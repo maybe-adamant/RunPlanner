@@ -157,5 +157,21 @@ The second authored-model slice now delivers:
   unreferenced dormant leaves, and topology bounds overflow;
 - round-trip coverage for two distinct occurrences of the same F combat room.
 
-The next slice adds semantic address constructors and the first topology/leaf
-commands against this fully typed persisted state.
+The third authored-model slice now delivers:
+
+- frozen semantic biome, occurrence, continuation, target, picked, incoming-
+  reward, and shop-purchase addresses with canonical keys;
+- an immutable command application boundary with address-bearing failures;
+- `CreateStart`, `CreateBatch`, `CreateTarget`, and `SetPicked` for an ordinary
+  F/G decision path;
+- occurrence-preserving room replacement with complete declaration-default
+  state replacement;
+- downstream continuation re-anchoring when the picked peer changes;
+- retained overflow targets and picks after a parent shrinks, while direct
+  creation or selection on unavailable exits is rejected;
+- counted-reward replacement and concrete shop purchase editing;
+- repeated-room, duplicate-ID, invalid-leaf, immutable-source, re-anchoring,
+  overflow, and recursive-default fixtures.
+
+The next slice adds terminal transition commands, explicit destructive and
+exit-reconciliation commands, and then the authored undo/redo wrapper.

@@ -292,10 +292,7 @@ export function decodeLinearBiomeTopology(
           );
         }
         role = target.exitIndex === 1 ? 'terminalShop' : 'terminalFreeReward';
-      } else if (
-        layout.start.roomGameNames.includes(room.gameName) ||
-        room.gameName === layout.terminal.roomGameName
-      ) {
+      } else if (room.kind === 'Intro' || room.kind === 'Opening' || room.kind === 'Preboss') {
         failProjectDocument(
           `${rawOccurrence.path}.gameName`,
           `${room.gameName} cannot be an ordinary generated target`,
