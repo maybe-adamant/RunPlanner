@@ -1,6 +1,7 @@
 import { encounterProfiles } from './encounters';
 import { biomeLayouts } from './layouts';
 import { fRooms } from './rooms/f';
+import { gRooms } from './rooms/g';
 import { rewardPayloadDomains } from './rewards/payloadDomains';
 import { rewardPrimitives } from './rewards/primitives';
 import { shopOptionSets, shopProfiles } from './rewards/shops';
@@ -9,7 +10,7 @@ import { routes } from './routes';
 import type { RawCatalogInput } from './types';
 
 export const declarations = {
-  version: '0.1.0-fg-slice-4',
+  version: '0.1.0-fg-slice-5',
   routes,
   rewardPayloadDomains,
   rewardPrimitives,
@@ -17,7 +18,7 @@ export const declarations = {
   shopOptionSets,
   shopProfiles,
   encounterProfiles,
-  rooms: fRooms,
+  rooms: [...fRooms, ...gRooms],
   biomeLayouts,
 } as const satisfies RawCatalogInput;
 
@@ -28,6 +29,7 @@ export type {
   RawFixedRewardBinding,
   RawForkedPrebossEntryPolicy,
   RawLinearBiomeLayoutDeclaration,
+  RawNoneRewardBinding,
   RawPayloadDomainDeclaration,
   RawRewardProducerBinding,
   RawRewardPrimitiveDeclaration,

@@ -22,6 +22,7 @@ export {
   type ConcreteReward,
   type CountedRewardBinding,
   type FixedRewardBinding,
+  type NoneRewardBinding,
   type RewardPayload,
   type RewardPayloadDomain,
   type RewardPrimitive,

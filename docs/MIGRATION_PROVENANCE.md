@@ -70,11 +70,11 @@ scripts.
 | Family                                   | Status         | Primary evidence                                                | Port action                                                                                                      |
 | ---------------------------------------- | -------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | RunProgress and MetaProgress primitives  | ported         | `LootData.lua`, `RewardData.lua`, legacy primitive declarations | Required counted-bag primitives, labels, and acquisition aliases normalize.                                      |
-| Remaining G primitives                   | verify-on-port | game reward data and legacy primitive declarations              | Port with their concrete G consumers.                                                                            |
+| F/G required primitives                  | ported         | game reward data and legacy primitive declarations              | All primitives consumed by the current F/G declarations normalize.                                               |
 | `BoonSource` and `DevotionPair` payloads | ported         | game source names and legacy payload declarations               | Membership, distinctness, and recursive defaults pass catalog tests.                                             |
 | RunProgress counted bag                  | ported         | `LootData.lua`, `RequirementsData.lua`                          | Game order and multiplicity are preserved; current-run predicates remain.                                        |
 | MetaProgress counted bag                 | ported         | `LootData.lua`, `RequirementsData.lua`, legacy `bags.lua`       | Current game order and multiplicity are preserved; run predicates remain.                                        |
-| Producer positive/negative filters       | ready          | `REWARD_MODEL.md`, legacy consumer audit                        | Embed on concrete producers; reject named filtered surfaces.                                                     |
+| Producer positive/negative filters       | ported         | `REWARD_MODEL.md`, legacy consumer audit                        | Concrete F/G producers embed normalized positive and negative filters.                                           |
 | Generated-door store resolution          | verify-on-port | `RoomLogic.lua`, `RewardLogic.lua`, legacy consumer audit       | Add physical-order fixture before F simulation.                                                                  |
 | World Shop profile                       | ported         | game shop data, legacy `shops.lua`                              | Option sets, stable slots, labels, and recursive defaults normalize; authored purchase state belongs to Phase 2. |
 | H/I/N/O/P/Q reward structures            | deferred       | legacy reward hierarchy and consumer audit                      | Translate with each biome slice.                                                                                 |
@@ -105,16 +105,21 @@ requirement remain outside the modeled input surface.
 
 ## G Migration
 
-| Family                           | Status         | Primary evidence                                        | Port action                                                                           |
-| -------------------------------- | -------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| G layout and terminal depth      | ready          | `RoomDataG.lua`, legacy G biome rules                   | Declare fixed intro and depth-8 terminal.                                             |
-| G intro                          | ready          | `RoomDataG.lua`, encounter declarations                 | Port as fixed reward-free intro.                                                      |
-| G physical exits                 | verify-on-port | `RoomDataG.lua`, extracted map topology                 | Preserve concrete two/three-exit order and miniboss exceptions.                       |
-| G combat declarations            | verify-on-port | `RoomSets.lua`, `RoomDataG.lua`, legacy `g_oceanus.lua` | Port all 20 and the four Devotion exclusions explicitly.                              |
-| `G_MiniBoss03`                   | ready          | `RoomSets.lua`, `RoomDataG.lua`                         | Include as a normal production Jellyfish miniboss room.                               |
-| G miniboss group requirements    | verify-on-port | `RoomDataG.lua`, run requirements                       | Preserve force window and entered-room mutual exclusion as origin-based requirements. |
-| `G_Shop01` force and eligibility | verify-on-port | `RoomDataG.lua`                                         | Preserve force window, independent upper bound, and minimum-exit requirement.         |
-| G forked preboss offers          | ready          | `RoomLogic.lua`, `RewardLogic.lua`, `F_G_GAME_RULES.md` | Support shop plus up to two free occurrences from predecessor exits.                  |
+| Family                           | Status | Primary evidence                                        | Port action                                                                                                                           |
+| -------------------------------- | ------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| G layout and terminal depth      | ported | `RoomDataG.lua`, legacy G biome rules                   | Fixed intro, authored bounds, ordinary continuation, and the depth-8 terminal normalize.                                              |
+| G intro                          | ported | `RoomDataG.lua`, encounter declarations                 | Reward-free `FixedIntro`, its 0-1 force window, and empty encounter profile normalize; the legacy exact-depth predicate was rejected. |
+| G physical exits                 | ported | `RoomDataG.lua`, extracted map topology                 | Every G room has exact ordered `OceanusExitDoor` fixtures, including all two/three-exit exceptions.                                   |
+| G combat declarations            | ported | `RoomSets.lua`, `RoomDataG.lua`, legacy `g_oceanus.lua` | All 20 rooms, exact counter ranges, and the four Devotion exclusions are covered by one parity matrix.                                |
+| `G_MiniBoss03`                   | ported | `RoomSets.lua`, `RoomDataG.lua`                         | Production Hellifish resolves to counting `MiniBossJellyfish`; it is not treated as debug-only.                                       |
+| G miniboss group requirements    | ported | `RoomDataG.lua`, run requirements                       | Entered-room mutual exclusion, force window, caps, concrete encounters, and Crawler's non-counting timing normalize.                  |
+| `G_Shop01` force and eligibility | ported | `RoomDataG.lua`                                         | Eligibility ends at depth 5 while force deadline remains 6; minimum two-exit context is explicit.                                     |
+| G forked preboss declaration     | ported | `RoomLogic.lua`, `RewardLogic.lua`, `F_G_GAME_RULES.md` | WorldShop-first and two-free-reward capacity normalize; physical occurrences and acquisition fixtures belong to later phases.         |
+
+The G port follows the same progressed-save scope as F. `G_MiniBoss02`'s
+lifetime encounter-completion gates, Narcissus progression/bounty gates, and
+the Fountain world-upgrade gate remain omitted. Their current-run room,
+counter, cap, force, and reward rules remain explicit.
 
 ## Deferred Biome Evidence
 

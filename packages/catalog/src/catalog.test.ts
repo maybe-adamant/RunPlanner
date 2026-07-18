@@ -14,7 +14,7 @@ function requireCounted(binding: RewardProducerBinding | undefined): CountedRewa
 
 describe('F catalog migration slice', () => {
   it('normalizes verified reward, encounter, and room declarations', () => {
-    expect(catalog.version).toBe('0.1.0-fg-slice-4');
+    expect(catalog.version).toBe('0.1.0-fg-slice-5');
     expect(catalog.routes.byKey.Underworld?.biomeSteps.map((step) => step.key)).toEqual([
       'Underworld_F',
       'Underworld_G',

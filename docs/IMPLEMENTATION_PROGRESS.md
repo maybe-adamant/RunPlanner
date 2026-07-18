@@ -57,7 +57,7 @@ simulator behavior was introduced during this phase.
 
 ### Phase 1: F/G Catalog Foundation
 
-Four migration slices delivered, completing the F declaration surface:
+Five migration slices delivered, completing the F/G declaration surface:
 
 - normalized core catalog, reward, room, encounter, and current-run
   requirement contracts;
@@ -89,13 +89,24 @@ Four migration slices delivered, completing the F declaration surface:
   encounter-depth range, reward binding, counters, and appearance cap;
 - executable parity coverage for every remaining F room family, WorldShop,
   and the F layout;
+- a `none` reward producer and fixed-start layout mode for reward-free biome
+  intros;
+- normalized `G_Intro`, all 20 explicit G combat declarations, all three G
+  minibosses, Narcissus, Fountain, Midshop, and Preboss;
+- exact G two/three-exit topology, including the one-exit Crawler room and its
+  non-counting encounter profile;
+- explicit G combat depth ranges, the four Devotion exclusions, miniboss
+  mutual exclusion, and independent Midshop eligibility/force windows;
+- the forked G preboss declaration, with WorldShop as the first offer and at
+  most two filtered free-reward offers;
+- the `Underworld_G` `LinearBiome` layout, fixed reward-free intro, ordinary
+  continuation rule, depth-8 terminal, and authored bounds;
+- executable parity coverage for every G room family, encounter identity,
+  physical exit, reward binding, and layout fact;
 - focused success and contract-failure tests at reward, shop, room-reference,
   and layout contacts;
 - application summary wired to the production catalog slice.
 
 Still required before Phase 1 closes:
 
-- complete G room declarations;
-- G encounter profiles and layout declaration;
-- exact G requirement coverage and declaration parity fixtures;
 - the requirement evaluator registry needed by the focused F/G rules.

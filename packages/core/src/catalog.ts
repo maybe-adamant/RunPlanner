@@ -92,7 +92,7 @@ export interface LinearBiomeLayout {
   readonly biomeStepKey: string;
   readonly kind: 'LinearBiome';
   readonly start: {
-    readonly mode: 'oneOf';
+    readonly mode: 'fixed' | 'oneOf';
     readonly roomGameNames: readonly string[];
   };
   readonly continuation: {
