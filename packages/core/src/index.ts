@@ -41,3 +41,12 @@ export {
   type NumericRange,
   type RequirementExpression,
 } from './requirements';
+export {
+  evaluateRequirement,
+  hasRequirementEvaluator,
+  requirementEvaluatorRegistry,
+  type RequirementEvaluationContext,
+  type RequirementEvaluator,
+  type RequirementEvaluatorRegistry,
+  type RequirementKind,
+} from './requirementEvaluator';

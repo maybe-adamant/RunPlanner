@@ -63,7 +63,7 @@ The normalized catalog contains immutable possible facts:
 - encounter profiles and phase timing;
 - local child slots;
 - reward primitives, payload domains, stores, bags, bindings, and shops;
-- normalized current-run requirements and registered evaluator kinds;
+- normalized current-run requirements whose kinds have registered evaluators;
 - batch and terminal policies.
 
 Catalog construction fails for:
@@ -267,6 +267,13 @@ Contacts supply their evaluation phase:
 Boolean composition uses explicit `all`, `any`, and `not` nodes. Evaluators
 receive only the typed history view and semantic context they require. They do
 not read UI state, project storage, or global runtime objects.
+
+The focused registry evaluates inclusive counter ranges, summed record counts,
+active current-room shop option names, the current room's chosen reward,
+offered-exit count, current-run flags, and room-history event spacing. Event
+spacing preserves the game's peer-generation behavior: no prior event passes,
+and an event stamped at the current room-history ordinal does not block another
+offer generated from that same room.
 
 Selected facts and candidate projections use the same evaluator functions.
 There is no permissive candidate rule beside a stricter selected rule.

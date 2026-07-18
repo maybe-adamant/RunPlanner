@@ -7,8 +7,8 @@ is mutable project history, not a design authority.
 
 ## Current Frontier
 
-Phase 0 is complete. Phase 1, the focused F/G catalog foundation, is in
-progress.
+Phases 0 and 1 are complete. The next frontier is Phase 2: the versioned
+authored project, codecs, semantic addresses, and edit commands.
 
 Before Phase 1 implementation, the inherited unique-room simplification was
 removed from the app design. Room Declarations remain unique by game name;
@@ -53,11 +53,9 @@ Validation at completion:
 No F/G declarations, Tauri dependency, graph library, project model, or
 simulator behavior was introduced during this phase.
 
-## In Progress
-
 ### Phase 1: F/G Catalog Foundation
 
-Five migration slices delivered, completing the F/G declaration surface:
+Six migration slices delivered, completing the F/G catalog foundation:
 
 - normalized core catalog, reward, room, encounter, and current-run
   requirement contracts;
@@ -105,8 +103,27 @@ Five migration slices delivered, completing the F/G declaration surface:
   physical exit, reward binding, and layout fact;
 - focused success and contract-failure tests at reward, shop, room-reference,
   and layout contacts;
-- application summary wired to the production catalog slice.
+- application summary wired to the production catalog slice;
+- a pure typed evaluation context that keeps counter, history, shop-option,
+  current-reward, exit, spacing, and flag inputs distinct;
+- an exhaustive current-run evaluator registry covering every normalized
+  requirement kind used by F/G;
+- exact inclusive range, summed-record, recursive boolean, shop-option,
+  current-reward, exit, flag, and event-spacing behavior fixtures;
+- catalog contact failure for a runtime requirement kind without an evaluator.
 
-Still required before Phase 1 closes:
+Validation at completion:
 
-- the requirement evaluator registry needed by the focused F/G rules.
+- workspace type checking passed;
+- the full Vitest suite passed;
+- ESLint passed with zero warnings;
+- Prettier check passed;
+- the Vite production build passed.
+
+## Next
+
+### Phase 2: Authored Project and Commands
+
+Start with the versioned `ProjectDocument` codec and stable repeatable Room
+Occurrence identity. Then add recursive leaf defaults, semantic addresses, and
+topology/leaf commands against exact JSON round-trip fixtures.

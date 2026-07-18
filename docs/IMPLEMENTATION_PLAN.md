@@ -312,9 +312,7 @@ Leave behind:
 
 ## Immediate Next Work Item
 
-Phase 0 is complete. Phase 1 begins with the smallest reward and room
-declaration slice needed to construct representative F opening and
-standard-combat catalog fixtures. Use `REWARD_MODEL.md`, `F_G_GAME_RULES.md`,
-`F_G_ROOM_TEMPLATES.md`, and `MIGRATION_PROVENANCE.md` as the focused migration
-authorities; do not port all F/G declarations before the first normalized
-fixture passes.
+Phases 0 and 1 are complete. Phase 2 begins with the versioned
+`ProjectDocument` decoder/encoder and stable Room Occurrence identity. Establish
+deterministic JSON round trips before adding the semantic topology and leaf
+command surface.

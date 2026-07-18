@@ -20,9 +20,10 @@ simulation. It will not contain a second planner or simulator.
 
 ## Status
 
-Phase 0 is complete: the TypeScript workspaces, pure core/catalog packages,
-React/Vite shell, Redux application composition, and repository checks are in
-place. Phase 1 begins with the focused F/G catalog foundation.
+Phases 0 and 1 are complete: the TypeScript application foundation and focused
+F/G normalized catalog now exist, including the pure current-run requirement
+evaluator registry. Phase 2 begins the versioned authored project and semantic
+command model.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

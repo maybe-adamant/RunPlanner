@@ -62,6 +62,7 @@ scripts.
 | Creation versus appearance caps            | ready    | `F_G_GAME_RULES.md`, `SIMULATION_AND_VALIDATION.md` | Verify every concrete cap while porting F/G rooms.                            |
 | Offer versus acquisition history           | ready    | `REWARD_MODEL.md`, `SIMULATION_AND_VALIDATION.md`   | Add picked/unpicked peer bag fixtures.                                        |
 | Counter-axis separation                    | ready    | `SIMULATION_AND_VALIDATION.md`                      | Preserve exact event phases and pre/post views.                               |
+| Current-run requirement evaluators         | ported   | `CATALOG_MODEL.md`, `SIMULATION_AND_VALIDATION.md`  | Total pure registry covers every normalized F/G requirement kind.             |
 | External save/profile requirements         | ready    | `CATALOG_MODEL.md`                                  | Omit from production declarations; do not create zombie audit predicates.     |
 | Lib controls, codecs, and commit lifecycle | rejected | `ARCHITECTURE.md`                                   | Do not port.                                                                  |
 
