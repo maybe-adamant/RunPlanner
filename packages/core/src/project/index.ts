@@ -16,6 +16,7 @@ export {
   createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
+  createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
   SemanticAddressContractError,
@@ -26,11 +27,21 @@ export {
   type OccurrenceAddress,
   type PickedAddress,
   type SemanticAddress,
+  type ShopOfferAddress,
   type ShopPurchaseAddress,
   type TargetAddress,
 } from './addresses';
 export { applyProjectCommand, type ProjectCommand, ProjectCommandContractError } from './commands';
 export { decodeLinearBiomeTopology } from './linearTopology';
+export {
+  applyProjectHistoryCommand,
+  canRedoProjectHistory,
+  canUndoProjectHistory,
+  createProjectHistory,
+  redoProjectHistory,
+  type ProjectHistory,
+  undoProjectHistory,
+} from './history';
 export {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type AuthoredBiomePlan,

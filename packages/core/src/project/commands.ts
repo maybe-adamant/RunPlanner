@@ -1,7 +1,10 @@
 import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../catalog';
+import type { ConcreteReward, RewardPayload } from '../rewards';
 import type {
   CountedRewardChoice,
   LinearBiomePlan,
+  LinearBiomeTopology,
+  LinearContinuation,
   OccurrenceId,
   ProjectDocument,
   RoomOccurrence,
@@ -13,6 +16,7 @@ import type {
   OccurrenceAddress,
   PickedAddress,
   SemanticAddress,
+  ShopOfferAddress,
   ShopPurchaseAddress,
   TargetAddress,
 } from './addresses';
@@ -30,6 +34,11 @@ export type ProjectCommand =
     }
   | { readonly kind: 'CreateBatch'; readonly continuation: ContinuationAddress }
   | {
+      readonly kind: 'CreateTerminalTransition';
+      readonly continuation: ContinuationAddress;
+      readonly targetOccurrenceIds: readonly OccurrenceId[];
+    }
+  | {
       readonly kind: 'CreateTarget';
       readonly target: TargetAddress;
       readonly occurrenceId: OccurrenceId;
@@ -41,6 +50,28 @@ export type ProjectCommand =
       readonly exitIndex: number;
     }
   | {
+      readonly kind: 'SetTerminalPicked';
+      readonly picked: PickedAddress;
+      readonly exitIndex: number;
+    }
+  | { readonly kind: 'ReconcileExitCapacity'; readonly continuation: ContinuationAddress }
+  | {
+      readonly kind: 'ReconcileTerminalExitCapacity';
+      readonly continuation: ContinuationAddress;
+    }
+  | { readonly kind: 'RemoveBatch'; readonly continuation: ContinuationAddress }
+  | {
+      readonly kind: 'RemoveTerminalTransition';
+      readonly continuation: ContinuationAddress;
+    }
+  | {
+      readonly kind: 'ReplaceWithTerminalTransition';
+      readonly continuation: ContinuationAddress;
+      readonly targetOccurrenceIds: readonly OccurrenceId[];
+    }
+  | { readonly kind: 'ReplaceWithBatch'; readonly continuation: ContinuationAddress }
+  | { readonly kind: 'ClearTopology'; readonly biome: BiomeAddress }
+  | {
       readonly kind: 'ReplaceOccurrenceRoom';
       readonly occurrence: OccurrenceAddress;
       readonly gameName: string;
@@ -49,6 +80,11 @@ export type ProjectCommand =
       readonly kind: 'ReplaceIncomingReward';
       readonly reward: IncomingRewardAddress;
       readonly choice: CountedRewardChoice;
+    }
+  | {
+      readonly kind: 'ReplaceShopOffer';
+      readonly offer: ShopOfferAddress;
+      readonly reward: ConcreteReward;
     }
   | {
       readonly kind: 'SetShopPurchase';
@@ -88,15 +124,27 @@ function commandAddress(command: ProjectCommand): SemanticAddress {
     case 'CreateStart':
       return command.biome;
     case 'CreateBatch':
+    case 'CreateTerminalTransition':
+    case 'ReconcileExitCapacity':
+    case 'ReconcileTerminalExitCapacity':
+    case 'RemoveBatch':
+    case 'RemoveTerminalTransition':
+    case 'ReplaceWithBatch':
+    case 'ReplaceWithTerminalTransition':
       return command.continuation;
     case 'CreateTarget':
       return command.target;
     case 'SetPicked':
+    case 'SetTerminalPicked':
       return command.picked;
+    case 'ClearTopology':
+      return command.biome;
     case 'ReplaceOccurrenceRoom':
       return command.occurrence;
     case 'ReplaceIncomingReward':
       return command.reward;
+    case 'ReplaceShopOffer':
+      return command.offer;
     case 'SetShopPurchase':
       return command.purchase;
   }
@@ -177,6 +225,13 @@ function hasGeneratedExit(room: RoomDeclaration, exitIndex: number): boolean {
   return room.exits.some((exit) => exit.index === exitIndex && exit.targetMode === 'generated');
 }
 
+function generatedExitIndexes(room: RoomDeclaration): readonly number[] {
+  return room.exits
+    .filter((exit) => exit.targetMode === 'generated')
+    .map((exit) => exit.index)
+    .sort((left, right) => left - right);
+}
+
 function occurrenceRole(
   plan: LinearBiomePlan,
   occurrenceId: OccurrenceId,
@@ -230,6 +285,221 @@ function replaceOccurrence(
         occurrence.occurrenceId === replacement.occurrenceId ? replacement : occurrence,
       ),
     },
+  };
+}
+
+function samePayload(left: RewardPayload | undefined, right: RewardPayload | undefined): boolean {
+  if (left === undefined || right === undefined) {
+    return left === right;
+  }
+  if ('source' in left || 'source' in right) {
+    return 'source' in left && 'source' in right && left.source === right.source;
+  }
+  return left.sources[0] === right.sources[0] && left.sources[1] === right.sources[1];
+}
+
+function sameReward(left: ConcreteReward, right: ConcreteReward): boolean {
+  return left.rewardType === right.rewardType && samePayload(left.payload, right.payload);
+}
+
+function sameChoice(left: CountedRewardChoice, right: CountedRewardChoice): boolean {
+  return left.storeKey === right.storeKey && sameReward(left.reward, right.reward);
+}
+
+function requireContinuation(
+  plan: LinearBiomePlan,
+  parentOccurrenceId: OccurrenceId,
+  expectedKind: LinearContinuation['kind'],
+  command: ProjectCommand,
+): LinearContinuation {
+  const topology = requireTopology(plan, command);
+  const continuation = topology.continuations.find(
+    (candidate) => candidate.parentOccurrenceId === parentOccurrenceId,
+  );
+  if (continuation?.kind !== expectedKind) {
+    failCommand(command, `parent does not own a ${expectedKind} continuation`);
+  }
+  return continuation;
+}
+
+function removeOccurrenceSubtrees(
+  topology: LinearBiomeTopology,
+  rootOccurrenceIds: readonly OccurrenceId[],
+): LinearBiomeTopology {
+  const removedOccurrenceIds = new Set<OccurrenceId>(rootOccurrenceIds);
+  const pending = [...rootOccurrenceIds];
+
+  while (pending.length > 0) {
+    const parentOccurrenceId = pending.pop();
+    if (parentOccurrenceId === undefined) {
+      break;
+    }
+    const continuation = topology.continuations.find(
+      (candidate) => candidate.parentOccurrenceId === parentOccurrenceId,
+    );
+    if (continuation === undefined) {
+      continue;
+    }
+    for (const target of continuation.targets) {
+      if (!removedOccurrenceIds.has(target.occurrenceId)) {
+        removedOccurrenceIds.add(target.occurrenceId);
+        pending.push(target.occurrenceId);
+      }
+    }
+  }
+
+  return {
+    ...topology,
+    occurrences: topology.occurrences.filter(
+      (occurrence) => !removedOccurrenceIds.has(occurrence.occurrenceId),
+    ),
+    continuations: topology.continuations.filter(
+      (continuation) => !removedOccurrenceIds.has(continuation.parentOccurrenceId),
+    ),
+  };
+}
+
+function removeContinuationSubtree(
+  topology: LinearBiomeTopology,
+  continuation: LinearContinuation,
+): LinearBiomeTopology {
+  const withoutContinuation = {
+    ...topology,
+    continuations: topology.continuations.filter(
+      (candidate) => candidate.parentOccurrenceId !== continuation.parentOccurrenceId,
+    ),
+  };
+  return removeOccurrenceSubtrees(
+    withoutContinuation,
+    continuation.targets.map((target) => target.occurrenceId),
+  );
+}
+
+function createTerminalPlan(
+  plan: LinearBiomePlan,
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+  parentOccurrenceId: OccurrenceId,
+  targetOccurrenceIds: readonly OccurrenceId[],
+  command: ProjectCommand,
+): LinearBiomePlan {
+  const topology = requireTopology(plan, command);
+  const parent = requireOccurrence(plan, parentOccurrenceId, command);
+  if (
+    topology.continuations.some(
+      (continuation) => continuation.parentOccurrenceId === parentOccurrenceId,
+    )
+  ) {
+    failCommand(command, 'parent already owns a continuation');
+  }
+  const parentRoom = requireRoom(catalog, parent.gameName, layout.biomeStepKey, command);
+  const exitIndexes = generatedExitIndexes(parentRoom);
+  if (exitIndexes.length === 0) {
+    failCommand(command, `${parent.gameName} has no generated terminal exits`);
+  }
+
+  const terminalRoom = requireRoom(
+    catalog,
+    layout.terminal.roomGameName,
+    layout.biomeStepKey,
+    command,
+  );
+  if (terminalRoom.entryOfferPolicy === undefined) {
+    failCommand(command, `${terminalRoom.gameName} has no terminal offer policy`);
+  }
+  if (exitIndexes.length > 1 + terminalRoom.entryOfferPolicy.maxFreeRewards) {
+    failCommand(
+      command,
+      `${parent.gameName} exceeds ${terminalRoom.gameName} terminal exit capacity`,
+    );
+  }
+  if (targetOccurrenceIds.length !== exitIndexes.length) {
+    failCommand(command, `requires ${exitIndexes.length} terminal occurrence IDs`);
+  }
+  if (new Set(targetOccurrenceIds).size !== targetOccurrenceIds.length) {
+    failCommand(command, 'terminal occurrence IDs must be unique');
+  }
+  for (const occurrenceId of targetOccurrenceIds) {
+    if (topology.occurrences.some((occurrence) => occurrence.occurrenceId === occurrenceId)) {
+      failCommand(command, `occurrence ${occurrenceId} already exists`);
+    }
+  }
+
+  const terminalOccurrences = exitIndexes.map((exitIndex, index): RoomOccurrence => {
+    const occurrenceId = targetOccurrenceIds[index];
+    if (occurrenceId === undefined) {
+      failCommand(command, `missing terminal occurrence ID for exit ${exitIndex}`);
+    }
+    const role: RoomOccurrenceRole = exitIndex === 1 ? 'terminalShop' : 'terminalFreeReward';
+    return {
+      occurrenceId,
+      gameName: terminalRoom.gameName,
+      state: createDefaultRoomState(catalog, terminalRoom, role),
+    };
+  });
+  const targets = exitIndexes.map((exitIndex, index) => {
+    const occurrence = terminalOccurrences[index];
+    if (occurrence === undefined) {
+      failCommand(command, `missing terminal occurrence for exit ${exitIndex}`);
+    }
+    return { exitIndex, occurrenceId: occurrence.occurrenceId };
+  });
+
+  return {
+    ...plan,
+    topology: {
+      ...topology,
+      occurrences: [...topology.occurrences, ...terminalOccurrences],
+      continuations: [
+        ...topology.continuations,
+        { kind: 'terminal', parentOccurrenceId, targets, pickedExitIndex: null },
+      ],
+    },
+  };
+}
+
+function reconcilePlan(
+  plan: LinearBiomePlan,
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+  parentOccurrenceId: OccurrenceId,
+  expectedKind: LinearContinuation['kind'],
+  command: ProjectCommand,
+): LinearBiomePlan {
+  const topology = requireTopology(plan, command);
+  const continuation = requireContinuation(plan, parentOccurrenceId, expectedKind, command);
+  const parent = requireOccurrence(plan, parentOccurrenceId, command);
+  const parentRoom = requireRoom(catalog, parent.gameName, layout.biomeStepKey, command);
+  const availableExitIndexes = new Set(generatedExitIndexes(parentRoom));
+  if (
+    continuation.pickedExitIndex !== null &&
+    !availableExitIndexes.has(continuation.pickedExitIndex)
+  ) {
+    failCommand(command, `picked exit ${continuation.pickedExitIndex} remains unavailable`);
+  }
+  const unavailableTargets = continuation.targets.filter(
+    (target) => !availableExitIndexes.has(target.exitIndex),
+  );
+  if (unavailableTargets.length === 0) {
+    return plan;
+  }
+  const retainedTargets = continuation.targets.filter((target) =>
+    availableExitIndexes.has(target.exitIndex),
+  );
+  const withReconciledContinuation = {
+    ...topology,
+    continuations: topology.continuations.map((candidate) =>
+      candidate.parentOccurrenceId === parentOccurrenceId
+        ? { ...continuation, targets: retainedTargets }
+        : candidate,
+    ),
+  };
+  return {
+    ...plan,
+    topology: removeOccurrenceSubtrees(
+      withReconciledContinuation,
+      unavailableTargets.map((target) => target.occurrenceId),
+    ),
   };
 }
 
@@ -291,6 +561,19 @@ function applyUnchecked(
         },
       });
     }
+    case 'CreateTerminalTransition':
+      return withBiome(
+        document,
+        located,
+        createTerminalPlan(
+          plan,
+          catalog,
+          layout,
+          command.continuation.parentOccurrenceId,
+          command.targetOccurrenceIds,
+          command,
+        ),
+      );
     case 'CreateTarget': {
       const topology = requireTopology(plan, command);
       if (topology.occurrences.some((room) => room.occurrenceId === command.occurrenceId)) {
@@ -388,6 +671,142 @@ function applyUnchecked(
         topology: { ...topology, continuations },
       });
     }
+    case 'SetTerminalPicked': {
+      const topology = requireTopology(plan, command);
+      const continuation = requireContinuation(
+        plan,
+        command.picked.parentOccurrenceId,
+        'terminal',
+        command,
+      );
+      const target = continuation.targets.find(
+        (candidate) => candidate.exitIndex === command.exitIndex,
+      );
+      if (target === undefined) {
+        failCommand(command, `exit ${command.exitIndex} has no terminal target`);
+      }
+      const parent = requireOccurrence(plan, command.picked.parentOccurrenceId, command);
+      const parentRoom = requireRoom(catalog, parent.gameName, layout.biomeStepKey, command);
+      if (!hasGeneratedExit(parentRoom, command.exitIndex)) {
+        failCommand(command, `exit ${command.exitIndex} is unavailable from ${parent.gameName}`);
+      }
+      if (continuation.pickedExitIndex === command.exitIndex) {
+        return document;
+      }
+      return withBiome(document, located, {
+        ...plan,
+        topology: {
+          ...topology,
+          continuations: topology.continuations.map((candidate) =>
+            candidate.parentOccurrenceId === continuation.parentOccurrenceId
+              ? { ...continuation, pickedExitIndex: command.exitIndex }
+              : candidate,
+          ),
+        },
+      });
+    }
+    case 'ReconcileExitCapacity': {
+      const reconciled = reconcilePlan(
+        plan,
+        catalog,
+        layout,
+        command.continuation.parentOccurrenceId,
+        'batch',
+        command,
+      );
+      return reconciled === plan ? document : withBiome(document, located, reconciled);
+    }
+    case 'ReconcileTerminalExitCapacity': {
+      const reconciled = reconcilePlan(
+        plan,
+        catalog,
+        layout,
+        command.continuation.parentOccurrenceId,
+        'terminal',
+        command,
+      );
+      return reconciled === plan ? document : withBiome(document, located, reconciled);
+    }
+    case 'RemoveBatch': {
+      const topology = requireTopology(plan, command);
+      const continuation = requireContinuation(
+        plan,
+        command.continuation.parentOccurrenceId,
+        'batch',
+        command,
+      );
+      return withBiome(document, located, {
+        ...plan,
+        topology: removeContinuationSubtree(topology, continuation),
+      });
+    }
+    case 'RemoveTerminalTransition': {
+      const topology = requireTopology(plan, command);
+      const continuation = requireContinuation(
+        plan,
+        command.continuation.parentOccurrenceId,
+        'terminal',
+        command,
+      );
+      return withBiome(document, located, {
+        ...plan,
+        topology: removeContinuationSubtree(topology, continuation),
+      });
+    }
+    case 'ReplaceWithTerminalTransition': {
+      const topology = requireTopology(plan, command);
+      const continuation = requireContinuation(
+        plan,
+        command.continuation.parentOccurrenceId,
+        'batch',
+        command,
+      );
+      const withoutBatch = {
+        ...plan,
+        topology: removeContinuationSubtree(topology, continuation),
+      };
+      return withBiome(
+        document,
+        located,
+        createTerminalPlan(
+          withoutBatch,
+          catalog,
+          layout,
+          command.continuation.parentOccurrenceId,
+          command.targetOccurrenceIds,
+          command,
+        ),
+      );
+    }
+    case 'ReplaceWithBatch': {
+      const topology = requireTopology(plan, command);
+      const continuation = requireContinuation(
+        plan,
+        command.continuation.parentOccurrenceId,
+        'terminal',
+        command,
+      );
+      const withoutTerminal = removeContinuationSubtree(topology, continuation);
+      return withBiome(document, located, {
+        ...plan,
+        topology: {
+          ...withoutTerminal,
+          continuations: [
+            ...withoutTerminal.continuations,
+            {
+              kind: 'batch',
+              parentOccurrenceId: command.continuation.parentOccurrenceId,
+              targets: [],
+              pickedExitIndex: null,
+            },
+          ],
+        },
+      });
+    }
+    case 'ClearTopology':
+      return plan.topology === null
+        ? document
+        : withBiome(document, located, { ...plan, topology: null });
     case 'ReplaceOccurrenceRoom': {
       const occurrence = requireOccurrence(plan, command.occurrence.occurrenceId, command);
       if (occurrence.gameName === command.gameName) {
@@ -407,9 +826,39 @@ function applyUnchecked(
       if (occurrence.state.kind !== 'counted' && occurrence.state.kind !== 'freeReward') {
         failCommand(command, `${occurrence.gameName} has no replaceable counted reward`);
       }
+      if (sameChoice(occurrence.state.choice, command.choice)) {
+        return document;
+      }
       const replacement = {
         ...occurrence,
         state: { ...occurrence.state, choice: command.choice },
+      };
+      return withBiome(document, located, replaceOccurrence(plan, replacement, command));
+    }
+    case 'ReplaceShopOffer': {
+      const occurrence = requireOccurrence(plan, command.offer.occurrenceId, command);
+      if (occurrence.state.kind !== 'shop') {
+        failCommand(command, `${occurrence.gameName} has no shop offer state`);
+      }
+      const offer = occurrence.state.shop.offers[command.offer.offerKey];
+      if (offer === undefined) {
+        failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
+      }
+      if (sameReward(offer.reward, command.reward)) {
+        return document;
+      }
+      const replacement = {
+        ...occurrence,
+        state: {
+          ...occurrence.state,
+          shop: {
+            ...occurrence.state.shop,
+            offers: {
+              ...occurrence.state.shop.offers,
+              [command.offer.offerKey]: { ...offer, reward: command.reward },
+            },
+          },
+        },
       };
       return withBiome(document, located, replaceOccurrence(plan, replacement, command));
     }

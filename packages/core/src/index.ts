@@ -53,6 +53,9 @@ export {
 } from './requirementEvaluator';
 export {
   applyProjectCommand,
+  applyProjectHistoryCommand,
+  canRedoProjectHistory,
+  canUndoProjectHistory,
   createBiomeAddress,
   createContinuationAddress,
   createEmptyProjectDocument,
@@ -61,6 +64,8 @@ export {
   createOccurrenceId,
   createPickedAddress,
   createProjectDocument,
+  createProjectHistory,
+  createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
   decodeProjectDocument,
@@ -91,6 +96,7 @@ export {
   type OccurrenceAddress,
   type OccurrenceId,
   type ProjectDocument,
+  type ProjectHistory,
   type ProjectCommand,
   type PickedAddress,
   type RoomOccurrence,
@@ -98,6 +104,9 @@ export {
   type ShopOfferState,
   type ShopState,
   type SemanticAddress,
+  type ShopOfferAddress,
   type ShopPurchaseAddress,
   type TargetAddress,
+  redoProjectHistory,
+  undoProjectHistory,
 } from './project';

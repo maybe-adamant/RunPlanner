@@ -301,7 +301,7 @@ Lib control persistence.
 
 UI code dispatches commands rather than mutating project records directly.
 
-The implemented F/G ordinary command slice is:
+The implemented F/G command set is:
 
 ```ts
 type ProjectCommand =
@@ -312,6 +312,11 @@ type ProjectCommand =
       gameName: GameRoomName;
     }
   | { kind: 'CreateBatch'; continuation: ContinuationAddress }
+  | {
+      kind: 'CreateTerminalTransition';
+      continuation: ContinuationAddress;
+      targetOccurrenceIds: readonly OccurrenceId[];
+    }
   | {
       kind: 'CreateTarget';
       target: TargetAddress;
@@ -324,6 +329,22 @@ type ProjectCommand =
       exitIndex: number;
     }
   | {
+      kind: 'SetTerminalPicked';
+      picked: PickedAddress;
+      exitIndex: number;
+    }
+  | { kind: 'ReconcileExitCapacity'; continuation: ContinuationAddress }
+  | { kind: 'ReconcileTerminalExitCapacity'; continuation: ContinuationAddress }
+  | { kind: 'RemoveBatch'; continuation: ContinuationAddress }
+  | { kind: 'RemoveTerminalTransition'; continuation: ContinuationAddress }
+  | {
+      kind: 'ReplaceWithTerminalTransition';
+      continuation: ContinuationAddress;
+      targetOccurrenceIds: readonly OccurrenceId[];
+    }
+  | { kind: 'ReplaceWithBatch'; continuation: ContinuationAddress }
+  | { kind: 'ClearTopology'; biome: BiomeAddress }
+  | {
       kind: 'ReplaceOccurrenceRoom';
       occurrence: OccurrenceAddress;
       gameName: GameRoomName;
@@ -332,6 +353,11 @@ type ProjectCommand =
       kind: 'ReplaceIncomingReward';
       reward: IncomingRewardAddress;
       choice: CountedRewardChoice;
+    }
+  | {
+      kind: 'ReplaceShopOffer';
+      offer: ShopOfferAddress;
+      reward: ConcreteReward;
     }
   | {
       kind: 'SetShopPurchase';
@@ -345,9 +371,7 @@ the same project decoder used at JSON contact. Command failures retain their
 semantic address as the primary path; a nested document path may be carried as
 detail when a leaf value fails its declaration codec.
 
-Planned linear extensions add terminal creation and selection, explicit exit
-reconciliation, batch/terminal replacement, structural removal, and complete
-biome clearing. Planned hub commands remain:
+Planned hub commands remain:
 
 ```ts
 type HubBiomeCommand =
@@ -415,10 +439,11 @@ ordinary or terminal targets:
 Commands must not automatically choose a surviving exit.
 
 `CreateTarget` accepts only an exit physically present on the current parent,
-and `SetPicked` accepts only a currently available target. Retained overflow is
-therefore created only by an upstream room replacement; ordinary commands
-cannot manufacture unavailable targets directly or reaffirm one as a valid
-pick.
+and terminal creation derives its complete target set from those current
+generated exits. `SetPicked` and `SetTerminalPicked` accept only currently
+available targets. Retained overflow is therefore created only by an upstream
+room replacement; commands cannot manufacture unavailable targets directly or
+reaffirm one as a valid pick.
 
 These remain intentionally destructive:
 
@@ -550,9 +575,16 @@ indented JSON with a trailing newline.
 
 ## Undo and Redo
 
-Undo/redo records authored semantic changes. The initial implementation may
-store complete authored snapshots because project size is bounded and
-correctness is more important than compression.
+Undo/redo records authored semantic changes as complete frozen snapshots
+because project size is bounded and correctness is more important than
+compression. `ProjectHistory` owns unbounded in-memory `past`, `present`, and
+`future` sequences. It is application-session state and is not encoded in the
+project document.
+
+Applying a semantic command records one new snapshot, clears redo, and leaves
+history unchanged when the command returns the identical authored project.
+Undo and redo restore the exact prior snapshot and are identity no-ops at their
+respective boundaries.
 
 The history excludes:
 

@@ -41,12 +41,19 @@ export interface ShopPurchaseAddress extends BiomeOwnedAddress {
   readonly offerKey: string;
 }
 
+export interface ShopOfferAddress extends BiomeOwnedAddress {
+  readonly kind: 'shopOffer';
+  readonly occurrenceId: OccurrenceId;
+  readonly offerKey: string;
+}
+
 export type SemanticAddress =
   | BiomeAddress
   | ContinuationAddress
   | IncomingRewardAddress
   | OccurrenceAddress
   | PickedAddress
+  | ShopOfferAddress
   | ShopPurchaseAddress
   | TargetAddress;
 
@@ -146,6 +153,19 @@ export function createShopPurchaseAddress(
   });
 }
 
+export function createShopOfferAddress(
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+  offerKey: string,
+): ShopOfferAddress {
+  return Object.freeze({
+    kind: 'shopOffer',
+    ...biomeOwner(biome),
+    occurrenceId,
+    offerKey: nonBlank(offerKey, 'offerKey'),
+  });
+}
+
 export function semanticAddressKey(address: SemanticAddress): string {
   switch (address.kind) {
     case 'biome':
@@ -174,6 +194,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
         address.parentOccurrenceId,
         address.exitIndex,
       ]);
+    case 'shopOffer':
     case 'shopPurchase':
       return JSON.stringify([
         address.kind,
