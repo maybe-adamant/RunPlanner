@@ -50,3 +50,18 @@ export {
   type RequirementEvaluatorRegistry,
   type RequirementKind,
 } from './requirementEvaluator';
+export {
+  createEmptyProjectDocument,
+  createProjectDocument,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  parseProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
+  ProjectDocumentContractError,
+  type AuthoredBiomePlan,
+  type AuthoredRoutePlan,
+  type CreateProjectDocumentOptions,
+  type LinearBiomePlan,
+  type OccurrenceId,
+  type ProjectDocument,
+} from './project';
