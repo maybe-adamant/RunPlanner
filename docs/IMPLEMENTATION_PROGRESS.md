@@ -7,8 +7,7 @@ is mutable project history, not a design authority.
 
 ## Current Frontier
 
-Phases 0 and 1 are complete. Phase 2 is in progress, beginning with the
-versioned authored-project persistence boundary.
+Phases 0, 1, 2, and 2.5 are complete. Phase 3 F simulation is the next frontier.
 
 Before Phase 1 implementation, the inherited unique-room simplification was
 removed from the app design. Room Declarations remain unique by game name;
@@ -120,8 +119,6 @@ Validation at completion:
 - Prettier check passed;
 - the Vite production build passed.
 
-## Next
-
 ### Phase 2: Authored Project and Commands
 
 The initial persistence slice now delivers:
@@ -187,3 +184,60 @@ The final Phase 2 slices now deliver:
 
 Phase 2 is complete. The next work item is the authored-editor smoke slice
 before Phase 3 simulation.
+
+### Phase 2.5: Authored Editor Smoke
+
+The first application-state slice now delivers:
+
+- an explicit F-configured smoke-project bootstrap with unstarted topology;
+- application composition of the normalized catalog, initial project, and
+  planner store;
+- one Redux-owned authored `ProjectHistory` using the pure core history
+  boundary;
+- semantic project-command dispatch plus undo and redo application actions;
+- exact snapshot restoration and semantic no-op coverage at the application
+  adapter boundary.
+
+The second shell and F-start slice now delivers:
+
+- horizontal Underworld, Surface, and Settings navigation;
+- route-local Underworld navigation for Route and Erebus panels;
+- authored project and catalog projection through the application shell;
+- application-bound undo and redo controls;
+- an explicit unstarted Erebus surface with no implicit opening selection;
+- opening creation with application-allocated occurrence identity;
+- occurrence-preserving authored opening replacement after topology creation;
+- neutral route and frontier placeholders that make no simulation claims.
+
+The final authored F projection slice now delivers:
+
+- declaration-derived two-stage room selectors without persisted UI
+  categories or implicit room selection;
+- ordinary decision cards with complete physical exits, stable occurrence
+  identity, single-choice picked exits, and unpicked dead-leaf editors;
+- retained unavailable exits that remain visible and editable after an
+  upstream exit-capacity shrink;
+- explicit ordinary and terminal reconciliation, subtree removal,
+  continuation replacement, and complete-biome clearing actions;
+- declaration-bound disabling for impossible target, batch, and terminal
+  construction at authored topology limits;
+- predecessor-derived F Preboss Shop and Free Reward occurrences with terminal
+  single-choice entry;
+- complete counted reward-pool, primitive, single-source, and paired-source
+  editors using declaration labels;
+- complete WorldShop offer, payload, and purchase editors;
+- neutral structural language with no eligibility, validity, candidate, or
+  finding claims before simulation exists;
+- projection fixtures for empty, started, ordinary, terminal, shop, and
+  retained-overflow authored states.
+
+Phase 2.5 is complete. The editor now exercises the full Phase 2 F command
+surface without editing JSON.
+
+## Next
+
+### Phase 3: F Simulation Vertical Slice
+
+Begin with the F completeness gate and canonical linear materializer, then add
+lifecycle history, validation, and semantic findings without changing authored
+editor ownership.

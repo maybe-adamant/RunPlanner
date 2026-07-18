@@ -17,7 +17,7 @@ const application = createApplication();
 createRoot(rootElement).render(
   <StrictMode>
     <Provider store={application.store}>
-      <App catalogSummary={application.catalogSummary} />
+      <App catalog={application.catalog} catalogSummary={application.catalogSummary} />
     </Provider>
   </StrictMode>,
 );
