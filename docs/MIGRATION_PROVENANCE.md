@@ -68,17 +68,17 @@ scripts.
 
 ## Reward Migration
 
-| Family                                   | Status         | Primary evidence                                                | Port action                                                                                                      |
-| ---------------------------------------- | -------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| RunProgress and MetaProgress primitives  | ported         | `LootData.lua`, `RewardData.lua`, legacy primitive declarations | Required counted-bag primitives, labels, and acquisition aliases normalize.                                      |
-| F/G required primitives                  | ported         | game reward data and legacy primitive declarations              | All primitives consumed by the current F/G declarations normalize.                                               |
-| `BoonSource` and `DevotionPair` payloads | ported         | game source names and legacy payload declarations               | Membership, distinctness, and recursive defaults pass catalog tests.                                             |
-| RunProgress counted bag                  | ported         | `LootData.lua`, `RequirementsData.lua`                          | Game order and multiplicity are preserved; current-run predicates remain.                                        |
-| MetaProgress counted bag                 | ported         | `LootData.lua`, `RequirementsData.lua`, legacy `bags.lua`       | Current game order and multiplicity are preserved; run predicates remain.                                        |
-| Producer positive/negative filters       | ported         | `REWARD_MODEL.md`, legacy consumer audit                        | Concrete F/G producers embed normalized positive and negative filters.                                           |
-| Generated-door store resolution          | verify-on-port | `RoomLogic.lua`, `RewardLogic.lua`, legacy consumer audit       | Add physical-order fixture before F simulation.                                                                  |
-| World Shop profile                       | ported         | game shop data, legacy `shops.lua`                              | Option sets, stable slots, labels, and recursive defaults normalize; authored purchase state belongs to Phase 2. |
-| H/I/N/O/P/Q reward structures            | deferred       | legacy reward hierarchy and consumer audit                      | Translate with each biome slice.                                                                                 |
+| Family                                   | Status         | Primary evidence                                                | Port action                                                                                      |
+| ---------------------------------------- | -------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| RunProgress and MetaProgress primitives  | ported         | `LootData.lua`, `RewardData.lua`, legacy primitive declarations | Required counted-bag primitives, labels, and acquisition aliases normalize.                      |
+| F/G required primitives                  | ported         | game reward data and legacy primitive declarations              | All primitives consumed by the current F/G declarations normalize.                               |
+| `BoonSource` and `DevotionPair` payloads | ported         | game source names and legacy payload declarations               | Membership, distinctness, and recursive defaults pass catalog tests.                             |
+| RunProgress counted bag                  | ported         | `LootData.lua`, `RequirementsData.lua`                          | Game order and multiplicity are preserved; current-run predicates remain.                        |
+| MetaProgress counted bag                 | ported         | `LootData.lua`, `RequirementsData.lua`, legacy `bags.lua`       | Current game order and multiplicity are preserved; run predicates remain.                        |
+| Producer positive/negative filters       | ported         | `REWARD_MODEL.md`, legacy consumer audit                        | Concrete F/G producers embed normalized positive and negative filters.                           |
+| Generated-door store resolution          | verify-on-port | `RoomLogic.lua`, `RewardLogic.lua`, legacy consumer audit       | Add physical-order fixture before F simulation.                                                  |
+| World Shop profile                       | ported         | game shop data, legacy `shops.lua`                              | Option sets, stable slots, labels, recursive defaults, and semantic purchase commands now exist. |
+| H/I/N/O/P/Q reward structures            | deferred       | legacy reward hierarchy and consumer audit                      | Translate with each biome slice.                                                                 |
 
 The RunProgress port follows `LootData.lua` entry order rather than the
 legacy declaration's reordered table. Mixed game requirements retain their

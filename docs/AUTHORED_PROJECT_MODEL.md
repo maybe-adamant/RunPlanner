@@ -121,6 +121,13 @@ React components may use the persisted occurrence ID as their key. Rendered
 rows, array offsets, selector indexes, and graph coordinates are not semantic
 identity.
 
+Production addresses are frozen discriminated value objects containing the
+listed owners. `semanticAddressKey` encodes that value as a canonical tuple for
+map, marker, and React-key use; the encoded string is a projection, not a
+second identity authority. Address constructors validate local scalar shape,
+while command application resolves route, biome, occurrence, continuation,
+target, reward, and shop owners against the authored project.
+
 ## Route Composition
 
 A route plan authors a contiguous configured prefix:
@@ -294,50 +301,53 @@ Lib control persistence.
 
 UI code dispatches commands rather than mutating project records directly.
 
-Representative linear commands:
+The implemented F/G ordinary command slice is:
 
 ```ts
-type LinearBiomeCommand =
-  | { kind: 'CreateStart'; occurrenceId: OccurrenceId; gameName: GameRoomName }
-  | { kind: 'ReplaceOccurrenceRoom'; occurrenceId: OccurrenceId; gameName: GameRoomName }
-  | { kind: 'CreateBatch'; parentOccurrenceId: OccurrenceId }
+type ProjectCommand =
+  | {
+      kind: 'CreateStart';
+      biome: BiomeAddress;
+      occurrenceId: OccurrenceId;
+      gameName: GameRoomName;
+    }
+  | { kind: 'CreateBatch'; continuation: ContinuationAddress }
   | {
       kind: 'CreateTarget';
-      parentOccurrenceId: OccurrenceId;
-      exitIndex: number;
+      target: TargetAddress;
       occurrenceId: OccurrenceId;
       gameName: GameRoomName;
     }
-  | { kind: 'SetPicked'; parentOccurrenceId: OccurrenceId; exitIndex: number }
-  | { kind: 'ReconcileExitCapacity'; parentOccurrenceId: OccurrenceId }
-  | { kind: 'RemoveBatch'; parentOccurrenceId: OccurrenceId }
   | {
-      kind: 'CreateTerminalTransition';
-      parentOccurrenceId: OccurrenceId;
-      targetOccurrenceIds: readonly OccurrenceId[];
-    }
-  | {
-      kind: 'SetTerminalPicked';
-      parentOccurrenceId: OccurrenceId;
+      kind: 'SetPicked';
+      picked: PickedAddress;
       exitIndex: number;
     }
   | {
-      kind: 'ReconcileTerminalExitCapacity';
-      parentOccurrenceId: OccurrenceId;
-    }
-  | {
-      kind: 'CreateTerminalCompanion';
-      exitIndex: number;
-      occurrenceId: OccurrenceId;
+      kind: 'ReplaceOccurrenceRoom';
+      occurrence: OccurrenceAddress;
       gameName: GameRoomName;
     }
-  | { kind: 'ReplaceWithBatch'; parentOccurrenceId: OccurrenceId }
-  | { kind: 'ReplaceWithTerminalTransition'; parentOccurrenceId: OccurrenceId }
-  | { kind: 'RemoveTerminalTransition' }
-  | { kind: 'ClearTopology' };
+  | {
+      kind: 'ReplaceIncomingReward';
+      reward: IncomingRewardAddress;
+      choice: CountedRewardChoice;
+    }
+  | {
+      kind: 'SetShopPurchase';
+      purchase: ShopPurchaseAddress;
+      purchased: boolean;
+    };
 ```
 
-Representative hub commands:
+Each command constructs an unpublished immutable proposal and sends it through
+the same project decoder used at JSON contact. Command failures retain their
+semantic address as the primary path; a nested document path may be carried as
+detail when a leaf value fails its declaration codec.
+
+Planned linear extensions add terminal creation and selection, explicit exit
+reconciliation, batch/terminal replacement, structural removal, and complete
+biome clearing. Planned hub commands remain:
 
 ```ts
 type HubBiomeCommand =
@@ -348,7 +358,7 @@ type HubBiomeCommand =
       occurrenceId: OccurrenceId;
       gameName: GameRoomName;
     }
-  | { kind: 'ReplaceOccurrenceRoom'; occurrenceId: OccurrenceId; gameName: GameRoomName }
+  | { kind: 'ReplaceOccurrenceRoom'; occurrence: OccurrenceAddress; gameName: GameRoomName }
   | { kind: 'SetVisitOrder'; doorIndex: number; visitOrder: number }
   | { kind: 'ClearHubTarget'; doorIndex: number }
   | { kind: 'CreateTerminalTransition'; terminalOccurrenceId: OccurrenceId }
@@ -356,22 +366,15 @@ type HubBiomeCommand =
   | { kind: 'ClearTopology' };
 ```
 
-Representative leaf commands are concrete replacements:
+Planned leaf extensions remain concrete replacements:
 
 ```ts
 type RoomCommand =
-  | { kind: 'ReplaceIncomingReward'; occurrenceId: OccurrenceId; reward: RewardChoice }
   | {
       kind: 'ReplacePayload';
       occurrenceId: OccurrenceId;
       slotKey: string;
       payload: RewardPayload;
-    }
-  | {
-      kind: 'SetShopPurchase';
-      occurrenceId: OccurrenceId;
-      offerKey: string;
-      purchased: boolean;
     }
   | { kind: 'ReplaceRoomMode'; occurrenceId: OccurrenceId; mode: string }
   | {
@@ -410,6 +413,12 @@ ordinary or terminal targets:
 - restoring capacity before reconciliation reactivates retained targets.
 
 Commands must not automatically choose a surviving exit.
+
+`CreateTarget` accepts only an exit physically present on the current parent,
+and `SetPicked` accepts only a currently available target. Retained overflow is
+therefore created only by an upstream room replacement; ordinary commands
+cannot manufacture unavailable targets directly or reaffirm one as a valid
+pick.
 
 These remain intentionally destructive:
 
