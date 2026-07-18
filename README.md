@@ -22,10 +22,10 @@ simulation. It will not contain a second planner or simulator.
 
 Phases 0 and 1 are complete: the TypeScript application foundation and focused
 F/G normalized catalog now exist, including the pure current-run requirement
-evaluator registry. Phase 2 is underway with the versioned authored-project
-codec, configured-route defaults, recursive F/G room state, and non-null linear
-topology. Typed semantic addresses and the first immutable ordinary-topology
-and room-leaf commands are also implemented.
+evaluator registry. Phase 2 is complete with the versioned authored-project
+codec, configured-route defaults, recursive F/G room state, non-null linear
+topology, complete F/G semantic commands, and authored undo/redo history. The
+next slice is the authored-editor smoke surface.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

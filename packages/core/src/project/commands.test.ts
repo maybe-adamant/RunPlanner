@@ -23,6 +23,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
+  createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
   SemanticAddressContractError,
@@ -30,6 +31,14 @@ import {
 } from './addresses';
 import { applyProjectCommand, ProjectCommandContractError } from './commands';
 import { createProjectDocument } from './defaults';
+import {
+  applyProjectHistoryCommand,
+  canRedoProjectHistory,
+  canUndoProjectHistory,
+  createProjectHistory,
+  redoProjectHistory,
+  undoProjectHistory,
+} from './history';
 import type { ProjectDocument } from './model';
 
 function collection<T>(values: readonly T[], key: (value: T) => string): CatalogCollection<T> {
@@ -248,6 +257,12 @@ function setPicked(
   });
 }
 
+function selectedTwoExitParent(parentId: typeof startId): ProjectDocument {
+  let project = createBatch(startedProject());
+  project = createTarget(project, startId, 1, parentId, 'F_CombatTwoExit');
+  return setPicked(project, startId, 1);
+}
+
 describe('project semantic addresses', () => {
   it('creates stable domain keys without rendered positions', () => {
     const occurrence = createOccurrenceAddress(biome, startId);
@@ -443,5 +458,323 @@ describe('ordinary project commands', () => {
         '$.routes[0].biomes[0].topology.occurrences[0].state.choice.reward.rewardType: unknown reward primitive MissingReward',
       ),
     );
+  });
+});
+
+describe('terminal and destructive project commands', () => {
+  it('creates derived terminal roles and preserves purchase state across offer replacement', () => {
+    const parentId = createOccurrenceId('terminal-parent');
+    const shopId = createOccurrenceId('terminal-shop');
+    const freeId = createOccurrenceId('terminal-free');
+    const continuation = createContinuationAddress(biome, parentId);
+    let project = selectedTwoExitParent(parentId);
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTerminalTransition',
+      continuation,
+      targetOccurrenceIds: [shopId, freeId],
+    });
+    const topology = project.routes[0]?.biomes[0]?.topology;
+    expect(topology?.continuations.at(-1)).toMatchObject({
+      kind: 'terminal',
+      parentOccurrenceId: parentId,
+      targets: [
+        { exitIndex: 1, occurrenceId: shopId },
+        { exitIndex: 2, occurrenceId: freeId },
+      ],
+      pickedExitIndex: null,
+    });
+    expect(topology?.occurrences.find((room) => room.occurrenceId === shopId)?.state.kind).toBe(
+      'shop',
+    );
+    expect(topology?.occurrences.find((room) => room.occurrenceId === freeId)?.state.kind).toBe(
+      'freeReward',
+    );
+
+    const removed = applyProjectCommand(project, catalog, {
+      kind: 'RemoveTerminalTransition',
+      continuation,
+    });
+    expect(
+      removed.routes[0]?.biomes[0]?.topology?.occurrences.map((room) => room.occurrenceId),
+    ).toEqual([startId, parentId]);
+
+    const purchase = createShopPurchaseAddress(biome, shopId, 'Offer1');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetShopPurchase',
+      purchase,
+      purchased: true,
+    });
+    const offer = createShopOfferAddress(biome, shopId, 'Offer1');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      reward: { rewardType: 'Boon', payload: { source: 'ZeusUpgrade' } },
+    });
+    const shopState = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      (room) => room.occurrenceId === shopId,
+    )?.state;
+    expect(shopState).toMatchObject({
+      kind: 'shop',
+      shop: {
+        offers: {
+          Offer1: {
+            reward: { rewardType: 'Boon', payload: { source: 'ZeusUpgrade' } },
+            purchased: true,
+          },
+        },
+      },
+    });
+    expect(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopOffer',
+        offer,
+        reward: { rewardType: 'Boon', payload: { source: 'ZeusUpgrade' } },
+      }),
+    ).toBe(project);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopOffer',
+        offer,
+        reward: { rewardType: 'MaxHealthDrop' },
+      }),
+    ).toThrowError(ProjectCommandContractError);
+  });
+
+  it('retains, restores, and explicitly reconciles terminal overflow', () => {
+    const parentId = createOccurrenceId('terminal-parent');
+    const shopId = createOccurrenceId('terminal-shop');
+    const freeId = createOccurrenceId('terminal-free');
+    const continuation = createContinuationAddress(biome, parentId);
+    let project = selectedTwoExitParent(parentId);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTerminalTransition',
+      continuation,
+      targetOccurrenceIds: [shopId, freeId],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetTerminalPicked',
+      picked: createPickedAddress(biome, parentId),
+      exitIndex: 2,
+    });
+    const shrunk = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, parentId),
+      gameName: 'F_CombatOneExit',
+    });
+
+    expect(() =>
+      applyProjectCommand(shrunk, catalog, {
+        kind: 'ReconcileTerminalExitCapacity',
+        continuation,
+      }),
+    ).toThrowError(
+      new ProjectCommandContractError(
+        'ReconcileTerminalExitCapacity',
+        continuation,
+        'picked exit 2 remains unavailable',
+      ),
+    );
+
+    const restored = applyProjectCommand(shrunk, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, parentId),
+      gameName: 'F_CombatTwoExit',
+    });
+    expect(
+      applyProjectCommand(restored, catalog, {
+        kind: 'ReconcileTerminalExitCapacity',
+        continuation,
+      }),
+    ).toBe(restored);
+
+    project = applyProjectCommand(shrunk, catalog, {
+      kind: 'SetTerminalPicked',
+      picked: createPickedAddress(biome, parentId),
+      exitIndex: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReconcileTerminalExitCapacity',
+      continuation,
+    });
+    const reconciled = project.routes[0]?.biomes[0]?.topology;
+    expect(reconciled?.continuations.at(-1)?.targets).toEqual([
+      { exitIndex: 1, occurrenceId: shopId },
+    ]);
+    expect(reconciled?.occurrences.some((room) => room.occurrenceId === freeId)).toBe(false);
+  });
+
+  it('reconciles ordinary overflow only after an available exit is picked', () => {
+    const parentId = createOccurrenceId('ordinary-parent');
+    const firstId = createOccurrenceId('ordinary-first');
+    const overflowId = createOccurrenceId('ordinary-overflow');
+    const continuation = createContinuationAddress(biome, parentId);
+    let project = createBatch(selectedTwoExitParent(parentId), parentId);
+    project = createTarget(project, parentId, 1, firstId, 'F_CombatOneExit');
+    project = createTarget(project, parentId, 2, overflowId, 'F_CombatOneExit');
+    project = setPicked(project, parentId, 2);
+    const shrunk = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, parentId),
+      gameName: 'F_CombatOneExit',
+    });
+
+    expect(() =>
+      applyProjectCommand(shrunk, catalog, { kind: 'ReconcileExitCapacity', continuation }),
+    ).toThrowError(
+      new ProjectCommandContractError(
+        'ReconcileExitCapacity',
+        continuation,
+        'picked exit 2 remains unavailable',
+      ),
+    );
+
+    project = setPicked(shrunk, parentId, 1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReconcileExitCapacity',
+      continuation,
+    });
+    const topology = project.routes[0]?.biomes[0]?.topology;
+    expect(topology?.continuations.at(-1)?.targets).toEqual([
+      { exitIndex: 1, occurrenceId: firstId },
+    ]);
+    expect(topology?.occurrences.some((room) => room.occurrenceId === overflowId)).toBe(false);
+  });
+
+  it('replaces continuation forms and deletes only their owned subtrees', () => {
+    const parentId = createOccurrenceId('replace-parent');
+    const childId = createOccurrenceId('replace-child');
+    const grandchildId = createOccurrenceId('replace-grandchild');
+    const shopId = createOccurrenceId('replace-shop');
+    const freeId = createOccurrenceId('replace-free');
+    const continuation = createContinuationAddress(biome, parentId);
+    let project = createBatch(selectedTwoExitParent(parentId), parentId);
+    project = createTarget(project, parentId, 1, childId, 'F_CombatOneExit');
+    project = setPicked(project, parentId, 1);
+    project = createBatch(project, childId);
+    project = createTarget(project, childId, 1, grandchildId, 'F_CombatOneExit');
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceWithTerminalTransition',
+      continuation,
+      targetOccurrenceIds: [shopId, freeId],
+    });
+    let topology = project.routes[0]?.biomes[0]?.topology;
+    expect(topology?.occurrences.map((room) => room.occurrenceId)).toEqual([
+      startId,
+      parentId,
+      shopId,
+      freeId,
+    ]);
+    expect(topology?.continuations.at(-1)?.kind).toBe('terminal');
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceWithBatch',
+      continuation,
+    });
+    topology = project.routes[0]?.biomes[0]?.topology;
+    expect(topology?.occurrences.map((room) => room.occurrenceId)).toEqual([startId, parentId]);
+    expect(topology?.continuations.at(-1)).toEqual({
+      kind: 'batch',
+      parentOccurrenceId: parentId,
+      targets: [],
+      pickedExitIndex: null,
+    });
+
+    project = applyProjectCommand(project, catalog, { kind: 'RemoveBatch', continuation });
+    expect(project.routes[0]?.biomes[0]?.topology?.occurrences).toHaveLength(2);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveBatch',
+      continuation: createContinuationAddress(biome, startId),
+    });
+    expect(
+      project.routes[0]?.biomes[0]?.topology?.occurrences.map((room) => room.occurrenceId),
+    ).toEqual([startId]);
+
+    project = applyProjectCommand(project, catalog, { kind: 'ClearTopology', biome });
+    expect(project.routes[0]?.biomes[0]?.topology).toBeNull();
+    expect(applyProjectCommand(project, catalog, { kind: 'ClearTopology', biome })).toBe(project);
+  });
+
+  it('rejects incomplete terminal occurrence allocation', () => {
+    const parentId = createOccurrenceId('terminal-parent');
+    const continuation = createContinuationAddress(biome, parentId);
+    expect(() =>
+      applyProjectCommand(selectedTwoExitParent(parentId), catalog, {
+        kind: 'CreateTerminalTransition',
+        continuation,
+        targetOccurrenceIds: [createOccurrenceId('only-shop')],
+      }),
+    ).toThrowError(
+      new ProjectCommandContractError(
+        'CreateTerminalTransition',
+        continuation,
+        'requires 2 terminal occurrence IDs',
+      ),
+    );
+  });
+});
+
+describe('authored project history', () => {
+  it('restores destructive edits exactly and clears redo after a new command', () => {
+    const parentId = createOccurrenceId('history-parent');
+    const original = selectedTwoExitParent(parentId);
+    const rootContinuation = createContinuationAddress(biome, startId);
+    let history = createProjectHistory(original);
+    history = applyProjectHistoryCommand(history, catalog, {
+      kind: 'RemoveBatch',
+      continuation: rootContinuation,
+    });
+    expect(canUndoProjectHistory(history)).toBe(true);
+    expect(history.present.routes[0]?.biomes[0]?.topology?.occurrences).toHaveLength(1);
+
+    history = undoProjectHistory(history);
+    expect(history.present).toBe(original);
+    expect(canRedoProjectHistory(history)).toBe(true);
+    const withRedo = history;
+
+    history = applyProjectHistoryCommand(history, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(biome, startId),
+      exitIndex: 1,
+    });
+    expect(history).toBe(withRedo);
+    expect(canRedoProjectHistory(history)).toBe(true);
+
+    history = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, parentId),
+      gameName: 'F_CombatOneExit',
+    });
+    expect(canRedoProjectHistory(history)).toBe(false);
+    expect(Object.isFrozen(history)).toBe(true);
+    expect(Object.isFrozen(history.past)).toBe(true);
+  });
+
+  it('undoes and redoes exact authored snapshots without recording leaf no-ops', () => {
+    const original = startedProject();
+    let history = createProjectHistory(original);
+    const unchanged = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, startId),
+      choice: {
+        storeKey: 'RunProgress',
+        reward: { rewardType: 'Boon', payload: { source: 'ApolloUpgrade' } },
+      },
+    });
+    expect(unchanged).toBe(history);
+
+    history = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, startId),
+      choice: { storeKey: 'RunProgress', reward: { rewardType: 'MaxHealthDrop' } },
+    });
+    const edited = history.present;
+    expect(history.past).toEqual([original]);
+    history = undoProjectHistory(history);
+    expect(history.present).toBe(original);
+    history = redoProjectHistory(history);
+    expect(history.present).toBe(edited);
+    expect(redoProjectHistory(history)).toBe(history);
   });
 });

@@ -173,5 +173,17 @@ The third authored-model slice now delivers:
 - repeated-room, duplicate-ID, invalid-leaf, immutable-source, re-anchoring,
   overflow, and recursive-default fixtures.
 
-The next slice adds terminal transition commands, explicit destructive and
-exit-reconciliation commands, and then the authored undo/redo wrapper.
+The final Phase 2 slices now deliver:
+
+- terminal transition construction from predecessor generated exits with
+  derived Shop/Free occurrence roles;
+- terminal selection and complete shop offer plus purchase editing;
+- explicit ordinary and terminal exit reconciliation;
+- batch and terminal removal, continuation-form replacement, owned-subtree
+  deletion, and complete topology clearing;
+- capacity restoration before reconciliation without state loss;
+- frozen unbounded authored history with exact undo/redo, no-op suppression,
+  redo invalidation after new edits, and destructive recovery fixtures.
+
+Phase 2 is complete. The next work item is the authored-editor smoke slice
+before Phase 3 simulation.

@@ -125,6 +125,27 @@ easier to audit while the app model is still settling.
 - malformed JSON and invalid structural commands fail at their contact
   boundaries.
 
+## Phase 2.5: Authored Editor Smoke
+
+### Deliverables
+
+- Underworld/Surface/Settings application shell;
+- an F-configured project bootstrap for smoke testing;
+- linear start, ordinary decision, picked-exit, terminal, reward, and shop
+  projections bound only to Phase 2 semantic commands;
+- undo/redo controls;
+- deliberately neutral incomplete/invalid presentation without simulated
+  eligibility, findings, or candidate decoration.
+
+### Acceptance
+
+- a user can exercise the complete authored F topology and leaf command surface
+  without editing JSON;
+- selectors render declaration labels and never persist UI categories;
+- retained overflow and explicit destructive actions remain visible;
+- all edits pass through semantic commands and authored history;
+- the slice makes no claim about game validity before Phase 3.
+
 ## Phase 3: F Simulation Vertical Slice
 
 ### Deliverables
@@ -312,9 +333,8 @@ Leave behind:
 
 ## Immediate Next Work Item
 
-Phases 0 and 1 are complete. Phase 2's top-level document codec, configured
-route prefixes, incomplete linear-biome form, and deterministic JSON round
-trips are implemented. Recursive F/G room defaults and the non-null linear
-topology codec are also complete. Semantic address constructors and the first
-ordinary topology/leaf command path are implemented. Next add terminal and
-explicit destructive/reconciliation commands before the undo/redo wrapper.
+Phases 0, 1, and 2 are complete. The authored project now has strict JSON
+persistence, recursive F/G leaves, repeatable occurrences, normalized linear
+topology, semantic addresses, complete F/G topology and leaf commands,
+explicit destructive reconciliation, and exact authored undo/redo. Next build
+the Phase 2.5 authored-editor smoke surface before Phase 3 simulation.
