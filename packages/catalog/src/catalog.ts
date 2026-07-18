@@ -1,69 +1,55 @@
-import type { BiomeStepDeclaration, Catalog, RouteDeclaration } from '@run-planner/core';
+import type { Catalog } from '@run-planner/core';
 
-export interface CatalogInput {
-  readonly version: string;
-  readonly routes: readonly RouteDeclaration[];
-}
+import type { RawCatalogInput } from './declarations';
+import { requireNonEmpty } from './normalization/common';
+import { normalizeEncounterProfiles } from './normalization/encounters';
+import { normalizeBiomeLayouts } from './normalization/layouts';
+import { normalizeRewardGraph, normalizeStores } from './normalization/rewards';
+import { normalizeRooms } from './normalization/rooms';
+import { normalizeRoutes } from './normalization/routes';
+import { normalizeShopOptionSets, normalizeShopProfiles } from './normalization/shops';
 
-export class CatalogContractError extends Error {
-  public constructor(message: string) {
-    super(message);
-    this.name = 'CatalogContractError';
-  }
-}
+export { CatalogContractError } from './normalization/errors';
 
-function requireNonEmpty(value: string, path: string): void {
-  if (value.trim().length === 0) {
-    throw new CatalogContractError(`${path} must not be empty`);
-  }
-}
+export function createCatalog(input: RawCatalogInput): Catalog {
+  requireNonEmpty(input.version, 'version');
 
-function freezeBiomeStep(step: BiomeStepDeclaration): BiomeStepDeclaration {
-  requireNonEmpty(step.key, 'biome step key');
-  requireNonEmpty(step.biome, `biome step ${step.key} biome`);
-
-  return Object.freeze({
-    key: step.key,
-    biome: step.biome,
+  const routes = normalizeRoutes(input.routes);
+  const rewardGraph = normalizeRewardGraph({
+    payloadDomains: input.rewardPayloadDomains,
+    primitives: input.rewardPrimitives,
   });
-}
-
-function freezeRoute(route: RouteDeclaration): RouteDeclaration {
-  requireNonEmpty(route.key, 'route key');
-  requireNonEmpty(route.label, `route ${route.key} label`);
-
-  const seenSteps = new Set<string>();
-  const biomeSteps = route.biomeSteps.map((step) => {
-    if (seenSteps.has(step.key)) {
-      throw new CatalogContractError(`route ${route.key} repeats biome step ${step.key}`);
-    }
-
-    seenSteps.add(step.key);
-    return freezeBiomeStep(step);
-  });
-
-  return Object.freeze({
-    key: route.key,
-    label: route.label,
-    biomeSteps: Object.freeze(biomeSteps),
-  });
-}
-
-export function createCatalog(input: CatalogInput): Catalog {
-  requireNonEmpty(input.version, 'catalog version');
-
-  const seenRoutes = new Set<string>();
-  const routes = input.routes.map((route) => {
-    if (seenRoutes.has(route.key)) {
-      throw new CatalogContractError(`catalog repeats route ${route.key}`);
-    }
-
-    seenRoutes.add(route.key);
-    return freezeRoute(route);
-  });
+  const rewardStores = normalizeStores(input.rewardStores, rewardGraph.primitives);
+  const shopOptionSets = normalizeShopOptionSets(input.shopOptionSets, rewardGraph.primitives);
+  const shopProfiles = normalizeShopProfiles(
+    input.shopProfiles,
+    shopOptionSets,
+    rewardGraph.primitives,
+  );
+  const encounterProfiles = normalizeEncounterProfiles(input.encounterProfiles);
+  const routeSteps = new Set(
+    routes.values.flatMap((route) => route.biomeSteps.map((step) => step.key)),
+  );
+  const rooms = normalizeRooms(
+    input.rooms,
+    routeSteps,
+    rewardStores,
+    rewardGraph.primitives,
+    shopProfiles,
+    encounterProfiles,
+  );
+  const biomeLayouts = normalizeBiomeLayouts(input.biomeLayouts, routeSteps, rooms);
 
   return Object.freeze({
     version: input.version,
-    routes: Object.freeze(routes),
+    routes,
+    rewardPayloadDomains: rewardGraph.payloadDomains,
+    rewardPrimitives: rewardGraph.primitives,
+    rewardStores,
+    shopOptionSets,
+    shopProfiles,
+    encounterProfiles,
+    rooms,
+    biomeLayouts,
   });
 }

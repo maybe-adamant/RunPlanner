@@ -24,7 +24,7 @@ export function App({ catalogSummary }: AppProps) {
           <p className="eyebrow">Hades II Run Director</p>
           <h1>Run Planner</h1>
         </div>
-        <span className="foundation-status">Foundation ready</span>
+        <span className="foundation-status">Catalog migration active</span>
       </header>
 
       <nav className="route-tabs" aria-label="Planner sections">
@@ -43,11 +43,11 @@ export function App({ catalogSummary }: AppProps) {
 
       <section className="workspace" aria-live="polite">
         <div className="workspace-copy">
-          <p className="eyebrow">Phase 0</p>
+          <p className="eyebrow">Phase 1</p>
           <h2>{sections.find((section) => section.key === activeSection)?.label}</h2>
           <p>
-            The application composition root is active. Route declarations and simulation arrive in
-            the next focused slices.
+            The application composition root is active. Verified F declarations are moving through
+            the standalone catalog boundary.
           </p>
         </div>
 
@@ -63,6 +63,14 @@ export function App({ catalogSummary }: AppProps) {
           <div>
             <dt>Biome steps</dt>
             <dd>{catalogSummary.biomeStepCount}</dd>
+          </div>
+          <div>
+            <dt>Reward primitives</dt>
+            <dd>{catalogSummary.rewardPrimitiveCount}</dd>
+          </div>
+          <div>
+            <dt>Rooms</dt>
+            <dd>{catalogSummary.roomCount}</dd>
           </div>
         </dl>
       </section>

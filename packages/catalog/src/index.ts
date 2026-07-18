@@ -1,8 +1,7 @@
 import { createCatalog } from './catalog';
+import { declarations } from './declarations';
 
-export const catalog = createCatalog({
-  version: '0.0.0-foundation',
-  routes: [],
-});
+export const catalog = createCatalog(declarations);
 
-export { CatalogContractError, createCatalog, type CatalogInput } from './catalog';
+export { CatalogContractError, createCatalog } from './catalog';
+export { type RawCatalogInput as CatalogInput } from './declarations';
