@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { CountedRewardBinding, RewardProducerBinding } from '@run-planner/core';
+import type {
+  CountedRewardBinding,
+  RequirementExpression,
+  RewardProducerBinding,
+} from '@run-planner/core';
 
 import { CatalogContractError, createCatalog } from './catalog';
 import { declarations } from './declarations';
@@ -271,6 +275,31 @@ describe('F catalog migration slice', () => {
       new CatalogContractError(
         'rooms[0].incomingReward.storeKeys[0]',
         'unknown reward store MissingStore',
+      ),
+    );
+  });
+
+  it('rejects a current-run requirement kind without an evaluator', () => {
+    const store = declarations.rewardStores[0];
+    const entry = store.entries[0];
+    const requirement = {
+      kind: 'externalSavePredicate',
+    } as unknown as RequirementExpression;
+
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        rewardStores: [
+          {
+            ...store,
+            entries: [{ ...entry, requirement }],
+          },
+        ],
+      }),
+    ).toThrowError(
+      new CatalogContractError(
+        'rewardStores[0].entries[0].requirement.kind',
+        'has no current-run evaluator: externalSavePredicate',
       ),
     );
   });

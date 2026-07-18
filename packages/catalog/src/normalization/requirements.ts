@@ -4,6 +4,7 @@ import type {
   RequirementExpression,
   RewardPrimitive,
 } from '@run-planner/core';
+import { hasRequirementEvaluator } from '@run-planner/core';
 
 import {
   freezeUniqueStrings,
@@ -38,6 +39,10 @@ export function normalizeRequirement(
   requirement: RequirementExpression,
   path: string,
 ): RequirementExpression {
+  if (!hasRequirementEvaluator(requirement.kind)) {
+    fail(`${path}.kind`, `has no current-run evaluator: ${String(requirement.kind)}`);
+  }
+
   switch (requirement.kind) {
     case 'all':
     case 'any': {

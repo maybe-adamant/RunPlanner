@@ -232,6 +232,14 @@ An unknown current-run predicate or missing evaluator is a catalog contract
 failure. External-state omission is not a fallback for unfinished current-run
 support.
 
+The current-run evaluator registry is total over the normalized requirement
+expression union. Catalog normalization rejects a kind absent from that
+registry, and extending the union without extending the registry is a compile
+failure. Evaluation context keeps counters, acquired-history records, current
+shop options, the current room reward, offered exits, event spacing, and flags
+as distinct semantic inputs; evaluators do not reconstruct one axis from
+another.
+
 ## Declaration and Occurrence Identity
 
 The catalog contains exactly one Room Declaration for each unique `gameName`.
