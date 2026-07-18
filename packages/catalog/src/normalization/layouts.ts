@@ -33,15 +33,19 @@ export function normalizeBiomeLayouts(
     if (roomGameNames.length === 0) {
       fail(`${path}.start.roomGameNames`, 'must not be empty');
     }
+    if (layout.start.mode === 'fixed' && roomGameNames.length !== 1) {
+      fail(`${path}.start.roomGameNames`, 'fixed start must reference exactly one room');
+    }
     roomGameNames.forEach((gameName, roomIndex) => {
       const room = rooms.byKey[gameName];
       if (room === undefined) {
         fail(`${path}.start.roomGameNames[${roomIndex}]`, `unknown room ${gameName}`);
       }
-      if (room.biomeStepKey !== layout.biomeStepKey || room.kind !== 'Opening') {
+      const requiredKind = layout.start.mode === 'fixed' ? 'Intro' : 'Opening';
+      if (room.biomeStepKey !== layout.biomeStepKey || room.kind !== requiredKind) {
         fail(
           `${path}.start.roomGameNames[${roomIndex}]`,
-          `${gameName} must be an Opening in ${layout.biomeStepKey}`,
+          `${gameName} must be an ${requiredKind} in ${layout.biomeStepKey}`,
         );
       }
     });
@@ -60,7 +64,7 @@ export function normalizeBiomeLayouts(
     return Object.freeze({
       biomeStepKey: layout.biomeStepKey,
       kind: 'LinearBiome',
-      start: Object.freeze({ mode: 'oneOf', roomGameNames }),
+      start: Object.freeze({ mode: layout.start.mode, roomGameNames }),
       continuation: Object.freeze({ defaultBatchRuleKey: 'Standard' }),
       terminal: Object.freeze({
         roomGameName: layout.terminal.roomGameName,

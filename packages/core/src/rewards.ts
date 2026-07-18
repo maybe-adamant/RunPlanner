@@ -57,12 +57,17 @@ export interface FixedRewardBinding {
   readonly reward: ConcreteReward;
 }
 
+export interface NoneRewardBinding {
+  readonly kind: 'none';
+}
+
 export interface ShopRewardBinding {
   readonly kind: 'shop';
   readonly shopProfileKey: string;
 }
 
-export type RewardProducerBinding = CountedRewardBinding | FixedRewardBinding | ShopRewardBinding;
+export type RewardProducerBinding =
+  CountedRewardBinding | FixedRewardBinding | NoneRewardBinding | ShopRewardBinding;
 
 export interface ShopOptionSet {
   readonly key: string;

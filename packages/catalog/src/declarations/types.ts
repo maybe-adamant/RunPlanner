@@ -66,13 +66,17 @@ export interface RawFixedRewardBinding {
   readonly rewardType: string;
 }
 
+export interface RawNoneRewardBinding {
+  readonly kind: 'none';
+}
+
 export interface RawShopRewardBinding {
   readonly kind: 'shop';
   readonly shopProfileKey: string;
 }
 
 export type RawRewardProducerBinding =
-  RawCountedRewardBinding | RawFixedRewardBinding | RawShopRewardBinding;
+  RawCountedRewardBinding | RawFixedRewardBinding | RawNoneRewardBinding | RawShopRewardBinding;
 
 export interface RawShopOptionSetDeclaration {
   readonly key: string;
@@ -123,7 +127,7 @@ export interface RawLinearBiomeLayoutDeclaration {
   readonly biomeStepKey: string;
   readonly kind: 'LinearBiome';
   readonly start: {
-    readonly mode: 'oneOf';
+    readonly mode: 'fixed' | 'oneOf';
     readonly roomGameNames: readonly string[];
   };
   readonly continuation: {

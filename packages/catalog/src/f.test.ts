@@ -33,15 +33,20 @@ function requireShop(binding: RewardProducerBinding | undefined): ShopRewardBind
 
 describe('complete F catalog', () => {
   it('declares every F opening and special room exactly once', () => {
-    expect(catalog.rooms.values).toHaveLength(32);
+    const fRooms = catalog.rooms.values.filter((room) => room.biomeStepKey === 'Underworld_F');
+    expect(fRooms).toHaveLength(32);
+    expect(fRooms.filter((room) => room.kind === 'Opening').map((room) => room.gameName)).toEqual([
+      'F_Opening01',
+      'F_Opening02',
+      'F_Opening03',
+    ]);
+    expect(fRooms.filter((room) => room.kind === 'Miniboss').map((room) => room.gameName)).toEqual([
+      'F_MiniBoss01',
+      'F_MiniBoss02',
+      'F_MiniBoss03',
+    ]);
     expect(
-      catalog.rooms.values.filter((room) => room.kind === 'Opening').map((room) => room.gameName),
-    ).toEqual(['F_Opening01', 'F_Opening02', 'F_Opening03']);
-    expect(
-      catalog.rooms.values.filter((room) => room.kind === 'Miniboss').map((room) => room.gameName),
-    ).toEqual(['F_MiniBoss01', 'F_MiniBoss02', 'F_MiniBoss03']);
-    expect(
-      catalog.rooms.values
+      fRooms
         .filter((room) => !['Opening', 'Combat', 'Miniboss'].includes(room.kind))
         .map((room) => room.gameName),
     ).toEqual(['F_Story01', 'F_Reprieve01', 'F_Shop01', 'F_PreBoss01']);
@@ -68,6 +73,7 @@ describe('complete F catalog', () => {
   });
 
   it('preserves every F room physical exit in declaration order', () => {
+    const fRooms = catalog.rooms.values.filter((room) => room.biomeStepKey === 'Underworld_F');
     const exitCounts = new Map<string, number>([
       ['F_Opening01', 1],
       ['F_Opening02', 1],
@@ -103,8 +109,8 @@ describe('complete F catalog', () => {
       ['F_PreBoss01', 1],
     ]);
 
-    expect(exitCounts.size).toBe(catalog.rooms.values.length);
-    for (const room of catalog.rooms.values) {
+    expect(exitCounts.size).toBe(fRooms.length);
+    for (const room of fRooms) {
       const exitCount = exitCounts.get(room.gameName);
       if (exitCount === undefined) {
         throw new Error(`missing exit fixture for ${room.gameName}`);

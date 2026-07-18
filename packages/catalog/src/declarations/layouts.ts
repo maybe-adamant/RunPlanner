@@ -16,4 +16,19 @@ export const biomeLayouts = [
     },
     bounds: { maxBatches: 10, maxTargets: 20 },
   },
+  {
+    biomeStepKey: 'Underworld_G',
+    kind: 'LinearBiome',
+    start: {
+      mode: 'fixed',
+      roomGameNames: ['G_Intro'],
+    },
+    continuation: { defaultBatchRuleKey: 'Standard' },
+    terminal: {
+      roomGameName: 'G_PreBoss01',
+      transitionRuleKey: 'PrebossEntry',
+      exitPolicy: { kind: 'allExitsTerminal' },
+    },
+    bounds: { maxBatches: 8, maxTargets: 21 },
+  },
 ] as const satisfies readonly RawLinearBiomeLayoutDeclaration[];

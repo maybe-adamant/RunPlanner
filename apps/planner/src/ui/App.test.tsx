@@ -16,7 +16,7 @@ describe('App', () => {
 
     expect(markup).toContain('Run Planner');
     expect(markup).toContain('Underworld');
-    expect(markup).toContain('0.1.0-fg-slice-4');
+    expect(markup).toContain('0.1.0-fg-slice-5');
     expect(markup).toContain('Catalog migration active');
   });
 });

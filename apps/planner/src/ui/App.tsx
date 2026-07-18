@@ -46,8 +46,8 @@ export function App({ catalogSummary }: AppProps) {
           <p className="eyebrow">Phase 1</p>
           <h2>{sections.find((section) => section.key === activeSection)?.label}</h2>
           <p>
-            The application composition root is active. Verified F declarations are moving through
-            the standalone catalog boundary.
+            The application composition root is active. Verified F/G declarations are available
+            through the standalone catalog boundary.
           </p>
         </div>
 

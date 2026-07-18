@@ -17,6 +17,10 @@ export const encounterProfiles = [
     phases: [{ key: 'Combat', kind: 'combat', countsEncounterDepth: true }],
   },
   {
+    key: 'FixedIntro',
+    phases: [],
+  },
+  {
     key: 'Story',
     phases: [{ key: 'Story', kind: 'story', countsEncounterDepth: false }],
   },
@@ -62,6 +66,39 @@ export const encounterProfiles = [
         kind: 'miniboss',
         countsEncounterDepth: true,
         baselineEncounterKey: 'MiniBossAssassin',
+      },
+    ],
+  },
+  {
+    key: 'G_MiniBoss01',
+    phases: [
+      {
+        key: 'G_MiniBoss01',
+        kind: 'miniboss',
+        countsEncounterDepth: true,
+        baselineEncounterKey: 'MiniBossWaterUnit',
+      },
+    ],
+  },
+  {
+    key: 'G_MiniBoss02',
+    phases: [
+      {
+        key: 'G_MiniBoss02',
+        kind: 'miniboss',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'MiniBossCrawler',
+      },
+    ],
+  },
+  {
+    key: 'G_MiniBoss03',
+    phases: [
+      {
+        key: 'G_MiniBoss03',
+        kind: 'miniboss',
+        countsEncounterDepth: true,
+        baselineEncounterKey: 'MiniBossJellyfish',
       },
     ],
   },

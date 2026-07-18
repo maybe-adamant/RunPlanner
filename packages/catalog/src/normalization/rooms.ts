@@ -3,6 +3,7 @@ import type {
   EncounterProfile,
   FixedRewardBinding,
   ForkedPrebossEntryPolicy,
+  NoneRewardBinding,
   RequirementExpression,
   RewardProducerBinding,
   RewardPrimitive,
@@ -60,6 +61,7 @@ function normalizeCaps(caps: RoomCaps, path: string): RoomCaps {
 }
 
 const roomTemplateKinds = {
+  FixedIntro: 'Intro',
   FixedOpening: 'Opening',
   ForkedPreboss: 'Preboss',
   Fountain: 'Reprieve',
@@ -70,6 +72,7 @@ const roomTemplateKinds = {
 } as const;
 
 const roomTemplateRewardKinds = {
+  FixedIntro: 'none',
   FixedOpening: 'countedChoice',
   ForkedPreboss: 'shop',
   Fountain: 'countedChoice',
@@ -122,6 +125,9 @@ function normalizeRewardBinding(
       kind: 'fixed',
       reward: concreteDefault(primitive),
     }) satisfies FixedRewardBinding;
+  }
+  if (raw.kind === 'none') {
+    return Object.freeze({ kind: 'none' }) satisfies NoneRewardBinding;
   }
 
   if (shops.byKey[raw.shopProfileKey] === undefined) {
