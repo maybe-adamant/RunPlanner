@@ -42,6 +42,16 @@ export interface EncounterProfile {
 export type RoomKind =
   'Combat' | 'Intro' | 'Miniboss' | 'Opening' | 'Preboss' | 'Reprieve' | 'Shop' | 'Story';
 
+export type RoomTemplateKey =
+  | 'FixedIntro'
+  | 'FixedOpening'
+  | 'ForkedPreboss'
+  | 'Fountain'
+  | 'Miniboss'
+  | 'Shop'
+  | 'StandardCombat'
+  | 'Story';
+
 export interface RoomExit {
   readonly index: number;
   readonly targetMode: 'fixedBoss' | 'generated';
@@ -77,7 +87,7 @@ export interface RoomDeclaration {
   readonly label: string;
   readonly biomeStepKey: string;
   readonly kind: RoomKind;
-  readonly templateKey: string;
+  readonly templateKey: RoomTemplateKey;
   readonly exits: readonly RoomExit[];
   readonly incomingReward: RewardProducerBinding;
   readonly entryOfferPolicy?: ForkedPrebossEntryPolicy;

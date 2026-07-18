@@ -52,19 +52,19 @@ scripts.
 
 ## Cross-Cutting Decisions
 
-| Rule family                                | Status   | New authority                                       | Evidence and action                                                           |
-| ------------------------------------------ | -------- | --------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Route order F/G/H/I and N/O/P/Q            | ported   | `CATALOG_MODEL.md`                                  | Explicit route declarations and normalized lookup now exist.                  |
-| Unique Room Declarations by `gameName`     | ported   | `CATALOG_MODEL.md`                                  | Catalog construction rejects duplicate concrete room game names.              |
-| Repeatable Room Occurrences                | ready    | `AUTHORED_PROJECT_MODEL.md`                         | Replaces legacy injective control identity; add repeated-offer fixtures.      |
-| Injective combat canonicalization          | rejected | `F_G_GAME_RULES.md`                                 | Do not substitute unused compatible combat names.                             |
-| Static combat capacity proof               | rejected | `F_G_GAME_RULES.md`                                 | Its purpose was supporting injectivity; retain ordinary topology bounds only. |
-| Creation versus appearance caps            | ready    | `F_G_GAME_RULES.md`, `SIMULATION_AND_VALIDATION.md` | Verify every concrete cap while porting F/G rooms.                            |
-| Offer versus acquisition history           | ready    | `REWARD_MODEL.md`, `SIMULATION_AND_VALIDATION.md`   | Add picked/unpicked peer bag fixtures.                                        |
-| Counter-axis separation                    | ready    | `SIMULATION_AND_VALIDATION.md`                      | Preserve exact event phases and pre/post views.                               |
-| Current-run requirement evaluators         | ported   | `CATALOG_MODEL.md`, `SIMULATION_AND_VALIDATION.md`  | Total pure registry covers every normalized F/G requirement kind.             |
-| External save/profile requirements         | ready    | `CATALOG_MODEL.md`                                  | Omit from production declarations; do not create zombie audit predicates.     |
-| Lib controls, codecs, and commit lifecycle | rejected | `ARCHITECTURE.md`                                   | Do not port.                                                                  |
+| Rule family                                | Status   | New authority                                       | Evidence and action                                                            |
+| ------------------------------------------ | -------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Route order F/G/H/I and N/O/P/Q            | ported   | `CATALOG_MODEL.md`                                  | Explicit route declarations and normalized lookup now exist.                   |
+| Unique Room Declarations by `gameName`     | ported   | `CATALOG_MODEL.md`                                  | Catalog construction rejects duplicate concrete room game names.               |
+| Repeatable Room Occurrences                | ported   | `AUTHORED_PROJECT_MODEL.md`                         | Persisted occurrence IDs support repeated game names with round-trip fixtures. |
+| Injective combat canonicalization          | rejected | `F_G_GAME_RULES.md`                                 | Do not substitute unused compatible combat names.                              |
+| Static combat capacity proof               | rejected | `F_G_GAME_RULES.md`                                 | Its purpose was supporting injectivity; retain ordinary topology bounds only.  |
+| Creation versus appearance caps            | ready    | `F_G_GAME_RULES.md`, `SIMULATION_AND_VALIDATION.md` | Verify every concrete cap while porting F/G rooms.                             |
+| Offer versus acquisition history           | ready    | `REWARD_MODEL.md`, `SIMULATION_AND_VALIDATION.md`   | Add picked/unpicked peer bag fixtures.                                         |
+| Counter-axis separation                    | ready    | `SIMULATION_AND_VALIDATION.md`                      | Preserve exact event phases and pre/post views.                                |
+| Current-run requirement evaluators         | ported   | `CATALOG_MODEL.md`, `SIMULATION_AND_VALIDATION.md`  | Total pure registry covers every normalized F/G requirement kind.              |
+| External save/profile requirements         | ready    | `CATALOG_MODEL.md`                                  | Omit from production declarations; do not create zombie audit predicates.      |
+| Lib controls, codecs, and commit lifecycle | rejected | `ARCHITECTURE.md`                                   | Do not port.                                                                   |
 
 ## Reward Migration
 

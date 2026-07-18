@@ -466,6 +466,32 @@ interface LinearBiomePlan {
   biomeStepKey: string;
   topology: LinearBiomeTopology | null;
 }
+
+interface LinearBiomeTopology {
+  startOccurrenceId: OccurrenceId;
+  occurrences: readonly RoomOccurrence[];
+  continuations: readonly LinearContinuation[];
+}
+
+interface RoomOccurrence {
+  occurrenceId: OccurrenceId;
+  gameName: string;
+  state: AuthoredRoomState;
+}
+
+type LinearContinuation =
+  | {
+      kind: 'batch';
+      parentOccurrenceId: OccurrenceId;
+      targets: readonly LinearTargetReference[];
+      pickedExitIndex: number | null;
+    }
+  | {
+      kind: 'terminal';
+      parentOccurrenceId: OccurrenceId;
+      targets: readonly LinearTargetReference[];
+      pickedExitIndex: number | null;
+    };
 ```
 
 Routes are encoded in normalized catalog order. A route plan's ordered
@@ -482,10 +508,22 @@ contains its selected `gameName` and complete room-local state. Several
 occurrences may reference the same game name; every occurrence ID remains
 unique.
 
-The initial persistence slice accepts the null topology form. The non-null
-`LinearBiomeTopology` enters the same schema version only alongside the typed
-room-state codecs and recursive declaration defaults; generic JSON leaf state
-is never an intermediate format.
+The non-null topology decoder resolves each occurrence through its Room
+Declaration, derives ordinary versus terminal Shop/Free realization from
+structural role, and then dispatches the declaration's typed room-state codec.
+Generic JSON leaf state is never an intermediate format.
+
+Input array order is not semantic authority. Normalization orders continuations
+along the picked spine, targets by physical exit index, and occurrences as the
+start followed by each normalized continuation's targets. Repeated `gameName`
+values remain separate because occurrence IDs are preserved. Continuations
+owned by unpicked targets, multiply owned occurrences, dormant unreferenced
+occurrences, cycles, and role-incompatible rooms or leaves are contract errors.
+
+`pickedExitIndex: null` represents an incomplete decision that has never been
+picked. Command handlers will enforce the stronger edit invariant that an
+existing picked value can only be replaced or structurally deleted; the codec
+does not invent a pick while loading an incomplete project.
 
 The precise nested JSON shape should be locked alongside codecs during the
 first authored-model implementation phase. It must contain semantic values,

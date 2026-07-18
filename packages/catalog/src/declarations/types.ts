@@ -6,6 +6,7 @@ import type {
   RoomCaps,
   RoomCounterEffects,
   RoomKind,
+  RoomTemplateKey,
   RouteDeclaration,
 } from '@run-planner/core';
 
@@ -112,7 +113,7 @@ export interface RawRoomDeclaration {
   readonly label: string;
   readonly biomeStepKey: string;
   readonly kind: RoomKind;
-  readonly templateKey: string;
+  readonly templateKey: RoomTemplateKey;
   readonly exits: readonly RawRoomExitDeclaration[];
   readonly incomingReward: RawRewardProducerBinding;
   readonly entryOfferPolicy?: RawForkedPrebossEntryPolicy;

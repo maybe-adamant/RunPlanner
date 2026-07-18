@@ -1,66 +1,21 @@
 import type { Catalog, RouteDeclaration } from '../catalog';
+import { decodeLinearBiomeTopology } from './linearTopology';
 import {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type AuthoredBiomePlan,
   type AuthoredRoutePlan,
   type ProjectDocument,
 } from './model';
+import {
+  expectArray,
+  expectExactKeys,
+  expectNonBlankString,
+  expectRecord,
+  expectString,
+  failProjectDocument as fail,
+} from './validation';
 
-type UnknownRecord = Record<string, unknown>;
-
-export class ProjectDocumentContractError extends Error {
-  readonly path: string;
-  readonly detail: string;
-
-  constructor(path: string, detail: string) {
-    super(`${path}: ${detail}`);
-    this.name = 'ProjectDocumentContractError';
-    this.path = path;
-    this.detail = detail;
-  }
-}
-
-function fail(path: string, detail: string): never {
-  throw new ProjectDocumentContractError(path, detail);
-}
-
-function expectRecord(value: unknown, path: string): UnknownRecord {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    fail(path, 'must be an object');
-  }
-  return value as UnknownRecord;
-}
-
-function expectExactKeys(value: UnknownRecord, keys: readonly string[], path: string): void {
-  const allowedKeys = new Set(keys);
-  for (const key of Object.keys(value)) {
-    if (!allowedKeys.has(key)) {
-      fail(`${path}.${key}`, 'is not a project document field');
-    }
-  }
-}
-
-function expectArray(value: unknown, path: string): readonly unknown[] {
-  if (!Array.isArray(value)) {
-    fail(path, 'must be an array');
-  }
-  return value;
-}
-
-function expectString(value: unknown, path: string): string {
-  if (typeof value !== 'string') {
-    fail(path, 'must be a string');
-  }
-  return value;
-}
-
-function expectNonBlankString(value: unknown, path: string): string {
-  const stringValue = expectString(value, path);
-  if (stringValue.trim().length === 0) {
-    fail(path, 'must not be blank');
-  }
-  return stringValue;
-}
+export { ProjectDocumentContractError } from './validation';
 
 function decodeBiomePlan(
   value: unknown,
@@ -86,14 +41,15 @@ function decodeBiomePlan(
     fail(`${path}.biomeStepKey`, `expected contiguous step ${expectedBiomeStepKey}`);
   }
 
-  if (plan.topology !== null) {
-    fail(`${path}.topology`, 'must be null until authored topology is created');
-  }
+  const topology =
+    plan.topology === null
+      ? null
+      : decodeLinearBiomeTopology(plan.topology, catalog, layout, `${path}.topology`);
 
   return Object.freeze({
     kind: 'LinearBiome',
     biomeStepKey,
-    topology: null,
+    topology,
   });
 }
 

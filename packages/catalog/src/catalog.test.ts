@@ -224,6 +224,28 @@ describe('F catalog migration slice', () => {
     );
   });
 
+  it('rejects unknown room templates at the declaration boundary', () => {
+    const opening = declarations.rooms[0];
+    expect(opening).toBeDefined();
+    if (opening === undefined) {
+      return;
+    }
+
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        rooms: [
+          {
+            ...opening,
+            templateKey: 'MissingTemplate' as typeof opening.templateKey,
+          },
+        ],
+      }),
+    ).toThrowError(
+      new CatalogContractError('rooms[0].templateKey', 'unknown room template MissingTemplate'),
+    );
+  });
+
   it('requires an explicit default for a multi-store reward binding', () => {
     const combat = declarations.rooms.find((room) => room.gameName === 'F_Combat02');
     expect(combat).toBeDefined();
