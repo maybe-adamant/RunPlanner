@@ -7,8 +7,8 @@ is mutable project history, not a design authority.
 
 ## Current Frontier
 
-Phases 0 and 1 are complete. The next frontier is Phase 2: the versioned
-authored project, codecs, semantic addresses, and edit commands.
+Phases 0 and 1 are complete. Phase 2 is in progress, beginning with the
+versioned authored-project persistence boundary.
 
 Before Phase 1 implementation, the inherited unique-room simplification was
 removed from the app design. Room Declarations remain unique by game name;
@@ -124,6 +124,22 @@ Validation at completion:
 
 ### Phase 2: Authored Project and Commands
 
-Start with the versioned `ProjectDocument` codec and stable repeatable Room
-Occurrence identity. Then add recursive leaf defaults, semantic addresses, and
-topology/leaf commands against exact JSON round-trip fixtures.
+The initial persistence slice now delivers:
+
+- schema version 1 `ProjectDocument`, route-plan, and incomplete linear-biome
+  types;
+- an opaque `OccurrenceId` domain type separate from game room names;
+- catalog-ordered empty-project defaults;
+- configured-route defaults whose biome arrays are the sole contiguous-prefix
+  authority;
+- explicit `topology: null` for configured but unstarted F/G biomes;
+- strict project and JSON decoders with path-bearing contract errors;
+- exact catalog-version compatibility and rejection of unknown persisted
+  fields;
+- deterministic normalized JSON encoding and round-trip fixtures;
+- focused failures for route gaps, unknown schema versions, catalog mismatch,
+  UI-state leakage, invalid JSON, and configuration beyond registered layouts.
+
+The next slice adds recursive declaration-owned room defaults and the non-null
+F/G linear topology/occurrence codecs. Semantic addresses and topology/leaf
+commands follow only after that persisted state is fully typed.

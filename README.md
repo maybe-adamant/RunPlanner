@@ -22,8 +22,8 @@ simulation. It will not contain a second planner or simulator.
 
 Phases 0 and 1 are complete: the TypeScript application foundation and focused
 F/G normalized catalog now exist, including the pure current-run requirement
-evaluator registry. Phase 2 begins the versioned authored project and semantic
-command model.
+evaluator registry. Phase 2 is underway with the versioned authored-project
+codec and configured-route defaults.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

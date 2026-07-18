@@ -449,19 +449,43 @@ representative top-level shape is:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: number;
+  schemaVersion: 1;
   projectId: string;
   name: string;
   catalogVersion: string;
-  routes: Record<RouteKey, AuthoredRoutePlan>;
+  routes: readonly AuthoredRoutePlan[];
+}
+
+interface AuthoredRoutePlan {
+  routeKey: string;
+  biomes: readonly AuthoredBiomePlan[];
+}
+
+interface LinearBiomePlan {
+  kind: 'LinearBiome';
+  biomeStepKey: string;
+  topology: LinearBiomeTopology | null;
 }
 ```
 
-Each route plan stores configured prefix and layout-specific biome plans. A
-biome plan contains an occurrence registry plus topology relationships that
-reference occurrence IDs. Every occurrence contains its selected `gameName`
-and room-local state. Several occurrences may reference the same game name;
-every occurrence ID remains unique.
+Routes are encoded in normalized catalog order. A route plan's ordered
+`biomes` array is its configured-prefix authority, so the document does not
+also persist a count or duplicate biome-key list. The decoder accepts route
+records in any order and canonicalizes them, while biome plans must already be
+the exact contiguous route prefix.
+
+`topology: null` is the complete representation of a configured biome whose
+topology has not been started. It does not choose a default opening or create
+placeholder Room Occurrences. A non-null topology contains the occurrence
+registry and relationships that reference occurrence IDs. Every occurrence
+contains its selected `gameName` and complete room-local state. Several
+occurrences may reference the same game name; every occurrence ID remains
+unique.
+
+The initial persistence slice accepts the null topology form. The non-null
+`LinearBiomeTopology` enters the same schema version only alongside the typed
+room-state codecs and recursive declaration defaults; generic JSON leaf state
+is never an intermediate format.
 
 The precise nested JSON shape should be locked alongside codecs during the
 first authored-model implementation phase. It must contain semantic values,
@@ -471,6 +495,11 @@ Project decoding validates untrusted JSON, applies explicit schema migrations
 when supported, and then performs structural normalization. Unknown versions
 or malformed values fail with a project-load error; they are never silently
 clamped or filled with guesses.
+
+Schema version 1 requires an exact compatible catalog version. Until an
+explicit migration exists, catalog mismatches are load failures rather than
+best-effort reinterpretation. Encoding uses normalized route order and stable
+indented JSON with a trailing newline.
 
 ## Undo and Redo
 
