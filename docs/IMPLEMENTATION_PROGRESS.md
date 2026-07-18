@@ -7,7 +7,8 @@ is mutable project history, not a design authority.
 
 ## Current Frontier
 
-Phase 0 is complete. Phase 1, the focused F/G catalog foundation, is next.
+Phase 0 is complete. Phase 1, the focused F/G catalog foundation, is in
+progress.
 
 Before Phase 1 implementation, the inherited unique-room simplification was
 removed from the app design. Room Declarations remain unique by game name;
@@ -51,3 +52,50 @@ Validation at completion:
 
 No F/G declarations, Tauri dependency, graph library, project model, or
 simulator behavior was introduced during this phase.
+
+## In Progress
+
+### Phase 1: F/G Catalog Foundation
+
+Four migration slices delivered, completing the F declaration surface:
+
+- normalized core catalog, reward, room, encounter, and current-run
+  requirement contracts;
+- path-bearing catalog contract errors;
+- explicit Underworld and Surface route declarations;
+- `BoonSource` and `DevotionPair` payload domains;
+- explicit primitives required by `RunProgress`, `MetaProgress`, and the first F
+  rooms;
+- `RunProgress` in game declaration order with exact multiplicity;
+- `MetaProgress` in current game declaration order with exact multiplicity;
+- current-run portions of RunProgress and MetaProgress entry requirements,
+  with external save/profile gates omitted by the catalog scope policy;
+- `F_Opening`, standard combat, F miniboss, story, reprieve, shop, and preboss
+  encounter profiles;
+- normalized `F_Opening01..03`, all 22 explicit F combat declarations, all
+  three F minibosses, Arachne, Fountain, Midshop, and Preboss;
+- normalized multi-store reward bindings with explicit default-store
+  selection;
+- fixed and shop reward-producer bindings;
+- the ordinary `WorldShop` option sets and three stable offer slots, including
+  recursive concrete defaults;
+- the forked F preboss declaration, with WorldShop as the first offer and at
+  most one filtered free-reward offer;
+- the `Underworld_F` `LinearBiome` layout, its three opening alternatives,
+  ordinary continuation rule, depth-10 terminal, and authored bounds;
+- explicit F miniboss mutual exclusion through current-run entered-room
+  history, plus the F miniboss and shop force windows;
+- executable parity coverage for every F combat room's physical exits,
+  encounter-depth range, reward binding, counters, and appearance cap;
+- executable parity coverage for every remaining F room family, WorldShop,
+  and the F layout;
+- focused success and contract-failure tests at reward, shop, room-reference,
+  and layout contacts;
+- application summary wired to the production catalog slice.
+
+Still required before Phase 1 closes:
+
+- complete G room declarations;
+- G encounter profiles and layout declaration;
+- exact G requirement coverage and declaration parity fixtures;
+- the requirement evaluator registry needed by the focused F/G rules.

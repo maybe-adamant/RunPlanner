@@ -54,8 +54,8 @@ scripts.
 
 | Rule family                                | Status   | New authority                                       | Evidence and action                                                           |
 | ------------------------------------------ | -------- | --------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Route order F/G/H/I and N/O/P/Q            | ready    | `CATALOG_MODEL.md`                                  | Recheck `RoomSets.lua` when route declarations are authored.                  |
-| Unique Room Declarations by `gameName`     | ready    | `CATALOG_MODEL.md`                                  | Preserve one declaration per concrete game room.                              |
+| Route order F/G/H/I and N/O/P/Q            | ported   | `CATALOG_MODEL.md`                                  | Explicit route declarations and normalized lookup now exist.                  |
+| Unique Room Declarations by `gameName`     | ported   | `CATALOG_MODEL.md`                                  | Catalog construction rejects duplicate concrete room game names.              |
 | Repeatable Room Occurrences                | ready    | `AUTHORED_PROJECT_MODEL.md`                         | Replaces legacy injective control identity; add repeated-offer fixtures.      |
 | Injective combat canonicalization          | rejected | `F_G_GAME_RULES.md`                                 | Do not substitute unused compatible combat names.                             |
 | Static combat capacity proof               | rejected | `F_G_GAME_RULES.md`                                 | Its purpose was supporting injectivity; retain ordinary topology bounds only. |
@@ -67,26 +67,41 @@ scripts.
 
 ## Reward Migration
 
-| Family                                                      | Status         | Primary evidence                                                               | Port action                                                                |
-| ----------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| Primitive identities, labels, and acquisition normalization | verify-on-port | `LootData.lua`, `RewardData.lua`, legacy `rewards/declarations/primitives.lua` | Author explicit TypeScript primitives and payload defaults.                |
-| `BoonSource` and `DevotionPair` payloads                    | ready          | legacy reward hierarchy and declarations                                       | Recheck supported source membership; add local payload tests.              |
-| RunProgress and MetaProgress counted bags                   | verify-on-port | `RewardData.lua`, `RewardLogic.lua`, legacy `bags.lua`                         | Preserve order, multiplicity, requirements, refill, and explicit defaults. |
-| Producer positive/negative filters                          | ready          | `REWARD_MODEL.md`, legacy consumer audit                                       | Embed on concrete producers; reject named filtered surfaces.               |
-| Generated-door store resolution                             | verify-on-port | `RoomLogic.lua`, `RewardLogic.lua`, legacy consumer audit                      | Add physical-order fixture before F simulation.                            |
-| World Shop profile                                          | verify-on-port | game shop data, legacy `shops.lua`                                             | Port option sets, stable slots, defaults, labels, and purchase state.      |
-| H/I/N/O/P/Q reward structures                               | deferred       | legacy reward hierarchy and consumer audit                                     | Translate with each biome slice.                                           |
+| Family                                   | Status         | Primary evidence                                                | Port action                                                                                                      |
+| ---------------------------------------- | -------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| RunProgress and MetaProgress primitives  | ported         | `LootData.lua`, `RewardData.lua`, legacy primitive declarations | Required counted-bag primitives, labels, and acquisition aliases normalize.                                      |
+| Remaining G primitives                   | verify-on-port | game reward data and legacy primitive declarations              | Port with their concrete G consumers.                                                                            |
+| `BoonSource` and `DevotionPair` payloads | ported         | game source names and legacy payload declarations               | Membership, distinctness, and recursive defaults pass catalog tests.                                             |
+| RunProgress counted bag                  | ported         | `LootData.lua`, `RequirementsData.lua`                          | Game order and multiplicity are preserved; current-run predicates remain.                                        |
+| MetaProgress counted bag                 | ported         | `LootData.lua`, `RequirementsData.lua`, legacy `bags.lua`       | Current game order and multiplicity are preserved; run predicates remain.                                        |
+| Producer positive/negative filters       | ready          | `REWARD_MODEL.md`, legacy consumer audit                        | Embed on concrete producers; reject named filtered surfaces.                                                     |
+| Generated-door store resolution          | verify-on-port | `RoomLogic.lua`, `RewardLogic.lua`, legacy consumer audit       | Add physical-order fixture before F simulation.                                                                  |
+| World Shop profile                       | ported         | game shop data, legacy `shops.lua`                              | Option sets, stable slots, labels, and recursive defaults normalize; authored purchase state belongs to Phase 2. |
+| H/I/N/O/P/Q reward structures            | deferred       | legacy reward hierarchy and consumer audit                      | Translate with each biome slice.                                                                                 |
+
+The RunProgress port follows `LootData.lua` entry order rather than the
+legacy declaration's reordered table. Mixed game requirements retain their
+current-run predicates while external unlock and prior-save predicates are
+omitted under the catalog scope policy. The resulting declaration is an
+explicit progressed-save planning baseline, not a transcription of external
+`GameState` paths.
+
+The MetaProgress port follows the current 19-entry `LootData.lua` bag rather
+than the legacy prototype's older 13-entry shape. `GiftDrop` is unconditional
+inside the progressed-save planning baseline. Bones and Ashes retain their
+`EnteredBiomes` split; lifetime-resource gates and the `GiftDrop` unlock
+requirement remain outside the modeled input surface.
 
 ## F Migration
 
-| Family                                   | Status         | Primary evidence                                        | Port action                                                                               |
-| ---------------------------------------- | -------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| F layout and terminal depth              | ready          | `RoomDataF.lua`, legacy F biome rules                   | Declare `LinearBiome`, opening alternatives, and depth-10 terminal.                       |
-| F opening production baseline            | ready          | `RoomDataF.lua`, encounter declarations                 | Use `OpeningGeneratedF`; omit `OpeningEmpty` and tutorial variants.                       |
-| F physical exits                         | verify-on-port | `RoomDataF.lua`, extracted map topology                 | Port every concrete exit count and fixture the one-exit exceptions.                       |
-| F combat declarations                    | verify-on-port | `RoomSets.lua`, `RoomDataF.lua`, legacy `f_erebus.lua`  | Port all 22 explicitly; do not infer reward binding from kind.                            |
-| F miniboss, story, fountain, and midshop | verify-on-port | `RoomDataF.lua`, legacy F declarations                  | Port exact requirements, caps, labels, encounters, and bindings.                          |
-| F forked preboss offers                  | ready          | `RoomLogic.lua`, `RewardLogic.lua`, `F_G_GAME_RULES.md` | Represent one occurrence per physical terminal offer; add shop/free acquisition fixtures. |
+| Family                                   | Status | Primary evidence                                        | Port action                                                                                                                 |
+| ---------------------------------------- | ------ | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| F layout and terminal depth              | ported | `RoomDataF.lua`, legacy F biome rules                   | `LinearBiome`, all three opening alternatives, authored bounds, and the depth-10 terminal normalize.                        |
+| F opening production baseline            | ported | `RoomDataF.lua`, `EncounterData.lua`                    | Opening01..03 use counting `OpeningGeneratedF`; progression variants are omitted.                                           |
+| F physical exits                         | ported | `RoomDataF.lua`, extracted map topology                 | Every supported F declaration has exact ordered physical exits in parity fixtures.                                          |
+| F combat declarations                    | ported | `RoomSets.lua`, `RoomDataF.lua`, legacy exit audit      | All 22 are explicit and covered by one complete parity matrix.                                                              |
+| F miniboss, story, fountain, and midshop | ported | `RoomDataF.lua`, legacy F declarations                  | Exact requirements, caps, labels, encounters, bindings, and force windows normalize.                                        |
+| F forked preboss declaration             | ported | `RoomLogic.lua`, `RewardLogic.lua`, `F_G_GAME_RULES.md` | WorldShop-first and one-free-reward policy normalize; physical occurrences and acquisition fixtures belong to later phases. |
 
 ## G Migration
 
