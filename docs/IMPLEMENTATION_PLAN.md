@@ -314,5 +314,6 @@ Leave behind:
 
 Phases 0 and 1 are complete. Phase 2's top-level document codec, configured
 route prefixes, incomplete linear-biome form, and deterministic JSON round
-trips are implemented. Next add recursive declaration-owned room defaults and
-the non-null F/G topology codec before introducing semantic commands.
+trips are implemented. Recursive F/G room defaults and the non-null linear
+topology codec are also complete. Next add semantic addresses and the first
+topology/leaf command handlers.

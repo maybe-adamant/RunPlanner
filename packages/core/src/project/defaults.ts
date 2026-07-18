@@ -1,6 +1,7 @@
 import type { Catalog } from '../catalog';
-import { decodeProjectDocument, ProjectDocumentContractError } from './codec';
+import { decodeProjectDocument } from './codec';
 import { PROJECT_DOCUMENT_SCHEMA_VERSION, type ProjectDocument } from './model';
+import { ProjectDocumentContractError } from './validation';
 
 export interface CreateProjectDocumentOptions {
   readonly projectId: string;

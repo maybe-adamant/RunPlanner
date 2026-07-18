@@ -140,6 +140,22 @@ The initial persistence slice now delivers:
 - focused failures for route gaps, unknown schema versions, catalog mismatch,
   UI-state leakage, invalid JSON, and configuration beyond registered layouts.
 
-The next slice adds recursive declaration-owned room defaults and the non-null
-F/G linear topology/occurrence codecs. Semantic addresses and topology/leaf
-commands follow only after that persisted state is fully typed.
+The second authored-model slice now delivers:
+
+- explicit F/G `RoomTemplateKey` typing at the normalized catalog boundary;
+- recursive counted-reward defaults from binding store through primitive
+  payload;
+- complete WorldShop defaults with stable slots and concrete purchase state;
+- strict authored payload, counted-choice, fixed, shop, and preboss-free state
+  codecs;
+- topology-derived F/G preboss Shop/Free realization roles;
+- non-null `LinearBiomeTopology`, Room Occurrence, target, batch, and terminal
+  contracts;
+- canonical picked-spine, physical-target, and occurrence ordering;
+- structural rejection of duplicate IDs, dangling or multiply owned
+  occurrences, detached downstream continuations, cycles, invalid roles,
+  unreferenced dormant leaves, and topology bounds overflow;
+- round-trip coverage for two distinct occurrences of the same F combat room.
+
+The next slice adds semantic address constructors and the first topology/leaf
+commands against this fully typed persisted state.

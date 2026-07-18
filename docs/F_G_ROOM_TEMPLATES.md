@@ -252,7 +252,7 @@ type ForkedPrebossState =
     }
   | {
       kind: 'freeReward';
-      reward: CountedRewardChoice;
+      choice: CountedRewardChoice;
     };
 ```
 

@@ -12,6 +12,7 @@ import type {
   RoomDeclaration,
   RoomExit,
   RoomForce,
+  RoomTemplateKey,
   ShopProfile,
   ShopRewardBinding,
 } from '@run-planner/core';
@@ -69,7 +70,7 @@ const roomTemplateKinds = {
   Shop: 'Shop',
   StandardCombat: 'Combat',
   Story: 'Story',
-} as const;
+} as const satisfies Readonly<Record<RoomTemplateKey, RoomDeclaration['kind']>>;
 
 const roomTemplateRewardKinds = {
   FixedIntro: 'none',
@@ -80,18 +81,17 @@ const roomTemplateRewardKinds = {
   Shop: 'shop',
   StandardCombat: 'countedChoice',
   Story: 'fixed',
-} as const;
+} as const satisfies Readonly<Record<RoomTemplateKey, RewardProducerBinding['kind']>>;
 
 function validateTemplate(room: RawRoomDeclaration, path: string): void {
-  const expectedKind = roomTemplateKinds[room.templateKey as keyof typeof roomTemplateKinds];
-  if (expectedKind === undefined) {
-    fail(`${path}.templateKey`, `unknown room template ${room.templateKey}`);
+  if (!Object.hasOwn(roomTemplateKinds, room.templateKey)) {
+    fail(`${path}.templateKey`, `unknown room template ${String(room.templateKey)}`);
   }
+  const expectedKind = roomTemplateKinds[room.templateKey];
   if (room.kind !== expectedKind) {
     fail(`${path}.kind`, `${room.templateKey} requires room kind ${expectedKind}`);
   }
-  const expectedRewardKind =
-    roomTemplateRewardKinds[room.templateKey as keyof typeof roomTemplateRewardKinds];
+  const expectedRewardKind = roomTemplateRewardKinds[room.templateKey];
   if (room.incomingReward.kind !== expectedRewardKind) {
     fail(
       `${path}.incomingReward.kind`,
