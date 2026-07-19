@@ -24,11 +24,36 @@ export interface RouteDeclaration {
 
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';
 
+export interface EncounterPhasePresence {
+  readonly kind: 'authoredOptional';
+  readonly decisionPoint: 'prepareRoom';
+  readonly requirement: RequirementExpression;
+  readonly defaultActive: boolean;
+}
+
+export interface RewardWheelOfferPoint {
+  readonly kind: 'rewardWheel';
+  readonly key: string;
+  readonly reward: CountedRewardBinding;
+  readonly defaultStoreKey: string;
+  readonly offerKeys: readonly string[];
+  readonly offerCount: {
+    readonly min: number;
+    readonly max: number;
+    readonly defaultValue: number;
+  };
+  readonly picked: 'exactlyOne';
+  readonly offerTiming: 'encounterStart';
+  readonly acquisitionTiming: 'postCombat';
+}
+
 export interface EncounterPhase {
   readonly key: string;
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
   readonly baselineEncounterKey?: string;
+  readonly presence?: EncounterPhasePresence;
+  readonly offerPoint?: RewardWheelOfferPoint;
 }
 
 export interface EncounterProfile {
@@ -39,6 +64,7 @@ export interface EncounterProfile {
 export type RoomKind =
   | 'Boss'
   | 'Combat'
+  | 'Devotion'
   | 'Hub'
   | 'Intro'
   | 'Miniboss'
@@ -50,6 +76,7 @@ export type RoomKind =
   | 'Story';
 
 export type RoomTemplateKey =
+  | 'Devotion'
   | 'FixedIntro'
   | 'FixedOpening'
   | 'FieldsCombat'
@@ -59,6 +86,7 @@ export type RoomTemplateKey =
   | 'RewardlessCombat'
   | 'Shop'
   | 'ShopPreboss'
+  | 'ShipCombat'
   | 'StandardCombat'
   | 'Story';
 
@@ -113,6 +141,7 @@ export type RoomForce =
       readonly start: number;
       readonly deadline: number;
     }
+  | { readonly kind: 'requirement'; readonly requirement: RequirementExpression }
   | { readonly kind: 'always' };
 
 export interface ForkedPrebossEntryPolicy {

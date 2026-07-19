@@ -78,8 +78,8 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
       />
     );
   }
-  if (state.kind === 'fieldsCombat') {
-    throw new Error(`${room.gameName} Fields editor is not active`);
+  if (state.kind === 'fieldsCombat' || state.kind === 'shipCombat') {
+    throw new Error(`${room.gameName} ${state.kind} editor is not active`);
   }
   if (state.shop === undefined) {
     return (

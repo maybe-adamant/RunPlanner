@@ -419,10 +419,12 @@ function validateRequirementRewardReferences(
       return;
     }
     case 'recordCount':
+    case 'distinctRecordKeyCount':
     case 'counterRange':
     case 'flagEquals':
     case 'minExits':
     case 'minRoomsSinceEvent':
+    case 'recentEncounterPhaseCount':
       return;
   }
 }

@@ -18,7 +18,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const biomes = normalizeBiomes(input.biomes);
   const routes = normalizeRoutes(input.routes, biomes);
   const rewards = createRewardKernelCatalog(input.rewardKernel);
-  const encounterProfiles = normalizeEncounterProfiles(input.encounterProfiles);
+  const encounterProfiles = normalizeEncounterProfiles(input.encounterProfiles, rewards);
   const exitCompatibilityPolicies = normalizeExitCompatibilityPolicies(
     input.exitCompatibilityPolicies,
   );

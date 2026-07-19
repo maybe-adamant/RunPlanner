@@ -61,6 +61,7 @@ function requirementContext(
     currentRoomRewardType: undefined,
     runDepthCache: 8,
     lastEventRunDepthCaches: {},
+    recentEncounterPhases: [],
     offeredExitCount: 3,
     flags: { allSpellInvested: false, pendingSpellDrop: false },
     ...overrides,

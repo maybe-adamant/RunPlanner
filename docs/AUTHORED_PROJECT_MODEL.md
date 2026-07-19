@@ -697,6 +697,19 @@ interface RoomOccurrence {
   state: AuthoredRoomState;
 }
 
+interface ShipCombatState {
+  kind: 'shipCombat';
+  encounterCount: 2 | 3;
+  wheels: Readonly<Record<'wheel1' | 'wheel2', RewardWheelState>>;
+}
+
+interface RewardWheelState {
+  storeKey: RewardStoreKey;
+  offerCount: 1 | 2;
+  offers: Readonly<Record<'offer1' | 'offer2', ResolvedRewardOffer>>;
+  pickedOfferIndex: 1 | 2;
+}
+
 type LinearContinuation =
   | {
       kind: 'batch';
@@ -733,6 +746,10 @@ which roles are admitted. For I, a picked `I_PreBoss02` derives
 parent occurrence is already its source, and the normalized layout policy owns
 how to select that source's semantic offer point. O resolves the last active
 ShipCombat wheel from the occurrence's authored encounter-count state.
+Both wheel records remain complete at maximum capacity. An inactive second
+combat or second offer emits no events but is never erased from authored state;
+the active counts select the meaningful prefix. `pickedOfferIndex` must address
+that active prefix.
 
 `AuthoredBatchState` is decoded against the normalized batch policy selected by
 the biome layout; the persisted document does not carry a user-authored rule

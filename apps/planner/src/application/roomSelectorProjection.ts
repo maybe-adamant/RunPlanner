@@ -17,6 +17,7 @@ export function roomCategoryForKind(kind: RoomKind): OrdinaryRoomCategory | unde
     case 'Opening':
     case 'Preboss':
     case 'Boss':
+    case 'Devotion':
     case 'Hub':
     case 'PostBoss':
       return undefined;

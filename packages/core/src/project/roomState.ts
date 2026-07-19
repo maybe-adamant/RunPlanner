@@ -1,4 +1,9 @@
-import type { Catalog, LocalChildDescriptor, RoomDeclaration } from '../catalog';
+import type {
+  Catalog,
+  LocalChildDescriptor,
+  RewardWheelOfferPoint,
+  RoomDeclaration,
+} from '../catalog';
 import type { CountedRewardBinding, ShopRewardBinding } from '../rewards';
 import type {
   ResolvedRewardOffer,
@@ -6,10 +11,17 @@ import type {
   RewardTypeDeclaration,
   ShopProfileDeclaration,
 } from '../rewardKernel/model';
-import type { AuthoredRoomState, ShopOfferState, ShopState } from './model';
+import type {
+  AuthoredRoomState,
+  RewardWheelState,
+  ShipCombatState,
+  ShopOfferState,
+  ShopState,
+} from './model';
 import {
   expectBoolean,
   expectExactKeys,
+  expectPositiveInteger,
   expectRecord,
   expectString,
   failProjectDocument,
@@ -122,6 +134,51 @@ function defaultFieldsCages(room: RoomDeclaration, path: string) {
   return Object.freeze(cages);
 }
 
+function requireShipCombatWheels(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  path: string,
+): readonly RewardWheelOfferPoint[] {
+  const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
+  if (profile === undefined) {
+    failProjectDocument(path, `unknown encounter profile ${room.encounterProfileKey}`);
+  }
+  const wheels = profile.phases.flatMap((phase) =>
+    phase.offerPoint === undefined ? [] : [phase.offerPoint],
+  );
+  if (wheels.length !== 2 || wheels[0]?.key !== 'wheel1' || wheels[1]?.key !== 'wheel2') {
+    failProjectDocument(path, 'ShipCombat requires wheel1 and wheel2 offer points');
+  }
+  return wheels;
+}
+
+function defaultRewardWheel(descriptor: RewardWheelOfferPoint, path: string): RewardWheelState {
+  const offer = defaultCountedOffer(descriptor.reward, descriptor.defaultStoreKey, path);
+  return Object.freeze({
+    storeKey: descriptor.defaultStoreKey,
+    offerCount: descriptor.offerCount.defaultValue,
+    offers: Object.freeze(
+      Object.fromEntries(descriptor.offerKeys.map((offerKey) => [offerKey, offer])),
+    ),
+    pickedOfferIndex: 1,
+  });
+}
+
+function defaultShipCombatState(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  path: string,
+): ShipCombatState {
+  const wheels = requireShipCombatWheels(catalog, room, path);
+  return Object.freeze({
+    kind: 'shipCombat',
+    encounterCount: 2,
+    wheels: Object.freeze(
+      Object.fromEntries(wheels.map((wheel) => [wheel.key, defaultRewardWheel(wheel, path)])),
+    ),
+  });
+}
+
 export function createDefaultRoomState(
   catalog: Catalog,
   room: RoomDeclaration,
@@ -138,6 +195,9 @@ export function createDefaultRoomState(
     case 'FieldsCombat':
       requireOrdinaryRole(role, room, path);
       return Object.freeze({ kind: 'fieldsCombat', cages: defaultFieldsCages(room, path) });
+    case 'ShipCombat':
+      requireOrdinaryRole(role, room, path);
+      return defaultShipCombatState(catalog, room, path);
     case 'FixedOpening':
     case 'Fountain':
     case 'Miniboss':
@@ -151,10 +211,14 @@ export function createDefaultRoomState(
           path,
         ),
       });
+    case 'Devotion':
     case 'Story': {
       requireOrdinaryRole(role, room, path);
       if (room.incomingReward.kind !== 'fixed') {
-        failProjectDocument(path, 'Story requires a fixed reward binding');
+        failProjectDocument(
+          path,
+          `${authoredTemplateKey(room, path)} requires a fixed reward binding`,
+        );
       }
       return Object.freeze({
         kind: 'fixed',
@@ -288,6 +352,86 @@ function decodeCountedOffer(
   return offer;
 }
 
+function decodeRewardWheel(
+  value: unknown,
+  catalog: Catalog,
+  descriptor: RewardWheelOfferPoint,
+  path: string,
+): RewardWheelState {
+  const wheel = expectRecord(value, path);
+  expectExactKeys(wheel, ['storeKey', 'offerCount', 'offers', 'pickedOfferIndex'], path);
+  const storeKey = expectString(wheel.storeKey, `${path}.storeKey`);
+  if (!descriptor.reward.storeKeys.includes(storeKey)) {
+    failProjectDocument(`${path}.storeKey`, `${storeKey} is not available from this wheel`);
+  }
+  const offerCount = expectPositiveInteger(wheel.offerCount, `${path}.offerCount`);
+  if (offerCount < descriptor.offerCount.min || offerCount > descriptor.offerCount.max) {
+    failProjectDocument(
+      `${path}.offerCount`,
+      `must be between ${descriptor.offerCount.min} and ${descriptor.offerCount.max}`,
+    );
+  }
+  const rawOffers = expectRecord(wheel.offers, `${path}.offers`);
+  expectExactKeys(rawOffers, descriptor.offerKeys, `${path}.offers`);
+  const offers: Record<string, ResolvedRewardOffer> = {};
+  for (const offerKey of descriptor.offerKeys) {
+    offers[offerKey] = decodeCountedOffer(
+      rawOffers[offerKey],
+      catalog,
+      descriptor.reward,
+      `${path}.offers.${offerKey}`,
+    );
+  }
+  const pickedOfferIndex = expectPositiveInteger(
+    wheel.pickedOfferIndex,
+    `${path}.pickedOfferIndex`,
+  );
+  if (pickedOfferIndex > offerCount) {
+    failProjectDocument(`${path}.pickedOfferIndex`, 'must select an active offer');
+  }
+  return Object.freeze({
+    storeKey,
+    offerCount,
+    offers: Object.freeze(offers),
+    pickedOfferIndex,
+  });
+}
+
+function decodeShipCombatState(
+  value: Record<string, unknown>,
+  catalog: Catalog,
+  room: RoomDeclaration,
+  path: string,
+): ShipCombatState {
+  expectedKind(value.kind, 'shipCombat', path);
+  expectExactKeys(value, ['kind', 'encounterCount', 'wheels'], path);
+  const encounterCount = expectPositiveInteger(value.encounterCount, `${path}.encounterCount`);
+  if (encounterCount !== 2 && encounterCount !== 3) {
+    failProjectDocument(`${path}.encounterCount`, 'must be 2 or 3');
+  }
+  const descriptors = requireShipCombatWheels(catalog, room, path);
+  const rawWheels = expectRecord(value.wheels, `${path}.wheels`);
+  expectExactKeys(
+    rawWheels,
+    descriptors.map((descriptor) => descriptor.key),
+    `${path}.wheels`,
+  );
+  const wheels: Record<string, RewardWheelState> = {};
+  for (const descriptor of descriptors) {
+    wheels[descriptor.key] = decodeRewardWheel(
+      rawWheels[descriptor.key],
+      catalog,
+      descriptor,
+      `${path}.wheels.${descriptor.key}`,
+    );
+  }
+  return Object.freeze({
+    kind: 'shipCombat',
+    encounterCount,
+    wheels: Object.freeze(wheels),
+  });
+}
+
 function decodeShopState(
   value: unknown,
   catalog: Catalog,
@@ -386,6 +530,9 @@ export function decodeRoomState(
       }
       return Object.freeze({ kind: 'fieldsCombat', cages: Object.freeze(cages) });
     }
+    case 'ShipCombat':
+      requireOrdinaryRole(role, room, path);
+      return decodeShipCombatState(state, catalog, room, path);
     case 'FixedOpening':
     case 'Fountain':
     case 'Miniboss':
@@ -402,12 +549,16 @@ export function decodeRoomState(
           `${path}.offer`,
         ),
       });
+    case 'Devotion':
     case 'Story': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'fixed', path);
       expectExactKeys(state, ['kind', 'payload'], path);
       if (room.incomingReward.kind !== 'fixed') {
-        failProjectDocument(path, 'Story requires a fixed reward binding');
+        failProjectDocument(
+          path,
+          `${authoredTemplateKey(room, path)} requires a fixed reward binding`,
+        );
       }
       const rewardType = catalog.rewards.rewardTypes.byKey[room.incomingReward.offer.rewardType];
       if (rewardType === undefined) {

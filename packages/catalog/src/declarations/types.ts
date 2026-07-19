@@ -30,6 +30,27 @@ export interface RawEncounterPhaseDeclaration {
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
   readonly baselineEncounterKey?: string;
+  readonly presence?: {
+    readonly kind: 'authoredOptional';
+    readonly decisionPoint: 'prepareRoom';
+    readonly requirement: RequirementExpression;
+    readonly defaultActive: boolean;
+  };
+  readonly offerPoint?: {
+    readonly kind: 'rewardWheel';
+    readonly key: string;
+    readonly reward: RawCountedRewardBinding;
+    readonly defaultStoreKey: string;
+    readonly offerKeys: readonly string[];
+    readonly offerCount: {
+      readonly min: number;
+      readonly max: number;
+      readonly defaultValue: number;
+    };
+    readonly picked: 'exactlyOne';
+    readonly offerTiming: 'encounterStart';
+    readonly acquisitionTiming: 'postCombat';
+  };
 }
 
 export interface RawEncounterProfileDeclaration {

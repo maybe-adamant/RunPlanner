@@ -16,6 +16,14 @@ function roomIndex(gameName: string): number {
   return index;
 }
 
+function encounterIndex(key: string): number {
+  const index = declarations.encounterProfiles.findIndex((profile) => profile.key === key);
+  if (index < 0) {
+    throw new Error(`missing encounter fixture ${key}`);
+  }
+  return index;
+}
+
 describe('shared structural catalog vocabulary', () => {
   it('normalizes typed physical exits through one compatibility authority', () => {
     const catalog = createCatalog(declarations);
@@ -860,6 +868,84 @@ describe('shared structural catalog vocabulary', () => {
       new CatalogContractError(
         `rooms[${index}].localChildren[0].fields`,
         'FieldsCombat cages do not own authored fields',
+      ),
+    );
+  });
+
+  it('rejects malformed ShipCombat offer-point and history contracts at construction', () => {
+    const shipIndex = encounterIndex('ShipCombat');
+    const room = declarations.rooms[roomIndex('O_Combat01')];
+    const profile = declarations.encounterProfiles[shipIndex];
+    if (room?.gameName !== 'O_Combat01' || profile?.key !== 'ShipCombat') {
+      throw new Error('ShipCombat fixtures are missing');
+    }
+
+    expect(() =>
+      createCatalog(
+        raw({
+          ...declarations,
+          encounterProfiles: declarations.encounterProfiles.map((candidate, index) =>
+            index === shipIndex
+              ? {
+                  ...candidate,
+                  phases: candidate.phases.map((phase) =>
+                    phase.key === 'Combat1' && phase.offerPoint !== undefined
+                      ? {
+                          ...phase,
+                          offerPoint: { ...phase.offerPoint, defaultStoreKey: 'TyphonBossRewards' },
+                        }
+                      : phase,
+                  ),
+                }
+              : candidate,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `encounterProfiles[${shipIndex}].phases[1].offerPoint.defaultStoreKey`,
+        'must belong to the wheel reward store domain',
+      ),
+    );
+
+    expect(() =>
+      createCatalog(
+        raw({
+          ...declarations,
+          encounterProfiles: declarations.encounterProfiles.map((candidate, index) =>
+            index === shipIndex
+              ? {
+                  ...candidate,
+                  phases: candidate.phases.map((phase) =>
+                    phase.key === 'Intro' ? { ...phase, kind: 'story' } : phase,
+                  ),
+                }
+              : candidate,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `rooms[${roomIndex('O_Combat01')}].encounterProfileKey`,
+        'ShipCombat must define canonical combat Intro, Combat1/wheel1, and optional Combat2/wheel2 phases with two offer slots',
+      ),
+    );
+
+    expect(() =>
+      createCatalog(
+        raw({
+          ...declarations,
+          rooms: declarations.rooms.map((candidate) =>
+            candidate.gameName === room.gameName
+              ? { ...candidate, enteredRewardStoreHistory: { kind: 'resolvedOffer' } }
+              : candidate,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `rooms[${roomIndex('O_Combat01')}].enteredRewardStoreHistory`,
+        'ShipCombat history is emitted by its active wheel offer points',
       ),
     );
   });
