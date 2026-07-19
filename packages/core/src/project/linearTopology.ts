@@ -237,7 +237,9 @@ export function decodeLinearBiomeTopology(
       occurrenceById,
       kind === 'terminal' ? maximumTerminalExitIndex : maximumExitIndex,
     );
-    targetCount += targets.length;
+    if (kind === 'batch') {
+      targetCount += targets.length;
+    }
     const pickedExitIndex = decodePickedExitIndex(
       rawContinuation.pickedExitIndex,
       `${continuationPath}.pickedExitIndex`,

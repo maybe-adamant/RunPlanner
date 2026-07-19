@@ -863,6 +863,25 @@ describe('terminal and destructive project commands', () => {
     ).toThrowError(ProjectCommandContractError);
   });
 
+  it('applies maxTargets only to ordinary generated targets', () => {
+    const parentId = createOccurrenceId('bounded-parent');
+    const shopId = createOccurrenceId('bounded-shop');
+    const freeId = createOccurrenceId('bounded-free');
+    let project = selectedTwoExitParent(parentId);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTerminalTransition',
+      continuation: createContinuationAddress(biome, parentId),
+      targetOccurrenceIds: [shopId, freeId],
+    });
+    const boundedLayout = { ...layout, bounds: { maxBatches: 1, maxTargets: 1 } };
+    const boundedCatalog = {
+      ...catalog,
+      biomeLayouts: collection([boundedLayout], (candidate) => candidate.biomeKey),
+    };
+
+    expect(parseProjectDocument(encodeProjectDocument(project), boundedCatalog)).toEqual(project);
+  });
+
   it('retains, restores, and explicitly reconciles terminal overflow', () => {
     const parentId = createOccurrenceId('terminal-parent');
     const shopId = createOccurrenceId('terminal-shop');

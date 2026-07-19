@@ -55,7 +55,7 @@ describe('F catalog migration slice', () => {
   });
 
   it('normalizes verified reward, encounter, and room declarations', () => {
-    expect(catalog.version).toBe('0.5.0-biome-identity');
+    expect(catalog.version).toBe('0.6.0-q-dormant');
     expect(catalog.routes.byKey.Underworld?.biomeKeys).toEqual(['F', 'G', 'H', 'I']);
 
     const runProgress = catalog.rewards.stores.byKey.RunProgress;

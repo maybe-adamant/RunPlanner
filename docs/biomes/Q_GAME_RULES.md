@@ -2,9 +2,9 @@
 
 ## Purpose and Status
 
-This document is the concrete game-rule authority for the Summit (`Q`). It
-exists before the Q declaration port so that Q can pressure-test the shared
-model without inheriting assumptions from ordinary F/G/P generated biomes.
+This document is the concrete game-rule authority for the Summit (`Q`). Q
+pressure-tests the normalized catalog without inheriting assumptions from
+ordinary F/G/P generated biomes.
 
 Shared picker, physical-door, cap, force, offer/acquisition, and occurrence
 semantics are defined by `../GAME_GENERATION_RULES.md`. Q remains a
@@ -12,9 +12,9 @@ semantics are defined by `../GAME_GENERATION_RULES.md`. Q remains a
 ordinary linear biome and its supported spine is reward-free outside the two
 miniboss offers and the preboss shop.
 
-Q declarations intentionally remain unported until every biome audit has
-pressure-tested and reconciled the shared catalog vocabulary. Documentation
-coverage does not activate Q simulation, authoring, or editor support.
+Q declarations are imported under the progressed-save, neutral-difficulty
+repeat-run baseline. Simulation, authoring, and editor support remain dormant;
+normalization does not activate those product capabilities.
 
 ## Evidence Status
 
@@ -52,26 +52,26 @@ This audit corrects four inherited assumptions:
 ## Feature Projection Map
 
 The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
-coverage is defined by `../MIGRATION_PROVENANCE.md`. Q currently has documentation
-coverage only.
+coverage is defined by `../MIGRATION_PROVENANCE.md`. Q has documentation and
+declaration coverage only.
 
-| Feature                     | Verified game behavior                                                                                              | Disposition and planner projection                                                | Current coverage | Reconsider when                                                 |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------- |
-| Scripted linear layout      | Fixed intro, foyer, forced two-exit combat, forced miniboss, ordinary combat, a second forced pair, and direct shop | **Exact:** `LinearBiome` with declaration-driven staged candidate pools           | documented       | --                                                              |
-| Room-set weights            | Every listed Q room occurs once                                                                                     | **Simplified:** preserve support and forced pools, never likelihood               | documented       | Probability analysis or seeded replay becomes a product goal    |
-| Foyer variants              | `Q_Combat10/11` are one-exit, reward-free first-stage rooms; `Q_Combat11` has a prior-run encounter-completion gate | **Simplified:** both remain ordinary progressed-save candidates                   | documented       | Save-profile state becomes a project input                      |
-| Forced fork rooms           | Three two-exit rooms are forced at source depth 2 and three at source depth 5                                       | **Exact:** room declarations and physical exit fixtures                           | documented       | --                                                              |
-| Paired miniboss offers      | Each physical exit independently picks from the eligible forced miniboss pool; peers may repeat                     | **Exact:** two ordered target occurrences, one picked                             | documented       | --                                                              |
-| Miniboss progression gates  | Stalker and Eye require prior lifetime encounter completions                                                        | **Excluded:** progressed-save baseline includes both in their stage pools         | documented       | Save-profile state becomes a project input                      |
-| Reward-free combat spine    | Intro, foyer, ordinary combat, and forced fork rooms have no normal incoming reward                                 | **Exact:** `none` producers and no generated base-store authoring                 | documented       | A supported target begins observing the generated store         |
-| Miniboss rewards            | Every supported miniboss forces `TyphonBossRewards`                                                                 | **Exact:** counted resolved offer from that store on every physical offer         | documented       | --                                                              |
-| Miniboss encounter depth    | Brute, Stalker, and Tail count; Eye does not                                                                        | **Exact:** separate encounter profiles                                            | documented       | --                                                              |
-| Direct preboss shop         | Exact-depth-7 `Q_PreBoss01` is a single direct `Q_WorldShop`, not shop-then-fill                                    | **Exact:** one terminal occurrence with Q-specific shop state                     | documented       | --                                                              |
-| Boss and route completion   | Neutral `Q_Boss01` ends the canonical repeat-run route after progressed ending state                                | **Exact:** derived boss declaration followed by route completion                  | documented       | The product supports an explicit narrative-progression run mode |
-| Palace postboss and story   | Before the ending-state override, boss links to postboss and postboss links directly to Palace story                | **Excluded:** narrative-progression sequence omitted from the repeat-run baseline | documented       | Narrative progression becomes a project input                   |
-| Save/profile and difficulty | Intro combat, foyer/miniboss candidates, ending sequence, and boss variant depend on persistent state               | **Excluded:** progressed-save neutral-difficulty baseline                         | documented       | Save-profile or difficulty state becomes a project input        |
-| Automatic boss drops        | Typhon emits boss-specific and equipped-weapon-dependent drops                                                      | **Excluded:** no supported authored choice, store ratio, or execution instruction | documented       | A consumer needs those exact drops                              |
-| Optional interactions       | Challenges, Surface shop, gathering, and rerolls can add optional state                                             | **Deferred:** canonical v1 traces never activate or use them                      | documented       | The corresponding authored action enters product scope          |
+| Feature                     | Verified game behavior                                                                                              | Disposition and planner projection                                                | Current coverage     | Reconsider when                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- |
+| Scripted linear layout      | Fixed intro, foyer, forced two-exit combat, forced miniboss, ordinary combat, a second forced pair, and direct shop | **Exact:** `LinearBiome` with declaration-driven staged candidate pools           | documented, declared | --                                                              |
+| Room-set weights            | Every listed Q room occurs once                                                                                     | **Simplified:** preserve support and forced pools, never likelihood               | documented           | Probability analysis or seeded replay becomes a product goal    |
+| Foyer variants              | `Q_Combat10/11` are one-exit, reward-free first-stage rooms; `Q_Combat11` has a prior-run encounter-completion gate | **Simplified:** both remain ordinary progressed-save candidates                   | documented, declared | Save-profile state becomes a project input                      |
+| Forced fork rooms           | Three two-exit rooms are forced at source depth 2 and three at source depth 5                                       | **Exact:** room declarations and physical exit fixtures                           | documented, declared | --                                                              |
+| Paired miniboss offers      | Each physical exit independently picks from the eligible forced miniboss pool; peers may repeat                     | **Exact:** two ordered target occurrences, one picked                             | documented, declared | --                                                              |
+| Miniboss progression gates  | Stalker and Eye require prior lifetime encounter completions                                                        | **Excluded:** progressed-save baseline includes both in their stage pools         | documented           | Save-profile state becomes a project input                      |
+| Reward-free combat spine    | Intro, foyer, ordinary combat, and forced fork rooms have no normal incoming reward                                 | **Exact:** `none` producers and no generated base-store authoring                 | documented, declared | A supported target begins observing the generated store         |
+| Miniboss rewards            | Every supported miniboss forces `TyphonBossRewards`                                                                 | **Exact:** counted resolved offer from that store on every physical offer         | documented, declared | --                                                              |
+| Miniboss encounter depth    | Brute, Stalker, and Tail count; Eye does not                                                                        | **Exact:** separate encounter profiles                                            | documented, declared | --                                                              |
+| Direct preboss shop         | Exact-depth-7 `Q_PreBoss01` is a single direct `Q_WorldShop`, not shop-then-fill                                    | **Exact:** one terminal occurrence with Q-specific shop state                     | documented, declared | --                                                              |
+| Boss and route completion   | Neutral `Q_Boss01` ends the canonical repeat-run route after progressed ending state                                | **Exact:** derived boss declaration followed by route completion                  | documented, declared | The product supports an explicit narrative-progression run mode |
+| Palace postboss and story   | Before the ending-state override, boss links to postboss and postboss links directly to Palace story                | **Excluded:** narrative-progression sequence omitted from the repeat-run baseline | documented           | Narrative progression becomes a project input                   |
+| Save/profile and difficulty | Intro combat, foyer/miniboss candidates, ending sequence, and boss variant depend on persistent state               | **Excluded:** progressed-save neutral-difficulty baseline                         | documented           | Save-profile or difficulty state becomes a project input        |
+| Automatic boss drops        | Typhon emits boss-specific and equipped-weapon-dependent drops                                                      | **Excluded:** no supported authored choice, store ratio, or execution instruction | documented           | A consumer needs those exact drops                              |
+| Optional interactions       | Challenges, Surface shop, gathering, and rerolls can add optional state                                             | **Deferred:** canonical v1 traces never activate or use them                      | documented           | The corresponding authored action enters product scope          |
 
 ## Possibility Contract
 
@@ -250,18 +250,18 @@ uses the ordinary generated RunProgress/MetaProgress store:
 
 The target ratio remains documented game evidence, but it is unobservable to
 the supported reward simulation. A Q generated batch therefore does not own a
-meaningless authored `baseRewardStoreKey`. The shared authored schema must
-make that field conditional on a layout reward policy that actually exposes a
+meaningless authored `baseRewardStoreKey`. The shared authored schema makes
+that field conditional on a layout reward policy that actually exposes a
 generated base store.
 
 `TyphonBossRewards` is a counted store containing two duplicate-capable Boon
 entries plus Talent, triple Stack, and two Hammer entries with their normal
-requirements. Q's declaration port must add this concrete store and its
-requirements before miniboss rewards can be called faithful.
+requirements. The audited reward kernel provides this concrete store and the
+Q room declarations bind every supported miniboss to it.
 
 `Q_WorldShop` is distinct from the ordinary `WorldShop`. Under the normal
 second-half Surface context it exposes its concrete late-run option groups and
-must receive its own shop profile and recursive defaults. It is not a
+owns its own shop profile and recursive defaults. It is not a
 generated counted reward bag and does not derive from Q's target ratio.
 
 ## Direct Preboss and Completion
@@ -341,13 +341,12 @@ It defers challenges, optional Surface shop interactions, gathering, rerolls,
 and similar optional player actions. Natural Chaos remains suppressed by the
 shared route-predictability policy.
 
-## Declaration-Port Contract
+## Declaration Coverage
 
-Before Q declarations can be called faithful, the normalized catalog must be
-able to express:
+The normalized catalog now expresses:
 
 1. staged declaration-driven candidate pools inside `LinearBiome`;
-2. fixed intro and foyer rooms with no incoming reward;
+2. fixed intro and `RewardlessCombat` foyer rooms with no incoming reward;
 3. concrete one-exit and two-exit Q combat declarations;
 4. independently generated repeated miniboss peers;
 5. the Brute/Stalker/Tail counting and Eye non-counting encounter profiles;
@@ -359,9 +358,9 @@ able to express:
 10. the progressed-save exclusions without production `unsupported`
     predicates.
 
-After the cross-biome vocabulary is reconciled, the declaration port should
-include all supported Q rooms and exact physical exits in one readable parity
-matrix. It must not activate Q in the editor or simulator.
+The readable declaration file and focused parity matrix cover every supported
+Q room and exact physical exit. Capability fixtures prove that this catalog
+coverage does not activate Q in the editor or simulator.
 
 ## Model Conclusions
 

@@ -531,8 +531,8 @@ The active Phase 2.8 matrix is:
 - F is editable;
 - no biome is simulatable.
 
-P is also declaration-complete in the normalized catalog, but it is not
-authorable, simulatable, or editable. Its presence proves that declaration
+P and Q are also declaration-complete in the normalized catalog, but they are
+not authorable, simulatable, or editable. Their presence proves that declaration
 coverage and product activation remain independent.
 
 Every active capability must reference a declared biome, and every
@@ -567,7 +567,7 @@ identity may exist while their application capabilities remain inactive.
 
 The verified H/I/N/O/P/Q game-rule audits and cross-biome reconciliation are
 complete. Phase 2.8 imports their declaration-only catalog slices in the
-documented pressure-test order. Those slices may extend normalized catalog
+documented pressure-test order; P and Q are now imported. Those slices may extend normalized catalog
 vocabulary when concrete game facts require it, but they remain inactive until
 their authored topology, simulator, validation, and editor loop is complete.
 `biomes/P_GAME_RULES.md`, `biomes/Q_GAME_RULES.md`, `biomes/H_GAME_RULES.md`,
