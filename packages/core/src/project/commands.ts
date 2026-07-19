@@ -22,6 +22,7 @@ import type {
   TargetAddress,
 } from './addresses';
 import { semanticAddressKey } from './addresses';
+import { createDefaultBatchState } from './batchState';
 import { decodeProjectDocument } from './codec';
 import { createDefaultRoomState, type RoomOccurrenceRole } from './roomState';
 import { ProjectDocumentContractError } from './validation';
@@ -262,7 +263,11 @@ function defaultBatchState(layout: LinearBiomeLayout): null {
   if (layout.continuation.batchPolicy.kind !== 'standard') {
     throw new Error(`${layout.biomeKey} does not use standard authored batches`);
   }
-  return null;
+  const state = createDefaultBatchState(layout.continuation.batchPolicy);
+  if (state !== null) {
+    throw new Error(`${layout.biomeKey} standard batch produced non-null state`);
+  }
+  return state;
 }
 
 function resolvedStoreForRoom(room: RoomDeclaration, sharedStoreKey: string): string {

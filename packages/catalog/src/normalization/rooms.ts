@@ -128,6 +128,7 @@ function normalizeCaps(caps: RoomCaps, path: string): RoomCaps {
 const roomTemplateKinds = {
   FixedIntro: 'Intro',
   FixedOpening: 'Opening',
+  FieldsCombat: 'Combat',
   ForkedPreboss: 'Preboss',
   Fountain: 'Reprieve',
   Miniboss: 'Miniboss',
@@ -141,6 +142,7 @@ const roomTemplateKinds = {
 const roomTemplateRewardKinds = {
   FixedIntro: 'none',
   FixedOpening: 'countedChoice',
+  FieldsCombat: 'none',
   ForkedPreboss: 'shop',
   Fountain: 'countedChoice',
   Miniboss: 'countedChoice',
@@ -367,6 +369,12 @@ function normalizeEntryOfferPolicy(
 }
 
 function normalizeForce(force: RoomForce, path: string): RoomForce {
+  if (force.kind === 'always') {
+    return Object.freeze({ kind: 'always' });
+  }
+  if (force.kind !== 'depthWindow') {
+    fail(`${path}.kind`, `unknown room force ${String((force as { kind?: unknown }).kind)}`);
+  }
   const start = requireNonNegativeInteger(force.start, `${path}.start`);
   const deadline = requireNonNegativeInteger(force.deadline, `${path}.deadline`);
   if (deadline < start) {
@@ -520,12 +528,64 @@ export function normalizeRooms(
       caps: normalizeCaps(room.caps, `${path}.caps`),
       ...(eligibility === undefined ? {} : { eligibility }),
       ...(room.force === undefined ? {} : { force: normalizeForce(room.force, `${path}.force`) }),
-      localChildren: normalizeLocalChildren(room.localChildren ?? [], `${path}.localChildren`),
+      localChildren: normalizeLocalChildren(
+        room.localChildren ?? [],
+        `${path}.localChildren`,
+        (binding, bindingPath) => {
+          const normalized = normalizeRewardBinding(binding, rewards, bindingPath);
+          if (normalized.kind !== 'countedChoice') {
+            fail(`${bindingPath}.kind`, 'bounded reward slots require countedChoice');
+          }
+          return normalized;
+        },
+      ),
     });
   });
 
   const collection = createCollection(rooms, 'rooms', (room) => room.gameName, 'gameName');
   collection.values.forEach((room, roomIndex) => {
+    if (room.mode.kind === 'authored' && room.mode.templateKey === 'FieldsCombat') {
+      const path = `rooms[${roomIndex}]`;
+      if (room.individualRewardStoreKey === undefined) {
+        fail(`${path}.individualRewardStoreKey`, 'is required by FieldsCombat');
+      }
+      if (room.localChildren.length !== 1) {
+        fail(`${path}.localChildren`, 'FieldsCombat requires exactly one cages descriptor');
+      }
+      const cages = room.localChildren[0];
+      if (cages?.kind !== 'boundedRewardSlots' || cages.key !== 'cages') {
+        fail(`${path}.localChildren[0]`, 'FieldsCombat requires boundedRewardSlots named cages');
+      }
+      if (
+        cages.slotKeys.length !== 3 ||
+        cages.slotKeys[0] !== 'cage1' ||
+        cages.slotKeys[1] !== 'cage2' ||
+        cages.slotKeys[2] !== 'cage3'
+      ) {
+        fail(`${path}.localChildren[0].slotKeys`, 'FieldsCombat requires cage1, cage2, cage3');
+      }
+      if (cages.fields.length !== 0) {
+        fail(`${path}.localChildren[0].fields`, 'FieldsCombat cages do not own authored fields');
+      }
+      if (
+        cages.reward.storeKeys.length !== 1 ||
+        cages.reward.storeKeys[0] !== room.individualRewardStoreKey
+      ) {
+        fail(
+          `${path}.localChildren[0].reward.storeKeys`,
+          `must contain only the FieldsCombat individual store ${room.individualRewardStoreKey}`,
+        );
+      }
+      const profile = encounters.byKey[room.encounterProfileKey];
+      const countingPhases =
+        profile?.phases.filter((phase) => phase.countsEncounterDepth).length ?? 0;
+      if (countingPhases !== cages.maxActiveSlots) {
+        fail(
+          `${path}.encounterProfileKey`,
+          `${room.encounterProfileKey} must count ${cages.maxActiveSlots} active cage encounters`,
+        );
+      }
+    }
     if (room.eligibility !== undefined) {
       validateRoomRequirementReferences(
         room.eligibility,

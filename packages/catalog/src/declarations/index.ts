@@ -4,6 +4,7 @@ import { exitCompatibilityPolicies, exitTypes } from './exits';
 import { biomeLayouts } from './layouts';
 import { fRooms } from './rooms/f';
 import { gRooms } from './rooms/g';
+import { hRooms } from './rooms/h';
 import { pRooms } from './rooms/p';
 import { qRooms } from './rooms/q';
 import { rewardKernelDeclarations } from '../rewardKernel/declarations';
@@ -11,14 +12,14 @@ import { routes } from './routes';
 import type { RawCatalogInput } from './types';
 
 export const declarations = {
-  version: '0.6.0-q-dormant',
+  version: '0.7.0-h-dormant',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,
   encounterProfiles,
   exitCompatibilityPolicies,
   exitTypes,
-  rooms: [...fRooms, ...gRooms, ...pRooms, ...qRooms],
+  rooms: [...fRooms, ...gRooms, ...pRooms, ...qRooms, ...hRooms],
   biomeLayouts,
 } as const satisfies RawCatalogInput;
 
@@ -31,6 +32,7 @@ export type {
   RawBiomeLayoutDeclaration,
   RawHubBiomeLayoutDeclaration,
   RawLinearBiomeLayoutDeclaration,
+  RawLocalChildDescriptor,
   RawNoneRewardBinding,
   RawRewardProducerBinding,
   RawRoomDeclaration,

@@ -245,6 +245,12 @@ Room declarations do not own:
 - copied encounter phases;
 - runtime instructions.
 
+A bounded reward-slot descriptor owns stable physical slot keys, the raw map
+capacity, the effective maximum clamped to the modeled slot surface, and one
+normalized counted-reward binding. The occurrence persists a complete value
+for every stable slot. Batch context may activate only a prefix; it never
+deletes or relocates the dormant values.
+
 Completion rooms such as bosses and postboss rooms are concrete derived Room
 Declarations rather than simulator constants. They retain their real game
 names, encounters, modeled reward surface, counters, exits, and store-history
@@ -531,7 +537,7 @@ The active Phase 2.8 matrix is:
 - F is editable;
 - no biome is simulatable.
 
-P and Q are also declaration-complete in the normalized catalog, but they are
+P, Q, and H are also declaration-complete in the normalized catalog, but they are
 not authorable, simulatable, or editable. Their presence proves that declaration
 coverage and product activation remain independent.
 
@@ -567,7 +573,7 @@ identity may exist while their application capabilities remain inactive.
 
 The verified H/I/N/O/P/Q game-rule audits and cross-biome reconciliation are
 complete. Phase 2.8 imports their declaration-only catalog slices in the
-documented pressure-test order; P and Q are now imported. Those slices may extend normalized catalog
+documented pressure-test order; P, Q, and H are now imported. Those slices may extend normalized catalog
 vocabulary when concrete game facts require it, but they remain inactive until
 their authored topology, simulator, validation, and editor loop is complete.
 `biomes/P_GAME_RULES.md`, `biomes/Q_GAME_RULES.md`, `biomes/H_GAME_RULES.md`,

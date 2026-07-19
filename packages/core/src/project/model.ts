@@ -18,10 +18,16 @@ export interface ShopState {
   readonly offers: Readonly<Record<string, ShopOfferState>>;
 }
 
+export interface FieldsCombatState {
+  readonly kind: 'fieldsCombat';
+  readonly cages: Readonly<Record<string, ResolvedRewardOffer>>;
+}
+
 export type AuthoredRoomState =
   | { readonly kind: 'none' }
   | { readonly kind: 'fixed'; readonly payload?: RewardPayload }
   | { readonly kind: 'counted'; readonly offer: ResolvedRewardOffer }
+  | FieldsCombatState
   | { readonly kind: 'shop'; readonly shop?: ShopState }
   | { readonly kind: 'freeReward'; readonly offer: ResolvedRewardOffer };
 
@@ -30,7 +36,11 @@ export type BatchRewardStoreState =
   | { readonly kind: 'sourceOfferPoint' }
   | { readonly kind: 'none' };
 
-export type AuthoredBatchState = null;
+export interface FieldsCageBatchState {
+  readonly cageOutcome: 'min' | 'max';
+}
+
+export type AuthoredBatchState = FieldsCageBatchState | null;
 
 export interface RoomOccurrence {
   readonly occurrenceId: OccurrenceId;

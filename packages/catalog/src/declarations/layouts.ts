@@ -150,4 +150,43 @@ export const biomeLayouts = [
     fields: [],
     bounds: { maxBatches: 6, maxTargets: 8 },
   },
+  {
+    biomeKey: 'H',
+    kind: 'LinearBiome',
+    start: {
+      kind: 'authoredStart',
+      mode: 'fixed',
+      roomGameNames: ['H_Intro'],
+    },
+    entries: [],
+    continuation: {
+      progressionPolicy: { kind: 'fixedCount', continuationCount: 4 },
+      batchPolicy: {
+        kind: 'fields',
+        fields: [
+          {
+            key: 'cageOutcome',
+            kind: 'enum',
+            values: ['min', 'max'],
+            defaultValue: 'min',
+          },
+        ],
+      },
+      rewardStorePolicy: { kind: 'none' },
+      rewardStoreOverrides: [],
+    },
+    terminal: {
+      kind: 'forkedTransition',
+      roomGameName: 'H_PreBoss01',
+      exitPolicy: { kind: 'allExitsTerminal' },
+    },
+    completion: {
+      rooms: [
+        { role: 'boss', roomGameName: 'H_Boss01' },
+        { role: 'postboss', roomGameName: 'H_PostBoss01' },
+      ],
+    },
+    fields: [],
+    bounds: { maxBatches: 4, maxTargets: 7 },
+  },
 ] as const satisfies readonly RawLinearBiomeLayoutDeclaration[];

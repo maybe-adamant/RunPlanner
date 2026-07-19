@@ -439,8 +439,8 @@ Deliver:
   declaration set;
 - the four-room count-driven Fields layout and its standard, Fields, and
   forked-preboss structural policies;
-- typed batch-owned Min/Max cage outcome and hidden two-Max ceiling state with
-  complete declaration-owned defaults;
+- typed batch-owned Min/Max cage outcome with a complete declaration-owned
+  default, plus the history-derived hidden two-Max ceiling contract;
 - bounded room-local cage slots, exact capacity/physical-order descriptors,
   and RunProgress individual-store ownership;
 - two-or-three counting-encounter profiles plus exact bridge force competition,

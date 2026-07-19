@@ -9,10 +9,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { createPlannerCapabilities, PlannerCapabilityContractError } from './capabilities';
-import {
-  activeCapabilityDefinition,
-  createApplicationCapabilities,
-} from './capabilityConfiguration';
+import { createApplicationCapabilities } from './capabilityConfiguration';
 import { authoredProjectCommandDispatched } from './authoredProjectSlice';
 import { createEditorNavigation } from './editorNavigation';
 import { createFEditorSmokeProject } from './projectBootstrap';
@@ -24,70 +21,16 @@ import {
 import { createPlannerStore } from './store';
 import { ordinaryRoomCategories, selectRoomsForCategory } from './roomSelectorProjection';
 
-function catalogWithDormantH(): Catalog {
-  const gLayout = declarations.biomeLayouts.find((layout) => layout.biomeKey === 'G');
-  const gStart = declarations.rooms.find((room) => room.gameName === 'G_Intro');
-  const gTerminal = declarations.rooms.find((room) => room.gameName === 'G_PreBoss01');
-  const gBoss = declarations.rooms.find((room) => room.gameName === 'G_Boss01');
-  const gPostboss = declarations.rooms.find((room) => room.gameName === 'G_PostBoss01');
-  if (
-    gLayout === undefined ||
-    gStart === undefined ||
-    gTerminal === undefined ||
-    gBoss === undefined ||
-    gPostboss === undefined
-  ) {
-    throw new Error('G fixture authority is missing');
-  }
-  const hStart = {
-    ...gStart,
-    gameName: 'H_IntroFixture',
-    label: 'Dormant H Intro',
-    biomeKey: 'H',
-  };
-  const hTerminal = {
-    ...gTerminal,
-    gameName: 'H_PreBossFixture',
-    label: 'Dormant H Preboss',
-    biomeKey: 'H',
-  };
-  const hBoss = {
-    ...gBoss,
-    gameName: 'H_BossFixture',
-    label: 'Dormant H Boss',
-    biomeKey: 'H',
-  };
-  const hPostboss = {
-    ...gPostboss,
-    gameName: 'H_PostBossFixture',
-    label: 'Dormant H Postboss',
-    biomeKey: 'H',
-  };
-  const hLayout = {
-    ...gLayout,
-    biomeKey: 'H',
-    start: {
-      ...gLayout.start,
-      roomGameNames: [hStart.gameName],
-    },
-    terminal: {
-      ...gLayout.terminal,
-      roomGameName: hTerminal.gameName,
-    },
-    completion: {
-      ...gLayout.completion,
-      rooms: [
-        { role: 'boss', roomGameName: hBoss.gameName },
-        { role: 'postboss', roomGameName: hPostboss.gameName },
-      ],
-    },
-  };
-
+function catalogBeforeHImport(): Catalog {
   return createCatalog({
     ...declarations,
-    version: `${catalog.version}-dormant-h`,
-    rooms: [...declarations.rooms, hStart, hTerminal, hBoss, hPostboss],
-    biomeLayouts: [...declarations.biomeLayouts, hLayout],
+    version: '0.6.0-q-dormant',
+    encounterProfiles: declarations.encounterProfiles.filter(
+      (profile) => !profile.key.startsWith('H_'),
+    ),
+    exitTypes: declarations.exitTypes.filter((exitType) => exitType.key !== 'FieldsExitDoor'),
+    rooms: declarations.rooms.filter((room) => room.biomeKey !== 'H'),
+    biomeLayouts: declarations.biomeLayouts.filter((layout) => layout.biomeKey !== 'H'),
   } as CatalogInput);
 }
 
@@ -169,6 +112,13 @@ describe('planner capabilities', () => {
         editable: false,
       },
       {
+        biomeKey: 'H',
+        declared: true,
+        authorable: false,
+        simulatable: false,
+        editable: false,
+      },
+      {
         biomeKey: 'P',
         declared: true,
         authorable: false,
@@ -189,14 +139,14 @@ describe('planner capabilities', () => {
   it('rejects unknown, duplicate, and non-authorable editable capability entries', () => {
     expect(() =>
       createPlannerCapabilities(catalog, {
-        authorableBiomeKeys: ['F', 'H'],
+        authorableBiomeKeys: ['F', 'I'],
         simulatableBiomeKeys: [],
         editableBiomeKeys: ['F'],
       }),
     ).toThrowError(
       new PlannerCapabilityContractError(
         'capabilities.authorableBiomeKeys[1]',
-        'H is not declared',
+        'I is not declared',
       ),
     );
     expect(() =>
@@ -223,14 +173,14 @@ describe('planner capabilities', () => {
   });
 
   it('keeps a newly declared dormant biome out of authoring and editor navigation', () => {
-    const widenedCatalog = catalogWithDormantH();
-    const capabilities = createPlannerCapabilities(widenedCatalog, activeCapabilityDefinition);
-    const navigation = createEditorNavigation(widenedCatalog, capabilities);
-    const baselineCapabilities = createApplicationCapabilities(catalog);
-    const baselineProject = createFEditorSmokeProject(catalog, baselineCapabilities);
-    const widenedProject = createFEditorSmokeProject(widenedCatalog, capabilities);
+    const preImportCatalog = catalogBeforeHImport();
+    const capabilities = createApplicationCapabilities(catalog);
+    const navigation = createEditorNavigation(catalog, capabilities);
+    const baselineCapabilities = createApplicationCapabilities(preImportCatalog);
+    const baselineProject = createFEditorSmokeProject(preImportCatalog, baselineCapabilities);
+    const widenedProject = createFEditorSmokeProject(catalog, capabilities);
     const store = createPlannerStore({
-      catalog: widenedCatalog,
+      catalog,
       capabilities,
       initialProject: widenedProject,
     });
@@ -248,6 +198,7 @@ describe('planner capabilities', () => {
     expect({ ...widenedProject, catalogVersion: baselineProject.catalogVersion }).toEqual(
       baselineProject,
     );
+    expect(fSelectorProjection(catalog)).toEqual(fSelectorProjection(preImportCatalog));
     expect(() =>
       store.dispatch(
         authoredProjectCommandDispatched({
@@ -339,9 +290,8 @@ describe('application project capability boundary', () => {
   });
 
   it('rejects dormant authored state during both decoded and parsed project load', () => {
-    const widenedCatalog = catalogWithDormantH();
-    const capabilities = createPlannerCapabilities(widenedCatalog, activeCapabilityDefinition);
-    const dormantProject = createProjectDocument(widenedCatalog, {
+    const capabilities = createApplicationCapabilities(catalog);
+    const dormantProject = createProjectDocument(catalog, {
       projectId: 'dormant-project',
       name: 'Dormant Project',
       configuredBiomeCounts: { Underworld: 3 },
@@ -352,14 +302,10 @@ describe('application project capability boundary', () => {
     );
 
     expect(() =>
-      decodeAuthorableProjectDocument(dormantProject, widenedCatalog, capabilities),
+      decodeAuthorableProjectDocument(dormantProject, catalog, capabilities),
     ).toThrowError(expectedError);
     expect(() =>
-      parseAuthorableProjectDocument(
-        encodeProjectDocument(dormantProject),
-        widenedCatalog,
-        capabilities,
-      ),
+      parseAuthorableProjectDocument(encodeProjectDocument(dormantProject), catalog, capabilities),
     ).toThrowError(expectedError);
   });
 });

@@ -12,8 +12,8 @@ completed under the prior reward-store ownership model; Phase 2.6 added the
 audited reward kernel as an intentionally unconnected pure subsystem; Phase
 2.7 atomically made it the sole connected F/G reward authority. Phase 2.8 is
 the current frontier. Capability isolation, the shared structural/F/G
-reconciliation slice, the dormant P/Q declaration imports, and the schema-version-3
-route/biome identity cleanup are complete; H/O/I/N remain before Phase 3
+reconciliation slice, the dormant P/Q/H declaration imports, and the schema-version-3
+route/biome identity cleanup are complete; O/I/N remain before Phase 3
 begins.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
@@ -49,8 +49,8 @@ empty-intro simplification, intentionally collapsed counting combat projection,
 miniboss encounter-depth asymmetry, forked preboss, and persistent-NPC
 composition boundary. The F, G, P, Q, H, O, I, and N rule documents now
 distinguish verified game behavior, modeling disposition, canonical
-projection, reconsideration trigger, and current feature coverage. P and Q are
-now declaration-complete and dormant. H, O, I, and N declarations have not yet
+projection, reconsideration trigger, and current feature coverage. P, Q, and H are
+now declaration-complete and dormant. O, I, and N declarations have not yet
 been imported.
 
 `biomes/Q_GAME_RULES.md` records Q's declaration-driven scripted stages, real foyer
@@ -105,8 +105,8 @@ changes for F/G. G completion remains unmaterialized until Phase 3.
 The P audit is now closed under the same derived-tail contract:
 `P_Boss01 -> P_PostBoss01 -> Q_Intro`, neutral `BossPrometheus01`, resolved
 boss-offer store history, and no modeled automatic boss-drop surface. F, G, P,
-Q, H, O, I, and N are closed as biome-rule/design audits. P and Q now also
-have dormant declaration coverage; H, O, I, and N remain documentation-only,
+Q, H, O, I, and N are closed as biome-rule/design audits. P, Q, and H now also
+have dormant declaration coverage; O, I, and N remain documentation-only,
 and no later biome is promoted to an active product capability.
 
 ## Completed
@@ -557,10 +557,30 @@ Completed:
    - capability isolation keeps Q non-authorable, non-simulatable, and
      non-editable, and the active F editor slice remains unchanged apart from
      catalog version.
+6. dormant H declaration import:
+   - all 22 supported progressed-save room declarations normalize: fixed intro,
+     15 repeatable-offer combat maps, two minibosses, Echo bridge, forked
+     preboss, and the derived neutral Cerberus/postboss tail;
+   - H owns four ordinary Fields batches with seven ordinary target slots,
+     followed by a separately bounded forked terminal with at most two target
+     occurrences;
+   - the typed Fields batch state persists only semantic `min` or `max` with a
+     declaration-owned `min` default, while `fieldsMaxDoorsRolled` remains
+     derived history and the unobservable terminal roll remains absent;
+   - every combat occurrence owns three complete ordered cage values, while
+     its descriptor preserves raw map capacity, effective active capacity, a
+     RunProgress producer with Devotion excluded, and a matching two- or
+     three-counting-encounter profile;
+   - exact physical exits, combat depth restrictions, miniboss mutual
+     exclusion and force windows, bridge exact-two eligibility and forced-pool
+     classification, terminal eligibility, and entered-store provenance have
+     focused parity fixtures;
+   - H's generated-store policy is `none`, optional Fields rewards and NPC
+     variants remain documented deferrals, and capability isolation keeps H
+     non-authorable, non-simulatable, and non-editable.
 
 Pending:
 
-6. dormant H declaration import;
 7. dormant O declaration import;
 8. dormant I declaration import;
 9. dormant N declaration import;

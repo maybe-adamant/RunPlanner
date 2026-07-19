@@ -52,6 +52,7 @@ export type RoomKind =
 export type RoomTemplateKey =
   | 'FixedIntro'
   | 'FixedOpening'
+  | 'FieldsCombat'
   | 'ForkedPreboss'
   | 'Fountain'
   | 'Miniboss'
@@ -105,12 +106,14 @@ export interface RoomCaps {
   readonly maxCreationsPerRoom?: number;
 }
 
-export interface RoomForce {
-  readonly kind: 'depthWindow';
-  readonly axis: CounterAxis;
-  readonly start: number;
-  readonly deadline: number;
-}
+export type RoomForce =
+  | {
+      readonly kind: 'depthWindow';
+      readonly axis: CounterAxis;
+      readonly start: number;
+      readonly deadline: number;
+    }
+  | { readonly kind: 'always' };
 
 export interface ForkedPrebossEntryPolicy {
   readonly kind: 'shopThenFillRemainingExits';
@@ -164,6 +167,9 @@ export type LocalChildDescriptor =
       readonly key: string;
       readonly kind: 'boundedRewardSlots';
       readonly slotKeys: readonly string[];
+      readonly rawCapacity: number;
+      readonly maxActiveSlots: number;
+      readonly reward: CountedRewardBinding;
       readonly fields: readonly AuthoredFieldDescriptor[];
     }
   | {
