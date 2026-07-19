@@ -4,6 +4,7 @@ import type {
   LinearBiomeLayout,
   RoomDeclaration,
 } from '@run-planner/core';
+import type { RewardStoreDeclaration } from '@run-planner/core/reward-kernel';
 
 import type { RawLinearBiomeLayoutDeclaration } from '../declarations';
 import {
@@ -18,6 +19,7 @@ export function normalizeBiomeLayouts(
   rawLayouts: readonly RawLinearBiomeLayoutDeclaration[],
   routeSteps: ReadonlySet<string>,
   rooms: CatalogCollection<RoomDeclaration>,
+  rewardStores: CatalogCollection<RewardStoreDeclaration>,
 ): CatalogCollection<BiomeLayout> {
   const layouts = rawLayouts.map((layout, layoutIndex): LinearBiomeLayout => {
     const path = `biomeLayouts[${layoutIndex}]`;
@@ -61,11 +63,50 @@ export function normalizeBiomeLayouts(
       );
     }
 
+    const rewardStoreKeys = freezeUniqueStrings(
+      layout.continuation.rewardStorePolicy.storeKeys,
+      `${path}.continuation.rewardStorePolicy.storeKeys`,
+    );
+    if (layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore') {
+      fail(
+        `${path}.continuation.rewardStorePolicy.kind`,
+        `unknown reward-store policy ${String(layout.continuation.rewardStorePolicy.kind)}`,
+      );
+    }
+    if (layout.continuation.batchStateDefault !== null) {
+      fail(`${path}.continuation.batchStateDefault`, 'must be null for Standard');
+    }
+    if (rewardStoreKeys.length === 0) {
+      fail(`${path}.continuation.rewardStorePolicy.storeKeys`, 'must not be empty');
+    }
+    for (const [index, storeKey] of rewardStoreKeys.entries()) {
+      if (rewardStores.byKey[storeKey] === undefined) {
+        fail(
+          `${path}.continuation.rewardStorePolicy.storeKeys[${index}]`,
+          `unknown reward store ${storeKey}`,
+        );
+      }
+    }
+    if (!rewardStoreKeys.includes(layout.continuation.rewardStorePolicy.defaultStoreKey)) {
+      fail(
+        `${path}.continuation.rewardStorePolicy.defaultStoreKey`,
+        'must belong to the authored base store domain',
+      );
+    }
+
     return Object.freeze({
       biomeStepKey: layout.biomeStepKey,
       kind: 'LinearBiome',
       start: Object.freeze({ mode: layout.start.mode, roomGameNames }),
-      continuation: Object.freeze({ defaultBatchRuleKey: 'Standard' }),
+      continuation: Object.freeze({
+        defaultBatchRuleKey: 'Standard',
+        rewardStorePolicy: Object.freeze({
+          kind: 'authoredBaseStore',
+          storeKeys: rewardStoreKeys,
+          defaultStoreKey: layout.continuation.rewardStorePolicy.defaultStoreKey,
+        }),
+        batchStateDefault: null,
+      }),
       terminal: Object.freeze({
         roomGameName: layout.terminal.roomGameName,
         transitionRuleKey: 'PrebossEntry',

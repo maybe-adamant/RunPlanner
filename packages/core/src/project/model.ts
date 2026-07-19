@@ -1,6 +1,6 @@
-import type { ConcreteReward, RewardPayload } from '../rewards';
+import type { ResolvedRewardOffer, RewardPayload } from '../rewardKernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 1 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 2 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -8,13 +8,8 @@ export type OccurrenceId = string & {
   readonly [occurrenceIdBrand]: 'OccurrenceId';
 };
 
-export interface CountedRewardChoice {
-  readonly storeKey: string;
-  readonly reward: ConcreteReward;
-}
-
 export interface ShopOfferState {
-  readonly reward: ConcreteReward;
+  readonly offer: ResolvedRewardOffer;
   readonly purchased: boolean;
 }
 
@@ -26,9 +21,16 @@ export interface ShopState {
 export type AuthoredRoomState =
   | { readonly kind: 'none' }
   | { readonly kind: 'fixed'; readonly payload?: RewardPayload }
-  | { readonly kind: 'counted'; readonly choice: CountedRewardChoice }
-  | { readonly kind: 'shop'; readonly shop: ShopState }
-  | { readonly kind: 'freeReward'; readonly choice: CountedRewardChoice };
+  | { readonly kind: 'counted'; readonly offer: ResolvedRewardOffer }
+  | { readonly kind: 'shop'; readonly shop?: ShopState }
+  | { readonly kind: 'freeReward'; readonly offer: ResolvedRewardOffer };
+
+export type BatchRewardStoreState =
+  | { readonly kind: 'authoredBaseStore'; readonly baseRewardStoreKey: string }
+  | { readonly kind: 'sourceOfferPoint' }
+  | { readonly kind: 'none' };
+
+export type AuthoredBatchState = null;
 
 export interface RoomOccurrence {
   readonly occurrenceId: OccurrenceId;
@@ -44,6 +46,8 @@ export interface LinearTargetReference {
 export interface LinearBatchContinuation {
   readonly kind: 'batch';
   readonly parentOccurrenceId: OccurrenceId;
+  readonly rewardStore: BatchRewardStoreState;
+  readonly batchState: AuthoredBatchState;
   readonly targets: readonly LinearTargetReference[];
   readonly pickedExitIndex: number | null;
 }

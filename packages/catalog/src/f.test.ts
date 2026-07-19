@@ -190,7 +190,7 @@ describe('complete F catalog', () => {
       },
     });
     expect(story?.exits).toHaveLength(2);
-    expect(storyReward.reward).toEqual({ rewardType: 'Story' });
+    expect(storyReward.offer).toEqual({ rewardType: 'Story' });
 
     const reprieve = catalog.rooms.byKey.F_Reprieve01;
     const reprieveReward = requireCounted(reprieve?.incomingReward);
@@ -208,7 +208,7 @@ describe('complete F catalog', () => {
     });
     expect(reprieve?.exits).toHaveLength(2);
     expect(reprieveReward.storeKeys).toEqual(['RunProgress', 'MetaProgress']);
-    expect(reprieveReward.defaultStoreKey).toBe('RunProgress');
+    expect(reprieveReward.storeKeys[0]).toBe('RunProgress');
     expect(reprieveReward.ineligibleRewardTypes).toEqual(['Devotion']);
 
     const shop = catalog.rooms.byKey.F_Shop01;
@@ -237,46 +237,30 @@ describe('complete F catalog', () => {
   });
 
   it('normalizes WorldShop as three explicit authored offer slots', () => {
-    expect(catalog.shopOptionSets.byKey.WorldShopBoon?.rewardTypes).toEqual([
-      'RandomLoot',
-      'BlindBoxLoot',
-      'ShopHermesUpgrade',
-    ]);
-    expect(catalog.shopOptionSets.byKey.WorldShopNonBoon?.rewardTypes).toEqual([
-      'WeaponUpgradeDrop',
-      'RoomRewardHealDrop',
-      'MaxHealthDrop',
-      'ArmorBoost',
-      'MetaCardPointsCommonDrop',
-      'MetaCurrencyDrop',
-      'GiftDrop',
-    ]);
-    expect(catalog.shopOptionSets.byKey.WorldShopMinor?.rewardTypes).toEqual([
-      'MaxManaDrop',
-      'StackUpgrade',
-      'StoreRewardRandomStack',
-      'SpellDrop',
-      'TalentDrop',
-    ]);
-
-    expect(catalog.shopProfiles.byKey.WorldShop?.slots.values).toEqual([
+    expect(catalog.rewards.shops.byKey.WorldShop?.slots.values).toEqual([
       {
         key: 'Boon',
         label: 'Offer 1',
-        optionSetKey: 'WorldShopBoon',
-        defaultReward: { rewardType: 'RandomLoot', payload: { source: 'ApolloUpgrade' } },
+        groupKey: 'Boon',
+        defaultOptionKey: 'RandomLoot',
+        defaultOffer: {
+          rewardType: 'RandomLoot',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
       },
       {
         key: 'MajorNonBoon',
         label: 'Offer 2',
-        optionSetKey: 'WorldShopNonBoon',
-        defaultReward: { rewardType: 'WeaponUpgradeDrop' },
+        groupKey: 'MajorNonBoon',
+        defaultOptionKey: 'WeaponUpgradeDropEarly',
+        defaultOffer: { rewardType: 'WeaponUpgradeDrop' },
       },
       {
         key: 'Minor',
         label: 'Offer 3',
-        optionSetKey: 'WorldShopMinor',
-        defaultReward: { rewardType: 'MaxManaDrop' },
+        groupKey: 'Minor',
+        defaultOptionKey: 'MaxManaDrop',
+        defaultOffer: { rewardType: 'MaxManaDrop' },
       },
     ]);
   });
@@ -316,7 +300,15 @@ describe('complete F catalog', () => {
         mode: 'oneOf',
         roomGameNames: ['F_Opening01', 'F_Opening02', 'F_Opening03'],
       },
-      continuation: { defaultBatchRuleKey: 'Standard' },
+      continuation: {
+        defaultBatchRuleKey: 'Standard',
+        rewardStorePolicy: {
+          kind: 'authoredBaseStore',
+          storeKeys: ['RunProgress', 'MetaProgress'],
+          defaultStoreKey: 'RunProgress',
+        },
+        batchStateDefault: null,
+      },
       terminal: {
         roomGameName: 'F_PreBoss01',
         transitionRuleKey: 'PrebossEntry',
@@ -326,8 +318,8 @@ describe('complete F catalog', () => {
     });
   });
 
-  it('rejects a shop default outside its authored option set', () => {
-    const worldShop = declarations.shopProfiles[0];
+  it('rejects a shop slot default outside its authored group', () => {
+    const worldShop = declarations.rewardKernel.shops[0];
     expect(worldShop).toBeDefined();
     if (worldShop === undefined) {
       return;
@@ -336,19 +328,23 @@ describe('complete F catalog', () => {
     expect(() =>
       createCatalog({
         ...declarations,
-        shopProfiles: [
-          {
-            ...worldShop,
-            slots: worldShop.slots.map((slot, index) =>
-              index === 0 ? { ...slot, defaultRewardType: 'MaxHealthDrop' } : slot,
-            ),
-          },
-        ],
+        rewardKernel: {
+          ...declarations.rewardKernel,
+          shops: [
+            {
+              ...worldShop,
+              slots: worldShop.slots.map((slot, index) =>
+                index === 0 ? { ...slot, defaultOptionKey: 'MaxHealthDrop' } : slot,
+              ),
+            },
+            ...declarations.rewardKernel.shops.slice(1),
+          ],
+        },
       }),
     ).toThrowError(
       new CatalogContractError(
-        'shopProfiles[0].slots[0].defaultRewardType',
-        'MaxHealthDrop is not available from WorldShopBoon',
+        'shops[0].slots[0].defaultOptionKey',
+        'unknown option MaxHealthDrop in Boon',
       ),
     );
   });

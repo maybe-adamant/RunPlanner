@@ -1,39 +1,35 @@
-import type {
-  Catalog,
-  ConcreteReward,
-  CountedRewardBinding,
-  CountedRewardChoice,
-} from '@run-planner/core';
+import type { Catalog, CountedRewardBinding } from '@run-planner/core';
+import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
 
 interface RewardValueEditorProps {
   readonly catalog: Catalog;
   readonly idPrefix: string;
-  readonly reward: ConcreteReward;
+  readonly offer: ResolvedRewardOffer;
   readonly rewardTypes: readonly string[];
-  readonly onReplace: (reward: ConcreteReward) => void;
+  readonly onReplace: (offer: ResolvedRewardOffer) => void;
 }
 
 interface CountedRewardEditorProps {
   readonly binding: CountedRewardBinding;
   readonly catalog: Catalog;
-  readonly choice: CountedRewardChoice;
+  readonly offer: ResolvedRewardOffer;
   readonly idPrefix: string;
-  readonly onReplace: (choice: CountedRewardChoice) => void;
+  readonly onReplace: (offer: ResolvedRewardOffer) => void;
 }
 
-function defaultReward(catalog: Catalog, rewardType: string): ConcreteReward {
-  const primitive = catalog.rewardPrimitives.byKey[rewardType];
-  if (primitive === undefined) {
-    throw new Error(`Reward primitive ${rewardType} is missing`);
+function defaultOffer(catalog: Catalog, rewardType: string): ResolvedRewardOffer {
+  const declaration = catalog.rewards.rewardTypes.byKey[rewardType];
+  if (declaration === undefined) {
+    throw new Error(`Reward type ${rewardType} is missing`);
   }
   return {
     rewardType,
-    ...(primitive.defaultPayload === undefined ? {} : { payload: primitive.defaultPayload }),
+    ...(declaration.defaultPayload === undefined ? {} : { payload: declaration.defaultPayload }),
   };
 }
 
 function payloadDomainValues(catalog: Catalog, domainKey: string): readonly string[] {
-  const domain = catalog.rewardPayloadDomains.byKey[domainKey];
+  const domain = catalog.rewards.payloadDomains.byKey[domainKey];
   if (domain?.kind !== 'oneOf') {
     throw new Error(`Payload value domain ${domainKey} is missing`);
   }
@@ -41,64 +37,47 @@ function payloadDomainValues(catalog: Catalog, domainKey: string): readonly stri
 }
 
 function sourceLabel(catalog: Catalog, source: string): string {
-  const primitive = catalog.rewardPrimitives.byKey[source];
-  if (primitive === undefined) {
+  const declaration = catalog.rewards.rewardTypes.byKey[source];
+  if (declaration === undefined) {
     throw new Error(`Payload source ${source} is missing`);
   }
-  return primitive.label;
-}
-
-function storeLabel(storeKey: string): string {
-  switch (storeKey) {
-    case 'RunProgress':
-      return 'Run Progress';
-    case 'MetaProgress':
-      return 'Meta Progress';
-    default:
-      throw new Error(`Reward store ${storeKey} has no editor label`);
-  }
-}
-
-function replaceSource(reward: ConcreteReward, source: string): ConcreteReward {
-  return { ...reward, payload: { source } };
-}
-
-function replacePairSource(
-  reward: ConcreteReward,
-  sources: readonly [string, string],
-): ConcreteReward {
-  return { ...reward, payload: { sources } };
+  return declaration.label;
 }
 
 function RewardPayloadEditor({
   catalog,
   idPrefix,
   onReplace,
-  reward,
+  offer,
 }: Omit<RewardValueEditorProps, 'rewardTypes'>) {
-  const primitive = catalog.rewardPrimitives.byKey[reward.rewardType];
-  if (primitive === undefined) {
-    throw new Error(`Reward primitive ${reward.rewardType} is missing`);
+  const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  if (declaration === undefined) {
+    throw new Error(`Reward type ${offer.rewardType} is missing`);
   }
-  if (primitive.payloadDomain === undefined) {
+  if (declaration.payloadDomain === undefined) {
     return null;
   }
-  const domain = catalog.rewardPayloadDomains.byKey[primitive.payloadDomain];
-  if (domain === undefined || reward.payload === undefined) {
-    throw new Error(`${primitive.gameName} has incomplete payload state`);
+  const domain = catalog.rewards.payloadDomains.byKey[declaration.payloadDomain];
+  if (domain === undefined || offer.payload === undefined) {
+    throw new Error(`${declaration.gameName} has incomplete payload state`);
   }
 
   if (domain.kind === 'oneOf') {
-    if (!('source' in reward.payload)) {
-      throw new Error(`${primitive.gameName} requires a single-source payload`);
+    if (offer.payload.kind !== 'BoonSource') {
+      throw new Error(`${declaration.gameName} requires a single-source payload`);
     }
     return (
       <label className="field-control" htmlFor={`${idPrefix}-source`}>
         <span>Source</span>
         <select
           id={`${idPrefix}-source`}
-          onChange={(event) => onReplace(replaceSource(reward, event.target.value))}
-          value={reward.payload.source}
+          onChange={(event) =>
+            onReplace({
+              ...offer,
+              payload: { kind: 'BoonSource', source: event.target.value },
+            })
+          }
+          value={offer.payload.source}
         >
           {domain.values.map((source) => (
             <option key={source} value={source}>
@@ -110,22 +89,31 @@ function RewardPayloadEditor({
     );
   }
 
-  if (!('sources' in reward.payload)) {
-    throw new Error(`${primitive.gameName} requires a paired payload`);
+  if (offer.payload.kind !== 'DevotionPair') {
+    throw new Error(`${declaration.gameName} requires a paired payload`);
   }
   const values = payloadDomainValues(catalog, domain.valueDomain);
-  const [first, second] = reward.payload.sources;
+  const { chosenSource, spurnedSource } = offer.payload;
   return (
     <div className="paired-payload">
       <label className="field-control" htmlFor={`${idPrefix}-source-1`}>
-        <span>Source 1</span>
+        <span>Chosen source</span>
         <select
           id={`${idPrefix}-source-1`}
-          onChange={(event) => onReplace(replacePairSource(reward, [event.target.value, second]))}
-          value={first}
+          onChange={(event) =>
+            onReplace({
+              ...offer,
+              payload: {
+                kind: 'DevotionPair',
+                chosenSource: event.target.value,
+                spurnedSource,
+              },
+            })
+          }
+          value={chosenSource}
         >
           {values
-            .filter((source) => source !== second)
+            .filter((source) => source !== spurnedSource)
             .map((source) => (
               <option key={source} value={source}>
                 {sourceLabel(catalog, source)}
@@ -134,14 +122,23 @@ function RewardPayloadEditor({
         </select>
       </label>
       <label className="field-control" htmlFor={`${idPrefix}-source-2`}>
-        <span>Source 2</span>
+        <span>Spurned source</span>
         <select
           id={`${idPrefix}-source-2`}
-          onChange={(event) => onReplace(replacePairSource(reward, [first, event.target.value]))}
-          value={second}
+          onChange={(event) =>
+            onReplace({
+              ...offer,
+              payload: {
+                kind: 'DevotionPair',
+                chosenSource,
+                spurnedSource: event.target.value,
+              },
+            })
+          }
+          value={spurnedSource}
         >
           {values
-            .filter((source) => source !== first)
+            .filter((source) => source !== chosenSource)
             .map((source) => (
               <option key={source} value={source}>
                 {sourceLabel(catalog, source)}
@@ -156,8 +153,8 @@ function RewardPayloadEditor({
 export function RewardValueEditor({
   catalog,
   idPrefix,
+  offer,
   onReplace,
-  reward,
   rewardTypes,
 }: RewardValueEditorProps) {
   return (
@@ -166,17 +163,17 @@ export function RewardValueEditor({
         <span>Reward</span>
         <select
           id={`${idPrefix}-reward`}
-          onChange={(event) => onReplace(defaultReward(catalog, event.target.value))}
-          value={reward.rewardType}
+          onChange={(event) => onReplace(defaultOffer(catalog, event.target.value))}
+          value={offer.rewardType}
         >
           {rewardTypes.map((rewardType) => {
-            const primitive = catalog.rewardPrimitives.byKey[rewardType];
-            if (primitive === undefined) {
-              throw new Error(`Reward primitive ${rewardType} is missing`);
+            const declaration = catalog.rewards.rewardTypes.byKey[rewardType];
+            if (declaration === undefined) {
+              throw new Error(`Reward type ${rewardType} is missing`);
             }
             return (
               <option key={rewardType} value={rewardType}>
-                {primitive.label}
+                {declaration.label}
               </option>
             );
           })}
@@ -185,79 +182,27 @@ export function RewardValueEditor({
       <RewardPayloadEditor
         catalog={catalog}
         idPrefix={idPrefix}
+        offer={offer}
         onReplace={onReplace}
-        reward={reward}
       />
     </div>
   );
 }
 
-function storeRewardTypes(
-  catalog: Catalog,
-  binding: CountedRewardBinding,
-  storeKey: string,
-): readonly string[] {
-  const store = catalog.rewardStores.byKey[storeKey];
-  if (store === undefined) {
-    throw new Error(`Reward store ${storeKey} is missing`);
-  }
-  return store.rewardTypes.filter((rewardType) => binding.allowedRewardTypes.includes(rewardType));
-}
-
-function defaultStoreChoice(
-  catalog: Catalog,
-  binding: CountedRewardBinding,
-  storeKey: string,
-): CountedRewardChoice {
-  const store = catalog.rewardStores.byKey[storeKey];
-  if (store === undefined) {
-    throw new Error(`Reward store ${storeKey} is missing`);
-  }
-  const rewardTypes = storeRewardTypes(catalog, binding, storeKey);
-  const rewardType = rewardTypes.includes(store.defaultRewardType)
-    ? store.defaultRewardType
-    : rewardTypes[0];
-  if (rewardType === undefined) {
-    throw new Error(`${storeKey} has no reward allowed by this producer`);
-  }
-  return { storeKey, reward: defaultReward(catalog, rewardType) };
-}
-
 export function CountedRewardEditor({
   binding,
   catalog,
-  choice,
+  offer,
   idPrefix,
   onReplace,
 }: CountedRewardEditorProps) {
-  const rewardTypes = storeRewardTypes(catalog, binding, choice.storeKey);
   return (
-    <div className="counted-reward-editor">
-      {binding.storeKeys.length > 1 && (
-        <label className="field-control" htmlFor={`${idPrefix}-store`}>
-          <span>Reward pool</span>
-          <select
-            id={`${idPrefix}-store`}
-            onChange={(event) =>
-              onReplace(defaultStoreChoice(catalog, binding, event.target.value))
-            }
-            value={choice.storeKey}
-          >
-            {binding.storeKeys.map((storeKey) => (
-              <option key={storeKey} value={storeKey}>
-                {storeLabel(storeKey)}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <RewardValueEditor
-        catalog={catalog}
-        idPrefix={idPrefix}
-        onReplace={(reward) => onReplace({ ...choice, reward })}
-        reward={choice.reward}
-        rewardTypes={rewardTypes}
-      />
-    </div>
+    <RewardValueEditor
+      catalog={catalog}
+      idPrefix={idPrefix}
+      offer={offer}
+      onReplace={onReplace}
+      rewardTypes={binding.allowedRewardTypes}
+    />
   );
 }

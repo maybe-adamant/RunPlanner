@@ -1,7 +1,7 @@
 import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../catalog';
-import type { ConcreteReward, RewardPayload } from '../rewards';
+import type { ResolvedRewardOffer, RewardPayload } from '../rewardKernel/model';
 import type {
-  CountedRewardChoice,
+  LinearBatchContinuation,
   LinearBiomePlan,
   LinearBiomeTopology,
   LinearContinuation,
@@ -11,6 +11,7 @@ import type {
 } from './model';
 import type {
   BiomeAddress,
+  BatchRewardStoreAddress,
   ContinuationAddress,
   IncomingRewardAddress,
   OccurrenceAddress,
@@ -33,6 +34,11 @@ export type ProjectCommand =
       readonly gameName: string;
     }
   | { readonly kind: 'CreateBatch'; readonly continuation: ContinuationAddress }
+  | {
+      readonly kind: 'ReplaceBatchRewardStore';
+      readonly rewardStore: BatchRewardStoreAddress;
+      readonly storeKey: string;
+    }
   | {
       readonly kind: 'CreateTerminalTransition';
       readonly continuation: ContinuationAddress;
@@ -79,12 +85,12 @@ export type ProjectCommand =
   | {
       readonly kind: 'ReplaceIncomingReward';
       readonly reward: IncomingRewardAddress;
-      readonly choice: CountedRewardChoice;
+      readonly value: ResolvedRewardOffer;
     }
   | {
       readonly kind: 'ReplaceShopOffer';
       readonly offer: ShopOfferAddress;
-      readonly reward: ConcreteReward;
+      readonly value: ResolvedRewardOffer;
     }
   | {
       readonly kind: 'SetShopPurchase';
@@ -132,6 +138,8 @@ function commandAddress(command: ProjectCommand): SemanticAddress {
     case 'ReplaceWithBatch':
     case 'ReplaceWithTerminalTransition':
       return command.continuation;
+    case 'ReplaceBatchRewardStore':
+      return command.rewardStore;
     case 'CreateTarget':
       return command.target;
     case 'SetPicked':
@@ -232,6 +240,131 @@ function generatedExitIndexes(room: RoomDeclaration): readonly number[] {
     .sort((left, right) => left - right);
 }
 
+function resolvedStoreForRoom(room: RoomDeclaration, sharedStoreKey: string): string {
+  return room.individualRewardStoreKey ?? room.forcedRewardStoreKey ?? sharedStoreKey;
+}
+
+function finalBatchSharedStore(
+  plan: LinearBiomePlan,
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+  continuation: LinearBatchContinuation,
+  replacement?: { readonly occurrenceId: OccurrenceId; readonly room: RoomDeclaration },
+): string {
+  if (continuation.rewardStore.kind !== 'authoredBaseStore') {
+    throw new Error('F/G batch must own an authored base store');
+  }
+  let storeKey = continuation.rewardStore.baseRewardStoreKey;
+  const topology = plan.topology;
+  if (topology === null) {
+    throw new Error(`${layout.biomeStepKey} batch has no topology`);
+  }
+  const targetsInPhysicalOrder = [...continuation.targets].sort(
+    (left, right) => left.exitIndex - right.exitIndex,
+  );
+  for (const target of targetsInPhysicalOrder) {
+    const occurrence = topology.occurrences.find(
+      (candidate) => candidate.occurrenceId === target.occurrenceId,
+    );
+    const targetRoom =
+      target.occurrenceId === replacement?.occurrenceId
+        ? replacement.room
+        : occurrence === undefined
+          ? undefined
+          : catalog.rooms.byKey[occurrence.gameName];
+    const forced = targetRoom?.forcedRewardStoreKey;
+    if (forced !== undefined) {
+      storeKey = forced;
+    }
+  }
+  return storeKey;
+}
+
+function isOccurrenceEntered(plan: LinearBiomePlan, occurrenceId: OccurrenceId): boolean {
+  const topology = plan.topology;
+  if (topology === null) {
+    return false;
+  }
+  if (topology.startOccurrenceId === occurrenceId) {
+    return true;
+  }
+  return topology.continuations.some(
+    (continuation) =>
+      continuation.pickedExitIndex !== null &&
+      continuation.targets.some(
+        (target) =>
+          target.exitIndex === continuation.pickedExitIndex && target.occurrenceId === occurrenceId,
+      ),
+  );
+}
+
+function resolvedStoreForOccurrence(
+  plan: LinearBiomePlan,
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+  occurrenceId: OccurrenceId,
+  replacementRoom?: RoomDeclaration,
+): string {
+  const topology = plan.topology;
+  if (topology === null) {
+    return layout.continuation.rewardStorePolicy.defaultStoreKey;
+  }
+  const occurrence = topology.occurrences.find(
+    (candidate) => candidate.occurrenceId === occurrenceId,
+  );
+  const room =
+    replacementRoom ??
+    (occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName]);
+  if (room === undefined) {
+    return layout.continuation.rewardStorePolicy.defaultStoreKey;
+  }
+  if (topology.startOccurrenceId === occurrenceId) {
+    return resolvedStoreForRoom(room, layout.continuation.rewardStorePolicy.defaultStoreKey);
+  }
+  const owner = topology.continuations.find((continuation) =>
+    continuation.targets.some((target) => target.occurrenceId === occurrenceId),
+  );
+  if (owner?.kind === 'batch') {
+    return resolvedStoreForRoom(
+      room,
+      finalBatchSharedStore(
+        plan,
+        catalog,
+        layout,
+        owner,
+        replacementRoom === undefined ? undefined : { occurrenceId, room: replacementRoom },
+      ),
+    );
+  }
+  return resolvedStoreForRoom(room, layout.continuation.rewardStorePolicy.defaultStoreKey);
+}
+
+function installEntryState(
+  plan: LinearBiomePlan,
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+  occurrenceId: OccurrenceId,
+  command: ProjectCommand,
+): LinearBiomePlan {
+  const occurrence = requireOccurrence(plan, occurrenceId, command);
+  if (occurrence.state.kind !== 'shop' || occurrence.state.shop !== undefined) {
+    return plan;
+  }
+  const room = requireRoom(catalog, occurrence.gameName, layout.biomeStepKey, command);
+  return replaceOccurrence(
+    plan,
+    {
+      ...occurrence,
+      state: createDefaultRoomState(catalog, room, {
+        role: occurrenceRole(plan, occurrenceId, command),
+        resolvedStoreKey: resolvedStoreForOccurrence(plan, catalog, layout, occurrenceId),
+        entryActive: true,
+      }),
+    },
+    command,
+  );
+}
+
 function occurrenceRole(
   plan: LinearBiomePlan,
   occurrenceId: OccurrenceId,
@@ -292,26 +425,26 @@ function samePayload(left: RewardPayload | undefined, right: RewardPayload | und
   if (left === undefined || right === undefined) {
     return left === right;
   }
-  if ('source' in left || 'source' in right) {
-    return 'source' in left && 'source' in right && left.source === right.source;
+  if (left.kind === 'BoonSource') {
+    return right.kind === 'BoonSource' && left.source === right.source;
   }
-  return left.sources[0] === right.sources[0] && left.sources[1] === right.sources[1];
+  return (
+    right.kind === 'DevotionPair' &&
+    left.chosenSource === right.chosenSource &&
+    left.spurnedSource === right.spurnedSource
+  );
 }
 
-function sameReward(left: ConcreteReward, right: ConcreteReward): boolean {
+function sameOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boolean {
   return left.rewardType === right.rewardType && samePayload(left.payload, right.payload);
 }
 
-function sameChoice(left: CountedRewardChoice, right: CountedRewardChoice): boolean {
-  return left.storeKey === right.storeKey && sameReward(left.reward, right.reward);
-}
-
-function requireContinuation(
+function requireContinuation<Kind extends LinearContinuation['kind']>(
   plan: LinearBiomePlan,
   parentOccurrenceId: OccurrenceId,
-  expectedKind: LinearContinuation['kind'],
+  expectedKind: Kind,
   command: ProjectCommand,
-): LinearContinuation {
+): Extract<LinearContinuation, { readonly kind: Kind }> {
   const topology = requireTopology(plan, command);
   const continuation = topology.continuations.find(
     (candidate) => candidate.parentOccurrenceId === parentOccurrenceId,
@@ -319,7 +452,7 @@ function requireContinuation(
   if (continuation?.kind !== expectedKind) {
     failCommand(command, `parent does not own a ${expectedKind} continuation`);
   }
-  return continuation;
+  return continuation as Extract<LinearContinuation, { readonly kind: Kind }>;
 }
 
 function removeOccurrenceSubtrees(
@@ -434,7 +567,14 @@ function createTerminalPlan(
     return {
       occurrenceId,
       gameName: terminalRoom.gameName,
-      state: createDefaultRoomState(catalog, terminalRoom, role),
+      state: createDefaultRoomState(catalog, terminalRoom, {
+        role,
+        resolvedStoreKey: resolvedStoreForRoom(
+          terminalRoom,
+          layout.continuation.rewardStorePolicy.defaultStoreKey,
+        ),
+        entryActive: false,
+      }),
     };
   });
   const targets = exitIndexes.map((exitIndex, index) => {
@@ -523,7 +663,14 @@ function applyUnchecked(
       const occurrence = {
         occurrenceId: command.occurrenceId,
         gameName: room.gameName,
-        state: createDefaultRoomState(catalog, room),
+        state: createDefaultRoomState(catalog, room, {
+          role: 'ordinary',
+          resolvedStoreKey: resolvedStoreForRoom(
+            room,
+            layout.continuation.rewardStorePolicy.defaultStoreKey,
+          ),
+          entryActive: true,
+        }),
       };
       return withBiome(document, located, {
         ...plan,
@@ -554,10 +701,50 @@ function applyUnchecked(
             {
               kind: 'batch',
               parentOccurrenceId: command.continuation.parentOccurrenceId,
+              rewardStore: {
+                kind: 'authoredBaseStore',
+                baseRewardStoreKey: layout.continuation.rewardStorePolicy.defaultStoreKey,
+              },
+              batchState: layout.continuation.batchStateDefault,
               targets: [],
               pickedExitIndex: null,
             },
           ],
+        },
+      });
+    }
+    case 'ReplaceBatchRewardStore': {
+      const topology = requireTopology(plan, command);
+      const continuation = requireContinuation(
+        plan,
+        command.rewardStore.parentOccurrenceId,
+        'batch',
+        command,
+      );
+      if (continuation.rewardStore.kind !== 'authoredBaseStore') {
+        failCommand(command, 'batch does not expose an authored base store');
+      }
+      if (!layout.continuation.rewardStorePolicy.storeKeys.includes(command.storeKey)) {
+        failCommand(command, `${command.storeKey} is not available from this batch policy`);
+      }
+      if (continuation.rewardStore.baseRewardStoreKey === command.storeKey) {
+        return document;
+      }
+      return withBiome(document, located, {
+        ...plan,
+        topology: {
+          ...topology,
+          continuations: topology.continuations.map((candidate) =>
+            candidate.parentOccurrenceId === continuation.parentOccurrenceId
+              ? {
+                  ...continuation,
+                  rewardStore: {
+                    kind: 'authoredBaseStore',
+                    baseRewardStoreKey: command.storeKey,
+                  },
+                }
+              : candidate,
+          ),
         },
       });
     }
@@ -603,7 +790,14 @@ function applyUnchecked(
       const occurrence = {
         occurrenceId: command.occurrenceId,
         gameName: room.gameName,
-        state: createDefaultRoomState(catalog, room),
+        state: createDefaultRoomState(catalog, room, {
+          role: 'ordinary',
+          resolvedStoreKey: resolvedStoreForRoom(
+            room,
+            finalBatchSharedStore(plan, catalog, layout, continuation),
+          ),
+          entryActive: false,
+        }),
       };
       const updatedContinuation = {
         ...continuation,
@@ -666,10 +860,12 @@ function applyUnchecked(
         }
         return candidate;
       });
-      return withBiome(document, located, {
-        ...plan,
-        topology: { ...topology, continuations },
-      });
+      const withPicked = { ...plan, topology: { ...topology, continuations } };
+      return withBiome(
+        document,
+        located,
+        installEntryState(withPicked, catalog, layout, target.occurrenceId, command),
+      );
     }
     case 'SetTerminalPicked': {
       const topology = requireTopology(plan, command);
@@ -693,7 +889,7 @@ function applyUnchecked(
       if (continuation.pickedExitIndex === command.exitIndex) {
         return document;
       }
-      return withBiome(document, located, {
+      const withPicked = {
         ...plan,
         topology: {
           ...topology,
@@ -703,7 +899,12 @@ function applyUnchecked(
               : candidate,
           ),
         },
-      });
+      };
+      return withBiome(
+        document,
+        located,
+        installEntryState(withPicked, catalog, layout, target.occurrenceId, command),
+      );
     }
     case 'ReconcileExitCapacity': {
       const reconciled = reconcilePlan(
@@ -796,6 +997,11 @@ function applyUnchecked(
             {
               kind: 'batch',
               parentOccurrenceId: command.continuation.parentOccurrenceId,
+              rewardStore: {
+                kind: 'authoredBaseStore',
+                baseRewardStoreKey: layout.continuation.rewardStorePolicy.defaultStoreKey,
+              },
+              batchState: layout.continuation.batchStateDefault,
               targets: [],
               pickedExitIndex: null,
             },
@@ -817,7 +1023,17 @@ function applyUnchecked(
       const replacement = {
         occurrenceId: occurrence.occurrenceId,
         gameName: room.gameName,
-        state: createDefaultRoomState(catalog, room, role),
+        state: createDefaultRoomState(catalog, room, {
+          role,
+          resolvedStoreKey: resolvedStoreForOccurrence(
+            plan,
+            catalog,
+            layout,
+            occurrence.occurrenceId,
+            room,
+          ),
+          entryActive: isOccurrenceEntered(plan, occurrence.occurrenceId),
+        }),
       };
       return withBiome(document, located, replaceOccurrence(plan, replacement, command));
     }
@@ -826,12 +1042,12 @@ function applyUnchecked(
       if (occurrence.state.kind !== 'counted' && occurrence.state.kind !== 'freeReward') {
         failCommand(command, `${occurrence.gameName} has no replaceable counted reward`);
       }
-      if (sameChoice(occurrence.state.choice, command.choice)) {
+      if (sameOffer(occurrence.state.offer, command.value)) {
         return document;
       }
       const replacement = {
         ...occurrence,
-        state: { ...occurrence.state, choice: command.choice },
+        state: { ...occurrence.state, offer: command.value },
       };
       return withBiome(document, located, replaceOccurrence(plan, replacement, command));
     }
@@ -840,11 +1056,14 @@ function applyUnchecked(
       if (occurrence.state.kind !== 'shop') {
         failCommand(command, `${occurrence.gameName} has no shop offer state`);
       }
+      if (occurrence.state.shop === undefined) {
+        failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
+      }
       const offer = occurrence.state.shop.offers[command.offer.offerKey];
       if (offer === undefined) {
         failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
       }
-      if (sameReward(offer.reward, command.reward)) {
+      if (sameOffer(offer.offer, command.value)) {
         return document;
       }
       const replacement = {
@@ -855,7 +1074,7 @@ function applyUnchecked(
             ...occurrence.state.shop,
             offers: {
               ...occurrence.state.shop.offers,
-              [command.offer.offerKey]: { ...offer, reward: command.reward },
+              [command.offer.offerKey]: { ...offer, offer: command.value },
             },
           },
         },
@@ -866,6 +1085,9 @@ function applyUnchecked(
       const occurrence = requireOccurrence(plan, command.purchase.occurrenceId, command);
       if (occurrence.state.kind !== 'shop') {
         failCommand(command, `${occurrence.gameName} has no shop purchase state`);
+      }
+      if (occurrence.state.shop === undefined) {
+        failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
       }
       const offer = occurrence.state.shop.offers[command.purchase.offerKey];
       if (offer === undefined) {

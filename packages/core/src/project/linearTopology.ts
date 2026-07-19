@@ -1,6 +1,7 @@
 import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../catalog';
 import type {
   LinearBiomeTopology,
+  BatchRewardStoreState,
   LinearContinuation,
   LinearTargetReference,
   OccurrenceId,
@@ -35,6 +36,33 @@ function occurrenceId(value: unknown, path: string): OccurrenceId {
 
 function decodePickedExitIndex(value: unknown, path: string): number | null {
   return value === null ? null : expectPositiveInteger(value, path);
+}
+
+function decodeBatchRewardStore(
+  value: unknown,
+  layout: LinearBiomeLayout,
+  path: string,
+): BatchRewardStoreState {
+  const rewardStore = expectRecord(value, path);
+  const kind = expectString(rewardStore.kind, `${path}.kind`);
+  if (kind !== layout.continuation.rewardStorePolicy.kind) {
+    failProjectDocument(
+      `${path}.kind`,
+      `expected ${layout.continuation.rewardStorePolicy.kind}, received ${kind}`,
+    );
+  }
+  expectExactKeys(rewardStore, ['kind', 'baseRewardStoreKey'], path);
+  const baseRewardStoreKey = expectString(
+    rewardStore.baseRewardStoreKey,
+    `${path}.baseRewardStoreKey`,
+  );
+  if (!layout.continuation.rewardStorePolicy.storeKeys.includes(baseRewardStoreKey)) {
+    failProjectDocument(
+      `${path}.baseRewardStoreKey`,
+      `${baseRewardStoreKey} is not available from this batch policy`,
+    );
+  }
+  return Object.freeze({ kind: 'authoredBaseStore', baseRewardStoreKey });
 }
 
 function maxExitIndex(catalog: Catalog, biomeStepKey: string): number {
@@ -159,7 +187,13 @@ export function decodeLinearBiomeTopology(
     const rawContinuation = expectRecord(rawValue, continuationPath);
     expectExactKeys(
       rawContinuation,
-      ['kind', 'parentOccurrenceId', 'targets', 'pickedExitIndex'],
+      [
+        'kind',
+        'parentOccurrenceId',
+        ...(rawContinuation.kind === 'batch' ? ['rewardStore', 'batchState'] : []),
+        'targets',
+        'pickedExitIndex',
+      ],
       continuationPath,
     );
     const kind = expectString(rawContinuation.kind, `${continuationPath}.kind`);
@@ -207,7 +241,24 @@ export function decodeLinearBiomeTopology(
     } else {
       terminalCount += 1;
     }
-    const decoded = Object.freeze({ kind, parentOccurrenceId, targets, pickedExitIndex });
+    const decoded =
+      kind === 'batch'
+        ? Object.freeze({
+            kind,
+            parentOccurrenceId,
+            rewardStore: decodeBatchRewardStore(
+              rawContinuation.rewardStore,
+              layout,
+              `${continuationPath}.rewardStore`,
+            ),
+            batchState:
+              rawContinuation.batchState === null
+                ? null
+                : failProjectDocument(`${continuationPath}.batchState`, 'must be null'),
+            targets,
+            pickedExitIndex,
+          })
+        : Object.freeze({ kind, parentOccurrenceId, targets, pickedExitIndex });
     continuationByParent.set(parentOccurrenceId, { value: decoded, path: continuationPath });
   }
 
@@ -259,6 +310,7 @@ export function decodeLinearBiomeTopology(
 
   const roles = new Map<OccurrenceId, RoomOccurrenceRole>();
   roles.set(startOccurrenceId, 'ordinary');
+  const enteredOccurrences = new Set<OccurrenceId>([startOccurrenceId]);
   const orderedOccurrenceIds: OccurrenceId[] = [startOccurrenceId];
 
   for (const continuation of orderedContinuations) {
@@ -299,6 +351,9 @@ export function decodeLinearBiomeTopology(
         );
       }
       roles.set(target.occurrenceId, role);
+      if (continuation.pickedExitIndex === target.exitIndex) {
+        enteredOccurrences.add(target.occurrenceId);
+      }
       orderedOccurrenceIds.push(target.occurrenceId);
     }
   }
@@ -328,7 +383,7 @@ export function decodeLinearBiomeTopology(
         rawOccurrence.state,
         catalog,
         room,
-        role,
+        { role, entryActive: enteredOccurrences.has(id) },
         `${rawOccurrence.path}.state`,
       ),
     });

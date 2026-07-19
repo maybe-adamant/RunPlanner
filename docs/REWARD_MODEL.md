@@ -20,9 +20,9 @@ simplified, deferred, or excluded disposition of each audited mechanic.
 Possibility-only evaluation is locked. The generated-batch base-store and
 resolved-offer-only leaf split described below is the globally frozen
 F/G/P/Q/H/O/I/N contract. N confirms that one persistent heterogeneous board
-can use `none` while every target resolves declaration-owned provenance.
-Production remains on the prior schema until the version 2 authority switch is
-implemented atomically in Phase 2.7.
+can use `none` while every target resolves declaration-owned provenance. The
+implemented F/G project, commands, catalog, and editor now use this contract as
+their sole connected reward authority under schema version 2.
 
 ## Composition
 
@@ -662,6 +662,7 @@ interface ShopGroup {
   key: string;
   offerCount: number;
   options: readonly ShopOptionEntry[];
+  rewardTypes: readonly RewardTypeGameName[]; // normalized stable UI projection
 }
 
 interface ShopOptionEntry {

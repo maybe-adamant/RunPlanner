@@ -8,7 +8,15 @@ export const biomeLayouts = [
       mode: 'oneOf',
       roomGameNames: ['F_Opening01', 'F_Opening02', 'F_Opening03'],
     },
-    continuation: { defaultBatchRuleKey: 'Standard' },
+    continuation: {
+      defaultBatchRuleKey: 'Standard',
+      rewardStorePolicy: {
+        kind: 'authoredBaseStore',
+        storeKeys: ['RunProgress', 'MetaProgress'],
+        defaultStoreKey: 'RunProgress',
+      },
+      batchStateDefault: null,
+    },
     terminal: {
       roomGameName: 'F_PreBoss01',
       transitionRuleKey: 'PrebossEntry',
@@ -23,7 +31,15 @@ export const biomeLayouts = [
       mode: 'fixed',
       roomGameNames: ['G_Intro'],
     },
-    continuation: { defaultBatchRuleKey: 'Standard' },
+    continuation: {
+      defaultBatchRuleKey: 'Standard',
+      rewardStorePolicy: {
+        kind: 'authoredBaseStore',
+        storeKeys: ['RunProgress', 'MetaProgress'],
+        defaultStoreKey: 'RunProgress',
+      },
+      batchStateDefault: null,
+    },
     terminal: {
       roomGameName: 'G_PreBoss01',
       transitionRuleKey: 'PrebossEntry',

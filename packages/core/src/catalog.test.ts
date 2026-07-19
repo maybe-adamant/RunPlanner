@@ -19,11 +19,14 @@ describe('summarizeCatalog', () => {
     const catalog: Catalog = {
       version: 'fixture-1',
       routes: { values: [route], byKey: { FixtureRoute: route } },
-      rewardPayloadDomains: emptyCollection(),
-      rewardPrimitives: emptyCollection(),
-      rewardStores: emptyCollection(),
-      shopOptionSets: emptyCollection(),
-      shopProfiles: emptyCollection(),
+      rewards: {
+        payloadDomains: emptyCollection(),
+        rewardTypes: emptyCollection(),
+        acquisitions: emptyCollection(),
+        stores: emptyCollection(),
+        shops: emptyCollection(),
+        producerLifecycles: emptyCollection(),
+      },
       encounterProfiles: emptyCollection(),
       rooms: emptyCollection(),
       biomeLayouts: emptyCollection(),
@@ -33,7 +36,7 @@ describe('summarizeCatalog', () => {
       version: 'fixture-1',
       routeCount: 1,
       biomeStepCount: 2,
-      rewardPrimitiveCount: 0,
+      rewardTypeCount: 0,
       roomCount: 0,
     });
   });

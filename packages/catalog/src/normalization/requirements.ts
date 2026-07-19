@@ -1,9 +1,5 @@
-import type {
-  CatalogCollection,
-  NumericRange,
-  RequirementExpression,
-  RewardPrimitive,
-} from '@run-planner/core';
+import type { CatalogCollection, NumericRange, RequirementExpression } from '@run-planner/core';
+import type { RewardTypeDeclaration } from '@run-planner/core/reward-kernel';
 import { hasRequirementEvaluator } from '@run-planner/core';
 
 import {
@@ -114,36 +110,36 @@ export function normalizeRequirement(
 
 export function validateRequirementReferences(
   requirement: RequirementExpression,
-  primitives: CatalogCollection<RewardPrimitive>,
+  rewardTypes: CatalogCollection<RewardTypeDeclaration>,
   path: string,
 ): void {
   switch (requirement.kind) {
     case 'all':
     case 'any':
       requirement.requirements.forEach((child, index) =>
-        validateRequirementReferences(child, primitives, `${path}.requirements[${index}]`),
+        validateRequirementReferences(child, rewardTypes, `${path}.requirements[${index}]`),
       );
       return;
     case 'not':
-      validateRequirementReferences(requirement.requirement, primitives, `${path}.requirement`);
+      validateRequirementReferences(requirement.requirement, rewardTypes, `${path}.requirement`);
       return;
     case 'notInCurrentRoomShopOptions':
-      if (primitives.byKey[requirement.rewardType] === undefined) {
-        fail(`${path}.rewardType`, `unknown reward primitive ${requirement.rewardType}`);
+      if (rewardTypes.byKey[requirement.rewardType] === undefined) {
+        fail(`${path}.rewardType`, `unknown reward type ${requirement.rewardType}`);
       }
       return;
     case 'currentRoomRewardExcludes':
       requirement.rewardTypes.forEach((rewardType, index) => {
-        if (primitives.byKey[rewardType] === undefined) {
-          fail(`${path}.rewardTypes[${index}]`, `unknown reward primitive ${rewardType}`);
+        if (rewardTypes.byKey[rewardType] === undefined) {
+          fail(`${path}.rewardTypes[${index}]`, `unknown reward type ${rewardType}`);
         }
       });
       return;
     case 'recordCount':
       if (requirement.record !== 'roomsEntered') {
         requirement.keys.forEach((key, index) => {
-          if (primitives.byKey[key] === undefined) {
-            fail(`${path}.keys[${index}]`, `unknown reward primitive ${key}`);
+          if (rewardTypes.byKey[key] === undefined) {
+            fail(`${path}.keys[${index}]`, `unknown reward type ${key}`);
           }
         });
       }

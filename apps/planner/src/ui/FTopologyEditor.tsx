@@ -10,6 +10,7 @@ import type {
   RoomOccurrence,
 } from '@run-planner/core';
 import {
+  createBatchRewardStoreAddress,
   createContinuationAddress,
   createOccurrenceAddress,
   createPickedAddress,
@@ -177,6 +178,10 @@ function BatchEditor({
   const dispatch = useAppDispatch();
   const parent = occurrence(topology, continuation.parentOccurrenceId);
   const parentRoom = declaration(catalog, parent);
+  const layout = catalog.biomeLayouts.byKey[biome.biomeStepKey];
+  if (layout === undefined) {
+    throw new Error(`Biome layout ${biome.biomeStepKey} is missing`);
+  }
   const availableExitIndexes = generatedExitIndexes(parentRoom);
   const available = new Set(availableExitIndexes);
   const exitIndexes = [
@@ -202,6 +207,37 @@ function BatchEditor({
             : `Exit ${continuation.pickedExitIndex} picked`}
         </span>
       </header>
+
+      {continuation.rewardStore.kind === 'authoredBaseStore' && (
+        <label
+          className="field-control batch-reward-store"
+          htmlFor={`batch-${continuation.parentOccurrenceId}-reward-store`}
+        >
+          <span>Reward pool</span>
+          <select
+            id={`batch-${continuation.parentOccurrenceId}-reward-store`}
+            onChange={(event) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceBatchRewardStore',
+                  rewardStore: createBatchRewardStoreAddress(
+                    biome,
+                    continuation.parentOccurrenceId,
+                  ),
+                  storeKey: event.target.value,
+                }),
+              )
+            }
+            value={continuation.rewardStore.baseRewardStoreKey}
+          >
+            {layout.continuation.rewardStorePolicy.storeKeys.map((storeKey) => (
+              <option key={storeKey} value={storeKey}>
+                {storeKey === 'RunProgress' ? 'Run Progress' : 'Meta Progress'}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <div className="exit-list">
         {exitIndexes.map((exitIndex) => (

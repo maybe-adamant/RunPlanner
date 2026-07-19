@@ -13,9 +13,8 @@ It does not define simulation algorithms or React rendering.
 The schema version 2 examples in this document describe the reconciled
 F/G/P/Q/H/O/I/N model. Occurrence identity, downstream retention, possibility
 support, generated-store ownership, conditional-terminal batches, fixed
-authored layout slots, and persistent hub topology are settled. Production
-still reads schema version 1 until the Phase 2.7 authority switch is
-implemented atomically.
+authored layout slots, and persistent hub topology are settled. Production now
+reads schema version 2 for the implemented F/G slice and rejects version 1.
 
 ## Core Distinction
 

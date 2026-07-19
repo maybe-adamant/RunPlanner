@@ -112,6 +112,7 @@ export interface ShopGroupDeclaration {
   readonly key: string;
   readonly offerCount: number;
   readonly options: CatalogCollection<ShopOptionEntry>;
+  readonly rewardTypes: readonly string[];
 }
 
 export interface ShopSlotDeclaration {

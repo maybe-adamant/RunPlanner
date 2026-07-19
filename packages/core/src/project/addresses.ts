@@ -19,6 +19,11 @@ export interface ContinuationAddress extends BiomeOwnedAddress {
   readonly parentOccurrenceId: OccurrenceId;
 }
 
+export interface BatchRewardStoreAddress extends BiomeOwnedAddress {
+  readonly kind: 'batchRewardStore';
+  readonly parentOccurrenceId: OccurrenceId;
+}
+
 export interface TargetAddress extends BiomeOwnedAddress {
   readonly kind: 'target';
   readonly parentOccurrenceId: OccurrenceId;
@@ -49,6 +54,7 @@ export interface ShopOfferAddress extends BiomeOwnedAddress {
 
 export type SemanticAddress =
   | BiomeAddress
+  | BatchRewardStoreAddress
   | ContinuationAddress
   | IncomingRewardAddress
   | OccurrenceAddress
@@ -111,6 +117,13 @@ export function createContinuationAddress(
   parentOccurrenceId: OccurrenceId,
 ): ContinuationAddress {
   return Object.freeze({ kind: 'continuation', ...biomeOwner(biome), parentOccurrenceId });
+}
+
+export function createBatchRewardStoreAddress(
+  biome: BiomeAddress,
+  parentOccurrenceId: OccurrenceId,
+): BatchRewardStoreAddress {
+  return Object.freeze({ kind: 'batchRewardStore', ...biomeOwner(biome), parentOccurrenceId });
 }
 
 export function createTargetAddress(
@@ -179,6 +192,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
         address.occurrenceId,
       ]);
     case 'continuation':
+    case 'batchRewardStore':
     case 'picked':
       return JSON.stringify([
         address.kind,

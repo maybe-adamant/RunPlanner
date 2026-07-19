@@ -18,9 +18,11 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { CatalogContractError } from '../normalization/errors';
-import { ordinarySources, rewardKernelCatalog, rewardKernelDeclarations } from './index';
+import { ordinarySources, rewardKernelDeclarations } from './index';
 import { createRewardKernelCatalog } from './normalize';
 import type { RawRewardKernelInput } from './types';
+
+const rewardKernelCatalog = createRewardKernelCatalog(rewardKernelDeclarations);
 
 function rawInput(value: unknown): RawRewardKernelInput {
   return value as RawRewardKernelInput;
@@ -277,6 +279,14 @@ describe('reward-kernel declaration parity', () => {
     expect(rewardKernelCatalog.shops.byKey.I_WorldShop?.slotCount).toBe(5);
     expect(rewardKernelCatalog.shops.byKey.Q_WorldShop?.slotCount).toBe(6);
     expect(rewardKernelCatalog.shops.byKey.Q_WorldShop?.groups.values[0]?.offerCount).toBe(2);
+    expect(rewardKernelCatalog.shops.byKey.WorldShop?.groups.byKey.Boon?.rewardTypes).toEqual([
+      'RandomLoot',
+      'BlindBoxLoot',
+      'ShopHermesUpgrade',
+    ]);
+    expect(
+      Object.isFrozen(rewardKernelCatalog.shops.byKey.WorldShop?.groups.byKey.Boon?.rewardTypes),
+    ).toBe(true);
     expect(
       rewardKernelCatalog.shops.byKey.WorldShop?.groups.byKey.MajorNonBoon?.options.values
         .filter((entry) => entry.defaultOffer.rewardType === 'WeaponUpgradeDrop')

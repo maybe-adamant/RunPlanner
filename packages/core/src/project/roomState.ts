@@ -1,15 +1,13 @@
 import type { Catalog, RoomDeclaration } from '../catalog';
+import type { CountedRewardBinding, ShopRewardBinding } from '../rewards';
 import type {
-  ConcreteReward,
-  CountedRewardBinding,
+  ResolvedRewardOffer,
   RewardPayload,
-  RewardPrimitive,
-  ShopProfile,
-  ShopRewardBinding,
-} from '../rewards';
-import type { AuthoredRoomState, CountedRewardChoice, ShopOfferState, ShopState } from './model';
+  RewardTypeDeclaration,
+  ShopProfileDeclaration,
+} from '../rewardKernel/model';
+import type { AuthoredRoomState, ShopOfferState, ShopState } from './model';
 import {
-  expectArray,
   expectBoolean,
   expectExactKeys,
   expectRecord,
@@ -19,28 +17,10 @@ import {
 
 export type RoomOccurrenceRole = 'ordinary' | 'terminalFreeReward' | 'terminalShop';
 
-function defaultCountedChoice(binding: CountedRewardBinding): CountedRewardChoice {
-  return Object.freeze({
-    storeKey: binding.defaultStoreKey,
-    reward: binding.defaultReward,
-  });
-}
-
-function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: string): ShopState {
-  const profile = catalog.shopProfiles.byKey[binding.shopProfileKey];
-  if (profile === undefined) {
-    failProjectDocument(path, `unknown shop profile ${binding.shopProfileKey}`);
-  }
-
-  const offers: Record<string, ShopOfferState> = {};
-  for (const slot of profile.slots.values) {
-    offers[slot.key] = Object.freeze({ reward: slot.defaultReward, purchased: false });
-  }
-
-  return Object.freeze({
-    profileKey: profile.key,
-    offers: Object.freeze(offers),
-  });
+export interface RoomStateContext {
+  readonly role: RoomOccurrenceRole;
+  readonly resolvedStoreKey?: string;
+  readonly entryActive: boolean;
 }
 
 function requireOrdinaryRole(role: RoomOccurrenceRole, room: RoomDeclaration, path: string): void {
@@ -63,12 +43,40 @@ function requireShopBinding(room: RoomDeclaration, path: string): ShopRewardBind
   return room.incomingReward;
 }
 
+function defaultCountedOffer(
+  binding: CountedRewardBinding,
+  storeKey: string | undefined,
+  path: string,
+): ResolvedRewardOffer {
+  if (storeKey === undefined) {
+    failProjectDocument(path, 'counted reward requires a resolved store');
+  }
+  const offer = binding.defaultOffersByStore[storeKey];
+  if (offer === undefined) {
+    failProjectDocument(path, `${storeKey} is not available from this room`);
+  }
+  return offer;
+}
+
+function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: string): ShopState {
+  const profile = catalog.rewards.shops.byKey[binding.shopProfileKey];
+  if (profile === undefined) {
+    failProjectDocument(path, `unknown shop profile ${binding.shopProfileKey}`);
+  }
+  const offers: Record<string, ShopOfferState> = {};
+  for (const slot of profile.slots.values) {
+    offers[slot.key] = Object.freeze({ offer: slot.defaultOffer, purchased: false });
+  }
+  return Object.freeze({ profileKey: profile.key, offers: Object.freeze(offers) });
+}
+
 export function createDefaultRoomState(
   catalog: Catalog,
   room: RoomDeclaration,
-  role: RoomOccurrenceRole = 'ordinary',
+  context: RoomStateContext,
 ): AuthoredRoomState {
   const path = `rooms.${room.gameName}.state`;
+  const { role, entryActive } = context;
 
   switch (room.templateKey) {
     case 'FixedIntro':
@@ -81,7 +89,11 @@ export function createDefaultRoomState(
       requireOrdinaryRole(role, room, path);
       return Object.freeze({
         kind: 'counted',
-        choice: defaultCountedChoice(requireCountedBinding(room, path)),
+        offer: defaultCountedOffer(
+          requireCountedBinding(room, path),
+          context.resolvedStoreKey,
+          path,
+        ),
       });
     case 'Story': {
       requireOrdinaryRole(role, room, path);
@@ -90,16 +102,18 @@ export function createDefaultRoomState(
       }
       return Object.freeze({
         kind: 'fixed',
-        ...(room.incomingReward.reward.payload === undefined
+        ...(room.incomingReward.offer.payload === undefined
           ? {}
-          : { payload: room.incomingReward.reward.payload }),
+          : { payload: room.incomingReward.offer.payload }),
       });
     }
     case 'Shop':
       requireOrdinaryRole(role, room, path);
       return Object.freeze({
         kind: 'shop',
-        shop: defaultShopState(catalog, requireShopBinding(room, path), path),
+        ...(entryActive
+          ? { shop: defaultShopState(catalog, requireShopBinding(room, path), path) }
+          : {}),
       });
     case 'ForkedPreboss':
       if (role === 'ordinary') {
@@ -108,7 +122,9 @@ export function createDefaultRoomState(
       if (role === 'terminalShop') {
         return Object.freeze({
           kind: 'shop',
-          shop: defaultShopState(catalog, requireShopBinding(room, path), path),
+          ...(entryActive
+            ? { shop: defaultShopState(catalog, requireShopBinding(room, path), path) }
+            : {}),
         });
       }
       if (room.entryOfferPolicy === undefined) {
@@ -116,109 +132,96 @@ export function createDefaultRoomState(
       }
       return Object.freeze({
         kind: 'freeReward',
-        choice: defaultCountedChoice(room.entryOfferPolicy.freeReward),
+        offer: defaultCountedOffer(
+          room.entryOfferPolicy.freeReward,
+          context.resolvedStoreKey,
+          path,
+        ),
       });
   }
 }
 
 function decodePayload(
   value: unknown,
-  primitive: RewardPrimitive,
+  rewardType: RewardTypeDeclaration,
   catalog: Catalog,
   path: string,
 ): RewardPayload | undefined {
-  if (primitive.payloadDomain === undefined) {
+  if (rewardType.payloadDomain === undefined) {
     if (value !== undefined) {
-      failProjectDocument(path, `${primitive.gameName} does not accept a payload`);
+      failProjectDocument(path, `${rewardType.gameName} does not accept a payload`);
     }
     return undefined;
   }
   if (value === undefined) {
-    failProjectDocument(path, `${primitive.gameName} requires a payload`);
+    failProjectDocument(path, `${rewardType.gameName} requires a payload`);
   }
-
-  const domain = catalog.rewardPayloadDomains.byKey[primitive.payloadDomain];
+  const domain = catalog.rewards.payloadDomains.byKey[rewardType.payloadDomain];
   if (domain === undefined) {
-    failProjectDocument(path, `unknown payload domain ${primitive.payloadDomain}`);
+    failProjectDocument(path, `unknown payload domain ${rewardType.payloadDomain}`);
   }
   const payload = expectRecord(value, path);
-
   if (domain.kind === 'oneOf') {
-    expectExactKeys(payload, ['source'], path);
+    expectExactKeys(payload, ['kind', 'source'], path);
+    if (expectString(payload.kind, `${path}.kind`) !== 'BoonSource') {
+      failProjectDocument(`${path}.kind`, 'expected BoonSource');
+    }
     const source = expectString(payload.source, `${path}.source`);
     if (!domain.values.includes(source)) {
       failProjectDocument(`${path}.source`, `${source} is not in ${domain.key}`);
     }
-    return Object.freeze({ source });
+    return Object.freeze({ kind: 'BoonSource', source });
   }
-
-  expectExactKeys(payload, ['sources'], path);
-  const sources = expectArray(payload.sources, `${path}.sources`);
-  if (sources.length !== 2) {
-    failProjectDocument(`${path}.sources`, 'must contain exactly two values');
+  expectExactKeys(payload, ['kind', 'chosenSource', 'spurnedSource'], path);
+  if (expectString(payload.kind, `${path}.kind`) !== 'DevotionPair') {
+    failProjectDocument(`${path}.kind`, 'expected DevotionPair');
   }
-  const first = expectString(sources[0], `${path}.sources[0]`);
-  const second = expectString(sources[1], `${path}.sources[1]`);
-  if (first === second) {
-    failProjectDocument(`${path}.sources`, 'must contain distinct values');
+  const chosenSource = expectString(payload.chosenSource, `${path}.chosenSource`);
+  const spurnedSource = expectString(payload.spurnedSource, `${path}.spurnedSource`);
+  if (chosenSource === spurnedSource) {
+    failProjectDocument(path, 'chosenSource and spurnedSource must be distinct');
   }
-  const valueDomain = catalog.rewardPayloadDomains.byKey[domain.valueDomain];
+  const valueDomain = catalog.rewards.payloadDomains.byKey[domain.valueDomain];
   if (valueDomain?.kind !== 'oneOf') {
     failProjectDocument(path, `invalid value domain ${domain.valueDomain}`);
   }
-  for (const [index, source] of [first, second].entries()) {
+  for (const [field, source] of [
+    ['chosenSource', chosenSource],
+    ['spurnedSource', spurnedSource],
+  ] as const) {
     if (!valueDomain.values.includes(source)) {
-      failProjectDocument(`${path}.sources[${index}]`, `${source} is not in ${valueDomain.key}`);
+      failProjectDocument(`${path}.${field}`, `${source} is not in ${valueDomain.key}`);
     }
   }
-  return Object.freeze({ sources: Object.freeze([first, second]) as readonly [string, string] });
+  return Object.freeze({ kind: 'DevotionPair', chosenSource, spurnedSource });
 }
 
-function decodeConcreteReward(value: unknown, catalog: Catalog, path: string): ConcreteReward {
-  const reward = expectRecord(value, path);
-  expectExactKeys(reward, ['rewardType', 'payload'], path);
-  const rewardType = expectString(reward.rewardType, `${path}.rewardType`);
-  const primitive = catalog.rewardPrimitives.byKey[rewardType];
-  if (primitive === undefined) {
-    failProjectDocument(`${path}.rewardType`, `unknown reward primitive ${rewardType}`);
+function decodeOffer(value: unknown, catalog: Catalog, path: string): ResolvedRewardOffer {
+  const offer = expectRecord(value, path);
+  expectExactKeys(offer, ['rewardType', 'payload'], path);
+  const rewardTypeName = expectString(offer.rewardType, `${path}.rewardType`);
+  const rewardType = catalog.rewards.rewardTypes.byKey[rewardTypeName];
+  if (rewardType === undefined) {
+    failProjectDocument(`${path}.rewardType`, `unknown reward type ${rewardTypeName}`);
   }
-  const payload = decodePayload(reward.payload, primitive, catalog, `${path}.payload`);
+  const payload = decodePayload(offer.payload, rewardType, catalog, `${path}.payload`);
   return Object.freeze({
-    rewardType,
+    rewardType: rewardTypeName,
     ...(payload === undefined ? {} : { payload }),
   });
 }
 
-function decodeCountedChoice(
+function decodeCountedOffer(
   value: unknown,
   catalog: Catalog,
   binding: CountedRewardBinding,
   path: string,
-): CountedRewardChoice {
-  const choice = expectRecord(value, path);
-  expectExactKeys(choice, ['storeKey', 'reward'], path);
-  const storeKey = expectString(choice.storeKey, `${path}.storeKey`);
-  if (!binding.storeKeys.includes(storeKey)) {
-    failProjectDocument(`${path}.storeKey`, `${storeKey} is not available from this room`);
+): ResolvedRewardOffer {
+  const offer = decodeOffer(value, catalog, path);
+  if (!binding.allowedRewardTypes.includes(offer.rewardType)) {
+    failProjectDocument(`${path}.rewardType`, `${offer.rewardType} is filtered from this room`);
   }
-  const store = catalog.rewardStores.byKey[storeKey];
-  if (store === undefined) {
-    failProjectDocument(`${path}.storeKey`, `unknown reward store ${storeKey}`);
-  }
-  const reward = decodeConcreteReward(choice.reward, catalog, `${path}.reward`);
-  if (!store.rewardTypes.includes(reward.rewardType)) {
-    failProjectDocument(
-      `${path}.reward.rewardType`,
-      `${reward.rewardType} is not produced by ${storeKey}`,
-    );
-  }
-  if (!binding.allowedRewardTypes.includes(reward.rewardType)) {
-    failProjectDocument(
-      `${path}.reward.rewardType`,
-      `${reward.rewardType} is filtered from this room`,
-    );
-  }
-  return Object.freeze({ storeKey, reward });
+  return offer;
 }
 
 function decodeShopState(
@@ -233,7 +236,7 @@ function decodeShopState(
   if (profileKey !== binding.shopProfileKey) {
     failProjectDocument(`${path}.profileKey`, `expected ${binding.shopProfileKey}`);
   }
-  const profile = catalog.shopProfiles.byKey[profileKey];
+  const profile = catalog.rewards.shops.byKey[profileKey];
   if (profile === undefined) {
     failProjectDocument(`${path}.profileKey`, `unknown shop profile ${profileKey}`);
   }
@@ -243,7 +246,7 @@ function decodeShopState(
 function decodeShopOffers(
   value: unknown,
   catalog: Catalog,
-  profile: ShopProfile,
+  profile: ShopProfileDeclaration,
   path: string,
 ): ShopState {
   const rawOffers = expectRecord(value, `${path}.offers`);
@@ -253,35 +256,32 @@ function decodeShopOffers(
     `${path}.offers`,
   );
   const offers: Record<string, ShopOfferState> = {};
-
   for (const slot of profile.slots.values) {
     const offerPath = `${path}.offers.${slot.key}`;
     const rawOffer = expectRecord(rawOffers[slot.key], offerPath);
-    expectExactKeys(rawOffer, ['reward', 'purchased'], offerPath);
-    const reward = decodeConcreteReward(rawOffer.reward, catalog, `${offerPath}.reward`);
-    const optionSet = catalog.shopOptionSets.byKey[slot.optionSetKey];
-    if (optionSet === undefined) {
-      failProjectDocument(offerPath, `unknown option set ${slot.optionSetKey}`);
+    expectExactKeys(rawOffer, ['offer', 'purchased'], offerPath);
+    const offer = decodeOffer(rawOffer.offer, catalog, `${offerPath}.offer`);
+    const group = profile.groups.byKey[slot.groupKey];
+    if (group === undefined) {
+      failProjectDocument(offerPath, `unknown shop group ${slot.groupKey}`);
     }
-    if (!optionSet.rewardTypes.includes(reward.rewardType)) {
+    if (
+      !group.options.values.some((option) => option.defaultOffer.rewardType === offer.rewardType)
+    ) {
       failProjectDocument(
-        `${offerPath}.reward.rewardType`,
-        `${reward.rewardType} is not available from ${slot.optionSetKey}`,
+        `${offerPath}.offer.rewardType`,
+        `${offer.rewardType} is not available from ${slot.groupKey}`,
       );
     }
     offers[slot.key] = Object.freeze({
-      reward,
+      offer,
       purchased: expectBoolean(rawOffer.purchased, `${offerPath}.purchased`),
     });
   }
-
-  return Object.freeze({
-    profileKey: profile.key,
-    offers: Object.freeze(offers),
-  });
+  return Object.freeze({ profileKey: profile.key, offers: Object.freeze(offers) });
 }
 
-function decodeExpectedKind(value: unknown, expected: string, path: string): void {
+function expectedKind(value: unknown, expected: string, path: string): void {
   const kind = expectString(value, `${path}.kind`);
   if (kind !== expected) {
     failProjectDocument(`${path}.kind`, `expected ${expected}, received ${kind}`);
@@ -292,86 +292,91 @@ export function decodeRoomState(
   value: unknown,
   catalog: Catalog,
   room: RoomDeclaration,
-  role: RoomOccurrenceRole,
+  context: Pick<RoomStateContext, 'role' | 'entryActive'>,
   path: string,
 ): AuthoredRoomState {
   const state = expectRecord(value, path);
-
+  const { role, entryActive } = context;
   switch (room.templateKey) {
     case 'FixedIntro':
       requireOrdinaryRole(role, room, path);
-      decodeExpectedKind(state.kind, 'none', path);
+      expectedKind(state.kind, 'none', path);
       expectExactKeys(state, ['kind'], path);
       return Object.freeze({ kind: 'none' });
     case 'FixedOpening':
     case 'Fountain':
     case 'Miniboss':
-    case 'StandardCombat': {
+    case 'StandardCombat':
       requireOrdinaryRole(role, room, path);
-      decodeExpectedKind(state.kind, 'counted', path);
-      expectExactKeys(state, ['kind', 'choice'], path);
+      expectedKind(state.kind, 'counted', path);
+      expectExactKeys(state, ['kind', 'offer'], path);
       return Object.freeze({
         kind: 'counted',
-        choice: decodeCountedChoice(
-          state.choice,
+        offer: decodeCountedOffer(
+          state.offer,
           catalog,
           requireCountedBinding(room, path),
-          `${path}.choice`,
+          `${path}.offer`,
         ),
       });
-    }
     case 'Story': {
       requireOrdinaryRole(role, room, path);
-      decodeExpectedKind(state.kind, 'fixed', path);
+      expectedKind(state.kind, 'fixed', path);
       expectExactKeys(state, ['kind', 'payload'], path);
       if (room.incomingReward.kind !== 'fixed') {
         failProjectDocument(path, 'Story requires a fixed reward binding');
       }
-      const primitive = catalog.rewardPrimitives.byKey[room.incomingReward.reward.rewardType];
-      if (primitive === undefined) {
-        failProjectDocument(path, `unknown fixed reward ${room.incomingReward.reward.rewardType}`);
+      const rewardType = catalog.rewards.rewardTypes.byKey[room.incomingReward.offer.rewardType];
+      if (rewardType === undefined) {
+        failProjectDocument(path, `unknown fixed reward ${room.incomingReward.offer.rewardType}`);
       }
-      const payload = decodePayload(state.payload, primitive, catalog, `${path}.payload`);
+      const payload = decodePayload(state.payload, rewardType, catalog, `${path}.payload`);
       return Object.freeze({ kind: 'fixed', ...(payload === undefined ? {} : { payload }) });
     }
     case 'Shop':
       requireOrdinaryRole(role, room, path);
-      decodeExpectedKind(state.kind, 'shop', path);
-      expectExactKeys(state, ['kind', 'shop'], path);
-      return Object.freeze({
-        kind: 'shop',
-        shop: decodeShopState(state.shop, catalog, requireShopBinding(room, path), `${path}.shop`),
-      });
+      return decodeShopRoomState(state, catalog, room, entryActive, path);
     case 'ForkedPreboss':
       if (role === 'ordinary') {
         failProjectDocument(path, 'ForkedPreboss requires a derived terminal role');
       }
       if (role === 'terminalShop') {
-        decodeExpectedKind(state.kind, 'shop', path);
-        expectExactKeys(state, ['kind', 'shop'], path);
-        return Object.freeze({
-          kind: 'shop',
-          shop: decodeShopState(
-            state.shop,
-            catalog,
-            requireShopBinding(room, path),
-            `${path}.shop`,
-          ),
-        });
+        return decodeShopRoomState(state, catalog, room, entryActive, path);
       }
-      decodeExpectedKind(state.kind, 'freeReward', path);
-      expectExactKeys(state, ['kind', 'choice'], path);
+      expectedKind(state.kind, 'freeReward', path);
+      expectExactKeys(state, ['kind', 'offer'], path);
       if (room.entryOfferPolicy === undefined) {
         failProjectDocument(path, 'ForkedPreboss requires an entry offer policy');
       }
       return Object.freeze({
         kind: 'freeReward',
-        choice: decodeCountedChoice(
-          state.choice,
+        offer: decodeCountedOffer(
+          state.offer,
           catalog,
           room.entryOfferPolicy.freeReward,
-          `${path}.choice`,
+          `${path}.offer`,
         ),
       });
   }
+}
+
+function decodeShopRoomState(
+  state: Record<string, unknown>,
+  catalog: Catalog,
+  room: RoomDeclaration,
+  entryActive: boolean,
+  path: string,
+): AuthoredRoomState {
+  expectedKind(state.kind, 'shop', path);
+  expectExactKeys(state, ['kind', 'shop'], path);
+  if (state.shop === undefined) {
+    if (entryActive) {
+      failProjectDocument(`${path}.shop`, 'is required for an entered shop occurrence');
+    }
+    return Object.freeze({ kind: 'shop' });
+  }
+  return Object.freeze({
+    kind: 'shop',
+    shop: decodeShopState(state.shop, catalog, requireShopBinding(room, path), `${path}.shop`),
+  });
 }
