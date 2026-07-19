@@ -344,7 +344,15 @@ event occurs. No declaration uses a generic `acquiredAs` alias.
 Counted bags preserve declaration order, multiplicity, entry-level
 requirements, and entry-level duplicate policy. The shared picker owns any
 refill behavior. Shops use ordered shop groups with offer counts and per-option
-requirements rather than counted bags.
+requirements rather than counted bags. Each shop profile also declares its
+ordered emitted slots with stable keys, labels, owning groups, and explicit
+default option entries; slots are not inferred from option order.
+
+Producer-lifecycle profiles remain separate from reward types. Each profile
+enumerates its supported reward types, supplies complete default role timing,
+and declares exact per-type overrides where timing differs. Normalization
+rejects unknown or duplicate supported types, overrides outside the profile,
+and any lifecycle that fails to bind every acquisition role exactly once.
 
 Producer bindings select stores, fixed sources, shop profiles, and positive or
 negative filters. A filtered variant does not automatically become a new named
@@ -441,11 +449,15 @@ Catalog construction must verify:
   compatible offer- or acquisition-role resolution point;
 - counted entries declare duplicate behavior and shops declare valid
   without-replacement group cardinality;
+- shop slots exactly realize group offer counts, own unique stable keys and
+  labels, and select distinct valid defaults within a multi-offer group;
 - every offer projection selects a registered closed semantic kind;
 - concrete acquisition history projections reference valid ledgers;
 - every producer lifecycle binding references a role declared by the reward
   type, and every role resolves a valid fixed, self, or typed payload-derived
   concrete acquisition;
+- every producer-lifecycle profile enumerates its supported reward types and
+  expands to one complete lifecycle for every supported role;
 - every supported concrete acquisition selects exactly one audited
   `lootAndUse` or `consumableAndUse` projection profile independently of its
   acquisition kind;

@@ -611,7 +611,25 @@ const stores = [
 ] satisfies RawRewardKernelInput['stores'];
 
 const shops = [
-  { key: 'WorldShop', groups: worldGroups },
+  {
+    key: 'WorldShop',
+    groups: worldGroups,
+    slots: [
+      { key: 'Boon', label: 'Offer 1', groupKey: 'Boon', defaultOptionKey: 'RandomLoot' },
+      {
+        key: 'MajorNonBoon',
+        label: 'Offer 2',
+        groupKey: 'MajorNonBoon',
+        defaultOptionKey: 'WeaponUpgradeDropEarly',
+      },
+      {
+        key: 'Minor',
+        label: 'Offer 3',
+        groupKey: 'Minor',
+        defaultOptionKey: 'MaxManaDrop',
+      },
+    ],
+  },
   {
     key: 'I_WorldShop',
     groups: [
@@ -661,6 +679,38 @@ const shops = [
       },
       { key: 'MetaProgress', offerCount: 1, options: lateResourceOptions },
     ],
+    slots: [
+      {
+        key: 'BoostedBoon',
+        label: 'Offer 1',
+        groupKey: 'BoostedBoon',
+        defaultOptionKey: 'BoostedRandomLoot',
+      },
+      {
+        key: 'MixedProgress',
+        label: 'Offer 2',
+        groupKey: 'MixedProgress',
+        defaultOptionKey: 'RandomLoot',
+      },
+      {
+        key: 'Survival',
+        label: 'Offer 3',
+        groupKey: 'Survival',
+        defaultOptionKey: 'HealBigDrop',
+      },
+      {
+        key: 'PremiumProgress',
+        label: 'Offer 4',
+        groupKey: 'PremiumProgress',
+        defaultOptionKey: 'ShopHermesUpgrade',
+      },
+      {
+        key: 'MetaProgress',
+        label: 'Offer 5',
+        groupKey: 'MetaProgress',
+        defaultOptionKey: 'WeaponPointsRareDrop',
+      },
+    ],
   },
   {
     key: 'Q_WorldShop',
@@ -709,6 +759,44 @@ const shops = [
       },
       { key: 'MetaProgress', offerCount: 1, options: lateResourceOptions },
     ],
+    slots: [
+      {
+        key: 'MixedProgress1',
+        label: 'Offer 1',
+        groupKey: 'MixedProgress',
+        defaultOptionKey: 'BoostedRandomLoot',
+      },
+      {
+        key: 'MixedProgress2',
+        label: 'Offer 2',
+        groupKey: 'MixedProgress',
+        defaultOptionKey: 'StackUpgradeBig',
+      },
+      {
+        key: 'LargeSurvival',
+        label: 'Offer 3',
+        groupKey: 'LargeSurvival',
+        defaultOptionKey: 'HealBigDrop',
+      },
+      {
+        key: 'Survival',
+        label: 'Offer 4',
+        groupKey: 'Survival',
+        defaultOptionKey: 'HealBigDrop',
+      },
+      {
+        key: 'PremiumProgress',
+        label: 'Offer 5',
+        groupKey: 'PremiumProgress',
+        defaultOptionKey: 'ShopHermesUpgrade',
+      },
+      {
+        key: 'MetaProgress',
+        label: 'Offer 6',
+        groupKey: 'MetaProgress',
+        defaultOptionKey: 'WeaponPointsRareDrop',
+      },
+    ],
   },
 ] satisfies RawRewardKernelInput['shops'];
 
@@ -721,4 +809,38 @@ export const rewardKernelDeclarations = {
   rewardTypes,
   stores,
   shops,
+  producerLifecycles: [
+    {
+      key: 'RoomReward',
+      rewardTypes: [
+        'MaxHealthDrop',
+        'MaxManaDrop',
+        'RoomMoneyDrop',
+        'StackUpgrade',
+        'WeaponUpgrade',
+        'HermesUpgrade',
+        'Devotion',
+        'SpellDrop',
+        'TalentDrop',
+        'Boon',
+        'GiftDrop',
+        'MetaCurrencyDrop',
+        'MetaCardPointsCommonDrop',
+        'MetaCurrencyBigDrop',
+        'MetaCardPointsCommonBigDrop',
+        'Story',
+        'Shop',
+      ],
+      defaultLifecyclePoint: 'roomRewardPickup',
+      overrides: [
+        {
+          rewardType: 'Devotion',
+          acquisitionLifecycle: [
+            { role: 'chosenSource', lifecyclePoint: 'beforeCombat' },
+            { role: 'spurnedSource', lifecyclePoint: 'afterCombat' },
+          ],
+        },
+      ],
+    },
+  ],
 } satisfies RawRewardKernelInput;

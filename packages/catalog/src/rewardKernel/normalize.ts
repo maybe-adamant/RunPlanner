@@ -1,9 +1,13 @@
 import type { CatalogCollection, RequirementExpression } from '@run-planner/core';
 import type {
+  AcquisitionLifecycleBinding,
   AcquisitionRoleResolution,
   AcquisitionRoleDeclaration,
   ConcreteAcquisitionDeclaration,
   PayloadDomainDeclaration,
+  ProducerLifecycleProfileDeclaration,
+  ProducerLifecyclePointKey,
+  ProducerRewardLifecycleDeclaration,
   ResolvedRewardOffer,
   RewardKernelCatalog,
   RewardPayload,
@@ -12,6 +16,7 @@ import type {
   ShopGroupDeclaration,
   ShopOptionEntry,
   ShopProfileDeclaration,
+  ShopSlotDeclaration,
   SourceResolutionPoint,
 } from '@run-planner/core/reward-kernel';
 
@@ -503,11 +508,48 @@ function normalizeShopOption(
   if (rewardType === undefined) {
     fail(`${path}.rewardType`, `unknown reward type ${defaultOffer.rewardType}`);
   }
+  const acquisitionLifecycle = normalizeAcquisitionLifecycle(
+    raw.acquisitionLifecycle,
+    rewardType,
+    'purchase',
+    path,
+  );
+  return Object.freeze({
+    key: requireNonEmpty(raw.key, `${path}.key`),
+    defaultOffer,
+    ...(raw.requirement === undefined
+      ? {}
+      : {
+          requirement: normalizeAndValidateRequirement(
+            raw.requirement,
+            rewardTypes,
+            `${path}.requirement`,
+          ),
+        }),
+    ...(raw.purchaseRequirement === undefined
+      ? {}
+      : {
+          purchaseRequirement: normalizeAndValidateRequirement(
+            raw.purchaseRequirement,
+            rewardTypes,
+            `${path}.purchaseRequirement`,
+          ),
+        }),
+    acquisitionLifecycle,
+  });
+}
+
+function normalizeAcquisitionLifecycle(
+  raw: readonly AcquisitionLifecycleBinding[] | undefined,
+  rewardType: RewardTypeDeclaration,
+  defaultLifecyclePoint: ProducerLifecyclePointKey,
+  path: string,
+): readonly AcquisitionLifecycleBinding[] {
   const rawLifecycle =
-    raw.acquisitionLifecycle ??
+    raw ??
     rewardType.acquisitionRoles.values.map((role) => ({
       role: role.key,
-      lifecyclePoint: 'purchase' as const,
+      lifecyclePoint: defaultLifecyclePoint,
     }));
   const seenRoles = new Set<string>();
   const acquisitionLifecycle = rawLifecycle.map((binding, index) => {
@@ -532,29 +574,7 @@ function normalizeShopOption(
   if (seenRoles.size !== rewardType.acquisitionRoles.values.length) {
     fail(`${path}.acquisitionLifecycle`, 'must bind every reward acquisition role exactly once');
   }
-  return Object.freeze({
-    key: requireNonEmpty(raw.key, `${path}.key`),
-    defaultOffer,
-    ...(raw.requirement === undefined
-      ? {}
-      : {
-          requirement: normalizeAndValidateRequirement(
-            raw.requirement,
-            rewardTypes,
-            `${path}.requirement`,
-          ),
-        }),
-    ...(raw.purchaseRequirement === undefined
-      ? {}
-      : {
-          purchaseRequirement: normalizeAndValidateRequirement(
-            raw.purchaseRequirement,
-            rewardTypes,
-            `${path}.purchaseRequirement`,
-          ),
-        }),
-    acquisitionLifecycle: Object.freeze(acquisitionLifecycle),
-  });
+  return Object.freeze(acquisitionLifecycle);
 }
 
 function normalizeShops(
@@ -564,7 +584,7 @@ function normalizeShops(
   return createCollection(
     raw.map((profile, profileIndex): ShopProfileDeclaration => {
       const path = `shops[${profileIndex}]`;
-      requireNonEmpty(profile.key, `${path}.key`);
+      const key = requireNonEmpty(profile.key, `${path}.key`);
       if (profile.groups.length === 0) {
         fail(`${path}.groups`, 'must not be empty');
       }
@@ -591,14 +611,143 @@ function normalizeShops(
         `${path}.groups`,
         (group) => group.key,
       );
+      const expectedGroupKeys = groups.values.flatMap((group) =>
+        Array.from({ length: group.offerCount }, () => group.key),
+      );
+      if (profile.slots.length !== expectedGroupKeys.length) {
+        fail(`${path}.slots`, `must declare exactly ${expectedGroupKeys.length} emitted slots`);
+      }
+      const defaultOptionsByGroup = new Map<string, Set<string>>();
+      const slots = createCollection(
+        profile.slots.map((slot, slotIndex): ShopSlotDeclaration => {
+          const slotPath = `${path}.slots[${slotIndex}]`;
+          const groupKey = requireNonEmpty(slot.groupKey, `${slotPath}.groupKey`);
+          const expectedGroupKey = expectedGroupKeys[slotIndex];
+          if (groupKey !== expectedGroupKey) {
+            fail(`${slotPath}.groupKey`, `expected ${String(expectedGroupKey)}`);
+          }
+          const group = groups.byKey[groupKey];
+          if (group === undefined) {
+            fail(`${slotPath}.groupKey`, `unknown shop group ${groupKey}`);
+          }
+          const defaultOptionKey = requireNonEmpty(
+            slot.defaultOptionKey,
+            `${slotPath}.defaultOptionKey`,
+          );
+          const defaultOption = group.options.byKey[defaultOptionKey];
+          if (defaultOption === undefined) {
+            fail(
+              `${slotPath}.defaultOptionKey`,
+              `unknown option ${defaultOptionKey} in ${groupKey}`,
+            );
+          }
+          const usedDefaults = defaultOptionsByGroup.get(groupKey) ?? new Set<string>();
+          if (usedDefaults.has(defaultOptionKey)) {
+            fail(`${slotPath}.defaultOptionKey`, `duplicates ${defaultOptionKey} in ${groupKey}`);
+          }
+          usedDefaults.add(defaultOptionKey);
+          defaultOptionsByGroup.set(groupKey, usedDefaults);
+          return Object.freeze({
+            key: requireNonEmpty(slot.key, `${slotPath}.key`),
+            label: requireNonEmpty(slot.label, `${slotPath}.label`),
+            groupKey,
+            defaultOptionKey,
+            defaultOffer: defaultOption.defaultOffer,
+          });
+        }),
+        `${path}.slots`,
+        (slot) => slot.key,
+      );
       return Object.freeze({
-        key: profile.key,
+        key,
         groups,
-        slotCount: groups.values.reduce((sum, group) => sum + group.offerCount, 0),
+        slots,
+        slotCount: slots.values.length,
       });
     }),
     'shops',
     (shop) => shop.key,
+  );
+}
+
+function normalizeProducerLifecycles(
+  raw: RawRewardKernelInput['producerLifecycles'],
+  rewardTypes: CatalogCollection<RewardTypeDeclaration>,
+): CatalogCollection<ProducerLifecycleProfileDeclaration> {
+  return createCollection(
+    raw.map((profile, profileIndex): ProducerLifecycleProfileDeclaration => {
+      const path = `producerLifecycles[${profileIndex}]`;
+      const key = requireNonEmpty(profile.key, `${path}.key`);
+      const defaultLifecyclePoint = requireClosedValue(
+        profile.defaultLifecyclePoint,
+        PRODUCER_LIFECYCLE_POINTS,
+        `${path}.defaultLifecyclePoint`,
+      );
+      if (profile.rewardTypes.length === 0) {
+        fail(`${path}.rewardTypes`, 'must not be empty');
+      }
+      const supportedRewardTypes = profile.rewardTypes.map((rewardTypeName, rewardTypeIndex) => {
+        const rewardTypePath = `${path}.rewardTypes[${rewardTypeIndex}]`;
+        const normalizedName = requireNonEmpty(rewardTypeName, rewardTypePath);
+        const rewardType = rewardTypes.byKey[normalizedName];
+        if (rewardType === undefined) {
+          fail(rewardTypePath, `unknown reward type ${normalizedName}`);
+        }
+        return rewardType;
+      });
+      if (
+        new Set(supportedRewardTypes.map((rewardType) => rewardType.gameName)).size !==
+        supportedRewardTypes.length
+      ) {
+        fail(`${path}.rewardTypes`, 'must be unique');
+      }
+      const supportedNames = new Set(supportedRewardTypes.map((rewardType) => rewardType.gameName));
+      const overrides = new Map<string, readonly AcquisitionLifecycleBinding[]>();
+      for (const [overrideIndex, override] of (profile.overrides ?? []).entries()) {
+        const overridePath = `${path}.overrides[${overrideIndex}]`;
+        const rewardTypeName = requireNonEmpty(override.rewardType, `${overridePath}.rewardType`);
+        const rewardType = rewardTypes.byKey[rewardTypeName];
+        if (rewardType === undefined) {
+          fail(`${overridePath}.rewardType`, `unknown reward type ${rewardTypeName}`);
+        }
+        if (!supportedNames.has(rewardTypeName)) {
+          fail(`${overridePath}.rewardType`, `${rewardTypeName} is not supported by ${key}`);
+        }
+        if (overrides.has(rewardTypeName)) {
+          fail(`${overridePath}.rewardType`, `duplicates ${rewardTypeName}`);
+        }
+        overrides.set(
+          rewardTypeName,
+          normalizeAcquisitionLifecycle(
+            override.acquisitionLifecycle,
+            rewardType,
+            defaultLifecyclePoint,
+            overridePath,
+          ),
+        );
+      }
+      const normalizedRewardTypes = createCollection(
+        supportedRewardTypes.map((rewardType): ProducerRewardLifecycleDeclaration =>
+          Object.freeze({
+            rewardType: rewardType.gameName,
+            acquisitionLifecycle:
+              overrides.get(rewardType.gameName) ??
+              normalizeAcquisitionLifecycle(
+                undefined,
+                rewardType,
+                defaultLifecyclePoint,
+                `${path}.rewardTypes.${rewardType.gameName}`,
+              ),
+          }),
+        ),
+        `${path}.rewardTypes`,
+        (rewardType) => rewardType.rewardType,
+        'rewardType',
+      );
+      return Object.freeze({ key, rewardTypes: normalizedRewardTypes });
+    }),
+    'producerLifecycles',
+    (profile) => profile.key,
   );
 }
 
@@ -608,5 +757,13 @@ export function createRewardKernelCatalog(input: RawRewardKernelInput): RewardKe
   const rewardTypes = normalizeRewardTypes(input.rewardTypes, payloadDomains, acquisitions);
   const stores = normalizeStores(input.stores, rewardTypes);
   const shops = normalizeShops(input.shops, rewardTypes);
-  return Object.freeze({ payloadDomains, acquisitions, rewardTypes, stores, shops });
+  const producerLifecycles = normalizeProducerLifecycles(input.producerLifecycles, rewardTypes);
+  return Object.freeze({
+    payloadDomains,
+    acquisitions,
+    rewardTypes,
+    stores,
+    shops,
+    producerLifecycles,
+  });
 }

@@ -6,6 +6,7 @@ import type {
   HistoryProjectionKey,
   OfferProjectionKey,
   PayloadDomainDeclaration,
+  ProducerLifecyclePointKey,
   RewardPayload,
   SourceResolutionPoint,
   SourceSupportPolicyKey,
@@ -61,9 +62,29 @@ export interface RawShopGroupDeclaration {
   readonly options: readonly RawShopOptionEntryDeclaration[];
 }
 
+export interface RawShopSlotDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly groupKey: string;
+  readonly defaultOptionKey: string;
+}
+
 export interface RawShopProfileDeclaration {
   readonly key: string;
   readonly groups: readonly RawShopGroupDeclaration[];
+  readonly slots: readonly RawShopSlotDeclaration[];
+}
+
+export interface RawProducerLifecycleOverrideDeclaration {
+  readonly rewardType: string;
+  readonly acquisitionLifecycle: readonly AcquisitionLifecycleBinding[];
+}
+
+export interface RawProducerLifecycleProfileDeclaration {
+  readonly key: string;
+  readonly rewardTypes: readonly string[];
+  readonly defaultLifecyclePoint: ProducerLifecyclePointKey;
+  readonly overrides?: readonly RawProducerLifecycleOverrideDeclaration[];
 }
 
 export interface RawRewardKernelInput {
@@ -72,4 +93,5 @@ export interface RawRewardKernelInput {
   readonly acquisitions: readonly RawConcreteAcquisitionDeclaration[];
   readonly stores: readonly RawRewardStoreDeclaration[];
   readonly shops: readonly RawShopProfileDeclaration[];
+  readonly producerLifecycles: readonly RawProducerLifecycleProfileDeclaration[];
 }

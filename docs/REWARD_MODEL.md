@@ -158,6 +158,16 @@ roles to lifecycle points. Concrete acquisition declarations project history.
 No generic `acquiredAs` alias or arbitrary payload-property path crosses those
 layers.
 
+Reusable producer timing is normalized separately from reward identity. A
+producer-lifecycle profile enumerates the reward types it supports, supplies
+one default point for their roles, and may explicitly override the complete
+role binding for a supported reward type. The initial `RoomReward` profile
+binds ordinary roles to `roomRewardPickup`, while its declaration binds
+Devotion's `chosenSource` to `beforeCombat` and `spurnedSource` to
+`afterCombat`. Catalog normalization expands that declaration into one exact
+role-complete lifecycle per supported reward type. It does not invent timing
+for reward types outside the profile or dispatch on reward names in core code.
+
 The reward type owns what can be acquired, but not when. Having no roles
 represents a structural offer such as Story or Shop. The producer lifecycle
 owns when each role occurs. The same concrete loot must not encode whether it
@@ -659,7 +669,21 @@ interface ShopOptionEntry {
   rewardType: RewardTypeGameName;
   requirement?: RequirementExpression;
 }
+
+interface ShopSlot {
+  key: string;
+  label: string;
+  groupKey: string;
+  defaultOptionKey: string;
+  defaultOffer: ResolvedRewardOffer;
+}
 ```
+
+Slots are explicit declaration data rather than indexes synthesized from group
+order. Their ordered `groupKey` sequence must exactly realize every group's
+`offerCount`, and defaults in one multi-offer group must select distinct option
+entries. The normalized slot retains the resolved default offer beside the
+option key that authoritatively selected it.
 
 Entry keys remain distinct when the same reward type appears with different
 requirements. Authored state stores the complete resolved offer in each emitted
