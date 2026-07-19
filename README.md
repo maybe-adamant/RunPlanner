@@ -31,9 +31,9 @@ cross-biome design reconciliation are complete. P, Q, H, O, I, and N close the
 linear, scripted-linear, batch-local-slot, ordered multi-encounter,
 conditional-terminal, and persistent-hub pressure tests.
 
-Phase 2.6 is complete. It adds the audited reward kernel as an unconnected pure
-subsystem. Phase 2.7, the atomic F/G switch to schema version 2, is now active.
-Phase 2.8 then hardens the shared structural vocabulary and imports the
+Phases 2.6 and 2.7 are complete. The audited reward kernel is now the sole
+connected F/G reward authority, and the authored project/editor use schema
+version 2. Phase 2.8 is now active; it hardens the shared structural vocabulary and imports the
 remaining biomes as dormant declarations. Phase 3 history work starts only
 after those gates pass.
 

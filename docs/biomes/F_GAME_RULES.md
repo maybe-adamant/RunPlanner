@@ -159,6 +159,6 @@ controls.
 F editable-room declarations, authored topology, semantic commands, and editor
 projection exist. The derived `F_Boss01`/`F_PostBoss01` declarations and layout
 completion sequence, complete history, legality, reward simulation, and
-findings remain pending. The shared candidate batch-store authority is
-documentation-only and must not coexist with the current schema version 1 leaf
-store in production.
+findings remain pending. Generated batches now own the authored base store,
+Room Declarations own forced overrides, and counted leaves persist only their
+complete resolved offer under schema version 2.

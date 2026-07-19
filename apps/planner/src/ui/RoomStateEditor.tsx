@@ -49,48 +49,50 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
   if (state.kind === 'none') {
     return <p className="fixed-room-state">No room-local reward.</p>;
   }
-
   if (state.kind === 'fixed') {
     if (room.incomingReward.kind !== 'fixed') {
       throw new Error(`${room.gameName} has no fixed reward binding`);
     }
-    const primitive = catalog.rewardPrimitives.byKey[room.incomingReward.reward.rewardType];
-    if (primitive === undefined) {
+    const rewardType = catalog.rewards.rewardTypes.byKey[room.incomingReward.offer.rewardType];
+    if (rewardType === undefined) {
       throw new Error(`${room.gameName} fixed reward is missing`);
     }
-    return <p className="fixed-room-state">Fixed reward: {primitive.label}</p>;
+    return <p className="fixed-room-state">Fixed reward: {rewardType.label}</p>;
   }
-
   if (state.kind === 'counted' || state.kind === 'freeReward') {
     return (
       <CountedRewardEditor
         binding={countedBinding(room, state.kind)}
         catalog={catalog}
-        choice={state.choice}
         idPrefix={idPrefix}
-        onReplace={(choice) =>
+        offer={state.offer}
+        onReplace={(value) =>
           dispatch(
             authoredProjectCommandDispatched({
               kind: 'ReplaceIncomingReward',
               reward: createIncomingRewardAddress(biome, occurrence.occurrenceId),
-              choice,
+              value,
             }),
           )
         }
       />
     );
   }
-
-  const profile = catalog.shopProfiles.byKey[state.shop.profileKey];
+  if (state.shop === undefined) {
+    return (
+      <p className="fixed-room-state">Shop inventory materializes when this room is picked.</p>
+    );
+  }
+  const profile = catalog.rewards.shops.byKey[state.shop.profileKey];
   if (profile === undefined) {
     throw new Error(`Shop profile ${state.shop.profileKey} is missing`);
   }
   return (
     <div className="shop-editor">
       {profile.slots.values.map((slot) => {
-        const offer = state.shop.offers[slot.key];
-        const optionSet = catalog.shopOptionSets.byKey[slot.optionSetKey];
-        if (offer === undefined || optionSet === undefined) {
+        const offerState = state.shop?.offers[slot.key];
+        const group = profile.groups.byKey[slot.groupKey];
+        if (offerState === undefined || group === undefined) {
           throw new Error(`${profile.key} offer ${slot.key} is incomplete`);
         }
         const offerPrefix = `${idPrefix}-offer-${slot.key}`;
@@ -100,7 +102,7 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
               <h4>{slot.label}</h4>
               <label className="purchase-control" htmlFor={`${offerPrefix}-purchased`}>
                 <input
-                  checked={offer.purchased}
+                  checked={offerState.purchased}
                   id={`${offerPrefix}-purchased`}
                   onChange={(event) =>
                     dispatch(
@@ -123,17 +125,17 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
             <RewardValueEditor
               catalog={catalog}
               idPrefix={offerPrefix}
-              onReplace={(reward) =>
+              offer={offerState.offer}
+              onReplace={(value) =>
                 dispatch(
                   authoredProjectCommandDispatched({
                     kind: 'ReplaceShopOffer',
                     offer: createShopOfferAddress(biome, occurrence.occurrenceId, slot.key),
-                    reward,
+                    value,
                   }),
                 )
               }
-              reward={offer.reward}
-              rewardTypes={optionSet.rewardTypes}
+              rewardTypes={group.rewardTypes}
             />
           </section>
         );

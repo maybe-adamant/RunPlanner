@@ -217,6 +217,6 @@ Their current-run room, counter, cap, force, and reward rules remain exact.
 
 G editable-room declarations and generic authored topology/commands exist. The
 derived `G_Boss01`/`G_PostBoss01` declarations and layout completion sequence,
-G simulation, findings, and editor activation remain pending. The shared
-candidate batch-store authority is documentation-only and must not coexist
-with the current schema version 1 leaf store in production.
+G simulation, findings, and editor activation remain pending. Its normalized
+declarations now use the shared schema-version-2 batch-store, resolved-offer,
+producer-lifecycle, and entered-store-history contracts.

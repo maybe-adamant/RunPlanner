@@ -11,6 +11,7 @@ export {
 } from './defaults';
 export {
   createBiomeAddress,
+  createBatchRewardStoreAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
@@ -22,6 +23,7 @@ export {
   SemanticAddressContractError,
   semanticAddressKey,
   type BiomeAddress,
+  type BatchRewardStoreAddress,
   type ContinuationAddress,
   type IncomingRewardAddress,
   type OccurrenceAddress,
@@ -47,7 +49,8 @@ export {
   type AuthoredBiomePlan,
   type AuthoredRoomState,
   type AuthoredRoutePlan,
-  type CountedRewardChoice,
+  type AuthoredBatchState,
+  type BatchRewardStoreState,
   type LinearBatchContinuation,
   type LinearBiomePlan,
   type LinearBiomeTopology,
@@ -60,4 +63,9 @@ export {
   type ShopOfferState,
   type ShopState,
 } from './model';
-export { createDefaultRoomState, decodeRoomState, type RoomOccurrenceRole } from './roomState';
+export {
+  createDefaultRoomState,
+  decodeRoomState,
+  type RoomOccurrenceRole,
+  type RoomStateContext,
+} from './roomState';

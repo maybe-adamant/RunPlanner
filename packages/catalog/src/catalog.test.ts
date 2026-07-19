@@ -16,9 +16,13 @@ function requireCounted(binding: RewardProducerBinding | undefined): CountedRewa
   return binding;
 }
 
+function storeRewardTypes(store: { readonly entries: readonly { readonly rewardType: string }[] }) {
+  return [...new Set(store.entries.map((entry) => entry.rewardType))];
+}
+
 describe('F catalog migration slice', () => {
   it('normalizes verified reward, encounter, and room declarations', () => {
-    expect(catalog.version).toBe('0.1.0-fg-slice-5');
+    expect(catalog.version).toBe('0.2.0-fg-reward-v2');
     expect(catalog.routes.byKey.Underworld?.biomeSteps.map((step) => step.key)).toEqual([
       'Underworld_F',
       'Underworld_G',
@@ -26,7 +30,7 @@ describe('F catalog migration slice', () => {
       'Underworld_I',
     ]);
 
-    const runProgress = catalog.rewardStores.byKey.RunProgress;
+    const runProgress = catalog.rewards.stores.byKey.RunProgress;
     expect(runProgress?.entries.map((entry) => entry.rewardType)).toEqual([
       'MaxHealthDrop',
       'MaxHealthDrop',
@@ -47,7 +51,7 @@ describe('F catalog migration slice', () => {
       'Boon',
       'Boon',
     ]);
-    expect(runProgress?.rewardTypes).toEqual([
+    expect(storeRewardTypes(runProgress!)).toEqual([
       'MaxHealthDrop',
       'MaxManaDrop',
       'RoomMoneyDrop',
@@ -60,33 +64,27 @@ describe('F catalog migration slice', () => {
       'Boon',
     ]);
 
-    const metaProgress = catalog.rewardStores.byKey.MetaProgress;
+    const metaProgress = catalog.rewards.stores.byKey.MetaProgress;
     expect(metaProgress?.entries.map((entry) => entry.rewardType)).toEqual([
       'GiftDrop',
       'MetaCurrencyDrop',
       'MetaCurrencyDrop',
-      'MetaCurrencyDrop',
-      'MetaCurrencyDrop',
+      'MetaCardPointsCommonDrop',
+      'MetaCardPointsCommonDrop',
+      'MetaCardPointsCommonDrop',
+      'MetaCardPointsCommonDrop',
       'MetaCurrencyBigDrop',
       'MetaCurrencyBigDrop',
-      'MetaCardPointsCommonDrop',
-      'MetaCardPointsCommonDrop',
-      'MetaCardPointsCommonDrop',
-      'MetaCardPointsCommonDrop',
-      'MetaCardPointsCommonDrop',
-      'MetaCardPointsCommonDrop',
-      'MetaCardPointsCommonDrop',
-      'MetaCardPointsCommonDrop',
       'MetaCardPointsCommonBigDrop',
       'MetaCardPointsCommonBigDrop',
       'MetaCardPointsCommonBigDrop',
       'MetaCardPointsCommonBigDrop',
     ]);
-    expect(metaProgress?.rewardTypes).toEqual([
+    expect(storeRewardTypes(metaProgress!)).toEqual([
       'GiftDrop',
       'MetaCurrencyDrop',
-      'MetaCurrencyBigDrop',
       'MetaCardPointsCommonDrop',
+      'MetaCurrencyBigDrop',
       'MetaCardPointsCommonBigDrop',
     ]);
     expect(metaProgress?.entries[0]?.requirement).toBeUndefined();
@@ -95,7 +93,7 @@ describe('F catalog migration slice', () => {
       axis: 'enteredBiomes',
       range: { max: 1 },
     });
-    expect(metaProgress?.entries[3]?.requirement).toEqual({
+    expect(metaProgress?.entries[7]?.requirement).toEqual({
       kind: 'counterRange',
       axis: 'enteredBiomes',
       range: { min: 2 },
@@ -111,9 +109,9 @@ describe('F catalog migration slice', () => {
       'TalentDrop',
       'Boon',
     ]);
-    expect(openingReward.defaultReward).toEqual({
+    expect(openingReward.defaultOffersByStore.RunProgress).toEqual({
       rewardType: 'Boon',
-      payload: { source: 'ApolloUpgrade' },
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     });
 
     const combat = catalog.rooms.byKey.F_Combat01;
@@ -130,14 +128,14 @@ describe('F catalog migration slice', () => {
     const multiStoreReward = requireCounted(multiStoreCombat?.incomingReward);
     expect(multiStoreCombat?.exits).toHaveLength(2);
     expect(multiStoreReward.storeKeys).toEqual(['RunProgress', 'MetaProgress']);
-    expect(multiStoreReward.defaultStoreKey).toBe('RunProgress');
-    expect(multiStoreReward.defaultReward).toEqual({
+    expect(multiStoreReward.storeKeys[0]).toBe('RunProgress');
+    expect(multiStoreReward.defaultOffersByStore.RunProgress).toEqual({
       rewardType: 'Boon',
-      payload: { source: 'ApolloUpgrade' },
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     });
     expect(multiStoreReward.allowedRewardTypes).toEqual([
-      ...runProgress!.rewardTypes,
-      ...metaProgress!.rewardTypes,
+      ...storeRewardTypes(runProgress!),
+      ...storeRewardTypes(metaProgress!),
     ]);
 
     expect(Object.isFrozen(catalog)).toBe(true);
@@ -204,10 +202,42 @@ describe('F catalog migration slice', () => {
       } else {
         const reward = requireCounted(room.incomingReward);
         expect(reward.storeKeys).toEqual(['RunProgress', 'MetaProgress']);
-        expect(reward.defaultStoreKey).toBe('RunProgress');
+        expect(reward.storeKeys[0]).toBe('RunProgress');
         expect(reward.ineligibleRewardTypes).toEqual([]);
       }
     }
+  });
+
+  it('binds every F/G producer to lifecycle, override, and store-history authority', () => {
+    const fgRooms = catalog.rooms.values.filter(
+      (room) => room.biomeStepKey === 'Underworld_F' || room.biomeStepKey === 'Underworld_G',
+    );
+    for (const room of fgRooms) {
+      expect(room.enteredRewardStoreHistory).toEqual(
+        room.gameName === 'G_Intro' ? { kind: 'none' } : { kind: 'resolvedOffer' },
+      );
+      if (room.incomingReward.kind !== 'none') {
+        expect(room.incomingReward.producerLifecycleKey).toBe('RoomReward');
+      }
+    }
+
+    const forcedRooms = fgRooms
+      .filter((room) => room.forcedRewardStoreKey === 'RunProgress')
+      .map((room) => room.gameName);
+    expect(forcedRooms).toEqual([
+      'F_Opening01',
+      'F_Opening02',
+      'F_Opening03',
+      'F_Combat01',
+      'F_MiniBoss01',
+      'F_MiniBoss02',
+      'F_MiniBoss03',
+      'F_PreBoss01',
+      'G_MiniBoss01',
+      'G_MiniBoss02',
+      'G_MiniBoss03',
+      'G_PreBoss01',
+    ]);
   });
 
   it('rejects duplicate room game names with a declaration path', () => {
@@ -246,29 +276,28 @@ describe('F catalog migration slice', () => {
     );
   });
 
-  it('requires an explicit default for a multi-store reward binding', () => {
-    const combat = declarations.rooms.find((room) => room.gameName === 'F_Combat02');
-    expect(combat).toBeDefined();
-    if (combat === undefined) {
-      return;
-    }
-
-    const incomingReward = {
-      kind: combat.incomingReward.kind,
-      storeKeys: combat.incomingReward.storeKeys,
-      eligibleRewardTypes: combat.incomingReward.eligibleRewardTypes,
-      ineligibleRewardTypes: combat.incomingReward.ineligibleRewardTypes,
-    };
-
+  it('requires the batch default to belong to its authored store domain', () => {
+    const layout = declarations.biomeLayouts[0];
     expect(() =>
       createCatalog({
         ...declarations,
-        rooms: [{ ...combat, incomingReward }],
+        biomeLayouts: [
+          {
+            ...layout,
+            continuation: {
+              ...layout.continuation,
+              rewardStorePolicy: {
+                ...layout.continuation.rewardStorePolicy,
+                defaultStoreKey: 'MissingStore',
+              },
+            },
+          },
+        ],
       }),
     ).toThrowError(
       new CatalogContractError(
-        'rooms[0].incomingReward.defaultStoreKey',
-        'is required when several stores are referenced',
+        'biomeLayouts[0].continuation.rewardStorePolicy.defaultStoreKey',
+        'must belong to the authored base store domain',
       ),
     );
   });
@@ -301,9 +330,45 @@ describe('F catalog migration slice', () => {
     );
   });
 
+  it('requires shop producers to use the Shop reward type', () => {
+    const shopIndex = declarations.rooms.findIndex((room) => room.gameName === 'F_Shop01');
+    const shop = declarations.rooms[shopIndex];
+    if (shop?.incomingReward.kind !== 'shop') {
+      throw new Error('missing F shop declaration');
+    }
+
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        rooms: declarations.rooms.map((room, index) =>
+          index === shopIndex
+            ? {
+                ...shop,
+                incomingReward: {
+                  ...shop.incomingReward,
+                  rewardType: 'Boon' as 'Shop',
+                },
+              }
+            : room,
+        ),
+      }),
+    ).toThrowError(
+      new CatalogContractError(
+        `rooms[${shopIndex}].incomingReward.rewardType`,
+        'shop producer requires Shop, received Boon',
+      ),
+    );
+  });
+
   it('rejects a current-run requirement kind without an evaluator', () => {
-    const store = declarations.rewardStores[0];
+    const store = declarations.rewardKernel.stores[0];
+    if (store === undefined) {
+      throw new Error('missing RunProgress store declaration');
+    }
     const entry = store.entries[0];
+    if (entry === undefined) {
+      throw new Error('missing RunProgress store entry');
+    }
     const requirement = {
       kind: 'externalSavePredicate',
     } as unknown as RequirementExpression;
@@ -311,23 +376,23 @@ describe('F catalog migration slice', () => {
     expect(() =>
       createCatalog({
         ...declarations,
-        rewardStores: [
-          {
-            ...store,
-            entries: [{ ...entry, requirement }],
-          },
-        ],
+        rewardKernel: {
+          ...declarations.rewardKernel,
+          stores: [{ ...store, entries: [{ ...entry, requirement }] }],
+        },
       }),
     ).toThrowError(
       new CatalogContractError(
-        'rewardStores[0].entries[0].requirement.kind',
+        'stores[0].entries[0].requirement.kind',
         'has no current-run evaluator: externalSavePredicate',
       ),
     );
   });
 
-  it('rejects a primitive whose payload default violates its domain', () => {
-    const boon = declarations.rewardPrimitives.find((primitive) => primitive.gameName === 'Boon');
+  it('rejects a reward type whose payload default violates its domain', () => {
+    const boon = declarations.rewardKernel.rewardTypes.find(
+      (rewardType) => rewardType.gameName === 'Boon',
+    );
     expect(boon).toBeDefined();
     if (boon === undefined) {
       return;
@@ -336,16 +401,22 @@ describe('F catalog migration slice', () => {
     expect(() =>
       createCatalog({
         ...declarations,
-        rewardPrimitives: declarations.rewardPrimitives.map((primitive) =>
-          primitive.gameName === 'Boon'
-            ? { ...boon, defaultPayload: { source: 'MissingUpgrade' } }
-            : primitive,
-        ),
+        rewardKernel: {
+          ...declarations.rewardKernel,
+          rewardTypes: declarations.rewardKernel.rewardTypes.map((rewardType) =>
+            rewardType.gameName === 'Boon'
+              ? {
+                  ...boon,
+                  defaultPayload: { kind: 'BoonSource', source: 'MissingUpgrade' },
+                }
+              : rewardType,
+          ),
+        },
       }),
     ).toThrowError(
       new CatalogContractError(
-        'rewardPrimitives.Boon.defaultPayload.source',
-        'MissingUpgrade is not in payload domain BoonSource',
+        'rewardTypes.Boon.defaultPayload',
+        'does not match payload domain BoonSource',
       ),
     );
   });

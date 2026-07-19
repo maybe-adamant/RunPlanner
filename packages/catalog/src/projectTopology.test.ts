@@ -15,7 +15,11 @@ function state(gameName: string, role: RoomOccurrenceRole = 'ordinary') {
   if (room === undefined) {
     throw new Error(`missing room ${gameName}`);
   }
-  return createDefaultRoomState(catalog, room, role);
+  return createDefaultRoomState(catalog, room, {
+    role,
+    resolvedStoreKey: 'RunProgress',
+    entryActive: true,
+  });
 }
 
 function occurrence(occurrenceId: string, gameName: string, role: RoomOccurrenceRole = 'ordinary') {
@@ -24,7 +28,7 @@ function occurrence(occurrenceId: string, gameName: string, role: RoomOccurrence
 
 function projectWithTopology(topology: unknown): unknown {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     projectId: 'project-topology',
     name: 'F Topology',
     catalogVersion: catalog.version,
@@ -40,7 +44,7 @@ function projectWithTopology(topology: unknown): unknown {
 
 function projectWithGTopology(topology: unknown): unknown {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     projectId: 'project-g-topology',
     name: 'G Topology',
     catalogVersion: catalog.version,
@@ -81,6 +85,8 @@ function repeatedRoomTopology() {
       {
         kind: 'batch',
         parentOccurrenceId: 'combat-04-first',
+        rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+        batchState: null,
         targets: [
           { exitIndex: 2, occurrenceId: 'combat-11' },
           { exitIndex: 1, occurrenceId: 'combat-04-later' },
@@ -90,6 +96,8 @@ function repeatedRoomTopology() {
       {
         kind: 'batch',
         parentOccurrenceId: 'start',
+        rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+        batchState: null,
         targets: [{ exitIndex: 1, occurrenceId: 'combat-04-first' }],
         pickedExitIndex: 1,
       },
@@ -127,6 +135,8 @@ describe('F/G linear project topology', () => {
     expect(topology.occurrences.at(-1)?.state.kind).toBe('freeReward');
 
     const encoded = encodeProjectDocument(project);
+    expect(encoded).toContain('"schemaVersion": 2');
+    expect(encoded).not.toContain('"storeKey"');
     expect(parseProjectDocument(encoded, catalog)).toEqual(project);
     expect(encodeProjectDocument(parseProjectDocument(encoded, catalog))).toBe(encoded);
   });
@@ -145,6 +155,8 @@ describe('F/G linear project topology', () => {
         {
           kind: 'batch',
           parentOccurrenceId: 'g-start',
+          rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+          batchState: null,
           targets: [{ exitIndex: 1, occurrenceId: 'g-combat' }],
           pickedExitIndex: 1,
         },
@@ -181,6 +193,8 @@ describe('F/G linear project topology', () => {
       {
         kind: 'batch',
         parentOccurrenceId: 'start',
+        rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+        batchState: null,
         targets: [
           { exitIndex: 1, occurrenceId: 'combat-04-first' },
           { exitIndex: 2, occurrenceId: 'combat-04-later' },
@@ -190,6 +204,8 @@ describe('F/G linear project topology', () => {
       {
         kind: 'batch',
         parentOccurrenceId: 'combat-04-later',
+        rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+        batchState: null,
         targets: [{ exitIndex: 1, occurrenceId: 'combat-11' }],
         pickedExitIndex: 1,
       },

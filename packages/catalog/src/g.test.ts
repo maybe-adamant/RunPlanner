@@ -56,7 +56,15 @@ describe('complete G catalog', () => {
       biomeStepKey: 'Underworld_G',
       kind: 'LinearBiome',
       start: { mode: 'fixed', roomGameNames: ['G_Intro'] },
-      continuation: { defaultBatchRuleKey: 'Standard' },
+      continuation: {
+        defaultBatchRuleKey: 'Standard',
+        rewardStorePolicy: {
+          kind: 'authoredBaseStore',
+          storeKeys: ['RunProgress', 'MetaProgress'],
+          defaultStoreKey: 'RunProgress',
+        },
+        batchStateDefault: null,
+      },
       terminal: {
         roomGameName: 'G_PreBoss01',
         transitionRuleKey: 'PrebossEntry',
@@ -123,7 +131,7 @@ describe('complete G catalog', () => {
       expect(room.caps).toEqual({ maxAppearancesThisBiome: 1 });
       expect(room.eligibility).toEqual(eligibility);
       expect(reward.storeKeys).toEqual(['RunProgress', 'MetaProgress']);
-      expect(reward.defaultStoreKey).toBe('RunProgress');
+      expect(reward.storeKeys[0]).toBe('RunProgress');
       expect(reward.ineligibleRewardTypes).toEqual(
         devotionExclusions.has(gameName) ? ['Devotion'] : [],
       );
@@ -219,7 +227,7 @@ describe('complete G catalog', () => {
       },
     });
     expect(story?.exits).toEqual([{ index: 1, targetMode: 'generated', type: 'OceanusExitDoor' }]);
-    expect(requireFixed(story?.incomingReward).reward).toEqual({ rewardType: 'Story' });
+    expect(requireFixed(story?.incomingReward).offer).toEqual({ rewardType: 'Story' });
 
     const reprieve = catalog.rooms.byKey.G_Reprieve01;
     const reprieveReward = requireCounted(reprieve?.incomingReward);
@@ -239,7 +247,7 @@ describe('complete G catalog', () => {
       { index: 2, targetMode: 'generated', type: 'OceanusExitDoor' },
     ]);
     expect(reprieveReward.storeKeys).toEqual(['RunProgress', 'MetaProgress']);
-    expect(reprieveReward.defaultStoreKey).toBe('RunProgress');
+    expect(reprieveReward.storeKeys[0]).toBe('RunProgress');
     expect(reprieveReward.ineligibleRewardTypes).toEqual(['Devotion']);
 
     const shop = catalog.rooms.byKey.G_Shop01;
@@ -332,7 +340,16 @@ describe('complete G catalog', () => {
     expect(() =>
       createCatalog({
         ...declarations,
-        rooms: [{ ...intro, incomingReward: { kind: 'fixed', rewardType: 'Story' } }],
+        rooms: [
+          {
+            ...intro,
+            incomingReward: {
+              kind: 'fixed',
+              rewardType: 'Story',
+              producerLifecycleKey: 'RoomReward',
+            },
+          },
+        ],
         biomeLayouts: [],
       }),
     ).toThrowError(

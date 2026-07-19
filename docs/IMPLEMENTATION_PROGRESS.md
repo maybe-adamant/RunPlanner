@@ -7,11 +7,12 @@ is mutable project history, not a design authority.
 
 ## Current Frontier
 
-Phases 0, 1, 2, 2.5, and 2.6 are complete. Phases 0 through 2.5 were completed
-under the prior reward-store ownership model; Phase 2.6 adds the audited reward
-kernel as an intentionally unconnected pure subsystem. Phase 2.7, the atomic
-F/G schema-version-2 reward authority switch, is the current frontier. Phase
-2.8 then imports P/Q/H/O/I/N as dormant declaration sets before Phase 3 begins.
+Phases 0, 1, 2, 2.5, 2.6, and 2.7 are complete. Phases 0 through 2.5 were
+completed under the prior reward-store ownership model; Phase 2.6 added the
+audited reward kernel as an intentionally unconnected pure subsystem; Phase
+2.7 atomically made it the sole connected F/G reward authority under schema
+version 2. Phase 2.8 is the current frontier and imports P/Q/H/O/I/N as dormant
+declaration sets before Phase 3 begins.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
 defines reusable single-room lifecycle profiles, occurrence-addressed history
@@ -267,9 +268,8 @@ The final Phase 2 slices now deliver:
   redo invalidation after new edits, and destructive recovery fixtures.
 
 Phase 2 was completed under the original leaf-owned counted-store
-representation. The completed cross-biome audit locks its replacement, but
-production remains on the old representation until Phase 2.7 implements the
-atomic switch described below.
+representation. The completed cross-biome audit locked its replacement, and
+Phase 2.7 later performed the atomic switch described below.
 
 ### Phase 2.5: Authored Editor Smoke
 
@@ -360,15 +360,44 @@ Delivered:
   latent bag branch, offer projection, trait-free baseline, and the order-
   sensitive Blind Box case.
 
-The existing schema-version-1 F/G catalog, project document, commands, and
-editor remain the only connected production authority. Phase 2.6 introduces no
-schema migration, canonical route-history walker, candidate evaluator, semantic
-finding, or UI behavior.
+At Phase 2.6 completion, the schema-version-1 F/G catalog, project document,
+commands, and editor remained the only connected production authority. The
+subsequent Phase 2.7 switch replaced that authority without adding a canonical
+route-history walker, candidate evaluator, or semantic finding.
 
 Validation at completion:
 
 - workspace type checking passed;
 - 13 test files and 95 tests passed;
+- ESLint passed with zero warnings;
+- Prettier check passed;
+- the Vite production build passed;
+- `git diff --check` passed.
+
+### Phase 2.7: F/G Reward Authority Switch
+
+Delivered:
+
+- one root catalog reward authority normalized from the audited reward kernel;
+- explicit F/G producer lifecycle bindings, forced-store overrides, and
+  entered-room store-history policies;
+- F/G layout-owned authored base-store policies with RunProgress defaults and
+  RunProgress/MetaProgress domains;
+- schema version 2 batch reward-store and batch-state persistence;
+- resolved-offer-only counted and free-reward leaves with typed payloads;
+- entry-materialized shop inventory required only on picked occurrences and
+  retained dormantly after another target is picked;
+- semantic `BatchRewardStoreAddress` and `ReplaceBatchRewardStore`, retaining
+  every target offer and all downstream topology;
+- F editor batch Reward Pool projection and schema-version-2 command wiring;
+- explicit rejection of schema version 1 without migration scaffolding;
+- deletion of the old primitive, `acquiredAs`, flat store, option-set,
+  eager-shop, and leaf-owned-store production authorities.
+
+Validation at completion:
+
+- workspace type checking passed;
+- 13 test files and 102 tests passed;
 - ESLint passed with zero warnings;
 - Prettier check passed;
 - the Vite production build passed;
@@ -431,37 +460,15 @@ branching, so production does not grow placeholder predicates for them.
 
 The N audit confirmed the shared store shape and added fixed authored layout
 slots, a fixed-slot persistent hub board, ordered restores, and side-room
-generation pressure. Current production code still uses schema version 1 and
-leaf-owned counted `storeKey` values. It also eagerly initializes shop state
-instead of treating shop inventory as picked-entry state. Do not perform these
-schema changes piecemeal; the now-complete audit set defines one shared version
-2 contract.
+generation pressure. Phase 2.7 has now applied the shared schema-version-2
+store and picked-entry shop contracts to F/G. The remaining biome structures
+stay dormant until Phase 2.8 imports their declarations.
 
 ## Next
 
-### Phase 2.7: F/G Reward Authority Switch
-
-Current:
-
-- the additive authority-switch preflight now gives every World, I, and Q shop
-  profile explicit stable emitted slots, labels, group ownership, and complete
-  declaration-selected defaults;
-- the normalized `RoomReward` producer-lifecycle profile now enumerates its
-  supported reward types, binds ordinary roles to `roomRewardPickup`, and
-  declares Devotion's before/after-combat role timing without core reward-name
-  dispatch;
-- both contacts reject missing, misordered, duplicate, unknown, or incomplete
-  declarations before schema version 2 consumes them.
-
-Remaining:
-
-1. replace leaf-owned stores and eager shops with schema version 2;
-2. bind F/G defaults, codecs, commands, and editor projection to the kernel;
-3. delete the superseded reward types and reject schema version 1.
-
 ### Phase 2.8: Cross-Biome Declaration Closure
 
-After Phase 2.7:
+Current:
 
 1. add declared/authorable/simulatable/editable capability gates;
 2. harden shared layout, exit, encounter, requirement, completion, batch, and
@@ -470,6 +477,6 @@ After Phase 2.7:
    pressure-test order;
 4. run cross-biome parity and capability-isolation gates.
 
-Phase 3 remains blocked until all three phases pass without placeholder
+Phase 3 remains blocked until Phase 2.8 passes without placeholder
 materializers, dormant biome activation, duplicated authority, or
 schema-version-1 compatibility scaffolding.

@@ -1,12 +1,9 @@
 import type {
   CountedRewardBinding,
+  EnteredRewardStoreHistoryPolicy,
   RewardProducerBinding,
-  RewardPayloadDomain,
-  RewardPrimitive,
-  RewardStore,
-  ShopOptionSet,
-  ShopProfile,
 } from './rewards';
+import type { RewardKernelCatalog } from './rewardKernel/model';
 import type { CounterAxis, RequirementExpression } from './requirements';
 
 export interface CatalogCollection<T> {
@@ -91,6 +88,9 @@ export interface RoomDeclaration {
   readonly exits: readonly RoomExit[];
   readonly incomingReward: RewardProducerBinding;
   readonly entryOfferPolicy?: ForkedPrebossEntryPolicy;
+  readonly forcedRewardStoreKey?: string;
+  readonly individualRewardStoreKey?: string;
+  readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
   readonly encounterProfileKey: string;
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;
@@ -107,6 +107,12 @@ export interface LinearBiomeLayout {
   };
   readonly continuation: {
     readonly defaultBatchRuleKey: 'Standard';
+    readonly rewardStorePolicy: {
+      readonly kind: 'authoredBaseStore';
+      readonly storeKeys: readonly string[];
+      readonly defaultStoreKey: string;
+    };
+    readonly batchStateDefault: null;
   };
   readonly terminal: {
     readonly roomGameName: string;
@@ -124,11 +130,7 @@ export type BiomeLayout = LinearBiomeLayout;
 export interface Catalog {
   readonly version: string;
   readonly routes: CatalogCollection<RouteDeclaration>;
-  readonly rewardPayloadDomains: CatalogCollection<RewardPayloadDomain>;
-  readonly rewardPrimitives: CatalogCollection<RewardPrimitive>;
-  readonly rewardStores: CatalogCollection<RewardStore>;
-  readonly shopOptionSets: CatalogCollection<ShopOptionSet>;
-  readonly shopProfiles: CatalogCollection<ShopProfile>;
+  readonly rewards: RewardKernelCatalog;
   readonly encounterProfiles: CatalogCollection<EncounterProfile>;
   readonly rooms: CatalogCollection<RoomDeclaration>;
   readonly biomeLayouts: CatalogCollection<BiomeLayout>;
@@ -138,7 +140,7 @@ export interface CatalogSummary {
   readonly version: string;
   readonly routeCount: number;
   readonly biomeStepCount: number;
-  readonly rewardPrimitiveCount: number;
+  readonly rewardTypeCount: number;
   readonly roomCount: number;
 }
 
@@ -150,7 +152,7 @@ export function summarizeCatalog(catalog: Catalog): CatalogSummary {
       (count, route) => count + route.biomeSteps.length,
       0,
     ),
-    rewardPrimitiveCount: catalog.rewardPrimitives.values.length,
+    rewardTypeCount: catalog.rewards.rewardTypes.values.length,
     roomCount: catalog.rooms.values.length,
   };
 }

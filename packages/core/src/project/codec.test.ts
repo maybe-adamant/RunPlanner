@@ -49,7 +49,15 @@ function linearLayout(biomeStepKey: string, terminalRoom: string): BiomeLayout {
     biomeStepKey,
     kind: 'LinearBiome',
     start: { mode: 'fixed', roomGameNames: [`${biomeStepKey}_Start`] },
-    continuation: { defaultBatchRuleKey: 'Standard' },
+    continuation: {
+      defaultBatchRuleKey: 'Standard',
+      rewardStorePolicy: {
+        kind: 'authoredBaseStore',
+        storeKeys: ['RunProgress'],
+        defaultStoreKey: 'RunProgress',
+      },
+      batchStateDefault: null,
+    },
     terminal: {
       roomGameName: terminalRoom,
       transitionRuleKey: 'PrebossEntry',
@@ -67,11 +75,14 @@ const layouts = [
 const catalog: Catalog = {
   version: 'fixture-catalog-1',
   routes: collection([underworld, surface]),
-  rewardPayloadDomains: emptyCollection(),
-  rewardPrimitives: emptyCollection(),
-  rewardStores: emptyCollection(),
-  shopOptionSets: emptyCollection(),
-  shopProfiles: emptyCollection(),
+  rewards: {
+    payloadDomains: emptyCollection(),
+    rewardTypes: emptyCollection(),
+    acquisitions: emptyCollection(),
+    stores: emptyCollection(),
+    shops: emptyCollection(),
+    producerLifecycles: emptyCollection(),
+  },
   encounterProfiles: emptyCollection(),
   rooms: emptyCollection(),
   biomeLayouts: {
@@ -82,7 +93,7 @@ const catalog: Catalog = {
 
 function rawDocument(routes: readonly unknown[]): unknown {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     projectId: 'project-fixture',
     name: 'Fixture Project',
     catalogVersion: catalog.version,
@@ -100,7 +111,7 @@ describe('project document codec', () => {
     const project = createEmptyProjectDocument(catalog, widerOptions);
 
     expect(project).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       projectId: 'project-empty',
       name: 'Empty Project',
       catalogVersion: 'fixture-catalog-1',
@@ -181,11 +192,11 @@ describe('project document codec', () => {
             { routeKey: 'Underworld', biomes: [] },
             { routeKey: 'Surface', biomes: [] },
           ]) as Record<string, unknown>),
-          schemaVersion: 2,
+          schemaVersion: 1,
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 1, received 2'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 2, received 1'));
     expect(() =>
       decodeProjectDocument(
         {

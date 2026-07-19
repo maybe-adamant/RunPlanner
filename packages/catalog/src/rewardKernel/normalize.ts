@@ -602,10 +602,14 @@ function normalizeShops(
             `${groupPath}.options`,
             (option) => option.key,
           );
+          const groupRewardTypes = Object.freeze([
+            ...new Set(options.values.map((option) => option.defaultOffer.rewardType)),
+          ]);
           return Object.freeze({
             key: requireNonEmpty(group.key, `${groupPath}.key`),
             offerCount,
             options,
+            rewardTypes: groupRewardTypes,
           });
         }),
         `${path}.groups`,

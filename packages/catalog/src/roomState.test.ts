@@ -15,168 +15,127 @@ function room(gameName: string) {
   return declaration;
 }
 
-describe('F/G authored room state', () => {
-  it('composes counted reward defaults through store and primitive defaults', () => {
-    expect(createDefaultRoomState(catalog, room('F_Combat02'))).toEqual({
+const ordinary = { role: 'ordinary', entryActive: true } as const;
+
+describe('F/G authored room state v2', () => {
+  it('composes counted offer defaults from the resolved store', () => {
+    expect(
+      createDefaultRoomState(catalog, room('F_Combat02'), {
+        ...ordinary,
+        resolvedStoreKey: 'MetaProgress',
+      }),
+    ).toEqual({
       kind: 'counted',
-      choice: {
-        storeKey: 'RunProgress',
-        reward: {
-          rewardType: 'Boon',
-          payload: { source: 'ApolloUpgrade' },
-        },
-      },
+      offer: { rewardType: 'GiftDrop' },
     });
-    expect(createDefaultRoomState(catalog, room('G_Intro'))).toEqual({ kind: 'none' });
-    expect(createDefaultRoomState(catalog, room('F_Story01'))).toEqual({ kind: 'fixed' });
+    expect(createDefaultRoomState(catalog, room('G_Intro'), ordinary)).toEqual({ kind: 'none' });
+    expect(createDefaultRoomState(catalog, room('F_Story01'), ordinary)).toEqual({ kind: 'fixed' });
   });
 
-  it('creates complete WorldShop offers with concrete purchase state', () => {
-    expect(createDefaultRoomState(catalog, room('F_Shop01'))).toEqual({
+  it('keeps unpicked shops inventory-free and materializes complete entry state', () => {
+    expect(
+      createDefaultRoomState(catalog, room('F_Shop01'), {
+        role: 'ordinary',
+        entryActive: false,
+      }),
+    ).toEqual({ kind: 'shop' });
+
+    const entered = createDefaultRoomState(catalog, room('F_Shop01'), ordinary);
+    expect(entered).toMatchObject({
       kind: 'shop',
       shop: {
         profileKey: 'WorldShop',
         offers: {
           Boon: {
-            reward: {
+            offer: {
               rewardType: 'RandomLoot',
-              payload: { source: 'ApolloUpgrade' },
+              payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
             },
             purchased: false,
           },
-          MajorNonBoon: {
-            reward: { rewardType: 'WeaponUpgradeDrop' },
-            purchased: false,
-          },
-          Minor: {
-            reward: { rewardType: 'MaxManaDrop' },
-            purchased: false,
-          },
         },
       },
     });
   });
 
-  it('derives forked preboss state from terminal role', () => {
+  it('derives forked preboss state from terminal role and entry status', () => {
     const preboss = room('G_PreBoss01');
-
-    expect(createDefaultRoomState(catalog, preboss, 'terminalShop')).toMatchObject({
-      kind: 'shop',
-      shop: { profileKey: 'WorldShop' },
-    });
-    expect(createDefaultRoomState(catalog, preboss, 'terminalFreeReward')).toEqual({
+    expect(
+      createDefaultRoomState(catalog, preboss, {
+        role: 'terminalShop',
+        resolvedStoreKey: 'RunProgress',
+        entryActive: false,
+      }),
+    ).toEqual({ kind: 'shop' });
+    expect(
+      createDefaultRoomState(catalog, preboss, {
+        role: 'terminalFreeReward',
+        resolvedStoreKey: 'RunProgress',
+        entryActive: false,
+      }),
+    ).toEqual({
       kind: 'freeReward',
-      choice: {
-        storeKey: 'RunProgress',
-        reward: { rewardType: 'Boon', payload: { source: 'ApolloUpgrade' } },
+      offer: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
-    expect(() => createDefaultRoomState(catalog, preboss)).toThrowError(
-      new ProjectDocumentContractError(
-        'rooms.G_PreBoss01.state',
-        'ForkedPreboss requires a derived terminal role',
-      ),
-    );
   });
 
-  it('decodes complete replacements and rejects filtered rewards or invalid payloads', () => {
+  it('decodes complete offers and rejects filtered rewards or invalid payloads', () => {
     expect(
       decodeRoomState(
-        {
-          kind: 'counted',
-          choice: {
-            storeKey: 'MetaProgress',
-            reward: { rewardType: 'GiftDrop' },
-          },
-        },
+        { kind: 'counted', offer: { rewardType: 'GiftDrop' } },
         catalog,
         room('F_Combat02'),
-        'ordinary',
+        ordinary,
         '$.state',
       ),
-    ).toEqual({
-      kind: 'counted',
-      choice: { storeKey: 'MetaProgress', reward: { rewardType: 'GiftDrop' } },
-    });
+    ).toEqual({ kind: 'counted', offer: { rewardType: 'GiftDrop' } });
 
     expect(() =>
       decodeRoomState(
         {
           kind: 'counted',
-          choice: {
-            storeKey: 'RunProgress',
-            reward: {
-              rewardType: 'Devotion',
-              payload: { sources: ['ApolloUpgrade', 'ZeusUpgrade'] },
+          offer: {
+            rewardType: 'Devotion',
+            payload: {
+              kind: 'DevotionPair',
+              chosenSource: 'ApolloUpgrade',
+              spurnedSource: 'ZeusUpgrade',
             },
           },
         },
         catalog,
         room('F_Combat01'),
-        'ordinary',
+        ordinary,
         '$.state',
       ),
     ).toThrowError(
       new ProjectDocumentContractError(
-        '$.state.choice.reward.rewardType',
+        '$.state.offer.rewardType',
         'Devotion is filtered from this room',
-      ),
-    );
-
-    expect(() =>
-      decodeRoomState(
-        {
-          kind: 'counted',
-          choice: {
-            storeKey: 'RunProgress',
-            reward: { rewardType: 'Boon', payload: { source: 'MissingUpgrade' } },
-          },
-        },
-        catalog,
-        room('F_Combat02'),
-        'ordinary',
-        '$.state',
-      ),
-    ).toThrowError(
-      new ProjectDocumentContractError(
-        '$.state.choice.reward.payload.source',
-        'MissingUpgrade is not in BoonSource',
       ),
     );
   });
 
-  it('decodes shop purchases against stable slot domains', () => {
-    const defaultState = createDefaultRoomState(catalog, room('F_Shop01'));
-    if (defaultState.kind !== 'shop') {
-      throw new Error('expected shop state');
-    }
-    const decoded = decodeRoomState(
-      {
-        ...defaultState,
-        shop: {
-          ...defaultState.shop,
-          offers: {
-            ...defaultState.shop.offers,
-            Minor: {
-              reward: { rewardType: 'StackUpgrade' },
-              purchased: true,
-            },
-          },
-        },
-      },
-      catalog,
-      room('F_Shop01'),
-      'ordinary',
-      '$.state',
+  it('requires shop inventory only for an entered occurrence', () => {
+    expect(
+      decodeRoomState(
+        { kind: 'shop' },
+        catalog,
+        room('F_Shop01'),
+        { role: 'ordinary', entryActive: false },
+        '$.state',
+      ),
+    ).toEqual({ kind: 'shop' });
+    expect(() =>
+      decodeRoomState({ kind: 'shop' }, catalog, room('F_Shop01'), ordinary, '$.state'),
+    ).toThrowError(
+      new ProjectDocumentContractError(
+        '$.state.shop',
+        'is required for an entered shop occurrence',
+      ),
     );
-
-    expect(decoded).toMatchObject({
-      kind: 'shop',
-      shop: {
-        offers: {
-          Minor: { reward: { rewardType: 'StackUpgrade' }, purchased: true },
-        },
-      },
-    });
   });
 });

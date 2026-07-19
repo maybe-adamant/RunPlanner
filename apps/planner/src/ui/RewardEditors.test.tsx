@@ -11,23 +11,27 @@ describe('reward editor projections', () => {
         catalog={catalog}
         idPrefix="trial"
         onReplace={() => undefined}
-        reward={{
+        offer={{
           rewardType: 'Devotion',
-          payload: { sources: ['ApolloUpgrade', 'ZeusUpgrade'] },
+          payload: {
+            kind: 'DevotionPair',
+            chosenSource: 'ApolloUpgrade',
+            spurnedSource: 'ZeusUpgrade',
+          },
         }}
         rewardTypes={['Devotion']}
       />,
     );
 
     expect(markup).toContain('Trial');
-    expect(markup).toContain('Source 1');
+    expect(markup).toContain('Chosen source');
     expect(markup).toContain('>Apollo</option>');
     expect(markup).toContain('>Zeus</option>');
     expect(markup).not.toContain('>ApolloUpgrade</option>');
     expect(markup).not.toContain('>ZeusUpgrade</option>');
   });
 
-  it('renders both declaration-owned reward pools for a multi-store F room', () => {
+  it('renders the static producer reward union without leaf store ownership', () => {
     const room = catalog.rooms.byKey.F_Combat02;
     if (room?.incomingReward.kind !== 'countedChoice') {
       throw new Error('F_Combat02 counted reward binding is missing');
@@ -36,16 +40,13 @@ describe('reward editor projections', () => {
       <CountedRewardEditor
         binding={room.incomingReward}
         catalog={catalog}
-        choice={{
-          storeKey: room.incomingReward.defaultStoreKey,
-          reward: room.incomingReward.defaultReward,
-        }}
+        offer={room.incomingReward.defaultOffersByStore.RunProgress!}
         idPrefix="combat-02"
         onReplace={() => undefined}
       />,
     );
 
-    expect(markup).toContain('Run Progress');
-    expect(markup).toContain('Meta Progress');
+    expect(markup).toContain('Boon');
+    expect(markup).not.toContain('Reward pool');
   });
 });

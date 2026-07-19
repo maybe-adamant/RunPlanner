@@ -8,16 +8,18 @@ import type {
   RoomDeclaration,
   RouteDeclaration,
 } from '../catalog';
+import type { CountedRewardBinding } from '../rewards';
 import type {
-  CountedRewardBinding,
-  RewardPayloadDomain,
-  RewardPrimitive,
-  RewardStore,
-  ShopOptionSet,
-  ShopProfile,
-} from '../rewards';
+  PayloadDomainDeclaration,
+  ProducerLifecycleProfileDeclaration,
+  RewardKernelCatalog,
+  RewardStoreDeclaration,
+  RewardTypeDeclaration,
+  ShopProfileDeclaration,
+} from '../rewardKernel/model';
 import {
   createBiomeAddress,
+  createBatchRewardStoreAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
@@ -39,6 +41,7 @@ import {
   redoProjectHistory,
   undoProjectHistory,
 } from './history';
+import { encodeProjectDocument, parseProjectDocument } from './codec';
 import type { ProjectDocument } from './model';
 
 function collection<T>(values: readonly T[], key: (value: T) => string): CatalogCollection<T> {
@@ -46,6 +49,10 @@ function collection<T>(values: readonly T[], key: (value: T) => string): Catalog
     values,
     byKey: Object.fromEntries(values.map((value) => [key(value), value])),
   };
+}
+
+function emptyCollection<T>(): CatalogCollection<T> {
+  return { values: [], byKey: {} };
 }
 
 const underworld = {
@@ -58,59 +65,126 @@ const boonSource = {
   key: 'BoonSource',
   kind: 'oneOf',
   values: ['ApolloUpgrade', 'ZeusUpgrade'],
-} as const satisfies RewardPayloadDomain;
+} as const satisfies PayloadDomainDeclaration;
 
 const boon = {
   gameName: 'Boon',
   label: 'Boon',
-  acquiredAs: 'Boon',
   payloadDomain: 'BoonSource',
-  defaultPayload: { source: 'ApolloUpgrade' },
-} as const satisfies RewardPrimitive;
+  defaultPayload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+  sourceSupport: 'ordinaryBoonPeer',
+  sourceResolution: { kind: 'offer' },
+  offerProjection: 'none',
+  acquisitionRoles: emptyCollection(),
+} as const satisfies RewardTypeDeclaration;
 
 const maxHealth = {
   gameName: 'MaxHealthDrop',
   label: 'Max Health',
-  acquiredAs: 'MaxHealthDrop',
-} as const satisfies RewardPrimitive;
+  offerProjection: 'none',
+  acquisitionRoles: emptyCollection(),
+} as const satisfies RewardTypeDeclaration;
+
+const shopReward = {
+  gameName: 'Shop',
+  label: 'Shop',
+  offerProjection: 'none',
+  acquisitionRoles: emptyCollection(),
+} as const satisfies RewardTypeDeclaration;
 
 const runProgress = {
   key: 'RunProgress',
-  defaultRewardType: 'Boon',
-  refill: 'appendWhenNoEligibleEntry',
-  entries: [{ rewardType: 'Boon' }, { rewardType: 'MaxHealthDrop' }],
-  rewardTypes: ['Boon', 'MaxHealthDrop'],
-} as const satisfies RewardStore;
+  defaultOffer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  entries: [
+    { index: 0, rewardType: 'Boon', allowDuplicates: true },
+    { index: 1, rewardType: 'MaxHealthDrop', allowDuplicates: false },
+  ],
+} as const satisfies RewardStoreDeclaration;
+
+const metaProgress = {
+  key: 'MetaProgress',
+  defaultOffer: { rewardType: 'MaxHealthDrop' },
+  entries: [{ index: 0, rewardType: 'MaxHealthDrop', allowDuplicates: false }],
+} as const satisfies RewardStoreDeclaration;
 
 const countedReward = {
   kind: 'countedChoice',
-  storeKeys: ['RunProgress'],
-  defaultStoreKey: 'RunProgress',
+  storeKeys: ['RunProgress', 'MetaProgress'],
   eligibleRewardTypes: [],
   ineligibleRewardTypes: [],
   allowedRewardTypes: ['Boon', 'MaxHealthDrop'],
-  defaultReward: { rewardType: 'Boon', payload: { source: 'ApolloUpgrade' } },
+  defaultOffersByStore: {
+    RunProgress: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+    MetaProgress: { rewardType: 'MaxHealthDrop' },
+  },
+  producerLifecycleKey: 'RoomReward',
 } as const satisfies CountedRewardBinding;
-
-const shopOptions = {
-  key: 'ShopBoon',
-  rewardTypes: ['Boon'],
-} as const satisfies ShopOptionSet;
 
 const shopProfile = {
   key: 'WorldShop',
+  groups: collection(
+    [
+      {
+        key: 'Boon',
+        offerCount: 1,
+        options: collection(
+          [
+            {
+              key: 'Boon',
+              defaultOffer: {
+                rewardType: 'Boon',
+                payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+              },
+              acquisitionLifecycle: [],
+            },
+          ],
+          (option) => option.key,
+        ),
+        rewardTypes: ['Boon'],
+      },
+    ],
+    (group) => group.key,
+  ),
   slots: collection(
     [
       {
         key: 'Offer1',
         label: 'Offer 1',
-        optionSetKey: 'ShopBoon',
-        defaultReward: { rewardType: 'Boon', payload: { source: 'ApolloUpgrade' } },
+        groupKey: 'Boon',
+        defaultOptionKey: 'Boon',
+        defaultOffer: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
       },
     ],
     (slot) => slot.key,
   ),
-} as const satisfies ShopProfile;
+  slotCount: 1,
+} as const satisfies ShopProfileDeclaration;
+
+const roomRewardLifecycle = {
+  key: 'RoomReward',
+  rewardTypes: collection(
+    [boon, maxHealth, shopReward].map((rewardType) => ({
+      rewardType: rewardType.gameName,
+      acquisitionLifecycle: [],
+    })),
+    (rewardType) => rewardType.rewardType,
+  ),
+} as const satisfies ProducerLifecycleProfileDeclaration;
+
+const rewards: RewardKernelCatalog = {
+  payloadDomains: collection([boonSource], (domain) => domain.key),
+  rewardTypes: collection([boon, maxHealth, shopReward], (rewardType) => rewardType.gameName),
+  acquisitions: emptyCollection(),
+  stores: collection([runProgress, metaProgress], (store) => store.key),
+  shops: collection([shopProfile], (profile) => profile.key),
+  producerLifecycles: collection([roomRewardLifecycle], (profile) => profile.key),
+};
 
 function exits(count: number) {
   return Array.from({ length: count }, (_, index) => ({
@@ -134,6 +208,7 @@ function countedRoom(
     templateKey,
     exits: exits(exitCount),
     incomingReward: countedReward,
+    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterProfileKey: kind,
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
@@ -143,9 +218,19 @@ function countedRoom(
 const rooms: readonly RoomDeclaration[] = [
   countedRoom('F_Opening01', 'Opening', 'FixedOpening', 2),
   countedRoom('F_Opening02', 'Opening', 'FixedOpening', 2),
+  countedRoom('F_OpeningThreeExit', 'Opening', 'FixedOpening', 3),
   countedRoom('F_OpeningHidden', 'Opening', 'FixedOpening', 2),
   countedRoom('F_CombatOneExit', 'Combat', 'StandardCombat', 1),
   countedRoom('F_CombatTwoExit', 'Combat', 'StandardCombat', 2),
+  countedRoom('F_CombatThreeExit', 'Combat', 'StandardCombat', 3),
+  {
+    ...countedRoom('F_ForcedMeta', 'Combat', 'StandardCombat', 1),
+    forcedRewardStoreKey: 'MetaProgress',
+  },
+  {
+    ...countedRoom('F_ForcedRun', 'Combat', 'StandardCombat', 1),
+    forcedRewardStoreKey: 'RunProgress',
+  },
   {
     gameName: 'F_Shop01',
     label: 'Midshop',
@@ -153,7 +238,13 @@ const rooms: readonly RoomDeclaration[] = [
     kind: 'Shop',
     templateKey: 'Shop',
     exits: exits(1),
-    incomingReward: { kind: 'shop', shopProfileKey: 'WorldShop' },
+    incomingReward: {
+      kind: 'shop',
+      offer: { rewardType: 'Shop' },
+      shopProfileKey: 'WorldShop',
+      producerLifecycleKey: 'RoomReward',
+    },
+    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterProfileKey: 'Shop',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
@@ -165,12 +256,19 @@ const rooms: readonly RoomDeclaration[] = [
     kind: 'Preboss',
     templateKey: 'ForkedPreboss',
     exits: [{ index: 1, targetMode: 'fixedBoss', type: 'Boss' }],
-    incomingReward: { kind: 'shop', shopProfileKey: 'WorldShop' },
+    incomingReward: {
+      kind: 'shop',
+      offer: { rewardType: 'Shop' },
+      shopProfileKey: 'WorldShop',
+      producerLifecycleKey: 'RoomReward',
+    },
     entryOfferPolicy: {
       kind: 'shopThenFillRemainingExits',
       freeReward: countedReward,
       maxFreeRewards: 1,
     },
+    forcedRewardStoreKey: 'RunProgress',
+    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterProfileKey: 'Preboss',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
@@ -180,8 +278,19 @@ const rooms: readonly RoomDeclaration[] = [
 const layout = {
   biomeStepKey: 'Underworld_F',
   kind: 'LinearBiome',
-  start: { mode: 'oneOf', roomGameNames: ['F_Opening01', 'F_Opening02'] },
-  continuation: { defaultBatchRuleKey: 'Standard' },
+  start: {
+    mode: 'oneOf',
+    roomGameNames: ['F_Opening01', 'F_Opening02', 'F_OpeningThreeExit'],
+  },
+  continuation: {
+    defaultBatchRuleKey: 'Standard',
+    rewardStorePolicy: {
+      kind: 'authoredBaseStore',
+      storeKeys: ['RunProgress', 'MetaProgress'],
+      defaultStoreKey: 'RunProgress',
+    },
+    batchStateDefault: null,
+  },
   terminal: {
     roomGameName: 'F_PreBoss01',
     transitionRuleKey: 'PrebossEntry',
@@ -193,11 +302,7 @@ const layout = {
 const catalog: Catalog = {
   version: 'command-fixture-1',
   routes: collection([underworld], (route) => route.key),
-  rewardPayloadDomains: collection([boonSource], (domain) => domain.key),
-  rewardPrimitives: collection([boon, maxHealth], (primitive) => primitive.gameName),
-  rewardStores: collection([runProgress], (store) => store.key),
-  shopOptionSets: collection([shopOptions], (options) => options.key),
-  shopProfiles: collection([shopProfile], (profile) => profile.key),
+  rewards,
   encounterProfiles: collection<EncounterProfile>([], (profile) => profile.key),
   rooms: collection(rooms, (room) => room.gameName),
   biomeLayouts: collection([layout], (biome) => biome.biomeStepKey),
@@ -305,13 +410,134 @@ describe('ordinary project commands', () => {
     ]);
     expect(topology?.occurrences[1]?.state).toEqual({
       kind: 'counted',
-      choice: {
-        storeKey: 'RunProgress',
-        reward: { rewardType: 'Boon', payload: { source: 'ApolloUpgrade' } },
-      },
+      offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     expect(topology?.continuations[0]?.pickedExitIndex).toBe(1);
     expect(Object.isFrozen(project)).toBe(true);
+  });
+
+  it('replaces the batch store without rewriting target offers or downstream topology', () => {
+    const targetId = createOccurrenceId('retained-target');
+    const downstreamId = createOccurrenceId('retained-downstream');
+    let project = createBatch(startedProject());
+    project = createTarget(project, startId, 1, targetId, 'F_CombatTwoExit');
+    project = setPicked(project, startId, 1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, targetId),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    project = createBatch(project, targetId);
+    project = createTarget(project, targetId, 1, downstreamId, 'F_CombatOneExit');
+    project = setPicked(project, targetId, 1);
+    const before = project.routes[0]?.biomes[0]?.topology;
+    if (before === null || before === undefined) {
+      throw new Error('expected retained topology fixture');
+    }
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, startId),
+      storeKey: 'MetaProgress',
+    });
+    const after = project.routes[0]?.biomes[0]?.topology;
+    if (after === null || after === undefined) {
+      throw new Error('expected topology after store replacement');
+    }
+
+    expect(after.occurrences).toEqual(before.occurrences);
+    expect(after.continuations).toEqual([
+      {
+        ...before.continuations[0],
+        rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
+      },
+      before.continuations[1],
+    ]);
+    expect(after.continuations[1]).toEqual({
+      kind: 'batch',
+      parentOccurrenceId: targetId,
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+      batchState: null,
+      targets: [{ exitIndex: 1, occurrenceId: downstreamId }],
+      pickedExitIndex: 1,
+    });
+  });
+
+  it('resolves forced stores in physical exit order regardless of authoring order', () => {
+    const metaId = createOccurrenceId('forced-meta');
+    const runId = createOccurrenceId('forced-run');
+    const ordinaryId = createOccurrenceId('after-forced');
+    let project = applyProjectCommand(emptyProject(), catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+      gameName: 'F_OpeningThreeExit',
+    });
+    project = createBatch(project);
+    project = createTarget(project, startId, 2, runId, 'F_ForcedRun');
+    project = createTarget(project, startId, 1, metaId, 'F_ForcedMeta');
+    project = createTarget(project, startId, 3, ordinaryId, 'F_CombatThreeExit');
+
+    const occurrences = project.routes[0]?.biomes[0]?.topology?.occurrences;
+    expect(occurrences?.find((room) => room.occurrenceId === metaId)?.state).toEqual({
+      kind: 'counted',
+      offer: { rewardType: 'MaxHealthDrop' },
+    });
+    expect(occurrences?.find((room) => room.occurrenceId === ordinaryId)?.state).toEqual({
+      kind: 'counted',
+      offer: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+  });
+
+  it('materializes shop inventory on entry and retains it dormantly after re-picking', () => {
+    const shopId = createOccurrenceId('unpicked-shop');
+    const siblingId = createOccurrenceId('shop-sibling');
+    let project = createBatch(startedProject());
+    project = createTarget(project, startId, 1, shopId, 'F_Shop01');
+    project = createTarget(project, startId, 2, siblingId, 'F_CombatTwoExit');
+    expect(
+      project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+        (room) => room.occurrenceId === shopId,
+      )?.state,
+    ).toEqual({ kind: 'shop' });
+
+    project = setPicked(project, startId, 1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(biome, shopId, 'Offer1'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetShopPurchase',
+      purchase: createShopPurchaseAddress(biome, shopId, 'Offer1'),
+      purchased: true,
+    });
+    project = setPicked(project, startId, 2);
+
+    const roundTripped = parseProjectDocument(encodeProjectDocument(project), catalog);
+    expect(
+      roundTripped.routes[0]?.biomes[0]?.topology?.occurrences.find(
+        (room) => room.occurrenceId === shopId,
+      )?.state,
+    ).toEqual({
+      kind: 'shop',
+      shop: {
+        profileKey: 'WorldShop',
+        offers: {
+          Offer1: {
+            offer: {
+              rewardType: 'Boon',
+              payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+            },
+            purchased: true,
+          },
+        },
+      },
+    });
+    expect(roundTripped.routes[0]?.biomes[0]?.topology?.continuations[0]?.pickedExitIndex).toBe(2);
   });
 
   it('re-anchors downstream topology and retains overflow after room replacement', () => {
@@ -333,7 +559,7 @@ describe('ordinary project commands', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(biome, second),
-      choice: { storeKey: 'RunProgress', reward: { rewardType: 'MaxHealthDrop' } },
+      value: { rewardType: 'MaxHealthDrop' },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceOccurrenceRoom',
@@ -350,10 +576,7 @@ describe('ordinary project commands', () => {
       gameName: 'F_CombatOneExit',
       state: {
         kind: 'counted',
-        choice: {
-          storeKey: 'RunProgress',
-          reward: { rewardType: 'Boon', payload: { source: 'ApolloUpgrade' } },
-        },
+        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
       },
     });
     expect(
@@ -413,16 +636,17 @@ describe('ordinary project commands', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(biome, startId),
-      choice: { storeKey: 'RunProgress', reward: { rewardType: 'MaxHealthDrop' } },
+      value: { rewardType: 'MaxHealthDrop' },
     });
     expect(project.routes[0]?.biomes[0]?.topology?.occurrences[0]?.state).toEqual({
       kind: 'counted',
-      choice: { storeKey: 'RunProgress', reward: { rewardType: 'MaxHealthDrop' } },
+      offer: { rewardType: 'MaxHealthDrop' },
     });
 
     const shopId = createOccurrenceId('shop');
     project = createBatch(project);
     project = createTarget(project, startId, 1, shopId, 'F_Shop01');
+    project = setPicked(project, startId, 1);
     const purchase = createShopPurchaseAddress(biome, shopId, 'Offer1');
     const purchased = applyProjectCommand(project, catalog, {
       kind: 'SetShopPurchase',
@@ -449,13 +673,13 @@ describe('ordinary project commands', () => {
       applyProjectCommand(startedProject(), catalog, {
         kind: 'ReplaceIncomingReward',
         reward,
-        choice: { storeKey: 'RunProgress', reward: { rewardType: 'MissingReward' } },
+        value: { rewardType: 'MissingReward' },
       }),
     ).toThrowError(
       new ProjectCommandContractError(
         'ReplaceIncomingReward',
         reward,
-        '$.routes[0].biomes[0].topology.occurrences[0].state.choice.reward.rewardType: unknown reward primitive MissingReward',
+        '$.routes[0].biomes[0].topology.occurrences[0].state.offer.rewardType: unknown reward type MissingReward',
       ),
     );
   });
@@ -501,6 +725,11 @@ describe('terminal and destructive project commands', () => {
 
     const purchase = createShopPurchaseAddress(biome, shopId, 'Offer1');
     project = applyProjectCommand(project, catalog, {
+      kind: 'SetTerminalPicked',
+      picked: createPickedAddress(biome, parentId),
+      exitIndex: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
       kind: 'SetShopPurchase',
       purchase,
       purchased: true,
@@ -509,7 +738,7 @@ describe('terminal and destructive project commands', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShopOffer',
       offer,
-      reward: { rewardType: 'Boon', payload: { source: 'ZeusUpgrade' } },
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
     const shopState = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
       (room) => room.occurrenceId === shopId,
@@ -519,7 +748,7 @@ describe('terminal and destructive project commands', () => {
       shop: {
         offers: {
           Offer1: {
-            reward: { rewardType: 'Boon', payload: { source: 'ZeusUpgrade' } },
+            offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
             purchased: true,
           },
         },
@@ -529,14 +758,14 @@ describe('terminal and destructive project commands', () => {
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceShopOffer',
         offer,
-        reward: { rewardType: 'Boon', payload: { source: 'ZeusUpgrade' } },
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
       }),
     ).toBe(project);
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceShopOffer',
         offer,
-        reward: { rewardType: 'MaxHealthDrop' },
+        value: { rewardType: 'MaxHealthDrop' },
       }),
     ).toThrowError(ProjectCommandContractError);
   });
@@ -677,6 +906,8 @@ describe('terminal and destructive project commands', () => {
     expect(topology?.continuations.at(-1)).toEqual({
       kind: 'batch',
       parentOccurrenceId: parentId,
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+      batchState: null,
       targets: [],
       pickedExitIndex: null,
     });
@@ -754,20 +985,27 @@ describe('authored project history', () => {
   it('undoes and redoes exact authored snapshots without recording leaf no-ops', () => {
     const original = startedProject();
     let history = createProjectHistory(original);
+    const reorderedUnchanged = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, startId),
+      value: {
+        payload: { source: 'ApolloUpgrade', kind: 'BoonSource' },
+        rewardType: 'Boon',
+      },
+    });
+    expect(reorderedUnchanged).toBe(history);
+
     const unchanged = applyProjectHistoryCommand(history, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(biome, startId),
-      choice: {
-        storeKey: 'RunProgress',
-        reward: { rewardType: 'Boon', payload: { source: 'ApolloUpgrade' } },
-      },
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     expect(unchanged).toBe(history);
 
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(biome, startId),
-      choice: { storeKey: 'RunProgress', reward: { rewardType: 'MaxHealthDrop' } },
+      value: { rewardType: 'MaxHealthDrop' },
     });
     const edited = history.present;
     expect(history.past).toEqual([original]);
