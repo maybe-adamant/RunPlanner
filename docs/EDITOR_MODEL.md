@@ -22,6 +22,10 @@ authored project + simulation result
 The UI may tolerate incomplete and invalid authored plans. It must not hide,
 repair, or silently delete them merely to keep the view visually legal.
 
+The batch-level Reward Pool projection described below follows the locked
+F/G/P/Q/H/O/I-compatible schema version 2 contract. Production remains on the
+older representation until the Phase 2.75 atomic authority switch.
+
 ## Application Shell
 
 The initial shell should preserve the useful high-level navigation proven by
@@ -67,13 +71,29 @@ interface BiomeEditorProjector<TTopology, TView> {
 
 `HubBiome` projects:
 
-- fixed entry sequence;
-- persistent hub doors;
-- target rooms and visit order;
-- side-room state;
-- derived returns;
-- independent terminal transition;
+- fixed authored entry-room leaves;
+- the nine-or-ten-member open set over catalog-fixed hub slots;
+- one complete target room and incoming reward per open slot;
+- the ordered six-slot pylon visit sequence;
+- generated/unavailable and entered-order state for side-room slots under
+  visited combat targets;
+- derived parent restores and hub returns;
+- the fixed authored preboss shop and derived completion sequence;
 - findings and candidate state attached by semantic address.
+
+The N editor may visually arrange the hub as a map, board, list, or visit
+timeline. None of those projections may expose arbitrary room replacement for
+a fixed hub slot or persist a second door-count value. Open-set membership and
+visit order remain separate controls because every open unvisited slot still
+owns a real offered reward leaf.
+
+For each active side slot, generation and entry may project as simple toggles;
+an entered slot additionally owns a unique ordinal (`1` when it is the only
+entered sibling).
+Generated and entered totals are derived. The editor must allow every
+permutation, and it must not suggest that reordering entries changes already-
+generated sibling offers. Reordering preserves the final modeled parent-exit
+state while changing the exact history/execution trace.
 
 Projectors consume normalized domain state and never infer topology from
 rendered components.
@@ -108,10 +128,11 @@ dispatches one atomic `ReplaceOccurrenceRoom` command and preserves its
 `occurrenceId`.
 
 Creating a previously absent target allocates an occurrence ID and installs
-the declaration's complete defaults in the same semantic command. Once that
-target exists, its ordinary selector has no empty value. Its game name can be
-replaced, while the occurrence itself can be removed only through an explicit
-owning structural command.
+the declaration's complete offer-time defaults in the same semantic command.
+If it is also picked, the command installs any required entry-time defaults.
+Once that target exists, its ordinary selector has no empty value. Its game
+name can be replaced, while the occurrence itself can be removed only through
+an explicit owning structural command.
 
 Selectors do not hide a game name merely because another occurrence already
 uses it. Repeated game names are legal authored structure; creation caps,
@@ -128,11 +149,38 @@ or Free Reward editor aligned to that exit. Selecting the entered terminal
 target is single-choice topology; the editor does not add a second preboss
 entry-mode selector.
 
-The active frontier offers structural actions rather than a persistent
-`Next Step` field:
+I keeps its post-goal preboss and ordinary peer in one decision card because
+they are one game batch. `Add Next Decision` is I's only frontier-advance
+action: before Goal completion it derives a Goal on the first exit, and after
+Goal completion it derives `I_PreBoss02` there. A second exit, when present,
+renders an ordinary room leaf. Both targets are directly pickable through the
+same single-choice interaction. Picking the preboss visually closes the biome,
+while picking the peer exposes its downstream decision. I never renders `Go to
+Preboss`; that action is reserved for layouts whose preboss is an independent
+terminal transition.
+
+Shop editors follow the shared entry-materialization rule. An unpicked shop
+target renders as a dead leaf without requiring or exposing shop inventory.
+Picking it atomically installs the profile's complete defaults when absent and
+exposes its shop editor. Switching the pick away may retain those values
+dormantly, but the editor hides them because they produce no current game
+facts. Incoming and free-reward editors remain visible on unpicked targets
+because those offers materialize on their doors.
+
+Every generated I preboss offer is a distinct Room Occurrence and follows that
+same contract; it does not introduce an I-specific shop mode.
+
+An I combat target renders its derived Goal marker instead of a reward editor
+when the current simulation resolves Goal. Its complete potential Tartarus
+reward remains dormant in authored state. When an upstream edit makes that
+same occurrence NonGoal, the editor exposes the retained reward value; it does
+not install a new default or ask the user to author Goal versus NonGoal.
+
+The active frontier offers policy-admitted structural actions rather than a
+persistent `Next Step` field:
 
 - Add Next Decision;
-- Go to Preboss;
+- Go to Preboss, only for layouts with an independent terminal transition;
 - replace terminal outcome with continuing rooms where the layout permits;
 - remove from this decision;
 - clear biome through an explicit destructive action.
@@ -164,7 +212,7 @@ deletion scope.
 Room editors are selected by room template and receive:
 
 - immutable declaration and labels;
-- current complete room state;
+- current complete offer-time state and any active entry-time state;
 - semantic replacement callbacks;
 - room-local findings and candidate results;
 - immutable topology context only where the template genuinely requires it.
@@ -176,13 +224,39 @@ Reward composition remains bottom-up:
 ```text
 payload domain
   -> reward primitive
-  -> reward store or fixed binding
-  -> counted choice / shop / room-local offer point
+  -> counted store domain or fixed binding
+  -> batch-resolved offer / shop / room-local offer point
   -> room template
 ```
 
 A parent selection immediately installs the selected child's complete declared
 defaults. The UI never commits an intermediate empty payload or reward.
+
+Every ordinary generated decision projects its store according to policy. An
+`authoredBaseStore` batch renders one batch-owned `Reward Pool` selector for
+its `baseRewardStoreKey`. A `sourceOfferPoint` batch renders that store only at
+its owning room-local offer point; the outgoing batch may show derived
+provenance but exposes no second editor. A `none` batch renders no placeholder
+store field. Each target room then renders only its concrete reward editor. A
+declaration-forced target may display the derived pool as read-only context,
+but it does not gain another persisted store selector. This keeps batch,
+declaration, and leaf ownership visible in the UI.
+
+Replacing the batch reward pool retains every target reward. Candidate and
+selected-plan validation mark a retained reward invalid when its newly resolved
+store cannot produce it; the editor does not reset it. The UI never displays
+probability percentages, likelihood scores, or warnings for merely unlikely
+but possible outcomes.
+
+An H ordinary batch has no Reward Pool selector because its observable rewards
+use declaration-owned RunProgress bindings. It instead renders one batch-owned
+Fields cage outcome selector with Min and Max semantic values. The view may
+show the derived active cage count and current two-Max ceiling as read-only
+context, but it persists neither. Each combat occurrence renders its three
+room-owned cage values; the batch projection marks only the derived active
+prefix as participating and leaves a dormant third value retained. A
+non-combat target renders no cage editor, and deferred
+`FieldsOptionalRewards` render no controls.
 
 Display labels remain separate from persisted game identifiers:
 
@@ -202,17 +276,20 @@ when the declaration provides `Ares`.
 The simulator returns semantic findings. The application indexes them by
 owner address and projects them into UI destinations:
 
-| Semantic owner         | Presentation                      |
-| ---------------------- | --------------------------------- |
-| Biome                  | biome status and findings summary |
-| Start                  | start selector marker             |
-| Parent batch           | decision card and batch marker    |
-| Parent plus exit index | target selector or physical exit  |
-| Picked continuation    | single-choice surface             |
-| Terminal predecessor   | terminal section                  |
-| Terminal target        | terminal exit and realization     |
-| Room occurrence        | room editor                       |
-| Occurrence plus slot   | local reward/child editor         |
+| Semantic owner              | Presentation                           |
+| --------------------------- | -------------------------------------- |
+| Biome                       | biome status and findings summary      |
+| Start                       | start selector marker                  |
+| Parent batch                | decision card and batch marker         |
+| Batch reward store          | decision Reward Pool selector          |
+| Batch policy state          | policy-specific batch selector         |
+| Parent plus exit index      | target selector or physical exit       |
+| Picked continuation         | single-choice surface                  |
+| Terminal predecessor        | terminal section                       |
+| Terminal target             | terminal exit and realization          |
+| Conditional terminal target | target row and biome-completion marker |
+| Room occurrence             | room editor                            |
+| Occurrence plus slot        | local reward/child editor              |
 
 Finding resolution is direct lookup. It never scans rows for a matching game
 room name.
@@ -296,6 +373,7 @@ The first usable editor slice is complete when a user can:
 - configure the Underworld prefix through F;
 - select an F opening;
 - add decisions and choose one or more physical targets;
+- select one concrete base reward pool for every generated decision;
 - select the picked exit;
 - edit every referenced F room's supported reward state;
 - terminate through the F preboss model;
@@ -313,6 +391,8 @@ Do not introduce:
 - topology mutation through arbitrary object writes;
 - empty sentinels for existing room or reward selections;
 - UI-local eligibility rules;
+- per-room store selectors that compete with batch store authority;
+- probability or likelihood decoration for valid possible choices;
 - findings keyed by rendered index;
 - a second serialized UI tree;
 - hidden invalid choices;

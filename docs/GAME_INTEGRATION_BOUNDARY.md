@@ -59,6 +59,10 @@ which facts are actually necessary.
 - decode and validate its transport/schema boundary;
 - reject unknown versions, operations, identifiers, and unsafe bounds;
 - translate semantic facts through fixed runtime adapters;
+- suppress natural Chaos and persistent NPC encounter substitution while those
+  systems are absent from the execution plan;
+- suppress Anomaly replacement while route-structural detours are absent from
+  the execution plan;
 - compare expected and observed game state at known checkpoints;
 - report mismatches without inventing new planning logic.
 
@@ -109,6 +113,39 @@ Although the payload is deferred, current app design must preserve:
 These facts are useful for simulation independently of the future transport
 and prevent the editor from becoming the only interpretation of a project.
 
+### Shared v1 suppression and no-action contract
+
+The app's v1 canonical history excludes three spontaneous systems whose presence
+would otherwise change modeled history:
+
+- natural Chaos generation;
+- Anomaly replacement;
+- persistent NPC encounter substitution.
+
+The future game module must disable both unless a later schema explicitly
+represents them. Observing either during a v1 trace is a conformance mismatch,
+not permission for the runtime to reinterpret the plan.
+
+Challenges, wells, gathering points, and rerolls use a no-action contract
+instead. They may exist in the world, but the traced player never activates a
+challenge, purchases from a well, gathers a resource, or rerolls an offer. If
+one of those actions later becomes authored, it must first acquire app-side
+simulation and validation semantics.
+
+### Oceanus v1 traversal contract
+
+The v1 G simulator conditions its canonical trace on the authored picked exit
+being open and taken immediately. It does not author or simulate optional
+locked-exit encounters. Physical target order remains semantic and must not be
+silently permuted merely to place the picked target on the first door.
+
+Future protocol work must preserve this trace and audit that the picked exit is
+traversable without an unlock encounter. Whether the game adapter realizes
+that condition through generation control, a narrower door adapter, or another
+verified mechanism remains deliberately undecided until runtime probes justify
+the execution schema. A mismatch must be reported rather than repaired by
+inventing an extra encounter that the app did not simulate.
+
 ## Readiness Gate for Protocol Work
 
 Do not design the concrete execution schema until:
@@ -145,6 +182,9 @@ for execution.
 - exact JSON execution-plan schema;
 - clipboard wrapper or compression;
 - game hook selection;
+- exact runtime mechanism that realizes G's open-picked-exit baseline;
+- exact runtime adapters that suppress natural Chaos, Anomaly replacement, and
+  persistent NPC encounter substitution;
 - runtime command handlers;
 - strict versus diagnostic mismatch policy;
 - automatic diagnostic import;

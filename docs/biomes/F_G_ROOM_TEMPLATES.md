@@ -30,28 +30,33 @@ Exact APIs may differ. The invariants do not:
 - constructed active leaf state is complete;
 - replacements are atomic and cannot empty an existing value;
 - local validation checks shape and declaration membership only;
+- counted materialization receives its resolved store from the owning batch
+  and Room Declaration context;
 - route history, force, caps, peers, and contextual eligibility belong to the
   simulator;
 - topology is never passed as mutable state;
 - findings return to occurrence-based semantic addresses.
 
 An occurrence replacement preserves `occurrenceId` and installs the new Room
-Declaration's complete template defaults.
+Declaration's complete offer-time defaults plus entry-time defaults when that
+occurrence is picked.
 
 ## Common Reward Fragments
 
-Templates compose the reward values defined in `REWARD_MODEL.md`:
+Templates compose the reward values defined in `../REWARD_MODEL.md`:
 
 ```ts
-type IncomingRewardState =
+type RoomRewardState =
   | { kind: 'none' }
   | { kind: 'fixed'; payload?: RewardPayload }
-  | { kind: 'counted'; choice: CountedRewardChoice }
-  | { kind: 'shop'; shop: ShopState };
+  | { kind: 'counted'; reward: ConcreteReward }
+  | { kind: 'shop'; shop?: ShopState };
 ```
 
 The normalized declaration determines the legal branch. Templates do not
-infer bindings from room names.
+infer bindings from room names. `fixed` and `counted` describe door-offer
+state; `shop` describes entry-materialized state and is required only when the
+occurrence is picked.
 
 ## `FixedOpening`
 
@@ -66,7 +71,7 @@ One complete counted `RunProgress` reward excluding Devotion,
 
 ```ts
 interface FixedOpeningState {
-  generatedReward: CountedRewardChoice;
+  generatedReward: ConcreteReward;
 }
 ```
 
@@ -106,14 +111,15 @@ come from the profile. The template owns no start selection or continuation.
 
 ```ts
 interface StandardCombatState {
-  generatedReward: CountedRewardChoice;
+  generatedReward: ConcreteReward;
 }
 ```
 
-The concrete room binding determines allowed stores, filters, and defaults.
-The same template therefore covers `F_Combat01`, ordinary F combat, the four
-Devotion-excluding G combat rooms, and ordinary G combat without conditionals
-inside the template.
+The owning batch and room override determine the resolved store. The concrete
+room binding determines filters and the complete reward domain accepted from
+possible resolved stores. The same template therefore covers `F_Combat01`,
+ordinary F combat, the four Devotion-excluding G combat rooms, and ordinary G
+combat without conditionals inside the template.
 
 ### Materialization
 
@@ -135,11 +141,8 @@ one complete Boon-source payload:
 ```ts
 interface MinibossState {
   generatedReward: {
-    storeKey: 'RunProgress';
-    reward: {
-      rewardType: 'Boon';
-      payload: { source: BoonSourceGameName };
-    };
+    rewardType: 'Boon';
+    payload: { source: BoonSourceGameName };
   };
 }
 ```
@@ -165,6 +168,10 @@ No authored fields. Both produce fixed payload-free `Story`.
 Emits the fixed Story reward and declared story encounter profile. Room
 eligibility and creation caps remain declaration requirements.
 
+This template owns only the incoming Story producer. Concrete NPC dialogue,
+gift choices, and trait/resource effects inside the room are a deferred entity
+and trait-resolution surface; they are not hidden Story state.
+
 Fixed state rejects reward replacement rather than persisting a redundant
 `Story` key.
 
@@ -178,7 +185,7 @@ Fixed state rejects reward replacement rather than persisting a redundant
 
 ```ts
 interface FountainState {
-  generatedReward: CountedRewardChoice;
+  generatedReward: ConcreteReward;
 }
 ```
 
@@ -205,9 +212,11 @@ interface ShopState {
 }
 ```
 
-Every declared World Shop slot begins with a complete default offer and a
-concrete `purchased` boolean. Reward replacement remains within the slot's
-declared option set. The state carries no counted `storeKey`.
+When the room is picked for entry, every declared World Shop slot begins with
+a complete default offer and a concrete `purchased` boolean. An unpicked Shop
+occurrence may omit this entry-materialized state or retain a previously
+authored complete value dormantly. Reward replacement remains within the
+slot's declared option set. The state carries no counted `storeKey`.
 
 ### Materialization
 
@@ -248,17 +257,19 @@ The active state shape follows the derived realization:
 type ForkedPrebossState =
   | {
       kind: 'shop';
-      shop: ShopState;
+      shop?: ShopState;
     }
   | {
       kind: 'freeReward';
-      choice: CountedRewardChoice;
+      reward: ConcreteReward;
     };
 ```
 
-The terminal policy supplies the discriminant while the Room Declaration
-supplies both branches' complete defaults. The free binding fixes
-`RunProgress` and excludes Devotion and `RoomMoneyDrop`.
+The terminal policy supplies the discriminant. The Room Declaration supplies
+complete defaults for the active branch: free-reward state is always complete
+because it materializes on the door, while shop state becomes required only
+when that target is picked for entry. The free binding fixes `RunProgress` and
+excludes Devotion and `RoomMoneyDrop`.
 
 The project codec may encode the discriminant for self-description, but
 contact validation must prove that it matches the target's derived terminal
@@ -282,7 +293,9 @@ state, and overflow reconciliation remain terminal-transition responsibilities.
 
 Defaults are semantic, not positional:
 
-- each counted binding owns a default store and reward;
+- each generated batch owns a default base store from its layout policy;
+- each counted binding owns one complete default reward for each store context
+  it can receive;
 - each payload-bearing primitive owns a complete payload default;
 - every shop slot owns a default offer and purchase state;
 - the preboss terminal policy owns the realization-role ordering.
@@ -291,6 +304,10 @@ Ordinary leaf commands only replace complete values. A counted choice cannot
 return to unspecified, a Boon cannot lose its source, and a shop slot cannot
 lose its offer. Structural deletion removes the owning occurrence; undo is the
 recovery boundary.
+
+Replacing a batch's base store is a topology-owner command, not a leaf command.
+It retains every target reward and lets contextual validation report any reward
+that the newly resolved store cannot produce.
 
 ## Semantic Addresses
 
@@ -311,7 +328,8 @@ Catalog construction rejects a template/declaration pairing when:
 
 - the producer kind is unsupported by that template;
 - the required encounter profile is absent or incompatible;
-- the binding has no complete default;
+- the binding has no complete reward default for a store context it can
+  receive;
 - a fixed template receives editable reward state;
 - a shop references an unknown profile or slot option;
 - a forked preboss realization disagrees with its terminal policy.
@@ -321,6 +339,6 @@ These are contract failures, not correctable user findings.
 ## Later Templates
 
 H Fields combat, I Clockwork combat, N hub rooms, O Ship combat, P internal
-encounter structure, and Q deterministic miniboss structure are deferred.
+encounter structure, and Q's scripted paired-miniboss structure are deferred.
 They should reuse these reward atoms and occurrence rules rather than expand
 this F/G template set with dormant branches.

@@ -10,6 +10,14 @@ The simulator is the app's theory of how supported Hades II route generation
 behaves. The later game module will test that theory through runtime auditing;
 it will not duplicate it.
 
+## Cross-Biome Freeze Status
+
+The possibility-support, materialization, reward-store, fixed-slot, and
+persistent-hub contracts in this document are globally locked by the completed
+F/G/P/Q/H/O/I/N audit set. Phase 3 implementation remains paused only until the
+dormant declarations and schema version 2 authority switch are reconciled
+atomically.
+
 ## Core Contract
 
 ```ts
@@ -26,6 +34,27 @@ The operation is:
 
 The initial implementation performs a full synchronous rebuild after every
 semantic edit. Optimization follows profiling rather than speculation.
+
+## Possibility Support Contract
+
+The simulator proves possibility, not probability. At each random game
+decision it derives a support set from the catalog and the exact pre-decision
+history. The authored project supplies one concrete outcome, and validation
+checks whether that outcome belongs to the support set.
+
+The generic decision rule is:
+
+1. derive all eligible outcomes;
+2. if any eligible forced outcomes exist, discard the ordinary eligible pool;
+3. retain every member of the selected pool as possible regardless of weight;
+4. validate the authored outcome by membership.
+
+For chance or ratio boundaries, a value at or below zero removes an outcome, a
+value strictly between zero and one keeps both sides possible, and a value at
+or above one forces the corresponding side. The simulator may preserve weights
+or multiplicity when they change later state, such as counted-bag depletion,
+but it never produces likelihood scores, "unlikely" findings, seeded RNG
+replays, or probability-based candidate ordering.
 
 ## Derived Pipeline
 
@@ -136,22 +165,57 @@ not ask whether those facts are legal.
 
 A complete biome requires:
 
-- structurally closed topology from declared entry to terminal transition;
+- structurally closed topology from declared entry to an independent terminal
+  transition or a policy-admitted picked terminal batch target;
 - all required target links and picked or visit-order choices;
 - all active terminal target links and their picked choice;
 - complete terminal companion links required by policy;
-- one complete occurrence record for every referenced top-level room;
-- complete active room-local leaf state;
+- one occurrence record with complete offer-time state for every referenced
+  top-level room;
+- complete entry-time room-local state for every picked occurrence that owns
+  it;
 - complete active local child and encounter offer-point state;
-- concrete rewards, payloads, shop offers, purchases, and modes;
+- concrete offered rewards, payloads, active shop offers, purchases, and
+  modes;
 - complete biome-global and batch-global authored values.
+
+For an `authoredBaseStore` batch, its concrete `baseRewardStoreKey` is one of
+those required batch-global values. A `sourceOfferPoint` batch is complete only
+when its parent occurrence has complete state for the semantic offer point
+selected by normalized policy. A batch with no observable base outcome instead
+has the explicit `none` policy and no invented store choice. Such a batch may
+be reward-free, as in Q, or resolve target provenance entirely through
+declaration overrides, as in I. Target incoming-reward leaves beneath every
+form own concrete rewards, not duplicate store selections.
+
+Any additional state required by the normalized batch policy is equally part
+of completeness. An ordinary H batch requires one concrete semantic
+`cageOutcome`, even when it has no combat target or when Min and Max derive the
+same visible cage count. H terminal transitions deliberately own no cage
+outcome under the observational simplification defined by `biomes/H_GAME_RULES.md`.
+
+An I combat occurrence is complete when its potential concrete Tartarus reward
+is complete even when Clockwork simulation currently derives Goal. The dormant
+value emits no canonical reward fact in that realization. Physical offer order,
+prior Goal offers, and the non-goal cap derive Goal versus NonGoal; authored
+state never supplies a competing discriminant.
+
+A complete N plan has every required fixed authored room, exactly nine or ten
+open fixed hub targets with complete incoming leaves, and a six-entry visit
+sequence containing distinct open slot keys. Side-room state is active only
+under visited combat targets: every declared local slot then has concrete
+generation state and reward state, and every generated slot has either one
+distinct entered ordinal or an explicit unentered result. The fixed preboss
+shop leaf must also be complete. Hub returns, parent restores, boss, and
+postboss require no authored occurrence records.
 
 Only referenced occurrences participate. Removed occurrences do not remain as
 dormant project state; undo may restore their prior authored snapshot.
 
-Generated unpicked targets participate because their rooms and rewards were
-offered by the game. A concrete negative such as `purchased: false` is complete
-state.
+Generated unpicked targets participate because their rooms and incoming or
+free rewards were offered by the game. Their entry-materialized shop state is
+not required and emits no facts. On a picked shop occurrence, a concrete
+negative such as `purchased: false` is complete state.
 
 ## Canonical Snapshots
 
@@ -164,21 +228,60 @@ Representative linear shape:
 interface CanonicalLinearBiome {
   kind: 'LinearBiome';
   biomeStepKey: BiomeStepKey;
-  startRoom: CanonicalRoom;
+  entryRooms: CanonicalRoom[];
   batches: CanonicalBatch[];
+  terminalEntry: CanonicalTerminalEntry;
+  biomeState: CanonicalBiomeState;
+}
+
+interface CanonicalHubBiome {
+  kind: 'HubBiome';
+  biomeStepKey: BiomeStepKey;
+  entryRooms: CanonicalRoom[];
+  hubBoard: CanonicalHubBoard;
+  visits: CanonicalHubVisit[];
   terminalEntry: CanonicalTerminalEntry;
   biomeState: CanonicalBiomeState;
 }
 ```
 
+`entryRooms` begins with the selected declared start and then contains any
+layout-derived fixed entry rooms in game order. Most linear biomes currently
+contain only their start; I additionally materializes progressed-save
+`I_Story01` before its first authored Clockwork batch.
+
+`terminalEntry` is a canonical role, not proof that authored persistence used
+the independent `terminal` continuation form. For I, materialization derives
+it from the picked terminal target of the final `ClockworkDoorBatch`;
+preceding unpicked preboss occurrences remain in their own batches as ordinary
+offer facts.
+
+N `hubBoard` records the fixed physical generation order and every open target
+offer exactly once. `visits` records the six player-selected target entries in
+visit order, each target's active side-room offers and side-entry order, the
+restored parent records, and the restored hub record. Open unvisited targets
+remain in `hubBoard` but never appear in `visits`.
+
+For N, `entryRooms` resolves the fixed authored Opening and PreHub references;
+their topology and game names come from the layout while their reward leaves
+come from persisted Room Occurrences. The stateless Hub entry is materialized
+as the structural owner of `hubBoard`, not as another authored occurrence.
+
 A canonical batch records:
 
 - selected parent occurrence ID and concrete game room name;
 - physical generation order;
+- explicit batch reward-store policy and authored base store when applicable;
 - every target occurrence, including unpicked dead leaves and repeated game
   room names;
+- offer-time room and reward facts for every target, but entry-time shop facts
+  only for the picked target;
 - exit index and picked state;
-- resolved concrete incoming offer;
+- the picked target's derived continuation effect when policy admits a
+  terminal declaration;
+- any policy-derived incoming realization, including I Goal versus NonGoal;
+- resolved concrete incoming offer, including actual store provenance, when
+  the target owns a producer;
 - concrete room-local fragment;
 - declaration-derived physical offer facts associated with the materialized
   occurrences;
@@ -204,7 +307,12 @@ room.prepare_encounters
 room.sequence
 room.generate_next
 room.commit
+
+editable terminal enters
+layout completion sequence begins
+each derived completion declaration enters and commits in order
 biome.complete
+next biome entry or route completion
 ```
 
 Encounter profiles emit ordered phase events. A counting combat phase may
@@ -222,6 +330,51 @@ encounter.complete
 Offer and acquisition timing belongs to the encounter or room declaration.
 The simulator must not infer it later from a generic reward list.
 
+H Fields combat is a concrete multi-phase projection rather than one generic
+combat event. Materialization first derives the active cage prefix for every
+combat target from the batch outcome and peer capacities. For each occurrence
+in physical target order, its ordinary incoming offer resolves before its
+active cage offers; this preserves cross-target counted-bag and Boon-source
+history. On entry, the picked combat room emits one non-counting passive phase
+followed by one counting encounter and required acquisition for every active
+cage. The unpicked targets never emit those encounter or acquisition events.
+The batch's semantic Max outcome updates `fieldsMaxDoorsRolled` even when
+capacity or an empty combat-target set makes that update visually opaque.
+
+N hub materialization is also explicitly phased:
+
+```text
+fixed Opening offer, entry, encounter, acquisition, commit
+fixed PreHub offer, entry, encounter, acquisition, commit
+derived Hub entry
+generate all open hub targets and incoming offers in physical order
+derive hubRewardLookup from every hub offer
+for each authored main visit:
+  enter the selected target
+  spawn required SoulPylon
+  start and complete the counting main encounter
+  destroy the required pylon and acquire the incoming reward
+  evaluate local generation pressure in availability order
+  jointly validate and offer the generated side-slot reward batch
+  for each authored entered side slot:
+    enter, resolve its non-counting encounter, and acquire its reward
+    restore the same main occurrence
+  restore the same Hub room
+enter fixed authored PreBoss and resolve its shop
+walk derived Boss and PostBoss completion
+```
+
+The hub lookup is produced before the first selected visit and remains based on
+the full open board. A restore event appends history without creating another
+occurrence, offer, acquisition, or encounter-start event.
+
+Every permutation of a parent's entered side slots is legal. Because all
+sibling offers exist before the first entry and supported side acquisitions do
+not revise those offers, permutations with the same generated set, entered set,
+and concrete rewards produce the same modeled state at final parent exit. The
+entered ordinals remain semantic only to preserve exact room/acquisition trace
+and eventual execution intent; generated and entered counts are derived.
+
 ## Counter and Ledger Axes
 
 These histories remain distinct:
@@ -233,6 +386,8 @@ These histories remain distinct:
 - route encounter depth counts route-wide counting encounters;
 - room-history ordinal supports route-wide spacing rules;
 - reward-offer history includes every displayed offer;
+- entered-room reward-store history records the resolved store even when the
+  visible producer is fixed Story or Shop;
 - loot/use histories include acquired rewards only;
 - pending shop offers represent their bounded active interval;
 - unresolved force pressure tracks eligible forced declarations not yet
@@ -252,7 +407,15 @@ Important consequences:
 - loot and use requirements update on acquisition;
 - one physical room commit advances `biomeDepthCache` once even when it has
   multiple encounters;
-- Clockwork Goal progress changes on acquisition.
+- fixed completion rooms contribute their declared room-history ordinals even
+  though they are derived rather than authored topology;
+- each derived completion room applies its declaration-owned reward-store
+  history policy instead of a simulator room-name exception;
+- the next biome reads route-wide history only after those fixed transitions
+  and the declared biome reset events have been applied;
+- Clockwork Goal progress changes on acquisition;
+- the I non-goal counter changes only when a concrete non-goal reward spawns
+  for the entered occurrence, never when it is merely offered.
 
 ## Requirements
 
@@ -289,6 +452,8 @@ Validation checks complete canonical facts in lifecycle order:
 - force pressure over complete peer batches;
 - encounter profile presence and counter effects;
 - selected traversal and visit order;
+- fixed hub-slot availability, persistent-board, restore, and visit-count
+  invariants;
 - specialized biome structures;
 - reward domains, payloads, bags, shops, and acquisitions;
 - semantic-address uniqueness.
@@ -300,10 +465,20 @@ Validation never rewrites authored topology, chooses a replacement, or repairs
 an invalid selection.
 
 For F/G, repeated ordinary combat game names remain valid construction and are
-judged only by their declared current-history rules. For I, repeated preboss
-offers will likewise use distinct occurrence identities. The I slice must
-define which declined-offer facts materialize without entered-room shop state;
-the simulator must not restore the old singleton-control workaround.
+judged only by their declared current-history rules. I preboss offers likewise
+use distinct occurrence identities. Each declined preboss materializes as an
+unpicked target in its real `ClockworkDoorBatch`; a later batch may create a
+new occurrence. Only the picked preboss contributes entry and local shop
+acquisitions. The simulator never restores the old singleton-control or
+synthetic-companion workaround.
+
+For N, one authored main occurrence may contribute an initial entry record and
+several restored-parent history records after side rooms. The hub likewise
+contributes one initial entry plus six restores without a top-level authored
+hub occurrence. Validation addresses offer and leaf findings through the open
+hub target occurrence, side findings through parent occurrence plus local slot
+key, and restore/history findings through their canonical semantic event
+address.
 
 ## Reward Simulation
 
@@ -313,10 +488,10 @@ section owns the history-dependent simulation of those normalized facts.
 The simulator keeps these distinct:
 
 `Reward primitive`
-: Concrete reward identity and normalized acquisition metadata.
+: Concrete reward identity and declaration-owned acquisition projection.
 
 `Reward store`
-: Authoring and domain option set.
+: Offer-point-resolved provenance and counted domain.
 
 `Reward bag`
 : Ordered counted multiset copied from a game store.
@@ -333,15 +508,42 @@ The simulator keeps these distinct:
 `Shop profile`
 : Shop option domain; it is not a counted reward bag.
 
-For each counted offer:
+For each generated batch:
 
-1. evaluate remaining bag entries against current history and source filters;
-2. identify eligible entries capable of producing the authored offer;
-3. refill once only when no entry in the whole bag is eligible;
-4. reject unavailable stores or invalid authored rewards explicitly;
-5. deterministically consume one compatible counted entry;
-6. preserve ineligible and unmatched entries;
-7. update acquisition ledgers only if an acquisition event occurs.
+1. derive the possible base stores from the biome ratio policy and current
+   entered-room store history when the policy is `authoredBaseStore`;
+2. validate the authored `baseRewardStoreKey` by support-set membership, or
+   resolve and validate the source occurrence's active semantic offer point
+   when the policy is `sourceOfferPoint`;
+3. scan all targets for valid forced-store overrides in physical order;
+4. derive every target's actual store from individual override, target forced
+   override, or the final shared store;
+5. evaluate remaining entries in that actual store against current history,
+   source filters, and same-batch duplicate rules;
+6. identify eligible entries capable of producing the authored concrete
+   reward;
+7. refill once only when no entry in the whole bag is eligible;
+8. reject unavailable stores or invalid authored rewards explicitly;
+9. deterministically consume one compatible counted entry;
+10. preserve ineligible and unmatched entries;
+11. apply the primitive's declared acquisition projection only if an
+    acquisition event occurs.
+
+For a generated batch with `none`, skip base-store support and shared-store
+resolution. A target forced or individual store still resolves from its Room
+Declaration and uses the same offer machinery. A target with no producer and
+no resolved store emits no reward offer and consumes no bag entry.
+
+Start and terminal offer points that do not own an authored batch store receive
+their store from their normalized fixed or terminal policy. They reuse the same
+bag, offer, and acquisition machinery after that resolution.
+
+`allowDuplicates` is an entry-level store fact and defaults to false.
+RunProgress Boon entries permit repeated reward types; other ordinary F/G
+entries do not. Repeated Boon types still obey source rules: earlier peer Boon
+sources are excluded within the batch, unpicked peer sources affect that local
+exclusion without entering acquisition history, and the ordinary four-source
+route cap restricts later source support to already acquired sources.
 
 Duplicate compatible entries with different downstream behavior require a
 declaration-owned deterministic match order.
@@ -357,6 +559,10 @@ active only when the picked realization is the shop target.
 Candidate domains are declaration-derived and stable. Declaration-impossible
 values may be absent. Context-invalid values remain present and receive
 semantic invalid results.
+
+Candidate results report possible, forced, or impossible membership plus the
+same semantic findings used for the selected plan. They do not report a score
+or likelihood.
 
 For one candidate, simulation:
 
@@ -396,6 +602,10 @@ bad:  f_combat04_other_miniboss_entered
 
 Human messages are presentation derived from code and evidence. The simulator
 does not embed English UI strings into findings.
+
+When support membership fails, typed evidence may contain the derived support
+set and the forced/eligibility facts that produced it. It never contains a
+likelihood score.
 
 Completeness and legality findings use the same address domain. Contract
 errors remain a separate result class because they indicate malformed data or
@@ -444,6 +654,29 @@ to remember research work. When an unmodeled rule materially affects a
 supported surface, either implement it, remove that surface from the catalog,
 or document a narrow known approximation with tests.
 
+The initial F context is explicit: reward bags and route histories start empty;
+F begins with `enteredBiomes = 1`, `biomeDepthCache = 0`, route encounter depth
+`1`, and biome encounter depth `1`; spell-related current-run flags are false;
+the opening is already created and its reward is acquired before its exits are
+generated. The counting opening encounter advances biome encounter depth to
+`2` at encounter start, before outgoing doors are generated, and its room
+commit advances biome depth cache to `1`. Current-room shop option history
+contains only unpurchased offers because purchased options are removed before
+the next doors are generated.
+
+The canonical model increments `upgradableTraitCount` once for every acquired
+ordinary Boon. Exact boon selection, replacement, and upgradeable trait
+inventory are not yet project inputs, and deferred NPC gifts do not modify the
+counter. This approximation is fixture-backed and must be replaced rather than
+layered over when concrete trait state becomes modeled.
+
+N's local conformance probe captured the availability rank for every
+multi-side-door map, so forced-prefix validation can consume exact declaration
+ranks. Supported local bag validation is an unordered joint sibling constraint
+and does not consume that rank. The persistent hub still requires observed
+generation order before an execution plan assumes stable hub-door ordering;
+that later probe fills execution evidence rather than changing model shape.
+
 ## Test Strategy
 
 The simulator is fixture-driven.
@@ -456,9 +689,14 @@ Required categories include:
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
 - picked and unpicked peer creation and reward depletion;
+- absent unpicked shop state, atomic picked-shop default installation, and
+  dormant retention after re-pick;
 - counter timing and pre/post-event views;
 - creation versus appearance caps;
 - force pressure;
+- low-weight possible outcomes and forced-pool exclusion;
+- chance/ratio boundaries at zero, strict interior, and one;
+- generated-batch base-store support and two-pass target-store overrides;
 - terminal policies;
 - optional encounter phases;
 - reward payload and bag-entry provenance;
@@ -474,6 +712,7 @@ game story without reverse-engineering generated data.
 The initial simulator does not provide:
 
 - vanilla probability distributions;
+- route likelihoods, unlikely-state warnings, or RNG-seed replay;
 - Monte Carlo search;
 - automatic route optimization;
 - runtime game mutation;

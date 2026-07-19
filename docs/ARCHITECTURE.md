@@ -34,6 +34,25 @@ The future game module owns only:
 The game module does not become a second simulator, validator, planner, or
 editor.
 
+## Possibility, Not Probability
+
+Run Planner models the support of game decisions: which concrete outcomes can
+or must occur from the current simulated state. It does not model how likely a
+possible outcome is.
+
+For every random decision, the catalog and current history determine a set of
+possible concrete outcomes. The authored project chooses one outcome from that
+set, and validation proves membership. A positive-probability outcome remains
+valid even when its probability is extremely small. A zero-probability outcome
+is impossible, and a singleton support set is forced.
+
+This is a cross-cutting semantic contract, not merely a UI simplification. It
+applies to room selection, reward-store selection, counted bags, encounters,
+Boon sources, and later random game decisions. Weights and ratios may still be
+read when they change the support set at a boundary, but the app does not
+compute route likelihoods, expose "unlikely" warnings, consume RNG seeds, run
+Monte Carlo search, or optimize for probability.
+
 ## Layered System
 
 ```text
@@ -352,4 +371,5 @@ Do not introduce:
 - a graph library as topology storage;
 - silent repair of invalid user choices;
 - generic fallback behavior for missing current-run rules;
+- probability scoring, route-likelihood warnings, or seeded RNG replay;
 - premature incremental simulation, workers, databases, or Rust services.

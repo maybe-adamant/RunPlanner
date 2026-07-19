@@ -7,18 +7,94 @@ is mutable project history, not a design authority.
 
 ## Current Frontier
 
-Phases 0, 1, 2, and 2.5 are complete. Phase 3 F simulation is the next frontier.
+Phases 0, 1, 2, and 2.5 were completed under the prior reward-store ownership
+model. Phase 2.75, Cross-Biome Catalog Closure, is the current frontier. The
+biome audit and shared-design reconciliation gate is complete; implementation
+must now harden the normalized catalog, switch F/G atomically to schema version
+2, and import P/Q/H/O/I/N as dormant declaration sets before Phase 3 begins.
+
+Possibility-only simulation and the reward-authority shape are locked by the
+complete audit set. O added the source-offer-point batch-store form without
+moving store ownership back to reward leaves; I confirms that a `none` batch
+can still resolve every counted target through a declaration-owned forced-
+store override; N confirms the same shape for one heterogeneous persistent hub
+board.
 
 Before Phase 1 implementation, the inherited unique-room simplification was
 removed from the app design. Room Declarations remain unique by game name;
 authored Room Occurrences receive stable persisted occurrence IDs and may
-reference the same declaration more than once. The exact I repeated-preboss
-offer representation remains deferred to the I implementation slice.
+reference the same declaration more than once. I now proves the consequence:
+each repeated preboss offer is an ordinary target occurrence in its real
+generated batch.
 
-The concrete Phase 1 documentation foundation now includes the reward model,
-F/G game rules, F/G room-template contracts, and a migration provenance
-ledger. F/G forked preboss exits are modeled as distinct terminal offer
-occurrences rather than one singleton room instance with an entry-mode field.
+The concrete Phase 1 documentation foundation now includes the shared game-
+generation rules, separate F and G game-rule authorities, F/G room-template
+contracts, and a migration provenance ledger. F/G forked preboss exits are
+modeled as distinct terminal offer occurrences rather than one singleton room
+instance with an entry-mode field.
+
+The cross-biome audits establish P, Q, H, O, I, and N as dormant declaration
+targets.
+`biomes/P_GAME_RULES.md` records its typed source-sensitive exits, reward-free
+empty-intro simplification, intentionally collapsed counting combat projection,
+miniboss encounter-depth asymmetry, forked preboss, and persistent-NPC
+composition boundary. The F, G, P, Q, H, O, I, and N rule documents now
+distinguish verified game behavior, modeling disposition, canonical
+projection, reconsideration trigger, and current feature coverage. Production
+P, Q, H, O, I, and N declarations have not yet been imported.
+
+`biomes/Q_GAME_RULES.md` records Q's declaration-driven scripted stages, real foyer
+variants, independently generated and repeatable miniboss peers, reward-free
+combat spine, Typhon miniboss store, direct Summit shop, Eye/Tail encounter-
+depth asymmetry, and boss-level repeat-run completion. It excludes the Palace
+postboss/story path as narrative progression and proves that reward-free
+generated batches must not author a meaningless base store.
+
+`biomes/H_GAME_RULES.md` records H's four-room count-driven spine, exact physical
+exits, bridge forced-pool competition, batch-owned semantic Min/Max cage
+outcome, hidden two-Max ceiling updates, room-owned local cage slots, and
+two-or-three counting encounters per entered combat. It defers
+`FieldsOptionalRewards` under a canonical no-pickup trace and narrowly omits
+the terminal-only cage roll because H has no downstream consumer for it.
+
+`biomes/O_GAME_RULES.md` records O's six-room single-exit spine, ordered Intro plus
+one/two counting ShipCombat phases, phase-owned one/two-option wheels,
+source-derived outgoing store, three combat eligibility families, special-room
+BED asymmetry, and direct shop-only preboss. It corrects the legacy assumption
+that early O combat requirements compose with the inherited recent-room rule.
+
+`biomes/I_GAME_RULES.md` records the fixed progressed-save Story entry, five
+acquisition-driven Clockwork Goals, authored three-through-six non-goal cap,
+fixed Tartarus target-store override, exact two-exit reserve, and supported
+special peers. It replaces the old terminal-plus-companion workaround with one
+conditional-terminal `ClockworkDoorBatch`: picking `I_PreBoss02` completes the
+biome, while picking its ordinary peer continues and permits a later preboss
+occurrence.
+
+`biomes/N_GAME_RULES.md` records fixed authored Opening, PreHub, and preboss leaves;
+one nine-or-ten-target persistent hub offer board over catalog-fixed slots; six
+ordered pylon visits; bounded generated and entered side-room state; parent and
+hub restores; and the full-board reward lookup consumed by the terminal
+WorldShop. `biomes/N_SIDE_ROOM_FINDINGS.md` closes exact local availability
+ranks for all multi-side-door maps. Local rewards validate as one unordered
+sibling batch. Eventual hub execution order remains a targeted conformance
+probe rather than unresolved schema work.
+
+The completed G audit additionally locks Anomaly replacement beside natural
+Chaos as a suppressed route-structural detour, keeps Narcissus's internal
+benefit choice deferred to future concrete NPC/trait resolution, and names the
+progressed-save exclusions for `FishmanIntro`, early-run Eris, and prior-run
+Narcissus force. It also replaces a hidden simulator-appended biome tail with
+the forward contract for concrete derived boss/postboss Room Declarations,
+ordered layout completion, and explicit entered-room reward-store history.
+Those schema and declaration changes remain pending.
+
+The P audit is now closed under the same derived-tail contract:
+`P_Boss01 -> P_PostBoss01 -> Q_Intro`, neutral `BossPrometheus01`, resolved
+boss-offer store history, and no modeled automatic boss-drop surface. F, G, P,
+Q, H, O, I, and N are closed as biome-rule/design audits; this does not promote
+them beyond documentation coverage or mark any derived completion declaration
+implemented.
 
 ## Completed
 
@@ -39,7 +115,7 @@ Delivered:
 - ESLint dependency-boundary rules;
 - Prettier configuration;
 - production build and aggregate `npm run check` script;
-- browser-development instructions in `README.md`.
+- browser-development instructions in `../README.md`.
 
 Validation at completion:
 
@@ -182,8 +258,10 @@ The final Phase 2 slices now deliver:
 - frozen unbounded authored history with exact undo/redo, no-op suppression,
   redo invalidation after new edits, and destructive recovery fixtures.
 
-Phase 2 is complete. The next work item is the authored-editor smoke slice
-before Phase 3 simulation.
+Phase 2 was completed under the original leaf-owned counted-store
+representation. The completed cross-biome audit locks its replacement, but
+production remains on the old representation until Phase 2.75 implements the
+atomic switch described below.
 
 ### Phase 2.5: Authored Editor Smoke
 
@@ -234,10 +312,54 @@ The final authored F projection slice now delivers:
 Phase 2.5 is complete. The editor now exercises the full Phase 2 F command
 surface without editing JSON.
 
+## Post-Phase 2.5 Audit Findings
+
+The 2026-07-18 game-data audits locked possibility-only simulation and produced
+these cross-biome reward-model findings for continued verification:
+
+- the simulator models outcome support only; every nonzero-probability outcome
+  is valid, while impossible and forced boundaries are enforced;
+- generated reward-store selection is resolved at the batch boundary, but its
+  concrete authority may be an authored batch value or an already-authored
+  source offer point rather than a counted room leaf;
+- a generated batch authors one `baseRewardStoreKey` only when the observable
+  generated-store outcome is not already owned by a source offer point;
+  reward-free batches use an explicit no-store policy;
+- Room Declarations own forced-store overrides independently of that batch
+  policy;
+- target leaves author concrete rewards only, while canonical materialization
+  attaches resolved store provenance;
+- fixed Story and Shop targets retain resolved store provenance for later
+  entered-room ratio history;
+- store entries own duplicate policy and reward primitives own explicit
+  acquisition projection;
+- same-batch Boon source exclusion and the ordinary source cap belong to
+  reward simulation, not editor filtering.
+
+The N audit confirmed the shared store shape and added fixed authored layout
+slots, a fixed-slot persistent hub board, ordered restores, and side-room
+generation pressure. Current production code still uses schema version 1 and
+leaf-owned counted `storeKey` values. It also eagerly initializes shop state
+instead of treating shop inventory as picked-entry state. Do not perform these
+schema changes piecemeal; the now-complete audit set defines one shared version
+2 contract.
+
 ## Next
 
-### Phase 3: F Simulation Vertical Slice
+### Phase 2.75: Cross-Biome Catalog Closure
 
-Begin with the F completeness gate and canonical linear materializer, then add
-lifecycle history, validation, and semantic findings without changing authored
-editor ownership.
+The pending implementation order is:
+
+1. add explicit declared/authorable/simulatable/editable capability gates;
+2. harden normalized layout, exit, room, encounter, reward, requirement,
+   completion, batch-policy, and local-slot vocabulary;
+3. switch F/G atomically to schema version 2, including batch-owned generated
+   stores, concrete-only reward leaves, entry-materialized shops, and derived
+   completion declarations;
+4. import dormant P, Q, H, O, I, and N declarations in that pressure-test order;
+5. run the full cross-biome parity, capability-isolation, project round-trip,
+   and F editor smoke gates.
+
+Phase 3 remains blocked until the complete normalized catalog passes without
+placeholder materializers, dormant biome activation, duplicated authority, or
+schema-version-1 compatibility scaffolding.

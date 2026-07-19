@@ -11,12 +11,16 @@ status ledger. Do not turn completed checkpoint history into design authority.
 ## Delivery Principles
 
 - Build the pure model and simulator before sophisticated UI.
-- Deliver thin vertical slices rather than porting every declaration first.
+- Deliver thin vertical slices for behavior and UI, but import declaration-only
+  biome slices before Phase 3 so the shared model is not frozen from F/G alone.
+  Audit every biome and reconcile the shared vocabulary before importing those
+  slices.
 - Preserve explicit readable game declarations.
 - Use F as the first complete slice and G as the first reuse proof.
 - Keep browser development independent of Tauri packaging.
 - Freeze rather than delete the old game-module prototype.
 - Port verified rules, not Lua architecture.
+- Model the support of game outcomes, never their probability or likelihood.
 - Add abstractions only after two concrete consumers prove the shared shape.
 
 ## Phase 0: Repository and Tooling Foundation
@@ -52,9 +56,11 @@ Do not add Tauri or React Flow in this phase.
 - explicit route declarations;
 - reward primitives, payload domains, stores, bags, and bindings required by
   F/G;
+- counted-entry duplicate policies and primitive acquisition projections;
 - encounter profiles required by F/G;
 - F and G room declarations with explicit labels and defaults;
 - F/G linear layout declarations;
+- F/G layout reward-store policies and room forced-store overrides;
 - requirement expression normalization and the evaluator registry needed by
   focused rules;
 - declaration contract errors with readable paths;
@@ -84,6 +90,8 @@ easier to audit while the app model is still settling.
 - game names uniquely identify declarations without imposing authored
   occurrence uniqueness;
 - every referenced declaration key resolves;
+- reward-store policy, forced overrides, duplicate behavior, and acquisition
+  projections normalize without simulator name switches;
 - malformed declarations fail at construction;
 - no React or Redux imports exist in catalog/core domain code;
 - focused parity fixtures cover representative opening, combat, miniboss,
@@ -93,14 +101,20 @@ easier to audit while the app model is still settling.
 
 ### Deliverables
 
-- versioned `ProjectDocument` decoder and encoder;
+- schema version 2 `ProjectDocument` decoder and encoder;
 - empty project and route defaults;
 - contiguous configured route prefixes;
 - F/G `LinearBiome` authored topology;
 - opaque persisted occurrence IDs separate from game room names;
 - occurrence-state initialization from recursive declaration defaults;
+- lifecycle-aware occurrence state: offer-time defaults on every target and
+  entry-materialized shop defaults only on picked targets;
+- explicit batch reward-store policy, with batch-owned `baseRewardStoreKey`
+  only when generated store selection is observable and not already owned by a
+  source offer point, plus concrete reward-only incoming leaves;
 - semantic address constructors;
 - explicit topology and leaf command handlers;
+- `ReplaceBatchRewardStore` with target-reward and downstream retention;
 - structural normalization;
 - repeated game-name support across distinct occurrences;
 - downstream re-anchoring and retained unavailable exits;
@@ -115,7 +129,12 @@ easier to audit while the app model is still settling.
 - occurrence IDs survive replacement of their selected game room;
 - distinct occurrences may reference the same game room name;
 - existing targets cannot be emptied by ordinary replacement commands;
-- active leaves are always complete after construction or replacement;
+- offer-time leaves are always complete after construction or replacement;
+- every picked shop occurrence is fully typed, while an unpicked shop may omit
+  its entry state or retain a complete dormant value;
+- changing the picked target installs missing shop defaults without clearing
+  the old target's dormant shop state;
+- no persisted counted leaf contains a competing `storeKey`;
 - upstream replacement retains compatible downstream topology;
 - exit shrink, re-pick, reconcile, and capacity restoration match the locked
   downstream policy;
@@ -133,6 +152,8 @@ easier to audit while the app model is still settling.
 - an F-configured project bootstrap for smoke testing;
 - linear start, ordinary decision, picked-exit, terminal, reward, and shop
   projections bound only to Phase 2 semantic commands;
+- one batch-level Reward Pool selector per generated decision, with concrete
+  reward-only target editors;
 - undo/redo controls;
 - deliberately neutral incomplete/invalid presentation without simulated
   eligibility, findings, or candidate decoration.
@@ -144,7 +165,143 @@ easier to audit while the app model is still settling.
 - selectors render declaration labels and never persist UI categories;
 - retained overflow and explicit destructive actions remain visible;
 - all edits pass through semantic commands and authored history;
+- changing a Reward Pool retains target rewards and downstream topology;
 - the slice makes no claim about game validity before Phase 3.
+
+## Phase 2.75: Cross-Biome Catalog Closure
+
+### Purpose
+
+Implement the declaration and authored-schema vocabulary established by the
+completed F/G/P/Q/H/O/I/N audits before Phase 3 builds canonical history. This
+phase is the atomic catalog and schema-version-2 authority switch. It is not an
+early simulator slice.
+
+The completed biome rule documents are the entry gate. They establish the
+smallest faithful shared model for generated-store ownership, physical exits,
+encounter phases, fixed completion, conditional terminals, room-local slots,
+and persistent hubs. Later-biome declarations remain dormant after import.
+
+### Capability Boundary
+
+Catalog presence must not imply product activation. Application composition
+must distinguish these capabilities independently:
+
+- declared in the normalized catalog;
+- authorable by the project model;
+- simulatable by the derived pipeline;
+- editable through a UI projector.
+
+Capability metadata is application composition, not game data stored on Room
+or Biome Declarations. At this phase's end all eight biomes are declared, F/G
+are authorable through schema version 2, F remains the active editor smoke
+slice, and no biome is marked simulatable before Phase 3. Focused tests must
+prove dormant declarations cannot leak into project defaults, selectors,
+simulation dispatch, or editor navigation.
+
+### Normalized Catalog Hardening
+
+- authored versus layout-derived Room Declarations;
+- structural room tags separate from presentation kinds;
+- typed physical exits and source-sensitive compatibility;
+- `LinearBiome` and `HubBiome` layout declarations;
+- layout-owned fixed entry and ordered completion sequences;
+- standard, staged, Fields, Clockwork, and persistent-hub batch policies;
+- forked, direct, independent, and conditional terminal policies;
+- authored, source-offer-derived, and absent generated-store policies;
+- typed biome-global and batch-global authored fields;
+- stable encounter phases with optional presence, lifecycle timing, offer
+  points, and counter effects;
+- bounded cage, wheel, and side-room descriptors owned by concrete rooms;
+- entered-room reward-store history policies;
+- complete declaration-time defaults and codecs for every imported authored
+  leaf surface;
+- no callbacks, untyped extension bags, room-name switches, or placeholder
+  canonical materializers inside declaration records.
+
+The legacy `fixedBoss` target mode is removed. Neutral boss/postboss rooms are
+concrete derived declarations referenced by layout completion data.
+
+### Atomic Schema Version 2 Switch
+
+- generated batches own a base store only when their policy exposes one;
+- O source batches derive the store from an addressed room offer point;
+- Q and I batch policies can explicitly own no base-store value;
+- Room Declarations own forced and individual store overrides;
+- counted room leaves persist concrete rewards without a competing `storeKey`;
+- counted-store entries own multiplicity and duplicate policy;
+- reward primitives own acquisition projections;
+- shop state is entry-materialized, required only on picked occurrences, and
+  retained dormantly after re-pick;
+- F/G defaults, codecs, commands, projection, fixtures, and application
+  bootstrap move to the new authority in one change.
+
+Schema version 1 is rejected explicitly after the switch. The pre-release app
+does not retain a permanent migration path for a document format that encodes
+the superseded ownership model.
+
+### Requirement and Force Query Contract
+
+Freeze the typed fact surface that Phase 3 history will populate:
+
+- exact counter axes;
+- creation, appearance, reward, use, and event records;
+- room-history ordinal and event spacing;
+- current predecessor exits and structural tags;
+- generated-store and entered-store histories;
+- biome-specific folded counters;
+- force-pool and force-pressure inputs.
+
+Requirement and force evaluators remain pure and receive explicit synthetic
+fact snapshots in Phase 2.75 tests. This phase does not build the history
+walker that produces those snapshots during a real route.
+
+### F/G Authority Proof
+
+Before later imports, migrate F/G onto the final vocabulary:
+
+- concrete-only counted leaves and batch-owned store policies;
+- entry-materialized shops;
+- exact physical exits, force declarations, and store-history policies;
+- derived `F_Boss01`, `F_PostBoss01`, `G_Boss01`, and `G_PostBoss01` Room
+  Declarations;
+- layout-owned completion sequences;
+- current F editor smoke behavior preserved through schema version 2.
+
+### Dormant Import Order
+
+1. P: typed source tags and source-sensitive exit compatibility.
+2. Q: staged candidate pools, reward-free batches, and boss-only completion.
+3. H: typed batch-global cage outcome and room-local bounded cage slots.
+4. O: ordered encounter phases, reward wheels, and source-offer-derived store.
+5. I: biome globals, fixed Tartarus provenance, and conditional terminal
+   batches.
+6. N: fixed authored slots, persistent hub board, visits, and bounded side
+   rooms.
+
+Each import adds explicit room, encounter, reward, exit, layout, requirement,
+and completion declarations with readable parity fixtures. It must not add an
+editor panel, canonical history, contextual candidate results, or a placeholder
+simulation implementation.
+
+### Acceptance
+
+- one immutable catalog normalizes faithful F/G/H/I/N/O/P/Q declarations;
+- every declaration reference, semantic kind, policy key, requirement kind,
+  default, and codec validates at construction;
+- per-biome parity fixtures cover room identities, labels, exits, tags,
+  encounters, rewards, caps, requirements, layouts, and completion;
+- external save/profile requirements remain omitted rather than represented by
+  production zombie predicates;
+- no topology consequence is encoded as fake room eligibility;
+- no counted room leaf retains generated-store authority;
+- no unpicked shop occurrence requires invented inventory;
+- every derived completion room and route transition is data-driven;
+- F/G schema-version-2 round trips and the F editor smoke suite pass;
+- dormant capability guards prevent H/I/N/O/P/Q authoring, simulation, and UI
+  activation;
+- no canonical event stream, history ledger, candidate evaluation, or semantic
+  finding is introduced before Phase 3.
 
 ## Phase 3: F Simulation Vertical Slice
 
@@ -152,11 +309,14 @@ easier to audit while the app model is still settling.
 
 - F completeness gate;
 - common linear canonical materializer;
+- layout-derived F boss/postboss completion materialization;
 - room-template materializers required by F;
 - lifecycle event stream;
 - route history and counter ledgers;
 - F room eligibility, caps, and force validation;
 - F reward offers, acquisitions, counted-bag simulation, and shop behavior;
+- possibility-support evaluation for rooms, reward stores, bag entries, and
+  Boon sources;
 - semantic findings;
 - deterministic golden fixtures for complete valid, incomplete, and invalid F
   projects.
@@ -169,6 +329,10 @@ Candidate simulation is not required until selected-plan validation is stable.
   occurrence;
 - a focused fixture materializes repeated game room names as distinct offers;
 - creation, appearance, offer, and acquisition histories differ correctly;
+- a low-weight eligible room remains valid while an active forced pool excludes
+  ordinary eligible rooms;
+- reward-store chance boundaries distinguish impossible, possible, and forced
+  outcomes without producing likelihood scores;
 - `biomeDepthCache` and `biomeEncounterDepth` follow declared timing;
 - terminal realization uses predecessor context correctly;
 - incomplete F produces no canonical snapshot;
@@ -212,6 +376,8 @@ Candidate simulation is not required until selected-plan validation is stable.
 - context-invalid option decoration;
 - complete F template coverage;
 - G catalog and simulation coverage using the shared linear foundation;
+- G's neutral `G_Boss01`/`G_PostBoss01` completion sequence and resolved boss-
+  offer store-history contribution;
 - G editor activation;
 - project dirty state and autosave policy;
 - resilient project-load error presentation;
@@ -234,12 +400,12 @@ Candidate simulation is not required until selected-plan validation is stable.
 Implement in this order unless concrete dependencies justify a change:
 
 1. H: Fields room structure, cage batches, and encounter-depth behavior.
-2. I: Clockwork Goals, repeated preboss offer semantics, and terminal
-   companions.
+2. I: Clockwork Goals, acquisition counters, and conditional-terminal batches
+   with repeated preboss occurrences.
 3. N: Hub layout, ordered pylon visits, returns, and side rooms.
 4. O: ship multi-encounter rooms and sequential reward wheels.
 5. P: linear surface topology and room-internal encounter rules.
-6. Q: forced skeleton and paired miniboss structure.
+6. Q: forced skeleton and independently generated two-exit miniboss stages.
 
 For each biome:
 
@@ -330,11 +496,3 @@ Leave behind:
 - allocation rules specific to the game draw loop;
 - fake-ImGui tests;
 - runtime execution compilation until Phase 8.
-
-## Immediate Next Work Item
-
-Phases 0, 1, and 2 are complete. The authored project now has strict JSON
-persistence, recursive F/G leaves, repeatable occurrences, normalized linear
-topology, semantic addresses, complete F/G topology and leaf commands,
-explicit destructive reconciliation, and exact authored undo/redo. Next build
-the Phase 2.5 authored-editor smoke surface before Phase 3 simulation.

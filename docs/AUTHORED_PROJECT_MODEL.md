@@ -8,6 +8,15 @@ addresses, edit commands, defaults, and persistence rules.
 
 It does not define simulation algorithms or React rendering.
 
+## Cross-Biome Freeze Status
+
+The schema version 2 examples in this document describe the reconciled
+F/G/P/Q/H/O/I/N model. Occurrence identity, downstream retention, possibility
+support, generated-store ownership, conditional-terminal batches, fixed
+authored layout slots, and persistent hub topology are settled. Production
+still reads schema version 1 until the authority switch is implemented
+atomically.
+
 ## Core Distinction
 
 The app keeps three models separate:
@@ -41,21 +50,24 @@ identity, such as `Underworld_F`.
 
 `Biome Layout Declaration`
 : Immutable structural metadata selecting a registered layout kind and its
-start, continuation, terminal, and bounded topology rules.
+start, continuation, terminal, ordered derived completion, and bounded topology
+rules.
 
 `Biome Plan`
 : Authored topology and biome-global state for one biome step. It owns
 structural relationships and never owns room-local rewards or payloads.
 
 `Room Declaration`
-: Immutable verified facts for one game room name: kind, label, template,
-eligibility, force, caps, exits, encounter profile, and reward binding.
+: Immutable verified facts for one game room name: kind, label, authored or
+derived mode, eligibility, force, caps, exits, encounter profile, reward
+binding, and entered-room store-history policy.
 
 `Room Occurrence`
 : One stable authored occurrence of a declared game room inside a biome plan.
 It owns an opaque persisted `occurrenceId`, one current `gameName`, and the
-complete room-local state for that selection. Several occurrences may
-reference the same Room Declaration.
+complete offer-time room-local state for that selection. It may also retain
+complete entry-time state that becomes required only when the occurrence is
+picked. Several occurrences may reference the same Room Declaration.
 
 `Room State`
 : Authored leaf values owned by one Room Occurrence. State follows occurrence
@@ -64,13 +76,25 @@ identity, not the globally unique game declaration.
 `Generated Batch`
 : The complete set of room occurrences offered together from a selected
 parent occurrence. It owns physical exit association, peer membership, and
-picked state.
+picked state. Its explicit reward-store policy either owns one concrete base
+store outcome, resolves one from a semantic source offer point, or records that
+no generated base store is observable.
 
 `Terminal Transition`
 : The selected continuation that resolves the predecessor's physical exits
 through the biome's terminal policy. It owns ordered terminal target
 occurrences, their picked state, and any policy-admitted ordinary companions.
 Several terminal targets may reference the same preboss Room Declaration.
+
+`Derived Layout Room`
+: A non-authored occurrence materialized from a layout-owned fixed entry or
+completion sequence, such as I Story, a boss, or a postboss. It references a
+concrete Room Declaration but owns no persisted leaf or topology state.
+
+`Fixed Authored Room Slot`
+: A layout-owned structural role whose concrete Room Declaration cannot be
+replaced but whose Room Occurrence owns persisted leaf state. N Opening,
+PreHub, and PreBoss use this form. Fixed identity does not imply statelessness.
 
 `Local Child Slot`
 : A bounded room-owned child such as an H cage, O reward wheel, or N side room.
@@ -108,11 +132,15 @@ biome                 routeKey + biomeStepKey
 start                 biomeStepKey + start aspect
 room occurrence       biomeStepKey + occurrenceId
 batch                 biomeStepKey + parent occurrenceId
+batch reward store    biomeStepKey + parent occurrenceId + rewardStore aspect
 batch target          biomeStepKey + parent occurrenceId + exitIndex
 picked continuation   biomeStepKey + parent occurrenceId + picked aspect
 terminal transition   biomeStepKey + predecessor occurrenceId
 terminal target       biomeStepKey + predecessor occurrenceId + exitIndex
 terminal companion    biomeStepKey + predecessor occurrenceId + exitIndex
+derived entry         biomeStepKey + entry role
+derived completion    biomeStepKey + completion role
+fixed authored room   biomeStepKey + fixedSlotKey
 room leaf             biomeStepKey + occurrenceId + aspect
 local child           biomeStepKey + occurrenceId + localSlotKey + aspect
 ```
@@ -156,10 +184,11 @@ A linear biome consists of:
 
 ```text
 declared start
+  -> zero or more layout-derived fixed entry rooms
   -> selected generated batch target
   -> selected generated batch target
   -> ...
-  -> terminal transition
+  -> terminal transition or terminal target in a generated batch
 ```
 
 Every selected parent owns exactly one continuation form:
@@ -167,9 +196,19 @@ Every selected parent owns exactly one continuation form:
 - a generated batch with one picked target that continues the spine; or
 - a terminal transition that closes the biome.
 
-The forms are mutually exclusive. Unpicked batch targets, unpicked terminal
-targets, and terminal companions are dead leaves and cannot own downstream
-topology.
+The forms are mutually exclusive at a parent. A normalized biome policy may
+also admit a terminal Room Declaration inside a generated batch. In that
+narrow form, the picked declaration role derives whether the batch continues
+or closes the biome. Unpicked batch targets, unpicked terminal targets, and
+terminal companions are dead leaves and cannot own downstream topology.
+
+The authored start occurrence selects only among declared start alternatives.
+A fixed room after that start and before the editable decision frontier uses a
+derived layout occurrence when it owns no leaf, or a fixed authored room slot
+when its room state is editable. I uses the stateless form for progressed-save
+`I_Story01`; N uses fixed authored entry slots for its reward-bearing Opening
+and PreHub. Canonical materialization emits each room's real creation, offer,
+entry, counter, and history facts before the first editable batch.
 
 F/G forked preboss transitions create one terminal target occurrence per
 active predecessor exit. Those targets share the same terminal `gameName` but
@@ -177,32 +216,50 @@ have distinct occurrence IDs and realization state. The terminal policy
 derives the first as Shop and remaining targets as free rewards; picked target
 identity replaces the old authored preboss `entryMode`.
 
+After the entered terminal target, simulation walks the layout's fixed
+completion sequence. Its declared boss and any declared postboss rooms therefore
+appear in canonical history without becoming editable occurrences in
+`AuthoredProject`. The sequence may omit a postboss, as Q does in the canonical
+repeat-run projection. The layout owns completion order and the Room
+Declarations own room-local facts.
+
 F, G, H, I, O, P, and Q use linear structure with registered biome-specific
 extensions. O room-internal encounters and I's preboss behavior do not turn
 their top-level layout into a generic graph.
 
-I's repeatedly offered `I_PreBoss02` no longer requires a singleton room-
-control exception. Distinct authored offers may reference that same Room
-Declaration through distinct occurrence IDs. The I implementation slice will
-decide the narrow representation of a declined offer versus an entered
-terminal occurrence; only the entered occurrence exposes local preboss shop
-state.
+I's repeatedly offered `I_PreBoss02` uses the policy-admitted batch form.
+After Goal completion, one `ClockworkDoorBatch` may contain the preboss on its
+first exit and an ordinary I target on its second. Picking the preboss closes
+the biome; picking the peer continues. Every later preboss offer is a new Room
+Occurrence of the same declaration. No declined-offer record or singleton
+preboss state exists, and only the entered occurrence exposes local shop
+acquisitions. Both the pre-Goal and post-Goal forms are created through the
+ordinary batch command behind `Add Next Decision`; I never creates an
+independent terminal transition or requires a separate `Go to Preboss` action.
 
 ### HubBiome
 
 N uses a hub layout:
 
 ```text
-fixed entry sequence
+fixed authored entry rooms
   -> persistent hub batch
       -> ordered pylon visits
+      -> optional local side-room visits and parent restores
       -> derived returns to hub
-  -> terminal transition
+  -> fixed authored terminal room
+  -> derived completion rooms
 ```
 
-The hub batch and post-visit terminal transition occupy separate structural
-roles and may coexist. Repeated returns do not create repeated hub rooms or
-cyclic authored links.
+N's hub declaration fixes the room assigned to each physical slot. The
+authored plan selects which supported slots opened and which six are visited;
+it never replaces a slot's `gameName`. Open unvisited slots remain real offered
+dead leaves.
+
+The hub batch and post-visit terminal role occupy separate structural roles
+and may coexist. Repeated hub returns and main-room restores after side visits
+reuse an existing room entity. They create additional canonical history
+records, not repeated authored occurrences or cyclic authored links.
 
 ## Ownership
 
@@ -212,6 +269,7 @@ cyclic authored links.
 - start selection where alternatives exist;
 - generated batches;
 - room-occurrence registry and physical exit target links;
+- fixed authored room-slot references required by the layout;
 - picked target or visit order;
 - terminal-transition presence and predecessor relationship;
 - ordered terminal target links, realization roles, and picked target;
@@ -232,16 +290,26 @@ Outgoing topology never belongs to the target room state.
 - realization-specific terminal shop or free-reward state where applicable.
 
 A room occurrence does not know its parent, peers, picked state, or successor.
+Topology supplies that activation context when completeness and
+materialization join the occurrence with its owning batch. Shop state
+optionality therefore does not add a persisted `picked` or `entered` flag to
+the room leaf.
 
 ### Batch Owns
 
 - peer-wide selection or visit order;
 - physical generation order;
+- the generated decision's explicit reward-store policy and authored base
+  outcome when applicable;
 - batch-wide authored state;
 - peer rules that require simultaneous visibility.
 
 Batch behavior is selected by normalized layout context rather than a user-
 authored implementation key.
+
+N's persistent hub batch additionally owns its open fixed-slot set and ordered
+six-slot visit sequence. Its target Room Occurrences own incoming rewards and
+local side-room state; the batch does not copy those leaves.
 
 ## Sparse Topology and Total Leaves
 
@@ -260,9 +328,11 @@ An absent topology slot represents structure that does not exist. Creating a
 decision must not silently choose the first eligible room.
 
 Creating a room occurrence installs the selected declaration's complete
-deterministic defaults. Replacing its `gameName` preserves `occurrenceId`,
-atomically replaces its room state with the new declaration defaults, and
-never passes through an empty value.
+deterministic offer-time defaults. If the occurrence is picked in the same
+command, the command also installs any required entry-time defaults. Replacing
+its `gameName` preserves `occurrenceId`, atomically replaces its room state
+with the defaults required by its current lifecycle role, and never passes
+through an empty active value.
 
 Leaf edits within the selected declaration then remain concrete replacement
 operations.
@@ -271,10 +341,18 @@ Defaults compose recursively from their semantic owners:
 
 - a reward primitive owns its payload default;
 - a reward bag owns its default primitive;
-- a multi-store binding owns its default store and required primitive choice;
-- a shop slot owns a default concrete offer;
+- a biome layout's store policy owns whether a new batch authors a base store,
+  derives one from its source, or has none; an authored form also owns its
+  store default;
+- a biome layout's batch policy owns the complete explicit default for any
+  required typed batch state;
+- a counted binding owns a complete reward default for each store context it
+  can receive;
+- a shop slot owns a default concrete offer, installed when its room becomes
+  picked for entry;
 - a structural wrapper owns a mode default;
-- a room template composes these defaults into complete initial room state.
+- a room template composes offer-time defaults into complete initial room
+  state and entry-time defaults into complete picked-room state.
 
 Option order is never default authority.
 
@@ -284,9 +362,16 @@ Every persisted Room Occurrence is referenced by the biome topology. The app
 does not keep a global dormant state record for every Room Declaration.
 
 - Creating a start, ordinary target, terminal target, or companion creates one
-  occurrence and its complete default state.
+  occurrence and its complete offer-time default state.
+- Initializing a layout with fixed authored room slots creates those required
+  occurrences with the defaults required by their fixed lifecycle role; their
+  `gameName` cannot be replaced independently of the layout.
 - Replacing the selected game room preserves the occurrence ID and installs
-  the replacement declaration's complete defaults.
+  the replacement declaration's complete offer-time defaults plus any
+  entry-time defaults required when that occurrence is currently picked.
+- Picking an occurrence atomically installs complete entry-time defaults when
+  they are absent. Picking another target may retain the old occurrence's
+  entry-time state dormantly, but materialization ignores that state.
 - Leaf edits replace values inside that occurrence.
 - Removing the owning decision or transition removes its no-longer-referenced
   occurrences and their state.
@@ -312,6 +397,11 @@ type ProjectCommand =
       gameName: GameRoomName;
     }
   | { kind: 'CreateBatch'; continuation: ContinuationAddress }
+  | {
+      kind: 'ReplaceBatchRewardStore';
+      continuation: ContinuationAddress;
+      storeKey: RewardStoreKey;
+    }
   | {
       kind: 'CreateTerminalTransition';
       continuation: ContinuationAddress;
@@ -352,7 +442,7 @@ type ProjectCommand =
   | {
       kind: 'ReplaceIncomingReward';
       reward: IncomingRewardAddress;
-      choice: CountedRewardChoice;
+      value: ConcreteReward;
     }
   | {
       kind: 'ReplaceShopOffer';
@@ -371,24 +461,43 @@ the same project decoder used at JSON contact. Command failures retain their
 semantic address as the primary path; a nested document path may be carried as
 detail when a leaf value fails its declaration codec.
 
-Planned hub commands remain:
+Planned N hub commands operate on fixed semantic slots:
 
 ```ts
 type HubBiomeCommand =
-  | { kind: 'SetHubDoorCount'; count: number }
   | {
-      kind: 'CreateHubTarget';
-      doorIndex: number;
-      occurrenceId: OccurrenceId;
-      gameName: GameRoomName;
+      kind: 'CreateHubTopology';
+      fixedOccurrenceIds: Readonly<Record<string, OccurrenceId>>;
     }
-  | { kind: 'ReplaceOccurrenceRoom'; occurrence: OccurrenceAddress; gameName: GameRoomName }
-  | { kind: 'SetVisitOrder'; doorIndex: number; visitOrder: number }
-  | { kind: 'ClearHubTarget'; doorIndex: number }
-  | { kind: 'CreateTerminalTransition'; terminalOccurrenceId: OccurrenceId }
-  | { kind: 'RemoveTerminalTransition' }
+  | {
+      kind: 'OpenHubSlot';
+      hubSlotKey: string;
+      occurrenceId: OccurrenceId;
+    }
+  | { kind: 'CloseHubSlot'; hubSlotKey: string }
+  | { kind: 'AppendHubVisit'; hubSlotKey: string }
+  | { kind: 'ReplaceHubVisit'; visitIndex: number; hubSlotKey: string }
+  | { kind: 'RemoveHubVisitsFrom'; visitIndex: number }
   | { kind: 'ClearTopology' };
 ```
+
+The open-slot collection is the only hub-door-count authority and contains
+nine or ten slots when complete. The ordered visit sequence references six
+distinct open slots when complete. Partial sets remain structurally decodable
+editor state but do not materialize a biome snapshot. Closing a slot or
+removing visits is explicitly destructive; ordinary replacement does not
+silently rewrite downstream visits.
+`CloseHubSlot` fails while `visitOrder` still references that slot; the visit
+must first be replaced or explicitly removed from that point.
+
+Each visited combat target owns one bounded record per declaration-fixed side
+slot. The record authors generation state, a complete reward leaf, and an
+optional distinct `enteredOrdinal`; a missing ordinal means generated but
+unentered when generation state is active. Generated and entered counts are
+derived rather than persisted authorities. Every permutation of the entered
+slots is structurally valid. Current simulation treats permutations with the
+same generated/entered sets and rewards as equivalent at final parent exit,
+while retaining ordinals for exact history and eventual execution intent.
 
 Planned leaf extensions remain concrete replacements:
 
@@ -409,6 +518,22 @@ type RoomCommand =
     };
 ```
 
+H also requires one policy-specific batch replacement rather than a generic
+untyped state mutation:
+
+```ts
+type FieldsBatchCommand = {
+  kind: 'ReplaceFieldsCageOutcome';
+  continuation: ContinuationAddress;
+  cageOutcome: 'min' | 'max';
+};
+```
+
+The command is available only when the normalized continuation policy is the
+Fields cage policy. It retains every target occurrence, local cage value, and
+downstream continuation; simulation alone re-derives active slots and
+`fieldsMaxDoorsRolled` support.
+
 Exact unions grow with implemented templates. Their shared rule is that one
 command expresses one semantic user intent and validates the complete proposed
 replacement before it becomes authored state.
@@ -418,11 +543,14 @@ replacement before it becomes authored state.
 Replacing the game room selected by a start or target preserves that
 occurrence's ID, so downstream topology remains attached without changing its
 semantic parent. The replacement occurrence receives the new declaration's
-complete room-local defaults. Unpicked peer occurrences remain untouched.
+complete offer-time defaults plus entry-time defaults when it is currently
+picked. Unpicked peer occurrences remain untouched.
 
 Choosing a different picked exit changes the selected parent occurrence. That
-command retains downstream topology by re-anchoring its batch or terminal
-ownership from the old picked occurrence ID to the new one.
+command installs any missing entry-time defaults on the new picked occurrence
+and retains downstream topology by re-anchoring its batch or terminal
+ownership from the old picked occurrence ID to the new one. Entry-time state
+on the old target remains dormant rather than being destructively cleared.
 
 Changing a parent to fewer physical exits does not silently delete overflow
 ordinary or terminal targets:
@@ -437,6 +565,16 @@ ordinary or terminal targets:
 - restoring capacity before reconciliation reactivates retained targets.
 
 Commands must not automatically choose a surviving exit.
+
+Replacing a batch's base reward store is valid only for an
+`authoredBaseStore` batch and retains every target occurrence and every
+concrete target reward. Simulation reports any retained reward that its newly
+resolved store cannot produce. A `none` batch has no replacement command.
+A `sourceOfferPoint` batch likewise has no batch replacement command because
+the concrete store is edited at its owning room-local offer point. A `none`
+batch may be reward-free or may resolve every target through declaration-owned
+overrides, as I does. Store replacement never resets downstream topology or
+leaf state.
 
 `CreateTarget` accepts only an exit physically present on the current parent,
 and terminal creation derives its complete target set from those current
@@ -470,6 +608,10 @@ invariants before replacing the authored state:
 - continuation forms remain mutually exclusive where required;
 - unpicked dead leaves own no downstream continuation;
 - structural roles use compatible room declarations;
+- every batch reward-store form matches its layout policy and every authored
+  base store belongs to that policy's static store domain;
+- every batch-state form matches its layout-selected typed codec and contains
+  one complete value for each required semantic field;
 - semantic addresses remain unique.
 
 This boundary rejects malformed construction. It does not reject a
@@ -483,7 +625,7 @@ representative top-level shape is:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 1;
+  schemaVersion: 2;
   projectId: string;
   name: string;
   catalogVersion: string;
@@ -507,6 +649,29 @@ interface LinearBiomeTopology {
   continuations: readonly LinearContinuation[];
 }
 
+interface HubBiomePlan {
+  kind: 'HubBiome';
+  biomeStepKey: string;
+  topology: HubBiomeTopology | null;
+}
+
+interface HubBiomeTopology {
+  occurrences: readonly RoomOccurrence[];
+  fixedRooms: readonly FixedAuthoredRoomReference[];
+  openTargets: readonly HubTargetReference[];
+  visitOrder: readonly string[];
+}
+
+interface FixedAuthoredRoomReference {
+  fixedSlotKey: string;
+  occurrenceId: OccurrenceId;
+}
+
+interface HubTargetReference {
+  hubSlotKey: string;
+  occurrenceId: OccurrenceId;
+}
+
 interface RoomOccurrence {
   occurrenceId: OccurrenceId;
   gameName: string;
@@ -517,6 +682,18 @@ type LinearContinuation =
   | {
       kind: 'batch';
       parentOccurrenceId: OccurrenceId;
+      rewardStore:
+        | {
+            kind: 'authoredBaseStore';
+            baseRewardStoreKey: RewardStoreKey;
+          }
+        | {
+            kind: 'sourceOfferPoint';
+          }
+        | {
+            kind: 'none';
+          };
+      batchState: AuthoredBatchState;
       targets: readonly LinearTargetReference[];
       pickedExitIndex: number | null;
     }
@@ -528,6 +705,40 @@ type LinearContinuation =
     };
 ```
 
+The `batch` record does not persist a continuation-effect discriminant. Its
+normalized batch policy and each target's resolved Room Declaration establish
+which roles are admitted. For I, a picked `I_PreBoss02` derives
+`completeBiome`; every picked ordinary target derives `continueBiome`.
+
+`sourceOfferPoint` carries no second address or store value. The continuation's
+parent occurrence is already its source, and the normalized layout policy owns
+how to select that source's semantic offer point. O resolves the last active
+ShipCombat wheel from the occurrence's authored encounter-count state.
+
+`AuthoredBatchState` is decoded against the normalized batch policy selected by
+the biome layout; the persisted document does not carry a user-authored rule
+or template key. Ordinary policies with no additional state use `null`. The H
+Fields policy uses:
+
+```ts
+interface FieldsCageBatchState {
+  cageOutcome: 'min' | 'max';
+}
+```
+
+That semantic outcome is persisted rather than its derived visible cage count.
+I adds no batch-owned value: Clockwork counters are derived from entered
+producer resolution, and terminal versus continuing outcome comes from the
+picked declaration. N's open fixed-slot set and visit sequence are topology,
+not an `AuthoredBatchState` extension.
+
+I combat occurrences persist one complete potential Tartarus reward, not an
+authored Goal/NonGoal discriminant. The Clockwork policy derives whether that
+leaf is active from physical offer order and current history. A Goal
+realization retains the dormant concrete value so an upstream edit that makes
+the occurrence NonGoal exposes the prior intent rather than installing a new
+default.
+
 Routes are encoded in normalized catalog order. A route plan's ordered
 `biomes` array is its configured-prefix authority, so the document does not
 also persist a count or duplicate biome-key list. The decoder accepts route
@@ -538,21 +749,33 @@ the exact contiguous route prefix.
 topology has not been started. It does not choose a default opening or create
 placeholder Room Occurrences. A non-null topology contains the occurrence
 registry and relationships that reference occurrence IDs. Every occurrence
-contains its selected `gameName` and complete room-local state. Several
-occurrences may reference the same game name; every occurrence ID remains
-unique.
+contains its selected `gameName` and complete offer-time room-local state.
+Entry-time state may be absent on an unpicked occurrence or retained there as
+a complete dormant value; it is required on every picked occurrence whose
+declaration owns that state. Several occurrences may reference the same game
+name; every occurrence ID remains unique.
+
+For N, `fixedRooms` must match the layout's required authored slot keys and
+their fixed Room Declarations. `openTargets` contains one occurrence for every
+open hub slot; its length derives the nine-or-ten door outcome. `visitOrder`
+references distinct open `hubSlotKey` values and reaches exactly six entries
+when complete. Hub slot order is normalized from the layout declaration, while
+visit-array order is semantic player entry order.
 
 The non-null topology decoder resolves each occurrence through its Room
 Declaration, derives ordinary versus terminal Shop/Free realization from
-structural role, and then dispatches the declaration's typed room-state codec.
+structural role, dispatches the layout-selected typed batch-state codec, and
+then dispatches the declaration's typed room-state codec.
 Generic JSON leaf state is never an intermediate format.
 
-Input array order is not semantic authority. Normalization orders continuations
+Incidental input array order is not semantic authority. Normalization orders continuations
 along the picked spine, targets by physical exit index, and occurrences as the
 start followed by each normalized continuation's targets. Repeated `gameName`
 values remain separate because occurrence IDs are preserved. Continuations
 owned by unpicked targets, multiply owned occurrences, dormant unreferenced
 occurrences, cycles, and role-incompatible rooms or leaves are contract errors.
+Explicit semantic sequences such as N `visitOrder` remain authoritative by
+definition.
 
 `pickedExitIndex: null` represents an incomplete decision that has never been
 picked. Command handlers will enforce the stronger edit invariant that an
@@ -568,10 +791,19 @@ when supported, and then performs structural normalization. Unknown versions
 or malformed values fail with a project-load error; they are never silently
 clamped or filled with guesses.
 
-Schema version 1 requires an exact compatible catalog version. Until an
-explicit migration exists, catalog mismatches are load failures rather than
-best-effort reinterpretation. Encoding uses normalized route order and stable
-indented JSON with a trailing newline.
+Schema version 2 moves generated-door store authority from counted room leaves
+to the explicit `rewardStore` policy on the owning batch. A batch whose layout
+exposes generated RunProgress/MetaProgress support uses
+`authoredBaseStore`; an O ShipCombat batch uses `sourceOfferPoint`; a
+batch with no observable base outcome uses `none`. Counted leaves persist
+only their concrete reward. The implementation must perform this as one schema
+authority switch; it must not accept both leaf and batch stores as competing
+sources.
+
+The project requires an exact compatible catalog version. Until an explicit
+migration exists, catalog mismatches are load failures rather than best-effort
+reinterpretation. Encoding uses normalized route order and stable indented
+JSON with a trailing newline.
 
 ## Undo and Redo
 
@@ -607,6 +839,7 @@ Authored state does not contain:
 - UI-only occurrence IDs distinct from the persisted domain occurrence;
 - canonical history or validation results;
 - unresolved values such as `Auto`, `Vanilla`, `Major`, or `Minor`;
+- probability scores, RNG seeds, or route-likelihood annotations;
 - automatic downstream repair;
 - canonical substitution of repeated game-room names;
 - future game-runtime instructions.
