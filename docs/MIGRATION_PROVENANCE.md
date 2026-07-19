@@ -120,7 +120,7 @@ scripts.
 | N reward structures                       | ready  | N game data, `biomes/N_GAME_RULES.md`                                            | Add persistent HubRewards offers, local side-room bags, and hub-wide preboss shop lookup.                                                                            |
 | O reward structures                       | ready  | `RoomDataO.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/O_GAME_RULES.md`    | Add phase-owned wheels, ordered offers/acquisitions, and source-derived outgoing stores without duplicating authority.                                               |
 | P reward structures                       | ready  | `RoomDataP.lua`, `biomes/P_GAME_RULES.md`                                        | Port the NPC-free baseline only; keep simulation dormant until N/O history exists.                                                                                   |
-| Q reward structures                       | ready  | `RoomDataQ.lua`, `LootData.lua`, `StoreData.lua`, `biomes/Q_GAME_RULES.md`       | Add `TyphonBossRewards`, `Q_WorldShop`, explicit no-reward producers, and no generated base store.                                                                   |
+| Q reward structures                       | ported | `RoomDataQ.lua`, `LootData.lua`, `StoreData.lua`, `biomes/Q_GAME_RULES.md`       | `TyphonBossRewards`, `Q_WorldShop`, explicit no-reward producers, and the no-generated-store policy are connected to Q declarations.                                 |
 
 The RunProgress port follows `LootData.lua` entry order rather than the
 legacy declaration's reordered table. Mixed game requirements retain their
@@ -263,17 +263,17 @@ been replaced by the occurrence-based conditional-terminal contract in
 
 ## Q Migration
 
-| Family                          | Status   | Primary evidence                                                           | Port action                                                                                                                       |
-| ------------------------------- | -------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Q layout and staged pools       | ready    | `RoomDataQ.lua`, physical maps, `biomes/Q_GAME_RULES.md`                   | Keep `LinearBiome`; add declaration-driven foyer, forced fork, miniboss, ordinary, second fork, and direct-terminal stages.       |
-| Q intro and foyer baseline      | ready    | `RoomDataQ.lua`, Q intro encounters, `biomes/Q_GAME_RULES.md`              | Port reward-free `Q_Intro` and both real foyer maps; omit first-time and lifetime progression gates.                              |
-| Q combat declarations           | ready    | `RoomSets.lua`, `RoomDataQ.lua`, extracted map topology                    | Port all supported concrete combat rooms, exact one/two-exit fixtures, no-reward producers, and stage requirements.               |
-| Q paired miniboss generation    | ready    | `RunLogic.lua`, `RoomLogic.lua`, `RoomDataQ.lua`, `biomes/Q_GAME_RULES.md` | Generate each physical exit independently; allow repeated peer room names and exclude concrete debug-only `Q_MiniBoss01`.         |
-| Q miniboss counters and rewards | ready    | Q miniboss encounters, `LootData.lua`, `biomes/Q_GAME_RULES.md`            | Preserve counting Brute/Stalker/Tail versus non-counting Eye and add concrete `TyphonBossRewards`.                                |
-| Q direct preboss shop           | ready    | `RoomDataQ.lua`, `StoreData.lua`, `biomes/Q_GAME_RULES.md`                 | Add one exact-depth-7 `Q_PreBoss01` terminal with `Q_WorldShop`; do not reuse shop-then-fill.                                     |
-| Q reward-free batch policy      | ready    | `RoomDataQ.lua`, `RewardLogic.lua`, `biomes/Q_GAME_RULES.md`               | Use an explicit no-base-store batch policy while retaining declaration-owned forced miniboss stores.                              |
-| Q completion and exclusions     | ready    | `RoomDataQ.lua`, boss encounters, `biomes/Q_GAME_RULES.md`                 | Derive neutral `Q_Boss01` then route completion; exclude `Q_Boss02`, Palace postboss/story progression, and automatic boss drops. |
-| Q simulation activation         | deferred | `biomes/Q_GAME_RULES.md`                                                   | Keep dormant until the full Surface prefix and shared cross-biome vocabulary are implemented.                                     |
+| Family                          | Status   | Primary evidence                                                           | Port action                                                                                                                        |
+| ------------------------------- | -------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Q layout and staged pools       | ported   | `RoomDataQ.lua`, physical maps, `biomes/Q_GAME_RULES.md`                   | `LinearBiome` now declares foyer, forced fork, miniboss, ordinary, second fork, and direct-terminal stages.                        |
+| Q intro and foyer baseline      | ported   | `RoomDataQ.lua`, Q intro encounters, `biomes/Q_GAME_RULES.md`              | Reward-free `Q_Intro` and both real foyer maps normalize while first-time and lifetime progression gates remain omitted.           |
+| Q combat declarations           | ported   | `RoomSets.lua`, `RoomDataQ.lua`, extracted map topology                    | All supported combat maps retain exact one/two-exit topology, no-reward leaves, requirements, forces, caps, and counters.          |
+| Q paired miniboss generation    | ported   | `RunLogic.lua`, `RoomLogic.lua`, `RoomDataQ.lua`, `biomes/Q_GAME_RULES.md` | Stage pools let each physical exit reference either peer independently; concrete debug-only `Q_MiniBoss01` stays excluded.         |
+| Q miniboss counters and rewards | ported   | Q miniboss encounters, `LootData.lua`, `biomes/Q_GAME_RULES.md`            | Brute/Stalker/Tail count, Eye does not, and every supported miniboss resolves through concrete `TyphonBossRewards`.                |
+| Q direct preboss shop           | ported   | `RoomDataQ.lua`, `StoreData.lua`, `biomes/Q_GAME_RULES.md`                 | Exact-depth-7 `Q_PreBoss01` owns one direct `Q_WorldShop`; no shop-then-fill policy is present.                                    |
+| Q reward-free batch policy      | ported   | `RoomDataQ.lua`, `RewardLogic.lua`, `biomes/Q_GAME_RULES.md`               | Q continuation batches use explicit no-store policy while miniboss declarations own their forced store.                            |
+| Q completion and exclusions     | ported   | `RoomDataQ.lua`, boss encounters, `biomes/Q_GAME_RULES.md`                 | Neutral `Q_Boss01` completes the route; `Q_Boss02`, Palace postboss/story, debug miniboss, and automatic boss drops stay excluded. |
+| Q simulation activation         | deferred | `biomes/Q_GAME_RULES.md`                                                   | Keep dormant until the full Surface prefix and shared cross-biome vocabulary are implemented.                                      |
 
 ## Port Checklist
 

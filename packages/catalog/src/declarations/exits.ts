@@ -26,4 +26,6 @@ export const exitTypes = [
     key: 'OlympusIndoorExitDoor',
     compatibilityPolicyKey: 'OutdoorSourceTargetsIndoor',
   },
+  { key: 'TyphonExitDoor', compatibilityPolicyKey: 'Unconstrained' },
+  { key: 'FortressMainDoor', compatibilityPolicyKey: 'Unconstrained' },
 ] as const satisfies readonly ExitTypeDeclaration[];

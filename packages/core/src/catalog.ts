@@ -55,6 +55,7 @@ export type RoomTemplateKey =
   | 'ForkedPreboss'
   | 'Fountain'
   | 'Miniboss'
+  | 'RewardlessCombat'
   | 'Shop'
   | 'ShopPreboss'
   | 'StandardCombat'

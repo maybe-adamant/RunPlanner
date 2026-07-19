@@ -112,6 +112,29 @@ function catalogBeforePImport(): Catalog {
   } as CatalogInput);
 }
 
+function catalogBeforeQImport(): Catalog {
+  return createCatalog({
+    ...declarations,
+    version: '0.5.0-biome-identity',
+    encounterProfiles: declarations.encounterProfiles.filter(
+      (profile) =>
+        ![
+          'SummitCombat',
+          'Q_MiniBoss02',
+          'Q_MiniBoss03',
+          'Q_MiniBoss04',
+          'Q_MiniBoss05',
+          'Q_Boss01',
+        ].includes(profile.key),
+    ),
+    exitTypes: declarations.exitTypes.filter(
+      (exitType) => !['TyphonExitDoor', 'FortressMainDoor'].includes(exitType.key),
+    ),
+    rooms: declarations.rooms.filter((room) => room.biomeKey !== 'Q'),
+    biomeLayouts: declarations.biomeLayouts.filter((layout) => layout.biomeKey !== 'Q'),
+  } as CatalogInput);
+}
+
 function fSelectorProjection(candidateCatalog: Catalog): readonly string[] {
   return ordinaryRoomCategories
     .flatMap((category) => selectRoomsForCategory(candidateCatalog, 'F', category))
@@ -147,6 +170,13 @@ describe('planner capabilities', () => {
       },
       {
         biomeKey: 'P',
+        declared: true,
+        authorable: false,
+        simulatable: false,
+        editable: false,
+      },
+      {
+        biomeKey: 'Q',
         declared: true,
         authorable: false,
         simulatable: false,
@@ -240,6 +270,28 @@ describe('planner capabilities', () => {
 
     expect(capabilities.byBiomeKey.P).toEqual({
       biomeKey: 'P',
+      declared: true,
+      authorable: false,
+      simulatable: false,
+      editable: false,
+    });
+    expect(navigation.routes.Surface?.biomePanels).toEqual([]);
+    expect({ ...project, catalogVersion: preImportProject.catalogVersion }).toEqual(
+      preImportProject,
+    );
+    expect(fSelectorProjection(catalog)).toEqual(fSelectorProjection(preImportCatalog));
+  });
+
+  it('keeps Q dormant and leaves the active F editor slice unchanged', () => {
+    const preImportCatalog = catalogBeforeQImport();
+    const preImportCapabilities = createApplicationCapabilities(preImportCatalog);
+    const capabilities = createApplicationCapabilities(catalog);
+    const preImportProject = createFEditorSmokeProject(preImportCatalog, preImportCapabilities);
+    const project = createFEditorSmokeProject(catalog, capabilities);
+    const navigation = createEditorNavigation(catalog, capabilities);
+
+    expect(capabilities.byBiomeKey.Q).toEqual({
+      biomeKey: 'Q',
       declared: true,
       authorable: false,
       simulatable: false,

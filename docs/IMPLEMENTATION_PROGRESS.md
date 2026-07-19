@@ -12,8 +12,8 @@ completed under the prior reward-store ownership model; Phase 2.6 added the
 audited reward kernel as an intentionally unconnected pure subsystem; Phase
 2.7 atomically made it the sole connected F/G reward authority. Phase 2.8 is
 the current frontier. Capability isolation, the shared structural/F/G
-reconciliation slice, the dormant P declaration import, and the schema-version-3
-route/biome identity cleanup are complete; Q/H/O/I/N remain before Phase 3
+reconciliation slice, the dormant P/Q declaration imports, and the schema-version-3
+route/biome identity cleanup are complete; H/O/I/N remain before Phase 3
 begins.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
@@ -49,8 +49,8 @@ empty-intro simplification, intentionally collapsed counting combat projection,
 miniboss encounter-depth asymmetry, forked preboss, and persistent-NPC
 composition boundary. The F, G, P, Q, H, O, I, and N rule documents now
 distinguish verified game behavior, modeling disposition, canonical
-projection, reconsideration trigger, and current feature coverage. P is now
-declaration-complete and dormant. Q, H, O, I, and N declarations have not yet
+projection, reconsideration trigger, and current feature coverage. P and Q are
+now declaration-complete and dormant. H, O, I, and N declarations have not yet
 been imported.
 
 `biomes/Q_GAME_RULES.md` records Q's declaration-driven scripted stages, real foyer
@@ -105,9 +105,9 @@ changes for F/G. G completion remains unmaterialized until Phase 3.
 The P audit is now closed under the same derived-tail contract:
 `P_Boss01 -> P_PostBoss01 -> Q_Intro`, neutral `BossPrometheus01`, resolved
 boss-offer store history, and no modeled automatic boss-drop surface. F, G, P,
-Q, H, O, I, and N are closed as biome-rule/design audits; this does not promote
-them beyond documentation coverage or mark any derived completion declaration
-implemented.
+Q, H, O, I, and N are closed as biome-rule/design audits. P and Q now also
+have dormant declaration coverage; H, O, I, and N remain documentation-only,
+and no later biome is promoted to an active product capability.
 
 ## Completed
 
@@ -534,10 +534,32 @@ Completed:
      next-biome versus route-complete behavior from route order;
    - schema version 3 rejects the pre-cleanup document shape without migration
      scaffolding, while F/G behavior and dormant P isolation remain unchanged.
+5. dormant Q declaration import:
+   - all 23 supported progressed-save room declarations normalize, including
+     both foyer maps, every reward-free combat map, four supported minibosses,
+     the direct Summit shop, and the derived neutral Typhon completion room;
+   - six staged candidate pools own Q's scripted order while physical
+     predecessor exits produce four single-target and two independent
+     two-target decisions under the exact six-batch/eight-target bound;
+   - `RewardlessCombat` gives authored Q combat occurrences an explicit empty
+     leaf contract, and Q batches use `rewardStorePolicy: none` instead of an
+     invented RunProgress/MetaProgress value;
+   - the authored topology decoder now applies `maxTargets` only to ordinary
+     generated targets, keeping terminal occurrences outside the documented
+     P/Q/H bounds;
+   - every miniboss forces the audited `TyphonBossRewards` store, repeated peer
+     room names remain legal because only appearance is capped, the room-reward
+     lifecycle accepts the store's Big Talent and triple Stack outcomes, and
+     Brute, Stalker, and Tail count encounter depth while Eye does not;
+   - `Q_PreBoss01` owns one direct `Q_WorldShop`, completion contains only
+     `Q_Boss01`, and the difficulty boss, Palace postboss/story, debug
+     miniboss, and automatic boss drops remain excluded;
+   - capability isolation keeps Q non-authorable, non-simulatable, and
+     non-editable, and the active F editor slice remains unchanged apart from
+     catalog version.
 
 Pending:
 
-5. dormant Q declaration import;
 6. dormant H declaration import;
 7. dormant O declaration import;
 8. dormant I declaration import;

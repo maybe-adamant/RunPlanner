@@ -106,6 +106,7 @@ export function createDefaultRoomState(
 
   switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
+    case 'RewardlessCombat':
       requireOrdinaryRole(role, room, path);
       return Object.freeze({ kind: 'none' });
     case 'FixedOpening':
@@ -333,6 +334,7 @@ export function decodeRoomState(
   const { role, entryActive } = context;
   switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
+    case 'RewardlessCombat':
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'none', path);
       expectExactKeys(state, ['kind'], path);
