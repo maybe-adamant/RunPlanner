@@ -28,6 +28,8 @@ describe('summarizeCatalog', () => {
         producerLifecycles: emptyCollection(),
       },
       encounterProfiles: emptyCollection(),
+      exitCompatibilityPolicies: emptyCollection(),
+      exitTypes: emptyCollection(),
       rooms: emptyCollection(),
       biomeLayouts: emptyCollection(),
     };

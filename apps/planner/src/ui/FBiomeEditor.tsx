@@ -18,6 +18,12 @@ function openingRooms(catalog: Catalog, biomeStepKey: string): readonly RoomDecl
   if (layout === undefined) {
     throw new Error(`${biomeStepKey} layout is missing`);
   }
+  if (layout.kind !== 'LinearBiome') {
+    throw new Error(`${biomeStepKey} is not a linear biome`);
+  }
+  if (layout.start.kind !== 'authoredStart') {
+    throw new Error(`${biomeStepKey} does not expose an authored start`);
+  }
   return layout.start.roomGameNames.map((gameName) => {
     const room = catalog.rooms.byKey[gameName];
     if (room === undefined) {

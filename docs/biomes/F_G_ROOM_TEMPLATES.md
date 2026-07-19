@@ -252,7 +252,7 @@ slot keys remain semantic addresses and persistence keys.
 
 ### Structural Context
 
-This template is used through the `PrebossEntry` terminal policy. The selected
+This template is used through the `forkedTransition` terminal policy. The selected
 predecessor's declared physical exits produce ordered terminal target
 occurrences:
 

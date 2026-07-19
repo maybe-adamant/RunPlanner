@@ -56,10 +56,7 @@ function declaration(catalog: Catalog, room: RoomOccurrence): RoomDeclaration {
 }
 
 function generatedExitIndexes(room: RoomDeclaration): readonly number[] {
-  return room.exits
-    .filter((exit) => exit.targetMode === 'generated')
-    .map((exit) => exit.index)
-    .sort((left, right) => left - right);
+  return room.exits.map((exit) => exit.index).sort((left, right) => left - right);
 }
 
 function terminalOccurrenceIds(room: RoomDeclaration): readonly OccurrenceId[] {
@@ -183,6 +180,12 @@ function BatchEditor({
   const layout = catalog.biomeLayouts.byKey[biome.biomeStepKey];
   if (layout === undefined) {
     throw new Error(`Biome layout ${biome.biomeStepKey} is missing`);
+  }
+  if (layout.kind !== 'LinearBiome') {
+    throw new Error(`${biome.biomeStepKey} is not a linear biome`);
+  }
+  if (layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore') {
+    throw new Error(`${biome.biomeStepKey} does not author a base reward store`);
   }
   const availableExitIndexes = generatedExitIndexes(parentRoom);
   const available = new Set(availableExitIndexes);
@@ -513,6 +516,9 @@ export function FTopologyEditor({ biome, catalog, topology }: FTopologyEditorPro
   const layout = catalog.biomeLayouts.byKey[biome.biomeStepKey];
   if (layout === undefined) {
     throw new Error(`${biome.biomeStepKey} layout is missing`);
+  }
+  if (layout.kind !== 'LinearBiome') {
+    throw new Error(`${biome.biomeStepKey} is not a linear biome`);
   }
   const batchCount = topology.continuations.filter(
     (continuation) => continuation.kind === 'batch',

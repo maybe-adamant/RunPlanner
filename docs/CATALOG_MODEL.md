@@ -89,10 +89,15 @@ records favor complete typed consumption.
 const F_Combat04 = {
   gameName: 'F_Combat04',
   label: 'Combat 04',
+  biomeStepKey: 'Underworld_F',
   kind: 'Combat',
-  template: 'StandardCombat',
-  exits: [{}, {}],
-  encounterProfile: 'StandardCombat',
+  mode: { kind: 'authored', templateKey: 'StandardCombat' },
+  structuralTags: [],
+  exits: [
+    { index: 1, type: 'ErebusExitDoor' },
+    { index: 2, type: 'ErebusExitDoor' },
+  ],
+  encounterProfileKey: 'StandardCombat',
   incomingReward: {
     kind: 'countedChoice',
     stores: ['RunProgress', 'MetaProgress'],
@@ -157,6 +162,10 @@ Biome layout declarations own immutable structure:
 - start alternatives and ordered fixed entry slots, including whether each
   fixed slot is stateless-derived or owns authored room state;
 - default continuation policy and structural overrides;
+- continuation progression policy: eligibility-driven, fixed-count, or an
+  ordered staged candidate-pool sequence;
+- generated-batch policy: standard, Fields cage, or Clockwork, with any
+  policy-owned authored fields declared beside that policy;
 - terminal room and terminal exit policy, including whether the terminal is an
   independent transition or a declaration role admitted by a generated batch;
 - ordered fixed-completion rooms with stable semantic roles;
@@ -168,8 +177,12 @@ Biome layout declarations own immutable structure:
 - reward-store selection policy: an authored generated-store policy with
   target ratio, adjustment rules, possible base stores, and one authoring
   default; a source-offer-point policy selecting an already-authored semantic
-  store; or an explicit no-base-store policy when no generated base outcome is
-  observable, including reward-free Q and declaration-overridden I batches.
+  store through a closed selector such as `lastActiveWheel`; or an explicit
+  no-base-store policy when no generated base outcome is observable, including
+  reward-free Q and declaration-overridden I batches.
+- optional source-encounter-profile overrides for the generated-store policy;
+  O uses this structural mapping so ShipCombat sources resolve their final
+  active wheel while non-ShipCombat sources retain the authored default;
 
 They do not copy room-local facts such as intrinsic exits, eligibility, caps,
 or incoming reward bindings.

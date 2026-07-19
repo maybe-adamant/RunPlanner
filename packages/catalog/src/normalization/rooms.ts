@@ -2,6 +2,7 @@ import type {
   CatalogCollection,
   EnteredRewardStoreHistoryPolicy,
   EncounterProfile,
+  ExitTypeDeclaration,
   FixedRewardBinding,
   ForkedPrebossEntryPolicy,
   NoneRewardBinding,
@@ -12,6 +13,8 @@ import type {
   RoomExit,
   RoomForce,
   RoomTemplateKey,
+  RoomMode,
+  RoomStructuralTag,
   ShopRewardBinding,
 } from '@run-planner/core';
 import type {
@@ -35,6 +38,7 @@ import {
   requirePositiveInteger,
 } from './common';
 import { fail } from './errors';
+import { normalizeLocalChildren } from './descriptors';
 import { normalizeRequirement, validateRequirementReferences } from './requirements';
 
 function defaultOffer(rewardType: RewardTypeDeclaration): ResolvedRewardOffer {
@@ -128,6 +132,7 @@ const roomTemplateKinds = {
   Fountain: 'Reprieve',
   Miniboss: 'Miniboss',
   Shop: 'Shop',
+  ShopPreboss: 'Preboss',
   StandardCombat: 'Combat',
   Story: 'Story',
 } as const satisfies Readonly<Record<RoomTemplateKey, RoomDeclaration['kind']>>;
@@ -139,31 +144,70 @@ const roomTemplateRewardKinds = {
   Fountain: 'countedChoice',
   Miniboss: 'countedChoice',
   Shop: 'shop',
+  ShopPreboss: 'shop',
   StandardCombat: 'countedChoice',
   Story: 'fixed',
 } as const satisfies Readonly<Record<RoomTemplateKey, RewardProducerBinding['kind']>>;
 
-function validateTemplate(room: RawRoomDeclaration, path: string): void {
-  if (!Object.hasOwn(roomTemplateKinds, room.templateKey)) {
-    fail(`${path}.templateKey`, `unknown room template ${String(room.templateKey)}`);
+function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
+  const receivedModeKind: unknown = (room.mode as { readonly kind?: unknown } | undefined)?.kind;
+  if (room.mode?.kind === 'derived') {
+    const classification = room.mode.classification;
+    if (
+      classification !== 'completion' &&
+      classification !== 'fixedEntry' &&
+      classification !== 'hub'
+    ) {
+      fail(
+        `${path}.mode.classification`,
+        `unknown derived classification ${String(classification)}`,
+      );
+    }
+    if (room.entryOfferPolicy !== undefined) {
+      fail(`${path}.entryOfferPolicy`, 'is only valid for authored ForkedPreboss rooms');
+    }
+    return Object.freeze({ kind: 'derived', classification });
   }
-  const expectedKind = roomTemplateKinds[room.templateKey];
+  if (room.mode?.kind !== 'authored') {
+    fail(`${path}.mode.kind`, `unknown room mode ${String(receivedModeKind)}`);
+  }
+  const templateKey = room.mode.templateKey;
+  if (!Object.hasOwn(roomTemplateKinds, templateKey)) {
+    fail(`${path}.mode.templateKey`, `unknown room template ${String(templateKey)}`);
+  }
+  const expectedKind = roomTemplateKinds[templateKey];
   if (room.kind !== expectedKind) {
-    fail(`${path}.kind`, `${room.templateKey} requires room kind ${expectedKind}`);
+    fail(`${path}.kind`, `${templateKey} requires room kind ${expectedKind}`);
   }
-  const expectedRewardKind = roomTemplateRewardKinds[room.templateKey];
+  const expectedRewardKind = roomTemplateRewardKinds[templateKey];
   if (room.incomingReward.kind !== expectedRewardKind) {
     fail(
       `${path}.incomingReward.kind`,
-      `${room.templateKey} requires reward producer ${expectedRewardKind}`,
+      `${templateKey} requires reward producer ${expectedRewardKind}`,
     );
   }
-  if (room.templateKey === 'ForkedPreboss' && room.entryOfferPolicy === undefined) {
+  if (templateKey === 'ForkedPreboss' && room.entryOfferPolicy === undefined) {
     fail(`${path}.entryOfferPolicy`, 'is required by ForkedPreboss');
   }
-  if (room.templateKey !== 'ForkedPreboss' && room.entryOfferPolicy !== undefined) {
+  if (templateKey !== 'ForkedPreboss' && room.entryOfferPolicy !== undefined) {
     fail(`${path}.entryOfferPolicy`, 'is only valid for ForkedPreboss');
   }
+  return Object.freeze({ kind: 'authored', templateKey });
+}
+
+const structuralTags = new Set<RoomStructuralTag>(['Indoor', 'Outdoor']);
+
+function normalizeStructuralTags(
+  rawTags: readonly RoomStructuralTag[],
+  path: string,
+): readonly RoomStructuralTag[] {
+  const tags = freezeUniqueStrings(rawTags, path);
+  for (const [index, tag] of tags.entries()) {
+    if (!structuralTags.has(tag as RoomStructuralTag)) {
+      fail(`${path}[${index}]`, `unknown structural tag ${tag}`);
+    }
+  }
+  return tags as readonly RoomStructuralTag[];
 }
 
 function normalizeRewardBinding(
@@ -358,6 +402,7 @@ export function normalizeRooms(
   routeSteps: ReadonlySet<string>,
   rewards: RewardKernelCatalog,
   encounters: CatalogCollection<EncounterProfile>,
+  exitTypes: CatalogCollection<ExitTypeDeclaration>,
 ): CatalogCollection<RoomDeclaration> {
   const rooms = rawRooms.map((room, roomIndex): RoomDeclaration => {
     const path = `rooms[${roomIndex}]`;
@@ -366,7 +411,10 @@ export function normalizeRooms(
     if (!routeSteps.has(room.biomeStepKey)) {
       fail(`${path}.biomeStepKey`, `unknown biome step ${room.biomeStepKey}`);
     }
-    validateTemplate(room, path);
+    if (room.structuralTags === undefined) {
+      fail(`${path}.structuralTags`, 'is required');
+    }
+    const mode = validateMode(room, path);
     if (encounters.byKey[room.encounterProfileKey] === undefined) {
       fail(`${path}.encounterProfileKey`, `unknown encounter profile ${room.encounterProfileKey}`);
     }
@@ -378,10 +426,15 @@ export function normalizeRooms(
       if (exit.index !== exitIndex + 1) {
         fail(`${exitPath}.index`, `must equal physical exit index ${exitIndex + 1}`);
       }
+      const type = requireNonEmpty(exit.type, `${exitPath}.type`);
+      const exitType = exitTypes.byKey[type];
+      if (exitType === undefined) {
+        fail(`${exitPath}.type`, `unknown physical exit type ${type}`);
+      }
       return Object.freeze({
         index: exit.index,
-        targetMode: exit.targetMode,
-        type: requireNonEmpty(exit.type, `${exitPath}.type`),
+        type,
+        compatibilityPolicyKey: exitType.compatibilityPolicyKey,
       });
     });
     const eligibility =
@@ -439,7 +492,8 @@ export function normalizeRooms(
       label: room.label,
       biomeStepKey: room.biomeStepKey,
       kind: room.kind,
-      templateKey: room.templateKey,
+      mode,
+      structuralTags: normalizeStructuralTags(room.structuralTags, `${path}.structuralTags`),
       exits: Object.freeze(exits),
       incomingReward,
       ...(entryOfferPolicy === undefined ? {} : { entryOfferPolicy }),
@@ -464,6 +518,7 @@ export function normalizeRooms(
       caps: normalizeCaps(room.caps, `${path}.caps`),
       ...(eligibility === undefined ? {} : { eligibility }),
       ...(room.force === undefined ? {} : { force: normalizeForce(room.force, `${path}.force`) }),
+      localChildren: normalizeLocalChildren(room.localChildren ?? [], `${path}.localChildren`),
     });
   });
 
@@ -475,6 +530,21 @@ export function normalizeRooms(
         collection,
         `rooms[${roomIndex}].eligibility`,
       );
+    }
+    for (const [childIndex, child] of room.localChildren.entries()) {
+      if (child.kind !== 'fixedRoomSlots') {
+        continue;
+      }
+      for (const [slotIndex, slot] of child.slots.entries()) {
+        const referenced = collection.byKey[slot.roomGameName];
+        const path = `rooms[${roomIndex}].localChildren[${childIndex}].slots[${slotIndex}].roomGameName`;
+        if (referenced === undefined) {
+          fail(path, `unknown room ${slot.roomGameName}`);
+        }
+        if (referenced.biomeStepKey !== room.biomeStepKey || referenced.mode.kind !== 'authored') {
+          fail(path, `${slot.roomGameName} must be an authored room in ${room.biomeStepKey}`);
+        }
+      }
     }
   });
   return collection;

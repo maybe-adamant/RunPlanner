@@ -25,20 +25,46 @@ export interface RoomStateContext {
 
 function requireOrdinaryRole(role: RoomOccurrenceRole, room: RoomDeclaration, path: string): void {
   if (role !== 'ordinary') {
-    failProjectDocument(path, `${room.templateKey} cannot use terminal role ${role}`);
+    failProjectDocument(
+      path,
+      `${authoredTemplateKey(room, path)} cannot use terminal role ${role}`,
+    );
   }
+}
+
+function requireShopPrebossRole(
+  role: RoomOccurrenceRole,
+  room: RoomDeclaration,
+  path: string,
+): void {
+  if (role === 'terminalFreeReward') {
+    failProjectDocument(
+      path,
+      `${authoredTemplateKey(room, path)} cannot use terminal free-reward role`,
+    );
+  }
+}
+
+function authoredTemplateKey(room: RoomDeclaration, path: string) {
+  if (room.mode.kind !== 'authored') {
+    failProjectDocument(path, `${room.gameName} is layout-derived and owns no authored room state`);
+  }
+  return room.mode.templateKey;
 }
 
 function requireCountedBinding(room: RoomDeclaration, path: string): CountedRewardBinding {
   if (room.incomingReward.kind !== 'countedChoice') {
-    failProjectDocument(path, `${room.templateKey} requires a counted reward binding`);
+    failProjectDocument(
+      path,
+      `${authoredTemplateKey(room, path)} requires a counted reward binding`,
+    );
   }
   return room.incomingReward;
 }
 
 function requireShopBinding(room: RoomDeclaration, path: string): ShopRewardBinding {
   if (room.incomingReward.kind !== 'shop') {
-    failProjectDocument(path, `${room.templateKey} requires a shop binding`);
+    failProjectDocument(path, `${authoredTemplateKey(room, path)} requires a shop binding`);
   }
   return room.incomingReward;
 }
@@ -78,7 +104,7 @@ export function createDefaultRoomState(
   const path = `rooms.${room.gameName}.state`;
   const { role, entryActive } = context;
 
-  switch (room.templateKey) {
+  switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
       requireOrdinaryRole(role, room, path);
       return Object.freeze({ kind: 'none' });
@@ -109,6 +135,14 @@ export function createDefaultRoomState(
     }
     case 'Shop':
       requireOrdinaryRole(role, room, path);
+      return Object.freeze({
+        kind: 'shop',
+        ...(entryActive
+          ? { shop: defaultShopState(catalog, requireShopBinding(room, path), path) }
+          : {}),
+      });
+    case 'ShopPreboss':
+      requireShopPrebossRole(role, room, path);
       return Object.freeze({
         kind: 'shop',
         ...(entryActive
@@ -297,7 +331,7 @@ export function decodeRoomState(
 ): AuthoredRoomState {
   const state = expectRecord(value, path);
   const { role, entryActive } = context;
-  switch (room.templateKey) {
+  switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'none', path);
@@ -335,6 +369,9 @@ export function decodeRoomState(
     }
     case 'Shop':
       requireOrdinaryRole(role, room, path);
+      return decodeShopRoomState(state, catalog, room, entryActive, path);
+    case 'ShopPreboss':
+      requireShopPrebossRole(role, room, path);
       return decodeShopRoomState(state, catalog, room, entryActive, path);
     case 'ForkedPreboss':
       if (role === 'ordinary') {

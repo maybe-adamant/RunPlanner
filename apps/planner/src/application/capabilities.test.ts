@@ -1,11 +1,10 @@
-import { catalog } from '@run-planner/catalog';
+import { catalog, createCatalog, type CatalogInput } from '@run-planner/catalog';
+import { declarations } from '@run-planner/catalog/testing';
 import {
   createBiomeAddress,
   createProjectDocument,
   encodeProjectDocument,
   type Catalog,
-  type LinearBiomeLayout,
-  type RoomDeclaration,
 } from '@run-planner/core';
 import { describe, expect, it } from 'vitest';
 
@@ -25,57 +24,72 @@ import {
 import { createPlannerStore } from './store';
 
 function catalogWithDormantH(): Catalog {
-  const gLayout = catalog.biomeLayouts.byKey.Underworld_G;
-  const gStartGameName = gLayout?.start.roomGameNames[0];
-  const gStart = gStartGameName === undefined ? undefined : catalog.rooms.byKey[gStartGameName];
-  const gTerminal =
-    gLayout === undefined ? undefined : catalog.rooms.byKey[gLayout.terminal.roomGameName];
-  if (gLayout === undefined || gStart === undefined || gTerminal === undefined) {
+  const gLayout = declarations.biomeLayouts.find(
+    (layout) => layout.biomeStepKey === 'Underworld_G',
+  );
+  const gStart = declarations.rooms.find((room) => room.gameName === 'G_Intro');
+  const gTerminal = declarations.rooms.find((room) => room.gameName === 'G_PreBoss01');
+  const gBoss = declarations.rooms.find((room) => room.gameName === 'G_Boss01');
+  const gPostboss = declarations.rooms.find((room) => room.gameName === 'G_PostBoss01');
+  if (
+    gLayout === undefined ||
+    gStart === undefined ||
+    gTerminal === undefined ||
+    gBoss === undefined ||
+    gPostboss === undefined
+  ) {
     throw new Error('G fixture authority is missing');
   }
-  const hStart: RoomDeclaration = Object.freeze({
+  const hStart = {
     ...gStart,
     gameName: 'H_IntroFixture',
     label: 'Dormant H Intro',
     biomeStepKey: 'Underworld_H',
-  });
-  const hTerminal: RoomDeclaration = Object.freeze({
+  };
+  const hTerminal = {
     ...gTerminal,
     gameName: 'H_PreBossFixture',
     label: 'Dormant H Preboss',
     biomeStepKey: 'Underworld_H',
-  });
-  const hLayout: LinearBiomeLayout = Object.freeze({
+  };
+  const hBoss = {
+    ...gBoss,
+    gameName: 'H_BossFixture',
+    label: 'Dormant H Boss',
+    biomeStepKey: 'Underworld_H',
+  };
+  const hPostboss = {
+    ...gPostboss,
+    gameName: 'H_PostBossFixture',
+    label: 'Dormant H Postboss',
+    biomeStepKey: 'Underworld_H',
+  };
+  const hLayout = {
     ...gLayout,
     biomeStepKey: 'Underworld_H',
-    start: Object.freeze({
+    start: {
       ...gLayout.start,
-      roomGameNames: Object.freeze([hStart.gameName]),
-    }),
-    terminal: Object.freeze({
+      roomGameNames: [hStart.gameName],
+    },
+    terminal: {
       ...gLayout.terminal,
       roomGameName: hTerminal.gameName,
-    }),
-  });
-  const layouts = Object.freeze([...catalog.biomeLayouts.values, hLayout]);
-  const rooms = Object.freeze([...catalog.rooms.values, hStart, hTerminal]);
+    },
+    completion: {
+      ...gLayout.completion,
+      rooms: [
+        { role: 'boss', roomGameName: hBoss.gameName },
+        { role: 'postboss', roomGameName: hPostboss.gameName },
+      ],
+    },
+  };
 
-  return Object.freeze({
-    ...catalog,
+  return createCatalog({
+    ...declarations,
     version: `${catalog.version}-dormant-h`,
-    biomeLayouts: Object.freeze({
-      values: layouts,
-      byKey: Object.freeze({ ...catalog.biomeLayouts.byKey, Underworld_H: hLayout }),
-    }),
-    rooms: Object.freeze({
-      values: rooms,
-      byKey: Object.freeze({
-        ...catalog.rooms.byKey,
-        [hStart.gameName]: hStart,
-        [hTerminal.gameName]: hTerminal,
-      }),
-    }),
-  });
+    rooms: [...declarations.rooms, hStart, hTerminal, hBoss, hPostboss],
+    biomeLayouts: [...declarations.biomeLayouts, hLayout],
+  } as CatalogInput);
 }
 
 describe('planner capabilities', () => {

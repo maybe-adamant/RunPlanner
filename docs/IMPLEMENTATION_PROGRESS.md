@@ -11,8 +11,9 @@ Phases 0, 1, 2, 2.5, 2.6, and 2.7 are complete. Phases 0 through 2.5 were
 completed under the prior reward-store ownership model; Phase 2.6 added the
 audited reward kernel as an intentionally unconnected pure subsystem; Phase
 2.7 atomically made it the sole connected F/G reward authority under schema
-version 2. Phase 2.8 is the current frontier and imports P/Q/H/O/I/N as dormant
-declaration sets before Phase 3 begins.
+version 2. Phase 2.8 is the current frontier. Capability isolation and the
+shared structural/F/G reconciliation slices are complete; P/Q/H/O/I/N remain
+the dormant declaration imports required before Phase 3 begins.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
 defines reusable single-room lifecycle profiles, occurrence-addressed history
@@ -96,7 +97,8 @@ progressed-save exclusions for `FishmanIntro`, early-run Eris, and prior-run
 Narcissus force. It also replaces a hidden simulator-appended biome tail with
 the forward contract for concrete derived boss/postboss Room Declarations,
 ordered layout completion, and explicit entered-room reward-store history.
-Those schema and declaration changes remain pending.
+The shared structural slice now implements those schema and declaration
+changes for F/G. G completion remains unmaterialized until Phase 3.
 
 The P audit is now closed under the same derived-tail contract:
 `P_Boss01 -> P_PostBoss01 -> Q_Intro`, neutral `BossPrometheus01`, resolved
@@ -482,10 +484,31 @@ Completed:
      identity rather than a second supported-biome list;
    - dormant-layout fixtures prove a later declaration cannot activate project
      authoring or UI navigation.
+2. shared structural vocabulary and F/G reconciliation:
+   - Room Declarations distinguish authored template ownership from
+     layout-derived fixed-entry, hub, and completion roles;
+   - structural tags and reusable physical exit types resolve through closed
+     compatibility policies, with F/G explicitly unconstrained;
+   - normalized `LinearBiome`/`HubBiome`, eligibility-driven/fixed-count/staged
+     progression, standard/Fields/Clockwork batches, fixed-entry,
+     fixed-authored-slot, terminal, ordered-completion, biome-field,
+     batch-field, and local-child descriptors fail at catalog construction
+     when malformed;
+   - batch reward-store policy is the closed authored-base-store,
+     source-offer-point, or none union, with normalized source-profile
+     overrides for O's mixed policy, while F/G retain the uniform authored
+     form;
+   - concrete derived `F_Boss01 -> F_PostBoss01` and
+     `G_Boss01 -> G_PostBoss01` tails are layout-owned and carry explicit
+     encounter, counter, exit, reward, and store-history facts;
+   - `fixedBoss` is removed from physical exits, derived rooms cannot enter
+     authored project topology, and schema-version-2 F/G editor behavior is
+     unchanged;
+   - synthetic fixtures cover every new closed discriminant plus valid dormant
+     HubBiome, source-offer-point, no-store, typed-field, and local-child forms.
 
 Pending:
 
-2. shared structural vocabulary and F/G reconciliation;
 3. dormant P declaration import;
 4. dormant Q declaration import;
 5. dormant H declaration import;

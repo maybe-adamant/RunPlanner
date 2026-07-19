@@ -34,7 +34,7 @@ function requireShop(binding: RewardProducerBinding | undefined): ShopRewardBind
 describe('complete F catalog', () => {
   it('declares every F opening and special room exactly once', () => {
     const fRooms = catalog.rooms.values.filter((room) => room.biomeStepKey === 'Underworld_F');
-    expect(fRooms).toHaveLength(32);
+    expect(fRooms).toHaveLength(34);
     expect(fRooms.filter((room) => room.kind === 'Opening').map((room) => room.gameName)).toEqual([
       'F_Opening01',
       'F_Opening02',
@@ -49,7 +49,7 @@ describe('complete F catalog', () => {
       fRooms
         .filter((room) => !['Opening', 'Combat', 'Miniboss'].includes(room.kind))
         .map((room) => room.gameName),
-    ).toEqual(['F_Story01', 'F_Reprieve01', 'F_Shop01', 'F_PreBoss01']);
+    ).toEqual(['F_Story01', 'F_Reprieve01', 'F_Shop01', 'F_PreBoss01', 'F_Boss01', 'F_PostBoss01']);
 
     for (const gameName of ['F_Opening01', 'F_Opening02', 'F_Opening03']) {
       const opening = catalog.rooms.byKey[gameName];
@@ -57,7 +57,7 @@ describe('complete F catalog', () => {
       expect(opening).toMatchObject({
         label: gameName.replace('F_', '').replace('Opening', 'Opening '),
         kind: 'Opening',
-        templateKey: 'FixedOpening',
+        mode: { kind: 'authored', templateKey: 'FixedOpening' },
         encounterProfileKey: 'F_Opening',
         counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
         caps: { maxAppearancesThisBiome: 1 },
@@ -107,6 +107,8 @@ describe('complete F catalog', () => {
       ['F_Reprieve01', 2],
       ['F_Shop01', 2],
       ['F_PreBoss01', 1],
+      ['F_Boss01', 1],
+      ['F_PostBoss01', 1],
     ]);
 
     expect(exitCounts.size).toBe(fRooms.length);
@@ -118,8 +120,8 @@ describe('complete F catalog', () => {
       expect(room.exits).toEqual(
         Array.from({ length: exitCount }, (_, index) => ({
           index: index + 1,
-          targetMode: room.kind === 'Preboss' ? 'fixedBoss' : 'generated',
           type: 'ErebusExitDoor',
+          compatibilityPolicyKey: 'Unconstrained',
         })),
       );
     }
@@ -143,7 +145,7 @@ describe('complete F catalog', () => {
       expect(room).toMatchObject({
         label,
         kind: 'Miniboss',
-        templateKey: 'Miniboss',
+        mode: { kind: 'authored', templateKey: 'Miniboss' },
         counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
         caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
         force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 4, deadline: 6 },
@@ -180,7 +182,7 @@ describe('complete F catalog', () => {
     expect(story).toMatchObject({
       label: 'Arachne',
       kind: 'Story',
-      templateKey: 'Story',
+      mode: { kind: 'authored', templateKey: 'Story' },
       encounterProfileKey: 'Story',
       caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
       eligibility: {
@@ -197,7 +199,7 @@ describe('complete F catalog', () => {
     expect(reprieve).toMatchObject({
       label: 'Fountain',
       kind: 'Reprieve',
-      templateKey: 'Fountain',
+      mode: { kind: 'authored', templateKey: 'Fountain' },
       encounterProfileKey: 'HealthRestore',
       caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
       eligibility: {
@@ -216,7 +218,7 @@ describe('complete F catalog', () => {
     expect(shop).toMatchObject({
       label: 'Midshop',
       kind: 'Shop',
-      templateKey: 'Shop',
+      mode: { kind: 'authored', templateKey: 'Shop' },
       encounterProfileKey: 'Shop',
       caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
       eligibility: {
@@ -273,7 +275,7 @@ describe('complete F catalog', () => {
     expect(preboss).toMatchObject({
       label: 'Preboss',
       kind: 'Preboss',
-      templateKey: 'ForkedPreboss',
+      mode: { kind: 'authored', templateKey: 'ForkedPreboss' },
       encounterProfileKey: 'Preboss',
       counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1 },
@@ -284,7 +286,9 @@ describe('complete F catalog', () => {
       },
       force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 10, deadline: 10 },
     });
-    expect(preboss?.exits).toEqual([{ index: 1, targetMode: 'fixedBoss', type: 'ErebusExitDoor' }]);
+    expect(preboss?.exits).toEqual([
+      { index: 1, type: 'ErebusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
+    ]);
     expect(shopReward.shopProfileKey).toBe('WorldShop');
     expect(preboss?.entryOfferPolicy).toMatchObject({
       kind: 'shopThenFillRemainingExits',
@@ -297,24 +301,64 @@ describe('complete F catalog', () => {
       biomeStepKey: 'Underworld_F',
       kind: 'LinearBiome',
       start: {
+        kind: 'authoredStart',
         mode: 'oneOf',
         roomGameNames: ['F_Opening01', 'F_Opening02', 'F_Opening03'],
       },
+      entries: [],
       continuation: {
-        defaultBatchRuleKey: 'Standard',
+        progressionPolicy: { kind: 'eligibilityDriven' },
+        batchPolicy: { kind: 'standard', fields: [] },
         rewardStorePolicy: {
           kind: 'authoredBaseStore',
           storeKeys: ['RunProgress', 'MetaProgress'],
           defaultStoreKey: 'RunProgress',
         },
-        batchStateDefault: null,
+        rewardStoreOverrides: [],
       },
       terminal: {
+        kind: 'forkedTransition',
         roomGameName: 'F_PreBoss01',
-        transitionRuleKey: 'PrebossEntry',
         exitPolicy: { kind: 'allExitsTerminal' },
       },
+      completion: {
+        rooms: [
+          { role: 'boss', roomGameName: 'F_Boss01' },
+          { role: 'postboss', roomGameName: 'F_PostBoss01' },
+        ],
+        routeTransition: { kind: 'nextBiome' },
+      },
+      fields: [],
       bounds: { maxBatches: 10, maxTargets: 20 },
+    });
+  });
+
+  it('declares the F completion tail as derived rooms with no authored leaf state', () => {
+    expect(catalog.rooms.byKey.F_Boss01).toMatchObject({
+      label: 'Hecate',
+      kind: 'Boss',
+      mode: { kind: 'derived', classification: 'completion' },
+      structuralTags: [],
+      incomingReward: { kind: 'none' },
+      enteredRewardStoreHistory: { kind: 'none' },
+      encounterProfileKey: 'F_Boss01',
+      counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+      localChildren: [],
+    });
+    expect(catalog.encounterProfiles.byKey.F_Boss01?.phases).toEqual([
+      {
+        key: 'F_Boss01',
+        kind: 'boss',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'BossHecate01',
+      },
+    ]);
+    expect(catalog.rooms.byKey.F_PostBoss01).toMatchObject({
+      kind: 'PostBoss',
+      mode: { kind: 'derived', classification: 'completion' },
+      incomingReward: { kind: 'none' },
+      enteredRewardStoreHistory: { kind: 'none' },
+      encounterProfileKey: 'F_PostBoss01',
     });
   });
 
@@ -369,7 +413,7 @@ describe('complete F catalog', () => {
     ).toThrowError(
       new CatalogContractError(
         'biomeLayouts[0].start.roomGameNames[0]',
-        'F_Combat01 must be an Opening in Underworld_F',
+        'F_Combat01 must be an authored Opening',
       ),
     );
   });

@@ -40,10 +40,10 @@ coverage is defined by `../MIGRATION_PROVENANCE.md`.
 | Progression encounter variants               | `OpeningEmpty`, `FCastTutorialFight`, and `FIntroFight` depend on persistent progression                                  | **Excluded:** absent from the progressed-save baseline                                                 | documented; progressed baseline declared                      | Save-profile state becomes a project input                 |
 | Ordinary combat identity                     | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition | documented, declared                                          | Combat composition becomes an authored or validated output |
 | Room eligibility and force                   | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | documented, declared; simulation pending                      | --                                                         |
-| Reward-store selection                       | F targets MetaProgress ratio `0.315` with adjustment speed `10`                                                           | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | documented; schema and simulation pending                     | Probability analysis or exact RNG replay is introduced     |
+| Reward-store selection                       | F targets MetaProgress ratio `0.315` with adjustment speed `10`                                                           | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | documented and declared; simulation pending                   | Probability analysis or exact RNG replay is introduced     |
 | Incoming rewards and shops                   | Openings, `F_Combat01`, minibosses, and preboss force RunProgress; other producers retain concrete filters and shops      | **Exact:** occurrence reward state plus declaration-owned overrides                                    | documented, declared, authored, presented; simulation pending | --                                                         |
 | Forked preboss                               | Every predecessor exit creates `F_PreBoss01`; first is Shop and at most one additional exit is a free reward              | **Exact:** one or two terminal occurrences of the same declaration                                     | documented, declared, authored, presented; simulation pending | --                                                         |
-| Fixed boss and postboss tail                 | `F_PreBoss01` leads through one mutually exclusive Hecate variant and then `F_PostBoss01`                                 | **Exact:** layout-derived `F_Boss01` then `F_PostBoss01` under the neutral difficulty baseline         | documented; declarations and simulation pending               | User-selected difficulty becomes a project input           |
+| Fixed boss and postboss tail                 | `F_PreBoss01` leads through one mutually exclusive Hecate variant and then `F_PostBoss01`                                 | **Exact:** layout-derived `F_Boss01` then `F_PostBoss01` under the neutral difficulty baseline         | documented and declared; simulation pending                   | User-selected difficulty becomes a project input           |
 | Story, Fountain, and other progression gates | Dialogue, world upgrades, and persistent progression alter availability                                                   | **Excluded:** progressed-save baseline retains current-run rules only                                  | documented; progressed baseline declared                      | Save-profile state becomes a project input                 |
 
 ## Layout
@@ -158,7 +158,8 @@ controls.
 
 F editable-room declarations, authored topology, semantic commands, and editor
 projection exist. The derived `F_Boss01`/`F_PostBoss01` declarations and layout
-completion sequence, complete history, legality, reward simulation, and
-findings remain pending. Generated batches now own the authored base store,
-Room Declarations own forced overrides, and counted leaves persist only their
-complete resolved offer under schema version 2.
+completion sequence also exist, but Phase 3 does not materialize them yet.
+Complete history, legality, reward simulation, and findings remain pending.
+Generated batches own the authored base store, Room Declarations own forced
+overrides, and counted leaves persist only their complete resolved offer under
+schema version 2.

@@ -1,12 +1,26 @@
 import type {
+  AuthoredFieldDescriptor,
+  CompletionDescriptor,
   EnteredRewardStoreHistoryPolicy,
   EncounterPhaseKind,
+  EntryDescriptor,
+  ExitCompatibilityPolicy,
+  ExitTypeDeclaration,
+  GeneratedBatchPolicy,
+  HubSlotDescriptor,
+  LocalChildDescriptor,
+  LinearStartDescriptor,
+  LinearProgressionPolicy,
   RequirementExpression,
+  RewardStorePolicy,
   RoomForce,
   RoomCaps,
   RoomCounterEffects,
   RoomKind,
-  RoomTemplateKey,
+  RoomMode,
+  RoomStructuralTag,
+  SourceRewardStorePolicyOverride,
+  TerminalPolicy,
   RouteDeclaration,
 } from '@run-planner/core';
 import type { RawRewardKernelInput } from '../rewardKernel/types';
@@ -53,7 +67,6 @@ export type RawRewardProducerBinding =
 
 export interface RawRoomExitDeclaration {
   readonly index: number;
-  readonly targetMode: 'fixedBoss' | 'generated';
   readonly type: string;
 }
 
@@ -68,7 +81,8 @@ export interface RawRoomDeclaration {
   readonly label: string;
   readonly biomeStepKey: string;
   readonly kind: RoomKind;
-  readonly templateKey: RoomTemplateKey;
+  readonly mode: RoomMode;
+  readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RawRoomExitDeclaration[];
   readonly incomingReward: RawRewardProducerBinding;
   readonly entryOfferPolicy?: RawForkedPrebossEntryPolicy;
@@ -80,40 +94,57 @@ export interface RawRoomDeclaration {
   readonly caps: RoomCaps;
   readonly eligibility?: RequirementExpression;
   readonly force?: RoomForce;
+  readonly localChildren?: readonly LocalChildDescriptor[];
 }
 
 export interface RawLinearBiomeLayoutDeclaration {
   readonly biomeStepKey: string;
   readonly kind: 'LinearBiome';
-  readonly start: {
-    readonly mode: 'fixed' | 'oneOf';
-    readonly roomGameNames: readonly string[];
-  };
+  readonly start: LinearStartDescriptor;
+  readonly entries?: readonly EntryDescriptor[];
   readonly continuation: {
-    readonly defaultBatchRuleKey: 'Standard';
-    readonly rewardStorePolicy: {
-      readonly kind: 'authoredBaseStore';
-      readonly storeKeys: readonly string[];
-      readonly defaultStoreKey: string;
-    };
-    readonly batchStateDefault: null;
+    readonly progressionPolicy: LinearProgressionPolicy;
+    readonly batchPolicy: GeneratedBatchPolicy;
+    readonly rewardStorePolicy: RewardStorePolicy;
+    readonly rewardStoreOverrides?: readonly SourceRewardStorePolicyOverride[];
   };
-  readonly terminal: {
-    readonly roomGameName: string;
-    readonly transitionRuleKey: 'PrebossEntry';
-    readonly exitPolicy: { readonly kind: 'allExitsTerminal' };
-  };
+  readonly terminal: TerminalPolicy;
+  readonly completion: CompletionDescriptor;
+  readonly fields?: readonly AuthoredFieldDescriptor[];
   readonly bounds: {
     readonly maxBatches: number;
     readonly maxTargets: number;
   };
 }
 
+export interface RawHubBiomeLayoutDeclaration {
+  readonly biomeStepKey: string;
+  readonly kind: 'HubBiome';
+  readonly entries: readonly EntryDescriptor[];
+  readonly hub: {
+    readonly roomGameName: string;
+    readonly slots: readonly HubSlotDescriptor[];
+    readonly openCount: { readonly min: number; readonly max: number };
+    readonly requiredVisits: number;
+    readonly restoreRoomGameName: string;
+    readonly rewardStorePolicy: RewardStorePolicy;
+    readonly fields?: readonly AuthoredFieldDescriptor[];
+  };
+  readonly terminal: TerminalPolicy;
+  readonly completion: CompletionDescriptor;
+  readonly fields?: readonly AuthoredFieldDescriptor[];
+}
+
+export type RawBiomeLayoutDeclaration =
+  RawHubBiomeLayoutDeclaration | RawLinearBiomeLayoutDeclaration;
+
 export interface RawCatalogInput {
   readonly version: string;
   readonly routes: readonly RouteDeclaration[];
   readonly rewardKernel: RawRewardKernelInput;
   readonly encounterProfiles: readonly RawEncounterProfileDeclaration[];
+  readonly exitCompatibilityPolicies: readonly ExitCompatibilityPolicy[];
+  readonly exitTypes: readonly ExitTypeDeclaration[];
   readonly rooms: readonly RawRoomDeclaration[];
-  readonly biomeLayouts: readonly RawLinearBiomeLayoutDeclaration[];
+  readonly biomeLayouts: readonly RawBiomeLayoutDeclaration[];
 }

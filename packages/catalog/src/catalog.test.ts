@@ -22,7 +22,7 @@ function storeRewardTypes(store: { readonly entries: readonly { readonly rewardT
 
 describe('F catalog migration slice', () => {
   it('normalizes verified reward, encounter, and room declarations', () => {
-    expect(catalog.version).toBe('0.2.0-fg-reward-v2');
+    expect(catalog.version).toBe('0.3.0-fg-structure-v2');
     expect(catalog.routes.byKey.Underworld?.biomeSteps.map((step) => step.key)).toEqual([
       'Underworld_F',
       'Underworld_G',
@@ -177,7 +177,7 @@ describe('F catalog migration slice', () => {
 
       expect(room.label).toBe(gameName.replace('F_', '').replace('Combat', 'Combat '));
       expect(room.kind).toBe('Combat');
-      expect(room.templateKey).toBe('StandardCombat');
+      expect(room.mode).toEqual({ kind: 'authored', templateKey: 'StandardCombat' });
       expect(room.exits).toHaveLength(exitCount);
       expect(room.exits.map((exit) => exit.index)).toEqual(
         Array.from({ length: exitCount }, (_, index) => index + 1),
@@ -212,9 +212,10 @@ describe('F catalog migration slice', () => {
     const fgRooms = catalog.rooms.values.filter(
       (room) => room.biomeStepKey === 'Underworld_F' || room.biomeStepKey === 'Underworld_G',
     );
+    const noStoreHistory = new Set(['G_Intro', 'F_Boss01', 'F_PostBoss01', 'G_PostBoss01']);
     for (const room of fgRooms) {
       expect(room.enteredRewardStoreHistory).toEqual(
-        room.gameName === 'G_Intro' ? { kind: 'none' } : { kind: 'resolvedOffer' },
+        noStoreHistory.has(room.gameName) ? { kind: 'none' } : { kind: 'resolvedOffer' },
       );
       if (room.incomingReward.kind !== 'none') {
         expect(room.incomingReward.producerLifecycleKey).toBe('RoomReward');
@@ -267,12 +268,18 @@ describe('F catalog migration slice', () => {
         rooms: [
           {
             ...opening,
-            templateKey: 'MissingTemplate' as typeof opening.templateKey,
+            mode: {
+              kind: 'authored',
+              templateKey: 'MissingTemplate' as typeof opening.mode.templateKey,
+            },
           },
         ],
       }),
     ).toThrowError(
-      new CatalogContractError('rooms[0].templateKey', 'unknown room template MissingTemplate'),
+      new CatalogContractError(
+        'rooms[0].mode.templateKey',
+        'unknown room template MissingTemplate',
+      ),
     );
   });
 
