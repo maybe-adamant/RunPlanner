@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export type PlannerSection = 'underworld' | 'surface' | 'settings';
-export type UnderworldPanel = 'route' | 'Underworld_F';
+export type UnderworldPanel = 'route' | `Underworld_${string}`;
 
 interface EditorSessionState {
   readonly activeSection: PlannerSection;

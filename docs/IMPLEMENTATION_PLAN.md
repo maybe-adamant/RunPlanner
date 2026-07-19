@@ -294,6 +294,238 @@ Each dormant import adds readable room, encounter, reward, exit, layout,
 requirement, and completion parity fixtures. It does not add an editor panel,
 canonical history, contextual candidates, or placeholder simulation.
 
+### Required Commit Sequence
+
+Phase 2.8 is delivered through the following ordered commits. A later commit
+must not compensate for a missing earlier gate, and biome imports must not be
+combined merely because they share declaration syntax. A commit is complete
+only when its implementation, parity/isolation fixtures, and documentation all
+satisfy both its Deliver and Gate lists; deferred work or a follow-up fix is not
+evidence that the current commit is closed.
+
+#### Commit 1: Capability Isolation
+
+Deliver:
+
+- one composition-owned capability matrix whose declared capability is derived
+  from the normalized catalog and whose authorable, simulatable, and editable
+  sets are independently explicit;
+- normalized subset invariants: editable biomes are authorable, and every
+  active capability references a declared biome step;
+- the Phase 2.8 baseline of F/G authorable, F editable, and no simulatable
+  biome;
+- capability-aware project bootstrap/load and semantic-command contact points
+  that reject dormant biome authoring without putting capability flags on Room
+  or Biome Declarations;
+- capability-derived editor navigation and selector scope rather than a second
+  handwritten supported-biome list;
+- isolation fixtures proving Underworld cannot be configured past G, Surface
+  cannot yet be configured, dormant commands fail at the application boundary,
+  and only F receives an editor entry.
+
+Gate:
+
+- adding a normalized dormant layout or room cannot change project defaults,
+  accepted application commands, simulator availability, or UI navigation;
+- catalog construction and pure structural codecs remain independent of React,
+  Redux, and application capability policy;
+- no simulator stub or placeholder editor panel is introduced.
+
+#### Commit 2: Shared Structure and F/G Reconciliation
+
+Deliver:
+
+- explicit authored versus layout-derived room mode, with structural tags
+  separated from player-facing room kind;
+- typed physical exits and an explicit compatibility policy for the currently
+  unconstrained F/G doors;
+- the closed layout discriminants and reusable fixed-entry, fixed-authored-
+  slot, ordered-completion, terminal, batch, biome-field, batch-field, and
+  local-child descriptor vocabulary required by the audited biome set;
+- the authored-base-store, source-offer-point, and no-base-store policy union,
+  while retaining authored-base-store as the only F/G active form;
+- concrete F/G boss and postboss Room Declarations plus layout-owned ordered
+  completion sequences and route transitions;
+- removal of `fixedBoss` as an encoded room-exit shortcut;
+- F/G declarations, schema-version-2 projects, commands, and the F editor
+  reconciled without changing their authored behavior;
+- synthetic construction failures for every newly closed semantic policy or
+  descriptor kind.
+
+Gate:
+
+- every F/G structural and reward parity fixture remains green;
+- F/G completion is entirely declaration/layout driven even though Phase 3
+  does not materialize it yet;
+- no P/Q/H/O/I/N room declaration is imported in this commit;
+- no event stream, history ledger, candidate evaluator, semantic finding, or
+  biome-specific simulator switch appears.
+
+#### Commit 3: Dormant P Declaration Import
+
+Deliver:
+
+- the complete progressed-save, NPC-free P room and encounter declaration set;
+- P's intentionally empty intro projection, ordinary linear layout, forked
+  preboss, and ordered boss/postboss completion;
+- typed Indoor/Outdoor structural tags and source-sensitive exit compatibility
+  without encoding target consequences as fake eligibility ranges;
+- P's authored RunProgress/MetaProgress batch-store policy, concrete room
+  filters, caps, force rules, counters, store-history policies, and reward
+  producers;
+- parity fixtures for every P room identity, physical exit, encounter-depth
+  asymmetry, requirement, terminal role, and completion step.
+
+Gate:
+
+- P is declared but remains non-authorable, non-simulatable, and non-editable;
+- NPC variants and save/profile requirements remain omitted rather than
+  represented by production placeholders;
+- after excluding the required catalog-version change, the F smoke project and
+  selector projections remain structurally identical across the P import.
+
+#### Commit 4: Dormant Q Declaration Import
+
+Deliver:
+
+- Q's supported foyer, combat, miniboss, shop, boss, and repeat-run completion
+  declarations under the progressed-save baseline;
+- the scripted/staged linear layout, stage-owned candidate pools, direct Summit
+  shop transition, and declared completion sequence with no Palace postboss or
+  inaccessible Story path;
+- explicit no-base-store ordinary batches, independent paired miniboss target
+  semantics, and the `TyphonBossRewards` forced-store surface;
+- Eye/Tail encounter-depth asymmetry, exact caps, requirements, exits, and
+  repeatable-peer parity fixtures.
+
+Gate:
+
+- Q's reward-free spine does not acquire an invented RunProgress/MetaProgress
+  batch value;
+- paired minibosses remain distinct ordered occurrences and are not collapsed
+  into a uniqueness rule;
+- Q remains non-authorable, non-simulatable, and non-editable.
+
+#### Commit 5: Dormant H Declaration Import
+
+Deliver:
+
+- H's fixed entry, combat, bridge, special-room, preboss, boss, and postboss
+  declaration set;
+- the four-room count-driven Fields layout and its standard, Fields, and
+  forked-preboss structural policies;
+- typed batch-owned Min/Max cage outcome and hidden two-Max ceiling state with
+  complete declaration-owned defaults;
+- bounded room-local cage slots, exact capacity/physical-order descriptors,
+  and RunProgress individual-store ownership;
+- two-or-three counting-encounter profiles plus exact bridge force competition,
+  counters, exits, and completion parity.
+
+Gate:
+
+- H uses a no-base-store batch policy and never persists an unobservable
+  RunProgress/MetaProgress batch value;
+- `FieldsOptionalRewards` and the terminal-only unused cage roll remain explicit
+  documented deferrals, not zombie fields;
+- H remains non-authorable, non-simulatable, and non-editable.
+
+#### Commit 6: Dormant O Declaration Import
+
+Deliver:
+
+- the full supported O intro, combat, special-room, shop-only preboss, boss, and
+  completion declaration set;
+- ordered Intro plus one/two ShipCombat encounter profiles with phase-owned
+  wheel offer points and complete maximum-capacity dormant wheel state;
+- typed one/two-option wheel descriptors, RunProgress/MetaProgress wheel-store
+  ownership, and the final-active-wheel source address;
+- source-offer-point outgoing batch-store policy alongside the authored form
+  used by non-ShipCombat sources;
+- O's three combat eligibility families, special-room encounter-depth
+  asymmetry, one-exit topology, reward timing, and completion parity fixtures.
+
+Gate:
+
+- room exits remain physical exits and are never inferred from wheel option
+  count;
+- the outgoing source-derived store is not copied into a competing persisted
+  batch or leaf value;
+- O remains non-authorable, non-simulatable, and non-editable.
+
+#### Commit 7: Dormant I Declaration Import
+
+Deliver:
+
+- I's fixed entry sequence, ordinary combat/special rooms, canonical
+  `I_PreBoss02`, WorldShop, boss, and completion declarations;
+- Clockwork batch state and derived Goal/NonGoal incoming realization with one
+  complete dormant NonGoal offer value;
+- declaration-owned `TartarusRewards` forced-store overrides, exact room
+  filters, counters, requirements, and no-base-store generated batches;
+- conditional-terminal batch policy in which ordinary Add Decision remains the
+  sole frontier action and the picked preboss target alone closes editable
+  topology;
+- entry-materialized I WorldShop state required only when the preboss target is
+  picked;
+- parity fixtures for pre-goal, post-goal unpicked preboss, picked terminal
+  preboss, and ordinary companion targets.
+
+Gate:
+
+- no separate Go To Preboss command or editable unpicked preboss shop state is
+  introduced for I;
+- Goal versus NonGoal remains derived from batch/history context rather than a
+  user-authored room kind;
+- I remains non-authorable, non-simulatable, and non-editable.
+
+#### Commit 8: Dormant N Declaration Import
+
+Deliver:
+
+- the `HubBiome` layout discriminant and N's fixed authored Opening, PreHub,
+  Hub, PreBoss, boss, and completion declarations;
+- one fixed-slot persistent hub board with declaration-owned slot identity,
+  supported open-set bounds, ordered six-visit trace, and derived restores;
+- exact combat/miniboss target declarations, pylon requirements, hub reward
+  lookup, forced-store ownership, and terminal trigger;
+- bounded side-room descriptors with availability rank, generated/entered
+  authored state, ordinary/hard reward bags, and jointly generated sibling
+  semantics;
+- parity fixtures for hub identity, open slots, visit order, restores, side-room
+  capacity, side-room reward support, and completion.
+
+Gate:
+
+- fixed hub slots cannot be replaced through arbitrary target-creation
+  commands;
+- side-room player entry order remains authored separately from generation
+  rank and does not create a false inherent room order;
+- N remains non-authorable, non-simulatable, and non-editable.
+
+#### Commit 9: Cross-Biome Closure Matrix
+
+Deliver:
+
+- one catalog-wide reference and parity matrix covering all eight biomes;
+- exhaustive capability-isolation fixtures for project defaults/load,
+  application commands, selectors, simulation dispatch, and editor navigation;
+- route-transition and derived-completion coverage across Underworld and
+  Surface layouts;
+- construction failures for unknown semantic kinds, incompatible exits,
+  malformed layout policies, incomplete defaults, and invalid local-slot
+  ownership;
+- final documentation and progress reconciliation naming every intentional
+  simplification, deferral, and exclusion that remains after import.
+
+Gate:
+
+- F/G are authorable, F alone is editable, and no biome is simulatable;
+- P/Q/H/O/I/N are fully declared but cannot enter authored state or any product
+  loop;
+- all repository validation passes with no placeholder materializer, dormant
+  activation, duplicated authority, or compatibility scaffolding;
+- Phase 3 begins only after this commit is reviewed and accepted.
+
 ### Acceptance
 
 - one immutable catalog normalizes faithful F/G/H/I/N/O/P/Q declarations;

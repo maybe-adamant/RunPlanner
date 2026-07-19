@@ -7,13 +7,16 @@ import {
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
 } from './authoredProjectSlice';
+import { createApplicationCapabilities } from './capabilityConfiguration';
 import { createFEditorSmokeProject } from './projectBootstrap';
 import { createPlannerStore } from './store';
 
 function createStore() {
+  const capabilities = createApplicationCapabilities(catalog);
   return createPlannerStore({
     catalog,
-    initialProject: createFEditorSmokeProject(catalog),
+    capabilities,
+    initialProject: createFEditorSmokeProject(catalog, capabilities),
   });
 }
 

@@ -496,6 +496,30 @@ that alters its semantic meaning.
 The future game execution artifact will carry catalog compatibility data, but
 its exact algorithm remains deferred.
 
+## Product Capability Boundary
+
+Catalog presence and product activation are separate facts. Application
+composition derives the declared biome-step set from normalized layouts and
+owns explicit authorable, simulatable, and editable sets. Room, layout, and
+route declarations do not carry those product flags.
+
+The active Phase 2.8 matrix is:
+
+- F and G are authorable;
+- F is editable;
+- no biome is simulatable.
+
+Every active capability must reference a declared biome step, and every
+editable biome must also be authorable. Project creation and loading, semantic
+command dispatch, simulator dispatch once it exists, and editor navigation are
+application contact points that consume this matrix. Pure catalog construction,
+project codecs, and structural declarations remain capability-agnostic.
+
+Adding a dormant declaration therefore expands the catalog without making that
+biome selectable, persistable in an application project, simulatable, or
+visible as an editor entry. Activation is a deliberate composition change made
+only when that product loop is complete.
+
 ## Initial F/G Scope and Declaration Freeze
 
 The first catalog slice should include only the shared foundations and concrete
@@ -513,7 +537,7 @@ proof:
 - explicit labels and recursive defaults.
 
 Do not declare later biomes fully supported through placeholders. Their route
-identity may exist while their catalog capability remains inactive.
+identity may exist while their application capabilities remain inactive.
 
 The verified H/I/N/O/P/Q game-rule audits and cross-biome reconciliation are
 complete. Phase 2.8 imports their declaration-only catalog slices in the

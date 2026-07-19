@@ -33,7 +33,12 @@ export {
   type ShopPurchaseAddress,
   type TargetAddress,
 } from './addresses';
-export { applyProjectCommand, type ProjectCommand, ProjectCommandContractError } from './commands';
+export {
+  applyProjectCommand,
+  projectCommandAddress,
+  type ProjectCommand,
+  ProjectCommandContractError,
+} from './commands';
 export { decodeLinearBiomeTopology } from './linearTopology';
 export {
   applyProjectHistoryCommand,

@@ -13,15 +13,15 @@ interface FBiomeEditorProps {
   readonly plan: LinearBiomePlan;
 }
 
-function openingRooms(catalog: Catalog): readonly RoomDeclaration[] {
-  const layout = catalog.biomeLayouts.byKey.Underworld_F;
+function openingRooms(catalog: Catalog, biomeStepKey: string): readonly RoomDeclaration[] {
+  const layout = catalog.biomeLayouts.byKey[biomeStepKey];
   if (layout === undefined) {
-    throw new Error('Underworld_F layout is missing');
+    throw new Error(`${biomeStepKey} layout is missing`);
   }
   return layout.start.roomGameNames.map((gameName) => {
     const room = catalog.rooms.byKey[gameName];
     if (room === undefined) {
-      throw new Error(`Underworld_F opening ${gameName} is missing`);
+      throw new Error(`${biomeStepKey} opening ${gameName} is missing`);
     }
     return room;
   });
@@ -30,7 +30,7 @@ function openingRooms(catalog: Catalog): readonly RoomDeclaration[] {
 export function FBiomeEditor({ catalog, plan }: FBiomeEditorProps) {
   const dispatch = useAppDispatch();
   const [pendingOpening, setPendingOpening] = useState('');
-  const options = openingRooms(catalog);
+  const options = openingRooms(catalog, plan.biomeStepKey);
   const biome = createBiomeAddress('Underworld', plan.biomeStepKey);
   const topology = plan.topology;
 

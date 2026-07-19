@@ -468,14 +468,35 @@ stay dormant until Phase 2.8 imports their declarations.
 
 ### Phase 2.8: Cross-Biome Declaration Closure
 
-Current:
+The required commit sequence is locked in `IMPLEMENTATION_PLAN.md`.
 
-1. add declared/authorable/simulatable/editable capability gates;
-2. harden shared layout, exit, encounter, requirement, completion, batch, and
-   local-slot vocabulary and reconcile F/G to it;
-3. import dormant P, Q, H, O, I, and N declarations in the documented
-   pressure-test order;
-4. run cross-biome parity and capability-isolation gates.
+Completed:
+
+1. capability isolation:
+   - declared capability is derived from normalized layouts while authorable,
+     simulatable, and editable capability remains application-owned;
+   - F/G are authorable, F alone is editable, and no biome is simulatable;
+   - project bootstrap/load, initial-store installation, and semantic command
+     dispatch reject non-authorable biomes at the application boundary;
+   - editor navigation and room selector scope are derived from semantic biome
+     identity rather than a second supported-biome list;
+   - dormant-layout fixtures prove a later declaration cannot activate project
+     authoring or UI navigation.
+
+Pending:
+
+2. shared structural vocabulary and F/G reconciliation;
+3. dormant P declaration import;
+4. dormant Q declaration import;
+5. dormant H declaration import;
+6. dormant O declaration import;
+7. dormant I declaration import;
+8. dormant N declaration import;
+9. cross-biome closure and capability matrix.
+
+Every biome-import commit must remain declaration-only and pass its own parity
+and dormant-isolation gate. Later commits must not compensate for an incomplete
+earlier slice.
 
 Phase 3 remains blocked until Phase 2.8 passes without placeholder
 materializers, dormant biome activation, duplicated authority, or

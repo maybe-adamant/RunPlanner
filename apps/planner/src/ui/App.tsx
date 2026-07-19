@@ -10,6 +10,7 @@ import {
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
 } from '../application/authoredProjectSlice';
+import type { EditorNavigation } from '../application/editorNavigation';
 import {
   sectionSelected,
   underworldPanelSelected,
@@ -22,6 +23,7 @@ import { FBiomeEditor } from './FBiomeEditor';
 interface AppProps {
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
+  readonly editorNavigation: EditorNavigation;
 }
 
 const sections: readonly { key: PlannerSection; label: string }[] = [
@@ -30,10 +32,16 @@ const sections: readonly { key: PlannerSection; label: string }[] = [
   { key: 'settings', label: 'Settings' },
 ];
 
-const underworldPanels: readonly { key: UnderworldPanel; label: string }[] = [
-  { key: 'route', label: 'Route' },
-  { key: 'Underworld_F', label: 'Erebus' },
-];
+function asUnderworldPanel(biomeStepKey: string): UnderworldPanel {
+  if (!biomeStepKey.startsWith('Underworld_')) {
+    throw new Error(`${biomeStepKey} is not an Underworld editor panel`);
+  }
+  return biomeStepKey as UnderworldPanel;
+}
+
+function missingEditorAdapter(biomeStepKey: string): never {
+  throw new Error(`${biomeStepKey} has no editor adapter`);
+}
 
 function RouteOverview({
   label,
@@ -59,7 +67,7 @@ function RouteOverview({
   );
 }
 
-export function App({ catalog, catalogSummary }: AppProps) {
+export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
   const activeSection = useAppSelector((state) => state.editorSession.activeSection);
   const activeUnderworldPanel = useAppSelector(
     (state) => state.editorSession.activeUnderworldPanel,
@@ -69,12 +77,19 @@ export function App({ catalog, catalogSummary }: AppProps) {
   const dispatch = useAppDispatch();
   const underworld = project.routes.find((route) => route.routeKey === 'Underworld');
   const surface = project.routes.find((route) => route.routeKey === 'Surface');
+  const underworldNavigation = editorNavigation.routes.Underworld;
 
-  if (underworld === undefined || surface === undefined) {
+  if (underworld === undefined || surface === undefined || underworldNavigation === undefined) {
     throw new Error('Authored project is missing a declared route');
   }
 
   const fPlan = underworld.biomes.find((biome) => biome.biomeStepKey === 'Underworld_F');
+  const activeBiomePanel = underworldNavigation.biomePanels.find(
+    (panel) => panel.biomeStepKey === activeUnderworldPanel,
+  );
+  if (activeUnderworldPanel !== 'route' && activeBiomePanel === undefined) {
+    throw new Error(`${activeUnderworldPanel} is not an active Underworld editor panel`);
+  }
 
   return (
     <main className="app-shell">
@@ -121,12 +136,22 @@ export function App({ catalog, catalogSummary }: AppProps) {
         <div className="editor-workspace">
           <nav className="panel-navigation" aria-label="Underworld panels">
             <p className="navigation-label">Underworld</p>
-            {underworldPanels.map((panel) => (
+            <button
+              className="panel-navigation-item"
+              data-active={activeUnderworldPanel === 'route'}
+              onClick={() => dispatch(underworldPanelSelected('route'))}
+              type="button"
+            >
+              Route
+            </button>
+            {underworldNavigation.biomePanels.map((panel) => (
               <button
                 className="panel-navigation-item"
-                data-active={panel.key === activeUnderworldPanel}
-                key={panel.key}
-                onClick={() => dispatch(underworldPanelSelected(panel.key))}
+                data-active={panel.biomeStepKey === activeUnderworldPanel}
+                key={panel.biomeStepKey}
+                onClick={() =>
+                  dispatch(underworldPanelSelected(asUnderworldPanel(panel.biomeStepKey)))
+                }
                 type="button"
               >
                 {panel.label}
@@ -134,10 +159,12 @@ export function App({ catalog, catalogSummary }: AppProps) {
             ))}
           </nav>
           <div className="editor-panel" aria-live="polite">
-            {activeUnderworldPanel === 'route' || fPlan === undefined ? (
+            {activeUnderworldPanel === 'route' ? (
               <RouteOverview label="Underworld" route={underworld} />
-            ) : (
+            ) : activeUnderworldPanel === 'Underworld_F' && fPlan !== undefined ? (
               <FBiomeEditor catalog={catalog} plan={fPlan} />
+            ) : (
+              missingEditorAdapter(activeUnderworldPanel)
             )}
           </div>
         </div>
