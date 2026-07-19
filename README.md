@@ -26,7 +26,15 @@ evaluator registry. Phase 2 is complete with the versioned authored-project
 codec, configured-route defaults, recursive F/G room state, non-null linear
 topology, complete F/G semantic commands, and authored undo/redo history. Phase
 2.5 is complete with the F-configured application state, route shell, and
-command-bound Erebus topology and leaf editor. Phase 3 simulation is next.
+command-bound Erebus topology and leaf editor. The post-editor audit and
+cross-biome design reconciliation are complete. P, Q, H, O, I, and N close the
+linear, scripted-linear, batch-local-slot, ordered multi-encounter,
+conditional-terminal, and persistent-hub pressure tests.
+
+Phase 2.75 is now active. It hardens the shared catalog vocabulary, switches
+F/G atomically to schema version 2 store ownership and entry-materialized
+shops, and imports the remaining biomes as dormant declarations. Phase 3
+history work starts only after that catalog and authored-schema gate passes.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.
@@ -58,23 +66,41 @@ graph projection, but it will never own topology or node identity.
 3. [`docs/REWARD_MODEL.md`](docs/REWARD_MODEL.md) defines reward primitives,
    payloads, counted bags, producer bindings, shops, and reward lifecycle
    semantics.
-4. [`docs/F_G_GAME_RULES.md`](docs/F_G_GAME_RULES.md) defines the concrete F/G
-   structure and generation rules for the first vertical slice.
-5. [`docs/F_G_ROOM_TEMPLATES.md`](docs/F_G_ROOM_TEMPLATES.md) defines the
-   app-native leaf contracts shared by F/G room declarations.
-6. [`docs/AUTHORED_PROJECT_MODEL.md`](docs/AUTHORED_PROJECT_MODEL.md) defines
-   persisted project state, topology ownership, identities, and edit commands.
-7. [`docs/SIMULATION_AND_VALIDATION.md`](docs/SIMULATION_AND_VALIDATION.md)
-   defines the pure derived pipeline, history, counters, validation, and
-   findings.
-8. [`docs/EDITOR_MODEL.md`](docs/EDITOR_MODEL.md) maps authored and derived
-   state into the external editor without leaking UI structure into the
-   domain.
-9. [`docs/GAME_INTEGRATION_BOUNDARY.md`](docs/GAME_INTEGRATION_BOUNDARY.md)
-   records the intentionally deferred app/game contract and conformance loop.
-10. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) defines the
+4. [`docs/GAME_GENERATION_RULES.md`](docs/GAME_GENERATION_RULES.md) defines
+   shared picker, door, cap, force, lifecycle, and generated-decision rules.
+5. [`docs/biomes/F_GAME_RULES.md`](docs/biomes/F_GAME_RULES.md) defines Erebus game behavior,
+   projection decisions, and current feature coverage.
+6. [`docs/biomes/G_GAME_RULES.md`](docs/biomes/G_GAME_RULES.md) defines Oceanus game behavior,
+   projection decisions, and current feature coverage.
+7. [`docs/biomes/P_GAME_RULES.md`](docs/biomes/P_GAME_RULES.md) pressure-tests that model
+   against P and defines the dormant P declaration contract.
+8. [`docs/biomes/Q_GAME_RULES.md`](docs/biomes/Q_GAME_RULES.md) defines Q's scripted stages,
+   independently generated miniboss peers, reward-free spine, and repeat-run
+   completion contract.
+9. [`docs/biomes/H_GAME_RULES.md`](docs/biomes/H_GAME_RULES.md) defines H's cage batches,
+   bridge competition, encounter multiplicity, and Fields reward projection.
+10. [`docs/biomes/O_GAME_RULES.md`](docs/biomes/O_GAME_RULES.md) defines O's ship encounter
+    phases, reward wheels, source-derived outgoing stores, and special rooms.
+11. [`docs/biomes/I_GAME_RULES.md`](docs/biomes/I_GAME_RULES.md) defines Clockwork Goal and
+    non-goal acquisition, special peers, and repeated mixed preboss batches.
+12. [`docs/biomes/N_GAME_RULES.md`](docs/biomes/N_GAME_RULES.md) defines Ephyra's fixed
+    entry, persistent hub board, ordered pylon visits, side rooms, and terminal
+    shop effects.
+13. [`docs/biomes/F_G_ROOM_TEMPLATES.md`](docs/biomes/F_G_ROOM_TEMPLATES.md) defines the
+    app-native leaf contracts shared by F/G room declarations.
+14. [`docs/AUTHORED_PROJECT_MODEL.md`](docs/AUTHORED_PROJECT_MODEL.md) defines
+    persisted project state, topology ownership, identities, and edit commands.
+15. [`docs/SIMULATION_AND_VALIDATION.md`](docs/SIMULATION_AND_VALIDATION.md)
+    defines the pure derived pipeline, history, counters, validation, and
+    findings.
+16. [`docs/EDITOR_MODEL.md`](docs/EDITOR_MODEL.md) maps authored and derived
+    state into the external editor without leaking UI structure into the
+    domain.
+17. [`docs/GAME_INTEGRATION_BOUNDARY.md`](docs/GAME_INTEGRATION_BOUNDARY.md)
+    records the intentionally deferred app/game contract and conformance loop.
+18. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) defines the
     development order and acceptance gates.
-11. [`docs/MIGRATION_PROVENANCE.md`](docs/MIGRATION_PROVENANCE.md) tracks the
+19. [`docs/MIGRATION_PROVENANCE.md`](docs/MIGRATION_PROVENANCE.md) tracks the
     disposition and implementation status of inherited evidence.
 
 These documents are one coherent design set. A rule belongs in exactly one
@@ -87,8 +113,16 @@ authority and should be referenced rather than copied elsewhere.
 | Product layers, dependencies, lifecycle, and stack                      | `ARCHITECTURE.md`              |
 | Declaration schema, provenance, normalization, and supported game facts | `CATALOG_MODEL.md`             |
 | Reward vocabulary, composition, stores, shops, and offer semantics      | `REWARD_MODEL.md`              |
-| Concrete F/G cross-room generation and topology rules                   | `F_G_GAME_RULES.md`            |
-| F/G room-template leaf and materialization contracts                    | `F_G_ROOM_TEMPLATES.md`        |
+| Shared picker, door, cap, force, and generated-decision game rules      | `GAME_GENERATION_RULES.md`     |
+| F behavior, projection decisions, topology, and feature coverage        | `biomes/F_GAME_RULES.md`       |
+| G behavior, projection decisions, topology, and feature coverage        | `biomes/G_GAME_RULES.md`       |
+| P topology, encounter, exit, and dormant declaration rules              | `biomes/P_GAME_RULES.md`       |
+| Q scripted topology, rewards, counters, and repeat-run completion       | `biomes/Q_GAME_RULES.md`       |
+| H cage batches, bridge, counters, rewards, and completion               | `biomes/H_GAME_RULES.md`       |
+| O ship phases, wheels, outgoing stores, counters, and completion        | `biomes/O_GAME_RULES.md`       |
+| I Clockwork counters, conditional terminal, rewards, and completion     | `biomes/I_GAME_RULES.md`       |
+| N fixed entry, persistent hub, side rooms, restores, and completion     | `biomes/N_GAME_RULES.md`       |
+| F/G room-template leaf and materialization contracts                    | `biomes/F_G_ROOM_TEMPLATES.md` |
 | Authored state, persistence, topology, identity, and commands           | `AUTHORED_PROJECT_MODEL.md`    |
 | Materialization, history, validation, feedback, and simulation          | `SIMULATION_AND_VALIDATION.md` |
 | UI projection and interaction policy                                    | `EDITOR_MODEL.md`              |
@@ -116,6 +150,12 @@ The authored project and immutable declarations are the only durable semantic
 inputs. History, validation, candidate decoration, and UI projections are
 derived and replaceable.
 
+Simulation models possibility, not probability. An authored outcome is valid
+when it belongs to the support set derived from exact game state; extreme
+unlikelihood never makes a possible route invalid. Forced and impossible
+boundaries are modeled, while likelihood scores, RNG seeds, and Monte Carlo
+search are outside the product.
+
 Room Declarations are unique by Hades `gameName`. Authored Room Occurrences
 have their own stable persisted IDs, so several offers may reference the same
 game room without conflating their leaf state or feedback identity.
@@ -134,7 +174,7 @@ fixtures, the app's catalog and simulator become its implementation authority.
 
 ## Current Scope
 
-The first product slice is F with shared F/G foundations:
+The first active product slice remains F with shared F/G foundations:
 
 - explicit declarations;
 - authored linear-biome topology;
@@ -143,8 +183,11 @@ The first product slice is F with shared F/G foundations:
 - validation and semantic feedback;
 - a usable editor with undo/redo.
 
-Biome rollout remains F/G, H/I, N/O, then P/Q unless implementation evidence
-shows a better dependency order.
+Before Phase 3 simulation, every remaining biome was audited and the full
+feature set was reconciled. Declarations can now be imported without editor or
+simulation activation. This model-coherence gate does not change the later
+full-loop rollout order. P, Q, H, O, I, and N are closed; their combined
+feature map is the declaration-freeze authority.
 
 ## Development
 
