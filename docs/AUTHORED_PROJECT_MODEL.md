@@ -14,8 +14,8 @@ The schema version 2 examples in this document describe the reconciled
 F/G/P/Q/H/O/I/N model. Occurrence identity, downstream retention, possibility
 support, generated-store ownership, conditional-terminal batches, fixed
 authored layout slots, and persistent hub topology are settled. Production
-still reads schema version 1 until the authority switch is implemented
-atomically.
+still reads schema version 1 until the Phase 2.7 authority switch is
+implemented atomically.
 
 ## Core Distinction
 
@@ -281,7 +281,7 @@ Outgoing topology never belongs to the target room state.
 
 ### Room State Owns
 
-- concrete incoming reward choice;
+- complete resolved incoming offer;
 - template-specific authored fields;
 - room-local encounter choices;
 - bounded local child state;
@@ -339,8 +339,8 @@ operations.
 
 Defaults compose recursively from their semantic owners:
 
-- a reward primitive owns its payload default;
-- a reward bag owns its default primitive;
+- a reward type owns its complete resolved-offer payload default;
+- a reward bag owns its default reward type;
 - a biome layout's store policy owns whether a new batch authors a base store,
   derives one from its source, or has none; an authored form also owns its
   store default;
@@ -348,13 +348,20 @@ Defaults compose recursively from their semantic owners:
   required typed batch state;
 - a counted binding owns a complete reward default for each store context it
   can receive;
-- a shop slot owns a default concrete offer, installed when its room becomes
+- a shop slot owns a default resolved offer, installed when its room becomes
   picked for entry;
 - a structural wrapper owns a mode default;
 - a room template composes offer-time defaults into complete initial room
   state and entry-time defaults into complete picked-room state.
 
 Option order is never default authority.
+
+Blind Box follows the same total-leaf rule. Its resolved offer persists a
+complete intended `BoonSource` even though the game does not reveal that source
+when the shop inventory is generated. The source remains dormant while the box
+is unpurchased and is validated only against acquisition-time history. Purchase
+order and the supporting shop-option entry remain derived witnesses, not
+persisted authored fields.
 
 ## Occurrence Lifecycle
 
@@ -442,12 +449,12 @@ type ProjectCommand =
   | {
       kind: 'ReplaceIncomingReward';
       reward: IncomingRewardAddress;
-      value: ConcreteReward;
+      value: ResolvedRewardOffer;
     }
   | {
       kind: 'ReplaceShopOffer';
-      offer: ShopOfferAddress;
-      reward: ConcreteReward;
+      shopOffer: ShopOfferAddress;
+      value: ResolvedRewardOffer;
     }
   | {
       kind: 'SetShopPurchase';
@@ -796,7 +803,7 @@ to the explicit `rewardStore` policy on the owning batch. A batch whose layout
 exposes generated RunProgress/MetaProgress support uses
 `authoredBaseStore`; an O ShipCombat batch uses `sourceOfferPoint`; a
 batch with no observable base outcome uses `none`. Counted leaves persist
-only their concrete reward. The implementation must perform this as one schema
+only their complete resolved reward offer. The implementation must perform this as one schema
 authority switch; it must not accept both leaf and batch stores as competing
 sources.
 
@@ -827,8 +834,9 @@ The history excludes:
 - hover, focus, and expansion state;
 - autosave bookkeeping.
 
-A grouped interaction such as replacing a reward primitive and installing its
-complete default payload is one undo step, not multiple intermediate edits.
+A grouped interaction such as replacing a reward type and installing its
+complete resolved-offer payload is one undo step, not multiple intermediate
+edits.
 
 ## Explicit Non-Goals
 

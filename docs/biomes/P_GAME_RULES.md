@@ -245,7 +245,7 @@ The globally frozen generated-batch reward authority is compatible with P:
 
 - a generated batch owns its base store;
 - a room declaration may force the resolved store;
-- each occurrence leaf owns only its concrete reward;
+- each occurrence leaf owns only its complete resolved reward offer;
 - internal encounter phases do not own separate incoming rewards.
 
 Base P excludes `Devotion` from ordinary counted rewards. Supported bindings
@@ -391,7 +391,7 @@ P history preserves:
 - the explicit non-counting Talos and counting Mega-Dracon difference;
 - derived `P_Boss01` and `P_PostBoss01` history followed by `Q_Intro`;
 - one resolved boss-offer store contribution and no automatic boss-drop
-  acquisition projection;
+  concrete acquisition or history projection;
 - NPC-composed replacement/blocking behavior only after persistent entities
   promote that deferred dimension into the model.
 

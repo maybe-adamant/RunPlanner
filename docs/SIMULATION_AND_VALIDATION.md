@@ -14,9 +14,9 @@ it will not duplicate it.
 
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
-F/G/P/Q/H/O/I/N audit set. Phase 3 implementation remains paused only until the
-dormant declarations and schema version 2 authority switch are reconciled
-atomically.
+F/G/P/Q/H/O/I/N audit set. Phase 3 implementation remains paused until the
+Phase 2.6 reward kernel, Phase 2.7 schema-version-2 F/G authority switch, and
+Phase 2.8 dormant declaration closure are complete.
 
 ## Core Contract
 
@@ -91,7 +91,8 @@ The normalized catalog contains immutable possible facts:
 - room identity, label, kind, template, exits, eligibility, force, and caps;
 - encounter profiles and phase timing;
 - local child slots;
-- reward primitives, payload domains, stores, bags, bindings, and shops;
+- reward types, payload domains, source-support policies, concrete acquisition
+  declarations, stores, bags, bindings, and shops;
 - normalized current-run requirements whose kinds have registered evaluators;
 - batch and terminal policies.
 
@@ -175,7 +176,7 @@ A complete biome requires:
 - complete entry-time room-local state for every picked occurrence that owns
   it;
 - complete active local child and encounter offer-point state;
-- concrete offered rewards, payloads, active shop offers, purchases, and
+- resolved reward offers, payloads, active shop offers, purchases, and
   modes;
 - complete biome-global and batch-global authored values.
 
@@ -186,7 +187,7 @@ selected by normalized policy. A batch with no observable base outcome instead
 has the explicit `none` policy and no invented store choice. Such a batch may
 be reward-free, as in Q, or resolve target provenance entirely through
 declaration overrides, as in I. Target incoming-reward leaves beneath every
-form own concrete rewards, not duplicate store selections.
+form own complete resolved offers, not duplicate store selections.
 
 Any additional state required by the normalized batch policy is equally part
 of completeness. An ordinary H batch requires one concrete semantic
@@ -280,7 +281,7 @@ A canonical batch records:
 - the picked target's derived continuation effect when policy admits a
   terminal declaration;
 - any policy-derived incoming realization, including I Goal versus NonGoal;
-- resolved concrete incoming offer, including actual store provenance, when
+- complete resolved incoming offer, including actual store provenance, when
   the target owns a producer;
 - concrete room-local fragment;
 - declaration-derived physical offer facts associated with the materialized
@@ -322,8 +323,9 @@ produce:
 encounter.start
 biomeEncounterDepth increment
 reward.offer
+reward.offer_projection, when declared
 combat.complete
-reward.acquire
+concrete_acquisition.emit
 encounter.complete
 ```
 
@@ -371,7 +373,8 @@ occurrence, offer, acquisition, or encounter-start event.
 Every permutation of a parent's entered side slots is legal. Because all
 sibling offers exist before the first entry and supported side acquisitions do
 not revise those offers, permutations with the same generated set, entered set,
-and concrete rewards produce the same modeled state at final parent exit. The
+and resolved offers and acquisitions produce the same modeled state at final
+parent exit. The
 entered ordinals remain semantic only to preserve exact room/acquisition trace
 and eventual execution intent; generated and entered counts are derived.
 
@@ -386,6 +389,8 @@ These histories remain distinct:
 - route encounter depth counts route-wide counting encounters;
 - room-history ordinal supports route-wide spacing rules;
 - reward-offer history includes every displayed offer;
+- reward-type offer projections update their exact facts at materialization;
+  Devotion sets `lastDevotionDepth` even when unpicked;
 - entered-room reward-store history records the resolved store even when the
   visible producer is fixed Story or Shop;
 - loot/use histories include acquired rewards only;
@@ -487,8 +492,13 @@ section owns the history-dependent simulation of those normalized facts.
 
 The simulator keeps these distinct:
 
-`Reward primitive`
-: Concrete reward identity and declaration-owned acquisition projection.
+`Reward type`
+: Picker and offer identity such as `Boon`, including its payload domain and
+complete offer default.
+
+`Store entry`
+: One concrete counted-bag member with requirements, multiplicity position,
+duplicate policy, and reward type.
 
 `Reward store`
 : Offer-point-resolved provenance and counted domain.
@@ -497,16 +507,42 @@ The simulator keeps these distinct:
 : Ordered counted multiset copied from a game store.
 
 `Offer point`
-: Lifecycle moment producing one or more concrete offers.
+: Lifecycle moment producing one or more resolved offers.
 
 `Reward offer`
-: Concrete store, reward type, payload, and semantic source.
+: Resolved store, reward type, complete payload, and semantic source. It can be
+offered without ever being acquired.
 
-`Reward acquisition`
-: Picked, entered, or purchased reward folded into loot/use history.
+`Offer projection`
+: Reward-type-specific current-run writes caused by materializing an offer.
+Devotion spacing is the only initial projection; generic offer history and bag
+consumption remain offer-point mechanics.
+
+`Concrete acquisition`
+: One most-concrete loot, consumable, or resource identity emitted by producer
+lifecycle at a specific point.
+
+`History projection`
+: Typed game-history writes folded only from a concrete acquisition.
 
 `Shop profile`
 : Shop option domain; it is not a counted reward bag.
+
+For an entered shop, evaluate ordered groups against the pre-generation fact
+snapshot, validate every authored offer against an eligible option entry, and
+enforce each group's `offerCount` without replacement. Positive weights do not
+change possibility support. After the inventory exists, process the authored
+purchased set and remove purchased names from the active current-room option
+set before outgoing reward requirements are evaluated. Exact affordability and
+resource state remain deferred under the sufficient-resource policy in
+`REWARD_MODEL.md`. Blind Box persists its intended source, but validates that
+source only if purchased. Evaluate every semantically distinct purchase order,
+merge equivalent history states, and retain a witness order proving the
+authored source is possible for later execution-plan compilation.
+Source-bearing shop options use their declared policy at their declared
+resolution point: RandomLoot uses `ordinaryNoPeer` during offer generation,
+while Blind Box uses the same policy only when its authored-source acquisition
+role runs after purchase.
 
 For each generated batch:
 
@@ -520,14 +556,26 @@ For each generated batch:
    override, or the final shared store;
 5. evaluate remaining entries in that actual store against current history,
    source filters, and same-batch duplicate rules;
-6. identify eligible entries capable of producing the authored concrete
-   reward;
-7. refill once only when no entry in the whole bag is eligible;
-8. reject unavailable stores or invalid authored rewards explicitly;
-9. deterministically consume one compatible counted entry;
-10. preserve ineligible and unmatched entries;
-11. apply the primitive's declared acquisition projection only if an
-    acquisition event occurs.
+6. identify eligible entries capable of producing the authored resolved offer,
+   and validate source support through that reward type's declared policy when
+   its resolution point is the offer;
+7. when no entry in the whole bag is eligible, append one full base set while
+   retaining leftovers, at most once;
+8. fail the supported-store refill invariant if that complete projected set
+   still contains no eligible entry; the proven planner baseline does not
+   synthesize the raw second-refill Heal fallback;
+9. reject unavailable stores or invalid authored rewards explicitly;
+10. consume each eligible counted entry that can explain the authored offer and
+    preserve the deduplicated set of distinct reachable bag states;
+11. preserve ineligible and unmatched entries in every reachable state;
+12. emit the generic offer-history event and apply the reward type's optional
+    offer projection; Devotion writes `lastDevotionDepth` here even when its
+    target remains unpicked;
+13. when the producer lifecycle reaches an acquisition point, resolve the
+    addressed role from the complete reward offer into a concrete acquisition;
+14. apply that concrete acquisition declaration's `lootAndUse` or
+    `consumableAndUse` projection and no store-entry-level alias; acquisition
+    kind remains independent of the selected history profile.
 
 For a generated batch with `none`, skip base-store support and shared-store
 resolution. A target forced or individual store still resolves from its Room
@@ -536,23 +584,37 @@ no resolved store emits no reward offer and consumes no bag entry.
 
 Start and terminal offer points that do not own an authored batch store receive
 their store from their normalized fixed or terminal policy. They reuse the same
-bag, offer, and acquisition machinery after that resolution.
+bag, offer, offer-projection, and acquisition machinery after that resolution.
 
 `allowDuplicates` is an entry-level store fact and defaults to false.
 RunProgress Boon entries permit repeated reward types; other ordinary F/G
 entries do not. Repeated Boon types still obey source rules: earlier peer Boon
 sources are excluded within the batch, unpicked peer sources affect that local
 exclusion without entering acquisition history, and the ordinary four-source
-route cap restricts later source support to already acquired sources.
+route cap restricts later source support to already acquired sources. When peer
+exclusions exhaust all sources, the game's weaker-exclusion and unrestricted
+fallbacks restore any otherwise eligible source to support.
 
-Duplicate compatible entries with different downstream behavior require a
-declaration-owned deterministic match order.
+Devotion does not reuse ordinary peer exclusion. Its
+`devotionAcquiredPair` policy requires two distinct already acquired ordinary
+god sources, preserves the authored chosen/spurned pair, acquires the chosen
+source before combat, and acquires the spurned source after combat. Hermes is
+outside the ordinary god-source domain. Policy dispatch is registry-based;
+simulation does not switch on reward names.
+
+Duplicate compatible entries with different downstream behavior branch latent
+bag state. The simulator may merge equivalent resulting states, but it must not
+select one entry by declaration order. A later authored offer is valid if at
+least one reachable state supports it; the next state frontier contains every
+supporting result.
 
 For F/G forked preboss transitions, each physical terminal target is a
 distinct occurrence referencing the same preboss declaration. Every target
 emits creation and door-offer facts in physical order. Only the picked target
-emits appearance and acquisition; room-internal shop offers and purchases are
-active only when the picked realization is the shop target.
+emits appearance and reaches its incoming producer's acquisition lifecycle.
+Story and structural Shop resolve no concrete incoming acquisition.
+Room-internal shop offers and purchases are active only when the picked
+realization is the shop target.
 
 ## Candidate Evaluation
 
@@ -669,6 +731,12 @@ ordinary Boon. Exact boon selection, replacement, and upgradeable trait
 inventory are not yet project inputs, and deferred NPC gifts do not modify the
 counter. This approximation is fixture-backed and must be replaced rather than
 layered over when concrete trait state becomes modeled.
+
+The trait-free witness also holds `allSpellInvested = false`; Talent remains
+possible after Spell subject to its other exact requirements. The canonical
+trace never uses Surface Shop delivery, so `pendingSpellDrop = false` is exact
+for the current scope. Concrete Hex investment and delivery features must
+replace those facts if activated.
 
 N's local conformance probe captured the availability rank for every
 multi-side-door map, so forced-prefix validation can consume exact declaration

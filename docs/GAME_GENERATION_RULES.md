@@ -12,7 +12,7 @@ It does not own a biome's start, room set, concrete exits, target reward ratio,
 requirements, terminal depth, or biome-specific feature dispositions. Those
 facts remain in `biomes/F_GAME_RULES.md`, `biomes/G_GAME_RULES.md`, `biomes/P_GAME_RULES.md`,
 `biomes/Q_GAME_RULES.md`, `biomes/H_GAME_RULES.md`, `biomes/O_GAME_RULES.md`,
-`biomes/I_GAME_RULES.md`, and later biome authorities.
+`biomes/I_GAME_RULES.md`, and `biomes/N_GAME_RULES.md`.
 
 ## Evidence Status
 
@@ -44,7 +44,8 @@ coverage is defined by `MIGRATION_PROVENANCE.md`.
 | Ordinary combat identity              | Concrete maps choose internal enemy encounters and wave compositions                                               | **Simplified:** preserve room identity and relevant encounter-depth effect, not enemy-wave identity | documented, declared for F/G                                    | Combat composition becomes an authored or validated output   |
 | Generated reward-store RNG            | Entered-room ratios determine RunProgress/MetaProgress probability when a generated target observes that store     | **Simplified:** preserve possible/forced support through authored, source-derived, or absent stores | documented; O source derivation; schema and simulation pending  | Probability analysis or exact RNG replay is introduced       |
 | Biome-specific batch outcomes         | A generated peer batch may resolve one semantic outcome that affects all targets and later history                 | **Exact:** batch-owned typed state selected by normalized layout policy                             | documented for H; schema and simulation pending                 | --                                                           |
-| Door reward lifecycle                 | Every created target with a reward producer receives an offer; only the entered target acquires it                 | **Exact:** separate optional offer and acquisition events                                           | documented; simulation pending                                  | --                                                           |
+| Door reward lifecycle                 | Every created target with a reward producer receives an offer; only the entered target acquires it                 | **Exact:** separate resolved-offer and concrete-acquisition events                                  | documented; simulation pending                                  | --                                                           |
+| Reward offer projections              | Devotion writes its spacing depth during offer setup even when its target is unpicked                              | **Exact:** declaration-selected offer-time projection, separate from acquisition                    | documented; simulation pending                                  | --                                                           |
 | Forked preboss generation             | One preboss map may be created once per predecessor exit, first as Shop and then as free rewards                   | **Exact:** distinct terminal target occurrences with derived realization roles                      | documented, declared, authored; F presented; simulation pending | --                                                           |
 | Conditional terminal generation       | A generated peer batch may contain one terminal room beside ordinary targets                                       | **Exact:** the picked target declaration determines completion or continuation                      | documented for I; schema and simulation pending                 | --                                                           |
 | Persistent hub generation             | One fixed physical hub creates a stable offer board, restores it after visits, and later opens a separate terminal | **Exact:** fixed catalog slots, one offer batch, authored visit order, and derived restores         | documented for N; schema and simulation pending                 | --                                                           |
@@ -171,14 +172,20 @@ offers every incoming reward. The picked occurrence is entered later.
 source.generate_next
   -> room.create for every physical exit
   -> reward.offer for every target with a producer
+      -> reward.offer_projection, when declared
 
 picked target entry
   -> room.appear
-  -> reward.acquire
+  -> producer-defined acquisition point(s)
+      -> concrete_acquisition.emit
 ```
 
-Unpicked targets never acquire their incoming rewards. Targets with no reward
-producer emit no reward offer at all. This distinction is essential for
+Offer projections occur during target generation and therefore affect later
+peer or downstream eligibility even when the target is unpicked. Devotion's
+spacing marker is the only supported reward-specific projection. Counted bag
+consumption and common offer history remain generic offer-point behavior.
+Unpicked targets never emit concrete acquisitions from their incoming offers.
+Targets with no reward producer emit no reward offer at all. This distinction is essential for
 counted bags, creation caps, reward-free Q batches, and repeated game names.
 
 ## Generated Reward-Store Selection
@@ -196,7 +203,7 @@ The normalized batch-store policy has three verified forms:
 
 `authoredBaseStore`
 : The otherwise-unrepresented generated-store outcome is persisted on the
-batch. F/G/P/H and non-ShipCombat O sources use this form when their
+batch. F/G/P and non-ShipCombat O sources use this form when their
 generated store is observable.
 
 `sourceOfferPoint`
@@ -206,9 +213,11 @@ a competing copy.
 
 `none`
 : No observable generated base store exists. Q reward-free batches use this
-form. I also uses it because every supported target resolves the declaration-
-owned `TartarusRewards` override; counted targets retain that concrete
-provenance without an authored batch value.
+form. H uses it because supported targets are reward-free or resolve
+declaration-owned RunProgress provenance. I likewise uses it because every
+supported target resolves the declaration-owned `TartarusRewards` override;
+counted targets retain that concrete provenance without an authored batch
+value.
 
 The completed biome audit set freezes this batch-store policy shape. This
 document owns only its placement in the generated-door lifecycle; it does not
@@ -332,7 +341,7 @@ The app models this without a singleton preboss control:
 - the terminal policy derives realization kind from physical generation order:
   first `shop`, then `freeReward`;
 - topology owns the one picked terminal target;
-- each free target owns its concrete reward;
+- each free target owns its complete resolved reward offer;
 - the shop target requires complete shop state only when picked for entry;
 - unpicked targets contribute creation and door-visible offer history but no
   acquisition or room-internal shop offers and purchases.
@@ -344,8 +353,8 @@ depth, room identity, maximum free-reward capacity, and predecessor exit facts.
 ## Fixed Biome Completion Transitions
 
 A biome continues from its editable terminal through an ordered completion
-sequence before the next biome begins or the route ends. F, G, H, I, O, and P
-use a fixed boss followed by a fixed postboss:
+sequence before the next biome begins or the route ends. F, G, H, I, N, O, and
+P use a fixed boss followed by a fixed postboss:
 
 ```text
 editable terminal
@@ -381,7 +390,7 @@ modeled reward surface because they do not affect any supported authored
 choice, validation rule, or execution instruction. A boss may still contribute
 the store resolved for its linked offer to the game's ratio ledger. That
 bookkeeping is an explicit Room Declaration policy and does not require a boss
-reward primitive, bag mutation, acquisition event, or editor state.
+reward type, bag mutation, concrete acquisition, or editor state.
 
 Concrete biome authorities own the canonical boss variant, any postboss
 identity, narrative-progression exclusions, and exceptional local effects.

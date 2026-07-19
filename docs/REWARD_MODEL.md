@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the concrete reward vocabulary shared by catalog
+This document defines the reward vocabulary shared by catalog
 declarations, authored room state, simulation, and the editor. It carries the
 verified reward hierarchy forward without carrying the old Lib control or
 storage implementation.
@@ -10,15 +10,17 @@ storage implementation.
 `CATALOG_MODEL.md` owns declaration normalization. This document owns what the
 reward declaration kinds mean and how they compose. `SIMULATION_AND_VALIDATION.md`
 owns lifecycle evaluation, counted-bag mutation, and legality.
+`REWARD_GAME_DATA_AUDIT.md` records the underlying game evidence and the exact,
+simplified, deferred, or excluded disposition of each audited mechanic.
 
 ## Cross-Biome Freeze Status
 
 Possibility-only evaluation is locked. The generated-batch base-store and
-concrete-only leaf split described below is the globally frozen
+resolved-offer-only leaf split described below is the globally frozen
 F/G/P/Q/H/O/I/N contract. N confirms that one persistent heterogeneous board
 can use `none` while every target resolves declaration-owned provenance.
 Production remains on the prior schema until the version 2 authority switch is
-implemented atomically.
+implemented atomically in Phase 2.7.
 
 ## Composition
 
@@ -26,91 +28,242 @@ Rewards compose bottom-up:
 
 ```text
 payload domain
-  -> reward primitive
-      -> counted store and bag declaration
+  -> reward type
+      -> resolved reward offer
+
+reward type
+  -> counted store entry
+      -> counted store and mutable bag
           -> concrete producer binding and filters
-              -> authored concrete reward leaf
+              -> authored resolved reward-offer leaf
 
 biome store-selection policy
   -> authored, source-offer-derived, or absent generated-batch base store
       -> room forced/individual override
           -> resolved target store
 
-resolved target store + authored concrete reward leaf
+resolved target store + authored resolved reward offer
   -> canonical counted offer
       -> room template or encounter offer point
 
-reward primitive
-  -> shop option set
-      -> shop profile
+resolved reward offer + offer point
+  -> generic offer-history event
+      -> optional reward-type offer projection
+
+reward type
+  -> shop option entry
+      -> ordered shop group
+          -> shop profile
           -> picked occurrence's authored shop state
+
+resolved reward offer + reward-type acquisition roles + producer lifecycle
+  -> zero or more concrete acquisition events at named lifecycle points
+      -> concrete acquisition declaration
+          -> typed game-history projection
 ```
 
-Counted rewards and shops share primitives but are separate producer branches.
-A shop is not a counted bag with different presentation.
+Counted rewards and shops share reward types and concrete acquisition
+declarations but are separate producer branches. A shop is not a counted bag
+with different presentation.
 
-## Identity and Labels
+## Four Distinct Reward Identities
 
-Every primitive keeps three concepts separate:
+The model keeps four close but non-interchangeable concepts separate:
+
+`Store Entry`
+: One concrete member of a counted bag. It owns multiplicity position,
+requirements, `allowDuplicates`, and a reward type such as `Boon`. It is
+consumed when the offer is generated, not when its reward is acquired.
+
+`Resolved Reward Offer`
+: The complete authored planner offer at its semantic resolution point. It
+retains the reward type that explains store behavior and any complete payload,
+such as `Boon` plus `ApolloUpgrade`. A payload may contain future planner intent
+that is not yet game-visible, as for Blind Box. The offer is not itself a claim
+that loot entered history.
+
+`Concrete Acquisition`
+: One most-concrete game identity acquired at a specific lifecycle point, such
+as loot `ApolloUpgrade` or consumable `MaxHealthDrop`. One offer may emit zero,
+one, or several acquisitions.
+
+`History Projection`
+: The declaration-owned closed profile applied when one concrete acquisition
+occurs. It updates the exact loot/use ledgers for that acquisition kind and
+belongs to the concrete acquisition identity, never to the store entry that
+happened to produce it.
+
+The core sequence is:
+
+```text
+StoreEntry(Boon)
+  -> ResolvedRewardOffer(Boon, ApolloUpgrade)
+  -> ConcreteAcquisition(loot, ApolloUpgrade)
+  -> HistoryProjection(ApolloUpgrade)
+```
+
+`Boon` remains observable for bag depletion, room filters, reward-type
+duplicates, and source selection. `ApolloUpgrade` is the concrete loot identity
+observed by downstream loot-history requirements. Neither identity replaces
+the other.
+
+An illustrative normalized shape is:
 
 ```ts
-interface RewardPrimitive {
-  gameName: RewardGameName;
+interface RewardTypeDeclaration {
+  gameName: RewardTypeGameName;
   label: string;
-  acquisition: AcquisitionProjection;
   payloadDomain?: PayloadDomainKey;
   defaultPayload?: RewardPayload;
+  sourceSupport?: RewardSourceSupportKey;
+  sourceResolution?: { kind: 'offer' } | { kind: 'acquisitionRole'; role: AcquisitionRoleKey };
+  offerProjection?: OfferProjectionKey;
+  acquisitionRoles: readonly AcquisitionRoleDeclaration[];
 }
 
-type AcquisitionProjection =
-  | { kind: 'primitive'; gameName: RewardGameName }
-  | { kind: 'payloadSource' }
-  | { kind: 'payloadSources' };
+interface ResolvedRewardOffer {
+  rewardType: RewardTypeGameName;
+  payload?: RewardPayload;
+}
+
+interface ConcreteAcquisitionAddress {
+  kind: 'loot' | 'consumable' | 'resource';
+  gameName: AcquisitionGameName;
+}
+
+interface ConcreteAcquisitionEvent {
+  role: AcquisitionRoleKey;
+  lifecyclePoint: ProducerLifecyclePointKey;
+  acquisition: ConcreteAcquisitionAddress;
+}
+
+interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddress {
+  historyProjection: 'lootAndUse' | 'consumableAndUse';
+}
 ```
 
-- `gameName` is the canonical authored and game-translation identity.
-- `label` is presentation-only and must be explicit.
-- `acquisition` declares exactly what is folded into acquisition history.
+The normalized acquisition-role resolution union is deliberately small:
 
-For example, a Boon offer carries a source payload and projects that concrete
-source, such as `ApolloUpgrade`, into loot history. A payload-free reward may
-project a fixed primitive identity. The simulator does not switch on reward
-names to reconstruct this behavior. The editor renders labels such as `Ares`;
-it never derives them by trimming identifiers such as `AresUpgrade`.
+- `self` resolves to the reward type's own game name and one declared
+  acquisition kind;
+- `fixed` resolves to one declared concrete acquisition address;
+- `payloadSource` resolves one semantically named field from the reward type's
+  typed payload domain.
+
+Reward-type declarations name those roles and define how each role resolves an
+identity from the complete offer. Producer and encounter declarations bind the
+roles to lifecycle points. Concrete acquisition declarations project history.
+No generic `acquiredAs` alias or arbitrary payload-property path crosses those
+layers.
+
+The reward type owns what can be acquired, but not when. Having no roles
+represents a structural offer such as Story or Shop. The producer lifecycle
+owns when each role occurs. The same concrete loot must not encode whether it
+came from a room reward, a cage, a shop purchase, or a multi-stage Devotion.
+
+Offer payload authorship and game-visible resolution timing are also separate.
+Most payloads are both authored and resolved at offer generation. Blind Box
+still persists the intended eventual source as complete planner intent, but the
+box remains the only game-visible offer and that source is validated and
+resolved only after purchase. An unpurchased Blind Box never validates or emits
+its dormant source.
+
+Offer identity, acquisition identity, and semantic effect are separate. Big,
+Triple, and self-consumed wrapper variants retain the exact ledger keys written
+by the game even when they have a related base effect. Spawn wrappers such as
+`WeaponUpgradeDrop` and `ShopHermesUpgrade` remain exact offer identities but
+resolve fixed concrete loot identities. A future semantic-effect alias may
+support deeper resource or trait simulation, but it cannot replace the ledger
+identity consumed by requirements.
 
 Labels need only be unambiguous inside one rendered option domain. Changing a
 label does not migrate authored state.
 
 ## Payload Domains
 
-A payload domain owns the shape and local validity of one primitive payload.
+A payload domain owns the shape and local validity of one resolved-offer
+payload.
 The initial domains are:
 
-| Domain         | Value                 | Local rule                                   |
-| -------------- | --------------------- | -------------------------------------------- |
-| `BoonSource`   | one source game name  | source belongs to the declared source domain |
-| `DevotionPair` | two source game names | both sources belong and are distinct         |
+| Domain         | Value                                | Local rule                                   |
+| -------------- | ------------------------------------ | -------------------------------------------- |
+| `BoonSource`   | one source game name                 | source belongs to the declared source domain |
+| `DevotionPair` | chosen and spurned source game names | both sources belong and are distinct         |
 
 Payload domains do not know rooms, bags, topology, history, or UI widgets.
-Every payload-bearing primitive declares a complete payload default.
+Every payload-bearing reward type declares a complete payload default.
+`Boon`, `RandomLoot`, and `BlindBoxLoot` share the `BoonSource` value shape.
+Their role and lifecycle declarations distinguish offer-time source resolution
+from Blind Box's acquisition-time validation; a second payload domain would
+duplicate shape without expressing that timing. The distinct
+`BoostedRandomLoot` shop entry resolves an ordinary `RandomLoot` offer under the
+rarity-deferred model.
 
 Defaults therefore recurse to a terminating value:
 
 ```text
-RunProgress default -> Boon
-Boon default -> ApolloUpgrade
-ApolloUpgrade -> no payload
+RunProgress default entry -> ResolvedRewardOffer(Boon, ApolloUpgrade)
+BoonSource payload default -> ApolloUpgrade
+Boon primary acquisition role -> ConcreteAcquisition(loot, ApolloUpgrade)
 ```
 
-An active payload is never empty. Replacing a primitive installs that
-primitive's complete payload default atomically.
+An active payload is never empty. Replacing a reward type installs that type's
+complete resolved-offer default atomically.
 
-## Reward Primitives
+## Source-Support Policies
 
-A primitive is one concrete reward kind plus optional payload:
+A source-bearing reward type selects one normalized source-support policy and
+one semantic resolution point. Payload shape alone is insufficient: the same
+`BoonSource` value is supported differently for an ordinary door Boon, a shop
+Boon, and a Blind Box. The initial policy vocabulary is closed:
+
+`ordinaryBoonPeer`
+: Resolve one ordinary source while its offer is generated. Apply the ordinary
+four-source cap, exclude sources already offered by earlier Boon peers, and use
+the game's weaker-exclusion and unrestricted fallbacks when those exclusions
+exhaust support.
+
+`ordinaryNoPeer`
+: Resolve one ordinary source at the declared lifecycle point using current
+ordinary-source eligibility and the four-source cap, with no generated-peer
+exclusion. `RandomLoot` and `BoostedRandomLoot` use it during shop generation.
+`BlindBoxLoot` uses the same support policy at its authored-source acquisition
+role after purchase.
+
+`devotionAcquiredPair`
+: Resolve two distinct sources from ordinary god loot already acquired in the
+current run. The game first constructs the unordered offered pair; the authored
+`chosenSource` and `spurnedSource` order records the player's later selection.
+Both ordered realizations of any supported pair are possible. Ordinary
+generated-peer exclusion and the four-source offer cap do not re-filter this
+already-acquired pair.
+
+The fully progressed baseline treats every ordinary god as previously
+interacted with outside the current run. This removes the external interaction
+gate from shop `RandomLoot` support without weakening current-run source caps.
+Hermes remains outside the ordinary source domain.
+
+The normalized bindings are:
+
+| Reward type    | Source support         | Resolution point                 |
+| -------------- | ---------------------- | -------------------------------- |
+| `Boon`         | `ordinaryBoonPeer`     | offer generation                 |
+| `Devotion`     | `devotionAcquiredPair` | offer generation                 |
+| `RandomLoot`   | `ordinaryNoPeer`       | shop offer generation            |
+| `BlindBoxLoot` | `ordinaryNoPeer`       | authored-source acquisition role |
+
+Catalog normalization rejects a source-bearing payload without both fields, a
+source policy on a payload-free reward type, or an acquisition-role resolution
+point that does not reference a role declared by that reward type. Simulation
+dispatches through the policy registry; it never switches on reward names to
+reconstruct source support.
+
+## Reward Types and Resolved Offers
+
+A resolved offer is one reward type plus its complete offer payload:
 
 ```ts
-type ConcreteReward =
+type ResolvedRewardOffer =
   | { rewardType: 'MaxHealthDrop' }
   | {
       rewardType: 'Boon';
@@ -118,13 +271,80 @@ type ConcreteReward =
     }
   | {
       rewardType: 'Devotion';
-      payload: { sources: ['ApolloUpgrade', 'ZeusUpgrade'] };
+      payload: {
+        chosenSource: 'ApolloUpgrade';
+        spurnedSource: 'ZeusUpgrade';
+      };
     };
 ```
 
-Fixed primitives may have payloads. A forced Devotion still needs its authored
-pair even though it does not come from a counted bag. Payload-free fixed facts
-such as `Story` need no authored leaf state.
+Fixed reward types may have payloads. A forced Devotion still needs its authored
+chosen/spurned pair even though it does not come from a counted bag. The chosen
+source resolves to one concrete loot acquisition before combat and the spurned
+source to another after combat. Both precede downstream room generation, but
+their roles remain explicit for execution intent. Payload-free structural types
+such as `Story` need no authored leaf state and emit no concrete acquisition.
+
+## Offer Projections
+
+Every generated offer emits the common canonical offer-history event. Counted
+offers also consume one store entry, and batch-local source or duplicate rules
+advance while peers are generated. Those are shared offer-point mechanics, not
+reward-type history aliases.
+
+A reward type declares an additional `offerProjection` only when merely
+materializing that type changes a persistent current-run fact. In the supported
+reward surface, Devotion is the only such type: its offer setup writes the
+current `runDepthCache` to `lastDevotionDepth`, including when its target is
+never entered. Later `minRoomsSinceEvent(Devotion)` requirements read that
+offer-time marker. Neither chosen nor spurned acquisition owns it.
+
+The normalized initial offer-projection vocabulary is therefore closed:
+
+```text
+none
+devotionSpacing -> lastDevotionDepth = current runDepthCache
+```
+
+Encounter selection performed while setting up Devotion remains part of the
+resolved offer and encounter profile. Presentation-only global encounter
+records have no supported downstream consumer and are not projected.
+
+## Concrete History Projection Profiles
+
+Every supported concrete acquisition selects exactly one closed history
+projection profile. The profile is independent of acquisition `kind`: kind
+identifies the concrete game entity, while the profile identifies the ledgers
+written by its actual pickup path.
+
+`lootAndUse`
+: Increment current-run use, biome-use, current-room use, loot-type history,
+and loot-biome history under the exact concrete loot game name.
+
+`consumableAndUse`
+: Increment current-run use, biome-use, current-room use, and consumable history
+under the exact concrete game name.
+
+Most loot uses `lootAndUse`. `SpellDrop` is deliberately a `loot` acquisition
+with `consumableAndUse`: its custom spell-screen path records use and
+`CurrentRun.ConsumableRecord`, but does not write `LootTypeHistory` or
+`LootBiomeRecord`. Ordinary consumables and resource pickups also use
+`consumableAndUse`. Resource identity remains explicit through acquisition
+`kind`; exact resource quantities and affordability remain deferred.
+
+The planner does not project persistent `GameState.UseRecord`; save/profile
+history is outside the project input boundary. It also does not collapse Big,
+Triple, self-consumed wrapper, or random-Stack identities to a semantic base
+name. Future trait/resource simulation may add typed semantic effects beside these
+profiles without changing their exact ledger writes.
+
+Ordinary god loot also folds into the acquired ordinary-source set. Under the
+locked trait-free approximation, every acquired ordinary god source adds one to
+`upgradableTraitCount`; Devotion's two acquired sources apply that rule
+independently. Hermes is not an ordinary source. Other health, mana, armor,
+resource, Stack, Talent, weapon-trait, and Last Stand effects remain governed by
+their documented simplifications or deferrals rather than hidden projection
+aliases.
 
 ## Counted Stores and Bags
 
@@ -134,19 +354,45 @@ A counted store declaration owns:
 - the ordered game bag entries, including multiplicity;
 - entry-level current-run requirements;
 - entry-level `allowDuplicates`, defaulting to `false`;
-- refill behavior;
-- one explicit default primitive for authoring.
+- one explicit default reward type and complete offer payload for authoring.
 
 The catalog exposes an immutable option domain from that declaration. The
 simulator creates a mutable scratch bag for one route simulation. Exact store
 provenance is resolved by the owning generated batch or fixed producer and is
-carried by canonical offers. A counted room leaf authors only its concrete
-reward; it is not a second store authority.
+carried by canonical offers. A counted room leaf authors only its complete
+resolved offer; it is not a second store authority.
 
 Repeated bag entries do not duplicate editor options. Their multiplicity and
-requirements remain available to simulation. When several compatible entries
-could produce one authored value, the declaration owns deterministic match
-order.
+requirements remain available to simulation. When several eligible entries can
+produce one authored value, possibility simulation preserves every distinct
+reachable post-consumption bag state. It must not invent a deterministic
+declaration-order tie-breaker for a random game choice.
+
+When no entry in the entire bag is eligible, the game appends a complete base
+set without discarding ineligible leftovers. It can do this twice. If no entry
+is eligible after the second refill, the offer falls back to
+`RoomRewardHealDrop`. This is one global picker rule, not repeated store data.
+The complete store-and-consumer proof in `REWARD_GAME_DATA_AUDIT.md` establishes
+that every supported planner call has an eligible entry after the first refill.
+The simulator therefore appends at most one complete set and treats a
+still-empty supported call as an invariant failure. It does not reproduce the
+redundant second append or synthesize the unreachable fallback. An explicit
+`RoomRewardHealDrop` entry in a counted store remains an ordinary reward.
+
+### Fully Progressed MetaProgress Projection
+
+The normalized `MetaProgress` store is a coherent 13-entry projection of the
+game's raw 19-entry store:
+
+- one unconditional `GiftDrop` under the completed external unlock baseline;
+- two ordinary Bones and four ordinary Ashes while `EnteredBiomes <= 1`;
+- two Big Bones and four Big Ashes while `EnteredBiomes > 1`.
+
+The raw later ordinary entries belong to a lower lifetime-resource tier and are
+mutually exclusive with the retained Big variants on a fully progressed save.
+They are omitted rather than made unconditional. This projection is exact for
+the selected profile; production does not carry lifetime-resource predicates or
+union mutually exclusive save tiers.
 
 ## Producer Bindings
 
@@ -156,8 +402,8 @@ A concrete producer embeds its complete binding:
 interface CountedChoiceBinding {
   kind: 'countedChoice';
   storeKeys: readonly RewardStoreKey[];
-  eligibleRewardTypes: readonly RewardGameName[];
-  ineligibleRewardTypes: readonly RewardGameName[];
+  eligibleRewardTypes: readonly RewardTypeGameName[];
+  ineligibleRewardTypes: readonly RewardTypeGameName[];
 }
 ```
 
@@ -169,7 +415,7 @@ intersect eligibleRewardTypes when non-empty
 subtract ineligibleRewardTypes
 ```
 
-Filters apply to reward primitive names, not Boon source names. Positive and
+Filters apply to reward type names, not Boon source names. Positive and
 negative filters cannot overlap. Every referenced reward must exist and every
 positive member must be produced by at least one referenced store.
 
@@ -195,11 +441,12 @@ The initial semantic producer kinds are:
 : Produces no modeled reward and owns no reward state.
 
 `fixed`
-: Produces one declared primitive. It authors only that primitive's payload,
+: Produces one declared reward type. It authors only that type's offer payload,
 when present.
 
 `countedChoice`
-: Authors one concrete reward from the store resolved at its offer point.
+: Authors one complete resolved reward offer from the store resolved at its
+offer point.
 
 `shop`
 : Declares an entry-materialized shop profile. Its owning occurrence authors
@@ -236,19 +483,24 @@ was drawn from that store's bag. Linked G/P boss doors first receive a
 RunProgress or MetaProgress store; automatic Mixer and weapon-dependent drops
 then occur outside the modeled reward surface. The entered boss still counts
 under the previously resolved store in the game's ratio ledger. Modeling that
-ledger effect does not require boss reward primitives, leaf state, bag
-depletion, acquisition history, or editor controls.
+ledger effect does not require boss reward types, leaf state, bag depletion,
+concrete acquisitions, history projection, or editor controls.
 
-Biome-specific slices add structural composition around these primitives:
+Biome-specific slices add structural composition around these reward types:
 
 - `localSlots` for verified H cages and N side rooms;
 - a derived incoming realization for the I Goal/NonGoal branch;
 - `offerPoint` for O encounter wheels.
 
 Those wrappers coordinate bounded local children. They do not redefine bags,
-primitives, payloads, or peer/history validation.
+reward types, concrete acquisitions, payloads, or peer/history validation.
 
 ### H Fields Cage Composition
+
+An ordinary H batch uses base-store policy `none`. Although the game computes a
+generic RunProgress/MetaProgress value, every supported target is reward-free
+or resolves declaration-owned RunProgress provenance, so no canonical consumer
+observes that generic value.
 
 Every H combat occurrence owns three complete RunProgress counted reward
 values with Devotion excluded. The surrounding generated batch owns one
@@ -280,7 +532,7 @@ Goal versus NonGoal is not authored state. `ClockworkDoorBatch` derives each
 combat target's incoming realization from physical reward order, prior Goal
 offers in that batch, and the non-goal cap.
 
-Every combat occurrence owns one complete potential concrete reward from
+Every combat occurrence owns one complete potential resolved reward offer from
 `TartarusRewards`, with its declaration filters applied. When simulation
 derives `Goal`, that value is dormant and emits no offer or bag mutation. When
 simulation derives `NonGoal`, the same value becomes the target's concrete
@@ -337,55 +589,94 @@ consumer is separate from counted-bag depletion and acquisition history.
 `biomes/N_GAME_RULES.md` owns the concrete bags, room filters, local-slot topology,
 and lifecycle order.
 
-## Authored and Resolved Counted Values
+## Authored and Materialized Counted Offers
 
-A counted room leaf authors one complete reward atom:
+A counted room leaf authors one complete resolved offer:
 
 ```ts
-type AuthoredCountedReward = ConcreteReward;
+type AuthoredCountedOffer = ResolvedRewardOffer;
 ```
 
 Canonical materialization combines it with the store resolved by the owning
 offer point:
 
 ```ts
-interface ResolvedCountedReward {
+interface MaterializedCountedOffer {
   storeKey: RewardStoreKey;
-  reward: ConcreteReward;
+  offer: ResolvedRewardOffer;
 }
 ```
 
-Changing an authored generated-batch base store retains its target rewards.
+Changing an authored generated-batch base store retains its target resolved
+offers.
 Changing a source-offer-point store likewise retains the outgoing batch and
-target rewards. The next simulation may report a retained reward as unavailable
-from its newly resolved store; it does not silently replace authored intent.
-Changing a reward installs the selected primitive's declared payload default.
+target resolved offers. The next simulation may report a retained offer as
+unavailable from its newly resolved store; it does not silently replace
+authored intent.
+Changing a reward installs the selected reward type's declared offer-payload
+default.
 
 The editor may retain inactive bounded state inside a later structural wrapper,
-but every active counted choice is concrete and complete.
+but every active counted choice is a complete resolved offer.
 
 ## Shops
 
-Shops are assembled from primitives through option sets and profiles:
+Shops are assembled from reward types through option entries, ordered groups,
+and profiles:
 
 ```text
-primitive -> option set -> stable shop slot -> shop profile
+reward type -> option entry -> ordered group -> stable emitted slot -> shop profile
 ```
 
-A slot owns a stable semantic key, presentation label, allowed primitives, and
+A shop profile owns ordered groups. Each group declares its eligible option
+entries, per-option current-run requirements, and `offerCount`. Selection is
+without replacement inside one group. Positive option weights affect
+probability only and do not enter possibility validation.
+
+Every emitted offer owns a stable semantic slot key, presentation label, and
 one explicit default. Its authored value is:
 
 ```ts
 interface ShopOfferState {
-  reward: ConcreteReward;
+  offer: ResolvedRewardOffer;
   purchased: boolean;
 }
 ```
 
+The normalized group shape is equivalent to:
+
+```ts
+interface ShopGroup {
+  key: string;
+  offerCount: number;
+  options: readonly ShopOptionEntry[];
+}
+
+interface ShopOptionEntry {
+  key: string;
+  rewardType: RewardTypeGameName;
+  requirement?: RequirementExpression;
+}
+```
+
+Entry keys remain distinct when the same reward type appears with different
+requirements. Authored state stores the complete resolved offer in each emitted
+slot, not the randomly selected entry key; simulation validates that at least
+one eligible without-replacement entry assignment explains the authored
+offers.
+
+`RandomLoot` and `BoostedRandomLoot` remain distinct shop-option entries. While
+rarity and price are deferred, both resolve the same authored `RandomLoot` plus
+source shape; the supporting entry stays in the derived assignment witness so
+two-offer groups still enforce without-replacement selection exactly.
+
 `purchased: false` is complete authored state. Purchase controls acquisition,
-not whether the offer exists. The ordinary `WorldShop` has three stable slots
-whose current labels are `Offer 1`, `Offer 2`, and `Offer 3`; internal slot keys
-may remain category-bearing without leaking into presentation.
+not whether the offer exists. The ordinary `WorldShop` has three one-offer
+groups and therefore three stable slots whose current labels are `Offer 1`,
+`Offer 2`, and `Offer 3`; internal slot keys may remain category-bearing without
+leaking into presentation. `I_WorldShop` has five one-offer groups.
+`Q_WorldShop` has six slots because its first of five groups emits two distinct
+offers.
 
 `WorldShop`, `I_WorldShop`, and `Q_WorldShop` are distinct profiles. N uses
 `WorldShop` but adds the declaration-owned `hubRewardLookup` requirements
@@ -404,21 +695,56 @@ This differs from incoming and free-reward leaves. Those rewards materialize
 on the physical door and therefore remain complete, offered facts even when
 their target is unpicked.
 
+Shop generation occurs before the entered shop's outgoing doors are generated.
+Purchased options are removed from the current room's active option set, so
+Hammer, Hermes, Spell, and Talent requirements that inspect the current shop
+see only unpurchased offers. This query is not a counted-store lookup.
+The normalized requirement kind is `notInCurrentRoomShopOptions`; the Phase 1
+prototype name `notInStore` is retired when Phase 2.6 establishes the shared
+reward-kernel requirement boundary.
+
+Exact prices, money, health, last-stand inventory, discounts, and affordability
+are deferred. The first complete model authors purchases under a
+sufficient-resource and valid-use assumption. This deliberately admits some
+purchases that one concrete resource state could not make; it does not weaken
+offer-generation requirements or downstream acquisition effects.
+
+Purchase order is derived simulation state, not authored shop UI state. A Blind
+Box offer persists its intended eventual `BoonSource`, but source support is not
+validated while the box is merely offered. When the box is purchased, the
+simulator explores relevant purchase orders, applies the declared
+`ordinaryNoPeer` support policy to that authored source at the acquisition role,
+and retains every reachable history state.
+A later plan compiler may select and encode one witness order. The editor
+continues to author the purchased set and intended source rather than exposing
+incidental ordering controls.
+
 ## Offer and Acquisition
 
 Offer and acquisition are separate facts:
 
 ```text
-source generates incoming reward -> reward.offer
-picked room enters              -> reward.acquire
-picked shop room enters         -> shop reward.offer
-purchased shop slot             -> reward.acquire
+source generates incoming reward  -> resolved_reward_offer.emit
+producer reaches lifecycle point  -> concrete_acquisition.emit
+picked shop room enters           -> resolved shop offers become active
+purchased shop slot               -> purchase-time concrete acquisition(s)
 ```
 
-Every generated peer occurrence contributes its concrete incoming offer and
+The lifecycle point is producer-specific. A normal room reward emits its
+concrete acquisition on pickup, a Devotion emits its chosen and spurned source
+at distinct points, and a purchased Blind Box first emits its box use and then
+validates and emits its authored hidden source. The concrete acquisition
+declaration then projects the typed history writes. Store-entry identity never
+enters history through an implicit alias.
+
+Every generated peer occurrence contributes its complete resolved incoming
+offer and
 counted-bag consumption, including unpicked peers. Only the picked and entered
-occurrence acquires its incoming reward. A shop exposes its concrete offers
-only on entry and acquires exactly its purchased slots.
+occurrence advances its producer's acquisition lifecycle. That lifecycle may
+resolve zero concrete acquisitions, as for Story and Shop, or several at
+different points, as for Devotion. A shop exposes its resolved offers only on
+entry and advances exactly its purchased slots through purchase-time
+acquisition.
 
 Fixed and forced producers do not borrow requirements from a same-named
 counted bag entry. A forced Devotion is validated as a fixed Devotion producer,
@@ -460,7 +786,7 @@ does not author a duplicate value.
 
 A reward-free generated batch such as Q's combat spine has no authored base
 store. Forced or individual target stores remain declaration-owned and still
-produce concrete offers, so Q miniboss targets can use `TyphonBossRewards`
+produce resolved offers, so Q miniboss targets can use `TyphonBossRewards`
 without inventing a RunProgress or MetaProgress batch value.
 
 The game then resolves actual target stores in two physical-order passes:
@@ -498,8 +824,13 @@ Repeated Boon reward types are separate from source selection. Within one door
 batch, ordinary Boon source choices exclude sources already offered by earlier
 peers. After the route reaches the ordinary four-source cap, later choices are
 restricted to already acquired sources. Unpicked sources participate in the
-same-batch exclusion but do not enter acquisition history. Devotion keeps a
-distinct two-source payload and uses its own declared selection behavior.
+same-batch exclusion but do not enter acquisition history. If peer exclusions
+exhaust the available source set, game setup retries with weaker exclusions and
+finally no exclusions; source uniqueness is strict only while another source
+remains possible. These are the `ordinaryBoonPeer` rules. Devotion instead uses
+`devotionAcquiredPair`: its two distinct sources must already be present in
+current-run ordinary god-loot history at offer generation, and the authored
+chosen/spurned order records which member is acquired before and after combat.
 
 ## F/G Producer Mapping
 
@@ -537,15 +868,21 @@ defaults, and producer/template compatibility. Authored commands validate
 complete replacement values. Simulation validates:
 
 - current bag availability and refill;
+- alternative latent bag states when one offer can consume different entries;
 - entry requirements at the offer point;
 - authored base-store support or source-offer-point resolution from the biome
   policy;
 - shared generated-door store resolution;
 - same-batch duplicate and Boon-source rules;
-- offer and acquisition timing;
+- source-support policy and resolution-point membership;
+- generic offer history, Devotion's offer-time spacing projection, and
+  acquisition timing;
 - shop purchases;
+- shop group cardinality, without-replacement support, and option requirements;
 - peer and biome constraints;
-- declaration-owned acquisition projection.
+- reward-type acquisition-role resolution, producer timing, and the closed
+  history projections selected independently from loot/consumable/resource
+  acquisition kind.
 
 The current canonical reward model uses one global bounded approximation for
 the game's `UpgradableTraitCount`: every acquired ordinary Boon contributes one
@@ -555,6 +892,12 @@ choices such as Narcissus do not contribute while their internal gift surface
 is deferred. This approximation must be replaced by resolved trait state when
 that future surface is introduced; it is not a generic unsupported state or
 permissive fallback.
+
+The same trait-free boundary fixes `allSpellInvested` to false after Spell is
+acquired, allowing later Talent offers whenever their other exact requirements
+hold. `pendingSpellDrop` remains false because the separate Surface Shop
+delivery system is not part of the canonical trace. Both facts must move to
+concrete Hex/Talent and delivery state if those deferred features are added.
 
 The editor only renders normalized domains and simulation results. It does not
 recompute reward legality.

@@ -8,10 +8,11 @@ is mutable project history, not a design authority.
 ## Current Frontier
 
 Phases 0, 1, 2, and 2.5 were completed under the prior reward-store ownership
-model. Phase 2.75, Cross-Biome Catalog Closure, is the current frontier. The
-biome audit and shared-design reconciliation gate is complete; implementation
-must now harden the normalized catalog, switch F/G atomically to schema version
-2, and import P/Q/H/O/I/N as dormant declaration sets before Phase 3 begins.
+model. Phase 2.6, Reward Kernel, is the current frontier. The biome and reward
+audits are complete. Implementation now proceeds through three additive gates:
+build the unconnected reward kernel in Phase 2.6, switch F/G atomically to
+schema version 2 in Phase 2.7, and import P/Q/H/O/I/N as dormant declaration
+sets in Phase 2.8 before Phase 3 begins.
 
 Possibility-only simulation and the reward-authority shape are locked by the
 complete audit set. O added the source-offer-point batch-store form without
@@ -53,7 +54,9 @@ generated batches must not author a meaningless base store.
 `biomes/H_GAME_RULES.md` records H's four-room count-driven spine, exact physical
 exits, bridge forced-pool competition, batch-owned semantic Min/Max cage
 outcome, hidden two-Max ceiling updates, room-owned local cage slots, and
-two-or-three counting encounters per entered combat. It defers
+two-or-three counting encounters per entered combat. Its generated batch uses
+`none` because every supported target is reward-free or resolves
+declaration-owned RunProgress provenance. It defers
 `FieldsOptionalRewards` under a canonical no-pickup trace and narrowly omits
 the terminal-only cage roll because H has no downstream consumer for it.
 
@@ -260,7 +263,7 @@ The final Phase 2 slices now deliver:
 
 Phase 2 was completed under the original leaf-owned counted-store
 representation. The completed cross-biome audit locks its replacement, but
-production remains on the old representation until Phase 2.75 implements the
+production remains on the old representation until Phase 2.7 implements the
 atomic switch described below.
 
 ### Phase 2.5: Authored Editor Smoke
@@ -327,14 +330,45 @@ these cross-biome reward-model findings for continued verification:
   reward-free batches use an explicit no-store policy;
 - Room Declarations own forced-store overrides independently of that batch
   policy;
-- target leaves author concrete rewards only, while canonical materialization
-  attaches resolved store provenance;
+- target leaves author complete resolved offers only, while canonical
+  materialization attaches resolved store provenance;
 - fixed Story and Shop targets retain resolved store provenance for later
   entered-room ratio history;
-- store entries own duplicate policy and reward primitives own explicit
-  acquisition projection;
+- store entries own duplicate policy; the settled store/consumer proof permits
+  one complete refill while making the raw second-refill/Heal branch
+  unreachable in the planner baseline; ambiguous matching entries branch into
+  every distinct reachable latent bag state;
+- the Phase 1 `RewardPrimitive.acquiredAs` shape must split into reward types,
+  resolved offers, concrete acquisitions, and concrete history projections;
+  reward types own typed acquisition roles, while producer and encounter
+  lifecycles own their timing rather than a generic alias;
+- Devotion owns the only supported reward-type-specific offer projection and
+  writes its spacing marker when offered, including on unpicked targets;
+- the exhaustive concrete acquisition registry separates acquisition kind from
+  the closed `lootAndUse` and `consumableAndUse` history projection profiles;
 - same-batch Boon source exclusion and the ordinary source cap belong to
-  reward simulation, not editor filtering.
+  reward simulation, not editor filtering, with the game's exhaustion fallback
+  restoring weaker source support;
+- source-bearing rewards select an explicit policy and resolution point:
+  ordinary generated Boons use peer-aware offer-time support, shop RandomLoot
+  uses no-peer offer-time support, Blind Box uses no-peer acquisition-time
+  support, and Devotion selects two distinct already acquired ordinary sources;
+- Devotion needs explicit chosen/spurned roles;
+- Blind Box persists its intended source while acquisition-time purchase-order
+  branches determine whether that source is possible;
+- World, I, and Q shops are ordered entry-generated groups with per-option
+  requirements and offer counts, not flat option unions;
+- MetaProgress must replace the Phase 1 19-entry progression-elided union with
+  the exact 13-entry fully progressed projection: early ordinary resources and
+  late Big resources only.
+- the trait-free reward baseline increments `upgradableTraitCount` per ordinary
+  god source, holds `allSpellInvested` false, and keeps `pendingSpellDrop` false
+  while Surface Shop delivery remains deferred.
+
+`REWARD_GAME_DATA_AUDIT.md` records the exact, simplified, deferred, and
+excluded disposition of the complete reward surface. It also records deferred
+affordability, resource, reroll, and trait depth, plus derived purchase-order
+branching, so production does not grow placeholder predicates for them.
 
 The N audit confirmed the shared store shape and added fixed authored layout
 slots, a fixed-slot persistent hub board, ordered restores, and side-room
@@ -346,20 +380,40 @@ schema changes piecemeal; the now-complete audit set defines one shared version
 
 ## Next
 
-### Phase 2.75: Cross-Biome Catalog Closure
+### Phase 2.6: Reward Kernel
 
-The pending implementation order is:
+Pending:
 
-1. add explicit declared/authorable/simulatable/editable capability gates;
-2. harden normalized layout, exit, room, encounter, reward, requirement,
-   completion, batch-policy, and local-slot vocabulary;
-3. switch F/G atomically to schema version 2, including batch-owned generated
-   stores, concrete-only reward leaves, entry-materialized shops, and derived
-   completion declarations;
-4. import dormant P, Q, H, O, I, and N declarations in that pressure-test order;
-5. run the full cross-biome parity, capability-isolation, project round-trip,
-   and F editor smoke gates.
+1. normalize the audited reward types, source-support policies, resolved
+   offers, counted stores, acquisitions, history projections, and shop groups;
+2. rename `notInStore` to `notInCurrentRoomShopOptions` at the shared
+   requirement boundary;
+3. implement pure reward-state transitions against synthetic fact snapshots;
+4. close the full reward parity gate without connecting the kernel to the v1
+   authored project or editor.
 
-Phase 3 remains blocked until the complete normalized catalog passes without
-placeholder materializers, dormant biome activation, duplicated authority, or
+The existing schema-version-1 F/G model remains the sole connected production
+authority during this phase.
+
+### Phase 2.7: F/G Reward Authority Switch
+
+After Phase 2.6:
+
+1. replace leaf-owned stores and eager shops with schema version 2;
+2. bind F/G defaults, codecs, commands, and editor projection to the kernel;
+3. delete the superseded reward types and reject schema version 1.
+
+### Phase 2.8: Cross-Biome Declaration Closure
+
+After Phase 2.7:
+
+1. add declared/authorable/simulatable/editable capability gates;
+2. harden shared layout, exit, encounter, requirement, completion, batch, and
+   local-slot vocabulary and reconcile F/G to it;
+3. import dormant P, Q, H, O, I, and N declarations in the documented
+   pressure-test order;
+4. run cross-biome parity and capability-isolation gates.
+
+Phase 3 remains blocked until all three phases pass without placeholder
+materializers, dormant biome activation, duplicated authority, or
 schema-version-1 compatibility scaffolding.

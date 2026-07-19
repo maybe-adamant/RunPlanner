@@ -49,7 +49,7 @@ Templates compose the reward values defined in `../REWARD_MODEL.md`:
 type RoomRewardState =
   | { kind: 'none' }
   | { kind: 'fixed'; payload?: RewardPayload }
-  | { kind: 'counted'; reward: ConcreteReward }
+  | { kind: 'counted'; offer: ResolvedRewardOffer }
   | { kind: 'shop'; shop?: ShopState };
 ```
 
@@ -71,7 +71,7 @@ One complete counted `RunProgress` reward excluding Devotion,
 
 ```ts
 interface FixedOpeningState {
-  generatedReward: ConcreteReward;
+  incomingOffer: ResolvedRewardOffer;
 }
 ```
 
@@ -82,7 +82,7 @@ data and is not authored state.
 ### Materialization
 
 Emits one start room fragment, its fixed opening encounter profile, and the
-concrete incoming opening reward. Root selection and outgoing topology remain
+complete resolved incoming opening offer. Root selection and outgoing topology remain
 Biome Plan facts.
 
 ## `FixedIntro`
@@ -111,7 +111,7 @@ come from the profile. The template owns no start selection or continuation.
 
 ```ts
 interface StandardCombatState {
-  generatedReward: ConcreteReward;
+  incomingOffer: ResolvedRewardOffer;
 }
 ```
 
@@ -140,7 +140,7 @@ one complete Boon-source payload:
 
 ```ts
 interface MinibossState {
-  generatedReward: {
+  incomingOffer: {
     rewardType: 'Boon';
     payload: { source: BoonSourceGameName };
   };
@@ -185,7 +185,7 @@ Fixed state rejects reward replacement rather than persisting a redundant
 
 ```ts
 interface FountainState {
-  generatedReward: ConcreteReward;
+  incomingOffer: ResolvedRewardOffer;
 }
 ```
 
@@ -195,7 +195,7 @@ reward state.
 
 ### Materialization
 
-Emits the concrete incoming reward and `HealthRestore` encounter profile.
+Emits the complete resolved incoming offer and `HealthRestore` encounter profile.
 
 ## `Shop`
 
@@ -212,17 +212,25 @@ interface ShopState {
 }
 ```
 
-When the room is picked for entry, every declared World Shop slot begins with
-a complete default offer and a concrete `purchased` boolean. An unpicked Shop
-occurrence may omit this entry-materialized state or retain a previously
-authored complete value dormantly. Reward replacement remains within the
-slot's declared option set. The state carries no counted `storeKey`.
+When the room is picked for entry, every slot emitted by the three ordered
+World Shop groups begins with a complete default offer and a concrete
+`purchased` boolean. An unpicked Shop occurrence may omit this
+entry-materialized state or retain a previously authored complete value
+dormantly. Reward replacement remains within its owning group's option entries;
+group cardinality and per-option requirements are simulation facts. The state
+carries no counted `storeKey`.
+
+A Blind Box slot persists its intended eventual Boon source as part of the
+complete resolved offer. That source is dormant while `purchased` is false and
+is validated only at the purchase-time lifecycle point.
 
 ### Materialization
 
-Entering the room exposes all declared offers and acquires exactly those with
-`purchased: true`. The incoming door offer is the fixed Shop producer; shop
-inventory is room-internal state.
+Entering the room exposes all three group-derived offers in group order and
+acquires exactly those with `purchased: true`. The incoming door offer is the
+fixed Shop producer; shop inventory is room-internal state. Purchase order is a
+derived possibility witness used to prove an authored Blind Box source; it is
+not another persisted leaf field.
 
 Player-facing labels are `Offer 1`, `Offer 2`, and `Offer 3`. Stable internal
 slot keys remain semantic addresses and persistence keys.
@@ -261,7 +269,7 @@ type ForkedPrebossState =
     }
   | {
       kind: 'freeReward';
-      reward: ConcreteReward;
+      offer: ResolvedRewardOffer;
     };
 ```
 
@@ -294,9 +302,9 @@ state, and overflow reconciliation remain terminal-transition responsibilities.
 Defaults are semantic, not positional:
 
 - each generated batch owns a default base store from its layout policy;
-- each counted binding owns one complete default reward for each store context
-  it can receive;
-- each payload-bearing primitive owns a complete payload default;
+- each counted binding owns one complete default resolved offer for each store
+  context it can receive;
+- each payload-bearing reward type owns a complete offer-payload default;
 - every shop slot owns a default offer and purchase state;
 - the preboss terminal policy owns the realization-role ordering.
 
@@ -314,10 +322,10 @@ that the newly resolved store cannot produce.
 Template findings and editor destinations attach beneath the occurrence:
 
 ```text
-room reward       biomeStepKey + occurrenceId + generatedReward
-shop offer        biomeStepKey + occurrenceId + shopSlotKey + offeredReward
+room offer        biomeStepKey + occurrenceId + incomingOffer
+shop offer        biomeStepKey + occurrenceId + shopSlotKey + offer
 shop purchase     biomeStepKey + occurrenceId + shopSlotKey + purchased
-preboss reward    biomeStepKey + occurrenceId + generatedReward
+preboss offer     biomeStepKey + occurrenceId + incomingOffer
 ```
 
 No template addresses state by game room name, UI row, or array position.
@@ -340,5 +348,5 @@ These are contract failures, not correctable user findings.
 
 H Fields combat, I Clockwork combat, N hub rooms, O Ship combat, P internal
 encounter structure, and Q's scripted paired-miniboss structure are deferred.
-They should reuse these reward atoms and occurrence rules rather than expand
+They should reuse these resolved-offer atoms and occurrence rules rather than expand
 this F/G template set with dormant branches.
