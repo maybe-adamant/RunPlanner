@@ -414,11 +414,11 @@ completion-room order; Room Declarations own the room facts.
 `ROOM_LIFECYCLE_MODEL.md` owns their single-room operation ordering.
 `SIMULATION_AND_VALIDATION.md` owns event folding and cross-room composition.
 
-The old `fixedBoss` target mode is only a transition into the layout-owned
-completion sequence; it must not remain the authority for the boss identity.
-When the completion schema is implemented, use a general fixed-completion
-transition name rather than encoding one concrete semantic role in the exit
-mode.
+Physical exits no longer encode a `fixedBoss` or other semantic target mode.
+The terminal Room Declaration owns its physical exit type, while the layout's
+ordered completion sequence is the sole authority for the derived boss and
+postboss identities. This keeps physical map facts independent from completion
+roles and leaves route order with the Route Declaration.
 
 ## Completeness and Validation
 

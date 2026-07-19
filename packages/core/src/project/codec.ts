@@ -35,6 +35,9 @@ function decodeBiomePlan(
   if (kind !== layout.kind) {
     fail(`${path}.kind`, `expected ${layout.kind}, received ${kind}`);
   }
+  if (layout.kind !== 'LinearBiome') {
+    fail(path, `${expectedBiomeStepKey} is not authorable by the linear project codec`);
+  }
 
   const biomeStepKey = expectString(plan.biomeStepKey, `${path}.biomeStepKey`);
   if (biomeStepKey !== expectedBiomeStepKey) {

@@ -1,8 +1,21 @@
-import type { CatalogCollection, EncounterPhase, EncounterProfile } from '@run-planner/core';
+import type {
+  CatalogCollection,
+  EncounterPhase,
+  EncounterPhaseKind,
+  EncounterProfile,
+} from '@run-planner/core';
 
 import type { RawEncounterProfileDeclaration } from '../declarations';
 import { createCollection, requireNonEmpty } from './common';
 import { fail } from './errors';
+
+const encounterPhaseKinds = new Set<EncounterPhaseKind>([
+  'boss',
+  'combat',
+  'miniboss',
+  'nonCombat',
+  'story',
+]);
 
 export function normalizeEncounterProfiles(
   rawProfiles: readonly RawEncounterProfileDeclaration[],
@@ -18,6 +31,12 @@ export function normalizeEncounterProfiles(
         fail(`${phasePath}.key`, `duplicates phase ${phase.key}`);
       }
       seenPhases.add(phase.key);
+      if (!encounterPhaseKinds.has(phase.kind)) {
+        fail(`${phasePath}.kind`, `unknown encounter phase kind ${String(phase.kind)}`);
+      }
+      if (typeof phase.countsEncounterDepth !== 'boolean') {
+        fail(`${phasePath}.countsEncounterDepth`, 'must be boolean');
+      }
       return Object.freeze({
         key: phase.key,
         kind: phase.kind,

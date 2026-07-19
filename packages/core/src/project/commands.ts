@@ -188,6 +188,9 @@ function locateBiome(
   if (layout === undefined) {
     failCommand(command, `catalog has no layout for ${address.biomeStepKey}`);
   }
+  if (layout.kind !== 'LinearBiome') {
+    failCommand(command, `${address.biomeStepKey} does not use authored linear topology`);
+  }
   return { routeIndex, biomeIndex, plan, layout };
 }
 
@@ -230,14 +233,36 @@ function requireRoom(
 }
 
 function hasGeneratedExit(room: RoomDeclaration, exitIndex: number): boolean {
-  return room.exits.some((exit) => exit.index === exitIndex && exit.targetMode === 'generated');
+  return room.exits.some((exit) => exit.index === exitIndex);
 }
 
 function generatedExitIndexes(room: RoomDeclaration): readonly number[] {
-  return room.exits
-    .filter((exit) => exit.targetMode === 'generated')
-    .map((exit) => exit.index)
-    .sort((left, right) => left - right);
+  return room.exits.map((exit) => exit.index).sort((left, right) => left - right);
+}
+
+function authoredBaseStorePolicy(layout: LinearBiomeLayout) {
+  const policy = layout.continuation.rewardStorePolicy;
+  if (
+    policy.kind !== 'authoredBaseStore' ||
+    layout.continuation.rewardStoreOverrides.length !== 0
+  ) {
+    throw new Error(`${layout.biomeStepKey} does not author a generated base store`);
+  }
+  return policy;
+}
+
+function authoredStart(layout: LinearBiomeLayout) {
+  if (layout.start.kind !== 'authoredStart') {
+    throw new Error(`${layout.biomeStepKey} does not expose an authored start`);
+  }
+  return layout.start;
+}
+
+function defaultBatchState(layout: LinearBiomeLayout): null {
+  if (layout.continuation.batchPolicy.kind !== 'standard') {
+    throw new Error(`${layout.biomeStepKey} does not use standard authored batches`);
+  }
+  return null;
 }
 
 function resolvedStoreForRoom(room: RoomDeclaration, sharedStoreKey: string): string {
@@ -307,7 +332,7 @@ function resolvedStoreForOccurrence(
 ): string {
   const topology = plan.topology;
   if (topology === null) {
-    return layout.continuation.rewardStorePolicy.defaultStoreKey;
+    return authoredBaseStorePolicy(layout).defaultStoreKey;
   }
   const occurrence = topology.occurrences.find(
     (candidate) => candidate.occurrenceId === occurrenceId,
@@ -316,10 +341,10 @@ function resolvedStoreForOccurrence(
     replacementRoom ??
     (occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName]);
   if (room === undefined) {
-    return layout.continuation.rewardStorePolicy.defaultStoreKey;
+    return authoredBaseStorePolicy(layout).defaultStoreKey;
   }
   if (topology.startOccurrenceId === occurrenceId) {
-    return resolvedStoreForRoom(room, layout.continuation.rewardStorePolicy.defaultStoreKey);
+    return resolvedStoreForRoom(room, authoredBaseStorePolicy(layout).defaultStoreKey);
   }
   const owner = topology.continuations.find((continuation) =>
     continuation.targets.some((target) => target.occurrenceId === occurrenceId),
@@ -336,7 +361,7 @@ function resolvedStoreForOccurrence(
       ),
     );
   }
-  return resolvedStoreForRoom(room, layout.continuation.rewardStorePolicy.defaultStoreKey);
+  return resolvedStoreForRoom(room, authoredBaseStorePolicy(layout).defaultStoreKey);
 }
 
 function installEntryState(
@@ -516,6 +541,9 @@ function createTerminalPlan(
   targetOccurrenceIds: readonly OccurrenceId[],
   command: ProjectCommand,
 ): LinearBiomePlan {
+  if (layout.terminal.kind !== 'forkedTransition') {
+    failCommand(command, `${layout.biomeStepKey} does not use a forked terminal transition`);
+  }
   const topology = requireTopology(plan, command);
   const parent = requireOccurrence(plan, parentOccurrenceId, command);
   if (
@@ -571,7 +599,7 @@ function createTerminalPlan(
         role,
         resolvedStoreKey: resolvedStoreForRoom(
           terminalRoom,
-          layout.continuation.rewardStorePolicy.defaultStoreKey,
+          authoredBaseStorePolicy(layout).defaultStoreKey,
         ),
         entryActive: false,
       }),
@@ -657,7 +685,7 @@ function applyUnchecked(
         failCommand(command, 'biome topology already has a start');
       }
       const room = requireRoom(catalog, command.gameName, layout.biomeStepKey, command);
-      if (!layout.start.roomGameNames.includes(room.gameName)) {
+      if (!authoredStart(layout).roomGameNames.includes(room.gameName)) {
         failCommand(command, `${room.gameName} is not a declared start room`);
       }
       const occurrence = {
@@ -667,7 +695,7 @@ function applyUnchecked(
           role: 'ordinary',
           resolvedStoreKey: resolvedStoreForRoom(
             room,
-            layout.continuation.rewardStorePolicy.defaultStoreKey,
+            authoredBaseStorePolicy(layout).defaultStoreKey,
           ),
           entryActive: true,
         }),
@@ -703,9 +731,9 @@ function applyUnchecked(
               parentOccurrenceId: command.continuation.parentOccurrenceId,
               rewardStore: {
                 kind: 'authoredBaseStore',
-                baseRewardStoreKey: layout.continuation.rewardStorePolicy.defaultStoreKey,
+                baseRewardStoreKey: authoredBaseStorePolicy(layout).defaultStoreKey,
               },
-              batchState: layout.continuation.batchStateDefault,
+              batchState: defaultBatchState(layout),
               targets: [],
               pickedExitIndex: null,
             },
@@ -724,7 +752,7 @@ function applyUnchecked(
       if (continuation.rewardStore.kind !== 'authoredBaseStore') {
         failCommand(command, 'batch does not expose an authored base store');
       }
-      if (!layout.continuation.rewardStorePolicy.storeKeys.includes(command.storeKey)) {
+      if (!authoredBaseStorePolicy(layout).storeKeys.includes(command.storeKey)) {
         failCommand(command, `${command.storeKey} is not available from this batch policy`);
       }
       if (continuation.rewardStore.baseRewardStoreKey === command.storeKey) {
@@ -784,6 +812,9 @@ function applyUnchecked(
         );
       }
       const room = requireRoom(catalog, command.gameName, layout.biomeStepKey, command);
+      if (room.mode.kind !== 'authored') {
+        failCommand(command, `${room.gameName} is layout-derived and cannot be authored`);
+      }
       if (room.kind === 'Intro' || room.kind === 'Opening' || room.kind === 'Preboss') {
         failCommand(command, `${room.gameName} cannot be an ordinary generated target`);
       }
@@ -999,9 +1030,9 @@ function applyUnchecked(
               parentOccurrenceId: command.continuation.parentOccurrenceId,
               rewardStore: {
                 kind: 'authoredBaseStore',
-                baseRewardStoreKey: layout.continuation.rewardStorePolicy.defaultStoreKey,
+                baseRewardStoreKey: authoredBaseStorePolicy(layout).defaultStoreKey,
               },
-              batchState: layout.continuation.batchStateDefault,
+              batchState: defaultBatchState(layout),
               targets: [],
               pickedExitIndex: null,
             },

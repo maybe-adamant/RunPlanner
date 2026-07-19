@@ -189,8 +189,8 @@ const rewards: RewardKernelCatalog = {
 function exits(count: number) {
   return Array.from({ length: count }, (_, index) => ({
     index: index + 1,
-    targetMode: 'generated' as const,
     type: 'Door',
+    compatibilityPolicyKey: 'Unconstrained',
   }));
 }
 
@@ -205,13 +205,15 @@ function countedRoom(
     label: gameName,
     biomeStepKey: 'Underworld_F',
     kind,
-    templateKey,
+    mode: { kind: 'authored', templateKey },
+    structuralTags: [],
     exits: exits(exitCount),
     incomingReward: countedReward,
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterProfileKey: kind,
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
+    localChildren: [],
   };
 }
 
@@ -236,7 +238,8 @@ const rooms: readonly RoomDeclaration[] = [
     label: 'Midshop',
     biomeStepKey: 'Underworld_F',
     kind: 'Shop',
-    templateKey: 'Shop',
+    mode: { kind: 'authored', templateKey: 'Shop' },
+    structuralTags: [],
     exits: exits(1),
     incomingReward: {
       kind: 'shop',
@@ -248,14 +251,16 @@ const rooms: readonly RoomDeclaration[] = [
     encounterProfileKey: 'Shop',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
+    localChildren: [],
   },
   {
     gameName: 'F_PreBoss01',
     label: 'Preboss',
     biomeStepKey: 'Underworld_F',
     kind: 'Preboss',
-    templateKey: 'ForkedPreboss',
-    exits: [{ index: 1, targetMode: 'fixedBoss', type: 'Boss' }],
+    mode: { kind: 'authored', templateKey: 'ForkedPreboss' },
+    structuralTags: [],
+    exits: [{ index: 1, type: 'Boss', compatibilityPolicyKey: 'Unconstrained' }],
     incomingReward: {
       kind: 'shop',
       offer: { rewardType: 'Shop' },
@@ -272,6 +277,22 @@ const rooms: readonly RoomDeclaration[] = [
     encounterProfileKey: 'Preboss',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
+    localChildren: [],
+  },
+  {
+    gameName: 'F_Boss01',
+    label: 'Boss',
+    biomeStepKey: 'Underworld_F',
+    kind: 'Boss',
+    mode: { kind: 'derived', classification: 'completion' },
+    structuralTags: [],
+    exits: exits(1),
+    incomingReward: { kind: 'none' },
+    enteredRewardStoreHistory: { kind: 'none' },
+    encounterProfileKey: 'Boss',
+    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+    caps: { maxAppearancesThisBiome: 1 },
+    localChildren: [],
   },
 ];
 
@@ -279,23 +300,31 @@ const layout = {
   biomeStepKey: 'Underworld_F',
   kind: 'LinearBiome',
   start: {
+    kind: 'authoredStart',
     mode: 'oneOf',
     roomGameNames: ['F_Opening01', 'F_Opening02', 'F_OpeningThreeExit'],
   },
+  entries: [],
   continuation: {
-    defaultBatchRuleKey: 'Standard',
+    progressionPolicy: { kind: 'eligibilityDriven' },
+    batchPolicy: { kind: 'standard', fields: [] },
     rewardStorePolicy: {
       kind: 'authoredBaseStore',
       storeKeys: ['RunProgress', 'MetaProgress'],
       defaultStoreKey: 'RunProgress',
     },
-    batchStateDefault: null,
+    rewardStoreOverrides: [],
   },
   terminal: {
+    kind: 'forkedTransition',
     roomGameName: 'F_PreBoss01',
-    transitionRuleKey: 'PrebossEntry',
     exitPolicy: { kind: 'allExitsTerminal' },
   },
+  completion: {
+    rooms: [{ role: 'boss', roomGameName: 'F_Boss01' }],
+    routeTransition: { kind: 'nextBiome' },
+  },
+  fields: [],
   bounds: { maxBatches: 10, maxTargets: 20 },
 } as const satisfies LinearBiomeLayout;
 
@@ -304,6 +333,14 @@ const catalog: Catalog = {
   routes: collection([underworld], (route) => route.key),
   rewards,
   encounterProfiles: collection<EncounterProfile>([], (profile) => profile.key),
+  exitCompatibilityPolicies: collection(
+    [{ key: 'Unconstrained', kind: 'unconstrained' }],
+    (policy) => policy.key,
+  ),
+  exitTypes: collection(
+    [{ key: 'Door', compatibilityPolicyKey: 'Unconstrained' }],
+    (exitType) => exitType.key,
+  ),
   rooms: collection(rooms, (room) => room.gameName),
   biomeLayouts: collection([layout], (biome) => biome.biomeStepKey),
 };
@@ -615,6 +652,16 @@ describe('ordinary project commands', () => {
         'CreateTarget',
         createTargetAddress(biome, startId, 2),
         'F_OpeningHidden cannot be an ordinary generated target',
+      ),
+    );
+
+    expect(() =>
+      createTarget(project, startId, 2, createOccurrenceId('derived-target'), 'F_Boss01'),
+    ).toThrowError(
+      new ProjectCommandContractError(
+        'CreateTarget',
+        createTargetAddress(biome, startId, 2),
+        'F_Boss01 is layout-derived and cannot be authored',
       ),
     );
 

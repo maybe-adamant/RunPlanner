@@ -5,46 +5,68 @@ export const biomeLayouts = [
     biomeStepKey: 'Underworld_F',
     kind: 'LinearBiome',
     start: {
+      kind: 'authoredStart',
       mode: 'oneOf',
       roomGameNames: ['F_Opening01', 'F_Opening02', 'F_Opening03'],
     },
+    entries: [],
     continuation: {
-      defaultBatchRuleKey: 'Standard',
+      progressionPolicy: { kind: 'eligibilityDriven' },
+      batchPolicy: { kind: 'standard', fields: [] },
       rewardStorePolicy: {
         kind: 'authoredBaseStore',
         storeKeys: ['RunProgress', 'MetaProgress'],
         defaultStoreKey: 'RunProgress',
       },
-      batchStateDefault: null,
+      rewardStoreOverrides: [],
     },
     terminal: {
+      kind: 'forkedTransition',
       roomGameName: 'F_PreBoss01',
-      transitionRuleKey: 'PrebossEntry',
       exitPolicy: { kind: 'allExitsTerminal' },
     },
+    completion: {
+      rooms: [
+        { role: 'boss', roomGameName: 'F_Boss01' },
+        { role: 'postboss', roomGameName: 'F_PostBoss01' },
+      ],
+      routeTransition: { kind: 'nextBiome' },
+    },
+    fields: [],
     bounds: { maxBatches: 10, maxTargets: 20 },
   },
   {
     biomeStepKey: 'Underworld_G',
     kind: 'LinearBiome',
     start: {
+      kind: 'authoredStart',
       mode: 'fixed',
       roomGameNames: ['G_Intro'],
     },
+    entries: [],
     continuation: {
-      defaultBatchRuleKey: 'Standard',
+      progressionPolicy: { kind: 'eligibilityDriven' },
+      batchPolicy: { kind: 'standard', fields: [] },
       rewardStorePolicy: {
         kind: 'authoredBaseStore',
         storeKeys: ['RunProgress', 'MetaProgress'],
         defaultStoreKey: 'RunProgress',
       },
-      batchStateDefault: null,
+      rewardStoreOverrides: [],
     },
     terminal: {
+      kind: 'forkedTransition',
       roomGameName: 'G_PreBoss01',
-      transitionRuleKey: 'PrebossEntry',
       exitPolicy: { kind: 'allExitsTerminal' },
     },
+    completion: {
+      rooms: [
+        { role: 'boss', roomGameName: 'G_Boss01' },
+        { role: 'postboss', roomGameName: 'G_PostBoss01' },
+      ],
+      routeTransition: { kind: 'nextBiome' },
+    },
+    fields: [],
     bounds: { maxBatches: 8, maxTargets: 21 },
   },
 ] as const satisfies readonly RawLinearBiomeLayoutDeclaration[];

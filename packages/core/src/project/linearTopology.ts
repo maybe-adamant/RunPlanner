@@ -51,6 +51,9 @@ function decodeBatchRewardStore(
       `expected ${layout.continuation.rewardStorePolicy.kind}, received ${kind}`,
     );
   }
+  if (layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore') {
+    failProjectDocument(path, 'linear project topology requires an authored base-store policy');
+  }
   expectExactKeys(rewardStore, ['kind', 'baseRewardStoreKey'], path);
   const baseRewardStoreKey = expectString(
     rewardStore.baseRewardStoreKey,
@@ -133,6 +136,12 @@ export function decodeLinearBiomeTopology(
   layout: LinearBiomeLayout,
   path: string,
 ): LinearBiomeTopology {
+  if (layout.continuation.batchPolicy.kind !== 'standard') {
+    failProjectDocument(path, `${layout.biomeStepKey} does not use standard authored batches`);
+  }
+  if (layout.continuation.rewardStoreOverrides.length !== 0) {
+    failProjectDocument(path, `${layout.biomeStepKey} uses source-specific reward-store policies`);
+  }
   const topology = expectRecord(value, path);
   expectExactKeys(topology, ['startOccurrenceId', 'occurrences', 'continuations'], path);
 
@@ -160,6 +169,9 @@ export function decodeLinearBiomeTopology(
     failProjectDocument(`${path}.startOccurrenceId`, `unknown occurrence ${startOccurrenceId}`);
   }
   const startRoom = requireRoom(start, catalog, layout.biomeStepKey);
+  if (layout.start.kind !== 'authoredStart') {
+    failProjectDocument(`${path}.startOccurrenceId`, `${layout.biomeStepKey} has a derived start`);
+  }
   if (!layout.start.roomGameNames.includes(startRoom.gameName)) {
     failProjectDocument(
       `${start.path}.gameName`,
@@ -168,6 +180,9 @@ export function decodeLinearBiomeTopology(
   }
 
   const maximumExitIndex = maxExitIndex(catalog, layout.biomeStepKey);
+  if (layout.terminal.kind !== 'forkedTransition') {
+    failProjectDocument(path, `${layout.biomeStepKey} does not use a forked terminal transition`);
+  }
   const terminalRoom = catalog.rooms.byKey[layout.terminal.roomGameName];
   if (terminalRoom?.entryOfferPolicy === undefined) {
     failProjectDocument(path, `${layout.terminal.roomGameName} has no terminal offer policy`);
@@ -348,6 +363,11 @@ export function decodeLinearBiomeTopology(
         failProjectDocument(
           `${rawOccurrence.path}.gameName`,
           `${room.gameName} cannot be an ordinary generated target`,
+        );
+      } else if (room.mode.kind !== 'authored') {
+        failProjectDocument(
+          `${rawOccurrence.path}.gameName`,
+          `${room.gameName} is layout-derived and cannot be authored`,
         );
       }
       roles.set(target.occurrenceId, role);

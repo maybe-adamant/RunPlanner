@@ -144,15 +144,15 @@ room currently requires `IndividualRewardStore`.
 
 ## F Migration
 
-| Family                                   | Status | Primary evidence                                             | Port action                                                                                                                    |
-| ---------------------------------------- | ------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| F layout and terminal depth              | ported | `RoomDataF.lua`, legacy F biome rules                        | `LinearBiome`, all three opening alternatives, authored bounds, and the depth-10 terminal normalize.                           |
-| F opening production baseline            | ported | `RoomDataF.lua`, `EncounterData.lua`                         | Opening01..03 use counting `OpeningGeneratedF`; progression variants are omitted.                                              |
-| F physical exits                         | ported | `RoomDataF.lua`, extracted map topology                      | Every supported F declaration has exact ordered physical exits in parity fixtures.                                             |
-| F combat declarations                    | ported | `RoomSets.lua`, `RoomDataF.lua`, legacy exit audit           | All 22 are explicit and covered by one complete parity matrix.                                                                 |
-| F miniboss, story, fountain, and midshop | ported | `RoomDataF.lua`, legacy F declarations                       | Exact requirements, caps, labels, encounters, bindings, and force windows normalize.                                           |
-| F forked preboss declaration             | ported | `RoomLogic.lua`, `RewardLogic.lua`, `biomes/F_GAME_RULES.md` | WorldShop-first and one-free-reward policy normalize; physical occurrences and acquisition fixtures belong to later phases.    |
-| F fixed completion tail                  | ready  | `RoomDataF.lua`, `RewardLogic.lua`, `biomes/F_GAME_RULES.md` | Declare neutral `F_Boss01` and `F_PostBoss01`, order them in the layout, and preserve the boss's ignored store-history policy. |
+| Family                                   | Status | Primary evidence                                             | Port action                                                                                                                                     |
+| ---------------------------------------- | ------ | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| F layout and terminal depth              | ported | `RoomDataF.lua`, legacy F biome rules                        | `LinearBiome`, all three opening alternatives, authored bounds, and the depth-10 terminal normalize.                                            |
+| F opening production baseline            | ported | `RoomDataF.lua`, `EncounterData.lua`                         | Opening01..03 use counting `OpeningGeneratedF`; progression variants are omitted.                                                               |
+| F physical exits                         | ported | `RoomDataF.lua`, extracted map topology                      | Every supported F declaration has exact ordered physical exits in parity fixtures.                                                              |
+| F combat declarations                    | ported | `RoomSets.lua`, `RoomDataF.lua`, legacy exit audit           | All 22 are explicit and covered by one complete parity matrix.                                                                                  |
+| F miniboss, story, fountain, and midshop | ported | `RoomDataF.lua`, legacy F declarations                       | Exact requirements, caps, labels, encounters, bindings, and force windows normalize.                                                            |
+| F forked preboss declaration             | ported | `RoomLogic.lua`, `RewardLogic.lua`, `biomes/F_GAME_RULES.md` | WorldShop-first and one-free-reward policy normalize; physical occurrences and acquisition fixtures belong to later phases.                     |
+| F fixed completion tail                  | ported | `RoomDataF.lua`, `RewardLogic.lua`, `biomes/F_GAME_RULES.md` | Neutral `F_Boss01` and `F_PostBoss01` are derived declarations ordered by the layout; the boss's ignored store-history policy remains explicit. |
 
 ## G Migration
 
@@ -168,7 +168,7 @@ room currently requires `IndividualRewardStore`.
 | G miniboss group requirements    | ported   | `RoomDataG.lua`, run requirements                                             | Entered-room mutual exclusion, force window, caps, concrete encounters, and Crawler's non-counting timing normalize.                                   |
 | `G_Shop01` force and eligibility | ported   | `RoomDataG.lua`                                                               | Eligibility ends at depth 5 while the raw force maximum remains 6; minimum two-exit context is explicit.                                               |
 | G forked preboss declaration     | ported   | `RoomLogic.lua`, `RewardLogic.lua`, `biomes/G_GAME_RULES.md`                  | WorldShop-first and two-free-reward capacity normalize; physical occurrences and acquisition fixtures belong to later phases.                          |
-| G fixed completion tail          | ready    | `RoomDataG.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/G_GAME_RULES.md` | Declare neutral `G_Boss01` and `G_PostBoss01`, order them in the layout, and preserve the boss offer's resolved store-history contribution.            |
+| G fixed completion tail          | ported   | `RoomDataG.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/G_GAME_RULES.md` | Neutral `G_Boss01` and `G_PostBoss01` are derived declarations ordered by the layout; the boss retains resolved-offer store history.                   |
 
 The G port follows the same progressed-save scope as F. `FishmanIntro`, the
 early-run Eris event, `G_MiniBoss02`'s lifetime encounter-completion gates,

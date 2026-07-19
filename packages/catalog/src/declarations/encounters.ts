@@ -102,4 +102,48 @@ export const encounterProfiles = [
       },
     ],
   },
+  {
+    key: 'F_Boss01',
+    phases: [
+      {
+        key: 'F_Boss01',
+        kind: 'boss',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'BossHecate01',
+      },
+    ],
+  },
+  {
+    key: 'F_PostBoss01',
+    phases: [
+      {
+        key: 'F_PostBoss01',
+        kind: 'story',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'Story_Chronos_01',
+      },
+    ],
+  },
+  {
+    key: 'G_Boss01',
+    phases: [
+      {
+        key: 'G_Boss01',
+        kind: 'boss',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'BossScylla01',
+      },
+    ],
+  },
+  {
+    key: 'G_PostBoss01',
+    phases: [
+      {
+        key: 'G_PostBoss01',
+        kind: 'nonCombat',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'Empty',
+      },
+    ],
+  },
 ] as const satisfies readonly RawEncounterProfileDeclaration[];

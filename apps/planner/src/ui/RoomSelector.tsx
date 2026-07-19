@@ -32,6 +32,9 @@ function categoryForKind(kind: RoomKind): OrdinaryRoomCategory | undefined {
     case 'Intro':
     case 'Opening':
     case 'Preboss':
+    case 'Boss':
+    case 'Hub':
+    case 'PostBoss':
       return undefined;
   }
 }
@@ -43,6 +46,9 @@ function categoryRooms(
 ): readonly RoomDeclaration[] {
   return catalog.rooms.values.filter((room) => {
     if (room.biomeStepKey !== biomeStepKey) {
+      return false;
+    }
+    if (room.mode.kind !== 'authored') {
       return false;
     }
     return categoryForKind(room.kind) === category;

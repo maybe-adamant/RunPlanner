@@ -48,21 +48,32 @@ function linearLayout(biomeStepKey: string, terminalRoom: string): BiomeLayout {
   return {
     biomeStepKey,
     kind: 'LinearBiome',
-    start: { mode: 'fixed', roomGameNames: [`${biomeStepKey}_Start`] },
+    start: {
+      kind: 'authoredStart',
+      mode: 'fixed',
+      roomGameNames: [`${biomeStepKey}_Start`],
+    },
+    entries: [],
     continuation: {
-      defaultBatchRuleKey: 'Standard',
+      progressionPolicy: { kind: 'eligibilityDriven' },
+      batchPolicy: { kind: 'standard', fields: [] },
       rewardStorePolicy: {
         kind: 'authoredBaseStore',
         storeKeys: ['RunProgress'],
         defaultStoreKey: 'RunProgress',
       },
-      batchStateDefault: null,
+      rewardStoreOverrides: [],
     },
     terminal: {
+      kind: 'forkedTransition',
       roomGameName: terminalRoom,
-      transitionRuleKey: 'PrebossEntry',
       exitPolicy: { kind: 'allExitsTerminal' },
     },
+    completion: {
+      rooms: [{ role: 'boss', roomGameName: `${biomeStepKey}_Boss` }],
+      routeTransition: { kind: 'nextBiome' },
+    },
+    fields: [],
     bounds: { maxBatches: 10, maxTargets: 20 },
   };
 }
@@ -84,6 +95,8 @@ const catalog: Catalog = {
     producerLifecycles: emptyCollection(),
   },
   encounterProfiles: emptyCollection(),
+  exitCompatibilityPolicies: emptyCollection(),
+  exitTypes: emptyCollection(),
   rooms: emptyCollection(),
   biomeLayouts: {
     values: layouts,

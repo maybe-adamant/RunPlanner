@@ -5,6 +5,8 @@ import {
   ProjectDocumentContractError,
 } from '@run-planner/core';
 
+import { createCatalog } from './catalog';
+import { declarations, type RawCatalogInput } from './declarations';
 import { catalog } from './index';
 
 function room(gameName: string) {
@@ -135,6 +137,61 @@ describe('F/G authored room state v2', () => {
       new ProjectDocumentContractError(
         '$.state.shop',
         'is required for an entered shop occurrence',
+      ),
+    );
+  });
+
+  it('allows a shop-only preboss to serve ordinary or direct-terminal roles', () => {
+    const directCatalog = createCatalog({
+      ...declarations,
+      rooms: declarations.rooms.map((candidate) =>
+        candidate.gameName === 'F_PreBoss01'
+          ? {
+              ...candidate,
+              mode: { kind: 'authored', templateKey: 'ShopPreboss' },
+              entryOfferPolicy: undefined,
+            }
+          : candidate,
+      ),
+      biomeLayouts: declarations.biomeLayouts.map((layout) =>
+        layout.biomeStepKey === 'Underworld_F'
+          ? {
+              ...layout,
+              terminal: { kind: 'directTransition', roomGameName: 'F_PreBoss01' },
+            }
+          : layout,
+      ),
+    } as RawCatalogInput);
+    const preboss = directCatalog.rooms.byKey.F_PreBoss01;
+    if (preboss === undefined) {
+      throw new Error('direct preboss fixture is missing');
+    }
+
+    expect(
+      createDefaultRoomState(directCatalog, preboss, {
+        role: 'terminalShop',
+        entryActive: false,
+      }),
+    ).toEqual({ kind: 'shop' });
+    expect(
+      decodeRoomState(
+        { kind: 'shop' },
+        directCatalog,
+        preboss,
+        { role: 'terminalShop', entryActive: false },
+        '$.state',
+      ),
+    ).toEqual({ kind: 'shop' });
+    expect(() =>
+      createDefaultRoomState(directCatalog, preboss, {
+        role: 'terminalFreeReward',
+        resolvedStoreKey: 'RunProgress',
+        entryActive: false,
+      }),
+    ).toThrowError(
+      new ProjectDocumentContractError(
+        'rooms.F_PreBoss01.state',
+        'ShopPreboss cannot use terminal free-reward role',
       ),
     );
   });

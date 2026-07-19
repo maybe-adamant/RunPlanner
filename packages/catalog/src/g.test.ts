@@ -34,14 +34,14 @@ function requireShop(binding: RewardProducerBinding | undefined): ShopRewardBind
 describe('complete G catalog', () => {
   it('normalizes the fixed reward-free intro and G layout', () => {
     const gRooms = catalog.rooms.values.filter((room) => room.biomeStepKey === 'Underworld_G');
-    expect(gRooms).toHaveLength(28);
+    expect(gRooms).toHaveLength(30);
 
     const intro = catalog.rooms.byKey.G_Intro;
     expect(intro).toMatchObject({
       label: 'Entrance',
       biomeStepKey: 'Underworld_G',
       kind: 'Intro',
-      templateKey: 'FixedIntro',
+      mode: { kind: 'authored', templateKey: 'FixedIntro' },
       incomingReward: { kind: 'none' },
       encounterProfileKey: 'FixedIntro',
       counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
@@ -49,27 +49,39 @@ describe('complete G catalog', () => {
       force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
     });
     expect(intro?.eligibility).toBeUndefined();
-    expect(intro?.exits).toEqual([{ index: 1, targetMode: 'generated', type: 'OceanusExitDoor' }]);
+    expect(intro?.exits).toEqual([
+      { index: 1, type: 'OceanusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
+    ]);
     expect(catalog.encounterProfiles.byKey.FixedIntro?.phases).toEqual([]);
 
     expect(catalog.biomeLayouts.byKey.Underworld_G).toEqual({
       biomeStepKey: 'Underworld_G',
       kind: 'LinearBiome',
-      start: { mode: 'fixed', roomGameNames: ['G_Intro'] },
+      start: { kind: 'authoredStart', mode: 'fixed', roomGameNames: ['G_Intro'] },
+      entries: [],
       continuation: {
-        defaultBatchRuleKey: 'Standard',
+        progressionPolicy: { kind: 'eligibilityDriven' },
+        batchPolicy: { kind: 'standard', fields: [] },
         rewardStorePolicy: {
           kind: 'authoredBaseStore',
           storeKeys: ['RunProgress', 'MetaProgress'],
           defaultStoreKey: 'RunProgress',
         },
-        batchStateDefault: null,
+        rewardStoreOverrides: [],
       },
       terminal: {
+        kind: 'forkedTransition',
         roomGameName: 'G_PreBoss01',
-        transitionRuleKey: 'PrebossEntry',
         exitPolicy: { kind: 'allExitsTerminal' },
       },
+      completion: {
+        rooms: [
+          { role: 'boss', roomGameName: 'G_Boss01' },
+          { role: 'postboss', roomGameName: 'G_PostBoss01' },
+        ],
+        routeTransition: { kind: 'nextBiome' },
+      },
+      fields: [],
       bounds: { maxBatches: 8, maxTargets: 21 },
     });
   });
@@ -118,12 +130,12 @@ describe('complete G catalog', () => {
 
       expect(room.label).toBe(gameName.replace('G_', '').replace('Combat', 'Combat '));
       expect(room.kind).toBe('Combat');
-      expect(room.templateKey).toBe('StandardCombat');
+      expect(room.mode).toEqual({ kind: 'authored', templateKey: 'StandardCombat' });
       expect(room.exits).toEqual(
         Array.from({ length: exitCount }, (_, index) => ({
           index: index + 1,
-          targetMode: 'generated',
           type: 'OceanusExitDoor',
+          compatibilityPolicyKey: 'Unconstrained',
         })),
       );
       expect(room.encounterProfileKey).toBe('StandardCombat');
@@ -176,7 +188,7 @@ describe('complete G catalog', () => {
       expect(room).toMatchObject({
         label,
         kind: 'Miniboss',
-        templateKey: 'Miniboss',
+        mode: { kind: 'authored', templateKey: 'Miniboss' },
         counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
         caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
         force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 4, deadline: 7 },
@@ -184,8 +196,8 @@ describe('complete G catalog', () => {
       expect(room.exits).toEqual(
         Array.from({ length: exitCount }, (_, index) => ({
           index: index + 1,
-          targetMode: 'generated',
           type: 'OceanusExitDoor',
+          compatibilityPolicyKey: 'Unconstrained',
         })),
       );
       expect(reward.storeKeys).toEqual(['RunProgress']);
@@ -218,7 +230,7 @@ describe('complete G catalog', () => {
     expect(story).toMatchObject({
       label: 'Narcissus',
       kind: 'Story',
-      templateKey: 'Story',
+      mode: { kind: 'authored', templateKey: 'Story' },
       caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
       eligibility: {
         kind: 'counterRange',
@@ -226,7 +238,9 @@ describe('complete G catalog', () => {
         range: { min: 3, max: 6 },
       },
     });
-    expect(story?.exits).toEqual([{ index: 1, targetMode: 'generated', type: 'OceanusExitDoor' }]);
+    expect(story?.exits).toEqual([
+      { index: 1, type: 'OceanusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
+    ]);
     expect(requireFixed(story?.incomingReward).offer).toEqual({ rewardType: 'Story' });
 
     const reprieve = catalog.rooms.byKey.G_Reprieve01;
@@ -234,7 +248,7 @@ describe('complete G catalog', () => {
     expect(reprieve).toMatchObject({
       label: 'Fountain',
       kind: 'Reprieve',
-      templateKey: 'Fountain',
+      mode: { kind: 'authored', templateKey: 'Fountain' },
       caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
       eligibility: {
         kind: 'counterRange',
@@ -243,8 +257,8 @@ describe('complete G catalog', () => {
       },
     });
     expect(reprieve?.exits).toEqual([
-      { index: 1, targetMode: 'generated', type: 'OceanusExitDoor' },
-      { index: 2, targetMode: 'generated', type: 'OceanusExitDoor' },
+      { index: 1, type: 'OceanusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
+      { index: 2, type: 'OceanusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
     ]);
     expect(reprieveReward.storeKeys).toEqual(['RunProgress', 'MetaProgress']);
     expect(reprieveReward.storeKeys[0]).toBe('RunProgress');
@@ -254,7 +268,7 @@ describe('complete G catalog', () => {
     expect(shop).toMatchObject({
       label: 'Midshop',
       kind: 'Shop',
-      templateKey: 'Shop',
+      mode: { kind: 'authored', templateKey: 'Shop' },
       caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
       eligibility: {
         kind: 'all',
@@ -266,8 +280,8 @@ describe('complete G catalog', () => {
       force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 3, deadline: 6 },
     });
     expect(shop?.exits).toEqual([
-      { index: 1, targetMode: 'generated', type: 'OceanusExitDoor' },
-      { index: 2, targetMode: 'generated', type: 'OceanusExitDoor' },
+      { index: 1, type: 'OceanusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
+      { index: 2, type: 'OceanusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
     ]);
     expect(requireShop(shop?.incomingReward).shopProfileKey).toBe('WorldShop');
   });
@@ -279,7 +293,7 @@ describe('complete G catalog', () => {
     expect(preboss).toMatchObject({
       label: 'Preboss',
       kind: 'Preboss',
-      templateKey: 'ForkedPreboss',
+      mode: { kind: 'authored', templateKey: 'ForkedPreboss' },
       counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1 },
       eligibility: {
@@ -294,11 +308,40 @@ describe('complete G catalog', () => {
       },
     });
     expect(preboss?.exits).toEqual([
-      { index: 1, targetMode: 'fixedBoss', type: 'OceanusExitDoor' },
+      { index: 1, type: 'OceanusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
     ]);
     expect(requireShop(preboss?.incomingReward).shopProfileKey).toBe('WorldShop');
     expect(freeReward.storeKeys).toEqual(['RunProgress']);
     expect(freeReward.ineligibleRewardTypes).toEqual(['Devotion', 'RoomMoneyDrop']);
+  });
+
+  it('declares the G completion tail with resolved boss-store provenance', () => {
+    expect(catalog.rooms.byKey.G_Boss01).toMatchObject({
+      label: 'Scylla and the Sirens',
+      kind: 'Boss',
+      mode: { kind: 'derived', classification: 'completion' },
+      structuralTags: [],
+      incomingReward: { kind: 'none' },
+      enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+      encounterProfileKey: 'G_Boss01',
+      counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+      localChildren: [],
+    });
+    expect(catalog.encounterProfiles.byKey.G_Boss01?.phases).toEqual([
+      {
+        key: 'G_Boss01',
+        kind: 'boss',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'BossScylla01',
+      },
+    ]);
+    expect(catalog.rooms.byKey.G_PostBoss01).toMatchObject({
+      kind: 'PostBoss',
+      mode: { kind: 'derived', classification: 'completion' },
+      incomingReward: { kind: 'none' },
+      enteredRewardStoreHistory: { kind: 'none' },
+      encounterProfileKey: 'G_PostBoss01',
+    });
   });
 
   it('rejects a fixed start with more than one room', () => {
@@ -317,7 +360,11 @@ describe('complete G catalog', () => {
           candidate.biomeStepKey === 'Underworld_G'
             ? {
                 ...layout,
-                start: { mode: 'fixed', roomGameNames: ['G_Intro', 'F_Opening01'] },
+                start: {
+                  kind: 'authoredStart',
+                  mode: 'fixed',
+                  roomGameNames: ['G_Intro', 'F_Opening01'],
+                },
               }
             : candidate,
         ),
