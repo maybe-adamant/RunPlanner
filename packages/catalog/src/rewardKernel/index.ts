@@ -9,6 +9,8 @@ export type {
   RawAcquisitionRoleDeclaration,
   RawConcreteAcquisitionDeclaration,
   RawPayloadDomainDeclaration,
+  RawProducerLifecycleOverrideDeclaration,
+  RawProducerLifecycleProfileDeclaration,
   RawRewardKernelInput,
   RawRewardStoreDeclaration,
   RawRewardStoreEntryDeclaration,
@@ -16,4 +18,5 @@ export type {
   RawShopGroupDeclaration,
   RawShopOptionEntryDeclaration,
   RawShopProfileDeclaration,
+  RawShopSlotDeclaration,
 } from './types';

@@ -114,10 +114,29 @@ export interface ShopGroupDeclaration {
   readonly options: CatalogCollection<ShopOptionEntry>;
 }
 
+export interface ShopSlotDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly groupKey: string;
+  readonly defaultOptionKey: string;
+  readonly defaultOffer: ResolvedRewardOffer;
+}
+
 export interface ShopProfileDeclaration {
   readonly key: string;
   readonly groups: CatalogCollection<ShopGroupDeclaration>;
+  readonly slots: CatalogCollection<ShopSlotDeclaration>;
   readonly slotCount: number;
+}
+
+export interface ProducerRewardLifecycleDeclaration {
+  readonly rewardType: string;
+  readonly acquisitionLifecycle: readonly AcquisitionLifecycleBinding[];
+}
+
+export interface ProducerLifecycleProfileDeclaration {
+  readonly key: string;
+  readonly rewardTypes: CatalogCollection<ProducerRewardLifecycleDeclaration>;
 }
 
 export interface RewardKernelCatalog {
@@ -126,6 +145,7 @@ export interface RewardKernelCatalog {
   readonly acquisitions: CatalogCollection<ConcreteAcquisitionDeclaration>;
   readonly stores: CatalogCollection<RewardStoreDeclaration>;
   readonly shops: CatalogCollection<ShopProfileDeclaration>;
+  readonly producerLifecycles: CatalogCollection<ProducerLifecycleProfileDeclaration>;
 }
 
 export interface RewardKernelFacts {

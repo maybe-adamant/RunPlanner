@@ -443,6 +443,18 @@ schema changes piecemeal; the now-complete audit set defines one shared version
 
 Current:
 
+- the additive authority-switch preflight now gives every World, I, and Q shop
+  profile explicit stable emitted slots, labels, group ownership, and complete
+  declaration-selected defaults;
+- the normalized `RoomReward` producer-lifecycle profile now enumerates its
+  supported reward types, binds ordinary roles to `roomRewardPickup`, and
+  declares Devotion's before/after-combat role timing without core reward-name
+  dispatch;
+- both contacts reject missing, misordered, duplicate, unknown, or incomplete
+  declarations before schema version 2 consumes them.
+
+Remaining:
+
 1. replace leaf-owned stores and eager shops with schema version 2;
 2. bind F/G defaults, codecs, commands, and editor projection to the kernel;
 3. delete the superseded reward types and reject schema version 1.

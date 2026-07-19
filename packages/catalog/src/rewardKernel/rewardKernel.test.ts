@@ -300,6 +300,125 @@ describe('reward-kernel declaration parity', () => {
       Object.fromEntries(
         rewardKernelCatalog.shops.values.map((profile) => [
           profile.key,
+          profile.slots.values.map((slot) => ({
+            key: slot.key,
+            label: slot.label,
+            groupKey: slot.groupKey,
+            defaultOptionKey: slot.defaultOptionKey,
+            defaultRewardType: slot.defaultOffer.rewardType,
+          })),
+        ]),
+      ),
+    ).toEqual({
+      WorldShop: [
+        {
+          key: 'Boon',
+          label: 'Offer 1',
+          groupKey: 'Boon',
+          defaultOptionKey: 'RandomLoot',
+          defaultRewardType: 'RandomLoot',
+        },
+        {
+          key: 'MajorNonBoon',
+          label: 'Offer 2',
+          groupKey: 'MajorNonBoon',
+          defaultOptionKey: 'WeaponUpgradeDropEarly',
+          defaultRewardType: 'WeaponUpgradeDrop',
+        },
+        {
+          key: 'Minor',
+          label: 'Offer 3',
+          groupKey: 'Minor',
+          defaultOptionKey: 'MaxManaDrop',
+          defaultRewardType: 'MaxManaDrop',
+        },
+      ],
+      I_WorldShop: [
+        {
+          key: 'BoostedBoon',
+          label: 'Offer 1',
+          groupKey: 'BoostedBoon',
+          defaultOptionKey: 'BoostedRandomLoot',
+          defaultRewardType: 'RandomLoot',
+        },
+        {
+          key: 'MixedProgress',
+          label: 'Offer 2',
+          groupKey: 'MixedProgress',
+          defaultOptionKey: 'RandomLoot',
+          defaultRewardType: 'RandomLoot',
+        },
+        {
+          key: 'Survival',
+          label: 'Offer 3',
+          groupKey: 'Survival',
+          defaultOptionKey: 'HealBigDrop',
+          defaultRewardType: 'HealBigDrop',
+        },
+        {
+          key: 'PremiumProgress',
+          label: 'Offer 4',
+          groupKey: 'PremiumProgress',
+          defaultOptionKey: 'ShopHermesUpgrade',
+          defaultRewardType: 'ShopHermesUpgrade',
+        },
+        {
+          key: 'MetaProgress',
+          label: 'Offer 5',
+          groupKey: 'MetaProgress',
+          defaultOptionKey: 'WeaponPointsRareDrop',
+          defaultRewardType: 'WeaponPointsRareDrop',
+        },
+      ],
+      Q_WorldShop: [
+        {
+          key: 'MixedProgress1',
+          label: 'Offer 1',
+          groupKey: 'MixedProgress',
+          defaultOptionKey: 'BoostedRandomLoot',
+          defaultRewardType: 'RandomLoot',
+        },
+        {
+          key: 'MixedProgress2',
+          label: 'Offer 2',
+          groupKey: 'MixedProgress',
+          defaultOptionKey: 'StackUpgradeBig',
+          defaultRewardType: 'StackUpgradeBig',
+        },
+        {
+          key: 'LargeSurvival',
+          label: 'Offer 3',
+          groupKey: 'LargeSurvival',
+          defaultOptionKey: 'HealBigDrop',
+          defaultRewardType: 'HealBigDrop',
+        },
+        {
+          key: 'Survival',
+          label: 'Offer 4',
+          groupKey: 'Survival',
+          defaultOptionKey: 'HealBigDrop',
+          defaultRewardType: 'HealBigDrop',
+        },
+        {
+          key: 'PremiumProgress',
+          label: 'Offer 5',
+          groupKey: 'PremiumProgress',
+          defaultOptionKey: 'ShopHermesUpgrade',
+          defaultRewardType: 'ShopHermesUpgrade',
+        },
+        {
+          key: 'MetaProgress',
+          label: 'Offer 6',
+          groupKey: 'MetaProgress',
+          defaultOptionKey: 'WeaponPointsRareDrop',
+          defaultRewardType: 'WeaponPointsRareDrop',
+        },
+      ],
+    });
+    expect(
+      Object.fromEntries(
+        rewardKernelCatalog.shops.values.map((profile) => [
+          profile.key,
           profile.groups.values.map((group) => ({
             key: group.key,
             offerCount: group.offerCount,
@@ -489,6 +608,66 @@ describe('reward-kernel declaration parity', () => {
       'CharonPointsDrop',
     ]);
     expect(rewardKernelCatalog.acquisitions.values).toHaveLength(48);
+  });
+
+  it('normalizes room-reward acquisition timing without reward-name dispatch', () => {
+    const roomReward = rewardKernelCatalog.producerLifecycles.byKey.RoomReward;
+    expect(roomReward?.rewardTypes.byKey.Boon?.acquisitionLifecycle).toEqual([
+      { role: 'source', lifecyclePoint: 'roomRewardPickup' },
+    ]);
+    expect(roomReward?.rewardTypes.byKey.Devotion?.acquisitionLifecycle).toEqual([
+      { role: 'chosenSource', lifecyclePoint: 'beforeCombat' },
+      { role: 'spurnedSource', lifecyclePoint: 'afterCombat' },
+    ]);
+    expect(roomReward?.rewardTypes.byKey.Story?.acquisitionLifecycle).toEqual([]);
+  });
+
+  it('rejects malformed emitted shop slots and producer lifecycle overrides', () => {
+    const worldShop = rewardKernelDeclarations.shops.find((shop) => shop.key === 'WorldShop');
+    if (worldShop === undefined) {
+      throw new Error('WorldShop test declaration is missing');
+    }
+    const malformed: readonly RawRewardKernelInput[] = [
+      rawInput({
+        ...rewardKernelDeclarations,
+        shops: rewardKernelDeclarations.shops.map((shop) =>
+          shop.key === 'WorldShop' ? { ...shop, slots: shop.slots.slice(1) } : shop,
+        ),
+      }),
+      rawInput({
+        ...rewardKernelDeclarations,
+        shops: rewardKernelDeclarations.shops.map((shop) =>
+          shop.key === 'WorldShop'
+            ? {
+                ...shop,
+                slots: shop.slots.map((slot, index) =>
+                  index === 0 ? { ...slot, defaultOptionKey: 'missing' } : slot,
+                ),
+              }
+            : shop,
+        ),
+      }),
+      rawInput({
+        ...rewardKernelDeclarations,
+        producerLifecycles: [
+          {
+            key: 'RoomReward',
+            rewardTypes: ['Devotion'],
+            defaultLifecyclePoint: 'roomRewardPickup',
+            overrides: [
+              {
+                rewardType: 'Devotion',
+                acquisitionLifecycle: [{ role: 'chosenSource', lifecyclePoint: 'beforeCombat' }],
+              },
+            ],
+          },
+        ],
+      }),
+    ];
+    expect(worldShop.slots).toHaveLength(3);
+    for (const input of malformed) {
+      expect(() => createRewardKernelCatalog(input)).toThrow(CatalogContractError);
+    }
   });
 
   it('rejects incomplete source contracts at catalog construction', () => {
