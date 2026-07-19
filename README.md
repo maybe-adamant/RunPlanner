@@ -31,11 +31,11 @@ cross-biome design reconciliation are complete. P, Q, H, O, I, and N close the
 linear, scripted-linear, batch-local-slot, ordered multi-encounter,
 conditional-terminal, and persistent-hub pressure tests.
 
-Phase 2.6 is now active. It builds the audited reward kernel as an unconnected
-pure subsystem. Phase 2.7 then switches F/G atomically to schema version 2,
-and Phase 2.8 hardens the shared structural vocabulary and imports the
+Phase 2.6 is complete. It adds the audited reward kernel as an unconnected pure
+subsystem. Phase 2.7, the atomic F/G switch to schema version 2, is now active.
+Phase 2.8 then hardens the shared structural vocabulary and imports the
 remaining biomes as dormant declarations. Phase 3 history work starts only
-after all three gates pass.
+after those gates pass.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.
@@ -71,40 +71,43 @@ graph projection, but it will never own topology or node identity.
    the game evidence and exact, simplified, deferred, or excluded disposition
    behind the reward model.
 5. [`docs/GAME_GENERATION_RULES.md`](docs/GAME_GENERATION_RULES.md) defines
-   shared picker, door, cap, force, lifecycle, and generated-decision rules.
-6. [`docs/biomes/F_GAME_RULES.md`](docs/biomes/F_GAME_RULES.md) defines Erebus game behavior,
+   shared picker, door, cap, force, and generated-decision rules.
+6. [`docs/ROOM_LIFECYCLE_MODEL.md`](docs/ROOM_LIFECYCLE_MODEL.md) defines the
+   ordered single-room lifecycle, history-fragment boundary, typed effects,
+   counter/cache timing, and additive audit contract.
+7. [`docs/biomes/F_GAME_RULES.md`](docs/biomes/F_GAME_RULES.md) defines Erebus game behavior,
    projection decisions, and current feature coverage.
-7. [`docs/biomes/G_GAME_RULES.md`](docs/biomes/G_GAME_RULES.md) defines Oceanus game behavior,
+8. [`docs/biomes/G_GAME_RULES.md`](docs/biomes/G_GAME_RULES.md) defines Oceanus game behavior,
    projection decisions, and current feature coverage.
-8. [`docs/biomes/P_GAME_RULES.md`](docs/biomes/P_GAME_RULES.md) pressure-tests that model
+9. [`docs/biomes/P_GAME_RULES.md`](docs/biomes/P_GAME_RULES.md) pressure-tests that model
    against P and defines the dormant P declaration contract.
-9. [`docs/biomes/Q_GAME_RULES.md`](docs/biomes/Q_GAME_RULES.md) defines Q's scripted stages,
-   independently generated miniboss peers, reward-free spine, and repeat-run
-   completion contract.
-10. [`docs/biomes/H_GAME_RULES.md`](docs/biomes/H_GAME_RULES.md) defines H's cage batches,
+10. [`docs/biomes/Q_GAME_RULES.md`](docs/biomes/Q_GAME_RULES.md) defines Q's scripted stages,
+    independently generated miniboss peers, reward-free spine, and repeat-run
+    completion contract.
+11. [`docs/biomes/H_GAME_RULES.md`](docs/biomes/H_GAME_RULES.md) defines H's cage batches,
     bridge competition, encounter multiplicity, and Fields reward projection.
-11. [`docs/biomes/O_GAME_RULES.md`](docs/biomes/O_GAME_RULES.md) defines O's ship encounter
+12. [`docs/biomes/O_GAME_RULES.md`](docs/biomes/O_GAME_RULES.md) defines O's ship encounter
     phases, reward wheels, source-derived outgoing stores, and special rooms.
-12. [`docs/biomes/I_GAME_RULES.md`](docs/biomes/I_GAME_RULES.md) defines Clockwork Goal and
+13. [`docs/biomes/I_GAME_RULES.md`](docs/biomes/I_GAME_RULES.md) defines Clockwork Goal and
     non-goal acquisition, special peers, and repeated mixed preboss batches.
-13. [`docs/biomes/N_GAME_RULES.md`](docs/biomes/N_GAME_RULES.md) defines Ephyra's fixed
+14. [`docs/biomes/N_GAME_RULES.md`](docs/biomes/N_GAME_RULES.md) defines Ephyra's fixed
     entry, persistent hub board, ordered pylon visits, side rooms, and terminal
     shop effects.
-14. [`docs/biomes/F_G_ROOM_TEMPLATES.md`](docs/biomes/F_G_ROOM_TEMPLATES.md) defines the
+15. [`docs/biomes/F_G_ROOM_TEMPLATES.md`](docs/biomes/F_G_ROOM_TEMPLATES.md) defines the
     app-native leaf contracts shared by F/G room declarations.
-15. [`docs/AUTHORED_PROJECT_MODEL.md`](docs/AUTHORED_PROJECT_MODEL.md) defines
+16. [`docs/AUTHORED_PROJECT_MODEL.md`](docs/AUTHORED_PROJECT_MODEL.md) defines
     persisted project state, topology ownership, identities, and edit commands.
-16. [`docs/SIMULATION_AND_VALIDATION.md`](docs/SIMULATION_AND_VALIDATION.md)
+17. [`docs/SIMULATION_AND_VALIDATION.md`](docs/SIMULATION_AND_VALIDATION.md)
     defines the pure derived pipeline, history, counters, validation, and
     findings.
-17. [`docs/EDITOR_MODEL.md`](docs/EDITOR_MODEL.md) maps authored and derived
+18. [`docs/EDITOR_MODEL.md`](docs/EDITOR_MODEL.md) maps authored and derived
     state into the external editor without leaking UI structure into the
     domain.
-18. [`docs/GAME_INTEGRATION_BOUNDARY.md`](docs/GAME_INTEGRATION_BOUNDARY.md)
+19. [`docs/GAME_INTEGRATION_BOUNDARY.md`](docs/GAME_INTEGRATION_BOUNDARY.md)
     records the intentionally deferred app/game contract and conformance loop.
-19. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) defines the
+20. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) defines the
     development order and acceptance gates.
-20. [`docs/MIGRATION_PROVENANCE.md`](docs/MIGRATION_PROVENANCE.md) tracks the
+21. [`docs/MIGRATION_PROVENANCE.md`](docs/MIGRATION_PROVENANCE.md) tracks the
     disposition and implementation status of inherited evidence.
 
 These documents are one coherent design set. A rule belongs in exactly one
@@ -116,6 +119,7 @@ authority and should be referenced rather than copied elsewhere.
 | ----------------------------------------------------------------------- | ------------------------------ |
 | Product layers, dependencies, lifecycle, and stack                      | `ARCHITECTURE.md`              |
 | Declaration schema, provenance, normalization, and supported game facts | `CATALOG_MODEL.md`             |
+| Single-room operation order and history-fragment boundaries             | `ROOM_LIFECYCLE_MODEL.md`      |
 | Reward vocabulary, composition, stores, shops, and offer semantics      | `REWARD_MODEL.md`              |
 | Shared picker, door, cap, force, and generated-decision game rules      | `GAME_GENERATION_RULES.md`     |
 | F behavior, projection decisions, topology, and feature coverage        | `biomes/F_GAME_RULES.md`       |

@@ -4,9 +4,12 @@
 
 This document owns cross-biome room-generation behavior shared by concrete
 biome authorities. It defines verified picker, physical-door, cap, force,
-offer/acquisition, generated-store, standard linear-batch, forked-preboss,
+generated-store, standard linear-batch, forked-preboss,
 conditional-terminal batch, fixed biome-completion, and intentionally deferred
 side-system semantics.
+
+`ROOM_LIFECYCLE_MODEL.md` owns the ordered single-room timing that decides when
+these generation rules observe room-local acquisitions.
 
 It does not own a biome's start, room set, concrete exits, target reward ratio,
 requirements, terminal depth, or biome-specific feature dispositions. Those
@@ -163,7 +166,7 @@ history. The supported trace never activates a challenge, purchases from a
 well, gathers a resource, or rerolls an offer. These no-action traces remain
 valid without pretending the underlying systems do not exist.
 
-## Offer and Entry Timing
+## Generated Targets and Entered Lifecycles
 
 While a source room is current, it generates every next-room occurrence and
 offers every incoming reward. The picked occurrence is entered later.
@@ -174,10 +177,16 @@ source.generate_next
   -> reward.offer for every target with a producer
       -> reward.offer_projection, when declared
 
-picked target entry
+source RoomLifecycleProfile continues
+  -> source.commit
+  -> source.exit through selected target
+
+picked target lifecycle
+  -> target.prepare from post-source-commit state
+  -> target.enter
   -> room.appear
   -> producer-defined acquisition point(s)
-      -> concrete_acquisition.emit
+  -> outgoing-generation checkpoint, when present
 ```
 
 Offer projections occur during target generation and therefore affect later
@@ -185,8 +194,13 @@ peer or downstream eligibility even when the target is unpicked. Devotion's
 spacing marker is the only supported reward-specific projection. Counted bag
 consumption and common offer history remain generic offer-point behavior.
 Unpicked targets never emit concrete acquisitions from their incoming offers.
-Targets with no reward producer emit no reward offer at all. This distinction is essential for
-counted bags, creation caps, reward-free Q batches, and repeated game names.
+Targets with no reward producer emit no reward offer at all. This distinction
+is essential for counted bags, creation caps, reward-free Q batches, and
+repeated game names.
+
+`ROOM_LIFECYCLE_MODEL.md` is the authority for the operation order inside the
+entered room and for the rule that a generated outgoing batch is immutable
+under later room-local acquisitions.
 
 ## Generated Reward-Store Selection
 
@@ -397,7 +411,8 @@ identity, narrative-progression exclusions, and exceptional local effects.
 User-selected difficulty variants remain excluded unless difficulty becomes
 an explicit project input. The route owns biome order; the layout owns
 completion-room order; Room Declarations own the room facts.
-`SIMULATION_AND_VALIDATION.md` owns their event and ledger ordering.
+`ROOM_LIFECYCLE_MODEL.md` owns their single-room operation ordering.
+`SIMULATION_AND_VALIDATION.md` owns event folding and cross-room composition.
 
 The old `fixedBoss` target mode is only a transition into the layout-owned
 completion sequence; it must not remain the authority for the boss identity.

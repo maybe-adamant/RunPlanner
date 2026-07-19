@@ -10,10 +10,10 @@ without importing the previous Lua control shape.
 
 Shared picker, physical-door, cap, force, offer/acquisition, occurrence,
 counted-bag, generated-store, direct-preboss, and fixed-completion semantics
-are defined by `../GAME_GENERATION_RULES.md` and `../REWARD_MODEL.md`. O remains a
-`LinearBiome`. Its combat occurrences add bounded phase-owned offer points;
-they do not turn the top-level biome into a graph or move outgoing topology
-into the room leaf.
+are defined by `../GAME_GENERATION_RULES.md`, `../ROOM_LIFECYCLE_MODEL.md`, and
+`../REWARD_MODEL.md`. O remains a `LinearBiome`. Its combat occurrences add
+bounded phase-owned offer points to an ordered room lifecycle; they do not turn
+the top-level biome into a graph or move outgoing topology into the room leaf.
 
 O declarations intentionally remain unported until every biome audit has
 pressure-tested and reconciled the shared catalog vocabulary. Documentation

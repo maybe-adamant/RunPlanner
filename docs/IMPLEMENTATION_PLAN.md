@@ -315,6 +315,12 @@ canonical history, contextual candidates, or placeholder simulation.
 ### Deliverables
 
 - F completeness gate;
+- normalized reusable room lifecycle profiles and their closed operation
+  vocabulary;
+- declaration-driven lifecycle effects and immutable occurrence-addressed
+  events with strict dispatch;
+- occurrence-addressed single-room history fragments composed through exact
+  outgoing-generation checkpoints;
 - common linear canonical materializer;
 - layout-derived F boss/postboss completion materialization;
 - room-template materializers required by F;
@@ -336,11 +342,18 @@ Candidate simulation is not required until selected-plan validation is stable.
   occurrence;
 - a focused fixture materializes repeated game room names as distinct offers;
 - creation, appearance, offer, and acquisition histories differ correctly;
+- standard reward acquisition affects the same room's outgoing generation,
+  while WorldShop purchases affect generation only after the already-generated
+  next room;
+- the fourth-shop-source/fifth-door-source trace remains valid and has an
+  operation-order witness;
 - a low-weight eligible room remains valid while an active forced pool excludes
   ordinary eligible rooms;
 - reward-store chance boundaries distinguish impossible, possible, and forced
   outcomes without producing likelihood scores;
 - `biomeDepthCache` and `biomeEncounterDepth` follow declared timing;
+- target preparation observes predecessor post-commit caches while outgoing
+  generation observes source pre-commit caches;
 - terminal realization uses predecessor context correctly;
 - incomplete F produces no canonical snapshot;
 - invalid complete F retains its snapshot and findings;

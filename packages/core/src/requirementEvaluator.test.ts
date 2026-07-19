@@ -21,10 +21,10 @@ const baseContext = {
     roomsEntered: {},
     useRecord: {},
   },
-  currentRoomStoreOptionNames: new Set<string>(),
+  currentRoomShopOptionNames: new Set<string>(),
   currentRoomRewardType: undefined,
-  roomHistoryOrdinal: 10,
-  lastEventRoomHistoryOrdinals: {},
+  runDepthCache: 10,
+  lastEventRunDepthCaches: {},
   offeredExitCount: 2,
   flags: {
     allSpellInvested: false,
@@ -40,7 +40,7 @@ describe('requirement evaluator registry', () => {
       'not',
       'counterRange',
       'recordCount',
-      'notInStore',
+      'notInCurrentRoomShopOptions',
       'minRoomsSinceEvent',
       'minExits',
       'currentRoomRewardExcludes',
@@ -98,7 +98,7 @@ describe('requirement evaluator registry', () => {
         ...baseContext.records,
         lootTypeHistory: { ApolloUpgrade: 1, ZeusUpgrade: 1 },
       },
-      currentRoomStoreOptionNames: new Set(['TalentDrop']),
+      currentRoomShopOptionNames: new Set(['TalentDrop']),
       currentRoomRewardType: 'SpellDrop',
       flags: { ...baseContext.flags, pendingSpellDrop: true },
     } satisfies RequirementEvaluationContext;
@@ -114,9 +114,12 @@ describe('requirement evaluator registry', () => {
         context,
       ),
     ).toBe(true);
-    expect(evaluateRequirement({ kind: 'notInStore', rewardType: 'TalentDrop' }, context)).toBe(
-      false,
-    );
+    expect(
+      evaluateRequirement(
+        { kind: 'notInCurrentRoomShopOptions', rewardType: 'TalentDrop' },
+        context,
+      ),
+    ).toBe(false);
     expect(
       evaluateRequirement(
         { kind: 'currentRoomRewardExcludes', rewardTypes: ['SpellDrop'] },
@@ -136,21 +139,21 @@ describe('requirement evaluator registry', () => {
     expect(
       evaluateRequirement(requirement, {
         ...baseContext,
-        lastEventRoomHistoryOrdinals: { Devotion: 10 },
+        lastEventRunDepthCaches: { Devotion: 10 },
       }),
     ).toBe(true);
     expect(
       evaluateRequirement(requirement, {
         ...baseContext,
-        roomHistoryOrdinal: 24,
-        lastEventRoomHistoryOrdinals: { Devotion: 10 },
+        runDepthCache: 24,
+        lastEventRunDepthCaches: { Devotion: 10 },
       }),
     ).toBe(false);
     expect(
       evaluateRequirement(requirement, {
         ...baseContext,
-        roomHistoryOrdinal: 25,
-        lastEventRoomHistoryOrdinals: { Devotion: 10 },
+        runDepthCache: 25,
+        lastEventRunDepthCaches: { Devotion: 10 },
       }),
     ).toBe(true);
   });

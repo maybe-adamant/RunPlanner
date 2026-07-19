@@ -66,6 +66,9 @@ project file
 
 normalized catalog + authored project
   -> pure simulator
+      -> execute catalog-selected room lifecycle profiles
+      -> apply declaration-selected typed lifecycle effects
+      -> compose occurrence-addressed room history fragments
       -> canonical route snapshots
       -> lifecycle history and ledgers
       -> validation and candidate results

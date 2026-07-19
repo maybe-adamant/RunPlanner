@@ -7,6 +7,11 @@ F/G vertical slice. A template describes the typed leaf shape and
 materialization behavior shared by concrete Room Declarations. It is not a UI
 component, Lib control, persistence allocation, or source of topology.
 
+Template materialization produces room-local semantic input. The
+catalog-selected lifecycle profile defined by `../ROOM_LIFECYCLE_MODEL.md`
+turns that input into an ordered `RoomHistoryFragment`; templates do not own or
+imperatively execute history ordering.
+
 Concrete declarations own game-specific exits, requirements, caps, labels,
 encounter-profile keys, and reward bindings. Templates consume those
 normalized facts and complete authored state.
@@ -16,11 +21,11 @@ normalized facts and complete authored state.
 Every template implementation provides pure operations equivalent to:
 
 ```ts
-interface RoomTemplate<State, Fragment> {
+interface RoomTemplate<State, RoomLocalMaterialization> {
   createDefaultState(context: TemplateDefaultContext): State;
   decodeState(value: unknown, context: TemplateDecodeContext): State;
   validateLocalState(state: State, context: TemplateContext): LocalIssue[];
-  materialize(state: State, context: TemplateContext): Fragment;
+  materialize(state: State, context: TemplateContext): RoomLocalMaterialization;
 }
 ```
 
@@ -35,6 +40,8 @@ Exact APIs may differ. The invariants do not:
 - route history, force, caps, peers, and contextual eligibility belong to the
   simulator;
 - topology is never passed as mutable state;
+- normalized template/encounter composition resolves one compatible lifecycle
+  profile rather than switching on a concrete room name;
 - findings return to occurrence-based semantic addresses.
 
 An occurrence replacement preserves `occurrenceId` and installs the new Room
@@ -227,10 +234,12 @@ is validated only at the purchase-time lifecycle point.
 ### Materialization
 
 Entering the room exposes all three group-derived offers in group order and
-acquires exactly those with `purchased: true`. The incoming door offer is the
-fixed Shop producer; shop inventory is room-internal state. Purchase order is a
-derived possibility witness used to prove an authored Blind Box source; it is
-not another persisted leaf field.
+acquires exactly those with `purchased: true`. Its WorldShop lifecycle
+generates the outgoing batch while the complete inventory is still active,
+then advances the purchased offers. The incoming door offer is the fixed Shop
+producer; shop inventory is room-internal state. Purchase order is a derived
+possibility witness used to prove an authored Blind Box source; it is not
+another persisted leaf field.
 
 Player-facing labels are `Offer 1`, `Offer 2`, and `Offer 3`. Stable internal
 slot keys remain semantic addresses and persistence keys.

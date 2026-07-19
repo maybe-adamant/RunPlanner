@@ -79,9 +79,9 @@ export function normalizeRequirement(
         keys: freezeUniqueStrings(requirement.keys, `${path}.keys`),
         range: normalizeRange(requirement.range, `${path}.range`),
       });
-    case 'notInStore':
+    case 'notInCurrentRoomShopOptions':
       return Object.freeze({
-        kind: 'notInStore',
+        kind: 'notInCurrentRoomShopOptions',
         rewardType: requireNonEmpty(requirement.rewardType, `${path}.rewardType`),
       });
     case 'minRoomsSinceEvent':
@@ -127,7 +127,7 @@ export function validateRequirementReferences(
     case 'not':
       validateRequirementReferences(requirement.requirement, primitives, `${path}.requirement`);
       return;
-    case 'notInStore':
+    case 'notInCurrentRoomShopOptions':
       if (primitives.byKey[requirement.rewardType] === undefined) {
         fail(`${path}.rewardType`, `unknown reward primitive ${requirement.rewardType}`);
       }

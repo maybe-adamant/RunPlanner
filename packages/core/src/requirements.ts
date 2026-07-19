@@ -39,7 +39,7 @@ export type RequirementExpression =
       readonly range: NumericRange;
     }
   | {
-      readonly kind: 'notInStore';
+      readonly kind: 'notInCurrentRoomShopOptions';
       readonly rewardType: string;
     }
   | {

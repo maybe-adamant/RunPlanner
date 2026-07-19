@@ -11,10 +11,10 @@ export type RequirementKind = RequirementExpression['kind'];
 export interface RequirementEvaluationContext {
   readonly counters: Readonly<Record<CounterAxis, number>>;
   readonly records: Readonly<Record<HistoryRecord, Readonly<Record<string, number>>>>;
-  readonly currentRoomStoreOptionNames: ReadonlySet<string>;
+  readonly currentRoomShopOptionNames: ReadonlySet<string>;
   readonly currentRoomRewardType: string | undefined;
-  readonly roomHistoryOrdinal: number;
-  readonly lastEventRoomHistoryOrdinals: Readonly<Record<string, number>>;
+  readonly runDepthCache: number;
+  readonly lastEventRunDepthCaches: Readonly<Record<string, number>>;
   readonly offeredExitCount: number;
   readonly flags: Readonly<Record<CurrentRunFlag, boolean>>;
 }
@@ -53,14 +53,14 @@ export const requirementEvaluatorRegistry = Object.freeze({
     const count = requirement.keys.reduce((total, key) => total + (record[key] ?? 0), 0);
     return isInRange(count, requirement.range);
   },
-  notInStore: (requirement, context) =>
-    !context.currentRoomStoreOptionNames.has(requirement.rewardType),
+  notInCurrentRoomShopOptions: (requirement, context) =>
+    !context.currentRoomShopOptionNames.has(requirement.rewardType),
   minRoomsSinceEvent: (requirement, context) => {
-    const lastOrdinal = context.lastEventRoomHistoryOrdinals[requirement.event];
+    const lastDepth = context.lastEventRunDepthCaches[requirement.event];
     return (
-      lastOrdinal === undefined ||
-      lastOrdinal === context.roomHistoryOrdinal ||
-      context.roomHistoryOrdinal - lastOrdinal >= requirement.count
+      lastDepth === undefined ||
+      lastDepth === context.runDepthCache ||
+      context.runDepthCache - requirement.count >= lastDepth
     );
   },
   minExits: (requirement, context) => context.offeredExitCount >= requirement.count,
@@ -89,8 +89,8 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.counterRange(requirement, context);
     case 'recordCount':
       return requirementEvaluatorRegistry.recordCount(requirement, context);
-    case 'notInStore':
-      return requirementEvaluatorRegistry.notInStore(requirement, context);
+    case 'notInCurrentRoomShopOptions':
+      return requirementEvaluatorRegistry.notInCurrentRoomShopOptions(requirement, context);
     case 'minRoomsSinceEvent':
       return requirementEvaluatorRegistry.minRoomsSinceEvent(requirement, context);
     case 'minExits':
