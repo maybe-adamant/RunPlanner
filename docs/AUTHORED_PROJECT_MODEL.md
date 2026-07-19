@@ -302,6 +302,11 @@ materialization join the occurrence with its owning batch. Shop state
 optionality therefore does not add a persisted `picked` or `entered` flag to
 the room leaf.
 
+An H Fields combat occurrence persists `cage1`, `cage2`, and `cage3` as
+complete resolved reward offers even when its declaration or owning batch
+activates only two. The semantic batch outcome and declaration capacity derive
+the active prefix; inactive cage values remain ordinary dormant leaf state.
+
 ### Batch Owns
 
 - peer-wide selection or visit order;

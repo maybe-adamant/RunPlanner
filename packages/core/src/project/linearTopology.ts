@@ -8,6 +8,7 @@ import type {
   RoomOccurrence,
 } from './model';
 import { decodeRoomState, type RoomOccurrenceRole } from './roomState';
+import { decodeBatchState } from './batchState';
 import {
   expectArray,
   expectExactKeys,
@@ -268,10 +269,11 @@ export function decodeLinearBiomeTopology(
               layout,
               `${continuationPath}.rewardStore`,
             ),
-            batchState:
-              rawContinuation.batchState === null
-                ? null
-                : failProjectDocument(`${continuationPath}.batchState`, 'must be null'),
+            batchState: decodeBatchState(
+              rawContinuation.batchState,
+              layout.continuation.batchPolicy,
+              `${continuationPath}.batchState`,
+            ),
             targets,
             pickedExitIndex,
           })

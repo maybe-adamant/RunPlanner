@@ -326,6 +326,14 @@ describe('shared structural catalog vocabulary', () => {
       error: new CatalogContractError('rooms[0].mode.kind', 'unknown room mode mystery'),
     },
     {
+      name: 'room force',
+      input: {
+        ...declarations,
+        rooms: [{ ...declarations.rooms[0], force: { kind: 'mystery' } }],
+      },
+      error: new CatalogContractError('rooms[0].force.kind', 'unknown room force mystery'),
+    },
+    {
       name: 'physical exit compatibility reference',
       input: {
         ...declarations,
@@ -748,6 +756,114 @@ describe('shared structural catalog vocabulary', () => {
     expect(() => createCatalog(raw(input))).toThrowError(error);
   });
 
+  it('rejects malformed FieldsCombat cage ownership at construction', () => {
+    const index = roomIndex('H_Combat01');
+    const room = declarations.rooms[index];
+    if (room?.gameName !== 'H_Combat01') {
+      throw new Error('H_Combat01 fixture is missing');
+    }
+    const invalidCapacityChildren = room.localChildren.map((child) => ({
+      ...child,
+      maxActiveSlots: 2,
+    }));
+
+    expect(() =>
+      createCatalog(
+        raw({
+          ...declarations,
+          rooms: declarations.rooms.map((candidate, roomIndex) =>
+            roomIndex === index
+              ? {
+                  ...candidate,
+                  localChildren: invalidCapacityChildren,
+                }
+              : candidate,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `rooms[${index}].localChildren[0].maxActiveSlots`,
+        'must equal raw capacity clamped to the physical slot count',
+      ),
+    );
+
+    expect(() =>
+      createCatalog(
+        raw({
+          ...declarations,
+          rooms: declarations.rooms.map((candidate, roomIndex) =>
+            roomIndex === index ? { ...candidate, individualRewardStoreKey: undefined } : candidate,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `rooms[${index}].individualRewardStoreKey`,
+        'is required by FieldsCombat',
+      ),
+    );
+
+    const cages = room.localChildren[0];
+    if (cages?.kind !== 'boundedRewardSlots') {
+      throw new Error('H_Combat01 cages fixture is missing');
+    }
+    expect(() =>
+      createCatalog(
+        raw({
+          ...declarations,
+          rooms: declarations.rooms.map((candidate, roomIndex) =>
+            roomIndex === index
+              ? {
+                  ...candidate,
+                  localChildren: [
+                    {
+                      ...cages,
+                      reward: {
+                        ...cages.reward,
+                        storeKeys: ['RunProgress', 'MetaProgress'],
+                      },
+                    },
+                  ],
+                }
+              : candidate,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `rooms[${index}].localChildren[0].reward.storeKeys`,
+        'must contain only the FieldsCombat individual store RunProgress',
+      ),
+    );
+
+    expect(() =>
+      createCatalog(
+        raw({
+          ...declarations,
+          rooms: declarations.rooms.map((candidate, roomIndex) =>
+            roomIndex === index
+              ? {
+                  ...candidate,
+                  localChildren: [
+                    {
+                      ...cages,
+                      fields: [{ key: 'entered', kind: 'boolean', defaultValue: false }],
+                    },
+                  ],
+                }
+              : candidate,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `rooms[${index}].localChildren[0].fields`,
+        'FieldsCombat cages do not own authored fields',
+      ),
+    );
+  });
+
   it('normalizes every closed authored field kind and both dormant store policies', () => {
     const catalog = createCatalog(
       raw({
@@ -761,6 +877,15 @@ describe('shared structural catalog vocabulary', () => {
                     key: 'cages',
                     kind: 'boundedRewardSlots',
                     slotKeys: ['cage1', 'cage2', 'cage3'],
+                    rawCapacity: 3,
+                    maxActiveSlots: 3,
+                    reward: {
+                      kind: 'countedChoice',
+                      storeKeys: ['RunProgress'],
+                      eligibleRewardTypes: [],
+                      ineligibleRewardTypes: [],
+                      producerLifecycleKey: 'RoomReward',
+                    },
                     fields: [{ key: 'entered', kind: 'boolean', defaultValue: false }],
                   },
                   {
@@ -825,11 +950,14 @@ describe('shared structural catalog vocabulary', () => {
     expect(catalog.biomeLayouts.byKey.G).toMatchObject({
       continuation: { rewardStorePolicy: { kind: 'none' } },
     });
-    expect(catalog.rooms.byKey.F_Opening01?.localChildren).toEqual([
+    expect(catalog.rooms.byKey.F_Opening01?.localChildren).toMatchObject([
       {
         key: 'cages',
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
+        rawCapacity: 3,
+        maxActiveSlots: 3,
+        reward: { kind: 'countedChoice', storeKeys: ['RunProgress'] },
         fields: [{ key: 'entered', kind: 'boolean', defaultValue: false }],
       },
       {

@@ -1,4 +1,10 @@
-import type { AuthoredFieldDescriptor, LocalChildDescriptor } from '@run-planner/core';
+import type {
+  AuthoredFieldDescriptor,
+  CountedRewardBinding,
+  LocalChildDescriptor,
+} from '@run-planner/core';
+
+import type { RawCountedRewardBinding, RawLocalChildDescriptor } from '../declarations';
 
 import {
   freezeUniqueStrings,
@@ -59,8 +65,9 @@ export function normalizeAuthoredFields(
 }
 
 export function normalizeLocalChildren(
-  rawChildren: readonly LocalChildDescriptor[],
+  rawChildren: readonly RawLocalChildDescriptor[],
   path: string,
+  normalizeCountedReward: (raw: RawCountedRewardBinding, path: string) => CountedRewardBinding,
 ): readonly LocalChildDescriptor[] {
   const keys = freezeUniqueStrings(
     rawChildren.map((child) => child.key),
@@ -75,10 +82,24 @@ export function normalizeLocalChildren(
         if (slotKeys.length === 0) {
           fail(`${childPath}.slotKeys`, 'must not be empty');
         }
+        const rawCapacity = requirePositiveInteger(child.rawCapacity, `${childPath}.rawCapacity`);
+        const maxActiveSlots = requirePositiveInteger(
+          child.maxActiveSlots,
+          `${childPath}.maxActiveSlots`,
+        );
+        if (maxActiveSlots !== Math.min(rawCapacity, slotKeys.length)) {
+          fail(
+            `${childPath}.maxActiveSlots`,
+            'must equal raw capacity clamped to the physical slot count',
+          );
+        }
         return Object.freeze({
           key: keys[index] as string,
           kind: 'boundedRewardSlots',
           slotKeys,
+          rawCapacity,
+          maxActiveSlots,
+          reward: normalizeCountedReward(child.reward, `${childPath}.reward`),
           fields: normalizeAuthoredFields(child.fields, `${childPath}.fields`),
         });
       }

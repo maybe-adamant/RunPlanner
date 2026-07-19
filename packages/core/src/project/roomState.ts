@@ -1,4 +1,4 @@
-import type { Catalog, RoomDeclaration } from '../catalog';
+import type { Catalog, LocalChildDescriptor, RoomDeclaration } from '../catalog';
 import type { CountedRewardBinding, ShopRewardBinding } from '../rewards';
 import type {
   ResolvedRewardOffer,
@@ -96,6 +96,32 @@ function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: st
   return Object.freeze({ profileKey: profile.key, offers: Object.freeze(offers) });
 }
 
+function requireFieldsCages(
+  room: RoomDeclaration,
+  path: string,
+): LocalChildDescriptor & {
+  readonly kind: 'boundedRewardSlots';
+} {
+  const cages = room.localChildren.find((child) => child.key === 'cages');
+  if (cages?.kind !== 'boundedRewardSlots') {
+    failProjectDocument(path, 'FieldsCombat requires bounded cages');
+  }
+  return cages;
+}
+
+function defaultFieldsCages(room: RoomDeclaration, path: string) {
+  const descriptor = requireFieldsCages(room, path);
+  const cages: Record<string, ResolvedRewardOffer> = {};
+  for (const slotKey of descriptor.slotKeys) {
+    cages[slotKey] = defaultCountedOffer(
+      descriptor.reward,
+      room.individualRewardStoreKey,
+      `${path}.cages.${slotKey}`,
+    );
+  }
+  return Object.freeze(cages);
+}
+
 export function createDefaultRoomState(
   catalog: Catalog,
   room: RoomDeclaration,
@@ -109,6 +135,9 @@ export function createDefaultRoomState(
     case 'RewardlessCombat':
       requireOrdinaryRole(role, room, path);
       return Object.freeze({ kind: 'none' });
+    case 'FieldsCombat':
+      requireOrdinaryRole(role, room, path);
+      return Object.freeze({ kind: 'fieldsCombat', cages: defaultFieldsCages(room, path) });
     case 'FixedOpening':
     case 'Fountain':
     case 'Miniboss':
@@ -339,6 +368,24 @@ export function decodeRoomState(
       expectedKind(state.kind, 'none', path);
       expectExactKeys(state, ['kind'], path);
       return Object.freeze({ kind: 'none' });
+    case 'FieldsCombat': {
+      requireOrdinaryRole(role, room, path);
+      expectedKind(state.kind, 'fieldsCombat', path);
+      expectExactKeys(state, ['kind', 'cages'], path);
+      const descriptor = requireFieldsCages(room, path);
+      const rawCages = expectRecord(state.cages, `${path}.cages`);
+      expectExactKeys(rawCages, descriptor.slotKeys, `${path}.cages`);
+      const cages: Record<string, ResolvedRewardOffer> = {};
+      for (const slotKey of descriptor.slotKeys) {
+        cages[slotKey] = decodeCountedOffer(
+          rawCages[slotKey],
+          catalog,
+          descriptor.reward,
+          `${path}.cages.${slotKey}`,
+        );
+      }
+      return Object.freeze({ kind: 'fieldsCombat', cages: Object.freeze(cages) });
+    }
     case 'FixedOpening':
     case 'Fountain':
     case 'Miniboss':

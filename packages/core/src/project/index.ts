@@ -40,6 +40,7 @@ export {
   ProjectCommandContractError,
 } from './commands';
 export { decodeLinearBiomeTopology } from './linearTopology';
+export { createDefaultBatchState, decodeBatchState } from './batchState';
 export {
   applyProjectHistoryCommand,
   canRedoProjectHistory,
@@ -56,6 +57,8 @@ export {
   type AuthoredRoutePlan,
   type AuthoredBatchState,
   type BatchRewardStoreState,
+  type FieldsCageBatchState,
+  type FieldsCombatState,
   type LinearBatchContinuation,
   type LinearBiomePlan,
   type LinearBiomeTopology,

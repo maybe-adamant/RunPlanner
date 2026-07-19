@@ -8,7 +8,6 @@ import type {
   ExitTypeDeclaration,
   GeneratedBatchPolicy,
   HubSlotDescriptor,
-  LocalChildDescriptor,
   LinearStartDescriptor,
   LinearProgressionPolicy,
   RequirementExpression,
@@ -66,6 +65,27 @@ export interface RawShopRewardBinding {
 export type RawRewardProducerBinding =
   RawCountedRewardBinding | RawFixedRewardBinding | RawNoneRewardBinding | RawShopRewardBinding;
 
+export type RawLocalChildDescriptor =
+  | {
+      readonly key: string;
+      readonly kind: 'boundedRewardSlots';
+      readonly slotKeys: readonly string[];
+      readonly rawCapacity: number;
+      readonly maxActiveSlots: number;
+      readonly reward: RawCountedRewardBinding;
+      readonly fields: readonly AuthoredFieldDescriptor[];
+    }
+  | {
+      readonly key: string;
+      readonly kind: 'fixedRoomSlots';
+      readonly slots: readonly {
+        readonly slotKey: string;
+        readonly roomGameName: string;
+        readonly availabilityRank: number;
+      }[];
+      readonly fields: readonly AuthoredFieldDescriptor[];
+    };
+
 export interface RawRoomExitDeclaration {
   readonly index: number;
   readonly type: string;
@@ -95,7 +115,7 @@ export interface RawRoomDeclaration {
   readonly caps: RoomCaps;
   readonly eligibility?: RequirementExpression;
   readonly force?: RoomForce;
-  readonly localChildren?: readonly LocalChildDescriptor[];
+  readonly localChildren?: readonly RawLocalChildDescriptor[];
 }
 
 export interface RawLinearBiomeLayoutDeclaration {
