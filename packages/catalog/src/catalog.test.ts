@@ -21,14 +21,42 @@ function storeRewardTypes(store: { readonly entries: readonly { readonly rewardT
 }
 
 describe('F catalog migration slice', () => {
+  it('keeps biome identity global while routes own reusable ordered references', () => {
+    const withAlternateRoute = createCatalog({
+      ...declarations,
+      routes: [
+        ...declarations.routes,
+        { key: 'Alternate', label: 'Alternate', biomeKeys: ['F', 'P'] },
+      ],
+    });
+
+    expect(withAlternateRoute.biomes.values).toHaveLength(8);
+    expect(withAlternateRoute.biomes.byKey.F).toEqual({ key: 'F', label: 'Erebus' });
+    expect(withAlternateRoute.routes.byKey.Underworld?.biomeKeys).toEqual(['F', 'G', 'H', 'I']);
+    expect(withAlternateRoute.routes.byKey.Alternate?.biomeKeys).toEqual(['F', 'P']);
+  });
+
+  it('rejects unknown and repeated biome references within a route', () => {
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        routes: [{ key: 'Broken', label: 'Broken', biomeKeys: ['Missing'] }],
+      }),
+    ).toThrowError(new CatalogContractError('routes[0].biomeKeys[0]', 'unknown biome Missing'));
+
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        routes: [{ key: 'Broken', label: 'Broken', biomeKeys: ['F', 'F'] }],
+      }),
+    ).toThrowError(
+      new CatalogContractError('routes[0].biomeKeys[1]', 'duplicates biome F within route Broken'),
+    );
+  });
+
   it('normalizes verified reward, encounter, and room declarations', () => {
-    expect(catalog.version).toBe('0.4.0-p-dormant');
-    expect(catalog.routes.byKey.Underworld?.biomeSteps.map((step) => step.key)).toEqual([
-      'Underworld_F',
-      'Underworld_G',
-      'Underworld_H',
-      'Underworld_I',
-    ]);
+    expect(catalog.version).toBe('0.5.0-biome-identity');
+    expect(catalog.routes.byKey.Underworld?.biomeKeys).toEqual(['F', 'G', 'H', 'I']);
 
     const runProgress = catalog.rewards.stores.byKey.RunProgress;
     expect(runProgress?.entries.map((entry) => entry.rewardType)).toEqual([
@@ -210,7 +238,7 @@ describe('F catalog migration slice', () => {
 
   it('binds every F/G producer to lifecycle, override, and store-history authority', () => {
     const fgRooms = catalog.rooms.values.filter(
-      (room) => room.biomeStepKey === 'Underworld_F' || room.biomeStepKey === 'Underworld_G',
+      (room) => room.biomeKey === 'F' || room.biomeKey === 'G',
     );
     const noStoreHistory = new Set(['G_Intro', 'F_Boss01', 'F_PostBoss01', 'G_PostBoss01']);
     for (const room of fgRooms) {

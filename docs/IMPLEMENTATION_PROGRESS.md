@@ -10,10 +10,11 @@ is mutable project history, not a design authority.
 Phases 0, 1, 2, 2.5, 2.6, and 2.7 are complete. Phases 0 through 2.5 were
 completed under the prior reward-store ownership model; Phase 2.6 added the
 audited reward kernel as an intentionally unconnected pure subsystem; Phase
-2.7 atomically made it the sole connected F/G reward authority under schema
-version 2. Phase 2.8 is the current frontier. Capability isolation, the shared
-structural/F/G reconciliation slice, and the dormant P declaration import are
-complete; Q/H/O/I/N remain before Phase 3 begins.
+2.7 atomically made it the sole connected F/G reward authority. Phase 2.8 is
+the current frontier. Capability isolation, the shared structural/F/G
+reconciliation slice, the dormant P declaration import, and the schema-version-3
+route/biome identity cleanup are complete; Q/H/O/I/N remain before Phase 3
+begins.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
 defines reusable single-room lifecycle profiles, occurrence-addressed history
@@ -166,7 +167,7 @@ Six migration slices delivered, completing the F/G catalog foundation:
   recursive concrete defaults;
 - the forked F preboss declaration, with WorldShop as the first offer and at
   most one filtered free-reward offer;
-- the `Underworld_F` `LinearBiome` layout, its three opening alternatives,
+- the `F` `LinearBiome` layout, its three opening alternatives,
   ordinary continuation rule, depth-10 terminal, and authored bounds;
 - explicit F miniboss mutual exclusion through current-run entered-room
   history, plus the F miniboss and shop force windows;
@@ -184,7 +185,7 @@ Six migration slices delivered, completing the F/G catalog foundation:
   mutual exclusion, and independent Midshop eligibility/force windows;
 - the forked G preboss declaration, with WorldShop as the first offer and at
   most two filtered free-reward offers;
-- the `Underworld_G` `LinearBiome` layout, fixed reward-free intro, ordinary
+- the `G` `LinearBiome` layout, fixed reward-free intro, ordinary
   continuation rule, depth-8 terminal, and authored bounds;
 - executable parity coverage for every G room family, encounter identity,
   physical exit, reward binding, and layout fact;
@@ -476,7 +477,7 @@ The required commit sequence is locked in `IMPLEMENTATION_PLAN.md`.
 Completed:
 
 1. capability isolation:
-   - declared capability is derived from normalized layouts while authorable,
+   - declared capability is derived from route-placed normalized layouts while authorable,
      simulatable, and editable capability remains application-owned;
    - F/G are authorable, F alone is editable, and no biome is simulatable;
    - project bootstrap/load, initial-store installation, and semantic command
@@ -503,8 +504,7 @@ Completed:
      `G_Boss01 -> G_PostBoss01` tails are layout-owned and carry explicit
      encounter, counter, exit, reward, and store-history facts;
    - `fixedBoss` is removed from physical exits, derived rooms cannot enter
-     authored project topology, and schema-version-2 F/G editor behavior is
-     unchanged;
+     authored project topology, and F/G editor behavior is unchanged;
    - synthetic fixtures cover every new closed discriminant plus valid dormant
      HubBiome, source-offer-point, no-store, typed-field, and local-child forms.
 3. dormant P declaration import:
@@ -523,15 +523,26 @@ Completed:
    - capability isolation keeps P non-authorable, non-simulatable, and
      non-editable, and the F smoke project and selector projection remain
      unchanged apart from catalog version.
+4. route/biome identity cleanup:
+   - global Biome Declarations own `F/G/H/I/N/O/P/Q` identity and labels;
+   - routes own only ordered biome-key references, allowing one biome to be
+     reused across routes without duplicate room or layout declarations;
+   - rooms, layouts, projects, semantic addresses, capabilities, and editor
+     navigation use the unqualified `biomeKey` axis beside a separate
+     `routeKey` axis;
+   - layouts no longer own route continuation; the route placement derives
+     next-biome versus route-complete behavior from route order;
+   - schema version 3 rejects the pre-cleanup document shape without migration
+     scaffolding, while F/G behavior and dormant P isolation remain unchanged.
 
 Pending:
 
-4. dormant Q declaration import;
-5. dormant H declaration import;
-6. dormant O declaration import;
-7. dormant I declaration import;
-8. dormant N declaration import;
-9. cross-biome closure and capability matrix.
+5. dormant Q declaration import;
+6. dormant H declaration import;
+7. dormant O declaration import;
+8. dormant I declaration import;
+9. dormant N declaration import;
+10. cross-biome closure and capability matrix.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete
@@ -539,4 +550,4 @@ earlier slice.
 
 Phase 3 remains blocked until Phase 2.8 passes without placeholder
 materializers, dormant biome activation, duplicated authority, or
-schema-version-1 compatibility scaffolding.
+pre-schema-version-3 compatibility scaffolding.

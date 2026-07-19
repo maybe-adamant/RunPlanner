@@ -8,7 +8,7 @@ import {
 } from '../application/roomSelectorProjection';
 
 interface RoomSelectorProps {
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
   readonly catalog: Catalog;
   readonly current?: RoomDeclaration;
   readonly disabled?: boolean;
@@ -25,7 +25,7 @@ const categories: readonly { readonly key: OrdinaryRoomCategory; readonly label:
 ];
 
 export function RoomSelector({
-  biomeStepKey,
+  biomeKey,
   catalog,
   current,
   disabled = false,
@@ -34,7 +34,7 @@ export function RoomSelector({
 }: RoomSelectorProps) {
   const currentCategory = current === undefined ? undefined : roomCategoryForKind(current.kind);
   const [category, setCategory] = useState<OrdinaryRoomCategory | ''>(currentCategory ?? '');
-  const rooms = category === '' ? [] : selectRoomsForCategory(catalog, biomeStepKey, category);
+  const rooms = category === '' ? [] : selectRoomsForCategory(catalog, biomeKey, category);
   const currentInCategory = current !== undefined && roomCategoryForKind(current.kind) === category;
 
   return (

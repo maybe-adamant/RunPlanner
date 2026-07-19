@@ -11,13 +11,20 @@ describe('summarizeCatalog', () => {
     const route = {
       key: 'FixtureRoute',
       label: 'Fixture Route',
-      biomeSteps: [
-        { key: 'Fixture_A', biome: 'A' },
-        { key: 'Fixture_B', biome: 'B' },
-      ],
+      biomeKeys: ['A', 'B'],
     };
     const catalog: Catalog = {
       version: 'fixture-1',
+      biomes: {
+        values: [
+          { key: 'A', label: 'Biome A' },
+          { key: 'B', label: 'Biome B' },
+        ],
+        byKey: {
+          A: { key: 'A', label: 'Biome A' },
+          B: { key: 'B', label: 'Biome B' },
+        },
+      },
       routes: { values: [route], byKey: { FixtureRoute: route } },
       rewards: {
         payloadDomains: emptyCollection(),
@@ -37,7 +44,7 @@ describe('summarizeCatalog', () => {
     expect(summarizeCatalog(catalog)).toEqual({
       version: 'fixture-1',
       routeCount: 1,
-      biomeStepCount: 2,
+      biomeCount: 2,
       rewardTypeCount: 0,
       roomCount: 0,
     });

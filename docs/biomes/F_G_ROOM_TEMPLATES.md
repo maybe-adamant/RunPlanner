@@ -331,10 +331,10 @@ that the newly resolved store cannot produce.
 Template findings and editor destinations attach beneath the occurrence:
 
 ```text
-room offer        biomeStepKey + occurrenceId + incomingOffer
-shop offer        biomeStepKey + occurrenceId + shopSlotKey + offer
-shop purchase     biomeStepKey + occurrenceId + shopSlotKey + purchased
-preboss offer     biomeStepKey + occurrenceId + incomingOffer
+room offer        biomeKey + occurrenceId + incomingOffer
+shop offer        biomeKey + occurrenceId + shopSlotKey + offer
+shop purchase     biomeKey + occurrenceId + shopSlotKey + purchased
+preboss offer     biomeKey + occurrenceId + incomingOffer
 ```
 
 No template addresses state by game room name, UI row, or array position.

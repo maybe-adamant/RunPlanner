@@ -68,10 +68,10 @@ function decodeBatchRewardStore(
   return Object.freeze({ kind: 'authoredBaseStore', baseRewardStoreKey });
 }
 
-function maxExitIndex(catalog: Catalog, biomeStepKey: string): number {
+function maxExitIndex(catalog: Catalog, biomeKey: string): number {
   let maximum = 0;
   for (const room of catalog.rooms.values) {
-    if (room.biomeStepKey === biomeStepKey) {
+    if (room.biomeKey === biomeKey) {
       maximum = Math.max(maximum, ...room.exits.map((exit) => exit.index));
     }
   }
@@ -115,16 +115,16 @@ function decodeTargets(
 function requireRoom(
   occurrence: RawOccurrence,
   catalog: Catalog,
-  biomeStepKey: string,
+  biomeKey: string,
 ): RoomDeclaration {
   const room = catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) {
     failProjectDocument(`${occurrence.path}.gameName`, `unknown room ${occurrence.gameName}`);
   }
-  if (room.biomeStepKey !== biomeStepKey) {
+  if (room.biomeKey !== biomeKey) {
     failProjectDocument(
       `${occurrence.path}.gameName`,
-      `${occurrence.gameName} belongs to ${room.biomeStepKey}`,
+      `${occurrence.gameName} belongs to ${room.biomeKey}`,
     );
   }
   return room;
@@ -137,10 +137,10 @@ export function decodeLinearBiomeTopology(
   path: string,
 ): LinearBiomeTopology {
   if (layout.continuation.batchPolicy.kind !== 'standard') {
-    failProjectDocument(path, `${layout.biomeStepKey} does not use standard authored batches`);
+    failProjectDocument(path, `${layout.biomeKey} does not use standard authored batches`);
   }
   if (layout.continuation.rewardStoreOverrides.length !== 0) {
-    failProjectDocument(path, `${layout.biomeStepKey} uses source-specific reward-store policies`);
+    failProjectDocument(path, `${layout.biomeKey} uses source-specific reward-store policies`);
   }
   const topology = expectRecord(value, path);
   expectExactKeys(topology, ['startOccurrenceId', 'occurrences', 'continuations'], path);
@@ -168,20 +168,20 @@ export function decodeLinearBiomeTopology(
   if (start === undefined) {
     failProjectDocument(`${path}.startOccurrenceId`, `unknown occurrence ${startOccurrenceId}`);
   }
-  const startRoom = requireRoom(start, catalog, layout.biomeStepKey);
+  const startRoom = requireRoom(start, catalog, layout.biomeKey);
   if (layout.start.kind !== 'authoredStart') {
-    failProjectDocument(`${path}.startOccurrenceId`, `${layout.biomeStepKey} has a derived start`);
+    failProjectDocument(`${path}.startOccurrenceId`, `${layout.biomeKey} has a derived start`);
   }
   if (!layout.start.roomGameNames.includes(startRoom.gameName)) {
     failProjectDocument(
       `${start.path}.gameName`,
-      `${startRoom.gameName} is not a declared start room for ${layout.biomeStepKey}`,
+      `${startRoom.gameName} is not a declared start room for ${layout.biomeKey}`,
     );
   }
 
-  const maximumExitIndex = maxExitIndex(catalog, layout.biomeStepKey);
+  const maximumExitIndex = maxExitIndex(catalog, layout.biomeKey);
   if (layout.terminal.kind !== 'forkedTransition') {
-    failProjectDocument(path, `${layout.biomeStepKey} does not use a forked terminal transition`);
+    failProjectDocument(path, `${layout.biomeKey} does not use a forked terminal transition`);
   }
   const terminalRoom = catalog.rooms.byKey[layout.terminal.roomGameName];
   if (terminalRoom?.entryOfferPolicy === undefined) {
@@ -349,7 +349,7 @@ export function decodeLinearBiomeTopology(
       if (rawOccurrence === undefined) {
         failProjectDocument(path, `unknown occurrence ${target.occurrenceId}`);
       }
-      const room = requireRoom(rawOccurrence, catalog, layout.biomeStepKey);
+      const room = requireRoom(rawOccurrence, catalog, layout.biomeKey);
       let role: RoomOccurrenceRole = 'ordinary';
       if (continuation.kind === 'terminal') {
         if (room.gameName !== layout.terminal.roomGameName) {
@@ -395,7 +395,7 @@ export function decodeLinearBiomeTopology(
     if (rawOccurrence === undefined || role === undefined) {
       failProjectDocument(path, `missing normalized occurrence ${id}`);
     }
-    const room = requireRoom(rawOccurrence, catalog, layout.biomeStepKey);
+    const room = requireRoom(rawOccurrence, catalog, layout.biomeKey);
     return Object.freeze({
       occurrenceId: id,
       gameName: room.gameName,

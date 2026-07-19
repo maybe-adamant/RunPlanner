@@ -2,7 +2,7 @@ import type { RawLinearBiomeLayoutDeclaration } from './types';
 
 export const biomeLayouts = [
   {
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'LinearBiome',
     start: {
       kind: 'authoredStart',
@@ -30,13 +30,12 @@ export const biomeLayouts = [
         { role: 'boss', roomGameName: 'F_Boss01' },
         { role: 'postboss', roomGameName: 'F_PostBoss01' },
       ],
-      routeTransition: { kind: 'nextBiome' },
     },
     fields: [],
     bounds: { maxBatches: 10, maxTargets: 20 },
   },
   {
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'LinearBiome',
     start: {
       kind: 'authoredStart',
@@ -64,13 +63,12 @@ export const biomeLayouts = [
         { role: 'boss', roomGameName: 'G_Boss01' },
         { role: 'postboss', roomGameName: 'G_PostBoss01' },
       ],
-      routeTransition: { kind: 'nextBiome' },
     },
     fields: [],
     bounds: { maxBatches: 8, maxTargets: 21 },
   },
   {
-    biomeStepKey: 'Surface_P',
+    biomeKey: 'P',
     kind: 'LinearBiome',
     start: {
       kind: 'authoredStart',
@@ -98,7 +96,6 @@ export const biomeLayouts = [
         { role: 'boss', roomGameName: 'P_Boss01' },
         { role: 'postboss', roomGameName: 'P_PostBoss01' },
       ],
-      routeTransition: { kind: 'nextBiome' },
     },
     fields: [],
     bounds: { maxBatches: 9, maxTargets: 18 },

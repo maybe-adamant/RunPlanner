@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../rewardKernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 2 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 3 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -69,7 +69,7 @@ export interface LinearBiomeTopology {
 
 export interface LinearBiomePlan {
   readonly kind: 'LinearBiome';
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
   readonly topology: LinearBiomeTopology | null;
 }
 

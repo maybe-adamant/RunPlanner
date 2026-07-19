@@ -1,3 +1,4 @@
+import { biomes } from './biomes';
 import { encounterProfiles } from './encounters';
 import { exitCompatibilityPolicies, exitTypes } from './exits';
 import { biomeLayouts } from './layouts';
@@ -9,7 +10,8 @@ import { routes } from './routes';
 import type { RawCatalogInput } from './types';
 
 export const declarations = {
-  version: '0.4.0-p-dormant',
+  version: '0.5.0-biome-identity',
+  biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,
   encounterProfiles,

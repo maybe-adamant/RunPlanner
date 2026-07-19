@@ -1,7 +1,7 @@
 export {
   summarizeCatalog,
   type BiomeLayout,
-  type BiomeStepDeclaration,
+  type BiomeDeclaration,
   type Catalog,
   type CatalogCollection,
   type CatalogSummary,

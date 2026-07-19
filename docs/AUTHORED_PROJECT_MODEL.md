@@ -10,11 +10,12 @@ It does not define simulation algorithms or React rendering.
 
 ## Cross-Biome Freeze Status
 
-The schema version 2 examples in this document describe the reconciled
+The schema version 3 examples in this document describe the reconciled
 F/G/P/Q/H/O/I/N model. Occurrence identity, downstream retention, possibility
 support, generated-store ownership, conditional-terminal batches, fixed
 authored layout slots, and persistent hub topology are settled. Production now
-reads schema version 2 for the implemented F/G slice and rejects version 1.
+reads schema version 3 for the implemented F/G slice and rejects earlier
+versions without compatibility scaffolding.
 
 ## Core Distinction
 
@@ -36,16 +37,23 @@ export artifact.
 : One saved planning workspace containing route plans and project metadata.
 
 `Route Declaration`
-: A stable route key and ordered biome-step declarations. The known routes are
+: A stable route key and ordered references to global Biome Declarations. The known routes are
 Underworld (`F -> G -> H -> I`) and Surface (`N -> O -> P -> Q`).
+
+`Biome Declaration`
+: One global biome identity and player-facing label. Its key is the game biome
+code (`F`, `G`, and so on), never a route-qualified name.
 
 `Route Plan`
 : Authored state for one route. It owns configured prefix scope, route-global
 authored inputs, and ordered biome plans.
 
-`Biome Step`
-: One occurrence of a biome declaration in one route. Its key includes route
-identity, such as `Underworld_F`.
+`Route Biome Placement`
+: One route-local reference to a global Biome Declaration. The current model
+identifies it by the separate `routeKey + biomeKey` axes. A biome may be reused
+by another route without another declaration. Duplicate use inside one route is
+rejected until a distinct placement identifier is required by real product
+scope.
 
 `Biome Layout Declaration`
 : Immutable structural metadata selecting a registered layout kind and its
@@ -53,7 +61,7 @@ start, continuation, terminal, ordered derived completion, and bounded topology
 rules.
 
 `Biome Plan`
-: Authored topology and biome-global state for one biome step. It owns
+: Authored topology and biome-global state for one biome. It owns
 structural relationships and never owns room-local rewards or payloads.
 
 `Room Declaration`
@@ -127,21 +135,21 @@ unpicked repeated combat offer to another map.
 Stable semantic structural addresses are composed from domain owners:
 
 ```text
-biome                 routeKey + biomeStepKey
-start                 biomeStepKey + start aspect
-room occurrence       biomeStepKey + occurrenceId
-batch                 biomeStepKey + parent occurrenceId
-batch reward store    biomeStepKey + parent occurrenceId + rewardStore aspect
-batch target          biomeStepKey + parent occurrenceId + exitIndex
-picked continuation   biomeStepKey + parent occurrenceId + picked aspect
-terminal transition   biomeStepKey + predecessor occurrenceId
-terminal target       biomeStepKey + predecessor occurrenceId + exitIndex
-terminal companion    biomeStepKey + predecessor occurrenceId + exitIndex
-derived entry         biomeStepKey + entry role
-derived completion    biomeStepKey + completion role
-fixed authored room   biomeStepKey + fixedSlotKey
-room leaf             biomeStepKey + occurrenceId + aspect
-local child           biomeStepKey + occurrenceId + localSlotKey + aspect
+biome                 routeKey + biomeKey
+start                 routeKey + biomeKey + start aspect
+room occurrence       routeKey + biomeKey + occurrenceId
+batch                 routeKey + biomeKey + parent occurrenceId
+batch reward store    routeKey + biomeKey + parent occurrenceId + rewardStore aspect
+batch target          routeKey + biomeKey + parent occurrenceId + exitIndex
+picked continuation   routeKey + biomeKey + parent occurrenceId + picked aspect
+terminal transition   routeKey + biomeKey + predecessor occurrenceId
+terminal target       routeKey + biomeKey + predecessor occurrenceId + exitIndex
+terminal companion    routeKey + biomeKey + predecessor occurrenceId + exitIndex
+derived entry         routeKey + biomeKey + entry role
+derived completion    routeKey + biomeKey + completion role
+fixed authored room   routeKey + biomeKey + fixedSlotKey
+room leaf             routeKey + biomeKey + occurrenceId + aspect
+local child           routeKey + biomeKey + occurrenceId + localSlotKey + aspect
 ```
 
 React components may use the persisted occurrence ID as their key. Rendered
@@ -631,7 +639,7 @@ representative top-level shape is:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 2;
+  schemaVersion: 3;
   projectId: string;
   name: string;
   catalogVersion: string;
@@ -645,7 +653,7 @@ interface AuthoredRoutePlan {
 
 interface LinearBiomePlan {
   kind: 'LinearBiome';
-  biomeStepKey: string;
+  biomeKey: string;
   topology: LinearBiomeTopology | null;
 }
 
@@ -657,7 +665,7 @@ interface LinearBiomeTopology {
 
 interface HubBiomePlan {
   kind: 'HubBiome';
-  biomeStepKey: string;
+  biomeKey: string;
   topology: HubBiomeTopology | null;
 }
 

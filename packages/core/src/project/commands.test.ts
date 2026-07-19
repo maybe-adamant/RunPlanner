@@ -58,7 +58,7 @@ function emptyCollection<T>(): CatalogCollection<T> {
 const underworld = {
   key: 'Underworld',
   label: 'Underworld',
-  biomeSteps: [{ key: 'Underworld_F', biome: 'F' }],
+  biomeKeys: ['F'],
 } as const satisfies RouteDeclaration;
 
 const boonSource = {
@@ -203,7 +203,7 @@ function countedRoom(
   return {
     gameName,
     label: gameName,
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind,
     mode: { kind: 'authored', templateKey },
     structuralTags: [],
@@ -236,7 +236,7 @@ const rooms: readonly RoomDeclaration[] = [
   {
     gameName: 'F_Shop01',
     label: 'Midshop',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Shop',
     mode: { kind: 'authored', templateKey: 'Shop' },
     structuralTags: [],
@@ -256,7 +256,7 @@ const rooms: readonly RoomDeclaration[] = [
   {
     gameName: 'F_PreBoss01',
     label: 'Preboss',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'ForkedPreboss' },
     structuralTags: [],
@@ -282,7 +282,7 @@ const rooms: readonly RoomDeclaration[] = [
   {
     gameName: 'F_Boss01',
     label: 'Boss',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Boss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],
@@ -297,7 +297,7 @@ const rooms: readonly RoomDeclaration[] = [
 ];
 
 const layout = {
-  biomeStepKey: 'Underworld_F',
+  biomeKey: 'F',
   kind: 'LinearBiome',
   start: {
     kind: 'authoredStart',
@@ -322,7 +322,6 @@ const layout = {
   },
   completion: {
     rooms: [{ role: 'boss', roomGameName: 'F_Boss01' }],
-    routeTransition: { kind: 'nextBiome' },
   },
   fields: [],
   bounds: { maxBatches: 10, maxTargets: 20 },
@@ -330,6 +329,7 @@ const layout = {
 
 const catalog: Catalog = {
   version: 'command-fixture-1',
+  biomes: collection([{ key: 'F', label: 'Erebus' }], (biome) => biome.key),
   routes: collection([underworld], (route) => route.key),
   rewards,
   encounterProfiles: collection<EncounterProfile>([], (profile) => profile.key),
@@ -342,10 +342,10 @@ const catalog: Catalog = {
     (exitType) => exitType.key,
   ),
   rooms: collection(rooms, (room) => room.gameName),
-  biomeLayouts: collection([layout], (biome) => biome.biomeStepKey),
+  biomeLayouts: collection([layout], (biome) => biome.biomeKey),
 };
 
-const biome = createBiomeAddress('Underworld', 'Underworld_F');
+const biome = createBiomeAddress('Underworld', 'F');
 const startId = createOccurrenceId('start');
 
 function emptyProject(): ProjectDocument {
@@ -411,9 +411,7 @@ describe('project semantic addresses', () => {
     const firstTarget = createTargetAddress(biome, startId, 1);
     const secondTarget = createTargetAddress(biome, startId, 2);
 
-    expect(semanticAddressKey(occurrence)).toBe(
-      '["occurrence","Underworld","Underworld_F","start"]',
-    );
+    expect(semanticAddressKey(occurrence)).toBe('["occurrence","Underworld","F","start"]');
     expect(semanticAddressKey(firstTarget)).not.toBe(semanticAddressKey(secondTarget));
     expect(Object.isFrozen(occurrence)).toBe(true);
     expect(() => createOccurrenceId(' ')).toThrowError(

@@ -89,7 +89,7 @@ records favor complete typed consumption.
 const F_Combat04 = {
   gameName: 'F_Combat04',
   label: 'Combat 04',
-  biomeStepKey: 'Underworld_F',
+  biomeKey: 'F',
   kind: 'Combat',
   mode: { kind: 'authored', templateKey: 'StandardCombat' },
   structuralTags: [],
@@ -122,7 +122,7 @@ reward binding, or eligibility.
 
 The catalog contains at least:
 
-- route declarations and ordered biome steps;
+- route declarations and ordered biomes;
 - biome layout declarations;
 - physical exit-type declarations;
 - room declarations;
@@ -147,14 +147,19 @@ kind; it does not contain callbacks.
 
 ## Route and Layout Declarations
 
-Route declarations own biome order:
+Global Biome Declarations own stable game-domain identity and player-facing
+labels. Route declarations own only ordered references to those biomes:
 
 ```text
 Underworld: F -> G -> H -> I
 Surface:    N -> O -> P -> Q
 ```
 
-Each route occurrence has a distinct biome-step key such as `Underworld_F`.
+A biome key is never route-qualified: rooms and layouts for Erebus reference
+`F`, not `Underworld_F`. The same Biome Declaration may appear in more than one
+route. The current route model rejects the same biome twice within one route;
+if that product case becomes real, a separate route-placement identity will be
+added without changing global biome identity.
 
 Biome layout declarations own immutable structure:
 
@@ -186,6 +191,10 @@ Biome layout declarations own immutable structure:
 
 They do not copy room-local facts such as intrinsic exits, eligibility, caps,
 or incoming reward bindings.
+
+They also do not own the transition after completion. The containing route's
+ordered biome references determine whether history advances to another biome
+or completes the route.
 
 Concrete structural extensions for F through Q should be added with their
 implementation slice and covered by focused fixtures. A biome is not declared
@@ -477,7 +486,7 @@ Catalog construction must verify:
 - declaration order is explicit wherever simulation consumes order;
 - layout bounds can contain every supported authored structure;
 - every fixed-completion reference resolves to a derived room in the same
-  biome step and completion roles are ordered and unique;
+  biome and completion roles are ordered and unique;
 - labels and game identifiers are both present;
 - every game room name uniquely identifies one Room Declaration.
 
@@ -512,7 +521,7 @@ its exact algorithm remains deferred.
 ## Product Capability Boundary
 
 Catalog presence and product activation are separate facts. Application
-composition derives the declared biome-step set from normalized layouts and
+composition derives the declared biome set from route-placed normalized layouts and
 owns explicit authorable, simulatable, and editable sets. Room, layout, and
 route declarations do not carry those product flags.
 
@@ -526,7 +535,7 @@ P is also declaration-complete in the normalized catalog, but it is not
 authorable, simulatable, or editable. Its presence proves that declaration
 coverage and product activation remain independent.
 
-Every active capability must reference a declared biome step, and every
+Every active capability must reference a declared biome, and every
 editable biome must also be authorable. Project creation and loading, semantic
 command dispatch, simulator dispatch once it exists, and editor navigation are
 application contact points that consume this matrix. Pure catalog construction,
@@ -543,7 +552,7 @@ The first catalog slice should include only the shared foundations and concrete
 declarations needed to build meaningful F fixtures, followed by G as the reuse
 proof:
 
-- Underworld route and F/G biome-step declarations;
+- global F/G Biome Declarations and their Underworld route references;
 - `LinearBiome` layout metadata;
 - opening, standard combat, miniboss, story, fountain, midshop, and terminal
   templates used by F/G;

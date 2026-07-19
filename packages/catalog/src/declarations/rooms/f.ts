@@ -4,7 +4,7 @@ export const fRooms = [
   {
     gameName: 'F_Opening01',
     label: 'Opening 01',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
     structuralTags: [],
@@ -25,7 +25,7 @@ export const fRooms = [
   {
     gameName: 'F_Opening02',
     label: 'Opening 02',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
     structuralTags: [],
@@ -46,7 +46,7 @@ export const fRooms = [
   {
     gameName: 'F_Opening03',
     label: 'Opening 03',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
     structuralTags: [],
@@ -67,7 +67,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat01',
     label: 'Combat 01',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -93,7 +93,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat02',
     label: 'Combat 02',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -121,7 +121,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat03',
     label: 'Combat 03',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -149,7 +149,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat04',
     label: 'Combat 04',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -177,7 +177,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat05',
     label: 'Combat 05',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -205,7 +205,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat06',
     label: 'Combat 06',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -228,7 +228,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat07',
     label: 'Combat 07',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -251,7 +251,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat08',
     label: 'Combat 08',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -279,7 +279,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat09',
     label: 'Combat 09',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -304,7 +304,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat10',
     label: 'Combat 10',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -329,7 +329,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat11',
     label: 'Combat 11',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -357,7 +357,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat12',
     label: 'Combat 12',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -385,7 +385,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat13',
     label: 'Combat 13',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -408,7 +408,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat14',
     label: 'Combat 14',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -436,7 +436,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat15',
     label: 'Combat 15',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -464,7 +464,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat16',
     label: 'Combat 16',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -492,7 +492,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat17',
     label: 'Combat 17',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -520,7 +520,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat18',
     label: 'Combat 18',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -548,7 +548,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat19',
     label: 'Combat 19',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -576,7 +576,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat20',
     label: 'Combat 20',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -604,7 +604,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat21',
     label: 'Combat 21',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -632,7 +632,7 @@ export const fRooms = [
   {
     gameName: 'F_Combat22',
     label: 'Combat 22',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -660,7 +660,7 @@ export const fRooms = [
   {
     gameName: 'F_MiniBoss01',
     label: 'Root-Stalker',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -694,7 +694,7 @@ export const fRooms = [
   {
     gameName: 'F_MiniBoss02',
     label: 'Shadow-Spiller',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -728,7 +728,7 @@ export const fRooms = [
   {
     gameName: 'F_MiniBoss03',
     label: 'Phantom',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -762,7 +762,7 @@ export const fRooms = [
   {
     gameName: 'F_Story01',
     label: 'Arachne',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
     structuralTags: [],
@@ -784,7 +784,7 @@ export const fRooms = [
   {
     gameName: 'F_Reprieve01',
     label: 'Fountain',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
     structuralTags: [],
@@ -812,7 +812,7 @@ export const fRooms = [
   {
     gameName: 'F_Shop01',
     label: 'Midshop',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Shop',
     mode: { kind: 'authored', templateKey: 'Shop' },
     structuralTags: [],
@@ -842,7 +842,7 @@ export const fRooms = [
   {
     gameName: 'F_PreBoss01',
     label: 'Preboss',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'ForkedPreboss' },
     structuralTags: [],
@@ -879,7 +879,7 @@ export const fRooms = [
   {
     gameName: 'F_Boss01',
     label: 'Hecate',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'Boss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],
@@ -893,7 +893,7 @@ export const fRooms = [
   {
     gameName: 'F_PostBoss01',
     label: 'Postboss',
-    biomeStepKey: 'Underworld_F',
+    biomeKey: 'F',
     kind: 'PostBoss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],

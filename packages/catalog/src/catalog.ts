@@ -1,6 +1,7 @@
 import type { Catalog } from '@run-planner/core';
 
 import type { RawCatalogInput } from './declarations';
+import { normalizeBiomes } from './normalization/biomes';
 import { requireNonEmpty } from './normalization/common';
 import { normalizeEncounterProfiles } from './normalization/encounters';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './normalization/exits';
@@ -14,38 +15,27 @@ export { CatalogContractError } from './normalization/errors';
 export function createCatalog(input: RawCatalogInput): Catalog {
   requireNonEmpty(input.version, 'version');
 
-  const routes = normalizeRoutes(input.routes);
+  const biomes = normalizeBiomes(input.biomes);
+  const routes = normalizeRoutes(input.routes, biomes);
   const rewards = createRewardKernelCatalog(input.rewardKernel);
   const encounterProfiles = normalizeEncounterProfiles(input.encounterProfiles);
   const exitCompatibilityPolicies = normalizeExitCompatibilityPolicies(
     input.exitCompatibilityPolicies,
   );
   const exitTypes = normalizeExitTypes(input.exitTypes, exitCompatibilityPolicies);
-  const routeSteps = new Set(
-    routes.values.flatMap((route) => route.biomeSteps.map((step) => step.key)),
+  const rooms = normalizeRooms(
+    input.rooms,
+    new Set(biomes.values.map((biome) => biome.key)),
+    rewards,
+    encounterProfiles,
+    exitTypes,
   );
-  const routeTransitions = new Map(
-    routes.values.flatMap((route) =>
-      route.biomeSteps.map(
-        (step, index) =>
-          [
-            step.key,
-            index === route.biomeSteps.length - 1 ? 'routeComplete' : 'nextBiome',
-          ] as const,
-      ),
-    ),
-  );
-  const rooms = normalizeRooms(input.rooms, routeSteps, rewards, encounterProfiles, exitTypes);
-  const biomeLayouts = normalizeBiomeLayouts(
-    input.biomeLayouts,
-    routeTransitions,
-    rooms,
-    rewards.stores,
-  );
+  const biomeLayouts = normalizeBiomeLayouts(input.biomeLayouts, biomes, rooms, rewards.stores);
   validateDerivedRoomOwnership(rooms, biomeLayouts);
 
   return Object.freeze({
     version: input.version,
+    biomes,
     routes,
     rewards,
     encounterProfiles,

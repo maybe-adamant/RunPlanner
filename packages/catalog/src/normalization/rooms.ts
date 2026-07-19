@@ -399,7 +399,7 @@ function validateRoomRequirementReferences(
 
 export function normalizeRooms(
   rawRooms: readonly RawRoomDeclaration[],
-  routeSteps: ReadonlySet<string>,
+  biomeKeys: ReadonlySet<string>,
   rewards: RewardKernelCatalog,
   encounters: CatalogCollection<EncounterProfile>,
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
@@ -408,8 +408,8 @@ export function normalizeRooms(
     const path = `rooms[${roomIndex}]`;
     requireNonEmpty(room.gameName, `${path}.gameName`);
     requireNonEmpty(room.label, `${path}.label`);
-    if (!routeSteps.has(room.biomeStepKey)) {
-      fail(`${path}.biomeStepKey`, `unknown biome step ${room.biomeStepKey}`);
+    if (!biomeKeys.has(room.biomeKey)) {
+      fail(`${path}.biomeKey`, `unknown biome ${room.biomeKey}`);
     }
     if (room.structuralTags === undefined) {
       fail(`${path}.structuralTags`, 'is required');
@@ -490,7 +490,7 @@ export function normalizeRooms(
     return Object.freeze({
       gameName: room.gameName,
       label: room.label,
-      biomeStepKey: room.biomeStepKey,
+      biomeKey: room.biomeKey,
       kind: room.kind,
       mode,
       structuralTags: normalizeStructuralTags(room.structuralTags, `${path}.structuralTags`),
@@ -541,8 +541,8 @@ export function normalizeRooms(
         if (referenced === undefined) {
           fail(path, `unknown room ${slot.roomGameName}`);
         }
-        if (referenced.biomeStepKey !== room.biomeStepKey || referenced.mode.kind !== 'authored') {
-          fail(path, `${slot.roomGameName} must be an authored room in ${room.biomeStepKey}`);
+        if (referenced.biomeKey !== room.biomeKey || referenced.mode.kind !== 'authored') {
+          fail(path, `${slot.roomGameName} must be an authored room in ${room.biomeKey}`);
         }
       }
     }

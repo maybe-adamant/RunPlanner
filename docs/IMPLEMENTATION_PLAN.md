@@ -308,10 +308,10 @@ evidence that the current commit is closed.
 Deliver:
 
 - one composition-owned capability matrix whose declared capability is derived
-  from the normalized catalog and whose authorable, simulatable, and editable
+  from route-placed normalized layouts and whose authorable, simulatable, and editable
   sets are independently explicit;
 - normalized subset invariants: editable biomes are authorable, and every
-  active capability references a declared biome step;
+  active capability references a declared biome;
 - the Phase 2.8 baseline of F/G authorable, F editable, and no simulatable
   biome;
 - capability-aware project bootstrap/load and semantic-command contact points
@@ -347,7 +347,7 @@ Deliver:
 - concrete F/G boss and postboss Room Declarations plus layout-owned ordered
   completion sequences and route transitions;
 - removal of `fixedBoss` as an encoded room-exit shortcut;
-- F/G declarations, schema-version-2 projects, commands, and the F editor
+- F/G declarations, projects, commands, and the F editor
   reconciled without changing their authored behavior;
 - synthetic construction failures for every newly closed semantic policy or
   descriptor kind.
@@ -384,7 +384,32 @@ Gate:
 - after excluding the required catalog-version change, the F smoke project and
   selector projections remain structurally identical across the P import.
 
-#### Commit 4: Dormant Q Declaration Import
+#### Commit 4: Route/Biome Identity Cleanup
+
+Deliver:
+
+- one global Biome Declaration collection owning stable biome keys and labels;
+- route declarations containing only ordered global biome-key references;
+- room, layout, capability, project, semantic-address, and editor contracts
+  using `biomeKey` without route-qualified biome identities;
+- project schema version 3 and a matching catalog-version bump, with no
+  compatibility scaffold for the pre-cleanup document shape;
+- layout completion descriptors containing only biome-owned completion rooms,
+  while route order is the sole authority for next-biome versus route-complete
+  behavior.
+
+Gate:
+
+- one Biome Declaration can be referenced by more than one route without
+  duplicate room or layout declarations;
+- `routeKey + biomeKey` remains the current placement and semantic-address
+  owner pair;
+- duplicate use of one biome within the same route fails until a distinct
+  route-placement identity is deliberately introduced;
+- F/G authored behavior and dormant P isolation remain unchanged;
+- Q declarations are not imported in this commit.
+
+#### Commit 5: Dormant Q Declaration Import
 
 Deliver:
 
@@ -406,7 +431,7 @@ Gate:
   into a uniqueness rule;
 - Q remains non-authorable, non-simulatable, and non-editable.
 
-#### Commit 5: Dormant H Declaration Import
+#### Commit 6: Dormant H Declaration Import
 
 Deliver:
 
@@ -429,7 +454,7 @@ Gate:
   documented deferrals, not zombie fields;
 - H remains non-authorable, non-simulatable, and non-editable.
 
-#### Commit 6: Dormant O Declaration Import
+#### Commit 7: Dormant O Declaration Import
 
 Deliver:
 
@@ -452,7 +477,7 @@ Gate:
   batch or leaf value;
 - O remains non-authorable, non-simulatable, and non-editable.
 
-#### Commit 7: Dormant I Declaration Import
+#### Commit 8: Dormant I Declaration Import
 
 Deliver:
 
@@ -478,7 +503,7 @@ Gate:
   user-authored room kind;
 - I remains non-authorable, non-simulatable, and non-editable.
 
-#### Commit 8: Dormant N Declaration Import
+#### Commit 9: Dormant N Declaration Import
 
 Deliver:
 
@@ -502,7 +527,7 @@ Gate:
   rank and does not create a false inherent room order;
 - N remains non-authorable, non-simulatable, and non-editable.
 
-#### Commit 9: Cross-Biome Closure Matrix
+#### Commit 10: Cross-Biome Closure Matrix
 
 Deliver:
 
@@ -536,7 +561,8 @@ Gate:
 - external save/profile requirements remain omitted rather than represented by
   production zombie predicates;
 - no topology consequence is encoded as fake room eligibility;
-- every derived completion room and route transition is data-driven;
+- every derived completion room is layout-driven and every route transition is
+  derived from route-owned biome order;
 - dormant capability guards prevent H/I/N/O/P/Q authoring, simulation, and UI
   activation;
 - no canonical event stream, history ledger, candidate evaluation, or semantic
