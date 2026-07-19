@@ -189,4 +189,38 @@ export const biomeLayouts = [
     fields: [],
     bounds: { maxBatches: 4, maxTargets: 7 },
   },
+  {
+    biomeKey: 'O',
+    kind: 'LinearBiome',
+    start: {
+      kind: 'authoredStart',
+      mode: 'fixed',
+      roomGameNames: ['O_Intro'],
+    },
+    entries: [],
+    continuation: {
+      progressionPolicy: { kind: 'fixedCount', continuationCount: 6 },
+      batchPolicy: { kind: 'standard', fields: [] },
+      rewardStorePolicy: {
+        kind: 'authoredBaseStore',
+        storeKeys: ['RunProgress', 'MetaProgress'],
+        defaultStoreKey: 'RunProgress',
+      },
+      rewardStoreOverrides: [
+        {
+          sourceEncounterProfileKey: 'ShipCombat',
+          policy: { kind: 'sourceOfferPoint', selector: 'lastActiveWheel' },
+        },
+      ],
+    },
+    terminal: { kind: 'directTransition', roomGameName: 'O_PreBoss01' },
+    completion: {
+      rooms: [
+        { role: 'boss', roomGameName: 'O_Boss01' },
+        { role: 'postboss', roomGameName: 'O_PostBoss01' },
+      ],
+    },
+    fields: [],
+    bounds: { maxBatches: 6, maxTargets: 6 },
+  },
 ] as const satisfies readonly RawLinearBiomeLayoutDeclaration[];

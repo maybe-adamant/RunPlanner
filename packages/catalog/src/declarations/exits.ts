@@ -29,4 +29,5 @@ export const exitTypes = [
   { key: 'TyphonExitDoor', compatibilityPolicyKey: 'Unconstrained' },
   { key: 'FortressMainDoor', compatibilityPolicyKey: 'Unconstrained' },
   { key: 'FieldsExitDoor', compatibilityPolicyKey: 'Unconstrained' },
+  { key: 'ShipsExitDoor', compatibilityPolicyKey: 'Unconstrained' },
 ] as const satisfies readonly ExitTypeDeclaration[];

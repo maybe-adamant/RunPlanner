@@ -3,9 +3,7 @@ import type {
   EnteredRewardStoreHistoryPolicy,
   EncounterProfile,
   ExitTypeDeclaration,
-  FixedRewardBinding,
   ForkedPrebossEntryPolicy,
-  NoneRewardBinding,
   RequirementExpression,
   RewardProducerBinding,
   RoomCaps,
@@ -15,21 +13,10 @@ import type {
   RoomTemplateKey,
   RoomMode,
   RoomStructuralTag,
-  ShopRewardBinding,
 } from '@run-planner/core';
-import type {
-  ProducerLifecycleProfileDeclaration,
-  ResolvedRewardOffer,
-  RewardKernelCatalog,
-  RewardStoreDeclaration,
-  RewardTypeDeclaration,
-} from '@run-planner/core/reward-kernel';
+import type { RewardKernelCatalog, RewardStoreDeclaration } from '@run-planner/core/reward-kernel';
 
-import type {
-  RawForkedPrebossEntryPolicy,
-  RawRewardProducerBinding,
-  RawRoomDeclaration,
-} from '../declarations';
+import type { RawForkedPrebossEntryPolicy, RawRoomDeclaration } from '../declarations';
 import {
   createCollection,
   freezeUniqueStrings,
@@ -40,43 +27,7 @@ import {
 import { fail } from './errors';
 import { normalizeLocalChildren } from './descriptors';
 import { normalizeRequirement, validateRequirementReferences } from './requirements';
-
-function defaultOffer(rewardType: RewardTypeDeclaration): ResolvedRewardOffer {
-  return Object.freeze({
-    rewardType: rewardType.gameName,
-    ...(rewardType.defaultPayload === undefined ? {} : { payload: rewardType.defaultPayload }),
-  });
-}
-
-function requireProducerLifecycle(
-  rewards: RewardKernelCatalog,
-  lifecycleKey: string,
-  rewardTypes: readonly string[],
-  path: string,
-): ProducerLifecycleProfileDeclaration {
-  const lifecycle = rewards.producerLifecycles.byKey[lifecycleKey];
-  if (lifecycle === undefined) {
-    fail(path, `unknown producer lifecycle ${lifecycleKey}`);
-  }
-  for (const rewardType of rewardTypes) {
-    if (lifecycle.rewardTypes.byKey[rewardType] === undefined) {
-      fail(path, `${lifecycleKey} does not support reward type ${rewardType}`);
-    }
-  }
-  return lifecycle;
-}
-
-function requireStoreKey(
-  storeKey: string,
-  stores: CatalogCollection<RewardStoreDeclaration>,
-  path: string,
-): string {
-  requireNonEmpty(storeKey, path);
-  if (stores.byKey[storeKey] === undefined) {
-    fail(path, `unknown reward store ${storeKey}`);
-  }
-  return storeKey;
-}
+import { normalizeRewardBinding, requireRewardStoreKey } from './rewardBindings';
 
 function normalizeEnteredStoreHistory(
   policy: EnteredRewardStoreHistoryPolicy,
@@ -92,7 +43,7 @@ function normalizeEnteredStoreHistory(
   }
   return Object.freeze({
     kind: 'fixed',
-    storeKey: requireStoreKey(policy.storeKey, stores, `${path}.storeKey`),
+    storeKey: requireRewardStoreKey(policy.storeKey, stores, `${path}.storeKey`),
   });
 }
 
@@ -126,6 +77,7 @@ function normalizeCaps(caps: RoomCaps, path: string): RoomCaps {
 }
 
 const roomTemplateKinds = {
+  Devotion: 'Devotion',
   FixedIntro: 'Intro',
   FixedOpening: 'Opening',
   FieldsCombat: 'Combat',
@@ -135,11 +87,13 @@ const roomTemplateKinds = {
   RewardlessCombat: 'Combat',
   Shop: 'Shop',
   ShopPreboss: 'Preboss',
+  ShipCombat: 'Combat',
   StandardCombat: 'Combat',
   Story: 'Story',
 } as const satisfies Readonly<Record<RoomTemplateKey, RoomDeclaration['kind']>>;
 
 const roomTemplateRewardKinds = {
+  Devotion: 'fixed',
   FixedIntro: 'none',
   FixedOpening: 'countedChoice',
   FieldsCombat: 'none',
@@ -149,6 +103,7 @@ const roomTemplateRewardKinds = {
   RewardlessCombat: 'none',
   Shop: 'shop',
   ShopPreboss: 'shop',
+  ShipCombat: 'none',
   StandardCombat: 'countedChoice',
   Story: 'fixed',
 } as const satisfies Readonly<Record<RoomTemplateKey, RewardProducerBinding['kind']>>;
@@ -214,141 +169,6 @@ function normalizeStructuralTags(
   return tags as readonly RoomStructuralTag[];
 }
 
-function normalizeRewardBinding(
-  raw: RawRewardProducerBinding,
-  rewards: RewardKernelCatalog,
-  path: string,
-): RewardProducerBinding {
-  if (raw.kind === 'countedChoice') {
-    const storeKeys = freezeUniqueStrings(raw.storeKeys, `${path}.storeKeys`);
-    if (storeKeys.length === 0) {
-      fail(`${path}.storeKeys`, 'must not be empty');
-    }
-    const eligibleRewardTypes = freezeUniqueStrings(
-      raw.eligibleRewardTypes,
-      `${path}.eligibleRewardTypes`,
-    );
-    const ineligibleRewardTypes = freezeUniqueStrings(
-      raw.ineligibleRewardTypes,
-      `${path}.ineligibleRewardTypes`,
-    );
-    const storeRewardTypes = new Set<string>();
-    const defaultOffersByStore: Record<string, ResolvedRewardOffer> = {};
-    for (const [index, storeKey] of storeKeys.entries()) {
-      const store = rewards.stores.byKey[storeKey];
-      if (store === undefined) {
-        fail(`${path}.storeKeys[${index}]`, `unknown reward store ${storeKey}`);
-      }
-      defaultOffersByStore[storeKey] = store.defaultOffer;
-      for (const entry of store.entries) {
-        storeRewardTypes.add(entry.rewardType);
-      }
-    }
-    for (const [index, rewardType] of eligibleRewardTypes.entries()) {
-      if (rewards.rewardTypes.byKey[rewardType] === undefined) {
-        fail(`${path}.eligibleRewardTypes[${index}]`, `unknown reward type ${rewardType}`);
-      }
-      if (!storeRewardTypes.has(rewardType)) {
-        fail(
-          `${path}.eligibleRewardTypes[${index}]`,
-          `${rewardType} is not produced by the referenced stores`,
-        );
-      }
-    }
-    const available = new Set(
-      eligibleRewardTypes.length === 0
-        ? storeRewardTypes
-        : eligibleRewardTypes.filter((rewardType) => storeRewardTypes.has(rewardType)),
-    );
-    for (const [index, rewardType] of ineligibleRewardTypes.entries()) {
-      if (rewards.rewardTypes.byKey[rewardType] === undefined) {
-        fail(`${path}.ineligibleRewardTypes[${index}]`, `unknown reward type ${rewardType}`);
-      }
-      if (eligibleRewardTypes.includes(rewardType)) {
-        fail(path, `${rewardType} appears in both eligible and ineligible filters`);
-      }
-      available.delete(rewardType);
-    }
-    const allowedRewardTypes = Object.freeze([...available]);
-    if (allowedRewardTypes.length === 0) {
-      fail(path, 'filters remove every reward type');
-    }
-    for (const storeKey of storeKeys) {
-      const defaultOffer = defaultOffersByStore[storeKey];
-      if (defaultOffer !== undefined && !allowedRewardTypes.includes(defaultOffer.rewardType)) {
-        fail(path, `default ${defaultOffer.rewardType} from ${storeKey} is removed by filters`);
-      }
-    }
-    requireProducerLifecycle(
-      rewards,
-      raw.producerLifecycleKey,
-      allowedRewardTypes,
-      `${path}.producerLifecycleKey`,
-    );
-    return Object.freeze({
-      kind: 'countedChoice',
-      storeKeys,
-      eligibleRewardTypes,
-      ineligibleRewardTypes,
-      allowedRewardTypes,
-      defaultOffersByStore: Object.freeze(defaultOffersByStore),
-      producerLifecycleKey: raw.producerLifecycleKey,
-    });
-  }
-  if (raw.kind === 'fixed') {
-    const rewardType = rewards.rewardTypes.byKey[raw.rewardType];
-    if (rewardType === undefined) {
-      fail(`${path}.rewardType`, `unknown reward type ${raw.rewardType}`);
-    }
-    requireProducerLifecycle(
-      rewards,
-      raw.producerLifecycleKey,
-      [raw.rewardType],
-      `${path}.producerLifecycleKey`,
-    );
-    return Object.freeze({
-      kind: 'fixed',
-      offer: defaultOffer(rewardType),
-      producerLifecycleKey: raw.producerLifecycleKey,
-    }) satisfies FixedRewardBinding;
-  }
-  if (raw.kind === 'none') {
-    return Object.freeze({ kind: 'none' }) satisfies NoneRewardBinding;
-  }
-  const receivedKind: unknown = (raw as { readonly kind?: unknown }).kind;
-  if (raw.kind !== 'shop') {
-    fail(`${path}.kind`, `unknown reward producer ${String(receivedKind)}`);
-  }
-  const receivedRewardType: unknown = (raw as unknown as { readonly rewardType?: unknown })
-    .rewardType;
-  if (receivedRewardType !== 'Shop') {
-    fail(
-      `${path}.rewardType`,
-      `shop producer requires Shop, received ${String(receivedRewardType)}`,
-    );
-  }
-
-  const shop = rewards.rewardTypes.byKey[raw.rewardType];
-  if (shop === undefined) {
-    fail(`${path}.rewardType`, `unknown reward type ${raw.rewardType}`);
-  }
-  if (rewards.shops.byKey[raw.shopProfileKey] === undefined) {
-    fail(`${path}.shopProfileKey`, `unknown shop profile ${raw.shopProfileKey}`);
-  }
-  requireProducerLifecycle(
-    rewards,
-    raw.producerLifecycleKey,
-    [raw.rewardType],
-    `${path}.producerLifecycleKey`,
-  );
-  return Object.freeze({
-    kind: 'shop',
-    offer: defaultOffer(shop),
-    shopProfileKey: raw.shopProfileKey,
-    producerLifecycleKey: raw.producerLifecycleKey,
-  }) satisfies ShopRewardBinding;
-}
-
 function normalizeEntryOfferPolicy(
   raw: RawForkedPrebossEntryPolicy,
   rewards: RewardKernelCatalog,
@@ -368,9 +188,14 @@ function normalizeEntryOfferPolicy(
   });
 }
 
-function normalizeForce(force: RoomForce, path: string): RoomForce {
+function normalizeForce(force: RoomForce, rewards: RewardKernelCatalog, path: string): RoomForce {
   if (force.kind === 'always') {
     return Object.freeze({ kind: 'always' });
+  }
+  if (force.kind === 'requirement') {
+    const requirement = normalizeRequirement(force.requirement, `${path}.requirement`);
+    validateRequirementReferences(requirement, rewards.rewardTypes, `${path}.requirement`);
+    return Object.freeze({ kind: 'requirement', requirement });
   }
   if (force.kind !== 'depthWindow') {
     fail(`${path}.kind`, `unknown room force ${String((force as { kind?: unknown }).kind)}`);
@@ -383,19 +208,30 @@ function normalizeForce(force: RoomForce, path: string): RoomForce {
   return Object.freeze({ kind: force.kind, axis: force.axis, start, deadline });
 }
 
-function validateRoomRequirementReferences(
+function validateContextRequirementReferences(
   requirement: RequirementExpression,
   rooms: CatalogCollection<RoomDeclaration>,
+  encounters: CatalogCollection<EncounterProfile>,
   path: string,
 ): void {
   if (requirement.kind === 'all' || requirement.kind === 'any') {
     requirement.requirements.forEach((child, index) =>
-      validateRoomRequirementReferences(child, rooms, `${path}.requirements[${index}]`),
+      validateContextRequirementReferences(
+        child,
+        rooms,
+        encounters,
+        `${path}.requirements[${index}]`,
+      ),
     );
     return;
   }
   if (requirement.kind === 'not') {
-    validateRoomRequirementReferences(requirement.requirement, rooms, `${path}.requirement`);
+    validateContextRequirementReferences(
+      requirement.requirement,
+      rooms,
+      encounters,
+      `${path}.requirement`,
+    );
     return;
   }
   if (requirement.kind === 'recordCount' && requirement.record === 'roomsEntered') {
@@ -404,6 +240,25 @@ function validateRoomRequirementReferences(
         fail(`${path}.keys[${index}]`, `unknown room ${gameName}`);
       }
     });
+  }
+  if (requirement.kind === 'distinctRecordKeyCount' && requirement.record === 'roomsEntered') {
+    requirement.keys.forEach((gameName, index) => {
+      if (rooms.byKey[gameName] === undefined) {
+        fail(`${path}.keys[${index}]`, `unknown room ${gameName}`);
+      }
+    });
+  }
+  if (requirement.kind === 'recentEncounterPhaseCount') {
+    const profile = encounters.byKey[requirement.profileKey];
+    if (profile === undefined) {
+      fail(`${path}.profileKey`, `unknown encounter profile ${requirement.profileKey}`);
+    }
+    if (!profile.phases.some((phase) => phase.key === requirement.phaseKey)) {
+      fail(
+        `${path}.phaseKey`,
+        `unknown phase ${requirement.phaseKey} in ${requirement.profileKey}`,
+      );
+    }
   }
 }
 
@@ -466,7 +321,7 @@ export function normalizeRooms(
     const forcedRewardStoreKey =
       room.forcedRewardStoreKey === undefined
         ? undefined
-        : requireStoreKey(
+        : requireRewardStoreKey(
             room.forcedRewardStoreKey,
             rewards.stores,
             `${path}.forcedRewardStoreKey`,
@@ -474,7 +329,7 @@ export function normalizeRooms(
     const individualRewardStoreKey =
       room.individualRewardStoreKey === undefined
         ? undefined
-        : requireStoreKey(
+        : requireRewardStoreKey(
             room.individualRewardStoreKey,
             rewards.stores,
             `${path}.individualRewardStoreKey`,
@@ -527,7 +382,9 @@ export function normalizeRooms(
       }),
       caps: normalizeCaps(room.caps, `${path}.caps`),
       ...(eligibility === undefined ? {} : { eligibility }),
-      ...(room.force === undefined ? {} : { force: normalizeForce(room.force, `${path}.force`) }),
+      ...(room.force === undefined
+        ? {}
+        : { force: normalizeForce(room.force, rewards, `${path}.force`) }),
       localChildren: normalizeLocalChildren(
         room.localChildren ?? [],
         `${path}.localChildren`,
@@ -586,11 +443,72 @@ export function normalizeRooms(
         );
       }
     }
+    if (room.mode.kind === 'authored' && room.mode.templateKey === 'ShipCombat') {
+      const path = `rooms[${roomIndex}]`;
+      const profile = encounters.byKey[room.encounterProfileKey];
+      const intro = profile?.phases[0];
+      const combat1 = profile?.phases[1];
+      const combat2 = profile?.phases[2];
+      if (
+        profile?.phases.length !== 3 ||
+        intro?.key !== 'Intro' ||
+        intro.kind !== 'combat' ||
+        intro.countsEncounterDepth ||
+        intro.presence !== undefined ||
+        intro.offerPoint !== undefined ||
+        combat1?.key !== 'Combat1' ||
+        combat1.kind !== 'combat' ||
+        !combat1.countsEncounterDepth ||
+        combat1.presence !== undefined ||
+        combat1.offerPoint?.key !== 'wheel1' ||
+        combat1.offerPoint.offerKeys.length !== 2 ||
+        combat1.offerPoint.offerKeys[0] !== 'offer1' ||
+        combat1.offerPoint.offerKeys[1] !== 'offer2' ||
+        combat1.offerPoint.offerCount.min !== 1 ||
+        combat1.offerPoint.offerCount.max !== 2 ||
+        combat1.offerPoint.offerCount.defaultValue !== 1 ||
+        combat2?.key !== 'Combat2' ||
+        combat2.kind !== 'combat' ||
+        !combat2.countsEncounterDepth ||
+        combat2.presence?.kind !== 'authoredOptional' ||
+        combat2.presence.defaultActive ||
+        combat2.offerPoint?.key !== 'wheel2' ||
+        combat2.offerPoint.offerKeys.length !== 2 ||
+        combat2.offerPoint.offerKeys[0] !== 'offer1' ||
+        combat2.offerPoint.offerKeys[1] !== 'offer2' ||
+        combat2.offerPoint.offerCount.min !== 1 ||
+        combat2.offerPoint.offerCount.max !== 2 ||
+        combat2.offerPoint.offerCount.defaultValue !== 1
+      ) {
+        fail(
+          `${path}.encounterProfileKey`,
+          `${room.encounterProfileKey} must define canonical combat Intro, Combat1/wheel1, and optional Combat2/wheel2 phases with two offer slots`,
+        );
+      }
+      if (room.localChildren.length !== 0) {
+        fail(`${path}.localChildren`, 'ShipCombat wheels belong to its encounter profile');
+      }
+      if (room.enteredRewardStoreHistory.kind !== 'none') {
+        fail(
+          `${path}.enteredRewardStoreHistory`,
+          'ShipCombat history is emitted by its active wheel offer points',
+        );
+      }
+    }
     if (room.eligibility !== undefined) {
-      validateRoomRequirementReferences(
+      validateContextRequirementReferences(
         room.eligibility,
         collection,
+        encounters,
         `rooms[${roomIndex}].eligibility`,
+      );
+    }
+    if (room.force?.kind === 'requirement') {
+      validateContextRequirementReferences(
+        room.force.requirement,
+        collection,
+        encounters,
+        `rooms[${roomIndex}].force.requirement`,
       );
     }
     for (const [childIndex, child] of room.localChildren.entries()) {

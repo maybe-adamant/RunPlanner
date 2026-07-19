@@ -59,6 +59,8 @@ export {
   type BatchRewardStoreState,
   type FieldsCageBatchState,
   type FieldsCombatState,
+  type RewardWheelState,
+  type ShipCombatState,
   type LinearBatchContinuation,
   type LinearBiomePlan,
   type LinearBiomeTopology,

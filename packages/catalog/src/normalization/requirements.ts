@@ -66,13 +66,22 @@ export function normalizeRequirement(
         range: normalizeRange(requirement.range, `${path}.range`),
       });
     case 'recordCount':
+    case 'distinctRecordKeyCount':
       if (requirement.keys.length === 0) {
         fail(`${path}.keys`, 'must not be empty');
       }
       return Object.freeze({
-        kind: 'recordCount',
+        kind: requirement.kind,
         record: requirement.record,
         keys: freezeUniqueStrings(requirement.keys, `${path}.keys`),
+        range: normalizeRange(requirement.range, `${path}.range`),
+      });
+    case 'recentEncounterPhaseCount':
+      return Object.freeze({
+        kind: 'recentEncounterPhaseCount',
+        profileKey: requireNonEmpty(requirement.profileKey, `${path}.profileKey`),
+        phaseKey: requireNonEmpty(requirement.phaseKey, `${path}.phaseKey`),
+        roomWindow: requirePositiveInteger(requirement.roomWindow, `${path}.roomWindow`),
         range: normalizeRange(requirement.range, `${path}.range`),
       });
     case 'notInCurrentRoomShopOptions':
@@ -136,6 +145,7 @@ export function validateRequirementReferences(
       });
       return;
     case 'recordCount':
+    case 'distinctRecordKeyCount':
       if (requirement.record !== 'roomsEntered') {
         requirement.keys.forEach((key, index) => {
           if (rewardTypes.byKey[key] === undefined) {
@@ -148,6 +158,7 @@ export function validateRequirementReferences(
     case 'flagEquals':
     case 'minExits':
     case 'minRoomsSinceEvent':
+    case 'recentEncounterPhaseCount':
       return;
   }
 }

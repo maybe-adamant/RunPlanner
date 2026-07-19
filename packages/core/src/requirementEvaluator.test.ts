@@ -25,6 +25,7 @@ const baseContext = {
   currentRoomRewardType: undefined,
   runDepthCache: 10,
   lastEventRunDepthCaches: {},
+  recentEncounterPhases: [],
   offeredExitCount: 2,
   flags: {
     allSpellInvested: false,
@@ -40,6 +41,8 @@ describe('requirement evaluator registry', () => {
       'not',
       'counterRange',
       'recordCount',
+      'distinctRecordKeyCount',
+      'recentEncounterPhaseCount',
       'notInCurrentRoomShopOptions',
       'minRoomsSinceEvent',
       'minExits',
@@ -116,6 +119,17 @@ describe('requirement evaluator registry', () => {
     ).toBe(true);
     expect(
       evaluateRequirement(
+        {
+          kind: 'distinctRecordKeyCount',
+          record: 'lootTypeHistory',
+          keys: ['ApolloUpgrade', 'ZeusUpgrade'],
+          range: { min: 2, max: 2 },
+        },
+        { ...context, records: { ...context.records, lootTypeHistory: { ApolloUpgrade: 5 } } },
+      ),
+    ).toBe(false);
+    expect(
+      evaluateRequirement(
         { kind: 'notInCurrentRoomShopOptions', rewardType: 'TalentDrop' },
         context,
       ),
@@ -130,6 +144,26 @@ describe('requirement evaluator registry', () => {
     expect(
       evaluateRequirement({ kind: 'flagEquals', flag: 'pendingSpellDrop', value: false }, context),
     ).toBe(false);
+  });
+
+  it('counts a requested encounter phase at most once per recent room', () => {
+    const requirement = {
+      kind: 'recentEncounterPhaseCount',
+      profileKey: 'ShipCombat',
+      phaseKey: 'Intro',
+      roomWindow: 3,
+      range: { min: 2, max: 2 },
+    } as const;
+    expect(
+      evaluateRequirement(requirement, {
+        ...baseContext,
+        recentEncounterPhases: [
+          { profileKey: 'Other', phaseKeys: ['Intro'] },
+          { profileKey: 'ShipCombat', phaseKeys: ['Intro', 'Combat1'] },
+          { profileKey: 'ShipCombat', phaseKeys: ['Intro', 'Combat1', 'Combat2'] },
+        ],
+      }),
+    ).toBe(true);
   });
 
   it('matches the game spacing rule, including same-room peer generation', () => {

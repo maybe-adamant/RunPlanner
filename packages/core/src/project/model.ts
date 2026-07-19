@@ -23,11 +23,25 @@ export interface FieldsCombatState {
   readonly cages: Readonly<Record<string, ResolvedRewardOffer>>;
 }
 
+export interface RewardWheelState {
+  readonly storeKey: string;
+  readonly offerCount: number;
+  readonly offers: Readonly<Record<string, ResolvedRewardOffer>>;
+  readonly pickedOfferIndex: number;
+}
+
+export interface ShipCombatState {
+  readonly kind: 'shipCombat';
+  readonly encounterCount: 2 | 3;
+  readonly wheels: Readonly<Record<string, RewardWheelState>>;
+}
+
 export type AuthoredRoomState =
   | { readonly kind: 'none' }
   | { readonly kind: 'fixed'; readonly payload?: RewardPayload }
   | { readonly kind: 'counted'; readonly offer: ResolvedRewardOffer }
   | FieldsCombatState
+  | ShipCombatState
   | { readonly kind: 'shop'; readonly shop?: ShopState }
   | { readonly kind: 'freeReward'; readonly offer: ResolvedRewardOffer };
 

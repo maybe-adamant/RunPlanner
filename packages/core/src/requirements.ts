@@ -39,6 +39,19 @@ export type RequirementExpression =
       readonly range: NumericRange;
     }
   | {
+      readonly kind: 'distinctRecordKeyCount';
+      readonly record: HistoryRecord;
+      readonly keys: readonly string[];
+      readonly range: NumericRange;
+    }
+  | {
+      readonly kind: 'recentEncounterPhaseCount';
+      readonly profileKey: string;
+      readonly phaseKey: string;
+      readonly roomWindow: number;
+      readonly range: NumericRange;
+    }
+  | {
       readonly kind: 'notInCurrentRoomShopOptions';
       readonly rewardType: string;
     }
