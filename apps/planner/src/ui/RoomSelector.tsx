@@ -4,6 +4,7 @@ import { useState } from 'react';
 type OrdinaryRoomCategory = 'Combat' | 'Miniboss' | 'Story' | 'Fountain' | 'Shop';
 
 interface RoomSelectorProps {
+  readonly biomeStepKey: string;
   readonly catalog: Catalog;
   readonly current?: RoomDeclaration;
   readonly disabled?: boolean;
@@ -37,10 +38,11 @@ function categoryForKind(kind: RoomKind): OrdinaryRoomCategory | undefined {
 
 function categoryRooms(
   catalog: Catalog,
+  biomeStepKey: string,
   category: OrdinaryRoomCategory,
 ): readonly RoomDeclaration[] {
   return catalog.rooms.values.filter((room) => {
-    if (room.biomeStepKey !== 'Underworld_F') {
+    if (room.biomeStepKey !== biomeStepKey) {
       return false;
     }
     return categoryForKind(room.kind) === category;
@@ -48,6 +50,7 @@ function categoryRooms(
 }
 
 export function RoomSelector({
+  biomeStepKey,
   catalog,
   current,
   disabled = false,
@@ -56,7 +59,7 @@ export function RoomSelector({
 }: RoomSelectorProps) {
   const currentCategory = current === undefined ? undefined : categoryForKind(current.kind);
   const [category, setCategory] = useState<OrdinaryRoomCategory | ''>(currentCategory ?? '');
-  const rooms = category === '' ? [] : categoryRooms(catalog, category);
+  const rooms = category === '' ? [] : categoryRooms(catalog, biomeStepKey, category);
   const currentInCategory = current !== undefined && categoryForKind(current.kind) === category;
 
   return (

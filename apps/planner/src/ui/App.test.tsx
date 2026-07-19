@@ -20,7 +20,11 @@ describe('App', () => {
     const application = createApplication();
     const markup = renderToStaticMarkup(
       <Provider store={application.store}>
-        <App catalog={application.catalog} catalogSummary={application.catalogSummary} />
+        <App
+          catalog={application.catalog}
+          catalogSummary={application.catalogSummary}
+          editorNavigation={application.editorNavigation}
+        />
       </Provider>,
     );
 
@@ -31,6 +35,10 @@ describe('App', () => {
     expect(markup).toContain('Erebus');
     expect(markup).toContain('Choose an opening room');
     expect(markup).toContain('Authored editor smoke');
+    expect(application.editorNavigation.routes.Underworld?.biomePanels).toEqual([
+      { biomeStepKey: 'Underworld_F', label: 'Erebus' },
+    ]);
+    expect(application.editorNavigation.routes.Surface?.biomePanels).toEqual([]);
   });
 
   it('projects route-local and top-level session navigation without authoring history', () => {
@@ -38,7 +46,11 @@ describe('App', () => {
     application.store.dispatch(underworldPanelSelected('route'));
     let markup = renderToStaticMarkup(
       <Provider store={application.store}>
-        <App catalog={application.catalog} catalogSummary={application.catalogSummary} />
+        <App
+          catalog={application.catalog}
+          catalogSummary={application.catalogSummary}
+          editorNavigation={application.editorNavigation}
+        />
       </Provider>,
     );
     expect(markup).toContain('Route settings');
@@ -48,7 +60,11 @@ describe('App', () => {
     application.store.dispatch(sectionSelected('surface'));
     markup = renderToStaticMarkup(
       <Provider store={application.store}>
-        <App catalog={application.catalog} catalogSummary={application.catalogSummary} />
+        <App
+          catalog={application.catalog}
+          catalogSummary={application.catalogSummary}
+          editorNavigation={application.editorNavigation}
+        />
       </Provider>,
     );
     expect(markup).toContain('0 configured');
@@ -67,7 +83,11 @@ describe('App', () => {
     );
     const markup = renderToStaticMarkup(
       <Provider store={application.store}>
-        <App catalog={application.catalog} catalogSummary={application.catalogSummary} />
+        <App
+          catalog={application.catalog}
+          catalogSummary={application.catalogSummary}
+          editorNavigation={application.editorNavigation}
+        />
       </Provider>,
     );
 
@@ -125,7 +145,11 @@ describe('App', () => {
 
     const markup = renderToStaticMarkup(
       <Provider store={application.store}>
-        <App catalog={application.catalog} catalogSummary={application.catalogSummary} />
+        <App
+          catalog={application.catalog}
+          catalogSummary={application.catalogSummary}
+          editorNavigation={application.editorNavigation}
+        />
       </Provider>,
     );
 
@@ -182,7 +206,11 @@ describe('App', () => {
 
     const markup = renderToStaticMarkup(
       <Provider store={application.store}>
-        <App catalog={application.catalog} catalogSummary={application.catalogSummary} />
+        <App
+          catalog={application.catalog}
+          catalogSummary={application.catalogSummary}
+          editorNavigation={application.editorNavigation}
+        />
       </Provider>,
     );
     expect(markup).toContain('disabled="" type="button">Add Next Decision');

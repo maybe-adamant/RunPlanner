@@ -125,7 +125,7 @@ interface LocatedBiome {
   readonly layout: LinearBiomeLayout;
 }
 
-function commandAddress(command: ProjectCommand): SemanticAddress {
+export function projectCommandAddress(command: ProjectCommand): SemanticAddress {
   switch (command.kind) {
     case 'CreateStart':
       return command.biome;
@@ -159,7 +159,7 @@ function commandAddress(command: ProjectCommand): SemanticAddress {
 }
 
 function failCommand(command: ProjectCommand, detail: string): never {
-  throw new ProjectCommandContractError(command.kind, commandAddress(command), detail);
+  throw new ProjectCommandContractError(command.kind, projectCommandAddress(command), detail);
 }
 
 function locateBiome(
@@ -167,7 +167,7 @@ function locateBiome(
   catalog: Catalog,
   command: ProjectCommand,
 ): LocatedBiome {
-  const address = commandAddress(command);
+  const address = projectCommandAddress(command);
   const routeIndex = document.routes.findIndex((route) => route.routeKey === address.routeKey);
   if (routeIndex < 0) {
     failCommand(command, `unknown or unconfigured route ${address.routeKey}`);
@@ -1132,7 +1132,7 @@ export function applyProjectCommand(
     if (error instanceof ProjectDocumentContractError) {
       throw new ProjectCommandContractError(
         command.kind,
-        commandAddress(command),
+        projectCommandAddress(command),
         `${error.path}: ${error.detail}`,
         { cause: error },
       );

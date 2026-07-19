@@ -65,6 +65,7 @@ export {
   decodeLinearBiomeTopology,
   encodeProjectDocument,
   parseProjectDocument,
+  projectCommandAddress,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   ProjectDocumentContractError,
   ProjectCommandContractError,

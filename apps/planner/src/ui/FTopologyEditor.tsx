@@ -99,6 +99,7 @@ function OrdinaryTargetEditor({
             <span className="neutral-status">Unspecified</span>
           </div>
           <RoomSelector
+            biomeStepKey={biome.biomeStepKey}
             catalog={catalog}
             disabled={!canCreateTarget}
             idPrefix={idPrefix}
@@ -149,6 +150,7 @@ function OrdinaryTargetEditor({
           <span className="neutral-status">{available ? roomDeclaration.kind : 'Unavailable'}</span>
         </div>
         <RoomSelector
+          biomeStepKey={biome.biomeStepKey}
           catalog={catalog}
           current={roomDeclaration}
           idPrefix={idPrefix}
@@ -508,9 +510,9 @@ function frontierOccurrenceId(topology: LinearBiomeTopology): OccurrenceId | und
 }
 
 export function FTopologyEditor({ biome, catalog, topology }: FTopologyEditorProps) {
-  const layout = catalog.biomeLayouts.byKey.Underworld_F;
+  const layout = catalog.biomeLayouts.byKey[biome.biomeStepKey];
   if (layout === undefined) {
-    throw new Error('Underworld_F layout is missing');
+    throw new Error(`${biome.biomeStepKey} layout is missing`);
   }
   const batchCount = topology.continuations.filter(
     (continuation) => continuation.kind === 'batch',
