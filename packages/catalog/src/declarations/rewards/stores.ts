@@ -108,7 +108,7 @@ export const rewardStores = [
         requirement: {
           kind: 'all',
           requirements: [
-            { kind: 'notInStore', rewardType: 'WeaponUpgradeDrop' },
+            { kind: 'notInCurrentRoomShopOptions', rewardType: 'WeaponUpgradeDrop' },
             {
               kind: 'recordCount',
               record: 'lootTypeHistory',
@@ -123,7 +123,7 @@ export const rewardStores = [
         requirement: {
           kind: 'all',
           requirements: [
-            { kind: 'notInStore', rewardType: 'WeaponUpgradeDrop' },
+            { kind: 'notInCurrentRoomShopOptions', rewardType: 'WeaponUpgradeDrop' },
             { kind: 'counterRange', axis: 'enteredBiomes', range: { min: 3 } },
             {
               kind: 'recordCount',
@@ -139,7 +139,7 @@ export const rewardStores = [
         requirement: {
           kind: 'all',
           requirements: [
-            { kind: 'notInStore', rewardType: 'ShopHermesUpgrade' },
+            { kind: 'notInCurrentRoomShopOptions', rewardType: 'ShopHermesUpgrade' },
             {
               kind: 'recordCount',
               record: 'biomeUseRecord',
@@ -187,7 +187,7 @@ export const rewardStores = [
         requirement: {
           kind: 'all',
           requirements: [
-            { kind: 'notInStore', rewardType: 'SpellDrop' },
+            { kind: 'notInCurrentRoomShopOptions', rewardType: 'SpellDrop' },
             { kind: 'currentRoomRewardExcludes', rewardTypes: ['SpellDrop'] },
             {
               kind: 'recordCount',
@@ -204,7 +204,7 @@ export const rewardStores = [
         requirement: {
           kind: 'all',
           requirements: [
-            { kind: 'notInStore', rewardType: 'TalentDrop' },
+            { kind: 'notInCurrentRoomShopOptions', rewardType: 'TalentDrop' },
             {
               kind: 'recordCount',
               record: 'useRecord',

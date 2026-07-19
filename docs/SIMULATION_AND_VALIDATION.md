@@ -81,6 +81,8 @@ declaration -> catalog -> history -> validator -> feedback
 Canonical materialization is the bridge between catalog/authored state and
 history. Declarations alone cannot produce history because concrete topology,
 rewards, purchases, encounters, and selected exits are authored choices.
+`ROOM_LIFECYCLE_MODEL.md` defines the single-room fragments that this pipeline
+composes.
 
 ## Catalog Boundary
 
@@ -300,14 +302,18 @@ runtime document justified by game probing.
 ## Lifecycle Event Stream
 
 History preserves game timing rather than reconstructing it from final room
-aggregates:
+aggregates. The canonical operation order comes from
+`ROOM_LIFECYCLE_MODEL.md`:
 
 ```text
+room.prepare
 room.enter
-room.prepare_encounters
-room.sequence
-room.generate_next
+room.start_encounter / room.complete_encounter
+room.offer_point / room.advance_producer, when declared
+room.generate_outgoing
+remaining room-local operations
 room.commit
+room.exit
 
 editable terminal enters
 layout completion sequence begins
@@ -329,8 +335,9 @@ concrete_acquisition.emit
 encounter.complete
 ```
 
-Offer and acquisition timing belongs to the encounter or room declaration.
-The simulator must not infer it later from a generic reward list.
+The lifecycle profile owns operation order. Encounter, room, reward, and layout
+declarations own the typed effects invoked by those operations. The simulator
+must not infer timing later from a generic reward list or final room aggregate.
 
 H Fields combat is a concrete multi-phase projection rather than one generic
 combat event. Materialization first derives the active cage prefix for every
@@ -398,8 +405,9 @@ These histories remain distinct:
 - unresolved force pressure tracks eligible forced declarations not yet
   generated.
 
-Every rule declares which pre-event or post-event view it reads. A generic row
-or room index cannot substitute for these axes.
+Every rule declares which pre-operation or post-operation view it reads.
+`ROOM_LIFECYCLE_MODEL.md` owns that operation order. A generic row or room index
+cannot substitute for these axes.
 
 Important consequences:
 
@@ -412,6 +420,10 @@ Important consequences:
 - loot and use requirements update on acquisition;
 - one physical room commit advances `biomeDepthCache` once even when it has
   multiple encounters;
+- a counting encounter advances `biomeEncounterDepth` at encounter start, so
+  outgoing generation observes it before the same room's later commit;
+- outgoing generation reads the source's pre-commit depth caches, while the
+  picked target's preparation reads the post-commit caches;
 - fixed completion rooms contribute their declared room-history ordinals even
   though they are derived rather than authored topology;
 - each derived completion room applies its declaration-owned reward-store
@@ -438,10 +450,11 @@ not read UI state, project storage, or global runtime objects.
 
 The focused registry evaluates inclusive counter ranges, summed record counts,
 active current-room shop option names, the current room's chosen reward,
-offered-exit count, current-run flags, and room-history event spacing. Event
-spacing preserves the game's peer-generation behavior: no prior event passes,
-and an event stamped at the current room-history ordinal does not block another
-offer generated from that same room.
+offered-exit count, current-run flags, and `runDepthCache`-backed event spacing.
+Devotion spacing preserves the game's peer-generation behavior: no prior marker
+passes, and a marker stamped at the current `runDepthCache` does not block
+another offer generated at that same depth. Otherwise the current depth must be
+at least the declared count beyond `lastDevotionDepth`.
 
 Selected facts and candidate projections use the same evaluator functions.
 There is no permissive candidate rule beside a stricter selected rule.
@@ -531,14 +544,18 @@ lifecycle at a specific point.
 For an entered shop, evaluate ordered groups against the pre-generation fact
 snapshot, validate every authored offer against an eligible option entry, and
 enforce each group's `offerCount` without replacement. Positive weights do not
-change possibility support. After the inventory exists, process the authored
-purchased set and remove purchased names from the active current-room option
-set before outgoing reward requirements are evaluated. Exact affordability and
-resource state remain deferred under the sufficient-resource policy in
-`REWARD_MODEL.md`. Blind Box persists its intended source, but validates that
-source only if purchased. Evaluate every semantically distinct purchase order,
-merge equivalent history states, and retain a witness order proving the
-authored source is possible for later execution-plan compilation.
+change possibility support. After the inventory exists, generate and validate
+the room's outgoing batch from the same pre-purchase acquisition history and
+the complete generated current-room option set. Only then process the authored
+purchased set. Exact affordability and resource state remain deferred under
+the sufficient-resource policy in `REWARD_MODEL.md`. Blind Box persists its
+intended source, but validates that source only if purchased. Evaluate every
+semantically distinct purchase order, merge equivalent exit-history states,
+and retain a witness order proving the authored source is possible for later
+execution-plan compilation. Those post-purchase histories continue through the
+already-generated picked target; they are not used to revalidate its room or
+incoming reward.
+
 Source-bearing shop options use their declared policy at their declared
 resolution point: RandomLoot uses `ordinaryNoPeer` during offer generation,
 while Blind Box uses the same policy only when its authored-source acquisition
@@ -723,8 +740,9 @@ the opening is already created and its reward is acquired before its exits are
 generated. The counting opening encounter advances biome encounter depth to
 `2` at encounter start, before outgoing doors are generated, and its room
 commit advances biome depth cache to `1`. Current-room shop option history
-contains only unpurchased offers because purchased options are removed before
-the next doors are generated.
+contains the complete generated inventory while that shop's outgoing doors are
+generated. Purchases occur afterward and first affect generation when the
+already-generated next room reaches its outgoing checkpoint.
 
 The canonical model increments `upgradableTraitCount` once for every acquired
 ordinary Boon. Exact boon selection, replacement, and upgradeable trait

@@ -8,8 +8,10 @@ verified reward hierarchy forward without carrying the old Lib control or
 storage implementation.
 
 `CATALOG_MODEL.md` owns declaration normalization. This document owns what the
-reward declaration kinds mean and how they compose. `SIMULATION_AND_VALIDATION.md`
-owns lifecycle evaluation, counted-bag mutation, and legality.
+reward declaration kinds mean and how they compose. `ROOM_LIFECYCLE_MODEL.md`
+owns when a room invokes offer and acquisition transitions.
+`SIMULATION_AND_VALIDATION.md` owns transition evaluation, counted-bag mutation,
+and legality.
 `REWARD_GAME_DATA_AUDIT.md` records the underlying game evidence and the exact,
 simplified, deferred, or excluded disposition of each audited mechanic.
 
@@ -695,13 +697,22 @@ This differs from incoming and free-reward leaves. Those rewards materialize
 on the physical door and therefore remain complete, offered facts even when
 their target is unpicked.
 
-Shop generation occurs before the entered shop's outgoing doors are generated.
-Purchased options are removed from the current room's active option set, so
-Hammer, Hermes, Spell, and Talent requirements that inspect the current shop
-see only unpurchased offers. This query is not a counted-store lookup.
+Shop inventory materializes from entry history before the entered shop's
+outgoing doors are generated. The outgoing batch is then generated before
+ordinary player purchases. Hammer, Hermes, Spell, and Talent requirements that
+inspect the current shop therefore see the complete generated shop inventory
+at that checkpoint, not a post-purchase remainder. This query is not a
+counted-store lookup.
+
 The normalized requirement kind is `notInCurrentRoomShopOptions`; the Phase 1
 prototype name `notInStore` is retired when Phase 2.6 establishes the shared
 reward-kernel requirement boundary.
+
+Purchases remove options and update acquisition history after the outgoing
+batch already exists. They cannot change that batch or the selected next room's
+already-resolved reward. Their first effect on room generation occurs when that
+selected room later generates its own outgoing batch. The exact operation order
+is defined by `ROOM_LIFECYCLE_MODEL.md`.
 
 Exact prices, money, health, last-stand inventory, discounts, and affordability
 are deferred. The first complete model authors purchases under a
@@ -715,6 +726,7 @@ validated while the box is merely offered. When the box is purchased, the
 simulator explores relevant purchase orders, applies the declared
 `ordinaryNoPeer` support policy to that authored source at the acquisition role,
 and retains every reachable history state.
+
 A later plan compiler may select and encode one witness order. The editor
 continues to author the purchased set and intended source rather than exposing
 incidental ordering controls.
@@ -875,8 +887,8 @@ complete replacement values. Simulation validates:
 - shared generated-door store resolution;
 - same-batch duplicate and Boon-source rules;
 - source-support policy and resolution-point membership;
-- generic offer history, Devotion's offer-time spacing projection, and
-  acquisition timing;
+- generic offer history, Devotion's offer-time spacing projection, acquisition
+  timing, and room-lifecycle placement relative to outgoing generation;
 - shop purchases;
 - shop group cardinality, without-replacement support, and option requirements;
 - peer and biome constraints;

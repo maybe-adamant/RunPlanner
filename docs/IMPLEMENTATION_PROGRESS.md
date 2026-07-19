@@ -7,12 +7,17 @@ is mutable project history, not a design authority.
 
 ## Current Frontier
 
-Phases 0, 1, 2, and 2.5 were completed under the prior reward-store ownership
-model. Phase 2.6, Reward Kernel, is the current frontier. The biome and reward
-audits are complete. Implementation now proceeds through three additive gates:
-build the unconnected reward kernel in Phase 2.6, switch F/G atomically to
-schema version 2 in Phase 2.7, and import P/Q/H/O/I/N as dormant declaration
-sets in Phase 2.8 before Phase 3 begins.
+Phases 0, 1, 2, 2.5, and 2.6 are complete. Phases 0 through 2.5 were completed
+under the prior reward-store ownership model; Phase 2.6 adds the audited reward
+kernel as an intentionally unconnected pure subsystem. Phase 2.7, the atomic
+F/G schema-version-2 reward authority switch, is the current frontier. Phase
+2.8 then imports P/Q/H/O/I/N as dormant declaration sets before Phase 3 begins.
+
+The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
+defines reusable single-room lifecycle profiles, occurrence-addressed history
+fragments, typed declaration-driven effects, exact counter/cache timing, and
+outgoing-generation checkpoints. This is design authority only; no Phase 3
+lifecycle executor or route-history composition is implemented yet.
 
 Possibility-only simulation and the reward-authority shape are locked by the
 complete audit set. O added the source-offer-point batch-store form without
@@ -315,6 +320,60 @@ The final authored F projection slice now delivers:
 Phase 2.5 is complete. The editor now exercises the full Phase 2 F command
 surface without editing JSON.
 
+### Phase 2.6: Reward Kernel
+
+Delivered:
+
+- isolated `@run-planner/core/reward-kernel` and
+  `@run-planner/catalog/reward-kernel` entry points with no connection to the
+  schema-version-1 project or editor;
+- normalized payload domains, complete resolved-offer defaults, reward types,
+  source-support policies, semantic resolution points, acquisition roles, and
+  producer-owned shop acquisition lifecycles;
+- strict contact validation for payload/default compatibility, source-policy
+  compatibility, role resolution, concrete acquisition references, counted
+  store defaults, shop groups, without-replacement capacity, and complete
+  acquisition-lifecycle bindings;
+- the complete eight-store inventory with declaration order, multiplicity,
+  current-run requirements, duplicate policy, immutable bag defaults, retained
+  leftovers, one call-local full refill, and deduplicated latent-state
+  branching;
+- the exact 13-entry fully progressed `MetaProgress` projection;
+- policy-dispatched `ordinaryBoonPeer`, `ordinaryNoPeer`, and
+  `devotionAcquiredPair` source support with the four-source cap, peer
+  exclusion fallback, acquired-source pairs, and delayed Blind Box validation;
+- generic resolved-offer history plus exact Devotion offer-time spacing;
+- the exhaustive concrete acquisition registry and closed `lootAndUse` and
+  `consumableAndUse` projections, including Spell's cross-kind behavior and
+  ordinary-source trait-count folding;
+- ordered `WorldShop`, `I_WorldShop`, and `Q_WorldShop` declarations with exact
+  group support, offer counts, distinct option entries, requirements, and
+  recursively complete defaults;
+- pure shop generation witnesses, without-replacement assignment, purchased-
+  set order branching, state equivalence merging, and retained executable
+  purchase-order witnesses;
+- behavior-preserving replacement of `notInStore` and
+  `currentRoomStoreOptionNames` by `notInCurrentRoomShopOptions` and
+  `currentRoomShopOptionNames` at the shared current-run requirement boundary;
+- parity and contract fixtures covering every store multiset, duplicate
+  position, acquisition identity/profile, shop group, source policy, refill,
+  latent bag branch, offer projection, trait-free baseline, and the order-
+  sensitive Blind Box case.
+
+The existing schema-version-1 F/G catalog, project document, commands, and
+editor remain the only connected production authority. Phase 2.6 introduces no
+schema migration, canonical route-history walker, candidate evaluator, semantic
+finding, or UI behavior.
+
+Validation at completion:
+
+- workspace type checking passed;
+- 13 test files and 95 tests passed;
+- ESLint passed with zero warnings;
+- Prettier check passed;
+- the Vite production build passed;
+- `git diff --check` passed.
+
 ## Post-Phase 2.5 Audit Findings
 
 The 2026-07-18 game-data audits locked possibility-only simulation and produced
@@ -380,24 +439,9 @@ schema changes piecemeal; the now-complete audit set defines one shared version
 
 ## Next
 
-### Phase 2.6: Reward Kernel
-
-Pending:
-
-1. normalize the audited reward types, source-support policies, resolved
-   offers, counted stores, acquisitions, history projections, and shop groups;
-2. rename `notInStore` to `notInCurrentRoomShopOptions` at the shared
-   requirement boundary;
-3. implement pure reward-state transitions against synthetic fact snapshots;
-4. close the full reward parity gate without connecting the kernel to the v1
-   authored project or editor.
-
-The existing schema-version-1 F/G model remains the sole connected production
-authority during this phase.
-
 ### Phase 2.7: F/G Reward Authority Switch
 
-After Phase 2.6:
+Current:
 
 1. replace leaf-owned stores and eager shops with schema version 2;
 2. bind F/G defaults, codecs, commands, and editor projection to the kernel;

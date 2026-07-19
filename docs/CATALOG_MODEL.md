@@ -123,6 +123,8 @@ The catalog contains at least:
 - room declarations;
 - room-template descriptors;
 - encounter profiles and phase descriptors;
+- reusable room lifecycle profiles, closed operations, and declaration-owned
+  effect references;
 - local child-slot descriptors;
 - reward types, payload domains, and offer projections;
 - reward source-support policies and semantic resolution points;
@@ -426,6 +428,8 @@ Catalog construction must verify:
 
 - every referenced key exists;
 - every semantic kind has a registered implementation;
+- every lifecycle profile uses registered operation kinds and every declared
+  lifecycle effect has a registered pure implementation;
 - every room template receives the fields it requires;
 - every room declares exactly one authored or derived mode, and derived rooms
   are referenced only from compatible layout roles;
@@ -510,6 +514,8 @@ authorities. Their shared vocabulary is reconciled by this design set, so
 dormant declaration import may resume without activating later biome loops.
 
 `GAME_GENERATION_RULES.md` owns shared generation behavior.
+`ROOM_LIFECYCLE_MODEL.md` owns the ordered operations that turn an entered
+occurrence into one composable history fragment.
 `biomes/F_GAME_RULES.md` and `biomes/G_GAME_RULES.md` own their concrete biome facts, while
 `biomes/F_G_ROOM_TEMPLATES.md` defines the template contracts their declarations must
 satisfy. `MIGRATION_PROVENANCE.md` records which exact facts still require

@@ -141,7 +141,7 @@ The target declaration preserves all 18 entries in game order:
 - four Boons with `allowDuplicates: true`.
 
 Current-run requirements remain exact: acquired ordinary gods, upgradeable
-trait count, Hammer history, current unpurchased shop options, entered biome
+trait count, Hammer history, current active shop options at the evaluation point, entered biome
 count, Hermes history, Devotion depth/spacing/exits, Spell state, and Talent
 state. External introduction and unlock gates are excluded.
 
@@ -519,11 +519,21 @@ purchase as a possible valid-use outcome rather than deriving that inventory.
 This is a named `Simplified` support expansion, not an unconditional option in
 the exact game model.
 
-Shop generation occurs on room entry before its outgoing doors are generated.
-Purchased items are removed from the room's active store options. Consequently
-Hammer, Hermes, Spell, and Talent `RequiredNotInStore` checks observe only
-currently unpurchased offers in that entered shop. The requirement kind should
-be `notInCurrentRoomShopOptions` rather than implying a counted bag.
+Shop inventory generation occurs during transition into the room, before its
+outgoing doors are generated. The Shop noncombat encounter then initiates exit
+generation before ordinary player purchases. Consequently Hammer, Hermes,
+Spell, and Talent `RequiredNotInStore` checks used by that outgoing generation
+observe the complete generated inventory, not a post-purchase remainder. The
+requirement kind should be `notInCurrentRoomShopOptions` rather than implying a
+counted bag.
+
+Purchases later remove items and update acquisition history, but the outgoing
+rooms and rewards are already materialized and are not revalidated. A shop
+Boon can therefore introduce a fourth ordinary source after the same shop's
+outgoing batch already offered a fifth source. The purchase first affects room
+generation at the selected next room's outgoing-generation checkpoint. The
+canonical profile and source-backed fixture are specified in
+`ROOM_LIFECYCLE_MODEL.md`.
 
 Exact money, health, last-stand inventory, prices, discounts, and affordability
 are `Deferred`. V1 authors whether an offered option was purchased under a
