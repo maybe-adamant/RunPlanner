@@ -11,33 +11,34 @@ import { RoomStateEditor } from './RoomStateEditor';
 interface FBiomeEditorProps {
   readonly catalog: Catalog;
   readonly plan: LinearBiomePlan;
+  readonly routeKey: string;
 }
 
-function openingRooms(catalog: Catalog, biomeStepKey: string): readonly RoomDeclaration[] {
-  const layout = catalog.biomeLayouts.byKey[biomeStepKey];
+function openingRooms(catalog: Catalog, biomeKey: string): readonly RoomDeclaration[] {
+  const layout = catalog.biomeLayouts.byKey[biomeKey];
   if (layout === undefined) {
-    throw new Error(`${biomeStepKey} layout is missing`);
+    throw new Error(`${biomeKey} layout is missing`);
   }
   if (layout.kind !== 'LinearBiome') {
-    throw new Error(`${biomeStepKey} is not a linear biome`);
+    throw new Error(`${biomeKey} is not a linear biome`);
   }
   if (layout.start.kind !== 'authoredStart') {
-    throw new Error(`${biomeStepKey} does not expose an authored start`);
+    throw new Error(`${biomeKey} does not expose an authored start`);
   }
   return layout.start.roomGameNames.map((gameName) => {
     const room = catalog.rooms.byKey[gameName];
     if (room === undefined) {
-      throw new Error(`${biomeStepKey} opening ${gameName} is missing`);
+      throw new Error(`${biomeKey} opening ${gameName} is missing`);
     }
     return room;
   });
 }
 
-export function FBiomeEditor({ catalog, plan }: FBiomeEditorProps) {
+export function FBiomeEditor({ catalog, plan, routeKey }: FBiomeEditorProps) {
   const dispatch = useAppDispatch();
   const [pendingOpening, setPendingOpening] = useState('');
-  const options = openingRooms(catalog, plan.biomeStepKey);
-  const biome = createBiomeAddress('Underworld', plan.biomeStepKey);
+  const options = openingRooms(catalog, plan.biomeKey);
+  const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const topology = plan.topology;
 
   if (topology === null) {
@@ -45,7 +46,7 @@ export function FBiomeEditor({ catalog, plan }: FBiomeEditorProps) {
       <section className="biome-editor" aria-labelledby="f-biome-title">
         <header className="panel-heading">
           <div>
-            <p className="eyebrow">Underworld · F</p>
+            <p className="eyebrow">{routeKey} · F</p>
             <h2 id="f-biome-title">Erebus</h2>
           </div>
           <span className="neutral-status">Not started</span>
@@ -108,7 +109,7 @@ export function FBiomeEditor({ catalog, plan }: FBiomeEditorProps) {
     <section className="biome-editor" aria-labelledby="f-biome-title">
       <header className="panel-heading">
         <div>
-          <p className="eyebrow">Underworld · F</p>
+          <p className="eyebrow">{routeKey} · F</p>
           <h2 id="f-biome-title">Erebus</h2>
         </div>
         <div className="panel-heading-actions">

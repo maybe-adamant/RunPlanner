@@ -154,7 +154,7 @@ describe('F/G authored room state v2', () => {
           : candidate,
       ),
       biomeLayouts: declarations.biomeLayouts.map((layout) =>
-        layout.biomeStepKey === 'Underworld_F'
+        layout.biomeKey === 'F'
           ? {
               ...layout,
               terminal: { kind: 'directTransition', roomGameName: 'F_PreBoss01' },

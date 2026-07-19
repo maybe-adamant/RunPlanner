@@ -2,7 +2,7 @@ import type { OccurrenceId } from './model';
 
 interface BiomeOwnedAddress {
   readonly routeKey: string;
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
 }
 
 export interface BiomeAddress extends BiomeOwnedAddress {
@@ -90,18 +90,18 @@ function positiveInteger(value: number, field: string): number {
 }
 
 function biomeOwner(address: BiomeAddress): BiomeOwnedAddress {
-  return { routeKey: address.routeKey, biomeStepKey: address.biomeStepKey };
+  return { routeKey: address.routeKey, biomeKey: address.biomeKey };
 }
 
 export function createOccurrenceId(value: string): OccurrenceId {
   return nonBlank(value, 'occurrenceId') as OccurrenceId;
 }
 
-export function createBiomeAddress(routeKey: string, biomeStepKey: string): BiomeAddress {
+export function createBiomeAddress(routeKey: string, biomeKey: string): BiomeAddress {
   return Object.freeze({
     kind: 'biome',
     routeKey: nonBlank(routeKey, 'routeKey'),
-    biomeStepKey: nonBlank(biomeStepKey, 'biomeStepKey'),
+    biomeKey: nonBlank(biomeKey, 'biomeKey'),
   });
 }
 
@@ -182,13 +182,13 @@ export function createShopOfferAddress(
 export function semanticAddressKey(address: SemanticAddress): string {
   switch (address.kind) {
     case 'biome':
-      return JSON.stringify([address.kind, address.routeKey, address.biomeStepKey]);
+      return JSON.stringify([address.kind, address.routeKey, address.biomeKey]);
     case 'occurrence':
     case 'incomingReward':
       return JSON.stringify([
         address.kind,
         address.routeKey,
-        address.biomeStepKey,
+        address.biomeKey,
         address.occurrenceId,
       ]);
     case 'continuation':
@@ -197,14 +197,14 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([
         address.kind,
         address.routeKey,
-        address.biomeStepKey,
+        address.biomeKey,
         address.parentOccurrenceId,
       ]);
     case 'target':
       return JSON.stringify([
         address.kind,
         address.routeKey,
-        address.biomeStepKey,
+        address.biomeKey,
         address.parentOccurrenceId,
         address.exitIndex,
       ]);
@@ -213,7 +213,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([
         address.kind,
         address.routeKey,
-        address.biomeStepKey,
+        address.biomeKey,
         address.occurrenceId,
         address.offerKey,
       ]);

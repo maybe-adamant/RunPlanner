@@ -3,7 +3,7 @@ import type { Catalog } from '@run-planner/core';
 export type ActiveBiomeCapability = 'authorable' | 'simulatable' | 'editable';
 
 export interface BiomeCapability {
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
   readonly declared: true;
   readonly authorable: boolean;
   readonly simulatable: boolean;
@@ -12,13 +12,13 @@ export interface BiomeCapability {
 
 export interface PlannerCapabilities {
   readonly values: readonly BiomeCapability[];
-  readonly byBiomeStepKey: Readonly<Record<string, BiomeCapability>>;
+  readonly byBiomeKey: Readonly<Record<string, BiomeCapability>>;
 }
 
 export interface PlannerCapabilityDefinition {
-  readonly authorableBiomeStepKeys: readonly string[];
-  readonly simulatableBiomeStepKeys: readonly string[];
-  readonly editableBiomeStepKeys: readonly string[];
+  readonly authorableBiomeKeys: readonly string[];
+  readonly simulatableBiomeKeys: readonly string[];
+  readonly editableBiomeKeys: readonly string[];
 }
 
 export class PlannerCapabilityContractError extends Error {
@@ -55,69 +55,72 @@ export function createPlannerCapabilities(
   catalog: Catalog,
   definition: PlannerCapabilityDefinition,
 ): PlannerCapabilities {
-  const declaredBiomeStepKeys = catalog.routes.values
-    .flatMap((route) => route.biomeSteps)
-    .filter((step) => catalog.biomeLayouts.byKey[step.key] !== undefined)
-    .map((step) => step.key);
-  const declared = new Set(declaredBiomeStepKeys);
+  const placedBiomeKeys = new Set(catalog.routes.values.flatMap((route) => route.biomeKeys));
+  const declaredBiomeKeys = catalog.biomes.values
+    .filter(
+      (biome) =>
+        placedBiomeKeys.has(biome.key) && catalog.biomeLayouts.byKey[biome.key] !== undefined,
+    )
+    .map((biome) => biome.key);
+  const declared = new Set(declaredBiomeKeys);
   const authorable = normalizeActiveSet(
-    definition.authorableBiomeStepKeys,
-    'capabilities.authorableBiomeStepKeys',
+    definition.authorableBiomeKeys,
+    'capabilities.authorableBiomeKeys',
     declared,
   );
   const simulatable = normalizeActiveSet(
-    definition.simulatableBiomeStepKeys,
-    'capabilities.simulatableBiomeStepKeys',
+    definition.simulatableBiomeKeys,
+    'capabilities.simulatableBiomeKeys',
     declared,
   );
   const editable = normalizeActiveSet(
-    definition.editableBiomeStepKeys,
-    'capabilities.editableBiomeStepKeys',
+    definition.editableBiomeKeys,
+    'capabilities.editableBiomeKeys',
     declared,
   );
 
-  for (const biomeStepKey of editable) {
-    if (!authorable.has(biomeStepKey)) {
+  for (const biomeKey of editable) {
+    if (!authorable.has(biomeKey)) {
       throw new PlannerCapabilityContractError(
-        'capabilities.editableBiomeStepKeys',
-        `${biomeStepKey} must also be authorable`,
+        'capabilities.editableBiomeKeys',
+        `${biomeKey} must also be authorable`,
       );
     }
   }
 
-  const values = declaredBiomeStepKeys.map((biomeStepKey) =>
+  const values = declaredBiomeKeys.map((biomeKey) =>
     Object.freeze({
-      biomeStepKey,
+      biomeKey,
       declared: true as const,
-      authorable: authorable.has(biomeStepKey),
-      simulatable: simulatable.has(biomeStepKey),
-      editable: editable.has(biomeStepKey),
+      authorable: authorable.has(biomeKey),
+      simulatable: simulatable.has(biomeKey),
+      editable: editable.has(biomeKey),
     }),
   );
 
   return Object.freeze({
     values: Object.freeze(values),
-    byBiomeStepKey: Object.freeze(
-      Object.fromEntries(values.map((capability) => [capability.biomeStepKey, capability])),
+    byBiomeKey: Object.freeze(
+      Object.fromEntries(values.map((capability) => [capability.biomeKey, capability])),
     ),
   });
 }
 
 export function hasBiomeCapability(
   capabilities: PlannerCapabilities,
-  biomeStepKey: string,
+  biomeKey: string,
   capability: ActiveBiomeCapability,
 ): boolean {
-  return capabilities.byBiomeStepKey[biomeStepKey]?.[capability] === true;
+  return capabilities.byBiomeKey[biomeKey]?.[capability] === true;
 }
 
 export function requireBiomeCapability(
   capabilities: PlannerCapabilities,
-  biomeStepKey: string,
+  biomeKey: string,
   capability: ActiveBiomeCapability,
   path: string,
 ): void {
-  if (!hasBiomeCapability(capabilities, biomeStepKey, capability)) {
-    throw new PlannerCapabilityContractError(path, `${biomeStepKey} is not ${capability}`);
+  if (!hasBiomeCapability(capabilities, biomeKey, capability)) {
+    throw new PlannerCapabilityContractError(path, `${biomeKey} is not ${capability}`);
   }
 }

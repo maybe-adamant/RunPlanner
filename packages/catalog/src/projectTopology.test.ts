@@ -28,14 +28,14 @@ function occurrence(occurrenceId: string, gameName: string, role: RoomOccurrence
 
 function projectWithTopology(topology: unknown): unknown {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     projectId: 'project-topology',
     name: 'F Topology',
     catalogVersion: catalog.version,
     routes: [
       {
         routeKey: 'Underworld',
-        biomes: [{ kind: 'LinearBiome', biomeStepKey: 'Underworld_F', topology }],
+        biomes: [{ kind: 'LinearBiome', biomeKey: 'F', topology }],
       },
       { routeKey: 'Surface', biomes: [] },
     ],
@@ -44,7 +44,7 @@ function projectWithTopology(topology: unknown): unknown {
 
 function projectWithGTopology(topology: unknown): unknown {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     projectId: 'project-g-topology',
     name: 'G Topology',
     catalogVersion: catalog.version,
@@ -52,8 +52,8 @@ function projectWithGTopology(topology: unknown): unknown {
       {
         routeKey: 'Underworld',
         biomes: [
-          { kind: 'LinearBiome', biomeStepKey: 'Underworld_F', topology: null },
-          { kind: 'LinearBiome', biomeStepKey: 'Underworld_G', topology },
+          { kind: 'LinearBiome', biomeKey: 'F', topology: null },
+          { kind: 'LinearBiome', biomeKey: 'G', topology },
         ],
       },
       { routeKey: 'Surface', biomes: [] },
@@ -135,7 +135,7 @@ describe('F/G linear project topology', () => {
     expect(topology.occurrences.at(-1)?.state.kind).toBe('freeReward');
 
     const encoded = encodeProjectDocument(project);
-    expect(encoded).toContain('"schemaVersion": 2');
+    expect(encoded).toContain('"schemaVersion": 3');
     expect(encoded).not.toContain('"storeKey"');
     expect(parseProjectDocument(encoded, catalog)).toEqual(project);
     expect(encodeProjectDocument(parseProjectDocument(encoded, catalog))).toBe(encoded);

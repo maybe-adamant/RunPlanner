@@ -36,7 +36,7 @@ describe('App', () => {
     expect(markup).toContain('Choose an opening room');
     expect(markup).toContain('Authored editor smoke');
     expect(application.editorNavigation.routes.Underworld?.biomePanels).toEqual([
-      { biomeStepKey: 'Underworld_F', label: 'Erebus' },
+      { biomeKey: 'F', label: 'Erebus' },
     ]);
     expect(application.editorNavigation.routes.Surface?.biomePanels).toEqual([]);
   });
@@ -76,7 +76,7 @@ describe('App', () => {
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'CreateStart',
-        biome: createBiomeAddress('Underworld', 'Underworld_F'),
+        biome: createBiomeAddress('Underworld', 'F'),
         occurrenceId: createOccurrenceId('test-start'),
         gameName: 'F_Opening01',
       }),
@@ -98,7 +98,7 @@ describe('App', () => {
 
   it('projects ordinary decisions, terminal offers, shop state, and retained overflow', () => {
     const application = createApplication();
-    const biome = createBiomeAddress('Underworld', 'Underworld_F');
+    const biome = createBiomeAddress('Underworld', 'F');
     const startId = createOccurrenceId('test-start');
     const combatId = createOccurrenceId('test-combat');
     const terminalShopId = createOccurrenceId('test-terminal-shop');
@@ -165,7 +165,7 @@ describe('App', () => {
 
   it('disables frontier commands that exceed authored topology bounds', () => {
     const application = createApplication();
-    const biome = createBiomeAddress('Underworld', 'Underworld_F');
+    const biome = createBiomeAddress('Underworld', 'F');
     const startId = createOccurrenceId('bounded-start');
     const dispatchCommand = (command: Parameters<typeof authoredProjectCommandDispatched>[0]) =>
       application.store.dispatch(authoredProjectCommandDispatched(command));

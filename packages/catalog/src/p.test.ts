@@ -31,13 +31,13 @@ function requireShop(binding: RewardProducerBinding | undefined): ShopRewardBind
 
 describe('complete dormant P catalog', () => {
   it('normalizes the empty fixed intro and ordinary linear layout', () => {
-    const rooms = catalog.rooms.values.filter((room) => room.biomeStepKey === 'Surface_P');
+    const rooms = catalog.rooms.values.filter((room) => room.biomeKey === 'P');
     expect(rooms).toHaveLength(28);
 
     expect(catalog.rooms.byKey.P_Intro).toEqual({
       gameName: 'P_Intro',
       label: 'Entrance',
-      biomeStepKey: 'Surface_P',
+      biomeKey: 'P',
       kind: 'Intro',
       mode: { kind: 'authored', templateKey: 'FixedIntro' },
       structuralTags: ['Outdoor'],
@@ -62,8 +62,8 @@ describe('complete dormant P catalog', () => {
     });
     expect(catalog.encounterProfiles.byKey.FixedIntro?.phases).toEqual([]);
 
-    expect(catalog.biomeLayouts.byKey.Surface_P).toEqual({
-      biomeStepKey: 'Surface_P',
+    expect(catalog.biomeLayouts.byKey.P).toEqual({
+      biomeKey: 'P',
       kind: 'LinearBiome',
       start: { kind: 'authoredStart', mode: 'fixed', roomGameNames: ['P_Intro'] },
       entries: [],
@@ -87,7 +87,6 @@ describe('complete dormant P catalog', () => {
           { role: 'boss', roomGameName: 'P_Boss01' },
           { role: 'postboss', roomGameName: 'P_PostBoss01' },
         ],
-        routeTransition: { kind: 'nextBiome' },
       },
       fields: [],
       bounds: { maxBatches: 9, maxTargets: 18 },

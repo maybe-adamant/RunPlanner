@@ -25,9 +25,7 @@ import { createPlannerStore } from './store';
 import { ordinaryRoomCategories, selectRoomsForCategory } from './roomSelectorProjection';
 
 function catalogWithDormantH(): Catalog {
-  const gLayout = declarations.biomeLayouts.find(
-    (layout) => layout.biomeStepKey === 'Underworld_G',
-  );
+  const gLayout = declarations.biomeLayouts.find((layout) => layout.biomeKey === 'G');
   const gStart = declarations.rooms.find((room) => room.gameName === 'G_Intro');
   const gTerminal = declarations.rooms.find((room) => room.gameName === 'G_PreBoss01');
   const gBoss = declarations.rooms.find((room) => room.gameName === 'G_Boss01');
@@ -45,29 +43,29 @@ function catalogWithDormantH(): Catalog {
     ...gStart,
     gameName: 'H_IntroFixture',
     label: 'Dormant H Intro',
-    biomeStepKey: 'Underworld_H',
+    biomeKey: 'H',
   };
   const hTerminal = {
     ...gTerminal,
     gameName: 'H_PreBossFixture',
     label: 'Dormant H Preboss',
-    biomeStepKey: 'Underworld_H',
+    biomeKey: 'H',
   };
   const hBoss = {
     ...gBoss,
     gameName: 'H_BossFixture',
     label: 'Dormant H Boss',
-    biomeStepKey: 'Underworld_H',
+    biomeKey: 'H',
   };
   const hPostboss = {
     ...gPostboss,
     gameName: 'H_PostBossFixture',
     label: 'Dormant H Postboss',
-    biomeStepKey: 'Underworld_H',
+    biomeKey: 'H',
   };
   const hLayout = {
     ...gLayout,
-    biomeStepKey: 'Underworld_H',
+    biomeKey: 'H',
     start: {
       ...gLayout.start,
       roomGameNames: [hStart.gameName],
@@ -109,81 +107,87 @@ function catalogBeforePImport(): Catalog {
     exitTypes: declarations.exitTypes.filter(
       (exitType) => !['OlympusOutdoorExitDoor', 'OlympusIndoorExitDoor'].includes(exitType.key),
     ),
-    rooms: declarations.rooms.filter((room) => room.biomeStepKey !== 'Surface_P'),
-    biomeLayouts: declarations.biomeLayouts.filter((layout) => layout.biomeStepKey !== 'Surface_P'),
+    rooms: declarations.rooms.filter((room) => room.biomeKey !== 'P'),
+    biomeLayouts: declarations.biomeLayouts.filter((layout) => layout.biomeKey !== 'P'),
   } as CatalogInput);
 }
 
 function fSelectorProjection(candidateCatalog: Catalog): readonly string[] {
   return ordinaryRoomCategories
-    .flatMap((category) => selectRoomsForCategory(candidateCatalog, 'Underworld_F', category))
+    .flatMap((category) => selectRoomsForCategory(candidateCatalog, 'F', category))
     .map((room) => `${room.kind}:${room.gameName}:${room.label}`);
 }
 
 describe('planner capabilities', () => {
   it('derives declared capability from the catalog and keeps active capabilities explicit', () => {
     const capabilities = createApplicationCapabilities(catalog);
+    const reusedCatalog = createCatalog({
+      ...declarations,
+      routes: [
+        ...declarations.routes,
+        { key: 'Alternate', label: 'Alternate', biomeKeys: ['F', 'P'] },
+      ],
+    });
+    const reusedCapabilities = createApplicationCapabilities(reusedCatalog);
 
     expect(capabilities.values).toEqual([
       {
-        biomeStepKey: 'Underworld_F',
+        biomeKey: 'F',
         declared: true,
         authorable: true,
         simulatable: false,
         editable: true,
       },
       {
-        biomeStepKey: 'Underworld_G',
+        biomeKey: 'G',
         declared: true,
         authorable: true,
         simulatable: false,
         editable: false,
       },
       {
-        biomeStepKey: 'Surface_P',
+        biomeKey: 'P',
         declared: true,
         authorable: false,
         simulatable: false,
         editable: false,
       },
     ]);
+    expect(reusedCapabilities.values).toEqual(capabilities.values);
   });
 
   it('rejects unknown, duplicate, and non-authorable editable capability entries', () => {
     expect(() =>
       createPlannerCapabilities(catalog, {
-        authorableBiomeStepKeys: ['Underworld_F', 'Underworld_H'],
-        simulatableBiomeStepKeys: [],
-        editableBiomeStepKeys: ['Underworld_F'],
+        authorableBiomeKeys: ['F', 'H'],
+        simulatableBiomeKeys: [],
+        editableBiomeKeys: ['F'],
       }),
     ).toThrowError(
       new PlannerCapabilityContractError(
-        'capabilities.authorableBiomeStepKeys[1]',
-        'Underworld_H is not declared',
+        'capabilities.authorableBiomeKeys[1]',
+        'H is not declared',
       ),
     );
     expect(() =>
       createPlannerCapabilities(catalog, {
-        authorableBiomeStepKeys: ['Underworld_F', 'Underworld_F'],
-        simulatableBiomeStepKeys: [],
-        editableBiomeStepKeys: ['Underworld_F'],
+        authorableBiomeKeys: ['F', 'F'],
+        simulatableBiomeKeys: [],
+        editableBiomeKeys: ['F'],
       }),
     ).toThrowError(
-      new PlannerCapabilityContractError(
-        'capabilities.authorableBiomeStepKeys[1]',
-        'duplicates Underworld_F',
-      ),
+      new PlannerCapabilityContractError('capabilities.authorableBiomeKeys[1]', 'duplicates F'),
     );
     expect(() =>
       createPlannerCapabilities(catalog, {
-        authorableBiomeStepKeys: ['Underworld_F'],
-        simulatableBiomeStepKeys: [],
-        editableBiomeStepKeys: ['Underworld_G'],
+        authorableBiomeKeys: ['F'],
+        simulatableBiomeKeys: [],
+        editableBiomeKeys: ['G'],
       }),
     ).toThrowError(
       new PlannerCapabilityContractError(
-        'capabilities.editableBiomeStepKeys',
-        'Underworld_G must also be authorable',
+        'capabilities.editableBiomeKeys',
+        'G must also be authorable',
       ),
     );
   });
@@ -201,16 +205,14 @@ describe('planner capabilities', () => {
       initialProject: widenedProject,
     });
 
-    expect(capabilities.byBiomeStepKey.Underworld_H).toEqual({
-      biomeStepKey: 'Underworld_H',
+    expect(capabilities.byBiomeKey.H).toEqual({
+      biomeKey: 'H',
       declared: true,
       authorable: false,
       simulatable: false,
       editable: false,
     });
-    expect(navigation.routes.Underworld?.biomePanels).toEqual([
-      { biomeStepKey: 'Underworld_F', label: 'Erebus' },
-    ]);
+    expect(navigation.routes.Underworld?.biomePanels).toEqual([{ biomeKey: 'F', label: 'Erebus' }]);
     expect(navigation.routes.Surface?.biomePanels).toEqual([]);
     expect(widenedProject.catalogVersion).not.toBe(baselineProject.catalogVersion);
     expect({ ...widenedProject, catalogVersion: baselineProject.catalogVersion }).toEqual(
@@ -220,11 +222,11 @@ describe('planner capabilities', () => {
       store.dispatch(
         authoredProjectCommandDispatched({
           kind: 'ClearTopology',
-          biome: createBiomeAddress('Underworld', 'Underworld_H'),
+          biome: createBiomeAddress('Underworld', 'H'),
         }),
       ),
     ).toThrowError(
-      new PlannerCapabilityContractError('command.ClearTopology', 'Underworld_H is not authorable'),
+      new PlannerCapabilityContractError('command.ClearTopology', 'H is not authorable'),
     );
   });
 
@@ -236,8 +238,8 @@ describe('planner capabilities', () => {
     const project = createFEditorSmokeProject(catalog, capabilities);
     const navigation = createEditorNavigation(catalog, capabilities);
 
-    expect(capabilities.byBiomeStepKey.Surface_P).toEqual({
-      biomeStepKey: 'Surface_P',
+    expect(capabilities.byBiomeKey.P).toEqual({
+      biomeKey: 'P',
       declared: true,
       authorable: false,
       simulatable: false,
@@ -260,10 +262,7 @@ describe('application project capability boundary', () => {
       configuredBiomeCounts: { Underworld: 2 },
     });
 
-    expect(fg.routes[0]?.biomes.map((biome) => biome.biomeStepKey)).toEqual([
-      'Underworld_F',
-      'Underworld_G',
-    ]);
+    expect(fg.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G']);
     expect(() =>
       createAuthorableProjectDocument(catalog, capabilities, {
         projectId: 'fgh-project',
@@ -273,7 +272,7 @@ describe('application project capability boundary', () => {
     ).toThrowError(
       new PlannerCapabilityContractError(
         'configuredBiomeCounts.Underworld[2]',
-        'Underworld_H is not authorable',
+        'H is not authorable',
       ),
     );
     expect(() =>
@@ -283,10 +282,7 @@ describe('application project capability boundary', () => {
         configuredBiomeCounts: { Surface: 1 },
       }),
     ).toThrowError(
-      new PlannerCapabilityContractError(
-        'configuredBiomeCounts.Surface[0]',
-        'Surface_N is not authorable',
-      ),
+      new PlannerCapabilityContractError('configuredBiomeCounts.Surface[0]', 'N is not authorable'),
     );
   });
 
@@ -300,7 +296,7 @@ describe('application project capability boundary', () => {
     });
     const expectedError = new PlannerCapabilityContractError(
       'project.routes[0].biomes[2]',
-      'Underworld_H is not authorable',
+      'H is not authorable',
     );
 
     expect(() =>

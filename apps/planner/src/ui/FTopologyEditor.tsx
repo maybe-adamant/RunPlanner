@@ -96,7 +96,7 @@ function OrdinaryTargetEditor({
             <span className="neutral-status">Unspecified</span>
           </div>
           <RoomSelector
-            biomeStepKey={biome.biomeStepKey}
+            biomeKey={biome.biomeKey}
             catalog={catalog}
             disabled={!canCreateTarget}
             idPrefix={idPrefix}
@@ -147,7 +147,7 @@ function OrdinaryTargetEditor({
           <span className="neutral-status">{available ? roomDeclaration.kind : 'Unavailable'}</span>
         </div>
         <RoomSelector
-          biomeStepKey={biome.biomeStepKey}
+          biomeKey={biome.biomeKey}
           catalog={catalog}
           current={roomDeclaration}
           idPrefix={idPrefix}
@@ -177,15 +177,15 @@ function BatchEditor({
   const dispatch = useAppDispatch();
   const parent = occurrence(topology, continuation.parentOccurrenceId);
   const parentRoom = declaration(catalog, parent);
-  const layout = catalog.biomeLayouts.byKey[biome.biomeStepKey];
+  const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
   if (layout === undefined) {
-    throw new Error(`Biome layout ${biome.biomeStepKey} is missing`);
+    throw new Error(`Biome layout ${biome.biomeKey} is missing`);
   }
   if (layout.kind !== 'LinearBiome') {
-    throw new Error(`${biome.biomeStepKey} is not a linear biome`);
+    throw new Error(`${biome.biomeKey} is not a linear biome`);
   }
   if (layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore') {
-    throw new Error(`${biome.biomeStepKey} does not author a base reward store`);
+    throw new Error(`${biome.biomeKey} does not author a base reward store`);
   }
   const availableExitIndexes = generatedExitIndexes(parentRoom);
   const available = new Set(availableExitIndexes);
@@ -513,12 +513,12 @@ function frontierOccurrenceId(topology: LinearBiomeTopology): OccurrenceId | und
 }
 
 export function FTopologyEditor({ biome, catalog, topology }: FTopologyEditorProps) {
-  const layout = catalog.biomeLayouts.byKey[biome.biomeStepKey];
+  const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
   if (layout === undefined) {
-    throw new Error(`${biome.biomeStepKey} layout is missing`);
+    throw new Error(`${biome.biomeKey} layout is missing`);
   }
   if (layout.kind !== 'LinearBiome') {
-    throw new Error(`${biome.biomeStepKey} is not a linear biome`);
+    throw new Error(`${biome.biomeKey} is not a linear biome`);
   }
   const batchCount = topology.continuations.filter(
     (continuation) => continuation.kind === 'batch',

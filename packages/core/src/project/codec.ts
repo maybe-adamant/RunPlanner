@@ -20,15 +20,15 @@ export { ProjectDocumentContractError } from './validation';
 function decodeBiomePlan(
   value: unknown,
   path: string,
-  expectedBiomeStepKey: string,
+  expectedBiomeKey: string,
   catalog: Catalog,
 ): AuthoredBiomePlan {
   const plan = expectRecord(value, path);
-  expectExactKeys(plan, ['kind', 'biomeStepKey', 'topology'], path);
+  expectExactKeys(plan, ['kind', 'biomeKey', 'topology'], path);
 
-  const layout = catalog.biomeLayouts.byKey[expectedBiomeStepKey];
+  const layout = catalog.biomeLayouts.byKey[expectedBiomeKey];
   if (layout === undefined) {
-    fail(path, `catalog has no authored layout for ${expectedBiomeStepKey}`);
+    fail(path, `catalog has no authored layout for ${expectedBiomeKey}`);
   }
 
   const kind = expectString(plan.kind, `${path}.kind`);
@@ -36,12 +36,12 @@ function decodeBiomePlan(
     fail(`${path}.kind`, `expected ${layout.kind}, received ${kind}`);
   }
   if (layout.kind !== 'LinearBiome') {
-    fail(path, `${expectedBiomeStepKey} is not authorable by the linear project codec`);
+    fail(path, `${expectedBiomeKey} is not authorable by the linear project codec`);
   }
 
-  const biomeStepKey = expectString(plan.biomeStepKey, `${path}.biomeStepKey`);
-  if (biomeStepKey !== expectedBiomeStepKey) {
-    fail(`${path}.biomeStepKey`, `expected contiguous step ${expectedBiomeStepKey}`);
+  const biomeKey = expectString(plan.biomeKey, `${path}.biomeKey`);
+  if (biomeKey !== expectedBiomeKey) {
+    fail(`${path}.biomeKey`, `expected contiguous biome ${expectedBiomeKey}`);
   }
 
   const topology =
@@ -51,7 +51,7 @@ function decodeBiomePlan(
 
   return Object.freeze({
     kind: 'LinearBiome',
-    biomeStepKey,
+    biomeKey,
     topology,
   });
 }
@@ -71,16 +71,16 @@ function decodeRoutePlan(
   }
 
   const rawBiomes = expectArray(plan.biomes, `${path}.biomes`);
-  if (rawBiomes.length > route.biomeSteps.length) {
-    fail(`${path}.biomes`, `exceeds the ${route.biomeSteps.length}-step route`);
+  if (rawBiomes.length > route.biomeKeys.length) {
+    fail(`${path}.biomes`, `exceeds the ${route.biomeKeys.length}-biome route`);
   }
 
   const biomes = rawBiomes.map((biome, index) => {
-    const expectedStep = route.biomeSteps[index];
-    if (expectedStep === undefined) {
-      fail(`${path}.biomes[${index}]`, 'has no matching route step');
+    const expectedBiomeKey = route.biomeKeys[index];
+    if (expectedBiomeKey === undefined) {
+      fail(`${path}.biomes[${index}]`, 'has no matching route biome');
     }
-    return decodeBiomePlan(biome, `${path}.biomes[${index}]`, expectedStep.key, catalog);
+    return decodeBiomePlan(biome, `${path}.biomes[${index}]`, expectedBiomeKey, catalog);
   });
 
   return Object.freeze({

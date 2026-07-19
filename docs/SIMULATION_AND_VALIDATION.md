@@ -16,7 +16,8 @@ The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. Phase 3 implementation remains paused until the
 Phase 2.8 dormant declaration closure is complete. The Phase 2.6 reward kernel
-and Phase 2.7 schema-version-2 F/G authority switch are implemented.
+and Phase 2.7 F/G authority switch are implemented; the later schema-version-3
+identity cleanup leaves those simulation contracts unchanged.
 
 ## Core Contract
 
@@ -88,7 +89,7 @@ composes.
 
 The normalized catalog contains immutable possible facts:
 
-- route and biome-step declarations;
+- global biome declarations and route-owned ordered biome references;
 - layout variants and structural policies;
 - room identity, label, kind, template, exits, eligibility, force, and caps;
 - encounter profiles and phase timing;
@@ -230,7 +231,7 @@ Representative linear shape:
 ```ts
 interface CanonicalLinearBiome {
   kind: 'LinearBiome';
-  biomeStepKey: BiomeStepKey;
+  biomeKey: BiomeKey;
   entryRooms: CanonicalRoom[];
   batches: CanonicalBatch[];
   terminalEntry: CanonicalTerminalEntry;
@@ -239,7 +240,7 @@ interface CanonicalLinearBiome {
 
 interface CanonicalHubBiome {
   kind: 'HubBiome';
-  biomeStepKey: BiomeStepKey;
+  biomeKey: BiomeKey;
   entryRooms: CanonicalRoom[];
   hubBoard: CanonicalHubBoard;
   visits: CanonicalHubVisit[];
@@ -675,7 +676,7 @@ interface Finding {
 Instance identity belongs in `origin`, never in the code:
 
 ```text
-good: target_room_ineligible + origin Underworld_F/room-01J.../exit2
+good: target_room_ineligible + origin F/room-01J.../exit2
 bad:  f_combat04_other_miniboss_entered
 ```
 

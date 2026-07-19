@@ -162,4 +162,4 @@ completion sequence also exist, but Phase 3 does not materialize them yet.
 Complete history, legality, reward simulation, and findings remain pending.
 Generated batches own the authored base store, Room Declarations own forced
 overrides, and counted leaves persist only their complete resolved offer under
-schema version 2.
+schema version 3.

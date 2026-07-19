@@ -22,7 +22,8 @@ resolved-offer-only leaf split described below is the globally frozen
 F/G/P/Q/H/O/I/N contract. N confirms that one persistent heterogeneous board
 can use `none` while every target resolves declaration-owned provenance. The
 implemented F/G project, commands, catalog, and editor now use this contract as
-their sole connected reward authority under schema version 2.
+their sole connected reward authority. Project schema version 3 changes only
+route/biome identity vocabulary; it does not change this reward contract.
 
 ## Composition
 

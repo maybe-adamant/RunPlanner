@@ -28,7 +28,7 @@ describe('authored project application state', () => {
     expect(project.routes).toEqual([
       {
         routeKey: 'Underworld',
-        biomes: [{ kind: 'LinearBiome', biomeStepKey: 'Underworld_F', topology: null }],
+        biomes: [{ kind: 'LinearBiome', biomeKey: 'F', topology: null }],
       },
       { routeKey: 'Surface', biomes: [] },
     ]);
@@ -39,7 +39,7 @@ describe('authored project application state', () => {
     const original = store.getState().authoredProject.present;
     const command = {
       kind: 'CreateStart',
-      biome: createBiomeAddress('Underworld', 'Underworld_F'),
+      biome: createBiomeAddress('Underworld', 'F'),
       occurrenceId: createOccurrenceId('f-start'),
       gameName: 'F_Opening01',
     } as const satisfies ProjectCommand;
@@ -63,7 +63,7 @@ describe('authored project application state', () => {
     store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ClearTopology',
-        biome: createBiomeAddress('Underworld', 'Underworld_F'),
+        biome: createBiomeAddress('Underworld', 'F'),
       }),
     );
 

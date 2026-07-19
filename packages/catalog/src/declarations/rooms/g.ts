@@ -4,7 +4,7 @@ export const gRooms = [
   {
     gameName: 'G_Intro',
     label: 'Entrance',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Intro',
     mode: { kind: 'authored', templateKey: 'FixedIntro' },
     structuralTags: [],
@@ -19,7 +19,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat01',
     label: 'Combat 01',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -47,7 +47,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat02',
     label: 'Combat 02',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -71,7 +71,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat03',
     label: 'Combat 03',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -100,7 +100,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat04',
     label: 'Combat 04',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -128,7 +128,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat05',
     label: 'Combat 05',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -157,7 +157,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat06',
     label: 'Combat 06',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -185,7 +185,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat07',
     label: 'Combat 07',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -213,7 +213,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat08',
     label: 'Combat 08',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -241,7 +241,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat09',
     label: 'Combat 09',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -270,7 +270,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat10',
     label: 'Combat 10',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -298,7 +298,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat11',
     label: 'Combat 11',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -326,7 +326,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat12',
     label: 'Combat 12',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -354,7 +354,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat13',
     label: 'Combat 13',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -382,7 +382,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat14',
     label: 'Combat 14',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -411,7 +411,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat15',
     label: 'Combat 15',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -440,7 +440,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat16',
     label: 'Combat 16',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -468,7 +468,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat17',
     label: 'Combat 17',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -497,7 +497,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat18',
     label: 'Combat 18',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -528,7 +528,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat19',
     label: 'Combat 19',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -556,7 +556,7 @@ export const gRooms = [
   {
     gameName: 'G_Combat20',
     label: 'Combat 20',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
     structuralTags: [],
@@ -585,7 +585,7 @@ export const gRooms = [
   {
     gameName: 'G_MiniBoss01',
     label: 'Deep Serpent',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -622,7 +622,7 @@ export const gRooms = [
   {
     gameName: 'G_MiniBoss02',
     label: 'King Vermin',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -656,7 +656,7 @@ export const gRooms = [
   {
     gameName: 'G_MiniBoss03',
     label: 'Hellifish',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
     structuralTags: [],
@@ -693,7 +693,7 @@ export const gRooms = [
   {
     gameName: 'G_Story01',
     label: 'Narcissus',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
     structuralTags: [],
@@ -712,7 +712,7 @@ export const gRooms = [
   {
     gameName: 'G_Reprieve01',
     label: 'Fountain',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
     structuralTags: [],
@@ -740,7 +740,7 @@ export const gRooms = [
   {
     gameName: 'G_Shop01',
     label: 'Midshop',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Shop',
     mode: { kind: 'authored', templateKey: 'Shop' },
     structuralTags: [],
@@ -770,7 +770,7 @@ export const gRooms = [
   {
     gameName: 'G_PreBoss01',
     label: 'Preboss',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'ForkedPreboss' },
     structuralTags: [],
@@ -807,7 +807,7 @@ export const gRooms = [
   {
     gameName: 'G_Boss01',
     label: 'Scylla and the Sirens',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'Boss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],
@@ -821,7 +821,7 @@ export const gRooms = [
   {
     gameName: 'G_PostBoss01',
     label: 'Postboss',
-    biomeStepKey: 'Underworld_G',
+    biomeKey: 'G',
     kind: 'PostBoss',
     mode: { kind: 'derived', classification: 'completion' },
     structuralTags: [],

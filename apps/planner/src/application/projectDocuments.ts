@@ -21,14 +21,14 @@ function requireConfiguredPrefixesAuthorable(
       configuredCount === undefined ||
       !Number.isInteger(configuredCount) ||
       configuredCount < 0 ||
-      configuredCount > route.biomeSteps.length
+      configuredCount > route.biomeKeys.length
     ) {
       continue;
     }
-    for (const [index, step] of route.biomeSteps.slice(0, configuredCount).entries()) {
+    for (const [index, biomeKey] of route.biomeKeys.slice(0, configuredCount).entries()) {
       requireBiomeCapability(
         capabilities,
-        step.key,
+        biomeKey,
         'authorable',
         `configuredBiomeCounts.${routeKey}[${index}]`,
       );
@@ -44,7 +44,7 @@ export function requireProjectAuthorable(
     for (const [biomeIndex, biome] of route.biomes.entries()) {
       requireBiomeCapability(
         capabilities,
-        biome.biomeStepKey,
+        biome.biomeKey,
         'authorable',
         `project.routes[${routeIndex}].biomes[${biomeIndex}]`,
       );

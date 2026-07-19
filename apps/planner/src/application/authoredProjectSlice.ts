@@ -30,7 +30,7 @@ export function createAuthoredProjectReducer(
     if (authoredProjectCommandDispatched.match(action)) {
       requireBiomeCapability(
         capabilities,
-        projectCommandAddress(action.payload).biomeStepKey,
+        projectCommandAddress(action.payload).biomeKey,
         'authorable',
         `command.${action.payload.kind}`,
       );

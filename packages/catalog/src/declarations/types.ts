@@ -21,6 +21,7 @@ import type {
   RoomStructuralTag,
   SourceRewardStorePolicyOverride,
   TerminalPolicy,
+  BiomeDeclaration,
   RouteDeclaration,
 } from '@run-planner/core';
 import type { RawRewardKernelInput } from '../rewardKernel/types';
@@ -79,7 +80,7 @@ export interface RawForkedPrebossEntryPolicy {
 export interface RawRoomDeclaration {
   readonly gameName: string;
   readonly label: string;
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
   readonly kind: RoomKind;
   readonly mode: RoomMode;
   readonly structuralTags: readonly RoomStructuralTag[];
@@ -98,7 +99,7 @@ export interface RawRoomDeclaration {
 }
 
 export interface RawLinearBiomeLayoutDeclaration {
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
   readonly kind: 'LinearBiome';
   readonly start: LinearStartDescriptor;
   readonly entries?: readonly EntryDescriptor[];
@@ -118,7 +119,7 @@ export interface RawLinearBiomeLayoutDeclaration {
 }
 
 export interface RawHubBiomeLayoutDeclaration {
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
   readonly kind: 'HubBiome';
   readonly entries: readonly EntryDescriptor[];
   readonly hub: {
@@ -140,6 +141,7 @@ export type RawBiomeLayoutDeclaration =
 
 export interface RawCatalogInput {
   readonly version: string;
+  readonly biomes: readonly BiomeDeclaration[];
   readonly routes: readonly RouteDeclaration[];
   readonly rewardKernel: RawRewardKernelInput;
   readonly encounterProfiles: readonly RawEncounterProfileDeclaration[];

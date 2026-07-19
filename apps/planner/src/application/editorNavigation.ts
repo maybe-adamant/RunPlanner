@@ -3,7 +3,7 @@ import type { Catalog } from '@run-planner/core';
 import { hasBiomeCapability, type PlannerCapabilities } from './capabilities';
 
 export interface BiomeEditorNavigationItem {
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
   readonly label: string;
 }
 
@@ -16,23 +16,20 @@ export interface EditorNavigation {
   readonly routes: Readonly<Record<string, RouteEditorNavigation>>;
 }
 
-const biomePanelLabels: Readonly<Record<string, string>> = Object.freeze({
-  Underworld_F: 'Erebus',
-});
-
 export function createEditorNavigation(
   catalog: Catalog,
   capabilities: PlannerCapabilities,
 ): EditorNavigation {
   const routes = catalog.routes.values.map((route) => {
-    const biomePanels = route.biomeSteps
-      .filter((step) => hasBiomeCapability(capabilities, step.key, 'editable'))
-      .map((step) =>
-        Object.freeze({
-          biomeStepKey: step.key,
-          label: biomePanelLabels[step.key] ?? step.biome,
-        }),
-      );
+    const biomePanels = route.biomeKeys
+      .filter((biomeKey) => hasBiomeCapability(capabilities, biomeKey, 'editable'))
+      .map((biomeKey) => {
+        const biome = catalog.biomes.byKey[biomeKey];
+        if (biome === undefined) {
+          throw new Error(`${route.key} references unknown biome ${biomeKey}`);
+        }
+        return Object.freeze({ biomeKey, label: biome.label });
+      });
     return Object.freeze({
       routeKey: route.key,
       biomePanels: Object.freeze(biomePanels),

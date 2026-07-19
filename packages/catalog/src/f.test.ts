@@ -33,7 +33,7 @@ function requireShop(binding: RewardProducerBinding | undefined): ShopRewardBind
 
 describe('complete F catalog', () => {
   it('declares every F opening and special room exactly once', () => {
-    const fRooms = catalog.rooms.values.filter((room) => room.biomeStepKey === 'Underworld_F');
+    const fRooms = catalog.rooms.values.filter((room) => room.biomeKey === 'F');
     expect(fRooms).toHaveLength(34);
     expect(fRooms.filter((room) => room.kind === 'Opening').map((room) => room.gameName)).toEqual([
       'F_Opening01',
@@ -73,7 +73,7 @@ describe('complete F catalog', () => {
   });
 
   it('preserves every F room physical exit in declaration order', () => {
-    const fRooms = catalog.rooms.values.filter((room) => room.biomeStepKey === 'Underworld_F');
+    const fRooms = catalog.rooms.values.filter((room) => room.biomeKey === 'F');
     const exitCounts = new Map<string, number>([
       ['F_Opening01', 1],
       ['F_Opening02', 1],
@@ -297,8 +297,8 @@ describe('complete F catalog', () => {
     expect(freeReward.storeKeys).toEqual(['RunProgress']);
     expect(freeReward.ineligibleRewardTypes).toEqual(['Devotion', 'RoomMoneyDrop']);
 
-    expect(catalog.biomeLayouts.byKey.Underworld_F).toEqual({
-      biomeStepKey: 'Underworld_F',
+    expect(catalog.biomeLayouts.byKey.F).toEqual({
+      biomeKey: 'F',
       kind: 'LinearBiome',
       start: {
         kind: 'authoredStart',
@@ -326,7 +326,6 @@ describe('complete F catalog', () => {
           { role: 'boss', roomGameName: 'F_Boss01' },
           { role: 'postboss', roomGameName: 'F_PostBoss01' },
         ],
-        routeTransition: { kind: 'nextBiome' },
       },
       fields: [],
       bounds: { maxBatches: 10, maxTargets: 20 },

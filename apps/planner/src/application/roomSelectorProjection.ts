@@ -25,11 +25,11 @@ export function roomCategoryForKind(kind: RoomKind): OrdinaryRoomCategory | unde
 
 export function selectRoomsForCategory(
   catalog: Catalog,
-  biomeStepKey: string,
+  biomeKey: string,
   category: OrdinaryRoomCategory,
 ): readonly RoomDeclaration[] {
   return catalog.rooms.values.filter((room) => {
-    if (room.biomeStepKey !== biomeStepKey) {
+    if (room.biomeKey !== biomeKey) {
       return false;
     }
     if (room.mode.kind !== 'authored') {

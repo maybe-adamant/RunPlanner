@@ -47,11 +47,11 @@ describe('shared structural catalog vocabulary', () => {
     ) {
       throw new Error('shared structural room fixtures are missing');
     }
-    const nOpening = { ...opening, gameName: 'N_OpeningFixture', biomeStepKey: 'Surface_N' };
+    const nOpening = { ...opening, gameName: 'N_OpeningFixture', biomeKey: 'N' };
     const nEntry = {
       ...boss,
       gameName: 'N_EntryFixture',
-      biomeStepKey: 'Surface_N',
+      biomeKey: 'N',
       kind: 'Intro',
       mode: { kind: 'derived', classification: 'fixedEntry' },
       encounterProfileKey: 'FixedIntro',
@@ -59,23 +59,23 @@ describe('shared structural catalog vocabulary', () => {
     const nHub = {
       ...boss,
       gameName: 'N_HubFixture',
-      biomeStepKey: 'Surface_N',
+      biomeKey: 'N',
       kind: 'Hub',
       mode: { kind: 'derived', classification: 'hub' },
       encounterProfileKey: 'FixedIntro',
     };
-    const nCombat = { ...combat, gameName: 'N_CombatFixture', biomeStepKey: 'Surface_N' };
+    const nCombat = { ...combat, gameName: 'N_CombatFixture', biomeKey: 'N' };
     const nPreboss = {
       ...preboss,
       gameName: 'N_PreBossFixture',
-      biomeStepKey: 'Surface_N',
+      biomeKey: 'N',
       mode: { kind: 'authored', templateKey: 'ShopPreboss' },
       entryOfferPolicy: undefined,
     };
-    const nBoss = { ...boss, gameName: 'N_BossFixture', biomeStepKey: 'Surface_N' };
-    const nPostboss = { ...postboss, gameName: 'N_PostBossFixture', biomeStepKey: 'Surface_N' };
+    const nBoss = { ...boss, gameName: 'N_BossFixture', biomeKey: 'N' };
+    const nPostboss = { ...postboss, gameName: 'N_PostBossFixture', biomeKey: 'N' };
     const nLayout = {
-      biomeStepKey: 'Surface_N',
+      biomeKey: 'N',
       kind: 'HubBiome',
       entries: [
         { kind: 'fixedAuthoredSlot', slotKey: 'opening', roomGameName: nOpening.gameName },
@@ -105,7 +105,6 @@ describe('shared structural catalog vocabulary', () => {
           { role: 'boss', roomGameName: nBoss.gameName },
           { role: 'postboss', roomGameName: nPostboss.gameName },
         ],
-        routeTransition: { kind: 'nextBiome' },
       },
       fields: [],
     };
@@ -119,7 +118,7 @@ describe('shared structural catalog vocabulary', () => {
       }),
     );
 
-    expect(catalog.biomeLayouts.byKey.Surface_N).toMatchObject({
+    expect(catalog.biomeLayouts.byKey.N).toMatchObject({
       kind: 'HubBiome',
       entries: [
         { kind: 'fixedAuthoredSlot', slotKey: 'opening', roomGameName: 'N_OpeningFixture' },
@@ -165,7 +164,7 @@ describe('shared structural catalog vocabulary', () => {
             : room,
         ),
         biomeLayouts: declarations.biomeLayouts.map((layout) =>
-          layout.biomeStepKey === 'Underworld_G'
+          layout.biomeKey === 'G'
             ? {
                 ...layout,
                 start: { kind: 'fixedEntry', role: 'intro', roomGameName: 'G_Intro' },
@@ -175,7 +174,7 @@ describe('shared structural catalog vocabulary', () => {
       }),
     );
 
-    expect(catalog.biomeLayouts.byKey.Underworld_G).toMatchObject({
+    expect(catalog.biomeLayouts.byKey.G).toMatchObject({
       kind: 'LinearBiome',
       start: { kind: 'fixedEntry', role: 'intro', roomGameName: 'G_Intro' },
     });
@@ -196,7 +195,7 @@ describe('shared structural catalog vocabulary', () => {
         ...declarations,
         rooms,
         biomeLayouts: declarations.biomeLayouts.map((layout) =>
-          layout.biomeStepKey === 'Underworld_G'
+          layout.biomeKey === 'G'
             ? {
                 ...layout,
                 continuation: { ...layout.continuation, batchPolicy },
@@ -212,7 +211,7 @@ describe('shared structural catalog vocabulary', () => {
         { kind: 'standard', fields: [] },
       ),
     );
-    expect(direct.biomeLayouts.byKey.Underworld_G).toMatchObject({
+    expect(direct.biomeLayouts.byKey.G).toMatchObject({
       terminal: { kind: 'directTransition', roomGameName: 'G_PreBoss01' },
     });
 
@@ -226,7 +225,7 @@ describe('shared structural catalog vocabulary', () => {
         { kind: 'clockwork', fields: [] },
       ),
     );
-    expect(conditional.biomeLayouts.byKey.Underworld_G).toMatchObject({
+    expect(conditional.biomeLayouts.byKey.G).toMatchObject({
       terminal: {
         kind: 'generatedTarget',
         roomGameName: 'G_PreBoss01',
@@ -240,7 +239,7 @@ describe('shared structural catalog vocabulary', () => {
       raw({
         ...declarations,
         biomeLayouts: declarations.biomeLayouts.map((layout) =>
-          layout.biomeStepKey === 'Underworld_F'
+          layout.biomeKey === 'F'
             ? {
                 ...layout,
                 continuation: {
@@ -259,7 +258,7 @@ describe('shared structural catalog vocabulary', () => {
                   },
                 },
               }
-            : layout.biomeStepKey === 'Underworld_G'
+            : layout.biomeKey === 'G'
               ? {
                   ...layout,
                   continuation: {
@@ -280,7 +279,7 @@ describe('shared structural catalog vocabulary', () => {
       }),
     );
 
-    expect(catalog.biomeLayouts.byKey.Underworld_F).toMatchObject({
+    expect(catalog.biomeLayouts.byKey.F).toMatchObject({
       continuation: {
         progressionPolicy: { kind: 'fixedCount', continuationCount: 4 },
         batchPolicy: {
@@ -296,7 +295,7 @@ describe('shared structural catalog vocabulary', () => {
         },
       },
     });
-    expect(catalog.biomeLayouts.byKey.Underworld_G).toMatchObject({
+    expect(catalog.biomeLayouts.byKey.G).toMatchObject({
       continuation: {
         progressionPolicy: {
           kind: 'staged',
@@ -638,7 +637,7 @@ describe('shared structural catalog vocabulary', () => {
       },
       error: new CatalogContractError(
         'biomeLayouts[0].continuation.rewardStoreOverrides[0].sourceEncounterProfileKey',
-        'ShipCombat is not used by a room in Underworld_F',
+        'ShipCombat is not used by a room in F',
       ),
     },
     {
@@ -729,25 +728,6 @@ describe('shared structural catalog vocabulary', () => {
       ),
     },
     {
-      name: 'route transition policy',
-      input: {
-        ...declarations,
-        biomeLayouts: [
-          {
-            ...declarations.biomeLayouts[0],
-            completion: {
-              ...declarations.biomeLayouts[0].completion,
-              routeTransition: { kind: 'mystery' },
-            },
-          },
-        ],
-      },
-      error: new CatalogContractError(
-        'biomeLayouts[0].completion.routeTransition.kind',
-        'unknown route transition mystery',
-      ),
-    },
-    {
       name: 'orphaned derived room',
       input: {
         ...declarations,
@@ -829,7 +809,7 @@ describe('shared structural catalog vocabulary', () => {
       }),
     );
 
-    expect(catalog.biomeLayouts.byKey.Underworld_F).toMatchObject({
+    expect(catalog.biomeLayouts.byKey.F).toMatchObject({
       fields: [
         { key: 'enabled', kind: 'boolean', defaultValue: false },
         { key: 'count', kind: 'boundedInteger', min: 1, max: 3, defaultValue: 2 },
@@ -842,7 +822,7 @@ describe('shared structural catalog vocabulary', () => {
         ],
       },
     });
-    expect(catalog.biomeLayouts.byKey.Underworld_G).toMatchObject({
+    expect(catalog.biomeLayouts.byKey.G).toMatchObject({
       continuation: { rewardStorePolicy: { kind: 'none' } },
     });
     expect(catalog.rooms.byKey.F_Opening01?.localChildren).toEqual([

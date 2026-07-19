@@ -33,13 +33,13 @@ function requireShop(binding: RewardProducerBinding | undefined): ShopRewardBind
 
 describe('complete G catalog', () => {
   it('normalizes the fixed reward-free intro and G layout', () => {
-    const gRooms = catalog.rooms.values.filter((room) => room.biomeStepKey === 'Underworld_G');
+    const gRooms = catalog.rooms.values.filter((room) => room.biomeKey === 'G');
     expect(gRooms).toHaveLength(30);
 
     const intro = catalog.rooms.byKey.G_Intro;
     expect(intro).toMatchObject({
       label: 'Entrance',
-      biomeStepKey: 'Underworld_G',
+      biomeKey: 'G',
       kind: 'Intro',
       mode: { kind: 'authored', templateKey: 'FixedIntro' },
       incomingReward: { kind: 'none' },
@@ -54,8 +54,8 @@ describe('complete G catalog', () => {
     ]);
     expect(catalog.encounterProfiles.byKey.FixedIntro?.phases).toEqual([]);
 
-    expect(catalog.biomeLayouts.byKey.Underworld_G).toEqual({
-      biomeStepKey: 'Underworld_G',
+    expect(catalog.biomeLayouts.byKey.G).toEqual({
+      biomeKey: 'G',
       kind: 'LinearBiome',
       start: { kind: 'authoredStart', mode: 'fixed', roomGameNames: ['G_Intro'] },
       entries: [],
@@ -79,7 +79,6 @@ describe('complete G catalog', () => {
           { role: 'boss', roomGameName: 'G_Boss01' },
           { role: 'postboss', roomGameName: 'G_PostBoss01' },
         ],
-        routeTransition: { kind: 'nextBiome' },
       },
       fields: [],
       bounds: { maxBatches: 8, maxTargets: 21 },
@@ -345,9 +344,7 @@ describe('complete G catalog', () => {
   });
 
   it('rejects a fixed start with more than one room', () => {
-    const layout = declarations.biomeLayouts.find(
-      (candidate) => candidate.biomeStepKey === 'Underworld_G',
-    );
+    const layout = declarations.biomeLayouts.find((candidate) => candidate.biomeKey === 'G');
     expect(layout).toBeDefined();
     if (layout === undefined) {
       return;
@@ -357,7 +354,7 @@ describe('complete G catalog', () => {
       createCatalog({
         ...declarations,
         biomeLayouts: declarations.biomeLayouts.map((candidate) =>
-          candidate.biomeStepKey === 'Underworld_G'
+          candidate.biomeKey === 'G'
             ? {
                 ...layout,
                 start: {

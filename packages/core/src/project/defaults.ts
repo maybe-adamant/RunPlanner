@@ -32,18 +32,18 @@ export function createProjectDocument(
         'must be a non-negative integer',
       );
     }
-    if (configuredCount > route.biomeSteps.length) {
+    if (configuredCount > route.biomeKeys.length) {
       throw new ProjectDocumentContractError(
         `configuredBiomeCounts.${route.key}`,
-        `exceeds the ${route.biomeSteps.length}-step route`,
+        `exceeds the ${route.biomeKeys.length}-biome route`,
       );
     }
 
     return {
       routeKey: route.key,
-      biomes: route.biomeSteps.slice(0, configuredCount).map((step) => ({
+      biomes: route.biomeKeys.slice(0, configuredCount).map((biomeKey) => ({
         kind: 'LinearBiome',
-        biomeStepKey: step.key,
+        biomeKey,
         topology: null,
       })),
     };

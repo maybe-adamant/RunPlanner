@@ -11,15 +11,15 @@ export interface CatalogCollection<T> {
   readonly byKey: Readonly<Record<string, T>>;
 }
 
-export interface BiomeStepDeclaration {
+export interface BiomeDeclaration {
   readonly key: string;
-  readonly biome: string;
+  readonly label: string;
 }
 
 export interface RouteDeclaration {
   readonly key: string;
   readonly label: string;
-  readonly biomeSteps: readonly BiomeStepDeclaration[];
+  readonly biomeKeys: readonly string[];
 }
 
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';
@@ -120,7 +120,7 @@ export interface ForkedPrebossEntryPolicy {
 export interface RoomDeclaration {
   readonly gameName: string;
   readonly label: string;
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
   readonly kind: RoomKind;
   readonly mode: RoomMode;
   readonly structuralTags: readonly RoomStructuralTag[];
@@ -272,11 +272,10 @@ export interface CompletionRoomDescriptor {
 
 export interface CompletionDescriptor {
   readonly rooms: readonly CompletionRoomDescriptor[];
-  readonly routeTransition: { readonly kind: 'nextBiome' | 'routeComplete' };
 }
 
 export interface LinearBiomeLayout {
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
   readonly kind: 'LinearBiome';
   readonly start: LinearStartDescriptor;
   readonly entries: readonly EntryDescriptor[];
@@ -301,7 +300,7 @@ export interface HubSlotDescriptor {
 }
 
 export interface HubBiomeLayout {
-  readonly biomeStepKey: string;
+  readonly biomeKey: string;
   readonly kind: 'HubBiome';
   readonly entries: readonly EntryDescriptor[];
   readonly hub: {
@@ -322,6 +321,7 @@ export type BiomeLayout = HubBiomeLayout | LinearBiomeLayout;
 
 export interface Catalog {
   readonly version: string;
+  readonly biomes: CatalogCollection<BiomeDeclaration>;
   readonly routes: CatalogCollection<RouteDeclaration>;
   readonly rewards: RewardKernelCatalog;
   readonly encounterProfiles: CatalogCollection<EncounterProfile>;
@@ -334,7 +334,7 @@ export interface Catalog {
 export interface CatalogSummary {
   readonly version: string;
   readonly routeCount: number;
-  readonly biomeStepCount: number;
+  readonly biomeCount: number;
   readonly rewardTypeCount: number;
   readonly roomCount: number;
 }
@@ -343,10 +343,7 @@ export function summarizeCatalog(catalog: Catalog): CatalogSummary {
   return {
     version: catalog.version,
     routeCount: catalog.routes.values.length,
-    biomeStepCount: catalog.routes.values.reduce(
-      (count, route) => count + route.biomeSteps.length,
-      0,
-    ),
+    biomeCount: catalog.biomes.values.length,
     rewardTypeCount: catalog.rewards.rewardTypes.values.length,
     roomCount: catalog.rooms.values.length,
   };

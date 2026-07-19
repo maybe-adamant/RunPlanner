@@ -25,33 +25,23 @@ function emptyCollection<T>(): CatalogCollection<T> {
 const underworld = {
   key: 'Underworld',
   label: 'Underworld',
-  biomeSteps: [
-    { key: 'Underworld_F', biome: 'F' },
-    { key: 'Underworld_G', biome: 'G' },
-    { key: 'Underworld_H', biome: 'H' },
-    { key: 'Underworld_I', biome: 'I' },
-  ],
+  biomeKeys: ['F', 'G', 'H', 'I'],
 } as const satisfies RouteDeclaration;
 
 const surface = {
   key: 'Surface',
   label: 'Surface',
-  biomeSteps: [
-    { key: 'Surface_N', biome: 'N' },
-    { key: 'Surface_O', biome: 'O' },
-    { key: 'Surface_P', biome: 'P' },
-    { key: 'Surface_Q', biome: 'Q' },
-  ],
+  biomeKeys: ['N', 'O', 'P', 'Q'],
 } as const satisfies RouteDeclaration;
 
-function linearLayout(biomeStepKey: string, terminalRoom: string): BiomeLayout {
+function linearLayout(biomeKey: string, terminalRoom: string): BiomeLayout {
   return {
-    biomeStepKey,
+    biomeKey,
     kind: 'LinearBiome',
     start: {
       kind: 'authoredStart',
       mode: 'fixed',
-      roomGameNames: [`${biomeStepKey}_Start`],
+      roomGameNames: [`${biomeKey}_Start`],
     },
     entries: [],
     continuation: {
@@ -70,21 +60,20 @@ function linearLayout(biomeStepKey: string, terminalRoom: string): BiomeLayout {
       exitPolicy: { kind: 'allExitsTerminal' },
     },
     completion: {
-      rooms: [{ role: 'boss', roomGameName: `${biomeStepKey}_Boss` }],
-      routeTransition: { kind: 'nextBiome' },
+      rooms: [{ role: 'boss', roomGameName: `${biomeKey}_Boss` }],
     },
     fields: [],
     bounds: { maxBatches: 10, maxTargets: 20 },
   };
 }
 
-const layouts = [
-  linearLayout('Underworld_F', 'F_PreBoss01'),
-  linearLayout('Underworld_G', 'G_PreBoss01'),
-];
+const layouts = [linearLayout('F', 'F_PreBoss01'), linearLayout('G', 'G_PreBoss01')];
 
 const catalog: Catalog = {
   version: 'fixture-catalog-1',
+  biomes: collection(
+    [...underworld.biomeKeys, ...surface.biomeKeys].map((key) => ({ key, label: `Biome ${key}` })),
+  ),
   routes: collection([underworld, surface]),
   rewards: {
     payloadDomains: emptyCollection(),
@@ -100,13 +89,13 @@ const catalog: Catalog = {
   rooms: emptyCollection(),
   biomeLayouts: {
     values: layouts,
-    byKey: Object.fromEntries(layouts.map((layout) => [layout.biomeStepKey, layout])),
+    byKey: Object.fromEntries(layouts.map((layout) => [layout.biomeKey, layout])),
   },
 };
 
 function rawDocument(routes: readonly unknown[]): unknown {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     projectId: 'project-fixture',
     name: 'Fixture Project',
     catalogVersion: catalog.version,
@@ -124,7 +113,7 @@ describe('project document codec', () => {
     const project = createEmptyProjectDocument(catalog, widerOptions);
 
     expect(project).toEqual({
-      schemaVersion: 2,
+      schemaVersion: 3,
       projectId: 'project-empty',
       name: 'Empty Project',
       catalogVersion: 'fixture-catalog-1',
@@ -148,8 +137,8 @@ describe('project document codec', () => {
     expect(project.routes[0]).toEqual({
       routeKey: 'Underworld',
       biomes: [
-        { kind: 'LinearBiome', biomeStepKey: 'Underworld_F', topology: null },
-        { kind: 'LinearBiome', biomeStepKey: 'Underworld_G', topology: null },
+        { kind: 'LinearBiome', biomeKey: 'F', topology: null },
+        { kind: 'LinearBiome', biomeKey: 'G', topology: null },
       ],
     });
     expect(project.routes[1]).toEqual({ routeKey: 'Surface', biomes: [] });
@@ -161,7 +150,7 @@ describe('project document codec', () => {
         { routeKey: 'Surface', biomes: [] },
         {
           routeKey: 'Underworld',
-          biomes: [{ kind: 'LinearBiome', biomeStepKey: 'Underworld_F', topology: null }],
+          biomes: [{ kind: 'LinearBiome', biomeKey: 'F', topology: null }],
         },
       ]),
       catalog,
@@ -180,7 +169,7 @@ describe('project document codec', () => {
         rawDocument([
           {
             routeKey: 'Underworld',
-            biomes: [{ kind: 'LinearBiome', biomeStepKey: 'Underworld_G', topology: null }],
+            biomes: [{ kind: 'LinearBiome', biomeKey: 'G', topology: null }],
           },
           { routeKey: 'Surface', biomes: [] },
         ]),
@@ -188,8 +177,8 @@ describe('project document codec', () => {
       ),
     ).toThrowError(
       new ProjectDocumentContractError(
-        '$.routes[0].biomes[0].biomeStepKey',
-        'expected contiguous step Underworld_F',
+        '$.routes[0].biomes[0].biomeKey',
+        'expected contiguous biome F',
       ),
     );
   });
@@ -209,7 +198,19 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 2, received 1'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 3, received 1'));
+    expect(() =>
+      decodeProjectDocument(
+        {
+          ...(rawDocument([
+            { routeKey: 'Underworld', biomes: [] },
+            { routeKey: 'Surface', biomes: [] },
+          ]) as Record<string, unknown>),
+          schemaVersion: 2,
+        },
+        catalog,
+      ),
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 3, received 2'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -253,7 +254,7 @@ describe('project document codec', () => {
     ).toThrowError(
       new ProjectDocumentContractError(
         '$.routes[0].biomes[2]',
-        'catalog has no authored layout for Underworld_H',
+        'catalog has no authored layout for H',
       ),
     );
   });
