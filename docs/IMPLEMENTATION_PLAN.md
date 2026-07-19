@@ -5,12 +5,14 @@
 This document defines the greenfield implementation order for the standalone
 app. It separates stable design guidance from mutable implementation progress.
 
-When implementation begins, add `IMPLEMENTATION_PROGRESS.md` as a factual
-status ledger. Do not turn completed checkpoint history into design authority.
+`IMPLEMENTATION_PROGRESS.md` is the factual status ledger. Do not turn
+completed checkpoint history into design authority.
 
 ## Delivery Principles
 
-- Build the pure model and simulator before sophisticated UI.
+- Build pure domain foundations before sophisticated UI. A thin authored editor
+  may precede simulation, but contextual validation and enrichment wait for the
+  simulator.
 - Deliver thin vertical slices for behavior and UI, but import declaration-only
   biome slices before Phase 3 so the shared model is not frozen from F/G alone.
   Audit every biome and reconcile the shared vocabulary before importing those
@@ -54,9 +56,9 @@ Do not add Tauri or React Flow in this phase.
 
 - normalized catalog interfaces in core;
 - explicit route declarations;
-- reward primitives, payload domains, stores, bags, and bindings required by
-  F/G;
-- counted-entry duplicate policies and primitive acquisition projections;
+- the initial `RewardPrimitive` and `acquiredAs` projection prototype, payload
+  domains, stores, bags, and bindings required by F/G;
+- the initial counted-entry duplicate and reward-projection policies;
 - encounter profiles required by F/G;
 - F and G room declarations with explicit labels and defaults;
 - F/G linear layout declarations;
@@ -101,20 +103,17 @@ easier to audit while the app model is still settling.
 
 ### Deliverables
 
-- schema version 2 `ProjectDocument` decoder and encoder;
+- schema version 1 `ProjectDocument` decoder and encoder;
 - empty project and route defaults;
 - contiguous configured route prefixes;
 - F/G `LinearBiome` authored topology;
 - opaque persisted occurrence IDs separate from game room names;
 - occurrence-state initialization from recursive declaration defaults;
-- lifecycle-aware occurrence state: offer-time defaults on every target and
-  entry-materialized shop defaults only on picked targets;
-- explicit batch reward-store policy, with batch-owned `baseRewardStoreKey`
-  only when generated store selection is observable and not already owned by a
-  source offer point, plus concrete reward-only incoming leaves;
+- leaf-owned counted reward state containing the selected store and concrete
+  reward;
+- complete eagerly initialized WorldShop state on every shop occurrence;
 - semantic address constructors;
 - explicit topology and leaf command handlers;
-- `ReplaceBatchRewardStore` with target-reward and downstream retention;
 - structural normalization;
 - repeated game-name support across distinct occurrences;
 - downstream re-anchoring and retained unavailable exits;
@@ -130,11 +129,9 @@ easier to audit while the app model is still settling.
 - distinct occurrences may reference the same game room name;
 - existing targets cannot be emptied by ordinary replacement commands;
 - offer-time leaves are always complete after construction or replacement;
-- every picked shop occurrence is fully typed, while an unpicked shop may omit
-  its entry state or retain a complete dormant value;
-- changing the picked target installs missing shop defaults without clearing
-  the old target's dormant shop state;
-- no persisted counted leaf contains a competing `storeKey`;
+- every shop occurrence contains complete WorldShop state;
+- every counted reward leaf contains one coherent selected store and concrete
+  reward under the original prototype authority;
 - upstream replacement retains compatible downstream topology;
 - exit shrink, re-pick, reconcile, and capacity restoration match the locked
   downstream policy;
@@ -144,6 +141,10 @@ easier to audit while the app model is still settling.
 - malformed JSON and invalid structural commands fail at their contact
   boundaries.
 
+This phase records the delivered prototype rather than the final reward
+authority. Phase 2.7 replaces its leaf-owned store and eager-shop contracts in
+one schema-version-2 switch.
+
 ## Phase 2.5: Authored Editor Smoke
 
 ### Deliverables
@@ -152,8 +153,7 @@ easier to audit while the app model is still settling.
 - an F-configured project bootstrap for smoke testing;
 - linear start, ordinary decision, picked-exit, terminal, reward, and shop
   projections bound only to Phase 2 semantic commands;
-- one batch-level Reward Pool selector per generated decision, with concrete
-  reward-only target editors;
+- complete leaf-owned reward-pool, reward-primitive, payload, and shop editors;
 - undo/redo controls;
 - deliberately neutral incomplete/invalid presentation without simulated
   eligibility, findings, or candidate decoration.
@@ -165,139 +165,146 @@ easier to audit while the app model is still settling.
 - selectors render declaration labels and never persist UI categories;
 - retained overflow and explicit destructive actions remain visible;
 - all edits pass through semantic commands and authored history;
-- changing a Reward Pool retains target rewards and downstream topology;
 - the slice makes no claim about game validity before Phase 3.
 
-## Phase 2.75: Cross-Biome Catalog Closure
+## Phase 2.6: Reward Kernel
 
 ### Purpose
 
-Implement the declaration and authored-schema vocabulary established by the
-completed F/G/P/Q/H/O/I/N audits before Phase 3 builds canonical history. This
-phase is the atomic catalog and schema-version-2 authority switch. It is not an
-early simulator slice.
+Implement the audited reward vocabulary and pure reward-state transitions
+without changing the connected schema-version-1 F/G editor. The kernel accepts
+explicit synthetic fact snapshots; it does not own topology, canonical route
+history, the authored project, or UI projection.
 
-The completed biome rule documents are the entry gate. They establish the
-smallest faithful shared model for generated-store ownership, physical exits,
-encounter phases, fixed completion, conditional terminals, room-local slots,
-and persistent hubs. Later-biome declarations remain dormant after import.
+### Deliverables
+
+- normalized reward types, payload domains, complete resolved offers, and
+  typed acquisition roles;
+- closed source-support policies for ordinary peer-excluding Boons, ordinary
+  no-peer sources, and acquired-source Devotion pairs, each with an explicit
+  resolution point;
+- counted stores and entries with declaration order, multiplicity, duplicate
+  policy, requirements, retained leftovers, one complete refill, and latent
+  bag-state branching;
+- the exact 13-entry fully progressed `MetaProgress` projection;
+- generic offer history plus the closed Devotion offer-time spacing projection;
+- concrete acquisition declarations and the exhaustive `lootAndUse` or
+  `consumableAndUse` history-projection registry;
+- ordered World, I, and Q shop groups with offer counts, per-option
+  requirements, and without-replacement support;
+- the behavior-preserving requirement rename from `notInStore` to
+  `notInCurrentRoomShopOptions` in the shared evaluator and reward declarations;
+- pure shop generation and purchase-order transitions, including delayed Blind
+  Box source validation;
+- explicit synthetic requirement and reward-context fixtures for every rule
+  the kernel consumes.
+
+The schema-version-1 leaf-owned store model remains the sole connected
+production authority throughout this phase. The new kernel may coexist only as
+an unconnected pure subsystem with no competing project or UI representation.
+
+### Acceptance
+
+- all reward declarations normalize without reward-name switches;
+- every source-bearing reward selects an audited source policy and compatible
+  offer- or acquisition-time resolution point;
+- reward parity covers store order and multiplicity, duplicates, one-refill
+  behavior, latent bag states, source support, Devotion timing, acquisition
+  projections, and all three shop profiles;
+- Blind Box support branches over meaningful purchase orders and retains an
+  execution witness;
+- the trait-free `upgradableTraitCount`, `allSpellInvested`, and
+  `pendingSpellDrop` baselines are explicit fixtures;
+- no authored schema, editor command, canonical history walker, candidate
+  evaluation, or semantic finding changes in this phase.
+
+## Phase 2.7: F/G Reward Authority Switch
+
+### Purpose
+
+Move F/G onto the reward kernel and the locked store-ownership model in one
+schema-version-2 change. Delete the superseded v1 types rather than preserving
+two authorities or adding pre-release migration scaffolding.
+
+### Deliverables
+
+- schema version 2 project defaults, codecs, commands, semantic addresses, and
+  round-trip fixtures;
+- batch-owned generated stores only where the batch policy exposes an authored
+  base store;
+- declaration-owned forced and individual store overrides;
+- complete resolved-offer-only counted leaves with no competing `storeKey`;
+- entry-materialized shop state required only on picked occurrences and
+  retained dormantly after re-pick;
+- `ReplaceBatchRewardStore` with target-reward and downstream retention;
+- F/G declarations bound to normalized reward types, stores, source policies,
+  shops, producer lifecycles, and store-history policies;
+- F editor projection and application bootstrap moved to the new authority.
+
+Schema version 1 is rejected explicitly after the switch. There is no permanent
+migration path for the superseded pre-release format.
+
+### Acceptance
+
+- no persisted counted leaf contains a generated `storeKey`;
+- no unpicked shop occurrence requires invented inventory;
+- changing a batch store retains target rewards and downstream topology;
+- F/G schema-version-2 JSON round trips, command fixtures, and F editor smoke
+  tests pass;
+- the old `RewardPrimitive`, `acquiredAs`, eager-shop, and leaf-store
+  authorities are deleted;
+- one connected reward authority exists before Phase 2.8 begins.
+
+## Phase 2.8: Cross-Biome Declaration Closure
+
+### Purpose
+
+Harden the structural catalog vocabulary against every completed biome audit,
+reconcile F/G to it, and import P/Q/H/O/I/N as dormant declarations before
+Phase 3 builds canonical history.
 
 ### Capability Boundary
 
-Catalog presence must not imply product activation. Application composition
-must distinguish these capabilities independently:
+Application composition distinguishes declared, authorable, simulatable, and
+editable capabilities. Capability metadata is not game data on Room or Biome
+Declarations. At phase end all eight biomes are declared, F/G are authorable,
+F remains the active editor smoke slice, and no biome is simulatable before
+Phase 3.
 
-- declared in the normalized catalog;
-- authorable by the project model;
-- simulatable by the derived pipeline;
-- editable through a UI projector.
+### Deliverables
 
-Capability metadata is application composition, not game data stored on Room
-or Biome Declarations. At this phase's end all eight biomes are declared, F/G
-are authorable through schema version 2, F remains the active editor smoke
-slice, and no biome is marked simulatable before Phase 3. Focused tests must
-prove dormant declarations cannot leak into project defaults, selectors,
-simulation dispatch, or editor navigation.
-
-### Normalized Catalog Hardening
-
-- authored versus layout-derived Room Declarations;
-- structural room tags separate from presentation kinds;
+- authored versus layout-derived rooms and structural tags separate from
+  presentation kinds;
 - typed physical exits and source-sensitive compatibility;
-- `LinearBiome` and `HubBiome` layout declarations;
-- layout-owned fixed entry and ordered completion sequences;
-- standard, staged, Fields, Clockwork, and persistent-hub batch policies;
-- forked, direct, independent, and conditional terminal policies;
+- `LinearBiome` and `HubBiome` layouts with fixed entry and ordered derived
+  completion sequences;
+- standard, staged, Fields, Clockwork, persistent-hub, forked, direct,
+  independent, and conditional-terminal policies;
 - authored, source-offer-derived, and absent generated-store policies;
-- typed biome-global and batch-global authored fields;
-- stable encounter phases with optional presence, lifecycle timing, offer
-  points, and counter effects;
-- bounded cage, wheel, and side-room descriptors owned by concrete rooms;
-- entered-room reward-store history policies;
-- complete declaration-time defaults and codecs for every imported authored
-  leaf surface;
-- no callbacks, untyped extension bags, room-name switches, or placeholder
-  canonical materializers inside declaration records.
+- typed biome-global and batch-global fields, stable encounter phases, bounded
+  local slots, and entered-store history policies;
+- derived F/G boss and postboss Room Declarations replacing `fixedBoss`;
+- extensions to the typed requirement and force-query surface required by
+  later-biome declarations, evaluated over explicit synthetic fact snapshots;
+- dormant P, Q, H, O, I, and N declaration imports in that pressure-test order;
+- capability-isolation tests proving dormant declarations cannot leak into
+  project defaults, selectors, simulation dispatch, or editor navigation.
 
-The legacy `fixedBoss` target mode is removed. Neutral boss/postboss rooms are
-concrete derived declarations referenced by layout completion data.
-
-### Atomic Schema Version 2 Switch
-
-- generated batches own a base store only when their policy exposes one;
-- O source batches derive the store from an addressed room offer point;
-- Q and I batch policies can explicitly own no base-store value;
-- Room Declarations own forced and individual store overrides;
-- counted room leaves persist concrete rewards without a competing `storeKey`;
-- counted-store entries own multiplicity and duplicate policy;
-- reward primitives own acquisition projections;
-- shop state is entry-materialized, required only on picked occurrences, and
-  retained dormantly after re-pick;
-- F/G defaults, codecs, commands, projection, fixtures, and application
-  bootstrap move to the new authority in one change.
-
-Schema version 1 is rejected explicitly after the switch. The pre-release app
-does not retain a permanent migration path for a document format that encodes
-the superseded ownership model.
-
-### Requirement and Force Query Contract
-
-Freeze the typed fact surface that Phase 3 history will populate:
-
-- exact counter axes;
-- creation, appearance, reward, use, and event records;
-- room-history ordinal and event spacing;
-- current predecessor exits and structural tags;
-- generated-store and entered-store histories;
-- biome-specific folded counters;
-- force-pool and force-pressure inputs.
-
-Requirement and force evaluators remain pure and receive explicit synthetic
-fact snapshots in Phase 2.75 tests. This phase does not build the history
-walker that produces those snapshots during a real route.
-
-### F/G Authority Proof
-
-Before later imports, migrate F/G onto the final vocabulary:
-
-- concrete-only counted leaves and batch-owned store policies;
-- entry-materialized shops;
-- exact physical exits, force declarations, and store-history policies;
-- derived `F_Boss01`, `F_PostBoss01`, `G_Boss01`, and `G_PostBoss01` Room
-  Declarations;
-- layout-owned completion sequences;
-- current F editor smoke behavior preserved through schema version 2.
-
-### Dormant Import Order
-
-1. P: typed source tags and source-sensitive exit compatibility.
-2. Q: staged candidate pools, reward-free batches, and boss-only completion.
-3. H: typed batch-global cage outcome and room-local bounded cage slots.
-4. O: ordered encounter phases, reward wheels, and source-offer-derived store.
-5. I: biome globals, fixed Tartarus provenance, and conditional terminal
-   batches.
-6. N: fixed authored slots, persistent hub board, visits, and bounded side
-   rooms.
-
-Each import adds explicit room, encounter, reward, exit, layout, requirement,
-and completion declarations with readable parity fixtures. It must not add an
-editor panel, canonical history, contextual candidate results, or a placeholder
-simulation implementation.
+Each dormant import adds readable room, encounter, reward, exit, layout,
+requirement, and completion parity fixtures. It does not add an editor panel,
+canonical history, contextual candidates, or placeholder simulation.
 
 ### Acceptance
 
 - one immutable catalog normalizes faithful F/G/H/I/N/O/P/Q declarations;
 - every declaration reference, semantic kind, policy key, requirement kind,
   default, and codec validates at construction;
-- per-biome parity fixtures cover room identities, labels, exits, tags,
-  encounters, rewards, caps, requirements, layouts, and completion;
+- per-biome parity covers identities, labels, exits, tags, encounters, rewards,
+  caps, requirements, layouts, and completion;
 - external save/profile requirements remain omitted rather than represented by
   production zombie predicates;
 - no topology consequence is encoded as fake room eligibility;
-- no counted room leaf retains generated-store authority;
-- no unpicked shop occurrence requires invented inventory;
 - every derived completion room and route transition is data-driven;
-- F/G schema-version-2 round trips and the F editor smoke suite pass;
 - dormant capability guards prevent H/I/N/O/P/Q authoring, simulation, and UI
   activation;
 - no canonical event stream, history ledger, candidate evaluation, or semantic
@@ -342,19 +349,18 @@ Candidate simulation is not required until selected-plan validation is stable.
 
 ## Phase 4: Thin Usable F Editor
 
+Phase 4 promotes the existing Phase 2.5 authored-editor smoke surface by
+connecting it to Phase 3 simulation, findings, and project persistence. It does
+not rebuild the shell or command-bound topology editors.
+
 ### Deliverables
 
-- Underworld/Surface/Settings application shell;
 - route prefix control;
-- linear-biome F projection;
-- opening selection;
-- add/remove decision commands;
-- type and room target selectors;
-- picked-exit single-choice UI;
-- room-template and reward editors required by the F fixture;
-- preboss editor;
+- Phase 3 simulation publication through the application composition root;
+- completeness, validity, and semantic-finding projection onto the existing F
+  editor;
 - project-level status and findings navigation;
-- undo/redo controls and keyboard shortcuts;
+- undo/redo keyboard shortcuts for the existing semantic history;
 - browser-local project load/save initially, with downloadable/uploadable JSON
   if direct filesystem access is not yet present.
 
@@ -374,8 +380,8 @@ Candidate simulation is not required until selected-plan validation is stable.
 
 - candidate evaluation using shared materializers and validators;
 - context-invalid option decoration;
-- complete F template coverage;
-- G catalog and simulation coverage using the shared linear foundation;
+- complete F candidate-projection coverage across every room template;
+- G simulation coverage using the shared linear foundation;
 - G's neutral `G_Boss01`/`G_PostBoss01` completion sequence and resolved boss-
   offer store-history contribution;
 - G editor activation;

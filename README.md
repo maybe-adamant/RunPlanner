@@ -31,10 +31,11 @@ cross-biome design reconciliation are complete. P, Q, H, O, I, and N close the
 linear, scripted-linear, batch-local-slot, ordered multi-encounter,
 conditional-terminal, and persistent-hub pressure tests.
 
-Phase 2.75 is now active. It hardens the shared catalog vocabulary, switches
-F/G atomically to schema version 2 store ownership and entry-materialized
-shops, and imports the remaining biomes as dormant declarations. Phase 3
-history work starts only after that catalog and authored-schema gate passes.
+Phase 2.6 is now active. It builds the audited reward kernel as an unconnected
+pure subsystem. Phase 2.7 then switches F/G atomically to schema version 2,
+and Phase 2.8 hardens the shared structural vocabulary and imports the
+remaining biomes as dormant declarations. Phase 3 history work starts only
+after all three gates pass.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.
@@ -63,44 +64,47 @@ graph projection, but it will never own topology or node identity.
    package dependencies, lifecycle, and technology responsibilities.
 2. [`docs/CATALOG_MODEL.md`](docs/CATALOG_MODEL.md) defines declaration
    families, source evidence, normalization, and supported game-rule scope.
-3. [`docs/REWARD_MODEL.md`](docs/REWARD_MODEL.md) defines reward primitives,
-   payloads, counted bags, producer bindings, shops, and reward lifecycle
-   semantics.
-4. [`docs/GAME_GENERATION_RULES.md`](docs/GAME_GENERATION_RULES.md) defines
+3. [`docs/REWARD_MODEL.md`](docs/REWARD_MODEL.md) defines reward types, resolved
+   offers, offer projections, counted bags, concrete acquisitions, history
+   projections, producer bindings, shops, and reward lifecycle semantics.
+4. [`docs/REWARD_GAME_DATA_AUDIT.md`](docs/REWARD_GAME_DATA_AUDIT.md) records
+   the game evidence and exact, simplified, deferred, or excluded disposition
+   behind the reward model.
+5. [`docs/GAME_GENERATION_RULES.md`](docs/GAME_GENERATION_RULES.md) defines
    shared picker, door, cap, force, lifecycle, and generated-decision rules.
-5. [`docs/biomes/F_GAME_RULES.md`](docs/biomes/F_GAME_RULES.md) defines Erebus game behavior,
+6. [`docs/biomes/F_GAME_RULES.md`](docs/biomes/F_GAME_RULES.md) defines Erebus game behavior,
    projection decisions, and current feature coverage.
-6. [`docs/biomes/G_GAME_RULES.md`](docs/biomes/G_GAME_RULES.md) defines Oceanus game behavior,
+7. [`docs/biomes/G_GAME_RULES.md`](docs/biomes/G_GAME_RULES.md) defines Oceanus game behavior,
    projection decisions, and current feature coverage.
-7. [`docs/biomes/P_GAME_RULES.md`](docs/biomes/P_GAME_RULES.md) pressure-tests that model
+8. [`docs/biomes/P_GAME_RULES.md`](docs/biomes/P_GAME_RULES.md) pressure-tests that model
    against P and defines the dormant P declaration contract.
-8. [`docs/biomes/Q_GAME_RULES.md`](docs/biomes/Q_GAME_RULES.md) defines Q's scripted stages,
+9. [`docs/biomes/Q_GAME_RULES.md`](docs/biomes/Q_GAME_RULES.md) defines Q's scripted stages,
    independently generated miniboss peers, reward-free spine, and repeat-run
    completion contract.
-9. [`docs/biomes/H_GAME_RULES.md`](docs/biomes/H_GAME_RULES.md) defines H's cage batches,
-   bridge competition, encounter multiplicity, and Fields reward projection.
-10. [`docs/biomes/O_GAME_RULES.md`](docs/biomes/O_GAME_RULES.md) defines O's ship encounter
+10. [`docs/biomes/H_GAME_RULES.md`](docs/biomes/H_GAME_RULES.md) defines H's cage batches,
+    bridge competition, encounter multiplicity, and Fields reward projection.
+11. [`docs/biomes/O_GAME_RULES.md`](docs/biomes/O_GAME_RULES.md) defines O's ship encounter
     phases, reward wheels, source-derived outgoing stores, and special rooms.
-11. [`docs/biomes/I_GAME_RULES.md`](docs/biomes/I_GAME_RULES.md) defines Clockwork Goal and
+12. [`docs/biomes/I_GAME_RULES.md`](docs/biomes/I_GAME_RULES.md) defines Clockwork Goal and
     non-goal acquisition, special peers, and repeated mixed preboss batches.
-12. [`docs/biomes/N_GAME_RULES.md`](docs/biomes/N_GAME_RULES.md) defines Ephyra's fixed
+13. [`docs/biomes/N_GAME_RULES.md`](docs/biomes/N_GAME_RULES.md) defines Ephyra's fixed
     entry, persistent hub board, ordered pylon visits, side rooms, and terminal
     shop effects.
-13. [`docs/biomes/F_G_ROOM_TEMPLATES.md`](docs/biomes/F_G_ROOM_TEMPLATES.md) defines the
+14. [`docs/biomes/F_G_ROOM_TEMPLATES.md`](docs/biomes/F_G_ROOM_TEMPLATES.md) defines the
     app-native leaf contracts shared by F/G room declarations.
-14. [`docs/AUTHORED_PROJECT_MODEL.md`](docs/AUTHORED_PROJECT_MODEL.md) defines
+15. [`docs/AUTHORED_PROJECT_MODEL.md`](docs/AUTHORED_PROJECT_MODEL.md) defines
     persisted project state, topology ownership, identities, and edit commands.
-15. [`docs/SIMULATION_AND_VALIDATION.md`](docs/SIMULATION_AND_VALIDATION.md)
+16. [`docs/SIMULATION_AND_VALIDATION.md`](docs/SIMULATION_AND_VALIDATION.md)
     defines the pure derived pipeline, history, counters, validation, and
     findings.
-16. [`docs/EDITOR_MODEL.md`](docs/EDITOR_MODEL.md) maps authored and derived
+17. [`docs/EDITOR_MODEL.md`](docs/EDITOR_MODEL.md) maps authored and derived
     state into the external editor without leaking UI structure into the
     domain.
-17. [`docs/GAME_INTEGRATION_BOUNDARY.md`](docs/GAME_INTEGRATION_BOUNDARY.md)
+18. [`docs/GAME_INTEGRATION_BOUNDARY.md`](docs/GAME_INTEGRATION_BOUNDARY.md)
     records the intentionally deferred app/game contract and conformance loop.
-18. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) defines the
+19. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) defines the
     development order and acceptance gates.
-19. [`docs/MIGRATION_PROVENANCE.md`](docs/MIGRATION_PROVENANCE.md) tracks the
+20. [`docs/MIGRATION_PROVENANCE.md`](docs/MIGRATION_PROVENANCE.md) tracks the
     disposition and implementation status of inherited evidence.
 
 These documents are one coherent design set. A rule belongs in exactly one
@@ -174,7 +178,7 @@ fixtures, the app's catalog and simulator become its implementation authority.
 
 ## Current Scope
 
-The first active product slice remains F with shared F/G foundations:
+The first complete product slice targets F with shared F/G foundations:
 
 - explicit declarations;
 - authored linear-biome topology;

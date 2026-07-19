@@ -199,7 +199,7 @@ The canonical event order for every active counting phase is:
 encounter.start
   -> biomeEncounterDepth += 1
   -> wheel store selected
-  -> one or two concrete rewards offered
+  -> one or two resolved reward offers
   -> one wheel choice selected
   -> combat
   -> selected reward spawned and acquired
@@ -219,7 +219,7 @@ phase can make its own room newly eligible after entry.
 Each active wheel owns:
 
 - one selected `RunProgress` or `MetaProgress` store;
-- one or two complete concrete reward offers;
+- one or two complete resolved reward offers;
 - one picked offer index.
 
 All offers on one wheel share its selected store. They consume one shared

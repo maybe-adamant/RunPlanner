@@ -124,7 +124,9 @@ The catalog contains at least:
 - room-template descriptors;
 - encounter profiles and phase descriptors;
 - local child-slot descriptors;
-- reward primitives and payload domains;
+- reward types, payload domains, and offer projections;
+- reward source-support policies and semantic resolution points;
+- concrete acquisition declarations and history projections;
 - reward stores and counted bags;
 - reward producer bindings and filters;
 - shop profiles;
@@ -231,8 +233,9 @@ completion.
 
 Declarations include only game facts consumed by a canonical product surface.
 Automatic boss-specific and weapon-dependent drops are documented evidence but
-do not require reward primitives or acquisition projection while no current
-validator, simulator rule, editor, or execution instruction consumes them.
+do not require reward types, concrete acquisition declarations, or history
+projections while no current validator, simulator rule, editor, or execution
+instruction consumes them.
 
 Reward-store history policy is explicit because visible reward kind is not
 enough to infer it. A generated fixed Story or Shop can record the store
@@ -291,22 +294,55 @@ Reward declarations compose bottom-up:
 
 ```text
 payload domain
-  -> primitive
-  -> store / counted bag / fixed source
+  -> reward type
+  -> resolved reward offer
+  -> store entry / fixed source / shop option
+  -> counted bag / shop group
   -> producer binding and filters
   -> offer point or room template
+
+resolved reward offer + offer point
+  -> generic offer event + optional reward-type offer projection
+
+resolved reward offer + reward-type acquisition roles + producer lifecycle
+  -> concrete acquisition event
+  -> history projection
 
 biome store policy + room store override
   -> generated-batch and target store resolution
 ```
 
-A primitive owns its game identity, label, acquisition projection, payload
-domain, and complete payload default. The acquisition projection explicitly
-states whether history receives the primitive identity, one payload source, or
-several payload sources. A store owns its option domain and default primitive.
+A reward type owns its picker/offer identity, label, payload domain, complete
+offer default, optional offer projection, optional source-support policy and
+resolution point, and named acquisition roles. Each role uses the closed self,
+fixed, or typed-payload-source resolver vocabulary. A store entry separately
+owns multiplicity position, requirements, duplicate policy, and the reward type
+it can resolve. A resolved offer retains that reward type and its complete
+payload.
+
+Source support uses a closed registry rather than reward-name switches. The
+initial policies are `ordinaryBoonPeer`, `ordinaryNoPeer`, and
+`devotionAcquiredPair`. Their declared resolution point determines whether
+support is checked while materializing the offer or at one addressed
+acquisition role. Catalog normalization rejects a source-bearing payload with
+no policy or a policy paired with an incompatible resolution point.
+
+An offer projection owns reward-type-specific current-run writes caused by
+materializing an offer. The initial vocabulary contains only
+`devotionSpacing`; common offer history, counted-entry consumption, and peer
+constraints remain offer-point behavior rather than repeated declaration data.
+
+A concrete acquisition declaration owns one most-concrete game identity and
+its typed game-history projection. Producer and encounter declarations bind
+reward-type acquisition roles to explicit lifecycle points. Blind Box retains
+its authored source while validating and emitting it only after purchase.
+Acquisition history changes only when the corresponding concrete acquisition
+event occurs. No declaration uses a generic `acquiredAs` alias.
+
 Counted bags preserve declaration order, multiplicity, entry-level
-requirements, and entry-level duplicate policy. Shops use shop profiles rather
-than counted bags.
+requirements, and entry-level duplicate policy. The shared picker owns any
+refill behavior. Shops use ordered shop groups with offer counts and per-option
+requirements rather than counted bags.
 
 Producer bindings select stores, fixed sources, shop profiles, and positive or
 negative filters. A filtered variant does not automatically become a new named
@@ -397,6 +433,18 @@ Catalog construction must verify:
 - encounter phases and local slots have unique stable keys;
 - requirement trees are typed and supported at their contacts;
 - reward sources, filters, payloads, and defaults agree;
+- every source-bearing payload selects a registered source-support policy and
+  compatible offer- or acquisition-role resolution point;
+- counted entries declare duplicate behavior and shops declare valid
+  without-replacement group cardinality;
+- every offer projection selects a registered closed semantic kind;
+- concrete acquisition history projections reference valid ledgers;
+- every producer lifecycle binding references a role declared by the reward
+  type, and every role resolves a valid fixed, self, or typed payload-derived
+  concrete acquisition;
+- every supported concrete acquisition selects exactly one audited
+  `lootAndUse` or `consumableAndUse` projection profile independently of its
+  acquisition kind;
 - declaration order is explicit wherever simulation consumes order;
 - layout bounds can contain every supported authored structure;
 - every fixed-completion reference resolves to a derived room in the same
@@ -442,7 +490,8 @@ proof:
 - `LinearBiome` layout metadata;
 - opening, standard combat, miniboss, story, fountain, midshop, and terminal
   templates used by F/G;
-- required reward primitives, payloads, stores, bags, bindings, and shops;
+- required reward types, payloads, concrete acquisitions, stores, bags,
+  bindings, and shops;
 - required encounter profiles;
 - eligibility, force, and cap evaluators exercised by F/G;
 - explicit labels and recursive defaults.
@@ -451,7 +500,7 @@ Do not declare later biomes fully supported through placeholders. Their route
 identity may exist while their catalog capability remains inactive.
 
 The verified H/I/N/O/P/Q game-rule audits and cross-biome reconciliation are
-complete. Phase 2.75 imports their declaration-only catalog slices in the
+complete. Phase 2.8 imports their declaration-only catalog slices in the
 documented pressure-test order. Those slices may extend normalized catalog
 vocabulary when concrete game facts require it, but they remain inactive until
 their authored topology, simulator, validation, and editor loop is complete.

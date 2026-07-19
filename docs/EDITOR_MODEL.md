@@ -24,7 +24,7 @@ repair, or silently delete them merely to keep the view visually legal.
 
 The batch-level Reward Pool projection described below follows the locked
 F/G/P/Q/H/O/I-compatible schema version 2 contract. Production remains on the
-older representation until the Phase 2.75 atomic authority switch.
+older representation until the Phase 2.7 atomic authority switch.
 
 ## Application Shell
 
@@ -223,21 +223,27 @@ Reward composition remains bottom-up:
 
 ```text
 payload domain
-  -> reward primitive
+  -> reward type and complete resolved-offer default
   -> counted store domain or fixed binding
-  -> batch-resolved offer / shop / room-local offer point
+  -> batch-resolved reward offer / shop / room-local offer point
   -> room template
 ```
 
 A parent selection immediately installs the selected child's complete declared
 defaults. The UI never commits an intermediate empty payload or reward.
 
+Blind Box deliberately exposes its intended eventual Boon source as planner
+intent even though the in-game shop hides that result. The editor labels it as
+an eventual result, not as visible shop information. An unpurchased box retains
+the complete source payload dormantly; contextual validation does not require
+that source to be possible until purchase.
+
 Every ordinary generated decision projects its store according to policy. An
 `authoredBaseStore` batch renders one batch-owned `Reward Pool` selector for
 its `baseRewardStoreKey`. A `sourceOfferPoint` batch renders that store only at
 its owning room-local offer point; the outgoing batch may show derived
 provenance but exposes no second editor. A `none` batch renders no placeholder
-store field. Each target room then renders only its concrete reward editor. A
+store field. Each target room then renders only its resolved-offer editor. A
 declaration-forced target may display the derived pool as read-only context,
 but it does not gain another persisted store selector. This keeps batch,
 declaration, and leaf ownership visible in the UI.
@@ -312,7 +318,8 @@ history entry, including compound default installation.
 Expected examples:
 
 - replacing a room is one undo step;
-- selecting a reward primitive and its default payload is one undo step;
+- selecting a reward type and installing its complete offer payload is one undo
+  step;
 - removing a decision and its downstream topology is one undo step;
 - clearing a biome is one undo step;
 - navigation and panel expansion are not undoable project edits.

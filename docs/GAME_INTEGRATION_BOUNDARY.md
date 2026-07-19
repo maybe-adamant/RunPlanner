@@ -122,9 +122,9 @@ would otherwise change modeled history:
 - Anomaly replacement;
 - persistent NPC encounter substitution.
 
-The future game module must disable both unless a later schema explicitly
-represents them. Observing either during a v1 trace is a conformance mismatch,
-not permission for the runtime to reinterpret the plan.
+The future game module must disable all three unless a later schema explicitly
+represents them. Observing any of them during a v1 trace is a conformance
+mismatch, not permission for the runtime to reinterpret the plan.
 
 Challenges, wells, gathering points, and rerolls use a no-action contract
 instead. They may exist in the world, but the traced player never activates a

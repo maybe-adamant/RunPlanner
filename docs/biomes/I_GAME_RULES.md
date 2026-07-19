@@ -237,7 +237,7 @@ therefore resolves the same declaration-owned forced-store override. I
 generated batches do not select RunProgress versus MetaProgress and their
 normalized batch-store policy is `none`; there is no otherwise-observable base
 store to author. `none` does not mean a counted target lacks provenance: its
-Room Declaration resolves `TartarusRewards` before its concrete offer is
+Room Declaration resolves `TartarusRewards` before its resolved offer is
 validated.
 
 `BaseI.TargetMetaRewardsRatio = 0.25` can still make the game compute an
@@ -448,7 +448,7 @@ The later dormant I declaration slice must add:
 3. all 24 supported combat declarations with exact physical exits;
 4. the two-exit Clockwork capacity predicate and `I_Combat24` BDC ceiling;
 5. fixed `TartarusRewards` store ownership, exact room filters, and one dormant-
-   capable concrete reward leaf per combat occurrence;
+   capable complete resolved-offer leaf per combat occurrence;
 6. derived Goal/NonGoal realization from physical offer order with no authored
    discriminant;
 7. entered-producer-driven Goal and non-goal counters with their exact spawn
