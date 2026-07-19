@@ -61,6 +61,12 @@ const underworld = {
   biomeKeys: ['F'],
 } as const satisfies RouteDeclaration;
 
+const alternate = {
+  key: 'Alternate',
+  label: 'Alternate',
+  biomeKeys: ['F'],
+} as const satisfies RouteDeclaration;
+
 const boonSource = {
   key: 'BoonSource',
   kind: 'oneOf',
@@ -345,6 +351,11 @@ const catalog: Catalog = {
   biomeLayouts: collection([layout], (biome) => biome.biomeKey),
 };
 
+const reusedBiomeCatalog: Catalog = {
+  ...catalog,
+  routes: collection([underworld, alternate], (route) => route.key),
+};
+
 const biome = createBiomeAddress('Underworld', 'F');
 const startId = createOccurrenceId('start');
 
@@ -417,6 +428,43 @@ describe('project semantic addresses', () => {
     expect(() => createOccurrenceId(' ')).toThrowError(
       new SemanticAddressContractError('occurrenceId', 'must not be blank'),
     );
+  });
+
+  it('isolates reused biome placements by route key', () => {
+    const sharedOccurrenceId = createOccurrenceId('shared-start');
+    const alternateBiome = createBiomeAddress('Alternate', 'F');
+    let project = createProjectDocument(reusedBiomeCatalog, {
+      projectId: 'reused-biome-project',
+      name: 'Reused Biome Project',
+      configuredBiomeCounts: { Underworld: 1, Alternate: 1 },
+    });
+
+    project = applyProjectCommand(project, reusedBiomeCatalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: sharedOccurrenceId,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, reusedBiomeCatalog, {
+      kind: 'CreateStart',
+      biome: alternateBiome,
+      occurrenceId: sharedOccurrenceId,
+      gameName: 'F_Opening02',
+    });
+    project = applyProjectCommand(project, reusedBiomeCatalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(alternateBiome, sharedOccurrenceId),
+      gameName: 'F_OpeningThreeExit',
+    });
+
+    expect(project.routes[0]?.biomes[0]?.topology?.occurrences[0]).toMatchObject({
+      occurrenceId: sharedOccurrenceId,
+      gameName: 'F_Opening01',
+    });
+    expect(project.routes[1]?.biomes[0]?.topology?.occurrences[0]).toMatchObject({
+      occurrenceId: sharedOccurrenceId,
+      gameName: 'F_OpeningThreeExit',
+    });
   });
 });
 
