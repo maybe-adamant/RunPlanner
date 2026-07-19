@@ -22,6 +22,7 @@ import {
   parseAuthorableProjectDocument,
 } from './projectDocuments';
 import { createPlannerStore } from './store';
+import { ordinaryRoomCategories, selectRoomsForCategory } from './roomSelectorProjection';
 
 function catalogWithDormantH(): Catalog {
   const gLayout = declarations.biomeLayouts.find(
@@ -92,6 +93,33 @@ function catalogWithDormantH(): Catalog {
   } as CatalogInput);
 }
 
+function catalogBeforePImport(): Catalog {
+  return createCatalog({
+    ...declarations,
+    version: '0.3.0-fg-structure-v2',
+    encounterProfiles: declarations.encounterProfiles.filter(
+      (profile) =>
+        !['OlympusCombat', 'P_MiniBoss01', 'P_MiniBoss02', 'P_Boss01', 'P_PostBoss01'].includes(
+          profile.key,
+        ),
+    ),
+    exitCompatibilityPolicies: declarations.exitCompatibilityPolicies.filter(
+      (policy) => !['TargetOutdoor', 'OutdoorSourceTargetsIndoor'].includes(policy.key),
+    ),
+    exitTypes: declarations.exitTypes.filter(
+      (exitType) => !['OlympusOutdoorExitDoor', 'OlympusIndoorExitDoor'].includes(exitType.key),
+    ),
+    rooms: declarations.rooms.filter((room) => room.biomeStepKey !== 'Surface_P'),
+    biomeLayouts: declarations.biomeLayouts.filter((layout) => layout.biomeStepKey !== 'Surface_P'),
+  } as CatalogInput);
+}
+
+function fSelectorProjection(candidateCatalog: Catalog): readonly string[] {
+  return ordinaryRoomCategories
+    .flatMap((category) => selectRoomsForCategory(candidateCatalog, 'Underworld_F', category))
+    .map((room) => `${room.kind}:${room.gameName}:${room.label}`);
+}
+
 describe('planner capabilities', () => {
   it('derives declared capability from the catalog and keeps active capabilities explicit', () => {
     const capabilities = createApplicationCapabilities(catalog);
@@ -108,6 +136,13 @@ describe('planner capabilities', () => {
         biomeStepKey: 'Underworld_G',
         declared: true,
         authorable: true,
+        simulatable: false,
+        editable: false,
+      },
+      {
+        biomeStepKey: 'Surface_P',
+        declared: true,
+        authorable: false,
         simulatable: false,
         editable: false,
       },
@@ -191,6 +226,28 @@ describe('planner capabilities', () => {
     ).toThrowError(
       new PlannerCapabilityContractError('command.ClearTopology', 'Underworld_H is not authorable'),
     );
+  });
+
+  it('keeps P dormant and leaves the F smoke project and selector projection unchanged', () => {
+    const preImportCatalog = catalogBeforePImport();
+    const preImportCapabilities = createApplicationCapabilities(preImportCatalog);
+    const capabilities = createApplicationCapabilities(catalog);
+    const preImportProject = createFEditorSmokeProject(preImportCatalog, preImportCapabilities);
+    const project = createFEditorSmokeProject(catalog, capabilities);
+    const navigation = createEditorNavigation(catalog, capabilities);
+
+    expect(capabilities.byBiomeStepKey.Surface_P).toEqual({
+      biomeStepKey: 'Surface_P',
+      declared: true,
+      authorable: false,
+      simulatable: false,
+      editable: false,
+    });
+    expect(navigation.routes.Surface?.biomePanels).toEqual([]);
+    expect({ ...project, catalogVersion: preImportProject.catalogVersion }).toEqual(
+      preImportProject,
+    );
+    expect(fSelectorProjection(catalog)).toEqual(fSelectorProjection(preImportCatalog));
   });
 });
 

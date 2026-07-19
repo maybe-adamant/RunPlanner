@@ -249,17 +249,17 @@ been replaced by the occurrence-based conditional-terminal contract in
 
 ## P Migration
 
-| Family                         | Status   | Primary evidence                                                              | Port action                                                                                                                      |
-| ------------------------------ | -------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| P layout and terminal depth    | ready    | `RoomDataP.lua`, `biomes/P_GAME_RULES.md`                                     | Add the fixed intro, nine-batch bound, and exact-depth-9 forked terminal without activating P simulation.                        |
-| P typed physical exits         | ready    | `ObstacleDataP.lua`, extracted map topology                                   | Add source tags and source-sensitive Indoor/Outdoor target compatibility before importing rooms.                                 |
-| P intro baseline               | ready    | `RoomDataP.lua`, P intro encounters                                           | Intentionally project optional non-counting, reward-free intro combat as the empty `FixedIntro`; exclude dream-run behavior.     |
-| P combat declarations          | ready    | `RoomSets.lua`, `RoomDataP.lua`                                               | Port all 19 rooms, exact tags/exits/counter requirements, and one intentionally collapsed counting Olympus combat profile.       |
-| P special rooms and minibosses | ready    | `RoomDataP.lua`, encounter declarations                                       | Port exact caps, requirements, force windows, rewards, and Talos/Dragon encounter-depth asymmetry.                               |
-| P forked preboss               | ready    | `RoomDataP.lua`, `RoomLogic.lua`, `biomes/P_GAME_RULES.md`                    | Reuse shop-then-fill with one free reward; predecessor exit count determines active terminal capacity.                           |
-| P fixed completion tail        | ready    | `RoomDataP.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/P_GAME_RULES.md` | Declare `P_Boss01` and `P_PostBoss01`, order them before `Q_Intro`, and retain only the resolved boss-offer store ledger effect. |
-| P persistent NPC variants      | deferred | P encounter sets and NPC encounter data                                       | Suppress unconfigured Heracles/Athena/Icarus variants; later entities compose into the spine before history.                     |
-| P simulation activation        | deferred | `biomes/P_GAME_RULES.md`                                                      | Requires validated N/O Surface history for reward-store support and other carried state.                                         |
+| Family                         | Status   | Primary evidence                                                              | Port action                                                                                                                |
+| ------------------------------ | -------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| P layout and terminal depth    | ported   | `RoomDataP.lua`, `biomes/P_GAME_RULES.md`                                     | Fixed intro, nine-batch bound, exact-depth-9 forked terminal, and ordered completion normalize without activating P.       |
+| P typed physical exits         | ported   | `ObstacleDataP.lua`, extracted map topology                                   | Source tags and source-sensitive Indoor/Outdoor target compatibility normalize without fake room-eligibility ranges.       |
+| P intro baseline               | ported   | `RoomDataP.lua`, P intro encounters                                           | Optional non-counting, reward-free intro combat is projected as empty `FixedIntro`; dream-run behavior is excluded.        |
+| P combat declarations          | ported   | `RoomSets.lua`, `RoomDataP.lua`                                               | All 19 rooms, exact tags/exits/real counter requirements, and one collapsed counting Olympus profile have parity fixtures. |
+| P special rooms and minibosses | ported   | `RoomDataP.lua`, encounter declarations                                       | Exact caps, requirements, force windows, rewards, and Talos/Dragon encounter-depth asymmetry normalize.                    |
+| P forked preboss               | ported   | `RoomDataP.lua`, `RoomLogic.lua`, `biomes/P_GAME_RULES.md`                    | Shop-then-fill normalizes with one free reward; predecessor exit count determines active terminal capacity.                |
+| P fixed completion tail        | ported   | `RoomDataP.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/P_GAME_RULES.md` | `P_Boss01` and `P_PostBoss01` are ordered before Q entry and only the resolved boss-offer store ledger effect remains.     |
+| P persistent NPC variants      | deferred | P encounter sets and NPC encounter data                                       | Suppress unconfigured Heracles/Athena/Icarus variants; later entities compose into the spine before history.               |
+| P simulation activation        | deferred | `biomes/P_GAME_RULES.md`                                                      | Requires validated N/O Surface history for reward-store support and other carried state.                                   |
 
 ## Q Migration
 

@@ -22,7 +22,7 @@ function storeRewardTypes(store: { readonly entries: readonly { readonly rewardT
 
 describe('F catalog migration slice', () => {
   it('normalizes verified reward, encounter, and room declarations', () => {
-    expect(catalog.version).toBe('0.3.0-fg-structure-v2');
+    expect(catalog.version).toBe('0.4.0-p-dormant');
     expect(catalog.routes.byKey.Underworld?.biomeSteps.map((step) => step.key)).toEqual([
       'Underworld_F',
       'Underworld_G',

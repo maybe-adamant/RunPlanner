@@ -11,9 +11,9 @@ Phases 0, 1, 2, 2.5, 2.6, and 2.7 are complete. Phases 0 through 2.5 were
 completed under the prior reward-store ownership model; Phase 2.6 added the
 audited reward kernel as an intentionally unconnected pure subsystem; Phase
 2.7 atomically made it the sole connected F/G reward authority under schema
-version 2. Phase 2.8 is the current frontier. Capability isolation and the
-shared structural/F/G reconciliation slices are complete; P/Q/H/O/I/N remain
-the dormant declaration imports required before Phase 3 begins.
+version 2. Phase 2.8 is the current frontier. Capability isolation, the shared
+structural/F/G reconciliation slice, and the dormant P declaration import are
+complete; Q/H/O/I/N remain before Phase 3 begins.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
 defines reusable single-room lifecycle profiles, occurrence-addressed history
@@ -48,8 +48,9 @@ empty-intro simplification, intentionally collapsed counting combat projection,
 miniboss encounter-depth asymmetry, forked preboss, and persistent-NPC
 composition boundary. The F, G, P, Q, H, O, I, and N rule documents now
 distinguish verified game behavior, modeling disposition, canonical
-projection, reconsideration trigger, and current feature coverage. Production
-P, Q, H, O, I, and N declarations have not yet been imported.
+projection, reconsideration trigger, and current feature coverage. P is now
+declaration-complete and dormant. Q, H, O, I, and N declarations have not yet
+been imported.
 
 `biomes/Q_GAME_RULES.md` records Q's declaration-driven scripted stages, real foyer
 variants, independently generated and repeatable miniboss peers, reward-free
@@ -506,10 +507,25 @@ Completed:
      unchanged;
    - synthetic fixtures cover every new closed discriminant plus valid dormant
      HubBiome, source-offer-point, no-store, typed-field, and local-child forms.
+3. dormant P declaration import:
+   - all 28 progressed-save, NPC-free room declarations normalize, including
+     all 19 concrete combat maps, specials, both minibosses, forked preboss,
+     and the derived Prometheus/postboss completion tail;
+   - Indoor/Outdoor room tags and Olympus physical exits resolve through
+     source-sensitive compatibility policies without fake indoor depth
+     eligibility;
+   - the intentionally empty intro and collapsed one-count Olympus combat
+     profiles preserve the chosen projection, while Talos remains non-counting
+     and Mega-Dracon counting;
+   - exact reward producers, filters, caps, current-run requirements, force
+     windows, counters, store-history policies, layout bounds, and completion
+     ownership are covered by parity fixtures;
+   - capability isolation keeps P non-authorable, non-simulatable, and
+     non-editable, and the F smoke project and selector projection remain
+     unchanged apart from catalog version.
 
 Pending:
 
-3. dormant P declaration import;
 4. dormant Q declaration import;
 5. dormant H declaration import;
 6. dormant O declaration import;

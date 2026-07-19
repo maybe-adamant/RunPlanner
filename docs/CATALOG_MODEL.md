@@ -522,6 +522,10 @@ The active Phase 2.8 matrix is:
 - F is editable;
 - no biome is simulatable.
 
+P is also declaration-complete in the normalized catalog, but it is not
+authorable, simulatable, or editable. Its presence proves that declaration
+coverage and product activation remain independent.
+
 Every active capability must reference a declared biome step, and every
 editable biome must also be authorable. Project creation and loading, semantic
 command dispatch, simulator dispatch once it exists, and editor navigation are
