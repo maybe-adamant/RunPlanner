@@ -3,18 +3,19 @@ import { exitCompatibilityPolicies, exitTypes } from './exits';
 import { biomeLayouts } from './layouts';
 import { fRooms } from './rooms/f';
 import { gRooms } from './rooms/g';
+import { pRooms } from './rooms/p';
 import { rewardKernelDeclarations } from '../rewardKernel/declarations';
 import { routes } from './routes';
 import type { RawCatalogInput } from './types';
 
 export const declarations = {
-  version: '0.3.0-fg-structure-v2',
+  version: '0.4.0-p-dormant',
   routes,
   rewardKernel: rewardKernelDeclarations,
   encounterProfiles,
   exitCompatibilityPolicies,
   exitTypes,
-  rooms: [...fRooms, ...gRooms],
+  rooms: [...fRooms, ...gRooms, ...pRooms],
   biomeLayouts,
 } as const satisfies RawCatalogInput;
 

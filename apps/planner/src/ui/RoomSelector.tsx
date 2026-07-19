@@ -1,7 +1,11 @@
-import type { Catalog, RoomDeclaration, RoomKind } from '@run-planner/core';
+import type { Catalog, RoomDeclaration } from '@run-planner/core';
 import { useState } from 'react';
 
-type OrdinaryRoomCategory = 'Combat' | 'Miniboss' | 'Story' | 'Fountain' | 'Shop';
+import {
+  roomCategoryForKind,
+  selectRoomsForCategory,
+  type OrdinaryRoomCategory,
+} from '../application/roomSelectorProjection';
 
 interface RoomSelectorProps {
   readonly biomeStepKey: string;
@@ -20,41 +24,6 @@ const categories: readonly { readonly key: OrdinaryRoomCategory; readonly label:
   { key: 'Shop', label: 'Shop' },
 ];
 
-function categoryForKind(kind: RoomKind): OrdinaryRoomCategory | undefined {
-  switch (kind) {
-    case 'Combat':
-    case 'Miniboss':
-    case 'Shop':
-    case 'Story':
-      return kind;
-    case 'Reprieve':
-      return 'Fountain';
-    case 'Intro':
-    case 'Opening':
-    case 'Preboss':
-    case 'Boss':
-    case 'Hub':
-    case 'PostBoss':
-      return undefined;
-  }
-}
-
-function categoryRooms(
-  catalog: Catalog,
-  biomeStepKey: string,
-  category: OrdinaryRoomCategory,
-): readonly RoomDeclaration[] {
-  return catalog.rooms.values.filter((room) => {
-    if (room.biomeStepKey !== biomeStepKey) {
-      return false;
-    }
-    if (room.mode.kind !== 'authored') {
-      return false;
-    }
-    return categoryForKind(room.kind) === category;
-  });
-}
-
 export function RoomSelector({
   biomeStepKey,
   catalog,
@@ -63,10 +32,10 @@ export function RoomSelector({
   idPrefix,
   onSelect,
 }: RoomSelectorProps) {
-  const currentCategory = current === undefined ? undefined : categoryForKind(current.kind);
+  const currentCategory = current === undefined ? undefined : roomCategoryForKind(current.kind);
   const [category, setCategory] = useState<OrdinaryRoomCategory | ''>(currentCategory ?? '');
-  const rooms = category === '' ? [] : categoryRooms(catalog, biomeStepKey, category);
-  const currentInCategory = current !== undefined && categoryForKind(current.kind) === category;
+  const rooms = category === '' ? [] : selectRoomsForCategory(catalog, biomeStepKey, category);
+  const currentInCategory = current !== undefined && roomCategoryForKind(current.kind) === category;
 
   return (
     <div className="room-selector">

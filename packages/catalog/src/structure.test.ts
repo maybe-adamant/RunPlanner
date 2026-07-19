@@ -18,33 +18,14 @@ function roomIndex(gameName: string): number {
 
 describe('shared structural catalog vocabulary', () => {
   it('normalizes typed physical exits through one compatibility authority', () => {
-    const catalog = createCatalog(
-      raw({
-        ...declarations,
-        exitCompatibilityPolicies: [
-          ...declarations.exitCompatibilityPolicies,
-          { key: 'OutdoorTarget', kind: 'targetHasTag', targetTag: 'Outdoor' },
-          {
-            key: 'IndoorFromOutdoor',
-            kind: 'sourceTagRequiresTargetTag',
-            sourceTag: 'Outdoor',
-            targetTag: 'Indoor',
-          },
-        ],
-        exitTypes: [
-          ...declarations.exitTypes,
-          { key: 'OlympusOutdoorExitDoor', compatibilityPolicyKey: 'OutdoorTarget' },
-          { key: 'OlympusIndoorExitDoor', compatibilityPolicyKey: 'IndoorFromOutdoor' },
-        ],
-      }),
-    );
+    const catalog = createCatalog(declarations);
 
     expect(catalog.exitTypes.byKey.OlympusOutdoorExitDoor).toEqual({
       key: 'OlympusOutdoorExitDoor',
-      compatibilityPolicyKey: 'OutdoorTarget',
+      compatibilityPolicyKey: 'TargetOutdoor',
     });
-    expect(catalog.exitCompatibilityPolicies.byKey.IndoorFromOutdoor).toEqual({
-      key: 'IndoorFromOutdoor',
+    expect(catalog.exitCompatibilityPolicies.byKey.OutdoorSourceTargetsIndoor).toEqual({
+      key: 'OutdoorSourceTargetsIndoor',
       kind: 'sourceTagRequiresTargetTag',
       sourceTag: 'Outdoor',
       targetTag: 'Indoor',
@@ -278,21 +259,23 @@ describe('shared structural catalog vocabulary', () => {
                   },
                 },
               }
-            : {
-                ...layout,
-                continuation: {
-                  ...layout.continuation,
-                  progressionPolicy: {
-                    kind: 'staged',
-                    stages: [
-                      {
-                        key: 'openingCombat',
-                        roomGameNames: ['G_Combat01', 'G_Combat02'],
-                      },
-                    ],
+            : layout.biomeStepKey === 'Underworld_G'
+              ? {
+                  ...layout,
+                  continuation: {
+                    ...layout.continuation,
+                    progressionPolicy: {
+                      kind: 'staged',
+                      stages: [
+                        {
+                          key: 'openingCombat',
+                          roomGameNames: ['G_Combat01', 'G_Combat02'],
+                        },
+                      ],
+                    },
                   },
-                },
-              },
+                }
+              : layout,
         ),
       }),
     );
