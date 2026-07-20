@@ -11,8 +11,9 @@ import type {
 } from '../materialization';
 import type {
   FForcePressureLedgerEntry,
-  FGenerationExclusionReason,
   FRoomGenerationValidation,
+  FRoomTargetCandidateValidation,
+  RoomGenerationExclusionReason,
 } from './model';
 import type { FindingEvidence, SemanticFinding } from '../model';
 
@@ -27,7 +28,7 @@ type ForceSupport = 'none' | 'optional' | 'required';
 
 interface CandidateEvaluation {
   readonly room: RoomDeclaration;
-  readonly reasons: readonly FGenerationExclusionReason[];
+  readonly reasons: readonly RoomGenerationExclusionReason[];
   readonly forceSupport: ForceSupport;
 }
 
@@ -211,7 +212,7 @@ function evaluateCandidate(
   room: RoomDeclaration,
   context: RequirementEvaluationContext,
 ): CandidateEvaluation {
-  const reasons: FGenerationExclusionReason[] = [];
+  const reasons: RoomGenerationExclusionReason[] = [];
   if (room.force !== undefined) {
     assertFGenerationForce(room.force);
   }
@@ -370,24 +371,22 @@ function assertTargetHistoryMatches(
   }
 }
 
-function validateTarget(
+function evaluateTargetGameName(
   catalog: Catalog,
   pool: readonly RoomDeclaration[],
   source: CanonicalAuthoredRoom,
-  target: CanonicalTarget,
+  targetOrigin: CanonicalTarget['origin'],
+  exit: CanonicalPhysicalExit,
   view: FTargetGenerationView,
-): {
-  readonly pressure: FForcePressureLedgerEntry;
-  readonly findings: readonly SemanticFinding[];
-} {
+  selectedGameName: string,
+): FRoomTargetCandidateValidation {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
     throw new FRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
-  assertTargetHistoryMatches(source, target, view);
   const context = projectFRoomGenerationRequirementContext(source, sourceDeclaration, view.before);
   const candidates = pool.map((room) =>
-    evaluateCandidate(catalog, source, sourceDeclaration, target.exit, view.before, room, context),
+    evaluateCandidate(catalog, source, sourceDeclaration, exit, view.before, room, context),
   );
   const eligible = candidates.filter((candidate) => candidate.reasons.length === 0);
   const optional = eligible.filter((candidate) => candidate.forceSupport === 'optional');
@@ -396,23 +395,23 @@ function validateTarget(
     required.length === 0
       ? eligible
       : eligible.filter((candidate) => candidate.forceSupport !== 'none');
-  const selected = candidates.find((candidate) => candidate.room.gameName === target.room.gameName);
-  const reasons = [...(selected?.reasons ?? ['notCandidate'])] as FGenerationExclusionReason[];
+  const selected = candidates.find((candidate) => candidate.room.gameName === selectedGameName);
+  const reasons = [...(selected?.reasons ?? ['notCandidate'])] as RoomGenerationExclusionReason[];
   if (selected !== undefined && selected.reasons.length === 0 && !support.includes(selected)) {
     reasons.push('forcedPool');
   }
   const selectedPossible = selected !== undefined && support.includes(selected);
   const pressure: FForcePressureLedgerEntry = Object.freeze({
-    targetOrigin: target.origin,
+    targetOrigin,
     beforeSequence: view.before.sequence,
     sourceGameName: source.gameName,
-    selectedGameName: target.room.gameName,
-    exitIndex: target.origin.exitIndex,
+    selectedGameName,
+    exitIndex: targetOrigin.exitIndex,
     biomeDepthCache: view.before.ledgers.counters.biomeDepthCache,
     biomeEncounterDepth: view.before.ledgers.counters.biomeEncounterDepth,
-    selectedCreationCount: creationCount(view.before, target.room.gameName),
-    selectedAppearanceCount: appearanceCount(view.before, target.room.gameName),
-    selectedParentCreationCount: creationCount(view.before, target.room.gameName, source.origin),
+    selectedCreationCount: creationCount(view.before, selectedGameName),
+    selectedAppearanceCount: appearanceCount(view.before, selectedGameName),
+    selectedParentCreationCount: creationCount(view.before, selectedGameName, source.origin),
     eligibleRoomGameNames: Object.freeze(eligible.map((candidate) => candidate.room.gameName)),
     optionalForcedRoomGameNames: Object.freeze(
       optional.map((candidate) => candidate.room.gameName),
@@ -426,12 +425,31 @@ function validateTarget(
   });
   const findings: SemanticFinding[] = [];
   if (support.length === 0) {
-    findings.push(finding('targetRoomSupportEmpty', target.origin, selectedEvidence(pressure)));
+    findings.push(finding('targetRoomSupportEmpty', targetOrigin, selectedEvidence(pressure)));
   }
   if (!selectedPossible) {
-    findings.push(finding('targetRoomUnavailable', target.origin, selectedEvidence(pressure)));
+    findings.push(finding('targetRoomUnavailable', targetOrigin, selectedEvidence(pressure)));
   }
   return Object.freeze({ pressure, findings: Object.freeze(findings) });
+}
+
+function validateTarget(
+  catalog: Catalog,
+  pool: readonly RoomDeclaration[],
+  source: CanonicalAuthoredRoom,
+  target: CanonicalTarget,
+  view: FTargetGenerationView,
+): FRoomTargetCandidateValidation {
+  assertTargetHistoryMatches(source, target, view);
+  return evaluateTargetGameName(
+    catalog,
+    pool,
+    source,
+    target.origin,
+    target.exit,
+    view,
+    target.room.gameName,
+  );
 }
 
 function requireSource(
@@ -514,4 +532,55 @@ export function evaluateFRoomGeneration(
     forcePressure: Object.freeze(pressure),
     findings: Object.freeze(findings),
   });
+}
+
+export function evaluateFRoomTargetCandidate(
+  catalog: Catalog,
+  snapshot: CanonicalLinearBiome,
+  history: CanonicalFHistory,
+  targetOrigin: CanonicalTarget['origin'],
+  gameName: string,
+): FRoomTargetCandidateValidation {
+  if (
+    snapshot.biomeKey !== 'F' ||
+    history.biomeKey !== 'F' ||
+    snapshot.routeKey !== history.routeKey ||
+    targetOrigin.routeKey !== snapshot.routeKey ||
+    targetOrigin.biomeKey !== snapshot.biomeKey
+  ) {
+    throw new FRoomGenerationContractError(
+      'F candidate generation inputs do not share one biome owner',
+    );
+  }
+  const batch = snapshot.batches.find(
+    (candidate) =>
+      candidate.parent.origin.occurrenceId === targetOrigin.parentOccurrenceId &&
+      candidate.targets.some((target) => target.origin.exitIndex === targetOrigin.exitIndex),
+  );
+  const target = batch?.targets.find(
+    (candidate) => candidate.origin.exitIndex === targetOrigin.exitIndex,
+  );
+  if (batch === undefined || target === undefined) {
+    throw new FRoomGenerationContractError(
+      `target ${semanticAddressKey(targetOrigin)} is not an ordinary F batch target`,
+    );
+  }
+  const rooms = authoredRooms(snapshot);
+  const source = requireSource(rooms, batch.parent.origin);
+  const view = targetGenerationViews(history).get(semanticAddressKey(targetOrigin));
+  if (view === undefined) {
+    throw new FRoomGenerationContractError(
+      `target ${semanticAddressKey(targetOrigin)} has no history generation view`,
+    );
+  }
+  assertTargetHistoryMatches(source, target, view);
+  return evaluateTargetGameName(
+    catalog,
+    fCandidatePool(catalog),
+    source,
+    targetOrigin,
+    target.exit,
+    view,
+    gameName,
+  );
 }

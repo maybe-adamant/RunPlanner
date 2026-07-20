@@ -1,6 +1,11 @@
-export { evaluateFRoomGeneration, FRoomGenerationContractError } from './f';
+export {
+  evaluateFRoomGeneration,
+  evaluateFRoomTargetCandidate,
+  FRoomGenerationContractError,
+} from './f';
 export type {
   FForcePressureLedgerEntry,
-  FGenerationExclusionReason,
   FRoomGenerationValidation,
+  FRoomTargetCandidateValidation,
+  RoomGenerationExclusionReason,
 } from './model';

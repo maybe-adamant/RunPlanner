@@ -51,6 +51,14 @@ fixture authors the representative valid F route entirely through visible
 controls, verifies player-facing labels, and reloads equal authored and
 evaluated state.
 
+Phase 5 has begun with the pure candidate-evaluation foundation. Generated F
+room candidates are evaluated at their exact semantic target through the same
+history view, force pressure, support-set calculation, findings, and evidence
+used by selected-plan validation. Ordered candidate batches reuse one project
+simulation, while incomplete or upstream-blocked contexts remain explicitly
+unavailable. Application projection and editor decoration remain the next
+slice.
+
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.
 Useful rules are brought forward deliberately; Lib controls, ImGui drawing,

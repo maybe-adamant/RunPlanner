@@ -1,7 +1,7 @@
 import type { TargetAddress } from '../../project/addresses';
 import type { SemanticFinding } from '../model';
 
-export type FGenerationExclusionReason =
+export type RoomGenerationExclusionReason =
   | 'currentRoomRepeat'
   | 'eligibilityRequirement'
   | 'exitIncompatible'
@@ -29,12 +29,17 @@ export interface FForcePressureLedgerEntry {
   readonly requiredForcedRoomGameNames: readonly string[];
   readonly supportRoomGameNames: readonly string[];
   readonly selectedPossible: boolean;
-  readonly selectedExclusionReasons: readonly FGenerationExclusionReason[];
+  readonly selectedExclusionReasons: readonly RoomGenerationExclusionReason[];
 }
 
 export interface FRoomGenerationValidation {
   readonly biomeKey: 'F';
   readonly validity: 'invalid' | 'valid';
   readonly forcePressure: readonly FForcePressureLedgerEntry[];
+  readonly findings: readonly SemanticFinding[];
+}
+
+export interface FRoomTargetCandidateValidation {
+  readonly pressure: FForcePressureLedgerEntry;
   readonly findings: readonly SemanticFinding[];
 }

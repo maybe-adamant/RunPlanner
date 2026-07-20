@@ -6,6 +6,19 @@ export {
   type IncompleteFCompletenessResult,
 } from './completeness';
 export {
+  CandidateEvaluationContractError,
+  evaluateProjectCandidate,
+  evaluateProjectCandidates,
+  type CandidateContextUnavailableReason,
+  type CandidateSupport,
+  type EvaluatedRoomTargetCandidate,
+  type ProjectCandidateEvaluation,
+  type ProjectCandidateQuery,
+  type RoomTargetCandidateQuery,
+  type RoomTargetCandidateEvidence,
+  type UnavailableCandidateEvaluation,
+} from './candidates';
+export {
   executeRoomLifecycle,
   LifecycleExecutionContractError,
   type RoomHistoryFragment,
@@ -38,10 +51,12 @@ export {
 } from './history';
 export {
   evaluateFRoomGeneration,
+  evaluateFRoomTargetCandidate,
   FRoomGenerationContractError,
   type FForcePressureLedgerEntry,
-  type FGenerationExclusionReason,
   type FRoomGenerationValidation,
+  type FRoomTargetCandidateValidation,
+  type RoomGenerationExclusionReason,
 } from './generation';
 export {
   evaluateFRewards,
