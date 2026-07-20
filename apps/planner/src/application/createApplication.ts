@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/catalog';
 import { simulateProject, summarizeCatalog, type ProjectDocument } from '@run-planner/core';
 
 import { createApplicationCapabilities } from './capabilityConfiguration';
+import { createCandidateProjectionService } from './candidateProjection';
 import { createEditorNavigation } from './editorNavigation';
 import { createInitialProject } from './projectBootstrap';
 import { createProjectOperations } from './projectOperations';
@@ -17,6 +18,7 @@ export interface CreateApplicationOptions {
 
 export function createApplication(options: CreateApplicationOptions = {}) {
   const capabilities = createApplicationCapabilities(catalog);
+  const candidateProjection = createCandidateProjectionService(catalog);
   const editorNavigation = createEditorNavigation(catalog, capabilities);
   const initialProject = createInitialProject(catalog, capabilities);
   const evaluateProject = (project: ProjectDocument) => simulateProject(catalog, project);
@@ -32,6 +34,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     catalog,
     catalogSummary: summarizeCatalog(catalog),
     capabilities,
+    candidateProjection,
     editorNavigation,
     projectOperations,
     store,

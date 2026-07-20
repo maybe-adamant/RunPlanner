@@ -1,13 +1,79 @@
 import { catalog } from '@run-planner/catalog';
+import {
+  createBiomeAddress,
+  createIncomingRewardAddress,
+  createOccurrenceId,
+  createProjectDocument,
+  type ProjectCandidateEvaluation,
+  type ProjectCandidateQuery,
+} from '@run-planner/core';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
+import type {
+  CandidateOptionProjection,
+  CandidateProjectionService,
+} from '../application/candidateProjection';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
+
+const biome = createBiomeAddress('Underworld', 'F');
+const reward = createIncomingRewardAddress(biome, createOccurrenceId('reward-editor'));
+const project = createProjectDocument(catalog, {
+  projectId: 'reward-editor',
+  name: 'Reward editor',
+  configuredBiomeCounts: { Underworld: 1 },
+});
+
+function unavailable(query: ProjectCandidateQuery): ProjectCandidateEvaluation {
+  return { context: 'unavailable', query, reason: 'biomeIncomplete' };
+}
+
+function projected<T>(
+  values: readonly T[],
+  queries: readonly ProjectCandidateQuery[],
+): readonly CandidateOptionProjection<T>[] {
+  return values.map((value, index) => ({ value, evaluation: unavailable(queries[index]!) }));
+}
+
+const candidateProjection: CandidateProjectionService = {
+  startRooms: (_project, owner, rooms) =>
+    projected(
+      rooms,
+      rooms.map((room) => ({ kind: 'startRoom', owner, gameName: room.gameName })),
+    ),
+  roomTargets: (_project, target, rooms) =>
+    projected(
+      rooms,
+      rooms.map((room) => ({ kind: 'roomTarget', target, gameName: room.gameName })),
+    ),
+  batchRewardStores: (_project, rewardStore, storeKeys) =>
+    projected(
+      storeKeys,
+      storeKeys.map((storeKey) => ({ kind: 'batchRewardStore', rewardStore, storeKey })),
+    ),
+  incomingRewards: (_project, owner, offers) =>
+    projected(
+      offers,
+      offers.map((value) => ({ kind: 'incomingReward', reward: owner, value })),
+    ),
+  shopOffers: (_project, owner, offers) =>
+    projected(
+      offers,
+      offers.map((value) => ({ kind: 'shopOffer', offer: owner, value })),
+    ),
+  shopPurchases: (_project, owner, values) =>
+    projected(
+      values,
+      values.map((purchased) => ({ kind: 'shopPurchase', purchase: owner, purchased })),
+    ),
+};
 
 describe('reward editor projections', () => {
   it('renders primitive and payload labels without leaking game source names', () => {
     const markup = renderToStaticMarkup(
       <RewardValueEditor
+        candidateOwner={{ kind: 'incomingReward', address: reward }}
+        candidateProjection={candidateProjection}
         catalog={catalog}
         idPrefix="trial"
         onReplace={() => undefined}
@@ -19,6 +85,7 @@ describe('reward editor projections', () => {
             spurnedSource: 'ZeusUpgrade',
           },
         }}
+        project={project}
         rewardTypes={['Devotion']}
       />,
     );
@@ -39,10 +106,13 @@ describe('reward editor projections', () => {
     const markup = renderToStaticMarkup(
       <CountedRewardEditor
         binding={room.incomingReward}
+        candidateOwner={{ kind: 'incomingReward', address: reward }}
+        candidateProjection={candidateProjection}
         catalog={catalog}
         offer={room.incomingReward.defaultOffersByStore.RunProgress!}
         idPrefix="combat-02"
         onReplace={() => undefined}
+        project={project}
       />,
     );
 

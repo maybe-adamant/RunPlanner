@@ -21,6 +21,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <Provider store={application.store}>
       <App
+        candidateProjection={application.candidateProjection}
         catalog={application.catalog}
         catalogSummary={application.catalogSummary}
         editorNavigation={application.editorNavigation}

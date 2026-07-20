@@ -7,15 +7,21 @@ import type {
 import { createBiomeAddress, createOccurrenceAddress } from '@run-planner/core';
 import { useState } from 'react';
 
+import {
+  presentCandidateLabel,
+  type CandidateProjectionService,
+} from '../application/candidateProjection';
 import { allocateOccurrenceId } from '../application/occurrenceIds';
 import { presentBiomeStatus } from '../application/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
-import { useAppDispatch } from '../application/store';
+import { selectPresentProject, useAppDispatch, useAppSelector } from '../application/store';
+import { candidateSelectState } from './candidatePresentation';
 import { FTopologyEditor } from './FTopologyEditor';
 import { SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
 import { RoomStateEditor } from './RoomStateEditor';
 
 interface FBiomeEditorProps {
+  readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly evaluation: FProjectEvaluation;
   readonly plan: LinearBiomePlan;
@@ -42,14 +48,22 @@ function openingRooms(catalog: Catalog, biomeKey: string): readonly RoomDeclarat
   });
 }
 
-export function FBiomeEditor({ catalog, evaluation, plan, routeKey }: FBiomeEditorProps) {
+export function FBiomeEditor({
+  candidateProjection,
+  catalog,
+  evaluation,
+  plan,
+  routeKey,
+}: FBiomeEditorProps) {
   const dispatch = useAppDispatch();
+  const project = useAppSelector(selectPresentProject);
   const [pendingOpening, setPendingOpening] = useState('');
   const options = openingRooms(catalog, plan.biomeKey);
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const topology = plan.topology;
 
   if (topology === null) {
+    const projectedOptions = candidateProjection.startRooms(project, biome, options);
     return (
       <section className="biome-editor" aria-labelledby="f-biome-title">
         <header className="panel-heading">
@@ -76,9 +90,13 @@ export function FBiomeEditor({ catalog, evaluation, plan, routeKey }: FBiomeEdit
               value={pendingOpening}
             >
               <option value="">Select an opening</option>
-              {options.map((room) => (
-                <option key={room.gameName} value={room.gameName}>
-                  {room.label}
+              {projectedOptions.map((option) => (
+                <option
+                  key={option.value.gameName}
+                  value={option.value.gameName}
+                  {...candidateSelectState(option)}
+                >
+                  {presentCandidateLabel(option.value.label, option)}
                 </option>
               ))}
             </select>
@@ -115,6 +133,11 @@ export function FBiomeEditor({ catalog, evaluation, plan, routeKey }: FBiomeEdit
   if (start === undefined) {
     throw new Error(`Erebus start occurrence ${topology.startOccurrenceId} is missing`);
   }
+  const startAddress = createOccurrenceAddress(biome, start.occurrenceId);
+  const projectedOptions = candidateProjection.startRooms(project, startAddress, options);
+  const selectedOpening = projectedOptions.find(
+    (option) => option.value.gameName === start.gameName,
+  );
 
   return (
     <section className="biome-editor" aria-labelledby="f-biome-title">
@@ -148,32 +171,47 @@ export function FBiomeEditor({ catalog, evaluation, plan, routeKey }: FBiomeEdit
             <h3>Opening</h3>
           </div>
           <span className="room-kind">Opening</span>
-          <SemanticOwnerMarker address={createOccurrenceAddress(biome, start.occurrenceId)} />
+          <SemanticOwnerMarker address={startAddress} />
         </div>
         <label htmlFor="f-authored-opening">Room</label>
         <select
+          {...candidateSelectState(selectedOpening)}
           id="f-authored-opening"
           onChange={(event) => {
             dispatch(
               authoredProjectCommandDispatched({
                 kind: 'ReplaceOccurrenceRoom',
-                occurrence: createOccurrenceAddress(biome, start.occurrenceId),
+                occurrence: startAddress,
                 gameName: event.target.value,
               }),
             );
           }}
           value={start.gameName}
         >
-          {options.map((room) => (
-            <option key={room.gameName} value={room.gameName}>
-              {room.label}
+          {projectedOptions.map((option) => (
+            <option
+              key={option.value.gameName}
+              value={option.value.gameName}
+              {...candidateSelectState(option)}
+            >
+              {presentCandidateLabel(option.value.label, option)}
             </option>
           ))}
         </select>
-        <RoomStateEditor biome={biome} catalog={catalog} occurrence={start} />
+        <RoomStateEditor
+          biome={biome}
+          candidateProjection={candidateProjection}
+          catalog={catalog}
+          occurrence={start}
+        />
       </article>
 
-      <FTopologyEditor biome={biome} catalog={catalog} topology={topology} />
+      <FTopologyEditor
+        biome={biome}
+        candidateProjection={candidateProjection}
+        catalog={catalog}
+        topology={topology}
+      />
     </section>
   );
 }

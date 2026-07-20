@@ -32,6 +32,16 @@ textarea {
   font: inherit;
 }
 
+select[data-candidate-support='impossible'],
+.purchase-control[data-candidate-support='impossible'] {
+  border-color: #ee8f8f;
+  color: #f2a0a0;
+}
+
+option[data-candidate-support='impossible'] {
+  color: #b22626;
+}
+
 button:focus-visible {
   outline: 2px solid #e2b971;
   outline-offset: 3px;

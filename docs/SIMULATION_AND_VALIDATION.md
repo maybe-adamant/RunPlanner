@@ -675,8 +675,21 @@ For one candidate, simulation:
 5. returns typed support, findings, and evidence without publishing or
    persisting scratch state.
 
-Ordered candidate queries for one authored snapshot reuse one project
-simulation. A candidate contact does not require unrelated downstream topology
+The initial F query set covers authored starts, ordinary room targets, batch
+reward stores, incoming and free rewards, WorldShop offers, and purchase
+choices. Preboss uses those same incoming-reward and WorldShop addresses rather
+than a second terminal-only candidate vocabulary.
+
+Ordered candidate queries for one authored snapshot may use one prepared
+candidate evaluator, which owns one shared base project simulation. The
+application keeps that evaluator and its option arrays in a weak cache keyed by
+immutable project identity and semantic owner. A semantic edit therefore
+invalidates the projection once, while repeated renders consume the same
+structures. Reward and shop alternatives still replay their immutable semantic
+replacement because their support depends on bag, peer, lifecycle, and history
+effects; React never performs or memoizes that replay itself.
+
+A candidate contact does not require unrelated downstream topology
 to remain complete when the proposed value changes structural capacity. For
 example, a room candidate reads the target's already-derived pre-generation
 history and runs the selected-plan room-support calculation for the proposed
