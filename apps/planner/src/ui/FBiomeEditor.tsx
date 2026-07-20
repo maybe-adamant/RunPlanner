@@ -2,8 +2,8 @@ import type { Catalog, LinearBiomePlan, RoomDeclaration } from '@run-planner/cor
 import { createBiomeAddress, createOccurrenceAddress } from '@run-planner/core';
 import { useState } from 'react';
 
-import { authoredProjectCommandDispatched } from '../application/authoredProjectSlice';
 import { allocateOccurrenceId } from '../application/occurrenceIds';
+import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import { useAppDispatch } from '../application/store';
 import { FTopologyEditor } from './FTopologyEditor';
 import { RoomStateEditor } from './RoomStateEditor';

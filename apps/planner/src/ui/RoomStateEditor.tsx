@@ -11,7 +11,7 @@ import {
   createShopPurchaseAddress,
 } from '@run-planner/core';
 
-import { authoredProjectCommandDispatched } from '../application/authoredProjectSlice';
+import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import { useAppDispatch } from '../application/store';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 

@@ -11,8 +11,8 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '../application/createApplication';
-import { authoredProjectCommandDispatched } from '../application/authoredProjectSlice';
 import { sectionSelected, underworldPanelSelected } from '../application/editorSessionSlice';
+import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import { App } from './App';
 
 describe('App', () => {
@@ -68,7 +68,7 @@ describe('App', () => {
       </Provider>,
     );
     expect(markup).toContain('0 configured');
-    expect(application.store.getState().authoredProject.past).toEqual([]);
+    expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
   });
 
   it('projects a started F topology from authored application state', () => {

@@ -866,6 +866,153 @@ not rebuild the shell or command-bound topology editors.
 - browser-local project load/save initially, with downloadable/uploadable JSON
   if direct filesystem access is not yet present.
 
+### Recommended Commit Sequence
+
+#### Commit 1: Atomic Project Workspace and Simulation Publication
+
+Deliver:
+
+- one Redux-owned project-workspace state containing authored `ProjectHistory`
+  and the `ProjectEvaluation` for its exact `present` document;
+- initial full-project simulation at application construction;
+- full deterministic resimulation after every effective semantic command,
+  undo, redo, and project replacement;
+- one atomic state publication for authored history plus derived evaluation,
+  without a middleware or subscription follow-up dispatch;
+- application selectors for the present project, history availability, and
+  coherent evaluation;
+- focused application tests for initial, edited, no-op, undo, and redo
+  publication.
+
+Gate:
+
+- no Redux-observable state can pair an authored document with an evaluation
+  produced from another document;
+- the simulator remains a pure core collaborator and the application does not
+  duplicate any completeness, materialization, generation, reward, or
+  validity rule;
+- simulation output remains derived, non-editable, non-persisted, and outside
+  authored undo history.
+
+#### Commit 2: Route-Prefix Command and Empty-Project Bootstrap
+
+Deliver:
+
+- a route-level semantic address and explicit `ConfigureRoutePrefix` project
+  command;
+- catalog-ordered contiguous-prefix expansion and explicit destructive
+  shrink behavior in core;
+- exact undo/redo restoration of removed biome plans after a prefix shrink;
+- application capability enforcement over every newly configured biome;
+- replacement of the hard-coded F smoke bootstrap with a normal empty project;
+- an Underworld route control exposing `None` and `Erebus` in Phase 4, while
+  Surface remains unconfigured;
+- confirmation before a prefix shrink discards authored biome state.
+
+Gate:
+
+- the project persists only the route plan's ordered biome array, never a
+  duplicate configured count or dormant route tree;
+- the core command can reach the application-authorable prefix boundary, but
+  the Phase 4 UI exposes only the prefix whose biomes are both editable and
+  simulatable;
+- configuring F produces `topology: null`, and removing F does not silently
+  preserve or repair its topology outside semantic history.
+
+#### Commit 3: Status, Findings, and Semantic Navigation
+
+Deliver:
+
+- application indexing of simulation findings by
+  `semanticAddressKey(finding.origin)`;
+- explicit player-facing presentation copy for every Phase 3 finding code,
+  without rendering raw codes or evidence as labels;
+- project, route, and F biome completeness/validity status projection;
+- owner markers on the existing F start, decision, target, picked, reward,
+  occurrence, shop, and terminal surfaces;
+- a project-level findings surface whose entries select the owning route and
+  biome panel and focus or scroll to the exact semantic owner;
+- transient selected-finding/navigation state that remains outside the
+  project document and authored history.
+
+Gate:
+
+- finding navigation resolves by semantic address and never scans rendered
+  rows for a room game name, occurrence index, or display label;
+- incomplete and invalid projects remain fully editable;
+- room and reward declarations continue to supply player-facing labels, and
+  internal game names or occurrence IDs do not leak into ordinary UI text;
+- no candidate simulation, option filtering, contextual option coloring, or
+  UI-local validity rule is introduced.
+
+#### Commit 4: Keyboard History Interaction
+
+Deliver:
+
+- `Ctrl/Cmd+Z` undo;
+- `Ctrl/Cmd+Shift+Z` and `Ctrl+Y` redo;
+- text-entry and content-editable protection so project history does not steal
+  native text editing;
+- accessible enabled/disabled history controls driven from the same project
+  history authority;
+- a browser-capable React interaction-test harness and focused tests proving
+  that UI intents dispatch our semantic/application actions.
+
+Gate:
+
+- one visible semantic edit remains one history entry;
+- navigation, selected findings, panel state, and focus do not enter history;
+- tests assert Run Planner command binding and resulting application state,
+  not React, Redux Toolkit, or browser-control internals.
+
+#### Commit 5: Browser Project Persistence and JSON Transfer
+
+Deliver:
+
+- injected application adapters for browser-local storage and JSON file
+  transfer, with browser globals confined to browser adapter construction;
+- explicit New, Save, and Load project operations over an initial single local
+  project slot;
+- downloadable encoded `ProjectDocument` JSON and upload/import through the
+  capability-aware project decoder;
+- project replacement that resets undo/redo history and runs a fresh atomic
+  simulation rather than becoming an undoable edit;
+- explicit presentation of decode, capability, and storage failures without
+  substituting a guessed project;
+- adapter and application tests proving normalized project and evaluation
+  round trips.
+
+Gate:
+
+- only semantic `ProjectDocument` state is stored or exported; evaluation,
+  history stacks, session state, and UI projections are reconstructed;
+- save followed by load reproduces equal normalized authored state and equal
+  deterministic simulation output;
+- no Tauri API, direct filesystem assumption, autosave policy, dirty-state
+  protocol, or schema-migration compatibility layer is introduced.
+
+#### Commit 6: Golden F Product-Loop Closure
+
+Deliver:
+
+- one browser interaction fixture that starts from an empty project,
+  configures F, and builds the representative golden F project without JSON
+  editing;
+- focused interaction fixtures for an incomplete finding, an invalid finding,
+  semantic-owner navigation, undo/redo, and destructive prefix shrink/restore;
+- persistence closure proving that the interactively authored golden project
+  reloads to the same authored document and `ProjectEvaluation`;
+- a player-facing label audit over the rendered golden editor;
+- final Phase 4 implementation-progress and status-document reconciliation.
+
+Gate:
+
+- every Phase 4 acceptance item has a named test or focused browser smoke
+  procedure;
+- the complete repository validation suite and production build pass;
+- Phase 4 closes without G activation, candidate evaluation, autosave/dirty
+  state, Tauri packaging, execution-plan compilation, or game-module work.
+
 ### Acceptance
 
 - a user can build the golden F project without editing JSON;
