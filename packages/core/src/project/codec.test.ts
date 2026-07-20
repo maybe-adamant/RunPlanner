@@ -51,6 +51,8 @@ function linearLayout(biomeKey: string, terminalRoom: string): BiomeLayout {
         kind: 'authoredBaseStore',
         storeKeys: ['RunProgress'],
         defaultStoreKey: 'RunProgress',
+        targetMetaRewardsRatio: 0.315,
+        targetMetaRewardsAdjustSpeed: 10,
       },
       rewardStoreOverrides: [],
     },

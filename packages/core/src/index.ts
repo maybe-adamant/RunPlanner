@@ -214,6 +214,7 @@ export {
   type RoomCreatedHistoryEvent,
   type RoomCreationSource,
   type RoomGenerationFindingCode,
+  type RewardGenerationFindingCode,
   type TargetGenerationCompletedHistoryEvent,
   type RoomLifecycleEvent,
   type RoomLifecycleExecutionInput,
@@ -222,4 +223,10 @@ export {
   type SimulationPhase,
   evaluateFRoomGeneration,
   FRoomGenerationContractError,
+  evaluateFRewards,
+  FRewardSimulationContractError,
+  type FRewardBranch,
+  type FRewardEvent,
+  type FRewardSimulation,
+  type FRewardStoreSupportEntry,
 } from './simulation';

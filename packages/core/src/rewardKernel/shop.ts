@@ -6,9 +6,13 @@ import type {
   RewardKernelCatalog,
   RewardKernelFacts,
   ShopGenerationWitness,
+  ShopGenerationSupport,
   ShopOptionEntry,
   ShopProfileDeclaration,
+  ShopPurchaseAcquisition,
+  ShopPurchaseFailure,
   ShopPurchaseResult,
+  ShopPurchaseSimulation,
 } from './model';
 import { isOfferSupportedAtResolutionPoint } from './support';
 
@@ -50,26 +54,54 @@ function assignments(
   });
 }
 
-export function findShopGenerationWitnesses(
+export function evaluateShopGenerationSupport(
   catalog: RewardKernelCatalog,
   profile: ShopProfileDeclaration,
   authored: readonly AuthoredShopOffer[],
   facts: RewardKernelFacts,
-): readonly ShopGenerationWitness[] {
+): ShopGenerationSupport {
   if (authored.length !== profile.slotCount) {
-    return [];
+    return Object.freeze({
+      witnesses: Object.freeze([]),
+      unsupportedSlotIndexes: Object.freeze([]),
+      jointlyUnavailable: true,
+    });
   }
   let offset = 0;
   let witnesses: readonly (readonly string[])[] = [[]];
+  const unsupportedSlotIndexes: number[] = [];
   for (const group of profile.groups.values) {
     const groupAuthored = authored.slice(offset, offset + group.offerCount);
+    groupAuthored.forEach((offer, groupIndex) => {
+      if (
+        !group.options.values.some((option) => optionSupportsOffer(catalog, option, offer, facts))
+      ) {
+        unsupportedSlotIndexes.push(offset + groupIndex);
+      }
+    });
     offset += group.offerCount;
     const groupAssignments = assignments(catalog, group.options.values, groupAuthored, facts);
     witnesses = witnesses.flatMap((prefix) =>
       groupAssignments.map((assignment) => [...prefix, ...assignment]),
     );
   }
-  return witnesses.map((optionKeys) => Object.freeze({ optionKeys: Object.freeze(optionKeys) }));
+  const normalizedWitnesses = Object.freeze(
+    witnesses.map((optionKeys) => Object.freeze({ optionKeys: Object.freeze(optionKeys) })),
+  );
+  return Object.freeze({
+    witnesses: normalizedWitnesses,
+    unsupportedSlotIndexes: Object.freeze(unsupportedSlotIndexes),
+    jointlyUnavailable: normalizedWitnesses.length === 0 && unsupportedSlotIndexes.length === 0,
+  });
+}
+
+export function findShopGenerationWitnesses(
+  catalog: RewardKernelCatalog,
+  profile: ShopProfileDeclaration,
+  authored: readonly AuthoredShopOffer[],
+  facts: RewardKernelFacts,
+): readonly ShopGenerationWitness[] {
+  return evaluateShopGenerationSupport(catalog, profile, authored, facts).witnesses;
 }
 
 function permutations(values: readonly number[]): readonly (readonly number[])[] {
@@ -115,14 +147,14 @@ function historyKey(history: RewardHistoryState): string {
   });
 }
 
-export function simulateShopPurchases(
+export function evaluateShopPurchases(
   catalog: RewardKernelCatalog,
   profile: ShopProfileDeclaration,
   authored: readonly AuthoredShopOffer[],
   witness: ShopGenerationWitness,
   initialHistory: RewardHistoryState,
   baseFacts: RewardKernelFacts,
-): readonly ShopPurchaseResult[] {
+): ShopPurchaseSimulation {
   const generationFacts = factsWithHistory(baseFacts, initialHistory, new Set());
   const witnessIsValid = findShopGenerationWitnesses(
     catalog,
@@ -135,13 +167,21 @@ export function simulateShopPurchases(
       candidate.optionKeys.every((optionKey, index) => optionKey === witness.optionKeys[index]),
   );
   if (!witnessIsValid) {
-    return [];
+    return Object.freeze({
+      results: Object.freeze([]),
+      failures: Object.freeze([
+        Object.freeze({ purchaseOrder: Object.freeze([]) }) satisfies ShopPurchaseFailure,
+      ]),
+    });
   }
   const purchasedIndexes = authored.flatMap((offer, index) => (offer.purchased ? [index] : []));
   const results = new Map<string, ShopPurchaseResult>();
+  const failures: ShopPurchaseFailure[] = [];
   for (const order of permutations(purchasedIndexes)) {
     let history = initialHistory;
     let possible = true;
+    let failedSlotIndex: number | undefined;
+    const acquisitions: ShopPurchaseAcquisition[] = [];
     const remaining = new Set(authored.map((_, index) => index));
     for (const index of order) {
       const authoredOffer = authored[index];
@@ -150,6 +190,7 @@ export function simulateShopPurchases(
         optionKey === undefined ? undefined : optionByWitness(profile, index, optionKey);
       if (authoredOffer === undefined || option === undefined) {
         possible = false;
+        failedSlotIndex = index;
         break;
       }
       const activeNames = new Set(
@@ -168,6 +209,7 @@ export function simulateShopPurchases(
         !evaluateRequirement(option.purchaseRequirement, facts.requirements)
       ) {
         possible = false;
+        failedSlotIndex = index;
         break;
       }
       for (const binding of option.acquisitionLifecycle) {
@@ -178,6 +220,7 @@ export function simulateShopPurchases(
           })
         ) {
           possible = false;
+          failedSlotIndex = index;
           break;
         }
         const event = resolveAcquisitionRole(
@@ -187,6 +230,7 @@ export function simulateShopPurchases(
           binding.lifecyclePoint,
         );
         history = applyConcreteAcquisition(catalog, history, event.acquisition);
+        acquisitions.push(Object.freeze({ slotIndex: index, optionKey: option.key, event }));
       }
       if (!possible) {
         break;
@@ -194,12 +238,38 @@ export function simulateShopPurchases(
       remaining.delete(index);
     }
     if (possible) {
-      const result = Object.freeze({ history, purchaseOrder: Object.freeze(order) });
+      const result = Object.freeze({
+        history,
+        purchaseOrder: Object.freeze(order),
+        acquisitions: Object.freeze(acquisitions),
+      });
       const key = historyKey(history);
       if (!results.has(key)) {
         results.set(key, result);
       }
+    } else {
+      failures.push(
+        Object.freeze({
+          purchaseOrder: Object.freeze(order),
+          ...(failedSlotIndex === undefined ? {} : { failedSlotIndex }),
+        }),
+      );
     }
   }
-  return [...results.values()];
+  return Object.freeze({
+    results: Object.freeze([...results.values()]),
+    failures: Object.freeze(failures),
+  });
+}
+
+export function simulateShopPurchases(
+  catalog: RewardKernelCatalog,
+  profile: ShopProfileDeclaration,
+  authored: readonly AuthoredShopOffer[],
+  witness: ShopGenerationWitness,
+  initialHistory: RewardHistoryState,
+  baseFacts: RewardKernelFacts,
+): readonly ShopPurchaseResult[] {
+  return evaluateShopPurchases(catalog, profile, authored, witness, initialHistory, baseFacts)
+    .results;
 }

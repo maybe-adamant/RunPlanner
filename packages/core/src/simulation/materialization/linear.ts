@@ -377,6 +377,23 @@ function requireRoom(catalog: Catalog, occurrence: RoomOccurrence): RoomDeclarat
   return room;
 }
 
+function finalSharedRewardStoreKey(
+  catalog: Catalog,
+  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  targets: LinearContinuation['targets'],
+  initialStoreKey: string | undefined,
+): string | undefined {
+  let storeKey = initialStoreKey;
+  for (const target of targets) {
+    const occurrence = requireOccurrence(occurrences, target.occurrenceId);
+    const room = requireRoom(catalog, occurrence);
+    if (room.forcedRewardStoreKey !== undefined) {
+      storeKey = room.forcedRewardStoreKey;
+    }
+  }
+  return storeKey;
+}
+
 function requirePickedExit(continuation: LinearContinuation): number {
   if (continuation.pickedExitIndex === null) {
     fail(`complete continuation ${continuation.parentOccurrenceId} lost its pick`);
@@ -536,6 +553,12 @@ export function materializeLinearBiome(
         continuation.rewardStore.kind === 'authoredBaseStore'
           ? continuation.rewardStore.baseRewardStoreKey
           : undefined;
+      const sharedStoreKey = finalSharedRewardStoreKey(
+        catalog,
+        occurrences,
+        continuation.targets,
+        baseStoreKey,
+      );
       const targets = Object.freeze(
         continuation.targets.map((target) =>
           materializeTarget(
@@ -547,7 +570,7 @@ export function materializeLinearBiome(
             target,
             'ordinary',
             'continuesSpine',
-            baseStoreKey,
+            sharedStoreKey,
           ),
         ),
       );

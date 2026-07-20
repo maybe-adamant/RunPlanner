@@ -29,6 +29,12 @@ export function createRewardHistoryState(): RewardHistoryState {
   });
 }
 
+export function beginCurrentRoomRewardHistory(history: RewardHistoryState): RewardHistoryState {
+  return Object.keys(history.currentRoomUseRecord).length === 0
+    ? history
+    : Object.freeze({ ...history, currentRoomUseRecord: EMPTY_RECORD });
+}
+
 function increment(
   record: Readonly<Record<string, number>>,
   key: string,

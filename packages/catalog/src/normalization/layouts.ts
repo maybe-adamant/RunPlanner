@@ -100,10 +100,25 @@ function normalizeRewardStorePolicy(
     if (!storeKeys.includes(rawPolicy.defaultStoreKey)) {
       fail(`${path}.defaultStoreKey`, 'must belong to the authored base store domain');
     }
+    if (
+      !Number.isFinite(rawPolicy.targetMetaRewardsRatio) ||
+      rawPolicy.targetMetaRewardsRatio < 0 ||
+      rawPolicy.targetMetaRewardsRatio > 1
+    ) {
+      fail(`${path}.targetMetaRewardsRatio`, 'must be a finite ratio from 0 through 1');
+    }
+    if (
+      !Number.isFinite(rawPolicy.targetMetaRewardsAdjustSpeed) ||
+      rawPolicy.targetMetaRewardsAdjustSpeed < 0
+    ) {
+      fail(`${path}.targetMetaRewardsAdjustSpeed`, 'must be a finite non-negative number');
+    }
     return Object.freeze({
       kind: 'authoredBaseStore',
       storeKeys,
       defaultStoreKey: rawPolicy.defaultStoreKey,
+      targetMetaRewardsRatio: rawPolicy.targetMetaRewardsRatio,
+      targetMetaRewardsAdjustSpeed: rawPolicy.targetMetaRewardsAdjustSpeed,
     });
   }
   if (rawPolicy.kind === 'sourceOfferPoint') {

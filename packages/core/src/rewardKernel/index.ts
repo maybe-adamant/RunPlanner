@@ -2,11 +2,17 @@ export { consumeCountedOffer, createRewardBagState } from './bag';
 export {
   applyConcreteAcquisition,
   applyOfferProjection,
+  beginCurrentRoomRewardHistory,
   createRewardHistoryState,
   factsWithHistory,
   resolveAcquisitionRole,
 } from './history';
-export { findShopGenerationWitnesses, simulateShopPurchases } from './shop';
+export {
+  evaluateShopGenerationSupport,
+  evaluateShopPurchases,
+  findShopGenerationWitnesses,
+  simulateShopPurchases,
+} from './shop';
 export {
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
@@ -42,11 +48,15 @@ export type {
   RewardStoreEntry,
   RewardTypeDeclaration,
   ShopGenerationWitness,
+  ShopGenerationSupport,
   ShopGroupDeclaration,
   ShopOptionEntry,
   ShopProfileDeclaration,
   ShopSlotDeclaration,
   ShopPurchaseResult,
+  ShopPurchaseAcquisition,
+  ShopPurchaseFailure,
+  ShopPurchaseSimulation,
   SourceResolutionPoint,
   SourceSupportPolicyKey,
 } from './model';

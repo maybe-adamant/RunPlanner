@@ -320,6 +320,8 @@ export type RewardStorePolicy =
       readonly kind: 'authoredBaseStore';
       readonly storeKeys: readonly string[];
       readonly defaultStoreKey: string;
+      readonly targetMetaRewardsRatio: number;
+      readonly targetMetaRewardsAdjustSpeed: number;
     }
   | {
       readonly kind: 'sourceOfferPoint';

@@ -55,7 +55,7 @@ describe('F catalog migration slice', () => {
   });
 
   it('normalizes verified reward, encounter, and room declarations', () => {
-    expect(catalog.version).toBe('0.13.0-f-possibility');
+    expect(catalog.version).toBe('0.14.0-f-rewards');
     expect(catalog.routes.byKey.Underworld?.biomeKeys).toEqual(['F', 'G', 'H', 'I']);
 
     const runProgress = catalog.rewards.stores.byKey.RunProgress;
@@ -338,6 +338,32 @@ describe('F catalog migration slice', () => {
         'biomeLayouts[0].continuation.rewardStorePolicy.defaultStoreKey',
         'must belong to the authored base store domain',
       ),
+    );
+  });
+
+  it.each([
+    ['targetMetaRewardsRatio', 1.1, 'must be a finite ratio from 0 through 1'],
+    ['targetMetaRewardsAdjustSpeed', -1, 'must be a finite non-negative number'],
+  ] as const)('rejects an invalid authored store %s', (field, value, detail) => {
+    const layout = declarations.biomeLayouts[0];
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        biomeLayouts: [
+          {
+            ...layout,
+            continuation: {
+              ...layout.continuation,
+              rewardStorePolicy: {
+                ...layout.continuation.rewardStorePolicy,
+                [field]: value,
+              },
+            },
+          },
+        ],
+      }),
+    ).toThrowError(
+      new CatalogContractError(`biomeLayouts[0].continuation.rewardStorePolicy.${field}`, detail),
     );
   });
 
