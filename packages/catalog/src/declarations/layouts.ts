@@ -4,6 +4,7 @@ export const biomeLayouts = [
   {
     biomeKey: 'F',
     kind: 'LinearBiome',
+    initialCounters: { biomeDepthCache: 0, biomeEncounterDepth: 1 },
     start: {
       kind: 'authoredStart',
       mode: 'oneOf',
@@ -43,6 +44,7 @@ export const biomeLayouts = [
   {
     biomeKey: 'G',
     kind: 'LinearBiome',
+    initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
     start: {
       kind: 'authoredStart',
       mode: 'fixed',
@@ -82,6 +84,7 @@ export const biomeLayouts = [
   {
     biomeKey: 'P',
     kind: 'LinearBiome',
+    initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
     start: {
       kind: 'authoredStart',
       mode: 'fixed',
@@ -121,6 +124,7 @@ export const biomeLayouts = [
   {
     biomeKey: 'Q',
     kind: 'LinearBiome',
+    initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
     start: {
       kind: 'authoredStart',
       mode: 'fixed',
@@ -175,6 +179,7 @@ export const biomeLayouts = [
   {
     biomeKey: 'H',
     kind: 'LinearBiome',
+    initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
     start: {
       kind: 'authoredStart',
       mode: 'fixed',
@@ -218,6 +223,7 @@ export const biomeLayouts = [
   {
     biomeKey: 'O',
     kind: 'LinearBiome',
+    initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
     start: {
       kind: 'authoredStart',
       mode: 'fixed',
@@ -258,6 +264,7 @@ export const biomeLayouts = [
   {
     biomeKey: 'I',
     kind: 'LinearBiome',
+    initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
     start: { kind: 'fixedEntry', role: 'intro', roomGameName: 'I_Intro' },
     entries: [{ kind: 'fixedEntry', role: 'story', roomGameName: 'I_Story01' }],
     continuation: {

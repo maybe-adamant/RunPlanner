@@ -300,6 +300,7 @@ describe('complete F catalog', () => {
     expect(catalog.biomeLayouts.byKey.F).toEqual({
       biomeKey: 'F',
       kind: 'LinearBiome',
+      initialCounters: { biomeDepthCache: 0, biomeEncounterDepth: 1 },
       start: {
         kind: 'authoredStart',
         mode: 'oneOf',

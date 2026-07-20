@@ -59,6 +59,7 @@ export interface CanonicalCompletionRoom {
   readonly encounterPhases: readonly EncounterPhase[];
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
+  readonly enteredRewardStoreKey?: string;
   readonly entered: true;
 }
 

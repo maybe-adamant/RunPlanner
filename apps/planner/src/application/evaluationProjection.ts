@@ -1,7 +1,7 @@
 import {
   semanticAddressKey,
   type Catalog,
-  type FProjectEvaluation,
+  type BiomeProjectEvaluation,
   type FindingCode,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
@@ -149,7 +149,7 @@ export function presentRouteStatus(evaluation: ProjectRouteEvaluation): StatusPr
   return routeStatusCopy[evaluation.status];
 }
 
-export function presentBiomeStatus(evaluation: FProjectEvaluation): StatusPresentation {
+export function presentBiomeStatus(evaluation: BiomeProjectEvaluation): StatusPresentation {
   if (evaluation.completion === 'incomplete') {
     return incompleteBiomeStatus;
   }

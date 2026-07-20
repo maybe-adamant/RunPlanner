@@ -35,6 +35,22 @@ export function beginCurrentRoomRewardHistory(history: RewardHistoryState): Rewa
     : Object.freeze({ ...history, currentRoomUseRecord: EMPTY_RECORD });
 }
 
+export function beginBiomeRewardHistory(history: RewardHistoryState): RewardHistoryState {
+  if (
+    Object.keys(history.biomeUseRecord).length === 0 &&
+    Object.keys(history.lootBiomeRecord).length === 0 &&
+    Object.keys(history.currentRoomUseRecord).length === 0
+  ) {
+    return history;
+  }
+  return Object.freeze({
+    ...history,
+    biomeUseRecord: EMPTY_RECORD,
+    currentRoomUseRecord: EMPTY_RECORD,
+    lootBiomeRecord: EMPTY_RECORD,
+  });
+}
+
 function increment(
   record: Readonly<Record<string, number>>,
   key: string,

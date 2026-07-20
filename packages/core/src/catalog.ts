@@ -404,6 +404,10 @@ export interface CompletionDescriptor {
 export interface LinearBiomeLayout {
   readonly biomeKey: string;
   readonly kind: 'LinearBiome';
+  readonly initialCounters: {
+    readonly biomeDepthCache: number;
+    readonly biomeEncounterDepth: number;
+  };
   readonly start: LinearStartDescriptor;
   readonly entries: readonly EntryDescriptor[];
   readonly continuation: {

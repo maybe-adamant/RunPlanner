@@ -2,6 +2,7 @@ export { consumeCountedOffer, createRewardBagState } from './bag';
 export {
   applyConcreteAcquisition,
   applyOfferProjection,
+  beginBiomeRewardHistory,
   beginCurrentRoomRewardHistory,
   createRewardHistoryState,
   factsWithHistory,

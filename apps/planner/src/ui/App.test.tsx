@@ -48,6 +48,7 @@ describe('App', () => {
     const markup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App
+          candidateProjection={application.candidateProjection}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
@@ -96,6 +97,7 @@ describe('App', () => {
     const markup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App
+          candidateProjection={application.candidateProjection}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
@@ -123,6 +125,7 @@ describe('App', () => {
     let markup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App
+          candidateProjection={application.candidateProjection}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
@@ -138,6 +141,7 @@ describe('App', () => {
     markup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App
+          candidateProjection={application.candidateProjection}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
@@ -163,6 +167,7 @@ describe('App', () => {
     const markup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App
+          candidateProjection={application.candidateProjection}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
@@ -227,6 +232,7 @@ describe('App', () => {
     const markup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App
+          candidateProjection={application.candidateProjection}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
@@ -374,6 +380,7 @@ describe('App', () => {
     const markup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App
+          candidateProjection={application.candidateProjection}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
@@ -433,6 +440,7 @@ describe('App', () => {
     const markup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App
+          candidateProjection={application.candidateProjection}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}

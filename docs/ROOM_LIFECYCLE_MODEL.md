@@ -454,11 +454,14 @@ not biome-local and therefore receive no reset event.
 ## History Views and Composition
 
 Composition begins with one addressed `biomeStarted` event whose payload owns
-the biome's exact initial counter state. For F that state is
+the biome's exact layout-declared initial counter state. For F that state is
 `biomeDepthCache = 0`, `biomeEncounterDepth = 1`, route encounter depth `1`,
 and room-history ordinal `0`. The opening's later commit applies its declared
 `biomeDepthCache = 1` delta. These are separate events so generation contacts
 never depend on an implicit fold initializer or a hidden opening exception.
+G begins at `biomeDepthCache = 1` and `biomeEncounterDepth = 1`, matching the
+game's between-biome depth baseline. Its route encounter depth and room-history
+ordinal are carried from F after F's declared biome-local resets.
 
 Every fragment exposes conceptually distinct states:
 

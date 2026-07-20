@@ -2,7 +2,11 @@ import type { Catalog, ExitCompatibilityPolicy, RoomDeclaration, RoomForce } fro
 import { evaluateRequirement, type RequirementEvaluationContext } from '../../requirementEvaluator';
 import type { RequirementExpression } from '../../requirements';
 import { semanticAddressKey, type OccurrenceAddress } from '../../project/addresses';
-import type { CanonicalFHistory, FHistoryStateView, FTargetGenerationView } from '../history';
+import type {
+  CanonicalLinearHistory,
+  LinearHistoryStateView,
+  LinearTargetGenerationView,
+} from '../history';
 import type {
   CanonicalAuthoredRoom,
   CanonicalLinearBiome,
@@ -10,17 +14,17 @@ import type {
   CanonicalTarget,
 } from '../materialization';
 import type {
-  FForcePressureLedgerEntry,
-  FRoomGenerationValidation,
-  FRoomTargetCandidateValidation,
+  LinearForcePressureLedgerEntry,
+  LinearRoomGenerationValidation,
+  LinearRoomTargetCandidateValidation,
   RoomGenerationExclusionReason,
 } from './model';
 import type { FindingEvidence, SemanticFinding } from '../model';
 
-export class FRoomGenerationContractError extends Error {
+export class LinearRoomGenerationContractError extends Error {
   constructor(detail: string) {
     super(detail);
-    this.name = 'FRoomGenerationContractError';
+    this.name = 'LinearRoomGenerationContractError';
   }
 }
 
@@ -42,56 +46,56 @@ function countByGameName(
   return counts;
 }
 
-function assertFGenerationRequirement(requirement: RequirementExpression): void {
+function assertLinearGenerationRequirement(requirement: RequirementExpression): void {
   switch (requirement.kind) {
     case 'all':
     case 'any':
-      requirement.requirements.forEach(assertFGenerationRequirement);
+      requirement.requirements.forEach(assertLinearGenerationRequirement);
       return;
     case 'not':
-      assertFGenerationRequirement(requirement.requirement);
+      assertLinearGenerationRequirement(requirement.requirement);
       return;
     case 'counterRange':
       if (requirement.axis !== 'biomeDepthCache' && requirement.axis !== 'biomeEncounterDepth') {
-        throw new FRoomGenerationContractError(
-          `F room generation cannot project counter ${requirement.axis}`,
+        throw new LinearRoomGenerationContractError(
+          `linear room generation cannot project counter ${requirement.axis}`,
         );
       }
       return;
     case 'recordCount':
       if (requirement.record !== 'roomsEntered') {
-        throw new FRoomGenerationContractError(
-          `F room generation cannot project record ${requirement.record}`,
+        throw new LinearRoomGenerationContractError(
+          `linear room generation cannot project record ${requirement.record}`,
         );
       }
       return;
     case 'minExits':
       return;
     default:
-      throw new FRoomGenerationContractError(
-        `F room generation cannot evaluate ${requirement.kind}`,
+      throw new LinearRoomGenerationContractError(
+        `linear room generation cannot evaluate ${requirement.kind}`,
       );
   }
 }
 
-function assertFGenerationForce(force: RoomForce): void {
+function assertLinearGenerationForce(force: RoomForce): void {
   switch (force.kind) {
     case 'always':
       return;
     case 'requirement':
-      assertFGenerationRequirement(force.requirement);
+      assertLinearGenerationRequirement(force.requirement);
       return;
     case 'depthWindow':
       if (force.axis !== 'biomeDepthCache' && force.axis !== 'biomeEncounterDepth') {
-        throw new FRoomGenerationContractError(
-          `F room generation cannot project force counter ${force.axis}`,
+        throw new LinearRoomGenerationContractError(
+          `linear room generation cannot project force counter ${force.axis}`,
         );
       }
   }
 }
 
 function priorPeerGameNames(
-  view: FHistoryStateView,
+  view: LinearHistoryStateView,
   parentOrigin: OccurrenceAddress,
 ): readonly string[] {
   return Object.freeze(
@@ -105,10 +109,11 @@ function priorPeerGameNames(
   );
 }
 
-function projectFRoomGenerationRequirementContext(
+function projectLinearRoomGenerationRequirementContext(
   source: CanonicalAuthoredRoom,
   sourceDeclaration: RoomDeclaration,
-  view: FHistoryStateView,
+  view: LinearHistoryStateView,
+  enteredBiomeCount: number,
 ): RequirementEvaluationContext {
   const roomsEntered = countByGameName(view.ledgers.roomAppearances);
   const shopOptions =
@@ -120,7 +125,7 @@ function projectFRoomGenerationRequirementContext(
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
       biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
       encounterDepth: view.ledgers.counters.routeEncounterDepth,
-      enteredBiomes: 1,
+      enteredBiomes: enteredBiomeCount,
       upgradableTraitCount: 0,
     }),
     records: Object.freeze({
@@ -171,7 +176,7 @@ function forceSupport(
     case 'always':
       return 'required';
     case 'requirement':
-      assertFGenerationRequirement(force.requirement);
+      assertLinearGenerationRequirement(force.requirement);
       return evaluateRequirement(force.requirement, context) ? 'required' : 'none';
     case 'depthWindow': {
       const currentDepth = context.counters[force.axis];
@@ -185,7 +190,7 @@ function forceSupport(
 }
 
 function creationCount(
-  view: FHistoryStateView,
+  view: LinearHistoryStateView,
   gameName: string,
   parentOrigin?: OccurrenceAddress,
 ): number {
@@ -198,7 +203,7 @@ function creationCount(
   ).length;
 }
 
-function appearanceCount(view: FHistoryStateView, gameName: string): number {
+function appearanceCount(view: LinearHistoryStateView, gameName: string): number {
   return view.ledgers.roomAppearances.filter((appearance) => appearance.gameName === gameName)
     .length;
 }
@@ -208,20 +213,20 @@ function evaluateCandidate(
   source: CanonicalAuthoredRoom,
   sourceDeclaration: RoomDeclaration,
   exit: CanonicalPhysicalExit,
-  view: FHistoryStateView,
+  view: LinearHistoryStateView,
   room: RoomDeclaration,
   context: RequirementEvaluationContext,
 ): CandidateEvaluation {
   const reasons: RoomGenerationExclusionReason[] = [];
   if (room.force !== undefined) {
-    assertFGenerationForce(room.force);
+    assertLinearGenerationForce(room.force);
   }
   if (exit.kind === 'unavailable') {
     reasons.push('physicalExitUnavailable');
   } else {
     const policy = catalog.exitCompatibilityPolicies.byKey[exit.compatibilityPolicyKey];
     if (policy === undefined) {
-      throw new FRoomGenerationContractError(
+      throw new LinearRoomGenerationContractError(
         `unknown exit compatibility policy ${exit.compatibilityPolicyKey}`,
       );
     }
@@ -236,7 +241,7 @@ function evaluateCandidate(
     reasons.push('forceMinimum');
   }
   if (room.eligibility !== undefined) {
-    assertFGenerationRequirement(room.eligibility);
+    assertLinearGenerationRequirement(room.eligibility);
     if (!evaluateRequirement(room.eligibility, context)) {
       reasons.push('eligibilityRequirement');
     }
@@ -266,23 +271,27 @@ function evaluateCandidate(
   });
 }
 
-function fCandidatePool(catalog: Catalog): readonly RoomDeclaration[] {
-  const layout = catalog.biomeLayouts.byKey.F;
+function linearCandidatePool(catalog: Catalog, biomeKey: string): readonly RoomDeclaration[] {
+  const layout = catalog.biomeLayouts.byKey[biomeKey];
   if (layout?.kind !== 'LinearBiome' || layout.start.kind !== 'authoredStart') {
-    throw new FRoomGenerationContractError('catalog does not provide F candidate structure');
+    throw new LinearRoomGenerationContractError(
+      `catalog does not provide ${biomeKey} candidate structure`,
+    );
   }
   const startNames = new Set(layout.start.roomGameNames);
   return Object.freeze(
     catalog.rooms.values.filter(
       (room) =>
-        room.biomeKey === 'F' && room.mode.kind === 'authored' && !startNames.has(room.gameName),
+        room.biomeKey === biomeKey &&
+        room.mode.kind === 'authored' &&
+        !startNames.has(room.gameName),
     ),
   );
 }
 
 function targetGenerationViews(
-  history: CanonicalFHistory,
-): ReadonlyMap<string, FTargetGenerationView> {
+  history: CanonicalLinearHistory,
+): ReadonlyMap<string, LinearTargetGenerationView> {
   const entries = history.rooms.flatMap((room) => room.targetGenerations);
   return new Map(entries.map((view) => [semanticAddressKey(view.targetOrigin), view]));
 }
@@ -310,7 +319,7 @@ function finding(
   });
 }
 
-function selectedEvidence(entry: FForcePressureLedgerEntry): FindingEvidence {
+function selectedEvidence(entry: LinearForcePressureLedgerEntry): FindingEvidence {
   return {
     sourceGameName: entry.sourceGameName,
     selectedGameName: entry.selectedGameName,
@@ -332,7 +341,7 @@ function selectedEvidence(entry: FForcePressureLedgerEntry): FindingEvidence {
 function assertTargetHistoryMatches(
   source: CanonicalAuthoredRoom,
   target: CanonicalTarget,
-  view: FTargetGenerationView,
+  view: LinearTargetGenerationView,
 ): void {
   const targetKey = semanticAddressKey(target.origin);
   const sourceKey = semanticAddressKey(source.origin);
@@ -340,7 +349,7 @@ function assertTargetHistoryMatches(
     semanticAddressKey(view.targetOrigin) !== targetKey ||
     semanticAddressKey(view.roomOrigin) !== semanticAddressKey(target.room.origin)
   ) {
-    throw new FRoomGenerationContractError(
+    throw new LinearRoomGenerationContractError(
       `target ${targetKey} does not match its history generation view`,
     );
   }
@@ -349,7 +358,7 @@ function assertTargetHistoryMatches(
     (appearance) => semanticAddressKey(appearance.origin) === sourceKey,
   );
   if (sourceAppearance?.gameName !== source.gameName) {
-    throw new FRoomGenerationContractError(
+    throw new LinearRoomGenerationContractError(
       `source ${sourceKey} does not match its history appearance`,
     );
   }
@@ -365,7 +374,7 @@ function assertTargetHistoryMatches(
     semanticAddressKey(creation.origin) !== semanticAddressKey(target.room.origin) ||
     creation.gameName !== target.room.gameName
   ) {
-    throw new FRoomGenerationContractError(
+    throw new LinearRoomGenerationContractError(
       `target ${targetKey} does not match its history creation`,
     );
   }
@@ -377,14 +386,20 @@ function evaluateTargetGameName(
   source: CanonicalAuthoredRoom,
   targetOrigin: CanonicalTarget['origin'],
   exit: CanonicalPhysicalExit,
-  view: FTargetGenerationView,
+  view: LinearTargetGenerationView,
   selectedGameName: string,
-): FRoomTargetCandidateValidation {
+  enteredBiomeCount: number,
+): LinearRoomTargetCandidateValidation {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
-    throw new FRoomGenerationContractError(`unknown source room ${source.gameName}`);
+    throw new LinearRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
-  const context = projectFRoomGenerationRequirementContext(source, sourceDeclaration, view.before);
+  const context = projectLinearRoomGenerationRequirementContext(
+    source,
+    sourceDeclaration,
+    view.before,
+    enteredBiomeCount,
+  );
   const candidates = pool.map((room) =>
     evaluateCandidate(catalog, source, sourceDeclaration, exit, view.before, room, context),
   );
@@ -401,7 +416,7 @@ function evaluateTargetGameName(
     reasons.push('forcedPool');
   }
   const selectedPossible = selected !== undefined && support.includes(selected);
-  const pressure: FForcePressureLedgerEntry = Object.freeze({
+  const pressure: LinearForcePressureLedgerEntry = Object.freeze({
     targetOrigin,
     beforeSequence: view.before.sequence,
     sourceGameName: source.gameName,
@@ -438,8 +453,9 @@ function validateTarget(
   pool: readonly RoomDeclaration[],
   source: CanonicalAuthoredRoom,
   target: CanonicalTarget,
-  view: FTargetGenerationView,
-): FRoomTargetCandidateValidation {
+  view: LinearTargetGenerationView,
+  enteredBiomeCount: number,
+): LinearRoomTargetCandidateValidation {
   assertTargetHistoryMatches(source, target, view);
   return evaluateTargetGameName(
     catalog,
@@ -449,6 +465,7 @@ function validateTarget(
     target.exit,
     view,
     target.room.gameName,
+    enteredBiomeCount,
   );
 }
 
@@ -458,7 +475,7 @@ function requireSource(
 ): CanonicalAuthoredRoom {
   const room = rooms.get(semanticAddressKey(origin));
   if (room === undefined || !room.entered) {
-    throw new FRoomGenerationContractError(
+    throw new LinearRoomGenerationContractError(
       `history source ${semanticAddressKey(origin)} is not an entered canonical room`,
     );
   }
@@ -470,39 +487,39 @@ function evaluateTargets(
   pool: readonly RoomDeclaration[],
   source: CanonicalAuthoredRoom,
   targets: readonly CanonicalTarget[],
-  views: ReadonlyMap<string, FTargetGenerationView>,
-  pressure: FForcePressureLedgerEntry[],
+  views: ReadonlyMap<string, LinearTargetGenerationView>,
+  pressure: LinearForcePressureLedgerEntry[],
   findings: SemanticFinding[],
+  enteredBiomeCount: number,
 ): void {
   for (const target of targets) {
     const view = views.get(semanticAddressKey(target.origin));
     if (view === undefined) {
-      throw new FRoomGenerationContractError(
+      throw new LinearRoomGenerationContractError(
         `target ${semanticAddressKey(target.origin)} has no history generation view`,
       );
     }
-    const result = validateTarget(catalog, pool, source, target, view);
+    const result = validateTarget(catalog, pool, source, target, view, enteredBiomeCount);
     pressure.push(result.pressure);
     findings.push(...result.findings);
   }
 }
 
-export function evaluateFRoomGeneration(
+export function evaluateLinearRoomGeneration(
   catalog: Catalog,
   snapshot: CanonicalLinearBiome,
-  history: CanonicalFHistory,
-): FRoomGenerationValidation {
-  if (
-    snapshot.biomeKey !== 'F' ||
-    history.biomeKey !== 'F' ||
-    snapshot.routeKey !== history.routeKey
-  ) {
-    throw new FRoomGenerationContractError('F generation inputs do not share one biome owner');
+  history: CanonicalLinearHistory,
+  enteredBiomeCount: number,
+): LinearRoomGenerationValidation {
+  if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
+    throw new LinearRoomGenerationContractError(
+      'linear generation inputs do not share one biome owner',
+    );
   }
-  const pool = fCandidatePool(catalog);
+  const pool = linearCandidatePool(catalog, snapshot.biomeKey);
   const rooms = authoredRooms(snapshot);
   const views = targetGenerationViews(history);
-  const pressure: FForcePressureLedgerEntry[] = [];
+  const pressure: LinearForcePressureLedgerEntry[] = [];
   const findings: SemanticFinding[] = [];
 
   for (const batch of snapshot.batches) {
@@ -514,6 +531,7 @@ export function evaluateFRoomGeneration(
       views,
       pressure,
       findings,
+      enteredBiomeCount,
     );
   }
   evaluateTargets(
@@ -524,10 +542,11 @@ export function evaluateFRoomGeneration(
     views,
     pressure,
     findings,
+    enteredBiomeCount,
   );
 
   return Object.freeze({
-    biomeKey: 'F',
+    biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
     forcePressure: Object.freeze(pressure),
     findings: Object.freeze(findings),
@@ -537,10 +556,10 @@ export function evaluateFRoomGeneration(
 export function evaluateFRoomTargetCandidate(
   catalog: Catalog,
   snapshot: CanonicalLinearBiome,
-  history: CanonicalFHistory,
+  history: CanonicalLinearHistory,
   targetOrigin: CanonicalTarget['origin'],
   gameName: string,
-): FRoomTargetCandidateValidation {
+): LinearRoomTargetCandidateValidation {
   if (
     snapshot.biomeKey !== 'F' ||
     history.biomeKey !== 'F' ||
@@ -548,7 +567,7 @@ export function evaluateFRoomTargetCandidate(
     targetOrigin.routeKey !== snapshot.routeKey ||
     targetOrigin.biomeKey !== snapshot.biomeKey
   ) {
-    throw new FRoomGenerationContractError(
+    throw new LinearRoomGenerationContractError(
       'F candidate generation inputs do not share one biome owner',
     );
   }
@@ -561,7 +580,7 @@ export function evaluateFRoomTargetCandidate(
     (candidate) => candidate.origin.exitIndex === targetOrigin.exitIndex,
   );
   if (batch === undefined || target === undefined) {
-    throw new FRoomGenerationContractError(
+    throw new LinearRoomGenerationContractError(
       `target ${semanticAddressKey(targetOrigin)} is not an ordinary F batch target`,
     );
   }
@@ -569,18 +588,30 @@ export function evaluateFRoomTargetCandidate(
   const source = requireSource(rooms, batch.parent.origin);
   const view = targetGenerationViews(history).get(semanticAddressKey(targetOrigin));
   if (view === undefined) {
-    throw new FRoomGenerationContractError(
+    throw new LinearRoomGenerationContractError(
       `target ${semanticAddressKey(targetOrigin)} has no history generation view`,
     );
   }
   assertTargetHistoryMatches(source, target, view);
   return evaluateTargetGameName(
     catalog,
-    fCandidatePool(catalog),
+    linearCandidatePool(catalog, 'F'),
     source,
     targetOrigin,
     target.exit,
     view,
     gameName,
+    1,
   );
+}
+
+export function evaluateFRoomGeneration(
+  catalog: Catalog,
+  snapshot: CanonicalLinearBiome,
+  history: CanonicalLinearHistory,
+): LinearRoomGenerationValidation {
+  if (snapshot.biomeKey !== 'F' || history.biomeKey !== 'F') {
+    throw new LinearRoomGenerationContractError('F generation requires biome F');
+  }
+  return evaluateLinearRoomGeneration(catalog, snapshot, history, 1);
 }

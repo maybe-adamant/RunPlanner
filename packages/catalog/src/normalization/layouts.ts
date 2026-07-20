@@ -21,6 +21,7 @@ import type { RawBiomeLayoutDeclaration } from '../declarations';
 import {
   createCollection,
   freezeUniqueStrings,
+  requireNonNegativeInteger,
   requireNonEmpty,
   requirePositiveInteger,
 } from './common';
@@ -468,6 +469,16 @@ function normalizeLinearLayout(
   return Object.freeze({
     biomeKey: layout.biomeKey,
     kind: 'LinearBiome',
+    initialCounters: Object.freeze({
+      biomeDepthCache: requireNonNegativeInteger(
+        layout.initialCounters.biomeDepthCache,
+        `${path}.initialCounters.biomeDepthCache`,
+      ),
+      biomeEncounterDepth: requireNonNegativeInteger(
+        layout.initialCounters.biomeEncounterDepth,
+        `${path}.initialCounters.biomeEncounterDepth`,
+      ),
+    }),
     start: normalizeLinearStart(layout.start, layout.biomeKey, rooms, `${path}.start`),
     entries: normalizeEntries(layout.entries ?? [], layout.biomeKey, rooms, `${path}.entries`),
     continuation: Object.freeze({

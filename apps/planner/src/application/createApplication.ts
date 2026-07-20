@@ -1,7 +1,10 @@
 import { catalog } from '@run-planner/catalog';
 import { simulateProject, summarizeCatalog, type ProjectDocument } from '@run-planner/core';
 
-import { createApplicationCapabilities } from './capabilityConfiguration';
+import {
+  createApplicationCapabilities,
+  createProjectSimulationScope,
+} from './capabilityConfiguration';
 import { createCandidateProjectionService } from './candidateProjection';
 import { createEditorNavigation } from './editorNavigation';
 import { createInitialProject } from './projectBootstrap';
@@ -18,10 +21,12 @@ export interface CreateApplicationOptions {
 
 export function createApplication(options: CreateApplicationOptions = {}) {
   const capabilities = createApplicationCapabilities(catalog);
-  const candidateProjection = createCandidateProjectionService(catalog);
+  const simulationScope = createProjectSimulationScope(capabilities);
+  const candidateProjection = createCandidateProjectionService(catalog, simulationScope);
   const editorNavigation = createEditorNavigation(catalog, capabilities);
   const initialProject = createInitialProject(catalog, capabilities);
-  const evaluateProject = (project: ProjectDocument) => simulateProject(catalog, project);
+  const evaluateProject = (project: ProjectDocument) =>
+    simulateProject(catalog, project, simulationScope);
   const store = createPlannerStore({ catalog, capabilities, evaluateProject, initialProject });
   const projectOperations = createProjectOperations({
     adapters: options.projectPersistence ?? createDefaultProjectPersistenceAdapters(),

@@ -55,9 +55,10 @@ function eventKinds(executionInput: RoomLifecycleExecutionInput) {
 }
 
 describe('room lifecycle catalog', () => {
-  it('normalizes the reusable F lifecycle profiles as immutable catalog data', () => {
+  it('normalizes the reusable linear lifecycle profiles as immutable catalog data', () => {
     expect(catalog.roomLifecycleProfiles.values.map((profile) => profile.key)).toEqual([
       'StandardRewardRoom',
+      'RewardlessRoom',
       'WorldShopRoom',
       'TerminalRewardRoom',
       'TerminalWorldShopRoom',

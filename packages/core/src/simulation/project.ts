@@ -1,32 +1,40 @@
 import type { Catalog } from '../catalog';
 import { createBiomeAddress, type BiomeAddress } from '../project/addresses';
 import type { AuthoredRoutePlan, LinearBiomePlan, ProjectDocument } from '../project/model';
-import { evaluateFCompleteness } from './completeness';
-import { evaluateFRoomGeneration, type FRoomGenerationValidation } from './generation';
-import { composeFHistory, type CanonicalFHistory } from './history';
+import { evaluateLinearCompleteness } from './completeness';
+import { evaluateLinearRoomGeneration, type LinearRoomGenerationValidation } from './generation';
+import { composeLinearHistory, type CanonicalLinearHistory } from './history';
 import { materializeLinearBiome, type CanonicalLinearBiome } from './materialization';
 import type { SemanticFinding } from './model';
-import { evaluateFRewards, type FRewardSimulation } from './rewards';
+import { evaluateLinearRewards, type LinearRewardSimulation } from './rewards';
 
-export interface IncompleteFProjectEvaluation {
-  readonly biomeKey: 'F';
+export interface IncompleteLinearProjectEvaluation {
+  readonly biomeKey: string;
   readonly origin: BiomeAddress;
   readonly completion: 'incomplete';
   readonly findings: readonly SemanticFinding[];
 }
 
-export interface CompleteFProjectEvaluation {
-  readonly biomeKey: 'F';
+export interface CompleteLinearProjectEvaluation {
+  readonly biomeKey: string;
   readonly origin: BiomeAddress;
   readonly completion: 'complete';
   readonly validity: 'invalid' | 'valid';
   readonly snapshot: CanonicalLinearBiome;
-  readonly history: CanonicalFHistory;
-  readonly roomGeneration: FRoomGenerationValidation;
-  readonly rewards: FRewardSimulation;
+  readonly history: CanonicalLinearHistory;
+  readonly roomGeneration: LinearRoomGenerationValidation;
+  readonly rewards: LinearRewardSimulation;
   readonly findings: readonly SemanticFinding[];
 }
 
+export type BiomeProjectEvaluation =
+  IncompleteLinearProjectEvaluation | CompleteLinearProjectEvaluation;
+export type IncompleteFProjectEvaluation = IncompleteLinearProjectEvaluation & {
+  readonly biomeKey: 'F';
+};
+export type CompleteFProjectEvaluation = CompleteLinearProjectEvaluation & {
+  readonly biomeKey: 'F';
+};
 export type FProjectEvaluation = IncompleteFProjectEvaluation | CompleteFProjectEvaluation;
 
 export type RouteProcessingHorizon =
@@ -56,7 +64,7 @@ export interface ProjectRouteEvaluation {
   readonly routeKey: string;
   readonly status: 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
   readonly configuredBiomeKeys: readonly string[];
-  readonly biomes: readonly FProjectEvaluation[];
+  readonly biomes: readonly BiomeProjectEvaluation[];
   readonly validatedPrefix: readonly string[];
   readonly horizon: RouteProcessingHorizon;
   readonly findings: readonly SemanticFinding[];
@@ -82,6 +90,10 @@ export interface ProjectEvaluation {
   readonly summary: ProjectEvaluationSummary;
 }
 
+export interface ProjectSimulationScope {
+  readonly simulatableBiomeKeys: readonly string[];
+}
+
 export class ProjectSimulationContractError extends Error {
   constructor(detail: string) {
     super(detail);
@@ -89,12 +101,18 @@ export class ProjectSimulationContractError extends Error {
   }
 }
 
-function evaluateF(catalog: Catalog, routeKey: string, plan: LinearBiomePlan): FProjectEvaluation {
-  const origin = createBiomeAddress(routeKey, 'F');
-  const completeness = evaluateFCompleteness(catalog, origin, plan);
+function evaluateLinearBiome(
+  catalog: Catalog,
+  routeKey: string,
+  plan: LinearBiomePlan,
+  enteredBiomeCount: number,
+  previous?: CompleteLinearProjectEvaluation,
+): BiomeProjectEvaluation {
+  const origin = createBiomeAddress(routeKey, plan.biomeKey);
+  const completeness = evaluateLinearCompleteness(catalog, origin, plan);
   if (completeness.completion === 'incomplete') {
     return Object.freeze({
-      biomeKey: 'F',
+      biomeKey: plan.biomeKey,
       origin,
       completion: 'incomplete',
       findings: completeness.findings,
@@ -102,13 +120,24 @@ function evaluateF(catalog: Catalog, routeKey: string, plan: LinearBiomePlan): F
   }
 
   const snapshot = materializeLinearBiome(catalog, origin, completeness);
-  const history = composeFHistory(catalog, snapshot);
-  const roomGeneration = evaluateFRoomGeneration(catalog, snapshot, history);
-  const rewards = evaluateFRewards(catalog, snapshot, history);
+  const history = composeLinearHistory(catalog, snapshot, previous?.history);
+  const roomGeneration = evaluateLinearRoomGeneration(
+    catalog,
+    snapshot,
+    history,
+    enteredBiomeCount,
+  );
+  const rewards = evaluateLinearRewards(
+    catalog,
+    snapshot,
+    history,
+    enteredBiomeCount,
+    previous?.rewards.branches,
+  );
   const findings = Object.freeze([...roomGeneration.findings, ...rewards.findings]);
 
   return Object.freeze({
-    biomeKey: 'F',
+    biomeKey: plan.biomeKey,
     origin,
     completion: 'complete',
     validity:
@@ -121,10 +150,24 @@ function evaluateF(catalog: Catalog, routeKey: string, plan: LinearBiomePlan): F
   });
 }
 
-const biomeSimulators = Object.freeze({ F: evaluateF });
+type BiomeSimulator = (
+  catalog: Catalog,
+  routeKey: string,
+  plan: LinearBiomePlan,
+  enteredBiomeCount: number,
+  previous?: CompleteLinearProjectEvaluation,
+) => BiomeProjectEvaluation;
 
-function registeredSimulator(biomeKey: string) {
-  return biomeSimulators[biomeKey as keyof typeof biomeSimulators];
+const biomeSimulators: Readonly<Record<string, BiomeSimulator>> = Object.freeze({
+  F: evaluateLinearBiome,
+  G: evaluateLinearBiome,
+});
+
+function registeredSimulator(biomeKey: string, simulatableBiomeKeys?: ReadonlySet<string>) {
+  if (simulatableBiomeKeys !== undefined && !simulatableBiomeKeys.has(biomeKey)) {
+    return undefined;
+  }
+  return biomeSimulators[biomeKey];
 }
 
 function assertProjectMatchesCatalog(catalog: Catalog, project: ProjectDocument): void {
@@ -155,7 +198,7 @@ function assertProjectMatchesCatalog(catalog: Catalog, project: ProjectDocument)
 
 function routeStatus(
   configuredBiomeCount: number,
-  evaluations: readonly FProjectEvaluation[],
+  evaluations: readonly BiomeProjectEvaluation[],
   horizon: RouteProcessingHorizon,
 ): ProjectRouteEvaluation['status'] {
   if (configuredBiomeCount === 0) {
@@ -179,7 +222,7 @@ function routeStatus(
 
 function summarizeRoute(
   configuredBiomeCount: number,
-  evaluations: readonly FProjectEvaluation[],
+  evaluations: readonly BiomeProjectEvaluation[],
   validatedPrefix: readonly string[],
   horizon: RouteProcessingHorizon,
 ): RouteEvaluationSummary {
@@ -207,14 +250,18 @@ function summarizeRoute(
   });
 }
 
-function evaluateRoute(catalog: Catalog, route: AuthoredRoutePlan): ProjectRouteEvaluation {
-  const evaluations: FProjectEvaluation[] = [];
+function evaluateRoute(
+  catalog: Catalog,
+  route: AuthoredRoutePlan,
+  simulatableBiomeKeys?: ReadonlySet<string>,
+): ProjectRouteEvaluation {
+  const evaluations: BiomeProjectEvaluation[] = [];
   const validatedPrefix: string[] = [];
   const findings: SemanticFinding[] = [];
   let horizon: RouteProcessingHorizon = Object.freeze({ kind: 'routeEnd' });
 
   for (const [index, plan] of route.biomes.entries()) {
-    const simulator = registeredSimulator(plan.biomeKey);
+    const simulator = registeredSimulator(plan.biomeKey, simulatableBiomeKeys);
     if (simulator === undefined) {
       horizon = Object.freeze({
         kind: 'simulatorBoundary',
@@ -224,7 +271,11 @@ function evaluateRoute(catalog: Catalog, route: AuthoredRoutePlan): ProjectRoute
       break;
     }
 
-    const evaluation = simulator(catalog, route.routeKey, plan);
+    const previous = evaluations.at(-1);
+    if (previous?.completion === 'incomplete') {
+      throw new ProjectSimulationContractError('incomplete biome cannot seed route continuation');
+    }
+    const evaluation = simulator(catalog, route.routeKey, plan, index + 1, previous);
     evaluations.push(evaluation);
     findings.push(...evaluation.findings);
     if (evaluation.completion === 'incomplete') {
@@ -300,9 +351,17 @@ function summarizeProject(routes: readonly ProjectRouteEvaluation[]): ProjectEva
   });
 }
 
-export function simulateProject(catalog: Catalog, project: ProjectDocument): ProjectEvaluation {
+export function simulateProject(
+  catalog: Catalog,
+  project: ProjectDocument,
+  scope?: ProjectSimulationScope,
+): ProjectEvaluation {
   assertProjectMatchesCatalog(catalog, project);
-  const routes = Object.freeze(project.routes.map((route) => evaluateRoute(catalog, route)));
+  const simulatableBiomeKeys =
+    scope === undefined ? undefined : new Set(scope.simulatableBiomeKeys);
+  const routes = Object.freeze(
+    project.routes.map((route) => evaluateRoute(catalog, route, simulatableBiomeKeys)),
+  );
   const findings = Object.freeze(routes.flatMap((route) => route.findings));
   const summary = summarizeProject(routes);
   const status: ProjectEvaluation['status'] =

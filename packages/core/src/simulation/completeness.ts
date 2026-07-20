@@ -15,18 +15,23 @@ import type {
 } from '../project/model';
 import type { CompletenessFindingCode, FindingEvidence, SemanticFinding } from './model';
 
-export interface IncompleteFCompletenessResult {
+export interface IncompleteLinearCompletenessResult {
   readonly completion: 'incomplete';
   readonly findings: readonly SemanticFinding[];
 }
 
-export interface CompleteFCompletenessResult {
+export interface CompleteLinearCompletenessResult {
   readonly completion: 'complete';
   readonly topology: LinearBiomeTopology;
   readonly findings: readonly [];
 }
 
-export type FCompletenessResult = CompleteFCompletenessResult | IncompleteFCompletenessResult;
+export type LinearCompletenessResult =
+  CompleteLinearCompletenessResult | IncompleteLinearCompletenessResult;
+
+export type IncompleteFCompletenessResult = IncompleteLinearCompletenessResult;
+export type CompleteFCompletenessResult = CompleteLinearCompletenessResult;
+export type FCompletenessResult = LinearCompletenessResult;
 
 export class CompletenessContractError extends Error {
   constructor(detail: string) {
@@ -49,22 +54,21 @@ function finding(
   });
 }
 
-function requireFLayout(catalog: Catalog, biome: BiomeAddress, plan: LinearBiomePlan) {
-  if (biome.biomeKey !== 'F' || plan.biomeKey !== 'F') {
-    throw new CompletenessContractError('F completeness requires biome F');
-  }
+function requireLinearLayout(catalog: Catalog, biome: BiomeAddress, plan: LinearBiomePlan) {
   if (plan.biomeKey !== biome.biomeKey) {
     throw new CompletenessContractError(
       `plan biome ${plan.biomeKey} does not match address biome ${biome.biomeKey}`,
     );
   }
   const route = catalog.routes.byKey[biome.routeKey];
-  if (route === undefined || !route.biomeKeys.includes('F')) {
-    throw new CompletenessContractError(`${biome.routeKey} does not place biome F`);
+  if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
+    throw new CompletenessContractError(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
   }
-  const layout = catalog.biomeLayouts.byKey.F;
+  const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
   if (layout?.kind !== 'LinearBiome') {
-    throw new CompletenessContractError('catalog does not provide a linear F layout');
+    throw new CompletenessContractError(
+      `catalog does not provide a linear ${biome.biomeKey} layout`,
+    );
   }
   if (
     layout.start.kind !== 'authoredStart' ||
@@ -72,7 +76,9 @@ function requireFLayout(catalog: Catalog, biome: BiomeAddress, plan: LinearBiome
     layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore' ||
     layout.terminal.kind !== 'forkedTransition'
   ) {
-    throw new CompletenessContractError('catalog F layout is not supported by F completeness');
+    throw new CompletenessContractError(
+      `catalog ${biome.biomeKey} layout is not supported by linear completeness`,
+    );
   }
   return layout;
 }
@@ -126,12 +132,12 @@ function findPickedShopState(
   }
 }
 
-export function evaluateFCompleteness(
+export function evaluateLinearCompleteness(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: LinearBiomePlan,
-): FCompletenessResult {
-  const layout: LinearBiomeLayout = requireFLayout(catalog, biome, plan);
+): LinearCompletenessResult {
+  const layout: LinearBiomeLayout = requireLinearLayout(catalog, biome, plan);
   const topology = plan.topology;
   if (topology === null) {
     return Object.freeze({
@@ -210,4 +216,15 @@ export function evaluateFCompleteness(
     topology,
     findings: Object.freeze([]) as readonly [],
   });
+}
+
+export function evaluateFCompleteness(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  plan: LinearBiomePlan,
+): FCompletenessResult {
+  if (biome.biomeKey !== 'F' || plan.biomeKey !== 'F') {
+    throw new CompletenessContractError('F completeness requires biome F');
+  }
+  return evaluateLinearCompleteness(catalog, biome, plan);
 }

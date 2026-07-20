@@ -2,6 +2,7 @@ import { evaluateRequirement, type RequirementEvaluationContext } from '@run-pla
 import {
   applyConcreteAcquisition,
   applyOfferProjection,
+  beginBiomeRewardHistory,
   beginCurrentRoomRewardHistory,
   consumeCountedOffer,
   createRewardBagState,
@@ -1165,6 +1166,21 @@ describe('offer and acquisition projections', () => {
     expect(nextRoom.useRecord).toEqual({ MaxHealthDrop: 1 });
     expect(nextRoom.biomeUseRecord).toEqual({ MaxHealthDrop: 1 });
     expect(nextRoom.consumableRecord).toEqual({ MaxHealthDrop: 1 });
+  });
+
+  it('starts a new biome without clearing route-wide reward history', () => {
+    const acquired = applyConcreteAcquisition(rewardKernelCatalog, createRewardHistoryState(), {
+      kind: 'loot',
+      gameName: 'ApolloUpgrade',
+    });
+    const nextBiome = beginBiomeRewardHistory(acquired);
+
+    expect(nextBiome.currentRoomUseRecord).toEqual({});
+    expect(nextBiome.biomeUseRecord).toEqual({});
+    expect(nextBiome.lootBiomeRecord).toEqual({});
+    expect(nextBiome.useRecord).toEqual({ ApolloUpgrade: 1 });
+    expect(nextBiome.lootTypeHistory).toEqual({ ApolloUpgrade: 1 });
+    expect(nextBiome.upgradableTraitCount).toBe(1);
   });
 
   it('makes the trait-free reward baseline explicit', () => {

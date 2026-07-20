@@ -2,19 +2,19 @@ import type { BiomeTransitionCounterAxis, EncounterPhaseKind } from '../../catal
 import type { BiomeAddress, OccurrenceAddress, TargetAddress } from '../../project/addresses';
 import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
 
-interface FHistoryEventBase {
+interface LinearHistoryEventBase {
   readonly sequence: number;
 }
 
 export type RoomCreationSource = 'biomeEntry' | 'generatedTarget' | 'layoutCompletion';
 
-export interface BiomeStartedHistoryEvent extends FHistoryEventBase {
+export interface BiomeStartedHistoryEvent extends LinearHistoryEventBase {
   readonly kind: 'biomeStarted';
   readonly origin: BiomeAddress;
-  readonly counters: FHistoryCounters;
+  readonly counters: LinearHistoryCounters;
 }
 
-interface RoomCreatedHistoryEventBase extends FHistoryEventBase {
+interface RoomCreatedHistoryEventBase extends LinearHistoryEventBase {
   readonly kind: 'roomCreated';
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
@@ -34,19 +34,19 @@ export type RoomCreatedHistoryEvent =
       readonly generationCount: number;
     });
 
-export interface BiomeCompletedHistoryEvent extends FHistoryEventBase {
+export interface BiomeCompletedHistoryEvent extends LinearHistoryEventBase {
   readonly kind: 'biomeCompleted';
   readonly origin: BiomeAddress;
 }
 
-export interface BiomeCounterResetHistoryEvent extends FHistoryEventBase {
+export interface BiomeCounterResetHistoryEvent extends LinearHistoryEventBase {
   readonly kind: 'biomeCounterReset';
   readonly origin: BiomeAddress;
   readonly axis: BiomeTransitionCounterAxis;
   readonly value: 0;
 }
 
-export interface TargetGenerationCompletedHistoryEvent extends FHistoryEventBase {
+export interface TargetGenerationCompletedHistoryEvent extends LinearHistoryEventBase {
   readonly kind: 'targetGenerationCompleted';
   readonly origin: TargetAddress;
   readonly roomOrigin: RoomHistoryOrigin;
@@ -55,7 +55,7 @@ export interface TargetGenerationCompletedHistoryEvent extends FHistoryEventBase
   readonly generationCount: number;
 }
 
-export type FHistoryEvent =
+export type LinearHistoryEvent =
   | BiomeCompletedHistoryEvent
   | BiomeCounterResetHistoryEvent
   | BiomeStartedHistoryEvent
@@ -85,51 +85,59 @@ export interface EnteredRewardStoreHistoryEntry {
   readonly storeKey: string;
 }
 
-export interface FHistoryCounters {
+export interface LinearHistoryCounters {
   readonly biomeDepthCache: number;
   readonly biomeEncounterDepth: number;
   readonly routeEncounterDepth: number;
   readonly roomHistoryOrdinal: number;
 }
 
-export interface FHistoryLedgers {
+export interface LinearHistoryLedgers {
   readonly roomCreations: readonly RoomCreatedHistoryEvent[];
   readonly roomAppearances: readonly RoomAppearanceHistoryEntry[];
   readonly encounterStarts: readonly EncounterHistoryEntry[];
   readonly encounterCompletions: readonly EncounterHistoryEntry[];
   readonly enteredRewardStores: readonly EnteredRewardStoreHistoryEntry[];
-  readonly counters: FHistoryCounters;
+  readonly counters: LinearHistoryCounters;
 }
 
-export interface FHistoryStateView {
+export interface LinearHistoryStateView {
   readonly sequence: number;
-  readonly ledgers: FHistoryLedgers;
+  readonly ledgers: LinearHistoryLedgers;
 }
 
-export interface FTargetGenerationView {
+export interface LinearTargetGenerationView {
   readonly targetOrigin: TargetAddress;
   readonly roomOrigin: RoomHistoryOrigin;
-  readonly before: FHistoryStateView;
-  readonly after: FHistoryStateView;
+  readonly before: LinearHistoryStateView;
+  readonly after: LinearHistoryStateView;
 }
 
-export interface FRoomHistoryViews {
+export interface LinearRoomHistoryViews {
   readonly origin: RoomHistoryOrigin;
-  readonly preparation: FHistoryStateView;
-  readonly entry: FHistoryStateView;
-  readonly preOutgoing?: FHistoryStateView;
-  readonly targetGenerations: readonly FTargetGenerationView[];
-  readonly outgoingGeneration?: FHistoryStateView;
-  readonly postCommit: FHistoryStateView;
-  readonly exit: FHistoryStateView;
+  readonly preparation: LinearHistoryStateView;
+  readonly entry: LinearHistoryStateView;
+  readonly preOutgoing?: LinearHistoryStateView;
+  readonly targetGenerations: readonly LinearTargetGenerationView[];
+  readonly outgoingGeneration?: LinearHistoryStateView;
+  readonly postCommit: LinearHistoryStateView;
+  readonly exit: LinearHistoryStateView;
 }
 
-export interface CanonicalFHistory {
+export interface CanonicalLinearHistory {
   readonly routeKey: string;
-  readonly biomeKey: 'F';
-  readonly events: readonly FHistoryEvent[];
-  readonly ledgers: FHistoryLedgers;
-  readonly rooms: readonly FRoomHistoryViews[];
-  readonly biomeCompletion: FHistoryStateView;
-  readonly afterTransition: FHistoryStateView;
+  readonly biomeKey: string;
+  readonly events: readonly LinearHistoryEvent[];
+  readonly ledgers: LinearHistoryLedgers;
+  readonly rooms: readonly LinearRoomHistoryViews[];
+  readonly biomeCompletion: LinearHistoryStateView;
+  readonly afterTransition: LinearHistoryStateView;
 }
+
+export type FHistoryEvent = LinearHistoryEvent;
+export type FHistoryCounters = LinearHistoryCounters;
+export type FHistoryLedgers = LinearHistoryLedgers;
+export type FHistoryStateView = LinearHistoryStateView;
+export type FTargetGenerationView = LinearTargetGenerationView;
+export type FRoomHistoryViews = LinearRoomHistoryViews;
+export type CanonicalFHistory = CanonicalLinearHistory;

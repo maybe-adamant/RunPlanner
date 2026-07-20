@@ -65,6 +65,7 @@ describe('complete dormant P catalog', () => {
     expect(catalog.biomeLayouts.byKey.P).toEqual({
       biomeKey: 'P',
       kind: 'LinearBiome',
+      initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
       start: { kind: 'authoredStart', mode: 'fixed', roomGameNames: ['P_Intro'] },
       entries: [],
       continuation: {

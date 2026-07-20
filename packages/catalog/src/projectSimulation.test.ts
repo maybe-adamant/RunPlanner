@@ -1,15 +1,19 @@
 import {
   applyProjectCommand,
+  composeLinearHistory,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
   createProjectDocument,
+  createRouteAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
+  evaluateProjectCandidate,
   semanticAddressKey,
   simulateProject,
   type OccurrenceId,
@@ -23,6 +27,7 @@ import { declarations } from './declarations';
 import { catalog } from './index';
 
 const biome = createBiomeAddress('Underworld', 'F');
+const gBiome = createBiomeAddress('Underworld', 'G');
 const startId = createOccurrenceId('golden-start');
 
 interface BatchSpec {
@@ -187,6 +192,168 @@ function completeGoldenProject(batches: readonly BatchSpec[] = goldenBatches): P
     offer: createShopOfferAddress(biome, createOccurrenceId('golden-terminal-e1'), 'MajorNonBoon'),
     value: { rewardType: 'RoomRewardHealDrop' },
   });
+}
+
+const gPickedRooms = [
+  'G_Combat01',
+  'G_Combat02',
+  'G_Combat03',
+  'G_Combat10',
+  'G_Combat11',
+  'G_Shop01',
+  'G_MiniBoss01',
+  'G_Combat12',
+] as const;
+
+interface GFixtureOptions {
+  readonly pickedMiniboss?: 'G_MiniBoss01' | 'G_MiniBoss02';
+}
+
+const gPeerRooms: Readonly<Record<number, readonly string[]>> = {
+  2: ['G_Combat02'],
+  3: ['G_Combat03', 'G_Combat03'],
+  4: ['G_Combat11', 'G_Combat12'],
+  5: ['G_Combat12'],
+  6: ['G_Combat12'],
+  7: ['G_MiniBoss02'],
+  8: ['G_Combat13'],
+};
+
+const gMetaOffers: Readonly<Record<number, readonly (ResolvedRewardOffer | undefined)[]>> = {
+  2: [{ rewardType: 'MetaCurrencyBigDrop' }, { rewardType: 'MetaCardPointsCommonBigDrop' }],
+  5: [{ rewardType: 'MetaCurrencyBigDrop' }, { rewardType: 'MetaCardPointsCommonBigDrop' }],
+};
+
+const gRunOffers: Readonly<Record<number, readonly (ResolvedRewardOffer | undefined)[]>> = {
+  1: [{ rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } }],
+  3: [
+    { rewardType: 'MaxHealthDrop' },
+    { rewardType: 'MaxManaDrop' },
+    { rewardType: 'RoomMoneyDrop' },
+  ],
+  4: [{ rewardType: 'SpellDrop' }, { rewardType: 'MaxHealthDrop' }, { rewardType: 'MaxManaDrop' }],
+  6: [undefined, { rewardType: 'StackUpgrade' }],
+  7: [
+    { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+    { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+  ],
+  8: [
+    { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+    { rewardType: 'TalentDrop' },
+  ],
+};
+
+function gOccurrenceId(batchIndex: number, exitIndex: number): OccurrenceId {
+  return createOccurrenceId(`golden-g-b${batchIndex}-e${exitIndex}`);
+}
+
+function completeGoldenFGProject(options: GFixtureOptions = {}): ProjectDocument {
+  const pickedRooms = gPickedRooms.map((gameName) =>
+    gameName === 'G_MiniBoss01' ? (options.pickedMiniboss ?? gameName) : gameName,
+  );
+  let project = applyProjectCommand(completeGoldenProject(), catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Underworld'),
+    configuredBiomeCount: 2,
+  });
+  const introId = createOccurrenceId('golden-g-intro');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: gBiome,
+    occurrenceId: introId,
+    gameName: 'G_Intro',
+  });
+  let parentId = introId;
+
+  pickedRooms.forEach((pickedGameName, offset) => {
+    const batchIndex = offset + 1;
+    const parent = catalog.rooms.byKey[batchIndex === 1 ? 'G_Intro' : pickedRooms[batchIndex - 2]!];
+    if (parent === undefined) {
+      throw new Error(`missing G parent for batch ${batchIndex}`);
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(gBiome, parentId),
+    });
+    if (batchIndex === 2 || batchIndex === 5) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(gBiome, parentId),
+        storeKey: 'MetaProgress',
+      });
+    }
+    const peerRooms =
+      batchIndex === 7 && options.pickedMiniboss === 'G_MiniBoss02'
+        ? ['G_MiniBoss01']
+        : batchIndex === 8 && options.pickedMiniboss === 'G_MiniBoss02'
+          ? []
+          : (gPeerRooms[batchIndex] ?? []);
+    const targetNames = [pickedGameName, ...peerRooms];
+    if (targetNames.length !== parent.exits.length) {
+      throw new Error(`G batch ${batchIndex} fixture does not fill its physical exits`);
+    }
+    targetNames.forEach((gameName, targetOffset) => {
+      const exitIndex = targetOffset + 1;
+      const occurrenceId = gOccurrenceId(batchIndex, exitIndex);
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(gBiome, parentId, exitIndex),
+        occurrenceId,
+        gameName,
+      });
+      const offer =
+        gMetaOffers[batchIndex]?.[targetOffset] ?? gRunOffers[batchIndex]?.[targetOffset];
+      if (offer !== undefined) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceIncomingReward',
+          reward: createIncomingRewardAddress(gBiome, occurrenceId),
+          value: offer,
+        });
+      }
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(gBiome, parentId),
+      exitIndex: 1,
+    });
+    if (pickedGameName === 'G_Shop01') {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopOffer',
+        offer: createShopOfferAddress(gBiome, gOccurrenceId(batchIndex, 1), 'MajorNonBoon'),
+        value: { rewardType: 'RoomRewardHealDrop' },
+      });
+    }
+    parentId = gOccurrenceId(batchIndex, 1);
+  });
+
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTerminalTransition',
+    continuation: createContinuationAddress(gBiome, parentId),
+    targetOccurrenceIds: [
+      createOccurrenceId('golden-g-terminal-shop'),
+      createOccurrenceId('golden-g-terminal-free'),
+    ],
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(gBiome, createOccurrenceId('golden-g-terminal-free')),
+    value: { rewardType: 'StackUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetTerminalPicked',
+    picked: createPickedAddress(gBiome, parentId),
+    exitIndex: 1,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(
+      gBiome,
+      createOccurrenceId('golden-g-terminal-shop'),
+      'MajorNonBoon',
+    ),
+    value: { rewardType: 'RoomRewardHealDrop' },
+  });
+  return project;
 }
 
 function earlyTerminalProject(): ProjectDocument {
@@ -468,6 +635,11 @@ describe('project simulation composition', () => {
       blockedBiomeKeys: ['G'],
     });
     expect(incomplete.routes[0]!.biomes).toHaveLength(1);
+    expect(
+      incomplete.findings.every(
+        (finding) => finding.origin.kind === 'route' || finding.origin.biomeKey === 'F',
+      ),
+    ).toBe(true);
     expect(incomplete.routes[0]!.summary).toMatchObject({
       evaluatedBiomeCount: 1,
       incompleteBiomeCount: 1,
@@ -480,12 +652,236 @@ describe('project simulation composition', () => {
       blockedBiomeKeys: ['G'],
     });
     expect(invalid.routes[0]!.biomes).toHaveLength(1);
+    expect(
+      invalid.findings.every(
+        (finding) => finding.origin.kind === 'route' || finding.origin.biomeKey === 'F',
+      ),
+    ).toBe(true);
     expect(invalid.routes[0]!.summary).toMatchObject({
       evaluatedBiomeCount: 1,
       invalidBiomeCount: 1,
       blockedBiomeCount: 1,
       eligibleForExecutionPlan: false,
     });
+  });
+
+  it('carries validated F route state through a complete G simulation', () => {
+    const result = simulateProject(catalog, completeGoldenFGProject());
+    const underworld = result.routes[0]!;
+    const f = underworld.biomes[0]!;
+    const g = underworld.biomes[1]!;
+
+    expect(result.findings).toEqual([]);
+    expect(result.status).toBe('valid');
+    expect(underworld.validatedPrefix).toEqual(['F', 'G']);
+    expect(g.completion).toBe('complete');
+    if (f.completion !== 'complete' || g.completion !== 'complete') {
+      throw new Error('golden F/G route unexpectedly incomplete');
+    }
+    expect(g.validity).toBe('valid');
+    expect(() => composeLinearHistory(catalog, g.snapshot)).toThrowError(
+      'G requires validated F history',
+    );
+    expect(g.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
+      'G_Boss01',
+      'G_PostBoss01',
+    ]);
+    expect(g.snapshot.entryRooms[0]).toMatchObject({
+      gameName: 'G_Intro',
+      lifecycleProfileKey: 'RewardlessRoom',
+    });
+    expect(g.history.events[0]).toMatchObject({
+      kind: 'biomeStarted',
+      counters: {
+        biomeDepthCache: 1,
+        biomeEncounterDepth: 1,
+        routeEncounterDepth: f.history.afterTransition.ledgers.counters.routeEncounterDepth,
+        roomHistoryOrdinal: f.history.afterTransition.ledgers.counters.roomHistoryOrdinal,
+      },
+    });
+    expect(g.history.events[0]!.sequence).toBe(f.history.afterTransition.sequence + 1);
+    expect(g.history.afterTransition.sequence).toBeGreaterThan(f.history.afterTransition.sequence);
+    expect(g.history.ledgers.roomAppearances.length).toBeGreaterThan(
+      f.history.ledgers.roomAppearances.length,
+    );
+    expect(
+      g.history.ledgers.encounterStarts.some(
+        (entry) => entry.baselineEncounterKey === 'GeneratedG_ExtraDoor',
+      ),
+    ).toBe(false);
+    expect(g.history.ledgers.enteredRewardStores.at(-1)).toMatchObject({
+      gameName: 'G_Boss01',
+      storeKey: 'RunProgress',
+    });
+    expect(g.history.afterTransition.ledgers.counters).toMatchObject({
+      biomeDepthCache: 0,
+      biomeEncounterDepth: 0,
+    });
+    expect(g.rewards.branches[0]!.events.length).toBeGreaterThan(0);
+    expect(g.rewards.branches[0]!.events[0]!.historySequence).toBeGreaterThan(
+      f.history.afterTransition.sequence,
+    );
+    expect(
+      g.rewards.branches[0]!.events.every(
+        (event) => event.origin.kind === 'route' || event.origin.biomeKey === 'G',
+      ),
+    ).toBe(true);
+    expect(g.rewards.storeSupport.slice(0, 3)).toMatchObject([
+      { enteredStoreCount: 0, enteredMetaStoreCount: 0 },
+      { enteredStoreCount: 1, enteredMetaStoreCount: 0 },
+      { enteredStoreCount: 2, enteredMetaStoreCount: 1 },
+    ]);
+    expect(
+      g.roomGeneration.forcePressure.find((entry) => entry.selectedGameName === 'G_Shop01'),
+    ).toMatchObject({
+      biomeDepthCache: 5,
+      selectedPossible: true,
+      requiredForcedRoomGameNames: ['G_Shop01'],
+    });
+    expect(
+      g.roomGeneration.forcePressure.find((entry) => entry.selectedGameName === 'G_MiniBoss01'),
+    ).toMatchObject({
+      biomeDepthCache: 6,
+      selectedPossible: true,
+      requiredForcedRoomGameNames: ['G_MiniBoss01', 'G_MiniBoss02', 'G_MiniBoss03'],
+    });
+    expect(g.roomGeneration.forcePressure.at(-1)).toMatchObject({
+      selectedGameName: 'G_PreBoss01',
+      selectedPossible: true,
+      biomeDepthCache: 8,
+    });
+  });
+
+  it('keeps the registered G simulator outside an F-only simulation scope', () => {
+    const result = simulateProject(catalog, completeGoldenFGProject(), {
+      simulatableBiomeKeys: ['F'],
+    });
+    const underworld = result.routes[0]!;
+
+    expect(result.status).toBe('blocked');
+    expect(underworld.biomes.map((evaluation) => evaluation.biomeKey)).toEqual(['F']);
+    expect(underworld.validatedPrefix).toEqual(['F']);
+    expect(underworld.horizon).toEqual({
+      kind: 'simulatorBoundary',
+      biomeKey: 'G',
+      blockedBiomeKeys: ['G'],
+    });
+  });
+
+  it('keeps baseline and proposal candidate simulation inside the application scope', () => {
+    const project = completeGoldenFGProject();
+    const scope = { simulatableBiomeKeys: ['F'] } as const;
+
+    expect(
+      evaluateProjectCandidate(
+        catalog,
+        project,
+        {
+          kind: 'roomTarget',
+          target: createTargetAddress(gBiome, createOccurrenceId('golden-g-intro'), 1),
+          gameName: 'G_Combat02',
+        },
+        scope,
+      ),
+    ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
+    expect(
+      evaluateProjectCandidate(
+        catalog,
+        project,
+        {
+          kind: 'incomingReward',
+          reward: createIncomingRewardAddress(gBiome, gOccurrenceId(1, 1)),
+          value: { rewardType: 'MaxHealthDrop' },
+        },
+        scope,
+      ),
+    ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
+  });
+
+  it('preserves biome encounter depth when the picked G miniboss is Crawler', () => {
+    const result = simulateProject(
+      catalog,
+      completeGoldenFGProject({ pickedMiniboss: 'G_MiniBoss02' }),
+    );
+    const g = result.routes[0]!.biomes[1]!;
+
+    expect(g.completion).toBe('complete');
+    if (g.completion !== 'complete') {
+      throw new Error('Crawler G route unexpectedly incomplete');
+    }
+    expect(g.validity).toBe('valid');
+    const crawlerOrigin = createOccurrenceAddress(gBiome, gOccurrenceId(7, 1));
+    const crawler = g.history.rooms.find(
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(crawlerOrigin),
+    );
+    expect(crawler).toBeDefined();
+    expect(
+      g.history.ledgers.encounterStarts.find(
+        (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(crawlerOrigin),
+      ),
+    ).toMatchObject({
+      gameName: 'G_MiniBoss02',
+      baselineEncounterKey: 'MiniBossCrawler',
+    });
+    expect(crawler!.preOutgoing!.ledgers.counters.biomeEncounterDepth).toBe(
+      crawler!.entry.ledgers.counters.biomeEncounterDepth,
+    );
+  });
+
+  it('retains a complete invalid G product after a G-local generation mismatch', () => {
+    const project = applyProjectCommand(completeGoldenFGProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(gBiome, gOccurrenceId(1, 1)),
+      gameName: 'G_Combat10',
+    });
+    const result = simulateProject(catalog, project);
+    const g = result.routes[0]!.biomes[1]!;
+
+    expect(result.status).toBe('invalid');
+    expect(result.routes[0]!.horizon).toEqual({
+      kind: 'invalid',
+      biomeKey: 'G',
+      blockedBiomeKeys: [],
+    });
+    expect(g.completion).toBe('complete');
+    if (g.completion !== 'complete') {
+      throw new Error('invalid G unexpectedly incomplete');
+    }
+    expect(g.validity).toBe('invalid');
+    expect(g.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'targetRoomUnavailable',
+        origin: createTargetAddress(gBiome, createOccurrenceId('golden-g-intro'), 1),
+      }),
+    );
+    expect(
+      g.findings.every(
+        (finding) => finding.origin.kind !== 'route' && finding.origin.biomeKey === 'G',
+      ),
+    ).toBe(true);
+  });
+
+  it('evaluates G reward legality from carried route state', () => {
+    const rewardOrigin = createIncomingRewardAddress(gBiome, gOccurrenceId(1, 1));
+    const project = applyProjectCommand(completeGoldenFGProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: rewardOrigin,
+      value: { rewardType: 'MetaCurrencyDrop' },
+    });
+    const result = simulateProject(catalog, project);
+    const g = result.routes[0]!.biomes[1]!;
+
+    expect(g.completion).toBe('complete');
+    if (g.completion !== 'complete') {
+      throw new Error('reward-invalid G unexpectedly incomplete');
+    }
+    expect(g.rewards.validity).toBe('invalid');
+    expect(g.rewards.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardBagEntryUnavailable',
+        origin: rewardOrigin,
+      }),
+    );
   });
 
   it('publishes reward/shop witnesses through the same complete invalid evaluation', () => {
@@ -522,7 +918,7 @@ describe('project simulation composition', () => {
     });
   });
 
-  it('is deeply deterministic and stops before dormant biome dispatch', () => {
+  it('is deeply deterministic and evaluates configured G as incomplete', () => {
     const project = completeGoldenProject();
     const first = simulateProject(catalog, project);
     const second = simulateProject(catalog, project);
@@ -531,18 +927,19 @@ describe('project simulation composition', () => {
 
     expect(second).toEqual(first);
     expect(rebuilt).toEqual(first);
-    expect(dormant.routes[0]!.biomes).toHaveLength(1);
-    expect(dormant.status).toBe('blocked');
+    expect(dormant.routes[0]!.biomes).toHaveLength(2);
+    expect(dormant.status).toBe('incomplete');
     expect(dormant.routes[0]!.horizon).toEqual({
-      kind: 'simulatorBoundary',
+      kind: 'incomplete',
       biomeKey: 'G',
-      blockedBiomeKeys: ['G'],
+      blockedBiomeKeys: [],
     });
     expect(dormant.routes[0]!.summary).toMatchObject({
       configuredBiomeCount: 2,
-      evaluatedBiomeCount: 1,
+      evaluatedBiomeCount: 2,
       validatedBiomeCount: 1,
-      blockedBiomeCount: 1,
+      incompleteBiomeCount: 1,
+      blockedBiomeCount: 0,
       eligibleForExecutionPlan: false,
     });
   });

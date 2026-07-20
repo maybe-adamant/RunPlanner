@@ -156,19 +156,20 @@ room currently requires `IndividualRewardStore`.
 
 ## G Migration
 
-| Family                           | Status   | Primary evidence                                                              | Port action                                                                                                                                            |
-| -------------------------------- | -------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| G layout and terminal depth      | ported   | `RoomDataG.lua`, legacy G biome rules                                         | Fixed intro, authored bounds, ordinary continuation, and the depth-8 terminal normalize.                                                               |
-| G intro                          | ported   | `RoomDataG.lua`, encounter declarations                                       | Reward-free `FixedIntro`, its 0-1 force window, and empty encounter profile normalize; the legacy exact-depth predicate was rejected.                  |
-| G physical exits                 | ported   | `RoomDataG.lua`, extracted map topology                                       | Every G room has exact ordered `OceanusExitDoor` fixtures, including all two/three-exit exceptions.                                                    |
-| G locked-exit encounters         | deferred | `RoomDataG.lua`, `ObstacleDataG.lua`, `RoomLogic.lua`                         | V1 conditions the canonical trace on taking an open picked exit immediately; optional per-exit unlock actions and counter effects are reserved for v2. |
-| G Anomaly replacement            | deferred | `RoomDataG.lua`, `RunLogic.lua`                                               | Suppress the one-room detour in v1; do not reinterpret it as an ordinary G encounter or candidate.                                                     |
-| G combat declarations            | ported   | `RoomSets.lua`, `RoomDataG.lua`, legacy `g_oceanus.lua`                       | All 20 rooms, exact counter ranges, and the four Devotion exclusions are covered by one parity matrix.                                                 |
-| `G_MiniBoss03`                   | ported   | `RoomSets.lua`, `RoomDataG.lua`                                               | Production Hellifish resolves to counting `MiniBossJellyfish`; it is not treated as debug-only.                                                        |
-| G miniboss group requirements    | ported   | `RoomDataG.lua`, run requirements                                             | Entered-room mutual exclusion, force window, caps, concrete encounters, and Crawler's non-counting timing normalize.                                   |
-| `G_Shop01` force and eligibility | ported   | `RoomDataG.lua`                                                               | Eligibility ends at depth 5 while the raw force maximum remains 6; minimum two-exit context is explicit.                                               |
-| G forked preboss declaration     | ported   | `RoomLogic.lua`, `RewardLogic.lua`, `biomes/G_GAME_RULES.md`                  | WorldShop-first and two-free-reward capacity normalize; physical occurrences and acquisition fixtures belong to later phases.                          |
-| G fixed completion tail          | ported   | `RoomDataG.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/G_GAME_RULES.md` | Neutral `G_Boss01` and `G_PostBoss01` are derived declarations ordered by the layout; the boss retains resolved-offer store history.                   |
+| Family                           | Status    | Primary evidence                                                               | Port action                                                                                                                                                       |
+| -------------------------------- | --------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G layout and terminal depth      | ported    | `RoomDataG.lua`, legacy G biome rules                                          | Fixed intro, authored bounds, ordinary continuation, and the depth-8 terminal normalize.                                                                          |
+| G intro                          | ported    | `RoomDataG.lua`, encounter declarations                                        | Reward-free `FixedIntro`, its 0-1 force window, and empty encounter profile normalize; the legacy exact-depth predicate was rejected.                             |
+| G physical exits                 | ported    | `RoomDataG.lua`, extracted map topology                                        | Every G room has exact ordered `OceanusExitDoor` fixtures, including all two/three-exit exceptions.                                                               |
+| G locked-exit encounters         | deferred  | `RoomDataG.lua`, `ObstacleDataG.lua`, `RoomLogic.lua`                          | V1 conditions the canonical trace on taking an open picked exit immediately; optional per-exit unlock actions and counter effects are reserved for v2.            |
+| G Anomaly replacement            | deferred  | `RoomDataG.lua`, `RunLogic.lua`                                                | Suppress the one-room detour in v1; do not reinterpret it as an ordinary G encounter or candidate.                                                                |
+| G combat declarations            | ported    | `RoomSets.lua`, `RoomDataG.lua`, legacy `g_oceanus.lua`                        | All 20 rooms, exact counter ranges, and the four Devotion exclusions are covered by one parity matrix.                                                            |
+| `G_MiniBoss03`                   | ported    | `RoomSets.lua`, `RoomDataG.lua`                                                | Production Hellifish resolves to counting `MiniBossJellyfish`; it is not treated as debug-only.                                                                   |
+| G miniboss group requirements    | ported    | `RoomDataG.lua`, run requirements                                              | Entered-room mutual exclusion, force window, caps, concrete encounters, and Crawler's non-counting timing normalize.                                              |
+| `G_Shop01` force and eligibility | ported    | `RoomDataG.lua`                                                                | Eligibility ends at depth 5 while the raw force maximum remains 6; minimum two-exit context is explicit.                                                          |
+| G forked preboss declaration     | ported    | `RoomLogic.lua`, `RewardLogic.lua`, `biomes/G_GAME_RULES.md`                   | WorldShop-first and two-free-reward capacity normalize; physical occurrences and acquisition fixtures belong to later phases.                                     |
+| G fixed completion tail          | ported    | `RoomDataG.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/G_GAME_RULES.md`  | Neutral `G_Boss01` and `G_PostBoss01` are derived declarations ordered by the layout; the boss retains resolved-offer store history.                              |
+| G simulation and route carry     | simulated | shared linear simulator, `projectSimulation.test.ts`, `biomes/G_GAME_RULES.md` | Complete G plans consume validated F route state, apply G-local baselines and resets, and publish generation/reward findings through the common project contract. |
 
 The G port follows the same progressed-save scope as F. `FishmanIntro`, the
 early-run Eris event, `G_MiniBoss02`'s lifetime encounter-completion gates,
@@ -292,10 +293,11 @@ rooms belong to each biome layout; `Next` is derived only from route order.
 | Surface    | P     | `LinearBiome` | 28 (26)          | eligibility / standard  | authored Run/Meta                    | forked              | `P_Boss01`, `P_PostBoss01` | Q    |
 | Surface    | Q     | `LinearBiome` | 23 (22)          | staged / standard       | none                                 | direct              | `Q_Boss01`                 | --   |
 
-The phase-end capability matrix remains F/G authorable, F editable, and no
-simulatable biome. P/Q/H/O/I/N are declared but cannot enter application
-projects, semantic commands, the simulatable capability, active selector
-scope, or editor navigation.
+The core simulation matrix now includes F and G, while the application
+capability matrix remains F/G authorable and F-only simulatable/editable until
+the shared G editor lands. P/Q/H/O/I/N are declared but cannot enter
+application projects, semantic commands, the simulatable capability, active
+selector scope, or editor navigation.
 
 The following remaining dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:

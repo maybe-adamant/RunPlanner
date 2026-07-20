@@ -11,6 +11,9 @@ export const roomLifecycleProfiles = [
       'F_MiniBoss01',
       'F_MiniBoss02',
       'F_MiniBoss03',
+      'G_MiniBoss01',
+      'G_MiniBoss02',
+      'G_MiniBoss03',
     ],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
@@ -41,6 +44,21 @@ export const roomLifecycleProfiles = [
         point: 'roomRewardPickup',
         effects: ['recordProducerPoint'],
       },
+      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
+      {
+        kind: 'commitRoom',
+        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
+      },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
+    key: 'RewardlessRoom',
+    encounterProfileKeys: ['FixedIntro'],
+    producer: { kind: 'none' },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
         kind: 'commitRoom',
@@ -139,7 +157,7 @@ export const roomLifecycleProfiles = [
   },
   {
     key: 'BossRoom',
-    encounterProfileKeys: ['F_Boss01'],
+    encounterProfileKeys: ['F_Boss01', 'G_Boss01'],
     producer: { kind: 'none' },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },
@@ -163,7 +181,7 @@ export const roomLifecycleProfiles = [
   },
   {
     key: 'PostBossRoom',
-    encounterProfileKeys: ['F_PostBoss01'],
+    encounterProfileKeys: ['F_PostBoss01', 'G_PostBoss01'],
     producer: { kind: 'none' },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },

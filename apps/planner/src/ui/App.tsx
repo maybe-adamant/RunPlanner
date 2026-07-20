@@ -1,13 +1,13 @@
 import {
   createRouteAddress,
   type AuthoredRoutePlan,
+  type BiomeProjectEvaluation,
   type Catalog,
   type CatalogSummary,
+  type FProjectEvaluation,
   type ProjectRouteEvaluation,
 } from '@run-planner/core';
-import { useMemo } from 'react';
 
-import { createCandidateProjectionService } from '../application/candidateProjection';
 import { presentProjectStatus, presentRouteStatus } from '../application/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import type { EditorNavigation, RouteEditorNavigation } from '../application/editorNavigation';
@@ -31,7 +31,7 @@ import { ProjectFileControls } from './ProjectFileControls';
 import { ProjectHistoryControls } from './ProjectHistoryControls';
 
 interface AppProps {
-  readonly candidateProjection?: CandidateProjectionService;
+  readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
@@ -49,6 +49,18 @@ function asUnderworldPanel(biomeKey: string): UnderworldPanel {
     throw new Error(`${biomeKey} is not an Underworld editor panel`);
   }
   return biomeKey as UnderworldPanel;
+}
+
+function asFProjectEvaluation(
+  evaluation: BiomeProjectEvaluation | undefined,
+): FProjectEvaluation | undefined {
+  if (evaluation === undefined) {
+    return undefined;
+  }
+  if (evaluation.biomeKey !== 'F') {
+    throw new Error(`${evaluation.biomeKey} is not an F project evaluation`);
+  }
+  return evaluation as FProjectEvaluation;
 }
 
 function RouteOverview({
@@ -145,10 +157,6 @@ export function App({
   editorNavigation,
   projectOperations,
 }: AppProps) {
-  const activeCandidateProjection = useMemo(
-    () => candidateProjection ?? createCandidateProjectionService(catalog),
-    [candidateProjection, catalog],
-  );
   const activeSection = useAppSelector((state) => state.editorSession.activeSection);
   const activeUnderworldPanel = useAppSelector(
     (state) => state.editorSession.activeUnderworldPanel,
@@ -175,7 +183,9 @@ export function App({
   }
 
   const fPlan = underworld.biomes.find((biome) => biome.biomeKey === 'F');
-  const fEvaluation = underworldEvaluation.biomes.find((biome) => biome.biomeKey === 'F');
+  const fEvaluation = asFProjectEvaluation(
+    underworldEvaluation.biomes.find((biome) => biome.biomeKey === 'F'),
+  );
   if (fPlan !== undefined && fEvaluation === undefined) {
     throw new Error('Configured Erebus is missing its evaluation');
   }
@@ -253,7 +263,7 @@ export function App({
               />
             ) : fPlan !== undefined && fEvaluation !== undefined ? (
               <FBiomeEditor
-                candidateProjection={activeCandidateProjection}
+                candidateProjection={candidateProjection}
                 catalog={catalog}
                 evaluation={fEvaluation}
                 plan={fPlan}

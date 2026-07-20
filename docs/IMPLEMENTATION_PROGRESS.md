@@ -130,6 +130,35 @@ and invalid tone. When a complete contextual snapshot is not available, the
 stable declaration domain remains editable with typed unavailable context
 rather than invented validity.
 
+Phase 5 Commit 3 is complete. The F-only completeness, canonical
+materialization, lifecycle/history, room-generation, and reward pipelines now
+expose one shared linear-biome foundation. Linear layouts declare their exact
+biome-local entry counters; route simulation carries validated room,
+encounter, reward-bag, acquisition, offer, and route-counter state from F into
+G while applying the declared biome-local counter and reward-record resets.
+
+G is registered only through that complete pipeline. Its rewardless fixed
+intro, physical exits, depth and encounter-depth requirements, miniboss mutual
+exclusion and Crawler timing, Shop/miniboss/preboss force pressure, Meta/Run
+ratio support, incoming rewards, WorldShops, terminal realizations, and
+layout-derived `G_Boss01 -> G_PostBoss01` tail now produce the same immutable
+project result and semantic findings as F. The canonical closed-door trace
+assumes the picked exit is open and emits no `GeneratedG_ExtraDoor` event.
+`G_Boss01` records the resolved RunProgress boss-offer store without adding a
+boss reward surface.
+
+Application composition derives an explicit simulation scope from the active
+capability matrix. G therefore remains behind the current F-only application
+simulation boundary until its editor and candidate presentation activate in
+Phase 5 Commit 4; direct core fixtures exercise the registered G simulator.
+
+Project fixtures cover complete-valid, complete-invalid, incomplete, and
+upstream-blocked G. They prove that invalid or incomplete F prevents G-local
+evaluation, G reward-ratio accounting excludes retained F store entries,
+biome reward records reset while global reward history survives, and the F/G
+prefix remains deterministic. G editor and candidate activation remain Phase
+5 Commit 4 work.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -832,8 +861,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, and 4 have no pending items. Phase 5 Commit 3, G simulation and
-route continuation, is the next implementation frontier.
+Phases 2.8, 3, and 4 have no pending items. Phase 5 Commit 4, G editor
+activation, is the next implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete
