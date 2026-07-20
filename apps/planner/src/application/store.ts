@@ -1,4 +1,4 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, createSelector } from '@reduxjs/toolkit';
 import {
   canRedoProjectHistory,
   canUndoProjectHistory,
@@ -9,6 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import type { PlannerCapabilities } from './capabilities';
 import { editorSessionReducer } from './editorSessionSlice';
+import { indexFindingsByOwner } from './evaluationProjection';
 import { requireProjectAuthorable } from './projectDocuments';
 import { createProjectWorkspaceReducer, type ProjectEvaluator } from './projectWorkspaceSlice';
 
@@ -42,6 +43,9 @@ export const selectProjectWorkspace = (state: RootState) => state.projectWorkspa
 export const selectProjectHistory = (state: RootState) => state.projectWorkspace.history;
 export const selectPresentProject = (state: RootState) => state.projectWorkspace.history.present;
 export const selectProjectEvaluation = (state: RootState) => state.projectWorkspace.evaluation;
+export const selectProjectFindingsByOwner = createSelector(selectProjectEvaluation, (evaluation) =>
+  indexFindingsByOwner(evaluation.findings),
+);
 export const selectCanUndoProject = (state: RootState) =>
   canUndoProjectHistory(state.projectWorkspace.history);
 export const selectCanRedoProject = (state: RootState) =>
