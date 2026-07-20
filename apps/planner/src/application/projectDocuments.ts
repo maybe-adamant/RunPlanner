@@ -9,30 +9,43 @@ import {
 
 import { requireBiomeCapability, type PlannerCapabilities } from './capabilities';
 
+export function requireRoutePrefixAuthorable(
+  catalog: Catalog,
+  capabilities: PlannerCapabilities,
+  routeKey: string,
+  configuredBiomeCount: number,
+  path: string,
+): void {
+  const route = catalog.routes.byKey[routeKey];
+  if (
+    route === undefined ||
+    !Number.isInteger(configuredBiomeCount) ||
+    configuredBiomeCount < 0 ||
+    configuredBiomeCount > route.biomeKeys.length
+  ) {
+    return;
+  }
+  for (const [index, biomeKey] of route.biomeKeys.slice(0, configuredBiomeCount).entries()) {
+    requireBiomeCapability(capabilities, biomeKey, 'authorable', `${path}[${index}]`);
+  }
+}
+
 function requireConfiguredPrefixesAuthorable(
   catalog: Catalog,
   capabilities: PlannerCapabilities,
   configuredBiomeCounts: Readonly<Record<string, number | undefined>>,
 ): void {
   for (const [routeKey, configuredCount] of Object.entries(configuredBiomeCounts)) {
-    const route = catalog.routes.byKey[routeKey];
-    if (
-      route === undefined ||
-      configuredCount === undefined ||
-      !Number.isInteger(configuredCount) ||
-      configuredCount < 0 ||
-      configuredCount > route.biomeKeys.length
-    ) {
+    if (configuredCount === undefined) {
       continue;
     }
-    for (const [index, biomeKey] of route.biomeKeys.slice(0, configuredCount).entries()) {
-      requireBiomeCapability(
-        capabilities,
-        biomeKey,
-        'authorable',
-        `configuredBiomeCounts.${routeKey}[${index}]`,
-      );
-    }
+    requireRoutePrefixAuthorable(
+      catalog,
+      capabilities,
+      routeKey,
+      configuredCount,
+      `configuredBiomeCounts.${routeKey}`,
+    );
   }
 }
 

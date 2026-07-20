@@ -5,6 +5,11 @@ interface BiomeOwnedAddress {
   readonly biomeKey: string;
 }
 
+export interface RouteAddress {
+  readonly kind: 'route';
+  readonly routeKey: string;
+}
+
 export interface BiomeAddress extends BiomeOwnedAddress {
   readonly kind: 'biome';
 }
@@ -58,6 +63,7 @@ export interface ShopOfferAddress extends BiomeOwnedAddress {
 }
 
 export type SemanticAddress =
+  | RouteAddress
   | BiomeAddress
   | BatchRewardStoreAddress
   | CompletionRoomAddress
@@ -101,6 +107,10 @@ function biomeOwner(address: BiomeAddress): BiomeOwnedAddress {
 
 export function createOccurrenceId(value: string): OccurrenceId {
   return nonBlank(value, 'occurrenceId') as OccurrenceId;
+}
+
+export function createRouteAddress(routeKey: string): RouteAddress {
+  return Object.freeze({ kind: 'route', routeKey: nonBlank(routeKey, 'routeKey') });
 }
 
 export function createBiomeAddress(routeKey: string, biomeKey: string): BiomeAddress {
@@ -197,6 +207,8 @@ export function createShopOfferAddress(
 
 export function semanticAddressKey(address: SemanticAddress): string {
   switch (address.kind) {
+    case 'route':
+      return JSON.stringify([address.kind, address.routeKey]);
     case 'biome':
       return JSON.stringify([address.kind, address.routeKey, address.biomeKey]);
     case 'occurrence':

@@ -135,6 +135,7 @@ unpicked repeated combat offer to another map.
 Stable semantic structural addresses are composed from domain owners:
 
 ```text
+route                 routeKey
 biome                 routeKey + biomeKey
 start                 routeKey + biomeKey + start aspect
 room occurrence       routeKey + biomeKey + occurrenceId
@@ -180,6 +181,12 @@ cannot be configured while an earlier biome is absent.
 
 Configured scope means authored scope. It does not itself claim that the
 biome is complete, valid, or ready for future game execution.
+
+`ConfigureRoutePrefix` is the only ordinary edit authority for configured
+scope. Expansion appends declaration-ordered biome plans initialized with
+`topology: null`. Shrink removes the discarded biome plans and all state they
+own; no second dormant route tree or persisted configured count survives.
+Undo restores the exact removed plans as the prior authored snapshot.
 
 ## Layout Variants
 
@@ -410,6 +417,11 @@ The implemented F/G command set is:
 ```ts
 type ProjectCommand =
   | {
+      kind: 'ConfigureRoutePrefix';
+      route: RouteAddress;
+      configuredBiomeCount: number;
+    }
+  | {
       kind: 'CreateStart';
       biome: BiomeAddress;
       occurrenceId: OccurrenceId;
@@ -604,6 +616,7 @@ reaffirm one as a valid pick.
 
 These remain intentionally destructive:
 
+- shrinking a configured route prefix removes every discarded biome plan;
 - `RemoveBatch` removes that decision and dependent downstream topology;
 - `ClearTopology` removes all topology in its scope;
 - terminal removal removes its target and companion references;
@@ -631,6 +644,8 @@ invariants before replacing the authored state:
   base store belongs to that policy's static store domain;
 - every batch-state form matches its layout-selected typed codec and contains
   one complete value for each required semantic field;
+- configured biome plans remain the exact declaration-ordered contiguous route
+  prefix;
 - semantic addresses remain unique.
 
 This boundary rejects malformed construction. It does not reject a

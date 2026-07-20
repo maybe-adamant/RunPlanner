@@ -42,6 +42,15 @@ existing workspace and evaluation identity. Application selectors expose the
 present project, history availability, and coherent evaluation without making
 derived output persisted or undoable.
 
+Phase 4 Commit 2 is complete. `RouteAddress` and `ConfigureRoutePrefix` now
+form the semantic authority for configured route scope. Expansion appends
+catalog-ordered `topology: null` biome plans, shrink explicitly discards the
+removed plans, and authored history restores the exact prior prefix. The
+application permits the F/G authorable boundary while the Phase 4 route UI
+offers only the fully editable and simulatable F prefix. Production boots an
+empty project, Underworld exposes `None` or `Erebus`, Surface remains empty,
+and configured biome navigation appears only after its prefix is authored.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -744,9 +753,9 @@ Completed:
 
 Pending:
 
-Phases 2.8 and 3 have no pending items. Phase 4 Commit 1 is complete. Commits 2
-through 6 add route-prefix authoring, status/findings navigation, keyboard
-history interaction, browser persistence and JSON transfer, and the golden F
+Phases 2.8 and 3 have no pending items. Phase 4 Commits 1 and 2 are complete.
+Commits 3 through 6 add status/findings navigation, keyboard history
+interaction, browser persistence and JSON transfer, and the golden F
 product-loop closure.
 
 Every biome-import commit must remain declaration-only and pass its own parity

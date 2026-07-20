@@ -4,6 +4,7 @@ import {
   createEmptyProjectDocument,
   createOccurrenceId,
   createProjectDocument,
+  createRouteAddress,
   simulateProject,
   type ProjectCommand,
   type ProjectDocument,
@@ -12,7 +13,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createApplicationCapabilities } from './capabilityConfiguration';
 import { PlannerCapabilityContractError } from './capabilities';
-import { createFEditorSmokeProject } from './projectBootstrap';
+import { createInitialProject } from './projectBootstrap';
 import {
   authoredProjectCommandDispatched,
   authoredProjectRedoRequested,
@@ -35,28 +36,25 @@ function createStore() {
     catalog,
     capabilities,
     evaluateProject,
-    initialProject: createFEditorSmokeProject(catalog, capabilities),
+    initialProject: createInitialProject(catalog, capabilities),
   });
   return { evaluateProject, store };
 }
 
 describe('project workspace application state', () => {
-  it('atomically boots one authored history and its exact evaluation', () => {
+  it('atomically boots one empty authored history and its exact evaluation', () => {
     const { evaluateProject, store } = createStore();
     const state = store.getState();
     const project = selectPresentProject(state);
 
-    expect(project.projectId).toBe('f-editor-smoke');
+    expect(project.projectId).toBe('run-plan');
     expect(project.routes).toEqual([
-      {
-        routeKey: 'Underworld',
-        biomes: [{ kind: 'LinearBiome', biomeKey: 'F', topology: null }],
-      },
+      { routeKey: 'Underworld', biomes: [] },
       { routeKey: 'Surface', biomes: [] },
     ]);
     expect(selectProjectEvaluation(state)).toBe(evaluateProject.mock.results[0]?.value);
     expect(evaluateProject.mock.calls[0]?.[0]).toBe(project);
-    expect(selectProjectEvaluation(state).status).toBe('incomplete');
+    expect(selectProjectEvaluation(state).status).toBe('empty');
     expect(selectCanUndoProject(state)).toBe(false);
     expect(selectCanRedoProject(state)).toBe(false);
   });
@@ -64,6 +62,14 @@ describe('project workspace application state', () => {
   it('publishes one replacement evaluation after edit, undo, and redo', () => {
     const { evaluateProject, store } = createStore();
     const original = selectPresentProject(store.getState());
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        route: createRouteAddress('Underworld'),
+        configuredBiomeCount: 1,
+      }),
+    );
+    const configured = selectPresentProject(store.getState());
     const command = {
       kind: 'CreateStart',
       biome: createBiomeAddress('Underworld', 'F'),
@@ -74,27 +80,27 @@ describe('project workspace application state', () => {
     store.dispatch(authoredProjectCommandDispatched(command));
     const editedState = store.getState();
     const editedHistory = selectProjectHistory(editedState);
-    expect(editedHistory.past).toEqual([original]);
+    expect(editedHistory.past).toEqual([original, configured]);
     expect(editedHistory.present.routes[0]?.biomes[0]?.topology?.startOccurrenceId).toBe('f-start');
     expect(editedHistory.future).toEqual([]);
-    expect(evaluateProject).toHaveBeenCalledTimes(2);
-    expect(evaluateProject.mock.calls[1]?.[0]).toBe(editedHistory.present);
-    expect(selectProjectEvaluation(editedState)).toBe(evaluateProject.mock.results[1]?.value);
+    expect(evaluateProject).toHaveBeenCalledTimes(3);
+    expect(evaluateProject.mock.calls[2]?.[0]).toBe(editedHistory.present);
+    expect(selectProjectEvaluation(editedState)).toBe(evaluateProject.mock.results[2]?.value);
 
     store.dispatch(authoredProjectUndoRequested());
     const undoneState = store.getState();
-    expect(selectPresentProject(undoneState)).toBe(original);
+    expect(selectPresentProject(undoneState)).toBe(configured);
     expect(selectProjectHistory(undoneState).future).toEqual([editedHistory.present]);
-    expect(evaluateProject).toHaveBeenCalledTimes(3);
-    expect(evaluateProject.mock.calls[2]?.[0]).toBe(original);
-    expect(selectProjectEvaluation(undoneState)).toBe(evaluateProject.mock.results[2]?.value);
+    expect(evaluateProject).toHaveBeenCalledTimes(4);
+    expect(evaluateProject.mock.calls[3]?.[0]).toBe(configured);
+    expect(selectProjectEvaluation(undoneState)).toBe(evaluateProject.mock.results[3]?.value);
 
     store.dispatch(authoredProjectRedoRequested());
     const redoneState = store.getState();
     expect(selectPresentProject(redoneState)).toBe(editedHistory.present);
-    expect(evaluateProject).toHaveBeenCalledTimes(4);
-    expect(evaluateProject.mock.calls[3]?.[0]).toBe(editedHistory.present);
-    expect(selectProjectEvaluation(redoneState)).toBe(evaluateProject.mock.results[3]?.value);
+    expect(evaluateProject).toHaveBeenCalledTimes(5);
+    expect(evaluateProject.mock.calls[4]?.[0]).toBe(editedHistory.present);
+    expect(selectProjectEvaluation(redoneState)).toBe(evaluateProject.mock.results[4]?.value);
   });
 
   it('retains the coherent workspace without resimulation for semantic and history no-ops', () => {
@@ -103,8 +109,9 @@ describe('project workspace application state', () => {
 
     store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'ClearTopology',
-        biome: createBiomeAddress('Underworld', 'F'),
+        kind: 'ConfigureRoutePrefix',
+        route: createRouteAddress('Underworld'),
+        configuredBiomeCount: 0,
       }),
     );
     store.dispatch(authoredProjectUndoRequested());
@@ -118,10 +125,9 @@ describe('project workspace application state', () => {
     const { evaluateProject, store } = createStore();
     store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'CreateStart',
-        biome: createBiomeAddress('Underworld', 'F'),
-        occurrenceId: createOccurrenceId('discarded-start'),
-        gameName: 'F_Opening01',
+        kind: 'ConfigureRoutePrefix',
+        route: createRouteAddress('Underworld'),
+        configuredBiomeCount: 1,
       }),
     );
     const replacement = createEmptyProjectDocument(catalog, {
@@ -136,6 +142,39 @@ describe('project workspace application state', () => {
     expect(evaluateProject).toHaveBeenCalledTimes(3);
     expect(evaluateProject.mock.calls[2]?.[0]).toBe(replacement);
     expect(selectProjectEvaluation(state)).toBe(evaluateProject.mock.results[2]?.value);
+  });
+
+  it('allows the authorable F/G prefix but rejects H before command application', () => {
+    const { evaluateProject, store } = createStore();
+    const route = createRouteAddress('Underworld');
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        route,
+        configuredBiomeCount: 2,
+      }),
+    );
+    const fgState = store.getState();
+    expect(selectPresentProject(fgState).routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual([
+      'F',
+      'G',
+    ]);
+    expect(selectProjectEvaluation(fgState).status).toBe('incomplete');
+    expect(evaluateProject).toHaveBeenCalledTimes(2);
+
+    expect(() =>
+      store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ConfigureRoutePrefix',
+          route,
+          configuredBiomeCount: 3,
+        }),
+      ),
+    ).toThrowError(
+      new PlannerCapabilityContractError('command.ConfigureRoutePrefix[2]', 'H is not authorable'),
+    );
+    expect(store.getState()).toBe(fgState);
+    expect(evaluateProject).toHaveBeenCalledTimes(2);
   });
 
   it('rejects a non-authorable replacement before publishing or evaluating it', () => {

@@ -6,6 +6,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
+  createRouteAddress,
   createTargetAddress,
 } from '@run-planner/core';
 import { describe, expect, it } from 'vitest';
@@ -14,6 +15,17 @@ import { createApplication } from '../application/createApplication';
 import { sectionSelected, underworldPanelSelected } from '../application/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import { App } from './App';
+
+function configureF(application: ReturnType<typeof createApplication>): void {
+  application.store.dispatch(
+    authoredProjectCommandDispatched({
+      kind: 'ConfigureRoutePrefix',
+      route: createRouteAddress('Underworld'),
+      configuredBiomeCount: 1,
+    }),
+  );
+  application.store.dispatch(underworldPanelSelected('F'));
+}
 
 describe('App', () => {
   it('renders the planner shell from the composed catalog and store', () => {
@@ -33,12 +45,18 @@ describe('App', () => {
     expect(markup).toContain('Surface');
     expect(markup).toContain('Settings');
     expect(markup).toContain('Erebus');
-    expect(markup).toContain('Choose an opening room');
-    expect(markup).toContain('Authored editor smoke');
+    expect(markup).toContain('Route settings');
+    expect(markup).toContain('0 configured');
+    expect(markup).not.toContain('Choose an opening room');
+    expect(markup).toContain('Project editor');
     expect(application.editorNavigation.routes.Underworld?.biomePanels).toEqual([
       { biomeKey: 'F', label: 'Erebus' },
     ]);
+    expect(application.editorNavigation.routes.Underworld?.configurablePrefixBiomePanels).toEqual([
+      { biomeKey: 'F', label: 'Erebus' },
+    ]);
     expect(application.editorNavigation.routes.Surface?.biomePanels).toEqual([]);
+    expect(application.editorNavigation.routes.Surface?.configurablePrefixBiomePanels).toEqual([]);
   });
 
   it('projects route-local and top-level session navigation without authoring history', () => {
@@ -54,7 +72,7 @@ describe('App', () => {
       </Provider>,
     );
     expect(markup).toContain('Route settings');
-    expect(markup).toContain('1 configured');
+    expect(markup).toContain('0 configured');
     expect(markup).not.toContain('Choose an opening room');
 
     application.store.dispatch(sectionSelected('surface'));
@@ -73,6 +91,7 @@ describe('App', () => {
 
   it('projects a started F topology from authored application state', () => {
     const application = createApplication();
+    configureF(application);
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'CreateStart',
@@ -98,6 +117,7 @@ describe('App', () => {
 
   it('projects ordinary decisions, terminal offers, shop state, and retained overflow', () => {
     const application = createApplication();
+    configureF(application);
     const biome = createBiomeAddress('Underworld', 'F');
     const startId = createOccurrenceId('test-start');
     const combatId = createOccurrenceId('test-combat');
@@ -165,6 +185,7 @@ describe('App', () => {
 
   it('disables frontier commands that exceed authored topology bounds', () => {
     const application = createApplication();
+    configureF(application);
     const biome = createBiomeAddress('Underworld', 'F');
     const startId = createOccurrenceId('bounded-start');
     const dispatchCommand = (command: Parameters<typeof authoredProjectCommandDispatched>[0]) =>

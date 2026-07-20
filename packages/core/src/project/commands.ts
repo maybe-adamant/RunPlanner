@@ -16,6 +16,7 @@ import type {
   IncomingRewardAddress,
   OccurrenceAddress,
   PickedAddress,
+  RouteAddress,
   SemanticAddress,
   ShopOfferAddress,
   ShopPurchaseAddress,
@@ -28,6 +29,11 @@ import { createDefaultRoomState, type RoomOccurrenceRole } from './roomState';
 import { ProjectDocumentContractError } from './validation';
 
 export type ProjectCommand =
+  | {
+      readonly kind: 'ConfigureRoutePrefix';
+      readonly route: RouteAddress;
+      readonly configuredBiomeCount: number;
+    }
   | {
       readonly kind: 'CreateStart';
       readonly biome: BiomeAddress;
@@ -126,8 +132,12 @@ interface LocatedBiome {
   readonly layout: LinearBiomeLayout;
 }
 
+type BiomeProjectCommand = Exclude<ProjectCommand, { readonly kind: 'ConfigureRoutePrefix' }>;
+
 export function projectCommandAddress(command: ProjectCommand): SemanticAddress {
   switch (command.kind) {
+    case 'ConfigureRoutePrefix':
+      return command.route;
     case 'CreateStart':
       return command.biome;
     case 'CreateBatch':
@@ -166,9 +176,12 @@ function failCommand(command: ProjectCommand, detail: string): never {
 function locateBiome(
   document: ProjectDocument,
   catalog: Catalog,
-  command: ProjectCommand,
+  command: BiomeProjectCommand,
 ): LocatedBiome {
   const address = projectCommandAddress(command);
+  if (address.kind === 'route') {
+    throw new Error('route command reached biome command resolution');
+  }
   const routeIndex = document.routes.findIndex((route) => route.routeKey === address.routeKey);
   if (routeIndex < 0) {
     failCommand(command, `unknown or unconfigured route ${address.routeKey}`);
@@ -434,6 +447,58 @@ function withBiome(
   return { ...document, routes };
 }
 
+function configureRoutePrefix(
+  document: ProjectDocument,
+  catalog: Catalog,
+  command: Extract<ProjectCommand, { readonly kind: 'ConfigureRoutePrefix' }>,
+): ProjectDocument {
+  const routeDeclaration = catalog.routes.byKey[command.route.routeKey];
+  if (routeDeclaration === undefined) {
+    failCommand(command, `unknown route ${command.route.routeKey}`);
+  }
+  const configuredBiomeCount = command.configuredBiomeCount;
+  if (!Number.isInteger(configuredBiomeCount) || configuredBiomeCount < 0) {
+    failCommand(command, 'configuredBiomeCount must be a non-negative integer');
+  }
+  if (configuredBiomeCount > routeDeclaration.biomeKeys.length) {
+    failCommand(
+      command,
+      `configuredBiomeCount exceeds the ${routeDeclaration.biomeKeys.length}-biome route`,
+    );
+  }
+  const routeIndex = document.routes.findIndex(
+    (route) => route.routeKey === command.route.routeKey,
+  );
+  if (routeIndex < 0) {
+    failCommand(command, `project is missing route ${command.route.routeKey}`);
+  }
+  const route = document.routes[routeIndex];
+  if (route === undefined) {
+    failCommand(command, `project is missing route ${command.route.routeKey}`);
+  }
+  if (route.biomes.length === configuredBiomeCount) {
+    return document;
+  }
+
+  const retainedBiomes = route.biomes.slice(0, configuredBiomeCount);
+  const addedBiomes = routeDeclaration.biomeKeys
+    .slice(route.biomes.length, configuredBiomeCount)
+    .map((biomeKey) => {
+      const layout = catalog.biomeLayouts.byKey[biomeKey];
+      if (layout?.kind !== 'LinearBiome') {
+        failCommand(command, `${biomeKey} has no supported authored plan initializer`);
+      }
+      return { kind: 'LinearBiome' as const, biomeKey, topology: null };
+    });
+  const replacement = { ...route, biomes: [...retainedBiomes, ...addedBiomes] };
+  return {
+    ...document,
+    routes: document.routes.map((candidate, index) =>
+      index === routeIndex ? replacement : candidate,
+    ),
+  };
+}
+
 function replaceOccurrence(
   plan: LinearBiomePlan,
   replacement: RoomOccurrence,
@@ -676,6 +741,9 @@ function applyUnchecked(
   catalog: Catalog,
   command: ProjectCommand,
 ): ProjectDocument {
+  if (command.kind === 'ConfigureRoutePrefix') {
+    return configureRoutePrefix(document, catalog, command);
+  }
   const located = locateBiome(document, catalog, command);
   const { layout, plan } = located;
 
