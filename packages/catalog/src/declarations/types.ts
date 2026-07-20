@@ -7,7 +7,11 @@ import type {
   ExitCompatibilityPolicy,
   ExitTypeDeclaration,
   GeneratedBatchPolicy,
+  HubOpenSlotConstraint,
+  HubRewardLookupDescriptor,
+  HubSideRoomGenerationPolicy,
   HubSlotDescriptor,
+  HubTargetCompletionDescriptor,
   LinearStartDescriptor,
   LinearProgressionPolicy,
   RequirementExpression,
@@ -18,6 +22,7 @@ import type {
   RoomKind,
   RoomMode,
   RoomStructuralTag,
+  RequiredRoomObjectDescriptor,
   SourceRewardStorePolicyOverride,
   TerminalPolicy,
   BiomeDeclaration,
@@ -82,6 +87,7 @@ export interface RawShopRewardBinding {
   readonly rewardType: 'Shop';
   readonly shopProfileKey: string;
   readonly producerLifecycleKey: string;
+  readonly additionalOptionRequirements?: Readonly<Record<string, RequirementExpression>>;
 }
 
 export type RawRewardProducerBinding =
@@ -103,8 +109,10 @@ export type RawLocalChildDescriptor =
       readonly slots: readonly {
         readonly slotKey: string;
         readonly roomGameName: string;
+        readonly physicalDoorId: number;
         readonly availabilityRank: number;
       }[];
+      readonly rewardGeneration: 'jointUnordered';
       readonly fields: readonly AuthoredFieldDescriptor[];
     };
 
@@ -137,6 +145,7 @@ export interface RawRoomDeclaration {
   readonly caps: RoomCaps;
   readonly eligibility?: RequirementExpression;
   readonly force?: RoomForce;
+  readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly localChildren?: readonly RawLocalChildDescriptor[];
 }
 
@@ -168,9 +177,13 @@ export interface RawHubBiomeLayoutDeclaration {
     readonly roomGameName: string;
     readonly slots: readonly HubSlotDescriptor[];
     readonly openCount: { readonly min: number; readonly max: number };
+    readonly openSlotConstraints: readonly HubOpenSlotConstraint[];
     readonly requiredVisits: number;
+    readonly targetCompletion: HubTargetCompletionDescriptor;
     readonly restoreRoomGameName: string;
     readonly rewardStorePolicy: RewardStorePolicy;
+    readonly rewardLookup: HubRewardLookupDescriptor;
+    readonly sideRoomGeneration: HubSideRoomGenerationPolicy;
     readonly fields?: readonly AuthoredFieldDescriptor[];
   };
   readonly terminal: TerminalPolicy;

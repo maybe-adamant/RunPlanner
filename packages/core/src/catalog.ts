@@ -69,6 +69,7 @@ export type RoomKind =
   | 'Intro'
   | 'Miniboss'
   | 'Opening'
+  | 'PreHub'
   | 'PostBoss'
   | 'Preboss'
   | 'Reprieve'
@@ -77,8 +78,11 @@ export type RoomKind =
 
 export type RoomTemplateKey =
   | 'Devotion'
+  | 'EphyraCombat'
+  | 'EphyraSideRoom'
   | 'FixedIntro'
   | 'FixedOpening'
+  | 'FixedPreHub'
   | 'FieldsCombat'
   | 'ClockworkCombat'
   | 'ForkedPreboss'
@@ -135,6 +139,12 @@ export interface RoomCaps {
   readonly maxCreationsPerRoom?: number;
 }
 
+export interface RequiredRoomObjectDescriptor {
+  readonly key: 'SoulPylon';
+  readonly spawnTiming: 'roomEntry';
+  readonly completionRequirement: 'destroyBeforeExit';
+}
+
 export type RoomForce =
   | {
       readonly kind: 'depthWindow';
@@ -169,6 +179,7 @@ export interface RoomDeclaration {
   readonly caps: RoomCaps;
   readonly eligibility?: RequirementExpression;
   readonly force?: RoomForce;
+  readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly localChildren: readonly LocalChildDescriptor[];
 }
 
@@ -208,8 +219,10 @@ export type LocalChildDescriptor =
       readonly slots: readonly {
         readonly slotKey: string;
         readonly roomGameName: string;
+        readonly physicalDoorId: number;
         readonly availabilityRank: number;
       }[];
+      readonly rewardGeneration: 'jointUnordered';
       readonly fields: readonly AuthoredFieldDescriptor[];
     };
 
@@ -334,6 +347,34 @@ export interface LinearBiomeLayout {
 export interface HubSlotDescriptor {
   readonly slotKey: string;
   readonly roomGameName: string;
+  readonly physicalDoorId: number;
+}
+
+export interface HubOpenSlotConstraint {
+  readonly kind: 'maxOpenFromSlots';
+  readonly slotKeys: readonly string[];
+  readonly max: number;
+}
+
+export interface HubRewardLookupDescriptor {
+  readonly key: string;
+  readonly source: 'allOpenTargetOffers';
+}
+
+export interface HubTargetCompletionDescriptor {
+  readonly kind: 'requiredRoomObject';
+  readonly objectKey: 'SoulPylon';
+}
+
+export interface HubSideRoomGenerationPolicy {
+  readonly kind: 'visitPressure';
+  readonly generatedCountKey: string;
+  readonly minimumPerVisit: {
+    readonly numerator: number;
+    readonly denominator: number;
+  };
+  readonly remainingSlots: 'optional';
+  readonly forcedOrder: 'availabilityRankPrefix';
 }
 
 export interface HubBiomeLayout {
@@ -344,9 +385,13 @@ export interface HubBiomeLayout {
     readonly roomGameName: string;
     readonly slots: readonly HubSlotDescriptor[];
     readonly openCount: { readonly min: number; readonly max: number };
+    readonly openSlotConstraints: readonly HubOpenSlotConstraint[];
     readonly requiredVisits: number;
+    readonly targetCompletion: HubTargetCompletionDescriptor;
     readonly restoreRoomGameName: string;
     readonly rewardStorePolicy: RewardStorePolicy;
+    readonly rewardLookup: HubRewardLookupDescriptor;
+    readonly sideRoomGeneration: HubSideRoomGenerationPolicy;
     readonly fields: readonly AuthoredFieldDescriptor[];
   };
   readonly terminal: TerminalPolicy;

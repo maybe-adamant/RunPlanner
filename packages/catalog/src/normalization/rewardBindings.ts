@@ -15,6 +15,7 @@ import type {
 import type { RawRewardProducerBinding } from '../declarations';
 import { freezeUniqueStrings, requireNonEmpty } from './common';
 import { fail } from './errors';
+import { normalizeRequirement, validateRequirementReferences } from './requirements';
 
 function defaultOffer(rewardType: RewardTypeDeclaration): ResolvedRewardOffer {
   return Object.freeze({
@@ -196,8 +197,23 @@ export function normalizeRewardBinding(
   if (shop === undefined) {
     fail(`${path}.rewardType`, `unknown reward type ${raw.rewardType}`);
   }
-  if (rewards.shops.byKey[raw.shopProfileKey] === undefined) {
+  const shopProfile = rewards.shops.byKey[raw.shopProfileKey];
+  if (shopProfile === undefined) {
     fail(`${path}.shopProfileKey`, `unknown shop profile ${raw.shopProfileKey}`);
+  }
+  const rawRequirements = raw.additionalOptionRequirements ?? {};
+  const optionKeys = new Set(
+    shopProfile.groups.values.flatMap((group) => group.options.values.map((option) => option.key)),
+  );
+  const additionalOptionRequirements: Record<string, ReturnType<typeof normalizeRequirement>> = {};
+  for (const [optionKey, rawRequirement] of Object.entries(rawRequirements)) {
+    if (!optionKeys.has(optionKey)) {
+      fail(`${path}.additionalOptionRequirements.${optionKey}`, 'unknown shop option');
+    }
+    const requirementPath = `${path}.additionalOptionRequirements.${optionKey}`;
+    const requirement = normalizeRequirement(rawRequirement, requirementPath);
+    validateRequirementReferences(requirement, rewards.rewardTypes, requirementPath);
+    additionalOptionRequirements[optionKey] = requirement;
   }
   requireProducerLifecycle(
     rewards,
@@ -210,5 +226,8 @@ export function normalizeRewardBinding(
     offer: defaultOffer(shop),
     shopProfileKey: raw.shopProfileKey,
     producerLifecycleKey: raw.producerLifecycleKey,
+    ...(Object.keys(additionalOptionRequirements).length === 0
+      ? {}
+      : { additionalOptionRequirements: Object.freeze(additionalOptionRequirements) }),
   });
 }

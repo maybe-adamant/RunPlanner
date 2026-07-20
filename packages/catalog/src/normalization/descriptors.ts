@@ -112,8 +112,17 @@ export function normalizeLocalChildren(
           fail(`${childPath}.slots`, 'must not be empty');
         }
         const ranks = new Set<number>();
+        const physicalDoorIds = new Set<number>();
         const slots = child.slots.map((slot, slotIndex) => {
           const slotPath = `${childPath}.slots[${slotIndex}]`;
+          const physicalDoorId = requirePositiveInteger(
+            slot.physicalDoorId,
+            `${slotPath}.physicalDoorId`,
+          );
+          if (physicalDoorIds.has(physicalDoorId)) {
+            fail(`${slotPath}.physicalDoorId`, `duplicates ${physicalDoorId}`);
+          }
+          physicalDoorIds.add(physicalDoorId);
           const availabilityRank = requirePositiveInteger(
             slot.availabilityRank,
             `${slotPath}.availabilityRank`,
@@ -125,13 +134,26 @@ export function normalizeLocalChildren(
           return Object.freeze({
             slotKey: slotKeys[slotIndex] as string,
             roomGameName: requireNonEmpty(slot.roomGameName, `${slotPath}.roomGameName`),
+            physicalDoorId,
             availabilityRank,
           });
         });
+        for (let rank = 1; rank <= slots.length; rank += 1) {
+          if (!ranks.has(rank)) {
+            fail(`${childPath}.slots.availabilityRanks`, `must contain contiguous rank ${rank}`);
+          }
+        }
+        if (child.rewardGeneration !== 'jointUnordered') {
+          fail(
+            `${childPath}.rewardGeneration`,
+            `unknown fixed-room reward generation ${String(child.rewardGeneration)}`,
+          );
+        }
         return Object.freeze({
           key: keys[index] as string,
           kind: 'fixedRoomSlots',
           slots: Object.freeze(slots),
+          rewardGeneration: 'jointUnordered',
           fields: normalizeAuthoredFields(child.fields, `${childPath}.fields`),
         });
       }

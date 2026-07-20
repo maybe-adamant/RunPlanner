@@ -63,6 +63,7 @@ function context(
     },
     currentRoomShopOptionNames: new Set(),
     currentRoomRewardType: undefined,
+    rewardLookups: {},
     runDepthCache: 20,
     lastEventRunDepthCaches: {},
     recentEncounterPhases: [],
@@ -431,7 +432,8 @@ describe('complete dormant I catalog', () => {
     );
 
     const reprieve = declarations.rooms[reprieveIndex];
-    if (reprieve?.eligibility?.kind !== 'all') {
+    const eligibility = reprieve?.eligibility;
+    if (eligibility?.kind !== 'all') {
       throw new Error('I Reprieve raw eligibility is missing');
     }
     expect(() =>
@@ -443,8 +445,8 @@ describe('complete dormant I catalog', () => {
               ? {
                   ...room,
                   eligibility: {
-                    ...reprieve.eligibility,
-                    requirements: reprieve.eligibility.requirements.map((requirement) =>
+                    ...eligibility,
+                    requirements: eligibility.requirements.map((requirement) =>
                       requirement.kind === 'currentBatchRoomCount'
                         ? { ...requirement, roomGameNames: ['I_UnknownPeer'] }
                         : requirement,

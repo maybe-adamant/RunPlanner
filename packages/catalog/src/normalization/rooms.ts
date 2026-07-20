@@ -78,9 +78,12 @@ function normalizeCaps(caps: RoomCaps, path: string): RoomCaps {
 
 const roomTemplateKinds = {
   Devotion: 'Devotion',
+  EphyraCombat: 'Combat',
+  EphyraSideRoom: 'Combat',
   ClockworkCombat: 'Combat',
   FixedIntro: 'Intro',
   FixedOpening: 'Opening',
+  FixedPreHub: 'PreHub',
   FieldsCombat: 'Combat',
   ForkedPreboss: 'Preboss',
   Fountain: 'Reprieve',
@@ -95,9 +98,12 @@ const roomTemplateKinds = {
 
 const roomTemplateRewardKinds = {
   Devotion: 'fixed',
+  EphyraCombat: 'countedChoice',
+  EphyraSideRoom: 'countedChoice',
   ClockworkCombat: 'countedChoice',
   FixedIntro: 'none',
   FixedOpening: 'countedChoice',
+  FixedPreHub: 'countedChoice',
   FieldsCombat: 'none',
   ForkedPreboss: 'shop',
   Fountain: 'countedChoice',
@@ -292,7 +298,7 @@ export function normalizeRooms(
     if (encounters.byKey[room.encounterProfileKey] === undefined) {
       fail(`${path}.encounterProfileKey`, `unknown encounter profile ${room.encounterProfileKey}`);
     }
-    if (room.exits.length === 0) {
+    if (room.exits.length === 0 && !(mode.kind === 'derived' && mode.classification === 'hub')) {
       fail(`${path}.exits`, 'must not be empty');
     }
     const exits = room.exits.map((exit, exitIndex): RoomExit => {
@@ -327,6 +333,34 @@ export function normalizeRooms(
       room.entryOfferPolicy === undefined
         ? undefined
         : normalizeEntryOfferPolicy(room.entryOfferPolicy, rewards, `${path}.entryOfferPolicy`);
+    const requiredObjectKeys = new Set<string>();
+    const requiredObjects = room.requiredObjects?.map((object, objectIndex) => {
+      const objectPath = `${path}.requiredObjects[${objectIndex}]`;
+      if (object.key !== 'SoulPylon') {
+        fail(`${objectPath}.key`, `unknown required room object ${String(object.key)}`);
+      }
+      if (object.spawnTiming !== 'roomEntry') {
+        fail(`${objectPath}.spawnTiming`, `unknown spawn timing ${String(object.spawnTiming)}`);
+      }
+      if (object.completionRequirement !== 'destroyBeforeExit') {
+        fail(
+          `${objectPath}.completionRequirement`,
+          `unknown completion requirement ${String(object.completionRequirement)}`,
+        );
+      }
+      if (requiredObjectKeys.has(object.key)) {
+        fail(`${objectPath}.key`, `duplicates ${object.key}`);
+      }
+      requiredObjectKeys.add(object.key);
+      return Object.freeze({
+        key: 'SoulPylon' as const,
+        spawnTiming: 'roomEntry' as const,
+        completionRequirement: 'destroyBeforeExit' as const,
+      });
+    });
+    if (requiredObjects !== undefined && requiredObjects.length === 0) {
+      fail(`${path}.requiredObjects`, 'must not be empty when declared');
+    }
     const forcedRewardStoreKey =
       room.forcedRewardStoreKey === undefined
         ? undefined
@@ -394,6 +428,7 @@ export function normalizeRooms(
       ...(room.force === undefined
         ? {}
         : { force: normalizeForce(room.force, rewards, `${path}.force`) }),
+      ...(requiredObjects === undefined ? {} : { requiredObjects: Object.freeze(requiredObjects) }),
       localChildren: normalizeLocalChildren(
         room.localChildren ?? [],
         `${path}.localChildren`,
@@ -533,6 +568,28 @@ export function normalizeRooms(
         if (referenced.biomeKey !== room.biomeKey || referenced.mode.kind !== 'authored') {
           fail(path, `${slot.roomGameName} must be an authored room in ${room.biomeKey}`);
         }
+      }
+    }
+    if (room.mode.kind === 'authored' && room.mode.templateKey === 'EphyraCombat') {
+      if (
+        room.localChildren.length > 1 ||
+        room.localChildren.some((child) => child.kind !== 'fixedRoomSlots')
+      ) {
+        fail(
+          `rooms[${roomIndex}].localChildren`,
+          'EphyraCombat accepts at most one fixed-room side group',
+        );
+      }
+      if (room.requiredObjects?.length !== 1 || room.requiredObjects[0]?.key !== 'SoulPylon') {
+        fail(`rooms[${roomIndex}].requiredObjects`, 'EphyraCombat requires one SoulPylon');
+      }
+    }
+    if (room.mode.kind === 'authored' && room.mode.templateKey === 'EphyraSideRoom') {
+      if (room.localChildren.length !== 0) {
+        fail(`rooms[${roomIndex}].localChildren`, 'EphyraSideRoom cannot own local children');
+      }
+      if (room.requiredObjects !== undefined) {
+        fail(`rooms[${roomIndex}].requiredObjects`, 'EphyraSideRoom cannot require room objects');
       }
     }
   });

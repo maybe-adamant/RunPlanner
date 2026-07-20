@@ -55,7 +55,7 @@ describe('F catalog migration slice', () => {
   });
 
   it('normalizes verified reward, encounter, and room declarations', () => {
-    expect(catalog.version).toBe('0.9.0-i-dormant');
+    expect(catalog.version).toBe('0.10.0-n-dormant');
     expect(catalog.routes.byKey.Underworld?.biomeKeys).toEqual(['F', 'G', 'H', 'I']);
 
     const runProgress = catalog.rewards.stores.byKey.RunProgress;
@@ -270,10 +270,14 @@ describe('F catalog migration slice', () => {
   });
 
   it('rejects duplicate room game names with a declaration path', () => {
+    const opening = declarations.rooms[0];
+    if (opening === undefined) {
+      throw new Error('F opening fixture is missing');
+    }
     expect(() =>
       createCatalog({
         ...declarations,
-        rooms: [...declarations.rooms, declarations.rooms[0]],
+        rooms: [...declarations.rooms, opening],
       }),
     ).toThrowError(
       new CatalogContractError(
@@ -286,8 +290,8 @@ describe('F catalog migration slice', () => {
   it('rejects unknown room templates at the declaration boundary', () => {
     const opening = declarations.rooms[0];
     expect(opening).toBeDefined();
-    if (opening === undefined) {
-      return;
+    if (opening === undefined || opening.mode.kind !== 'authored') {
+      throw new Error('F authored opening fixture is missing');
     }
 
     expect(() =>
@@ -340,9 +344,10 @@ describe('F catalog migration slice', () => {
   it('rejects unresolved reward stores at the room contact', () => {
     const opening = declarations.rooms[0];
     expect(opening).toBeDefined();
-    if (opening === undefined) {
-      return;
+    if (opening === undefined || opening.incomingReward.kind !== 'countedChoice') {
+      throw new Error('F counted opening fixture is missing');
     }
+    const incomingReward = opening.incomingReward;
 
     expect(() =>
       createCatalog({
@@ -351,7 +356,7 @@ describe('F catalog migration slice', () => {
           {
             ...opening,
             incomingReward: {
-              ...opening.incomingReward,
+              ...incomingReward,
               storeKeys: ['MissingStore'],
             },
           },

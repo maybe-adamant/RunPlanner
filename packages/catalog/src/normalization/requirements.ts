@@ -89,6 +89,12 @@ export function normalizeRequirement(
         kind: 'notInCurrentRoomShopOptions',
         rewardType: requireNonEmpty(requirement.rewardType, `${path}.rewardType`),
       });
+    case 'rewardLookupExcludes':
+      return Object.freeze({
+        kind: 'rewardLookupExcludes',
+        lookupKey: requireNonEmpty(requirement.lookupKey, `${path}.lookupKey`),
+        rewardType: requireNonEmpty(requirement.rewardType, `${path}.rewardType`),
+      });
     case 'minRoomsSinceEvent':
       return Object.freeze({
         kind: 'minRoomsSinceEvent',
@@ -153,6 +159,7 @@ export function validateRequirementReferences(
       validateRequirementReferences(requirement.requirement, rewardTypes, `${path}.requirement`);
       return;
     case 'notInCurrentRoomShopOptions':
+    case 'rewardLookupExcludes':
       if (rewardTypes.byKey[requirement.rewardType] === undefined) {
         fail(`${path}.rewardType`, `unknown reward type ${requirement.rewardType}`);
       }
