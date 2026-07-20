@@ -18,9 +18,11 @@ F/G/P/Q/H/O/I/N audit set. Phase 2.8 dormant declaration closure and the Phase
 3 F simulation vertical slice are complete. F completeness, canonical
 materialization, lifecycle composition, event-folded history, room-generation
 legality, reward-kernel orchestration, and project-level simulation now form
-one public result. Candidate evaluation remains deferred to Phase 5. The Phase
-2.7 F/G authority switch and later schema-version-3 identity cleanup leave
-those simulation contracts unchanged.
+one public result. The initial Phase 5 candidate foundation now evaluates
+generated F room alternatives through that same room-generation authority;
+the remaining F candidate domains and application projection follow in the
+next slice. The Phase 2.7 F/G authority switch and later schema-version-3
+identity cleanup leave those simulation contracts unchanged.
 
 ## Core Contract
 
@@ -664,11 +666,24 @@ or likelihood.
 
 For one candidate, simulation:
 
-1. applies an unpublished semantic replacement;
-2. rematerializes the smallest affected semantic owner;
-3. replays shared validators through the required local horizon;
-4. returns findings and evidence;
-5. discards scratch state.
+1. validates the query against its authored semantic owner and declaration;
+2. derives the exact current pre-decision context through normal project
+   simulation;
+3. projects the proposed value into the smallest affected semantic owner;
+4. invokes the same support evaluator and finding producer used for the
+   selected value;
+5. returns typed support, findings, and evidence without publishing or
+   persisting scratch state.
+
+Ordered candidate queries for one authored snapshot reuse one project
+simulation. A candidate contact does not require unrelated downstream topology
+to remain complete when the proposed value changes structural capacity. For
+example, a room candidate reads the target's already-derived pre-generation
+history and runs the selected-plan room-support calculation for the proposed
+game name; it does not misreport that context as unavailable merely because
+the proposed room would require later exit reconciliation. Validators beyond
+the candidate's semantic effect are replayed only when that candidate domain
+depends on them.
 
 Candidate evaluation is added after selected-plan F simulation is correct. It
 must reuse materializers and validators rather than creating a parallel rules

@@ -99,6 +99,17 @@ and session-state exclusion coverage. Phase 4 closes without activating G or
 adding candidate evaluation, autosave/dirty state, Tauri, execution-plan
 compilation, or game-module work.
 
+Phase 5 Commit 1 is complete. Core now owns immutable project-candidate query
+and result contracts with evaluated `possible`, `forced`, or `impossible`
+support and typed unavailable-context reasons. The first installed query is a
+generated room alternative at a semantic target. It reuses the exact F
+pre-generation history, requirement evaluators, forced-pool calculation,
+semantic findings, and pressure evidence used by selected-plan validation;
+the candidate surface carries no UI color, label, visibility, Redux, or React
+state. Ordered queries reuse one project evaluation. Focused fixtures prove
+possible, forced, impossible, already-authored-invalid, incomplete,
+upstream-blocked, purity, contact failure, and selected-plan parity behavior.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -801,8 +812,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, and 4 have no pending items. Phase 5 is the next implementation
-frontier.
+Phases 2.8, 3, and 4 have no pending items. Phase 5 Commit 2, complete F
+candidate projection, is the next implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

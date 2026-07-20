@@ -1,5 +1,6 @@
 import {
   applyProjectCommand,
+  CandidateEvaluationContractError,
   composeFHistory,
   createBiomeAddress,
   createContinuationAddress,
@@ -7,10 +8,15 @@ import {
   createOccurrenceId,
   createPickedAddress,
   createProjectDocument,
+  createRouteAddress,
   createTargetAddress,
   evaluateFCompleteness,
   evaluateFRoomGeneration,
+  evaluateProjectCandidate,
+  evaluateProjectCandidates,
   materializeLinearBiome,
+  semanticAddressKey,
+  simulateProject,
   type CompleteFCompletenessResult,
   type LinearBiomePlan,
   type ProjectDocument,
@@ -20,6 +26,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from './index';
 
 const biome = createBiomeAddress('Underworld', 'F');
+const gBiome = createBiomeAddress('Underworld', 'G');
 const startId = createOccurrenceId('possibility-start');
 
 interface BatchSpec {
@@ -136,6 +143,78 @@ function pressure(result: ReturnType<typeof evaluate>, batchIndex: number, exitI
     throw new Error(`missing pressure entry for batch ${batchIndex} exit ${exitIndex}`);
   }
   return entry;
+}
+
+function targetAddress(batchIndex: number, exitIndex: number) {
+  return createTargetAddress(
+    biome,
+    batchIndex === 1
+      ? startId
+      : batchOccurrenceId(batchIndex - 1, baselineBatches[batchIndex - 2]!.pickedExitIndex),
+    exitIndex,
+  );
+}
+
+function roomCandidate(
+  project: ProjectDocument,
+  batchIndex: number,
+  exitIndex: number,
+  gameName: string,
+) {
+  return evaluateProjectCandidate(catalog, project, {
+    kind: 'roomTarget',
+    target: targetAddress(batchIndex, exitIndex),
+    gameName,
+  });
+}
+
+function withGTarget(project: ProjectDocument): ProjectDocument {
+  const gStartId = createOccurrenceId('candidate-g-start');
+  let result = applyProjectCommand(project, catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Underworld'),
+    configuredBiomeCount: 2,
+  });
+  result = applyProjectCommand(result, catalog, {
+    kind: 'CreateStart',
+    biome: gBiome,
+    occurrenceId: gStartId,
+    gameName: 'G_Intro',
+  });
+  result = applyProjectCommand(result, catalog, {
+    kind: 'CreateBatch',
+    continuation: createContinuationAddress(gBiome, gStartId),
+  });
+  return applyProjectCommand(result, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(gBiome, gStartId, 1),
+    occurrenceId: createOccurrenceId('candidate-g-target'),
+    gameName: 'G_Combat01',
+  });
+}
+
+function incompleteFProject(): ProjectDocument {
+  let project = createProjectDocument(catalog, {
+    projectId: 'candidate-incomplete',
+    name: 'Candidate Incomplete',
+    configuredBiomeCounts: { Underworld: 1 },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome,
+    occurrenceId: startId,
+    gameName: 'F_Opening01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    continuation: createContinuationAddress(biome, startId),
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: targetAddress(1, 1),
+    occurrenceId: batchOccurrenceId(1, 1),
+    gameName: 'F_Combat02',
+  });
 }
 
 describe('F room possibility and generation validation', () => {
@@ -339,5 +418,166 @@ describe('F room possibility and generation validation', () => {
       terminal.every((entry) => entry.requiredForcedRoomGameNames.includes('F_PreBoss01')),
     ).toBe(true);
     expect(result.history.rooms.at(-4)?.preOutgoing?.ledgers.counters.biomeDepthCache).toBe(10);
+  });
+});
+
+describe('project candidate evaluation', () => {
+  it('reports possible, forced, and impossible room support without mutating the project', () => {
+    const project = possibilityProject();
+    const before = JSON.stringify(project);
+
+    const [possible, forced, impossible] = evaluateProjectCandidates(catalog, project, [
+      { kind: 'roomTarget', target: targetAddress(5, 1), gameName: 'F_Combat20' },
+      { kind: 'roomTarget', target: targetAddress(6, 1), gameName: 'F_MiniBoss03' },
+      { kind: 'roomTarget', target: targetAddress(6, 1), gameName: 'F_Combat20' },
+    ]);
+
+    expect(possible).toMatchObject({
+      context: 'evaluated',
+      support: 'possible',
+      findings: [],
+    });
+    expect(forced).toMatchObject({
+      context: 'evaluated',
+      support: 'forced',
+      findings: [],
+    });
+    expect(impossible).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: {
+        candidateGameName: 'F_Combat20',
+        exclusionReasons: ['forcedPool'],
+      },
+      findings: [
+        expect.objectContaining({
+          code: 'targetRoomUnavailable',
+          origin: targetAddress(6, 1),
+        }),
+      ],
+    });
+    expect(JSON.stringify(project)).toBe(before);
+  });
+
+  it('matches the selected-plan pressure and findings after applying the same replacement', () => {
+    const project = possibilityProject();
+    const cases = [
+      { batchIndex: 5, exitIndex: 1, gameName: 'F_Combat20', support: 'possible' },
+      { batchIndex: 6, exitIndex: 1, gameName: 'F_MiniBoss03', support: 'forced' },
+      { batchIndex: 6, exitIndex: 2, gameName: 'F_Combat20', support: 'impossible' },
+    ] as const;
+
+    for (const parityCase of cases) {
+      const target = targetAddress(parityCase.batchIndex, parityCase.exitIndex);
+      const candidate = roomCandidate(
+        project,
+        parityCase.batchIndex,
+        parityCase.exitIndex,
+        parityCase.gameName,
+      );
+      const selectedProject = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(
+          biome,
+          batchOccurrenceId(parityCase.batchIndex, parityCase.exitIndex),
+        ),
+        gameName: parityCase.gameName,
+      });
+      const selectedEvaluation = simulateProject(catalog, selectedProject);
+      const selectedBiome = selectedEvaluation.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((evaluation) => evaluation.biomeKey === 'F');
+      if (selectedBiome?.completion !== 'complete') {
+        throw new Error('selected candidate parity fixture did not produce complete F');
+      }
+      const targetKey = semanticAddressKey(target);
+      const selectedPressure = selectedBiome.roomGeneration.forcePressure.find(
+        (entry) => semanticAddressKey(entry.targetOrigin) === targetKey,
+      );
+      const selectedFindings = selectedBiome.roomGeneration.findings.filter(
+        (finding) => semanticAddressKey(finding.origin) === targetKey,
+      );
+
+      expect(candidate.context).toBe('evaluated');
+      if (candidate.context !== 'evaluated') {
+        throw new Error('candidate context unexpectedly unavailable');
+      }
+      expect(candidate.support).toBe(parityCase.support);
+      expect(candidate.evidence).toMatchObject({
+        candidateGameName: selectedPressure?.selectedGameName,
+        eligibleRoomGameNames: selectedPressure?.eligibleRoomGameNames,
+        requiredForcedRoomGameNames: selectedPressure?.requiredForcedRoomGameNames,
+        supportRoomGameNames: selectedPressure?.supportRoomGameNames,
+        exclusionReasons: selectedPressure?.selectedExclusionReasons,
+      });
+      expect(candidate.findings).toEqual(selectedFindings);
+    }
+  });
+
+  it('keeps an already-authored impossible room assessable', () => {
+    const batches = baselineBatches.map((batch, index) =>
+      index === 5 ? { targets: ['F_Combat20', 'F_MiniBoss01'], pickedExitIndex: 2 } : batch,
+    );
+    const candidate = roomCandidate(possibilityProject(batches), 6, 1, 'F_Combat20');
+
+    expect(candidate).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: {
+        candidateGameName: 'F_Combat20',
+        exclusionReasons: ['forcedPool'],
+      },
+    });
+  });
+
+  it('reports unavailable context for a target in an incomplete biome', () => {
+    expect(roomCandidate(incompleteFProject(), 1, 1, 'F_Combat03')).toEqual({
+      context: 'unavailable',
+      query: {
+        kind: 'roomTarget',
+        target: targetAddress(1, 1),
+        gameName: 'F_Combat03',
+      },
+      reason: 'biomeIncomplete',
+    });
+  });
+
+  it('distinguishes unavailable upstream history contexts', () => {
+    const gTarget = createTargetAddress(gBiome, createOccurrenceId('candidate-g-start'), 1);
+    const query = { kind: 'roomTarget' as const, target: gTarget, gameName: 'G_Combat02' };
+    const invalidBatches = baselineBatches.map((batch, index) =>
+      index === 5 ? { targets: ['F_Combat20', 'F_MiniBoss01'], pickedExitIndex: 2 } : batch,
+    );
+
+    expect(evaluateProjectCandidate(catalog, withGTarget(incompleteFProject()), query)).toEqual({
+      context: 'unavailable',
+      query,
+      reason: 'upstreamIncomplete',
+    });
+    expect(
+      evaluateProjectCandidate(catalog, withGTarget(possibilityProject(invalidBatches)), query),
+    ).toEqual({
+      context: 'unavailable',
+      query,
+      reason: 'upstreamInvalid',
+    });
+  });
+
+  it('fails malformed candidate addresses at the candidate contact boundary', () => {
+    const project = possibilityProject();
+    const missingTarget = createTargetAddress(biome, startId, 2);
+
+    expect(() =>
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'roomTarget',
+        target: missingTarget,
+        gameName: 'F_Combat03',
+      }),
+    ).toThrow(
+      new CandidateEvaluationContractError(
+        { kind: 'roomTarget', target: missingTarget, gameName: 'F_Combat03' },
+        'exit 2 has no authored target',
+      ),
+    );
   });
 });
