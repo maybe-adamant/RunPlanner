@@ -41,6 +41,8 @@ function context(
     lastEventRunDepthCaches: {},
     recentEncounterPhases: [],
     offeredExitCount: 1,
+    currentBatchRoomGameNames: [],
+    clockwork: undefined,
     flags: { allSpellInvested: false, pendingSpellDrop: false },
     ...overrides,
   };

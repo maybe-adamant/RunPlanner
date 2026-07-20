@@ -12,8 +12,8 @@ completed under the prior reward-store ownership model; Phase 2.6 added the
 audited reward kernel as an intentionally unconnected pure subsystem; Phase
 2.7 atomically made it the sole connected F/G reward authority. Phase 2.8 is
 the current frontier. Capability isolation, the shared structural/F/G
-reconciliation slice, the dormant P/Q/H/O declaration imports, and the schema-version-3
-route/biome identity cleanup are complete; I/N remain before Phase 3
+reconciliation slice, the dormant P/Q/H/O/I declaration imports, and the schema-version-3
+route/biome identity cleanup are complete; N remains before Phase 3
 begins.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
@@ -49,8 +49,8 @@ empty-intro simplification, intentionally collapsed counting combat projection,
 miniboss encounter-depth asymmetry, forked preboss, and persistent-NPC
 composition boundary. The F, G, P, Q, H, O, I, and N rule documents now
 distinguish verified game behavior, modeling disposition, canonical
-projection, reconsideration trigger, and current feature coverage. P, Q, H, and O are
-now declaration-complete and dormant. I and N declarations have not yet
+projection, reconsideration trigger, and current feature coverage. P, Q, H, O,
+and I are now declaration-complete and dormant. N declarations have not yet
 been imported.
 
 `biomes/Q_GAME_RULES.md` records Q's declaration-driven scripted stages, real foyer
@@ -105,8 +105,8 @@ changes for F/G. G completion remains unmaterialized until Phase 3.
 The P audit is now closed under the same derived-tail contract:
 `P_Boss01 -> P_PostBoss01 -> Q_Intro`, neutral `BossPrometheus01`, resolved
 boss-offer store history, and no modeled automatic boss-drop surface. F, G, P,
-Q, H, O, I, and N are closed as biome-rule/design audits. P, Q, H, and O now also
-have dormant declaration coverage; I and N remain documentation-only,
+Q, H, O, I, and N are closed as biome-rule/design audits. P, Q, H, O, and I now
+also have dormant declaration coverage; N remains documentation-only,
 and no later biome is promoted to an active product capability.
 
 ## Completed
@@ -600,10 +600,29 @@ Completed:
      focused parity fixtures;
    - capability isolation keeps O non-authorable, non-simulatable, and
      non-editable.
+8. dormant I declaration import:
+   - all 32 supported progressed-save rooms normalize: derived Intro/Story,
+     24 Clockwork combat maps, Reprieve, two minibosses, canonical shop-only
+     preboss, and the neutral Chronos/postboss tail;
+   - the layout owns fixed Intro/Story entry, twelve bounded Clockwork batches,
+     no generated base store, authored `maxNonGoalRewards` in `3..6`, and one
+     generated preboss target whose picked occurrence alone closes the biome;
+   - every combat occurrence owns one complete dormant-capable Tartarus
+     NonGoal offer while Goal versus NonGoal remains derived and batch state
+     remains `null`;
+   - typed Clockwork goal/capacity and current-batch peer requirements preserve
+     two-exit reserve, special-room ordering/exclusion, miniboss competition,
+     and conditional preboss eligibility without instance-shaped predicates;
+   - counted producers can explicitly override a filtered store default, so
+     Tartarus Boon-only minibosses remain complete without changing the shared
+     store default used by ordinary combat and Reprieve;
+   - unpicked preboss occurrences own no shop inventory, while picked entry
+     materializes the complete five-slot `I_WorldShop` state;
+   - capability isolation keeps I non-authorable, non-simulatable, and
+     non-editable.
 
 Pending:
 
-8. dormant I declaration import;
 9. dormant N declaration import;
 10. cross-biome closure and capability matrix.
 

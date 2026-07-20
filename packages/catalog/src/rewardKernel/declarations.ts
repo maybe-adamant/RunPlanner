@@ -816,6 +816,7 @@ export const rewardKernelDeclarations = {
         'MaxHealthDrop',
         'MaxManaDrop',
         'RoomMoneyDrop',
+        'RoomMoneyTripleDrop',
         'StackUpgrade',
         'StackUpgradeTriple',
         'WeaponUpgrade',

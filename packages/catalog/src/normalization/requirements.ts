@@ -108,6 +108,26 @@ export function normalizeRequirement(
         kind: 'currentRoomRewardExcludes',
         rewardTypes: freezeUniqueStrings(requirement.rewardTypes, `${path}.rewardTypes`),
       });
+    case 'currentBatchTargetCount':
+    case 'clockworkGoalsRemaining':
+      return Object.freeze({
+        kind: requirement.kind,
+        range: normalizeRange(requirement.range, `${path}.range`),
+      });
+    case 'currentBatchRoomCount':
+      if (requirement.roomGameNames.length === 0) {
+        fail(`${path}.roomGameNames`, 'must not be empty');
+      }
+      return Object.freeze({
+        kind: 'currentBatchRoomCount',
+        roomGameNames: freezeUniqueStrings(requirement.roomGameNames, `${path}.roomGameNames`),
+        range: normalizeRange(requirement.range, `${path}.range`),
+      });
+    case 'clockworkNonGoalCapacity':
+      return Object.freeze({
+        kind: 'clockworkNonGoalCapacity',
+        reserve: requireNonNegativeInteger(requirement.reserve, `${path}.reserve`),
+      });
     case 'flagEquals':
       return Object.freeze({
         kind: 'flagEquals',
@@ -155,6 +175,10 @@ export function validateRequirementReferences(
       }
       return;
     case 'counterRange':
+    case 'clockworkGoalsRemaining':
+    case 'clockworkNonGoalCapacity':
+    case 'currentBatchRoomCount':
+    case 'currentBatchTargetCount':
     case 'flagEquals':
     case 'minExits':
     case 'minRoomsSinceEvent':

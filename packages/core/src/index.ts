@@ -62,6 +62,7 @@ export {
   evaluateRequirement,
   hasRequirementEvaluator,
   requirementEvaluatorRegistry,
+  type ClockworkRequirementFacts,
   type RequirementEvaluationContext,
   type RequirementEvaluator,
   type RequirementEvaluatorRegistry,

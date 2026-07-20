@@ -3,7 +3,7 @@
 ## Purpose and Status
 
 This document is the concrete game-rule authority for Tartarus (`I`). It
-exists before the I declaration port so that Clockwork Goal acquisition,
+defines how Clockwork Goal acquisition,
 bounded non-goal progress, second-exit special rooms, and repeatable mixed
 preboss batches can pressure-test the shared model without importing the
 previous Lua control shape.
@@ -16,9 +16,9 @@ target can either continue the biome or enter its terminal. That semantic
 outcome is derived from the picked Room Declaration, not persisted as a second
 mode value.
 
-I declarations intentionally remain unported until every biome audit has
-pressure-tested and reconciled the shared catalog vocabulary. Documentation
-coverage does not activate I simulation, authoring, or editor support.
+I declarations and focused parity fixtures are ported. I intentionally remains
+non-authorable, non-simulatable, and non-editable until its complete product
+loop is implemented.
 
 ## Evidence Status
 
@@ -61,23 +61,23 @@ direction, while correcting three inherited assumptions:
 ## Feature Projection Map
 
 The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
-coverage is defined by `../MIGRATION_PROVENANCE.md`. I currently has documentation
-coverage only.
+coverage is defined by `../MIGRATION_PROVENANCE.md`. I currently has normalized
+declaration coverage only.
 
 | Feature                      | Verified game behavior                                                                                       | Disposition and planner projection                                      | Current coverage | Reconsider when                                              |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------ |
-| Linear entered spine         | Fixed intro and progressed-save Story lead into a bounded Clockwork loop                                     | **Exact:** `LinearBiome` with `ClockworkDoorBatch` continuations        | documented       | --                                                           |
+| Linear entered spine         | Fixed intro and progressed-save Story lead into a bounded Clockwork loop                                     | **Exact:** `LinearBiome` with `ClockworkDoorBatch` continuations        | declared         | --                                                           |
 | Room-set weights             | Several combat maps and Reprieve have extra room-set entries                                                 | **Simplified:** preserve support and forced pools, never likelihood     | documented       | Probability analysis or seeded replay becomes a product goal |
-| Clockwork globals            | Intro initializes five remaining goals and randomly chooses a non-goal cap from three through six            | **Exact:** fixed five plus one authored possibility-selected cap        | documented       | --                                                           |
-| Goal offer and acquisition   | The first combat offer in a batch is Goal; entering it decrements remaining goals                            | **Exact:** goal is an acquisition-driven structural producer            | documented       | --                                                           |
-| Non-goal rewards             | A concrete entered-room reward spawn increments `BiomeRewardsSpawned`; offers alone do not                   | **Exact:** concrete `TartarusRewards` resolution plus derived counter   | documented       | --                                                           |
+| Clockwork globals            | Intro initializes five remaining goals and randomly chooses a non-goal cap from three through six            | **Exact:** fixed five plus one authored possibility-selected cap        | declared         | --                                                           |
+| Goal offer and acquisition   | The first combat offer in a batch is Goal; entering it decrements remaining goals                            | **Exact:** goal is an acquisition-driven structural producer            | declared         | --                                                           |
+| Non-goal rewards             | A concrete entered-room reward spawn increments `BiomeRewardsSpawned`; offers alone do not                   | **Exact:** concrete `TartarusRewards` resolution plus derived counter   | declared         | --                                                           |
 | Base Run/Meta ratio          | `BaseI` declares `TargetMetaRewardsRatio = 0.25`, but every supported target overrides the resolved store    | **Simplified:** omit an unobservable generated base-store outcome       | documented       | A later I target consumes the unoverridden store             |
-| Two-exit reserve             | Two-exit target maps are ineligible when fewer than two non-goal acquisitions remain                         | **Exact:** declaration-owned Clockwork capacity predicate               | documented       | --                                                           |
-| Special peers                | Story, Reprieve, and minibosses have distinct peer-order, cap, force, reward, and counter rules              | **Exact:** separate Room Declarations and current-history predicates    | documented       | --                                                           |
-| Repeated preboss offers      | `I_PreBoss02` is forced once per predecessor after goals reach zero and may be declined on a two-exit source | **Exact:** a new terminal Room Occurrence in each generated batch       | documented       | --                                                           |
-| Conditional terminal outcome | Picking preboss completes I; picking its ordinary peer continues                                             | **Exact:** picked declaration role determines batch continuation effect | documented       | --                                                           |
-| Preboss shop                 | Entered `I_PreBoss02` owns the five-group `I_WorldShop`; its Goal marker is structural                       | **Exact:** one shop-only terminal leaf with no free-reward realization  | documented       | --                                                           |
-| Boss and postboss            | Neutral Chronos follows through `I_PostBoss01`; later restored-house scenes are progression presentation     | **Exact:** derived boss/postboss completion, then route completion      | documented       | --                                                           |
+| Two-exit reserve             | Two-exit target maps are ineligible when fewer than two non-goal acquisitions remain                         | **Exact:** declaration-owned Clockwork capacity predicate               | declared         | --                                                           |
+| Special peers                | Story, Reprieve, and minibosses have distinct peer-order, cap, force, reward, and counter rules              | **Exact:** separate Room Declarations and current-history predicates    | declared         | --                                                           |
+| Repeated preboss offers      | `I_PreBoss02` is forced once per predecessor after goals reach zero and may be declined on a two-exit source | **Exact:** a new terminal Room Occurrence in each generated batch       | declared         | --                                                           |
+| Conditional terminal outcome | Picking preboss completes I; picking its ordinary peer continues                                             | **Exact:** picked declaration role determines batch continuation effect | declared         | --                                                           |
+| Preboss shop                 | Entered `I_PreBoss02` owns the five-group `I_WorldShop`; its Goal marker is structural                       | **Exact:** one shop-only terminal leaf with no free-reward realization  | declared         | --                                                           |
+| Boss and postboss            | Neutral Chronos follows through `I_PostBoss01`; later restored-house scenes are progression presentation     | **Exact:** derived boss/postboss completion, then route completion      | declared         | --                                                           |
 | Boss automatic drop          | `MixerIBossDrop` is outside the modeled reward surface and has no downstream ratio consumer                  | **Simplified:** no reward leaf, acquisition, or terminal ledger entry   | documented       | A downstream consumer makes the fact observable              |
 | Save/profile variants        | Intro combat, Story availability, preboss map, Reprieve, and combat 24 depend on persistent state            | **Excluded:** progressed-save normal-run baseline                       | documented       | Save-profile state becomes a project input                   |
 | Persistent NPC encounters    | Nemesis can replace an ordinary I encounter                                                                  | **Deferred:** suppress under the shared NPC-free baseline               | documented       | Persistent NPC entities are implemented                      |
@@ -440,7 +440,7 @@ production `unsupported` predicates or dormant validation codes.
 
 ## Declaration-Port Contract
 
-The later dormant I declaration slice must add:
+The dormant I import delivers:
 
 1. the derived fixed `I_Intro -> I_Story01` entry sequence with real canonical
    creation, offer, and entry facts;
@@ -462,7 +462,7 @@ The later dormant I declaration slice must add:
 14. the NPC-free, no-detour, no-action baseline without production
     `unsupported` requirements.
 
-The port must be declaration-first and dormant. It must not reactivate I until
+The import remains declaration-first and dormant. It does not reactivate I until
 authored topology, simulation, validation, and editor projection all consume
 the same conditional-terminal batch contract.
 

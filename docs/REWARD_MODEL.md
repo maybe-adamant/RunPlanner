@@ -417,6 +417,7 @@ interface CountedChoiceBinding {
   storeKeys: readonly RewardStoreKey[];
   eligibleRewardTypes: readonly RewardTypeGameName[];
   ineligibleRewardTypes: readonly RewardTypeGameName[];
+  defaultRewardTypesByStore?: Readonly<Record<RewardStoreKey, RewardTypeGameName>>;
 }
 ```
 
@@ -443,8 +444,12 @@ They are evaluated by the simulator.
 The binding's `storeKeys` declare which resolved store contexts the producer
 can accept. They do not select the active store and do not own a default store.
 New generated batches receive their base-store default from the biome layout
-policy; a target reward default comes from its currently resolved store and
-binding filters.
+policy. A target reward default normally comes from its currently resolved
+store. When a room's positive or negative filter removes that store default,
+`defaultRewardTypesByStore` must name an allowed member of the same store. This
+is only a complete leaf-initialization default; it neither changes bag order
+nor creates a second store-selection authority. Tartarus Boon-only minibosses
+use this form while ordinary I combat retains the Tartarus store default.
 
 ## Producer Kinds
 

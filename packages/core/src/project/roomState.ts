@@ -199,6 +199,7 @@ export function createDefaultRoomState(
       requireOrdinaryRole(role, room, path);
       return defaultShipCombatState(catalog, room, path);
     case 'FixedOpening':
+    case 'ClockworkCombat':
     case 'Fountain':
     case 'Miniboss':
     case 'StandardCombat':
@@ -534,6 +535,7 @@ export function decodeRoomState(
       requireOrdinaryRole(role, room, path);
       return decodeShipCombatState(state, catalog, room, path);
     case 'FixedOpening':
+    case 'ClockworkCombat':
     case 'Fountain':
     case 'Miniboss':
     case 'StandardCombat':

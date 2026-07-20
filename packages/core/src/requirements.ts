@@ -69,6 +69,23 @@ export type RequirementExpression =
       readonly rewardTypes: readonly string[];
     }
   | {
+      readonly kind: 'currentBatchTargetCount';
+      readonly range: NumericRange;
+    }
+  | {
+      readonly kind: 'currentBatchRoomCount';
+      readonly roomGameNames: readonly string[];
+      readonly range: NumericRange;
+    }
+  | {
+      readonly kind: 'clockworkGoalsRemaining';
+      readonly range: NumericRange;
+    }
+  | {
+      readonly kind: 'clockworkNonGoalCapacity';
+      readonly reserve: number;
+    }
+  | {
       readonly kind: 'flagEquals';
       readonly flag: CurrentRunFlag;
       readonly value: boolean;

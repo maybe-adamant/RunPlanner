@@ -80,6 +80,7 @@ export type RoomTemplateKey =
   | 'FixedIntro'
   | 'FixedOpening'
   | 'FieldsCombat'
+  | 'ClockworkCombat'
   | 'ForkedPreboss'
   | 'Fountain'
   | 'Miniboss'

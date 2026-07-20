@@ -63,6 +63,7 @@ export interface RawCountedRewardBinding {
   readonly storeKeys: readonly string[];
   readonly eligibleRewardTypes: readonly string[];
   readonly ineligibleRewardTypes: readonly string[];
+  readonly defaultRewardTypesByStore?: Readonly<Record<string, string>>;
   readonly producerLifecycleKey: string;
 }
 

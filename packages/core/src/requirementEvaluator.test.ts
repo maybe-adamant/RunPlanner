@@ -27,6 +27,8 @@ const baseContext = {
   lastEventRunDepthCaches: {},
   recentEncounterPhases: [],
   offeredExitCount: 2,
+  currentBatchRoomGameNames: [],
+  clockwork: undefined,
   flags: {
     allSpellInvested: false,
     pendingSpellDrop: false,
@@ -47,6 +49,10 @@ describe('requirement evaluator registry', () => {
       'minRoomsSinceEvent',
       'minExits',
       'currentRoomRewardExcludes',
+      'currentBatchTargetCount',
+      'currentBatchRoomCount',
+      'clockworkGoalsRemaining',
+      'clockworkNonGoalCapacity',
       'flagEquals',
     ]);
     expect(hasRequirementEvaluator('counterRange')).toBe(true);
@@ -164,6 +170,53 @@ describe('requirement evaluator registry', () => {
         ],
       }),
     ).toBe(true);
+  });
+
+  it('evaluates current-batch and Clockwork generation facts without authored room state', () => {
+    const context = {
+      ...baseContext,
+      currentBatchRoomGameNames: ['I_Combat01', 'I_Reprieve01'],
+      clockwork: {
+        remainingGoals: 0,
+        maxNonGoalRewards: 4,
+        nonGoalRewardsAcquired: 2,
+      },
+    } satisfies RequirementEvaluationContext;
+
+    expect(
+      evaluateRequirement({ kind: 'currentBatchTargetCount', range: { min: 1 } }, context),
+    ).toBe(true);
+    expect(
+      evaluateRequirement(
+        {
+          kind: 'currentBatchRoomCount',
+          roomGameNames: ['I_Reprieve01', 'I_MiniBoss01'],
+          range: { max: 0 },
+        },
+        context,
+      ),
+    ).toBe(false);
+    expect(
+      evaluateRequirement({ kind: 'clockworkGoalsRemaining', range: { max: 0 } }, context),
+    ).toBe(true);
+    expect(evaluateRequirement({ kind: 'clockworkNonGoalCapacity', reserve: 1 }, context)).toBe(
+      true,
+    );
+    expect(
+      evaluateRequirement(
+        { kind: 'clockworkNonGoalCapacity', reserve: 1 },
+        {
+          ...context,
+          clockwork: { ...context.clockwork, nonGoalRewardsAcquired: 3 },
+        },
+      ),
+    ).toBe(false);
+    expect(() =>
+      evaluateRequirement(
+        { kind: 'clockworkGoalsRemaining', range: { max: 0 } },
+        { ...context, clockwork: undefined },
+      ),
+    ).toThrowError('Clockwork requirement evaluated without Clockwork facts');
   });
 
   it('matches the game spacing rule, including same-room peer generation', () => {

@@ -8,6 +8,12 @@ import type {
 
 export type RequirementKind = RequirementExpression['kind'];
 
+export interface ClockworkRequirementFacts {
+  readonly remainingGoals: number;
+  readonly maxNonGoalRewards: number;
+  readonly nonGoalRewardsAcquired: number;
+}
+
 export interface RequirementEvaluationContext {
   readonly counters: Readonly<Record<CounterAxis, number>>;
   readonly records: Readonly<Record<HistoryRecord, Readonly<Record<string, number>>>>;
@@ -20,6 +26,8 @@ export interface RequirementEvaluationContext {
     readonly phaseKeys: readonly string[];
   }[];
   readonly offeredExitCount: number;
+  readonly currentBatchRoomGameNames: readonly string[];
+  readonly clockwork: ClockworkRequirementFacts | undefined;
   readonly flags: Readonly<Record<CurrentRunFlag, boolean>>;
 }
 
@@ -42,6 +50,13 @@ function isInRange(value: number, range: NumericRange): boolean {
     (range.min === undefined || value >= range.min) &&
     (range.max === undefined || value <= range.max)
   );
+}
+
+function requireClockwork(context: RequirementEvaluationContext): ClockworkRequirementFacts {
+  if (context.clockwork === undefined) {
+    throw new Error('Clockwork requirement evaluated without Clockwork facts');
+  }
+  return context.clockwork;
 }
 
 export const requirementEvaluatorRegistry = Object.freeze({
@@ -88,6 +103,20 @@ export const requirementEvaluatorRegistry = Object.freeze({
   currentRoomRewardExcludes: (requirement, context) =>
     context.currentRoomRewardType === undefined ||
     !requirement.rewardTypes.includes(context.currentRoomRewardType),
+  currentBatchTargetCount: (requirement, context) =>
+    isInRange(context.currentBatchRoomGameNames.length, requirement.range),
+  currentBatchRoomCount: (requirement, context) => {
+    const count = context.currentBatchRoomGameNames.filter((gameName) =>
+      requirement.roomGameNames.includes(gameName),
+    ).length;
+    return isInRange(count, requirement.range);
+  },
+  clockworkGoalsRemaining: (requirement, context) =>
+    isInRange(requireClockwork(context).remainingGoals, requirement.range),
+  clockworkNonGoalCapacity: (requirement, context) => {
+    const clockwork = requireClockwork(context);
+    return clockwork.nonGoalRewardsAcquired < clockwork.maxNonGoalRewards - requirement.reserve;
+  },
   flagEquals: (requirement, context) => context.flags[requirement.flag] === requirement.value,
 } satisfies RequirementEvaluatorRegistry);
 
@@ -122,6 +151,14 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.minExits(requirement, context);
     case 'currentRoomRewardExcludes':
       return requirementEvaluatorRegistry.currentRoomRewardExcludes(requirement, context);
+    case 'currentBatchTargetCount':
+      return requirementEvaluatorRegistry.currentBatchTargetCount(requirement, context);
+    case 'currentBatchRoomCount':
+      return requirementEvaluatorRegistry.currentBatchRoomCount(requirement, context);
+    case 'clockworkGoalsRemaining':
+      return requirementEvaluatorRegistry.clockworkGoalsRemaining(requirement, context);
+    case 'clockworkNonGoalCapacity':
+      return requirementEvaluatorRegistry.clockworkNonGoalCapacity(requirement, context);
     case 'flagEquals':
       return requirementEvaluatorRegistry.flagEquals(requirement, context);
   }
