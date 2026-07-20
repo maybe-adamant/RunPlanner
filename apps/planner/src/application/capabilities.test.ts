@@ -119,6 +119,13 @@ describe('planner capabilities', () => {
         editable: false,
       },
       {
+        biomeKey: 'I',
+        declared: true,
+        authorable: false,
+        simulatable: false,
+        editable: false,
+      },
+      {
         biomeKey: 'O',
         declared: true,
         authorable: false,
@@ -146,14 +153,14 @@ describe('planner capabilities', () => {
   it('rejects unknown, duplicate, and non-authorable editable capability entries', () => {
     expect(() =>
       createPlannerCapabilities(catalog, {
-        authorableBiomeKeys: ['F', 'I'],
+        authorableBiomeKeys: ['F', 'N'],
         simulatableBiomeKeys: [],
         editableBiomeKeys: ['F'],
       }),
     ).toThrowError(
       new PlannerCapabilityContractError(
         'capabilities.authorableBiomeKeys[1]',
-        'I is not declared',
+        'N is not declared',
       ),
     );
     expect(() =>

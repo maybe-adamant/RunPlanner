@@ -5,6 +5,7 @@ import { biomeLayouts } from './layouts';
 import { fRooms } from './rooms/f';
 import { gRooms } from './rooms/g';
 import { hRooms } from './rooms/h';
+import { iRooms } from './rooms/i';
 import { oRooms } from './rooms/o';
 import { pRooms } from './rooms/p';
 import { qRooms } from './rooms/q';
@@ -13,14 +14,14 @@ import { routes } from './routes';
 import type { RawCatalogInput } from './types';
 
 export const declarations = {
-  version: '0.8.0-o-dormant',
+  version: '0.9.0-i-dormant',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,
   encounterProfiles,
   exitCompatibilityPolicies,
   exitTypes,
-  rooms: [...fRooms, ...gRooms, ...pRooms, ...qRooms, ...hRooms, ...oRooms],
+  rooms: [...fRooms, ...gRooms, ...pRooms, ...qRooms, ...hRooms, ...oRooms, ...iRooms],
   biomeLayouts,
 } as const satisfies RawCatalogInput;
 

@@ -72,13 +72,15 @@ export function normalizeRewardBinding(
       `${path}.ineligibleRewardTypes`,
     );
     const storeRewardTypes = new Set<string>();
-    const defaultOffersByStore: Record<string, ResolvedRewardOffer> = {};
+    const storeRewardTypesByKey = new Map<string, ReadonlySet<string>>();
+    const storesByKey = new Map<string, RewardStoreDeclaration>();
     for (const [index, storeKey] of storeKeys.entries()) {
       const store = rewards.stores.byKey[storeKey];
       if (store === undefined) {
         fail(`${path}.storeKeys[${index}]`, `unknown reward store ${storeKey}`);
       }
-      defaultOffersByStore[storeKey] = store.defaultOffer;
+      storesByKey.set(storeKey, store);
+      storeRewardTypesByKey.set(storeKey, new Set(store.entries.map((entry) => entry.rewardType)));
       for (const entry of store.entries) {
         storeRewardTypes.add(entry.rewardType);
       }
@@ -112,11 +114,34 @@ export function normalizeRewardBinding(
     if (allowedRewardTypes.length === 0) {
       fail(path, 'filters remove every reward type');
     }
-    for (const storeKey of storeKeys) {
-      const defaultOffer = defaultOffersByStore[storeKey];
-      if (defaultOffer !== undefined && !allowedRewardTypes.includes(defaultOffer.rewardType)) {
-        fail(path, `default ${defaultOffer.rewardType} from ${storeKey} is removed by filters`);
+    const rawDefaults = raw.defaultRewardTypesByStore ?? {};
+    for (const storeKey of Object.keys(rawDefaults)) {
+      if (!storeKeys.includes(storeKey)) {
+        fail(
+          `${path}.defaultRewardTypesByStore.${storeKey}`,
+          `${storeKey} is not a referenced store`,
+        );
       }
+    }
+    const defaultOffersByStore: Record<string, ResolvedRewardOffer> = {};
+    for (const storeKey of storeKeys) {
+      const store = storesByKey.get(storeKey) as RewardStoreDeclaration;
+      const rewardTypeName = rawDefaults[storeKey] ?? store.defaultOffer.rewardType;
+      if (!storeRewardTypesByKey.get(storeKey)?.has(rewardTypeName)) {
+        fail(
+          `${path}.defaultRewardTypesByStore.${storeKey}`,
+          `${rewardTypeName} is not produced by ${storeKey}`,
+        );
+      }
+      if (!allowedRewardTypes.includes(rewardTypeName)) {
+        fail(
+          `${path}.defaultRewardTypesByStore.${storeKey}`,
+          `${rewardTypeName} is removed by this producer's filters`,
+        );
+      }
+      defaultOffersByStore[storeKey] = defaultOffer(
+        rewards.rewardTypes.byKey[rewardTypeName] as RewardTypeDeclaration,
+      );
     }
     requireProducerLifecycle(
       rewards,

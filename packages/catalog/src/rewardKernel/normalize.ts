@@ -421,6 +421,10 @@ function validateRequirementRewardReferences(
     case 'recordCount':
     case 'distinctRecordKeyCount':
     case 'counterRange':
+    case 'clockworkGoalsRemaining':
+    case 'clockworkNonGoalCapacity':
+    case 'currentBatchRoomCount':
+    case 'currentBatchTargetCount':
     case 'flagEquals':
     case 'minExits':
     case 'minRoomsSinceEvent':

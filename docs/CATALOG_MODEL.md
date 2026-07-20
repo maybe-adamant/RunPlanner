@@ -385,7 +385,10 @@ and any lifecycle that fails to bind every acquisition role exactly once.
 Producer bindings select stores, fixed sources, shop profiles, and positive or
 negative filters. A filtered variant does not automatically become a new named
 reward surface. Filters must reference concrete types exposed by their source,
-and positive/negative sets cannot overlap.
+and positive/negative sets cannot overlap. If filtering removes a referenced
+store's ordinary default, the raw binding must explicitly select an allowed
+default reward type from that same store; normalization never guesses the
+first remaining option.
 
 Defaults follow semantic ownership. Option ordering is not a default. A
 producer binding describes the reward domain that a room can accept; it does
@@ -429,9 +432,14 @@ The current-run evaluator registry is total over the normalized requirement
 expression union. Catalog normalization rejects a kind absent from that
 registry, and extending the union without extending the registry is a compile
 failure. Evaluation context keeps counters, acquired-history records, current
-shop options, the current room reward, offered exits, event spacing, and flags
-as distinct semantic inputs; evaluators do not reconstruct one axis from
-another.
+shop options, the current room reward, offered exits, current-batch room order,
+Clockwork progress, event spacing, and flags as distinct semantic inputs;
+evaluators do not reconstruct one axis from another. I uses generic current-
+batch count/room-count predicates for peer order and exclusion, plus typed
+Clockwork goal and non-goal-capacity predicates. Room-specific validation codes
+or instance-shaped predicate names are not part of the declaration language.
+Evaluating a Clockwork predicate without Clockwork facts is a contract failure,
+not an ordinary ineligible result.
 
 ## Declaration and Occurrence Identity
 

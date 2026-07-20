@@ -223,4 +223,37 @@ export const biomeLayouts = [
     fields: [],
     bounds: { maxBatches: 6, maxTargets: 6 },
   },
+  {
+    biomeKey: 'I',
+    kind: 'LinearBiome',
+    start: { kind: 'fixedEntry', role: 'intro', roomGameName: 'I_Intro' },
+    entries: [{ kind: 'fixedEntry', role: 'story', roomGameName: 'I_Story01' }],
+    continuation: {
+      progressionPolicy: { kind: 'eligibilityDriven' },
+      batchPolicy: { kind: 'clockwork', fields: [] },
+      rewardStorePolicy: { kind: 'none' },
+      rewardStoreOverrides: [],
+    },
+    terminal: {
+      kind: 'generatedTarget',
+      roomGameName: 'I_PreBoss02',
+      closesBiomeWhenPicked: true,
+    },
+    completion: {
+      rooms: [
+        { role: 'boss', roomGameName: 'I_Boss01' },
+        { role: 'postboss', roomGameName: 'I_PostBoss01' },
+      ],
+    },
+    fields: [
+      {
+        key: 'maxNonGoalRewards',
+        kind: 'boundedInteger',
+        min: 3,
+        max: 6,
+        defaultValue: 3,
+      },
+    ],
+    bounds: { maxBatches: 12, maxTargets: 22 },
+  },
 ] as const satisfies readonly RawLinearBiomeLayoutDeclaration[];

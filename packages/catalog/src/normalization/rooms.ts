@@ -78,6 +78,7 @@ function normalizeCaps(caps: RoomCaps, path: string): RoomCaps {
 
 const roomTemplateKinds = {
   Devotion: 'Devotion',
+  ClockworkCombat: 'Combat',
   FixedIntro: 'Intro',
   FixedOpening: 'Opening',
   FieldsCombat: 'Combat',
@@ -94,6 +95,7 @@ const roomTemplateKinds = {
 
 const roomTemplateRewardKinds = {
   Devotion: 'fixed',
+  ClockworkCombat: 'countedChoice',
   FixedIntro: 'none',
   FixedOpening: 'countedChoice',
   FieldsCombat: 'none',
@@ -245,6 +247,13 @@ function validateContextRequirementReferences(
     requirement.keys.forEach((gameName, index) => {
       if (rooms.byKey[gameName] === undefined) {
         fail(`${path}.keys[${index}]`, `unknown room ${gameName}`);
+      }
+    });
+  }
+  if (requirement.kind === 'currentBatchRoomCount') {
+    requirement.roomGameNames.forEach((gameName, index) => {
+      if (rooms.byKey[gameName] === undefined) {
+        fail(`${path}.roomGameNames[${index}]`, `unknown room ${gameName}`);
       }
     });
   }
