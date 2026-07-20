@@ -71,6 +71,19 @@ their native editing history. The new jsdom/Testing Library interaction
 harness verifies semantic edits, button and keyboard history traversal, native
 text-edit protection, and navigation remaining outside authored history.
 
+Phase 4 Commit 5 is complete. The application composition root now injects a
+single-slot project-storage adapter and a JSON-transfer adapter, while the
+browser entrypoint alone constructs those adapters from browser globals. New,
+Save, Load, Export JSON, and Import JSON are explicit user operations over the
+normalized `ProjectDocument`; derived evaluation, history, and UI/session
+projections remain outside the stored document. Load and import use the
+capability-aware decoder and publish one fresh project history plus one atomic
+simulation only after the entire document passes. Decode, capability, missing
+save, storage, transfer, and cancellation outcomes are presented without
+substituting guessed state. Adapter, application, and browser-interaction tests
+cover authored-document and deterministic-evaluation round trips, history
+reset, browser object lifecycle, and failure retention.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -773,9 +786,8 @@ Completed:
 
 Pending:
 
-Phases 2.8 and 3 have no pending items. Phase 4 Commits 1 through 4 are complete.
-Commits 5 and 6 add browser persistence and JSON transfer, then the golden F
-product-loop closure.
+Phases 2.8 and 3 have no pending items. Phase 4 Commits 1 through 5 are complete.
+Commit 6 adds the golden F product-loop closure.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

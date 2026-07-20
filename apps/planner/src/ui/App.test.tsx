@@ -51,6 +51,7 @@ describe('App', () => {
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
+          projectOperations={application.projectOperations}
         />
       </Provider>,
     );
@@ -98,6 +99,7 @@ describe('App', () => {
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
+          projectOperations={application.projectOperations}
         />
       </Provider>,
     );
@@ -124,6 +126,7 @@ describe('App', () => {
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
+          projectOperations={application.projectOperations}
         />
       </Provider>,
     );
@@ -138,6 +141,7 @@ describe('App', () => {
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
+          projectOperations={application.projectOperations}
         />
       </Provider>,
     );
@@ -162,6 +166,7 @@ describe('App', () => {
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
+          projectOperations={application.projectOperations}
         />
       </Provider>,
     );
@@ -225,6 +230,7 @@ describe('App', () => {
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
+          projectOperations={application.projectOperations}
         />
       </Provider>,
     );
@@ -371,6 +377,7 @@ describe('App', () => {
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
+          projectOperations={application.projectOperations}
         />
       </Provider>,
     );
@@ -429,6 +436,7 @@ describe('App', () => {
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
+          projectOperations={application.projectOperations}
         />
       </Provider>,
     );
