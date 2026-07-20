@@ -171,7 +171,7 @@ The application layer owns composition and orchestration:
 - project lifecycle commands;
 - simulation scheduling;
 - derived-result publication;
-- file/clipboard adapters;
+- portable profile-file and autosave-recovery adapters;
 - future Tauri integration;
 - error boundaries and developer diagnostics.
 
@@ -320,7 +320,8 @@ passes explicit collaborators downward:
 build catalog
 build codecs
 build simulator registries
-build project repository adapter
+build profile-file adapter
+build autosave-recovery adapter
 build Redux store and evaluation coordinator
 render React application
 ```
@@ -335,6 +336,53 @@ repositories.
 The app persists an authored project document, not Redux state and not a
 simulation cache. The document contains only durable semantic choices and its
 schema version.
+
+The normalized `ProjectDocument` is also the portable profile-file format. The
+initial product does not wrap it in a second profile document: a profile is one
+saved planning workspace, and `project.name` supplies the suggested normalized
+filename. A future wrapper is justified only if one profile must own data that
+is not part of one authored project, such as several projects or application
+preferences.
+
+Manual profile persistence and automatic recovery are separate application
+authorities:
+
+```ts
+interface ProfileFileAdapter {
+  save(suggestedFileName: string, json: string): Promise<'saved' | 'cancelled'>;
+  load(): Promise<string | null>;
+}
+
+interface AutosaveRecoveryAdapter {
+  read(): string | null;
+  write(json: string): void;
+  clear(): void;
+}
+```
+
+`ProfileFileAdapter` owns explicit user-directed Save Profile and Load Profile
+operations. The browser implementation uses download/upload; a later Tauri
+implementation may use native dialogs without changing the application
+contract. `AutosaveRecoveryAdapter` owns a separate browser-local recovery key
+and never substitutes for an explicit profile file. Browser globals remain
+confined to the browser adapter composition.
+
+The application keeps the fingerprint of the last successfully saved snapshot
+or explicitly loaded profile as session state. Dirty state is derived by
+comparing that fingerprint with the current normalized project fingerprint.
+If the user edits while an asynchronous save is pending, success establishes
+the serialized snapshot as the baseline and the newer current project remains
+dirty. Autosave writes do not establish a clean baseline. Undoing back to the
+explicit baseline is therefore clean even without another save, while
+restoring an autosave is always reported as recovered and unsaved.
+
+Autosave observes only effective authored-project replacements, including
+semantic edits, undo/redo, New, and successful profile load. It is debounced
+and ignores navigation, findings, and derived simulation publication. A
+corrupt recovery value is preserved for diagnosis or explicit discard: startup
+uses a safe new project, presents the failure, and suspends further autosave so
+the raw value cannot be overwritten accidentally. Successful profile load or
+explicit Discard Autosave clears that recovery blockade.
 
 Authored room identity is occurrence-based: each persisted occurrence has an
 opaque stable ID, selected game room name, and local state. The catalog keeps

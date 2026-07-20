@@ -1034,14 +1034,223 @@ Gate:
 - G's neutral `G_Boss01`/`G_PostBoss01` completion sequence and resolved boss-
   offer store-history contribution;
 - G editor activation;
-- project dirty state and autosave policy;
+- one explicit portable Save Profile/Load Profile workflow over normalized
+  `ProjectDocument` JSON, replacing the temporary separate local and transfer
+  operations from Phase 4;
+- project-name editing and safe suggested profile-filename normalization;
+- a separate debounced autosave/recovery channel;
+- normalized-fingerprint dirty state relative to the last successful explicit
+  profile save/load baseline;
 - resilient project-load error presentation;
 - measured responsiveness for full F/G edits;
 - accessibility and keyboard pass.
 
+### Profile Persistence Contract
+
+Phase 5 keeps the profile file equal to the existing normalized
+`ProjectDocument`; it does not introduce a competing wrapper or persistence
+schema. The application receives two explicit adapters:
+
+- `ProfileFileAdapter` for user-directed Save Profile and Load Profile;
+- `AutosaveRecoveryAdapter` for browser-local crash/restart recovery.
+
+The browser profile adapter uses download/upload and derives a safe
+`.runplanner.json` filename from `project.name`. A later native adapter may use
+filesystem dialogs behind the same contract. Browser globals do not enter
+application or core code.
+
+Successful explicit load establishes the loaded fingerprint baseline. A
+successful save establishes the fingerprint of the snapshot actually passed
+to the adapter, so an edit made while saving remains dirty. New and restored
+recovery documents have no clean baseline; autosave writes never establish
+one. Dirty state is equality with that normalized baseline, so undoing back to
+the saved document becomes clean automatically.
+
+Autosave runs only after effective authored replacements: semantic edits,
+undo, redo, New, and successful profile load. It is debounced and ignores
+session navigation, findings, and derived evaluation. A valid startup recovery
+is capability-decoded, installed with fresh history and simulation, and marked
+Recovered / Unsaved. A corrupt recovery value must remain intact while the app
+boots a safe new project, presents the failure, and suspends further autosave
+until explicit Discard Autosave or a successful profile load.
+
+Focused coverage must prove:
+
+- profile save/load normalized-project and evaluation equality;
+- safe filename derivation from edited project names and pending-save snapshot
+  semantics;
+- edit-to-dirty and undo-back-to-clean behavior;
+- valid startup recovery with fresh history and evaluation;
+- corrupt recovery preservation and explicit discard;
+- autosave failure without loss of the editable project;
+- save/load cancellation as a state-preserving no-op.
+
+### Recommended Commit Sequence
+
+#### Commit 1: Candidate-Evaluation Foundation
+
+Deliver:
+
+- pure candidate-query and candidate-result contracts addressed by semantic
+  generation point and proposed semantic value;
+- typed distinction between unavailable evaluation context and evaluated
+  impossible, possible, or forced support;
+- typed game-language exclusion and force reasons suitable for later
+  presentation without carrying colors, visibility, labels, or control state;
+- candidate execution through the same materialization, history, generation,
+  reward-support, and validation authorities used by selected-plan simulation;
+- focused parity fixtures proving that selecting an evaluated candidate yields
+  the same legality result under the same history.
+
+Gate:
+
+- candidate evaluation is pure and cannot modify the authored project or
+  dispatch an editor command;
+- the currently authored value remains evaluable even when it is impossible;
+- incomplete earlier history produces typed unavailable context rather than a
+  guessed local result;
+- no React, Redux, display label, color, or rendered-position concept enters
+  the candidate result.
+
+#### Commit 2: Complete F Candidate Projection
+
+Deliver:
+
+- application projections for every candidate-bearing F opening, room target,
+  batch reward store, reward type/payload, shop, and preboss surface;
+- semantic-address indexing that lets controls consume candidate results
+  without re-running domain rules;
+- declaration-impossible values omitted and context-invalid values retained
+  with common invalid decoration;
+- focused interaction coverage across every distinct F room template and
+  reward editor shape.
+
+Gate:
+
+- candidate and selected-plan validation agree for the same F value;
+- UI code maps typed results to presentation but owns no eligibility, force,
+  reward-bag, lifecycle, or topology rule;
+- invalid authored values remain visible and replaceable;
+- option projections use stable cached structures or measured dirty rebuilds
+  rather than allocating full option sets on every render.
+
+#### Commit 3: G Simulation and Route Continuation
+
+Deliver:
+
+- G completeness, linear materialization, lifecycle history, generation
+  legality, reward legality, and finding composition through shared linear
+  foundations;
+- validated F history carried into G in route order, with declared biome-local
+  resets applied at the correct completion boundary;
+- G-specific opening, depth, exit, miniboss, force, and closed-door
+  approximation rules from the reconciled biome authority;
+- layout-derived `G_Boss01 -> G_PostBoss01` completion and the declared resolved
+  boss-offer store-history contribution;
+- project fixtures for valid, incomplete, invalid, and upstream-blocked G.
+
+Gate:
+
+- G is a registered simulator only after its full result closes under the same
+  project-evaluation contract as F;
+- invalid or incomplete F blocks G without inventing G-local findings;
+- shared linear mechanics are generalized at their owning seam rather than
+  copied into a second F-shaped pipeline;
+- no G declaration becomes an editor or application rule.
+
+#### Commit 4: G Editor Activation
+
+Deliver:
+
+- shared linear-biome editor composition for F and G with biome-specific room
+  declarations and leaf editors selected from the catalog;
+- G route navigation, topology authoring, findings navigation, status, and
+  candidate decoration;
+- capability activation of G as simulatable and editable only after the full
+  simulator and editor paths are installed;
+- F-to-G browser interaction fixtures covering authoring, upstream blocking,
+  undo/redo, and semantic-owner navigation.
+
+Gate:
+
+- F behavior and its golden fixture remain unchanged;
+- G editing dispatches only existing or deliberately generalized semantic
+  commands;
+- no component branches on game room names to reproduce declaration or
+  simulation facts;
+- dormant H/I/N/O/P/Q capabilities remain unchanged.
+
+#### Commit 5: Portable Profile Workflow
+
+Deliver:
+
+- replacement of the temporary local-slot and JSON-transfer UI with injected
+  `ProfileFileAdapter` Save Profile and Load Profile operations;
+- one semantic project-name command and an accessible project-name editor;
+- safe `.runplanner.json` suggested filename normalization;
+- snapshot-accurate asynchronous save baselines and atomic capability-aware
+  profile replacement;
+- browser download/upload adapters plus cancellation and failure coverage.
+
+Gate:
+
+- the normalized `ProjectDocument` remains the only profile payload;
+- successful load resets history and publishes one coherent fresh evaluation;
+- failed or cancelled operations preserve the current project, evaluation,
+  history, and baseline;
+- browser globals remain confined to adapter construction.
+
+#### Commit 6: Dirty State and Autosave Recovery
+
+Deliver:
+
+- normalized project fingerprint comparison with the explicit profile baseline
+  and visible Clean, Dirty, Unsaved, and Recovered status;
+- a separately injected debounced `AutosaveRecoveryAdapter` triggered only by
+  effective authored replacements;
+- startup recovery through the capability-aware decoder with fresh history and
+  simulation;
+- corrupt-recovery preservation, autosave suspension, and explicit Discard
+  Autosave recovery action;
+- deterministic timer, storage-failure, undo-to-clean, and recovery tests.
+
+Gate:
+
+- autosave never establishes the explicit clean baseline;
+- session edits and simulation publication never schedule autosave;
+- a fallback new project cannot overwrite an unreadable recovery value;
+- recovery or autosave failure never makes the editable authored project
+  unavailable.
+
+#### Commit 7: F/G Product-Loop Closure
+
+Deliver:
+
+- complete F/G browser fixtures covering authoring, candidate feedback,
+  simulation, validation, profiles, recovery, and semantic navigation;
+- an accessibility and keyboard audit over the shared F/G editor and project
+  lifecycle controls;
+- measured full-rebuild, candidate-projection, and representative edit latency
+  with optimization only where evidence requires it;
+- player-facing label and internal-identifier leakage audit;
+- final Phase 5 progress, status, and acceptance reconciliation.
+
+Gate:
+
+- every Phase 5 acceptance item has a named automated fixture or documented
+  browser smoke procedure;
+- the complete repository validation suite and production build pass;
+- no Tauri packaging, execution-plan compiler, game-module integration, or
+  post-biome UX policy is pulled into Phase 5;
+- H/I/N/O/P/Q remain declaration-only and dormant.
+
 ### Acceptance
 
-- F and G both author, simulate, validate, save, and reload;
+- F and G both author, simulate, validate, save as portable profiles, and load
+  to equal authored and derived state;
+- autosave restores valid authored work without becoming the explicit clean
+  profile baseline;
+- corrupt autosave cannot be silently overwritten by fallback startup state;
 - candidate results agree with selected-plan validation for the same value;
 - blocked downstream biome behavior is clear and does not invent local
   validity;

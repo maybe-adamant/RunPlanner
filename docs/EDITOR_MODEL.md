@@ -349,6 +349,55 @@ Session state may include:
 
 Session state must never be required to reconstruct the authored project.
 
+## Profile Files, Autosave, and Dirty State
+
+The user-facing project lifecycle has one explicit file workflow:
+
+- **New** creates a fresh project;
+- **Save Profile** writes the normalized `ProjectDocument` through the
+  platform profile-file adapter;
+- **Load Profile** decodes one selected profile file and replaces the project
+  only after the entire document passes capability validation.
+
+The temporary Phase 4 distinction between local Save/Load and Export/Import is
+not retained as two public persistence concepts. Browser Save Profile uses a
+download and Browser Load Profile uses an upload. A later desktop host may use
+native file dialogs through the same application contract. The suggested
+filename is derived from the editable project name, for example
+`erebus-route.runplanner.json`.
+
+Explicit profile replacement is atomic: successful load resets undo/redo,
+runs one fresh simulation, installs the loaded document as the clean baseline,
+and then queues recovery autosave. Cancellation is a no-op. Decode or
+capability failure leaves the current project, history, evaluation, and clean
+baseline untouched.
+
+Autosave is a distinct recovery channel, not an implicit Save Profile action.
+It observes effective authored changes only and is debounced. Navigation,
+finding selection, panel state, and simulation publication do not trigger it.
+Autosave failure is presented without blocking continued editing.
+
+The visible dirty state follows the normalized authored document rather than
+an imperative flag:
+
+| Action                      | Explicit profile baseline | Resulting status               |
+| --------------------------- | ------------------------- | ------------------------------ |
+| New                         | none                      | Unsaved                        |
+| Save Profile succeeds       | serialized snapshot       | Clean only if still equal      |
+| Semantic edit               | unchanged                 | Dirty if unequal               |
+| Undo/redo                   | unchanged                 | Clean exactly when equal again |
+| Load Profile succeeds       | loaded project            | Clean                          |
+| Restore autosave at startup | none                      | Recovered / Unsaved            |
+| Autosave write              | unchanged                 | No dirty-state change          |
+
+On startup, a valid recovery document is decoded through the same
+capability-aware project boundary and receives a fresh history and simulation.
+If recovery is corrupt, the editor opens a safe new project, reports the
+failure, preserves the raw recovery value, and suspends further autosave. The
+user may explicitly Discard Autosave, or successfully load a profile, to clear
+that blockade. The app must never overwrite corrupt recovery merely because a
+blank fallback project booted successfully.
+
 ## Graph Policy
 
 Do not begin with a freeform graph canvas. Linear and hub layouts have stronger

@@ -31,6 +31,11 @@ Only `AuthoredProject` is saved as the project document. A future execution
 plan is compiled from a complete valid simulation result and is a separate
 export artifact.
 
+The encoded `ProjectDocument` is the portable profile payload; there is no
+second persisted profile wrapper. Profile filename normalization, explicit
+save baselines, dirty state, autosave timing, recovery failures, and adapter
+status are application/session concerns rather than authored domain state.
+
 ## Core Terms
 
 `Project`
@@ -855,6 +860,14 @@ The project requires an exact compatible catalog version. Until an explicit
 migration exists, catalog mismatches are load failures rather than best-effort
 reinterpretation. Encoding uses normalized route order and stable indented
 JSON with a trailing newline.
+
+The canonical encoding, or a stable fingerprint of it, may be compared with
+the last successfully saved or explicitly loaded profile to derive dirty
+state. That baseline is not written into the document. The same encoded
+document may be copied into a separate autosave recovery channel, but doing so
+does not make the project clean. A document restored from recovery receives a
+fresh history and simulation and remains recovered/unsaved until the user
+explicitly saves it as a profile.
 
 ## Undo and Redo
 
