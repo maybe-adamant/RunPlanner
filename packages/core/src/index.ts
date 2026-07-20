@@ -146,3 +146,20 @@ export {
   redoProjectHistory,
   undoProjectHistory,
 } from './project';
+export {
+  CompletenessContractError,
+  evaluateFCompleteness,
+  type BiomeEvaluation,
+  type CompletenessFindingCode,
+  type CompleteBiomeEvaluation,
+  type CompleteFCompletenessResult,
+  type FCompletenessResult,
+  type FindingCode,
+  type FindingEvidence,
+  type FindingEvidenceValue,
+  type FindingSeverity,
+  type IncompleteBiomeEvaluation,
+  type IncompleteFCompletenessResult,
+  type SemanticFinding,
+  type SimulationPhase,
+} from './simulation';
