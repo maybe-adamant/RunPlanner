@@ -11,13 +11,18 @@ import {
   createShopPurchaseAddress,
 } from '@run-planner/core';
 
+import {
+  candidateSupport,
+  type CandidateProjectionService,
+} from '../application/candidateProjection';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
-import { useAppDispatch } from '../application/store';
+import { selectPresentProject, useAppDispatch, useAppSelector } from '../application/store';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 import { SemanticOwnerMarker } from './EvaluationFeedback';
 
 interface RoomStateEditorProps {
   readonly biome: BiomeAddress;
+  readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly occurrence: RoomOccurrence;
 }
@@ -38,8 +43,14 @@ function countedBinding(
   return room.incomingReward;
 }
 
-export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorProps) {
+export function RoomStateEditor({
+  biome,
+  candidateProjection,
+  catalog,
+  occurrence,
+}: RoomStateEditorProps) {
   const dispatch = useAppDispatch();
+  const project = useAppSelector(selectPresentProject);
   const room = catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) {
     throw new Error(`Room declaration ${occurrence.gameName} is missing`);
@@ -68,13 +79,14 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
     );
   }
   if (state.kind === 'counted' || state.kind === 'freeReward') {
+    const rewardAddress = createIncomingRewardAddress(biome, occurrence.occurrenceId);
     return (
       <div className="room-state-with-marker">
-        <SemanticOwnerMarker
-          address={createIncomingRewardAddress(biome, occurrence.occurrenceId)}
-        />
+        <SemanticOwnerMarker address={rewardAddress} />
         <CountedRewardEditor
           binding={countedBinding(room, state.kind)}
+          candidateOwner={{ kind: 'incomingReward', address: rewardAddress }}
+          candidateProjection={candidateProjection}
           catalog={catalog}
           idPrefix={idPrefix}
           offer={state.offer}
@@ -82,11 +94,12 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
             dispatch(
               authoredProjectCommandDispatched({
                 kind: 'ReplaceIncomingReward',
-                reward: createIncomingRewardAddress(biome, occurrence.occurrenceId),
+                reward: rewardAddress,
                 value,
               }),
             )
           }
+          project={project}
         />
       </div>
     );
@@ -115,19 +128,24 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
           throw new Error(`${profile.key} offer ${slot.key} is incomplete`);
         }
         const offerPrefix = `${idPrefix}-offer-${slot.key}`;
+        const offerAddress = createShopOfferAddress(biome, occurrence.occurrenceId, slot.key);
+        const purchaseAddress = createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key);
+        const purchaseCandidate = candidateProjection
+          .shopPurchases(project, purchaseAddress, [false, true])
+          .find((option) => option.value === offerState.purchased);
         return (
           <section className="shop-offer" key={slot.key}>
             <div className="shop-offer-heading">
               <div className="owner-markers">
                 <h4>{slot.label}</h4>
-                <SemanticOwnerMarker
-                  address={createShopOfferAddress(biome, occurrence.occurrenceId, slot.key)}
-                />
+                <SemanticOwnerMarker address={offerAddress} />
               </div>
-              <label className="purchase-control" htmlFor={`${offerPrefix}-purchased`}>
-                <SemanticOwnerMarker
-                  address={createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key)}
-                />
+              <label
+                className="purchase-control"
+                data-candidate-support={candidateSupport(purchaseCandidate)}
+                htmlFor={`${offerPrefix}-purchased`}
+              >
+                <SemanticOwnerMarker address={purchaseAddress} />
                 <input
                   checked={offerState.purchased}
                   id={`${offerPrefix}-purchased`}
@@ -135,11 +153,7 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
                     dispatch(
                       authoredProjectCommandDispatched({
                         kind: 'SetShopPurchase',
-                        purchase: createShopPurchaseAddress(
-                          biome,
-                          occurrence.occurrenceId,
-                          slot.key,
-                        ),
+                        purchase: purchaseAddress,
                         purchased: event.target.checked,
                       }),
                     )
@@ -150,6 +164,8 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
               </label>
             </div>
             <RewardValueEditor
+              candidateOwner={{ kind: 'shopOffer', address: offerAddress }}
+              candidateProjection={candidateProjection}
               catalog={catalog}
               idPrefix={offerPrefix}
               offer={offerState.offer}
@@ -157,11 +173,12 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
                 dispatch(
                   authoredProjectCommandDispatched({
                     kind: 'ReplaceShopOffer',
-                    offer: createShopOfferAddress(biome, occurrence.occurrenceId, slot.key),
+                    offer: offerAddress,
                     value,
                   }),
                 )
               }
+              project={project}
               rewardTypes={group.rewardTypes}
             />
           </section>

@@ -18,6 +18,7 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
     <Provider store={application.store}>
       {options.companion}
       <App
+        candidateProjection={application.candidateProjection}
         catalog={application.catalog}
         catalogSummary={application.catalogSummary}
         editorNavigation={application.editorNavigation}

@@ -5,7 +5,9 @@ import {
   type CatalogSummary,
   type ProjectRouteEvaluation,
 } from '@run-planner/core';
+import { useMemo } from 'react';
 
+import { createCandidateProjectionService } from '../application/candidateProjection';
 import { presentProjectStatus, presentRouteStatus } from '../application/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import type { EditorNavigation, RouteEditorNavigation } from '../application/editorNavigation';
@@ -22,12 +24,14 @@ import {
   useAppSelector,
 } from '../application/store';
 import type { ProjectOperations } from '../application/projectOperations';
+import type { CandidateProjectionService } from '../application/candidateProjection';
 import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
 import { FBiomeEditor } from './FBiomeEditor';
 import { ProjectFileControls } from './ProjectFileControls';
 import { ProjectHistoryControls } from './ProjectHistoryControls';
 
 interface AppProps {
+  readonly candidateProjection?: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
@@ -134,7 +138,17 @@ function RouteOverview({
   );
 }
 
-export function App({ catalog, catalogSummary, editorNavigation, projectOperations }: AppProps) {
+export function App({
+  candidateProjection,
+  catalog,
+  catalogSummary,
+  editorNavigation,
+  projectOperations,
+}: AppProps) {
+  const activeCandidateProjection = useMemo(
+    () => candidateProjection ?? createCandidateProjectionService(catalog),
+    [candidateProjection, catalog],
+  );
   const activeSection = useAppSelector((state) => state.editorSession.activeSection);
   const activeUnderworldPanel = useAppSelector(
     (state) => state.editorSession.activeUnderworldPanel,
@@ -239,6 +253,7 @@ export function App({ catalog, catalogSummary, editorNavigation, projectOperatio
               />
             ) : fPlan !== undefined && fEvaluation !== undefined ? (
               <FBiomeEditor
+                candidateProjection={activeCandidateProjection}
                 catalog={catalog}
                 evaluation={fEvaluation}
                 plan={fPlan}

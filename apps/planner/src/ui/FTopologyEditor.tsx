@@ -17,15 +17,21 @@ import {
   createTargetAddress,
 } from '@run-planner/core';
 
+import {
+  presentCandidateLabel,
+  type CandidateProjectionService,
+} from '../application/candidateProjection';
 import { allocateOccurrenceId } from '../application/occurrenceIds';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
-import { useAppDispatch } from '../application/store';
+import { selectPresentProject, useAppDispatch, useAppSelector } from '../application/store';
+import { candidateSelectState } from './candidatePresentation';
 import { SemanticOwnerMarker } from './EvaluationFeedback';
 import { RoomSelector } from './RoomSelector';
 import { RoomStateEditor } from './RoomStateEditor';
 
 interface FTopologyEditorProps {
   readonly biome: BiomeAddress;
+  readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly topology: LinearBiomeTopology;
 }
@@ -71,6 +77,7 @@ function confirmDestructive(message: string): boolean {
 function OrdinaryTargetEditor({
   available,
   biome,
+  candidateProjection,
   catalog,
   canCreateTarget,
   continuation,
@@ -103,6 +110,7 @@ function OrdinaryTargetEditor({
           </div>
           <RoomSelector
             biomeKey={biome.biomeKey}
+            candidateProjection={candidateProjection}
             catalog={catalog}
             disabled={!canCreateTarget}
             idPrefix={idPrefix}
@@ -116,6 +124,7 @@ function OrdinaryTargetEditor({
                 }),
               )
             }
+            target={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
           />
         </div>
       </div>
@@ -162,6 +171,7 @@ function OrdinaryTargetEditor({
         </div>
         <RoomSelector
           biomeKey={biome.biomeKey}
+          candidateProjection={candidateProjection}
           catalog={catalog}
           current={roomDeclaration}
           idPrefix={idPrefix}
@@ -174,8 +184,14 @@ function OrdinaryTargetEditor({
               }),
             )
           }
+          target={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
         />
-        <RoomStateEditor biome={biome} catalog={catalog} occurrence={room} />
+        <RoomStateEditor
+          biome={biome}
+          candidateProjection={candidateProjection}
+          catalog={catalog}
+          occurrence={room}
+        />
       </div>
     </div>
   );
@@ -183,12 +199,14 @@ function OrdinaryTargetEditor({
 
 function BatchEditor({
   biome,
+  candidateProjection,
   canCreateTarget,
   catalog,
   continuation,
   topology,
 }: BatchEditorProps) {
   const dispatch = useAppDispatch();
+  const project = useAppSelector(selectPresentProject);
   const parent = occurrence(topology, continuation.parentOccurrenceId);
   const parentRoom = declaration(catalog, parent);
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
@@ -212,6 +230,20 @@ function BatchEditor({
   const pickedAvailable =
     continuation.pickedExitIndex === null || available.has(continuation.pickedExitIndex);
   const address = createContinuationAddress(biome, continuation.parentOccurrenceId);
+  const rewardStoreAddress = createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId);
+  const projectedStores =
+    continuation.rewardStore.kind === 'authoredBaseStore'
+      ? candidateProjection.batchRewardStores(
+          project,
+          rewardStoreAddress,
+          layout.continuation.rewardStorePolicy.storeKeys,
+        )
+      : Object.freeze([]);
+  const selectedStore = projectedStores.find(
+    (option) =>
+      continuation.rewardStore.kind === 'authoredBaseStore' &&
+      option.value === continuation.rewardStore.baseRewardStoreKey,
+  );
 
   return (
     <section className="decision-card">
@@ -240,29 +272,28 @@ function BatchEditor({
         >
           <span className="field-label-with-marker">
             Reward pool
-            <SemanticOwnerMarker
-              address={createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId)}
-            />
+            <SemanticOwnerMarker address={rewardStoreAddress} />
           </span>
           <select
+            {...candidateSelectState(selectedStore)}
             id={`batch-${continuation.parentOccurrenceId}-reward-store`}
             onChange={(event) =>
               dispatch(
                 authoredProjectCommandDispatched({
                   kind: 'ReplaceBatchRewardStore',
-                  rewardStore: createBatchRewardStoreAddress(
-                    biome,
-                    continuation.parentOccurrenceId,
-                  ),
+                  rewardStore: rewardStoreAddress,
                   storeKey: event.target.value,
                 }),
               )
             }
             value={continuation.rewardStore.baseRewardStoreKey}
           >
-            {layout.continuation.rewardStorePolicy.storeKeys.map((storeKey) => (
-              <option key={storeKey} value={storeKey}>
-                {storeKey === 'RunProgress' ? 'Run Progress' : 'Meta Progress'}
+            {projectedStores.map((option) => (
+              <option key={option.value} value={option.value} {...candidateSelectState(option)}>
+                {presentCandidateLabel(
+                  option.value === 'RunProgress' ? 'Run Progress' : 'Meta Progress',
+                  option,
+                )}
               </option>
             ))}
           </select>
@@ -274,6 +305,7 @@ function BatchEditor({
           <OrdinaryTargetEditor
             available={available.has(exitIndex)}
             biome={biome}
+            candidateProjection={candidateProjection}
             canCreateTarget={canCreateTarget}
             catalog={catalog}
             continuation={continuation}
@@ -345,6 +377,7 @@ function BatchEditor({
 
 function TerminalEditor({
   biome,
+  candidateProjection,
   canReplaceWithBatch,
   catalog,
   continuation,
@@ -463,7 +496,12 @@ function TerminalEditor({
                     {!isAvailable && <span className="neutral-status">Unavailable</span>}
                   </div>
                 </div>
-                <RoomStateEditor biome={biome} catalog={catalog} occurrence={room} />
+                <RoomStateEditor
+                  biome={biome}
+                  candidateProjection={candidateProjection}
+                  catalog={catalog}
+                  occurrence={room}
+                />
               </div>
             </div>
           );
@@ -596,7 +634,12 @@ function frontierOccurrenceId(topology: LinearBiomeTopology): OccurrenceId | und
   return last.targets.find((target) => target.exitIndex === last.pickedExitIndex)?.occurrenceId;
 }
 
-export function FTopologyEditor({ biome, catalog, topology }: FTopologyEditorProps) {
+export function FTopologyEditor({
+  biome,
+  candidateProjection,
+  catalog,
+  topology,
+}: FTopologyEditorProps) {
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
   if (layout === undefined) {
     throw new Error(`${biome.biomeKey} layout is missing`);
@@ -622,6 +665,7 @@ export function FTopologyEditor({ biome, catalog, topology }: FTopologyEditorPro
         continuation.kind === 'batch' ? (
           <BatchEditor
             biome={biome}
+            candidateProjection={candidateProjection}
             canCreateTarget={targetCount < layout.bounds.maxTargets}
             catalog={catalog}
             continuation={continuation}
@@ -631,6 +675,7 @@ export function FTopologyEditor({ biome, catalog, topology }: FTopologyEditorPro
         ) : (
           <TerminalEditor
             biome={biome}
+            candidateProjection={candidateProjection}
             canReplaceWithBatch={batchCount < layout.bounds.maxBatches}
             catalog={catalog}
             continuation={continuation}
@@ -642,6 +687,7 @@ export function FTopologyEditor({ biome, catalog, topology }: FTopologyEditorPro
       {frontier !== undefined && (
         <FrontierEditor
           biome={biome}
+          candidateProjection={candidateProjection}
           canAddBatch={batchCount < layout.bounds.maxBatches}
           canCreateTerminal={targetCount + frontierTerminalTargetCount <= layout.bounds.maxTargets}
           catalog={catalog}

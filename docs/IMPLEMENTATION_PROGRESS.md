@@ -110,6 +110,26 @@ state. Ordered queries reuse one project evaluation. Focused fixtures prove
 possible, forced, impossible, already-authored-invalid, incomplete,
 upstream-blocked, purity, contact failure, and selected-plan parity behavior.
 
+Phase 5 Commit 2 is complete. The candidate authority now covers every active
+F editor value surface: authored opening rooms, ordinary generated targets,
+batch reward stores, incoming and terminal free rewards, WorldShop offers, and
+purchase choices. Preboss composes the ordinary free-reward and shop query
+forms through its existing semantic addresses. Room candidates reuse exact
+pre-generation pressure, store candidates reuse the exact ratio-support
+witness, and reward/shop alternatives replay the same immutable semantic
+command, lifecycle history, reward bags, peer rules, and selected-plan finding
+producers as the authored value.
+
+The application owns one semantic-address candidate projection service. It
+caches one prepared evaluator and stable option arrays per immutable project,
+owner, and declaration-derived domain, so React consumes typed results without
+re-running rules or allocating complete option structures every render.
+Declaration-impossible values remain outside the supplied domain;
+context-invalid values remain selectable and use one common unavailable label
+and invalid tone. When a complete contextual snapshot is not available, the
+stable declaration domain remains editable with typed unavailable context
+rather than invented validity.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -812,8 +832,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, and 4 have no pending items. Phase 5 Commit 2, complete F
-candidate projection, is the next implementation frontier.
+Phases 2.8, 3, and 4 have no pending items. Phase 5 Commit 3, G simulation and
+route continuation, is the next implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

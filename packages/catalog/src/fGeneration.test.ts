@@ -3,12 +3,16 @@ import {
   CandidateEvaluationContractError,
   composeFHistory,
   createBiomeAddress,
+  createBatchRewardStoreAddress,
   createContinuationAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
   createProjectDocument,
   createRouteAddress,
+  createIncomingRewardAddress,
+  createShopOfferAddress,
+  createShopPurchaseAddress,
   createTargetAddress,
   evaluateFCompleteness,
   evaluateFRoomGeneration,
@@ -20,6 +24,7 @@ import {
   type CompleteFCompletenessResult,
   type LinearBiomePlan,
   type ProjectDocument,
+  type RoomOccurrence,
 } from '@run-planner/core';
 import { describe, expect, it } from 'vitest';
 
@@ -422,6 +427,184 @@ describe('F room possibility and generation validation', () => {
 });
 
 describe('project candidate evaluation', () => {
+  it('projects authored F starts and base reward stores through semantic owners', () => {
+    const project = possibilityProject();
+    const opening = evaluateProjectCandidate(catalog, project, {
+      kind: 'startRoom',
+      owner: createOccurrenceAddress(biome, startId),
+      gameName: 'F_Opening02',
+    });
+    const unsupportedOpening = evaluateProjectCandidate(catalog, project, {
+      kind: 'startRoom',
+      owner: createOccurrenceAddress(biome, startId),
+      gameName: 'F_Combat01',
+    });
+    const store = createBatchRewardStoreAddress(biome, startId);
+    const stores = evaluateProjectCandidates(catalog, project, [
+      { kind: 'batchRewardStore', rewardStore: store, storeKey: 'RunProgress' },
+      { kind: 'batchRewardStore', rewardStore: store, storeKey: 'MetaProgress' },
+    ]);
+
+    expect(opening).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(unsupportedOpening).toMatchObject({ context: 'evaluated', support: 'impossible' });
+    expect(stores).toHaveLength(2);
+    expect(
+      stores.filter(
+        (candidate) => candidate.context === 'evaluated' && candidate.support !== 'impossible',
+      ),
+    ).not.toHaveLength(0);
+    const selectedStoreFindings = simulateProject(catalog, project).findings.filter(
+      (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(store),
+    );
+    const currentStore = stores[0];
+    expect(currentStore?.context).toBe('evaluated');
+    if (currentStore?.context === 'evaluated') {
+      expect(currentStore.findings).toEqual(selectedStoreFindings);
+    }
+    const authoredMeta = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: store,
+      storeKey: 'MetaProgress',
+    });
+    const authoredMetaFindings = simulateProject(catalog, authoredMeta).findings.filter(
+      (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(store),
+    );
+    const metaStore = stores[1];
+    expect(metaStore?.context).toBe('evaluated');
+    if (metaStore?.context === 'evaluated') {
+      expect(metaStore.findings).toEqual(authoredMetaFindings);
+    }
+  });
+
+  it('evaluates selected incoming rewards, shop offers, and purchases with selected-plan parity', () => {
+    let project = possibilityProject();
+    const shopId = batchOccurrenceId(5, 1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, shopId),
+      gameName: 'F_Shop01',
+    });
+    const plan = fPlan(project);
+    const room = plan.topology?.occurrences.find(
+      (candidate): candidate is RoomOccurrence => candidate.occurrenceId === shopId,
+    );
+    if (room?.state.kind !== 'shop' || room.state.shop === undefined) {
+      throw new Error('candidate shop fixture did not materialize inventory');
+    }
+    const firstOffer = Object.values(room.state.shop.offers)[0];
+    const firstOfferKey = Object.keys(room.state.shop.offers)[0];
+    if (firstOffer === undefined || firstOfferKey === undefined) {
+      throw new Error('candidate shop fixture has no first offer');
+    }
+    const incomingId = batchOccurrenceId(4, 1);
+    const incoming = plan.topology?.occurrences.find(
+      (candidate): candidate is RoomOccurrence => candidate.occurrenceId === incomingId,
+    );
+    if (incoming?.state.kind !== 'counted') {
+      throw new Error('candidate incoming fixture has no counted reward');
+    }
+    const offerAddress = createShopOfferAddress(biome, shopId, firstOfferKey);
+    const purchaseAddress = createShopPurchaseAddress(biome, shopId, firstOfferKey);
+    const results = evaluateProjectCandidates(catalog, project, [
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, incomingId),
+        value: incoming.state.offer,
+      },
+      { kind: 'shopOffer', offer: offerAddress, value: firstOffer.offer },
+      {
+        kind: 'shopPurchase',
+        purchase: purchaseAddress,
+        purchased: firstOffer.purchased,
+      },
+    ]);
+    const selected = simulateProject(catalog, project).findings;
+
+    for (const result of results) {
+      expect(result.context).toBe('evaluated');
+      if (result.context !== 'evaluated') {
+        continue;
+      }
+      expect(result.support === 'impossible').toBe(result.findings.length > 0);
+      for (const finding of result.findings) {
+        expect(selected).toContainEqual(finding);
+      }
+    }
+    const purchasedCandidate = evaluateProjectCandidate(catalog, project, {
+      kind: 'shopPurchase',
+      purchase: purchaseAddress,
+      purchased: true,
+    });
+    const authoredPurchase = applyProjectCommand(project, catalog, {
+      kind: 'SetShopPurchase',
+      purchase: purchaseAddress,
+      purchased: true,
+    });
+    expect(purchasedCandidate.context).toBe('evaluated');
+    if (purchasedCandidate.context === 'evaluated') {
+      for (const finding of purchasedCandidate.findings) {
+        expect(simulateProject(catalog, authoredPurchase).findings).toContainEqual(finding);
+      }
+    }
+
+    const earlyIncomingId = batchOccurrenceId(1, 1);
+    const alternateIncoming = evaluateProjectCandidate(catalog, project, {
+      kind: 'incomingReward',
+      reward: createIncomingRewardAddress(biome, earlyIncomingId),
+      value: { rewardType: 'StackUpgrade' },
+    });
+    const authoredImpossibleIncoming = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, earlyIncomingId),
+      value: { rewardType: 'StackUpgrade' },
+    });
+    expect(alternateIncoming.context).toBe('evaluated');
+    if (alternateIncoming.context === 'evaluated') {
+      for (const finding of alternateIncoming.findings) {
+        expect(simulateProject(catalog, authoredImpossibleIncoming).findings).toContainEqual(
+          finding,
+        );
+      }
+    }
+
+    const profile = catalog.rewards.shops.byKey[room.state.shop.profileKey];
+    const slot = profile?.slots.byKey[firstOfferKey];
+    const group =
+      profile === undefined || slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
+    const alternateRewardType = group?.rewardTypes.find(
+      (rewardType) => rewardType !== firstOffer.offer.rewardType,
+    );
+    const alternateDeclaration =
+      alternateRewardType === undefined
+        ? undefined
+        : catalog.rewards.rewardTypes.byKey[alternateRewardType];
+    if (alternateRewardType === undefined || alternateDeclaration === undefined) {
+      throw new Error('candidate shop fixture has no alternate first-slot offer');
+    }
+    const alternateShopOffer = {
+      rewardType: alternateRewardType,
+      ...(alternateDeclaration.defaultPayload === undefined
+        ? {}
+        : { payload: alternateDeclaration.defaultPayload }),
+    };
+    const alternateShop = evaluateProjectCandidate(catalog, project, {
+      kind: 'shopOffer',
+      offer: offerAddress,
+      value: alternateShopOffer,
+    });
+    const authoredAlternateShop = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: offerAddress,
+      value: alternateShopOffer,
+    });
+    expect(alternateShop.context).toBe('evaluated');
+    if (alternateShop.context === 'evaluated') {
+      for (const finding of alternateShop.findings) {
+        expect(simulateProject(catalog, authoredAlternateShop).findings).toContainEqual(finding);
+      }
+    }
+  });
+
   it('reports possible, forced, and impossible room support without mutating the project', () => {
     const project = possibilityProject();
     const before = JSON.stringify(project);

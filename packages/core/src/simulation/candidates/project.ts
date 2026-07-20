@@ -1,6 +1,8 @@
 import type { Catalog } from '../../catalog';
-import { semanticAddressKey } from '../../project/addresses';
+import { semanticAddressKey, type SemanticAddress } from '../../project/addresses';
+import { applyProjectCommand, type ProjectCommand } from '../../project/commands';
 import type { LinearBiomePlan, ProjectDocument } from '../../project/model';
+import type { ResolvedRewardOffer } from '../../rewardKernel/model';
 import { evaluateFRoomTargetCandidate, type FForcePressureLedgerEntry } from '../generation';
 import type {
   CompleteFProjectEvaluation,
@@ -11,11 +13,36 @@ import { simulateProject } from '../project';
 import type {
   CandidateContextUnavailableReason,
   CandidateSupport,
+  BatchRewardStoreCandidateQuery,
+  IncomingRewardCandidateQuery,
   ProjectCandidateEvaluation,
+  ProjectCandidateEvaluator,
   ProjectCandidateQuery,
   RoomTargetCandidateEvidence,
   RoomTargetCandidateQuery,
+  ShopOfferCandidateQuery,
+  ShopPurchaseCandidateQuery,
+  StartRoomCandidateQuery,
 } from './model';
+
+type CandidateAddress = Exclude<SemanticAddress, { readonly kind: 'route' }>;
+
+function queryAddress(query: ProjectCandidateQuery): CandidateAddress {
+  switch (query.kind) {
+    case 'startRoom':
+      return query.owner;
+    case 'roomTarget':
+      return query.target;
+    case 'batchRewardStore':
+      return query.rewardStore;
+    case 'incomingReward':
+      return query.reward;
+    case 'shopOffer':
+      return query.offer;
+    case 'shopPurchase':
+      return query.purchase;
+  }
+}
 
 export class CandidateEvaluationContractError extends Error {
   readonly queryKind: ProjectCandidateQuery['kind'];
@@ -23,7 +50,7 @@ export class CandidateEvaluationContractError extends Error {
   readonly detail: string;
 
   constructor(query: ProjectCandidateQuery, detail: string) {
-    const targetKey = semanticAddressKey(query.target);
+    const targetKey = semanticAddressKey(queryAddress(query));
     super(`${query.kind} at ${targetKey}: ${detail}`);
     this.name = 'CandidateEvaluationContractError';
     this.queryKind = query.kind;
@@ -36,30 +63,52 @@ function failCandidate(query: ProjectCandidateQuery, detail: string): never {
   throw new CandidateEvaluationContractError(query, detail);
 }
 
-function immutableQuery(query: RoomTargetCandidateQuery): RoomTargetCandidateQuery {
+function immutableOffer(value: ResolvedRewardOffer): ResolvedRewardOffer {
   return Object.freeze({
-    kind: 'roomTarget',
-    target: Object.freeze({ ...query.target }),
-    gameName: query.gameName,
+    rewardType: value.rewardType,
+    ...(value.payload === undefined ? {} : { payload: Object.freeze({ ...value.payload }) }),
   });
 }
 
-function locateBiomePlan(
-  project: ProjectDocument,
-  query: RoomTargetCandidateQuery,
-): LinearBiomePlan {
-  const route = project.routes.find((candidate) => candidate.routeKey === query.target.routeKey);
-  if (route === undefined) {
-    failCandidate(query, `project has no route ${query.target.routeKey}`);
+function immutableQuery(query: ProjectCandidateQuery): ProjectCandidateQuery {
+  switch (query.kind) {
+    case 'startRoom':
+      return Object.freeze({ ...query, owner: Object.freeze({ ...query.owner }) });
+    case 'roomTarget':
+      return Object.freeze({ ...query, target: Object.freeze({ ...query.target }) });
+    case 'batchRewardStore':
+      return Object.freeze({ ...query, rewardStore: Object.freeze({ ...query.rewardStore }) });
+    case 'incomingReward':
+      return Object.freeze({
+        ...query,
+        reward: Object.freeze({ ...query.reward }),
+        value: immutableOffer(query.value),
+      });
+    case 'shopOffer':
+      return Object.freeze({
+        ...query,
+        offer: Object.freeze({ ...query.offer }),
+        value: immutableOffer(query.value),
+      });
+    case 'shopPurchase':
+      return Object.freeze({ ...query, purchase: Object.freeze({ ...query.purchase }) });
   }
-  const biome = route.biomes.find((candidate) => candidate.biomeKey === query.target.biomeKey);
+}
+
+function locateBiomePlan(project: ProjectDocument, query: ProjectCandidateQuery): LinearBiomePlan {
+  const address = queryAddress(query);
+  const route = project.routes.find((candidate) => candidate.routeKey === address.routeKey);
+  if (route === undefined) {
+    failCandidate(query, `project has no route ${address.routeKey}`);
+  }
+  const biome = route.biomes.find((candidate) => candidate.biomeKey === address.biomeKey);
   if (biome === undefined) {
-    failCandidate(query, `project has no configured biome ${query.target.biomeKey}`);
+    failCandidate(query, `project has no configured biome ${address.biomeKey}`);
   }
   return biome;
 }
 
-function assertTargetExists(project: ProjectDocument, query: RoomTargetCandidateQuery): void {
+function targetExists(project: ProjectDocument, query: RoomTargetCandidateQuery): boolean {
   const topology = locateBiomePlan(project, query).topology;
   if (topology === null) {
     failCandidate(query, 'biome topology has not been started');
@@ -70,9 +119,7 @@ function assertTargetExists(project: ProjectDocument, query: RoomTargetCandidate
   if (continuation?.kind !== 'batch') {
     failCandidate(query, 'target parent does not own an ordinary generated batch');
   }
-  if (!continuation.targets.some((candidate) => candidate.exitIndex === query.target.exitIndex)) {
-    failCandidate(query, `exit ${query.target.exitIndex} has no authored target`);
-  }
+  return continuation.targets.some((candidate) => candidate.exitIndex === query.target.exitIndex);
 }
 
 function assertCandidateExists(catalog: Catalog, query: RoomTargetCandidateQuery): void {
@@ -87,22 +134,24 @@ function assertCandidateExists(catalog: Catalog, query: RoomTargetCandidateQuery
 
 function requireRoute(
   routes: readonly ProjectRouteEvaluation[],
-  query: RoomTargetCandidateQuery,
+  query: ProjectCandidateQuery,
 ): ProjectRouteEvaluation {
-  const route = routes.find((candidate) => candidate.routeKey === query.target.routeKey);
+  const address = queryAddress(query);
+  const route = routes.find((candidate) => candidate.routeKey === address.routeKey);
   if (route === undefined) {
-    failCandidate(query, `simulation has no route ${query.target.routeKey}`);
+    failCandidate(query, `simulation has no route ${address.routeKey}`);
   }
   return route;
 }
 
 function unavailableReason(
   route: ProjectRouteEvaluation,
-  query: RoomTargetCandidateQuery,
+  query: ProjectCandidateQuery,
 ): CandidateContextUnavailableReason {
+  const address = queryAddress(query);
   const { horizon } = route;
   if (horizon.kind === 'incomplete') {
-    return horizon.biomeKey === query.target.biomeKey ? 'biomeIncomplete' : 'upstreamIncomplete';
+    return horizon.biomeKey === address.biomeKey ? 'biomeIncomplete' : 'upstreamIncomplete';
   }
   if (horizon.kind === 'invalid') {
     return 'upstreamInvalid';
@@ -115,9 +164,10 @@ function unavailableReason(
 
 function locateCompleteF(
   route: ProjectRouteEvaluation,
-  query: RoomTargetCandidateQuery,
+  query: ProjectCandidateQuery,
 ): CompleteFProjectEvaluation | CandidateContextUnavailableReason {
-  const evaluation = route.biomes.find((candidate) => candidate.biomeKey === query.target.biomeKey);
+  const address = queryAddress(query);
+  const evaluation = route.biomes.find((candidate) => candidate.biomeKey === address.biomeKey);
   if (evaluation === undefined) {
     return unavailableReason(route, query);
   }
@@ -159,13 +209,16 @@ function evaluateRoomTargetCandidate(
   projectEvaluation: ProjectEvaluation,
   query: RoomTargetCandidateQuery,
 ): ProjectCandidateEvaluation {
-  const stableQuery = immutableQuery(query);
-  assertTargetExists(project, stableQuery);
+  const stableQuery = immutableQuery(query) as RoomTargetCandidateQuery;
+  const authoredTargetExists = targetExists(project, stableQuery);
   assertCandidateExists(catalog, stableQuery);
   const route = requireRoute(projectEvaluation.routes, stableQuery);
   const biome = locateCompleteF(route, stableQuery);
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  }
+  if (!authoredTargetExists) {
+    failCandidate(stableQuery, `exit ${stableQuery.target.exitIndex} has no authored target`);
   }
 
   const candidate = evaluateFRoomTargetCandidate(
@@ -181,6 +234,228 @@ function evaluateRoomTargetCandidate(
     support: support(candidate.pressure),
     findings: candidate.findings,
     evidence: evidence(candidate.pressure),
+  });
+}
+
+function evaluateStartRoomCandidate(
+  catalog: Catalog,
+  project: ProjectDocument,
+  query: StartRoomCandidateQuery,
+): ProjectCandidateEvaluation {
+  const stableQuery = immutableQuery(query) as StartRoomCandidateQuery;
+  const plan = locateBiomePlan(project, stableQuery);
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  if (layout?.kind !== 'LinearBiome' || layout.start.kind !== 'authoredStart') {
+    failCandidate(stableQuery, `${plan.biomeKey} has no authored start candidate domain`);
+  }
+  const room = catalog.rooms.byKey[stableQuery.gameName];
+  if (room === undefined || room.biomeKey !== plan.biomeKey) {
+    failCandidate(stableQuery, `catalog has no ${plan.biomeKey} room ${stableQuery.gameName}`);
+  }
+  if (stableQuery.owner.kind === 'occurrence') {
+    if (
+      plan.topology === null ||
+      plan.topology.startOccurrenceId !== stableQuery.owner.occurrenceId
+    ) {
+      failCandidate(stableQuery, 'occurrence owner is not the authored biome start');
+    }
+  }
+  const supported = layout.start.roomGameNames;
+  const possible = supported.includes(stableQuery.gameName);
+  return Object.freeze({
+    context: 'evaluated',
+    query: stableQuery,
+    support: possible ? (supported.length === 1 ? 'forced' : 'possible') : 'impossible',
+    findings: Object.freeze([]),
+    evidence: Object.freeze({
+      candidateGameName: stableQuery.gameName,
+      supportedGameNames: supported,
+    }),
+  });
+}
+
+function evaluateBatchRewardStoreCandidate(
+  catalog: Catalog,
+  project: ProjectDocument,
+  projectEvaluation: ProjectEvaluation,
+  query: BatchRewardStoreCandidateQuery,
+): ProjectCandidateEvaluation {
+  const stableQuery = immutableQuery(query) as BatchRewardStoreCandidateQuery;
+  const plan = locateBiomePlan(project, stableQuery);
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  if (
+    layout?.kind !== 'LinearBiome' ||
+    layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore' ||
+    !layout.continuation.rewardStorePolicy.storeKeys.includes(stableQuery.storeKey)
+  ) {
+    failCandidate(stableQuery, `${stableQuery.storeKey} is outside the authored store domain`);
+  }
+  const continuation = plan.topology?.continuations.find(
+    (candidate) =>
+      candidate.kind === 'batch' &&
+      candidate.parentOccurrenceId === stableQuery.rewardStore.parentOccurrenceId,
+  );
+  if (continuation?.kind !== 'batch' || continuation.rewardStore.kind !== 'authoredBaseStore') {
+    failCandidate(stableQuery, 'semantic owner has no authored batch reward store');
+  }
+  const route = requireRoute(projectEvaluation.routes, stableQuery);
+  const biome = locateCompleteF(route, stableQuery);
+  if (typeof biome === 'string') {
+    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  }
+  const selected = biome.rewards.storeSupport.find(
+    (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(stableQuery.rewardStore),
+  );
+  if (selected === undefined) {
+    failCandidate(stableQuery, 'reward store has no simulation support entry');
+  }
+  const possible = selected.supportStoreKeys.includes(stableQuery.storeKey);
+  const findings = possible
+    ? Object.freeze([])
+    : Object.freeze([
+        Object.freeze({
+          code: 'baseRewardStoreUnavailable' as const,
+          severity: 'error' as const,
+          phase: 'rewardGeneration' as const,
+          origin: stableQuery.rewardStore,
+          evidence: Object.freeze({
+            authoredStoreKey: stableQuery.storeKey,
+            enteredStoreCount: selected.enteredStoreCount,
+            enteredMetaStoreCount: selected.enteredMetaStoreCount,
+            currentMetaRatio: selected.currentMetaRatio,
+            metaSelectionValue: selected.metaSelectionValue,
+            supportStoreKeys: selected.supportStoreKeys,
+          }),
+        }),
+      ]);
+  return Object.freeze({
+    context: 'evaluated',
+    query: stableQuery,
+    support: possible
+      ? selected.supportStoreKeys.length === 1
+        ? 'forced'
+        : 'possible'
+      : 'impossible',
+    findings,
+    evidence: Object.freeze({
+      candidateStoreKey: stableQuery.storeKey,
+      enteredStoreCount: selected.enteredStoreCount,
+      enteredMetaStoreCount: selected.enteredMetaStoreCount,
+      currentMetaRatio: selected.currentMetaRatio,
+      metaSelectionValue: selected.metaSelectionValue,
+      supportStoreKeys: selected.supportStoreKeys,
+    }),
+  });
+}
+
+function rewardCommand(
+  query: IncomingRewardCandidateQuery | ShopOfferCandidateQuery,
+): ProjectCommand {
+  return query.kind === 'incomingReward'
+    ? { kind: 'ReplaceIncomingReward', reward: query.reward, value: query.value }
+    : { kind: 'ReplaceShopOffer', offer: query.offer, value: query.value };
+}
+
+function applyCandidateCommand(
+  catalog: Catalog,
+  project: ProjectDocument,
+  query: ProjectCandidateQuery,
+  command: ProjectCommand,
+): ProjectDocument {
+  try {
+    return applyProjectCommand(project, catalog, command);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    failCandidate(query, `candidate proposal is malformed: ${detail}`);
+  }
+}
+
+function rewardFindings(
+  evaluation: CompleteFProjectEvaluation,
+  query: IncomingRewardCandidateQuery | ShopOfferCandidateQuery,
+) {
+  const address = query.kind === 'incomingReward' ? query.reward : query.offer;
+  const exactKey = semanticAddressKey(address);
+  return Object.freeze(
+    evaluation.rewards.findings.filter((finding) => {
+      if (semanticAddressKey(finding.origin) === exactKey) {
+        return true;
+      }
+      return (
+        query.kind === 'shopOffer' &&
+        finding.code === 'shopOfferUnavailable' &&
+        finding.origin.kind === 'occurrence' &&
+        finding.origin.routeKey === address.routeKey &&
+        finding.origin.biomeKey === address.biomeKey &&
+        finding.origin.occurrenceId === address.occurrenceId
+      );
+    }),
+  );
+}
+
+function evaluateRewardCandidate(
+  catalog: Catalog,
+  project: ProjectDocument,
+  query: IncomingRewardCandidateQuery | ShopOfferCandidateQuery,
+): ProjectCandidateEvaluation {
+  const stableQuery = immutableQuery(query) as
+    IncomingRewardCandidateQuery | ShopOfferCandidateQuery;
+  locateBiomePlan(project, stableQuery);
+  const proposal = applyCandidateCommand(catalog, project, stableQuery, rewardCommand(stableQuery));
+  const route = requireRoute(simulateProject(catalog, proposal).routes, stableQuery);
+  const biome = locateCompleteF(route, stableQuery);
+  if (typeof biome === 'string') {
+    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  }
+  const findings = rewardFindings(biome, stableQuery);
+  const evidence = Object.freeze({
+    candidate: stableQuery.value,
+    relevantFindingCodes: Object.freeze(findings.map((finding) => finding.code)),
+  });
+  const support = findings.length === 0 ? ('possible' as const) : ('impossible' as const);
+  return stableQuery.kind === 'incomingReward'
+    ? Object.freeze({ context: 'evaluated', query: stableQuery, support, findings, evidence })
+    : Object.freeze({ context: 'evaluated', query: stableQuery, support, findings, evidence });
+}
+
+function evaluateShopPurchaseCandidate(
+  catalog: Catalog,
+  project: ProjectDocument,
+  query: ShopPurchaseCandidateQuery,
+): ProjectCandidateEvaluation {
+  const stableQuery = immutableQuery(query) as ShopPurchaseCandidateQuery;
+  locateBiomePlan(project, stableQuery);
+  const proposal = applyCandidateCommand(catalog, project, stableQuery, {
+    kind: 'SetShopPurchase',
+    purchase: stableQuery.purchase,
+    purchased: stableQuery.purchased,
+  });
+  const route = requireRoute(simulateProject(catalog, proposal).routes, stableQuery);
+  const biome = locateCompleteF(route, stableQuery);
+  if (typeof biome === 'string') {
+    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  }
+  const exactKey = semanticAddressKey(stableQuery.purchase);
+  const findings = Object.freeze(
+    biome.rewards.findings.filter(
+      (finding) =>
+        semanticAddressKey(finding.origin) === exactKey ||
+        (finding.code === 'shopPurchaseUnavailable' &&
+          finding.origin.kind === 'occurrence' &&
+          finding.origin.routeKey === stableQuery.purchase.routeKey &&
+          finding.origin.biomeKey === stableQuery.purchase.biomeKey &&
+          finding.origin.occurrenceId === stableQuery.purchase.occurrenceId),
+    ),
+  );
+  return Object.freeze({
+    context: 'evaluated',
+    query: stableQuery,
+    support: findings.length === 0 ? 'possible' : 'impossible',
+    findings,
+    evidence: Object.freeze({
+      purchased: stableQuery.purchased,
+      relevantFindingCodes: Object.freeze(findings.map((finding) => finding.code)),
+    }),
   });
 }
 
@@ -204,12 +479,43 @@ export function evaluateProjectCandidates(
   if (queries.length === 0) {
     return Object.freeze([]);
   }
+  return createProjectCandidateEvaluator(catalog, project).evaluate(queries);
+}
+
+export function createProjectCandidateEvaluator(
+  catalog: Catalog,
+  project: ProjectDocument,
+): ProjectCandidateEvaluator {
   const projectEvaluation = simulateProject(catalog, project);
+  return Object.freeze({
+    evaluate: (queries: readonly ProjectCandidateQuery[]) =>
+      evaluatePreparedProjectCandidates(catalog, project, projectEvaluation, queries),
+  });
+}
+
+function evaluatePreparedProjectCandidates(
+  catalog: Catalog,
+  project: ProjectDocument,
+  projectEvaluation: ProjectEvaluation,
+  queries: readonly ProjectCandidateQuery[],
+): readonly ProjectCandidateEvaluation[] {
+  if (queries.length === 0) {
+    return Object.freeze([]);
+  }
   return Object.freeze(
     queries.map((query): ProjectCandidateEvaluation => {
       switch (query.kind) {
+        case 'startRoom':
+          return evaluateStartRoomCandidate(catalog, project, query);
         case 'roomTarget':
           return evaluateRoomTargetCandidate(catalog, project, projectEvaluation, query);
+        case 'batchRewardStore':
+          return evaluateBatchRewardStoreCandidate(catalog, project, projectEvaluation, query);
+        case 'incomingReward':
+        case 'shopOffer':
+          return evaluateRewardCandidate(catalog, project, query);
+        case 'shopPurchase':
+          return evaluateShopPurchaseCandidate(catalog, project, query);
       }
     }),
   );
