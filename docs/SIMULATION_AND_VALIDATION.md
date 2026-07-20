@@ -14,10 +14,10 @@ it will not duplicate it.
 
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
-F/G/P/Q/H/O/I/N audit set. Phase 3 implementation remains paused until the
-Phase 2.8 dormant declaration closure is complete. The Phase 2.6 reward kernel
-and Phase 2.7 F/G authority switch are implemented; the later schema-version-3
-identity cleanup leaves those simulation contracts unchanged.
+F/G/P/Q/H/O/I/N audit set. Phase 2.8 dormant declaration closure is complete;
+Phase 3 implementation is the next frontier and has not begun. The Phase 2.6
+reward kernel and Phase 2.7 F/G authority switch are implemented; the later
+schema-version-3 identity cleanup leaves those simulation contracts unchanged.
 
 ## Core Contract
 

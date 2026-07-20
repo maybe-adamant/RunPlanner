@@ -15,6 +15,7 @@ export function roomCategoryForKind(kind: RoomKind): OrdinaryRoomCategory | unde
       return 'Fountain';
     case 'Intro':
     case 'Opening':
+    case 'PreHub':
     case 'Preboss':
     case 'Boss':
     case 'Devotion':
@@ -22,6 +23,8 @@ export function roomCategoryForKind(kind: RoomKind): OrdinaryRoomCategory | unde
     case 'PostBoss':
       return undefined;
   }
+  const unhandledKind: never = kind;
+  return unhandledKind;
 }
 
 export function selectRoomsForCategory(
