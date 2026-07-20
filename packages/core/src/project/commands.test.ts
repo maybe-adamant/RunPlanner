@@ -339,6 +339,7 @@ const catalog: Catalog = {
   routes: collection([underworld], (route) => route.key),
   rewards,
   encounterProfiles: collection<EncounterProfile>([], (profile) => profile.key),
+  roomLifecycleProfiles: emptyCollection(),
   exitCompatibilityPolicies: collection(
     [{ key: 'Unconstrained', kind: 'unconstrained' }],
     (policy) => policy.key,

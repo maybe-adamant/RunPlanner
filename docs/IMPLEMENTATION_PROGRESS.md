@@ -14,13 +14,17 @@ audited reward kernel as an intentionally unconnected pure subsystem; Phase
 complete: capability isolation, the shared structural/F/G reconciliation
 slice, the dormant P/Q/H/O/I/N declaration imports, schema-version-3
 route/biome identity cleanup, and the cross-biome closure matrix all pass.
-Phase 3 is the next implementation frontier and has not begun.
+Phase 3 is in progress. Commit 1 adds the strict F biome-completeness gate and
+addressed incomplete findings without materializing partial history. Commit 2
+adds normalized reusable lifecycle profiles and deterministic single-room
+history fragments; route-wide materialization remains pending.
 
-The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
-defines reusable single-room lifecycle profiles, occurrence-addressed history
-fragments, typed declaration-driven effects, exact counter/cache timing, and
-outgoing-generation checkpoints. This is design authority only; no Phase 3
-lifecycle executor or route-history composition is implemented yet.
+The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
+initial F profile set, closed operations/effects, occurrence-addressed events,
+producer-role timing, exact encounter-depth timing, commit counter effects,
+and outgoing-generation checkpoints are implemented by the pure single-room
+executor. Concrete reward acquisition, route-history composition, and ledger
+folding are not yet implemented.
 
 Possibility-only simulation and the reward-authority shape are locked by the
 complete audit set. O added the source-offer-point batch-store form without
@@ -659,7 +663,8 @@ Completed:
 
 Pending:
 
-Phase 2.8 has no pending items. Phase 3 work begins in a separate slice.
+Phase 2.8 has no pending items. Phase 3 continues with the common linear
+materializer and canonical F snapshot described by Commit 3.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

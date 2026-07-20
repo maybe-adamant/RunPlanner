@@ -84,6 +84,7 @@ const catalog: Catalog = {
     producerLifecycles: emptyCollection(),
   },
   encounterProfiles: emptyCollection(),
+  roomLifecycleProfiles: emptyCollection(),
   exitCompatibilityPolicies: emptyCollection(),
   exitTypes: emptyCollection(),
   rooms: emptyCollection(),

@@ -21,6 +21,8 @@ import type {
   RoomCounterEffects,
   RoomKind,
   RoomMode,
+  RoomLifecycleOperation,
+  RoomLifecycleProducerPolicy,
   RoomStructuralTag,
   RequiredRoomObjectDescriptor,
   SourceRewardStorePolicyOverride,
@@ -61,6 +63,13 @@ export interface RawEncounterPhaseDeclaration {
 export interface RawEncounterProfileDeclaration {
   readonly key: string;
   readonly phases: readonly RawEncounterPhaseDeclaration[];
+}
+
+export interface RawRoomLifecycleProfileDeclaration {
+  readonly key: string;
+  readonly encounterProfileKeys: readonly string[];
+  readonly producer: RoomLifecycleProducerPolicy;
+  readonly operations: readonly RoomLifecycleOperation[];
 }
 
 export interface RawCountedRewardBinding {
@@ -200,6 +209,7 @@ export interface RawCatalogInput {
   readonly routes: readonly RouteDeclaration[];
   readonly rewardKernel: RawRewardKernelInput;
   readonly encounterProfiles: readonly RawEncounterProfileDeclaration[];
+  readonly roomLifecycleProfiles: readonly RawRoomLifecycleProfileDeclaration[];
   readonly exitCompatibilityPolicies: readonly ExitCompatibilityPolicy[];
   readonly exitTypes: readonly ExitTypeDeclaration[];
   readonly rooms: readonly RawRoomDeclaration[];

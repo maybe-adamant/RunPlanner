@@ -2,6 +2,7 @@ import { biomes } from './biomes';
 import { encounterProfiles } from './encounters';
 import { exitCompatibilityPolicies, exitTypes } from './exits';
 import { biomeLayouts } from './layouts';
+import { roomLifecycleProfiles } from './lifecycles';
 import { fRooms } from './rooms/f';
 import { gRooms } from './rooms/g';
 import { hRooms } from './rooms/h';
@@ -26,11 +27,12 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.10.0-n-dormant',
+  version: '0.11.0-f-lifecycle',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,
   encounterProfiles,
+  roomLifecycleProfiles,
   exitCompatibilityPolicies,
   exitTypes,
   rooms,
@@ -50,5 +52,6 @@ export type {
   RawNoneRewardBinding,
   RawRewardProducerBinding,
   RawRoomDeclaration,
+  RawRoomLifecycleProfileDeclaration,
   RawShopRewardBinding,
 } from './types';
