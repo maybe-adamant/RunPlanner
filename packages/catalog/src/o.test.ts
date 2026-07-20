@@ -89,6 +89,10 @@ describe('complete dormant O catalog', () => {
           { role: 'boss', roomGameName: 'O_Boss01' },
           { role: 'postboss', roomGameName: 'O_PostBoss01' },
         ],
+        transitionEffects: [
+          { kind: 'resetCounter', axis: 'biomeDepthCache' },
+          { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+        ],
       },
       fields: [],
       bounds: { maxBatches: 6, maxTargets: 6 },

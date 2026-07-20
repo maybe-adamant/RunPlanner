@@ -27,7 +27,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.11.0-f-lifecycle',
+  version: '0.12.0-f-history',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,

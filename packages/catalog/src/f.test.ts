@@ -326,6 +326,10 @@ describe('complete F catalog', () => {
           { role: 'boss', roomGameName: 'F_Boss01' },
           { role: 'postboss', roomGameName: 'F_PostBoss01' },
         ],
+        transitionEffects: [
+          { kind: 'resetCounter', axis: 'biomeDepthCache' },
+          { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+        ],
       },
       fields: [],
       bounds: { maxBatches: 10, maxTargets: 20 },

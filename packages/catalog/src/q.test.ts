@@ -76,7 +76,13 @@ describe('complete dormant Q catalog', () => {
         rewardStoreOverrides: [],
       },
       terminal: { kind: 'directTransition', roomGameName: 'Q_PreBoss01' },
-      completion: { rooms: [{ role: 'boss', roomGameName: 'Q_Boss01' }] },
+      completion: {
+        rooms: [{ role: 'boss', roomGameName: 'Q_Boss01' }],
+        transitionEffects: [
+          { kind: 'resetCounter', axis: 'biomeDepthCache' },
+          { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+        ],
+      },
       fields: [],
       bounds: { maxBatches: 6, maxTargets: 8 },
     });

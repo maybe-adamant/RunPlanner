@@ -390,8 +390,25 @@ function normalizeCompletion(
       roomGameName: room.gameName,
     });
   });
+  const expectedTransitionAxes = ['biomeDepthCache', 'biomeEncounterDepth'] as const;
+  if (rawCompletion.transitionEffects.length !== expectedTransitionAxes.length) {
+    fail(`${path}.transitionEffects`, `requires resets for ${expectedTransitionAxes.join(', ')}`);
+  }
+  const transitionEffects = rawCompletion.transitionEffects.map((effect, index) => {
+    const effectPath = `${path}.transitionEffects[${index}]`;
+    const receivedKind: unknown = (effect as { readonly kind?: unknown }).kind;
+    if (effect.kind !== 'resetCounter') {
+      fail(`${effectPath}.kind`, `unknown biome transition effect ${String(receivedKind)}`);
+    }
+    const expectedAxis = expectedTransitionAxes[index];
+    if (effect.axis !== expectedAxis) {
+      fail(`${effectPath}.axis`, `expected ${expectedAxis}`);
+    }
+    return Object.freeze({ kind: effect.kind, axis: effect.axis });
+  });
   return Object.freeze({
     rooms: Object.freeze(completionRooms),
+    transitionEffects: Object.freeze(transitionEffects),
   });
 }
 

@@ -186,6 +186,10 @@ describe('Phase 2.8 cross-biome catalog closure', () => {
         expect(room?.mode).toEqual({ kind: 'derived', classification: 'completion' });
         expect(room?.kind).toBe(completion.role === 'boss' ? 'Boss' : 'PostBoss');
       }
+      expect(layout.completion.transitionEffects).toEqual([
+        { kind: 'resetCounter', axis: 'biomeDepthCache' },
+        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+      ]);
     }
 
     expect(JSON.stringify(catalog.biomeLayouts.values)).not.toContain('nextBiomeKey');

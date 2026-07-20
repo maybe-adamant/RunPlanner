@@ -61,6 +61,10 @@ function linearLayout(biomeKey: string, terminalRoom: string): BiomeLayout {
     },
     completion: {
       rooms: [{ role: 'boss', roomGameName: `${biomeKey}_Boss` }],
+      transitionEffects: [
+        { kind: 'resetCounter', axis: 'biomeDepthCache' },
+        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+      ],
     },
     fields: [],
     bounds: { maxBatches: 10, maxTargets: 20 },

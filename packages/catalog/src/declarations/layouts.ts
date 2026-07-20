@@ -30,6 +30,10 @@ export const biomeLayouts = [
         { role: 'boss', roomGameName: 'F_Boss01' },
         { role: 'postboss', roomGameName: 'F_PostBoss01' },
       ],
+      transitionEffects: [
+        { kind: 'resetCounter', axis: 'biomeDepthCache' },
+        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+      ],
     },
     fields: [],
     bounds: { maxBatches: 10, maxTargets: 20 },
@@ -63,6 +67,10 @@ export const biomeLayouts = [
         { role: 'boss', roomGameName: 'G_Boss01' },
         { role: 'postboss', roomGameName: 'G_PostBoss01' },
       ],
+      transitionEffects: [
+        { kind: 'resetCounter', axis: 'biomeDepthCache' },
+        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+      ],
     },
     fields: [],
     bounds: { maxBatches: 8, maxTargets: 21 },
@@ -95,6 +103,10 @@ export const biomeLayouts = [
       rooms: [
         { role: 'boss', roomGameName: 'P_Boss01' },
         { role: 'postboss', roomGameName: 'P_PostBoss01' },
+      ],
+      transitionEffects: [
+        { kind: 'resetCounter', axis: 'biomeDepthCache' },
+        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
       ],
     },
     fields: [],
@@ -146,6 +158,10 @@ export const biomeLayouts = [
     terminal: { kind: 'directTransition', roomGameName: 'Q_PreBoss01' },
     completion: {
       rooms: [{ role: 'boss', roomGameName: 'Q_Boss01' }],
+      transitionEffects: [
+        { kind: 'resetCounter', axis: 'biomeDepthCache' },
+        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+      ],
     },
     fields: [],
     bounds: { maxBatches: 6, maxTargets: 8 },
@@ -185,6 +201,10 @@ export const biomeLayouts = [
         { role: 'boss', roomGameName: 'H_Boss01' },
         { role: 'postboss', roomGameName: 'H_PostBoss01' },
       ],
+      transitionEffects: [
+        { kind: 'resetCounter', axis: 'biomeDepthCache' },
+        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+      ],
     },
     fields: [],
     bounds: { maxBatches: 4, maxTargets: 7 },
@@ -219,6 +239,10 @@ export const biomeLayouts = [
         { role: 'boss', roomGameName: 'O_Boss01' },
         { role: 'postboss', roomGameName: 'O_PostBoss01' },
       ],
+      transitionEffects: [
+        { kind: 'resetCounter', axis: 'biomeDepthCache' },
+        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+      ],
     },
     fields: [],
     bounds: { maxBatches: 6, maxTargets: 6 },
@@ -243,6 +267,10 @@ export const biomeLayouts = [
       rooms: [
         { role: 'boss', roomGameName: 'I_Boss01' },
         { role: 'postboss', roomGameName: 'I_PostBoss01' },
+      ],
+      transitionEffects: [
+        { kind: 'resetCounter', axis: 'biomeDepthCache' },
+        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
       ],
     },
     fields: [
@@ -319,6 +347,10 @@ export const biomeLayouts = [
       rooms: [
         { role: 'boss', roomGameName: 'N_Boss01' },
         { role: 'postboss', roomGameName: 'N_PostBoss01' },
+      ],
+      transitionEffects: [
+        { kind: 'resetCounter', axis: 'biomeDepthCache' },
+        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
       ],
     },
     fields: [],

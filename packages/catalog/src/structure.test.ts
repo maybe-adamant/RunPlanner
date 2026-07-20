@@ -143,6 +143,10 @@ describe('shared structural catalog vocabulary', () => {
           { role: 'boss', roomGameName: nBoss.gameName },
           { role: 'postboss', roomGameName: nPostboss.gameName },
         ],
+        transitionEffects: [
+          { kind: 'resetCounter', axis: 'biomeDepthCache' },
+          { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+        ],
       },
       fields: [],
     };
@@ -777,6 +781,50 @@ describe('shared structural catalog vocabulary', () => {
       error: new CatalogContractError(
         'biomeLayouts[0].completion.rooms[0].role',
         'completion role boss is required at index 0',
+      ),
+    },
+    {
+      name: 'completion transition effect',
+      input: {
+        ...declarations,
+        biomeLayouts: [
+          {
+            ...declarations.biomeLayouts[0],
+            completion: {
+              ...declarations.biomeLayouts[0].completion,
+              transitionEffects: [
+                { kind: 'mystery', axis: 'biomeDepthCache' },
+                { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+              ],
+            },
+          },
+        ],
+      },
+      error: new CatalogContractError(
+        'biomeLayouts[0].completion.transitionEffects[0].kind',
+        'unknown biome transition effect mystery',
+      ),
+    },
+    {
+      name: 'completion transition axis order',
+      input: {
+        ...declarations,
+        biomeLayouts: [
+          {
+            ...declarations.biomeLayouts[0],
+            completion: {
+              ...declarations.biomeLayouts[0].completion,
+              transitionEffects: [
+                { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+                { kind: 'resetCounter', axis: 'biomeDepthCache' },
+              ],
+            },
+          },
+        ],
+      },
+      error: new CatalogContractError(
+        'biomeLayouts[0].completion.transitionEffects[0].axis',
+        'expected biomeDepthCache',
       ),
     },
     {

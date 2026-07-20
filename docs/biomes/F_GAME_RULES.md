@@ -159,7 +159,10 @@ controls.
 F editable-room declarations, authored topology, semantic commands, and editor
 projection exist. Complete topology now materializes one canonical F snapshot,
 including the layout-derived `F_Boss01`/`F_PostBoss01` completion sequence.
-Complete history, legality, reward simulation, and findings remain pending.
+The picked spine now composes into canonical lifecycle history with sequential
+peer creation, timing-specific counter/store ledgers, completion-room history,
+and declared biome-local resets. Legality, reward simulation, and findings
+remain pending.
 Generated batches own the authored base store, Room Declarations own forced
 overrides, and counted leaves persist only their complete resolved offer under
 schema version 3.

@@ -1,11 +1,13 @@
 import type { EncounterPhaseKind, RoomCounterEffects } from '../../catalog';
-import type { OccurrenceAddress } from '../../project/addresses';
+import type { CompletionRoomAddress, OccurrenceAddress } from '../../project/addresses';
 import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../rewardKernel/model';
+
+export type RoomHistoryOrigin = CompletionRoomAddress | OccurrenceAddress;
 
 interface RoomLifecycleEventBase {
   readonly sequence: number;
   readonly operationIndex: number;
-  readonly origin: OccurrenceAddress;
+  readonly origin: RoomHistoryOrigin;
 }
 
 export type RoomLifecycleEvent =
@@ -50,6 +52,10 @@ export type RoomLifecycleEvent =
       readonly biomeDepthCacheDelta: number;
       readonly roomHistoryOrdinalDelta: number;
     })
+  | (RoomLifecycleEventBase & {
+      readonly kind: 'enteredRewardStoreRecorded';
+      readonly storeKey: string;
+    })
   | (RoomLifecycleEventBase & { readonly kind: 'roomExited' });
 
 export interface RoomLifecycleProducerInput {
@@ -58,15 +64,16 @@ export interface RoomLifecycleProducerInput {
 }
 
 export interface RoomLifecycleExecutionInput {
-  readonly origin: OccurrenceAddress;
+  readonly origin: RoomHistoryOrigin;
   readonly lifecycleProfileKey: string;
   readonly encounterProfileKey: string;
   readonly producer?: RoomLifecycleProducerInput;
   readonly counterEffects: RoomCounterEffects;
+  readonly enteredRewardStoreKey?: string;
 }
 
 export interface RoomHistoryFragment {
-  readonly origin: OccurrenceAddress;
+  readonly origin: RoomHistoryOrigin;
   readonly lifecycleProfileKey: string;
   readonly encounterProfileKey: string;
   readonly events: readonly RoomLifecycleEvent[];
