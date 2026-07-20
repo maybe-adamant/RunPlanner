@@ -14,7 +14,7 @@ audited reward kernel as an intentionally unconnected pure subsystem; Phase
 complete: capability isolation, the shared structural/F/G reconciliation
 slice, the dormant P/Q/H/O/I/N declaration imports, schema-version-3
 route/biome identity cleanup, and the cross-biome closure matrix all pass.
-Phase 3 is in progress. Commit 1 adds the strict F biome-completeness gate and
+Phase 3 is complete. Commit 1 adds the strict F biome-completeness gate and
 addressed incomplete findings without materializing partial history. Commit 2
 adds normalized reusable lifecycle profiles and deterministic single-room
 history fragments. Commit 3 adds the common canonical linear materializer for
@@ -27,7 +27,11 @@ compatibility, force pressure, and retained invalid topology without editing
 the canonical snapshot. Commit 6 connects the audited reward kernel to that
 same canonical F lifecycle: generated stores, counted bags, physical-order
 offers, concrete acquisitions, and WorldShop generation/purchases now replay
-as one possibility frontier with semantic findings.
+as one possibility frontier with semantic findings. Commit 7 closes the public
+pure `simulateProject` root, route horizons and summaries, F capability
+promotion, and complete-valid, complete-invalid, incomplete, deterministic,
+empty-project, blocked-downstream, repeated-room, counter, force, terminal, and
+reward/shop golden assertions.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
@@ -35,8 +39,9 @@ producer-role timing, exact encounter-depth timing, commit counter effects,
 and outgoing-generation checkpoints are implemented by the pure single-room
 executor. F biome-history composition, the Commit 4 structural/counter
 ledgers, Commit 5 room-generation legality, and Commit 6 reward legality are
-implemented. The public project-level simulation composition root remains
-pending for Commit 7.
+implemented. The public project-level simulation composition root now returns
+one immutable result containing the validated prefix, canonical products,
+witnesses, and findings for the exact authored snapshot.
 
 F authored base-store policies now carry the normalized game-language
 `targetMetaRewardsRatio` and `targetMetaRewardsAdjustSpeed` facts. Reward replay
@@ -730,8 +735,8 @@ Completed:
 
 Pending:
 
-Phase 2.8 has no pending items. Phase 3 continues with the project simulation
-composition root and golden closure described by Commit 7.
+Phases 2.8 and 3 have no pending items. Phase 4 connects this public simulation
+result to the existing editor and project-persistence application loop.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

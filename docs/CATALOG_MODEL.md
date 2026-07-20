@@ -553,13 +553,17 @@ The closed Phase 2.8 capability matrix is:
 - F is editable;
 - no biome is simulatable.
 
+Phase 3 promotes F alone to simulatable after its public project simulator and
+golden closure pass. The Phase 2.8 authorable/editable sets and every dormant
+later-biome capability remain unchanged.
+
 P, Q, H, O, I, and N are also declaration-complete in the normalized catalog,
 but they are not authorable, simulatable, or editable. Their presence proves
 that declaration coverage and product activation remain independent.
 
 Every active capability must reference a declared biome, and every
 editable biome must also be authorable. Project creation and loading, semantic
-command dispatch, simulator dispatch once it exists, and editor navigation are
+command dispatch, simulator dispatch, and editor navigation are
 application contact points that consume this matrix. Pure catalog construction,
 project codecs, and structural declarations remain capability-agnostic.
 

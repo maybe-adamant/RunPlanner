@@ -35,12 +35,13 @@ Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected F/G reward authority, and the authored project/editor use schema
 version 3. All eight biomes close one catalog-wide reference matrix while
 P/Q/H/O/I/N remain dormant behind the application capability boundary. Phase
-3 is in progress: F completeness, single-room lifecycle execution, canonical
+3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room
 legality, and semantic generation findings are also implemented. F reward,
-bag, acquisition, and shop orchestration are implemented; the assembled
-project evaluation result remains pending.
+bag, acquisition, and shop orchestration feed the public deterministic
+`simulateProject` composition root. F is now simulatable; G remains authorable
+but dormant until its complete product loop exists.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

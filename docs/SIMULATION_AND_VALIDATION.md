@@ -14,13 +14,13 @@ it will not duplicate it.
 
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
-F/G/P/Q/H/O/I/N audit set. Phase 2.8 dormant declaration closure is complete;
-Phase 3 now implements F completeness, canonical materialization, lifecycle
-composition, event-folded history ledgers through the biome transition, and F
-room-generation legality. Reward-kernel orchestration, project simulation, and
-candidate evaluation remain pending. The Phase 2.6 reward kernel and Phase 2.7
-F/G authority switch are implemented; the later schema-version-3 identity
-cleanup leaves those simulation contracts unchanged.
+F/G/P/Q/H/O/I/N audit set. Phase 2.8 dormant declaration closure and the Phase
+3 F simulation vertical slice are complete. F completeness, canonical
+materialization, lifecycle composition, event-folded history, room-generation
+legality, reward-kernel orchestration, and project-level simulation now form
+one public result. Candidate evaluation remains deferred to Phase 5. The Phase
+2.7 F/G authority switch and later schema-version-3 identity cleanup leave
+those simulation contracts unchanged.
 
 ## Core Contract
 
@@ -717,25 +717,37 @@ implementation failure rather than correctable user intent.
 
 ## Simulation Result
 
-Representative result shape:
+The implemented result shape is:
 
 ```ts
-interface SimulationResult {
-  routes: ReadonlyMap<RouteKey, RouteSimulation>;
-  findings: readonly Finding[];
-  candidateResults: CandidateResultIndex;
-  summary: ProjectSimulationSummary;
+interface ProjectEvaluation {
+  status: 'empty' | 'valid' | 'incomplete' | 'invalid' | 'blocked';
+  projectId: string;
+  catalogVersion: string;
+  routes: readonly ProjectRouteEvaluation[];
+  findings: readonly SemanticFinding[];
+  summary: ProjectEvaluationSummary;
 }
 ```
 
 Each route simulation records:
 
-- normalized authored topology for every configured biome;
-- canonical snapshots through the semantic processing horizon;
-- accumulated lifecycle events and ledgers;
-- biome processing states: validated, invalid, incomplete, or blocked;
-- semantic findings indexed by owner;
+- configured biome identity and the currently registered simulation prefix;
+- complete F evaluations with canonical snapshots, lifecycle events, ledgers,
+  room-generation proof, reward witnesses, and findings;
+- incomplete F evaluations without canonical products;
+- validated-prefix identity and an exact route-end, simulator-boundary,
+  incomplete, or invalid processing horizon;
+- semantic findings in stable route and phase order;
 - whether the route is eligible for future execution-plan compilation.
+
+The only registered biome simulator is F. Reaching authored G records a
+`simulatorBoundary` horizon and blocked project status without dispatching G or
+inventing G findings.
+An entirely unconfigured project has explicit `empty` status, no findings, and
+is not eligible for execution-plan compilation.
+Candidate results and UI decoration are deliberately absent from this Phase 3
+contract.
 
 The complete result is replaced atomically after an authored edit.
 

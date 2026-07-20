@@ -106,7 +106,7 @@ describe('planner capabilities', () => {
         biomeKey: 'F',
         declared: true,
         authorable: true,
-        simulatable: false,
+        simulatable: true,
         editable: true,
       },
       {
