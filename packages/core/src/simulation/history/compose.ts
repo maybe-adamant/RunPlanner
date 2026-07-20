@@ -13,34 +13,37 @@ import type {
   CanonicalRoom,
   CanonicalTarget,
 } from '../materialization';
-import { foldFHistoryEvents } from './fold';
-import type { CanonicalFHistory, FHistoryEvent, RoomCreatedHistoryEvent } from './model';
+import { foldLinearHistoryEvents } from './fold';
+import type { CanonicalLinearHistory, LinearHistoryEvent, RoomCreatedHistoryEvent } from './model';
 
-export class FHistoryCompositionContractError extends Error {
+export class LinearHistoryCompositionContractError extends Error {
   constructor(detail: string) {
     super(detail);
-    this.name = 'FHistoryCompositionContractError';
+    this.name = 'LinearHistoryCompositionContractError';
   }
 }
 
 interface EventBuilder {
-  readonly events: FHistoryEvent[];
+  readonly events: LinearHistoryEvent[];
+  readonly sequenceBase: number;
 }
 
-type FHistoryEventData<Event extends FHistoryEvent = FHistoryEvent> = Event extends FHistoryEvent
-  ? Omit<Event, 'sequence'>
-  : never;
+type LinearHistoryEventData<Event extends LinearHistoryEvent = LinearHistoryEvent> =
+  Event extends LinearHistoryEvent ? Omit<Event, 'sequence'> : never;
 
-function append(builder: EventBuilder, event: FHistoryEventData): void {
+function append(builder: EventBuilder, event: LinearHistoryEventData): void {
   builder.events.push(
-    Object.freeze({ ...event, sequence: builder.events.length + 1 }) as FHistoryEvent,
+    Object.freeze({
+      ...event,
+      sequence: builder.sequenceBase + builder.events.length + 1,
+    }) as LinearHistoryEvent,
   );
 }
 
 function appendLifecycleEvent(builder: EventBuilder, event: RoomLifecycleEvent): void {
   const { sequence: localSequence, ...data } = event;
   if (localSequence <= 0) {
-    throw new FHistoryCompositionContractError('room fragment has an invalid local sequence');
+    throw new LinearHistoryCompositionContractError('room fragment has an invalid local sequence');
   }
   append(builder, data);
 }
@@ -66,7 +69,7 @@ function generatedTargetCreated(
   generationIndex: number,
   generationCount: number,
 ): void {
-  const event: FHistoryEventData<RoomCreatedHistoryEvent> = {
+  const event: LinearHistoryEventData<RoomCreatedHistoryEvent> = {
     kind: 'roomCreated',
     origin: target.room.origin,
     gameName: target.room.gameName,
@@ -98,12 +101,16 @@ function enteredStoreKey(
     case 'none':
       return undefined;
     case 'resolvedOffer': {
-      if (room.kind !== 'authored' || room.incomingReward?.resolvedStoreKey === undefined) {
-        throw new FHistoryCompositionContractError(
+      const resolvedStoreKey =
+        room.kind === 'authored'
+          ? room.incomingReward?.resolvedStoreKey
+          : room.enteredRewardStoreKey;
+      if (resolvedStoreKey === undefined) {
+        throw new LinearHistoryCompositionContractError(
           `${room.gameName} requires resolved entered-store provenance`,
         );
       }
-      return room.incomingReward.resolvedStoreKey;
+      return resolvedStoreKey;
     }
   }
 }
@@ -111,7 +118,7 @@ function enteredStoreKey(
 function lifecycleInput(catalog: Catalog, room: CanonicalRoom) {
   const declaration = catalog.rooms.byKey[room.gameName];
   if (declaration === undefined) {
-    throw new FHistoryCompositionContractError(`unknown canonical room ${room.gameName}`);
+    throw new LinearHistoryCompositionContractError(`unknown canonical room ${room.gameName}`);
   }
   const storeKey = enteredStoreKey(declaration.enteredRewardStoreHistory, room);
   return {
@@ -148,7 +155,7 @@ function appendRoomLifecycle(
   generatedTargets?: readonly CanonicalTarget[],
 ): void {
   if (room.kind === 'authored' && !room.entered) {
-    throw new FHistoryCompositionContractError(
+    throw new LinearHistoryCompositionContractError(
       `unpicked occurrence ${semanticAddressKey(room.origin)} cannot execute a lifecycle`,
     );
   }
@@ -158,12 +165,12 @@ function appendRoomLifecycle(
     appendLifecycleEvent(builder, event);
     if (event.kind === 'outgoingGenerationCheckpoint') {
       if (generatedTargets === undefined) {
-        throw new FHistoryCompositionContractError(
+        throw new LinearHistoryCompositionContractError(
           `${room.gameName} reached outgoing generation without canonical targets`,
         );
       }
       if (room.origin.kind !== 'occurrence') {
-        throw new FHistoryCompositionContractError(
+        throw new LinearHistoryCompositionContractError(
           `${room.gameName} derived room cannot own generated targets`,
         );
       }
@@ -172,7 +179,7 @@ function appendRoomLifecycle(
     }
   }
   if (generatedTargets !== undefined && !injectedTargets) {
-    throw new FHistoryCompositionContractError(
+    throw new LinearHistoryCompositionContractError(
       `${room.gameName} has canonical targets but no outgoing-generation operation`,
     );
   }
@@ -181,7 +188,9 @@ function appendRoomLifecycle(
 function pickedRoom(targets: readonly CanonicalTarget[], owner: string): CanonicalAuthoredRoom {
   const picked = targets.filter((target) => target.picked);
   if (picked.length !== 1 || picked[0] === undefined) {
-    throw new FHistoryCompositionContractError(`${owner} must contain exactly one picked target`);
+    throw new LinearHistoryCompositionContractError(
+      `${owner} must contain exactly one picked target`,
+    );
   }
   return picked[0].room;
 }
@@ -192,45 +201,71 @@ function requireParent(
   owner: string,
 ): void {
   if (semanticAddressKey(source.origin) !== semanticAddressKey(parent)) {
-    throw new FHistoryCompositionContractError(
+    throw new LinearHistoryCompositionContractError(
       `${owner} parent ${semanticAddressKey(parent)} does not match ${semanticAddressKey(source.origin)}`,
     );
   }
 }
 
-function requireFLayout(catalog: Catalog, snapshot: CanonicalLinearBiome) {
-  if (snapshot.biomeKey !== 'F') {
-    throw new FHistoryCompositionContractError(
-      `F history cannot compose biome ${snapshot.biomeKey}`,
+function requireLinearLayout(
+  catalog: Catalog,
+  snapshot: CanonicalLinearBiome,
+  previous?: CanonicalLinearHistory,
+) {
+  const route = catalog.routes.byKey[snapshot.routeKey];
+  const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
+  if (
+    route === undefined ||
+    !route.biomeKeys.includes(snapshot.biomeKey) ||
+    layout?.kind !== 'LinearBiome'
+  ) {
+    throw new LinearHistoryCompositionContractError(
+      `catalog cannot place canonical ${snapshot.biomeKey} history`,
     );
   }
-  const route = catalog.routes.byKey[snapshot.routeKey];
-  const layout = catalog.biomeLayouts.byKey.F;
-  if (route === undefined || !route.biomeKeys.includes('F') || layout?.kind !== 'LinearBiome') {
-    throw new FHistoryCompositionContractError('catalog cannot place canonical F history');
+  const biomeIndex = route.biomeKeys.indexOf(snapshot.biomeKey);
+  const expectedPreviousBiomeKey = route.biomeKeys[biomeIndex - 1];
+  if (expectedPreviousBiomeKey === undefined) {
+    if (previous !== undefined) {
+      throw new LinearHistoryCompositionContractError(
+        `${snapshot.biomeKey} is the first ${route.key} biome and cannot consume prior history`,
+      );
+    }
+  } else if (
+    previous === undefined ||
+    previous.routeKey !== snapshot.routeKey ||
+    previous.biomeKey !== expectedPreviousBiomeKey
+  ) {
+    throw new LinearHistoryCompositionContractError(
+      `${snapshot.biomeKey} requires validated ${expectedPreviousBiomeKey} history`,
+    );
   }
   return layout;
 }
 
-export function composeFHistory(
+export function composeLinearHistory(
   catalog: Catalog,
   snapshot: CanonicalLinearBiome,
-): CanonicalFHistory {
-  const layout = requireFLayout(catalog, snapshot);
+  previous?: CanonicalLinearHistory,
+): CanonicalLinearHistory {
+  const layout = requireLinearLayout(catalog, snapshot, previous);
+  const seed = previous?.afterTransition;
   const entry = snapshot.entryRooms[0];
   if (snapshot.entryRooms.length !== 1 || entry === undefined) {
-    throw new FHistoryCompositionContractError('F history requires one canonical entry room');
+    throw new LinearHistoryCompositionContractError(
+      `${snapshot.biomeKey} history requires one canonical entry room`,
+    );
   }
-  const builder: EventBuilder = { events: [] };
+  const builder: EventBuilder = { events: [], sequenceBase: seed?.sequence ?? 0 };
   const biome: BiomeAddress = createBiomeAddress(snapshot.routeKey, snapshot.biomeKey);
   append(builder, {
     kind: 'biomeStarted',
     origin: biome,
     counters: Object.freeze({
-      biomeDepthCache: 0,
-      biomeEncounterDepth: 1,
-      routeEncounterDepth: 1,
-      roomHistoryOrdinal: 0,
+      biomeDepthCache: layout.initialCounters.biomeDepthCache,
+      biomeEncounterDepth: layout.initialCounters.biomeEncounterDepth,
+      routeEncounterDepth: seed?.ledgers.counters.routeEncounterDepth ?? 1,
+      roomHistoryOrdinal: seed?.ledgers.counters.roomHistoryOrdinal ?? 0,
     }),
   });
   standaloneRoomCreated(builder, entry, 'biomeEntry');
@@ -264,5 +299,17 @@ export function composeFHistory(
       value: 0,
     });
   }
-  return foldFHistoryEvents(builder.events);
+  return foldLinearHistoryEvents(builder.events, seed);
+}
+
+export function composeFHistory(
+  catalog: Catalog,
+  snapshot: CanonicalLinearBiome,
+): CanonicalLinearHistory {
+  if (snapshot.biomeKey !== 'F') {
+    throw new LinearHistoryCompositionContractError(
+      `F history cannot compose biome ${snapshot.biomeKey}`,
+    );
+  }
+  return composeLinearHistory(catalog, snapshot);
 }

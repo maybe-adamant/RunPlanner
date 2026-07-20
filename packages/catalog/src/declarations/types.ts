@@ -161,6 +161,10 @@ export interface RawRoomDeclaration {
 export interface RawLinearBiomeLayoutDeclaration {
   readonly biomeKey: string;
   readonly kind: 'LinearBiome';
+  readonly initialCounters: {
+    readonly biomeDepthCache: number;
+    readonly biomeEncounterDepth: number;
+  };
   readonly start: LinearStartDescriptor;
   readonly entries?: readonly EntryDescriptor[];
   readonly continuation: {

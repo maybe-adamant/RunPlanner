@@ -38,6 +38,7 @@ function linearLayout(biomeKey: string, terminalRoom: string): BiomeLayout {
   return {
     biomeKey,
     kind: 'LinearBiome',
+    initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
     start: {
       kind: 'authoredStart',
       mode: 'fixed',

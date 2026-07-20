@@ -164,6 +164,8 @@ added without changing global biome identity.
 Biome layout declarations own immutable structure:
 
 - layout kind: initially `LinearBiome` or `HubBiome`;
+- exact biome-local counter baselines at biome entry; route-wide counters are
+  carried by route simulation rather than restated by each layout;
 - start alternatives and ordered fixed entry slots, including whether each
   fixed slot is stateless-derived or owns authored room state;
 - default continuation policy and structural overrides;

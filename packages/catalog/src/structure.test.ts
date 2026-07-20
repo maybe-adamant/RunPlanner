@@ -509,6 +509,22 @@ describe('shared structural catalog vocabulary', () => {
       error: new CatalogContractError('biomeLayouts[0].kind', 'unknown biome layout MysteryBiome'),
     },
     {
+      name: 'linear layout entry counters',
+      input: {
+        ...declarations,
+        biomeLayouts: [
+          {
+            ...declarations.biomeLayouts[0],
+            initialCounters: { biomeDepthCache: -1, biomeEncounterDepth: 1 },
+          },
+        ],
+      },
+      error: new CatalogContractError(
+        'biomeLayouts[0].initialCounters.biomeDepthCache',
+        'must be a non-negative integer',
+      ),
+    },
+    {
       name: 'entry descriptor',
       input: {
         ...declarations,

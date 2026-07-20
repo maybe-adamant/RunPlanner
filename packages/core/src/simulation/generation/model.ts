@@ -13,7 +13,7 @@ export type RoomGenerationExclusionReason =
   | 'notCandidate'
   | 'physicalExitUnavailable';
 
-export interface FForcePressureLedgerEntry {
+export interface LinearForcePressureLedgerEntry {
   readonly targetOrigin: TargetAddress;
   readonly beforeSequence: number;
   readonly sourceGameName: string;
@@ -32,14 +32,18 @@ export interface FForcePressureLedgerEntry {
   readonly selectedExclusionReasons: readonly RoomGenerationExclusionReason[];
 }
 
-export interface FRoomGenerationValidation {
-  readonly biomeKey: 'F';
+export interface LinearRoomGenerationValidation {
+  readonly biomeKey: string;
   readonly validity: 'invalid' | 'valid';
-  readonly forcePressure: readonly FForcePressureLedgerEntry[];
+  readonly forcePressure: readonly LinearForcePressureLedgerEntry[];
   readonly findings: readonly SemanticFinding[];
 }
 
-export interface FRoomTargetCandidateValidation {
-  readonly pressure: FForcePressureLedgerEntry;
+export interface LinearRoomTargetCandidateValidation {
+  readonly pressure: LinearForcePressureLedgerEntry;
   readonly findings: readonly SemanticFinding[];
 }
+
+export type FForcePressureLedgerEntry = LinearForcePressureLedgerEntry;
+export type FRoomGenerationValidation = LinearRoomGenerationValidation;
+export type FRoomTargetCandidateValidation = LinearRoomTargetCandidateValidation;

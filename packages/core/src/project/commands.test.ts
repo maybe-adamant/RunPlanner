@@ -306,6 +306,7 @@ const rooms: readonly RoomDeclaration[] = [
 const layout = {
   biomeKey: 'F',
   kind: 'LinearBiome',
+  initialCounters: { biomeDepthCache: 0, biomeEncounterDepth: 1 },
   start: {
     kind: 'authoredStart',
     mode: 'oneOf',

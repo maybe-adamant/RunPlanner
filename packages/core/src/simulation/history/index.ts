@@ -1,10 +1,21 @@
-export { composeFHistory, FHistoryCompositionContractError } from './compose';
-export { foldFHistoryEvents, FHistoryFoldContractError } from './fold';
+export {
+  composeFHistory,
+  composeLinearHistory,
+  LinearHistoryCompositionContractError,
+  LinearHistoryCompositionContractError as FHistoryCompositionContractError,
+} from './compose';
+export {
+  foldFHistoryEvents,
+  foldLinearHistoryEvents,
+  LinearHistoryFoldContractError,
+  LinearHistoryFoldContractError as FHistoryFoldContractError,
+} from './fold';
 export type {
   BiomeCompletedHistoryEvent,
   BiomeCounterResetHistoryEvent,
   BiomeStartedHistoryEvent,
   CanonicalFHistory,
+  CanonicalLinearHistory,
   EncounterHistoryEntry,
   EnteredRewardStoreHistoryEntry,
   FHistoryCounters,
@@ -13,6 +24,12 @@ export type {
   FHistoryStateView,
   FRoomHistoryViews,
   FTargetGenerationView,
+  LinearHistoryCounters,
+  LinearHistoryEvent,
+  LinearHistoryLedgers,
+  LinearHistoryStateView,
+  LinearRoomHistoryViews,
+  LinearTargetGenerationView,
   RoomAppearanceHistoryEntry,
   RoomCreatedHistoryEvent,
   RoomCreationSource,

@@ -57,6 +57,7 @@ describe('complete G catalog', () => {
     expect(catalog.biomeLayouts.byKey.G).toEqual({
       biomeKey: 'G',
       kind: 'LinearBiome',
+      initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
       start: { kind: 'authoredStart', mode: 'fixed', roomGameNames: ['G_Intro'] },
       entries: [],
       continuation: {

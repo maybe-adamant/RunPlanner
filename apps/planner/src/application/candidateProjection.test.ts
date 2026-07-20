@@ -13,6 +13,7 @@ import { createCandidateProjectionService, presentCandidateLabel } from './candi
 import { selectRoomsForCategory } from './roomSelectorProjection';
 
 const biome = createBiomeAddress('Underworld', 'F');
+const simulationScope = Object.freeze({ simulatableBiomeKeys: Object.freeze(['F']) });
 
 function project() {
   return createProjectDocument(catalog, {
@@ -24,7 +25,7 @@ function project() {
 
 describe('candidate application projection', () => {
   it('caches stable option structures by immutable project and semantic owner', () => {
-    const service = createCandidateProjectionService(catalog);
+    const service = createCandidateProjectionService(catalog, simulationScope);
     const document = project();
     const layout = catalog.biomeLayouts.byKey.F;
     if (layout?.kind !== 'LinearBiome' || layout.start.kind !== 'authoredStart') {
@@ -41,7 +42,7 @@ describe('candidate application projection', () => {
   });
 
   it('retains stable declaration domains when contextual evaluation is unavailable', () => {
-    const service = createCandidateProjectionService(catalog);
+    const service = createCandidateProjectionService(catalog, simulationScope);
     const startId = createOccurrenceId('candidate-projection-start');
     let document = applyProjectCommand(project(), catalog, {
       kind: 'CreateStart',
@@ -67,7 +68,7 @@ describe('candidate application projection', () => {
   });
 
   it('uses one common label decoration for context-impossible authored values', () => {
-    const service = createCandidateProjectionService(catalog);
+    const service = createCandidateProjectionService(catalog, simulationScope);
     const document = project();
     const room = catalog.rooms.byKey.F_Combat01!;
     const option = service.startRooms(document, biome, [room])[0];

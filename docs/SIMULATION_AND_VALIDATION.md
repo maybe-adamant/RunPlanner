@@ -761,17 +761,20 @@ interface ProjectEvaluation {
 Each route simulation records:
 
 - configured biome identity and the currently registered simulation prefix;
-- complete F evaluations with canonical snapshots, lifecycle events, ledgers,
+- complete F/G evaluations with canonical snapshots, lifecycle events, ledgers,
   room-generation proof, reward witnesses, and findings;
-- incomplete F evaluations without canonical products;
+- incomplete F/G evaluations without canonical products;
 - validated-prefix identity and an exact route-end, simulator-boundary,
   incomplete, or invalid processing horizon;
 - semantic findings in stable route and phase order;
 - whether the route is eligible for future execution-plan compilation.
 
-The only registered biome simulator is F. Reaching authored G records a
-`simulatorBoundary` horizon and blocked project status without dispatching G or
-inventing G findings.
+The core registry contains complete F and G simulators. Project simulation may
+also receive an application-owned simulation scope; reaching a registered
+biome outside that scope records a `simulatorBoundary` horizon without
+dispatching the biome or inventing local findings. The current application
+scope remains F-only until G editor activation, while direct core conformance
+fixtures exercise the full F-to-G prefix.
 An entirely unconfigured project has explicit `empty` status, no findings, and
 is not eligible for execution-plan compilation.
 Candidate results and UI decoration are deliberately absent from this Phase 3
@@ -810,6 +813,14 @@ Current-room shop option history
 contains the complete generated inventory while that shop's outgoing doors are
 generated. Purchases occur afterward and first affect generation when the
 already-generated next room reaches its outgoing checkpoint.
+
+For a validated downstream G, the route evaluator carries F's room, encounter,
+reward-bag, global acquisition, offer, and route-counter state forward. It then
+applies G's layout-declared biome-local counter baselines and clears only the
+reward records that the game resets per biome (`BiomeUseRecord`,
+`LootBiomeRecord`, and current-room use state). G reward-ratio support counts
+only G-local entered-store history even though the canonical history retains
+the validated F prefix.
 
 The canonical model increments `upgradableTraitCount` once for every acquired
 ordinary Boon. Exact boon selection, replacement, and upgradeable trait

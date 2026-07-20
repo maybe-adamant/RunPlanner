@@ -66,6 +66,7 @@ describe('complete dormant O catalog', () => {
     expect(layout).toEqual({
       biomeKey: 'O',
       kind: 'LinearBiome',
+      initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
       start: { kind: 'authoredStart', mode: 'fixed', roomGameNames: ['O_Intro'] },
       entries: [],
       continuation: {

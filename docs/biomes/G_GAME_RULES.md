@@ -38,18 +38,18 @@ coverage is defined by `../MIGRATION_PROVENANCE.md`.
 
 | Feature                                | Verified game behavior                                                                                                    | Disposition and planner projection                                                                     | Current coverage                                                    | Reconsider when                                               |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Generated decisions                    | G uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                   | documented, declared, authored; simulation and presentation pending | --                                                            |
-| Fixed intro                            | `G_Intro` is reward-free and has no planner-relevant encounter choice                                                     | **Exact:** empty fixed intro projection                                                                | documented, declared, authored; simulation and presentation pending | --                                                            |
+| Generated decisions                    | G uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                   | documented, declared, authored, and simulated; presentation pending | --                                                            |
+| Fixed intro                            | `G_Intro` is reward-free and has no planner-relevant encounter choice                                                     | **Exact:** empty fixed intro projection                                                                | documented, declared, authored, and simulated; presentation pending | --                                                            |
 | Ordinary combat identity               | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition | documented, declared                                                | Combat composition becomes an authored or validated output    |
 | Locked extra exits                     | After ordinary target creation, later exits may require a counting, reward-free unlock encounter before traversal         | **Deferred:** v1 requires the picked exit to realize open and takes it immediately                     | documented by canonical v1 baseline                                 | v2 models optional per-exit actions and their counter effects |
 | Anomaly replacement                    | An eligible ordinary G target may be replaced by a one-room Anomaly detour that later returns to the prior room set       | **Deferred:** omit and suppress Anomaly replacement in the v1 detour-free baseline                     | documented                                                          | Route-structural detours are implemented                      |
-| Room eligibility and force             | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | documented, declared; simulation pending                            | --                                                            |
-| Reward-store selection                 | G targets MetaProgress ratio `0.35` with adjustment speed `10`                                                            | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | documented and declared; simulation pending                         | Probability analysis or exact RNG replay is introduced        |
-| Incoming rewards and shops             | Combat, miniboss, Story, Fountain, Midshop, and Preboss producers retain concrete filters and overrides                   | **Exact:** occurrence incoming-reward state plus declaration-owned overrides                           | documented, declared, authored; simulation and presentation pending | --                                                            |
-| Miniboss variants                      | All three variants are production rooms; Crawler is non-counting                                                          | **Exact:** separate concrete room and encounter profiles                                               | documented, declared, authored; simulation and presentation pending | --                                                            |
-| Forked preboss                         | Every predecessor exit creates `G_PreBoss01`; first is Shop and up to two additional exits are free rewards               | **Exact:** one to three terminal occurrences of the same declaration                                   | documented, declared, authored; simulation and presentation pending | --                                                            |
+| Room eligibility and force             | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | documented, declared, and simulated                                 | --                                                            |
+| Reward-store selection                 | G targets MetaProgress ratio `0.35` with adjustment speed `10`                                                            | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | documented, declared, and simulated                                 | Probability analysis or exact RNG replay is introduced        |
+| Incoming rewards and shops             | Combat, miniboss, Story, Fountain, Midshop, and Preboss producers retain concrete filters and overrides                   | **Exact:** occurrence incoming-reward state plus declaration-owned overrides                           | documented, declared, authored, and simulated; presentation pending | --                                                            |
+| Miniboss variants                      | All three variants are production rooms; Crawler is non-counting                                                          | **Exact:** separate concrete room and encounter profiles                                               | documented, declared, authored, and simulated; presentation pending | --                                                            |
+| Forked preboss                         | Every predecessor exit creates `G_PreBoss01`; first is Shop and up to two additional exits are free rewards               | **Exact:** one to three terminal occurrences of the same declaration                                   | documented, declared, authored, and simulated; presentation pending | --                                                            |
 | Narcissus benefit choice               | Entering `G_Story01` presents three NPC benefits whose concrete effects can include run and meta resources or traits      | **Deferred:** retain the fixed Story offer but do not author or consume the internal benefit choice    | documented                                                          | Concrete NPC gifts and trait state are modeled                |
-| Fixed boss and postboss tail           | `G_PreBoss01` leads through one mutually exclusive Scylla variant and then `G_PostBoss01`                                 | **Exact:** layout-derived `G_Boss01` then `G_PostBoss01` under the neutral difficulty baseline         | documented and declared; simulation pending                         | User-selected difficulty becomes a project input              |
+| Fixed boss and postboss tail           | `G_PreBoss01` leads through one mutually exclusive Scylla variant and then `G_PostBoss01`                                 | **Exact:** layout-derived `G_Boss01` then `G_PostBoss01` under the neutral difficulty baseline         | documented, declared, and simulated                                 | User-selected difficulty becomes a project input              |
 | Narcissus and special-room progression | Dialogue, bounty, lifetime, prior-run force, and world-upgrade gates alter availability                                   | **Excluded:** progressed-save baseline retains current-run rules only                                  | documented; progressed baseline declared                            | Save-profile state becomes a project input                    |
 
 ## Layout
@@ -57,6 +57,10 @@ coverage is defined by `../MIGRATION_PROVENANCE.md`.
 `G_Intro` is the fixed, reward-free start. G then uses standard generated
 batches and terminates through `G_PreBoss01`, forced at
 `biomeDepthCache = 8`.
+
+The layout declares G's entry baseline as `biomeDepthCache = 1` and
+`biomeEncounterDepth = 1`. Route-wide encounter depth and room-history ordinal
+continue from validated F after F's biome-local transition resets.
 
 The intro's reward-free empty profile, 0-to-1 force window, and current-run
 counter behavior are exact catalog facts. The legacy exact-depth predicate is
@@ -215,9 +219,15 @@ Their current-run room, counter, cap, force, and reward rules remain exact.
 
 ## Current Product Boundary
 
-G editable-room declarations and generic authored topology/commands exist. The
-derived `G_Boss01`/`G_PostBoss01` declarations and layout completion sequence
-also exist, but remain unmaterialized. G simulation, findings, and editor
-activation remain pending. Its normalized declarations use the shared schema-
-version-2 batch-store, resolved-offer, producer-lifecycle, and entered-store-
-history contracts.
+G completeness, canonical linear materialization, lifecycle/history folding,
+room-generation legality, reward legality, finding composition, and validated
+F-to-G route continuation are live. The fixed rewardless intro uses the shared
+rewardless lifecycle; the canonical v1 history emits no locked-door encounter.
+The layout-derived boss/postboss tail is materialized, and `G_Boss01` records
+the RunProgress store resolved for its outgoing boss offer without inventing a
+boss reward.
+
+G editor activation and candidate presentation remain pending. The application
+therefore keeps G outside its simulation horizon and presents only the F editor.
+Direct core simulation includes complete or incomplete G plans for conformance
+coverage until the application activates G in Phase 5 Commit 4.

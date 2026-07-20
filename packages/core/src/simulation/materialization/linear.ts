@@ -19,7 +19,7 @@ import type {
   RoomOccurrence,
   ShopState,
 } from '../../project/model';
-import type { CompleteFCompletenessResult } from '../completeness';
+import type { CompleteLinearCompletenessResult } from '../completeness';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
@@ -35,8 +35,15 @@ import type {
   CanonicalTerminalEntry,
 } from './model';
 
-type FAuthoredTemplateKey =
-  'FixedOpening' | 'ForkedPreboss' | 'Fountain' | 'Miniboss' | 'Shop' | 'StandardCombat' | 'Story';
+type LinearAuthoredTemplateKey =
+  | 'FixedIntro'
+  | 'FixedOpening'
+  | 'ForkedPreboss'
+  | 'Fountain'
+  | 'Miniboss'
+  | 'Shop'
+  | 'StandardCombat'
+  | 'Story';
 
 type AuthoredRoomRole = 'ordinary' | 'terminalFreeReward' | 'terminalShop';
 
@@ -145,6 +152,16 @@ function materializeFixedRoom(context: AuthoredRoomMaterializationContext): Mate
   });
 }
 
+function materializeRewardlessRoom(
+  context: AuthoredRoomMaterializationContext,
+): MaterializedRoomLeaf {
+  requireStateKind(context, 'none');
+  if (context.room.incomingReward.kind !== 'none') {
+    fail(`${context.room.gameName} rewardless template has a reward producer`);
+  }
+  return Object.freeze({ lifecycleProfileKey: 'RewardlessRoom' });
+}
+
 function materializeShopEntry(
   context: AuthoredRoomMaterializationContext,
   shop: ShopState,
@@ -234,6 +251,7 @@ function materializeForkedPreboss(
 }
 
 const authoredTemplateMaterializers = Object.freeze({
+  FixedIntro: materializeRewardlessRoom,
   FixedOpening: materializeCountedRoom,
   ForkedPreboss: materializeForkedPreboss,
   Fountain: materializeCountedRoom,
@@ -241,7 +259,7 @@ const authoredTemplateMaterializers = Object.freeze({
   Shop: materializeShopRoom,
   StandardCombat: materializeCountedRoom,
   Story: materializeFixedRoom,
-}) satisfies Readonly<Record<FAuthoredTemplateKey, AuthoredTemplateMaterializer>>;
+}) satisfies Readonly<Record<LinearAuthoredTemplateKey, AuthoredTemplateMaterializer>>;
 
 function authoredMaterializer(
   templateKey: RoomTemplateKey,
@@ -253,7 +271,7 @@ function authoredMaterializer(
     >
   )[templateKey];
   if (materializer === undefined) {
-    fail(`${roomGameName} uses unsupported F template ${templateKey}`);
+    fail(`${roomGameName} uses unsupported linear template ${templateKey}`);
   }
   return materializer;
 }
@@ -432,16 +450,13 @@ function materializeTarget(
   });
 }
 
-function requireFLayout(
+function requireLinearLayout(
   catalog: Catalog,
   biome: BiomeAddress,
-  completeness: CompleteFCompletenessResult,
+  completeness: CompleteLinearCompletenessResult,
 ): LinearBiomeLayout {
   if ((completeness as { readonly completion?: unknown }).completion !== 'complete') {
     fail('linear materialization requires a complete biome result');
-  }
-  if (biome.biomeKey !== 'F') {
-    fail(`F materialization cannot process biome ${biome.biomeKey}`);
   }
   const route = catalog.routes.byKey[biome.routeKey];
   if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
@@ -458,7 +473,7 @@ function requireFLayout(
     layout.terminal.kind !== 'forkedTransition' ||
     layout.fields.length !== 0
   ) {
-    fail('catalog F layout is not supported by the canonical linear materializer');
+    fail(`catalog ${biome.biomeKey} layout is not supported by the canonical linear materializer`);
   }
   for (const room of catalog.rooms.values) {
     if (room.biomeKey === layout.biomeKey && room.mode.kind === 'authored') {
@@ -472,6 +487,7 @@ function materializeCompletionRooms(
   catalog: Catalog,
   biome: BiomeAddress,
   layout: LinearBiomeLayout,
+  terminalResolvedStoreKey: string | undefined,
 ): readonly CanonicalCompletionRoom[] {
   const completionKinds = {
     boss: { roomKind: 'Boss', lifecycleProfileKey: 'BossRoom' },
@@ -497,6 +513,20 @@ function materializeCompletionRooms(
       ) {
         fail(`${room.gameName} cannot use lifecycle ${lifecycleProfileKey}`);
       }
+      let enteredRewardStoreKey: string | undefined;
+      switch (room.enteredRewardStoreHistory.kind) {
+        case 'none':
+          break;
+        case 'fixed':
+          enteredRewardStoreKey = room.enteredRewardStoreHistory.storeKey;
+          break;
+        case 'resolvedOffer':
+          if (terminalResolvedStoreKey === undefined) {
+            fail(`${room.gameName} cannot resolve its completion offer store`);
+          }
+          enteredRewardStoreKey = terminalResolvedStoreKey;
+          break;
+      }
       return Object.freeze({
         kind: 'completion',
         origin: createCompletionRoomAddress(biome, descriptor.role),
@@ -506,6 +536,7 @@ function materializeCompletionRooms(
         encounterPhases: encounterPhases(catalog, room),
         lifecycleProfileKey,
         counterEffects: room.counters,
+        ...(enteredRewardStoreKey === undefined ? {} : { enteredRewardStoreKey }),
         entered: true,
       });
     }),
@@ -515,9 +546,9 @@ function materializeCompletionRooms(
 export function materializeLinearBiome(
   catalog: Catalog,
   biome: BiomeAddress,
-  completeness: CompleteFCompletenessResult,
+  completeness: CompleteLinearCompletenessResult,
 ): CanonicalLinearBiome {
-  const layout = requireFLayout(catalog, biome, completeness);
+  const layout = requireLinearLayout(catalog, biome, completeness);
   const topology = completeness.topology;
   const occurrences = new Map(
     topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
@@ -619,7 +650,11 @@ export function materializeLinearBiome(
   }
 
   if (terminalEntry === undefined) {
-    fail('complete F topology has no terminal entry');
+    fail(`complete ${layout.biomeKey} topology has no terminal entry`);
+  }
+  const terminalDeclaration = catalog.rooms.byKey[layout.terminal.roomGameName];
+  if (terminalDeclaration === undefined) {
+    fail(`${layout.terminal.roomGameName} has no terminal declaration`);
   }
   return Object.freeze({
     kind: 'LinearBiome',
@@ -628,7 +663,12 @@ export function materializeLinearBiome(
     entryRooms: Object.freeze([start]),
     batches: Object.freeze(batches),
     terminalEntry,
-    completionRooms: materializeCompletionRooms(catalog, biome, layout),
+    completionRooms: materializeCompletionRooms(
+      catalog,
+      biome,
+      layout,
+      terminalDeclaration.forcedRewardStoreKey,
+    ),
     biomeState: Object.freeze({}),
   });
 }
