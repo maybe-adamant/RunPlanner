@@ -594,6 +594,237 @@ Gate:
 
 Candidate simulation is not required until selected-plan validation is stable.
 
+### Required Commit Sequence
+
+Phase 3 is delivered through the following ordered commits. Each commit must
+leave the pure core and normalized catalog internally coherent and must pass
+the repository validation suite. A later commit may extend an earlier result,
+but it must not supply missing invariants that the earlier commit claimed to
+close. React, Redux publication, editor feedback rendering, candidate lists,
+and execution-plan compilation remain outside this sequence.
+
+#### Commit 1: Evaluation Contracts and F Completeness
+
+Deliver:
+
+- discriminated incomplete and complete biome-evaluation contracts that make
+  it impossible to attach a canonical snapshot to an incomplete biome;
+- the semantic finding contract with stable game-domain codes, severity,
+  phase, semantic origin, and structured evidence, without UI positions or
+  instance-shaped finding codes;
+- one F completeness evaluator over normalized authored topology, separate
+  from project decoding and semantic legality;
+- explicit completeness checks for an authored start, a closed picked spine,
+  every referenced target, every required pick, the terminal transition and
+  its active targets, batch-owned values, active incoming rewards, and picked
+  shop state;
+- focused fixtures for an unstarted F biome, a partially authored ordinary
+  decision, a missing pick, an unfinished terminal transition, and one fully
+  complete but not yet validated F biome.
+
+Gate:
+
+- malformed topology remains a project-codec contract error rather than an
+  incomplete result;
+- a structurally valid but unfinished F biome produces addressed completeness
+  findings and no canonical snapshot;
+- completeness does not evaluate room eligibility, caps, force, reward
+  support, or shop possibility;
+- no placeholder `simulateProject`, canonical materializer, event stream, or
+  candidate result is introduced.
+
+#### Commit 2: Lifecycle Profiles and Single-Room Execution
+
+Deliver:
+
+- normalized reusable Room Lifecycle Profile declarations and the closed
+  operation vocabulary required by F;
+- strict catalog normalization for lifecycle profile keys, operation kinds,
+  encounter references, producer lifecycle points, and declaration-owned
+  effect kinds;
+- declaration-driven effect and exhaustive operation dispatch registries in
+  the pure core;
+- immutable occurrence-addressed lifecycle events and a concrete
+  `RoomHistoryFragment` result;
+- F-required standard-room, WorldShop, terminal, Boss, and PostBoss lifecycle
+  profiles plus Devotion producer-point composition, reusing the existing
+  reward producer lifecycle authority rather than duplicating acquisition
+  timing;
+- focused ordering fixtures for the standard producer-advance point, Devotion
+  before/after-combat producer points, WorldShop generation-before-purchase,
+  counting versus non-counting encounters, and commit-time counter effects.
+
+Gate:
+
+- lifecycle execution dispatches through normalized profile, encounter,
+  producer, and effect declarations and never through concrete F room names;
+- an unknown profile, operation, effect, or lifecycle point fails at a strict
+  construction or dispatch boundary rather than becoming a no-op;
+- no unrestricted callback/event DSL or final-room aggregate is introduced as
+  a second timing authority;
+- the executor can produce a deterministic single-room fragment without a
+  linear-biome materializer or React/application dependency.
+
+#### Commit 3: Common Linear Materializer and Canonical F
+
+Deliver:
+
+- the canonical linear-biome, room, batch, target, terminal-entry, and
+  completion-room contracts defined by `SIMULATION_AND_VALIDATION.md`;
+- one common `LinearBiome` materializer that consumes complete normalized
+  topology and layout declarations without validating contextual legality;
+- strict room-template materializer dispatch for every authored F template;
+- materialization of the selected F opening, every ordinary picked and
+  unpicked occurrence, batch store provenance, resolved incoming leaves,
+  terminal Shop/Free targets, and stable semantic return addresses;
+- layout-derived `F_Boss01` and `F_PostBoss01` completion materialization in
+  declared order;
+- fixtures for a representative complete F topology, repeated `gameName`
+  values with distinct occurrence IDs, one- and two-exit predecessors, and
+  terminal realization from exact predecessor exits.
+
+Gate:
+
+- the materializer is callable only after completeness succeeds and never
+  invents missing authored values;
+- complete but context-invalid authored facts still materialize unchanged so
+  later validation can diagnose them;
+- repeated game room names remain separate canonical occurrences, offers, and
+  semantic owners;
+- completion rooms come only from the layout descriptor and are not authored
+  occurrences, generated candidates, or room-name special cases;
+- no history reconstruction, eligibility decision, topology repair, or
+  candidate enumeration appears in the materializer.
+
+#### Commit 4: Lifecycle Composition and History Ledgers
+
+Deliver:
+
+- composition of occurrence-addressed room fragments by following the picked
+  F spine while retaining every generated unpicked peer at its predecessor's
+  outgoing-generation checkpoint;
+- one immutable deterministic lifecycle event stream spanning authored rooms,
+  terminal entry, derived Boss/PostBoss completion, and biome completion;
+- event-folded ledgers for room creation, room appearance, encounter starts
+  and completion, `biomeDepthCache`, `biomeEncounterDepth`, route encounter
+  depth, room-history ordinal, and entered-store history;
+- exact pre-outgoing, post-commit, preparation, entry, outgoing-generation,
+  and exit state views needed by later validators;
+- fixtures proving sequential physical target creation, unpicked creation
+  without appearance, encounter-start depth increments, commit-time cache
+  increments, target preparation from predecessor post-commit state, and
+  declared biome-transition resets.
+
+Gate:
+
+- the ordered event stream is the timing authority and every ledger is a pure
+  fold over those events;
+- outgoing generation observes source pre-commit caches while selected-target
+  preparation observes predecessor post-commit caches;
+- one committed room advances room-history caches once even when its profile
+  contains several encounter phases;
+- no validator reconstructs intermediate history from a final aggregate, and
+  no unpicked occurrence executes an entered-room fragment.
+
+#### Commit 5: F Room Possibility and Generation Validation
+
+Deliver:
+
+- exact requirement-evaluation contexts projected from lifecycle state at the
+  room-generation contact point;
+- F physical-exit, source/target compatibility, room eligibility, creation-
+  cap, appearance-cap, and mutual-exclusion validation;
+- support-only room selection with sequential physical-peer updates, positive-
+  weight possibility, and forced-pool replacement of the ordinary eligible
+  pool;
+- unresolved force-pressure ledger updates derived at each physical target
+  generation point;
+- F force-pressure evaluation using the documented capped force-chance formula
+  without treating its maximum as a separate upper eligibility bound;
+- semantic findings addressed to the owning batch, target, picked choice, or
+  occurrence, with structured pre-decision evidence;
+- fixtures for a possible low-weight room, an impossible room, ordinary rooms
+  excluded by an active forced pool, chance boundaries below and at forced,
+  same-batch repeated names, later repeated offers, and separate creation and
+  appearance caps.
+
+Gate:
+
+- validation checks the authored selected outcome by membership in the exact
+  support set and produces no probability, likelihood, or RNG replay result;
+- the same normalized requirement evaluators remain the sole current-run
+  predicate authority;
+- validation never edits topology, chooses a replacement, or suppresses the
+  canonical snapshot of a complete invalid biome;
+- candidate projection arrays and editor option decoration remain absent.
+
+#### Commit 6: F Reward, Bag, Acquisition, and Shop Simulation
+
+Deliver:
+
+- lifecycle integration of the existing reward-kernel store-support, counted-
+  bag, offer-history, concrete-acquisition, source-support, and shop-order
+  operations;
+- F authored base-store support plus declaration-owned forced and individual
+  target-store overrides at the exact outgoing-generation history view;
+- sequential target offer resolution, counted-bag consumption, and offer
+  projections for picked and unpicked occurrences;
+- concrete acquisition emission only from entered producers at their declared
+  lifecycle points, including Devotion's ordered source pair;
+- WorldShop inventory generation, active-option history, ordered purchased-set
+  exploration, equivalent-state merging, and retained witness orders;
+- semantic findings for unsupported store outcomes, bag entries, payloads,
+  Boon sources, shop options, purchases, and acquisition resolutions;
+- fixtures for impossible/possible/forced reward-store boundaries, one-refill
+  counted bags, unpicked offers without acquisitions, standard same-room
+  acquisition effects, and the fourth-shop-source/fifth-door-source trace.
+
+Gate:
+
+- generated target rewards are resolved in physical order and later peers see
+  earlier offers, bag consumption, and offer projections;
+- WorldShop inventory and outgoing targets observe pre-purchase acquisition
+  history, and purchases never rewrite or revalidate the already-generated
+  batch;
+- reward possibility proves support only and emits no probability score;
+- the simulator orchestrates the existing reward kernel instead of creating a
+  competing reward, bag, source, or shop authority.
+
+#### Commit 7: Project Simulation Orchestration and Golden Closure
+
+Deliver:
+
+- the pure deterministic
+  `simulateProject(catalog, authoredProject): ProjectEvaluation` composition
+  root;
+- route-ordered biome processing with F as the only registered simulator,
+  incomplete and invalid processing horizons, validated-prefix tracking, and
+  project/route summaries;
+- application capability promotion of F to simulatable only after the public
+  simulator exists, without yet publishing simulation through Redux or React;
+- explicit incomplete, complete-invalid, and complete-valid F evaluation
+  results, with complete results retaining canonical snapshots, event streams,
+  ledgers, witnesses, and findings;
+- one representative complete valid F golden project plus focused incomplete
+  and complete-invalid golden projects;
+- deterministic deep-equality, stable semantic-origin, repeated-room,
+  terminal-context, counter-timing, force-support, and reward/shop integration
+  assertions over the public evaluation result;
+- final Phase 3 documentation and implementation-progress reconciliation.
+
+Gate:
+
+- equal normalized catalogs and authored projects produce deeply equal public
+  evaluations without reading or mutating React, Redux, browser, filesystem,
+  game-runtime, or wall-clock state;
+- incomplete F has no canonical snapshot, while complete invalid F retains its
+  snapshot and addressed findings;
+- dormant G/P/Q/H/O/I/N declarations cannot enter simulation dispatch;
+- the result publishes no placeholder candidates, UI decoration, execution-
+  plan JSON, or game-module instruction;
+- the full repository validation suite passes and every Phase 3 acceptance
+  item is covered by a named fixture before the phase is marked complete.
+
 ### Acceptance
 
 - one representative F project materializes every picked and unpicked
