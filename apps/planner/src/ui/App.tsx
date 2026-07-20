@@ -21,14 +21,17 @@ import {
   useAppDispatch,
   useAppSelector,
 } from '../application/store';
+import type { ProjectOperations } from '../application/projectOperations';
 import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
 import { FBiomeEditor } from './FBiomeEditor';
+import { ProjectFileControls } from './ProjectFileControls';
 import { ProjectHistoryControls } from './ProjectHistoryControls';
 
 interface AppProps {
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
+  readonly projectOperations: ProjectOperations;
 }
 
 const sections: readonly { key: PlannerSection; label: string }[] = [
@@ -131,7 +134,7 @@ function RouteOverview({
   );
 }
 
-export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
+export function App({ catalog, catalogSummary, editorNavigation, projectOperations }: AppProps) {
   const activeSection = useAppSelector((state) => state.editorSession.activeSection);
   const activeUnderworldPanel = useAppSelector(
     (state) => state.editorSession.activeUnderworldPanel,
@@ -181,6 +184,8 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
           <ProjectHistoryControls />
         </div>
       </header>
+
+      <ProjectFileControls operations={projectOperations} />
 
       <nav className="route-tabs" aria-label="Planner sections">
         {sections.map((section) => (

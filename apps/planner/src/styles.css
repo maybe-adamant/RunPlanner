@@ -145,6 +145,48 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.project-file-controls {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.project-file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.project-file-actions button {
+  padding: 5px 9px;
+  border: 1px solid #34353e;
+  border-radius: 7px;
+  color: #c8c3bb;
+  background: #1a1b21;
+  cursor: pointer;
+}
+
+.project-file-actions button:hover:not(:disabled) {
+  border-color: #55535e;
+  color: #fffaf2;
+}
+
+.project-operation-result {
+  margin: 0;
+  color: #aaa7af;
+  font-size: 0.82rem;
+}
+
+.project-operation-result[data-status='success'] {
+  color: #9bd7af;
+}
+
+.project-operation-result[data-status='failure'] {
+  color: #e7a1a1;
+}
+
 .route-tabs {
   display: flex;
   gap: 4px;
