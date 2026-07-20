@@ -157,8 +157,8 @@ controls.
 ## Current Product Boundary
 
 F editable-room declarations, authored topology, semantic commands, and editor
-projection exist. The derived `F_Boss01`/`F_PostBoss01` declarations and layout
-completion sequence also exist, but Phase 3 does not materialize them yet.
+projection exist. Complete topology now materializes one canonical F snapshot,
+including the layout-derived `F_Boss01`/`F_PostBoss01` completion sequence.
 Complete history, legality, reward simulation, and findings remain pending.
 Generated batches own the authored base store, Room Declarations own forced
 overrides, and counted leaves persist only their complete resolved offer under

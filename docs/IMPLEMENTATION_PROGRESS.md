@@ -17,7 +17,10 @@ route/biome identity cleanup, and the cross-biome closure matrix all pass.
 Phase 3 is in progress. Commit 1 adds the strict F biome-completeness gate and
 addressed incomplete findings without materializing partial history. Commit 2
 adds normalized reusable lifecycle profiles and deterministic single-room
-history fragments; route-wide materialization remains pending.
+history fragments. Commit 3 adds the common canonical linear materializer for
+complete F topology, including addressed batches, terminal realizations, and
+layout-derived completion rooms. Route-wide history composition remains
+pending.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, occurrence-addressed events,
@@ -25,6 +28,12 @@ producer-role timing, exact encounter-depth timing, commit counter effects,
 and outgoing-generation checkpoints are implemented by the pure single-room
 executor. Concrete reward acquisition, route-history composition, and ledger
 folding are not yet implemented.
+
+Canonical F materialization now preserves normalized authored facts without
+making a legality claim. Repeated room game names remain distinct addressed
+occurrences, unpicked shop state remains dormant, terminal width derives from
+the predecessor's physical exits, and Boss/PostBoss rooms derive only from the
+layout completion sequence.
 
 Possibility-only simulation and the reward-authority shape are locked by the
 complete audit set. O added the source-offer-point batch-store form without
@@ -663,8 +672,8 @@ Completed:
 
 Pending:
 
-Phase 2.8 has no pending items. Phase 3 continues with the common linear
-materializer and canonical F snapshot described by Commit 3.
+Phase 2.8 has no pending items. Phase 3 continues with lifecycle composition
+and history ledgers described by Commit 4.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete
