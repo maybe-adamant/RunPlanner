@@ -2,9 +2,11 @@ import { evaluateRequirement, type RequirementEvaluationContext } from '@run-pla
 import {
   applyConcreteAcquisition,
   applyOfferProjection,
+  beginCurrentRoomRewardHistory,
   consumeCountedOffer,
   createRewardBagState,
   createRewardHistoryState,
+  evaluateShopGenerationSupport,
   factsWithHistory,
   findShopGenerationWitnesses,
   isOfferSupportedAtResolutionPoint,
@@ -1152,6 +1154,19 @@ describe('offer and acquisition projections', () => {
     expect(history.lootTypeHistory).toEqual({});
   });
 
+  it('starts a new current-room use record without clearing route or biome history', () => {
+    const acquired = applyConcreteAcquisition(rewardKernelCatalog, createRewardHistoryState(), {
+      kind: 'consumable',
+      gameName: 'MaxHealthDrop',
+    });
+    const nextRoom = beginCurrentRoomRewardHistory(acquired);
+
+    expect(nextRoom.currentRoomUseRecord).toEqual({});
+    expect(nextRoom.useRecord).toEqual({ MaxHealthDrop: 1 });
+    expect(nextRoom.biomeUseRecord).toEqual({ MaxHealthDrop: 1 });
+    expect(nextRoom.consumableRecord).toEqual({ MaxHealthDrop: 1 });
+  });
+
   it('makes the trait-free reward baseline explicit', () => {
     const baseline = facts();
     expect(baseline.requirements.counters.upgradableTraitCount).toBe(0);
@@ -1282,6 +1297,36 @@ describe('ordered shop transitions', () => {
     ]);
   });
 
+  it('distinguishes a jointly unavailable Q group from unsupported individual slots', () => {
+    const profile = rewardKernelCatalog.shops.byKey.Q_WorldShop!;
+    const authored: readonly AuthoredShopOffer[] = [
+      {
+        offer: {
+          rewardType: 'BlindBoxLoot',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+        purchased: false,
+      },
+      {
+        offer: {
+          rewardType: 'BlindBoxLoot',
+          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+        },
+        purchased: false,
+      },
+      { offer: { rewardType: 'HealBigDrop' }, purchased: false },
+      { offer: { rewardType: 'HealBigDrop' }, purchased: false },
+      { offer: { rewardType: 'MaxHealthDropBig' }, purchased: false },
+      { offer: { rewardType: 'WeaponPointsRareDrop' }, purchased: false },
+    ];
+
+    const support = evaluateShopGenerationSupport(rewardKernelCatalog, profile, authored, facts());
+
+    expect(support.witnesses).toEqual([]);
+    expect(support.unsupportedSlotIndexes).toEqual([]);
+    expect(support.jointlyUnavailable).toBe(true);
+  });
+
   it('merges purchase orders that produce equivalent history records', () => {
     const profile = rewardKernelCatalog.shops.byKey.Q_WorldShop!;
     const authored: readonly AuthoredShopOffer[] = [
@@ -1312,6 +1357,20 @@ describe('ordered shop transitions', () => {
     );
     expect(results).toHaveLength(1);
     expect(results[0]?.purchaseOrder).toEqual([0, 1]);
+    expect(results[0]?.acquisitions).toEqual([
+      expect.objectContaining({
+        slotIndex: 0,
+        event: expect.objectContaining({
+          acquisition: { kind: 'consumable', gameName: 'MaxHealthDrop' },
+        }),
+      }),
+      expect.objectContaining({
+        slotIndex: 1,
+        event: expect.objectContaining({
+          acquisition: { kind: 'consumable', gameName: 'MaxManaDrop' },
+        }),
+      }),
+    ]);
     expect(results[0]?.history.consumableRecord).toEqual({
       MaxHealthDrop: 1,
       MaxManaDrop: 1,
@@ -1359,6 +1418,11 @@ describe('ordered shop transitions', () => {
     );
     expect(results).toHaveLength(1);
     expect(results[0]?.purchaseOrder).toEqual([1, 0]);
+    expect(results[0]?.acquisitions.map((acquisition) => acquisition.event.role)).toEqual([
+      'box',
+      'hiddenSource',
+      'source',
+    ]);
     expect(results[0]?.history.lootTypeHistory).toMatchObject({
       ZeusUpgrade: 1,
       HestiaUpgrade: 1,

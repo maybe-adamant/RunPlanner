@@ -313,6 +313,8 @@ describe('complete F catalog', () => {
           kind: 'authoredBaseStore',
           storeKeys: ['RunProgress', 'MetaProgress'],
           defaultStoreKey: 'RunProgress',
+          targetMetaRewardsRatio: 0.315,
+          targetMetaRewardsAdjustSpeed: 10,
         },
         rewardStoreOverrides: [],
       },

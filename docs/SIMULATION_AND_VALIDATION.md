@@ -705,6 +705,12 @@ When support membership fails, typed evidence may contain the derived support
 set and the forced/eligibility facts that produced it. It never contains a
 likelihood score.
 
+Shop findings retain the narrowest proven owner. An offer or purchase address
+is marked unavailable only when that slot fails every reachable witness. When
+each slot remains individually possible but the complete authored set has no
+joint witness, one finding belongs to the shop occurrence with the participating
+offer keys in evidence; supported sibling slots are not marked invalid.
+
 Completeness and legality findings use the same address domain. Contract
 errors remain a separate result class because they indicate malformed data or
 implementation failure rather than correctable user intent.

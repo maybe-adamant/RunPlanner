@@ -179,8 +179,9 @@ Biome layout declarations own immutable structure:
   trigger;
 - declaration-proven topology bounds;
 - biome-global authored field descriptors;
-- reward-store selection policy: an authored generated-store policy with
-  target ratio, adjustment rules, possible base stores, and one authoring
+- reward-store selection policy: an authored generated-store policy with the
+  normalized game-language `targetMetaRewardsRatio` and
+  `targetMetaRewardsAdjustSpeed`, possible base stores, and one authoring
   default; a source-offer-point policy selecting an already-authored semantic
   store through a closed selector such as `lastActiveWheel`; or an explicit
   no-base-store policy when no generated base outcome is observable, including

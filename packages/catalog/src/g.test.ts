@@ -66,6 +66,8 @@ describe('complete G catalog', () => {
           kind: 'authoredBaseStore',
           storeKeys: ['RunProgress', 'MetaProgress'],
           defaultStoreKey: 'RunProgress',
+          targetMetaRewardsRatio: 0.35,
+          targetMetaRewardsAdjustSpeed: 10,
         },
         rewardStoreOverrides: [],
       },

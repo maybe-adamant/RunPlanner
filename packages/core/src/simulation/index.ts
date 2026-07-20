@@ -44,6 +44,14 @@ export {
   type FRoomGenerationValidation,
 } from './generation';
 export {
+  evaluateFRewards,
+  FRewardSimulationContractError,
+  type FRewardBranch,
+  type FRewardEvent,
+  type FRewardSimulation,
+  type FRewardStoreSupportEntry,
+} from './rewards';
+export {
   LinearMaterializationContractError,
   materializeLinearBiome,
   type CanonicalAuthoredRoom,
@@ -71,6 +79,7 @@ export {
   type FindingEvidenceValue,
   type FindingSeverity,
   type RoomGenerationFindingCode,
+  type RewardGenerationFindingCode,
   type IncompleteBiomeEvaluation,
   type SemanticFinding,
   type SimulationPhase,

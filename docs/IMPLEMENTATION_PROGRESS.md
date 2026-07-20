@@ -24,15 +24,46 @@ deterministic event stream and folds it into timing-specific history ledgers
 and state views through the declared biome transition. Commit 5 projects exact
 generation-time requirement contexts and validates F room support, caps,
 compatibility, force pressure, and retained invalid topology without editing
-the canonical snapshot.
+the canonical snapshot. Commit 6 connects the audited reward kernel to that
+same canonical F lifecycle: generated stores, counted bags, physical-order
+offers, concrete acquisitions, and WorldShop generation/purchases now replay
+as one possibility frontier with semantic findings.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
 and outgoing-generation checkpoints are implemented by the pure single-room
-executor. Concrete reward acquisition and reward legality remain pending; F
-biome-history composition, the Commit 4 structural/counter ledgers, and Commit
-5 room-generation legality are implemented.
+executor. F biome-history composition, the Commit 4 structural/counter
+ledgers, Commit 5 room-generation legality, and Commit 6 reward legality are
+implemented. The public project-level simulation composition root remains
+pending for Commit 7.
+
+F authored base-store policies now carry the normalized game-language
+`targetMetaRewardsRatio` and `targetMetaRewardsAdjustSpeed` facts. Reward replay
+counts prior committed stores plus the current entered room at its exact
+outgoing checkpoint, validates the authored outcome by support membership, and
+then applies declaration-owned forced and individual target overrides through
+the documented two-pass rule.
+
+The reward possibility frontier lazily owns one counted bag per store and one
+concrete reward history per reachable branch. Every physical target consumes
+and projects its offer, including unpicked targets; only lifecycle events from
+entered producers emit acquisitions. WorldShop generation retains option-entry
+witnesses, outgoing targets observe the complete pre-purchase inventory and
+history, and purchased-set permutations merge only when their final reward
+histories are equivalent while retaining a witness order.
+
+Room preparation resets only the current-room use record before any WorldShop
+inventory materializes; current-run and biome reward histories persist. Shop
+failure attribution marks a concrete offer or purchase only when that slot
+fails every reachable witness and otherwise reports the impossible joint set at
+the owning shop occurrence.
+
+Focused integration fixtures cover forced and mixed store support, addressed
+invalid authored stores, counted-bag exhaustion and one refill, unpicked offer
+without acquisition, same-room acquisition visibility, bag/source failure
+ownership, Devotion's ordered chosen/spurned acquisitions, shop-inventory and
+purchase failures, and the fourth-shop-source/fifth-door-source timing trace.
 
 F room generation now records one immutable force-pressure entry per physical
 target. Each entry reads the target's pre-creation history view, projects only
@@ -699,8 +730,8 @@ Completed:
 
 Pending:
 
-Phase 2.8 has no pending items. Phase 3 continues with F reward, bag,
-acquisition, and shop simulation described by Commit 6.
+Phase 2.8 has no pending items. Phase 3 continues with the project simulation
+composition root and golden closure described by Commit 7.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

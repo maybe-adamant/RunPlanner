@@ -38,8 +38,9 @@ P/Q/H/O/I/N remain dormant behind the application capability boundary. Phase
 3 is in progress: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room
-legality, and semantic generation findings are also implemented. Reward
-orchestration and the assembled evaluation result remain pending.
+legality, and semantic generation findings are also implemented. F reward,
+bag, acquisition, and shop orchestration are implemented; the assembled
+project evaluation result remains pending.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

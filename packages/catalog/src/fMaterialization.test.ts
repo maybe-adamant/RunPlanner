@@ -4,6 +4,7 @@ import {
   createBiomeAddress,
   createContinuationAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createPickedAddress,
   createProjectDocument,
   createShopPurchaseAddress,
@@ -319,6 +320,28 @@ describe('canonical F materialization', () => {
     expect(Object.isFrozen(snapshot)).toBe(true);
     expect(Object.isFrozen(snapshot.batches)).toBe(true);
     expect(Object.isFrozen(snapshot.terminalEntry.targets)).toBe(true);
+  });
+
+  it('applies a later forced target store to earlier ordinary peers', () => {
+    let project = representativeProject(1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, firstCombatId),
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, deadShopId),
+      gameName: 'F_Combat01',
+    });
+
+    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
+    const targets = snapshot.batches[1]!.targets;
+
+    expect(targets.map((target) => target.room.incomingReward?.resolvedStoreKey)).toEqual([
+      'RunProgress',
+      'RunProgress',
+    ]);
   });
 
   it('materializes a picked free terminal without dormant shop entry state', () => {

@@ -104,6 +104,11 @@ The critical rule is:
 > at its generation operation. Later acquisitions never retroactively change
 > that batch's room identities, rewards, offer projections, or legality.
 
+Preparing the next entered room also starts its empty current-room use record.
+Current-run and biome-use records persist. This reset occurs at preparation,
+before an entered WorldShop materializes its inventory, because that room is
+already the game's current room at that point.
+
 ## Vocabulary
 
 `RoomLifecycleProfile`

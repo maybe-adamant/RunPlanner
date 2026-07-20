@@ -194,7 +194,30 @@ export interface ShopGenerationWitness {
   readonly optionKeys: readonly string[];
 }
 
+export interface ShopGenerationSupport {
+  readonly witnesses: readonly ShopGenerationWitness[];
+  readonly unsupportedSlotIndexes: readonly number[];
+  readonly jointlyUnavailable: boolean;
+}
+
 export interface ShopPurchaseResult {
   readonly history: RewardHistoryState;
   readonly purchaseOrder: readonly number[];
+  readonly acquisitions: readonly ShopPurchaseAcquisition[];
+}
+
+export interface ShopPurchaseAcquisition {
+  readonly slotIndex: number;
+  readonly optionKey: string;
+  readonly event: ConcreteAcquisitionEvent;
+}
+
+export interface ShopPurchaseFailure {
+  readonly purchaseOrder: readonly number[];
+  readonly failedSlotIndex?: number;
+}
+
+export interface ShopPurchaseSimulation {
+  readonly results: readonly ShopPurchaseResult[];
+  readonly failures: readonly ShopPurchaseFailure[];
 }

@@ -75,6 +75,8 @@ describe('complete dormant O catalog', () => {
           kind: 'authoredBaseStore',
           storeKeys: ['RunProgress', 'MetaProgress'],
           defaultStoreKey: 'RunProgress',
+          targetMetaRewardsRatio: 0.3,
+          targetMetaRewardsAdjustSpeed: 10,
         },
         rewardStoreOverrides: [
           {

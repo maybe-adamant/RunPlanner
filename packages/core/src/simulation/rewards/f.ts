@@ -1,0 +1,1012 @@
+import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../../catalog';
+import { semanticAddressKey, type OccurrenceAddress } from '../../project/addresses';
+import {
+  applyConcreteAcquisition,
+  applyOfferProjection,
+  beginCurrentRoomRewardHistory,
+  consumeCountedOffer,
+  createRewardBagState,
+  createRewardHistoryState,
+  evaluateShopGenerationSupport,
+  evaluateShopPurchases,
+  factsWithHistory,
+  isOfferSupportedAtResolutionPoint,
+  isPayloadLocallyValid,
+  resolveAcquisitionRole,
+  type AuthoredShopOffer,
+  type RewardBagState,
+  type RewardHistoryState,
+  type RewardKernelFacts,
+  type ShopGenerationWitness,
+  type ShopGenerationSupport,
+  type ShopPurchaseFailure,
+} from '../../rewardKernel';
+import type { CountedRewardBinding } from '../../rewards';
+import type { RequirementEvaluationContext } from '../../requirementEvaluator';
+import type { CanonicalFHistory, FHistoryStateView, FRoomHistoryViews } from '../history';
+import type {
+  CanonicalAuthoredRoom,
+  CanonicalBatch,
+  CanonicalLinearBiome,
+  CanonicalResolvedIncomingReward,
+  CanonicalTarget,
+} from '../materialization';
+import type { FindingEvidence, RewardGenerationFindingCode, SemanticFinding } from '../model';
+import type {
+  FRewardBranch,
+  FRewardEvent,
+  FRewardSimulation,
+  FRewardStoreSupportEntry,
+} from './model';
+
+interface PendingShopState {
+  readonly profileKey: string;
+  readonly witness: ShopGenerationWitness;
+}
+
+interface RewardBranchState {
+  readonly bags: Readonly<Record<string, RewardBagState>>;
+  readonly history: RewardHistoryState;
+  readonly events: readonly FRewardEvent[];
+  readonly pendingShops: Readonly<Record<string, PendingShopState>>;
+  readonly processedThroughHistorySequence: number;
+}
+
+type FRewardEventData<Event extends FRewardEvent = FRewardEvent> = Event extends FRewardEvent
+  ? Omit<Event, 'historySequence' | 'rewardSequence'>
+  : never;
+
+export class FRewardSimulationContractError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = 'FRewardSimulationContractError';
+  }
+}
+
+function freezeRecord<T>(value: Readonly<Record<string, T>>): Readonly<Record<string, T>> {
+  return Object.freeze({ ...value });
+}
+
+function appendRewardEvent(
+  branch: RewardBranchState,
+  historySequence: number,
+  event: FRewardEventData,
+): RewardBranchState {
+  const next = Object.freeze({
+    ...event,
+    rewardSequence: branch.events.length + 1,
+    historySequence,
+  }) as FRewardEvent;
+  return Object.freeze({
+    ...branch,
+    events: Object.freeze([...branch.events, next]),
+    processedThroughHistorySequence: historySequence,
+  });
+}
+
+function advanceBranch(branch: RewardBranchState, historySequence: number): RewardBranchState {
+  return branch.processedThroughHistorySequence >= historySequence
+    ? branch
+    : Object.freeze({ ...branch, processedThroughHistorySequence: historySequence });
+}
+
+function countByGameName(
+  entries: readonly { readonly gameName: string }[],
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const entry of entries) {
+    counts[entry.gameName] = (counts[entry.gameName] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function priorPeerGameNames(
+  view: FHistoryStateView,
+  parentOrigin: OccurrenceAddress,
+): readonly string[] {
+  return Object.freeze(
+    view.ledgers.roomCreations
+      .filter(
+        (creation) =>
+          creation.source === 'generatedTarget' &&
+          semanticAddressKey(creation.parentOrigin) === semanticAddressKey(parentOrigin),
+      )
+      .map((creation) => creation.gameName),
+  );
+}
+
+function recentEncounterPhases(catalog: Catalog, view: FHistoryStateView) {
+  const ordered = new Map<string, { readonly profileKey: string; readonly phaseKeys: string[] }>();
+  for (const encounter of view.ledgers.encounterStarts) {
+    const key = semanticAddressKey(encounter.origin);
+    const current = ordered.get(key);
+    if (current === undefined) {
+      const profileKey = catalog.rooms.byKey[encounter.gameName]?.encounterProfileKey;
+      if (profileKey === undefined) {
+        throw new FRewardSimulationContractError(
+          `encounter history references unknown room ${encounter.gameName}`,
+        );
+      }
+      ordered.set(key, { profileKey, phaseKeys: [encounter.phaseKey] });
+    } else {
+      current.phaseKeys.push(encounter.phaseKey);
+    }
+  }
+  return Object.freeze(
+    [...ordered.values()].map((entry) =>
+      Object.freeze({ profileKey: entry.profileKey, phaseKeys: Object.freeze(entry.phaseKeys) }),
+    ),
+  );
+}
+
+function rewardFacts(
+  catalog: Catalog,
+  source: CanonicalAuthoredRoom,
+  sourceDeclaration: RoomDeclaration,
+  view: FHistoryStateView,
+  history: RewardHistoryState,
+  currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
+): RewardKernelFacts {
+  const requirements: RequirementEvaluationContext = Object.freeze({
+    counters: Object.freeze({
+      biomeDepthCache: view.ledgers.counters.biomeDepthCache,
+      biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
+      encounterDepth: view.ledgers.counters.routeEncounterDepth,
+      enteredBiomes: 1,
+      upgradableTraitCount: history.upgradableTraitCount,
+    }),
+    records: Object.freeze({
+      biomeUseRecord: history.biomeUseRecord,
+      lootTypeHistory: history.lootTypeHistory,
+      roomsEntered: Object.freeze(countByGameName(view.ledgers.roomAppearances)),
+      useRecord: history.useRecord,
+    }),
+    currentRoomShopOptionNames,
+    currentRoomRewardType: source.incomingReward?.offer.rewardType,
+    rewardLookups: Object.freeze({}),
+    runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
+    lastEventRunDepthCaches: Object.freeze(
+      history.lastDevotionDepth === undefined ? {} : { Devotion: history.lastDevotionDepth },
+    ),
+    recentEncounterPhases: recentEncounterPhases(catalog, view),
+    offeredExitCount: sourceDeclaration.exits.length,
+    currentBatchRoomGameNames: priorPeerGameNames(view, source.origin),
+    clockwork: undefined,
+    flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
+  });
+  return factsWithHistory(Object.freeze({ requirements }), history, currentRoomShopOptionNames);
+}
+
+function finding(
+  code: RewardGenerationFindingCode,
+  origin: SemanticFinding['origin'],
+  evidence: FindingEvidence,
+): SemanticFinding {
+  return Object.freeze({
+    code,
+    severity: 'error',
+    phase: 'rewardGeneration',
+    origin,
+    evidence: Object.freeze(evidence),
+  });
+}
+
+function findingKey(value: SemanticFinding): string {
+  return JSON.stringify([value.code, semanticAddressKey(value.origin), value.evidence]);
+}
+
+function addFinding(findings: Map<string, SemanticFinding>, value: SemanticFinding): void {
+  findings.set(findingKey(value), value);
+}
+
+function offerEvidence(offer: CanonicalResolvedIncomingReward['offer']): FindingEvidence {
+  const payload = offer.payload;
+  return {
+    rewardType: offer.rewardType,
+    ...(payload?.kind === 'BoonSource' ? { source: payload.source } : {}),
+    ...(payload?.kind === 'DevotionPair'
+      ? { chosenSource: payload.chosenSource, spurnedSource: payload.spurnedSource }
+      : {}),
+  };
+}
+
+function requireFLayout(catalog: Catalog, snapshot: CanonicalLinearBiome): LinearBiomeLayout {
+  const layout = catalog.biomeLayouts.byKey.F;
+  if (
+    snapshot.biomeKey !== 'F' ||
+    layout?.kind !== 'LinearBiome' ||
+    layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore'
+  ) {
+    throw new FRewardSimulationContractError('catalog does not provide authored F reward stores');
+  }
+  return layout;
+}
+
+function authoredRooms(snapshot: CanonicalLinearBiome): ReadonlyMap<string, CanonicalAuthoredRoom> {
+  const rooms = [
+    ...snapshot.entryRooms,
+    ...snapshot.batches.flatMap((batch) => batch.targets.map((target) => target.room)),
+    ...snapshot.terminalEntry.targets.map((target) => target.room),
+  ];
+  return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
+}
+
+function roomViews(history: CanonicalFHistory): ReadonlyMap<string, FRoomHistoryViews> {
+  return new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room]));
+}
+
+function canonicalTargets(snapshot: CanonicalLinearBiome): ReadonlyMap<string, CanonicalTarget> {
+  return new Map(
+    [...snapshot.batches.flatMap((batch) => batch.targets), ...snapshot.terminalEntry.targets].map(
+      (target) => [semanticAddressKey(target.origin), target],
+    ),
+  );
+}
+
+function enteredStoreKey(
+  room: CanonicalAuthoredRoom,
+  declaration: RoomDeclaration,
+): string | undefined {
+  switch (declaration.enteredRewardStoreHistory.kind) {
+    case 'none':
+      return undefined;
+    case 'fixed':
+      return declaration.enteredRewardStoreHistory.storeKey;
+    case 'resolvedOffer':
+      return room.incomingReward?.resolvedStoreKey;
+  }
+}
+
+function storeSupport(
+  layout: LinearBiomeLayout,
+  batch: CanonicalBatch,
+  source: CanonicalAuthoredRoom,
+  sourceDeclaration: RoomDeclaration,
+  view: FHistoryStateView,
+  historySequence: number,
+): FRewardStoreSupportEntry {
+  const policy = layout.continuation.rewardStorePolicy;
+  if (policy.kind !== 'authoredBaseStore' || batch.rewardStore.kind !== 'authoredBaseStore') {
+    throw new FRewardSimulationContractError('F batch lost its authored base-store contract');
+  }
+  const priorStores = view.ledgers.enteredRewardStores.map((entry) => entry.storeKey);
+  const currentStore = enteredStoreKey(source, sourceDeclaration);
+  const stores = currentStore === undefined ? priorStores : [...priorStores, currentStore];
+  const metaCount = stores.filter((storeKey) => storeKey === 'MetaProgress').length;
+  const ratio = stores.length === 0 ? null : metaCount / stores.length;
+  const metaSelectionValue =
+    ratio === null
+      ? policy.targetMetaRewardsRatio
+      : policy.targetMetaRewardsRatio +
+        policy.targetMetaRewardsAdjustSpeed * (policy.targetMetaRewardsRatio - ratio);
+  const supportStoreKeys = Object.freeze(
+    metaSelectionValue <= 0
+      ? policy.storeKeys.filter((storeKey) => storeKey !== 'MetaProgress')
+      : metaSelectionValue >= 1
+        ? policy.storeKeys.filter((storeKey) => storeKey === 'MetaProgress')
+        : [...policy.storeKeys],
+  );
+  return Object.freeze({
+    origin: batch.rewardStore.origin,
+    historySequence,
+    authoredStoreKey: batch.rewardStore.baseRewardStoreKey,
+    enteredStoreCount: stores.length,
+    enteredMetaStoreCount: metaCount,
+    currentMetaRatio: ratio,
+    metaSelectionValue,
+    supportStoreKeys,
+    selectedPossible: supportStoreKeys.includes(batch.rewardStore.baseRewardStoreKey),
+  });
+}
+
+function expectedTargetStores(
+  catalog: Catalog,
+  targets: readonly CanonicalTarget[],
+  initialSharedStoreKey: string | undefined,
+): ReadonlyMap<string, string | undefined> {
+  let finalSharedStoreKey = initialSharedStoreKey;
+  for (const target of targets) {
+    const declaration = catalog.rooms.byKey[target.room.gameName];
+    if (declaration === undefined) {
+      throw new FRewardSimulationContractError(`unknown target room ${target.room.gameName}`);
+    }
+    if (declaration.forcedRewardStoreKey !== undefined) {
+      finalSharedStoreKey = declaration.forcedRewardStoreKey;
+    }
+  }
+  return new Map(
+    targets.map((target) => {
+      const declaration = catalog.rooms.byKey[target.room.gameName]!;
+      return [
+        semanticAddressKey(target.origin),
+        declaration.individualRewardStoreKey ??
+          declaration.forcedRewardStoreKey ??
+          finalSharedStoreKey,
+      ];
+    }),
+  );
+}
+
+function countedBinding(
+  declaration: RoomDeclaration,
+  incoming: CanonicalResolvedIncomingReward,
+): CountedRewardBinding | undefined {
+  if (incoming.producerKind === 'freeReward') {
+    return declaration.entryOfferPolicy?.freeReward;
+  }
+  return declaration.incomingReward.kind === 'countedChoice'
+    ? declaration.incomingReward
+    : undefined;
+}
+
+function withBag(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  storeKey: string,
+): { readonly branch: RewardBranchState; readonly bag: RewardBagState } | undefined {
+  const store = catalog.rewards.stores.byKey[storeKey];
+  if (store === undefined) {
+    return undefined;
+  }
+  const current = branch.bags[storeKey];
+  if (current !== undefined) {
+    return { branch, bag: current };
+  }
+  const bag = createRewardBagState(store);
+  return {
+    branch: Object.freeze({ ...branch, bags: freezeRecord({ ...branch.bags, [storeKey]: bag }) }),
+    bag,
+  };
+}
+
+interface OfferProcessingContext {
+  readonly catalog: Catalog;
+  readonly incoming: CanonicalResolvedIncomingReward;
+  readonly declaration: RoomDeclaration;
+  readonly source: CanonicalAuthoredRoom;
+  readonly view: FHistoryStateView;
+  readonly historySequence: number;
+  readonly peers: readonly CanonicalResolvedIncomingReward['offer'][];
+  readonly currentRoomShopOptionNames: ReadonlySet<string>;
+}
+
+function processIncomingOffer(
+  branches: readonly RewardBranchState[],
+  context: OfferProcessingContext,
+  findings: Map<string, SemanticFinding>,
+): readonly RewardBranchState[] {
+  const { catalog, incoming, declaration, source, view, historySequence } = context;
+  const rewardType = catalog.rewards.rewardTypes.byKey[incoming.offer.rewardType];
+  if (
+    rewardType === undefined ||
+    !isPayloadLocallyValid(catalog.rewards, rewardType, incoming.offer.payload)
+  ) {
+    addFinding(
+      findings,
+      finding('rewardPayloadInvalid', incoming.origin, offerEvidence(incoming.offer)),
+    );
+    return [];
+  }
+
+  const binding = countedBinding(declaration, incoming);
+  const next: RewardBranchState[] = [];
+  let sawSourceFailure = false;
+  let sawBagInvariantFailure = false;
+  for (const originalBranch of branches) {
+    const facts = rewardFacts(
+      catalog,
+      source,
+      catalog.rooms.byKey[source.gameName] ?? declaration,
+      view,
+      originalBranch.history,
+      context.currentRoomShopOptionNames,
+    );
+    const peers = { priorOffers: context.peers };
+    if (
+      !isOfferSupportedAtResolutionPoint(catalog.rewards, incoming.offer, facts, 'offer', peers)
+    ) {
+      sawSourceFailure = true;
+      continue;
+    }
+
+    if (binding === undefined) {
+      const history = applyOfferProjection(
+        catalog.rewards,
+        originalBranch.history,
+        incoming.offer,
+        facts,
+      );
+      next.push(
+        appendRewardEvent(Object.freeze({ ...originalBranch, history }), historySequence, {
+          kind: 'rewardOffered',
+          origin: incoming.origin,
+          offer: incoming.offer,
+          ...(incoming.resolvedStoreKey === undefined
+            ? {}
+            : { storeKey: incoming.resolvedStoreKey }),
+        }),
+      );
+      continue;
+    }
+
+    const storeKey = incoming.resolvedStoreKey;
+    if (storeKey === undefined || !binding.storeKeys.includes(storeKey)) {
+      sawBagInvariantFailure = true;
+      continue;
+    }
+    const prepared = withBag(catalog, originalBranch, storeKey);
+    const store = catalog.rewards.stores.byKey[storeKey];
+    if (prepared === undefined || store === undefined) {
+      sawBagInvariantFailure = true;
+      continue;
+    }
+    let transitions: readonly RewardBagState[];
+    try {
+      transitions = consumeCountedOffer(
+        catalog.rewards,
+        store,
+        prepared.bag,
+        incoming.offer,
+        facts,
+        {
+          ...(binding.eligibleRewardTypes.length === 0
+            ? {}
+            : { eligibleRewardTypes: new Set(binding.eligibleRewardTypes) }),
+          ...(binding.ineligibleRewardTypes.length === 0
+            ? {}
+            : { ineligibleRewardTypes: new Set(binding.ineligibleRewardTypes) }),
+          peers,
+        },
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('one-refill eligibility invariant')) {
+        sawBagInvariantFailure = true;
+        continue;
+      }
+      throw error;
+    }
+    for (const bag of transitions) {
+      const history = applyOfferProjection(
+        catalog.rewards,
+        prepared.branch.history,
+        incoming.offer,
+        facts,
+      );
+      next.push(
+        appendRewardEvent(
+          Object.freeze({
+            ...prepared.branch,
+            bags: freezeRecord({ ...prepared.branch.bags, [storeKey]: bag }),
+            history,
+          }),
+          historySequence,
+          {
+            kind: 'rewardOffered',
+            origin: incoming.origin,
+            offer: incoming.offer,
+            storeKey,
+          },
+        ),
+      );
+    }
+  }
+
+  if (next.length === 0) {
+    const code: RewardGenerationFindingCode = sawSourceFailure
+      ? 'rewardSourceUnavailable'
+      : sawBagInvariantFailure
+        ? 'rewardBagSupportEmpty'
+        : 'rewardBagEntryUnavailable';
+    addFinding(
+      findings,
+      finding(code, incoming.origin, {
+        ...offerEvidence(incoming.offer),
+        storeKey: incoming.resolvedStoreKey ?? null,
+      }),
+    );
+  }
+  return Object.freeze(next);
+}
+
+function processShopInventory(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  room: CanonicalAuthoredRoom,
+  declaration: RoomDeclaration,
+  view: FHistoryStateView,
+  historySequence: number,
+  findings: Map<string, SemanticFinding>,
+): readonly RewardBranchState[] {
+  const entry = room.entryState;
+  if (entry?.kind !== 'shop') {
+    throw new FRewardSimulationContractError(`${room.gameName} materialized a missing shop state`);
+  }
+  const profile = catalog.rewards.shops.byKey[entry.profileKey];
+  if (profile === undefined) {
+    throw new FRewardSimulationContractError(`unknown shop profile ${entry.profileKey}`);
+  }
+  const authored: readonly AuthoredShopOffer[] = entry.offers.map((offer) => ({
+    offer: offer.offer,
+    purchased: offer.purchased,
+  }));
+  const next: RewardBranchState[] = [];
+  const supportResults: ShopGenerationSupport[] = [];
+  for (const branch of branches) {
+    const facts = rewardFacts(catalog, room, declaration, view, branch.history);
+    const support = evaluateShopGenerationSupport(catalog.rewards, profile, authored, facts);
+    supportResults.push(support);
+    for (const witness of support.witnesses) {
+      let candidate = branch;
+      for (const offer of entry.offers) {
+        const offerFacts = rewardFacts(catalog, room, declaration, view, candidate.history);
+        const history = applyOfferProjection(
+          catalog.rewards,
+          candidate.history,
+          offer.offer,
+          offerFacts,
+        );
+        candidate = appendRewardEvent(Object.freeze({ ...candidate, history }), historySequence, {
+          kind: 'rewardOffered',
+          origin: offer.offerOrigin,
+          offer: offer.offer,
+        });
+      }
+      candidate = appendRewardEvent(candidate, historySequence, {
+        kind: 'shopInventorySupported',
+        origin: room.origin,
+        profileKey: profile.key,
+        optionKeys: witness.optionKeys,
+      });
+      next.push(
+        Object.freeze({
+          ...candidate,
+          pendingShops: freezeRecord({
+            ...candidate.pendingShops,
+            [semanticAddressKey(room.origin)]: Object.freeze({
+              profileKey: profile.key,
+              witness,
+            }),
+          }),
+        }),
+      );
+    }
+  }
+  if (next.length === 0) {
+    const unsupportedIndexes = entry.offers.flatMap((_, index) =>
+      supportResults.every((support) => support.unsupportedSlotIndexes.includes(index))
+        ? [index]
+        : [],
+    );
+    for (const index of unsupportedIndexes) {
+      const offer = entry.offers[index]!;
+      const rewardType = catalog.rewards.rewardTypes.byKey[offer.offer.rewardType];
+      const code: RewardGenerationFindingCode =
+        rewardType === undefined ||
+        !isPayloadLocallyValid(catalog.rewards, rewardType, offer.offer.payload)
+          ? 'rewardPayloadInvalid'
+          : 'shopOfferUnavailable';
+      addFinding(findings, finding(code, offer.offerOrigin, offerEvidence(offer.offer)));
+    }
+    if (unsupportedIndexes.length === 0) {
+      addFinding(
+        findings,
+        finding('shopOfferUnavailable', room.origin, {
+          offerKeys: entry.offers.map((offer) => offer.offerKey),
+          kind: 'jointOfferSet',
+        }),
+      );
+    }
+  }
+  return Object.freeze(next);
+}
+
+function processShopPurchases(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  room: CanonicalAuthoredRoom,
+  declaration: RoomDeclaration,
+  view: FHistoryStateView,
+  historySequence: number,
+  findings: Map<string, SemanticFinding>,
+): readonly RewardBranchState[] {
+  const entry = room.entryState;
+  if (entry?.kind !== 'shop') {
+    throw new FRewardSimulationContractError(`${room.gameName} applied missing shop purchases`);
+  }
+  const profile = catalog.rewards.shops.byKey[entry.profileKey];
+  if (profile === undefined) {
+    throw new FRewardSimulationContractError(`unknown shop profile ${entry.profileKey}`);
+  }
+  const authored: readonly AuthoredShopOffer[] = entry.offers.map((offer) => ({
+    offer: offer.offer,
+    purchased: offer.purchased,
+  }));
+  const next: RewardBranchState[] = [];
+  const failures: ShopPurchaseFailure[] = [];
+  for (const branch of branches) {
+    const pending = branch.pendingShops[semanticAddressKey(room.origin)];
+    if (pending?.profileKey !== profile.key) {
+      throw new FRewardSimulationContractError(`${room.gameName} lost its shop witness`);
+    }
+    const facts = rewardFacts(catalog, room, declaration, view, branch.history);
+    const simulation = evaluateShopPurchases(
+      catalog.rewards,
+      profile,
+      authored,
+      pending.witness,
+      branch.history,
+      facts,
+    );
+    failures.push(...simulation.failures);
+    for (const result of simulation.results) {
+      let candidate: RewardBranchState = Object.freeze({ ...branch, history: result.history });
+      for (const acquisition of result.acquisitions) {
+        const offer = entry.offers[acquisition.slotIndex];
+        if (offer === undefined) {
+          throw new FRewardSimulationContractError('shop acquisition has no semantic slot');
+        }
+        candidate = appendRewardEvent(candidate, historySequence, {
+          kind: 'concreteAcquisition',
+          origin: offer.purchaseOrigin,
+          acquisition: acquisition.event,
+        });
+      }
+      candidate = appendRewardEvent(candidate, historySequence, {
+        kind: 'shopPurchasesSupported',
+        origin: room.origin,
+        profileKey: profile.key,
+        purchaseOrder: Object.freeze(
+          result.purchaseOrder.map((slotIndex) => entry.offers[slotIndex]!.offerKey),
+        ),
+      });
+      const { [semanticAddressKey(room.origin)]: completed, ...remainingShops } =
+        candidate.pendingShops;
+      void completed;
+      next.push(Object.freeze({ ...candidate, pendingShops: freezeRecord(remainingShops) }));
+    }
+  }
+  if (next.length === 0) {
+    const purchasedIndexes = entry.offers.flatMap((offer, index) =>
+      offer.purchased ? [index] : [],
+    );
+    const failedIndexes = purchasedIndexes.filter(
+      (index) =>
+        failures.length > 0 && failures.every((failure) => failure.failedSlotIndex === index),
+    );
+    for (const index of failedIndexes) {
+      const offer = entry.offers[index]!;
+      addFinding(
+        findings,
+        finding('shopPurchaseUnavailable', offer.purchaseOrigin, offerEvidence(offer.offer)),
+      );
+    }
+    if (failedIndexes.length === 0) {
+      addFinding(
+        findings,
+        finding('shopPurchaseUnavailable', room.origin, {
+          kind: 'jointPurchaseSet',
+          offerKeys: purchasedIndexes.map((index) => entry.offers[index]!.offerKey),
+        }),
+      );
+    }
+  }
+  return Object.freeze(next);
+}
+
+function processProducerRole(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  room: CanonicalAuthoredRoom,
+  declaration: RoomDeclaration,
+  view: FHistoryStateView,
+  event: Extract<CanonicalFHistory['events'][number], { readonly kind: 'producerRoleAdvanced' }>,
+  findings: Map<string, SemanticFinding>,
+): readonly RewardBranchState[] {
+  const incoming = room.incomingReward;
+  if (
+    incoming === undefined ||
+    incoming.offer.rewardType !== event.rewardType ||
+    incoming.producerLifecycleKey !== event.producerLifecycleKey
+  ) {
+    throw new FRewardSimulationContractError(
+      `${room.gameName} producer event does not match its offer`,
+    );
+  }
+  const next: RewardBranchState[] = [];
+  for (const branch of branches) {
+    const facts = rewardFacts(catalog, room, declaration, view, branch.history);
+    if (
+      !isOfferSupportedAtResolutionPoint(catalog.rewards, incoming.offer, facts, {
+        acquisitionRole: event.role,
+      })
+    ) {
+      continue;
+    }
+    const acquisition = resolveAcquisitionRole(
+      catalog.rewards,
+      incoming.offer,
+      event.role,
+      event.lifecyclePoint,
+    );
+    const history = applyConcreteAcquisition(
+      catalog.rewards,
+      branch.history,
+      acquisition.acquisition,
+    );
+    next.push(
+      appendRewardEvent(Object.freeze({ ...branch, history }), event.sequence, {
+        kind: 'concreteAcquisition',
+        origin: incoming.origin,
+        acquisition,
+      }),
+    );
+  }
+  if (next.length === 0) {
+    addFinding(
+      findings,
+      finding('rewardAcquisitionUnavailable', incoming.origin, {
+        ...offerEvidence(incoming.offer),
+        role: event.role,
+        lifecyclePoint: event.lifecyclePoint,
+      }),
+    );
+  }
+  return Object.freeze(next);
+}
+
+function publicBranch(branch: RewardBranchState): FRewardBranch {
+  return Object.freeze({
+    bags: branch.bags,
+    history: branch.history,
+    events: branch.events,
+    processedThroughHistorySequence: branch.processedThroughHistorySequence,
+  });
+}
+
+export function evaluateFRewards(
+  catalog: Catalog,
+  snapshot: CanonicalLinearBiome,
+  history: CanonicalFHistory,
+): FRewardSimulation {
+  if (
+    snapshot.biomeKey !== 'F' ||
+    history.biomeKey !== 'F' ||
+    snapshot.routeKey !== history.routeKey
+  ) {
+    throw new FRewardSimulationContractError('F reward inputs do not share one biome owner');
+  }
+  const layout = requireFLayout(catalog, snapshot);
+  const rooms = authoredRooms(snapshot);
+  const views = roomViews(history);
+  const targets = canonicalTargets(snapshot);
+  const batchesByParent = new Map(
+    snapshot.batches.map((batch) => [semanticAddressKey(batch.parent.origin), batch]),
+  );
+  const terminalParentKey = semanticAddressKey(snapshot.terminalEntry.predecessor.origin);
+  const expectedStores = new Map<string, string | undefined>();
+  const storeSupportEntries: FRewardStoreSupportEntry[] = [];
+  const findings = new Map<string, SemanticFinding>();
+  let peers: readonly CanonicalResolvedIncomingReward['offer'][] = Object.freeze([]);
+  let branches: readonly RewardBranchState[] = [
+    Object.freeze({
+      bags: Object.freeze({}),
+      history: createRewardHistoryState(),
+      events: Object.freeze([]),
+      pendingShops: Object.freeze({}),
+      processedThroughHistorySequence: 0,
+    }),
+  ];
+
+  for (const event of history.events) {
+    if (branches.length === 0) {
+      break;
+    }
+    switch (event.kind) {
+      case 'roomPrepared':
+        branches = branches.map((branch) =>
+          advanceBranch(
+            Object.freeze({ ...branch, history: beginCurrentRoomRewardHistory(branch.history) }),
+            event.sequence,
+          ),
+        );
+        break;
+      case 'roomCreated': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        if (room === undefined) {
+          branches = branches.map((branch) => advanceBranch(branch, event.sequence));
+          break;
+        }
+        if (room.gameName !== event.gameName) {
+          throw new FRewardSimulationContractError(
+            `${semanticAddressKey(event.origin)} is ${room.gameName} in the snapshot but ${event.gameName} in history`,
+          );
+        }
+        const incoming = room.incomingReward;
+        if (incoming === undefined) {
+          branches = branches.map((branch) => advanceBranch(branch, event.sequence));
+          break;
+        }
+        const declaration = catalog.rooms.byKey[room.gameName];
+        if (declaration === undefined) {
+          throw new FRewardSimulationContractError(`${room.gameName} has no declaration`);
+        }
+        let source = room;
+        let view = views.get(semanticAddressKey(room.origin))?.preparation;
+        let currentShopNames: ReadonlySet<string> = new Set();
+        if (event.source === 'generatedTarget') {
+          const target = targets.get(semanticAddressKey(event.targetOrigin));
+          const parent = rooms.get(semanticAddressKey(event.parentOrigin));
+          const parentViews = views.get(semanticAddressKey(event.parentOrigin));
+          if (target === undefined || parent === undefined || parentViews === undefined) {
+            throw new FRewardSimulationContractError('generated reward lost its source room');
+          }
+          if (
+            semanticAddressKey(target.room.origin) !== semanticAddressKey(event.origin) ||
+            semanticAddressKey(target.origin) !== semanticAddressKey(event.targetOrigin) ||
+            semanticAddressKey(parent.origin) !== semanticAddressKey(event.parentOrigin)
+          ) {
+            throw new FRewardSimulationContractError(
+              `target ${semanticAddressKey(event.targetOrigin)} does not match its reward history event`,
+            );
+          }
+          source = parent;
+          view =
+            parentViews.targetGenerations.find(
+              (candidate) =>
+                semanticAddressKey(candidate.targetOrigin) ===
+                semanticAddressKey(event.targetOrigin),
+            )?.before ?? parentViews.preOutgoing!;
+          currentShopNames = new Set(
+            parent.entryState?.offers.map((offer) => offer.offer.rewardType) ?? [],
+          );
+          const expectedStore = expectedStores.get(semanticAddressKey(event.targetOrigin));
+          if (expectedStore !== incoming.resolvedStoreKey) {
+            throw new FRewardSimulationContractError(
+              `${room.gameName} resolved ${String(incoming.resolvedStoreKey)} instead of ${String(expectedStore)}`,
+            );
+          }
+        }
+        if (view === undefined) {
+          throw new FRewardSimulationContractError(
+            `${room.gameName} has no offer-time history view`,
+          );
+        }
+        branches = processIncomingOffer(
+          branches,
+          {
+            catalog,
+            incoming,
+            declaration,
+            source,
+            view,
+            historySequence: event.sequence,
+            peers,
+            currentRoomShopOptionNames: currentShopNames,
+          },
+          findings,
+        );
+        if (event.source === 'generatedTarget') {
+          peers = Object.freeze([...peers, incoming.offer]);
+        }
+        break;
+      }
+      case 'outgoingGenerationCheckpoint': {
+        const source = rooms.get(semanticAddressKey(event.origin));
+        const sourceViews = views.get(semanticAddressKey(event.origin));
+        const declaration = source && catalog.rooms.byKey[source.gameName];
+        if (source === undefined || sourceViews === undefined || declaration === undefined) {
+          throw new FRewardSimulationContractError(
+            'outgoing reward checkpoint has no authored source',
+          );
+        }
+        const batch = batchesByParent.get(semanticAddressKey(event.origin));
+        const isTerminal = semanticAddressKey(event.origin) === terminalParentKey;
+        const targetSet =
+          batch?.targets ?? (isTerminal ? snapshot.terminalEntry.targets : undefined);
+        if (targetSet === undefined) {
+          throw new FRewardSimulationContractError(
+            `${source.gameName} has no outgoing reward batch`,
+          );
+        }
+        let sharedStore: string | undefined;
+        if (batch !== undefined) {
+          const support = storeSupport(
+            layout,
+            batch,
+            source,
+            declaration,
+            sourceViews.preOutgoing ?? sourceViews.preparation,
+            event.sequence,
+          );
+          storeSupportEntries.push(support);
+          sharedStore = support.authoredStoreKey;
+          if (!support.selectedPossible) {
+            addFinding(
+              findings,
+              finding('baseRewardStoreUnavailable', support.origin, {
+                authoredStoreKey: support.authoredStoreKey,
+                enteredStoreCount: support.enteredStoreCount,
+                enteredMetaStoreCount: support.enteredMetaStoreCount,
+                currentMetaRatio: support.currentMetaRatio,
+                metaSelectionValue: support.metaSelectionValue,
+                supportStoreKeys: support.supportStoreKeys,
+              }),
+            );
+          }
+        }
+        for (const [targetKey, storeKey] of expectedTargetStores(catalog, targetSet, sharedStore)) {
+          expectedStores.set(targetKey, storeKey);
+        }
+        peers = Object.freeze([]);
+        branches = branches.map((branch) => advanceBranch(branch, event.sequence));
+        break;
+      }
+      case 'offerPointMaterialized': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        const declaration = room && catalog.rooms.byKey[room.gameName];
+        const roomView = views.get(semanticAddressKey(event.origin));
+        if (room === undefined || declaration === undefined || roomView === undefined) {
+          throw new FRewardSimulationContractError('shop offer point has no authored room');
+        }
+        branches = processShopInventory(
+          catalog,
+          branches,
+          room,
+          declaration,
+          roomView.preparation,
+          event.sequence,
+          findings,
+        );
+        break;
+      }
+      case 'producerRoleAdvanced': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        const declaration = room && catalog.rooms.byKey[room.gameName];
+        const roomView = views.get(semanticAddressKey(event.origin));
+        if (room === undefined || declaration === undefined || roomView === undefined) {
+          throw new FRewardSimulationContractError('producer role has no authored room');
+        }
+        branches = processProducerRole(
+          catalog,
+          branches,
+          room,
+          declaration,
+          roomView.preOutgoing ?? roomView.entry,
+          event,
+          findings,
+        );
+        break;
+      }
+      case 'shopPurchasesApplied': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        const declaration = room && catalog.rooms.byKey[room.gameName];
+        const roomView = views.get(semanticAddressKey(event.origin));
+        if (room === undefined || declaration === undefined || roomView === undefined) {
+          throw new FRewardSimulationContractError('shop purchases have no authored room');
+        }
+        branches = processShopPurchases(
+          catalog,
+          branches,
+          room,
+          declaration,
+          roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+          event.sequence,
+          findings,
+        );
+        break;
+      }
+      default:
+        branches = branches.map((branch) => advanceBranch(branch, event.sequence));
+        break;
+    }
+  }
+
+  const immutableFindings = Object.freeze([...findings.values()]);
+  return Object.freeze({
+    biomeKey: 'F',
+    validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
+    storeSupport: Object.freeze(storeSupportEntries),
+    branches: Object.freeze(branches.map(publicBranch)),
+    findings: immutableFindings,
+  });
+}
