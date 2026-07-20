@@ -8,6 +8,12 @@ interface FHistoryEventBase {
 
 export type RoomCreationSource = 'biomeEntry' | 'generatedTarget' | 'layoutCompletion';
 
+export interface BiomeStartedHistoryEvent extends FHistoryEventBase {
+  readonly kind: 'biomeStarted';
+  readonly origin: BiomeAddress;
+  readonly counters: FHistoryCounters;
+}
+
 interface RoomCreatedHistoryEventBase extends FHistoryEventBase {
   readonly kind: 'roomCreated';
   readonly origin: RoomHistoryOrigin;
@@ -52,6 +58,7 @@ export interface TargetGenerationCompletedHistoryEvent extends FHistoryEventBase
 export type FHistoryEvent =
   | BiomeCompletedHistoryEvent
   | BiomeCounterResetHistoryEvent
+  | BiomeStartedHistoryEvent
   | RoomCreatedHistoryEvent
   | TargetGenerationCompletedHistoryEvent
   | RoomLifecycleEvent;

@@ -70,11 +70,17 @@ export interface CanonicalRoomReference {
   readonly gameName: string;
 }
 
-export interface CanonicalPhysicalExit {
-  readonly index: number;
-  readonly type: string;
-  readonly compatibilityPolicyKey: string;
-}
+export type CanonicalPhysicalExit =
+  | {
+      readonly kind: 'available';
+      readonly index: number;
+      readonly type: string;
+      readonly compatibilityPolicyKey: string;
+    }
+  | {
+      readonly kind: 'unavailable';
+      readonly index: number;
+    };
 
 export type CanonicalTargetContinuation = 'continuesSpine' | 'deadLeaf' | 'entersTerminal';
 

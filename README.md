@@ -37,8 +37,9 @@ version 3. All eight biomes close one catalog-wide reference matrix while
 P/Q/H/O/I/N remain dormant behind the application capability boundary. Phase
 3 is in progress: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
-implemented. Contextual legality, reward orchestration, and findings remain
-pending.
+implemented. F room-generation possibility, force pressure, contextual room
+legality, and semantic generation findings are also implemented. Reward
+orchestration and the assembled evaluation result remain pending.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

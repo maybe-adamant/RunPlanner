@@ -21,15 +21,33 @@ history fragments. Commit 3 adds the common canonical linear materializer for
 complete F topology, including addressed batches, terminal realizations, and
 layout-derived completion rooms. Commit 4 composes the picked F spine into one
 deterministic event stream and folds it into timing-specific history ledgers
-and state views through the declared biome transition.
+and state views through the declared biome transition. Commit 5 projects exact
+generation-time requirement contexts and validates F room support, caps,
+compatibility, force pressure, and retained invalid topology without editing
+the canonical snapshot.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
 and outgoing-generation checkpoints are implemented by the pure single-room
-executor. Concrete reward acquisition and contextual legality remain pending;
-F biome-history composition and the Commit 4 structural/counter ledgers are
-implemented.
+executor. Concrete reward acquisition and reward legality remain pending; F
+biome-history composition, the Commit 4 structural/counter ledgers, and Commit
+5 room-generation legality are implemented.
+
+F room generation now records one immutable force-pressure entry per physical
+target. Each entry reads the target's pre-creation history view, projects only
+the current F requirement vocabulary through the shared evaluator registry,
+and records eligible, optional-force, required-force, and exact support sets.
+The selected room is valid by membership, never by probability. Sequential
+peers observe earlier creations, while appearances remain a separate cap axis.
+
+The first implementation of history exposed a declaration mismatch already
+contradicted by the lifecycle authority: F enters its opening at
+`biomeDepthCache = 0`, but committing that opening advances the next-room
+generation view to `1`. Commit 5 corrects the opening delta and adds an
+explicit `biomeStarted` event carrying F's initial encounter-depth baselines.
+This makes the declared depth-10 terminal reachable at the exact ten-batch
+layout bound.
 
 F lifecycle composition now inserts every picked and unpicked target creation
 at its predecessor's outgoing-generation checkpoint while executing entered
@@ -681,8 +699,8 @@ Completed:
 
 Pending:
 
-Phase 2.8 has no pending items. Phase 3 continues with F room possibility and
-generation validation described by Commit 5.
+Phase 2.8 has no pending items. Phase 3 continues with F reward, bag,
+acquisition, and shop simulation described by Commit 6.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

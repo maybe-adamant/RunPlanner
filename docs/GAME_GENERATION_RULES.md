@@ -42,8 +42,8 @@ coverage is defined by `MIGRATION_PROVENANCE.md`.
 | Feature                               | Verified game behavior                                                                                             | Disposition and planner projection                                                                  | Current shared coverage                                         | Reconsider when                                              |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------ |
 | Room selection weights                | Eligible room-set members have relative weights and forced rooms replace the ordinary pool                         | **Simplified:** retain possible and forced support, never likelihood                                | documented                                                      | Probability analysis or seeded replay becomes a product goal |
-| Physical target creation              | Doors create targets sequentially; peers may repeat a game room and unpicked peers still affect history            | **Exact:** distinct ordered Room Occurrences                                                        | documented, declared, authored; F presented                     | --                                                           |
-| Creation, appearance, and force rules | Caps use distinct histories; force windows use a capped chance formula and do not imply eligibility ceilings       | **Exact:** separate predicates over canonical history                                               | documented, declared; simulation pending                        | --                                                           |
+| Physical target creation              | Doors create targets sequentially; peers may repeat a game room and unpicked peers still affect history            | **Exact:** distinct ordered Room Occurrences                                                        | documented, declared, authored; F simulated and presented       | --                                                           |
+| Creation, appearance, and force rules | Caps use distinct histories; force windows use a capped chance formula and do not imply eligibility ceilings       | **Exact:** separate predicates over canonical history                                               | documented, declared; F simulation implemented                  | --                                                           |
 | Ordinary combat identity              | Concrete maps choose internal enemy encounters and wave compositions                                               | **Simplified:** preserve room identity and relevant encounter-depth effect, not enemy-wave identity | documented, declared for F/G                                    | Combat composition becomes an authored or validated output   |
 | Generated reward-store RNG            | Entered-room ratios determine RunProgress/MetaProgress probability when a generated target observes that store     | **Simplified:** preserve possible/forced support through authored, source-derived, or absent stores | documented; O source derivation; schema and simulation pending  | Probability analysis or exact RNG replay is introduced       |
 | Biome-specific batch outcomes         | A generated peer batch may resolve one semantic outcome that affects all targets and later history                 | **Exact:** batch-owned typed state selected by normalized layout policy                             | documented for H; schema and simulation pending                 | --                                                           |
@@ -135,6 +135,13 @@ later exit.
 
 The simulator must therefore preserve physical generation order and evaluate
 force and eligibility from the appropriate pre-creation history view.
+
+The F implementation records the result as one immutable force-pressure entry
+per physical target. Each entry contains the exact pre-creation counters and
+cap counts, eligible rooms, optional and required forced rooms, final support,
+and the selected room's exclusion reasons. A selected room is legal exactly
+when it belongs to that support set. Room-set membership is treated as
+positive-weight support; multiplicity and likelihood remain outside the model.
 
 ## Intentionally Deferred Side Systems
 

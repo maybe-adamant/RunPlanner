@@ -237,7 +237,12 @@ describe('canonical F materialization', () => {
       '["batchRewardStore","Underworld","F","f-start"]',
     );
     expect(snapshot.batches[0]!.targets[0]).toMatchObject({
-      exit: { index: 1, type: 'ErebusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
+      exit: {
+        kind: 'available',
+        index: 1,
+        type: 'ErebusExitDoor',
+        compatibilityPolicyKey: 'Unconstrained',
+      },
       picked: true,
       continuation: 'continuesSpine',
       room: {
@@ -343,7 +348,7 @@ describe('canonical F materialization', () => {
     });
     expect(snapshot.terminalEntry.targets).toHaveLength(1);
     expect(snapshot.terminalEntry.targets[0]).toMatchObject({
-      exit: { index: 1 },
+      exit: { kind: 'available', index: 1 },
       picked: true,
       room: { lifecycleProfileKey: 'TerminalWorldShopRoom' },
     });

@@ -329,9 +329,10 @@ function roomReference(room: CanonicalAuthoredRoom): CanonicalRoomReference {
 function canonicalExit(room: RoomDeclaration, exitIndex: number): CanonicalPhysicalExit {
   const exit = room.exits.find((candidate) => candidate.index === exitIndex);
   if (exit === undefined) {
-    fail(`${room.gameName} has no physical exit ${exitIndex}`);
+    return Object.freeze({ kind: 'unavailable', index: exitIndex });
   }
   return Object.freeze({
+    kind: 'available',
     index: exit.index,
     type: exit.type,
     compatibilityPolicyKey: exit.compatibilityPolicyKey,

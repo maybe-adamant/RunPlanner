@@ -2,7 +2,7 @@ import type { SemanticAddress } from '../project/addresses';
 
 export type FindingSeverity = 'error' | 'warning';
 
-export type SimulationPhase = 'completeness';
+export type SimulationPhase = 'completeness' | 'roomGeneration';
 
 export type CompletenessFindingCode =
   | 'biomeTopologyMissing'
@@ -11,7 +11,9 @@ export type CompletenessFindingCode =
   | 'pickedTargetMissing'
   | 'targetMissing';
 
-export type FindingCode = CompletenessFindingCode;
+export type RoomGenerationFindingCode = 'targetRoomSupportEmpty' | 'targetRoomUnavailable';
+
+export type FindingCode = CompletenessFindingCode | RoomGenerationFindingCode;
 
 export type FindingEvidenceValue =
   | boolean

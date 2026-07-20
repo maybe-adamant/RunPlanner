@@ -160,7 +160,11 @@ function freezeRoomViews(views: MutableRoomViews): FRoomHistoryViews {
 
 export function foldFHistoryEvents(events: readonly FHistoryEvent[]): CanonicalFHistory {
   const immutableEvents = Object.freeze(
-    events.map((event) => Object.freeze({ ...event }) as FHistoryEvent),
+    events.map((event) =>
+      event.kind === 'biomeStarted'
+        ? Object.freeze({ ...event, counters: Object.freeze({ ...event.counters }) })
+        : Object.freeze({ ...event }),
+    ),
   );
   const ledgers: MutableLedgers = {
     roomCreations: [],
@@ -180,6 +184,7 @@ export function foldFHistoryEvents(events: readonly FHistoryEvent[]): CanonicalF
   const viewsByOrigin = new Map<string, MutableRoomViews>();
   const orderedViews: MutableRoomViews[] = [];
   let pendingTargetGeneration: PendingTargetGeneration | undefined;
+  let biomeStarted = false;
   let biomeCompletion: FHistoryStateView | undefined;
   let biomeCompletionOrigin:
     Extract<FHistoryEvent, { readonly kind: 'biomeCompleted' }>['origin'] | undefined;
@@ -192,7 +197,25 @@ export function foldFHistoryEvents(events: readonly FHistoryEvent[]): CanonicalF
       );
     }
     switch (event.kind) {
+      case 'biomeStarted':
+        if (
+          index !== 0 ||
+          biomeStarted ||
+          event.origin.biomeKey !== 'F' ||
+          event.counters.biomeDepthCache !== 0 ||
+          event.counters.biomeEncounterDepth !== 1 ||
+          event.counters.routeEncounterDepth !== 1 ||
+          event.counters.roomHistoryOrdinal !== 0
+        ) {
+          throw new FHistoryFoldContractError('history has an invalid biome start event');
+        }
+        Object.assign(ledgers.counters, event.counters);
+        biomeStarted = true;
+        break;
       case 'roomCreated': {
+        if (!biomeStarted) {
+          throw new FHistoryFoldContractError('room creation precedes biome start');
+        }
         const before = stateView(event.sequence - 1, ledgers);
         const key = semanticAddressKey(event.origin);
         if (namesByOrigin.has(key)) {
@@ -377,6 +400,9 @@ export function foldFHistoryEvents(events: readonly FHistoryEvent[]): CanonicalF
 
   if (biomeCompletion === undefined || biomeCompletionOrigin === undefined) {
     throw new FHistoryFoldContractError('history has no biome completion event');
+  }
+  if (!biomeStarted) {
+    throw new FHistoryFoldContractError('history has no biome start event');
   }
   if (resetAxes.length !== 2) {
     throw new FHistoryFoldContractError('history has an incomplete biome reset sequence');

@@ -59,7 +59,7 @@ describe('complete F catalog', () => {
         kind: 'Opening',
         mode: { kind: 'authored', templateKey: 'FixedOpening' },
         encounterProfileKey: 'F_Opening',
-        counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
+        counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
         caps: { maxAppearancesThisBiome: 1 },
       });
       expect(reward.storeKeys).toEqual(['RunProgress']);
