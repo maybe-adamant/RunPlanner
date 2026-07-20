@@ -6,6 +6,14 @@ export {
   type IncompleteFCompletenessResult,
 } from './completeness';
 export {
+  executeRoomLifecycle,
+  LifecycleExecutionContractError,
+  type RoomHistoryFragment,
+  type RoomLifecycleEvent,
+  type RoomLifecycleExecutionInput,
+  type RoomLifecycleProducerInput,
+} from './lifecycle';
+export {
   type BiomeEvaluation,
   type CompletenessFindingCode,
   type CompleteBiomeEvaluation,

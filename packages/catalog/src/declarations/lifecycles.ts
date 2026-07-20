@@ -1,0 +1,170 @@
+import type { RawRoomLifecycleProfileDeclaration } from './types';
+
+export const roomLifecycleProfiles = [
+  {
+    key: 'StandardRewardRoom',
+    encounterProfileKeys: [
+      'F_Opening',
+      'StandardCombat',
+      'Story',
+      'HealthRestore',
+      'F_MiniBoss01',
+      'F_MiniBoss02',
+      'F_MiniBoss03',
+    ],
+    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      {
+        kind: 'advanceProducer',
+        point: 'beforeCombat',
+        effects: ['recordProducerPoint'],
+      },
+      {
+        kind: 'startEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
+      },
+      {
+        kind: 'completeEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterCompletion'],
+      },
+      {
+        kind: 'advanceProducer',
+        point: 'afterCombat',
+        effects: ['recordProducerPoint'],
+      },
+      {
+        kind: 'advanceProducer',
+        point: 'roomRewardPickup',
+        effects: ['recordProducerPoint'],
+      },
+      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
+      { kind: 'commitRoom', effects: ['recordCommit', 'advanceRoomCounters'] },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
+    key: 'WorldShopRoom',
+    encounterProfileKeys: ['Shop'],
+    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      {
+        kind: 'materializeOfferPoint',
+        offerPoint: 'shopInventory',
+        effects: ['recordOfferPoint'],
+      },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
+      {
+        kind: 'applyShopPurchases',
+        offerPoint: 'shopInventory',
+        effects: ['recordShopPurchases'],
+      },
+      { kind: 'commitRoom', effects: ['recordCommit', 'advanceRoomCounters'] },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
+    key: 'TerminalRewardRoom',
+    encounterProfileKeys: ['Preboss'],
+    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      {
+        kind: 'advanceProducer',
+        point: 'beforeCombat',
+        effects: ['recordProducerPoint'],
+      },
+      {
+        kind: 'startEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
+      },
+      {
+        kind: 'completeEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterCompletion'],
+      },
+      {
+        kind: 'advanceProducer',
+        point: 'afterCombat',
+        effects: ['recordProducerPoint'],
+      },
+      {
+        kind: 'advanceProducer',
+        point: 'roomRewardPickup',
+        effects: ['recordProducerPoint'],
+      },
+      { kind: 'commitRoom', effects: ['recordCommit', 'advanceRoomCounters'] },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
+    key: 'TerminalWorldShopRoom',
+    encounterProfileKeys: ['Preboss'],
+    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      {
+        kind: 'materializeOfferPoint',
+        offerPoint: 'shopInventory',
+        effects: ['recordOfferPoint'],
+      },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      {
+        kind: 'applyShopPurchases',
+        offerPoint: 'shopInventory',
+        effects: ['recordShopPurchases'],
+      },
+      { kind: 'commitRoom', effects: ['recordCommit', 'advanceRoomCounters'] },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
+    key: 'BossRoom',
+    encounterProfileKeys: ['F_Boss01'],
+    producer: { kind: 'none' },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      {
+        kind: 'startEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
+      },
+      {
+        kind: 'completeEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterCompletion'],
+      },
+      { kind: 'commitRoom', effects: ['recordCommit', 'advanceRoomCounters'] },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
+    key: 'PostBossRoom',
+    encounterProfileKeys: ['F_PostBoss01'],
+    producer: { kind: 'none' },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      {
+        kind: 'startEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
+      },
+      {
+        kind: 'completeEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterCompletion'],
+      },
+      { kind: 'commitRoom', effects: ['recordCommit', 'advanceRoomCounters'] },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+] as const satisfies readonly RawRoomLifecycleProfileDeclaration[];

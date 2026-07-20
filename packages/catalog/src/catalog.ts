@@ -11,6 +11,7 @@ import {
   validateRewardLookupOwnership,
 } from './normalization/layouts';
 import { normalizeRooms } from './normalization/rooms';
+import { normalizeRoomLifecycleProfiles } from './normalization/lifecycles';
 import { normalizeRoutes } from './normalization/routes';
 import { createRewardKernelCatalog } from './rewardKernel/normalize';
 
@@ -23,6 +24,11 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const routes = normalizeRoutes(input.routes, biomes);
   const rewards = createRewardKernelCatalog(input.rewardKernel);
   const encounterProfiles = normalizeEncounterProfiles(input.encounterProfiles, rewards);
+  const roomLifecycleProfiles = normalizeRoomLifecycleProfiles(
+    input.roomLifecycleProfiles,
+    encounterProfiles,
+    rewards.producerLifecycles,
+  );
   const exitCompatibilityPolicies = normalizeExitCompatibilityPolicies(
     input.exitCompatibilityPolicies,
   );
@@ -44,6 +50,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     routes,
     rewards,
     encounterProfiles,
+    roomLifecycleProfiles,
     exitCompatibilityPolicies,
     exitTypes,
     rooms,

@@ -5,6 +5,7 @@ import type {
 } from './rewards';
 import type { RewardKernelCatalog } from './rewardKernel/model';
 import type { CounterAxis, RequirementExpression } from './requirements';
+import type { ProducerLifecyclePointKey } from './rewardKernel/model';
 
 export interface CatalogCollection<T> {
   readonly values: readonly T[];
@@ -59,6 +60,71 @@ export interface EncounterPhase {
 export interface EncounterProfile {
   readonly key: string;
   readonly phases: readonly EncounterPhase[];
+}
+
+export type RoomLifecycleEffectKind =
+  | 'advanceEncounterDepth'
+  | 'advanceRoomCounters'
+  | 'recordAppearance'
+  | 'recordCommit'
+  | 'recordEncounterCompletion'
+  | 'recordEncounterStart'
+  | 'recordExit'
+  | 'recordOfferPoint'
+  | 'recordOutgoingGeneration'
+  | 'recordPreparation'
+  | 'recordProducerPoint'
+  | 'recordShopPurchases';
+
+export interface OnlyEncounterPhaseSelector {
+  readonly kind: 'only';
+}
+
+export type EncounterPhaseSelector = OnlyEncounterPhaseSelector;
+
+interface RoomLifecycleOperationBase {
+  readonly effects: readonly RoomLifecycleEffectKind[];
+}
+
+export type RoomLifecycleOperation =
+  | (RoomLifecycleOperationBase & { readonly kind: 'prepareRoom' })
+  | (RoomLifecycleOperationBase & {
+      readonly kind: 'materializeOfferPoint';
+      readonly offerPoint: string;
+    })
+  | (RoomLifecycleOperationBase & { readonly kind: 'enterRoom' })
+  | (RoomLifecycleOperationBase & {
+      readonly kind: 'startEncounter';
+      readonly encounter: EncounterPhaseSelector;
+    })
+  | (RoomLifecycleOperationBase & {
+      readonly kind: 'completeEncounter';
+      readonly encounter: EncounterPhaseSelector;
+    })
+  | (RoomLifecycleOperationBase & {
+      readonly kind: 'advanceProducer';
+      readonly point: ProducerLifecyclePointKey;
+    })
+  | (RoomLifecycleOperationBase & { readonly kind: 'generateOutgoingBatch' })
+  | (RoomLifecycleOperationBase & {
+      readonly kind: 'applyShopPurchases';
+      readonly offerPoint: string;
+    })
+  | (RoomLifecycleOperationBase & { readonly kind: 'commitRoom' })
+  | (RoomLifecycleOperationBase & { readonly kind: 'exitRoom' });
+
+export type RoomLifecycleProducerPolicy =
+  | { readonly kind: 'none' }
+  | {
+      readonly kind: 'required';
+      readonly lifecycleProfileKeys: readonly string[];
+    };
+
+export interface RoomLifecycleProfile {
+  readonly key: string;
+  readonly encounterProfileKeys: readonly string[];
+  readonly producer: RoomLifecycleProducerPolicy;
+  readonly operations: readonly RoomLifecycleOperation[];
 }
 
 export type RoomKind =
@@ -407,6 +473,7 @@ export interface Catalog {
   readonly routes: CatalogCollection<RouteDeclaration>;
   readonly rewards: RewardKernelCatalog;
   readonly encounterProfiles: CatalogCollection<EncounterProfile>;
+  readonly roomLifecycleProfiles: CatalogCollection<RoomLifecycleProfile>;
   readonly exitCompatibilityPolicies: CatalogCollection<ExitCompatibilityPolicy>;
   readonly exitTypes: CatalogCollection<ExitTypeDeclaration>;
   readonly rooms: CatalogCollection<RoomDeclaration>;
