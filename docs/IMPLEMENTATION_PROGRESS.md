@@ -62,6 +62,15 @@ the authored project or history. Finding presentation renders declaration and
 structural labels rather than evidence, game names, occurrence IDs, or raw
 codes.
 
+Phase 4 Commit 4 is complete. The existing semantic undo and redo actions now
+have one shared visible and keyboard interaction surface. Header controls are
+driven directly by authored project-history availability, while global
+`Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`, and `Ctrl+Y` bindings dispatch the same
+application actions. Text inputs, textareas, and content-editable regions keep
+their native editing history. The new jsdom/Testing Library interaction
+harness verifies semantic edits, button and keyboard history traversal, native
+text-edit protection, and navigation remaining outside authored history.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -764,9 +773,9 @@ Completed:
 
 Pending:
 
-Phases 2.8 and 3 have no pending items. Phase 4 Commits 1 through 3 are complete.
-Commits 4 through 6 add keyboard history interaction, browser persistence and
-JSON transfer, and the golden F product-loop closure.
+Phases 2.8 and 3 have no pending items. Phase 4 Commits 1 through 4 are complete.
+Commits 5 and 6 add browser persistence and JSON transfer, then the golden F
+product-loop closure.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

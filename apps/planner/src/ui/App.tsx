@@ -7,11 +7,7 @@ import {
 } from '@run-planner/core';
 
 import { presentProjectStatus, presentRouteStatus } from '../application/evaluationProjection';
-import {
-  authoredProjectCommandDispatched,
-  authoredProjectRedoRequested,
-  authoredProjectUndoRequested,
-} from '../application/projectWorkspaceSlice';
+import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import type { EditorNavigation, RouteEditorNavigation } from '../application/editorNavigation';
 import {
   sectionSelected,
@@ -20,8 +16,6 @@ import {
   type UnderworldPanel,
 } from '../application/editorSessionSlice';
 import {
-  selectCanRedoProject,
-  selectCanUndoProject,
   selectPresentProject,
   selectProjectEvaluation,
   useAppDispatch,
@@ -29,6 +23,7 @@ import {
 } from '../application/store';
 import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
 import { FBiomeEditor } from './FBiomeEditor';
+import { ProjectHistoryControls } from './ProjectHistoryControls';
 
 interface AppProps {
   readonly catalog: Catalog;
@@ -143,8 +138,6 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
   );
   const project = useAppSelector(selectPresentProject);
   const evaluation = useAppSelector(selectProjectEvaluation);
-  const canUndo = useAppSelector(selectCanUndoProject);
-  const canRedo = useAppSelector(selectCanRedoProject);
   const dispatch = useAppDispatch();
   const underworld = project.routes.find((route) => route.routeKey === 'Underworld');
   const surface = project.routes.find((route) => route.routeKey === 'Surface');
@@ -185,20 +178,7 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
         <div className="header-actions">
           <span className="foundation-status">Project editor</span>
           <StatusBadge status={presentProjectStatus(evaluation)} />
-          <button
-            disabled={!canUndo}
-            onClick={() => dispatch(authoredProjectUndoRequested())}
-            type="button"
-          >
-            Undo
-          </button>
-          <button
-            disabled={!canRedo}
-            onClick={() => dispatch(authoredProjectRedoRequested())}
-            type="button"
-          >
-            Redo
-          </button>
+          <ProjectHistoryControls />
         </div>
       </header>
 
