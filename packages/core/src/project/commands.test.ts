@@ -25,6 +25,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
+  createRouteAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
@@ -32,7 +33,7 @@ import {
   semanticAddressKey,
 } from './addresses';
 import { applyProjectCommand, ProjectCommandContractError } from './commands';
-import { createProjectDocument } from './defaults';
+import { createEmptyProjectDocument, createProjectDocument } from './defaults';
 import {
   applyProjectHistoryCommand,
   canRedoProjectHistory,
@@ -425,12 +426,15 @@ function selectedTwoExitParent(parentId: typeof startId): ProjectDocument {
 
 describe('project semantic addresses', () => {
   it('creates stable domain keys without rendered positions', () => {
+    const route = createRouteAddress('Underworld');
     const occurrence = createOccurrenceAddress(biome, startId);
     const firstTarget = createTargetAddress(biome, startId, 1);
     const secondTarget = createTargetAddress(biome, startId, 2);
 
+    expect(semanticAddressKey(route)).toBe('["route","Underworld"]');
     expect(semanticAddressKey(occurrence)).toBe('["occurrence","Underworld","F","start"]');
     expect(semanticAddressKey(firstTarget)).not.toBe(semanticAddressKey(secondTarget));
+    expect(Object.isFrozen(route)).toBe(true);
     expect(Object.isFrozen(occurrence)).toBe(true);
     expect(() => createOccurrenceId(' ')).toThrowError(
       new SemanticAddressContractError('occurrenceId', 'must not be blank'),
@@ -472,6 +476,87 @@ describe('project semantic addresses', () => {
       occurrenceId: sharedOccurrenceId,
       gameName: 'F_OpeningThreeExit',
     });
+  });
+});
+
+describe('route prefix commands', () => {
+  const route = createRouteAddress('Underworld');
+
+  it('expands and shrinks the declared prefix without a duplicate count authority', () => {
+    const empty = createEmptyProjectDocument(catalog, {
+      projectId: 'route-prefix-project',
+      name: 'Route Prefix Project',
+    });
+    const configured = applyProjectCommand(empty, catalog, {
+      kind: 'ConfigureRoutePrefix',
+      route,
+      configuredBiomeCount: 1,
+    });
+
+    expect(configured.routes[0]?.biomes).toEqual([
+      { kind: 'LinearBiome', biomeKey: 'F', topology: null },
+    ]);
+    expect(
+      applyProjectCommand(configured, catalog, {
+        kind: 'ConfigureRoutePrefix',
+        route,
+        configuredBiomeCount: 1,
+      }),
+    ).toBe(configured);
+    expect(
+      applyProjectCommand(configured, catalog, {
+        kind: 'ConfigureRoutePrefix',
+        route,
+        configuredBiomeCount: 0,
+      }).routes[0]?.biomes,
+    ).toEqual([]);
+  });
+
+  it('restores an explicitly removed configured biome through semantic history', () => {
+    const original = startedProject();
+    let history = createProjectHistory(original);
+    history = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ConfigureRoutePrefix',
+      route,
+      configuredBiomeCount: 0,
+    });
+
+    expect(history.present.routes[0]?.biomes).toEqual([]);
+    history = undoProjectHistory(history);
+    expect(history.present).toBe(original);
+    history = redoProjectHistory(history);
+    expect(history.present.routes[0]?.biomes).toEqual([]);
+  });
+
+  it('rejects malformed counts and unknown routes at the route address', () => {
+    const empty = createEmptyProjectDocument(catalog, {
+      projectId: 'invalid-route-prefix-project',
+      name: 'Invalid Route Prefix Project',
+    });
+
+    for (const configuredBiomeCount of [-1, 0.5, 2]) {
+      expect(() =>
+        applyProjectCommand(empty, catalog, {
+          kind: 'ConfigureRoutePrefix',
+          route,
+          configuredBiomeCount,
+        }),
+      ).toThrowError(ProjectCommandContractError);
+    }
+    const unknownRoute = createRouteAddress('Unknown');
+    expect(() =>
+      applyProjectCommand(empty, catalog, {
+        kind: 'ConfigureRoutePrefix',
+        route: unknownRoute,
+        configuredBiomeCount: 0,
+      }),
+    ).toThrowError(
+      new ProjectCommandContractError(
+        'ConfigureRoutePrefix',
+        unknownRoute,
+        'unknown route Unknown',
+      ),
+    );
   });
 });
 

@@ -13,7 +13,7 @@ import {
 } from '@run-planner/core';
 
 import { requireBiomeCapability, type PlannerCapabilities } from './capabilities';
-import { requireProjectAuthorable } from './projectDocuments';
+import { requireProjectAuthorable, requireRoutePrefixAuthorable } from './projectDocuments';
 
 export type ProjectEvaluator = (project: ProjectDocument) => ProjectEvaluation;
 
@@ -51,12 +51,26 @@ export function createProjectWorkspaceReducer(
 
   return (state = initialState, action) => {
     if (authoredProjectCommandDispatched.match(action)) {
-      requireBiomeCapability(
-        capabilities,
-        projectCommandAddress(action.payload).biomeKey,
-        'authorable',
-        `command.${action.payload.kind}`,
-      );
+      if (action.payload.kind === 'ConfigureRoutePrefix') {
+        requireRoutePrefixAuthorable(
+          catalog,
+          capabilities,
+          action.payload.route.routeKey,
+          action.payload.configuredBiomeCount,
+          `command.${action.payload.kind}`,
+        );
+      } else {
+        const address = projectCommandAddress(action.payload);
+        if (address.kind === 'route') {
+          throw new Error('route address escaped route-prefix capability validation');
+        }
+        requireBiomeCapability(
+          capabilities,
+          address.biomeKey,
+          'authorable',
+          `command.${action.payload.kind}`,
+        );
+      }
       const history = applyProjectHistoryCommand(state.history, catalog, action.payload);
       return history === state.history ? state : publishWorkspace(history, evaluateProject);
     }

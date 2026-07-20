@@ -17,7 +17,6 @@ import {
 } from './capabilities';
 import { createApplicationCapabilities } from './capabilityConfiguration';
 import { createEditorNavigation } from './editorNavigation';
-import { createFEditorSmokeProject } from './projectBootstrap';
 import {
   createAuthorableProjectDocument,
   decodeAuthorableProjectDocument,
@@ -26,6 +25,17 @@ import {
 import { authoredProjectCommandDispatched } from './projectWorkspaceSlice';
 import { createPlannerStore } from './store';
 import { ordinaryRoomCategories, selectRoomsForCategory } from './roomSelectorProjection';
+
+function createFEditorProject(
+  catalogValue: Catalog,
+  capabilities: ReturnType<typeof createApplicationCapabilities>,
+) {
+  return createAuthorableProjectDocument(catalogValue, capabilities, {
+    projectId: 'f-editor-test',
+    name: 'F Editor Test',
+    configuredBiomeCounts: { Underworld: 1 },
+  });
+}
 
 function catalogBeforeHImport(): Catalog {
   return createCatalog({
@@ -204,8 +214,8 @@ describe('planner capabilities', () => {
     const capabilities = createApplicationCapabilities(catalog);
     const navigation = createEditorNavigation(catalog, capabilities);
     const baselineCapabilities = createApplicationCapabilities(preImportCatalog);
-    const baselineProject = createFEditorSmokeProject(preImportCatalog, baselineCapabilities);
-    const widenedProject = createFEditorSmokeProject(catalog, capabilities);
+    const baselineProject = createFEditorProject(preImportCatalog, baselineCapabilities);
+    const widenedProject = createFEditorProject(catalog, capabilities);
     const store = createPlannerStore({
       catalog,
       capabilities,
@@ -260,8 +270,8 @@ describe('planner capabilities', () => {
     const preImportCatalog = catalogBeforePImport();
     const preImportCapabilities = createApplicationCapabilities(preImportCatalog);
     const capabilities = createApplicationCapabilities(catalog);
-    const preImportProject = createFEditorSmokeProject(preImportCatalog, preImportCapabilities);
-    const project = createFEditorSmokeProject(catalog, capabilities);
+    const preImportProject = createFEditorProject(preImportCatalog, preImportCapabilities);
+    const project = createFEditorProject(catalog, capabilities);
     const navigation = createEditorNavigation(catalog, capabilities);
 
     expect(capabilities.byBiomeKey.P).toEqual({
@@ -282,8 +292,8 @@ describe('planner capabilities', () => {
     const preImportCatalog = catalogBeforeQImport();
     const preImportCapabilities = createApplicationCapabilities(preImportCatalog);
     const capabilities = createApplicationCapabilities(catalog);
-    const preImportProject = createFEditorSmokeProject(preImportCatalog, preImportCapabilities);
-    const project = createFEditorSmokeProject(catalog, capabilities);
+    const preImportProject = createFEditorProject(preImportCatalog, preImportCapabilities);
+    const project = createFEditorProject(catalog, capabilities);
     const navigation = createEditorNavigation(catalog, capabilities);
 
     expect(capabilities.byBiomeKey.Q).toEqual({
@@ -367,7 +377,7 @@ describe('Phase 2.8 capability closure', () => {
 
   it('keeps every dormant biome outside all active application contacts', () => {
     const capabilities = createApplicationCapabilities(catalog);
-    const project = createFEditorSmokeProject(catalog, capabilities);
+    const project = createFEditorProject(catalog, capabilities);
     const store = createPlannerStore({
       catalog,
       capabilities,

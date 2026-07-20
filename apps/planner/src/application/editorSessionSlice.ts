@@ -10,7 +10,7 @@ interface EditorSessionState {
 
 const initialState: EditorSessionState = {
   activeSection: 'underworld',
-  activeUnderworldPanel: 'F',
+  activeUnderworldPanel: 'route',
 };
 
 const editorSessionSlice = createSlice({

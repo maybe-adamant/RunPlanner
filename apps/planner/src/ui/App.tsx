@@ -1,10 +1,16 @@
-import type { AuthoredRoutePlan, Catalog, CatalogSummary } from '@run-planner/core';
+import {
+  createRouteAddress,
+  type AuthoredRoutePlan,
+  type Catalog,
+  type CatalogSummary,
+} from '@run-planner/core';
 
 import {
+  authoredProjectCommandDispatched,
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
 } from '../application/projectWorkspaceSlice';
-import type { EditorNavigation } from '../application/editorNavigation';
+import type { EditorNavigation, RouteEditorNavigation } from '../application/editorNavigation';
 import {
   sectionSelected,
   underworldPanelSelected,
@@ -39,17 +45,29 @@ function asUnderworldPanel(biomeKey: string): UnderworldPanel {
   return biomeKey as UnderworldPanel;
 }
 
-function missingEditorAdapter(biomeKey: string): never {
-  throw new Error(`${biomeKey} has no editor adapter`);
-}
-
 function RouteOverview({
+  catalog,
   label,
+  navigation,
   route,
 }: {
+  readonly catalog: Catalog;
   readonly label: string;
+  readonly navigation: RouteEditorNavigation;
   readonly route: AuthoredRoutePlan;
 }) {
+  const dispatch = useAppDispatch();
+  const currentPrefixAvailable =
+    route.biomes.length <= navigation.configurablePrefixBiomePanels.length;
+  const currentTerminalBiome = route.biomes.at(-1);
+  const currentTerminalDeclaration =
+    currentTerminalBiome === undefined
+      ? undefined
+      : catalog.biomes.byKey[currentTerminalBiome.biomeKey];
+  if (currentTerminalBiome !== undefined && currentTerminalDeclaration === undefined) {
+    throw new Error(`${route.routeKey} references unknown biome ${currentTerminalBiome.biomeKey}`);
+  }
+
   return (
     <section className="route-overview">
       <header className="panel-heading">
@@ -59,9 +77,50 @@ function RouteOverview({
         </div>
         <span className="neutral-status">{route.biomes.length} configured</span>
       </header>
+      <label className="field-control" htmlFor={`${route.routeKey}-configured-prefix`}>
+        <span>Configured biomes</span>
+        <select
+          disabled={
+            navigation.configurablePrefixBiomePanels.length === 0 && route.biomes.length === 0
+          }
+          id={`${route.routeKey}-configured-prefix`}
+          onChange={(event) => {
+            const configuredBiomeCount = Number(event.target.value);
+            const removedBiomeCount = route.biomes.length - configuredBiomeCount;
+            if (
+              removedBiomeCount > 0 &&
+              !globalThis.confirm(
+                `Remove ${removedBiomeCount} configured ${removedBiomeCount === 1 ? 'biome' : 'biomes'} and all authored state in the removed prefix? Undo can restore it.`,
+              )
+            ) {
+              return;
+            }
+            dispatch(
+              authoredProjectCommandDispatched({
+                kind: 'ConfigureRoutePrefix',
+                route: createRouteAddress(route.routeKey),
+                configuredBiomeCount,
+              }),
+            );
+          }}
+          value={route.biomes.length}
+        >
+          <option value={0}>None</option>
+          {navigation.configurablePrefixBiomePanels.map((biome, index) => (
+            <option key={biome.biomeKey} value={index + 1}>
+              {biome.label}
+            </option>
+          ))}
+          {!currentPrefixAvailable && currentTerminalDeclaration !== undefined && (
+            <option disabled value={route.biomes.length}>
+              {currentTerminalDeclaration.label} (not active)
+            </option>
+          )}
+        </select>
+      </label>
       <p className="panel-description">
-        Route-prefix editing is not part of this smoke slice. The authored bootstrap currently
-        configures only Erebus.
+        Configured biomes form one contiguous route prefix. Removing a biome also removes every
+        authored room beneath it; Undo restores the exact prior project.
       </p>
     </section>
   );
@@ -79,18 +138,23 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
   const underworld = project.routes.find((route) => route.routeKey === 'Underworld');
   const surface = project.routes.find((route) => route.routeKey === 'Surface');
   const underworldNavigation = editorNavigation.routes.Underworld;
+  const surfaceNavigation = editorNavigation.routes.Surface;
 
-  if (underworld === undefined || surface === undefined || underworldNavigation === undefined) {
+  if (
+    underworld === undefined ||
+    surface === undefined ||
+    underworldNavigation === undefined ||
+    surfaceNavigation === undefined
+  ) {
     throw new Error('Authored project is missing a declared route');
   }
 
   const fPlan = underworld.biomes.find((biome) => biome.biomeKey === 'F');
-  const activeBiomePanel = underworldNavigation.biomePanels.find(
-    (panel) => panel.biomeKey === activeUnderworldPanel,
+  const configuredUnderworldPanels = underworldNavigation.biomePanels.filter((panel) =>
+    underworld.biomes.some((biome) => biome.biomeKey === panel.biomeKey),
   );
-  if (activeUnderworldPanel !== 'route' && activeBiomePanel === undefined) {
-    throw new Error(`${activeUnderworldPanel} is not an active Underworld editor panel`);
-  }
+  const displayedUnderworldPanel =
+    activeUnderworldPanel === 'F' && fPlan !== undefined ? 'F' : 'route';
 
   return (
     <main className="app-shell">
@@ -100,7 +164,7 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
           <h1>Run Planner</h1>
         </div>
         <div className="header-actions">
-          <span className="foundation-status">Authored editor smoke</span>
+          <span className="foundation-status">Project editor</span>
           <button
             disabled={!canUndo}
             onClick={() => dispatch(authoredProjectUndoRequested())}
@@ -139,16 +203,16 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
             <p className="navigation-label">Underworld</p>
             <button
               className="panel-navigation-item"
-              data-active={activeUnderworldPanel === 'route'}
+              data-active={displayedUnderworldPanel === 'route'}
               onClick={() => dispatch(underworldPanelSelected('route'))}
               type="button"
             >
               Route
             </button>
-            {underworldNavigation.biomePanels.map((panel) => (
+            {configuredUnderworldPanels.map((panel) => (
               <button
                 className="panel-navigation-item"
-                data-active={panel.biomeKey === activeUnderworldPanel}
+                data-active={panel.biomeKey === displayedUnderworldPanel}
                 key={panel.biomeKey}
                 onClick={() => dispatch(underworldPanelSelected(asUnderworldPanel(panel.biomeKey)))}
                 type="button"
@@ -158,13 +222,16 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
             ))}
           </nav>
           <div className="editor-panel" aria-live="polite">
-            {activeUnderworldPanel === 'route' ? (
-              <RouteOverview label="Underworld" route={underworld} />
-            ) : activeUnderworldPanel === 'F' && fPlan !== undefined ? (
+            {displayedUnderworldPanel === 'route' ? (
+              <RouteOverview
+                catalog={catalog}
+                label="Underworld"
+                navigation={underworldNavigation}
+                route={underworld}
+              />
+            ) : fPlan !== undefined ? (
               <FBiomeEditor catalog={catalog} plan={fPlan} routeKey={underworld.routeKey} />
-            ) : (
-              missingEditorAdapter(activeUnderworldPanel)
-            )}
+            ) : null}
           </div>
         </div>
       )}
@@ -178,7 +245,12 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
             </button>
           </nav>
           <div className="editor-panel" aria-live="polite">
-            <RouteOverview label="Surface" route={surface} />
+            <RouteOverview
+              catalog={catalog}
+              label="Surface"
+              navigation={surfaceNavigation}
+              route={surface}
+            />
           </div>
         </div>
       )}
