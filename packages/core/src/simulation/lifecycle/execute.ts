@@ -159,6 +159,13 @@ const lifecycleEffectRegistry = Object.freeze({
       biomeDepthCacheDelta: context.input.counterEffects.biomeDepthCache,
       roomHistoryOrdinalDelta: context.input.counterEffects.roomHistoryOrdinal,
     }),
+  recordEnteredRewardStore: (context, state) =>
+    context.input.enteredRewardStoreKey === undefined
+      ? state
+      : appendEvent(state, context, {
+          kind: 'enteredRewardStoreRecorded',
+          storeKey: context.input.enteredRewardStoreKey,
+        }),
   recordExit: (context, state) => appendEvent(state, context, { kind: 'roomExited' }),
 }) satisfies Readonly<Record<RoomLifecycleEffectKind, EffectHandler>>;
 
@@ -223,6 +230,14 @@ function resolveExecutionContext(
   catalog: Catalog,
   input: RoomLifecycleExecutionInput,
 ): ExecutionContext {
+  if (
+    input.enteredRewardStoreKey !== undefined &&
+    catalog.rewards.stores.byKey[input.enteredRewardStoreKey] === undefined
+  ) {
+    throw new LifecycleExecutionContractError(
+      `unknown entered reward store ${input.enteredRewardStoreKey}`,
+    );
+  }
   const profile = catalog.roomLifecycleProfiles.byKey[input.lifecycleProfileKey];
   if (profile === undefined) {
     throw new LifecycleExecutionContractError(

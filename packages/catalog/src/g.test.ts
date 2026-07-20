@@ -79,6 +79,10 @@ describe('complete G catalog', () => {
           { role: 'boss', roomGameName: 'G_Boss01' },
           { role: 'postboss', roomGameName: 'G_PostBoss01' },
         ],
+        transitionEffects: [
+          { kind: 'resetCounter', axis: 'biomeDepthCache' },
+          { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+        ],
       },
       fields: [],
       bounds: { maxBatches: 8, maxTargets: 21 },

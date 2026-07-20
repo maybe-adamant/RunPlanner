@@ -22,6 +22,7 @@ const effectKinds = {
   recordCommit: true,
   recordEncounterCompletion: true,
   recordEncounterStart: true,
+  recordEnteredRewardStore: true,
   recordExit: true,
   recordOfferPoint: true,
   recordOutgoingGeneration: true,
@@ -47,7 +48,7 @@ const expectedEffects = {
   advanceProducer: ['recordProducerPoint'],
   generateOutgoingBatch: ['recordOutgoingGeneration'],
   applyShopPurchases: ['recordShopPurchases'],
-  commitRoom: ['recordCommit', 'advanceRoomCounters'],
+  commitRoom: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
   exitRoom: ['recordExit'],
 } as const satisfies Readonly<
   Record<RoomLifecycleOperation['kind'], readonly RoomLifecycleEffectKind[]>

@@ -124,13 +124,15 @@ declaration determines whether and how the effect applies; the lifecycle
 profile determines when it can run.
 
 `RoomLifecycleEvent`
-: One immutable occurrence-addressed fact emitted after an effect is applied.
-Events are folded into ledgers and retained as ordering evidence. An
-operation may emit zero, one, or several events.
+: One immutable room-addressed fact emitted after an effect is applied.
+Authored rooms use their occurrence address; layout-derived completion rooms
+use their stable completion-role address. Events are folded into ledgers and
+retained as ordering evidence. An operation may emit zero, one, or several
+events.
 
 `RoomHistoryFragment`
-: The concrete occurrence-addressed event sequence produced by executing one
-lifecycle profile against one entered occurrence and its authored leaf state.
+: The concrete room-addressed event sequence produced by executing one
+lifecycle profile against one entered room and its resolved local state.
 
 `Outgoing-generation checkpoint`
 : The operation at which the layout-owned next batch is evaluated and
@@ -370,7 +372,7 @@ visibility.
 A terminal profile may omit ordinary outgoing generation and hand control to a
 layout-owned fixed completion sequence. A persistent hub may generate a stable
 board once and later emit restore fragments. Those are structural compositions
-of occurrence-addressed room fragments, not reasons to weaken the ordering
+of room-addressed fragments, not reasons to weaken the ordering
 contract or introduce UI-shaped rows into history.
 
 ## Counter and Cache Timing
@@ -439,6 +441,11 @@ transition boundary. They are not `exitRoom` defaults and are not repeated by
 every room profile. The next biome starts from the reset state plus any
 route-wide history retained by its declared transition policy.
 
+The initial closed transition vocabulary is one ordered `resetCounter` effect
+over `biomeDepthCache` or `biomeEncounterDepth`. Every current layout declares
+both effects in that order. Route encounter depth and room-history ordinal are
+not biome-local and therefore receive no reset event.
+
 ## History Views and Composition
 
 Every fragment exposes conceptually distinct states:
@@ -478,6 +485,13 @@ current RoomHistoryFragment
 Unpicked targets contribute creation, offer, bag-consumption, and offer-
 projection events at the source room's outgoing checkpoint. They never execute
 an entered-room fragment and never emit concrete acquisitions.
+
+Each physical target has a `roomCreated` event followed by a
+`targetGenerationCompleted` marker. Room/reward legality, incoming-offer, bag,
+and offer-projection events occupy that interval in physical order. Commit 4
+initially contains only creation in the interval; later reward integration may
+insert its events without moving either boundary or changing the target's
+pre/post generation views.
 
 ## Possibility and Validation
 

@@ -74,6 +74,10 @@ describe('complete dormant H catalog', () => {
           { role: 'boss', roomGameName: 'H_Boss01' },
           { role: 'postboss', roomGameName: 'H_PostBoss01' },
         ],
+        transitionEffects: [
+          { kind: 'resetCounter', axis: 'biomeDepthCache' },
+          { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+        ],
       },
       fields: [],
       bounds: { maxBatches: 4, maxTargets: 7 },

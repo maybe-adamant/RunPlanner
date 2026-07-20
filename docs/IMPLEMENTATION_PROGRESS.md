@@ -19,15 +19,24 @@ addressed incomplete findings without materializing partial history. Commit 2
 adds normalized reusable lifecycle profiles and deterministic single-room
 history fragments. Commit 3 adds the common canonical linear materializer for
 complete F topology, including addressed batches, terminal realizations, and
-layout-derived completion rooms. Route-wide history composition remains
-pending.
+layout-derived completion rooms. Commit 4 composes the picked F spine into one
+deterministic event stream and folds it into timing-specific history ledgers
+and state views through the declared biome transition.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
-initial F profile set, closed operations/effects, occurrence-addressed events,
+initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
 and outgoing-generation checkpoints are implemented by the pure single-room
-executor. Concrete reward acquisition, route-history composition, and ledger
-folding are not yet implemented.
+executor. Concrete reward acquisition and contextual legality remain pending;
+F biome-history composition and the Commit 4 structural/counter ledgers are
+implemented.
+
+F lifecycle composition now inserts every picked and unpicked target creation
+at its predecessor's outgoing-generation checkpoint while executing entered
+rooms only. Room appearance, encounter, depth-cache, encounter-depth, route-
+depth, room-ordinal, and entered-store ledgers are pure folds over that event
+stream. Layout completion owns the ordered Boss/PostBoss tail and explicit
+biome-local counter resets; route-wide counters survive the transition.
 
 Canonical F materialization now preserves normalized authored facts without
 making a legality claim. Repeated room game names remain distinct addressed
@@ -672,8 +681,8 @@ Completed:
 
 Pending:
 
-Phase 2.8 has no pending items. Phase 3 continues with lifecycle composition
-and history ledgers described by Commit 4.
+Phase 2.8 has no pending items. Phase 3 continues with F room possibility and
+generation validation described by Commit 5.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

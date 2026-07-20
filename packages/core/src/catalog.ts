@@ -69,6 +69,7 @@ export type RoomLifecycleEffectKind =
   | 'recordCommit'
   | 'recordEncounterCompletion'
   | 'recordEncounterStart'
+  | 'recordEnteredRewardStore'
   | 'recordExit'
   | 'recordOfferPoint'
   | 'recordOutgoingGeneration'
@@ -386,8 +387,16 @@ export interface CompletionRoomDescriptor {
   readonly roomGameName: string;
 }
 
+export type BiomeTransitionCounterAxis = 'biomeDepthCache' | 'biomeEncounterDepth';
+
+export interface BiomeTransitionCounterReset {
+  readonly kind: 'resetCounter';
+  readonly axis: BiomeTransitionCounterAxis;
+}
+
 export interface CompletionDescriptor {
   readonly rooms: readonly CompletionRoomDescriptor[];
+  readonly transitionEffects: readonly BiomeTransitionCounterReset[];
 }
 
 export interface LinearBiomeLayout {

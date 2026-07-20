@@ -106,6 +106,10 @@ describe('complete dormant I catalog', () => {
           { role: 'boss', roomGameName: 'I_Boss01' },
           { role: 'postboss', roomGameName: 'I_PostBoss01' },
         ],
+        transitionEffects: [
+          { kind: 'resetCounter', axis: 'biomeDepthCache' },
+          { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+        ],
       },
       fields: [
         {

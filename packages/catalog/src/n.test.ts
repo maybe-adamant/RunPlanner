@@ -106,6 +106,10 @@ describe('complete dormant N catalog', () => {
       { role: 'boss', roomGameName: 'N_Boss01' },
       { role: 'postboss', roomGameName: 'N_PostBoss01' },
     ]);
+    expect(layout.completion.transitionEffects).toEqual([
+      { kind: 'resetCounter', axis: 'biomeDepthCache' },
+      { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+    ]);
   });
 
   it('keeps Opening and PreHub as separate fixed authored counted leaves', () => {

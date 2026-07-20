@@ -288,6 +288,25 @@ describe('single-room lifecycle execution', () => {
     expect(fragment.events[4]).toMatchObject({ offerPoint: 'shopInventory' });
   });
 
+  it('records entered-store provenance as a commit-time effect', () => {
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({ enteredRewardStoreKey: 'MetaProgress' }),
+    );
+    const store = fragment.events.find((event) => event.kind === 'enteredRewardStoreRecorded');
+
+    expect(store).toMatchObject({
+      kind: 'enteredRewardStoreRecorded',
+      storeKey: 'MetaProgress',
+    });
+    expect(fragment.events.indexOf(store!)).toBeGreaterThan(
+      fragment.events.findIndex((event) => event.kind === 'roomCountersAdvanced'),
+    );
+    expect(fragment.events.indexOf(store!)).toBeLessThan(
+      fragment.events.findIndex((event) => event.kind === 'roomExited'),
+    );
+  });
+
   it('omits encounter-depth facts for non-counting terminal and completion encounters', () => {
     expect(
       eventKinds(
@@ -333,6 +352,7 @@ describe('single-room lifecycle execution', () => {
       [input({ lifecycleProfileKey: 'Missing' }), 'unknown room lifecycle profile Missing'],
       [input({ encounterProfileKey: 'Missing' }), 'unknown encounter profile Missing'],
       [input({ encounterProfileKey: 'Shop' }), 'Shop is incompatible with StandardRewardRoom'],
+      [input({ enteredRewardStoreKey: 'Missing' }), 'unknown entered reward store Missing'],
       [inputWithoutProducer(), 'StandardRewardRoom requires a producer'],
       [
         input({ lifecycleProfileKey: 'BossRoom', encounterProfileKey: 'F_Boss01' }),

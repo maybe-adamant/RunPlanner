@@ -261,6 +261,13 @@ Q's canonical repeat-run projection ends after its boss. The route declaration,
 not a completion room, remains the authority for biome order or route
 completion.
 
+The completion descriptor also owns an ordered closed transition-effect list.
+Every current biome explicitly resets `biomeDepthCache` followed by
+`biomeEncounterDepth` after its completion rooms. Route encounter depth and
+room-history ordinal are deliberately absent from that list and survive the
+transition. The simulator walks these declarations; it does not hide a generic
+reset inside room exit or route composition.
+
 Declarations include only game facts consumed by a canonical product surface.
 Automatic boss-specific and weapon-dependent drops are documented evidence but
 do not require reward types, concrete acquisition declarations, or history
