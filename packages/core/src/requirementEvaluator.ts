@@ -19,6 +19,7 @@ export interface RequirementEvaluationContext {
   readonly records: Readonly<Record<HistoryRecord, Readonly<Record<string, number>>>>;
   readonly currentRoomShopOptionNames: ReadonlySet<string>;
   readonly currentRoomRewardType: string | undefined;
+  readonly rewardLookups: Readonly<Record<string, ReadonlySet<string>>>;
   readonly runDepthCache: number;
   readonly lastEventRunDepthCaches: Readonly<Record<string, number>>;
   readonly recentEncounterPhases: readonly {
@@ -91,6 +92,13 @@ export const requirementEvaluatorRegistry = Object.freeze({
   },
   notInCurrentRoomShopOptions: (requirement, context) =>
     !context.currentRoomShopOptionNames.has(requirement.rewardType),
+  rewardLookupExcludes: (requirement, context) => {
+    const lookup = context.rewardLookups[requirement.lookupKey];
+    if (lookup === undefined) {
+      throw new Error(`Requirement evaluated without reward lookup ${requirement.lookupKey}`);
+    }
+    return !lookup.has(requirement.rewardType);
+  },
   minRoomsSinceEvent: (requirement, context) => {
     const lastDepth = context.lastEventRunDepthCaches[requirement.event];
     return (
@@ -145,6 +153,8 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.recentEncounterPhaseCount(requirement, context);
     case 'notInCurrentRoomShopOptions':
       return requirementEvaluatorRegistry.notInCurrentRoomShopOptions(requirement, context);
+    case 'rewardLookupExcludes':
+      return requirementEvaluatorRegistry.rewardLookupExcludes(requirement, context);
     case 'minRoomsSinceEvent':
       return requirementEvaluatorRegistry.minRoomsSinceEvent(requirement, context);
     case 'minExits':

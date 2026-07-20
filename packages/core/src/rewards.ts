@@ -1,4 +1,5 @@
 import type { ResolvedRewardOffer } from './rewardKernel/model';
+import type { RequirementExpression } from './requirements';
 
 export interface CountedRewardBinding {
   readonly kind: 'countedChoice';
@@ -25,6 +26,7 @@ export interface ShopRewardBinding {
   readonly offer: ResolvedRewardOffer;
   readonly shopProfileKey: string;
   readonly producerLifecycleKey: string;
+  readonly additionalOptionRequirements?: Readonly<Record<string, RequirementExpression>>;
 }
 
 export type RewardProducerBinding =

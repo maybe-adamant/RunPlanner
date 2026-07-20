@@ -56,6 +56,11 @@ export type RequirementExpression =
       readonly rewardType: string;
     }
   | {
+      readonly kind: 'rewardLookupExcludes';
+      readonly lookupKey: string;
+      readonly rewardType: string;
+    }
+  | {
       readonly kind: 'minRoomsSinceEvent';
       readonly event: string;
       readonly count: number;

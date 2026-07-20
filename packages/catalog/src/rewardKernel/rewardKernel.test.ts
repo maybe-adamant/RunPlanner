@@ -59,6 +59,7 @@ function requirementContext(
     },
     currentRoomShopOptionNames: new Set(),
     currentRoomRewardType: undefined,
+    rewardLookups: {},
     runDepthCache: 8,
     lastEventRunDepthCaches: {},
     recentEncounterPhases: [],

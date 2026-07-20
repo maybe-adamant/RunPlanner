@@ -23,6 +23,7 @@ const baseContext = {
   },
   currentRoomShopOptionNames: new Set<string>(),
   currentRoomRewardType: undefined,
+  rewardLookups: {},
   runDepthCache: 10,
   lastEventRunDepthCaches: {},
   recentEncounterPhases: [],
@@ -46,6 +47,7 @@ describe('requirement evaluator registry', () => {
       'distinctRecordKeyCount',
       'recentEncounterPhaseCount',
       'notInCurrentRoomShopOptions',
+      'rewardLookupExcludes',
       'minRoomsSinceEvent',
       'minExits',
       'currentRoomRewardExcludes',
@@ -243,5 +245,29 @@ describe('requirement evaluator registry', () => {
         lastEventRunDepthCaches: { Devotion: 10 },
       }),
     ).toBe(true);
+  });
+
+  it('requires and consumes a named derived reward lookup explicitly', () => {
+    const requirement = {
+      kind: 'rewardLookupExcludes',
+      lookupKey: 'hubRewardLookup',
+      rewardType: 'WeaponUpgrade',
+    } as const;
+
+    expect(
+      evaluateRequirement(requirement, {
+        ...baseContext,
+        rewardLookups: { hubRewardLookup: new Set(['SpellDrop']) },
+      }),
+    ).toBe(true);
+    expect(
+      evaluateRequirement(requirement, {
+        ...baseContext,
+        rewardLookups: { hubRewardLookup: new Set(['WeaponUpgrade']) },
+      }),
+    ).toBe(false);
+    expect(() => evaluateRequirement(requirement, baseContext)).toThrowError(
+      'Requirement evaluated without reward lookup hubRewardLookup',
+    );
   });
 });

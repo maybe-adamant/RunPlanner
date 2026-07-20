@@ -126,6 +126,13 @@ describe('planner capabilities', () => {
         editable: false,
       },
       {
+        biomeKey: 'N',
+        declared: true,
+        authorable: false,
+        simulatable: false,
+        editable: false,
+      },
+      {
         biomeKey: 'O',
         declared: true,
         authorable: false,
@@ -153,14 +160,14 @@ describe('planner capabilities', () => {
   it('rejects unknown, duplicate, and non-authorable editable capability entries', () => {
     expect(() =>
       createPlannerCapabilities(catalog, {
-        authorableBiomeKeys: ['F', 'N'],
+        authorableBiomeKeys: ['F', 'Z'],
         simulatableBiomeKeys: [],
         editableBiomeKeys: ['F'],
       }),
     ).toThrowError(
       new PlannerCapabilityContractError(
         'capabilities.authorableBiomeKeys[1]',
-        'N is not declared',
+        'Z is not declared',
       ),
     );
     expect(() =>
@@ -206,6 +213,13 @@ describe('planner capabilities', () => {
       simulatable: false,
       editable: false,
     });
+    expect(capabilities.byBiomeKey.N).toEqual({
+      biomeKey: 'N',
+      declared: true,
+      authorable: false,
+      simulatable: false,
+      editable: false,
+    });
     expect(navigation.routes.Underworld?.biomePanels).toEqual([{ biomeKey: 'F', label: 'Erebus' }]);
     expect(navigation.routes.Surface?.biomePanels).toEqual([]);
     expect(widenedProject.catalogVersion).not.toBe(baselineProject.catalogVersion);
@@ -222,6 +236,16 @@ describe('planner capabilities', () => {
       ),
     ).toThrowError(
       new PlannerCapabilityContractError('command.ClearTopology', 'H is not authorable'),
+    );
+    expect(() =>
+      store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ClearTopology',
+          biome: createBiomeAddress('Surface', 'N'),
+        }),
+      ),
+    ).toThrowError(
+      new PlannerCapabilityContractError('command.ClearTopology', 'N is not authorable'),
     );
   });
 

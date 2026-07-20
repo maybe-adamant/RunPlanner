@@ -13,6 +13,8 @@ import type {
 } from '../rewardKernel/model';
 import type {
   AuthoredRoomState,
+  EphyraCombatState,
+  EphyraSideRoomState,
   RewardWheelState,
   ShipCombatState,
   ShopOfferState,
@@ -179,6 +181,53 @@ function defaultShipCombatState(
   });
 }
 
+function requireEphyraSideRooms(
+  room: RoomDeclaration,
+  path: string,
+): Extract<LocalChildDescriptor, { readonly kind: 'fixedRoomSlots' }> | undefined {
+  const descriptor = room.localChildren[0];
+  if (descriptor === undefined) {
+    return undefined;
+  }
+  if (room.localChildren.length !== 1 || descriptor.kind !== 'fixedRoomSlots') {
+    failProjectDocument(path, 'EphyraCombat requires at most one fixed-room side group');
+  }
+  return descriptor;
+}
+
+function defaultEphyraCombatState(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  resolvedStoreKey: string | undefined,
+  path: string,
+): EphyraCombatState {
+  const sideRooms: Record<string, EphyraSideRoomState> = {};
+  for (const slot of requireEphyraSideRooms(room, path)?.slots ?? []) {
+    const sideRoom = catalog.rooms.byKey[slot.roomGameName];
+    if (sideRoom === undefined) {
+      failProjectDocument(`${path}.sideRooms.${slot.slotKey}`, `unknown room ${slot.roomGameName}`);
+    }
+    sideRooms[slot.slotKey] = Object.freeze({
+      generation: 'notGenerated',
+      enteredOrdinal: null,
+      offer: defaultCountedOffer(
+        requireCountedBinding(sideRoom, path),
+        sideRoom.individualRewardStoreKey ?? sideRoom.forcedRewardStoreKey,
+        `${path}.sideRooms.${slot.slotKey}.offer`,
+      ),
+    });
+  }
+  return Object.freeze({
+    kind: 'ephyraCombat',
+    offer: defaultCountedOffer(
+      requireCountedBinding(room, path),
+      resolvedStoreKey ?? room.forcedRewardStoreKey,
+      `${path}.offer`,
+    ),
+    sideRooms: Object.freeze(sideRooms),
+  });
+}
+
 export function createDefaultRoomState(
   catalog: Catalog,
   room: RoomDeclaration,
@@ -198,8 +247,13 @@ export function createDefaultRoomState(
     case 'ShipCombat':
       requireOrdinaryRole(role, room, path);
       return defaultShipCombatState(catalog, room, path);
+    case 'EphyraCombat':
+      requireOrdinaryRole(role, room, path);
+      return defaultEphyraCombatState(catalog, room, context.resolvedStoreKey, path);
     case 'FixedOpening':
+    case 'FixedPreHub':
     case 'ClockworkCombat':
+    case 'EphyraSideRoom':
     case 'Fountain':
     case 'Miniboss':
     case 'StandardCombat':
@@ -208,7 +262,7 @@ export function createDefaultRoomState(
         kind: 'counted',
         offer: defaultCountedOffer(
           requireCountedBinding(room, path),
-          context.resolvedStoreKey,
+          context.resolvedStoreKey ?? room.forcedRewardStoreKey ?? room.individualRewardStoreKey,
           path,
         ),
       });
@@ -433,6 +487,81 @@ function decodeShipCombatState(
   });
 }
 
+function decodeEphyraCombatState(
+  value: Record<string, unknown>,
+  catalog: Catalog,
+  room: RoomDeclaration,
+  path: string,
+): EphyraCombatState {
+  expectedKind(value.kind, 'ephyraCombat', path);
+  expectExactKeys(value, ['kind', 'offer', 'sideRooms'], path);
+  const descriptor = requireEphyraSideRooms(room, path);
+  const slots = descriptor?.slots ?? [];
+  const rawSideRooms = expectRecord(value.sideRooms, `${path}.sideRooms`);
+  expectExactKeys(
+    rawSideRooms,
+    slots.map((slot) => slot.slotKey),
+    `${path}.sideRooms`,
+  );
+  const enteredOrdinals = new Set<number>();
+  const sideRooms: Record<string, EphyraSideRoomState> = {};
+  for (const slot of slots) {
+    const slotPath = `${path}.sideRooms.${slot.slotKey}`;
+    const rawState = expectRecord(rawSideRooms[slot.slotKey], slotPath);
+    expectExactKeys(rawState, ['generation', 'enteredOrdinal', 'offer'], slotPath);
+    const generation = expectString(rawState.generation, `${slotPath}.generation`);
+    if (generation !== 'generated' && generation !== 'notGenerated') {
+      failProjectDocument(`${slotPath}.generation`, 'must be generated or notGenerated');
+    }
+    let enteredOrdinal: number | null = null;
+    if (rawState.enteredOrdinal !== null) {
+      enteredOrdinal = expectPositiveInteger(rawState.enteredOrdinal, `${slotPath}.enteredOrdinal`);
+      if (enteredOrdinal > slots.length) {
+        failProjectDocument(`${slotPath}.enteredOrdinal`, 'exceeds the local side-room capacity');
+      }
+      if (enteredOrdinals.has(enteredOrdinal)) {
+        failProjectDocument(`${slotPath}.enteredOrdinal`, `duplicates ${enteredOrdinal}`);
+      }
+      enteredOrdinals.add(enteredOrdinal);
+      if (generation !== 'generated') {
+        failProjectDocument(`${slotPath}.enteredOrdinal`, 'requires a generated side room');
+      }
+    }
+    const sideRoom = catalog.rooms.byKey[slot.roomGameName];
+    if (sideRoom === undefined) {
+      failProjectDocument(slotPath, `unknown room ${slot.roomGameName}`);
+    }
+    sideRooms[slot.slotKey] = Object.freeze({
+      generation,
+      enteredOrdinal,
+      offer: decodeCountedOffer(
+        rawState.offer,
+        catalog,
+        requireCountedBinding(sideRoom, slotPath),
+        `${slotPath}.offer`,
+      ),
+    });
+  }
+  for (let ordinal = 1; ordinal <= enteredOrdinals.size; ordinal += 1) {
+    if (!enteredOrdinals.has(ordinal)) {
+      failProjectDocument(
+        `${path}.sideRooms.enteredOrdinals`,
+        `must contain contiguous ordinal ${ordinal}`,
+      );
+    }
+  }
+  return Object.freeze({
+    kind: 'ephyraCombat',
+    offer: decodeCountedOffer(
+      value.offer,
+      catalog,
+      requireCountedBinding(room, path),
+      `${path}.offer`,
+    ),
+    sideRooms: Object.freeze(sideRooms),
+  });
+}
+
 function decodeShopState(
   value: unknown,
   catalog: Catalog,
@@ -534,8 +663,13 @@ export function decodeRoomState(
     case 'ShipCombat':
       requireOrdinaryRole(role, room, path);
       return decodeShipCombatState(state, catalog, room, path);
+    case 'EphyraCombat':
+      requireOrdinaryRole(role, room, path);
+      return decodeEphyraCombatState(state, catalog, room, path);
     case 'FixedOpening':
+    case 'FixedPreHub':
     case 'ClockworkCombat':
+    case 'EphyraSideRoom':
     case 'Fountain':
     case 'Miniboss':
     case 'StandardCombat':

@@ -12,9 +12,9 @@ completed under the prior reward-store ownership model; Phase 2.6 added the
 audited reward kernel as an intentionally unconnected pure subsystem; Phase
 2.7 atomically made it the sole connected F/G reward authority. Phase 2.8 is
 the current frontier. Capability isolation, the shared structural/F/G
-reconciliation slice, the dormant P/Q/H/O/I declaration imports, and the schema-version-3
-route/biome identity cleanup are complete; N remains before Phase 3
-begins.
+reconciliation slice, the dormant P/Q/H/O/I/N declaration imports, and the
+schema-version-3 route/biome identity cleanup are complete. The cross-biome
+closure matrix is the only remaining Phase 2.8 item before Phase 3 begins.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
 defines reusable single-room lifecycle profiles, occurrence-addressed history
@@ -50,8 +50,7 @@ miniboss encounter-depth asymmetry, forked preboss, and persistent-NPC
 composition boundary. The F, G, P, Q, H, O, I, and N rule documents now
 distinguish verified game behavior, modeling disposition, canonical
 projection, reconsideration trigger, and current feature coverage. P, Q, H, O,
-and I are now declaration-complete and dormant. N declarations have not yet
-been imported.
+I, and N are now declaration-complete and dormant.
 
 `biomes/Q_GAME_RULES.md` records Q's declaration-driven scripted stages, real foyer
 variants, independently generated and repeatable miniboss peers, reward-free
@@ -105,9 +104,9 @@ changes for F/G. G completion remains unmaterialized until Phase 3.
 The P audit is now closed under the same derived-tail contract:
 `P_Boss01 -> P_PostBoss01 -> Q_Intro`, neutral `BossPrometheus01`, resolved
 boss-offer store history, and no modeled automatic boss-drop surface. F, G, P,
-Q, H, O, I, and N are closed as biome-rule/design audits. P, Q, H, O, and I now
-also have dormant declaration coverage; N remains documentation-only,
-and no later biome is promoted to an active product capability.
+Q, H, O, I, and N are closed as biome-rule/design audits and now have dormant
+declaration coverage. No later biome is promoted to an active product
+capability.
 
 ## Completed
 
@@ -464,9 +463,9 @@ branching, so production does not grow placeholder predicates for them.
 
 The N audit confirmed the shared store shape and added fixed authored layout
 slots, a fixed-slot persistent hub board, ordered restores, and side-room
-generation pressure. Phase 2.7 has now applied the shared schema-version-2
-store and picked-entry shop contracts to F/G. The remaining biome structures
-stay dormant until Phase 2.8 imports their declarations.
+generation pressure. Phase 2.7 applied the shared store and picked-entry shop
+contracts to F/G. Phase 2.8 has now imported every later-biome declaration
+slice while keeping those structures dormant behind product capabilities.
 
 ## Next
 
@@ -620,10 +619,32 @@ Completed:
      materializes the complete five-slot `I_WorldShop` state;
    - capability isolation keeps I non-authorable, non-simulatable, and
      non-editable.
+9. dormant N declaration import:
+   - all 46 supported progressed-save declarations normalize: fixed authored
+     Opening and PreHub, derived persistent Hub, 23 combat targets, two
+     minibosses, 15 reusable side-room maps, fixed authored preboss, and the
+     neutral Polyphemus/postboss completion tail;
+   - the HubBiome layout owns 25 immutable physical slot mappings, a nine-or-
+     ten open-set bound, at-most-one-miniboss constraint, six required distinct
+     visits, derived hub restores, and no generated base reward store;
+   - every hub target requires one entry-spawned Soul Pylon destroyed before
+     exit; combat targets force HubRewards, minibosses force Boon-only
+     RunProgress, and Combat 12/17 retain their Hammer/Hermes exclusions;
+   - combat occurrences own complete bounded side-room leaves with physical
+     door evidence, contiguous availability ranks, separate generated state
+     and player entry ordinal, and one jointly validated unordered sibling
+     reward batch;
+   - ordinary and hard side maps bind SubRoomRewards and SubRoomRewardsHard,
+     remain non-counting encounter profiles, and permit repeated concrete map
+     names through parent-local slot identity;
+   - the complete open offer board produces named `hubRewardLookup` state, and
+     the fixed WorldShop preboss owns explicit Hammer/Hex option requirements
+     against that lookup before the derived boss/postboss tail;
+   - capability isolation keeps N non-authorable, non-simulatable, and
+     non-editable; no Hub project codec, simulator, or editor path is activated.
 
 Pending:
 
-9. dormant N declaration import;
 10. cross-biome closure and capability matrix.
 
 Every biome-import commit must remain declaration-only and pass its own parity

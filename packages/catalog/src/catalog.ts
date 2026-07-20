@@ -5,7 +5,11 @@ import { normalizeBiomes } from './normalization/biomes';
 import { requireNonEmpty } from './normalization/common';
 import { normalizeEncounterProfiles } from './normalization/encounters';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './normalization/exits';
-import { normalizeBiomeLayouts, validateDerivedRoomOwnership } from './normalization/layouts';
+import {
+  normalizeBiomeLayouts,
+  validateDerivedRoomOwnership,
+  validateRewardLookupOwnership,
+} from './normalization/layouts';
 import { normalizeRooms } from './normalization/rooms';
 import { normalizeRoutes } from './normalization/routes';
 import { createRewardKernelCatalog } from './rewardKernel/normalize';
@@ -32,6 +36,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   );
   const biomeLayouts = normalizeBiomeLayouts(input.biomeLayouts, biomes, rooms, rewards.stores);
   validateDerivedRoomOwnership(rooms, biomeLayouts);
+  validateRewardLookupOwnership(rooms, biomeLayouts);
 
   return Object.freeze({
     version: input.version,

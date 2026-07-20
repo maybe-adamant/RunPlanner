@@ -9,6 +9,7 @@ import type {
   LinearBiomeLayout,
   LinearProgressionPolicy,
   LinearStartDescriptor,
+  RequirementExpression,
   RewardStorePolicy,
   RoomDeclaration,
   SourceRewardStorePolicyOverride,
@@ -499,15 +500,25 @@ function normalizeHubLayout(
     layout.hub.slots.map((slot) => slot.slotKey),
     `${path}.hub.slots.slotKeys`,
   );
+  const physicalDoorIds = new Set<number>();
   const slots = layout.hub.slots.map((slot, index) => {
     const slotPath = `${path}.hub.slots[${index}]`;
     const room = requireRoom(slot.roomGameName, layout.biomeKey, rooms, `${slotPath}.roomGameName`);
     if (room.mode.kind !== 'authored') {
       fail(`${slotPath}.roomGameName`, `${room.gameName} must be authored`);
     }
+    const physicalDoorId = requirePositiveInteger(
+      slot.physicalDoorId,
+      `${slotPath}.physicalDoorId`,
+    );
+    if (physicalDoorIds.has(physicalDoorId)) {
+      fail(`${slotPath}.physicalDoorId`, `duplicates ${physicalDoorId}`);
+    }
+    physicalDoorIds.add(physicalDoorId);
     return Object.freeze({
       slotKey: slotKeys[index] as string,
       roomGameName: room.gameName,
+      physicalDoorId,
     });
   });
   if (slots.length === 0) {
@@ -524,6 +535,105 @@ function normalizeHubLayout(
   );
   if (requiredVisits > min) {
     fail(`${path}.hub.requiredVisits`, 'must not exceed the minimum open slot count');
+  }
+  if (
+    layout.hub.targetCompletion.kind !== 'requiredRoomObject' ||
+    layout.hub.targetCompletion.objectKey !== 'SoulPylon'
+  ) {
+    fail(
+      `${path}.hub.targetCompletion`,
+      'must name one supported required room object completion policy',
+    );
+  }
+  const targetCompletion = Object.freeze({
+    kind: 'requiredRoomObject' as const,
+    objectKey: 'SoulPylon' as const,
+  });
+  for (const [slotIndex, slot] of slots.entries()) {
+    const room = rooms.byKey[slot.roomGameName] as RoomDeclaration;
+    if (
+      room.requiredObjects?.length !== 1 ||
+      room.requiredObjects[0]?.key !== targetCompletion.objectKey
+    ) {
+      fail(
+        `${path}.hub.slots[${slotIndex}].roomGameName`,
+        `${room.gameName} must require one ${targetCompletion.objectKey}`,
+      );
+    }
+  }
+  const openSlotConstraints = layout.hub.openSlotConstraints.map((constraint, index) => {
+    const constraintPath = `${path}.hub.openSlotConstraints[${index}]`;
+    if (constraint.kind !== 'maxOpenFromSlots') {
+      fail(`${constraintPath}.kind`, `unknown open-slot constraint ${String(constraint.kind)}`);
+    }
+    const constrainedSlotKeys = freezeUniqueStrings(
+      constraint.slotKeys,
+      `${constraintPath}.slotKeys`,
+    );
+    if (constrainedSlotKeys.length === 0) {
+      fail(`${constraintPath}.slotKeys`, 'must not be empty');
+    }
+    constrainedSlotKeys.forEach((slotKey, slotIndex) => {
+      if (!slotKeys.includes(slotKey)) {
+        fail(`${constraintPath}.slotKeys[${slotIndex}]`, `unknown hub slot ${slotKey}`);
+      }
+    });
+    const constraintMax = requirePositiveInteger(constraint.max, `${constraintPath}.max`);
+    if (constraintMax > constrainedSlotKeys.length) {
+      fail(`${constraintPath}.max`, 'must not exceed the constrained slot count');
+    }
+    return Object.freeze({
+      kind: 'maxOpenFromSlots' as const,
+      slotKeys: constrainedSlotKeys,
+      max: constraintMax,
+    });
+  });
+  if (layout.hub.rewardLookup.source !== 'allOpenTargetOffers') {
+    fail(
+      `${path}.hub.rewardLookup.source`,
+      `unknown reward lookup source ${String(layout.hub.rewardLookup.source)}`,
+    );
+  }
+  const rewardLookup = Object.freeze({
+    key: requireNonEmpty(layout.hub.rewardLookup.key, `${path}.hub.rewardLookup.key`),
+    source: 'allOpenTargetOffers' as const,
+  });
+  const generation = layout.hub.sideRoomGeneration;
+  if (generation.kind !== 'visitPressure') {
+    fail(
+      `${path}.hub.sideRoomGeneration.kind`,
+      `unknown side-room generation policy ${String(generation.kind)}`,
+    );
+  }
+  if (
+    generation.remainingSlots !== 'optional' ||
+    generation.forcedOrder !== 'availabilityRankPrefix'
+  ) {
+    fail(`${path}.hub.sideRoomGeneration`, 'must preserve optional remainder and ranked prefix');
+  }
+  const sideRoomGeneration = Object.freeze({
+    kind: 'visitPressure' as const,
+    generatedCountKey: requireNonEmpty(
+      generation.generatedCountKey,
+      `${path}.hub.sideRoomGeneration.generatedCountKey`,
+    ),
+    minimumPerVisit: Object.freeze({
+      numerator: requirePositiveInteger(
+        generation.minimumPerVisit.numerator,
+        `${path}.hub.sideRoomGeneration.minimumPerVisit.numerator`,
+      ),
+      denominator: requirePositiveInteger(
+        generation.minimumPerVisit.denominator,
+        `${path}.hub.sideRoomGeneration.minimumPerVisit.denominator`,
+      ),
+    }),
+    remainingSlots: 'optional' as const,
+    forcedOrder: 'availabilityRankPrefix' as const,
+  });
+  if (
+    sideRoomGeneration.minimumPerVisit.numerator > sideRoomGeneration.minimumPerVisit.denominator
+  ) {
+    fail(`${path}.hub.sideRoomGeneration.minimumPerVisit`, 'numerator must not exceed denominator');
   }
   const terminal = normalizeTerminal(layout.terminal, layout.biomeKey, rooms, `${path}.terminal`);
   if (terminal.kind !== 'fixedAuthoredSlot') {
@@ -544,13 +654,17 @@ function normalizeHubLayout(
       roomGameName: hubRoom.gameName,
       slots: Object.freeze(slots),
       openCount: Object.freeze({ min, max }),
+      openSlotConstraints: Object.freeze(openSlotConstraints),
       requiredVisits,
+      targetCompletion,
       restoreRoomGameName: restoreRoom.gameName,
       rewardStorePolicy: normalizeRewardStorePolicy(
         layout.hub.rewardStorePolicy,
         rewardStores,
         `${path}.hub.rewardStorePolicy`,
       ),
+      rewardLookup,
+      sideRoomGeneration,
       fields: normalizeAuthoredFields(layout.hub.fields ?? [], `${path}.hub.fields`),
     }),
     terminal,
@@ -623,6 +737,50 @@ export function validateDerivedRoomOwnership(
   for (const [index, room] of rooms.values.entries()) {
     if (room.mode.kind === 'derived' && !owners.has(room.gameName)) {
       fail(`rooms[${index}].mode`, `${room.gameName} has no layout owner`);
+    }
+  }
+}
+
+function visitRewardLookupRequirements(
+  requirement: RequirementExpression,
+  visit: (lookupKey: string) => void,
+): void {
+  if (requirement.kind === 'all' || requirement.kind === 'any') {
+    requirement.requirements.forEach((child) => visitRewardLookupRequirements(child, visit));
+    return;
+  }
+  if (requirement.kind === 'not') {
+    visitRewardLookupRequirements(requirement.requirement, visit);
+    return;
+  }
+  if (requirement.kind === 'rewardLookupExcludes') {
+    visit(requirement.lookupKey);
+  }
+}
+
+export function validateRewardLookupOwnership(
+  rooms: CatalogCollection<RoomDeclaration>,
+  layouts: CatalogCollection<BiomeLayout>,
+): void {
+  for (const [roomIndex, room] of rooms.values.entries()) {
+    if (
+      room.incomingReward.kind !== 'shop' ||
+      room.incomingReward.additionalOptionRequirements === undefined
+    ) {
+      continue;
+    }
+    const layout = layouts.byKey[room.biomeKey];
+    for (const [optionKey, requirement] of Object.entries(
+      room.incomingReward.additionalOptionRequirements,
+    )) {
+      visitRewardLookupRequirements(requirement, (lookupKey) => {
+        if (layout?.kind !== 'HubBiome' || layout.hub.rewardLookup.key !== lookupKey) {
+          fail(
+            `rooms[${roomIndex}].incomingReward.additionalOptionRequirements.${optionKey}.lookupKey`,
+            `${lookupKey} is not produced by ${room.biomeKey}`,
+          );
+        }
+      });
     }
   }
 }

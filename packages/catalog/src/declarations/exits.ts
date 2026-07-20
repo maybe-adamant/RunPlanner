@@ -31,4 +31,8 @@ export const exitTypes = [
   { key: 'FieldsExitDoor', compatibilityPolicyKey: 'Unconstrained' },
   { key: 'ShipsExitDoor', compatibilityPolicyKey: 'Unconstrained' },
   { key: 'TartarusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
+  { key: 'N_OpeningDoor', compatibilityPolicyKey: 'Unconstrained' },
+  { key: 'EphyraExitDoor', compatibilityPolicyKey: 'Unconstrained' },
+  { key: 'EphyraExitDoorReturn', compatibilityPolicyKey: 'Unconstrained' },
+  { key: 'N_SubRoomDoor', compatibilityPolicyKey: 'Unconstrained' },
 ] as const satisfies readonly ExitTypeDeclaration[];

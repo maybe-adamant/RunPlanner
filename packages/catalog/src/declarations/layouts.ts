@@ -1,4 +1,4 @@
-import type { RawLinearBiomeLayoutDeclaration } from './types';
+import type { RawBiomeLayoutDeclaration } from './types';
 
 export const biomeLayouts = [
   {
@@ -256,4 +256,71 @@ export const biomeLayouts = [
     ],
     bounds: { maxBatches: 12, maxTargets: 22 },
   },
-] as const satisfies readonly RawLinearBiomeLayoutDeclaration[];
+  {
+    biomeKey: 'N',
+    kind: 'HubBiome',
+    entries: [
+      { kind: 'fixedAuthoredSlot', slotKey: 'opening', roomGameName: 'N_Opening01' },
+      { kind: 'fixedAuthoredSlot', slotKey: 'preHub', roomGameName: 'N_PreHub01' },
+    ],
+    hub: {
+      roomGameName: 'N_Hub',
+      slots: [
+        { slotKey: 'combat01', roomGameName: 'N_Combat01', physicalDoorId: 617113 },
+        { slotKey: 'combat02', roomGameName: 'N_Combat02', physicalDoorId: 560725 },
+        { slotKey: 'combat03', roomGameName: 'N_Combat03', physicalDoorId: 560702 },
+        { slotKey: 'combat04', roomGameName: 'N_Combat04', physicalDoorId: 560707 },
+        { slotKey: 'combat05', roomGameName: 'N_Combat05', physicalDoorId: 561337 },
+        { slotKey: 'combat06', roomGameName: 'N_Combat06', physicalDoorId: 560708 },
+        { slotKey: 'combat07', roomGameName: 'N_Combat07', physicalDoorId: 617138 },
+        { slotKey: 'combat08', roomGameName: 'N_Combat08', physicalDoorId: 560699 },
+        { slotKey: 'combat09', roomGameName: 'N_Combat09', physicalDoorId: 617012 },
+        { slotKey: 'combat10', roomGameName: 'N_Combat10', physicalDoorId: 617151 },
+        { slotKey: 'combat11', roomGameName: 'N_Combat11', physicalDoorId: 561449 },
+        { slotKey: 'combat12', roomGameName: 'N_Combat12', physicalDoorId: 561389 },
+        { slotKey: 'combat13', roomGameName: 'N_Combat13', physicalDoorId: 616992 },
+        { slotKey: 'combat14', roomGameName: 'N_Combat14', physicalDoorId: 561403 },
+        { slotKey: 'combat15', roomGameName: 'N_Combat15', physicalDoorId: 560705 },
+        { slotKey: 'combat16', roomGameName: 'N_Combat16', physicalDoorId: 561354 },
+        { slotKey: 'combat17', roomGameName: 'N_Combat17', physicalDoorId: 561424 },
+        { slotKey: 'combat18', roomGameName: 'N_Combat18', physicalDoorId: 561374 },
+        { slotKey: 'combat19', roomGameName: 'N_Combat19', physicalDoorId: 560620 },
+        { slotKey: 'combat20', roomGameName: 'N_Combat20', physicalDoorId: 561418 },
+        { slotKey: 'combat21', roomGameName: 'N_Combat21', physicalDoorId: 560713 },
+        { slotKey: 'combat22', roomGameName: 'N_Combat22', physicalDoorId: 560776 },
+        { slotKey: 'combat23', roomGameName: 'N_Combat23', physicalDoorId: 561368 },
+        { slotKey: 'miniBoss01', roomGameName: 'N_MiniBoss01', physicalDoorId: 617043 },
+        { slotKey: 'miniBoss02', roomGameName: 'N_MiniBoss02', physicalDoorId: 560889 },
+      ],
+      openCount: { min: 9, max: 10 },
+      openSlotConstraints: [
+        { kind: 'maxOpenFromSlots', slotKeys: ['miniBoss01', 'miniBoss02'], max: 1 },
+      ],
+      requiredVisits: 6,
+      targetCompletion: { kind: 'requiredRoomObject', objectKey: 'SoulPylon' },
+      restoreRoomGameName: 'N_Hub',
+      rewardStorePolicy: { kind: 'none' },
+      rewardLookup: { key: 'hubRewardLookup', source: 'allOpenTargetOffers' },
+      sideRoomGeneration: {
+        kind: 'visitPressure',
+        generatedCountKey: 'numSubRoomsSpawned',
+        minimumPerVisit: { numerator: 1, denominator: 2 },
+        remainingSlots: 'optional',
+        forcedOrder: 'availabilityRankPrefix',
+      },
+      fields: [],
+    },
+    terminal: {
+      kind: 'fixedAuthoredSlot',
+      slotKey: 'preboss',
+      roomGameName: 'N_PreBoss01',
+    },
+    completion: {
+      rooms: [
+        { role: 'boss', roomGameName: 'N_Boss01' },
+        { role: 'postboss', roomGameName: 'N_PostBoss01' },
+      ],
+    },
+    fields: [],
+  },
+] as const satisfies readonly RawBiomeLayoutDeclaration[];

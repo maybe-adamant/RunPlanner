@@ -34,9 +34,9 @@ conditional-terminal, and persistent-hub pressure tests.
 Phases 2.6 and 2.7 are complete. The audited reward kernel is now the sole
 connected F/G reward authority, and the authored project/editor use schema
 version 3. Phase 2.8 is now active. Capability isolation, shared structural
-reconciliation, the dormant P/Q/H/O/I declaration imports, and global biome identity
-cleanup are complete; N remains. Phase 3 history work starts
-only after those gates pass.
+reconciliation, the dormant P/Q/H/O/I/N declaration imports, and global biome
+identity cleanup are complete; only the cross-biome closure matrix remains.
+Phase 3 history work starts only after that gate passes.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

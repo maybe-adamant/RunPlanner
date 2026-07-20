@@ -37,6 +37,7 @@ function context(
     },
     currentRoomShopOptionNames: new Set(),
     currentRoomRewardType: undefined,
+    rewardLookups: {},
     runDepthCache: 1,
     lastEventRunDepthCaches: {},
     recentEncounterPhases: [],

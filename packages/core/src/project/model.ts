@@ -36,10 +36,25 @@ export interface ShipCombatState {
   readonly wheels: Readonly<Record<string, RewardWheelState>>;
 }
 
+export type SideRoomGeneration = 'generated' | 'notGenerated';
+
+export interface EphyraSideRoomState {
+  readonly generation: SideRoomGeneration;
+  readonly enteredOrdinal: number | null;
+  readonly offer: ResolvedRewardOffer;
+}
+
+export interface EphyraCombatState {
+  readonly kind: 'ephyraCombat';
+  readonly offer: ResolvedRewardOffer;
+  readonly sideRooms: Readonly<Record<string, EphyraSideRoomState>>;
+}
+
 export type AuthoredRoomState =
   | { readonly kind: 'none' }
   | { readonly kind: 'fixed'; readonly payload?: RewardPayload }
   | { readonly kind: 'counted'; readonly offer: ResolvedRewardOffer }
+  | EphyraCombatState
   | FieldsCombatState
   | ShipCombatState
   | { readonly kind: 'shop'; readonly shop?: ShopState }

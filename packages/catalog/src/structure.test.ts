@@ -16,6 +16,14 @@ function roomIndex(gameName: string): number {
   return index;
 }
 
+function linearLayout(biomeKey: string) {
+  const layout = declarations.biomeLayouts.find((candidate) => candidate.biomeKey === biomeKey);
+  if (layout?.kind !== 'LinearBiome') {
+    throw new Error(`${biomeKey} linear layout fixture is missing`);
+  }
+  return layout;
+}
+
 function encounterIndex(key: string): number {
   const index = declarations.encounterProfiles.findIndex((profile) => profile.key === key);
   if (index < 0) {
@@ -72,7 +80,18 @@ describe('shared structural catalog vocabulary', () => {
       mode: { kind: 'derived', classification: 'hub' },
       encounterProfileKey: 'FixedIntro',
     };
-    const nCombat = { ...combat, gameName: 'N_CombatFixture', biomeKey: 'N' };
+    const nCombat = {
+      ...combat,
+      gameName: 'N_CombatFixture',
+      biomeKey: 'N',
+      requiredObjects: [
+        {
+          key: 'SoulPylon',
+          spawnTiming: 'roomEntry',
+          completionRequirement: 'destroyBeforeExit',
+        },
+      ],
+    };
     const nPreboss = {
       ...preboss,
       gameName: 'N_PreBossFixture',
@@ -95,12 +114,23 @@ describe('shared structural catalog vocabulary', () => {
           {
             slotKey: 'combat01',
             roomGameName: nCombat.gameName,
+            physicalDoorId: 1,
           },
         ],
         openCount: { min: 1, max: 1 },
+        openSlotConstraints: [],
         requiredVisits: 1,
+        targetCompletion: { kind: 'requiredRoomObject', objectKey: 'SoulPylon' },
         restoreRoomGameName: nHub.gameName,
         rewardStorePolicy: { kind: 'none' },
+        rewardLookup: { key: 'fixtureLookup', source: 'allOpenTargetOffers' },
+        sideRoomGeneration: {
+          kind: 'visitPressure',
+          generatedCountKey: 'generatedSideRooms',
+          minimumPerVisit: { numerator: 1, denominator: 2 },
+          remainingSlots: 'optional',
+          forcedOrder: 'availabilityRankPrefix',
+        },
         fields: [],
       },
       terminal: {
@@ -121,8 +151,11 @@ describe('shared structural catalog vocabulary', () => {
     const catalog = createCatalog(
       raw({
         ...declarations,
-        rooms: [...declarations.rooms, ...nRooms],
-        biomeLayouts: [...declarations.biomeLayouts, nLayout],
+        rooms: [...declarations.rooms.filter((room) => room.biomeKey !== 'N'), ...nRooms],
+        biomeLayouts: [
+          ...declarations.biomeLayouts.filter((layout) => layout.biomeKey !== 'N'),
+          nLayout,
+        ],
       }),
     );
 
@@ -134,8 +167,11 @@ describe('shared structural catalog vocabulary', () => {
       ],
       hub: {
         roomGameName: 'N_HubFixture',
-        slots: [{ slotKey: 'combat01', roomGameName: 'N_CombatFixture' }],
+        slots: [{ slotKey: 'combat01', roomGameName: 'N_CombatFixture', physicalDoorId: 1 }],
+        openSlotConstraints: [],
+        targetCompletion: { kind: 'requiredRoomObject', objectKey: 'SoulPylon' },
         rewardStorePolicy: { kind: 'none' },
+        rewardLookup: { key: 'fixtureLookup', source: 'allOpenTargetOffers' },
         fields: [],
       },
     });
@@ -251,7 +287,7 @@ describe('shared structural catalog vocabulary', () => {
             ? {
                 ...layout,
                 continuation: {
-                  ...layout.continuation,
+                  ...linearLayout('F').continuation,
                   progressionPolicy: { kind: 'fixedCount', continuationCount: 4 },
                   batchPolicy: {
                     kind: 'fields',
@@ -539,7 +575,7 @@ describe('shared structural catalog vocabulary', () => {
             ? {
                 ...layout,
                 continuation: {
-                  ...layout.continuation,
+                  ...linearLayout('F').continuation,
                   batchPolicy: { kind: 'clockwork', fields: [] },
                 },
                 terminal: {
@@ -770,7 +806,11 @@ describe('shared structural catalog vocabulary', () => {
     if (room?.gameName !== 'H_Combat01') {
       throw new Error('H_Combat01 fixture is missing');
     }
-    const invalidCapacityChildren = room.localChildren.map((child) => ({
+    const localChildren = room.localChildren;
+    if (localChildren === undefined) {
+      throw new Error('H_Combat01 local children fixture is missing');
+    }
+    const invalidCapacityChildren = localChildren.map((child) => ({
       ...child,
       maxActiveSlots: 2,
     }));
@@ -812,7 +852,7 @@ describe('shared structural catalog vocabulary', () => {
       ),
     );
 
-    const cages = room.localChildren[0];
+    const cages = localChildren[0];
     if (cages?.kind !== 'boundedRewardSlots') {
       throw new Error('H_Combat01 cages fixture is missing');
     }
@@ -981,9 +1021,11 @@ describe('shared structural catalog vocabulary', () => {
                       {
                         slotKey: 'side1',
                         roomGameName: 'F_Combat01',
+                        physicalDoorId: 1,
                         availabilityRank: 1,
                       },
                     ],
+                    rewardGeneration: 'jointUnordered',
                     fields: [{ key: 'entered', kind: 'boolean', defaultValue: false }],
                   },
                 ],
@@ -1000,22 +1042,26 @@ describe('shared structural catalog vocabulary', () => {
                   { key: 'mode', kind: 'enum', values: ['A', 'B'], defaultValue: 'A' },
                 ]
               : [],
-          continuation: {
-            ...layout.continuation,
-            rewardStorePolicy:
-              index === 0
-                ? { kind: 'sourceOfferPoint', selector: 'lastActiveWheel' }
-                : { kind: 'none' },
-            rewardStoreOverrides:
-              index === 0
-                ? [
-                    {
-                      sourceEncounterProfileKey: 'F_Opening',
-                      policy: { kind: 'none' },
-                    },
-                  ]
-                : [],
-          },
+          ...(layout.kind === 'LinearBiome'
+            ? {
+                continuation: {
+                  ...layout.continuation,
+                  rewardStorePolicy:
+                    index === 0
+                      ? { kind: 'sourceOfferPoint' as const, selector: 'lastActiveWheel' as const }
+                      : { kind: 'none' as const },
+                  rewardStoreOverrides:
+                    index === 0
+                      ? [
+                          {
+                            sourceEncounterProfileKey: 'F_Opening',
+                            policy: { kind: 'none' as const },
+                          },
+                        ]
+                      : [],
+                },
+              }
+            : {}),
         })),
       }),
     );
@@ -1049,7 +1095,15 @@ describe('shared structural catalog vocabulary', () => {
       {
         key: 'sideRooms',
         kind: 'fixedRoomSlots',
-        slots: [{ slotKey: 'side1', roomGameName: 'F_Combat01', availabilityRank: 1 }],
+        slots: [
+          {
+            slotKey: 'side1',
+            roomGameName: 'F_Combat01',
+            physicalDoorId: 1,
+            availabilityRank: 1,
+          },
+        ],
+        rewardGeneration: 'jointUnordered',
         fields: [{ key: 'entered', kind: 'boolean', defaultValue: false }],
       },
     ]);
