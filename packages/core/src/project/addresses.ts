@@ -14,6 +14,11 @@ export interface OccurrenceAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
 }
 
+export interface CompletionRoomAddress extends BiomeOwnedAddress {
+  readonly kind: 'completionRoom';
+  readonly role: 'boss' | 'postboss';
+}
+
 export interface ContinuationAddress extends BiomeOwnedAddress {
   readonly kind: 'continuation';
   readonly parentOccurrenceId: OccurrenceId;
@@ -55,6 +60,7 @@ export interface ShopOfferAddress extends BiomeOwnedAddress {
 export type SemanticAddress =
   | BiomeAddress
   | BatchRewardStoreAddress
+  | CompletionRoomAddress
   | ContinuationAddress
   | IncomingRewardAddress
   | OccurrenceAddress
@@ -110,6 +116,16 @@ export function createOccurrenceAddress(
   occurrenceId: OccurrenceId,
 ): OccurrenceAddress {
   return Object.freeze({ kind: 'occurrence', ...biomeOwner(biome), occurrenceId });
+}
+
+export function createCompletionRoomAddress(
+  biome: BiomeAddress,
+  role: CompletionRoomAddress['role'],
+): CompletionRoomAddress {
+  if (role !== 'boss' && role !== 'postboss') {
+    throw new SemanticAddressContractError('role', `unknown completion role ${String(role)}`);
+  }
+  return Object.freeze({ kind: 'completionRoom', ...biomeOwner(biome), role });
 }
 
 export function createContinuationAddress(
@@ -191,6 +207,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
         address.biomeKey,
         address.occurrenceId,
       ]);
+    case 'completionRoom':
+      return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.role]);
     case 'continuation':
     case 'batchRewardStore':
     case 'picked':

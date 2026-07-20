@@ -14,6 +14,25 @@ export {
   type RoomLifecycleProducerInput,
 } from './lifecycle';
 export {
+  LinearMaterializationContractError,
+  materializeLinearBiome,
+  type CanonicalAuthoredRoom,
+  type CanonicalBatch,
+  type CanonicalBatchRewardStore,
+  type CanonicalBiomeState,
+  type CanonicalCompletionRoom,
+  type CanonicalLinearBiome,
+  type CanonicalPhysicalExit,
+  type CanonicalResolvedIncomingReward,
+  type CanonicalRoom,
+  type CanonicalRoomReference,
+  type CanonicalShopEntryState,
+  type CanonicalShopOffer,
+  type CanonicalTarget,
+  type CanonicalTargetContinuation,
+  type CanonicalTerminalEntry,
+} from './materialization';
+export {
   type BiomeEvaluation,
   type CompletenessFindingCode,
   type CompleteBiomeEvaluation,
