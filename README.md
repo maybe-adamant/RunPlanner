@@ -43,6 +43,14 @@ bag, acquisition, and shop orchestration feed the public deterministic
 `simulateProject` composition root. F is now simulatable; G remains authorable
 but dormant until its complete product loop exists.
 
+Phase 4 is complete. The browser editor publishes simulation and semantic
+findings atomically with authored history, supports semantic finding
+navigation and keyboard undo/redo, and owns explicit New, Save, Load, Export,
+and Import operations over normalized project JSON. A browser interaction
+fixture authors the representative valid F route entirely through visible
+controls, verifies player-facing labels, and reloads equal authored and
+evaluated state.
+
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.
 Useful rules are brought forward deliberately; Lib controls, ImGui drawing,
@@ -188,14 +196,14 @@ fixtures, the app's catalog and simulator become its implementation authority.
 
 ## Current Scope
 
-The first complete product slice targets F with shared F/G foundations:
+The first complete product slice delivers F with shared F/G foundations:
 
 - explicit declarations;
 - authored linear-biome topology;
 - complete room and reward leaf defaults;
 - materialized history;
 - validation and semantic feedback;
-- a usable editor with undo/redo.
+- a usable editor with undo/redo and browser-local/JSON persistence.
 
 Before Phase 3 simulation, every remaining biome was audited and the full
 feature set was reconciled. Declarations can now be imported without editor or

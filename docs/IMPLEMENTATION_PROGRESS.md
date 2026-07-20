@@ -84,6 +84,21 @@ substituting guessed state. Adapter, application, and browser-interaction tests
 cover authored-document and deterministic-evaluation round trips, history
 reset, browser object lifecycle, and failure retention.
 
+Phase 4 Commit 6 is complete. The named browser fixture `authors, validates,
+labels, saves, and reloads the representative F project through the browser
+UI` starts from the production empty project and authors the same ten-batch,
+twenty-target golden F route through visible semantic controls. It reaches a
+valid execution-eligible evaluation, audits declaration-owned room and reward
+labels for internal-name leakage, and proves Save/New/Load equality for both
+the normalized `ProjectDocument` and deterministic `ProjectEvaluation`.
+Focused fixtures keep incomplete and early-invalid topology editable, navigate
+findings to exact semantic-owner markers, and restore then re-remove authored F
+state across a confirmed destructive route-prefix shrink. The Phase 4 history
+interaction fixtures continue to name button, keyboard, text-edit protection,
+and session-state exclusion coverage. Phase 4 closes without activating G or
+adding candidate evaluation, autosave/dirty state, Tauri, execution-plan
+compilation, or game-module work.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -786,8 +801,8 @@ Completed:
 
 Pending:
 
-Phases 2.8 and 3 have no pending items. Phase 4 Commits 1 through 5 are complete.
-Commit 6 adds the golden F product-loop closure.
+Phases 2.8, 3, and 4 have no pending items. Phase 5 is the next implementation
+frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete
