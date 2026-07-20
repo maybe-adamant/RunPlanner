@@ -1050,6 +1050,26 @@ Gate:
   projects;
 - the app is useful without Tauri packaging or game execution.
 
+### Phase 7 Data Readiness
+
+Phase 5 candidate evaluation must preserve the game-language facts needed by
+the later shared UX pass without implementing that presentation early:
+
+- candidate results retain semantic generation-point ownership;
+- support state and exclusion reasons remain typed simulation facts rather
+  than `hidden`, color, dropdown-group, or other UI states;
+- evaluation output distinguishes evaluated context from context unavailable
+  because required earlier history is missing;
+- the currently authored candidate remains assessable when it is unsupported;
+- candidate support and selected-plan validation agree for the same semantic
+  value;
+- temporary Phase 5 decoration consumes an application projection and does
+  not narrow the simulation result to the needs of the current control.
+
+These are data-shape and ownership constraints, not additional Phase 5 UX
+deliverables. The deferred presentation contract is defined in
+`POST_BIOME_UX_FEEDBACK_AND_FRONTIER.md`.
+
 ## Phase 6: Controlled Biome Expansion
 
 Implement in this order unless concrete dependencies justify a change:
@@ -1075,9 +1095,61 @@ For each biome:
 Do not create placeholder production behavior that claims a biome is simulated
 when it only has declarations or UI.
 
-## Phase 7: Desktop Shell
+Phase 5 and Phase 6 may retain temporary per-biome candidate and frontier
+controls, but their simulation results and editor boundaries must observe the
+readiness constraints in `POST_BIOME_UX_FEEDBACK_AND_FRONTIER.md`. Phase 7 must
+not require a rewrite of game rules merely to change presentation policy.
 
-Add Tauri after browser F/G proves the application architecture.
+## Phase 7: Cross-Biome UX Feedback and Frontier
+
+Begin the major shared UX pass only after every supported biome has completed
+its Phase 6 product loop. The design authority and detailed commit sequence are
+defined in `POST_BIOME_UX_FEEDBACK_AND_FRONTIER.md`.
+
+Phase 7 keeps the complete authored, simulation, validation, candidate, and
+semantic-command models as its authorities. It replaces temporary per-biome
+presentation decisions without moving game rules into React.
+
+### Deliverables
+
+- one shared semantic feedback presentation projection;
+- exact local warning/invalid decoration and upward route/biome/project status
+  propagation;
+- coverage-derived blocked presentation that remains editable;
+- compact primary/related findings presentation and semantic navigation;
+- typed, injected candidate presentation policies;
+- support-first and diagnostic candidate views without authored migration;
+- candidate-aware room categories and selectors across every active biome;
+- one shared frontier-outcome projection covering ordinary, independent-
+  terminal, conditional-terminal, fixed-hub-terminal, and blocked states;
+- a unified ordinary frontier-advance interaction with explicit retained-
+  invalid repair actions;
+- cross-biome accessibility, keyboard, visual-hierarchy, and responsiveness
+  polish.
+
+### Acceptance
+
+- every active biome uses the shared feedback and candidate presentation
+  language;
+- selected invalid authored values remain visible and editable under every
+  candidate policy;
+- unselected candidate visibility can change through typed policy without
+  changing simulation or project state;
+- blocked owners come from explicit evaluation coverage rather than finding
+  order or UI inference;
+- all frontier layout families retain their domain semantics while ordinary
+  users no longer choose an internal continuation representation;
+- no room eligibility, reward support, force, history, or terminal rule exists
+  only in UI code;
+- representative interaction fixtures cover F/G/H/I/N/O/P/Q feedback,
+  candidate, and frontier behavior;
+- the full repository test suite, production build, accessibility checks, and
+  measured responsiveness pass.
+
+## Phase 8: Desktop Shell
+
+Add Tauri after the browser application proves the complete cross-biome
+simulation and shared UX architecture.
 
 ### Deliverables
 
@@ -1096,7 +1168,7 @@ Add Tauri after browser F/G proves the application architecture.
 - filesystem permissions are narrow and explicit;
 - packaged Windows behavior passes a focused smoke test.
 
-## Phase 8: Simulation Conformance and Game Protocol
+## Phase 9: Simulation Conformance and Game Protocol
 
 Begin only after the readiness gate in `GAME_INTEGRATION_BOUNDARY.md` passes.
 
@@ -1113,7 +1185,7 @@ Begin only after the readiness gate in `GAME_INTEGRATION_BOUNDARY.md` passes.
 
 The game module remains a declarative consumer and auditor.
 
-## Phase 9: Hardening
+## Phase 10: Hardening
 
 - project schema migrations;
 - corruption and recovery UX;
@@ -1150,4 +1222,4 @@ Leave behind:
 - commit/reload publication callbacks;
 - allocation rules specific to the game draw loop;
 - fake-ImGui tests;
-- runtime execution compilation until Phase 8.
+- runtime execution compilation until Phase 9.

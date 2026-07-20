@@ -305,6 +305,12 @@ impossible values may be absent. Before contextual candidate simulation is
 available, selectors show stable declaration-derived domains without
 pretending they are validated.
 
+The post-Phase-6 UX pass refines this initial policy through typed candidate
+presentation rules defined in `POST_BIOME_UX_FEEDBACK_AND_FRONTIER.md`. A
+currently authored invalid value always remains visible; an unselected
+unsupported candidate may later be hidden by an explicit presentation policy.
+Simulation continues to own support and exclusion reasons.
+
 Later biomes blocked by an earlier incomplete or invalid biome remain visible
 and editable. Their contextual validity is unavailable because the required
 history does not exist. The view should communicate that state without
@@ -402,7 +408,7 @@ Do not introduce:
 - probability or likelihood decoration for valid possible choices;
 - findings keyed by rendered index;
 - a second serialized UI tree;
-- hidden invalid choices;
+- hiding a currently authored invalid choice;
 - automatic surviving-exit selection;
 - graph coordinates as domain topology;
 - a large generic form generator that obscures room semantics;
