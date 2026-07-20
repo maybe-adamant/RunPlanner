@@ -20,6 +20,7 @@ import {
 import { allocateOccurrenceId } from '../application/occurrenceIds';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import { useAppDispatch } from '../application/store';
+import { SemanticOwnerMarker } from './EvaluationFeedback';
 import { RoomSelector } from './RoomSelector';
 import { RoomStateEditor } from './RoomStateEditor';
 
@@ -93,7 +94,12 @@ function OrdinaryTargetEditor({
         <div className="exit-content">
           <div className="exit-heading">
             <h4>Exit {exitIndex}</h4>
-            <span className="neutral-status">Unspecified</span>
+            <div className="owner-markers">
+              <SemanticOwnerMarker
+                address={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
+              />
+              <span className="neutral-status">Unspecified</span>
+            </div>
           </div>
           <RoomSelector
             biomeKey={biome.biomeKey}
@@ -144,7 +150,15 @@ function OrdinaryTargetEditor({
             <p className="card-kicker">Exit {exitIndex}</p>
             <h4>{roomDeclaration.label}</h4>
           </div>
-          <span className="neutral-status">{available ? roomDeclaration.kind : 'Unavailable'}</span>
+          <div className="owner-markers">
+            <SemanticOwnerMarker
+              address={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
+            />
+            <SemanticOwnerMarker address={createOccurrenceAddress(biome, room.occurrenceId)} />
+            <span className="neutral-status">
+              {available ? roomDeclaration.kind : 'Unavailable'}
+            </span>
+          </div>
         </div>
         <RoomSelector
           biomeKey={biome.biomeKey}
@@ -206,11 +220,17 @@ function BatchEditor({
           <p className="card-kicker">Decision</p>
           <h3>Doors from {parentRoom.label}</h3>
         </div>
-        <span className="neutral-status">
-          {continuation.pickedExitIndex === null
-            ? 'No picked exit'
-            : `Exit ${continuation.pickedExitIndex} picked`}
-        </span>
+        <div className="owner-markers">
+          <SemanticOwnerMarker address={address} />
+          <SemanticOwnerMarker
+            address={createPickedAddress(biome, continuation.parentOccurrenceId)}
+          />
+          <span className="neutral-status">
+            {continuation.pickedExitIndex === null
+              ? 'No picked exit'
+              : `Exit ${continuation.pickedExitIndex} picked`}
+          </span>
+        </div>
       </header>
 
       {continuation.rewardStore.kind === 'authoredBaseStore' && (
@@ -218,7 +238,12 @@ function BatchEditor({
           className="field-control batch-reward-store"
           htmlFor={`batch-${continuation.parentOccurrenceId}-reward-store`}
         >
-          <span>Reward pool</span>
+          <span className="field-label-with-marker">
+            Reward pool
+            <SemanticOwnerMarker
+              address={createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId)}
+            />
+          </span>
           <select
             id={`batch-${continuation.parentOccurrenceId}-reward-store`}
             onChange={(event) =>
@@ -328,10 +353,17 @@ function TerminalEditor({
   const dispatch = useAppDispatch();
   const parent = occurrence(topology, continuation.parentOccurrenceId);
   const parentRoom = declaration(catalog, parent);
-  const available = new Set(generatedExitIndexes(parentRoom));
+  const availableExitIndexes = generatedExitIndexes(parentRoom);
+  const available = new Set(availableExitIndexes);
   const unavailableTargets = continuation.targets.filter(
     (target) => !available.has(target.exitIndex),
   );
+  const exitIndexes = [
+    ...new Set([
+      ...availableExitIndexes,
+      ...continuation.targets.map((target) => target.exitIndex),
+    ]),
+  ].sort((left, right) => left - right);
   const pickedAvailable =
     continuation.pickedExitIndex === null || available.has(continuation.pickedExitIndex);
   const address = createContinuationAddress(biome, continuation.parentOccurrenceId);
@@ -343,15 +375,52 @@ function TerminalEditor({
           <p className="card-kicker">Terminal transition</p>
           <h3>Preboss from {parentRoom.label}</h3>
         </div>
-        <span className="neutral-status">
-          {continuation.pickedExitIndex === null
-            ? 'No entered exit'
-            : `Exit ${continuation.pickedExitIndex} entered`}
-        </span>
+        <div className="owner-markers">
+          <SemanticOwnerMarker address={address} />
+          <SemanticOwnerMarker
+            address={createPickedAddress(biome, continuation.parentOccurrenceId)}
+          />
+          <span className="neutral-status">
+            {continuation.pickedExitIndex === null
+              ? 'No entered exit'
+              : `Exit ${continuation.pickedExitIndex} entered`}
+          </span>
+        </div>
       </header>
 
       <div className="exit-list">
-        {continuation.targets.map((target) => {
+        {exitIndexes.map((exitIndex) => {
+          const target = continuation.targets.find(
+            (candidate) => candidate.exitIndex === exitIndex,
+          );
+          if (target === undefined) {
+            return (
+              <div className="exit-row" data-available="true" key={exitIndex}>
+                <div className="exit-marker" aria-hidden="true" />
+                <div className="exit-content">
+                  <div className="exit-heading">
+                    <div>
+                      <p className="card-kicker">Exit {exitIndex}</p>
+                      <h4>{exitIndex === 1 ? 'Preboss Shop' : 'Free Reward'}</h4>
+                    </div>
+                    <div className="owner-markers">
+                      <SemanticOwnerMarker
+                        address={createTargetAddress(
+                          biome,
+                          continuation.parentOccurrenceId,
+                          exitIndex,
+                        )}
+                      />
+                      <span className="neutral-status">Missing offer</span>
+                    </div>
+                  </div>
+                  <p className="fixed-room-state">
+                    Rebuild this Preboss transition to restore its derived offer.
+                  </p>
+                </div>
+              </div>
+            );
+          }
           const room = occurrence(topology, target.occurrenceId);
           const isAvailable = available.has(target.exitIndex);
           return (
@@ -380,7 +449,19 @@ function TerminalEditor({
                     <p className="card-kicker">Exit {target.exitIndex}</p>
                     <h4>{target.exitIndex === 1 ? 'Preboss Shop' : 'Free Reward'}</h4>
                   </div>
-                  {!isAvailable && <span className="neutral-status">Unavailable</span>}
+                  <div className="owner-markers">
+                    <SemanticOwnerMarker
+                      address={createTargetAddress(
+                        biome,
+                        continuation.parentOccurrenceId,
+                        target.exitIndex,
+                      )}
+                    />
+                    <SemanticOwnerMarker
+                      address={createOccurrenceAddress(biome, room.occurrenceId)}
+                    />
+                    {!isAvailable && <span className="neutral-status">Unavailable</span>}
+                  </div>
                 </div>
                 <RoomStateEditor biome={biome} catalog={catalog} occurrence={room} />
               </div>
@@ -464,7 +545,10 @@ function FrontierEditor({
   return (
     <section className="frontier-actions">
       <div>
-        <p className="card-kicker">Active frontier</p>
+        <div className="owner-markers frontier-owner">
+          <p className="card-kicker">Active frontier</p>
+          <SemanticOwnerMarker address={address} />
+        </div>
         <h3>Continue from {parentRoom.label}</h3>
         <p>These are structural authoring actions; eligibility is not evaluated yet.</p>
       </div>

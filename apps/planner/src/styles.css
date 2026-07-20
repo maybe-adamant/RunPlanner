@@ -81,6 +81,40 @@ button:focus-visible {
   font-size: 0.8rem;
 }
 
+.status-badge {
+  padding: 5px 9px;
+  border: 1px solid #3b3c46;
+  border-radius: 999px;
+  color: #aaa7af;
+  background: rgb(255 255 255 / 3%);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.status-badge[data-tone='valid'] {
+  border-color: rgb(104 186 137 / 42%);
+  color: #9bd7af;
+  background: rgb(60 130 84 / 12%);
+}
+
+.status-badge[data-tone='incomplete'] {
+  border-color: rgb(226 185 113 / 42%);
+  color: #e2b971;
+  background: rgb(226 185 113 / 9%);
+}
+
+.status-badge[data-tone='invalid'] {
+  border-color: rgb(218 115 115 / 42%);
+  color: #e7a1a1;
+  background: rgb(150 53 53 / 12%);
+}
+
+.status-badge[data-tone='blocked'] {
+  border-color: rgb(132 130 143 / 42%);
+  color: #aaa7b3;
+  background: rgb(100 98 112 / 10%);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -112,6 +146,97 @@ button:disabled {
   margin-top: 22px;
   padding-bottom: 1px;
   border-bottom: 1px solid #303139;
+}
+
+.project-findings {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #2e2f38;
+  border-radius: 10px;
+  background: rgb(28 29 35 / 72%);
+}
+
+.project-findings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-findings-heading .eyebrow {
+  margin-bottom: 2px;
+}
+
+.project-findings-heading h2 {
+  margin: 0;
+  color: #f0ebe3;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.findings-count {
+  display: grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid #464752;
+  border-radius: 999px;
+  color: #c8c2ca;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.findings-empty {
+  margin: 8px 0 0;
+  color: #8f8c95;
+  font-size: 0.84rem;
+}
+
+.findings-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 7px;
+  padding: 0;
+  margin: 10px 0 0;
+  list-style: none;
+}
+
+.findings-list button {
+  display: grid;
+  width: 100%;
+  gap: 2px;
+  padding: 9px 10px;
+  border: 1px solid #3b3c46;
+  border-radius: 8px;
+  color: inherit;
+  background: rgb(15 16 20 / 45%);
+  text-align: left;
+  cursor: pointer;
+}
+
+.findings-list button:hover,
+.findings-list button[data-selected='true'] {
+  border-color: rgb(226 185 113 / 55%);
+  background: rgb(226 185 113 / 7%);
+}
+
+.finding-title {
+  color: #f0e9df;
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.finding-destination {
+  color: #bba3d6;
+  font-size: 0.73rem;
+  font-weight: 650;
+}
+
+.finding-description {
+  margin-top: 3px;
+  color: #98959e;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .route-tab {
@@ -212,6 +337,41 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 7px;
+}
+
+.owner-markers,
+.field-label-with-marker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.frontier-owner {
+  justify-content: flex-start;
+}
+
+.semantic-owner-marker {
+  display: none;
+}
+
+.semantic-owner-marker[data-has-findings='true'] {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid rgb(218 115 115 / 52%);
+  border-radius: 999px;
+  color: #f0b0b0;
+  background: rgb(150 53 53 / 18%);
+  font-size: 0.7rem;
+  font-weight: 750;
+  line-height: 1;
+  scroll-margin-block: 35vh;
+}
+
+.semantic-owner-marker[data-selected='true'] {
+  outline: 2px solid #e2b971;
+  outline-offset: 3px;
 }
 
 .neutral-status {
@@ -380,6 +540,16 @@ select {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #353640;
+}
+
+.room-state-with-marker {
+  display: grid;
+}
+
+.room-state-with-marker > .semantic-owner-marker[data-has-findings='true'] {
+  z-index: 1;
+  justify-self: end;
+  margin: 9px 6px -29px 0;
 }
 
 .fixed-room-state {

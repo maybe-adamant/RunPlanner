@@ -3,8 +3,10 @@ import {
   type AuthoredRoutePlan,
   type Catalog,
   type CatalogSummary,
+  type ProjectRouteEvaluation,
 } from '@run-planner/core';
 
+import { presentProjectStatus, presentRouteStatus } from '../application/evaluationProjection';
 import {
   authoredProjectCommandDispatched,
   authoredProjectRedoRequested,
@@ -21,9 +23,11 @@ import {
   selectCanRedoProject,
   selectCanUndoProject,
   selectPresentProject,
+  selectProjectEvaluation,
   useAppDispatch,
   useAppSelector,
 } from '../application/store';
+import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
 import { FBiomeEditor } from './FBiomeEditor';
 
 interface AppProps {
@@ -50,11 +54,13 @@ function RouteOverview({
   label,
   navigation,
   route,
+  routeEvaluation,
 }: {
   readonly catalog: Catalog;
   readonly label: string;
   readonly navigation: RouteEditorNavigation;
   readonly route: AuthoredRoutePlan;
+  readonly routeEvaluation: ProjectRouteEvaluation;
 }) {
   const dispatch = useAppDispatch();
   const currentPrefixAvailable =
@@ -75,7 +81,11 @@ function RouteOverview({
           <p className="eyebrow">Route settings</p>
           <h2>{label}</h2>
         </div>
-        <span className="neutral-status">{route.biomes.length} configured</span>
+        <div className="panel-heading-actions">
+          <SemanticOwnerMarker address={createRouteAddress(route.routeKey)} />
+          <StatusBadge status={presentRouteStatus(routeEvaluation)} />
+          <span className="neutral-status">{route.biomes.length} configured</span>
+        </div>
       </header>
       <label className="field-control" htmlFor={`${route.routeKey}-configured-prefix`}>
         <span>Configured biomes</span>
@@ -132,6 +142,7 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
     (state) => state.editorSession.activeUnderworldPanel,
   );
   const project = useAppSelector(selectPresentProject);
+  const evaluation = useAppSelector(selectProjectEvaluation);
   const canUndo = useAppSelector(selectCanUndoProject);
   const canRedo = useAppSelector(selectCanRedoProject);
   const dispatch = useAppDispatch();
@@ -139,17 +150,25 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
   const surface = project.routes.find((route) => route.routeKey === 'Surface');
   const underworldNavigation = editorNavigation.routes.Underworld;
   const surfaceNavigation = editorNavigation.routes.Surface;
+  const underworldEvaluation = evaluation.routes.find((route) => route.routeKey === 'Underworld');
+  const surfaceEvaluation = evaluation.routes.find((route) => route.routeKey === 'Surface');
 
   if (
     underworld === undefined ||
     surface === undefined ||
     underworldNavigation === undefined ||
-    surfaceNavigation === undefined
+    surfaceNavigation === undefined ||
+    underworldEvaluation === undefined ||
+    surfaceEvaluation === undefined
   ) {
     throw new Error('Authored project is missing a declared route');
   }
 
   const fPlan = underworld.biomes.find((biome) => biome.biomeKey === 'F');
+  const fEvaluation = underworldEvaluation.biomes.find((biome) => biome.biomeKey === 'F');
+  if (fPlan !== undefined && fEvaluation === undefined) {
+    throw new Error('Configured Erebus is missing its evaluation');
+  }
   const configuredUnderworldPanels = underworldNavigation.biomePanels.filter((panel) =>
     underworld.biomes.some((biome) => biome.biomeKey === panel.biomeKey),
   );
@@ -165,6 +184,7 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
         </div>
         <div className="header-actions">
           <span className="foundation-status">Project editor</span>
+          <StatusBadge status={presentProjectStatus(evaluation)} />
           <button
             disabled={!canUndo}
             onClick={() => dispatch(authoredProjectUndoRequested())}
@@ -197,6 +217,8 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
         ))}
       </nav>
 
+      <ProjectFindings catalog={catalog} evaluation={evaluation} />
+
       {activeSection === 'underworld' && (
         <div className="editor-workspace">
           <nav className="panel-navigation" aria-label="Underworld panels">
@@ -228,9 +250,15 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
                 label="Underworld"
                 navigation={underworldNavigation}
                 route={underworld}
+                routeEvaluation={underworldEvaluation}
               />
-            ) : fPlan !== undefined ? (
-              <FBiomeEditor catalog={catalog} plan={fPlan} routeKey={underworld.routeKey} />
+            ) : fPlan !== undefined && fEvaluation !== undefined ? (
+              <FBiomeEditor
+                catalog={catalog}
+                evaluation={fEvaluation}
+                plan={fPlan}
+                routeKey={underworld.routeKey}
+              />
             ) : null}
           </div>
         </div>
@@ -250,6 +278,7 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
               label="Surface"
               navigation={surfaceNavigation}
               route={surface}
+              routeEvaluation={surfaceEvaluation}
             />
           </div>
         </div>

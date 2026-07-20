@@ -1,15 +1,23 @@
-import type { Catalog, LinearBiomePlan, RoomDeclaration } from '@run-planner/core';
+import type {
+  Catalog,
+  FProjectEvaluation,
+  LinearBiomePlan,
+  RoomDeclaration,
+} from '@run-planner/core';
 import { createBiomeAddress, createOccurrenceAddress } from '@run-planner/core';
 import { useState } from 'react';
 
 import { allocateOccurrenceId } from '../application/occurrenceIds';
+import { presentBiomeStatus } from '../application/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import { useAppDispatch } from '../application/store';
 import { FTopologyEditor } from './FTopologyEditor';
+import { SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
 import { RoomStateEditor } from './RoomStateEditor';
 
 interface FBiomeEditorProps {
   readonly catalog: Catalog;
+  readonly evaluation: FProjectEvaluation;
   readonly plan: LinearBiomePlan;
   readonly routeKey: string;
 }
@@ -34,7 +42,7 @@ function openingRooms(catalog: Catalog, biomeKey: string): readonly RoomDeclarat
   });
 }
 
-export function FBiomeEditor({ catalog, plan, routeKey }: FBiomeEditorProps) {
+export function FBiomeEditor({ catalog, evaluation, plan, routeKey }: FBiomeEditorProps) {
   const dispatch = useAppDispatch();
   const [pendingOpening, setPendingOpening] = useState('');
   const options = openingRooms(catalog, plan.biomeKey);
@@ -49,7 +57,10 @@ export function FBiomeEditor({ catalog, plan, routeKey }: FBiomeEditorProps) {
             <p className="eyebrow">{routeKey} · F</p>
             <h2 id="f-biome-title">Erebus</h2>
           </div>
-          <span className="neutral-status">Not started</span>
+          <div className="panel-heading-actions">
+            <SemanticOwnerMarker address={biome} />
+            <StatusBadge status={presentBiomeStatus(evaluation)} />
+          </div>
         </header>
 
         <div className="empty-topology">
@@ -113,7 +124,8 @@ export function FBiomeEditor({ catalog, plan, routeKey }: FBiomeEditorProps) {
           <h2 id="f-biome-title">Erebus</h2>
         </div>
         <div className="panel-heading-actions">
-          <span className="neutral-status">Authored</span>
+          <SemanticOwnerMarker address={biome} />
+          <StatusBadge status={presentBiomeStatus(evaluation)} />
           <button
             className="danger-action"
             onClick={() => {
@@ -136,6 +148,7 @@ export function FBiomeEditor({ catalog, plan, routeKey }: FBiomeEditorProps) {
             <h3>Opening</h3>
           </div>
           <span className="room-kind">Opening</span>
+          <SemanticOwnerMarker address={createOccurrenceAddress(biome, start.occurrenceId)} />
         </div>
         <label htmlFor="f-authored-opening">Room</label>
         <select

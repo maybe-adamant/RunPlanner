@@ -14,6 +14,7 @@ import {
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import { useAppDispatch } from '../application/store';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
+import { SemanticOwnerMarker } from './EvaluationFeedback';
 
 interface RoomStateEditorProps {
   readonly biome: BiomeAddress;
@@ -57,25 +58,37 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
     if (rewardType === undefined) {
       throw new Error(`${room.gameName} fixed reward is missing`);
     }
-    return <p className="fixed-room-state">Fixed reward: {rewardType.label}</p>;
+    return (
+      <div className="room-state-with-marker">
+        <SemanticOwnerMarker
+          address={createIncomingRewardAddress(biome, occurrence.occurrenceId)}
+        />
+        <p className="fixed-room-state">Fixed reward: {rewardType.label}</p>
+      </div>
+    );
   }
   if (state.kind === 'counted' || state.kind === 'freeReward') {
     return (
-      <CountedRewardEditor
-        binding={countedBinding(room, state.kind)}
-        catalog={catalog}
-        idPrefix={idPrefix}
-        offer={state.offer}
-        onReplace={(value) =>
-          dispatch(
-            authoredProjectCommandDispatched({
-              kind: 'ReplaceIncomingReward',
-              reward: createIncomingRewardAddress(biome, occurrence.occurrenceId),
-              value,
-            }),
-          )
-        }
-      />
+      <div className="room-state-with-marker">
+        <SemanticOwnerMarker
+          address={createIncomingRewardAddress(biome, occurrence.occurrenceId)}
+        />
+        <CountedRewardEditor
+          binding={countedBinding(room, state.kind)}
+          catalog={catalog}
+          idPrefix={idPrefix}
+          offer={state.offer}
+          onReplace={(value) =>
+            dispatch(
+              authoredProjectCommandDispatched({
+                kind: 'ReplaceIncomingReward',
+                reward: createIncomingRewardAddress(biome, occurrence.occurrenceId),
+                value,
+              }),
+            )
+          }
+        />
+      </div>
     );
   }
   if (state.kind === 'fieldsCombat' || state.kind === 'shipCombat') {
@@ -105,8 +118,16 @@ export function RoomStateEditor({ biome, catalog, occurrence }: RoomStateEditorP
         return (
           <section className="shop-offer" key={slot.key}>
             <div className="shop-offer-heading">
-              <h4>{slot.label}</h4>
+              <div className="owner-markers">
+                <h4>{slot.label}</h4>
+                <SemanticOwnerMarker
+                  address={createShopOfferAddress(biome, occurrence.occurrenceId, slot.key)}
+                />
+              </div>
               <label className="purchase-control" htmlFor={`${offerPrefix}-purchased`}>
+                <SemanticOwnerMarker
+                  address={createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key)}
+                />
                 <input
                   checked={offerState.purchased}
                   id={`${offerPrefix}-purchased`}

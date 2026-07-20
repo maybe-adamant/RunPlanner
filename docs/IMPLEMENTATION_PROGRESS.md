@@ -51,6 +51,17 @@ offers only the fully editable and simulatable F prefix. Production boots an
 empty project, Underworld exposes `None` or `Erebus`, Surface remains empty,
 and configured biome navigation appears only after its prefix is authored.
 
+Phase 4 Commit 3 is complete. The application derives one finding index keyed
+by exact semantic owner, supplies explicit player-facing copy for every Phase
+3 finding code, and projects project, route, and F biome evaluation status.
+The project findings surface navigates through transient editor-session state
+to the owning route and F panel, then focuses and scrolls the exact semantic
+owner marker. Existing start, continuation, target, picked, reward, occurrence,
+shop, and terminal surfaces expose those markers without adding UI identity to
+the authored project or history. Finding presentation renders declaration and
+structural labels rather than evidence, game names, occurrence IDs, or raw
+codes.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -753,10 +764,9 @@ Completed:
 
 Pending:
 
-Phases 2.8 and 3 have no pending items. Phase 4 Commits 1 and 2 are complete.
-Commits 3 through 6 add status/findings navigation, keyboard history
-interaction, browser persistence and JSON transfer, and the golden F
-product-loop closure.
+Phases 2.8 and 3 have no pending items. Phase 4 Commits 1 through 3 are complete.
+Commits 4 through 6 add keyboard history interaction, browser persistence and
+JSON transfer, and the golden F product-loop closure.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete
