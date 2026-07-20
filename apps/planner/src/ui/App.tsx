@@ -1,15 +1,9 @@
-import {
-  canRedoProjectHistory,
-  canUndoProjectHistory,
-  type AuthoredRoutePlan,
-  type Catalog,
-  type CatalogSummary,
-} from '@run-planner/core';
+import type { AuthoredRoutePlan, Catalog, CatalogSummary } from '@run-planner/core';
 
 import {
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
-} from '../application/authoredProjectSlice';
+} from '../application/projectWorkspaceSlice';
 import type { EditorNavigation } from '../application/editorNavigation';
 import {
   sectionSelected,
@@ -17,7 +11,13 @@ import {
   type PlannerSection,
   type UnderworldPanel,
 } from '../application/editorSessionSlice';
-import { useAppDispatch, useAppSelector } from '../application/store';
+import {
+  selectCanRedoProject,
+  selectCanUndoProject,
+  selectPresentProject,
+  useAppDispatch,
+  useAppSelector,
+} from '../application/store';
 import { FBiomeEditor } from './FBiomeEditor';
 
 interface AppProps {
@@ -72,8 +72,9 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
   const activeUnderworldPanel = useAppSelector(
     (state) => state.editorSession.activeUnderworldPanel,
   );
-  const history = useAppSelector((state) => state.authoredProject);
-  const project = history.present;
+  const project = useAppSelector(selectPresentProject);
+  const canUndo = useAppSelector(selectCanUndoProject);
+  const canRedo = useAppSelector(selectCanRedoProject);
   const dispatch = useAppDispatch();
   const underworld = project.routes.find((route) => route.routeKey === 'Underworld');
   const surface = project.routes.find((route) => route.routeKey === 'Surface');
@@ -101,14 +102,14 @@ export function App({ catalog, catalogSummary, editorNavigation }: AppProps) {
         <div className="header-actions">
           <span className="foundation-status">Authored editor smoke</span>
           <button
-            disabled={!canUndoProjectHistory(history)}
+            disabled={!canUndo}
             onClick={() => dispatch(authoredProjectUndoRequested())}
             type="button"
           >
             Undo
           </button>
           <button
-            disabled={!canRedoProjectHistory(history)}
+            disabled={!canRedo}
             onClick={() => dispatch(authoredProjectRedoRequested())}
             type="button"
           >

@@ -33,6 +33,15 @@ promotion, and complete-valid, complete-invalid, incomplete, deterministic,
 empty-project, blocked-downstream, repeated-room, counter, force, terminal, and
 reward/shop golden assertions.
 
+Phase 4 Commit 1 is complete. The application composition root now injects the
+pure project evaluator into one Redux-owned project workspace. That workspace
+atomically publishes semantic `ProjectHistory` and the `ProjectEvaluation` for
+its exact present document at boot, after every effective semantic edit, undo,
+redo, and whole-project replacement. Semantic and history no-ops retain the
+existing workspace and evaluation identity. Application selectors expose the
+present project, history availability, and coherent evaluation without making
+derived output persisted or undoable.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -735,8 +744,10 @@ Completed:
 
 Pending:
 
-Phases 2.8 and 3 have no pending items. Phase 4 connects this public simulation
-result to the existing editor and project-persistence application loop.
+Phases 2.8 and 3 have no pending items. Phase 4 Commit 1 is complete. Commits 2
+through 6 add route-prefix authoring, status/findings navigation, keyboard
+history interaction, browser persistence and JSON transfer, and the golden F
+product-loop closure.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

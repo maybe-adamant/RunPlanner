@@ -17,8 +17,8 @@ import {
   createTargetAddress,
 } from '@run-planner/core';
 
-import { authoredProjectCommandDispatched } from '../application/authoredProjectSlice';
 import { allocateOccurrenceId } from '../application/occurrenceIds';
+import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
 import { useAppDispatch } from '../application/store';
 import { RoomSelector } from './RoomSelector';
 import { RoomStateEditor } from './RoomStateEditor';

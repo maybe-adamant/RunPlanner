@@ -4,6 +4,7 @@ import {
   createBiomeAddress,
   createProjectDocument,
   encodeProjectDocument,
+  simulateProject,
   type Catalog,
 } from '@run-planner/core';
 import { describe, expect, it } from 'vitest';
@@ -15,7 +16,6 @@ import {
   requireBiomeCapability,
 } from './capabilities';
 import { createApplicationCapabilities } from './capabilityConfiguration';
-import { authoredProjectCommandDispatched } from './authoredProjectSlice';
 import { createEditorNavigation } from './editorNavigation';
 import { createFEditorSmokeProject } from './projectBootstrap';
 import {
@@ -23,6 +23,7 @@ import {
   decodeAuthorableProjectDocument,
   parseAuthorableProjectDocument,
 } from './projectDocuments';
+import { authoredProjectCommandDispatched } from './projectWorkspaceSlice';
 import { createPlannerStore } from './store';
 import { ordinaryRoomCategories, selectRoomsForCategory } from './roomSelectorProjection';
 
@@ -208,6 +209,7 @@ describe('planner capabilities', () => {
     const store = createPlannerStore({
       catalog,
       capabilities,
+      evaluateProject: (project) => simulateProject(catalog, project),
       initialProject: widenedProject,
     });
 
@@ -366,7 +368,12 @@ describe('Phase 2.8 capability closure', () => {
   it('keeps every dormant biome outside all active application contacts', () => {
     const capabilities = createApplicationCapabilities(catalog);
     const project = createFEditorSmokeProject(catalog, capabilities);
-    const store = createPlannerStore({ catalog, capabilities, initialProject: project });
+    const store = createPlannerStore({
+      catalog,
+      capabilities,
+      evaluateProject: (value) => simulateProject(catalog, value),
+      initialProject: project,
+    });
 
     for (const { routeKey, biomeKey } of dormantPlacements) {
       for (const capability of ['authorable', 'simulatable', 'editable'] as const) {
