@@ -16,8 +16,8 @@ The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. Phase 2.8 dormant declaration closure is complete;
 Phase 3 now implements F completeness, canonical materialization, lifecycle
-composition, and event-folded history ledgers through the biome transition.
-Selected-plan legality, reward-kernel orchestration, project simulation, and
+composition, event-folded history ledgers through the biome transition, and F
+room-generation legality. Reward-kernel orchestration, project simulation, and
 candidate evaluation remain pending. The Phase 2.6 reward kernel and Phase 2.7
 F/G authority switch are implemented; the later schema-version-3 identity
 cleanup leaves those simulation contracts unchanged.
@@ -409,6 +409,13 @@ These histories remain distinct:
 - unresolved force pressure tracks eligible forced declarations not yet
   generated.
 
+The F generation validator records one immutable pressure entry for every
+physical target. The entry owns the target's exact pre-creation counter and
+creation/appearance evidence plus its eligible, optional-force,
+required-force, and final support sets. It is a validation ledger, not an
+editor candidate projection: no alternate topology or decorated option array
+is produced.
+
 Every rule declares which pre-operation or post-operation view it reads.
 `ROOM_LIFECYCLE_MODEL.md` owns that operation order. A generic row or room index
 cannot substitute for these axes.
@@ -482,6 +489,14 @@ Validation checks complete canonical facts in lifecycle order:
 
 Targets in one generated batch process in physical generation order. Each
 creation and offer updates scratch history before the next peer is validated.
+
+The current F room-generation contact projects only predicates supported by
+the normalized F declarations: `all`, `any`, `not`, biome depth-cache and
+encounter-depth ranges, entered-room record counts, and predecessor exit
+counts. The shared requirement evaluator registry remains the sole predicate
+authority. Encounter, reward, and feature predicates that do not belong to
+the current F generation surface fail the contact contract instead of reading
+invented defaults.
 
 Validation never rewrites authored topology, chooses a replacement, or repairs
 an invalid selection.
@@ -667,7 +682,7 @@ and typed evidence:
 ```ts
 interface Finding {
   code: string;
-  severity: 'incomplete' | 'invalid';
+  severity: 'error' | 'warning';
   phase?: LifecyclePhase;
   origin: SemanticAddress;
   providerKey?: string;
@@ -741,9 +756,11 @@ The initial F context is explicit: reward bags and route histories start empty;
 F begins with `enteredBiomes = 1`, `biomeDepthCache = 0`, route encounter depth
 `1`, and biome encounter depth `1`; spell-related current-run flags are false;
 the opening is already created and its reward is acquired before its exits are
-generated. The counting opening encounter advances biome encounter depth to
-`2` at encounter start, before outgoing doors are generated, and its room
-commit advances biome depth cache to `1`. Current-room shop option history
+generated. A first `biomeStarted` event owns those counter baselines; the fold
+does not infer them from empty-ledger defaults. The counting opening encounter
+advances biome encounter depth to `2` at encounter start, before outgoing doors
+are generated, and its room commit advances biome depth cache to `1`.
+Current-room shop option history
 contains the complete generated inventory while that shop's outgoing doors are
 generated. Purchases occur afterward and first affect generation when the
 already-generated next room reaches its outgoing checkpoint.

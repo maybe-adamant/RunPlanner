@@ -35,11 +35,11 @@ coverage is defined by `../MIGRATION_PROVENANCE.md`.
 
 | Feature                                      | Verified game behavior                                                                                                    | Disposition and planner projection                                                                     | Current coverage                                              | Reconsider when                                            |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- | ---------------------------------------------------------- |
-| Generated decisions                          | F uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                   | documented, declared, authored, presented; simulation pending | --                                                         |
-| Opening baseline                             | `F_Opening01..03` use counting `OpeningGeneratedF` and forced RunProgress in the progressed-save route                    | **Exact:** one counting opening encounter and its resolved reward offer                                | documented, declared, authored, presented; simulation pending | --                                                         |
+| Generated decisions                          | F uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                   | documented, declared, authored, simulated, and presented      | --                                                         |
+| Opening baseline                             | `F_Opening01..03` use counting `OpeningGeneratedF` and forced RunProgress in the progressed-save route                    | **Exact:** one counting opening encounter and its resolved reward offer                                | documented, declared, authored, simulated, and presented      | --                                                         |
 | Progression encounter variants               | `OpeningEmpty`, `FCastTutorialFight`, and `FIntroFight` depend on persistent progression                                  | **Excluded:** absent from the progressed-save baseline                                                 | documented; progressed baseline declared                      | Save-profile state becomes a project input                 |
 | Ordinary combat identity                     | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition | documented, declared                                          | Combat composition becomes an authored or validated output |
-| Room eligibility and force                   | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | documented, declared; simulation pending                      | --                                                         |
+| Room eligibility and force                   | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | documented, declared; F simulation implemented                | --                                                         |
 | Reward-store selection                       | F targets MetaProgress ratio `0.315` with adjustment speed `10`                                                           | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | documented and declared; simulation pending                   | Probability analysis or exact RNG replay is introduced     |
 | Incoming rewards and shops                   | Openings, `F_Combat01`, minibosses, and preboss force RunProgress; other producers retain concrete filters and shops      | **Exact:** occurrence reward state plus declaration-owned overrides                                    | documented, declared, authored, presented; simulation pending | --                                                         |
 | Forked preboss                               | Every predecessor exit creates `F_PreBoss01`; first is Shop and at most one additional exit is a free reward              | **Exact:** one or two terminal occurrences of the same declaration                                     | documented, declared, authored, presented; simulation pending | --                                                         |
@@ -69,9 +69,11 @@ baseline uses counting `OpeningGeneratedF` for all three opening maps.
 progression-controlled `FIntroFight`. None of these variants are production
 choices or production `unsupported` predicates.
 
-The opening begins with `biomeEncounterDepth = 1`. Its counting encounter
-increments that counter to `2` at encounter start, before outgoing doors are
-generated. Completion is not the counter mutation point.
+The opening begins with `biomeDepthCache = 0` and
+`biomeEncounterDepth = 1`. Its counting encounter increments encounter depth
+to `2` at encounter start, before outgoing doors are generated. Its later room
+commit advances biome depth cache to `1`; encounter completion is not either
+counter's mutation point.
 
 Every opening forces RunProgress and excludes `Devotion`, `RoomMoneyDrop`,
 `MaxHealthDrop`, and `MaxManaDrop`.
@@ -161,8 +163,10 @@ projection exist. Complete topology now materializes one canonical F snapshot,
 including the layout-derived `F_Boss01`/`F_PostBoss01` completion sequence.
 The picked spine now composes into canonical lifecycle history with sequential
 peer creation, timing-specific counter/store ledgers, completion-room history,
-and declared biome-local resets. Legality, reward simulation, and findings
-remain pending.
+and declared biome-local resets. F room-generation legality now validates
+physical exits, compatibility, requirements, distinct caps, mutual exclusion,
+and exact forced-pool support and emits addressed semantic findings. Reward
+simulation and its legality findings remain pending.
 Generated batches own the authored base store, Room Declarations own forced
 overrides, and counted leaves persist only their complete resolved offer under
 schema version 3.

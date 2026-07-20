@@ -3,6 +3,7 @@ export { foldFHistoryEvents, FHistoryFoldContractError } from './fold';
 export type {
   BiomeCompletedHistoryEvent,
   BiomeCounterResetHistoryEvent,
+  BiomeStartedHistoryEvent,
   CanonicalFHistory,
   EncounterHistoryEntry,
   EnteredRewardStoreHistoryEntry,

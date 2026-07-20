@@ -21,6 +21,7 @@ export {
   foldFHistoryEvents,
   type BiomeCompletedHistoryEvent,
   type BiomeCounterResetHistoryEvent,
+  type BiomeStartedHistoryEvent,
   type CanonicalFHistory,
   type EncounterHistoryEntry,
   type EnteredRewardStoreHistoryEntry,
@@ -35,6 +36,13 @@ export {
   type RoomCreationSource,
   type TargetGenerationCompletedHistoryEvent,
 } from './history';
+export {
+  evaluateFRoomGeneration,
+  FRoomGenerationContractError,
+  type FForcePressureLedgerEntry,
+  type FGenerationExclusionReason,
+  type FRoomGenerationValidation,
+} from './generation';
 export {
   LinearMaterializationContractError,
   materializeLinearBiome,
@@ -62,6 +70,7 @@ export {
   type FindingEvidence,
   type FindingEvidenceValue,
   type FindingSeverity,
+  type RoomGenerationFindingCode,
   type IncompleteBiomeEvaluation,
   type SemanticFinding,
   type SimulationPhase,

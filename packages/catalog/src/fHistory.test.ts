@@ -174,30 +174,42 @@ describe('F lifecycle composition and history ledgers', () => {
     const firstCombat = roomViews(result.rooms, firstCombatId);
     const secondCombat = roomViews(result.rooms, secondCombatId);
 
+    expect(result.events[0]).toEqual({
+      kind: 'biomeStarted',
+      sequence: 1,
+      origin: biome,
+      counters: {
+        biomeDepthCache: 0,
+        biomeEncounterDepth: 1,
+        routeEncounterDepth: 1,
+        roomHistoryOrdinal: 0,
+      },
+    });
+
     expect(start.preparation.ledgers.counters).toEqual({
       biomeDepthCache: 0,
-      biomeEncounterDepth: 0,
-      routeEncounterDepth: 0,
+      biomeEncounterDepth: 1,
+      routeEncounterDepth: 1,
       roomHistoryOrdinal: 0,
     });
     expect(start.preOutgoing?.ledgers.counters).toMatchObject({
       biomeDepthCache: 0,
-      biomeEncounterDepth: 1,
-      routeEncounterDepth: 1,
+      biomeEncounterDepth: 2,
+      routeEncounterDepth: 2,
     });
     expect(firstCombat.preparation.ledgers.counters).toMatchObject({
-      biomeDepthCache: 0,
-      biomeEncounterDepth: 1,
+      biomeDepthCache: 1,
+      biomeEncounterDepth: 2,
       roomHistoryOrdinal: 1,
     });
     expect(firstCombat.preparation.ledgers).toEqual(start.exit.ledgers);
     expect(firstCombat.preOutgoing?.ledgers.counters).toMatchObject({
-      biomeDepthCache: 0,
-      biomeEncounterDepth: 2,
+      biomeDepthCache: 1,
+      biomeEncounterDepth: 3,
     });
     expect(firstCombat.postCommit.ledgers.counters).toMatchObject({
-      biomeDepthCache: 1,
-      biomeEncounterDepth: 2,
+      biomeDepthCache: 2,
+      biomeEncounterDepth: 3,
       roomHistoryOrdinal: 2,
     });
     expect(secondCombat.preparation.ledgers.counters).toEqual(
@@ -231,6 +243,10 @@ describe('F lifecycle composition and history ledgers', () => {
     );
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result.events)).toBe(true);
+    expect(Object.isFrozen(result.events[0])).toBe(true);
+    expect(
+      result.events[0]?.kind === 'biomeStarted' && Object.isFrozen(result.events[0].counters),
+    ).toBe(true);
     expect(Object.isFrozen(result.ledgers.roomCreations)).toBe(true);
   });
 
@@ -246,15 +262,15 @@ describe('F lifecycle composition and history ledgers', () => {
       result.ledgers.roomAppearances.length,
     );
     expect(result.biomeCompletion.ledgers.counters).toEqual({
-      biomeDepthCache: 4,
-      biomeEncounterDepth: 3,
-      routeEncounterDepth: 3,
+      biomeDepthCache: 5,
+      biomeEncounterDepth: 4,
+      routeEncounterDepth: 4,
       roomHistoryOrdinal: 6,
     });
     expect(result.afterTransition.ledgers.counters).toEqual({
       biomeDepthCache: 0,
       biomeEncounterDepth: 0,
-      routeEncounterDepth: 3,
+      routeEncounterDepth: 4,
       roomHistoryOrdinal: 6,
     });
     expect(result.events.slice(-3)).toEqual([

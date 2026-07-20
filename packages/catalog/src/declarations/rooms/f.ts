@@ -19,7 +19,7 @@ export const fRooms = [
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterProfileKey: 'F_Opening',
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
+    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -40,7 +40,7 @@ export const fRooms = [
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterProfileKey: 'F_Opening',
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
+    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -61,7 +61,7 @@ export const fRooms = [
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterProfileKey: 'F_Opening',
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
+    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {

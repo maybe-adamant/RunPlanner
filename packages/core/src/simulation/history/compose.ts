@@ -222,6 +222,17 @@ export function composeFHistory(
     throw new FHistoryCompositionContractError('F history requires one canonical entry room');
   }
   const builder: EventBuilder = { events: [] };
+  const biome: BiomeAddress = createBiomeAddress(snapshot.routeKey, snapshot.biomeKey);
+  append(builder, {
+    kind: 'biomeStarted',
+    origin: biome,
+    counters: Object.freeze({
+      biomeDepthCache: 0,
+      biomeEncounterDepth: 1,
+      routeEncounterDepth: 1,
+      roomHistoryOrdinal: 0,
+    }),
+  });
   standaloneRoomCreated(builder, entry, 'biomeEntry');
   let source = entry;
 
@@ -244,7 +255,6 @@ export function composeFHistory(
     appendRoomLifecycle(builder, catalog, completion);
   }
 
-  const biome: BiomeAddress = createBiomeAddress(snapshot.routeKey, snapshot.biomeKey);
   append(builder, { kind: 'biomeCompleted', origin: biome });
   for (const effect of layout.completion.transitionEffects) {
     append(builder, {
