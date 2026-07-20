@@ -276,6 +276,47 @@ been replaced by the occurrence-based conditional-terminal contract in
 | Q completion and exclusions     | ported   | `RoomDataQ.lua`, boss encounters, `biomes/Q_GAME_RULES.md`                 | Neutral `Q_Boss01` completes the route; `Q_Boss02`, Palace postboss/story, debug miniboss, and automatic boss drops stay excluded. |
 | Q simulation activation         | deferred | `biomes/Q_GAME_RULES.md`                                                   | Keep dormant until the full Surface prefix and shared cross-biome vocabulary are implemented.                                      |
 
+## Phase 2.8 Cross-Biome Closure
+
+The normalized catalog closes the following route-owned matrix. Completion
+rooms belong to each biome layout; `Next` is derived only from route order.
+
+| Route      | Biome | Layout        | Rooms (authored) | Progression / batch     | Generated store                      | Terminal            | Completion                 | Next |
+| ---------- | ----- | ------------- | ---------------- | ----------------------- | ------------------------------------ | ------------------- | -------------------------- | ---- |
+| Underworld | F     | `LinearBiome` | 34 (32)          | eligibility / standard  | authored Run/Meta                    | forked              | `F_Boss01`, `F_PostBoss01` | G    |
+| Underworld | G     | `LinearBiome` | 30 (28)          | eligibility / standard  | authored Run/Meta                    | forked              | `G_Boss01`, `G_PostBoss01` | H    |
+| Underworld | H     | `LinearBiome` | 22 (20)          | fixed count / Fields    | none                                 | forked              | `H_Boss01`, `H_PostBoss01` | I    |
+| Underworld | I     | `LinearBiome` | 32 (28)          | eligibility / Clockwork | none                                 | generated target    | `I_Boss01`, `I_PostBoss01` | --   |
+| Surface    | N     | `HubBiome`    | 46 (43)          | persistent fixed hub    | none                                 | fixed authored slot | `N_Boss01`, `N_PostBoss01` | O    |
+| Surface    | O     | `LinearBiome` | 25 (23)          | fixed count / standard  | authored, ShipCombat source override | direct              | `O_Boss01`, `O_PostBoss01` | P    |
+| Surface    | P     | `LinearBiome` | 28 (26)          | eligibility / standard  | authored Run/Meta                    | forked              | `P_Boss01`, `P_PostBoss01` | Q    |
+| Surface    | Q     | `LinearBiome` | 23 (22)          | staged / standard       | none                                 | direct              | `Q_Boss01`                 | --   |
+
+The phase-end capability matrix remains F/G authorable, F editable, and no
+simulatable biome. P/Q/H/O/I/N are declared but cannot enter application
+projects, semantic commands, the simulatable capability, active selector
+scope, or editor navigation.
+
+The following remaining dispositions are deliberate and exhaustive at this
+boundary; each biome rule document owns its exact room-level instances:
+
+- **Simplified:** simulation proves possibility rather than probability; the
+  catalog uses a progressed-save, neutral-difficulty, NPC-free baseline; combat
+  encounter variants collapse only when they have no modeled topology,
+  counter, reward, or history distinction.
+- **Deferred:** persistent NPC entities, Chaos and other structural detours,
+  optional interactions, concrete boon/trait identities, affordability, and
+  every Phase 3 history, candidate, validation, and feedback consumer remain
+  additive future work.
+- **Excluded:** external save/profile predicates, inaccessible or debug-only
+  rooms, noncanonical difficulty variants, and automatic boss drops without a
+  modeled downstream consumer do not enter production declarations.
+- **Dormant:** P/Q/H/O/I/N have complete declarations but no authored topology
+  codec, materializer, simulator dispatch, semantic findings, or editor panel.
+
+No generic `unsupported` field, compatibility scaffold, placeholder
+materializer, or route-qualified duplicate biome authority remains.
+
 ## Port Checklist
 
 For each declaration family:

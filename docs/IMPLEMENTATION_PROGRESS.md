@@ -11,10 +11,10 @@ Phases 0, 1, 2, 2.5, 2.6, and 2.7 are complete. Phases 0 through 2.5 were
 completed under the prior reward-store ownership model; Phase 2.6 added the
 audited reward kernel as an intentionally unconnected pure subsystem; Phase
 2.7 atomically made it the sole connected F/G reward authority. Phase 2.8 is
-the current frontier. Capability isolation, the shared structural/F/G
-reconciliation slice, the dormant P/Q/H/O/I/N declaration imports, and the
-schema-version-3 route/biome identity cleanup are complete. The cross-biome
-closure matrix is the only remaining Phase 2.8 item before Phase 3 begins.
+complete: capability isolation, the shared structural/F/G reconciliation
+slice, the dormant P/Q/H/O/I/N declaration imports, schema-version-3
+route/biome identity cleanup, and the cross-biome closure matrix all pass.
+Phase 3 is the next implementation frontier and has not begun.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. It
 defines reusable single-room lifecycle profiles, occurrence-addressed history
@@ -642,15 +642,28 @@ Completed:
      against that lookup before the derived boss/postboss tail;
    - capability isolation keeps N non-authorable, non-simulatable, and
      non-editable; no Hub project codec, simulator, or editor path is activated.
+10. cross-biome closure and capability matrix:
+    - one route-ordered fixture covers every F/G/H/I/N/O/P/Q label, room and
+      authored-room count, layout kind, progression/batch/store policy,
+      terminal kind, derived completion sequence, and next-biome outcome;
+    - every normalized room reference closes against the shared biome, layout,
+      encounter, physical-exit, compatibility, and local-child authorities;
+    - completion rooms remain biome-owned derived declarations while route
+      order alone derives `F -> G -> H -> I` and `N -> O -> P -> Q` transitions;
+    - data-driven application fixtures reject every dormant biome at the
+      authorable, simulatable, editable, and semantic-command contacts;
+    - editor navigation and selector consumers expose only F, while project
+      creation/load retain the F/G authorable prefix boundary;
+    - the remaining simplifications, deferrals, and exclusions are reconciled
+      in `MIGRATION_PROVENANCE.md` without adding placeholder production state.
 
 Pending:
 
-10. cross-biome closure and capability matrix.
+Phase 2.8 has no pending items. Phase 3 work begins in a separate slice.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete
 earlier slice.
 
-Phase 3 remains blocked until Phase 2.8 passes without placeholder
-materializers, dormant biome activation, duplicated authority, or
-pre-schema-version-3 compatibility scaffolding.
+Phase 2.8 passes without placeholder materializers, dormant biome activation,
+duplicated authority, or pre-schema-version-3 compatibility scaffolding.

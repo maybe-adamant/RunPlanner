@@ -539,7 +539,7 @@ composition derives the declared biome set from route-placed normalized layouts 
 owns explicit authorable, simulatable, and editable sets. Room, layout, and
 route declarations do not carry those product flags.
 
-The active Phase 2.8 matrix is:
+The closed Phase 2.8 capability matrix is:
 
 - F and G are authorable;
 - F is editable;
@@ -579,16 +579,15 @@ proof:
 Do not declare later biomes fully supported through placeholders. Their route
 identity may exist while their application capabilities remain inactive.
 
-The verified H/I/N/O/P/Q game-rule audits and cross-biome reconciliation are
-complete. Phase 2.8 imports their declaration-only catalog slices in the
-documented pressure-test order; P, Q, H, O, I, and N are now imported. Those
-slices extend normalized catalog vocabulary only where concrete game facts
-require it, and remain inactive until their authored topology, simulator,
-validation, and editor loop is complete.
+The verified H/I/N/O/P/Q game-rule audits, dormant imports, and cross-biome
+closure are complete. Those slices extend normalized catalog vocabulary only
+where concrete game facts require it, and remain inactive until their authored
+topology, simulator, validation, and editor loop is complete.
 `biomes/P_GAME_RULES.md`, `biomes/Q_GAME_RULES.md`, `biomes/H_GAME_RULES.md`,
 `biomes/O_GAME_RULES.md`, `biomes/I_GAME_RULES.md`, and `biomes/N_GAME_RULES.md` are completed audit
-authorities. Their shared vocabulary is reconciled by this design set, so
-dormant declaration import may resume without activating later biome loops.
+authorities. Their shared vocabulary is reconciled by this design set; future
+activation must complete one biome product loop without reopening declaration
+ownership.
 
 `GAME_GENERATION_RULES.md` owns shared generation behavior.
 `ROOM_LIFECYCLE_MODEL.md` owns the ordered operations that turn an entered

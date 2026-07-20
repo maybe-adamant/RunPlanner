@@ -8,7 +8,12 @@ import {
 } from '@run-planner/core';
 import { describe, expect, it } from 'vitest';
 
-import { createPlannerCapabilities, PlannerCapabilityContractError } from './capabilities';
+import {
+  createPlannerCapabilities,
+  hasBiomeCapability,
+  PlannerCapabilityContractError,
+  requireBiomeCapability,
+} from './capabilities';
 import { createApplicationCapabilities } from './capabilityConfiguration';
 import { authoredProjectCommandDispatched } from './authoredProjectSlice';
 import { createEditorNavigation } from './editorNavigation';
@@ -345,5 +350,68 @@ describe('application project capability boundary', () => {
     expect(() =>
       parseAuthorableProjectDocument(encodeProjectDocument(dormantProject), catalog, capabilities),
     ).toThrowError(expectedError);
+  });
+});
+
+describe('Phase 2.8 capability closure', () => {
+  const dormantPlacements = [
+    { routeKey: 'Underworld', biomeKey: 'H' },
+    { routeKey: 'Underworld', biomeKey: 'I' },
+    { routeKey: 'Surface', biomeKey: 'N' },
+    { routeKey: 'Surface', biomeKey: 'O' },
+    { routeKey: 'Surface', biomeKey: 'P' },
+    { routeKey: 'Surface', biomeKey: 'Q' },
+  ] as const;
+
+  it('keeps every dormant biome outside all active application contacts', () => {
+    const capabilities = createApplicationCapabilities(catalog);
+    const project = createFEditorSmokeProject(catalog, capabilities);
+    const store = createPlannerStore({ catalog, capabilities, initialProject: project });
+
+    for (const { routeKey, biomeKey } of dormantPlacements) {
+      for (const capability of ['authorable', 'simulatable', 'editable'] as const) {
+        expect(hasBiomeCapability(capabilities, biomeKey, capability)).toBe(false);
+        expect(() =>
+          requireBiomeCapability(capabilities, biomeKey, capability, `${capability}.${biomeKey}`),
+        ).toThrowError(
+          new PlannerCapabilityContractError(
+            `${capability}.${biomeKey}`,
+            `${biomeKey} is not ${capability}`,
+          ),
+        );
+      }
+
+      expect(() =>
+        store.dispatch(
+          authoredProjectCommandDispatched({
+            kind: 'ClearTopology',
+            biome: createBiomeAddress(routeKey, biomeKey),
+          }),
+        ),
+      ).toThrowError(
+        new PlannerCapabilityContractError(
+          'command.ClearTopology',
+          `${biomeKey} is not authorable`,
+        ),
+      );
+    }
+  });
+
+  it('limits navigation and selector consumers to the editable F surface', () => {
+    const capabilities = createApplicationCapabilities(catalog);
+    const navigation = createEditorNavigation(catalog, capabilities);
+    const editorBiomeKeys = Object.values(navigation.routes).flatMap((route) =>
+      route.biomePanels.map((panel) => panel.biomeKey),
+    );
+
+    expect(editorBiomeKeys).toEqual(['F']);
+    const selectableRooms = editorBiomeKeys.flatMap((biomeKey) =>
+      ordinaryRoomCategories.flatMap((category) =>
+        selectRoomsForCategory(catalog, biomeKey, category),
+      ),
+    );
+    expect(selectableRooms.length).toBeGreaterThan(0);
+    expect(new Set(selectableRooms.map((room) => room.biomeKey))).toEqual(new Set(['F']));
+    expect(selectableRooms.some((room) => room.mode.kind !== 'authored')).toBe(false);
   });
 });

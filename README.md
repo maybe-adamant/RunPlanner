@@ -31,12 +31,11 @@ cross-biome design reconciliation are complete. P, Q, H, O, I, and N close the
 linear, scripted-linear, batch-local-slot, ordered multi-encounter,
 conditional-terminal, and persistent-hub pressure tests.
 
-Phases 2.6 and 2.7 are complete. The audited reward kernel is now the sole
+Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected F/G reward authority, and the authored project/editor use schema
-version 3. Phase 2.8 is now active. Capability isolation, shared structural
-reconciliation, the dormant P/Q/H/O/I/N declaration imports, and global biome
-identity cleanup are complete; only the cross-biome closure matrix remains.
-Phase 3 history work starts only after that gate passes.
+version 3. All eight biomes close one catalog-wide reference matrix while
+P/Q/H/O/I/N remain dormant behind the application capability boundary. Phase
+3 history work is the next implementation frontier and has not begun.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.
