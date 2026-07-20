@@ -284,23 +284,32 @@ is necessary.
 
 ## Atomic Derived Publication
 
-One simulation attempt produces one coherent result:
+One simulation attempt produces one coherent immutable result:
 
 ```ts
-type ProjectEvaluation =
-  | { status: 'ready'; result: SimulationResult }
-  | { status: 'incomplete'; result: SimulationResult }
-  | { status: 'invalid'; result: SimulationResult }
-  | { status: 'contractError'; error: ContractError };
+interface ProjectEvaluation {
+  status: 'empty' | 'valid' | 'incomplete' | 'invalid' | 'blocked';
+  projectId: string;
+  catalogVersion: string;
+  routes: readonly ProjectRouteEvaluation[];
+  findings: readonly SemanticFinding[];
+  summary: ProjectEvaluationSummary;
+}
 ```
 
-Exact names may change. The invariant does not: UI must never combine history
-from one authored snapshot with findings or candidate decoration from another.
+Complete biome results carry their canonical snapshot, lifecycle history,
+counter ledgers, room-generation proof, reward witnesses, and findings in the
+same object. Incomplete biome results cannot carry those canonical products.
+The UI must never combine history from one authored snapshot with findings or
+candidate decoration from another.
 
-Ordinary incomplete and invalid plans remain first-class editor states.
+`empty` identifies a project with no configured biome prefix and no invented
+finding. Ordinary incomplete and invalid plans remain first-class editor states.
+`blocked` identifies a configured biome beyond the registered simulator
+boundary; it is a product-capability fact, not invented game invalidity.
 Malformed project documents, impossible catalog construction, and violated
-internal invariants are contract failures and do not masquerade as user
-feedback.
+internal invariants throw at their contact boundary and do not masquerade as
+user feedback.
 
 ## Composition and Dependency Injection
 

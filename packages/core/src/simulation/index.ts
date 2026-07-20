@@ -84,3 +84,15 @@ export {
   type SemanticFinding,
   type SimulationPhase,
 } from './model';
+export {
+  ProjectSimulationContractError,
+  simulateProject,
+  type CompleteFProjectEvaluation,
+  type FProjectEvaluation,
+  type IncompleteFProjectEvaluation,
+  type ProjectEvaluation,
+  type ProjectEvaluationSummary,
+  type ProjectRouteEvaluation,
+  type RouteEvaluationSummary,
+  type RouteProcessingHorizon,
+} from './project';
