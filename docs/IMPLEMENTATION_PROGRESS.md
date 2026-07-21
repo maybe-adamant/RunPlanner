@@ -255,7 +255,7 @@ batch authority without admitting source-derived or Clockwork policies. New H
 batches default to semantic Min, `ReplaceFieldsCageOutcome` replaces only that
 batch fact, and complete maximum-capacity cage leaves remain attached to their
 room occurrences. A dormant H fixture closes the exact four-batch,
-seven-ordinary-target spine and forked preboss, round-trips schema version 3,
+seven-ordinary-target spine and forked preboss, round-trips the project schema,
 and rejects malformed store/state authorities and a fifth ordinary batch. H
 remains outside authorable, simulatable, editable, navigation, profile, and
 project-simulation capabilities.
@@ -336,6 +336,17 @@ post-purchase bags, reward history, pending-shop state, and history checkpoint
 now merge while retaining one ordered witness, preventing equivalent F/G/H
 proof branches from multiplying across biome transitions. I remains dormant
 and is the next controlled biome expansion.
+
+Phase 6 I Slice 1 is complete. Schema version 4 adds exact declaration-owned
+biome state and persists I's bounded `maxNonGoalRewards` value at that owner.
+The common linear authored topology now admits a layout-derived fixed-entry
+source, `clockwork` no-store batches, repeated generated `I_PreBoss02` target
+occurrences, and picked-only WorldShop realization without a second terminal
+action. Structural completeness closes on the picked generated preboss, while
+ordinary picked-target changes retain and re-anchor downstream topology and a
+terminal pick cannot silently discard an existing continuation. Focused codec,
+command, malformed-authority, bound, and completeness fixtures pass. I remains
+non-simulatable, non-editable, and absent from application capabilities.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
@@ -1039,8 +1050,9 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices are
-complete; I authored-topology planning is the next implementation frontier.
+Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices and I
+Slice 1 are complete; I Clockwork materialization and history are the next
+implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

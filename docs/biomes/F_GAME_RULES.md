@@ -170,4 +170,4 @@ simulation and its addressed legality findings are live through the common
 project evaluator and editor candidate projection.
 Generated batches own the authored base store, Room Declarations own forced
 overrides, and counted leaves persist only their complete resolved offer under
-schema version 3.
+the current project schema.

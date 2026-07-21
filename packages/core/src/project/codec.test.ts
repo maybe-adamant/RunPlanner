@@ -8,6 +8,7 @@ import {
   ProjectDocumentContractError,
 } from './codec';
 import { createEmptyProjectDocument, createProjectDocument } from './defaults';
+import { PROJECT_DOCUMENT_SCHEMA_VERSION } from './model';
 
 function collection<T extends { readonly key: string }>(
   values: readonly T[],
@@ -103,7 +104,7 @@ const catalog: Catalog = {
 
 function rawDocument(routes: readonly unknown[]): unknown {
   return {
-    schemaVersion: 3,
+    schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
     projectId: 'project-fixture',
     name: 'Fixture Project',
     catalogVersion: catalog.version,
@@ -121,7 +122,7 @@ describe('project document codec', () => {
     const project = createEmptyProjectDocument(catalog, widerOptions);
 
     expect(project).toEqual({
-      schemaVersion: 3,
+      schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
       projectId: 'project-empty',
       name: 'Empty Project',
       catalogVersion: 'fixture-catalog-1',
@@ -145,8 +146,8 @@ describe('project document codec', () => {
     expect(project.routes[0]).toEqual({
       routeKey: 'Underworld',
       biomes: [
-        { kind: 'LinearBiome', biomeKey: 'F', topology: null },
-        { kind: 'LinearBiome', biomeKey: 'G', topology: null },
+        { kind: 'LinearBiome', biomeKey: 'F', state: {}, topology: null },
+        { kind: 'LinearBiome', biomeKey: 'G', state: {}, topology: null },
       ],
     });
     expect(project.routes[1]).toEqual({ routeKey: 'Surface', biomes: [] });
@@ -158,7 +159,7 @@ describe('project document codec', () => {
         { routeKey: 'Surface', biomes: [] },
         {
           routeKey: 'Underworld',
-          biomes: [{ kind: 'LinearBiome', biomeKey: 'F', topology: null }],
+          biomes: [{ kind: 'LinearBiome', biomeKey: 'F', state: {}, topology: null }],
         },
       ]),
       catalog,
@@ -177,7 +178,7 @@ describe('project document codec', () => {
         rawDocument([
           {
             routeKey: 'Underworld',
-            biomes: [{ kind: 'LinearBiome', biomeKey: 'G', topology: null }],
+            biomes: [{ kind: 'LinearBiome', biomeKey: 'G', state: {}, topology: null }],
           },
           { routeKey: 'Surface', biomes: [] },
         ]),
@@ -206,7 +207,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 3, received 1'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 4, received 1'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -218,7 +219,19 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 3, received 2'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 4, received 2'));
+    expect(() =>
+      decodeProjectDocument(
+        {
+          ...(rawDocument([
+            { routeKey: 'Underworld', biomes: [] },
+            { routeKey: 'Surface', biomes: [] },
+          ]) as Record<string, unknown>),
+          schemaVersion: 3,
+        },
+        catalog,
+      ),
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 4, received 3'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -261,8 +274,8 @@ describe('project document codec', () => {
       }),
     ).toThrowError(
       new ProjectDocumentContractError(
-        '$.routes[0].biomes[2]',
-        'catalog has no authored layout for H',
+        'configuredBiomeCounts.Underworld',
+        'H has no supported linear plan initializer',
       ),
     );
   });

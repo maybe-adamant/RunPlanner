@@ -104,7 +104,12 @@ function withDormantG(project: ProjectDocument): ProjectDocument {
               ...route,
               biomes: Object.freeze([
                 ...route.biomes,
-                Object.freeze({ kind: 'LinearBiome' as const, biomeKey: 'G', topology: null }),
+                Object.freeze({
+                  kind: 'LinearBiome' as const,
+                  biomeKey: 'G',
+                  state: Object.freeze({}),
+                  topology: null,
+                }),
               ]),
             })
           : route,

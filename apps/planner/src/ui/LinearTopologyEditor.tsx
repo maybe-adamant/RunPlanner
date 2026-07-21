@@ -226,6 +226,9 @@ function BatchEditor({
 }: BatchEditorProps) {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectPresentProject);
+  if (continuation.parentOccurrenceId === null) {
+    throw new Error('Layout-entry batches are not projected by the active editor');
+  }
   const parent = occurrence(topology, continuation.parentOccurrenceId);
   const parentRoom = declaration(catalog, parent);
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
@@ -468,6 +471,9 @@ function TerminalEditor({
   topology,
 }: TerminalEditorProps) {
   const dispatch = useAppDispatch();
+  if (continuation.parentOccurrenceId === null) {
+    throw new Error('Layout-entry terminals are not projected by the active editor');
+  }
   const parent = occurrence(topology, continuation.parentOccurrenceId);
   const parentRoom = declaration(catalog, parent);
   const availableExitIndexes = generatedExitIndexes(parentRoom);
@@ -709,7 +715,7 @@ function FrontierEditor({
 
 function frontierOccurrenceId(topology: LinearBiomeTopology): OccurrenceId | undefined {
   if (topology.continuations.length === 0) {
-    return topology.startOccurrenceId;
+    return topology.startOccurrenceId ?? undefined;
   }
   const last = topology.continuations.at(-1);
   if (last?.kind !== 'batch' || last.pickedExitIndex === null) {

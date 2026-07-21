@@ -1,4 +1,5 @@
 import type { Catalog, RouteDeclaration } from '../catalog';
+import { decodeBiomeState } from './biomeState';
 import { decodeLinearBiomeTopology } from './linearTopology';
 import {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
@@ -24,7 +25,7 @@ function decodeBiomePlan(
   catalog: Catalog,
 ): AuthoredBiomePlan {
   const plan = expectRecord(value, path);
-  expectExactKeys(plan, ['kind', 'biomeKey', 'topology'], path);
+  expectExactKeys(plan, ['kind', 'biomeKey', 'state', 'topology'], path);
 
   const layout = catalog.biomeLayouts.byKey[expectedBiomeKey];
   if (layout === undefined) {
@@ -52,6 +53,7 @@ function decodeBiomePlan(
   return Object.freeze({
     kind: 'LinearBiome',
     biomeKey,
+    state: decodeBiomeState(plan.state, layout, `${path}.state`),
     topology,
   });
 }

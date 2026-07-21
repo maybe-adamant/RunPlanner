@@ -18,6 +18,11 @@ export interface BiomeAddress extends BiomeOwnedAddress {
   readonly kind: 'biome';
 }
 
+export interface BiomeFieldAddress extends BiomeOwnedAddress {
+  readonly kind: 'biomeField';
+  readonly fieldKey: string;
+}
+
 export interface OccurrenceAddress extends BiomeOwnedAddress {
   readonly kind: 'occurrence';
   readonly occurrenceId: OccurrenceId;
@@ -30,23 +35,23 @@ export interface CompletionRoomAddress extends BiomeOwnedAddress {
 
 export interface ContinuationAddress extends BiomeOwnedAddress {
   readonly kind: 'continuation';
-  readonly parentOccurrenceId: OccurrenceId;
+  readonly parentOccurrenceId: OccurrenceId | null;
 }
 
 export interface BatchRewardStoreAddress extends BiomeOwnedAddress {
   readonly kind: 'batchRewardStore';
-  readonly parentOccurrenceId: OccurrenceId;
+  readonly parentOccurrenceId: OccurrenceId | null;
 }
 
 export interface TargetAddress extends BiomeOwnedAddress {
   readonly kind: 'target';
-  readonly parentOccurrenceId: OccurrenceId;
+  readonly parentOccurrenceId: OccurrenceId | null;
   readonly exitIndex: number;
 }
 
 export interface PickedAddress extends BiomeOwnedAddress {
   readonly kind: 'picked';
-  readonly parentOccurrenceId: OccurrenceId;
+  readonly parentOccurrenceId: OccurrenceId | null;
 }
 
 export interface IncomingRewardAddress extends BiomeOwnedAddress {
@@ -77,6 +82,7 @@ export type SemanticAddress =
   | ProjectAddress
   | RouteAddress
   | BiomeAddress
+  | BiomeFieldAddress
   | BatchRewardStoreAddress
   | CompletionRoomAddress
   | ContinuationAddress
@@ -138,6 +144,14 @@ export function createBiomeAddress(routeKey: string, biomeKey: string): BiomeAdd
   });
 }
 
+export function createBiomeFieldAddress(biome: BiomeAddress, fieldKey: string): BiomeFieldAddress {
+  return Object.freeze({
+    kind: 'biomeField',
+    ...biomeOwner(biome),
+    fieldKey: nonBlank(fieldKey, 'fieldKey'),
+  });
+}
+
 export function createOccurrenceAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -157,21 +171,21 @@ export function createCompletionRoomAddress(
 
 export function createContinuationAddress(
   biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId,
+  parentOccurrenceId: OccurrenceId | null,
 ): ContinuationAddress {
   return Object.freeze({ kind: 'continuation', ...biomeOwner(biome), parentOccurrenceId });
 }
 
 export function createBatchRewardStoreAddress(
   biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId,
+  parentOccurrenceId: OccurrenceId | null,
 ): BatchRewardStoreAddress {
   return Object.freeze({ kind: 'batchRewardStore', ...biomeOwner(biome), parentOccurrenceId });
 }
 
 export function createTargetAddress(
   biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId,
+  parentOccurrenceId: OccurrenceId | null,
   exitIndex: number,
 ): TargetAddress {
   return Object.freeze({
@@ -184,7 +198,7 @@ export function createTargetAddress(
 
 export function createPickedAddress(
   biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId,
+  parentOccurrenceId: OccurrenceId | null,
 ): PickedAddress {
   return Object.freeze({ kind: 'picked', ...biomeOwner(biome), parentOccurrenceId });
 }
@@ -245,6 +259,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([address.kind, address.routeKey]);
     case 'biome':
       return JSON.stringify([address.kind, address.routeKey, address.biomeKey]);
+    case 'biomeField':
+      return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.fieldKey]);
     case 'occurrence':
     case 'incomingReward':
       return JSON.stringify([

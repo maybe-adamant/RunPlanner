@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../rewardKernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 3 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 4 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -71,6 +71,10 @@ export interface FieldsCageBatchState {
 
 export type AuthoredBatchState = FieldsCageBatchState | null;
 
+export type AuthoredFieldValue = boolean | number | string;
+
+export type AuthoredBiomeState = Readonly<Record<string, AuthoredFieldValue>>;
+
 export interface RoomOccurrence {
   readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
@@ -84,7 +88,7 @@ export interface LinearTargetReference {
 
 export interface LinearBatchContinuation {
   readonly kind: 'batch';
-  readonly parentOccurrenceId: OccurrenceId;
+  readonly parentOccurrenceId: OccurrenceId | null;
   readonly rewardStore: BatchRewardStoreState;
   readonly batchState: AuthoredBatchState;
   readonly targets: readonly LinearTargetReference[];
@@ -93,7 +97,7 @@ export interface LinearBatchContinuation {
 
 export interface LinearTerminalContinuation {
   readonly kind: 'terminal';
-  readonly parentOccurrenceId: OccurrenceId;
+  readonly parentOccurrenceId: OccurrenceId | null;
   readonly targets: readonly LinearTargetReference[];
   readonly pickedExitIndex: number | null;
 }
@@ -101,7 +105,7 @@ export interface LinearTerminalContinuation {
 export type LinearContinuation = LinearBatchContinuation | LinearTerminalContinuation;
 
 export interface LinearBiomeTopology {
-  readonly startOccurrenceId: OccurrenceId;
+  readonly startOccurrenceId: OccurrenceId | null;
   readonly occurrences: readonly RoomOccurrence[];
   readonly continuations: readonly LinearContinuation[];
 }
@@ -109,6 +113,7 @@ export interface LinearBiomeTopology {
 export interface LinearBiomePlan {
   readonly kind: 'LinearBiome';
   readonly biomeKey: string;
+  readonly state: AuthoredBiomeState;
   readonly topology: LinearBiomeTopology | null;
 }
 

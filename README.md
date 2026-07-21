@@ -33,7 +33,7 @@ conditional-terminal, and persistent-hub pressure tests.
 
 Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected linear reward authority, and the authored project/editor use schema
-version 3. All eight biomes close one catalog-wide reference matrix while
+version 4. All eight biomes close one catalog-wide reference matrix while
 P/Q/O/I/N remain dormant behind the application capability boundary. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
@@ -42,6 +42,12 @@ legality, and semantic generation findings are also implemented. F reward,
 bag, acquisition, and shop orchestration feed the public deterministic
 `simulateProject` composition root. Phase 3 made F simulatable while G remained
 authorable but dormant until its complete product loop landed in Phase 5.
+
+Phase 6 has completed H's full product loop and I's dormant authorship slice.
+I now persists its bounded Clockwork setting, owns its first decision after the
+derived Intro/Story sequence, and represents repeated generated preboss targets
+without a second terminal action. I remains outside simulation, editor, and
+application capabilities until its remaining product-loop slices close.
 
 Phase 4 is complete. The browser editor publishes simulation and semantic
 findings atomically with authored history, supports semantic finding

@@ -35,6 +35,10 @@ function occurrenceId(value: unknown, path: string): OccurrenceId {
   return expectNonBlankString(value, path) as OccurrenceId;
 }
 
+function nullableOccurrenceId(value: unknown, path: string): OccurrenceId | null {
+  return value === null ? null : occurrenceId(value, path);
+}
+
 function decodePickedExitIndex(value: unknown, path: string): number | null {
   return value === null ? null : expectPositiveInteger(value, path);
 }
@@ -141,7 +145,8 @@ export function decodeLinearBiomeTopology(
 ): LinearBiomeTopology {
   if (
     layout.continuation.batchPolicy.kind !== 'standard' &&
-    layout.continuation.batchPolicy.kind !== 'fields'
+    layout.continuation.batchPolicy.kind !== 'fields' &&
+    layout.continuation.batchPolicy.kind !== 'clockwork'
   ) {
     failProjectDocument(path, `${layout.biomeKey} does not use a supported authored batch policy`);
   }
@@ -169,36 +174,49 @@ export function decodeLinearBiomeTopology(
     });
   }
 
-  const startOccurrenceId = occurrenceId(topology.startOccurrenceId, `${path}.startOccurrenceId`);
-  const start = occurrenceById.get(startOccurrenceId);
-  if (start === undefined) {
-    failProjectDocument(`${path}.startOccurrenceId`, `unknown occurrence ${startOccurrenceId}`);
-  }
-  const startRoom = requireRoom(start, catalog, layout.biomeKey);
-  if (layout.start.kind !== 'authoredStart') {
-    failProjectDocument(`${path}.startOccurrenceId`, `${layout.biomeKey} has a derived start`);
-  }
-  if (!layout.start.roomGameNames.includes(startRoom.gameName)) {
+  const startOccurrenceId = nullableOccurrenceId(
+    topology.startOccurrenceId,
+    `${path}.startOccurrenceId`,
+  );
+  if (layout.start.kind === 'authoredStart') {
+    if (startOccurrenceId === null) {
+      failProjectDocument(
+        `${path}.startOccurrenceId`,
+        `${layout.biomeKey} requires an authored start`,
+      );
+    }
+    const start = occurrenceById.get(startOccurrenceId);
+    if (start === undefined) {
+      failProjectDocument(`${path}.startOccurrenceId`, `unknown occurrence ${startOccurrenceId}`);
+    }
+    const startRoom = requireRoom(start, catalog, layout.biomeKey);
+    if (!layout.start.roomGameNames.includes(startRoom.gameName)) {
+      failProjectDocument(
+        `${start.path}.gameName`,
+        `${startRoom.gameName} is not a declared start room for ${layout.biomeKey}`,
+      );
+    }
+  } else if (startOccurrenceId !== null) {
     failProjectDocument(
-      `${start.path}.gameName`,
-      `${startRoom.gameName} is not a declared start room for ${layout.biomeKey}`,
+      `${path}.startOccurrenceId`,
+      `${layout.biomeKey} uses derived fixed entries`,
     );
   }
 
   const maximumExitIndex = maxExitIndex(catalog, layout.biomeKey);
-  if (layout.terminal.kind !== 'forkedTransition') {
-    failProjectDocument(path, `${layout.biomeKey} does not use a forked terminal transition`);
-  }
   const terminalRoom = catalog.rooms.byKey[layout.terminal.roomGameName];
-  if (terminalRoom?.entryOfferPolicy === undefined) {
+  if (terminalRoom === undefined) {
+    failProjectDocument(path, `${layout.terminal.roomGameName} is not declared`);
+  }
+  if (layout.terminal.kind === 'forkedTransition' && terminalRoom.entryOfferPolicy === undefined) {
     failProjectDocument(path, `${layout.terminal.roomGameName} has no terminal offer policy`);
   }
-  const maximumTerminalExitIndex = Math.min(
-    maximumExitIndex,
-    1 + terminalRoom.entryOfferPolicy.maxFreeRewards,
-  );
+  const maximumTerminalExitIndex =
+    layout.terminal.kind === 'forkedTransition'
+      ? Math.min(maximumExitIndex, 1 + terminalRoom.entryOfferPolicy!.maxFreeRewards)
+      : 0;
   const rawContinuations = expectArray(topology.continuations, `${path}.continuations`);
-  const continuationByParent = new Map<OccurrenceId, DecodedContinuation>();
+  const continuationByParent = new Map<OccurrenceId | null, DecodedContinuation>();
   let batchCount = 0;
   let terminalCount = 0;
   let targetCount = 0;
@@ -221,11 +239,23 @@ export function decodeLinearBiomeTopology(
     if (kind !== 'batch' && kind !== 'terminal') {
       failProjectDocument(`${continuationPath}.kind`, `unknown continuation kind ${kind}`);
     }
-    const parentOccurrenceId = occurrenceId(
+    if (kind === 'terminal' && layout.terminal.kind !== 'forkedTransition') {
+      failProjectDocument(
+        `${continuationPath}.kind`,
+        `${layout.biomeKey} does not use an independent terminal transition`,
+      );
+    }
+    const parentOccurrenceId = nullableOccurrenceId(
       rawContinuation.parentOccurrenceId,
       `${continuationPath}.parentOccurrenceId`,
     );
-    if (!occurrenceById.has(parentOccurrenceId)) {
+    if (parentOccurrenceId === null && layout.start.kind !== 'fixedEntry') {
+      failProjectDocument(
+        `${continuationPath}.parentOccurrenceId`,
+        `${layout.biomeKey} has no derived entry continuation`,
+      );
+    }
+    if (parentOccurrenceId !== null && !occurrenceById.has(parentOccurrenceId)) {
       failProjectDocument(
         `${continuationPath}.parentOccurrenceId`,
         `unknown occurrence ${parentOccurrenceId}`,
@@ -295,22 +325,28 @@ export function decodeLinearBiomeTopology(
   if (targetCount > layout.bounds.maxTargets) {
     failProjectDocument(`${path}.continuations`, `exceeds ${layout.bounds.maxTargets} targets`);
   }
+  if (layout.start.kind === 'fixedEntry' && !continuationByParent.has(null)) {
+    failProjectDocument(
+      `${path}.continuations`,
+      `${layout.biomeKey} topology must continue from its fixed entry sequence`,
+    );
+  }
 
   const orderedContinuations: LinearContinuation[] = [];
-  const spine = new Set<OccurrenceId>();
-  let currentOccurrenceId: OccurrenceId | null = startOccurrenceId;
-  while (currentOccurrenceId !== null) {
-    if (spine.has(currentOccurrenceId)) {
-      failProjectDocument(path, `continuation cycle reaches ${currentOccurrenceId}`);
+  const spine = new Set<OccurrenceId | null>();
+  let currentOwner: OccurrenceId | null | undefined = startOccurrenceId;
+  while (currentOwner !== undefined) {
+    if (spine.has(currentOwner)) {
+      failProjectDocument(path, `continuation cycle reaches ${String(currentOwner)}`);
     }
-    spine.add(currentOccurrenceId);
-    const continuation = continuationByParent.get(currentOccurrenceId);
+    spine.add(currentOwner);
+    const continuation = continuationByParent.get(currentOwner);
     if (continuation === undefined) {
       break;
     }
     orderedContinuations.push(continuation.value);
     if (continuation.value.kind === 'terminal' || continuation.value.pickedExitIndex === null) {
-      currentOccurrenceId = null;
+      currentOwner = undefined;
     } else {
       const pickedTarget = continuation.value.targets.find(
         (target) => target.exitIndex === continuation.value.pickedExitIndex,
@@ -318,7 +354,12 @@ export function decodeLinearBiomeTopology(
       if (pickedTarget === undefined) {
         failProjectDocument(continuation.path, 'picked target disappeared during normalization');
       }
-      currentOccurrenceId = pickedTarget.occurrenceId;
+      const picked = occurrenceById.get(pickedTarget.occurrenceId);
+      currentOwner =
+        layout.terminal.kind === 'generatedTarget' &&
+        picked?.gameName === layout.terminal.roomGameName
+          ? undefined
+          : pickedTarget.occurrenceId;
     }
   }
 
@@ -333,16 +374,23 @@ export function decodeLinearBiomeTopology(
   }
 
   const roles = new Map<OccurrenceId, RoomOccurrenceRole>();
-  roles.set(startOccurrenceId, 'ordinary');
-  const enteredOccurrences = new Set<OccurrenceId>([startOccurrenceId]);
-  const orderedOccurrenceIds: OccurrenceId[] = [startOccurrenceId];
+  const enteredOccurrences = new Set<OccurrenceId>();
+  const orderedOccurrenceIds: OccurrenceId[] = [];
+  if (startOccurrenceId !== null) {
+    roles.set(startOccurrenceId, 'ordinary');
+    enteredOccurrences.add(startOccurrenceId);
+    orderedOccurrenceIds.push(startOccurrenceId);
+  }
 
   for (const continuation of orderedContinuations) {
     if (continuation.kind === 'terminal') {
-      if (continuation.targets.length > 1 + terminalRoom.entryOfferPolicy.maxFreeRewards) {
+      if (
+        terminalRoom.entryOfferPolicy === undefined ||
+        continuation.targets.length > 1 + terminalRoom.entryOfferPolicy.maxFreeRewards
+      ) {
         failProjectDocument(
           path,
-          `terminal transition exceeds ${terminalRoom.entryOfferPolicy.maxFreeRewards} free rewards`,
+          `terminal transition exceeds ${terminalRoom.entryOfferPolicy?.maxFreeRewards ?? 0} free rewards`,
         );
       }
     }
@@ -368,6 +416,11 @@ export function decodeLinearBiomeTopology(
           );
         }
         role = target.exitIndex === 1 ? 'terminalShop' : 'terminalFreeReward';
+      } else if (
+        layout.terminal.kind === 'generatedTarget' &&
+        room.gameName === layout.terminal.roomGameName
+      ) {
+        role = 'terminalShop';
       } else if (room.kind === 'Intro' || room.kind === 'Opening' || room.kind === 'Preboss') {
         failProjectDocument(
           `${rawOccurrence.path}.gameName`,

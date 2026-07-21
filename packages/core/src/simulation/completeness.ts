@@ -71,13 +71,13 @@ function requireLinearLayout(catalog: Catalog, biome: BiomeAddress, plan: Linear
     );
   }
   if (
-    layout.start.kind !== 'authoredStart' ||
     (layout.continuation.batchPolicy.kind !== 'standard' &&
-      layout.continuation.batchPolicy.kind !== 'fields') ||
+      layout.continuation.batchPolicy.kind !== 'fields' &&
+      layout.continuation.batchPolicy.kind !== 'clockwork') ||
     (layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore' &&
       layout.continuation.rewardStorePolicy.kind !== 'none') ||
     layout.continuation.rewardStoreOverrides.length !== 0 ||
-    layout.terminal.kind !== 'forkedTransition'
+    (layout.terminal.kind !== 'forkedTransition' && layout.terminal.kind !== 'generatedTarget')
   ) {
     throw new CompletenessContractError(
       `catalog ${biome.biomeKey} layout is not supported by linear completeness`,
@@ -92,10 +92,37 @@ function occurrenceById(topology: LinearBiomeTopology): ReadonlyMap<OccurrenceId
 
 function continuationByParent(
   topology: LinearBiomeTopology,
-): ReadonlyMap<OccurrenceId, LinearContinuation> {
+): ReadonlyMap<OccurrenceId | null, LinearContinuation> {
   return new Map(
     topology.continuations.map((continuation) => [continuation.parentOccurrenceId, continuation]),
   );
+}
+
+function sourceRoom(
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  parentOccurrenceId: OccurrenceId | null,
+): RoomDeclaration {
+  if (parentOccurrenceId !== null) {
+    const parent = occurrences.get(parentOccurrenceId);
+    const room = parent === undefined ? undefined : catalog.rooms.byKey[parent.gameName];
+    if (room === undefined) {
+      throw new CompletenessContractError(
+        `trusted topology lost continuation source ${parentOccurrenceId}`,
+      );
+    }
+    return room;
+  }
+  if (layout.start.kind !== 'fixedEntry') {
+    throw new CompletenessContractError(`${layout.biomeKey} has no derived entry source`);
+  }
+  const source = layout.entries.at(-1) ?? layout.start;
+  const room = catalog.rooms.byKey[source.roomGameName];
+  if (room === undefined) {
+    throw new CompletenessContractError(`catalog lost fixed entry ${source.roomGameName}`);
+  }
+  return room;
 }
 
 function requiredExitIndexes(room: RoomDeclaration): readonly number[] {
@@ -105,16 +132,16 @@ function requiredExitIndexes(room: RoomDeclaration): readonly number[] {
 function findRequiredTargets(
   findings: SemanticFinding[],
   biome: BiomeAddress,
-  parent: RoomOccurrence,
+  parentOccurrenceId: OccurrenceId | null,
   room: RoomDeclaration,
   continuation: LinearContinuation,
 ): void {
   for (const exitIndex of requiredExitIndexes(room)) {
     if (!continuation.targets.some((target) => target.exitIndex === exitIndex)) {
       findings.push(
-        finding('targetMissing', createTargetAddress(biome, parent.occurrenceId, exitIndex), {
+        finding('targetMissing', createTargetAddress(biome, parentOccurrenceId, exitIndex), {
           exitIndex,
-          parentGameName: parent.gameName,
+          parentGameName: room.gameName,
         }),
       );
     }
@@ -154,35 +181,32 @@ export function evaluateLinearCompleteness(
   const occurrences = occurrenceById(topology);
   const continuations = continuationByParent(topology);
   const findings: SemanticFinding[] = [];
-  let currentOccurrenceId: OccurrenceId | null = topology.startOccurrenceId;
+  let currentOwner: OccurrenceId | null | undefined = topology.startOccurrenceId;
 
-  while (currentOccurrenceId !== null) {
-    const parent = occurrences.get(currentOccurrenceId);
-    if (parent === undefined) {
-      throw new CompletenessContractError(
-        `trusted topology lost occurrence ${currentOccurrenceId}`,
-      );
+  while (currentOwner !== undefined) {
+    const parent = currentOwner === null ? undefined : occurrences.get(currentOwner);
+    if (currentOwner !== null && parent === undefined) {
+      throw new CompletenessContractError(`trusted topology lost occurrence ${currentOwner}`);
     }
-    const room = catalog.rooms.byKey[parent.gameName];
-    if (room === undefined) {
-      throw new CompletenessContractError(`trusted topology lost room ${parent.gameName}`);
+    const room = sourceRoom(catalog, layout, occurrences, currentOwner);
+    if (parent !== undefined) {
+      findPickedShopState(findings, biome, parent);
     }
-    findPickedShopState(findings, biome, parent);
 
-    const continuation = continuations.get(currentOccurrenceId);
+    const continuation = continuations.get(currentOwner);
     if (continuation === undefined) {
       findings.push(
-        finding('continuationMissing', createContinuationAddress(biome, currentOccurrenceId), {
-          parentGameName: parent.gameName,
+        finding('continuationMissing', createContinuationAddress(biome, currentOwner), {
+          parentGameName: room.gameName,
         }),
       );
       break;
     }
 
-    findRequiredTargets(findings, biome, parent, room, continuation);
+    findRequiredTargets(findings, biome, currentOwner, room, continuation);
     if (continuation.pickedExitIndex === null) {
       findings.push(
-        finding('pickedTargetMissing', createPickedAddress(biome, currentOccurrenceId), {
+        finding('pickedTargetMissing', createPickedAddress(biome, currentOwner), {
           continuationKind: continuation.kind,
         }),
       );
@@ -205,9 +229,15 @@ export function evaluateLinearCompleteness(
     }
     if (continuation.kind === 'terminal') {
       findPickedShopState(findings, biome, pickedOccurrence);
-      currentOccurrenceId = null;
+      currentOwner = undefined;
+    } else if (
+      layout.terminal.kind === 'generatedTarget' &&
+      pickedOccurrence.gameName === layout.terminal.roomGameName
+    ) {
+      findPickedShopState(findings, biome, pickedOccurrence);
+      currentOwner = undefined;
     } else {
-      currentOccurrenceId = pickedTarget.occurrenceId;
+      currentOwner = pickedTarget.occurrenceId;
     }
   }
 

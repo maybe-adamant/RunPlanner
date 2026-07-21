@@ -1,7 +1,9 @@
 import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../catalog';
 import type { ResolvedRewardOffer, RewardPayload } from '../rewardKernel/model';
+import { createDefaultBiomeState, replaceBiomeStateField } from './biomeState';
 import type {
   AuthoredBatchState,
+  AuthoredFieldValue,
   BatchRewardStoreState,
   LinearBatchContinuation,
   LinearBiomePlan,
@@ -13,6 +15,7 @@ import type {
 } from './model';
 import type {
   BiomeAddress,
+  BiomeFieldAddress,
   BatchRewardStoreAddress,
   ContinuationAddress,
   IncomingRewardAddress,
@@ -41,6 +44,11 @@ export type ProjectCommand =
       readonly kind: 'ConfigureRoutePrefix';
       readonly route: RouteAddress;
       readonly configuredBiomeCount: number;
+    }
+  | {
+      readonly kind: 'ReplaceBiomeField';
+      readonly field: BiomeFieldAddress;
+      readonly value: AuthoredFieldValue;
     }
   | {
       readonly kind: 'CreateStart';
@@ -163,6 +171,8 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
       return command.route;
     case 'CreateStart':
       return command.biome;
+    case 'ReplaceBiomeField':
+      return command.field;
     case 'CreateBatch':
     case 'ReplaceFieldsCageOutcome':
     case 'CreateTerminalTransition':
@@ -291,13 +301,6 @@ function authoredBaseStorePolicy(layout: LinearBiomeLayout) {
   return policy;
 }
 
-function authoredStart(layout: LinearBiomeLayout) {
-  if (layout.start.kind !== 'authoredStart') {
-    throw new Error(`${layout.biomeKey} does not expose an authored start`);
-  }
-  return layout.start;
-}
-
 function defaultBatchRewardStore(layout: LinearBiomeLayout): BatchRewardStoreState {
   if (layout.continuation.rewardStoreOverrides.length !== 0) {
     throw new Error(`${layout.biomeKey} uses source-specific reward-store policies`);
@@ -319,7 +322,8 @@ function defaultBatchRewardStore(layout: LinearBiomeLayout): BatchRewardStoreSta
 function defaultBatchState(layout: LinearBiomeLayout): AuthoredBatchState {
   if (
     layout.continuation.batchPolicy.kind !== 'standard' &&
-    layout.continuation.batchPolicy.kind !== 'fields'
+    layout.continuation.batchPolicy.kind !== 'fields' &&
+    layout.continuation.batchPolicy.kind !== 'clockwork'
   ) {
     throw new Error(`${layout.biomeKey} does not use a supported authored batch policy`);
   }
@@ -478,7 +482,7 @@ function installEntryState(
         catalog,
         room,
         roomStateContext(
-          occurrenceRole(plan, occurrenceId, command),
+          occurrenceRole(plan, catalog, layout, occurrenceId, command),
           resolvedStoreForOccurrence(plan, catalog, layout, occurrenceId),
           true,
         ),
@@ -490,8 +494,11 @@ function installEntryState(
 
 function occurrenceRole(
   plan: LinearBiomePlan,
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
   occurrenceId: OccurrenceId,
   command: ProjectCommand,
+  replacementRoom?: RoomDeclaration,
 ): RoomOccurrenceRole {
   const topology = requireTopology(plan, command);
   if (topology.startOccurrenceId === occurrenceId) {
@@ -504,6 +511,20 @@ function occurrenceRole(
     if (target !== undefined) {
       if (continuation.kind === 'terminal') {
         return target.exitIndex === 1 ? 'terminalShop' : 'terminalFreeReward';
+      }
+      const room =
+        replacementRoom ??
+        requireRoom(
+          catalog,
+          requireOccurrence(plan, occurrenceId, command).gameName,
+          layout.biomeKey,
+          command,
+        );
+      if (
+        layout.terminal.kind === 'generatedTarget' &&
+        room.gameName === layout.terminal.roomGameName
+      ) {
+        return 'terminalShop';
       }
       return 'ordinary';
     }
@@ -568,7 +589,12 @@ function configureRoutePrefix(
       if (layout?.kind !== 'LinearBiome') {
         failCommand(command, `${biomeKey} has no supported authored plan initializer`);
       }
-      return { kind: 'LinearBiome' as const, biomeKey, topology: null };
+      return {
+        kind: 'LinearBiome' as const,
+        biomeKey,
+        state: createDefaultBiomeState(layout),
+        topology: null,
+      };
     });
   const replacement = { ...route, biomes: [...retainedBiomes, ...addedBiomes] };
   return {
@@ -616,7 +642,7 @@ function sameOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boole
 
 function requireContinuation<Kind extends LinearContinuation['kind']>(
   plan: LinearBiomePlan,
-  parentOccurrenceId: OccurrenceId,
+  parentOccurrenceId: OccurrenceId | null,
   expectedKind: Kind,
   command: ProjectCommand,
 ): Extract<LinearContinuation, { readonly kind: Kind }> {
@@ -628,6 +654,24 @@ function requireContinuation<Kind extends LinearContinuation['kind']>(
     failCommand(command, `parent does not own a ${expectedKind} continuation`);
   }
   return continuation as Extract<LinearContinuation, { readonly kind: Kind }>;
+}
+
+function continuationSourceRoom(
+  plan: LinearBiomePlan,
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+  parentOccurrenceId: OccurrenceId | null,
+  command: ProjectCommand,
+): RoomDeclaration {
+  if (parentOccurrenceId !== null) {
+    const parent = requireOccurrence(plan, parentOccurrenceId, command);
+    return requireRoom(catalog, parent.gameName, layout.biomeKey, command);
+  }
+  if (layout.start.kind !== 'fixedEntry') {
+    failCommand(command, `${layout.biomeKey} has no layout-derived entry continuation`);
+  }
+  const source = layout.entries.at(-1) ?? layout.start;
+  return requireRoom(catalog, source.roomGameName, layout.biomeKey, command);
 }
 
 function removeOccurrenceSubtrees(
@@ -662,7 +706,9 @@ function removeOccurrenceSubtrees(
       (occurrence) => !removedOccurrenceIds.has(occurrence.occurrenceId),
     ),
     continuations: topology.continuations.filter(
-      (continuation) => !removedOccurrenceIds.has(continuation.parentOccurrenceId),
+      (continuation) =>
+        continuation.parentOccurrenceId === null ||
+        !removedOccurrenceIds.has(continuation.parentOccurrenceId),
     ),
   };
 }
@@ -776,14 +822,13 @@ function reconcilePlan(
   plan: LinearBiomePlan,
   catalog: Catalog,
   layout: LinearBiomeLayout,
-  parentOccurrenceId: OccurrenceId,
+  parentOccurrenceId: OccurrenceId | null,
   expectedKind: LinearContinuation['kind'],
   command: ProjectCommand,
 ): LinearBiomePlan {
   const topology = requireTopology(plan, command);
   const continuation = requireContinuation(plan, parentOccurrenceId, expectedKind, command);
-  const parent = requireOccurrence(plan, parentOccurrenceId, command);
-  const parentRoom = requireRoom(catalog, parent.gameName, layout.biomeKey, command);
+  const parentRoom = continuationSourceRoom(plan, catalog, layout, parentOccurrenceId, command);
   const availableExitIndexes = new Set(generatedExitIndexes(parentRoom));
   if (
     continuation.pickedExitIndex !== null &&
@@ -832,12 +877,25 @@ function applyUnchecked(
   const { layout, plan } = located;
 
   switch (command.kind) {
+    case 'ReplaceBiomeField': {
+      const state = replaceBiomeStateField(
+        plan.state,
+        layout,
+        command.field.fieldKey,
+        command.value,
+        `commands.ReplaceBiomeField.${command.field.fieldKey}`,
+      );
+      return state === plan.state ? document : withBiome(document, located, { ...plan, state });
+    }
     case 'CreateStart': {
       if (plan.topology !== null) {
         failCommand(command, 'biome topology already has a start');
       }
+      if (layout.start.kind !== 'authoredStart') {
+        failCommand(command, `${layout.biomeKey} does not expose an authored start`);
+      }
       const room = requireRoom(catalog, command.gameName, layout.biomeKey, command);
-      if (!authoredStart(layout).roomGameNames.includes(room.gameName)) {
+      if (!layout.start.roomGameNames.includes(room.gameName)) {
         failCommand(command, `${room.gameName} is not a declared start room`);
       }
       const occurrence = {
@@ -863,8 +921,13 @@ function applyUnchecked(
       });
     }
     case 'CreateBatch': {
-      const topology = requireTopology(plan, command);
-      requireOccurrence(plan, command.continuation.parentOccurrenceId, command);
+      const parentOccurrenceId = command.continuation.parentOccurrenceId;
+      const topology =
+        plan.topology ??
+        (parentOccurrenceId === null && layout.start.kind === 'fixedEntry'
+          ? { startOccurrenceId: null, occurrences: [], continuations: [] }
+          : requireTopology(plan, command));
+      continuationSourceRoom({ ...plan, topology }, catalog, layout, parentOccurrenceId, command);
       if (
         topology.continuations.some(
           (continuation) =>
@@ -881,7 +944,7 @@ function applyUnchecked(
             ...topology.continuations,
             {
               kind: 'batch',
-              parentOccurrenceId: command.continuation.parentOccurrenceId,
+              parentOccurrenceId,
               rewardStore: defaultBatchRewardStore(layout),
               batchState: defaultBatchState(layout),
               targets: [],
@@ -959,6 +1022,9 @@ function applyUnchecked(
       });
     }
     case 'CreateTerminalTransition':
+      if (command.continuation.parentOccurrenceId === null) {
+        failCommand(command, 'forked terminal transition requires an authored parent occurrence');
+      }
       return withBiome(
         document,
         located,
@@ -985,19 +1051,31 @@ function applyUnchecked(
       if (continuation.targets.some((target) => target.exitIndex === command.target.exitIndex)) {
         failCommand(command, `exit ${command.target.exitIndex} already has a target`);
       }
-      const parent = requireOccurrence(plan, command.target.parentOccurrenceId, command);
-      const parentRoom = requireRoom(catalog, parent.gameName, layout.biomeKey, command);
+      const parentRoom = continuationSourceRoom(
+        plan,
+        catalog,
+        layout,
+        command.target.parentOccurrenceId,
+        command,
+      );
       if (!hasGeneratedExit(parentRoom, command.target.exitIndex)) {
         failCommand(
           command,
-          `exit ${command.target.exitIndex} is unavailable from ${parent.gameName}`,
+          `exit ${command.target.exitIndex} is unavailable from ${parentRoom.gameName}`,
         );
       }
       const room = requireRoom(catalog, command.gameName, layout.biomeKey, command);
       if (room.mode.kind !== 'authored') {
         failCommand(command, `${room.gameName} is layout-derived and cannot be authored`);
       }
-      if (room.kind === 'Intro' || room.kind === 'Opening' || room.kind === 'Preboss') {
+      const generatedTerminal =
+        layout.terminal.kind === 'generatedTarget' &&
+        room.gameName === layout.terminal.roomGameName;
+      if (
+        room.kind === 'Intro' ||
+        room.kind === 'Opening' ||
+        (room.kind === 'Preboss' && !generatedTerminal)
+      ) {
         failCommand(command, `${room.gameName} cannot be an ordinary generated target`);
       }
       const occurrence = {
@@ -1007,7 +1085,7 @@ function applyUnchecked(
           catalog,
           room,
           roomStateContext(
-            'ordinary',
+            generatedTerminal ? 'terminalShop' : 'ordinary',
             resolvedStoreForRoom(room, finalBatchSharedStore(plan, catalog, layout, continuation)),
             false,
           ),
@@ -1047,10 +1125,18 @@ function applyUnchecked(
       if (target === undefined) {
         failCommand(command, `exit ${command.exitIndex} has no target`);
       }
-      const parent = requireOccurrence(plan, command.picked.parentOccurrenceId, command);
-      const parentRoom = requireRoom(catalog, parent.gameName, layout.biomeKey, command);
+      const parentRoom = continuationSourceRoom(
+        plan,
+        catalog,
+        layout,
+        command.picked.parentOccurrenceId,
+        command,
+      );
       if (!hasGeneratedExit(parentRoom, command.exitIndex)) {
-        failCommand(command, `exit ${command.exitIndex} is unavailable from ${parent.gameName}`);
+        failCommand(
+          command,
+          `exit ${command.exitIndex} is unavailable from ${parentRoom.gameName}`,
+        );
       }
       if (continuation.pickedExitIndex === command.exitIndex) {
         return document;
@@ -1061,6 +1147,17 @@ function applyUnchecked(
         oldPickedOccurrenceId = continuation.targets.find(
           (candidate) => candidate.exitIndex === continuation.pickedExitIndex,
         )?.occurrenceId;
+      }
+      const pickedOccurrence = requireOccurrence(plan, target.occurrenceId, command);
+      if (
+        layout.terminal.kind === 'generatedTarget' &&
+        pickedOccurrence.gameName === layout.terminal.roomGameName &&
+        oldPickedOccurrenceId !== undefined &&
+        topology.continuations.some(
+          (candidate) => candidate.parentOccurrenceId === oldPickedOccurrenceId,
+        )
+      ) {
+        failCommand(command, 'remove the downstream continuation before picking the terminal room');
       }
       const continuations = topology.continuations.map((candidate) => {
         if (candidate.parentOccurrenceId === continuation.parentOccurrenceId) {
@@ -1082,6 +1179,9 @@ function applyUnchecked(
       );
     }
     case 'SetTerminalPicked': {
+      if (command.picked.parentOccurrenceId === null) {
+        failCommand(command, 'terminal transition requires an authored parent occurrence');
+      }
       const topology = requireTopology(plan, command);
       const continuation = requireContinuation(
         plan,
@@ -1150,6 +1250,9 @@ function applyUnchecked(
         'batch',
         command,
       );
+      if (continuation.parentOccurrenceId === null) {
+        return withBiome(document, located, { ...plan, topology: null });
+      }
       return withBiome(document, located, {
         ...plan,
         topology: removeContinuationSubtree(topology, continuation),
@@ -1169,6 +1272,9 @@ function applyUnchecked(
       });
     }
     case 'ReplaceWithTerminalTransition': {
+      if (command.continuation.parentOccurrenceId === null) {
+        failCommand(command, 'forked terminal transition requires an authored parent occurrence');
+      }
       const topology = requireTopology(plan, command);
       const continuation = requireContinuation(
         plan,
@@ -1194,6 +1300,9 @@ function applyUnchecked(
       );
     }
     case 'ReplaceWithBatch': {
+      if (command.continuation.parentOccurrenceId === null) {
+        failCommand(command, 'terminal transition requires an authored parent occurrence');
+      }
       const topology = requireTopology(plan, command);
       const continuation = requireContinuation(
         plan,
@@ -1230,7 +1339,19 @@ function applyUnchecked(
         return document;
       }
       const room = requireRoom(catalog, command.gameName, layout.biomeKey, command);
-      const role = occurrenceRole(plan, occurrence.occurrenceId, command);
+      if (
+        layout.terminal.kind === 'generatedTarget' &&
+        room.gameName === layout.terminal.roomGameName &&
+        plan.topology?.continuations.some(
+          (continuation) => continuation.parentOccurrenceId === occurrence.occurrenceId,
+        )
+      ) {
+        failCommand(
+          command,
+          'remove the downstream continuation before selecting the terminal room',
+        );
+      }
+      const role = occurrenceRole(plan, catalog, layout, occurrence.occurrenceId, command, room);
       const replacement = {
         occurrenceId: occurrence.occurrenceId,
         gameName: room.gameName,
