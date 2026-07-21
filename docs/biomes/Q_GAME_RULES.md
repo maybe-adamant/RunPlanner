@@ -385,5 +385,7 @@ Q strengthens the shared model in four places:
 - completion is a layout-owned ordered sequence that may end after the boss
   and need not universally contain a postboss room.
 
-F, G, P, Q, H, O, I, and N are now closed as game-rule/design audits. Their
-shared vocabulary is reconciled before any dormant declaration import begins.
+F, G, P, Q, H, O, I, and N are closed as game-rule/design audits. Their shared
+vocabulary and dormant declaration imports are reconciled; Q remains
+non-authorable, non-simulatable, and non-editable until its complete Phase 6
+product loop is implemented.
