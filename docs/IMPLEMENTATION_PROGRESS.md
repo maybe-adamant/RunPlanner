@@ -241,6 +241,14 @@ candidate, semantic edit, and identity-cached undo latency. The full acceptance
 matrix, local measurements, browser-host smoke procedure, and closed scope are
 recorded in `PHASE_5_PRODUCT_LOOP_CLOSURE.md`.
 
+G-specific closure fixtures additionally cover the Crawler miniboss's
+non-counting encounter timing and mutual exclusion of the other miniboss
+variants after entry. A three-exit G predecessor also proves the maximum-width
+preboss transition as one Shop plus two free rewards through both canonical
+simulation and the shared browser editor. Generic F/G concepts remain covered
+by the shared complete product-loop fixture rather than being duplicated per
+biome.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,

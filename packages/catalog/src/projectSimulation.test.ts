@@ -208,6 +208,7 @@ const gPickedRooms = [
 
 interface GFixtureOptions {
   readonly pickedMiniboss?: 'G_MiniBoss01' | 'G_MiniBoss02';
+  readonly terminalParent?: 'G_Combat12' | 'G_Combat14';
 }
 
 const gPeerRooms: Readonly<Record<number, readonly string[]>> = {
@@ -249,8 +250,12 @@ function gOccurrenceId(batchIndex: number, exitIndex: number): OccurrenceId {
 }
 
 function completeGoldenFGProject(options: GFixtureOptions = {}): ProjectDocument {
-  const pickedRooms = gPickedRooms.map((gameName) =>
-    gameName === 'G_MiniBoss01' ? (options.pickedMiniboss ?? gameName) : gameName,
+  const pickedRooms = gPickedRooms.map((gameName, index) =>
+    gameName === 'G_MiniBoss01'
+      ? (options.pickedMiniboss ?? gameName)
+      : index === gPickedRooms.length - 1
+        ? (options.terminalParent ?? gameName)
+        : gameName,
   );
   let project = applyProjectCommand(completeGoldenProject(), catalog, {
     kind: 'ConfigureRoutePrefix',
@@ -327,19 +332,27 @@ function completeGoldenFGProject(options: GFixtureOptions = {}): ProjectDocument
     parentId = gOccurrenceId(batchIndex, 1);
   });
 
+  const terminalParent = catalog.rooms.byKey[pickedRooms.at(-1)!];
+  if (terminalParent === undefined) {
+    throw new Error('missing G terminal predecessor');
+  }
+  const terminalOccurrenceIds = terminalParent.exits.map((exit) =>
+    createOccurrenceId(
+      exit.index === 1 ? 'golden-g-terminal-shop' : `golden-g-terminal-free-${exit.index}`,
+    ),
+  );
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTerminalTransition',
     continuation: createContinuationAddress(gBiome, parentId),
-    targetOccurrenceIds: [
-      createOccurrenceId('golden-g-terminal-shop'),
-      createOccurrenceId('golden-g-terminal-free'),
-    ],
+    targetOccurrenceIds: terminalOccurrenceIds,
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(gBiome, createOccurrenceId('golden-g-terminal-free')),
-    value: { rewardType: 'StackUpgrade' },
-  });
+  for (const [index, occurrenceId] of terminalOccurrenceIds.slice(1).entries()) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(gBiome, occurrenceId),
+      value: { rewardType: index === 0 ? 'StackUpgrade' : 'HermesUpgrade' },
+    });
+  }
   project = applyProjectCommand(project, catalog, {
     kind: 'SetTerminalPicked',
     picked: createPickedAddress(gBiome, parentId),
@@ -834,10 +847,8 @@ describe('project simulation composition', () => {
   });
 
   it('preserves biome encounter depth when the picked G miniboss is Crawler', () => {
-    const result = simulateProject(
-      catalog,
-      completeGoldenFGProject({ pickedMiniboss: 'G_MiniBoss02' }),
-    );
+    const project = completeGoldenFGProject({ pickedMiniboss: 'G_MiniBoss02' });
+    const result = simulateProject(catalog, project);
     const g = result.routes[0]!.biomes[1]!;
 
     expect(g.completion).toBe('complete');
@@ -861,6 +872,46 @@ describe('project simulation composition', () => {
     expect(crawler!.preOutgoing!.ledgers.counters.biomeEncounterDepth).toBe(
       crawler!.entry.ledgers.counters.biomeEncounterDepth,
     );
+
+    for (const gameName of ['G_MiniBoss01', 'G_MiniBoss03']) {
+      const candidate = evaluateProjectCandidate(catalog, project, {
+        kind: 'roomTarget',
+        target: createTargetAddress(gBiome, gOccurrenceId(7, 1), 1),
+        gameName,
+      });
+      expect(candidate).toMatchObject({ context: 'evaluated', support: 'impossible' });
+      if (candidate.context !== 'evaluated' || !('exclusionReasons' in candidate.evidence)) {
+        throw new Error(`${gameName} candidate context is unavailable`);
+      }
+      expect(candidate.evidence.exclusionReasons).toContain('eligibilityRequirement');
+      if (gameName === 'G_MiniBoss01') {
+        expect(candidate.evidence.exclusionReasons).toContain('maxCreationsThisRun');
+      }
+    }
+  });
+
+  it('materializes the maximum G preboss fork from a three-exit predecessor', () => {
+    const project = completeGoldenFGProject({ terminalParent: 'G_Combat14' });
+    const result = simulateProject(catalog, project);
+    const g = result.routes[0]!.biomes[1]!;
+
+    expect(result.status).toBe('valid');
+    expect(g.completion).toBe('complete');
+    if (g.completion !== 'complete') {
+      throw new Error('three-exit G terminal unexpectedly incomplete');
+    }
+    expect(
+      g.snapshot.terminalEntry.targets.map((target) => ({
+        exitIndex: target.exit.index,
+        gameName: target.room.gameName,
+        producerKind: target.room.incomingReward?.producerKind,
+        hasShop: target.room.entryState?.kind === 'shop',
+      })),
+    ).toEqual([
+      { exitIndex: 1, gameName: 'G_PreBoss01', producerKind: 'shop', hasShop: true },
+      { exitIndex: 2, gameName: 'G_PreBoss01', producerKind: 'freeReward', hasShop: false },
+      { exitIndex: 3, gameName: 'G_PreBoss01', producerKind: 'freeReward', hasShop: false },
+    ]);
   });
 
   it('retains a complete invalid G product after a G-local generation mismatch', () => {
