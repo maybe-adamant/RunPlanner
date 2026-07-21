@@ -477,14 +477,15 @@ The dormant I import delivers:
 14. the NPC-free, no-detour, no-action baseline without production
     `unsupported` requirements.
 
-The declaration import, authored topology, and canonical/history projection
-remain dormant. Schema version 4
-persists `maxNonGoalRewards`, attaches the first batch to the final fixed entry
-without a fake occurrence, admits repeated generated preboss targets, and
-requires complete WorldShop state only on the picked preboss. Materialization
-derives offer-time Goal/NonGoal facts and history advances only entered
-producers. Selected validation, candidates, editor projection, and application
-activation remain later slices.
+The declaration import, authored topology, canonical/history projection,
+selected validation, candidates, and editor projection remain dormant behind
+the application capability boundary. Schema version 4 persists
+`maxNonGoalRewards`, attaches the first batch to the final fixed entry without
+a fake occurrence, admits repeated generated preboss targets, and requires
+complete WorldShop state only on the picked preboss. Materialization and the
+editor share one offer-time Goal/NonGoal projection; history advances only
+entered producers. Production navigation, profiles, and activation remain for
+the final I slice.
 
 ## Required Fixtures
 

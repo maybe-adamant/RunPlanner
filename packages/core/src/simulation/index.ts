@@ -128,7 +128,10 @@ export {
 export {
   LinearMaterializationContractError,
   materializeLinearBiome,
+  projectClockworkTopology,
   projectLinearBatchState,
+  type ClockworkBatchProjection,
+  type ClockworkTargetProjection,
   type CanonicalAuthoredRoom,
   type CanonicalBatch,
   type CanonicalBatchState,

@@ -43,13 +43,15 @@ bag, acquisition, and shop orchestration feed the public deterministic
 `simulateProject` composition root. Phase 3 made F simulatable while G remained
 authorable but dormant until its complete product loop landed in Phase 5.
 
-Phase 6 has completed H's full product loop and I's dormant authorship plus
-canonical/history slices. I now persists its bounded Clockwork setting,
+Phase 6 has completed H's full product loop and I's dormant authorship,
+canonical/history, selected-validation/candidate, and editor slices. I now
+persists and edits its bounded Clockwork setting,
 materializes the fixed Intro/Story sequence, derives Goal versus NonGoal in
 physical offer order, advances acquisition counters at entered producer points,
 and represents repeated generated preboss targets without a second terminal
-action. I remains outside selected validation, editor, and application
-capabilities until its remaining product-loop slices close.
+action. Its dormant editor projects those facts through one decision language,
+including picked-only WorldShop state. I remains outside production navigation,
+profiles, and application capabilities until the activation slice closes.
 
 Phase 4 is complete. The browser editor publishes simulation and semantic
 findings atomically with authored history, supports semantic finding

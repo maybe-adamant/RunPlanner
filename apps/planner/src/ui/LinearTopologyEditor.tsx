@@ -3,7 +3,9 @@ import type {
   BiomeProjectEvaluation,
   CanonicalBatchState,
   Catalog,
+  ClockworkBatchProjection,
   LinearBatchContinuation,
+  LinearBiomePlan,
   LinearBiomeTopology,
   LinearTargetReference,
   LinearTerminalContinuation,
@@ -17,6 +19,7 @@ import {
   createOccurrenceAddress,
   createPickedAddress,
   createTargetAddress,
+  projectClockworkTopology,
   projectLinearBatchState,
 } from '@run-planner/core';
 
@@ -37,12 +40,14 @@ interface LinearTopologyEditorProps {
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly evaluation: BiomeProjectEvaluation | undefined;
+  readonly plan: LinearBiomePlan;
   readonly topology: LinearBiomeTopology;
 }
 
 interface BatchEditorProps extends LinearTopologyEditorProps {
   readonly canCreateTarget: boolean;
   readonly canReplaceWithTerminal: boolean;
+  readonly clockworkBatch?: ClockworkBatchProjection;
   readonly continuation: LinearBatchContinuation;
 }
 
@@ -94,6 +99,7 @@ function OrdinaryTargetEditor({
   canCreateTarget,
   continuation,
   exitIndex,
+  clockworkReward,
   projectedBatchState,
   target,
   topology,
@@ -101,6 +107,7 @@ function OrdinaryTargetEditor({
   readonly available: boolean;
   readonly canCreateTarget: boolean;
   readonly continuation: LinearBatchContinuation;
+  readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly exitIndex: number;
   readonly projectedBatchState: CanonicalBatchState;
   readonly target: LinearTargetReference | undefined;
@@ -179,7 +186,13 @@ function OrdinaryTargetEditor({
             />
             <SemanticOwnerMarker address={createOccurrenceAddress(biome, room.occurrenceId)} />
             <span className="neutral-status">
-              {available ? roomDeclaration.kind : 'Unavailable'}
+              {!available
+                ? 'Unavailable'
+                : clockworkReward === undefined
+                  ? roomDeclaration.kind
+                  : clockworkReward === 'goal'
+                    ? 'Goal'
+                    : 'NonGoal'}
             </span>
           </div>
         </div>
@@ -207,6 +220,8 @@ function OrdinaryTargetEditor({
           biome={biome}
           candidateProjection={candidateProjection}
           catalog={catalog}
+          {...(clockworkReward === undefined ? {} : { clockworkReward })}
+          entryActive={continuation.pickedExitIndex === exitIndex}
           occurrence={room}
         />
       </div>
@@ -220,17 +235,14 @@ function BatchEditor({
   canCreateTarget,
   canReplaceWithTerminal,
   catalog,
+  clockworkBatch,
   continuation,
   evaluation,
+  plan,
   topology,
 }: BatchEditorProps) {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectPresentProject);
-  if (continuation.parentOccurrenceId === null) {
-    throw new Error('Layout-entry batches are not projected by the active editor');
-  }
-  const parent = occurrence(topology, continuation.parentOccurrenceId);
-  const parentRoom = declaration(catalog, parent);
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
   if (layout === undefined) {
     throw new Error(`Biome layout ${biome.biomeKey} is missing`);
@@ -238,7 +250,31 @@ function BatchEditor({
   if (layout.kind !== 'LinearBiome') {
     throw new Error(`${biome.biomeKey} is not a linear biome`);
   }
-  const projectedBatchState = projectLinearBatchState(catalog, biome, topology, continuation);
+  const parentRoom =
+    continuation.parentOccurrenceId === null
+      ? (() => {
+          if (layout.start.kind !== 'fixedEntry') {
+            throw new Error(`${layout.biomeKey} has no fixed entry source`);
+          }
+          const source = layout.entries.at(-1) ?? layout.start;
+          const room = catalog.rooms.byKey[source.roomGameName];
+          if (room === undefined) {
+            throw new Error(`${source.roomGameName} fixed entry is missing`);
+          }
+          return room;
+        })()
+      : declaration(catalog, occurrence(topology, continuation.parentOccurrenceId));
+  const projectedBatchState =
+    layout.continuation.batchPolicy.kind === 'clockwork'
+      ? (() => {
+          if (clockworkBatch === undefined) {
+            throw new Error(
+              `${layout.biomeKey} batch ${continuation.parentOccurrenceId} has no Clockwork projection`,
+            );
+          }
+          return clockworkBatch.batchState;
+        })()
+      : projectLinearBatchState(catalog, biome, topology, continuation);
   const availableExitIndexes = generatedExitIndexes(parentRoom);
   const available = new Set(availableExitIndexes);
   const exitIndexes = [
@@ -396,7 +432,14 @@ function BatchEditor({
             evaluation={evaluation}
             exitIndex={exitIndex}
             key={exitIndex}
+            plan={plan}
             projectedBatchState={projectedBatchState}
+            {...(() => {
+              const reward = clockworkBatch?.targets.find(
+                (candidate) => candidate.exitIndex === exitIndex,
+              )?.reward;
+              return reward === undefined ? {} : { clockworkReward: reward };
+            })()}
             target={continuation.targets.find((target) => target.exitIndex === exitIndex)}
             topology={topology}
           />
@@ -423,26 +466,28 @@ function BatchEditor({
             Remove Unavailable Exits
           </button>
         )}
-        <button
-          disabled={!canReplaceWithTerminal}
-          onClick={() => {
-            if (
-              !confirmDestructive('Replace this decision and all downstream rooms with Preboss?')
-            ) {
-              return;
-            }
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceWithTerminalTransition',
-                continuation: address,
-                targetOccurrenceIds: terminalOccurrenceIds(parentRoom),
-              }),
-            );
-          }}
-          type="button"
-        >
-          Replace With Preboss
-        </button>
+        {layout.terminal.kind !== 'generatedTarget' && (
+          <button
+            disabled={!canReplaceWithTerminal}
+            onClick={() => {
+              if (
+                !confirmDestructive('Replace this decision and all downstream rooms with Preboss?')
+              ) {
+                return;
+              }
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceWithTerminalTransition',
+                  continuation: address,
+                  targetOccurrenceIds: terminalOccurrenceIds(parentRoom),
+                }),
+              );
+            }}
+            type="button"
+          >
+            Replace With Preboss
+          </button>
+        )}
         <button
           className="danger-action"
           onClick={() => {
@@ -590,6 +635,7 @@ function TerminalEditor({
                   biome={biome}
                   candidateProjection={candidateProjection}
                   catalog={catalog}
+                  entryActive={continuation.pickedExitIndex === target.exitIndex}
                   occurrence={room}
                 />
               </div>
@@ -670,6 +716,10 @@ function FrontierEditor({
   const parent = occurrence(topology, parentOccurrenceId);
   const parentRoom = declaration(catalog, parent);
   const address = createContinuationAddress(biome, parentOccurrenceId);
+  const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
+  if (layout?.kind !== 'LinearBiome') {
+    throw new Error(`${biome.biomeKey} is not a linear biome`);
+  }
   return (
     <section className="frontier-actions">
       <div>
@@ -693,27 +743,32 @@ function FrontierEditor({
         >
           Add Next Decision
         </button>
-        <button
-          disabled={!canCreateTerminal}
-          onClick={() =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'CreateTerminalTransition',
-                continuation: address,
-                targetOccurrenceIds: terminalOccurrenceIds(parentRoom),
-              }),
-            )
-          }
-          type="button"
-        >
-          Go to Preboss
-        </button>
+        {layout.terminal.kind !== 'generatedTarget' && (
+          <button
+            disabled={!canCreateTerminal}
+            onClick={() =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'CreateTerminalTransition',
+                  continuation: address,
+                  targetOccurrenceIds: terminalOccurrenceIds(parentRoom),
+                }),
+              )
+            }
+            type="button"
+          >
+            Go to Preboss
+          </button>
+        )}
       </div>
     </section>
   );
 }
 
-function frontierOccurrenceId(topology: LinearBiomeTopology): OccurrenceId | undefined {
+function frontierOccurrenceId(
+  topology: LinearBiomeTopology,
+  terminalRoomGameName?: string,
+): OccurrenceId | undefined {
   if (topology.continuations.length === 0) {
     return topology.startOccurrenceId ?? undefined;
   }
@@ -721,7 +776,15 @@ function frontierOccurrenceId(topology: LinearBiomeTopology): OccurrenceId | und
   if (last?.kind !== 'batch' || last.pickedExitIndex === null) {
     return undefined;
   }
-  return last.targets.find((target) => target.exitIndex === last.pickedExitIndex)?.occurrenceId;
+  const picked = last.targets.find((target) => target.exitIndex === last.pickedExitIndex);
+  if (
+    picked === undefined ||
+    (terminalRoomGameName !== undefined &&
+      occurrence(topology, picked.occurrenceId).gameName === terminalRoomGameName)
+  ) {
+    return undefined;
+  }
+  return picked.occurrenceId;
 }
 
 export function LinearTopologyEditor({
@@ -729,6 +792,7 @@ export function LinearTopologyEditor({
   candidateProjection,
   catalog,
   evaluation,
+  plan,
   topology,
 }: LinearTopologyEditorProps) {
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
@@ -753,11 +817,18 @@ export function LinearTopologyEditor({
     (fixedContinuationCount === undefined || batchCount < fixedContinuationCount);
   const canCreateTerminal =
     fixedContinuationCount === undefined || batchCount === fixedContinuationCount;
-  const frontier = frontierOccurrenceId(topology);
+  const frontier = frontierOccurrenceId(
+    topology,
+    layout.terminal.kind === 'generatedTarget' ? layout.terminal.roomGameName : undefined,
+  );
   const frontierRoom =
     frontier === undefined ? undefined : declaration(catalog, occurrence(topology, frontier));
   const frontierTerminalTargetCount =
     frontierRoom === undefined ? 0 : generatedExitIndexes(frontierRoom).length;
+  const clockworkBatches =
+    layout.continuation.batchPolicy.kind === 'clockwork'
+      ? projectClockworkTopology(catalog, biome, plan)
+      : Object.freeze([]);
   return (
     <div className="topology-editor">
       {topology.continuations.map((continuation) =>
@@ -766,11 +837,20 @@ export function LinearTopologyEditor({
             biome={biome}
             candidateProjection={candidateProjection}
             canCreateTarget={targetCount < layout.bounds.maxTargets}
-            canReplaceWithTerminal={fixedContinuationCount === undefined}
+            canReplaceWithTerminal={
+              fixedContinuationCount === undefined && layout.terminal.kind !== 'generatedTarget'
+            }
             catalog={catalog}
+            {...(() => {
+              const clockworkBatch = clockworkBatches.find(
+                (batch) => batch.parentOccurrenceId === continuation.parentOccurrenceId,
+              );
+              return clockworkBatch === undefined ? {} : { clockworkBatch };
+            })()}
             continuation={continuation}
             evaluation={evaluation}
-            key={continuation.parentOccurrenceId}
+            key={continuation.parentOccurrenceId ?? 'layout-entry'}
+            plan={plan}
             topology={topology}
           />
         ) : (
@@ -783,7 +863,8 @@ export function LinearTopologyEditor({
             catalog={catalog}
             continuation={continuation}
             evaluation={evaluation}
-            key={continuation.parentOccurrenceId}
+            key={continuation.parentOccurrenceId ?? 'layout-entry'}
+            plan={plan}
             topology={topology}
           />
         ),
@@ -797,6 +878,7 @@ export function LinearTopologyEditor({
           catalog={catalog}
           evaluation={evaluation}
           parentOccurrenceId={frontier}
+          plan={plan}
           topology={topology}
         />
       )}

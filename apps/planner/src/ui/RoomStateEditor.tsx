@@ -29,6 +29,8 @@ interface RoomStateEditorProps {
   readonly biome: BiomeAddress;
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
+  readonly clockworkReward?: 'goal' | 'nonGoal';
+  readonly entryActive?: boolean;
   readonly occurrence: RoomOccurrence;
 }
 
@@ -111,6 +113,8 @@ export function RoomStateEditor({
   biome,
   candidateProjection,
   catalog,
+  clockworkReward,
+  entryActive,
   occurrence,
 }: RoomStateEditorProps) {
   const dispatch = useAppDispatch();
@@ -144,6 +148,14 @@ export function RoomStateEditor({
   }
   if (state.kind === 'counted' || state.kind === 'freeReward') {
     const rewardAddress = createIncomingRewardAddress(biome, occurrence.occurrenceId);
+    if (state.kind === 'counted' && clockworkReward === 'goal') {
+      return (
+        <div className="room-state-with-marker clockwork-goal-state">
+          <SemanticOwnerMarker address={rewardAddress} />
+          <p className="fixed-room-state">Clockwork Goal</p>
+        </div>
+      );
+    }
     return (
       <div className="room-state-with-marker">
         <SemanticOwnerMarker address={rewardAddress} />
@@ -240,7 +252,7 @@ export function RoomStateEditor({
   if (state.kind === 'ephyraCombat') {
     throw new Error(`${room.gameName} Ephyra editor is not active`);
   }
-  if (state.shop === undefined) {
+  if (entryActive === false || state.shop === undefined) {
     return (
       <p className="fixed-room-state">Shop inventory materializes when this room is picked.</p>
     );

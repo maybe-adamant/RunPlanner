@@ -373,6 +373,19 @@ project. Incomplete or invalid F/G/H prefixes return explicit unavailable
 context. The core simulator can evaluate I, while the application scope still
 ends at H, so I remains non-editable and absent from product capabilities.
 
+Phase 6 I Slice 4 is complete. A pure core Clockwork topology projection now
+derives incomplete-plan batch state and per-target Goal/NonGoal roles through
+the same authority consumed by canonical materialization. The dormant linear
+editor renders I's fixed Intro/Story entries, bounded `maxNonGoalRewards`
+setting, layout-entry decisions, derived Goal markers, retained editable
+NonGoal leaves, generated preboss peers, and picked-only WorldShop state. I
+uses `Add Next Decision` as its sole frontier action, closes visually when the
+picked target is preboss, and inherits semantic findings, candidate decoration,
+destructive repair, and project undo/redo from the common editor contracts.
+Focused interaction fixtures use test-only I capabilities; the production
+capability definition still ends at H, so navigation, profiles, and the full
+product loop remain dormant until Slice 5.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1076,7 +1089,7 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices and I
-Slices 1-3 are complete; the dormant I editor projection is the next
+Slices 1-4 are complete; atomic I product-loop activation is the next
 implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity

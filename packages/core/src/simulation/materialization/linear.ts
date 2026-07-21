@@ -24,6 +24,7 @@ import type {
   AuthoredRoomState,
   BatchRewardStoreState,
   LinearBatchContinuation,
+  LinearBiomePlan,
   LinearBiomeTopology,
   LinearContinuation,
   OccurrenceId,
@@ -853,7 +854,21 @@ interface ClockworkProjectionState {
   readonly maxNonGoalRewards: number;
 }
 
-function clockworkBatchState(state: ClockworkProjectionState): CanonicalBatchState {
+export interface ClockworkTargetProjection {
+  readonly exitIndex: number;
+  readonly occurrenceId: OccurrenceId;
+  readonly reward: 'goal' | 'nonGoal';
+}
+
+export interface ClockworkBatchProjection {
+  readonly parentOccurrenceId: OccurrenceId | null;
+  readonly batchState: Extract<CanonicalBatchState, { readonly kind: 'clockwork' }>;
+  readonly targets: readonly ClockworkTargetProjection[];
+}
+
+function clockworkBatchState(
+  state: ClockworkProjectionState,
+): Extract<CanonicalBatchState, { readonly kind: 'clockwork' }> {
   return Object.freeze({ kind: 'clockwork', ...state });
 }
 
@@ -887,6 +902,96 @@ function advanceClockworkState(
       });
 }
 
+function projectClockworkBatches(
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+  topology: LinearBiomeTopology,
+  maxNonGoalRewards: number,
+): readonly ClockworkBatchProjection[] {
+  if (
+    layout.start.kind !== 'fixedEntry' ||
+    layout.terminal.kind !== 'generatedTarget' ||
+    layout.continuation.batchPolicy.kind !== 'clockwork'
+  ) {
+    fail(`${layout.biomeKey} is not a Clockwork linear biome`);
+  }
+  let state: ClockworkProjectionState = Object.freeze({
+    goalsRemaining: layout.continuation.batchPolicy.initialGoalCount,
+    nonGoalRewardsAcquired: 0,
+    maxNonGoalRewards,
+  });
+  const occurrences = new Map(
+    topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
+  );
+  const batches: ClockworkBatchProjection[] = [];
+  for (const continuation of topology.continuations) {
+    if (continuation.kind !== 'batch') {
+      fail(`${layout.biomeKey} Clockwork topology contains an independent terminal transition`);
+    }
+    const batchState = clockworkBatchState(state);
+    let goalAlreadyOffered = false;
+    const targets = Object.freeze(
+      [...continuation.targets]
+        .sort((left, right) => left.exitIndex - right.exitIndex)
+        .map((target): ClockworkTargetProjection => {
+          const occurrence = requireOccurrence(occurrences, target.occurrenceId);
+          const room = requireRoom(catalog, occurrence);
+          const reward = clockworkReward(
+            room,
+            state,
+            goalAlreadyOffered,
+            layout.terminal.roomGameName,
+          );
+          if (reward === 'goal') {
+            goalAlreadyOffered = true;
+          }
+          return Object.freeze({
+            exitIndex: target.exitIndex,
+            occurrenceId: target.occurrenceId,
+            reward,
+          });
+        }),
+    );
+    batches.push(
+      Object.freeze({
+        parentOccurrenceId: continuation.parentOccurrenceId,
+        batchState,
+        targets,
+      }),
+    );
+    const picked = targets.find((target) => target.exitIndex === continuation.pickedExitIndex);
+    if (picked !== undefined) {
+      state = advanceClockworkState(state, picked.reward);
+    }
+  }
+  return Object.freeze(batches);
+}
+
+export function projectClockworkTopology(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  plan: LinearBiomePlan,
+): readonly ClockworkBatchProjection[] {
+  if (plan.biomeKey !== biome.biomeKey) {
+    fail(`${biome.biomeKey} projection received ${plan.biomeKey} plan`);
+  }
+  const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
+  if (layout?.kind !== 'LinearBiome') {
+    fail(`${biome.biomeKey} is not a linear biome`);
+  }
+  const route = catalog.routes.byKey[biome.routeKey];
+  if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
+    fail(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
+  }
+  const maxNonGoalRewards = plan.state.maxNonGoalRewards;
+  if (typeof maxNonGoalRewards !== 'number' || !Number.isInteger(maxNonGoalRewards)) {
+    fail(`${layout.biomeKey} has no projectable maxNonGoalRewards`);
+  }
+  return plan.topology === null
+    ? Object.freeze([])
+    : projectClockworkBatches(catalog, layout, plan.topology, maxNonGoalRewards);
+}
+
 function materializeClockworkBiome(
   catalog: Catalog,
   biome: BiomeAddress,
@@ -904,11 +1009,6 @@ function materializeClockworkBiome(
   if (typeof maxNonGoalRewards !== 'number' || !Number.isInteger(maxNonGoalRewards)) {
     fail(`${layout.biomeKey} has no materializable maxNonGoalRewards`);
   }
-  let state: ClockworkProjectionState = Object.freeze({
-    goalsRemaining: layout.continuation.batchPolicy.initialGoalCount,
-    nonGoalRewardsAcquired: 0,
-    maxNonGoalRewards,
-  });
   const entryDescriptors = [layout.start, ...layout.entries] as readonly FixedEntryDescriptor[];
   const entryRooms = Object.freeze(
     entryDescriptors.map((descriptor) => materializeFixedEntryRoom(catalog, biome, descriptor)),
@@ -924,6 +1024,7 @@ function materializeClockworkBiome(
   );
   const batches: CanonicalBatch[] = [];
   let terminalEntry: CanonicalTerminalEntry | undefined;
+  const projectedBatches = projectClockworkBatches(catalog, layout, topology, maxNonGoalRewards);
 
   for (const [batchIndex, continuation] of topology.continuations.entries()) {
     if (continuation.kind !== 'batch') {
@@ -938,22 +1039,22 @@ function materializeClockworkBiome(
       fail(`trusted Clockwork source lost room ${source.gameName}`);
     }
     const pickedExitIndex = requirePickedExit(continuation);
-    const batchState = clockworkBatchState(state);
-    let goalAlreadyOffered = false;
+    const projectedBatch = projectedBatches[batchIndex];
+    if (projectedBatch === undefined) {
+      fail(`Clockwork batch ${batchIndex + 1} has no projection`);
+    }
+    const batchState = projectedBatch.batchState;
     const targets: readonly CanonicalTarget[] = Object.freeze(
       [...continuation.targets]
         .sort((left, right) => left.exitIndex - right.exitIndex)
         .map((target): CanonicalTarget => {
           const occurrence = requireOccurrence(occurrences, target.occurrenceId);
           const room = requireRoom(catalog, occurrence);
-          const reward = clockworkReward(
-            room,
-            state,
-            goalAlreadyOffered,
-            layout.terminal.roomGameName,
-          );
-          if (reward === 'goal') {
-            goalAlreadyOffered = true;
+          const reward = projectedBatch.targets.find(
+            (candidate) => candidate.exitIndex === target.exitIndex,
+          )?.reward;
+          if (reward === undefined) {
+            fail(`Clockwork batch ${batchIndex + 1} target ${target.exitIndex} has no projection`);
           }
           const terminal = room.gameName === layout.terminal.roomGameName;
           return materializeTarget(
@@ -977,11 +1078,6 @@ function materializeClockworkBiome(
     if (picked === undefined) {
       fail(`Clockwork batch ${batchIndex + 1} lost its picked target`);
     }
-    const pickedReward = picked.room.clockworkReward;
-    if (pickedReward === undefined) {
-      fail(`Clockwork batch ${batchIndex + 1} lost its picked reward`);
-    }
-    state = advanceClockworkState(state, pickedReward);
     const rewardStore = canonicalRewardStore(biome, continuation.parentOccurrenceId, {
       kind: 'none',
     });
