@@ -321,11 +321,35 @@ interface CanonicalLinearBiome {
 interface CanonicalHubBiome {
   kind: 'HubBiome';
   biomeKey: BiomeKey;
-  entryRooms: CanonicalRoom[];
+  entryRooms: CanonicalAuthoredRoom[];
   hubBoard: CanonicalHubBoard;
   visits: CanonicalHubVisit[];
-  terminalEntry: CanonicalTerminalEntry;
+  terminalEntry: CanonicalAuthoredRoom;
+  completionRooms: CanonicalCompletionRoom[];
   biomeState: CanonicalBiomeState;
+}
+
+interface CanonicalHubBoard {
+  origin: HubOpenSetAddress;
+  room: CanonicalHubRoom;
+  targets: CanonicalHubTarget[];
+}
+
+interface CanonicalHubTarget {
+  origin: HubSlotAddress;
+  hubSlotKey: string;
+  physicalDoorId: number;
+  room: CanonicalAuthoredRoom;
+}
+
+interface CanonicalHubVisit {
+  origin: HubVisitAddress;
+  visitIndex: number;
+  target: CanonicalHubTarget;
+  localSlots: CanonicalLocalChildRoom[];
+  enteredLocalRooms: CanonicalLocalChildRoom[];
+  parentRestores: CanonicalRoomRestore[];
+  hubRestore: CanonicalRoomRestore;
 }
 ```
 
@@ -354,10 +378,27 @@ visit order, each target's active side-room offers and side-entry order, the
 restored parent records, and the restored hub record. Open unvisited targets
 remain in `hubBoard` but never appear in `visits`.
 
+Each visit references the exact `CanonicalHubTarget` object already owned by
+the board. A local slot keeps its physical door ID, availability rank,
+generated/not-generated result, optional entered ordinal, and parent-local
+semantic address. `localSlots` retains declaration-fixed physical slot order;
+availability rank remains a separate axis for generation pressure. Generated
+slots expose their concrete incoming offer whether entered or not;
+not-generated slots expose no canonical offer. The `enteredLocalRooms` array
+reuses those local-slot objects in player entry order.
+Parent and Hub restore records reference the existing authored parent and one
+derived Hub room; they never create another Room Occurrence or replay an offer.
+The persistent Hub room and its open board have distinct `HubRoomAddress` and
+`HubOpenSetAddress` owners so later history, findings, and candidate indexes
+cannot collapse the room lifecycle into the board-generation surface.
+
 For N, `entryRooms` resolves the fixed authored Opening and PreHub references;
 their topology and game names come from the layout while their reward leaves
 come from persisted Room Occurrences. The stateless Hub entry is materialized
-as the structural owner of `hubBoard`, not as another authored occurrence.
+as the structural owner of `hubBoard`, not as another authored occurrence. The
+fixed authored Preboss is the Hub snapshot's direct `terminalEntry`; it owns
+the complete WorldShop leaf, while Boss and Postboss remain derived completion
+rooms.
 
 A canonical batch records:
 

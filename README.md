@@ -80,6 +80,12 @@ Equivalent post-shop witness states merge before crossing biome boundaries,
 preventing proof-only branch multiplication while retaining one ordered
 witness for every distinct downstream state. P/Q/O/N remain dormant.
 
+N now additionally has dormant schema-version-5 Hub authorship, structural
+completeness, and canonical Hub materialization. Its normalized snapshot keeps
+the persistent physical board, ordered visits, parent-local side rooms,
+restores, fixed Preboss shop, and derived completion distinct without
+activating Surface simulation or editing.
+
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.
 Useful rules are brought forward deliberately; Lib controls, ImGui drawing,

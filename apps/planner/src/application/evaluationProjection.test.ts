@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/catalog';
 import {
   createBiomeAddress,
+  createHubRoomAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectAddress,
@@ -115,5 +116,8 @@ describe('evaluation presentation', () => {
     expect(findingDestinationLabel(catalog, createProjectAddress())).toBe('Project');
     expect(findingDestinationLabel(catalog, target)).toBe('Erebus · Exit 2');
     expect(findingDestinationLabel(catalog, room)).toBe('Erebus · Room');
+    expect(
+      findingDestinationLabel(catalog, createHubRoomAddress(createBiomeAddress('Surface', 'N'))),
+    ).toBe('City of Ephyra · Hub');
   });
 });

@@ -5,7 +5,12 @@ import type {
   ContinuationAddress,
   FixedEntryRewardAddress,
   FixedEntryRoomAddress,
+  HubOpenSetAddress,
+  HubRoomAddress,
+  HubSlotAddress,
+  HubVisitAddress,
   IncomingRewardAddress,
+  LocalChildAddress,
   LocalRewardAddress,
   OccurrenceAddress,
   PickedAddress,
@@ -17,7 +22,7 @@ import type { OccurrenceId } from '../../project/model';
 import type { ResolvedRewardOffer } from '../../rewardKernel/model';
 
 export interface CanonicalResolvedIncomingReward {
-  readonly origin: FixedEntryRewardAddress | IncomingRewardAddress;
+  readonly origin: FixedEntryRewardAddress | IncomingRewardAddress | LocalRewardAddress;
   readonly kind: 'resolved';
   readonly producerKind: 'countedChoice' | 'fixed' | 'freeReward' | 'shop';
   readonly producerLifecycleKey: string;
@@ -91,11 +96,46 @@ export interface CanonicalFixedEntryRoom {
   readonly incomingReward?: CanonicalResolvedIncomingReward;
 }
 
+export interface CanonicalHubRoom {
+  readonly kind: 'hub';
+  readonly origin: HubRoomAddress;
+  readonly gameName: string;
+  readonly encounterProfileKey: string;
+  readonly encounterPhases: readonly EncounterPhase[];
+  readonly lifecycleProfileKey: string;
+  readonly counterEffects: RoomCounterEffects;
+  readonly entered: true;
+}
+
+export interface CanonicalLocalChildRoom {
+  readonly kind: 'localChild';
+  readonly origin: LocalChildAddress;
+  readonly groupKey: string;
+  readonly slotKey: string;
+  readonly gameName: string;
+  readonly physicalDoorId: number;
+  readonly availabilityRank: number;
+  readonly generation: 'generated' | 'notGenerated';
+  readonly enteredOrdinal: number | null;
+  readonly encounterProfileKey: string;
+  readonly encounterPhases: readonly EncounterPhase[];
+  readonly lifecycleProfileKey: string;
+  readonly counterEffects: RoomCounterEffects;
+  readonly entered: boolean;
+  readonly incomingReward?: CanonicalResolvedIncomingReward;
+}
+
 export type CanonicalRoom =
   CanonicalAuthoredRoom | CanonicalCompletionRoom | CanonicalFixedEntryRoom;
 
 export interface CanonicalRoomReference {
   readonly origin: FixedEntryRoomAddress | OccurrenceAddress;
+  readonly occurrenceId?: OccurrenceId;
+  readonly gameName: string;
+}
+
+export interface CanonicalHubRoomReference {
+  readonly origin: HubRoomAddress | OccurrenceAddress;
   readonly occurrenceId?: OccurrenceId;
   readonly gameName: string;
 }
@@ -176,6 +216,47 @@ export interface CanonicalLinearBiome {
   readonly entryRooms: readonly (CanonicalAuthoredRoom | CanonicalFixedEntryRoom)[];
   readonly batches: readonly CanonicalBatch[];
   readonly terminalEntry: CanonicalTerminalEntry;
+  readonly completionRooms: readonly CanonicalCompletionRoom[];
+  readonly biomeState: CanonicalBiomeState;
+}
+
+export interface CanonicalHubTarget {
+  readonly origin: HubSlotAddress;
+  readonly hubSlotKey: string;
+  readonly physicalDoorId: number;
+  readonly room: CanonicalAuthoredRoom;
+}
+
+export interface CanonicalHubBoard {
+  readonly origin: HubOpenSetAddress;
+  readonly room: CanonicalHubRoom;
+  readonly targets: readonly CanonicalHubTarget[];
+}
+
+export interface CanonicalRoomRestore {
+  readonly kind: 'restore';
+  readonly after: HubVisitAddress | LocalChildAddress;
+  readonly room: CanonicalHubRoomReference;
+}
+
+export interface CanonicalHubVisit {
+  readonly origin: HubVisitAddress;
+  readonly visitIndex: number;
+  readonly target: CanonicalHubTarget;
+  readonly localSlots: readonly CanonicalLocalChildRoom[];
+  readonly enteredLocalRooms: readonly CanonicalLocalChildRoom[];
+  readonly parentRestores: readonly CanonicalRoomRestore[];
+  readonly hubRestore: CanonicalRoomRestore;
+}
+
+export interface CanonicalHubBiome {
+  readonly kind: 'HubBiome';
+  readonly routeKey: string;
+  readonly biomeKey: string;
+  readonly entryRooms: readonly CanonicalAuthoredRoom[];
+  readonly hubBoard: CanonicalHubBoard;
+  readonly visits: readonly CanonicalHubVisit[];
+  readonly terminalEntry: CanonicalAuthoredRoom;
   readonly completionRooms: readonly CanonicalCompletionRoom[];
   readonly biomeState: CanonicalBiomeState;
 }

@@ -5,6 +5,7 @@ export {
   projectLinearBatchState,
 } from './linear';
 export type { ClockworkBatchProjection, ClockworkTargetProjection } from './linear';
+export { HubMaterializationContractError, materializeHubBiome } from './hub';
 export type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
@@ -13,12 +14,20 @@ export type {
   CanonicalBiomeState,
   CanonicalCompletionRoom,
   CanonicalFixedEntryRoom,
+  CanonicalHubBiome,
+  CanonicalHubBoard,
+  CanonicalHubRoom,
+  CanonicalHubRoomReference,
+  CanonicalHubTarget,
+  CanonicalHubVisit,
   CanonicalLinearBiome,
+  CanonicalLocalChildRoom,
   CanonicalLocalReward,
   CanonicalPhysicalExit,
   CanonicalResolvedIncomingReward,
   CanonicalRoom,
   CanonicalRoomReference,
+  CanonicalRoomRestore,
   CanonicalShopEntryState,
   CanonicalShopOffer,
   CanonicalTarget,

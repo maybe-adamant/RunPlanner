@@ -21,6 +21,13 @@ export const roomLifecycleProfiles = [
       'I_Story01',
       'I_MiniBoss01',
       'I_MiniBoss02',
+      'N_Opening',
+      'N_PreHub',
+      'EphyraCombat',
+      'EphyraSideRoom',
+      'EphyraSideRoomHard',
+      'N_MiniBoss01',
+      'N_MiniBoss02',
     ],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
@@ -208,7 +215,7 @@ export const roomLifecycleProfiles = [
   },
   {
     key: 'BossRoom',
-    encounterProfileKeys: ['F_Boss01', 'G_Boss01', 'H_Boss01', 'I_Boss01'],
+    encounterProfileKeys: ['F_Boss01', 'G_Boss01', 'H_Boss01', 'I_Boss01', 'N_Boss01'],
     producer: { kind: 'none' },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },
@@ -232,7 +239,13 @@ export const roomLifecycleProfiles = [
   },
   {
     key: 'PostBossRoom',
-    encounterProfileKeys: ['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01', 'I_PostBoss01'],
+    encounterProfileKeys: [
+      'F_PostBoss01',
+      'G_PostBoss01',
+      'H_PostBoss01',
+      'I_PostBoss01',
+      'N_PostBoss01',
+    ],
     producer: { kind: 'none' },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },
