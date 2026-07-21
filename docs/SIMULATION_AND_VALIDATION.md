@@ -617,13 +617,15 @@ The hub lookup is produced before the first selected visit and remains based on
 the full open board. A restore event appends history without creating another
 occurrence, offer, acquisition, or encounter-start event.
 
-The dormant N lifecycle/history slice implements the structural portion of
-this trace: exact fixed-entry, Hub-board, main, side, restore, terminal, and
-completion events fold through the shared history ledgers, including required
-Soul Pylons and generated-side-room counters. The offer, counted-bag,
-acquisition, sibling-batch, `hubRewardLookup`, and Preboss-shop branches remain
-the following N reward-simulation slice; they are not inferred from the
-structural history aggregate.
+The dormant N lifecycle/history and reward slices now implement this trace.
+Exact fixed-entry, Hub-board, main, side, restore, terminal, and completion
+events fold through the shared history ledgers, including required Soul Pylons
+and generated-side-room counters. Reward replay consumes every open target in
+physical order, resolves each generated side group jointly, acquires only
+entered rooms, derives `hubRewardLookup` from the full initial board, and then
+validates the fixed Preboss shop. These facts remain replaceable simulation
+output; none are inferred from a final room aggregate or persisted beside the
+authored Hub plan.
 
 Every permutation of a parent's entered side slots is legal. Because all
 sibling offers exist before the first entry and supported side acquisitions do

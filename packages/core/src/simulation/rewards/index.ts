@@ -4,6 +4,7 @@ export {
   LinearRewardSimulationContractError,
   LinearRewardSimulationContractError as FRewardSimulationContractError,
 } from './linear';
+export { evaluateHubRewards, evaluateNRewards, HubRewardSimulationContractError } from './hub';
 export type {
   FRewardBranch,
   FRewardEvent,
@@ -13,4 +14,9 @@ export type {
   LinearRewardEvent,
   LinearRewardSimulation,
   LinearRewardStoreSupportEntry,
+  HubRewardSimulation,
+  RewardBranch,
+  RewardEvent,
+  RewardSimulation,
+  RewardStoreSupportEntry,
 } from './model';

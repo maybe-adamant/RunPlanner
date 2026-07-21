@@ -3,34 +3,34 @@ import type { BatchRewardStoreAddress, SemanticAddress } from '../../project/add
 import type { ConcreteAcquisitionEvent, ResolvedRewardOffer } from '../../rewardKernel/model';
 import type { SemanticFinding } from '../model';
 
-interface LinearRewardEventBase {
+interface RewardEventBase {
   readonly rewardSequence: number;
   readonly historySequence: number;
   readonly origin: SemanticAddress;
 }
 
-export type LinearRewardEvent =
-  | (LinearRewardEventBase & {
+export type RewardEvent =
+  | (RewardEventBase & {
       readonly kind: 'rewardOffered';
       readonly offer: ResolvedRewardOffer;
       readonly storeKey?: string;
     })
-  | (LinearRewardEventBase & {
+  | (RewardEventBase & {
       readonly kind: 'concreteAcquisition';
       readonly acquisition: ConcreteAcquisitionEvent;
     })
-  | (LinearRewardEventBase & {
+  | (RewardEventBase & {
       readonly kind: 'shopInventorySupported';
       readonly profileKey: string;
       readonly optionKeys: readonly string[];
     })
-  | (LinearRewardEventBase & {
+  | (RewardEventBase & {
       readonly kind: 'shopPurchasesSupported';
       readonly profileKey: string;
       readonly purchaseOrder: readonly string[];
     });
 
-export interface LinearRewardStoreSupportEntry {
+export interface RewardStoreSupportEntry {
   readonly origin: BatchRewardStoreAddress;
   readonly historySequence: number;
   readonly authoredStoreKey: string;
@@ -42,22 +42,34 @@ export interface LinearRewardStoreSupportEntry {
   readonly selectedPossible: boolean;
 }
 
-export interface LinearRewardBranch {
+export interface RewardBranch {
   readonly bags: Readonly<Record<string, RewardBagState>>;
   readonly history: RewardHistoryState;
-  readonly events: readonly LinearRewardEvent[];
+  readonly events: readonly RewardEvent[];
   readonly processedThroughHistorySequence: number;
 }
 
-export interface LinearRewardSimulation {
+interface RewardSimulationBase {
   readonly biomeKey: string;
   readonly validity: 'invalid' | 'valid';
-  readonly storeSupport: readonly LinearRewardStoreSupportEntry[];
-  readonly branches: readonly LinearRewardBranch[];
+  readonly branches: readonly RewardBranch[];
   readonly findings: readonly SemanticFinding[];
 }
 
-export type FRewardEvent = LinearRewardEvent;
-export type FRewardStoreSupportEntry = LinearRewardStoreSupportEntry;
-export type FRewardBranch = LinearRewardBranch;
+export interface LinearRewardSimulation extends RewardSimulationBase {
+  readonly storeSupport: readonly RewardStoreSupportEntry[];
+}
+
+export interface HubRewardSimulation extends RewardSimulationBase {
+  readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
+}
+
+export type RewardSimulation = HubRewardSimulation | LinearRewardSimulation;
+
+export type LinearRewardEvent = RewardEvent;
+export type LinearRewardStoreSupportEntry = RewardStoreSupportEntry;
+export type LinearRewardBranch = RewardBranch;
+export type FRewardEvent = RewardEvent;
+export type FRewardStoreSupportEntry = RewardStoreSupportEntry;
+export type FRewardBranch = RewardBranch;
 export type FRewardSimulation = LinearRewardSimulation;
