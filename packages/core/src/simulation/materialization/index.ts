@@ -1,8 +1,10 @@
 export {
   LinearMaterializationContractError,
   materializeLinearBiome,
+  projectClockworkTopology,
   projectLinearBatchState,
 } from './linear';
+export type { ClockworkBatchProjection, ClockworkTargetProjection } from './linear';
 export type {
   CanonicalAuthoredRoom,
   CanonicalBatch,

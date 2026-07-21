@@ -4,7 +4,14 @@ import type {
   LinearBiomePlan,
   RoomDeclaration,
 } from '@run-planner/core';
-import { createBiomeAddress, createOccurrenceAddress } from '@run-planner/core';
+import {
+  createBiomeAddress,
+  createBiomeFieldAddress,
+  createContinuationAddress,
+  createFixedEntryRewardAddress,
+  createFixedEntryRoomAddress,
+  createOccurrenceAddress,
+} from '@run-planner/core';
 import { useState } from 'react';
 
 import {
@@ -66,7 +73,6 @@ export function LinearBiomeEditor({
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectPresentProject);
   const [pendingStart, setPendingStart] = useState('');
-  const options = startRooms(catalog, plan.biomeKey);
   const biomeDeclaration = catalog.biomes.byKey[plan.biomeKey];
   if (biomeDeclaration === undefined) {
     throw new Error(`${plan.biomeKey} biome declaration is missing`);
@@ -77,11 +83,186 @@ export function LinearBiomeEditor({
   const biomeLabel = biomeDeclaration.label;
   const titleId = `${plan.biomeKey.toLowerCase()}-biome-title`;
   const startRoomId = `${plan.biomeKey.toLowerCase()}-starting-room`;
+  const biome = createBiomeAddress(routeKey, plan.biomeKey);
+  const topology = plan.topology;
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  if (layout?.kind !== 'LinearBiome') {
+    throw new Error(`${plan.biomeKey} is not a linear biome`);
+  }
+
+  if (layout.start.kind === 'fixedEntry') {
+    const fixedEntries = [
+      layout.start,
+      ...layout.entries.map((entry) => {
+        if (entry.kind !== 'fixedEntry') {
+          throw new Error(`${plan.biomeKey} has a non-fixed entry`);
+        }
+        return entry;
+      }),
+    ];
+    const boundedField = layout.fields.find(
+      (field) => field.key === 'maxNonGoalRewards' && field.kind === 'boundedInteger',
+    );
+    if (boundedField?.kind !== 'boundedInteger') {
+      throw new Error(`${plan.biomeKey} has no bounded maxNonGoalRewards field`);
+    }
+    const fieldAddress = createBiomeFieldAddress(biome, boundedField.key);
+    const fieldValues = Array.from(
+      { length: boundedField.max - boundedField.min + 1 },
+      (_, index) => boundedField.min + index,
+    );
+    const projectedFields = candidateProjection.biomeFields(project, fieldAddress, fieldValues);
+    const selectedField = projectedFields.find(
+      (option) => option.value === plan.state.maxNonGoalRewards,
+    );
+    const fixedSourceDescriptor = fixedEntries.at(-1);
+    const fixedSourceRoom =
+      fixedSourceDescriptor === undefined
+        ? undefined
+        : catalog.rooms.byKey[fixedSourceDescriptor.roomGameName];
+    if (fixedSourceRoom === undefined) {
+      throw new Error(`${plan.biomeKey} has no fixed continuation source`);
+    }
+    return (
+      <SemanticFindingsScope findings={evaluation?.findings ?? []}>
+        <section className="biome-editor" aria-labelledby={titleId}>
+          <header className="panel-heading">
+            <div>
+              <p className="eyebrow">
+                {routeKey} · {plan.biomeKey}
+              </p>
+              <h2 id={titleId}>{biomeLabel}</h2>
+            </div>
+            <div className="panel-heading-actions">
+              <SemanticOwnerMarker address={biome} />
+              <StatusBadge status={presentBiomeStatus(evaluation)} />
+              {topology !== null && (
+                <button
+                  className="danger-action"
+                  onClick={() => {
+                    if (
+                      !globalThis.confirm(`Clear all authored ${biomeLabel} rooms and rewards?`)
+                    ) {
+                      return;
+                    }
+                    dispatch(authoredProjectCommandDispatched({ kind: 'ClearTopology', biome }));
+                  }}
+                  type="button"
+                >
+                  Clear {biomeLabel}
+                </button>
+              )}
+            </div>
+          </header>
+
+          <label className="field-control biome-field" htmlFor={`${plan.biomeKey}-non-goal-cap`}>
+            <span className="field-label-with-marker">
+              Maximum NonGoal rewards
+              <SemanticOwnerMarker address={fieldAddress} />
+            </span>
+            <select
+              {...candidateSelectState(selectedField)}
+              id={`${plan.biomeKey}-non-goal-cap`}
+              onChange={(event) =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceBiomeField',
+                    field: fieldAddress,
+                    value: Number(event.target.value),
+                  }),
+                )
+              }
+              value={String(plan.state.maxNonGoalRewards)}
+            >
+              {projectedFields.map((option) => (
+                <option
+                  key={String(option.value)}
+                  value={String(option.value)}
+                  {...candidateSelectState(option)}
+                >
+                  {presentCandidateLabel(String(option.value), option)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="fixed-entry-list" aria-label="Fixed biome entries" role="group">
+            {fixedEntries.map((entry) => {
+              const room = catalog.rooms.byKey[entry.roomGameName];
+              if (room === undefined) {
+                throw new Error(`${entry.roomGameName} fixed entry is missing`);
+              }
+              return (
+                <article className="room-card" key={entry.role}>
+                  <div className="room-card-heading">
+                    <div>
+                      <p className="card-kicker">Fixed {entry.role}</p>
+                      <h3>{room.label}</h3>
+                    </div>
+                    <span className="room-kind">{room.kind}</span>
+                    <SemanticOwnerMarker address={createFixedEntryRoomAddress(biome, entry.role)} />
+                  </div>
+                  {room.incomingReward.kind === 'fixed' && (
+                    <div className="room-state-with-marker">
+                      <SemanticOwnerMarker
+                        address={createFixedEntryRewardAddress(biome, entry.role)}
+                      />
+                      <p className="fixed-room-state">
+                        Fixed reward: {room.incomingReward.offer.rewardType}
+                      </p>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+
+          {topology === null ? (
+            <section className="frontier-actions">
+              <div>
+                <div className="owner-markers frontier-owner">
+                  <p className="card-kicker">Active frontier</p>
+                  <SemanticOwnerMarker address={createContinuationAddress(biome, null)} />
+                </div>
+                <h3>Continue from {fixedSourceRoom.label}</h3>
+                <p>The first Clockwork decision follows the fixed biome entries.</p>
+              </div>
+              <div className="frontier-buttons">
+                <button
+                  className="primary-action"
+                  onClick={() =>
+                    dispatch(
+                      authoredProjectCommandDispatched({
+                        kind: 'CreateBatch',
+                        continuation: createContinuationAddress(biome, null),
+                      }),
+                    )
+                  }
+                  type="button"
+                >
+                  Add Next Decision
+                </button>
+              </div>
+            </section>
+          ) : (
+            <LinearTopologyEditor
+              biome={biome}
+              candidateProjection={candidateProjection}
+              catalog={catalog}
+              evaluation={evaluation}
+              plan={plan}
+              topology={topology}
+            />
+          )}
+        </section>
+      </SemanticFindingsScope>
+    );
+  }
+
+  const options = startRooms(catalog, plan.biomeKey);
   const authoredStartKind = options.every((room) => room.kind === 'Opening')
     ? 'opening'
     : 'starting';
-  const biome = createBiomeAddress(routeKey, plan.biomeKey);
-  const topology = plan.topology;
 
   if (topology === null) {
     const projectedOptions = candidateProjection.startRooms(project, biome, options);
@@ -237,6 +418,7 @@ export function LinearBiomeEditor({
             biome={biome}
             candidateProjection={candidateProjection}
             catalog={catalog}
+            entryActive={true}
             occurrence={start}
           />
         </article>
@@ -246,6 +428,7 @@ export function LinearBiomeEditor({
           candidateProjection={candidateProjection}
           catalog={catalog}
           evaluation={evaluation}
+          plan={plan}
           topology={topology}
         />
       </section>
