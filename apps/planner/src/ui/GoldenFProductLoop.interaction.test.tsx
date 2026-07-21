@@ -284,7 +284,11 @@ function appendGoldenBatches(
   biomeKey: 'F' | 'G',
   startId: OccurrenceId,
   batches: readonly BatchSpec[],
-): { readonly parentId: OccurrenceId; readonly project: ProjectDocument } {
+): {
+  readonly parentGameName: string;
+  readonly parentId: OccurrenceId;
+  readonly project: ProjectDocument;
+} {
   const biome = createBiomeAddress('Underworld', biomeKey);
   let nextProject = project;
   let parentId = startId;
@@ -336,7 +340,11 @@ function appendGoldenBatches(
     }
     parentId = targetOccurrenceId(biomeKey, batchIndex, 1);
   }
-  return Object.freeze({ parentId, project: nextProject });
+  const parentGameName = batches.at(-1)?.targets[0]?.gameName;
+  if (parentGameName === undefined) {
+    throw new Error(`${biomeKey} golden batches have no terminal predecessor`);
+  }
+  return Object.freeze({ parentGameName, parentId, project: nextProject });
 }
 
 function appendGoldenTerminal(
@@ -344,20 +352,28 @@ function appendGoldenTerminal(
   catalog: Catalog,
   biomeKey: 'F' | 'G',
   parentId: OccurrenceId,
+  parentGameName: string,
 ): ProjectDocument {
   const biome = createBiomeAddress('Underworld', biomeKey);
-  const shopId = createOccurrenceId(`phase-5-${biomeKey.toLowerCase()}-terminal-shop`);
-  const freeId = createOccurrenceId(`phase-5-${biomeKey.toLowerCase()}-terminal-free`);
+  const parent = catalog.rooms.byKey[parentGameName];
+  if (parent === undefined) {
+    throw new Error(`${biomeKey} terminal predecessor ${parentGameName} is missing`);
+  }
+  const targetIds = parent.exits.map((exit) =>
+    createOccurrenceId(`phase-5-${biomeKey.toLowerCase()}-terminal-e${exit.index}`),
+  );
   let nextProject = applyProjectCommand(project, catalog, {
     kind: 'CreateTerminalTransition',
     continuation: createContinuationAddress(biome, parentId),
-    targetOccurrenceIds: [shopId, freeId],
+    targetOccurrenceIds: targetIds,
   });
-  nextProject = applyProjectCommand(nextProject, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, freeId),
-    value: { rewardType: 'StackUpgrade' },
-  });
+  for (const [index, occurrenceId] of targetIds.slice(1).entries()) {
+    nextProject = applyProjectCommand(nextProject, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, occurrenceId),
+      value: { rewardType: index === 0 ? 'StackUpgrade' : 'HermesUpgrade' },
+    });
+  }
   nextProject = applyProjectCommand(nextProject, catalog, {
     kind: 'SetTerminalPicked',
     picked: createPickedAddress(biome, parentId),
@@ -365,12 +381,15 @@ function appendGoldenTerminal(
   });
   return applyProjectCommand(nextProject, catalog, {
     kind: 'ReplaceShopOffer',
-    offer: createShopOfferAddress(biome, shopId, 'MajorNonBoon'),
+    offer: createShopOfferAddress(biome, targetIds[0]!, 'MajorNonBoon'),
     value: { rewardType: 'RoomRewardHealDrop' },
   });
 }
 
-function createGoldenFGProject(catalog: Catalog): ProjectDocument {
+function createGoldenFGProject(
+  catalog: Catalog,
+  options: { readonly gTerminalParent?: 'G_Combat12' | 'G_Combat14' } = {},
+): ProjectDocument {
   let project = createProjectDocument(catalog, {
     projectId: 'phase-5-product-loop',
     name: 'Phase 5 Product Loop',
@@ -384,7 +403,7 @@ function createGoldenFGProject(catalog: Catalog): ProjectDocument {
     gameName: 'F_Opening01',
   });
   const f = appendGoldenBatches(project, catalog, 'F', fStart, goldenBatches);
-  project = appendGoldenTerminal(f.project, catalog, 'F', f.parentId);
+  project = appendGoldenTerminal(f.project, catalog, 'F', f.parentId, f.parentGameName);
 
   const gStart = createOccurrenceId('phase-5-g-start');
   project = applyProjectCommand(project, catalog, {
@@ -393,8 +412,22 @@ function createGoldenFGProject(catalog: Catalog): ProjectDocument {
     occurrenceId: gStart,
     gameName: 'G_Intro',
   });
-  const g = appendGoldenBatches(project, catalog, 'G', gStart, goldenGBatches);
-  return appendGoldenTerminal(g.project, catalog, 'G', g.parentId);
+  const gBatches = goldenGBatches.map((batch, index) =>
+    index === goldenGBatches.length - 1 && options.gTerminalParent !== undefined
+      ? Object.freeze({
+          ...batch,
+          targets: Object.freeze(
+            batch.targets.map((target, targetIndex) =>
+              targetIndex === 0
+                ? Object.freeze({ ...target, gameName: options.gTerminalParent! })
+                : target,
+            ),
+          ),
+        })
+      : batch,
+  );
+  const g = appendGoldenBatches(project, catalog, 'G', gStart, gBatches);
+  return appendGoldenTerminal(g.project, catalog, 'G', g.parentId, g.parentGameName);
 }
 
 function createPersistence(): {
@@ -717,6 +750,39 @@ describe('golden F product loop', () => {
     await user.click(screen.getByRole('button', { name: 'Redo' }));
     expect(currentProject(application)).toBe(started);
     expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
+  }, 30_000);
+
+  it('renders and edits the maximum-width G preboss fork through the shared editor', async () => {
+    const application = createApplication();
+    application.store.dispatch(
+      authoredProjectReplaced(
+        createGoldenFGProject(application.catalog, { gTerminalParent: 'G_Combat14' }),
+      ),
+    );
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
+
+    const heading = screen.getByRole('heading', { name: 'Preboss from Combat 14' });
+    const terminal = heading.closest<HTMLElement>('.terminal-card');
+    if (terminal === null) {
+      throw new Error('maximum-width G preboss editor is missing');
+    }
+    expect(within(terminal).getAllByRole('radio')).toHaveLength(3);
+    expect(within(terminal).getByRole('heading', { name: 'Preboss Shop' })).toBeTruthy();
+    expect(within(terminal).getAllByRole('heading', { name: 'Free Reward' })).toHaveLength(2);
+
+    await view.user.click(within(terminal).getByRole('radio', { name: 'Enter terminal exit 3' }));
+
+    const underworld = currentProject(application).routes.find(
+      (route) => route.routeKey === 'Underworld',
+    );
+    const g = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
+    expect(g?.topology?.continuations.at(-1)).toMatchObject({
+      kind: 'terminal',
+      pickedExitIndex: 3,
+    });
+    expect(currentEvaluation(application).status).toBe('valid');
   }, 30_000);
 
   it('closes the complete F/G browser loop with profiles, recovery, accessibility, and responsive projections', async () => {
