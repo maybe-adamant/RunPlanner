@@ -301,6 +301,17 @@ the complete Fields support table, early and repeated Bridge offers, miniboss
 exclusion, terminal pressure, and a carried-bag cage failure without adding H
 to simulator dispatch or application capabilities.
 
+Phase 6 H Slice 5 is complete. Core candidate vocabulary now includes addressed
+room-local rewards and Fields cage outcomes. One candidate-only dormant H
+resolver composes and caches the selected H evaluation after a valid G prefix,
+while ordinary project simulation still stops at the H boundary. Room and
+Min/Max candidates reuse selected-plan generation ledgers; cage rewards,
+terminal free rewards, WorldShop offers, and purchases replay one immutable
+semantic replacement through the common linear authority. `ReplaceLocalReward`
+owns one bounded cage leaf without disturbing sibling cages or topology.
+Fixtures cover possible, forced, impossible, selected-invalid, and incomplete-
+context results plus unchanged authorship and dormant simulator isolation.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1003,8 +1014,9 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slices 1 through 4 are
-complete; H Slice 5 candidate evaluation is the next implementation frontier.
+Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slices 1 through 5 are
+complete; H Slice 6 dormant editor projection is the next implementation
+frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

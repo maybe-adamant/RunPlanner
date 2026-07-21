@@ -16,6 +16,7 @@ import type {
   BatchRewardStoreAddress,
   ContinuationAddress,
   IncomingRewardAddress,
+  LocalRewardAddress,
   OccurrenceAddress,
   PickedAddress,
   RouteAddress,
@@ -107,6 +108,11 @@ export type ProjectCommand =
       readonly value: ResolvedRewardOffer;
     }
   | {
+      readonly kind: 'ReplaceLocalReward';
+      readonly reward: LocalRewardAddress;
+      readonly value: ResolvedRewardOffer;
+    }
+  | {
       readonly kind: 'ReplaceShopOffer';
       readonly offer: ShopOfferAddress;
       readonly value: ResolvedRewardOffer;
@@ -179,6 +185,8 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
     case 'ReplaceOccurrenceRoom':
       return command.occurrence;
     case 'ReplaceIncomingReward':
+      return command.reward;
+    case 'ReplaceLocalReward':
       return command.reward;
     case 'ReplaceShopOffer':
       return command.offer;
@@ -1249,6 +1257,41 @@ function applyUnchecked(
       const replacement = {
         ...occurrence,
         state: { ...occurrence.state, offer: command.value },
+      };
+      return withBiome(document, located, replaceOccurrence(plan, replacement, command));
+    }
+    case 'ReplaceLocalReward': {
+      const occurrence = requireOccurrence(plan, command.reward.occurrenceId, command);
+      if (occurrence.state.kind !== 'fieldsCombat' || command.reward.groupKey !== 'cages') {
+        failCommand(command, `${occurrence.gameName} has no replaceable local reward group`);
+      }
+      const room = requireRoom(catalog, occurrence.gameName, layout.biomeKey, command);
+      const cages = room.localChildren.find((child) => child.key === command.reward.groupKey);
+      if (
+        cages?.kind !== 'boundedRewardSlots' ||
+        !cages.slotKeys.includes(command.reward.slotKey)
+      ) {
+        failCommand(
+          command,
+          `unknown local reward ${command.reward.groupKey}.${command.reward.slotKey}`,
+        );
+      }
+      const offer = occurrence.state.cages[command.reward.slotKey];
+      if (offer === undefined) {
+        failCommand(
+          command,
+          `missing local reward ${command.reward.groupKey}.${command.reward.slotKey}`,
+        );
+      }
+      if (sameOffer(offer, command.value)) {
+        return document;
+      }
+      const replacement = {
+        ...occurrence,
+        state: {
+          ...occurrence.state,
+          cages: { ...occurrence.state.cages, [command.reward.slotKey]: command.value },
+        },
       };
       return withBiome(document, located, replaceOccurrence(plan, replacement, command));
     }

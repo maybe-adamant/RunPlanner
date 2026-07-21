@@ -56,6 +56,20 @@ const candidateProjection: CandidateProjectionService = {
       offers,
       offers.map((value) => ({ kind: 'incomingReward', reward: owner, value })),
     ),
+  localRewards: (_project, owner, offers) =>
+    projected(
+      offers,
+      offers.map((value) => ({ kind: 'localReward', reward: owner, value })),
+    ),
+  fieldsCageOutcomes: (_project, continuation, outcomes) =>
+    projected(
+      outcomes,
+      outcomes.map((cageOutcome) => ({
+        kind: 'fieldsCageOutcome',
+        continuation,
+        cageOutcome,
+      })),
+    ),
   shopOffers: (_project, owner, offers) =>
     projected(
       offers,
