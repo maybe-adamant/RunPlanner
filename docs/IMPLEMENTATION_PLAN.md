@@ -1291,7 +1291,7 @@ Implement in this order unless concrete dependencies justify a change:
 5. P: linear surface topology and room-internal encounter rules.
 6. Q: forced skeleton and independently generated two-exit miniboss stages.
 
-For each biome:
+For each biome, close these acceptance gates:
 
 - verify declarations;
 - add authored topology support;
@@ -1300,6 +1300,14 @@ For each biome:
 - add editor projection;
 - add candidate evaluation;
 - activate it only after its full product loop passes.
+
+These gates are not a required one-commit-per-gate sequence. H used seven
+slices because it established Fields batch state, room-local rewards, dormant
+candidate projection, and the first controlled post-F/G activation boundary.
+Later linear biomes should reuse those authorities and split commits only when
+they introduce a genuinely new authored, simulation, candidate, or editor
+contract. Declaration verification was already completed by Phase 2.8 and is
+normally a parity gate rather than another migration slice.
 
 ### H Delivery Slices
 
@@ -1344,6 +1352,153 @@ H is implemented through these atomic slices:
    - close complete F/G/H profiles, recovery, blocked-prefix behavior,
      accessibility, interaction, and responsiveness fixtures before moving to
      I.
+
+### I Delivery Slices
+
+I should close through five slices:
+
+1. Clockwork authorship:
+   - persist the declaration-owned `maxNonGoalRewards` bounded value at the
+     biome owner and expose one typed semantic replacement command;
+   - admit `clockwork` batches, the fixed Intro/Story entries, and generated
+     `I_PreBoss02` target occurrences without adding a second terminal action;
+   - require complete WorldShop state only when a generated preboss target is
+     picked, while retaining repeated preboss occurrences as distinct authored
+     identities;
+   - close codec, command, downstream-retention, completeness, and malformed-
+     authority fixtures without activating I capabilities;
+2. Clockwork materialization and history:
+   - derive Goal versus NonGoal from the exact pre-generation Clockwork state;
+   - materialize the fixed entries, ordinary batches, repeated conditional
+     preboss targets, picked-terminal closure, boss, and postboss tail;
+   - apply Goal acquisition, non-goal reward acquisition,
+     `BiomeRewardsSpawned`, encounter-depth, and completion timing at their
+     exact lifecycle points;
+   - carry the validated F/G/H route state into I without inventing a
+     route-local reset;
+3. selected validation and candidates:
+   - validate Goal pressure, non-goal caps, room eligibility, generated
+     preboss support, Tartarus reward resolution, shops, and completion;
+   - evaluate the biome field, rooms, rewards, shop offers, and purchases
+     through the same selected-plan authorities;
+   - preserve authored invalid values and return unavailable context when the
+     F/G/H prefix is incomplete or invalid;
+4. I editor projection:
+   - render the bounded Clockwork setting and one `Add Next Decision` frontier;
+   - show derived Goal markers instead of editable rewards, retained NonGoal
+     rewards when active, and generated preboss peers in the ordinary decision
+     card;
+   - expose a picked preboss WorldShop, semantic findings, candidates, and
+     undo/redo without introducing `Go to Preboss`;
+5. I product-loop activation:
+   - promote I to authorable, simulatable, and editable atomically;
+   - close complete F/G/H/I profiles, recovery, blocked-prefix behavior,
+     semantic navigation, accessibility, interaction, and responsiveness.
+
+### N Planning Boundary
+
+N does not inherit the consolidated linear-biome commit shape. `HubBiome`
+requires its own authored plan, canonical materializer, ordered visit/return
+history, side-room model, candidate surface, and editor projector. Define N's
+concrete slices immediately before implementation. N must activate before any
+later Surface biome because application route prefixes remain contiguous.
+
+### O Delivery Slices
+
+O should close through six slices after N:
+
+1. ship authorship:
+   - admit direct-terminal topology and source-offer-point batch-store
+     authority through the project codec and semantic commands;
+   - expose typed replacements for encounter count, wheel offer count, wheel
+     store, active offers, and picked offer while preserving complete
+     maximum-capacity wheel defaults;
+   - retain dormant second-wheel values when the room uses only Intro plus one
+     combat;
+2. ship materialization and lifecycle:
+   - materialize Intro, Combat1/wheel1, optional Combat2/wheel2, direct preboss,
+     boss, and postboss in physical order;
+   - generate each active wheel's offers jointly, acquire only its picked
+     offer at the declared phase, and derive the outgoing batch store from the
+     last active wheel;
+   - apply exact encounter-depth and room-counter timing across all active
+     phases and carry N route history into O;
+3. selected O validation:
+   - validate one-exit topology, combat-family eligibility, caps, special-room
+     timing, wheel capacity, stores, offers, picks, direct preboss timing, and
+     completion;
+   - emit findings at the exact room, wheel, offer, pick, or continuation
+     owner without editing authorship;
+4. O candidate evaluation:
+   - add only the new candidate vocabulary required for encounter count and
+     wheel count/store/offer/pick values;
+   - reuse existing room, reward, shop, and selected-plan authorities;
+   - prove candidate/selected consistency, selected-invalid retention, and
+     unavailable upstream context;
+5. O editor projection:
+   - render active and dormant wheel capacity, ordered wheel offers, one picked
+     offer, direct-preboss frontier, findings, and candidates through semantic
+     commands;
+   - keep encounter and wheel timing out of React;
+6. O product-loop activation:
+   - promote O atomically after N is active;
+   - close complete N/O Surface profiles, recovery, navigation, accessibility,
+     interaction, and responsiveness without skipping the N prefix.
+
+### P Delivery Slices
+
+P should be a three-slice reuse proof:
+
+1. dormant P core loop:
+   - reuse standard batches, authored Run/Meta stores, eligibility-driven
+     progression, forked preboss, and the common linear authored contract;
+   - materialize and replay P's fixed start, room-internal encounter rules,
+     ordinary rewards, selected validation, preboss, boss, and postboss after
+     the N/O prefix;
+   - add no P-specific production abstraction unless a verified rule cannot be
+     represented by the existing linear authorities;
+2. P candidates and editor:
+   - reuse existing room, reward, shop, batch-store, terminal, finding, and
+     linear-editor surfaces;
+   - add only focused P fixtures for its unique room eligibility and
+     room-internal encounter behavior;
+3. P product-loop activation:
+   - promote P atomically after N/O;
+   - close complete N/O/P Surface profiles and the shared product-loop gates.
+
+### Q Delivery Slices
+
+Q should close through four slices:
+
+1. scripted authorship:
+   - admit the declaration-owned staged progression and direct terminal through
+     codec, semantic commands, completeness, and downstream retention;
+   - preserve fixed stage order, physical target order, reward-free ordinary
+     batches, and independently authored miniboss peers;
+2. scripted materialization and validation:
+   - materialize Intro, foyer, both forks, both miniboss stages, ordinary
+     stages, direct preboss, and boss in declaration order;
+   - replay reward-free rooms and counted `TyphonBossRewards` offers with exact
+     counters, candidate pools, force rules, and completion;
+   - emit selected-plan findings without adding a generic script interpreter;
+3. Q candidates and editor:
+   - project stage-constrained room candidates, two-exit miniboss decisions,
+     reward-free leaves, direct-preboss frontier, findings, and navigation;
+   - reuse existing reward controls for miniboss rewards and add no meaningless
+     batch-store editor;
+4. Q product-loop activation:
+   - promote Q atomically after N/O/P;
+   - close the complete N/O/P/Q Surface product loop, profiles, recovery,
+     accessibility, interaction, and responsiveness.
+
+Candidate support for every later biome must consume the normal selected-plan
+evaluator. Do not reintroduce a candidate-only dormant simulator. If a dormant
+editor slice cannot use the normal evaluator without a second authority, keep
+candidate/editor wiring in the final activation slice instead.
+
+Dormant core work may land before a predecessor is active, but application
+activation must preserve route-prefix order: `F -> G -> H -> I` and
+`N -> O -> P -> Q`.
 
 Do not create placeholder production behavior that claims a biome is simulated
 when it only has declarations or UI.
