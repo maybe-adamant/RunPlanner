@@ -25,6 +25,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
+  createProjectAddress,
   createRouteAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
@@ -427,11 +428,13 @@ function selectedTwoExitParent(parentId: typeof startId): ProjectDocument {
 
 describe('project semantic addresses', () => {
   it('creates stable domain keys without rendered positions', () => {
+    const project = createProjectAddress();
     const route = createRouteAddress('Underworld');
     const occurrence = createOccurrenceAddress(biome, startId);
     const firstTarget = createTargetAddress(biome, startId, 1);
     const secondTarget = createTargetAddress(biome, startId, 2);
 
+    expect(semanticAddressKey(project)).toBe('["project"]');
     expect(semanticAddressKey(route)).toBe('["route","Underworld"]');
     expect(semanticAddressKey(occurrence)).toBe('["occurrence","Underworld","F","start"]');
     expect(semanticAddressKey(firstTarget)).not.toBe(semanticAddressKey(secondTarget));
@@ -477,6 +480,39 @@ describe('project semantic addresses', () => {
       occurrenceId: sharedOccurrenceId,
       gameName: 'F_OpeningThreeExit',
     });
+  });
+});
+
+describe('project-root commands', () => {
+  it('renames the project as one undoable semantic edit', () => {
+    const original = emptyProject();
+    let history = applyProjectHistoryCommand(createProjectHistory(original), catalog, {
+      kind: 'RenameProject',
+      name: 'Ocean Route',
+    });
+
+    expect(history.present.name).toBe('Ocean Route');
+    expect(history.past).toEqual([original]);
+    expect(
+      applyProjectCommand(history.present, catalog, {
+        kind: 'RenameProject',
+        name: 'Ocean Route',
+      }),
+    ).toBe(history.present);
+    history = undoProjectHistory(history);
+    expect(history.present).toBe(original);
+  });
+
+  it('rejects a blank name at the project semantic owner', () => {
+    expect(() =>
+      applyProjectCommand(emptyProject(), catalog, { kind: 'RenameProject', name: ' ' }),
+    ).toThrowError(
+      new ProjectCommandContractError(
+        'RenameProject',
+        createProjectAddress(),
+        '$.name: must not be blank',
+      ),
+    );
   });
 });
 

@@ -3,53 +3,27 @@
 import { fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  createBrowserProjectStorage,
-  createBrowserProjectTransfer,
-} from './browserProjectAdapters';
+import { createBrowserProfileFileAdapter } from './browserProfileFileAdapter';
 
 afterEach(() => {
   document.body.replaceChildren();
   vi.restoreAllMocks();
 });
 
-describe('browser project adapters', () => {
-  it('owns one fixed browser-local project slot', () => {
-    const values = new Map<string, string>();
-    const browserStorage: Storage = {
-      get length() {
-        return values.size;
-      },
-      clear: () => values.clear(),
-      getItem: (key: string) => values.get(key) ?? null,
-      key: (index: number) => [...values.keys()][index] ?? null,
-      removeItem: (key: string) => {
-        values.delete(key);
-      },
-      setItem: (key: string, value: string) => {
-        values.set(key, value);
-      },
-    };
-    const storage = createBrowserProjectStorage(browserStorage);
-
-    expect(storage.read()).toBeNull();
-    storage.write('{"project":true}');
-
-    expect(storage.read()).toBe('{"project":true}');
-    expect(values.size).toBe(1);
-  });
-
-  it('downloads JSON through an ephemeral browser object URL', () => {
+describe('browser profile-file adapter', () => {
+  it('saves JSON through an ephemeral browser object URL', async () => {
     const createObjectURL = vi.fn<(blob: Blob) => string>(() => 'blob:run-planner');
     const revokeObjectURL = vi.fn<(url: string) => void>(() => {});
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    const transfer = createBrowserProjectTransfer({
+    const adapter = createBrowserProfileFileAdapter({
       Blob,
       URL: { createObjectURL, revokeObjectURL },
       document,
     });
 
-    transfer.download('plan.json', '{"project":true}');
+    await expect(adapter.save('erebus-route.runplanner.json', '{"project":true}')).resolves.toBe(
+      'saved',
+    );
 
     const blob = createObjectURL.mock.calls[0]?.[0];
     expect(blob).toBeInstanceOf(Blob);
@@ -59,43 +33,66 @@ describe('browser project adapters', () => {
     expect(document.querySelector('a')).toBeNull();
   });
 
-  it('uploads selected JSON text and removes its transient file input', async () => {
-    const transfer = createBrowserProjectTransfer({
+  it('loads selected profile text and removes its transient file input', async () => {
+    const adapter = createBrowserProfileFileAdapter({
       Blob,
       URL: { createObjectURL: vi.fn(), revokeObjectURL: vi.fn() },
       document,
     });
 
-    const upload = transfer.upload();
+    const load = adapter.load();
     const input = document.querySelector('input[type="file"]');
     if (!(input instanceof HTMLInputElement)) {
-      throw new Error('upload did not create its file input');
+      throw new Error('load did not create its file input');
     }
+    expect(input.accept).toContain('.runplanner.json');
     Object.defineProperty(input, 'files', {
       configurable: true,
       value: [{ text: () => Promise.resolve('{"project":true}') }],
     });
     fireEvent.change(input);
 
-    await expect(upload).resolves.toBe('{"project":true}');
+    await expect(load).resolves.toBe('{"project":true}');
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
   it('reports a cancelled file picker without leaving transient DOM state', async () => {
-    const transfer = createBrowserProjectTransfer({
+    const adapter = createBrowserProfileFileAdapter({
       Blob,
       URL: { createObjectURL: vi.fn(), revokeObjectURL: vi.fn() },
       document,
     });
 
-    const upload = transfer.upload();
+    const load = adapter.load();
     const input = document.querySelector('input[type="file"]');
     if (!(input instanceof HTMLInputElement)) {
-      throw new Error('upload did not create its file input');
+      throw new Error('load did not create its file input');
     }
     fireEvent(input, new Event('cancel'));
 
-    await expect(upload).resolves.toBeNull();
+    await expect(load).resolves.toBeNull();
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it('rejects an unreadable selected profile and removes its transient input', async () => {
+    const adapter = createBrowserProfileFileAdapter({
+      Blob,
+      URL: { createObjectURL: vi.fn(), revokeObjectURL: vi.fn() },
+      document,
+    });
+
+    const load = adapter.load();
+    const input = document.querySelector('input[type="file"]');
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('load did not create its file input');
+    }
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [{ text: () => Promise.reject(new Error('read denied')) }],
+    });
+    fireEvent.change(input);
+
+    await expect(load).rejects.toThrow('read denied');
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 });

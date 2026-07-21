@@ -9,14 +9,11 @@ import { createCandidateProjectionService } from './candidateProjection';
 import { createEditorNavigation } from './editorNavigation';
 import { createInitialProject } from './projectBootstrap';
 import { createProjectOperations } from './projectOperations';
-import {
-  createDefaultProjectPersistenceAdapters,
-  type ProjectPersistenceAdapters,
-} from './projectPersistence';
+import { createUnavailableProfileFileAdapter, type ProfileFileAdapter } from './profileFile';
 import { createPlannerStore } from './store';
 
 export interface CreateApplicationOptions {
-  readonly projectPersistence?: ProjectPersistenceAdapters;
+  readonly profileFile?: ProfileFileAdapter;
 }
 
 export function createApplication(options: CreateApplicationOptions = {}) {
@@ -29,9 +26,9 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     simulateProject(catalog, project, simulationScope);
   const store = createPlannerStore({ catalog, capabilities, evaluateProject, initialProject });
   const projectOperations = createProjectOperations({
-    adapters: options.projectPersistence ?? createDefaultProjectPersistenceAdapters(),
     capabilities,
     catalog,
+    profileFile: options.profileFile ?? createUnavailableProfileFileAdapter(),
     store,
   });
 

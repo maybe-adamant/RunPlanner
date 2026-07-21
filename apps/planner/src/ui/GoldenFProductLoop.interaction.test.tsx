@@ -10,7 +10,7 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication, type PlannerApplication } from '../application/createApplication';
-import type { ProjectPersistenceAdapters } from '../application/projectPersistence';
+import type { ProfileFileAdapter } from '../application/profileFile';
 import { renderPlannerForInteraction } from '../testing/renderPlanner';
 import { semanticOwnerElementId } from './semanticOwner';
 
@@ -183,22 +183,17 @@ async function authorGoldenF(user: PlannerUser): Promise<void> {
 }
 
 function createPersistence(): {
-  readonly adapters: ProjectPersistenceAdapters;
+  readonly profileFile: ProfileFileAdapter;
   readStoredJson(): string | null;
 } {
   let storedJson: string | null = null;
   return {
-    adapters: {
-      storage: {
-        read: () => storedJson,
-        write: (json) => {
-          storedJson = json;
-        },
+    profileFile: {
+      save: (_fileName, json) => {
+        storedJson = json;
+        return Promise.resolve('saved');
       },
-      transfer: {
-        download: () => {},
-        upload: () => Promise.resolve(null),
-      },
+      load: () => Promise.resolve(storedJson),
     },
     readStoredJson: () => storedJson,
   };
@@ -239,7 +234,7 @@ afterEach(() => {
 describe('golden F product loop', () => {
   it('authors, validates, labels, saves, and reloads the representative F project through the browser UI', async () => {
     const persistence = createPersistence();
-    const application = createApplication({ projectPersistence: persistence.adapters });
+    const application = createApplication({ profileFile: persistence.profileFile });
     const { user } = renderPlannerForInteraction({ application });
 
     await authorGoldenF(user);
@@ -290,17 +285,19 @@ describe('golden F product loop', () => {
       expect(text).not.toContain(internalName);
     }
 
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.click(screen.getByRole('button', { name: 'Save Profile' }));
+    await screen.findByText('Saved the profile.');
     expect(persistence.readStoredJson()).toBe(encodeProjectDocument(authored));
     await user.click(screen.getByRole('button', { name: 'New' }));
     expect(currentEvaluation(application).status).toBe('empty');
-    await user.click(screen.getByRole('button', { name: 'Load' }));
+    await user.click(screen.getByRole('button', { name: 'Load Profile' }));
+    await screen.findByText('Loaded the profile.');
 
     expect(currentProject(application)).toEqual(authored);
     expect(currentEvaluation(application)).toEqual(evaluated);
     expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
     expect(application.store.getState().projectWorkspace.history.future).toEqual([]);
-  }, 30_000);
+  }, 45_000);
 
   it('keeps an incomplete F editable and navigates its finding to the biome owner', async () => {
     const application = createApplication();
@@ -373,4 +370,72 @@ describe('golden F product loop', () => {
     expect(currentEvaluation(application).status).toBe('empty');
     expect(screen.queryByRole('button', { name: 'Erebus' })).toBeNull();
   });
+
+  it('keeps G authoring available while incomplete F blocks its simulation', async () => {
+    const application = createApplication();
+    const { user } = renderPlannerForInteraction({ application });
+
+    await user.selectOptions(screen.getByLabelText('Configured biomes'), '2');
+    await user.click(screen.getByRole('button', { name: 'Oceanus' }));
+
+    expect(screen.getByText('Blocked', { selector: '.status-badge' })).toBeTruthy();
+    await user.selectOptions(screen.getByLabelText('Starting room'), 'G_Intro');
+    await user.click(screen.getByRole('button', { name: 'Start Oceanus' }));
+    await user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
+    await user.selectOptions(screen.getByLabelText('Type'), 'Combat');
+
+    const roomOption = screen.getByRole('option', { name: 'Combat 01' });
+    expect(roomOption.getAttribute('data-candidate-support')).toBe('unavailable');
+    expect(currentEvaluation(application).routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(
+      ['F'],
+    );
+    expect(
+      currentEvaluation(application).findings.every(
+        (finding) =>
+          finding.origin.kind !== 'project' &&
+          (finding.origin.kind === 'route' || finding.origin.biomeKey === 'F'),
+      ),
+    ).toBe(true);
+  });
+
+  it('navigates, authors, undoes, and redoes G after a validated F prefix', async () => {
+    const application = createApplication();
+    const { user } = renderPlannerForInteraction({ application });
+    await authorGoldenF(user);
+    await user.click(screen.getByRole('button', { name: 'Route' }));
+    await user.selectOptions(screen.getByLabelText('Configured biomes'), '2');
+    const gFinding = currentEvaluation(application).findings.find(
+      (finding) =>
+        finding.code === 'biomeTopologyMissing' &&
+        finding.origin.kind !== 'project' &&
+        finding.origin.kind !== 'route' &&
+        finding.origin.biomeKey === 'G',
+    );
+    if (gFinding === undefined) {
+      throw new Error('Configured G topology finding is missing');
+    }
+    const scrollIntoView = stubScrollIntoView();
+
+    await user.click(screen.getByRole('button', { name: /Start this biome/ }));
+
+    expect(application.store.getState().editorSession.activeUnderworldPanel).toBe('G');
+    expect(document.activeElement?.id).toBe(semanticOwnerElementId(gFinding.origin));
+    expect(scrollIntoView).toHaveBeenCalledOnce();
+    const start = screen.getByLabelText('Starting room');
+    expect(
+      within(start)
+        .getByRole('option', { name: 'Entrance' })
+        .getAttribute('data-candidate-support'),
+    ).toBe('forced');
+    await user.selectOptions(start, 'G_Intro');
+    await user.click(screen.getByRole('button', { name: 'Start Oceanus' }));
+    const started = currentProject(application);
+    expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(screen.getByRole('button', { name: 'Start Oceanus' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Redo' }));
+    expect(currentProject(application)).toBe(started);
+    expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
+  }, 30_000);
 });

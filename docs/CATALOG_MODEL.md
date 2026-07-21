@@ -559,6 +559,11 @@ Phase 3 promotes F alone to simulatable after its public project simulator and
 golden closure pass. The Phase 2.8 authorable/editable sets and every dormant
 later-biome capability remain unchanged.
 
+Phase 5 promotes G to simulatable and editable after its complete simulator,
+candidate projection, shared linear-biome editor, navigation, and interaction
+fixtures land. The current application capability matrix therefore makes F
+and G authorable, simulatable, and editable. Every later biome remains dormant.
+
 P, Q, H, O, I, and N are also declaration-complete in the normalized catalog,
 but they are not authorable, simulatable, or editable. Their presence proves
 that declaration coverage and product activation remain independent.

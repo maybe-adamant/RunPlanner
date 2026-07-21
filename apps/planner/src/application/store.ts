@@ -10,6 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { PlannerCapabilities } from './capabilities';
 import { editorSessionReducer } from './editorSessionSlice';
 import { indexFindingsByOwner } from './evaluationProjection';
+import { profileSessionReducer } from './profileSessionSlice';
 import { requireProjectAuthorable } from './projectDocuments';
 import { createProjectWorkspaceReducer, type ProjectEvaluator } from './projectWorkspaceSlice';
 
@@ -31,6 +32,7 @@ export function createPlannerStore(options: CreatePlannerStoreOptions) {
         options.evaluateProject,
       ),
       editorSession: editorSessionReducer,
+      profileSession: profileSessionReducer,
     },
   });
 }
@@ -43,6 +45,8 @@ export const selectProjectWorkspace = (state: RootState) => state.projectWorkspa
 export const selectProjectHistory = (state: RootState) => state.projectWorkspace.history;
 export const selectPresentProject = (state: RootState) => state.projectWorkspace.history.present;
 export const selectProjectEvaluation = (state: RootState) => state.projectWorkspace.evaluation;
+export const selectExplicitProfileBaselineJson = (state: RootState) =>
+  state.profileSession.explicitBaselineJson;
 export const selectProjectFindingsByOwner = createSelector(selectProjectEvaluation, (evaluation) =>
   indexFindingsByOwner(evaluation.findings),
 );

@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createProjectAddress,
   createTargetAddress,
   semanticAddressKey,
   type FProjectEvaluation,
@@ -90,6 +91,10 @@ describe('evaluation presentation', () => {
       label: 'Not configured',
       tone: 'empty',
     });
+    expect(presentBiomeStatus(undefined)).toEqual({
+      label: 'Blocked',
+      tone: 'blocked',
+    });
     expect(presentBiomeStatus({ completion: 'incomplete' } as FProjectEvaluation)).toEqual({
       label: 'Incomplete',
       tone: 'incomplete',
@@ -106,6 +111,7 @@ describe('evaluation presentation', () => {
     const target = createTargetAddress(biome, createOccurrenceId('private-parent'), 2);
     const room = createOccurrenceAddress(biome, createOccurrenceId('private-room'));
 
+    expect(findingDestinationLabel(catalog, createProjectAddress())).toBe('Project');
     expect(findingDestinationLabel(catalog, target)).toBe('Erebus · Exit 2');
     expect(findingDestinationLabel(catalog, room)).toBe('Erebus · Room');
   });

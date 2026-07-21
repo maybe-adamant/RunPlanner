@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 
-import { createBrowserProjectPersistenceAdapters } from './application/browserProjectAdapters';
+import { createBrowserProfileFileAdapter } from './application/browserProfileFileAdapter';
 import { createApplication } from './application/createApplication';
 import './styles.css';
 import { App } from './ui/App';
@@ -14,7 +14,11 @@ if (rootElement === null) {
 }
 
 const application = createApplication({
-  projectPersistence: createBrowserProjectPersistenceAdapters(),
+  profileFile: createBrowserProfileFileAdapter({
+    Blob: globalThis.Blob,
+    URL: globalThis.URL,
+    document: globalThis.document,
+  }),
 });
 
 createRoot(rootElement).render(

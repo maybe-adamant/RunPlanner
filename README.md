@@ -40,24 +40,26 @@ materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room
 legality, and semantic generation findings are also implemented. F reward,
 bag, acquisition, and shop orchestration feed the public deterministic
-`simulateProject` composition root. F is now simulatable; G remains authorable
-but dormant until its complete product loop exists.
+`simulateProject` composition root. Phase 3 made F simulatable while G remained
+authorable but dormant until its complete product loop landed in Phase 5.
 
 Phase 4 is complete. The browser editor publishes simulation and semantic
 findings atomically with authored history, supports semantic finding
-navigation and keyboard undo/redo, and owns explicit New, Save, Load, Export,
-and Import operations over normalized project JSON. A browser interaction
-fixture authors the representative valid F route entirely through visible
+navigation and keyboard undo/redo, and introduced temporary New, Save, Load,
+Export, and Import operations over normalized project JSON. A browser
+interaction fixture authors the representative valid F route through visible
 controls, verifies player-facing labels, and reloads equal authored and
 evaluated state.
 
-Phase 5 has begun with the pure candidate-evaluation foundation. Generated F
-room candidates are evaluated at their exact semantic target through the same
-history view, force pressure, support-set calculation, findings, and evidence
-used by selected-plan validation. Ordered candidate batches reuse one project
-simulation, while incomplete or upstream-blocked contexts remain explicitly
-unavailable. Application projection and editor decoration remain the next
-slice.
+Phase 5 Commits 1 through 5 are complete. Generated room candidates and every
+active reward/shop value are evaluated through the
+same simulation authorities used by selected-plan validation. F and G now
+share the complete linear simulation, candidate, editor, navigation, and
+finding path; both are authorable, simulatable, and editable while later
+biomes remain dormant. The current profile workflow saves and loads normalized
+`ProjectDocument` files through one injected adapter, supports undoable project
+names and safe filename suggestions, and tracks the exact explicit save/load
+baseline. Dirty-state presentation and autosave recovery are the next slice.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

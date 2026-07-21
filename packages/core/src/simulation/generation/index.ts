@@ -2,6 +2,7 @@ export {
   evaluateFRoomGeneration,
   evaluateFRoomTargetCandidate,
   evaluateLinearRoomGeneration,
+  evaluateLinearRoomTargetCandidate,
   LinearRoomGenerationContractError,
   LinearRoomGenerationContractError as FRoomGenerationContractError,
 } from './linear';
