@@ -116,18 +116,22 @@ address. The UI does not invent a second occurrence identity.
 
 All topology edits dispatch commands from `AUTHORED_PROJECT_MODEL.md`.
 
-The UI may use convenient two-stage selection:
+Room replacement uses one grouped contextual picker:
 
 ```text
-Type: Combat / Miniboss / Story / Fountain / Shop
-Room: category-filtered concrete room labels
+Combat
+  Combat 03
+  Combat 06
+Miniboss
+  Shadow-Spiller
 ```
 
-The category is transient browsing state. An authored target is one stable
-Room Occurrence whose current selection is a concrete `gameName`. Changing
-category does not clear the occurrence; choosing a concrete replacement
-dispatches one atomic `ReplaceOccurrenceRoom` command and preserves its
-`occurrenceId`.
+Room kind is transient grouping and search vocabulary, not a required first
+selection. An authored target is one stable Room Occurrence whose current
+selection is a concrete `gameName`. Choosing a concrete replacement dispatches
+one atomic `ReplaceOccurrenceRoom` command and preserves its `occurrenceId`.
+Contextual support, grouping, zero/one-candidate behavior, and selected-invalid
+retention are defined in `CONTEXTUAL_EDITOR_UX.md`.
 
 Creating a previously absent target allocates an occurrence ID and installs
 the declaration's complete offer-time defaults in the same semantic command.
@@ -234,6 +238,13 @@ payload domain
 A parent selection immediately installs the selected child's complete declared
 defaults. The UI never commits an intermediate empty payload or reward.
 
+Reward type and payload project through one compact compound picker. A
+payload-free reward commits immediately; Boon advances to one source choice;
+Devotion advances through chosen and spurned sources. Partial picker progress
+is transient session state, and only the complete `ResolvedRewardOffer`
+dispatches one semantic replacement command. The contextual store, sibling,
+bag, and source rules are defined in `CONTEXTUAL_EDITOR_UX.md`.
+
 Blind Box deliberately exposes its intended eventual Boon source as planner
 intent even though the in-game shop hides that result. The editor labels it as
 an eventual result, not as visible shop information. An unpurchased box retains
@@ -305,16 +316,19 @@ owner address and projects them into UI destinations:
 Finding resolution is direct lookup. It never scans rows for a matching game
 room name.
 
-Context-invalid candidates remain visible and are decorated. Declaration-
-impossible values may be absent. Before contextual candidate simulation is
-available, selectors show stable declaration-derived domains without
-pretending they are validated.
+Context-invalid authored values remain visible and are decorated.
+Declaration-impossible values may be absent. Contextual pickers ordinarily
+omit unselected impossible values while keeping them inspectable through an
+unavailable disclosure. Before contextual candidate simulation is available,
+selectors show stable declaration-derived domains without pretending they are
+validated. `CONTEXTUAL_EDITOR_UX.md` owns the detailed presentation policy;
+simulation continues to own support and exclusion reasons.
 
-The post-Phase-6 UX pass refines this initial policy through typed candidate
-presentation rules defined in `POST_BIOME_UX_FEEDBACK_AND_FRONTIER.md`. A
-currently authored invalid value always remains visible; an unselected
-unsupported candidate may later be hidden by an explicit presentation policy.
-Simulation continues to own support and exclusion reasons.
+The active biome consumes progressive evaluation coverage from
+`SIMULATION_AND_VALIDATION.md`. A missing downstream decision or terminal does
+not suppress findings and candidate support for an earlier covered owner. The
+page renders that one atomic prefix result; it does not request or assemble a
+separate partial history.
 
 Later biomes blocked by an earlier incomplete or invalid biome remain visible
 and editable. Their contextual validity is unavailable because the required

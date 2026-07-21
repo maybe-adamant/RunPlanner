@@ -86,7 +86,7 @@ checks that jsdom cannot faithfully own:
 
 ## Closed Scope
 
-Phase 5 closes with F and G as the only active biomes. H, I, N, O, P, and Q
-remain declaration-only and dormant. This closure adds no Tauri packaging,
-execution-plan compiler, game-module integration, Chaos/NPC detours, or the
-post-biome unified UX policy reserved for Phase 7.
+At Phase 5 closure, F and G were the only active biomes and H/I/N/O/P/Q were
+declaration-complete but dormant. The phase added no Tauri packaging,
+execution-plan compiler, game-module integration, Chaos/NPC detours, or later
+contextual-selection UX work.

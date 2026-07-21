@@ -1101,7 +1101,14 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices and
-all five I slices are complete; the next controlled biome expansion is pending.
+all five I slices are complete. The contextual-selection UX insertion defined
+in `CONTEXTUAL_EDITOR_UX.md` is next; N remains the next controlled biome
+expansion after that insertion closes.
+
+That insertion begins by replacing the current incomplete-biome early return
+with the progressive evaluation contract in `SIMULATION_AND_VALIDATION.md`.
+Production does not yet publish prefix materialization, prefix history state,
+or contextual candidates before biome completion.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete
