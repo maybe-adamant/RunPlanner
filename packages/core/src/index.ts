@@ -162,6 +162,7 @@ export {
 } from './project';
 export {
   CandidateEvaluationContractError,
+  createPreparedProjectCandidateEvaluator,
   createProjectCandidateEvaluator,
   CompletenessContractError,
   evaluateProjectCandidate,

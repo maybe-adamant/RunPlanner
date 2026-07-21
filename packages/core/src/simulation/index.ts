@@ -11,6 +11,7 @@ export {
 } from './completeness';
 export {
   CandidateEvaluationContractError,
+  createPreparedProjectCandidateEvaluator,
   createProjectCandidateEvaluator,
   evaluateProjectCandidate,
   evaluateProjectCandidates,

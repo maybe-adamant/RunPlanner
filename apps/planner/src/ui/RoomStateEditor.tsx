@@ -4,12 +4,15 @@ import type {
   CountedRewardBinding,
   RoomDeclaration,
   RoomOccurrence,
+  ShopPurchaseAddress,
+  ProjectDocument,
 } from '@run-planner/core';
 import {
   createIncomingRewardAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
 } from '@run-planner/core';
+import { useRef, useState } from 'react';
 
 import {
   candidateSupport,
@@ -25,6 +28,64 @@ interface RoomStateEditorProps {
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly occurrence: RoomOccurrence;
+}
+
+interface ShopPurchaseControlProps {
+  readonly address: ShopPurchaseAddress;
+  readonly candidateProjection: CandidateProjectionService;
+  readonly checked: boolean;
+  readonly id: string;
+  readonly onChange: (purchased: boolean) => void;
+  readonly project: ProjectDocument;
+}
+
+function ShopPurchaseControl({
+  address,
+  candidateProjection,
+  checked,
+  id,
+  onChange,
+  project,
+}: ShopPurchaseControlProps) {
+  type Projection = {
+    readonly checked: boolean;
+    readonly project: ProjectDocument;
+    readonly support: ReturnType<typeof candidateSupport>;
+  };
+  const projectionRef = useRef<Projection | undefined>(undefined);
+  const [projection, setProjection] = useState<Projection>();
+  const support =
+    projection?.project === project && projection.checked === checked
+      ? projection.support
+      : 'unavailable';
+  const activateProjection = () => {
+    if (
+      support !== 'unavailable' ||
+      (projectionRef.current?.project === project && projectionRef.current.checked === checked)
+    ) {
+      return;
+    }
+    const candidate = candidateProjection
+      .shopPurchases(project, address, [false, true])
+      .find((option) => option.value === checked);
+    const next = { checked, project, support: candidateSupport(candidate) };
+    projectionRef.current = next;
+    setProjection(next);
+  };
+  return (
+    <label className="purchase-control" data-candidate-support={support} htmlFor={id}>
+      <SemanticOwnerMarker address={address} />
+      <input
+        checked={checked}
+        id={id}
+        onChange={(event) => onChange(event.target.checked)}
+        onFocus={activateProjection}
+        onPointerDown={activateProjection}
+        type="checkbox"
+      />
+      Purchased
+    </label>
+  );
 }
 
 function countedBinding(
@@ -130,9 +191,6 @@ export function RoomStateEditor({
         const offerPrefix = `${idPrefix}-offer-${slot.key}`;
         const offerAddress = createShopOfferAddress(biome, occurrence.occurrenceId, slot.key);
         const purchaseAddress = createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key);
-        const purchaseCandidate = candidateProjection
-          .shopPurchases(project, purchaseAddress, [false, true])
-          .find((option) => option.value === offerState.purchased);
         return (
           <section className="shop-offer" key={slot.key}>
             <div className="shop-offer-heading">
@@ -140,28 +198,22 @@ export function RoomStateEditor({
                 <h4>{slot.label}</h4>
                 <SemanticOwnerMarker address={offerAddress} />
               </div>
-              <label
-                className="purchase-control"
-                data-candidate-support={candidateSupport(purchaseCandidate)}
-                htmlFor={`${offerPrefix}-purchased`}
-              >
-                <SemanticOwnerMarker address={purchaseAddress} />
-                <input
-                  checked={offerState.purchased}
-                  id={`${offerPrefix}-purchased`}
-                  onChange={(event) =>
-                    dispatch(
-                      authoredProjectCommandDispatched({
-                        kind: 'SetShopPurchase',
-                        purchase: purchaseAddress,
-                        purchased: event.target.checked,
-                      }),
-                    )
-                  }
-                  type="checkbox"
-                />
-                Purchased
-              </label>
+              <ShopPurchaseControl
+                address={purchaseAddress}
+                candidateProjection={candidateProjection}
+                checked={offerState.purchased}
+                id={`${offerPrefix}-purchased`}
+                onChange={(purchased) =>
+                  dispatch(
+                    authoredProjectCommandDispatched({
+                      kind: 'SetShopPurchase',
+                      purchase: purchaseAddress,
+                      purchased,
+                    }),
+                  )
+                }
+                project={project}
+              />
             </div>
             <RewardValueEditor
               candidateOwner={{ kind: 'shopOffer', address: offerAddress }}

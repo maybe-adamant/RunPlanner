@@ -220,6 +220,7 @@ export function App({
           <nav className="panel-navigation" aria-label="Underworld panels">
             <p className="navigation-label">Underworld</p>
             <button
+              aria-current={displayedUnderworldPanel === 'route' ? 'page' : undefined}
               className="panel-navigation-item"
               data-active={displayedUnderworldPanel === 'route'}
               onClick={() => dispatch(underworldPanelSelected('route'))}
@@ -229,6 +230,7 @@ export function App({
             </button>
             {configuredUnderworldPanels.map((panel) => (
               <button
+                aria-current={panel.biomeKey === displayedUnderworldPanel ? 'page' : undefined}
                 className="panel-navigation-item"
                 data-active={panel.biomeKey === displayedUnderworldPanel}
                 key={panel.biomeKey}
@@ -265,7 +267,12 @@ export function App({
         <div className="editor-workspace">
           <nav className="panel-navigation" aria-label="Surface panels">
             <p className="navigation-label">Surface</p>
-            <button className="panel-navigation-item" data-active="true" type="button">
+            <button
+              aria-current="page"
+              className="panel-navigation-item"
+              data-active="true"
+              type="button"
+            >
               Route
             </button>
           </nav>

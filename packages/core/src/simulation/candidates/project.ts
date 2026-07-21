@@ -8,12 +8,13 @@ import {
   type LinearForcePressureLedgerEntry,
 } from '../generation';
 import type {
+  BiomeProjectEvaluation,
   CompleteLinearProjectEvaluation,
   ProjectEvaluation,
   ProjectRouteEvaluation,
   ProjectSimulationScope,
 } from '../project';
-import { simulateProject } from '../project';
+import { assertProjectEvaluationSource, evaluateLinearBiome, simulateProject } from '../project';
 import type {
   CandidateContextUnavailableReason,
   CandidateSupport,
@@ -402,20 +403,52 @@ function rewardFindings(
   );
 }
 
+function evaluateCandidateBiome(
+  catalog: Catalog,
+  proposal: ProjectDocument,
+  projectEvaluation: ProjectEvaluation,
+  query: IncomingRewardCandidateQuery | ShopOfferCandidateQuery | ShopPurchaseCandidateQuery,
+): BiomeProjectEvaluation | CandidateContextUnavailableReason {
+  const address = queryAddress(query);
+  const baselineRoute = requireRoute(projectEvaluation.routes, query);
+  const baselineBiome = locateCompleteLinear(baselineRoute, query);
+  if (typeof baselineBiome === 'string') {
+    return baselineBiome;
+  }
+
+  const route = proposal.routes.find((candidate) => candidate.routeKey === address.routeKey);
+  if (route === undefined) {
+    failCandidate(query, `candidate proposal has no route ${address.routeKey}`);
+  }
+  const biomeIndex = route.biomes.findIndex((candidate) => candidate.biomeKey === address.biomeKey);
+  const plan = route.biomes[biomeIndex];
+  if (biomeIndex < 0 || plan === undefined) {
+    failCandidate(query, `candidate proposal has no configured biome ${address.biomeKey}`);
+  }
+
+  const previous = biomeIndex === 0 ? undefined : baselineRoute.biomes[biomeIndex - 1];
+  if (previous?.completion === 'incomplete') {
+    failCandidate(query, 'candidate biome has an incomplete upstream evaluation');
+  }
+  return evaluateLinearBiome(catalog, route.routeKey, plan, biomeIndex + 1, previous);
+}
+
 function evaluateRewardCandidate(
   catalog: Catalog,
   project: ProjectDocument,
+  projectEvaluation: ProjectEvaluation,
   query: IncomingRewardCandidateQuery | ShopOfferCandidateQuery,
-  scope?: ProjectSimulationScope,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as
     IncomingRewardCandidateQuery | ShopOfferCandidateQuery;
   locateBiomePlan(project, stableQuery);
   const proposal = applyCandidateCommand(catalog, project, stableQuery, rewardCommand(stableQuery));
-  const route = requireRoute(simulateProject(catalog, proposal, scope).routes, stableQuery);
-  const biome = locateCompleteLinear(route, stableQuery);
+  const biome = evaluateCandidateBiome(catalog, proposal, projectEvaluation, stableQuery);
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  }
+  if (biome.completion === 'incomplete') {
+    failCandidate(stableQuery, 'reward proposal made a complete biome incomplete');
   }
   const findings = rewardFindings(biome, stableQuery);
   const evidence = Object.freeze({
@@ -431,8 +464,8 @@ function evaluateRewardCandidate(
 function evaluateShopPurchaseCandidate(
   catalog: Catalog,
   project: ProjectDocument,
+  projectEvaluation: ProjectEvaluation,
   query: ShopPurchaseCandidateQuery,
-  scope?: ProjectSimulationScope,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as ShopPurchaseCandidateQuery;
   locateBiomePlan(project, stableQuery);
@@ -441,10 +474,12 @@ function evaluateShopPurchaseCandidate(
     purchase: stableQuery.purchase,
     purchased: stableQuery.purchased,
   });
-  const route = requireRoute(simulateProject(catalog, proposal, scope).routes, stableQuery);
-  const biome = locateCompleteLinear(route, stableQuery);
+  const biome = evaluateCandidateBiome(catalog, proposal, projectEvaluation, stableQuery);
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  }
+  if (biome.completion === 'incomplete') {
+    failCandidate(stableQuery, 'purchase proposal made a complete biome incomplete');
   }
   const exactKey = semanticAddressKey(stableQuery.purchase);
   const findings = Object.freeze(
@@ -500,10 +535,22 @@ export function createProjectCandidateEvaluator(
   project: ProjectDocument,
   scope?: ProjectSimulationScope,
 ): ProjectCandidateEvaluator {
-  const projectEvaluation = simulateProject(catalog, project, scope);
+  return createPreparedProjectCandidateEvaluator(
+    catalog,
+    project,
+    simulateProject(catalog, project, scope),
+  );
+}
+
+export function createPreparedProjectCandidateEvaluator(
+  catalog: Catalog,
+  project: ProjectDocument,
+  projectEvaluation: ProjectEvaluation,
+): ProjectCandidateEvaluator {
+  assertProjectEvaluationSource(project, projectEvaluation);
   return Object.freeze({
     evaluate: (queries: readonly ProjectCandidateQuery[]) =>
-      evaluatePreparedProjectCandidates(catalog, project, projectEvaluation, queries, scope),
+      evaluatePreparedProjectCandidates(catalog, project, projectEvaluation, queries),
   });
 }
 
@@ -512,7 +559,6 @@ function evaluatePreparedProjectCandidates(
   project: ProjectDocument,
   projectEvaluation: ProjectEvaluation,
   queries: readonly ProjectCandidateQuery[],
-  scope?: ProjectSimulationScope,
 ): readonly ProjectCandidateEvaluation[] {
   if (queries.length === 0) {
     return Object.freeze([]);
@@ -528,9 +574,9 @@ function evaluatePreparedProjectCandidates(
           return evaluateBatchRewardStoreCandidate(catalog, project, projectEvaluation, query);
         case 'incomingReward':
         case 'shopOffer':
-          return evaluateRewardCandidate(catalog, project, query, scope);
+          return evaluateRewardCandidate(catalog, project, projectEvaluation, query);
         case 'shopPurchase':
-          return evaluateShopPurchaseCandidate(catalog, project, query, scope);
+          return evaluateShopPurchaseCandidate(catalog, project, projectEvaluation, query);
       }
     }),
   );

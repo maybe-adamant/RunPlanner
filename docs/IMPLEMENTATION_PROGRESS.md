@@ -221,6 +221,26 @@ cancellation, undo-to-clean, recovered-unsaved behavior, corruption,
 capability rejection, discard/load unblocking, and recovery read/write/clear
 failures.
 
+Phase 5 Commit 7 is complete. The named complete F/G browser fixture closes one
+valid two-biome project across simulation, candidate feedback, representative
+editing and undo, semantic navigation, portable profiles, startup recovery,
+dirty-state transitions, and equal authored and derived reload state. The same
+fixture audits visible controls for unique IDs, explicit labels, accessible
+button names, current-panel and profile-status announcements, and internal
+room/reward identifier leakage. Shared route and biome controls also have a
+focused keyboard-activation fixture alongside the existing semantic history
+shortcuts and native text-edit protection.
+
+Measured evidence removed repeated work at its owners. Application simulation
+and candidate preparation now share immutable-project evaluations; reward/shop
+candidates replay only the addressed biome through the common linear authority;
+branch-invariant reward facts are cached by immutable history-view identity;
+and closed reward/shop controls defer option projection until focus or pointer
+intent. The representative complete F/G fixture guards cold rebuild, cold room
+candidate, semantic edit, and identity-cached undo latency. The full acceptance
+matrix, local measurements, browser-host smoke procedure, and closed scope are
+recorded in `PHASE_5_PRODUCT_LOOP_CLOSURE.md`.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -923,8 +943,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, and 4 have no pending items. Phase 5 Commit 7, F/G product-loop
-closure, is the next implementation frontier.
+Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 biome expansion is the
+next implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

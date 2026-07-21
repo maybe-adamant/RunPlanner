@@ -6,6 +6,7 @@ import type {
   ShopOfferAddress,
 } from '@run-planner/core';
 import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
+import { useRef, useState } from 'react';
 
 import {
   presentCandidateLabel,
@@ -33,10 +34,6 @@ interface CountedRewardEditorProps extends Omit<RewardValueEditorProps, 'rewardT
   readonly binding: CountedRewardBinding;
 }
 
-function offerKey(value: ResolvedRewardOffer): string {
-  return JSON.stringify(value);
-}
-
 function projectRewardOptions(
   service: CandidateProjectionService,
   project: ProjectDocument,
@@ -46,6 +43,92 @@ function projectRewardOptions(
   return owner.kind === 'incomingReward'
     ? service.incomingRewards(project, owner.address, offers)
     : service.shopOffers(project, owner.address, offers);
+}
+
+interface RewardSelectOption {
+  readonly label: string;
+  readonly offer: ResolvedRewardOffer;
+  readonly value: string;
+}
+
+interface ProjectedRewardSelectProps {
+  readonly candidateOwner: RewardCandidateOwner;
+  readonly candidateProjection: CandidateProjectionService;
+  readonly id: string;
+  readonly label: string;
+  readonly onChange: (value: string) => void;
+  readonly options: readonly RewardSelectOption[];
+  readonly project: ProjectDocument;
+  readonly value: string;
+}
+
+function ProjectedRewardSelect({
+  candidateOwner,
+  candidateProjection,
+  id,
+  label,
+  onChange,
+  options,
+  project,
+  value,
+}: ProjectedRewardSelectProps) {
+  const projectionKey = JSON.stringify(options.map((option) => option.offer));
+  type Projection = {
+    readonly key: string;
+    readonly options: readonly CandidateOptionProjection<ResolvedRewardOffer>[];
+    readonly project: ProjectDocument;
+  };
+  const projectionRef = useRef<Projection | undefined>(undefined);
+  const [projection, setProjection] = useState<Projection>();
+  const projected =
+    projection?.project === project && projection.key === projectionKey
+      ? projection.options
+      : undefined;
+  const activateProjection = () => {
+    if (
+      projected !== undefined ||
+      (projectionRef.current?.project === project && projectionRef.current.key === projectionKey)
+    ) {
+      return;
+    }
+    const next = {
+      key: projectionKey,
+      options: projectRewardOptions(
+        candidateProjection,
+        project,
+        candidateOwner,
+        options.map((option) => option.offer),
+      ),
+      project,
+    };
+    projectionRef.current = next;
+    setProjection(next);
+  };
+  const selectedIndex = options.findIndex((option) => option.value === value);
+  const selected = selectedIndex < 0 ? undefined : projected?.[selectedIndex];
+  return (
+    <label className="field-control" htmlFor={id}>
+      <span>{label}</span>
+      <select
+        {...candidateSelectState(selected)}
+        id={id}
+        onChange={(event) => onChange(event.target.value)}
+        onFocus={activateProjection}
+        onPointerDown={activateProjection}
+        value={value}
+      >
+        {options.map((option, index) => (
+          <option
+            key={option.value}
+            value={option.value}
+            {...candidateSelectState(projected?.[index])}
+          >
+            {presentCandidateLabel(option.label, projected?.[index])}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 
 function defaultOffer(catalog: Catalog, rewardType: string): ResolvedRewardOffer {
@@ -100,39 +183,21 @@ function RewardPayloadEditor({
     if (offer.payload.kind !== 'BoonSource') {
       throw new Error(`${declaration.gameName} requires a single-source payload`);
     }
-    const values = domain.values.map((source) => ({
-      ...offer,
-      payload: { kind: 'BoonSource' as const, source },
-    }));
-    const projected = projectRewardOptions(candidateProjection, project, candidateOwner, values);
-    const selected = projected.find((option) => offerKey(option.value) === offerKey(offer));
     return (
-      <label className="field-control" htmlFor={`${idPrefix}-source`}>
-        <span>Source</span>
-        <select
-          {...candidateSelectState(selected)}
-          id={`${idPrefix}-source`}
-          onChange={(event) =>
-            onReplace({
-              ...offer,
-              payload: { kind: 'BoonSource', source: event.target.value },
-            })
-          }
-          value={offer.payload.source}
-        >
-          {projected.map((option) => {
-            const payload = option.value.payload;
-            if (payload?.kind !== 'BoonSource') {
-              throw new Error(`${declaration.gameName} projected a non-source payload`);
-            }
-            return (
-              <option key={payload.source} value={payload.source} {...candidateSelectState(option)}>
-                {presentCandidateLabel(sourceLabel(catalog, payload.source), option)}
-              </option>
-            );
-          })}
-        </select>
-      </label>
+      <ProjectedRewardSelect
+        candidateOwner={candidateOwner}
+        candidateProjection={candidateProjection}
+        id={`${idPrefix}-source`}
+        label="Source"
+        onChange={(source) => onReplace({ ...offer, payload: { kind: 'BoonSource', source } })}
+        options={domain.values.map((source) => ({
+          label: sourceLabel(catalog, source),
+          offer: { ...offer, payload: { kind: 'BoonSource', source } },
+          value: source,
+        }))}
+        project={project}
+        value={offer.payload.source}
+      />
     );
   }
 
@@ -141,104 +206,58 @@ function RewardPayloadEditor({
   }
   const values = payloadDomainValues(catalog, domain.valueDomain);
   const { chosenSource, spurnedSource } = offer.payload;
-  const chosenOffers = values
+  const chosenOptions = values
     .filter((source) => source !== spurnedSource)
     .map((source) => ({
-      ...offer,
-      payload: { kind: 'DevotionPair' as const, chosenSource: source, spurnedSource },
+      label: sourceLabel(catalog, source),
+      offer: {
+        ...offer,
+        payload: { kind: 'DevotionPair' as const, chosenSource: source, spurnedSource },
+      },
+      value: source,
     }));
-  const spurnedOffers = values
+  const spurnedOptions = values
     .filter((source) => source !== chosenSource)
     .map((source) => ({
-      ...offer,
-      payload: { kind: 'DevotionPair' as const, chosenSource, spurnedSource: source },
+      label: sourceLabel(catalog, source),
+      offer: {
+        ...offer,
+        payload: { kind: 'DevotionPair' as const, chosenSource, spurnedSource: source },
+      },
+      value: source,
     }));
-  const projectedChosen = projectRewardOptions(
-    candidateProjection,
-    project,
-    candidateOwner,
-    chosenOffers,
-  );
-  const projectedSpurned = projectRewardOptions(
-    candidateProjection,
-    project,
-    candidateOwner,
-    spurnedOffers,
-  );
   return (
     <div className="paired-payload">
-      <label className="field-control" htmlFor={`${idPrefix}-source-1`}>
-        <span>Chosen source</span>
-        <select
-          {...candidateSelectState(
-            projectedChosen.find((option) => offerKey(option.value) === offerKey(offer)),
-          )}
-          id={`${idPrefix}-source-1`}
-          onChange={(event) =>
-            onReplace({
-              ...offer,
-              payload: {
-                kind: 'DevotionPair',
-                chosenSource: event.target.value,
-                spurnedSource,
-              },
-            })
-          }
-          value={chosenSource}
-        >
-          {projectedChosen.map((option) => {
-            const payload = option.value.payload;
-            if (payload?.kind !== 'DevotionPair') {
-              throw new Error(`${declaration.gameName} projected an invalid chosen source`);
-            }
-            return (
-              <option
-                key={payload.chosenSource}
-                value={payload.chosenSource}
-                {...candidateSelectState(option)}
-              >
-                {presentCandidateLabel(sourceLabel(catalog, payload.chosenSource), option)}
-              </option>
-            );
-          })}
-        </select>
-      </label>
-      <label className="field-control" htmlFor={`${idPrefix}-source-2`}>
-        <span>Spurned source</span>
-        <select
-          {...candidateSelectState(
-            projectedSpurned.find((option) => offerKey(option.value) === offerKey(offer)),
-          )}
-          id={`${idPrefix}-source-2`}
-          onChange={(event) =>
-            onReplace({
-              ...offer,
-              payload: {
-                kind: 'DevotionPair',
-                chosenSource,
-                spurnedSource: event.target.value,
-              },
-            })
-          }
-          value={spurnedSource}
-        >
-          {projectedSpurned.map((option) => {
-            const payload = option.value.payload;
-            if (payload?.kind !== 'DevotionPair') {
-              throw new Error(`${declaration.gameName} projected an invalid spurned source`);
-            }
-            return (
-              <option
-                key={payload.spurnedSource}
-                value={payload.spurnedSource}
-                {...candidateSelectState(option)}
-              >
-                {presentCandidateLabel(sourceLabel(catalog, payload.spurnedSource), option)}
-              </option>
-            );
-          })}
-        </select>
-      </label>
+      <ProjectedRewardSelect
+        candidateOwner={candidateOwner}
+        candidateProjection={candidateProjection}
+        id={`${idPrefix}-source-1`}
+        label="Chosen source"
+        onChange={(source) =>
+          onReplace({
+            ...offer,
+            payload: { kind: 'DevotionPair', chosenSource: source, spurnedSource },
+          })
+        }
+        options={chosenOptions}
+        project={project}
+        value={chosenSource}
+      />
+      <ProjectedRewardSelect
+        candidateOwner={candidateOwner}
+        candidateProjection={candidateProjection}
+        id={`${idPrefix}-source-2`}
+        label="Spurned source"
+        onChange={(source) =>
+          onReplace({
+            ...offer,
+            payload: { kind: 'DevotionPair', chosenSource, spurnedSource: source },
+          })
+        }
+        options={spurnedOptions}
+        project={project}
+        value={spurnedSource}
+      />
     </div>
   );
 }
@@ -256,42 +275,24 @@ export function RewardValueEditor({
   const typeOffers = rewardTypes.map((rewardType) =>
     rewardType === offer.rewardType ? offer : defaultOffer(catalog, rewardType),
   );
-  const projectedTypes = projectRewardOptions(
-    candidateProjection,
-    project,
-    candidateOwner,
-    typeOffers,
-  );
-  const selectedType = projectedTypes.find(
-    (option) => option.value.rewardType === offer.rewardType,
-  );
   return (
     <div className="reward-value-editor">
-      <label className="field-control" htmlFor={`${idPrefix}-reward`}>
-        <span>Reward</span>
-        <select
-          {...candidateSelectState(selectedType)}
-          id={`${idPrefix}-reward`}
-          onChange={(event) => onReplace(defaultOffer(catalog, event.target.value))}
-          value={offer.rewardType}
-        >
-          {projectedTypes.map((option) => {
-            const declaration = catalog.rewards.rewardTypes.byKey[option.value.rewardType];
-            if (declaration === undefined) {
-              throw new Error(`Reward type ${option.value.rewardType} is missing`);
-            }
-            return (
-              <option
-                key={option.value.rewardType}
-                value={option.value.rewardType}
-                {...candidateSelectState(option)}
-              >
-                {presentCandidateLabel(declaration.label, option)}
-              </option>
-            );
-          })}
-        </select>
-      </label>
+      <ProjectedRewardSelect
+        candidateOwner={candidateOwner}
+        candidateProjection={candidateProjection}
+        id={`${idPrefix}-reward`}
+        label="Reward"
+        onChange={(rewardType) => onReplace(defaultOffer(catalog, rewardType))}
+        options={typeOffers.map((candidate) => {
+          const declaration = catalog.rewards.rewardTypes.byKey[candidate.rewardType];
+          if (declaration === undefined) {
+            throw new Error(`Reward type ${candidate.rewardType} is missing`);
+          }
+          return { label: declaration.label, offer: candidate, value: candidate.rewardType };
+        })}
+        project={project}
+        value={offer.rewardType}
+      />
       <RewardPayloadEditor
         candidateOwner={candidateOwner}
         candidateProjection={candidateProjection}
