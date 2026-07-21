@@ -177,6 +177,9 @@ describe('N Hub lifecycle composition and history', () => {
     expect(history.ledgers.roomCreations).toHaveLength(21);
     expect(history.ledgers.counters.numSubRoomsSpawned).toBe(6);
     expect(
+      history.ledgers.roomCreations.filter((event) => event.gameName === 'N_PreHub01'),
+    ).toEqual([expect.objectContaining({ source: 'layoutEntry', picked: true })]);
+    expect(
       history.ledgers.roomCreations.filter(
         (event) =>
           semanticAddressKey(event.origin) === semanticAddressKey(snapshot.hubBoard.room.origin),

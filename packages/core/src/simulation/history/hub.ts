@@ -5,7 +5,6 @@ import {
   semanticAddressKey,
   type BiomeAddress,
 } from '../../project/addresses';
-import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,
   CanonicalHubBiome,
@@ -15,9 +14,14 @@ import type {
   CanonicalLocalChildRoom,
   CanonicalRoomRestore,
 } from '../materialization';
-import { foldHubHistoryEvents } from './fold';
-import { createRoomLifecycleInput, type CanonicalLifecycleRoom } from './lifecycleInput';
-import type { CanonicalHubHistory, HistoryEvent, RoomCreatedHistoryEvent } from './model';
+import {
+  appendRoomLifecycle as appendCanonicalRoomLifecycle,
+  composeBiomeHistoryEnvelope,
+  composeFixedEntryChain,
+  type HistorySegmentWriter,
+} from './composition';
+import type { CanonicalLifecycleRoom } from './lifecycleInput';
+import type { CanonicalHubHistory, RoomCreatedHistoryEvent } from './model';
 
 export class HubHistoryCompositionContractError extends Error {
   constructor(detail: string) {
@@ -26,15 +30,7 @@ export class HubHistoryCompositionContractError extends Error {
   }
 }
 
-interface EventBuilder {
-  readonly events: HistoryEvent[];
-}
-
-type HistoryEventData<Event extends HistoryEvent = HistoryEvent> = Event extends HistoryEvent
-  ? Omit<Event, 'sequence'>
-  : never;
-
-type OutgoingProjection = (builder: EventBuilder, parent: CanonicalLifecycleRoom) => void;
+type OutgoingProjection = (writer: HistorySegmentWriter, parent: CanonicalLifecycleRoom) => void;
 type FixedTerminalHubLayout = HubBiomeLayout & {
   readonly terminal: Extract<HubBiomeLayout['terminal'], { readonly kind: 'fixedAuthoredSlot' }>;
 };
@@ -43,26 +39,12 @@ function fail(detail: string): never {
   throw new HubHistoryCompositionContractError(detail);
 }
 
-function append(builder: EventBuilder, event: HistoryEventData): void {
-  builder.events.push(
-    Object.freeze({ ...event, sequence: builder.events.length + 1 }) as HistoryEvent,
-  );
-}
-
-function appendLifecycleEvent(builder: EventBuilder, event: RoomLifecycleEvent): void {
-  const { sequence: localSequence, ...data } = event;
-  if (localSequence <= 0) {
-    fail('room fragment has an invalid local sequence');
-  }
-  append(builder, data);
-}
-
 function roomEntered(room: CanonicalLifecycleRoom): boolean {
   return room.entered;
 }
 
 function appendRoomLifecycle(
-  builder: EventBuilder,
+  writer: HistorySegmentWriter,
   catalog: Catalog,
   room: CanonicalLifecycleRoom,
   outgoing?: OutgoingProjection,
@@ -70,41 +52,13 @@ function appendRoomLifecycle(
   if (!roomEntered(room)) {
     fail(`unentered room ${semanticAddressKey(room.origin)} cannot execute a lifecycle`);
   }
-  const fragment = executeRoomLifecycle(catalog, createRoomLifecycleInput(catalog, room));
-  let projectedOutgoing = false;
-  for (const event of fragment.events) {
-    appendLifecycleEvent(builder, event);
-    if (event.kind === 'outgoingGenerationCheckpoint') {
-      if (outgoing === undefined || projectedOutgoing) {
-        fail(`${room.gameName} has no unique Hub outgoing projection`);
-      }
-      outgoing(builder, room);
-      projectedOutgoing = true;
-    }
-  }
-  if ((outgoing !== undefined) === projectedOutgoing) {
-    return;
-  }
-  fail(`${room.gameName} canonical outgoing projection does not match its lifecycle`);
-}
-
-function standaloneRoomCreated(
-  builder: EventBuilder,
-  room: CanonicalLifecycleRoom,
-  source: 'biomeEntry' | 'layoutCompletion',
-): void {
-  append(builder, {
-    kind: 'roomCreated',
-    origin: room.origin,
-    gameName: room.gameName,
-    encounterProfileKey: room.encounterProfileKey,
-    source,
-    picked: true,
+  appendCanonicalRoomLifecycle(writer, catalog, room, fail, {
+    ...(outgoing === undefined ? {} : { outgoing }),
   });
 }
 
 function appendGenerationCompleted(
-  builder: EventBuilder,
+  writer: HistorySegmentWriter,
   event: Omit<
     Extract<
       RoomCreatedHistoryEvent,
@@ -113,7 +67,7 @@ function appendGenerationCompleted(
     'sequence'
   >,
 ): void {
-  append(builder, {
+  writer.append({
     kind: 'targetGenerationCompleted',
     origin: event.targetOrigin,
     roomOrigin: event.origin,
@@ -124,7 +78,7 @@ function appendGenerationCompleted(
 }
 
 function layoutEntryCreated(
-  builder: EventBuilder,
+  writer: HistorySegmentWriter,
   parent: CanonicalLifecycleRoom,
   room: CanonicalAuthoredRoom | CanonicalHubRoom,
   role: string,
@@ -145,12 +99,12 @@ function layoutEntryCreated(
     generationIndex: 1,
     generationCount: 1,
   };
-  append(builder, event);
-  appendGenerationCompleted(builder, event);
+  writer.append(event);
+  appendGenerationCompleted(writer, event);
 }
 
 function hubTargetCreated(
-  builder: EventBuilder,
+  writer: HistorySegmentWriter,
   parent: CanonicalHubRoom,
   target: CanonicalHubTarget,
   generationIndex: number,
@@ -171,12 +125,12 @@ function hubTargetCreated(
     generationIndex,
     generationCount,
   };
-  append(builder, event);
-  appendGenerationCompleted(builder, event);
+  writer.append(event);
+  appendGenerationCompleted(writer, event);
 }
 
 function localChildCreated(
-  builder: EventBuilder,
+  writer: HistorySegmentWriter,
   parent: CanonicalAuthoredRoom,
   room: CanonicalLocalChildRoom,
   generationIndex: number,
@@ -197,18 +151,18 @@ function localChildCreated(
     generationIndex,
     generationCount,
   };
-  append(builder, event);
-  appendGenerationCompleted(builder, event);
+  writer.append(event);
+  appendGenerationCompleted(writer, event);
 }
 
 function terminalCreated(
-  builder: EventBuilder,
+  writer: HistorySegmentWriter,
   biome: BiomeAddress,
   parent: CanonicalHubRoom,
   room: CanonicalAuthoredRoom,
   role: string,
 ): void {
-  append(builder, {
+  writer.append({
     kind: 'roomCreated',
     origin: room.origin,
     gameName: room.gameName,
@@ -221,7 +175,7 @@ function terminalCreated(
 }
 
 function appendRestore(
-  builder: EventBuilder,
+  writer: HistorySegmentWriter,
   restore: CanonicalRoomRestore,
   room: CanonicalAuthoredRoom | CanonicalHubRoom,
   restoreKind: 'hub' | 'parent',
@@ -232,7 +186,7 @@ function appendRestore(
   ) {
     fail(`${restoreKind} restore does not reference its canonical room`);
   }
-  append(builder, {
+  writer.append({
     kind: 'roomRestored',
     origin: room.origin,
     after: restore.after,
@@ -262,7 +216,7 @@ function sideRoomProjection(visit: CanonicalHubVisit): OutgoingProjection {
       .filter((room) => room.generation === 'generated')
       .sort((left, right) => left.availabilityRank - right.availabilityRank);
     if (generated.length === 0) {
-      append(builder, { kind: 'emptyOutgoingGenerationCompleted', origin: parent.origin });
+      builder.append({ kind: 'emptyOutgoingGenerationCompleted', origin: parent.origin });
       return;
     }
     generated.forEach((room, index) =>
@@ -290,17 +244,17 @@ function requireHubLayout(catalog: Catalog, snapshot: CanonicalHubBiome): FixedT
 }
 
 function composeVisit(
-  builder: EventBuilder,
+  writer: HistorySegmentWriter,
   catalog: Catalog,
   visit: CanonicalHubVisit,
   hubRoom: CanonicalHubRoom,
 ): void {
-  appendRoomLifecycle(builder, catalog, visit.target.room, sideRoomProjection(visit));
+  appendRoomLifecycle(writer, catalog, visit.target.room, sideRoomProjection(visit));
   for (const [index, sideRoom] of visit.enteredLocalRooms.entries()) {
     if (!sideRoom.entered || sideRoom.generation !== 'generated') {
       fail(`visit ${visit.visitIndex} enters an unavailable local room`);
     }
-    appendRoomLifecycle(builder, catalog, sideRoom);
+    appendRoomLifecycle(writer, catalog, sideRoom);
     const restore = visit.parentRestores[index];
     if (
       restore === undefined ||
@@ -308,7 +262,7 @@ function composeVisit(
     ) {
       fail(`visit ${visit.visitIndex} has no ordered parent restore for ${sideRoom.slotKey}`);
     }
-    appendRestore(builder, restore, visit.target.room, 'parent');
+    appendRestore(writer, restore, visit.target.room, 'parent');
   }
   if (visit.parentRestores.length !== visit.enteredLocalRooms.length) {
     fail(`visit ${visit.visitIndex} parent restore count is inconsistent`);
@@ -316,7 +270,7 @@ function composeVisit(
   if (semanticAddressKey(visit.hubRestore.after) !== semanticAddressKey(visit.origin)) {
     fail(`visit ${visit.visitIndex} Hub restore has the wrong visit owner`);
   }
-  appendRestore(builder, visit.hubRestore, hubRoom, 'hub');
+  appendRestore(writer, visit.hubRestore, hubRoom, 'hub');
 }
 
 export function composeHubHistory(
@@ -329,11 +283,11 @@ export function composeHubHistory(
   if (entry === undefined) {
     fail(`${snapshot.biomeKey} Hub history requires a canonical entry room`);
   }
-  const builder: EventBuilder = { events: [] };
-  append(builder, {
-    kind: 'biomeStarted',
-    origin: biome,
-    counters: Object.freeze({
+  return composeBiomeHistoryEnvelope({
+    catalog,
+    routeKey: snapshot.routeKey,
+    biomeKey: snapshot.biomeKey,
+    initialCounters: {
       biomeDepthCache: layout.initialCounters.biomeDepthCache,
       biomeEncounterDepth: layout.initialCounters.biomeEncounterDepth,
       routeEncounterDepth: 1,
@@ -341,53 +295,52 @@ export function composeHubHistory(
       numSubRoomsSpawned: 0,
       soulPylonsSpawned: 0,
       soulPylonsCompleted: 0,
-    }),
+    },
+    completionRooms: snapshot.completionRooms,
+    transitionEffects: layout.completion.transitionEffects,
+    composeEntry(writer) {
+      return composeFixedEntryChain(
+        writer,
+        snapshot.entryRooms,
+        (targetWriter, source, nextEntry, targetIndex) => {
+          const descriptor = layout.entries[targetIndex];
+          if (
+            descriptor?.kind !== 'fixedAuthoredSlot' ||
+            descriptor.roomGameName !== nextEntry.gameName
+          ) {
+            fail(
+              `${snapshot.biomeKey} fixed Hub entry ${targetIndex + 1} does not match its layout`,
+            );
+          }
+          appendRoomLifecycle(targetWriter, catalog, source, (outgoingWriter, parent) =>
+            layoutEntryCreated(outgoingWriter, parent, nextEntry, descriptor.slotKey),
+          );
+        },
+        fail,
+      );
+    },
+    composeBody(writer, source) {
+      appendRoomLifecycle(writer, catalog, source, (outgoingWriter, parent) =>
+        layoutEntryCreated(outgoingWriter, parent, snapshot.hubBoard.room, 'hub'),
+      );
+      appendRoomLifecycle(
+        writer,
+        catalog,
+        snapshot.hubBoard.room,
+        boardProjection(snapshot.hubBoard),
+      );
+      for (const visit of snapshot.visits) {
+        composeVisit(writer, catalog, visit, snapshot.hubBoard.room);
+      }
+      return snapshot.hubBoard.room;
+    },
+    composeTerminal(writer, predecessor) {
+      terminalCreated(writer, biome, predecessor, snapshot.terminalEntry, layout.terminal.slotKey);
+      appendRoomLifecycle(writer, catalog, snapshot.terminalEntry);
+      return snapshot.terminalEntry;
+    },
+    fail,
   });
-  standaloneRoomCreated(builder, entry, 'biomeEntry');
-
-  let source: CanonicalAuthoredRoom = entry;
-  for (const [index, nextEntry] of snapshot.entryRooms.slice(1).entries()) {
-    const descriptor = layout.entries[index + 1];
-    if (
-      descriptor?.kind !== 'fixedAuthoredSlot' ||
-      descriptor.roomGameName !== nextEntry.gameName
-    ) {
-      fail(`${snapshot.biomeKey} fixed Hub entry ${index + 2} does not match its layout`);
-    }
-    appendRoomLifecycle(builder, catalog, source, (targetBuilder, parent) =>
-      layoutEntryCreated(targetBuilder, parent, nextEntry, descriptor.slotKey),
-    );
-    source = nextEntry;
-  }
-
-  appendRoomLifecycle(builder, catalog, source, (targetBuilder, parent) =>
-    layoutEntryCreated(targetBuilder, parent, snapshot.hubBoard.room, 'hub'),
-  );
-  appendRoomLifecycle(builder, catalog, snapshot.hubBoard.room, boardProjection(snapshot.hubBoard));
-
-  for (const visit of snapshot.visits) {
-    composeVisit(builder, catalog, visit, snapshot.hubBoard.room);
-  }
-
-  terminalCreated(
-    builder,
-    biome,
-    snapshot.hubBoard.room,
-    snapshot.terminalEntry,
-    layout.terminal.slotKey,
-  );
-  appendRoomLifecycle(builder, catalog, snapshot.terminalEntry);
-
-  for (const completion of snapshot.completionRooms) {
-    standaloneRoomCreated(builder, completion, 'layoutCompletion');
-    appendRoomLifecycle(builder, catalog, completion);
-  }
-
-  append(builder, { kind: 'biomeCompleted', origin: biome });
-  for (const effect of layout.completion.transitionEffects) {
-    append(builder, { kind: 'biomeCounterReset', origin: biome, axis: effect.axis, value: 0 });
-  }
-  return foldHubHistoryEvents(builder.events);
 }
 
 export function composeNHistory(

@@ -6,7 +6,6 @@ import type {
   RoomDeclaration,
 } from '../../catalog';
 import {
-  createCompletionRoomAddress,
   createHubOpenSetAddress,
   createHubRoomAddress,
   createHubSlotAddress,
@@ -31,7 +30,6 @@ import type { CountedRewardBinding, ShopRewardBinding } from '../../rewards';
 import type { CompleteHubCompletenessResult } from '../completeness';
 import type {
   CanonicalAuthoredRoom,
-  CanonicalCompletionRoom,
   CanonicalHubBiome,
   CanonicalHubBoard,
   CanonicalHubRoom,
@@ -43,6 +41,7 @@ import type {
   CanonicalRoomRestore,
   CanonicalShopEntryState,
 } from './model';
+import { materializeCompletionRooms } from './completion';
 
 type FixedRoomState = 'counted' | 'shop';
 type FixedRoomDescriptor = FixedAuthoredSlotDescriptor & {
@@ -414,44 +413,6 @@ function fixedDescriptors(layout: HubBiomeLayout): readonly FixedRoomDescriptor[
   ]);
 }
 
-function materializeCompletionRooms(
-  catalog: Catalog,
-  biome: BiomeAddress,
-  layout: HubBiomeLayout,
-): readonly CanonicalCompletionRoom[] {
-  const completionKinds = {
-    boss: { roomKind: 'Boss', lifecycleProfileKey: 'BossRoom' },
-    postboss: { roomKind: 'PostBoss', lifecycleProfileKey: 'PostBossRoom' },
-  } as const;
-  return Object.freeze(
-    layout.completion.rooms.map((descriptor): CanonicalCompletionRoom => {
-      const room = requireRoom(catalog, descriptor.roomGameName);
-      const expected = completionKinds[descriptor.role];
-      if (
-        room.mode.kind !== 'derived' ||
-        room.mode.classification !== 'completion' ||
-        room.kind !== expected.roomKind ||
-        room.incomingReward.kind !== 'none' ||
-        room.enteredRewardStoreHistory.kind !== 'none'
-      ) {
-        fail(`${room.gameName} is not a supported ${descriptor.role} completion room`);
-      }
-      requireLifecycleSelection(catalog, room, expected.lifecycleProfileKey, undefined);
-      return Object.freeze({
-        kind: 'completion',
-        origin: createCompletionRoomAddress(biome, descriptor.role),
-        role: descriptor.role,
-        gameName: room.gameName,
-        encounterProfileKey: room.encounterProfileKey,
-        encounterPhases: encounterPhases(catalog, room),
-        lifecycleProfileKey: expected.lifecycleProfileKey,
-        counterEffects: room.counters,
-        entered: true,
-      });
-    }),
-  );
-}
-
 function requireHubLayout(
   catalog: Catalog,
   biome: BiomeAddress,
@@ -618,7 +579,14 @@ export function materializeHubBiome(
     hubBoard,
     visits: materializeVisits(catalog, biome, topology, hubBoard),
     terminalEntry,
-    completionRooms: materializeCompletionRooms(catalog, biome, layout),
+    completionRooms: materializeCompletionRooms({
+      catalog,
+      biome,
+      completion: layout.completion,
+      enteredStorePolicy: { kind: 'noneOnly' },
+      lifecycleProducerPolicy: 'noneOnly',
+      fail,
+    }),
     biomeState: Object.freeze({}),
   });
 }

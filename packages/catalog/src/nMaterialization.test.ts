@@ -307,6 +307,9 @@ describe('canonical N Hub materialization', () => {
       },
     ]);
     expect(snapshot.completionRooms.every((room) => room.entered)).toBe(true);
+    expect(snapshot.completionRooms.every((room) => room.enteredRewardStoreKey === undefined)).toBe(
+      true,
+    );
     expect(
       snapshot.hubBoard.targets.some(
         (target) => target.room.occurrenceId === fixedOccurrenceIds.preboss,
