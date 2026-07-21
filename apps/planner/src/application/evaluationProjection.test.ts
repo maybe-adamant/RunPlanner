@@ -25,6 +25,7 @@ import {
 } from './evaluationProjection';
 
 const allFindingCodes = [
+  'fieldsCageOutcomeUnavailable',
   'biomeTopologyMissing',
   'continuationMissing',
   'pickedShopStateMissing',
@@ -56,7 +57,7 @@ function finding(code: FindingCode, origin: SemanticAddress = biome): SemanticFi
 
 describe('evaluation presentation', () => {
   it('provides explicit player copy for every Phase 3 finding code', () => {
-    expect(allFindingCodes).toHaveLength(15);
+    expect(allFindingCodes).toHaveLength(16);
     for (const code of allFindingCodes) {
       const presentation = presentFinding(finding(code));
       expect(presentation.title).not.toBe(code);

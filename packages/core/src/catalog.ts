@@ -361,6 +361,10 @@ export type GeneratedBatchPolicy =
       readonly minDoorCageRewards: number;
       readonly maxDoorCageRewards: number;
       readonly maxDoorCageCeiling: number;
+      readonly maxOutcomeSupport: {
+        readonly optionalBiomeDepths: readonly number[];
+        readonly requiredBiomeDepths: readonly number[];
+      };
     }
   | {
       readonly kind: 'clockwork';

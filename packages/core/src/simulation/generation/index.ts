@@ -5,8 +5,11 @@ export {
   evaluateLinearRoomTargetCandidate,
   LinearRoomGenerationContractError,
   LinearRoomGenerationContractError as FRoomGenerationContractError,
+  supportedFieldsCageOutcomes,
 } from './linear';
 export type {
+  FieldsCageOutcome,
+  FieldsCageOutcomeSupportEntry,
   FForcePressureLedgerEntry,
   FRoomGenerationValidation,
   FRoomTargetCandidateValidation,

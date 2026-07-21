@@ -71,13 +71,12 @@ recorded in
 [`docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md`](docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md).
 
 Phase 6 now includes dormant H authored topology, canonical Fields
-materialization, and route-history/reward replay. The shared history fold
-records batch outcomes and the derived `fieldsMaxDoorsRolled` counter, executes
-the selected two- or three-cage encounter profile, and carries route state from
-G. Reward replay resolves every active cage offer in physical target order and
-acquires only the picked combat occurrence's cages. Application capabilities
-remain limited to F/G; H selected validation, candidates, editor projection,
-and activation remain subsequent controlled slices.
+materialization, route-history/reward replay, and selected validation. The
+shared validator applies declaration-owned eligibility, caps, sequential force
+competition, terminal timing, cage bag support, and the pre-commit Fields
+Min/Max support table without rewriting authored state. Application
+capabilities remain limited to F/G; H candidates, editor projection, and
+activation remain subsequent controlled slices.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

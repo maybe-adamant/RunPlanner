@@ -266,12 +266,53 @@ function normalizeBatchPolicy(rawPolicy: GeneratedBatchPolicy, path: string): Ge
       rawPolicy.maxDoorCageCeiling,
       `${path}.maxDoorCageCeiling`,
     );
+    const rawMaxOutcomeSupport: unknown = (rawPolicy as { readonly maxOutcomeSupport?: unknown })
+      .maxOutcomeSupport;
+    if (
+      typeof rawMaxOutcomeSupport !== 'object' ||
+      rawMaxOutcomeSupport === null ||
+      Array.isArray(rawMaxOutcomeSupport)
+    ) {
+      fail(`${path}.maxOutcomeSupport`, 'is required');
+    }
+    const maxOutcomeSupport = rawMaxOutcomeSupport as Record<string, unknown>;
+    if (!Array.isArray(maxOutcomeSupport.optionalBiomeDepths)) {
+      fail(`${path}.maxOutcomeSupport.optionalBiomeDepths`, 'must be an array');
+    }
+    if (!Array.isArray(maxOutcomeSupport.requiredBiomeDepths)) {
+      fail(`${path}.maxOutcomeSupport.requiredBiomeDepths`, 'must be an array');
+    }
+    const optionalBiomeDepths = maxOutcomeSupport.optionalBiomeDepths.map((depth, index) =>
+      requirePositiveInteger(
+        depth as number,
+        `${path}.maxOutcomeSupport.optionalBiomeDepths[${index}]`,
+      ),
+    );
+    const requiredBiomeDepths = maxOutcomeSupport.requiredBiomeDepths.map((depth, index) =>
+      requirePositiveInteger(
+        depth as number,
+        `${path}.maxOutcomeSupport.requiredBiomeDepths[${index}]`,
+      ),
+    );
+    if (new Set(optionalBiomeDepths).size !== optionalBiomeDepths.length) {
+      fail(`${path}.maxOutcomeSupport.optionalBiomeDepths`, 'must not contain duplicates');
+    }
+    if (new Set(requiredBiomeDepths).size !== requiredBiomeDepths.length) {
+      fail(`${path}.maxOutcomeSupport.requiredBiomeDepths`, 'must not contain duplicates');
+    }
+    if (optionalBiomeDepths.some((depth) => requiredBiomeDepths.includes(depth))) {
+      fail(`${path}.maxOutcomeSupport`, 'optional and required depths must be disjoint');
+    }
     return Object.freeze({
       kind: rawPolicy.kind,
       fields,
       minDoorCageRewards,
       maxDoorCageRewards,
       maxDoorCageCeiling,
+      maxOutcomeSupport: Object.freeze({
+        optionalBiomeDepths: Object.freeze(optionalBiomeDepths),
+        requiredBiomeDepths: Object.freeze(requiredBiomeDepths),
+      }),
     });
   } else if (fields.length !== 0) {
     fail(`${path}.fields`, `${rawPolicy.kind} policy does not own authored batch fields`);

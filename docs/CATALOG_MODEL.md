@@ -172,7 +172,9 @@ Biome layout declarations own immutable structure:
 - continuation progression policy: eligibility-driven, fixed-count, or an
   ordered staged candidate-pool sequence;
 - generated-batch policy: standard, Fields cage, or Clockwork, with any
-  policy-owned authored fields declared beside that policy;
+  policy-owned authored fields declared beside that policy; the Fields policy
+  additionally owns its Min/Max capacities, Max ceiling, and possibility-only
+  optional/required Max depth sets;
 - terminal room and terminal exit policy, including whether the terminal is an
   independent transition or a declaration role admitted by a generated batch;
 - ordered fixed-completion rooms with stable semantic roles;

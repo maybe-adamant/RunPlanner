@@ -14,10 +14,10 @@ batches add one H-specific semantic outcome that activates bounded cage slots
 owned by each combat occurrence.
 
 H declarations, dormant authored topology, canonical Fields materialization,
-route history, reward replay, and focused parity fixtures are ported. H
-intentionally remains non-authorable, non-simulatable, and non-editable at the
-application capability boundary until its complete product loop is
-implemented.
+route history, reward replay, selected validation, and focused parity fixtures
+are ported. H intentionally remains non-authorable, non-simulatable, and
+non-editable at the application capability boundary until its complete product
+loop is implemented.
 
 ## Evidence Status
 
@@ -57,29 +57,30 @@ This audit corrects four inherited assumptions:
 
 The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
 coverage is defined by `../MIGRATION_PROVENANCE.md`. H currently has normalized
-declaration, dormant authored-topology, and canonical-materialization coverage.
+declaration, dormant authored-topology, canonical-materialization, history,
+reward-replay, and selected-validation coverage.
 
-| Feature                     | Verified game behavior                                                                                                               | Disposition and planner projection                                                                   | Current coverage                             | Reconsider when                                               |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------- |
-| Linear entered spine        | Fixed intro, four entered Combat/Miniboss/Bridge rooms, then preboss                                                                 | **Exact:** `LinearBiome` with count-driven eligibility                                               | documented, declared, authored, materialized | --                                                            |
-| Room-set weights            | Every listed H room occurs once                                                                                                      | **Simplified:** preserve support and forced pools, never likelihood                                  | documented                                   | Probability analysis or seeded replay becomes a product goal  |
-| Physical exits              | Intro, Combat01, Miniboss02, and preboss have one; other supported generated rooms have two                                          | **Exact:** declaration-owned ordered physical exits                                                  | documented, declared, authored, materialized | --                                                            |
-| Combat peer repetition      | Combat rooms have no creation cap and may be offered again until entered; current-room repeat and entered appearance are rejected    | **Exact:** repeated Room Occurrences with concrete game identity                                     | declared                                     | --                                                            |
-| Fields cage batch           | One Min/Max result and one effective capacity apply to every combat target in a generated peer batch                                 | **Exact:** batch-owned semantic outcome activates room-owned bounded local slots                     | documented, declared, authored, materialized | --                                                            |
-| Maximum-cage ceiling        | At most two Max outcomes update `FieldsMaxDoorsRolled`; capacity clamping does not suppress the update                               | **Exact:** history-derived counter from semantic batch outcomes                                      | documented, history                          | --                                                            |
-| Passive and cage encounters | The ambient combat encounter does not count; every entered cage encounter counts                                                     | **Exact:** zero-count ambient phase plus one counting phase per active cage                          | documented, declared, materialized, history  | --                                                            |
-| Cage rewards                | Every generated combat target receives two or three RunProgress cage offers; only entered target cages are fought and acquired       | **Exact:** offer every active local slot; acquire every active slot of the picked target             | documented, declared, authored, replayed     | --                                                            |
-| Generated base store        | Door generation computes Run/Meta, but every supported target is reward-free or resolves `BaseH.IndividualRewardStore = RunProgress` | **Simplified:** use batch policy `none`; preserve every concrete RunProgress offer and ledger effect | documented, declared, authored, materialized | A supported H target consumes an unoverridden base store      |
-| Fields optional rewards     | Entered combat rooms independently spawn zero to four non-required rewards from a separate bag                                       | **Deferred:** canonical v1 trace acquires none and emits no authored optional-reward state           | documented                                   | Optional pickup simulation becomes product scope              |
-| Minibosses                  | Two mutually exclusive entered variants force Boons and compete under a depth force window                                           | **Exact:** separate declarations, sequential creation caps, and counting encounters                  | declared, materialized                       | --                                                            |
-| Bridge                      | Exactly-two combat/miniboss eligibility, always-force pressure, one creation, and Story/Shop/Nemesis variants                        | **Simplified:** progressed-save Echo Story projection; preserve exact topology competition           | declared, materialized                       | Save-profile state or persistent NPC composition enters scope |
-| Forked preboss              | After four counted rooms, predecessor exits create Shop first and at most one free reward                                            | **Exact:** shop-then-fill terminal occurrences with one free-reward capacity                         | documented, declared, authored, materialized | --                                                            |
-| Terminal-only cage roll     | Generic Fields generation can update its internal roll on the preboss batch even though no target owns cages                         | **Simplified:** omit because the biome terminates before any consumer can observe it                 | documented                                   | Exact RNG/debug trace becomes a product goal                  |
-| Boss and postboss           | Neutral Cerberus links through postboss to `I_Intro`                                                                                 | **Exact:** declaration-driven derived completion sequence                                            | declared, materialized                       | --                                                            |
-| Boss store history          | Cerberus's Mixer drop is outside the reward surface but the entered boss records RunProgress provenance                              | **Exact:** fixed RunProgress ledger entry without a reward leaf or acquisition                       | declared, materialized                       | --                                                            |
-| Save/profile and difficulty | Intro reward, bridge variant, early Eris behavior, and boss variant depend on persistent state                                       | **Excluded:** progressed-save neutral-difficulty baseline                                            | documented                                   | Save-profile or difficulty state becomes a project input      |
-| Persistent NPC variants     | Nemesis can replace passive, cage, or bridge encounter behavior                                                                      | **Deferred:** omit and suppress under the shared NPC-free baseline                                   | documented                                   | Persistent NPC entities are implemented                       |
-| Optional interactions       | Wells, challenges, gathering, sell shops, and rerolls can add optional state                                                         | **Deferred:** canonical v1 traces never activate or use them                                         | documented                                   | The corresponding authored action enters product scope        |
+| Feature                     | Verified game behavior                                                                                                               | Disposition and planner projection                                                                   | Current coverage                                        | Reconsider when                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------- |
+| Linear entered spine        | Fixed intro, four entered Combat/Miniboss/Bridge rooms, then preboss                                                                 | **Exact:** `LinearBiome` with count-driven eligibility                                               | documented, declared, authored, materialized            | --                                                            |
+| Room-set weights            | Every listed H room occurs once                                                                                                      | **Simplified:** preserve support and forced pools, never likelihood                                  | documented                                              | Probability analysis or seeded replay becomes a product goal  |
+| Physical exits              | Intro, Combat01, Miniboss02, and preboss have one; other supported generated rooms have two                                          | **Exact:** declaration-owned ordered physical exits                                                  | documented, declared, authored, materialized            | --                                                            |
+| Combat peer repetition      | Combat rooms have no creation cap and may be offered again until entered; current-room repeat and entered appearance are rejected    | **Exact:** repeated Room Occurrences with concrete game identity                                     | declared                                                | --                                                            |
+| Fields cage batch           | One Min/Max result and one effective capacity apply to every combat target in a generated peer batch                                 | **Exact:** batch-owned semantic outcome activates room-owned bounded local slots                     | documented, declared, authored, materialized            | --                                                            |
+| Maximum-cage ceiling        | At most two Max outcomes update `FieldsMaxDoorsRolled`; capacity clamping does not suppress the update                               | **Exact:** history-derived counter from semantic batch outcomes                                      | documented, history, validated                          | --                                                            |
+| Passive and cage encounters | The ambient combat encounter does not count; every entered cage encounter counts                                                     | **Exact:** zero-count ambient phase plus one counting phase per active cage                          | documented, declared, materialized, history             | --                                                            |
+| Cage rewards                | Every generated combat target receives two or three RunProgress cage offers; only entered target cages are fought and acquired       | **Exact:** offer every active local slot; acquire every active slot of the picked target             | documented, declared, authored, replayed, validated     | --                                                            |
+| Generated base store        | Door generation computes Run/Meta, but every supported target is reward-free or resolves `BaseH.IndividualRewardStore = RunProgress` | **Simplified:** use batch policy `none`; preserve every concrete RunProgress offer and ledger effect | documented, declared, authored, materialized            | A supported H target consumes an unoverridden base store      |
+| Fields optional rewards     | Entered combat rooms independently spawn zero to four non-required rewards from a separate bag                                       | **Deferred:** canonical v1 trace acquires none and emits no authored optional-reward state           | documented                                              | Optional pickup simulation becomes product scope              |
+| Minibosses                  | Two mutually exclusive entered variants force Boons and compete under a depth force window                                           | **Exact:** separate declarations, sequential creation caps, and counting encounters                  | declared, materialized, validated                       | --                                                            |
+| Bridge                      | Exactly-two combat/miniboss eligibility, always-force pressure, one creation, and Story/Shop/Nemesis variants                        | **Simplified:** progressed-save Echo Story projection; preserve exact topology competition           | declared, materialized, validated                       | Save-profile state or persistent NPC composition enters scope |
+| Forked preboss              | After four counted rooms, predecessor exits create Shop first and at most one free reward                                            | **Exact:** shop-then-fill terminal occurrences with one free-reward capacity                         | documented, declared, authored, materialized, validated | --                                                            |
+| Terminal-only cage roll     | Generic Fields generation can update its internal roll on the preboss batch even though no target owns cages                         | **Simplified:** omit because the biome terminates before any consumer can observe it                 | documented                                              | Exact RNG/debug trace becomes a product goal                  |
+| Boss and postboss           | Neutral Cerberus links through postboss to `I_Intro`                                                                                 | **Exact:** declaration-driven derived completion sequence                                            | declared, materialized                                  | --                                                            |
+| Boss store history          | Cerberus's Mixer drop is outside the reward surface but the entered boss records RunProgress provenance                              | **Exact:** fixed RunProgress ledger entry without a reward leaf or acquisition                       | declared, materialized                                  | --                                                            |
+| Save/profile and difficulty | Intro reward, bridge variant, early Eris behavior, and boss variant depend on persistent state                                       | **Excluded:** progressed-save neutral-difficulty baseline                                            | documented                                              | Save-profile or difficulty state becomes a project input      |
+| Persistent NPC variants     | Nemesis can replace passive, cage, or bridge encounter behavior                                                                      | **Deferred:** omit and suppress under the shared NPC-free baseline                                   | documented                                              | Persistent NPC entities are implemented                       |
+| Optional interactions       | Wells, challenges, gathering, sell shops, and rerolls can add optional state                                                         | **Deferred:** canonical v1 traces never activate or use them                                         | documented                                              | The corresponding authored action enters product scope        |
 
 ## Possibility Contract
 
@@ -269,9 +270,11 @@ Once `fieldsMaxDoorsRolled = 2`, only Min remains possible at every depth. A
 successful or ceiling-forced Max increments the counter even when capacity
 clamps the visible result to two or the ordinary batch has no combat target.
 
-Depth five is normally the terminal generation point in canonical H and its
-unobservable terminal roll is omitted as described above. The declaration
-retains the verified game table rather than encoding a UI-stage shortcut.
+Source depth four is the terminal generation point in canonical H after four
+ordinary entered rooms, and its unobservable terminal roll is omitted as
+described above. The declaration retains the verified depth-five and later
+game table as possibility data rather than encoding a canonical-path or UI
+shortcut.
 
 ## Cage Reward and Encounter Lifecycle
 
@@ -541,10 +544,16 @@ retaining one peer context across the batch. Active cages on unpicked combat
 targets emit offers and consume bag support but never acquire; each active cage
 on the picked combat target acquires at its matching encounter completion.
 
-H does not yet validate selected room/Fields support, evaluate candidates, or
-project an editor. The application capability boundary and project simulator
-dispatch therefore continue to reject H profiles until the complete product
-loop is ready.
+Selected validation now evaluates each ordinary Fields outcome from the source
+room's pre-commit depth and prior Max count, then merges continuation-addressed
+failures with the common room-generation and reward finding streams. The same
+declaration-driven walk validates combat depth restrictions, sequential force
+competition, Bridge and miniboss caps/exclusions, and the forced preboss after
+four entered ordinary rooms. Invalid values remain authored.
+
+H does not yet evaluate candidates or project an editor. The application
+capability boundary and project simulator dispatch therefore continue to
+reject H profiles until the complete product loop is ready.
 
 ## Model Conclusions
 

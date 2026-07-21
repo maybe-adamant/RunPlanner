@@ -56,6 +56,10 @@ describe('complete dormant H catalog', () => {
           minDoorCageRewards: 2,
           maxDoorCageRewards: 3,
           maxDoorCageCeiling: 2,
+          maxOutcomeSupport: {
+            optionalBiomeDepths: [1, 2, 3],
+            requiredBiomeDepths: [4, 5],
+          },
           fields: [
             {
               key: 'cageOutcome',

@@ -309,6 +309,16 @@ visible cage count. Room-creation history also retains the actual materialized
 encounter profile, because a Min outcome can select a two-cage profile that
 differs from the room declaration's maximum-capacity profile.
 
+Selected Fields validation reads the source room's pre-commit history view.
+It combines that view's `biomeDepthCache`, the prior derived
+`fieldsMaxDoorsRolled`, and the declaration-owned ceiling to expose the exact
+supported Min/Max set. Reaching the ceiling takes priority over depth pressure;
+depths four and five otherwise force Max, while depth six and later supports
+only Min. An unsupported authored outcome remains in the snapshot and emits an
+addressed continuation finding. H room legality, sequential forced pools, and
+cage reward support continue through the common declaration and reward
+validators rather than a parallel biome validator.
+
 A canonical room records authored occurrence ID, concrete game room identity,
 resolved encounter phases, room-local state, local children, offers,
 acquisitions, and return addresses. It does not copy labels, candidate arrays,
