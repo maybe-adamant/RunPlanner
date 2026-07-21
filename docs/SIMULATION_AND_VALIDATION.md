@@ -302,6 +302,13 @@ semantic result, while each combat room exposes only its active addressed
 local-reward prefix. Capacity derivation never removes or rewrites dormant
 authored cage leaves.
 
+History emits that typed Fields outcome immediately before its physical target
+creation events. Folding the event increments the biome-local
+`fieldsMaxDoorsRolled` counter for Max without inferring the outcome from
+visible cage count. Room-creation history also retains the actual materialized
+encounter profile, because a Min outcome can select a two-cage profile that
+differs from the room declaration's maximum-capacity profile.
+
 A canonical room records authored occurrence ID, concrete game room identity,
 resolved encounter phases, room-local state, local children, offers,
 acquisitions, and return addresses. It does not copy labels, candidate arrays,

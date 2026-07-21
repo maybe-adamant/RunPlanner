@@ -214,6 +214,11 @@ Fields phase followed by the active two- or three-cage prefix. Cage reward
 offer and acquisition events remain separate local producers rather than being
 hidden inside this encounter operation.
 
+Room-creation history retains the concrete materialized encounter-profile key.
+Consumers must not recover it from the maximum-capacity Room Declaration: an H
+Min outcome can select the two-cage profile for a room whose declaration names
+the three-cage maximum.
+
 Do not introduce an unrestricted callback or event DSL. Add or split an
 operation, effect, or event kind only when audited game behavior has an
 observable distinction that the closed vocabulary cannot represent correctly.

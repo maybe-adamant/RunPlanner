@@ -41,6 +41,7 @@ export interface CanonicalLocalReward {
   readonly origin: LocalRewardAddress;
   readonly groupKey: string;
   readonly slotKey: string;
+  readonly encounterPhaseKey: string;
   readonly producerLifecycleKey: string;
   readonly offer: ResolvedRewardOffer;
   readonly resolvedStoreKey: string;

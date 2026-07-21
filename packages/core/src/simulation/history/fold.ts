@@ -25,6 +25,7 @@ interface MutableLedgers {
     biomeEncounterDepth: number;
     routeEncounterDepth: number;
     roomHistoryOrdinal: number;
+    fieldsMaxDoorsRolled?: number;
   };
 }
 
@@ -105,11 +106,19 @@ function requireRoomViews(
 function encounterEntry(
   event: Extract<LinearHistoryEvent, { readonly kind: 'encounterStarted' }>,
   namesByOrigin: ReadonlyMap<string, string>,
+  encounterProfilesByOrigin: ReadonlyMap<string, string>,
 ): EncounterHistoryEntry {
+  const encounterProfileKey = encounterProfilesByOrigin.get(semanticAddressKey(event.origin));
+  if (encounterProfileKey === undefined) {
+    throw new LinearHistoryFoldContractError(
+      `${event.kind} references a room without an encounter profile`,
+    );
+  }
   return Object.freeze({
     sequence: event.sequence,
     origin: event.origin,
     gameName: roomName(namesByOrigin, event),
+    encounterProfileKey,
     phaseKey: event.phaseKey,
     phaseKind: event.phaseKind,
     ...(event.baselineEncounterKey === undefined
@@ -185,6 +194,7 @@ export function foldLinearHistoryEvents(
     },
   };
   const namesByOrigin = new Map<string, string>();
+  const encounterProfilesByOrigin = new Map<string, string>();
   const activeEncounters = new Map<string, EncounterHistoryEntry>();
   const viewsByOrigin = new Map<string, MutableRoomViews>();
   const orderedViews: MutableRoomViews[] = [];
@@ -196,6 +206,7 @@ export function foldLinearHistoryEvents(
   let biomeStartOrigin:
     Extract<LinearHistoryEvent, { readonly kind: 'biomeStarted' }>['origin'] | undefined;
   const resetAxes: BiomeTransitionCounterAxis[] = [];
+  const fieldsBatchOrigins = new Set<string>();
 
   for (const [index, event] of immutableEvents.entries()) {
     const expectedSequence = (seed?.sequence ?? 0) + index + 1;
@@ -210,6 +221,9 @@ export function foldLinearHistoryEvents(
           throw new LinearHistoryFoldContractError('history has an invalid biome start event');
         }
         Object.assign(ledgers.counters, event.counters);
+        if (event.counters.fieldsMaxDoorsRolled === undefined) {
+          delete ledgers.counters.fieldsMaxDoorsRolled;
+        }
         biomeStarted = true;
         biomeStartOrigin = event.origin;
         break;
@@ -223,6 +237,7 @@ export function foldLinearHistoryEvents(
           throw new LinearHistoryFoldContractError(`room ${key} was created more than once`);
         }
         namesByOrigin.set(key, event.gameName);
+        encounterProfilesByOrigin.set(key, event.encounterProfileKey);
         ledgers.roomCreations.push(event);
         if (event.source === 'generatedTarget') {
           if (pendingTargetGeneration !== undefined) {
@@ -318,7 +333,7 @@ export function foldLinearHistoryEvents(
         break;
       }
       case 'encounterStarted': {
-        const entry = encounterEntry(event, namesByOrigin);
+        const entry = encounterEntry(event, namesByOrigin, encounterProfilesByOrigin);
         const key = encounterKey(event);
         if (activeEncounters.has(key)) {
           throw new LinearHistoryFoldContractError(`${event.phaseKey} started more than once`);
@@ -327,6 +342,36 @@ export function foldLinearHistoryEvents(
         ledgers.encounterStarts.push(entry);
         break;
       }
+      case 'fieldsBatchOutcomeRecorded':
+        if (
+          ledgers.counters.fieldsMaxDoorsRolled === undefined ||
+          biomeStartOrigin === undefined ||
+          event.origin.routeKey !== biomeStartOrigin.routeKey ||
+          event.origin.biomeKey !== biomeStartOrigin.biomeKey
+        ) {
+          throw new LinearHistoryFoldContractError(
+            'Fields batch outcome appeared outside a Fields biome',
+          );
+        }
+        if (
+          !Number.isInteger(event.batchCapacity) ||
+          !Number.isInteger(event.activeCageCount) ||
+          event.batchCapacity <= 0 ||
+          event.activeCageCount <= 0 ||
+          event.activeCageCount > event.batchCapacity
+        ) {
+          throw new LinearHistoryFoldContractError('Fields batch outcome has invalid cage counts');
+        }
+        if (fieldsBatchOrigins.has(semanticAddressKey(event.origin))) {
+          throw new LinearHistoryFoldContractError(
+            `Fields batch ${semanticAddressKey(event.origin)} was recorded more than once`,
+          );
+        }
+        fieldsBatchOrigins.add(semanticAddressKey(event.origin));
+        if (event.cageOutcome === 'max') {
+          ledgers.counters.fieldsMaxDoorsRolled += 1;
+        }
+        break;
       case 'encounterDepthAdvanced':
         ledgers.counters.biomeEncounterDepth += event.biomeEncounterDepthDelta;
         ledgers.counters.routeEncounterDepth += event.routeEncounterDepthDelta;

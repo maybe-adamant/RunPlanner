@@ -1,5 +1,10 @@
 import type { BiomeTransitionCounterAxis, EncounterPhaseKind } from '../../catalog';
-import type { BiomeAddress, OccurrenceAddress, TargetAddress } from '../../project/addresses';
+import type {
+  BiomeAddress,
+  ContinuationAddress,
+  OccurrenceAddress,
+  TargetAddress,
+} from '../../project/addresses';
 import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
 
 interface LinearHistoryEventBase {
@@ -18,6 +23,15 @@ interface RoomCreatedHistoryEventBase extends LinearHistoryEventBase {
   readonly kind: 'roomCreated';
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
+  readonly encounterProfileKey: string;
+}
+
+export interface FieldsBatchOutcomeHistoryEvent extends LinearHistoryEventBase {
+  readonly kind: 'fieldsBatchOutcomeRecorded';
+  readonly origin: ContinuationAddress;
+  readonly cageOutcome: 'min' | 'max';
+  readonly batchCapacity: number;
+  readonly activeCageCount: number;
 }
 
 export type RoomCreatedHistoryEvent =
@@ -59,6 +73,7 @@ export type LinearHistoryEvent =
   | BiomeCompletedHistoryEvent
   | BiomeCounterResetHistoryEvent
   | BiomeStartedHistoryEvent
+  | FieldsBatchOutcomeHistoryEvent
   | RoomCreatedHistoryEvent
   | TargetGenerationCompletedHistoryEvent
   | RoomLifecycleEvent;
@@ -73,6 +88,7 @@ export interface EncounterHistoryEntry {
   readonly sequence: number;
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
+  readonly encounterProfileKey: string;
   readonly phaseKey: string;
   readonly phaseKind: EncounterPhaseKind;
   readonly baselineEncounterKey?: string;
@@ -90,6 +106,7 @@ export interface LinearHistoryCounters {
   readonly biomeEncounterDepth: number;
   readonly routeEncounterDepth: number;
   readonly roomHistoryOrdinal: number;
+  readonly fieldsMaxDoorsRolled?: number;
 }
 
 export interface LinearHistoryLedgers {

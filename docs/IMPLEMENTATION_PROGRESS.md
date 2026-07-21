@@ -272,6 +272,21 @@ real multi-phase Fields lifecycle profile; local reward offer/acquisition
 events and route history remain Slice 3. H is still absent from all application
 capabilities and simulator dispatch.
 
+Phase 6 H Slice 3 is complete. The common linear history composer now emits a
+typed Fields batch-outcome event before physical target creation, and the
+history fold derives `fieldsMaxDoorsRolled` from every ordinary Max including
+capacity-two and no-combat outcomes. Materialized encounter-profile identity
+survives into history, so entered combat rooms execute the exact non-counting
+Passive phase followed by two or three counting cage phases. The shared reward
+replay accepts the exact Fields/no-store layout pair, resolves each target's
+ordinary incoming producer before its active local cages, shares peer and bag
+state across picked and unpicked targets, and acquires local rewards only when
+the picked room completes the matching cage phase. One golden validated F/G
+seed plus dormant H composition proves carried route counters, reward
+bags/history, fixed H store provenance, physical cage-offer order, and
+picked-only acquisition timing without adding H to simulator dispatch or
+application capabilities.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -974,9 +989,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slices 1 and 2 are
-complete; H Slice 3 lifecycle and route history is the next implementation
-frontier.
+Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slices 1 through 3 are
+complete; H Slice 4 selected validation is the next implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

@@ -70,13 +70,14 @@ responsiveness. The acceptance matrix and browser-only smoke procedure are
 recorded in
 [`docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md`](docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md).
 
-Phase 6 now includes dormant H authored topology and canonical Fields
-materialization. The core derives Min/Max cage capacity from physical targets,
-projects only each combat occurrence's active cage prefix, retains clamped and
-no-combat Max outcomes, and materializes H's intro, forked preboss, boss, and
-postboss without changing authored leaves. Application capabilities remain
-limited to F/G; H history, validation, candidates, editor projection, and
-activation remain subsequent controlled slices.
+Phase 6 now includes dormant H authored topology, canonical Fields
+materialization, and route-history/reward replay. The shared history fold
+records batch outcomes and the derived `fieldsMaxDoorsRolled` counter, executes
+the selected two- or three-cage encounter profile, and carries route state from
+G. Reward replay resolves every active cage offer in physical target order and
+acquires only the picked combat occurrence's cages. Application capabilities
+remain limited to F/G; H selected validation, candidates, editor projection,
+and activation remain subsequent controlled slices.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

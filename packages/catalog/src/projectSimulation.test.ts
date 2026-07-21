@@ -13,10 +13,17 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  evaluateLinearCompleteness,
+  evaluateLinearRewards,
+  foldLinearHistoryEvents,
   evaluateProjectCandidate,
   evaluateProjectCandidates,
   semanticAddressKey,
   simulateProject,
+  materializeLinearBiome,
+  type LinearBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/core';
@@ -29,6 +36,7 @@ import { catalog } from './index';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const gBiome = createBiomeAddress('Underworld', 'G');
+const hBiome = createBiomeAddress('Underworld', 'H');
 const startId = createOccurrenceId('golden-start');
 
 interface BatchSpec {
@@ -368,6 +376,187 @@ function completeGoldenFGProject(options: GFixtureOptions = {}): ProjectDocument
     value: { rewardType: 'RoomRewardHealDrop' },
   });
   return project;
+}
+
+function hPlan(project: ProjectDocument): LinearBiomePlan {
+  const plan = project.routes
+    .find((route) => route.routeKey === 'Underworld')
+    ?.biomes.find((biomePlan) => biomePlan.biomeKey === 'H');
+  if (plan === undefined) {
+    throw new Error('golden project has no H plan');
+  }
+  return plan;
+}
+
+function appendGoldenH(project: ProjectDocument): ProjectDocument {
+  const start = createOccurrenceId('golden-h-start');
+  const combat02 = createOccurrenceId('golden-h-combat02');
+  const combat09 = createOccurrenceId('golden-h-combat09');
+  const combat03 = createOccurrenceId('golden-h-combat03');
+  const bridge = createOccurrenceId('golden-h-bridge');
+  const miniboss = createOccurrenceId('golden-h-miniboss');
+  const combat05 = createOccurrenceId('golden-h-combat05');
+  const combat04 = createOccurrenceId('golden-h-combat04');
+  let next = applyProjectCommand(project, catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Underworld'),
+    configuredBiomeCount: 3,
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'CreateStart',
+    biome: hBiome,
+    occurrenceId: start,
+    gameName: 'H_Intro',
+  });
+
+  const batches = [
+    {
+      parent: start,
+      targets: [{ occurrenceId: combat02, gameName: 'H_Combat02' }],
+      outcome: 'min' as const,
+    },
+    {
+      parent: combat02,
+      targets: [
+        { occurrenceId: combat09, gameName: 'H_Combat09' },
+        { occurrenceId: combat03, gameName: 'H_Combat03' },
+      ],
+      outcome: 'max' as const,
+    },
+    {
+      parent: combat09,
+      targets: [
+        { occurrenceId: bridge, gameName: 'H_Bridge01' },
+        { occurrenceId: miniboss, gameName: 'H_MiniBoss01' },
+      ],
+      outcome: 'max' as const,
+    },
+    {
+      parent: bridge,
+      targets: [
+        { occurrenceId: combat05, gameName: 'H_Combat05' },
+        { occurrenceId: combat04, gameName: 'H_Combat04' },
+      ],
+      outcome: 'min' as const,
+    },
+  ];
+  for (const batch of batches) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(hBiome, batch.parent),
+    });
+    if (batch.outcome === 'max') {
+      next = applyProjectCommand(next, catalog, {
+        kind: 'ReplaceFieldsCageOutcome',
+        continuation: createContinuationAddress(hBiome, batch.parent),
+        cageOutcome: batch.outcome,
+      });
+    }
+    for (const [targetOffset, target] of batch.targets.entries()) {
+      next = applyProjectCommand(next, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(hBiome, batch.parent, targetOffset + 1),
+        occurrenceId: target.occurrenceId,
+        gameName: target.gameName,
+      });
+    }
+    next = applyProjectCommand(next, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(hBiome, batch.parent),
+      exitIndex: 1,
+    });
+  }
+  next = applyProjectCommand(next, catalog, {
+    kind: 'CreateTerminalTransition',
+    continuation: createContinuationAddress(hBiome, combat05),
+    targetOccurrenceIds: [
+      createOccurrenceId('golden-h-terminal-shop'),
+      createOccurrenceId('golden-h-terminal-free'),
+    ],
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'SetTerminalPicked',
+    picked: createPickedAddress(hBiome, combat05),
+    exitIndex: 1,
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(hBiome, createOccurrenceId('golden-h-terminal-free')),
+    value: { rewardType: 'StackUpgrade' },
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(
+      hBiome,
+      createOccurrenceId('golden-h-terminal-shop'),
+      'MajorNonBoon',
+    ),
+    value: { rewardType: 'RoomRewardHealDrop' },
+  });
+
+  const raw = JSON.parse(encodeProjectDocument(next)) as {
+    routes: Array<{
+      routeKey: string;
+      biomes: Array<{
+        biomeKey: string;
+        topology: {
+          occurrences: Array<{
+            occurrenceId: string;
+            state: {
+              kind: string;
+              cages?: Record<string, ResolvedRewardOffer>;
+            };
+          }>;
+        } | null;
+      }>;
+    }>;
+  };
+  const h = raw.routes
+    .find((route) => route.routeKey === 'Underworld')
+    ?.biomes.find((biomePlan) => biomePlan.biomeKey === 'H');
+  if (h?.topology === null || h === undefined) {
+    throw new Error('encoded golden H topology is missing');
+  }
+  const offersByOccurrence: Readonly<Record<string, readonly ResolvedRewardOffer[]>> = {
+    'golden-h-combat02': [
+      { rewardType: 'RoomMoneyDrop' },
+      { rewardType: 'WeaponUpgrade' },
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+    ],
+    'golden-h-combat09': [
+      { rewardType: 'HermesUpgrade' },
+      { rewardType: 'TalentDrop' },
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+    ],
+    'golden-h-combat03': [
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    ],
+    'golden-h-combat05': [
+      { rewardType: 'MaxHealthDrop' },
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+    ],
+    'golden-h-combat04': [
+      { rewardType: 'MaxManaDrop' },
+      { rewardType: 'RoomMoneyDrop' },
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    ],
+  };
+  for (const occurrence of h.topology.occurrences) {
+    if (occurrence.state.kind !== 'fieldsCombat' || occurrence.state.cages === undefined) {
+      continue;
+    }
+    const offers = offersByOccurrence[occurrence.occurrenceId];
+    if (offers === undefined) {
+      throw new Error(`missing golden cage offers for ${occurrence.occurrenceId}`);
+    }
+    for (const [index, slotKey] of ['cage1', 'cage2', 'cage3'].entries()) {
+      occurrence.state.cages[slotKey] = offers[index]!;
+    }
+  }
+  return decodeProjectDocument(raw, catalog);
 }
 
 function earlyTerminalProject(): ProjectDocument {
@@ -774,6 +963,119 @@ describe('project simulation composition', () => {
       selectedPossible: true,
       biomeDepthCache: 8,
     });
+  });
+
+  it('composes dormant H Fields history and rewards from carried G state', () => {
+    const fgResult = simulateProject(catalog, completeGoldenFGProject());
+    const g = fgResult.routes[0]!.biomes[1];
+    if (g?.completion !== 'complete') {
+      throw new Error('golden G history seed is unavailable');
+    }
+    const project = appendGoldenH(completeGoldenFGProject());
+    const completeness = evaluateLinearCompleteness(catalog, hBiome, hPlan(project));
+    if (completeness.completion !== 'complete') {
+      throw new Error('golden H topology is incomplete');
+    }
+    const snapshot = materializeLinearBiome(catalog, hBiome, completeness);
+    expect(() => composeLinearHistory(catalog, snapshot)).toThrowError(
+      'H requires validated G history',
+    );
+    const history = composeLinearHistory(catalog, snapshot, g.history);
+    const rewards = evaluateLinearRewards(catalog, snapshot, history, 3, g.rewards.branches);
+
+    expect(history.events[0]).toMatchObject({
+      kind: 'biomeStarted',
+      counters: {
+        biomeDepthCache: 1,
+        biomeEncounterDepth: 1,
+        fieldsMaxDoorsRolled: 0,
+        routeEncounterDepth: g.history.afterTransition.ledgers.counters.routeEncounterDepth,
+        roomHistoryOrdinal: g.history.afterTransition.ledgers.counters.roomHistoryOrdinal,
+      },
+    });
+    expect(
+      history.events
+        .filter((event) => event.kind === 'fieldsBatchOutcomeRecorded')
+        .map((event) => ({
+          cageOutcome: event.cageOutcome,
+          batchCapacity: event.batchCapacity,
+          activeCageCount: event.activeCageCount,
+        })),
+    ).toEqual([
+      { cageOutcome: 'min', batchCapacity: 3, activeCageCount: 2 },
+      { cageOutcome: 'max', batchCapacity: 2, activeCageCount: 2 },
+      { cageOutcome: 'max', batchCapacity: 3, activeCageCount: 3 },
+      { cageOutcome: 'min', batchCapacity: 3, activeCageCount: 2 },
+    ]);
+    expect(history.biomeCompletion.ledgers.counters.fieldsMaxDoorsRolled).toBe(2);
+    expect(foldLinearHistoryEvents(history.events, g.history.afterTransition)).toEqual(history);
+    expect(history.afterTransition.ledgers.counters.routeEncounterDepth).toBe(
+      g.history.afterTransition.ledgers.counters.routeEncounterDepth + 6,
+    );
+    expect(
+      history.ledgers.encounterStarts
+        .filter((entry) => entry.origin.biomeKey === 'H' && entry.gameName === 'H_Combat02')
+        .map((entry) => [entry.encounterProfileKey, entry.phaseKey]),
+    ).toEqual([
+      ['H_FieldsCombatCage2', 'Passive'],
+      ['H_FieldsCombatCage2', 'Cage01'],
+      ['H_FieldsCombatCage2', 'Cage02'],
+    ]);
+    expect(
+      history.ledgers.enteredRewardStores
+        .filter((entry) => entry.origin.biomeKey === 'H')
+        .map((entry) => entry.gameName),
+    ).toEqual(['H_Bridge01', 'H_PreBoss01', 'H_Boss01']);
+
+    expect(rewards.findings).toEqual([]);
+    expect(rewards.validity).toBe('valid');
+    const branch = rewards.branches[0]!;
+    const localOffers = branch.events.filter(
+      (event) => event.kind === 'rewardOffered' && event.origin.kind === 'localReward',
+    );
+    const localAcquisitions = branch.events.filter(
+      (event) => event.kind === 'concreteAcquisition' && event.origin.kind === 'localReward',
+    );
+    expect(localOffers.map((event) => semanticAddressKey(event.origin))).toEqual([
+      '["localReward","Underworld","H","golden-h-combat02","cages","cage1"]',
+      '["localReward","Underworld","H","golden-h-combat02","cages","cage2"]',
+      '["localReward","Underworld","H","golden-h-combat09","cages","cage1"]',
+      '["localReward","Underworld","H","golden-h-combat09","cages","cage2"]',
+      '["localReward","Underworld","H","golden-h-combat03","cages","cage1"]',
+      '["localReward","Underworld","H","golden-h-combat03","cages","cage2"]',
+      '["localReward","Underworld","H","golden-h-combat05","cages","cage1"]',
+      '["localReward","Underworld","H","golden-h-combat05","cages","cage2"]',
+      '["localReward","Underworld","H","golden-h-combat04","cages","cage1"]',
+      '["localReward","Underworld","H","golden-h-combat04","cages","cage2"]',
+    ]);
+    expect(localAcquisitions.map((event) => semanticAddressKey(event.origin))).toEqual([
+      '["localReward","Underworld","H","golden-h-combat02","cages","cage1"]',
+      '["localReward","Underworld","H","golden-h-combat02","cages","cage2"]',
+      '["localReward","Underworld","H","golden-h-combat09","cages","cage1"]',
+      '["localReward","Underworld","H","golden-h-combat09","cages","cage2"]',
+      '["localReward","Underworld","H","golden-h-combat05","cages","cage1"]',
+      '["localReward","Underworld","H","golden-h-combat05","cages","cage2"]',
+    ]);
+    for (const acquisition of localAcquisitions) {
+      if (acquisition.origin.kind !== 'localReward') {
+        throw new Error('filtered local acquisition lost its semantic owner');
+      }
+      const occurrenceId = acquisition.origin.occurrenceId;
+      const offer = localOffers.find(
+        (candidate) =>
+          semanticAddressKey(candidate.origin) === semanticAddressKey(acquisition.origin),
+      );
+      expect(offer?.historySequence).toBeLessThan(acquisition.historySequence);
+      const slotNumber = Number(acquisition.origin.slotKey.slice(-1));
+      const completion = history.events.find(
+        (event) =>
+          event.kind === 'encounterCompleted' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === occurrenceId &&
+          event.phaseKey === `Cage0${slotNumber}`,
+      );
+      expect(acquisition.historySequence).toBe(completion?.sequence);
+    }
   });
 
   it('keeps the registered G simulator outside an F-only simulation scope', () => {

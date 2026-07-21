@@ -64,6 +64,7 @@ export {
   type CanonicalLinearHistory,
   type EncounterHistoryEntry,
   type EnteredRewardStoreHistoryEntry,
+  type FieldsBatchOutcomeHistoryEvent,
   type FHistoryCounters,
   type FHistoryEvent,
   type FHistoryLedgers,
