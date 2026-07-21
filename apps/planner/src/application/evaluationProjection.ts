@@ -220,6 +220,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Local room order`;
     case 'hubOpenSet':
       return `${biomeLabel} · Open Hub rooms`;
+    case 'hubRoom':
+      return `${biomeLabel} · Hub`;
     case 'hubSlot':
       return `${biomeLabel} · Hub room`;
     case 'hubVisit':

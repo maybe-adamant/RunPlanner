@@ -13,10 +13,10 @@ semantics are defined by `../GAME_GENERATION_RULES.md`, `../REWARD_MODEL.md`, an
 `../SIMULATION_AND_VALIDATION.md`. N is a `HubBiome`; it is not a linear biome
 represented with synthetic cycles.
 
-N declarations, the schema-version-5 authored Hub plan, semantic commands, and
-structural completeness are ported. N intentionally remains outside
-application authoring capabilities, simulation, and editing until its complete
-HubBiome product loop is implemented.
+N declarations, the schema-version-5 authored Hub plan, semantic commands,
+structural completeness, and canonical Hub materialization are ported. N
+intentionally remains outside application authoring capabilities, simulation,
+and editing until its complete HubBiome product loop is implemented.
 
 ## Evidence Status
 
@@ -559,6 +559,14 @@ The Phase 6 authored model exposes no arbitrary `CreateHubTarget(gameName)` or
 `ClearTopology` may remove the N topology as an explicit destructive action.
 Ordinary upstream replacement retains complete leaf values and may temporarily
 produce invalid state for the validator to report.
+
+The canonical materializer resolves the fixed authored entry leaves, one
+derived persistent Hub and physical offer board, ordered visits, complete
+parent-local side slots, the fixed authored Preboss shop, and derived
+completion. A visit reuses its board target; entered-side order reuses its
+local-slot projections; parent and Hub restores reference those existing room
+entities. Generated-but-unentered side slots retain canonical offers, while
+not-generated slots retain authored state but produce no canonical offer.
 
 ## Audit Conclusion
 

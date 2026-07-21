@@ -419,6 +419,24 @@ leaf replacement, malformed fixed identity, duplicate visits, and unreferenced
 occurrences. N remains non-simulatable, non-editable, absent from Surface
 navigation, and rejected by application profile capabilities.
 
+Phase 6 N Slice 2 is complete. The canonical Hub materializer now resolves the
+fixed authored Opening and PreHub entries, one derived persistent `N_Hub`, the
+full open offer board in normalized physical order, the independent six-visit
+sequence, every visited parent's declaration-fixed local side slots, the fixed
+authored Preboss WorldShop, and the derived Boss/Postboss completion. Generated
+side slots expose their concrete offers even when unentered; not-generated
+slots remain explicit without producing canonical offers. Entered-side order
+references the same local-slot objects, visits reference the same board target
+objects, and parent/Hub restores reference existing rooms without duplicating
+authored occurrences or replaying offers.
+
+Focused fixtures close incomplete-boundary rejection, physical-versus-visit
+order, open dead leaves, repeated side-room game names with parent-local
+addresses, generated/unentered/not-generated distinctions, restore identity,
+terminal shop state, derived completion, structural-invalid materialization,
+deep freezing, and authored-state nonmutation. N remains outside simulator
+dispatch and every application capability; Slice 3 owns lifecycle and history.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1122,8 +1140,8 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, and N Slice 1 are complete. N Slice 2, canonical Hub
-materialization, is next. N will close the second topology family's complete
+five I slices, and N Slices 1-2 are complete. N Slice 3, exact room lifecycle
+and route history, is next. N will close the second topology family's complete
 product loop before the contextual-selection UX insertion defined in
 `CONTEXTUAL_EDITOR_UX.md`.
 

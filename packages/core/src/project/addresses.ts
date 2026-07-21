@@ -103,6 +103,10 @@ export interface HubOpenSetAddress extends BiomeOwnedAddress {
   readonly kind: 'hubOpenSet';
 }
 
+export interface HubRoomAddress extends BiomeOwnedAddress {
+  readonly kind: 'hubRoom';
+}
+
 export interface HubVisitAddress extends BiomeOwnedAddress {
   readonly kind: 'hubVisit';
   readonly visitIndex: number;
@@ -134,6 +138,7 @@ export type SemanticAddress =
   | IncomingRewardAddress
   | HubSlotAddress
   | HubOpenSetAddress
+  | HubRoomAddress
   | HubVisitAddress
   | LocalChildAddress
   | LocalChildGroupAddress
@@ -348,6 +353,10 @@ export function createHubOpenSetAddress(biome: BiomeAddress): HubOpenSetAddress 
   return Object.freeze({ kind: 'hubOpenSet', ...biomeOwner(biome) });
 }
 
+export function createHubRoomAddress(biome: BiomeAddress): HubRoomAddress {
+  return Object.freeze({ kind: 'hubRoom', ...biomeOwner(biome) });
+}
+
 export function createHubVisitAddress(biome: BiomeAddress, visitIndex: number): HubVisitAddress {
   return Object.freeze({
     kind: 'hubVisit',
@@ -421,6 +430,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'hubSlot':
       return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.hubSlotKey]);
     case 'hubOpenSet':
+    case 'hubRoom':
       return JSON.stringify([address.kind, address.routeKey, address.biomeKey]);
     case 'hubVisit':
       return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.visitIndex]);
