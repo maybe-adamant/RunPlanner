@@ -565,10 +565,11 @@ Phase 5 promotes G to simulatable and editable after its complete simulator,
 candidate projection, shared linear-biome editor, navigation, and interaction
 fixtures land. Phase 6 promotes H after its authored Fields topology,
 materialization, lifecycle, validation, candidate, editor, profile, and
-recovery paths close as one product loop.
+recovery paths close as one product loop, then promotes I after the equivalent
+Clockwork topology, generated-terminal, and WorldShop loop closes.
 
-The current application capability matrix therefore makes F, G, and H
-authorable, simulatable, and editable. P, Q, O, I, and N are
+The current application capability matrix therefore makes F, G, H, and I
+authorable, simulatable, and editable. P, Q, O, and N are
 declaration-complete but inactive. Their presence proves that declaration
 coverage and product activation remain independent.
 

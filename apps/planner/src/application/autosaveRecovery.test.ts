@@ -266,24 +266,22 @@ describe('autosave recovery lifecycle', () => {
     expect(selectPresentProject(application.store.getState()).routes[0]?.biomes).toHaveLength(1);
   });
 
-  it('rejects a structurally valid recovery outside the active capability boundary', () => {
-    const dormantProject = createProjectDocument(catalog, {
-      projectId: 'dormant-recovery',
-      name: 'Dormant Recovery',
+  it('restores a structurally valid activated I recovery', () => {
+    const iProject = createProjectDocument(catalog, {
+      projectId: 'i-recovery',
+      name: 'I Recovery',
       configuredBiomeCounts: { Underworld: 4 },
     });
-    const recovery = createRecoveryFixture(encodeProjectDocument(dormantProject));
+    const recovery = createRecoveryFixture(encodeProjectDocument(iProject));
     const application = createApplication({
       autosaveRecovery: recovery,
       autosaveScheduler: createSchedulerFixture(),
     });
 
-    expect(selectProfileSession(application.store.getState()).recoveryStatus).toBe('blocked');
-    expect(selectProfileSession(application.store.getState()).recoveryError).toContain(
-      'I is not authorable',
-    );
-    expect(selectProjectEvaluation(application.store.getState()).status).toBe('empty');
-    expect(recovery.raw).toBe(encodeProjectDocument(dormantProject));
+    expect(selectProfileSession(application.store.getState()).recoveryStatus).toBe('recovered');
+    expect(selectPresentProject(application.store.getState())).toEqual(iProject);
+    expect(selectProjectEvaluation(application.store.getState()).status).toBe('incomplete');
+    expect(recovery.raw).toBe(encodeProjectDocument(iProject));
   });
 
   it('reports autosave write failure without losing edits and clears it after a later success', () => {

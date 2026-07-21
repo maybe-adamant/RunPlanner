@@ -7,8 +7,9 @@ import {
 } from '../application/candidateProjection';
 import {
   roomCategoryForKind,
+  roomSelectorCategories,
   selectRoomsForCategory,
-  type OrdinaryRoomCategory,
+  type RoomSelectorCategory,
 } from '../application/roomSelectorProjection';
 import { selectPresentProject, useAppSelector } from '../application/store';
 import { candidateSelectState } from './candidatePresentation';
@@ -24,14 +25,6 @@ interface RoomSelectorProps {
   readonly target: TargetAddress;
 }
 
-const categories: readonly { readonly key: OrdinaryRoomCategory; readonly label: string }[] = [
-  { key: 'Combat', label: 'Combat' },
-  { key: 'Miniboss', label: 'Miniboss' },
-  { key: 'Story', label: 'Story' },
-  { key: 'Fountain', label: 'Fountain' },
-  { key: 'Shop', label: 'Shop' },
-];
-
 function RoomSelectorFields({
   biomeKey,
   candidateProjection,
@@ -43,8 +36,9 @@ function RoomSelectorFields({
   target,
 }: RoomSelectorProps) {
   const project = useAppSelector(selectPresentProject);
+  const categories = roomSelectorCategories(catalog, biomeKey);
   const currentCategory = current === undefined ? undefined : roomCategoryForKind(current.kind);
-  const [category, setCategory] = useState<OrdinaryRoomCategory | ''>(currentCategory ?? '');
+  const [category, setCategory] = useState<RoomSelectorCategory | ''>(currentCategory ?? '');
   const rooms = category === '' ? [] : selectRoomsForCategory(catalog, biomeKey, category);
   const projectedRooms = candidateProjection.roomTargets(project, target, rooms);
   const currentInCategory = current !== undefined && roomCategoryForKind(current.kind) === category;
@@ -60,13 +54,13 @@ function RoomSelectorFields({
           {...candidateSelectState(selectedRoom)}
           disabled={disabled}
           id={`${idPrefix}-category`}
-          onChange={(event) => setCategory(event.target.value as OrdinaryRoomCategory | '')}
+          onChange={(event) => setCategory(event.target.value as RoomSelectorCategory | '')}
           value={category}
         >
           <option value="">Select a type</option>
           {categories.map((candidate) => (
-            <option key={candidate.key} value={candidate.key}>
-              {candidate.label}
+            <option key={candidate} value={candidate}>
+              {candidate}
             </option>
           ))}
         </select>

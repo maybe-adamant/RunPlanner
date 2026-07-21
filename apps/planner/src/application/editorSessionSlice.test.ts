@@ -59,6 +59,18 @@ describe('editor finding navigation', () => {
     expect(selected.activeUnderworldPanel).toBe('H');
   });
 
+  it('routes an I finding to the Tartarus panel', () => {
+    const selection = {
+      key: 'i-finding-key',
+      origin: createBiomeAddress('Underworld', 'I'),
+    } as const;
+
+    const selected = editorSessionReducer(undefined, findingSelected(selection));
+
+    expect(selected.activeSection).toBe('underworld');
+    expect(selected.activeUnderworldPanel).toBe('I');
+  });
+
   it('selects a project-root finding without inventing route navigation', () => {
     const settings = editorSessionReducer(undefined, sectionSelected('settings'));
     const selection = { key: 'project-finding-key', origin: createProjectAddress() } as const;

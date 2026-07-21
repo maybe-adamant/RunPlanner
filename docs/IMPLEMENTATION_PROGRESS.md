@@ -386,6 +386,18 @@ Focused interaction fixtures use test-only I capabilities; the production
 capability definition still ends at H, so navigation, profiles, and the full
 product loop remain dormant until Slice 5.
 
+Phase 6 I Slice 5 is complete. I is now authorable, simulatable, and editable
+in the production capability matrix. Underworld route configuration and
+navigation expose Tartarus, semantic findings route to its panel, profile and
+autosave-recovery contacts accept complete F/G/H/I projects, and the room
+selector exposes generated preboss targets only for layouts whose terminal is
+an ordinary generated target. The complete browser fixture closes I labels,
+Clockwork settings and roles, picked-only WorldShop state, invalid finding
+navigation, undo, profile round trips, recovery, candidate and rebuild budgets,
+accessibility, and responsive projections. A separate fixture retains authored
+I state while an incomplete H prefix blocks simulation and reports unavailable
+candidate context. P/Q/O/N remain dormant.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1088,9 +1100,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices and I
-Slices 1-4 are complete; atomic I product-loop activation is the next
-implementation frontier.
+Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices and
+all five I slices are complete; the next controlled biome expansion is pending.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

@@ -12,7 +12,6 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApplicationCapabilities } from './capabilityConfiguration';
-import { PlannerCapabilityContractError } from './capabilities';
 import { createInitialProject } from './projectBootstrap';
 import {
   authoredProjectCommandDispatched,
@@ -144,51 +143,35 @@ describe('project workspace application state', () => {
     expect(selectProjectEvaluation(state)).toBe(evaluateProject.mock.results[2]?.value);
   });
 
-  it('allows the authorable F/G/H prefix but rejects I before command application', () => {
+  it('allows the complete authorable Underworld prefix', () => {
     const { evaluateProject, store } = createStore();
     const route = createRouteAddress('Underworld');
     store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ConfigureRoutePrefix',
         route,
-        configuredBiomeCount: 3,
+        configuredBiomeCount: 4,
       }),
     );
-    const fghState = store.getState();
-    expect(selectPresentProject(fghState).routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(
-      ['F', 'G', 'H'],
-    );
-    expect(selectProjectEvaluation(fghState).status).toBe('incomplete');
-    expect(evaluateProject).toHaveBeenCalledTimes(2);
-
-    expect(() =>
-      store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ConfigureRoutePrefix',
-          route,
-          configuredBiomeCount: 4,
-        }),
-      ),
-    ).toThrowError(
-      new PlannerCapabilityContractError('command.ConfigureRoutePrefix[3]', 'I is not authorable'),
-    );
-    expect(store.getState()).toBe(fghState);
+    const fghiState = store.getState();
+    expect(
+      selectPresentProject(fghiState).routes[0]?.biomes.map((biome) => biome.biomeKey),
+    ).toEqual(['F', 'G', 'H', 'I']);
+    expect(selectProjectEvaluation(fghiState).status).toBe('incomplete');
     expect(evaluateProject).toHaveBeenCalledTimes(2);
   });
 
-  it('rejects a non-authorable replacement before publishing or evaluating it', () => {
+  it('publishes an activated I replacement atomically', () => {
     const { evaluateProject, store } = createStore();
-    const original = store.getState().projectWorkspace;
-    const dormantReplacement = createProjectDocument(catalog, {
-      projectId: 'dormant-replacement',
-      name: 'Dormant Replacement',
+    const replacement = createProjectDocument(catalog, {
+      projectId: 'i-replacement',
+      name: 'I Replacement',
       configuredBiomeCounts: { Underworld: 4 },
     });
 
-    expect(() => store.dispatch(authoredProjectReplaced(dormantReplacement))).toThrowError(
-      new PlannerCapabilityContractError('project.routes[0].biomes[3]', 'I is not authorable'),
-    );
-    expect(store.getState().projectWorkspace).toBe(original);
-    expect(evaluateProject).toHaveBeenCalledTimes(1);
+    store.dispatch(authoredProjectReplaced(replacement));
+    expect(selectPresentProject(store.getState())).toBe(replacement);
+    expect(selectProjectEvaluation(store.getState())).toBe(evaluateProject.mock.results[1]?.value);
+    expect(evaluateProject).toHaveBeenCalledTimes(2);
   });
 });
