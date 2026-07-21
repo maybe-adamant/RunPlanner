@@ -84,6 +84,7 @@ export {
   evaluateFRoomGeneration,
   evaluateFRoomTargetCandidate,
   evaluateLinearRoomGeneration,
+  evaluateLinearRoomTargetCandidate,
   FRoomGenerationContractError,
   LinearRoomGenerationContractError,
   type FForcePressureLedgerEntry,

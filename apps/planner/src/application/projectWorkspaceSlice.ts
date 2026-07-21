@@ -13,6 +13,7 @@ import {
 } from '@run-planner/core';
 
 import { requireBiomeCapability, type PlannerCapabilities } from './capabilities';
+import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
 import { requireProjectAuthorable, requireRoutePrefixAuthorable } from './projectDocuments';
 
 export type ProjectEvaluator = (project: ProjectDocument) => ProjectEvaluation;
@@ -51,7 +52,9 @@ export function createProjectWorkspaceReducer(
 
   return (state = initialState, action) => {
     if (authoredProjectCommandDispatched.match(action)) {
-      if (action.payload.kind === 'ConfigureRoutePrefix') {
+      if (action.payload.kind === 'RenameProject') {
+        // Project-root commands do not cross a biome capability boundary.
+      } else if (action.payload.kind === 'ConfigureRoutePrefix') {
         requireRoutePrefixAuthorable(
           catalog,
           capabilities,
@@ -61,8 +64,8 @@ export function createProjectWorkspaceReducer(
         );
       } else {
         const address = projectCommandAddress(action.payload);
-        if (address.kind === 'route') {
-          throw new Error('route address escaped route-prefix capability validation');
+        if (address.kind === 'project' || address.kind === 'route') {
+          throw new Error('top-level address escaped top-level command validation');
         }
         requireBiomeCapability(
           capabilities,
@@ -85,6 +88,14 @@ export function createProjectWorkspaceReducer(
     if (authoredProjectReplaced.match(action)) {
       requireProjectAuthorable(action.payload, capabilities);
       return publishWorkspace(createProjectHistory(action.payload), evaluateProject);
+    }
+    if (newProjectCreated.match(action)) {
+      requireProjectAuthorable(action.payload, capabilities);
+      return publishWorkspace(createProjectHistory(action.payload), evaluateProject);
+    }
+    if (profileLoadSucceeded.match(action)) {
+      requireProjectAuthorable(action.payload.project, capabilities);
+      return publishWorkspace(createProjectHistory(action.payload.project), evaluateProject);
     }
     return state;
   };

@@ -22,13 +22,14 @@ import type {
   ShopPurchaseAddress,
   TargetAddress,
 } from './addresses';
-import { semanticAddressKey } from './addresses';
+import { createProjectAddress, semanticAddressKey } from './addresses';
 import { createDefaultBatchState } from './batchState';
 import { decodeProjectDocument } from './codec';
 import { createDefaultRoomState, type RoomOccurrenceRole } from './roomState';
 import { ProjectDocumentContractError } from './validation';
 
 export type ProjectCommand =
+  | { readonly kind: 'RenameProject'; readonly name: string }
   | {
       readonly kind: 'ConfigureRoutePrefix';
       readonly route: RouteAddress;
@@ -132,10 +133,15 @@ interface LocatedBiome {
   readonly layout: LinearBiomeLayout;
 }
 
-type BiomeProjectCommand = Exclude<ProjectCommand, { readonly kind: 'ConfigureRoutePrefix' }>;
+type BiomeProjectCommand = Exclude<
+  ProjectCommand,
+  { readonly kind: 'ConfigureRoutePrefix' | 'RenameProject' }
+>;
 
 export function projectCommandAddress(command: ProjectCommand): SemanticAddress {
   switch (command.kind) {
+    case 'RenameProject':
+      return createProjectAddress();
     case 'ConfigureRoutePrefix':
       return command.route;
     case 'CreateStart':
@@ -179,7 +185,7 @@ function locateBiome(
   command: BiomeProjectCommand,
 ): LocatedBiome {
   const address = projectCommandAddress(command);
-  if (address.kind === 'route') {
+  if (address.kind === 'project' || address.kind === 'route') {
     throw new Error('route command reached biome command resolution');
   }
   const routeIndex = document.routes.findIndex((route) => route.routeKey === address.routeKey);
@@ -741,6 +747,9 @@ function applyUnchecked(
   catalog: Catalog,
   command: ProjectCommand,
 ): ProjectDocument {
+  if (command.kind === 'RenameProject') {
+    return command.name === document.name ? document : { ...document, name: command.name };
+  }
   if (command.kind === 'ConfigureRoutePrefix') {
     return configureRoutePrefix(document, catalog, command);
   }

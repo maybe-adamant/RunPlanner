@@ -24,7 +24,7 @@ export interface StatusPresentation {
 const findingCopy = {
   biomeTopologyMissing: {
     title: 'Start this biome',
-    description: 'Choose an opening room before building its route.',
+    description: 'Choose a starting room before building its route.',
   },
   continuationMissing: {
     title: 'Continue this route',
@@ -113,6 +113,10 @@ const invalidBiomeStatus = Object.freeze({
   label: 'Complete · Invalid',
   tone: 'invalid',
 } as const satisfies StatusPresentation);
+const blockedBiomeStatus = Object.freeze({
+  label: 'Blocked',
+  tone: 'blocked',
+} as const satisfies StatusPresentation);
 
 export function indexFindingsByOwner(findings: readonly SemanticFinding[]): FindingIndex {
   const mutable = new Map<string, SemanticFinding[]>();
@@ -149,7 +153,12 @@ export function presentRouteStatus(evaluation: ProjectRouteEvaluation): StatusPr
   return routeStatusCopy[evaluation.status];
 }
 
-export function presentBiomeStatus(evaluation: BiomeProjectEvaluation): StatusPresentation {
+export function presentBiomeStatus(
+  evaluation: BiomeProjectEvaluation | undefined,
+): StatusPresentation {
+  if (evaluation === undefined) {
+    return blockedBiomeStatus;
+  }
   if (evaluation.completion === 'incomplete') {
     return incompleteBiomeStatus;
   }
@@ -157,6 +166,9 @@ export function presentBiomeStatus(evaluation: BiomeProjectEvaluation): StatusPr
 }
 
 export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddress): string {
+  if (origin.kind === 'project') {
+    return 'Project';
+  }
   if (origin.kind === 'route') {
     const route = catalog.routes.byKey[origin.routeKey];
     if (route === undefined) {

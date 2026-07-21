@@ -14,6 +14,7 @@ import {
   createShopPurchaseAddress,
   createTargetAddress,
   evaluateProjectCandidate,
+  evaluateProjectCandidates,
   semanticAddressKey,
   simulateProject,
   type OccurrenceId,
@@ -615,7 +616,11 @@ describe('project simulation composition', () => {
     expect(evaluation.roomGeneration.findings).toContainEqual(
       expect.objectContaining({ code: 'targetRoomUnavailable' }),
     );
-    expect(result.findings.every((finding) => finding.origin.routeKey === 'Underworld')).toBe(true);
+    expect(
+      result.findings.every(
+        (finding) => finding.origin.kind !== 'project' && finding.origin.routeKey === 'Underworld',
+      ),
+    ).toBe(true);
   });
 
   it('blocks configured downstream biomes after incomplete and invalid F horizons', () => {
@@ -637,7 +642,9 @@ describe('project simulation composition', () => {
     expect(incomplete.routes[0]!.biomes).toHaveLength(1);
     expect(
       incomplete.findings.every(
-        (finding) => finding.origin.kind === 'route' || finding.origin.biomeKey === 'F',
+        (finding) =>
+          finding.origin.kind !== 'project' &&
+          (finding.origin.kind === 'route' || finding.origin.biomeKey === 'F'),
       ),
     ).toBe(true);
     expect(incomplete.routes[0]!.summary).toMatchObject({
@@ -654,7 +661,9 @@ describe('project simulation composition', () => {
     expect(invalid.routes[0]!.biomes).toHaveLength(1);
     expect(
       invalid.findings.every(
-        (finding) => finding.origin.kind === 'route' || finding.origin.biomeKey === 'F',
+        (finding) =>
+          finding.origin.kind !== 'project' &&
+          (finding.origin.kind === 'route' || finding.origin.biomeKey === 'F'),
       ),
     ).toBe(true);
     expect(invalid.routes[0]!.summary).toMatchObject({
@@ -723,7 +732,9 @@ describe('project simulation composition', () => {
     );
     expect(
       g.rewards.branches[0]!.events.every(
-        (event) => event.origin.kind === 'route' || event.origin.biomeKey === 'G',
+        (event) =>
+          event.origin.kind !== 'project' &&
+          (event.origin.kind === 'route' || event.origin.biomeKey === 'G'),
       ),
     ).toBe(true);
     expect(g.rewards.storeSupport.slice(0, 3)).toMatchObject([
@@ -798,6 +809,30 @@ describe('project simulation composition', () => {
     ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
   });
 
+  it('evaluates G room, store, and reward candidates through the shared linear authorities', () => {
+    const project = completeGoldenFGProject();
+    const target = createTargetAddress(gBiome, createOccurrenceId('golden-g-intro'), 1);
+    const rewardStore = createBatchRewardStoreAddress(gBiome, createOccurrenceId('golden-g-intro'));
+    const reward = createIncomingRewardAddress(gBiome, gOccurrenceId(1, 1));
+    const [roomCandidate, storeCandidate, rewardCandidate] = evaluateProjectCandidates(
+      catalog,
+      project,
+      [
+        { kind: 'roomTarget', target, gameName: 'G_Combat02' },
+        { kind: 'batchRewardStore', rewardStore, storeKey: 'RunProgress' },
+        {
+          kind: 'incomingReward',
+          reward,
+          value: { rewardType: 'MaxHealthDrop' },
+        },
+      ],
+    );
+
+    expect(roomCandidate).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(storeCandidate).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(rewardCandidate).toMatchObject({ context: 'evaluated', support: 'possible' });
+  });
+
   it('preserves biome encounter depth when the picked G miniboss is Crawler', () => {
     const result = simulateProject(
       catalog,
@@ -856,7 +891,10 @@ describe('project simulation composition', () => {
     );
     expect(
       g.findings.every(
-        (finding) => finding.origin.kind !== 'route' && finding.origin.biomeKey === 'G',
+        (finding) =>
+          finding.origin.kind !== 'project' &&
+          finding.origin.kind !== 'route' &&
+          finding.origin.biomeKey === 'G',
       ),
     ).toBe(true);
   });

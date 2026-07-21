@@ -1,10 +1,8 @@
 import {
   createRouteAddress,
   type AuthoredRoutePlan,
-  type BiomeProjectEvaluation,
   type Catalog,
   type CatalogSummary,
-  type FProjectEvaluation,
   type ProjectRouteEvaluation,
 } from '@run-planner/core';
 
@@ -26,7 +24,7 @@ import {
 import type { ProjectOperations } from '../application/projectOperations';
 import type { CandidateProjectionService } from '../application/candidateProjection';
 import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
-import { FBiomeEditor } from './FBiomeEditor';
+import { LinearBiomeEditor } from './LinearBiomeEditor';
 import { ProjectFileControls } from './ProjectFileControls';
 import { ProjectHistoryControls } from './ProjectHistoryControls';
 
@@ -45,22 +43,10 @@ const sections: readonly { key: PlannerSection; label: string }[] = [
 ];
 
 function asUnderworldPanel(biomeKey: string): UnderworldPanel {
-  if (biomeKey !== 'F') {
+  if (biomeKey !== 'F' && biomeKey !== 'G') {
     throw new Error(`${biomeKey} is not an Underworld editor panel`);
   }
   return biomeKey as UnderworldPanel;
-}
-
-function asFProjectEvaluation(
-  evaluation: BiomeProjectEvaluation | undefined,
-): FProjectEvaluation | undefined {
-  if (evaluation === undefined) {
-    return undefined;
-  }
-  if (evaluation.biomeKey !== 'F') {
-    throw new Error(`${evaluation.biomeKey} is not an F project evaluation`);
-  }
-  return evaluation as FProjectEvaluation;
 }
 
 function RouteOverview({
@@ -182,18 +168,19 @@ export function App({
     throw new Error('Authored project is missing a declared route');
   }
 
-  const fPlan = underworld.biomes.find((biome) => biome.biomeKey === 'F');
-  const fEvaluation = asFProjectEvaluation(
-    underworldEvaluation.biomes.find((biome) => biome.biomeKey === 'F'),
-  );
-  if (fPlan !== undefined && fEvaluation === undefined) {
-    throw new Error('Configured Erebus is missing its evaluation');
-  }
   const configuredUnderworldPanels = underworldNavigation.biomePanels.filter((panel) =>
     underworld.biomes.some((biome) => biome.biomeKey === panel.biomeKey),
   );
+  const activeBiomeKey =
+    activeUnderworldPanel === 'F' || activeUnderworldPanel === 'G'
+      ? activeUnderworldPanel
+      : undefined;
+  const activeBiomePlan = underworld.biomes.find((biome) => biome.biomeKey === activeBiomeKey);
+  const activeBiomeEvaluation = underworldEvaluation.biomes.find(
+    (biome) => biome.biomeKey === activeBiomeKey,
+  );
   const displayedUnderworldPanel =
-    activeUnderworldPanel === 'F' && fPlan !== undefined ? 'F' : 'route';
+    activeBiomeKey !== undefined && activeBiomePlan !== undefined ? activeBiomeKey : 'route';
 
   return (
     <main className="app-shell">
@@ -261,12 +248,12 @@ export function App({
                 route={underworld}
                 routeEvaluation={underworldEvaluation}
               />
-            ) : fPlan !== undefined && fEvaluation !== undefined ? (
-              <FBiomeEditor
+            ) : activeBiomePlan !== undefined ? (
+              <LinearBiomeEditor
                 candidateProjection={candidateProjection}
                 catalog={catalog}
-                evaluation={fEvaluation}
-                plan={fPlan}
+                evaluation={activeBiomeEvaluation}
+                plan={activeBiomePlan}
                 routeKey={underworld.routeKey}
               />
             ) : null}

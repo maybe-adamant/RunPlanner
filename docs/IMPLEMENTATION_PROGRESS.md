@@ -148,16 +148,56 @@ assumes the picked exit is open and emits no `GeneratedG_ExtraDoor` event.
 boss reward surface.
 
 Application composition derives an explicit simulation scope from the active
-capability matrix. G therefore remains behind the current F-only application
-simulation boundary until its editor and candidate presentation activate in
-Phase 5 Commit 4; direct core fixtures exercise the registered G simulator.
+capability matrix. Commit 3 deliberately kept G behind the F-only application
+simulation boundary while direct core fixtures exercised the registered G
+simulator.
 
 Project fixtures cover complete-valid, complete-invalid, incomplete, and
 upstream-blocked G. They prove that invalid or incomplete F prevents G-local
 evaluation, G reward-ratio accounting excludes retained F store entries,
 biome reward records reset while global reward history survives, and the F/G
-prefix remains deterministic. G editor and candidate activation remain Phase
-5 Commit 4 work.
+prefix remains deterministic. G editor and candidate activation were reserved
+for Phase 5 Commit 4.
+
+Phase 5 Commit 4 is complete. F and G now share one declaration-driven linear
+biome editor and topology editor. Application capabilities activate both
+biomes as authorable, simulatable, and editable; navigation, finding selection,
+status presentation, and semantic-owner focus route to the matching biome
+without room-game-name branches.
+
+Candidate projection now evaluates any complete active linear biome through
+the shared generation, store, reward, and shop authorities. Entered-biome
+count is derived from configured route order, so G alternatives receive the
+same eligibility and force-pressure semantics as selected G topology while F
+behavior remains unchanged. An upstream-blocked G plan stays visible and
+editable with typed unavailable candidate support rather than invented local
+findings.
+
+Browser interaction fixtures cover upstream-blocked G authoring and a valid
+F-to-G handoff. They prove G navigation, topology start, candidate decoration,
+semantic finding navigation, and undo/redo restoration through the same
+commands used by F. P/Q/H/O/I/N remain dormant at every application capability
+contact.
+
+Phase 5 Commit 5 is complete. The temporary single browser slot and separate
+JSON export/import authorities are removed. Application composition now
+injects one `ProfileFileAdapter`; the browser adapter implements Save Profile
+with an ephemeral download and Load Profile with a transient upload input,
+while browser globals remain confined to entrypoint composition.
+
+The normalized `ProjectDocument` remains the entire profile payload.
+`RenameProject` is one undoable project-root semantic command, and its committed
+name derives a bounded cross-platform-safe `.runplanner.json` suggestion.
+Successful save establishes the exact serialized snapshot captured before the
+asynchronous adapter call, so a later edit cannot be mistaken for saved state.
+Successful load capability-decodes the complete document and atomically
+publishes fresh history, evaluation, and normalized explicit baseline.
+
+New clears that explicit baseline. Save/load cancellation, adapter failure,
+decode failure, and dormant-biome rejection retain the current project,
+evaluation, history, and baseline. Application, browser-adapter, core-command,
+and interaction fixtures cover those lifecycle contacts. Dirty-state
+presentation and the separate autosave recovery channel remain Commit 6 work.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
@@ -861,8 +901,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, and 4 have no pending items. Phase 5 Commit 4, G editor
-activation, is the next implementation frontier.
+Phases 2.8, 3, and 4 have no pending items. Phase 5 Commit 6, dirty state and
+autosave recovery, is the next implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

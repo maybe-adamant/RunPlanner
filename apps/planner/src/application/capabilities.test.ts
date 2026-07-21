@@ -127,8 +127,8 @@ describe('planner capabilities', () => {
         biomeKey: 'G',
         declared: true,
         authorable: true,
-        simulatable: false,
-        editable: false,
+        simulatable: true,
+        editable: true,
       },
       {
         biomeKey: 'H',
@@ -175,7 +175,7 @@ describe('planner capabilities', () => {
     ]);
     expect(reusedCapabilities.values).toEqual(capabilities.values);
     expect(createProjectSimulationScope(capabilities)).toEqual({
-      simulatableBiomeKeys: ['F'],
+      simulatableBiomeKeys: ['F', 'G'],
     });
   });
 
@@ -243,7 +243,10 @@ describe('planner capabilities', () => {
       simulatable: false,
       editable: false,
     });
-    expect(navigation.routes.Underworld?.biomePanels).toEqual([{ biomeKey: 'F', label: 'Erebus' }]);
+    expect(navigation.routes.Underworld?.biomePanels).toEqual([
+      { biomeKey: 'F', label: 'Erebus' },
+      { biomeKey: 'G', label: 'Oceanus' },
+    ]);
     expect(navigation.routes.Surface?.biomePanels).toEqual([]);
     expect(widenedProject.catalogVersion).not.toBe(baselineProject.catalogVersion);
     expect({ ...widenedProject, catalogVersion: baselineProject.catalogVersion }).toEqual(
@@ -371,7 +374,7 @@ describe('application project capability boundary', () => {
   });
 });
 
-describe('Phase 2.8 capability closure', () => {
+describe('application capability closure', () => {
   const dormantPlacements = [
     { routeKey: 'Underworld', biomeKey: 'H' },
     { routeKey: 'Underworld', biomeKey: 'I' },
@@ -420,21 +423,21 @@ describe('Phase 2.8 capability closure', () => {
     }
   });
 
-  it('limits navigation and selector consumers to the editable F surface', () => {
+  it('limits navigation and selector consumers to the editable F/G surface', () => {
     const capabilities = createApplicationCapabilities(catalog);
     const navigation = createEditorNavigation(catalog, capabilities);
     const editorBiomeKeys = Object.values(navigation.routes).flatMap((route) =>
       route.biomePanels.map((panel) => panel.biomeKey),
     );
 
-    expect(editorBiomeKeys).toEqual(['F']);
+    expect(editorBiomeKeys).toEqual(['F', 'G']);
     const selectableRooms = editorBiomeKeys.flatMap((biomeKey) =>
       ordinaryRoomCategories.flatMap((category) =>
         selectRoomsForCategory(catalog, biomeKey, category),
       ),
     );
     expect(selectableRooms.length).toBeGreaterThan(0);
-    expect(new Set(selectableRooms.map((room) => room.biomeKey))).toEqual(new Set(['F']));
+    expect(new Set(selectableRooms.map((room) => room.biomeKey))).toEqual(new Set(['F', 'G']));
     expect(selectableRooms.some((room) => room.mode.kind !== 'authored')).toBe(false);
   });
 });

@@ -227,7 +227,9 @@ The layout-derived boss/postboss tail is materialized, and `G_Boss01` records
 the RunProgress store resolved for its outgoing boss offer without inventing a
 boss reward.
 
-G editor activation and candidate presentation remain pending. The application
-therefore keeps G outside its simulation horizon and presents only the F editor.
-Direct core simulation includes complete or incomplete G plans for conformance
-coverage until the application activates G in Phase 5 Commit 4.
+G editor activation and candidate presentation are live through the shared
+linear-biome editor. The application simulation horizon includes F and G;
+upstream-invalid or incomplete F leaves configured G visible and editable but
+context-unavailable, without inventing G-local findings. Direct core and
+application interaction fixtures cover complete, incomplete, and blocked G
+plans.

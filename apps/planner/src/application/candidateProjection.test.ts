@@ -13,7 +13,7 @@ import { createCandidateProjectionService, presentCandidateLabel } from './candi
 import { selectRoomsForCategory } from './roomSelectorProjection';
 
 const biome = createBiomeAddress('Underworld', 'F');
-const simulationScope = Object.freeze({ simulatableBiomeKeys: Object.freeze(['F']) });
+const simulationScope = Object.freeze({ simulatableBiomeKeys: Object.freeze(['F', 'G']) });
 
 function project() {
   return createProjectDocument(catalog, {
@@ -75,5 +75,24 @@ describe('candidate application projection', () => {
 
     expect(option?.evaluation).toMatchObject({ context: 'evaluated', support: 'impossible' });
     expect(presentCandidateLabel(room.label, option)).toBe('Combat 01 — unavailable');
+  });
+
+  it('projects the catalog-authored G start without a biome-specific application rule', () => {
+    const service = createCandidateProjectionService(catalog, simulationScope);
+    const document = createProjectDocument(catalog, {
+      projectId: 'g-candidate-projection',
+      name: 'G Candidate Projection',
+      configuredBiomeCounts: { Underworld: 2 },
+    });
+    const layout = catalog.biomeLayouts.byKey.G;
+    if (layout?.kind !== 'LinearBiome' || layout.start.kind !== 'authoredStart') {
+      throw new Error('G authored start domain is missing');
+    }
+    const rooms = layout.start.roomGameNames.map((gameName) => catalog.rooms.byKey[gameName]!);
+
+    const options = service.startRooms(document, createBiomeAddress('Underworld', 'G'), rooms);
+
+    expect(options.map((option) => option.value.gameName)).toEqual(['G_Intro']);
+    expect(options[0]?.evaluation).toMatchObject({ context: 'evaluated', support: 'forced' });
   });
 });

@@ -553,22 +553,22 @@ export function evaluateLinearRoomGeneration(
   });
 }
 
-export function evaluateFRoomTargetCandidate(
+export function evaluateLinearRoomTargetCandidate(
   catalog: Catalog,
   snapshot: CanonicalLinearBiome,
   history: CanonicalLinearHistory,
   targetOrigin: CanonicalTarget['origin'],
   gameName: string,
+  enteredBiomeCount: number,
 ): LinearRoomTargetCandidateValidation {
   if (
-    snapshot.biomeKey !== 'F' ||
-    history.biomeKey !== 'F' ||
+    snapshot.biomeKey !== history.biomeKey ||
     snapshot.routeKey !== history.routeKey ||
     targetOrigin.routeKey !== snapshot.routeKey ||
     targetOrigin.biomeKey !== snapshot.biomeKey
   ) {
     throw new LinearRoomGenerationContractError(
-      'F candidate generation inputs do not share one biome owner',
+      'linear candidate generation inputs do not share one biome owner',
     );
   }
   const batch = snapshot.batches.find(
@@ -581,7 +581,7 @@ export function evaluateFRoomTargetCandidate(
   );
   if (batch === undefined || target === undefined) {
     throw new LinearRoomGenerationContractError(
-      `target ${semanticAddressKey(targetOrigin)} is not an ordinary F batch target`,
+      `target ${semanticAddressKey(targetOrigin)} is not an ordinary linear batch target`,
     );
   }
   const rooms = authoredRooms(snapshot);
@@ -595,14 +595,27 @@ export function evaluateFRoomTargetCandidate(
   assertTargetHistoryMatches(source, target, view);
   return evaluateTargetGameName(
     catalog,
-    linearCandidatePool(catalog, 'F'),
+    linearCandidatePool(catalog, snapshot.biomeKey),
     source,
     targetOrigin,
     target.exit,
     view,
     gameName,
-    1,
+    enteredBiomeCount,
   );
+}
+
+export function evaluateFRoomTargetCandidate(
+  catalog: Catalog,
+  snapshot: CanonicalLinearBiome,
+  history: CanonicalLinearHistory,
+  targetOrigin: CanonicalTarget['origin'],
+  gameName: string,
+): LinearRoomTargetCandidateValidation {
+  if (snapshot.biomeKey !== 'F' || history.biomeKey !== 'F') {
+    throw new LinearRoomGenerationContractError('F candidate generation requires biome F');
+  }
+  return evaluateLinearRoomTargetCandidate(catalog, snapshot, history, targetOrigin, gameName, 1);
 }
 
 export function evaluateFRoomGeneration(

@@ -29,19 +29,19 @@ import { SemanticOwnerMarker } from './EvaluationFeedback';
 import { RoomSelector } from './RoomSelector';
 import { RoomStateEditor } from './RoomStateEditor';
 
-interface FTopologyEditorProps {
+interface LinearTopologyEditorProps {
   readonly biome: BiomeAddress;
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly topology: LinearBiomeTopology;
 }
 
-interface BatchEditorProps extends FTopologyEditorProps {
+interface BatchEditorProps extends LinearTopologyEditorProps {
   readonly canCreateTarget: boolean;
   readonly continuation: LinearBatchContinuation;
 }
 
-interface TerminalEditorProps extends FTopologyEditorProps {
+interface TerminalEditorProps extends LinearTopologyEditorProps {
   readonly canReplaceWithBatch: boolean;
   readonly continuation: LinearTerminalContinuation;
 }
@@ -84,7 +84,7 @@ function OrdinaryTargetEditor({
   exitIndex,
   target,
   topology,
-}: FTopologyEditorProps & {
+}: LinearTopologyEditorProps & {
   readonly available: boolean;
   readonly canCreateTarget: boolean;
   readonly continuation: LinearBatchContinuation;
@@ -571,7 +571,7 @@ function FrontierEditor({
   catalog,
   parentOccurrenceId,
   topology,
-}: FTopologyEditorProps & {
+}: LinearTopologyEditorProps & {
   readonly canAddBatch: boolean;
   readonly canCreateTerminal: boolean;
   readonly parentOccurrenceId: OccurrenceId;
@@ -634,12 +634,12 @@ function frontierOccurrenceId(topology: LinearBiomeTopology): OccurrenceId | und
   return last.targets.find((target) => target.exitIndex === last.pickedExitIndex)?.occurrenceId;
 }
 
-export function FTopologyEditor({
+export function LinearTopologyEditor({
   biome,
   candidateProjection,
   catalog,
   topology,
-}: FTopologyEditorProps) {
+}: LinearTopologyEditorProps) {
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
   if (layout === undefined) {
     throw new Error(`${biome.biomeKey} layout is missing`);

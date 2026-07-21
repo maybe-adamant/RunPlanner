@@ -1,33 +1,20 @@
-import type {
-  ProjectJsonTransferAdapter,
-  ProjectPersistenceAdapters,
-  ProjectStorageAdapter,
-} from './projectPersistence';
+import type { ProfileFileAdapter } from './profileFile';
 
-const projectStorageKey = 'run-planner.project';
-
-export interface BrowserProjectTransferEnvironment {
+export interface BrowserProfileFileEnvironment {
   readonly Blob: typeof Blob;
   readonly URL: Pick<typeof URL, 'createObjectURL' | 'revokeObjectURL'>;
   readonly document: Document;
 }
 
-export function createBrowserProjectStorage(storage: Storage): ProjectStorageAdapter {
+export function createBrowserProfileFileAdapter(
+  environment: BrowserProfileFileEnvironment,
+): ProfileFileAdapter {
   return Object.freeze({
-    read: () => storage.getItem(projectStorageKey),
-    write: (json: string) => storage.setItem(projectStorageKey, json),
-  });
-}
-
-export function createBrowserProjectTransfer(
-  environment: BrowserProjectTransferEnvironment,
-): ProjectJsonTransferAdapter {
-  return Object.freeze({
-    download(fileName: string, json: string): void {
+    save(suggestedFileName: string, json: string): Promise<'saved'> {
       const blob = new environment.Blob([json], { type: 'application/json' });
       const url = environment.URL.createObjectURL(blob);
       const anchor = environment.document.createElement('a');
-      anchor.download = fileName;
+      anchor.download = suggestedFileName;
       anchor.href = url;
       anchor.hidden = true;
       environment.document.body.append(anchor);
@@ -37,11 +24,12 @@ export function createBrowserProjectTransfer(
         anchor.remove();
         environment.URL.revokeObjectURL(url);
       }
+      return Promise.resolve('saved');
     },
-    upload(): Promise<string | null> {
+    load(): Promise<string | null> {
       return new Promise((resolve, reject) => {
         const input = environment.document.createElement('input');
-        input.accept = '.json,application/json';
+        input.accept = '.runplanner.json,.json,application/json';
         input.hidden = true;
         input.type = 'file';
         let settled = false;
@@ -81,16 +69,5 @@ export function createBrowserProjectTransfer(
         }
       });
     },
-  });
-}
-
-export function createBrowserProjectPersistenceAdapters(): ProjectPersistenceAdapters {
-  return Object.freeze({
-    storage: createBrowserProjectStorage(globalThis.localStorage),
-    transfer: createBrowserProjectTransfer({
-      Blob: globalThis.Blob,
-      URL: globalThis.URL,
-      document: globalThis.document,
-    }),
   });
 }

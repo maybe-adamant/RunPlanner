@@ -1,4 +1,4 @@
-import { createBiomeAddress } from '@run-planner/core';
+import { createBiomeAddress, createProjectAddress } from '@run-planner/core';
 import { describe, expect, it } from 'vitest';
 
 import { editorSessionReducer, findingSelected, sectionSelected } from './editorSessionSlice';
@@ -33,5 +33,28 @@ describe('editor finding navigation', () => {
 
     expect(selectedAgain.selectedFinding).toBe(selection);
     expect(selectedAgain.findingNavigationRevision).toBe(2);
+  });
+
+  it('routes a G finding to the Oceanus panel', () => {
+    const selection = {
+      key: 'g-finding-key',
+      origin: createBiomeAddress('Underworld', 'G'),
+    } as const;
+
+    const selected = editorSessionReducer(undefined, findingSelected(selection));
+
+    expect(selected.activeSection).toBe('underworld');
+    expect(selected.activeUnderworldPanel).toBe('G');
+  });
+
+  it('selects a project-root finding without inventing route navigation', () => {
+    const settings = editorSessionReducer(undefined, sectionSelected('settings'));
+    const selection = { key: 'project-finding-key', origin: createProjectAddress() } as const;
+
+    const selected = editorSessionReducer(settings, findingSelected(selection));
+
+    expect(selected.activeSection).toBe('settings');
+    expect(selected.selectedFinding).toBe(selection);
+    expect(selected.findingNavigationRevision).toBe(1);
   });
 });

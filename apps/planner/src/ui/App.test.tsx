@@ -71,9 +71,11 @@ describe('App', () => {
     expect(markup).toContain('Configure a biome to begin simulation.');
     expect(application.editorNavigation.routes.Underworld?.biomePanels).toEqual([
       { biomeKey: 'F', label: 'Erebus' },
+      { biomeKey: 'G', label: 'Oceanus' },
     ]);
     expect(application.editorNavigation.routes.Underworld?.configurablePrefixBiomePanels).toEqual([
       { biomeKey: 'F', label: 'Erebus' },
+      { biomeKey: 'G', label: 'Oceanus' },
     ]);
     expect(application.editorNavigation.routes.Surface?.biomePanels).toEqual([]);
     expect(application.editorNavigation.routes.Surface?.configurablePrefixBiomePanels).toEqual([]);
@@ -111,7 +113,7 @@ describe('App', () => {
     expect(state.editorSession.activeUnderworldPanel).toBe('F');
     expect(state.projectWorkspace.history).toBe(historyBeforeNavigation);
     expect(markup).toContain('Start this biome');
-    expect(markup).toContain('Choose an opening room before building its route.');
+    expect(markup).toContain('Choose a starting room before building its route.');
     expect(markup).toContain('Incomplete');
     expect(markup).toContain(semanticOwnerElementId(finding.origin));
     expect(markup).toContain('data-selected="true"');

@@ -159,10 +159,28 @@ button:disabled {
   display: flex;
   min-height: 34px;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 14px;
 }
 
+.project-name-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.project-name-control label {
+  color: #aaa7af;
+  font-size: 0.82rem;
+}
+
+.project-name-control input {
+  width: min(220px, 38vw);
+  padding: 5px 8px;
+}
+
+.project-name-control button,
 .project-file-actions {
   display: flex;
   flex-wrap: wrap;

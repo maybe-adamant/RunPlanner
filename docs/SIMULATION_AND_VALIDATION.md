@@ -773,8 +773,8 @@ The core registry contains complete F and G simulators. Project simulation may
 also receive an application-owned simulation scope; reaching a registered
 biome outside that scope records a `simulatorBoundary` horizon without
 dispatching the biome or inventing local findings. The current application
-scope remains F-only until G editor activation, while direct core conformance
-fixtures exercise the full F-to-G prefix.
+scope includes F and G, and both application interaction fixtures and direct
+core conformance fixtures exercise the full F-to-G prefix.
 An entirely unconfigured project has explicit `empty` status, no findings, and
 is not eligible for execution-plan compilation.
 Candidate results and UI decoration are deliberately absent from this Phase 3

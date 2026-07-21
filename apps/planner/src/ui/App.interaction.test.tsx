@@ -4,7 +4,7 @@ import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '../application/createApplication';
-import type { ProjectPersistenceAdapters } from '../application/projectPersistence';
+import type { ProfileFileAdapter } from '../application/profileFile';
 import { renderPlannerForInteraction } from '../testing/renderPlanner';
 
 afterEach(cleanup);
@@ -105,37 +105,49 @@ describe('planner history interaction', () => {
   });
 });
 
-describe('project file interaction', () => {
-  it('saves, replaces, and reloads the project through the visible file controls', async () => {
-    let storedJson: string | null = null;
-    const adapters: ProjectPersistenceAdapters = {
-      storage: {
-        read: () => storedJson,
-        write: (json) => {
-          storedJson = json;
-        },
+describe('project profile interaction', () => {
+  it('renames the project through one undoable semantic command', async () => {
+    const { application, user } = renderPlannerForInteraction();
+
+    await user.clear(screen.getByRole('textbox', { name: 'Project name' }));
+    await user.type(screen.getByRole('textbox', { name: 'Project name' }), 'Ocean Route');
+    await user.click(screen.getByRole('button', { name: 'Rename' }));
+
+    expect(application.store.getState().projectWorkspace.history.present.name).toBe('Ocean Route');
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(application.store.getState().projectWorkspace.history.present.name).toBe('Run Plan');
+    expect(screen.getByRole('textbox', { name: 'Project name' })).toHaveProperty(
+      'value',
+      'Run Plan',
+    );
+  });
+
+  it('saves, replaces, and reloads the project through the visible profile controls', async () => {
+    let profileJson: string | null = null;
+    const profileFile: ProfileFileAdapter = {
+      save: (_fileName, json) => {
+        profileJson = json;
+        return Promise.resolve('saved');
       },
-      transfer: {
-        download: () => {},
-        upload: () => Promise.resolve(null),
-      },
+      load: () => Promise.resolve(profileJson),
     };
-    const application = createApplication({ projectPersistence: adapters });
+    const application = createApplication({ profileFile });
     const { user } = renderPlannerForInteraction({ application });
 
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
     const savedEvaluation = application.store.getState().projectWorkspace.evaluation;
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-    expect(screen.getByText('Saved this project in the browser.')).toBeTruthy();
-    expect(storedJson).not.toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Save Profile' }));
+    expect(await screen.findByText('Saved the profile.')).toBeTruthy();
+    expect(profileJson).not.toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'New' }));
     expect(configuredBiomeCount(application)).toBe(0);
     expect(screen.getByText('Created a new project.')).toBeTruthy();
 
-    await user.click(screen.getByRole('button', { name: 'Load' }));
+    await user.click(screen.getByRole('button', { name: 'Load Profile' }));
+    expect(await screen.findByText('Loaded the profile.')).toBeTruthy();
     expect(configuredBiomeCount(application)).toBe(1);
-    expect(screen.getByText('Loaded the saved browser project.')).toBeTruthy();
     expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
     expect(application.store.getState().projectWorkspace.history.future).toEqual([]);
     expect(application.store.getState().projectWorkspace.evaluation).toEqual(savedEvaluation);
@@ -143,23 +155,19 @@ describe('project file interaction', () => {
 
   it('presents a load failure and retains the current workspace', async () => {
     const application = createApplication({
-      projectPersistence: {
-        storage: {
-          read: () => '{not json',
-          write: () => {},
-        },
-        transfer: {
-          download: () => {},
-          upload: () => Promise.resolve(null),
-        },
+      profileFile: {
+        save: () => Promise.resolve('saved'),
+        load: () => Promise.resolve('{not json'),
       },
     });
     const workspace = application.store.getState().projectWorkspace;
     const { user } = renderPlannerForInteraction({ application });
 
-    await user.click(screen.getByRole('button', { name: 'Load' }));
+    await user.click(screen.getByRole('button', { name: 'Load Profile' }));
 
-    expect(screen.getByRole('alert').textContent).toBe('Load failed: $: must be valid JSON');
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Load Profile failed: $: must be valid JSON',
+    );
     expect(application.store.getState().projectWorkspace).toBe(workspace);
   });
 });

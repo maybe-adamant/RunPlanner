@@ -293,11 +293,11 @@ rooms belong to each biome layout; `Next` is derived only from route order.
 | Surface    | P     | `LinearBiome` | 28 (26)          | eligibility / standard  | authored Run/Meta                    | forked              | `P_Boss01`, `P_PostBoss01` | Q    |
 | Surface    | Q     | `LinearBiome` | 23 (22)          | staged / standard       | none                                 | direct              | `Q_Boss01`                 | --   |
 
-The core simulation matrix now includes F and G, while the application
-capability matrix remains F/G authorable and F-only simulatable/editable until
-the shared G editor lands. P/Q/H/O/I/N are declared but cannot enter
-application projects, semantic commands, the simulatable capability, active
-selector scope, or editor navigation.
+The core simulation matrix and application capability matrix now include F and
+G as authorable, simulatable, and editable through one shared linear-biome
+editor. P/Q/H/O/I/N are declared but cannot enter application projects,
+semantic commands, the simulatable capability, active selector scope, or
+editor navigation.
 
 The following remaining dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:

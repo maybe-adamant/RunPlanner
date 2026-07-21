@@ -421,6 +421,7 @@ The implemented F/G command set is:
 
 ```ts
 type ProjectCommand =
+  | { kind: 'RenameProject'; name: string }
   | {
       kind: 'ConfigureRoutePrefix';
       route: RouteAddress;
@@ -491,6 +492,11 @@ type ProjectCommand =
       purchased: boolean;
     };
 ```
+
+`RenameProject` is owned by the stable project-root semantic address. It is one
+ordinary authored history step; text-entry draft state remains transient until
+the user commits the name. Route and biome commands retain their narrower
+semantic owners.
 
 Each command constructs an unpublished immutable proposal and sends it through
 the same project decoder used at JSON contact. Command failures retain their
