@@ -16,6 +16,7 @@ import type {
   AuthoredRoomState,
   BatchRewardStoreState,
   LinearBatchContinuation,
+  LinearBiomeTopology,
   LinearContinuation,
   OccurrenceId,
   RoomOccurrence,
@@ -552,6 +553,36 @@ function canonicalBatchState(
     batchCapacity,
     activeCageCount: cageOutcome === 'min' ? policy.minDoorCageRewards : batchCapacity,
   });
+}
+
+export function projectLinearBatchState(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  topology: LinearBiomeTopology,
+  continuation: LinearBatchContinuation,
+): CanonicalBatchState {
+  const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
+  if (layout?.kind !== 'LinearBiome') {
+    fail(`${biome.biomeKey} is not a linear biome`);
+  }
+  const route = catalog.routes.byKey[biome.routeKey];
+  if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
+    fail(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
+  }
+  const owned = topology.continuations.find(
+    (candidate) =>
+      candidate.kind === 'batch' &&
+      candidate.parentOccurrenceId === continuation.parentOccurrenceId,
+  );
+  if (owned === undefined || owned.kind !== 'batch') {
+    fail(`batch ${continuation.parentOccurrenceId} does not belong to the supplied topology`);
+  }
+  return canonicalBatchState(
+    catalog,
+    layout,
+    new Map(topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence])),
+    owned,
+  );
 }
 
 function requirePickedExit(continuation: LinearContinuation): number {

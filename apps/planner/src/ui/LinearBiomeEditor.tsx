@@ -17,7 +17,7 @@ import { authoredProjectCommandDispatched } from '../application/projectWorkspac
 import { selectPresentProject, useAppDispatch, useAppSelector } from '../application/store';
 import { candidateSelectState } from './candidatePresentation';
 import { LinearTopologyEditor } from './LinearTopologyEditor';
-import { SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
+import { SemanticFindingsScope, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
 import { RoomStateEditor } from './RoomStateEditor';
 
 interface LinearBiomeEditorProps {
@@ -86,73 +86,77 @@ export function LinearBiomeEditor({
   if (topology === null) {
     const projectedOptions = candidateProjection.startRooms(project, biome, options);
     return (
-      <section className="biome-editor" aria-labelledby={titleId}>
-        <header className="panel-heading">
-          <div>
-            <p className="eyebrow">
-              {routeKey} · {plan.biomeKey}
-            </p>
-            <h2 id={titleId}>{biomeLabel}</h2>
-          </div>
-          <div className="panel-heading-actions">
-            <SemanticOwnerMarker address={biome} />
-            <StatusBadge status={presentBiomeStatus(evaluation)} />
-          </div>
-        </header>
+      <SemanticFindingsScope findings={evaluation?.findings ?? []}>
+        <section className="biome-editor" aria-labelledby={titleId}>
+          <header className="panel-heading">
+            <div>
+              <p className="eyebrow">
+                {routeKey} · {plan.biomeKey}
+              </p>
+              <h2 id={titleId}>{biomeLabel}</h2>
+            </div>
+            <div className="panel-heading-actions">
+              <SemanticOwnerMarker address={biome} />
+              <StatusBadge status={presentBiomeStatus(evaluation)} />
+            </div>
+          </header>
 
-        <div className="empty-topology">
-          <div>
-            <h3>
-              Choose {authoredStartKind === 'opening' ? 'an' : 'a'} {authoredStartKind} room
-            </h3>
-            <p>{biomeLabel} is configured for this project, but no authored topology exists yet.</p>
-          </div>
-          <div className="start-room-form">
-            <label htmlFor={startRoomId}>
-              {authoredStartKind === 'opening' ? 'Opening' : 'Starting'} room
-            </label>
-            <select
-              id={startRoomId}
-              onChange={(event) => setPendingStart(event.target.value)}
-              value={pendingStart}
-            >
-              <option value="">
-                Select {authoredStartKind === 'opening' ? 'an opening' : 'a room'}
-              </option>
-              {projectedOptions.map((option) => (
-                <option
-                  key={option.value.gameName}
-                  value={option.value.gameName}
-                  {...candidateSelectState(option)}
-                >
-                  {presentCandidateLabel(option.value.label, option)}
+          <div className="empty-topology">
+            <div>
+              <h3>
+                Choose {authoredStartKind === 'opening' ? 'an' : 'a'} {authoredStartKind} room
+              </h3>
+              <p>
+                {biomeLabel} is configured for this project, but no authored topology exists yet.
+              </p>
+            </div>
+            <div className="start-room-form">
+              <label htmlFor={startRoomId}>
+                {authoredStartKind === 'opening' ? 'Opening' : 'Starting'} room
+              </label>
+              <select
+                id={startRoomId}
+                onChange={(event) => setPendingStart(event.target.value)}
+                value={pendingStart}
+              >
+                <option value="">
+                  Select {authoredStartKind === 'opening' ? 'an opening' : 'a room'}
                 </option>
-              ))}
-            </select>
-            <button
-              className="primary-action"
-              disabled={pendingStart === ''}
-              onClick={() => {
-                if (pendingStart === '') {
-                  return;
-                }
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'CreateStart',
-                    biome,
-                    occurrenceId: allocateOccurrenceId(),
-                    gameName: pendingStart,
-                  }),
-                );
-                setPendingStart('');
-              }}
-              type="button"
-            >
-              Start {biomeLabel}
-            </button>
+                {projectedOptions.map((option) => (
+                  <option
+                    key={option.value.gameName}
+                    value={option.value.gameName}
+                    {...candidateSelectState(option)}
+                  >
+                    {presentCandidateLabel(option.value.label, option)}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="primary-action"
+                disabled={pendingStart === ''}
+                onClick={() => {
+                  if (pendingStart === '') {
+                    return;
+                  }
+                  dispatch(
+                    authoredProjectCommandDispatched({
+                      kind: 'CreateStart',
+                      biome,
+                      occurrenceId: allocateOccurrenceId(),
+                      gameName: pendingStart,
+                    }),
+                  );
+                  setPendingStart('');
+                }}
+                type="button"
+              >
+                Start {biomeLabel}
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </SemanticFindingsScope>
     );
   }
 
@@ -168,80 +172,83 @@ export function LinearBiomeEditor({
   const selectedStart = projectedOptions.find((option) => option.value.gameName === start.gameName);
 
   return (
-    <section className="biome-editor" aria-labelledby={titleId}>
-      <header className="panel-heading">
-        <div>
-          <p className="eyebrow">
-            {routeKey} · {plan.biomeKey}
-          </p>
-          <h2 id={titleId}>{biomeLabel}</h2>
-        </div>
-        <div className="panel-heading-actions">
-          <SemanticOwnerMarker address={biome} />
-          <StatusBadge status={presentBiomeStatus(evaluation)} />
-          <button
-            className="danger-action"
-            onClick={() => {
-              if (!globalThis.confirm(`Clear all authored ${biomeLabel} rooms and rewards?`)) {
-                return;
-              }
-              dispatch(authoredProjectCommandDispatched({ kind: 'ClearTopology', biome }));
-            }}
-            type="button"
-          >
-            Clear {biomeLabel}
-          </button>
-        </div>
-      </header>
-
-      <article className="room-card">
-        <div className="room-card-heading">
+    <SemanticFindingsScope findings={evaluation?.findings ?? []}>
+      <section className="biome-editor" aria-labelledby={titleId}>
+        <header className="panel-heading">
           <div>
-            <p className="card-kicker">Starting room</p>
-            <h3>{startRoom.kind}</h3>
+            <p className="eyebrow">
+              {routeKey} · {plan.biomeKey}
+            </p>
+            <h2 id={titleId}>{biomeLabel}</h2>
           </div>
-          <span className="room-kind">{startRoom.kind}</span>
-          <SemanticOwnerMarker address={startAddress} />
-        </div>
-        <label htmlFor={`${startRoomId}-authored`}>Room</label>
-        <select
-          {...candidateSelectState(selectedStart)}
-          id={`${startRoomId}-authored`}
-          onChange={(event) => {
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceOccurrenceRoom',
-                occurrence: startAddress,
-                gameName: event.target.value,
-              }),
-            );
-          }}
-          value={start.gameName}
-        >
-          {projectedOptions.map((option) => (
-            <option
-              key={option.value.gameName}
-              value={option.value.gameName}
-              {...candidateSelectState(option)}
+          <div className="panel-heading-actions">
+            <SemanticOwnerMarker address={biome} />
+            <StatusBadge status={presentBiomeStatus(evaluation)} />
+            <button
+              className="danger-action"
+              onClick={() => {
+                if (!globalThis.confirm(`Clear all authored ${biomeLabel} rooms and rewards?`)) {
+                  return;
+                }
+                dispatch(authoredProjectCommandDispatched({ kind: 'ClearTopology', biome }));
+              }}
+              type="button"
             >
-              {presentCandidateLabel(option.value.label, option)}
-            </option>
-          ))}
-        </select>
-        <RoomStateEditor
+              Clear {biomeLabel}
+            </button>
+          </div>
+        </header>
+
+        <article className="room-card">
+          <div className="room-card-heading">
+            <div>
+              <p className="card-kicker">Starting room</p>
+              <h3>{startRoom.kind}</h3>
+            </div>
+            <span className="room-kind">{startRoom.kind}</span>
+            <SemanticOwnerMarker address={startAddress} />
+          </div>
+          <label htmlFor={`${startRoomId}-authored`}>Room</label>
+          <select
+            {...candidateSelectState(selectedStart)}
+            id={`${startRoomId}-authored`}
+            onChange={(event) => {
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceOccurrenceRoom',
+                  occurrence: startAddress,
+                  gameName: event.target.value,
+                }),
+              );
+            }}
+            value={start.gameName}
+          >
+            {projectedOptions.map((option) => (
+              <option
+                key={option.value.gameName}
+                value={option.value.gameName}
+                {...candidateSelectState(option)}
+              >
+                {presentCandidateLabel(option.value.label, option)}
+              </option>
+            ))}
+          </select>
+          <RoomStateEditor
+            biome={biome}
+            candidateProjection={candidateProjection}
+            catalog={catalog}
+            occurrence={start}
+          />
+        </article>
+
+        <LinearTopologyEditor
           biome={biome}
           candidateProjection={candidateProjection}
           catalog={catalog}
-          occurrence={start}
+          evaluation={evaluation}
+          topology={topology}
         />
-      </article>
-
-      <LinearTopologyEditor
-        biome={biome}
-        candidateProjection={candidateProjection}
-        catalog={catalog}
-        topology={topology}
-      />
-    </section>
+      </section>
+    </SemanticFindingsScope>
   );
 }

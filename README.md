@@ -72,11 +72,12 @@ recorded in
 
 Phase 6 now includes dormant H authored topology, canonical Fields
 materialization, route-history/reward replay, selected validation, and
-candidate evaluation. The candidate-only dormant resolver reuses the validated
-G prefix and common linear authorities for rooms, Fields outcomes, active cage
-rewards, terminal rewards, WorldShop offers, and purchases without registering
-H for project simulation. Application capabilities remain limited to F/G; H
-editor projection and activation remain subsequent controlled slices.
+candidate evaluation plus a dormant editor projection. The shared editor now
+projects fixed-count Fields decisions, Min/Max outcomes, active and dormant
+cage leaves, semantic findings, and the forked terminal through existing
+commands and candidate services. Application capabilities, project simulation,
+profile loading, and navigation remain limited to F/G; H activation is the
+final controlled H slice.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

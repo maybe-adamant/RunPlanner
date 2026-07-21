@@ -3,11 +3,13 @@ import {
   type Catalog,
   type ProjectEvaluation,
   type SemanticAddress,
+  type SemanticFinding,
 } from '@run-planner/core';
-import { useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
 import {
   findingDestinationLabel,
+  indexFindingsByOwner,
   presentFinding,
   semanticFindingKey,
   type StatusPresentation,
@@ -15,6 +17,21 @@ import {
 import { findingSelected } from '../application/editorSessionSlice';
 import { selectProjectFindingsByOwner, useAppDispatch, useAppSelector } from '../application/store';
 import { semanticOwnerElementId } from './semanticOwner';
+
+const scopedFindings = createContext<ReturnType<typeof indexFindingsByOwner> | undefined>(
+  undefined,
+);
+
+export function SemanticFindingsScope({
+  children,
+  findings,
+}: {
+  readonly children: ReactNode;
+  readonly findings: readonly SemanticFinding[];
+}) {
+  const index = useMemo(() => indexFindingsByOwner(findings), [findings]);
+  return <scopedFindings.Provider value={index}>{children}</scopedFindings.Provider>;
+}
 
 export function StatusBadge({ status }: { readonly status: StatusPresentation }) {
   return (
@@ -26,7 +43,9 @@ export function StatusBadge({ status }: { readonly status: StatusPresentation })
 
 export function SemanticOwnerMarker({ address }: { readonly address: SemanticAddress }) {
   const ownerKey = semanticAddressKey(address);
-  const findings = useAppSelector(selectProjectFindingsByOwner).get(ownerKey) ?? [];
+  const localFindings = useContext(scopedFindings);
+  const projectFindings = useAppSelector(selectProjectFindingsByOwner);
+  const findings = (localFindings ?? projectFindings).get(ownerKey) ?? [];
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
   const navigationRevision = useAppSelector(
     (state) => state.editorSession.findingNavigationRevision,

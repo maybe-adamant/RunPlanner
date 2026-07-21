@@ -1,5 +1,7 @@
 import type {
   BiomeAddress,
+  BiomeProjectEvaluation,
+  CanonicalBatchState,
   Catalog,
   LinearBatchContinuation,
   LinearBiomeTopology,
@@ -15,6 +17,7 @@ import {
   createOccurrenceAddress,
   createPickedAddress,
   createTargetAddress,
+  projectLinearBatchState,
 } from '@run-planner/core';
 
 import {
@@ -33,11 +36,13 @@ interface LinearTopologyEditorProps {
   readonly biome: BiomeAddress;
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
+  readonly evaluation: BiomeProjectEvaluation | undefined;
   readonly topology: LinearBiomeTopology;
 }
 
 interface BatchEditorProps extends LinearTopologyEditorProps {
   readonly canCreateTarget: boolean;
+  readonly canReplaceWithTerminal: boolean;
   readonly continuation: LinearBatchContinuation;
 }
 
@@ -74,6 +79,13 @@ function confirmDestructive(message: string): boolean {
   return globalThis.confirm(message);
 }
 
+function fieldsCageOutcome(value: string): 'min' | 'max' {
+  if (value !== 'min' && value !== 'max') {
+    throw new Error(`Unknown Fields cage outcome ${value}`);
+  }
+  return value;
+}
+
 function OrdinaryTargetEditor({
   available,
   biome,
@@ -82,6 +94,7 @@ function OrdinaryTargetEditor({
   canCreateTarget,
   continuation,
   exitIndex,
+  projectedBatchState,
   target,
   topology,
 }: LinearTopologyEditorProps & {
@@ -89,6 +102,7 @@ function OrdinaryTargetEditor({
   readonly canCreateTarget: boolean;
   readonly continuation: LinearBatchContinuation;
   readonly exitIndex: number;
+  readonly projectedBatchState: CanonicalBatchState;
   readonly target: LinearTargetReference | undefined;
 }) {
   const dispatch = useAppDispatch();
@@ -187,6 +201,9 @@ function OrdinaryTargetEditor({
           target={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
         />
         <RoomStateEditor
+          {...(room.state.kind === 'fieldsCombat' && projectedBatchState.kind === 'fields'
+            ? { activeCageCount: projectedBatchState.activeCageCount }
+            : {})}
           biome={biome}
           candidateProjection={candidateProjection}
           catalog={catalog}
@@ -201,8 +218,10 @@ function BatchEditor({
   biome,
   candidateProjection,
   canCreateTarget,
+  canReplaceWithTerminal,
   catalog,
   continuation,
+  evaluation,
   topology,
 }: BatchEditorProps) {
   const dispatch = useAppDispatch();
@@ -216,9 +235,7 @@ function BatchEditor({
   if (layout.kind !== 'LinearBiome') {
     throw new Error(`${biome.biomeKey} is not a linear biome`);
   }
-  if (layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore') {
-    throw new Error(`${biome.biomeKey} does not author a base reward store`);
-  }
+  const projectedBatchState = projectLinearBatchState(catalog, biome, topology, continuation);
   const availableExitIndexes = generatedExitIndexes(parentRoom);
   const available = new Set(availableExitIndexes);
   const exitIndexes = [
@@ -231,18 +248,34 @@ function BatchEditor({
     continuation.pickedExitIndex === null || available.has(continuation.pickedExitIndex);
   const address = createContinuationAddress(biome, continuation.parentOccurrenceId);
   const rewardStoreAddress = createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId);
+  const rewardStorePolicy = layout.continuation.rewardStorePolicy;
   const projectedStores =
-    continuation.rewardStore.kind === 'authoredBaseStore'
+    continuation.rewardStore.kind === 'authoredBaseStore' &&
+    rewardStorePolicy.kind === 'authoredBaseStore'
       ? candidateProjection.batchRewardStores(
           project,
           rewardStoreAddress,
-          layout.continuation.rewardStorePolicy.storeKeys,
+          rewardStorePolicy.storeKeys,
         )
       : Object.freeze([]);
   const selectedStore = projectedStores.find(
     (option) =>
       continuation.rewardStore.kind === 'authoredBaseStore' &&
       option.value === continuation.rewardStore.baseRewardStoreKey,
+  );
+  const fieldsSupport =
+    evaluation?.completion === 'complete'
+      ? evaluation.roomGeneration.fieldsCageOutcomes.find(
+          (entry) => entry.origin.parentOccurrenceId === continuation.parentOccurrenceId,
+        )
+      : undefined;
+  const projectedFieldsOutcomes =
+    projectedBatchState.kind === 'fields' && continuation.batchState !== null
+      ? candidateProjection.fieldsCageOutcomes(project, address, ['min', 'max'])
+      : Object.freeze([]);
+  const selectedFieldsOutcome = projectedFieldsOutcomes.find(
+    (option) =>
+      continuation.batchState !== null && option.value === continuation.batchState.cageOutcome,
   );
 
   return (
@@ -300,6 +333,57 @@ function BatchEditor({
         </label>
       )}
 
+      {projectedBatchState.kind === 'fields' && continuation.batchState !== null && (
+        <div className="fields-batch-editor">
+          <label
+            className="field-control"
+            htmlFor={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
+          >
+            <span className="field-label-with-marker">
+              Fields cage outcome
+              <SemanticOwnerMarker address={address} />
+            </span>
+            <select
+              {...candidateSelectState(selectedFieldsOutcome)}
+              aria-label="Fields cage outcome"
+              id={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
+              onChange={(event) =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceFieldsCageOutcome',
+                    continuation: address,
+                    cageOutcome: fieldsCageOutcome(event.target.value),
+                  }),
+                )
+              }
+              value={continuation.batchState.cageOutcome}
+            >
+              {projectedFieldsOutcomes.map((option) => (
+                <option key={option.value} value={option.value} {...candidateSelectState(option)}>
+                  {presentCandidateLabel(option.value === 'min' ? 'Min' : 'Max', option)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <dl className="fields-batch-summary">
+            <div>
+              <dt>Active cages</dt>
+              <dd>
+                {projectedBatchState.activeCageCount} / {projectedBatchState.batchCapacity}
+              </dd>
+            </div>
+            <div>
+              <dt>Prior Max outcomes</dt>
+              <dd>
+                {fieldsSupport === undefined
+                  ? 'Unavailable'
+                  : `${fieldsSupport.fieldsMaxDoorsRolled} / ${fieldsSupport.maxDoorCageCeiling}`}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      )}
+
       <div className="exit-list">
         {exitIndexes.map((exitIndex) => (
           <OrdinaryTargetEditor
@@ -309,8 +393,10 @@ function BatchEditor({
             canCreateTarget={canCreateTarget}
             catalog={catalog}
             continuation={continuation}
+            evaluation={evaluation}
             exitIndex={exitIndex}
             key={exitIndex}
+            projectedBatchState={projectedBatchState}
             target={continuation.targets.find((target) => target.exitIndex === exitIndex)}
             topology={topology}
           />
@@ -338,6 +424,7 @@ function BatchEditor({
           </button>
         )}
         <button
+          disabled={!canReplaceWithTerminal}
           onClick={() => {
             if (
               !confirmDestructive('Replace this decision and all downstream rooms with Preboss?')
@@ -638,6 +725,7 @@ export function LinearTopologyEditor({
   biome,
   candidateProjection,
   catalog,
+  evaluation,
   topology,
 }: LinearTopologyEditorProps) {
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
@@ -650,10 +738,18 @@ export function LinearTopologyEditor({
   const batchCount = topology.continuations.filter(
     (continuation) => continuation.kind === 'batch',
   ).length;
-  const targetCount = topology.continuations.reduce(
-    (count, continuation) => count + continuation.targets.length,
-    0,
-  );
+  const targetCount = topology.continuations
+    .filter((continuation) => continuation.kind === 'batch')
+    .reduce((count, continuation) => count + continuation.targets.length, 0);
+  const fixedContinuationCount =
+    layout.continuation.progressionPolicy.kind === 'fixedCount'
+      ? layout.continuation.progressionPolicy.continuationCount
+      : undefined;
+  const canAddBatch =
+    batchCount < layout.bounds.maxBatches &&
+    (fixedContinuationCount === undefined || batchCount < fixedContinuationCount);
+  const canCreateTerminal =
+    fixedContinuationCount === undefined || batchCount === fixedContinuationCount;
   const frontier = frontierOccurrenceId(topology);
   const frontierRoom =
     frontier === undefined ? undefined : declaration(catalog, occurrence(topology, frontier));
@@ -667,8 +763,10 @@ export function LinearTopologyEditor({
             biome={biome}
             candidateProjection={candidateProjection}
             canCreateTarget={targetCount < layout.bounds.maxTargets}
+            canReplaceWithTerminal={fixedContinuationCount === undefined}
             catalog={catalog}
             continuation={continuation}
+            evaluation={evaluation}
             key={continuation.parentOccurrenceId}
             topology={topology}
           />
@@ -676,9 +774,12 @@ export function LinearTopologyEditor({
           <TerminalEditor
             biome={biome}
             candidateProjection={candidateProjection}
-            canReplaceWithBatch={batchCount < layout.bounds.maxBatches}
+            canReplaceWithBatch={
+              fixedContinuationCount === undefined && batchCount < layout.bounds.maxBatches
+            }
             catalog={catalog}
             continuation={continuation}
+            evaluation={evaluation}
             key={continuation.parentOccurrenceId}
             topology={topology}
           />
@@ -688,9 +789,10 @@ export function LinearTopologyEditor({
         <FrontierEditor
           biome={biome}
           candidateProjection={candidateProjection}
-          canAddBatch={batchCount < layout.bounds.maxBatches}
-          canCreateTerminal={targetCount + frontierTerminalTargetCount <= layout.bounds.maxTargets}
+          canAddBatch={canAddBatch}
+          canCreateTerminal={canCreateTerminal && frontierTerminalTargetCount > 0}
           catalog={catalog}
+          evaluation={evaluation}
           parentOccurrenceId={frontier}
           topology={topology}
         />
