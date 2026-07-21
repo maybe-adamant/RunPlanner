@@ -199,12 +199,12 @@ describe('project profile operations', () => {
     const dormantProject = createProjectDocument(catalog, {
       projectId: 'dormant',
       name: 'Dormant',
-      configuredBiomeCounts: { Underworld: 3 },
+      configuredBiomeCounts: { Underworld: 4 },
     });
     profile.setLoadJson(encodeProjectDocument(dormantProject));
     const loadResult = await application.projectOperations.loadProfile();
     expect(loadResult.status).toBe('failure');
-    expect(loadResult.message).toContain('H is not authorable');
+    expect(loadResult.message).toContain('I is not authorable');
     expect(application.store.getState()).toBe(state);
   });
 });

@@ -141,9 +141,9 @@ describe('planner capabilities', () => {
       {
         biomeKey: 'H',
         declared: true,
-        authorable: false,
-        simulatable: false,
-        editable: false,
+        authorable: true,
+        simulatable: true,
+        editable: true,
       },
       {
         biomeKey: 'I',
@@ -183,7 +183,7 @@ describe('planner capabilities', () => {
     ]);
     expect(reusedCapabilities.values).toEqual(capabilities.values);
     expect(createProjectSimulationScope(capabilities)).toEqual({
-      simulatableBiomeKeys: ['F', 'G'],
+      simulatableBiomeKeys: ['F', 'G', 'H'],
     });
   });
 
@@ -223,13 +223,15 @@ describe('planner capabilities', () => {
     );
   });
 
-  it('keeps a newly declared dormant biome out of authoring and editor navigation', () => {
+  it('requires the activated H declaration and exposes its complete application surface', () => {
     const preImportCatalog = catalogBeforeHImport();
     const capabilities = createApplicationCapabilities(catalog);
     const navigation = createEditorNavigation(catalog, capabilities);
-    const baselineCapabilities = createApplicationCapabilities(preImportCatalog);
-    const baselineProject = createFEditorProject(preImportCatalog, baselineCapabilities);
-    const widenedProject = createFEditorProject(catalog, capabilities);
+    const widenedProject = createAuthorableProjectDocument(catalog, capabilities, {
+      projectId: 'fgh-editor-test',
+      name: 'F/G/H Editor Test',
+      configuredBiomeCounts: { Underworld: 3 },
+    });
     const store = createPlannerStore({
       catalog,
       capabilities,
@@ -240,9 +242,9 @@ describe('planner capabilities', () => {
     expect(capabilities.byBiomeKey.H).toEqual({
       biomeKey: 'H',
       declared: true,
-      authorable: false,
-      simulatable: false,
-      editable: false,
+      authorable: true,
+      simulatable: true,
+      editable: true,
     });
     expect(capabilities.byBiomeKey.N).toEqual({
       biomeKey: 'N',
@@ -254,13 +256,20 @@ describe('planner capabilities', () => {
     expect(navigation.routes.Underworld?.biomePanels).toEqual([
       { biomeKey: 'F', label: 'Erebus' },
       { biomeKey: 'G', label: 'Oceanus' },
+      { biomeKey: 'H', label: 'Fields of Mourning' },
     ]);
     expect(navigation.routes.Surface?.biomePanels).toEqual([]);
-    expect(widenedProject.catalogVersion).not.toBe(baselineProject.catalogVersion);
-    expect({ ...widenedProject, catalogVersion: baselineProject.catalogVersion }).toEqual(
-      baselineProject,
+    expect(widenedProject.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual([
+      'F',
+      'G',
+      'H',
+    ]);
+    expect(() => createApplicationCapabilities(preImportCatalog)).toThrowError(
+      new PlannerCapabilityContractError(
+        'capabilities.authorableBiomeKeys[2]',
+        'H is not declared',
+      ),
     );
-    expect(fSelectorProjection(catalog)).toEqual(fSelectorProjection(preImportCatalog));
     expect(() =>
       store.dispatch(
         authoredProjectCommandDispatched({
@@ -268,9 +277,7 @@ describe('planner capabilities', () => {
           biome: createBiomeAddress('Underworld', 'H'),
         }),
       ),
-    ).toThrowError(
-      new PlannerCapabilityContractError('command.ClearTopology', 'H is not authorable'),
-    );
+    ).not.toThrow();
     expect(() =>
       store.dispatch(
         authoredProjectCommandDispatched({
@@ -329,25 +336,25 @@ describe('planner capabilities', () => {
 });
 
 describe('application project capability boundary', () => {
-  it('allows the authorable F/G prefix and rejects Underworld beyond G and Surface', () => {
+  it('allows the authorable F/G/H prefix and rejects Underworld beyond H and Surface', () => {
     const capabilities = createApplicationCapabilities(catalog);
-    const fg = createAuthorableProjectDocument(catalog, capabilities, {
-      projectId: 'fg-project',
-      name: 'F/G Project',
-      configuredBiomeCounts: { Underworld: 2 },
+    const fgh = createAuthorableProjectDocument(catalog, capabilities, {
+      projectId: 'fgh-project',
+      name: 'F/G/H Project',
+      configuredBiomeCounts: { Underworld: 3 },
     });
 
-    expect(fg.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G']);
+    expect(fgh.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G', 'H']);
     expect(() =>
       createAuthorableProjectDocument(catalog, capabilities, {
-        projectId: 'fgh-project',
-        name: 'F/G/H Project',
-        configuredBiomeCounts: { Underworld: 3 },
+        projectId: 'fghi-project',
+        name: 'F/G/H/I Project',
+        configuredBiomeCounts: { Underworld: 4 },
       }),
     ).toThrowError(
       new PlannerCapabilityContractError(
-        'configuredBiomeCounts.Underworld[2]',
-        'H is not authorable',
+        'configuredBiomeCounts.Underworld[3]',
+        'I is not authorable',
       ),
     );
     expect(() =>
@@ -361,18 +368,27 @@ describe('application project capability boundary', () => {
     );
   });
 
-  it('rejects dormant authored state during both decoded and parsed project load', () => {
+  it('loads H authored state and rejects the next dormant biome', () => {
     const capabilities = createApplicationCapabilities(catalog);
-    const dormantProject = createProjectDocument(catalog, {
-      projectId: 'dormant-project',
-      name: 'Dormant Project',
+    const hProject = createProjectDocument(catalog, {
+      projectId: 'h-project',
+      name: 'H Project',
       configuredBiomeCounts: { Underworld: 3 },
     });
+    const dormantProject = createProjectDocument(catalog, {
+      projectId: 'dormant-i-project',
+      name: 'Dormant I Project',
+      configuredBiomeCounts: { Underworld: 4 },
+    });
     const expectedError = new PlannerCapabilityContractError(
-      'project.routes[0].biomes[2]',
-      'H is not authorable',
+      'project.routes[0].biomes[3]',
+      'I is not authorable',
     );
 
+    expect(decodeAuthorableProjectDocument(hProject, catalog, capabilities)).toEqual(hProject);
+    expect(
+      parseAuthorableProjectDocument(encodeProjectDocument(hProject), catalog, capabilities),
+    ).toEqual(hProject);
     expect(() =>
       decodeAuthorableProjectDocument(dormantProject, catalog, capabilities),
     ).toThrowError(expectedError);
@@ -384,7 +400,6 @@ describe('application project capability boundary', () => {
 
 describe('application capability closure', () => {
   const dormantPlacements = [
-    { routeKey: 'Underworld', biomeKey: 'H' },
     { routeKey: 'Underworld', biomeKey: 'I' },
     { routeKey: 'Surface', biomeKey: 'N' },
     { routeKey: 'Surface', biomeKey: 'O' },
@@ -431,21 +446,21 @@ describe('application capability closure', () => {
     }
   });
 
-  it('limits navigation and selector consumers to the editable F/G surface', () => {
+  it('limits navigation and selector consumers to the editable F/G/H surface', () => {
     const capabilities = createApplicationCapabilities(catalog);
     const navigation = createEditorNavigation(catalog, capabilities);
     const editorBiomeKeys = Object.values(navigation.routes).flatMap((route) =>
       route.biomePanels.map((panel) => panel.biomeKey),
     );
 
-    expect(editorBiomeKeys).toEqual(['F', 'G']);
+    expect(editorBiomeKeys).toEqual(['F', 'G', 'H']);
     const selectableRooms = editorBiomeKeys.flatMap((biomeKey) =>
       ordinaryRoomCategories.flatMap((category) =>
         selectRoomsForCategory(catalog, biomeKey, category),
       ),
     );
     expect(selectableRooms.length).toBeGreaterThan(0);
-    expect(new Set(selectableRooms.map((room) => room.biomeKey))).toEqual(new Set(['F', 'G']));
+    expect(new Set(selectableRooms.map((room) => room.biomeKey))).toEqual(new Set(['F', 'G', 'H']));
     expect(selectableRooms.some((room) => room.mode.kind !== 'authored')).toBe(false);
   });
 });

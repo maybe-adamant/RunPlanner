@@ -144,22 +144,21 @@ describe('project workspace application state', () => {
     expect(selectProjectEvaluation(state)).toBe(evaluateProject.mock.results[2]?.value);
   });
 
-  it('allows the authorable F/G prefix but rejects H before command application', () => {
+  it('allows the authorable F/G/H prefix but rejects I before command application', () => {
     const { evaluateProject, store } = createStore();
     const route = createRouteAddress('Underworld');
     store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ConfigureRoutePrefix',
         route,
-        configuredBiomeCount: 2,
+        configuredBiomeCount: 3,
       }),
     );
-    const fgState = store.getState();
-    expect(selectPresentProject(fgState).routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual([
-      'F',
-      'G',
-    ]);
-    expect(selectProjectEvaluation(fgState).status).toBe('incomplete');
+    const fghState = store.getState();
+    expect(selectPresentProject(fghState).routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(
+      ['F', 'G', 'H'],
+    );
+    expect(selectProjectEvaluation(fghState).status).toBe('incomplete');
     expect(evaluateProject).toHaveBeenCalledTimes(2);
 
     expect(() =>
@@ -167,13 +166,13 @@ describe('project workspace application state', () => {
         authoredProjectCommandDispatched({
           kind: 'ConfigureRoutePrefix',
           route,
-          configuredBiomeCount: 3,
+          configuredBiomeCount: 4,
         }),
       ),
     ).toThrowError(
-      new PlannerCapabilityContractError('command.ConfigureRoutePrefix[2]', 'H is not authorable'),
+      new PlannerCapabilityContractError('command.ConfigureRoutePrefix[3]', 'I is not authorable'),
     );
-    expect(store.getState()).toBe(fgState);
+    expect(store.getState()).toBe(fghState);
     expect(evaluateProject).toHaveBeenCalledTimes(2);
   });
 
@@ -183,11 +182,11 @@ describe('project workspace application state', () => {
     const dormantReplacement = createProjectDocument(catalog, {
       projectId: 'dormant-replacement',
       name: 'Dormant Replacement',
-      configuredBiomeCounts: { Underworld: 3 },
+      configuredBiomeCounts: { Underworld: 4 },
     });
 
     expect(() => store.dispatch(authoredProjectReplaced(dormantReplacement))).toThrowError(
-      new PlannerCapabilityContractError('project.routes[0].biomes[2]', 'H is not authorable'),
+      new PlannerCapabilityContractError('project.routes[0].biomes[3]', 'I is not authorable'),
     );
     expect(store.getState().projectWorkspace).toBe(original);
     expect(evaluateProject).toHaveBeenCalledTimes(1);

@@ -47,6 +47,18 @@ describe('editor finding navigation', () => {
     expect(selected.activeUnderworldPanel).toBe('G');
   });
 
+  it('routes an H finding to the Fields of Mourning panel', () => {
+    const selection = {
+      key: 'h-finding-key',
+      origin: createBiomeAddress('Underworld', 'H'),
+    } as const;
+
+    const selected = editorSessionReducer(undefined, findingSelected(selection));
+
+    expect(selected.activeSection).toBe('underworld');
+    expect(selected.activeUnderworldPanel).toBe('H');
+  });
+
   it('selects a project-root finding without inventing route navigation', () => {
     const settings = editorSessionReducer(undefined, sectionSelected('settings'));
     const selection = { key: 'project-finding-key', origin: createProjectAddress() } as const;

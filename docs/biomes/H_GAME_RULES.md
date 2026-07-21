@@ -4,8 +4,8 @@
 
 This document is the concrete game-rule authority for the Mourning Fields
 (`H`). It defines the Fields cage batches, room-local reward slots, bridge
-competition, and encounter-depth behavior now represented by the dormant H
-catalog slice without importing the previous Lua control shape.
+competition, and encounter-depth behavior represented by the active H product
+slice without importing the previous Lua control shape.
 
 Shared picker, physical-door, cap, force, offer/acquisition, occurrence,
 generated-store, forked-preboss, and fixed-completion semantics are defined by
@@ -13,11 +13,11 @@ generated-store, forked-preboss, and fixed-completion semantics are defined by
 batches add one H-specific semantic outcome that activates bounded cage slots
 owned by each combat occurrence.
 
-H declarations, dormant authored topology, canonical Fields materialization,
-route history, reward replay, selected validation, candidate evaluation,
-dormant editor projection, and focused parity fixtures are ported. H
-intentionally remains non-authorable, non-simulatable, and non-editable at the
-application capability boundary until its complete product loop is activated.
+H declarations, authored topology, canonical Fields materialization, route
+history, reward replay, selected validation, candidate evaluation, editor
+projection, and focused parity fixtures are ported. H is authorable,
+simulatable, and editable after F/G through the complete application product
+loop.
 
 ## Evidence Status
 
@@ -551,19 +551,17 @@ declaration-driven walk validates combat depth restrictions, sequential force
 competition, Bridge and miniboss caps/exclusions, and the forced preboss after
 four entered ordinary rooms. Invalid values remain authored.
 
-H candidates now reuse the selected-plan room, Fields, reward-bag, shop, and
-purchase authorities. A candidate-only dormant resolver composes H after a
-valid G prefix; it preserves selected invalid values and returns explicit
-unavailable context for incomplete H without adding H to project simulator
-dispatch.
+H candidates reuse the selected-plan room, Fields, reward-bag, shop, and
+purchase authorities. The active resolver composes H after a valid G prefix;
+it preserves selected invalid values and returns explicit unavailable context
+when earlier route history is incomplete.
 
-The common linear editor now projects H through a dormant interaction harness.
-It consumes the declaration-derived fixed-count frontier, pure Fields batch
-state, Min/Max and reward candidates, all three persisted cage leaves with an
+The common linear editor projects H through the production Fields panel. It
+consumes the declaration-derived fixed-count frontier, pure Fields batch state,
+Min/Max and reward candidates, all three persisted cage leaves with an
 active/dormant prefix, scoped semantic findings, and the existing forked
-terminal editor. This adds no H panel or profile capability. The application
-capability boundary and project simulator dispatch continue to reject H
-profiles until product-loop activation.
+terminal editor. Complete F/G/H profiles, recovery, findings navigation,
+accessibility, and responsive evaluation are covered as one product loop.
 
 ## Model Conclusions
 

@@ -201,65 +201,14 @@ function locateCompleteLinear(
 
 interface PreparedCandidateContext {
   readonly projectEvaluation: ProjectEvaluation;
-  readonly dormantLinearBiomes: Map<string, BiomeProjectEvaluation>;
 }
 
-const dormantLinearCandidateBiomeKeys = new Set(['H']);
-
 function locateCandidateLinear(
-  catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: ProjectCandidateQuery,
 ): CompleteLinearProjectEvaluation | CandidateContextUnavailableReason {
-  const address = queryAddress(query);
   const route = requireRoute(context.projectEvaluation.routes, query);
-  const located = locateCompleteLinear(route, query);
-  if (located !== 'simulatorUnavailable') {
-    return located;
-  }
-  if (
-    route.horizon.kind !== 'simulatorBoundary' ||
-    route.horizon.biomeKey !== address.biomeKey ||
-    !dormantLinearCandidateBiomeKeys.has(address.biomeKey)
-  ) {
-    return located;
-  }
-
-  const key = `${address.routeKey}:${address.biomeKey}`;
-  let evaluation = context.dormantLinearBiomes.get(key);
-  if (evaluation === undefined) {
-    const authoredRoute = project.routes.find(
-      (candidate) => candidate.routeKey === address.routeKey,
-    );
-    if (authoredRoute === undefined) {
-      failCandidate(query, `project has no route ${address.routeKey}`);
-    }
-    const biomeIndex = authoredRoute.biomes.findIndex(
-      (candidate) => candidate.biomeKey === address.biomeKey,
-    );
-    const plan = biomeIndex < 0 ? undefined : authoredRoute.biomes[biomeIndex];
-    if (biomeIndex < 0 || plan === undefined) {
-      failCandidate(query, `project has no configured biome ${address.biomeKey}`);
-    }
-    let previous: CompleteLinearProjectEvaluation | undefined;
-    if (biomeIndex > 0) {
-      const upstream = route.biomes[biomeIndex - 1];
-      if (upstream === undefined || upstream.completion === 'incomplete') {
-        failCandidate(query, 'dormant candidate biome has no complete upstream evaluation');
-      }
-      previous = upstream;
-    }
-    evaluation = evaluateLinearBiome(
-      catalog,
-      authoredRoute.routeKey,
-      plan,
-      biomeIndex + 1,
-      previous,
-    );
-    context.dormantLinearBiomes.set(key, evaluation);
-  }
-  return evaluation.completion === 'incomplete' ? 'biomeIncomplete' : evaluation;
+  return locateCompleteLinear(route, query);
 }
 
 function support(pressure: LinearForcePressureLedgerEntry): CandidateSupport {
@@ -298,7 +247,7 @@ function evaluateRoomTargetCandidate(
   const authoredTargetExists = targetExists(project, stableQuery);
   assertCandidateExists(catalog, stableQuery);
   const route = requireRoute(context.projectEvaluation.routes, stableQuery);
-  const biome = locateCandidateLinear(catalog, project, context, stableQuery);
+  const biome = locateCandidateLinear(context, stableQuery);
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
   }
@@ -388,7 +337,7 @@ function evaluateBatchRewardStoreCandidate(
   if (continuation?.kind !== 'batch' || continuation.rewardStore.kind !== 'authoredBaseStore') {
     failCandidate(stableQuery, 'semantic owner has no authored batch reward store');
   }
-  const biome = locateCandidateLinear(catalog, project, context, stableQuery);
+  const biome = locateCandidateLinear(context, stableQuery);
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
   }
@@ -501,7 +450,7 @@ function evaluateCandidateBiome(
 ): BiomeProjectEvaluation | CandidateContextUnavailableReason {
   const address = queryAddress(query);
   const baselineRoute = requireRoute(context.projectEvaluation.routes, query);
-  const baselineBiome = locateCandidateLinear(catalog, project, context, query);
+  const baselineBiome = locateCandidateLinear(context, query);
   if (typeof baselineBiome === 'string') {
     return baselineBiome;
   }
@@ -598,7 +547,7 @@ function evaluateFieldsCageOutcomeCandidate(
   ) {
     failCandidate(stableQuery, 'semantic owner has no Fields cage outcome');
   }
-  const biome = locateCandidateLinear(catalog, project, context, stableQuery);
+  const biome = locateCandidateLinear(context, stableQuery);
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
   }
@@ -737,7 +686,6 @@ export function createPreparedProjectCandidateEvaluator(
   assertProjectEvaluationSource(project, projectEvaluation);
   const context: PreparedCandidateContext = {
     projectEvaluation,
-    dormantLinearBiomes: new Map(),
   };
   return Object.freeze({
     evaluate: (queries: readonly ProjectCandidateQuery[]) =>

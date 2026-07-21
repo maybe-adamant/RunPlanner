@@ -20,7 +20,10 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createPlannerCapabilities } from '../application/capabilities';
+import {
+  createApplicationCapabilities,
+  createProjectSimulationScope,
+} from '../application/capabilityConfiguration';
 import {
   createCandidateProjectionService,
   type CandidateProjectionService,
@@ -29,8 +32,6 @@ import { createPlannerStore, selectPresentProject, useAppSelector } from '../app
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
 const biome = createBiomeAddress('Underworld', 'H');
-const simulationScope = Object.freeze({ simulatableBiomeKeys: Object.freeze(['F', 'G']) });
-
 afterEach(cleanup);
 
 function hPlan(project: ProjectDocument): LinearBiomePlan {
@@ -38,7 +39,7 @@ function hPlan(project: ProjectDocument): LinearBiomePlan {
     .find((route) => route.routeKey === biome.routeKey)
     ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
   if (plan === undefined) {
-    throw new Error('dormant H editor fixture has no H plan');
+    throw new Error('H editor fixture has no H plan');
   }
   return plan;
 }
@@ -85,8 +86,8 @@ function hProject(withTerminal: boolean): ProjectDocument {
   const combat05 = createOccurrenceId('editor-h-combat05');
   const combat04 = createOccurrenceId('editor-h-combat04');
   let project = createProjectDocument(catalog, {
-    projectId: 'dormant-h-editor',
-    name: 'Dormant H Editor',
+    projectId: 'h-editor',
+    name: 'H Editor',
     configuredBiomeCounts: { Underworld: 3 },
   });
   project = applyProjectCommand(project, catalog, {
@@ -131,7 +132,7 @@ function hProject(withTerminal: boolean): ProjectDocument {
   });
 }
 
-function DormantHEditorHarness({
+function HEditorHarness({
   candidateProjection,
 }: {
   readonly candidateProjection: CandidateProjectionService;
@@ -167,12 +168,9 @@ function DormantHEditorHarness({
   );
 }
 
-function renderDormantH(project: ProjectDocument) {
-  const capabilities = createPlannerCapabilities(catalog, {
-    authorableBiomeKeys: ['F', 'G', 'H'],
-    simulatableBiomeKeys: ['F', 'G'],
-    editableBiomeKeys: ['F', 'G', 'H'],
-  });
+function renderH(project: ProjectDocument) {
+  const capabilities = createApplicationCapabilities(catalog);
+  const simulationScope = createProjectSimulationScope(capabilities);
   const evaluateProject = (current: ProjectDocument) =>
     simulateProject(catalog, current, simulationScope);
   const store = createPlannerStore({
@@ -185,15 +183,15 @@ function renderDormantH(project: ProjectDocument) {
   const user = userEvent.setup();
   const view = render(
     <Provider store={store}>
-      <DormantHEditorHarness candidateProjection={candidateProjection} />
+      <HEditorHarness candidateProjection={candidateProjection} />
     </Provider>,
   );
   return { store, user, ...view };
 }
 
-describe('dormant H editor projection', () => {
+describe('H editor projection', () => {
   it('edits Fields outcomes and bounded cage leaves through semantic commands', async () => {
-    const { store, user } = renderDormantH(hProject(true));
+    const { store, user } = renderH(hProject(true));
 
     expect(screen.getByRole('heading', { name: 'Fields of Mourning' })).toBeTruthy();
     const outcomes = screen.getAllByLabelText('Fields cage outcome');
@@ -237,7 +235,7 @@ describe('dormant H editor projection', () => {
   });
 
   it('uses fixed-count frontier gating at the terminal frontier', () => {
-    renderDormantH(hProject(false));
+    renderH(hProject(false));
 
     expect(screen.getByRole('button', { name: 'Add Next Decision' })).toHaveProperty(
       'disabled',
@@ -256,7 +254,7 @@ describe('dormant H editor projection', () => {
       kind: 'RemoveBatch',
       continuation: createContinuationAddress(biome, createOccurrenceId('editor-h-bridge')),
     });
-    renderDormantH(project);
+    renderH(project);
 
     expect(screen.getByRole('button', { name: 'Add Next Decision' })).toHaveProperty(
       'disabled',

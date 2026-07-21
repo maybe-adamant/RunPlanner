@@ -326,6 +326,17 @@ realizations, contextual candidate unavailability, and both sides of the
 fixed-count frontier. Production capabilities, profiles, simulator dispatch,
 and navigation remain F/G-only.
 
+Phase 6 H Slice 7 is complete. H is promoted atomically to the application
+authoring, simulation, editor, navigation, profile, and recovery boundaries.
+The complete F/G/H browser fixture validates the route prefix, Fields panel,
+local cage edits, selected-invalid feedback navigation, save/load, startup
+recovery, accessible control identity, evaluated candidates, and interactive
+rebuild/edit/undo budgets. Shop support witnesses that reach the same
+post-purchase bags, reward history, pending-shop state, and history checkpoint
+now merge while retaining one ordered witness, preventing equivalent F/G/H
+proof branches from multiplying across biome transitions. I remains dormant
+and is the next controlled biome expansion.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1028,9 +1039,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slices 1 through 6 are
-complete; H Slice 7 product-loop activation is the next implementation
-frontier.
+Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices are
+complete; I authored-topology planning is the next implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete
