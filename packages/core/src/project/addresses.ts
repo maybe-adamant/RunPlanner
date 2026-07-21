@@ -33,6 +33,21 @@ export interface CompletionRoomAddress extends BiomeOwnedAddress {
   readonly role: 'boss' | 'postboss';
 }
 
+export interface FixedEntryRoomAddress extends BiomeOwnedAddress {
+  readonly kind: 'fixedEntryRoom';
+  readonly role: string;
+}
+
+export interface FixedEntryRewardAddress extends BiomeOwnedAddress {
+  readonly kind: 'fixedEntryReward';
+  readonly role: string;
+}
+
+export interface FixedEntryTargetAddress extends BiomeOwnedAddress {
+  readonly kind: 'fixedEntryTarget';
+  readonly role: string;
+}
+
 export interface ContinuationAddress extends BiomeOwnedAddress {
   readonly kind: 'continuation';
   readonly parentOccurrenceId: OccurrenceId | null;
@@ -86,6 +101,9 @@ export type SemanticAddress =
   | BatchRewardStoreAddress
   | CompletionRoomAddress
   | ContinuationAddress
+  | FixedEntryRewardAddress
+  | FixedEntryRoomAddress
+  | FixedEntryTargetAddress
   | IncomingRewardAddress
   | LocalRewardAddress
   | OccurrenceAddress
@@ -167,6 +185,39 @@ export function createCompletionRoomAddress(
     throw new SemanticAddressContractError('role', `unknown completion role ${String(role)}`);
   }
   return Object.freeze({ kind: 'completionRoom', ...biomeOwner(biome), role });
+}
+
+export function createFixedEntryRoomAddress(
+  biome: BiomeAddress,
+  role: string,
+): FixedEntryRoomAddress {
+  return Object.freeze({
+    kind: 'fixedEntryRoom',
+    ...biomeOwner(biome),
+    role: nonBlank(role, 'role'),
+  });
+}
+
+export function createFixedEntryRewardAddress(
+  biome: BiomeAddress,
+  role: string,
+): FixedEntryRewardAddress {
+  return Object.freeze({
+    kind: 'fixedEntryReward',
+    ...biomeOwner(biome),
+    role: nonBlank(role, 'role'),
+  });
+}
+
+export function createFixedEntryTargetAddress(
+  biome: BiomeAddress,
+  role: string,
+): FixedEntryTargetAddress {
+  return Object.freeze({
+    kind: 'fixedEntryTarget',
+    ...biomeOwner(biome),
+    role: nonBlank(role, 'role'),
+  });
 }
 
 export function createContinuationAddress(
@@ -279,6 +330,10 @@ export function semanticAddressKey(address: SemanticAddress): string {
         address.slotKey,
       ]);
     case 'completionRoom':
+      return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.role]);
+    case 'fixedEntryRoom':
+    case 'fixedEntryReward':
+    case 'fixedEntryTarget':
       return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.role]);
     case 'continuation':
     case 'batchRewardStore':

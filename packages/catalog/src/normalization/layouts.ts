@@ -317,6 +317,16 @@ function normalizeBatchPolicy(rawPolicy: GeneratedBatchPolicy, path: string): Ge
   } else if (fields.length !== 0) {
     fail(`${path}.fields`, `${rawPolicy.kind} policy does not own authored batch fields`);
   }
+  if (rawPolicy.kind === 'clockwork') {
+    return Object.freeze({
+      kind: rawPolicy.kind,
+      initialGoalCount: requirePositiveInteger(
+        rawPolicy.initialGoalCount,
+        `${path}.initialGoalCount`,
+      ),
+      fields,
+    });
+  }
   return Object.freeze({ kind: rawPolicy.kind, fields });
 }
 

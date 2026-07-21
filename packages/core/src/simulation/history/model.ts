@@ -2,7 +2,7 @@ import type { BiomeTransitionCounterAxis, EncounterPhaseKind } from '../../catal
 import type {
   BiomeAddress,
   ContinuationAddress,
-  OccurrenceAddress,
+  FixedEntryTargetAddress,
   TargetAddress,
 } from '../../project/addresses';
 import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
@@ -11,7 +11,8 @@ interface LinearHistoryEventBase {
   readonly sequence: number;
 }
 
-export type RoomCreationSource = 'biomeEntry' | 'generatedTarget' | 'layoutCompletion';
+export type RoomCreationSource =
+  'biomeEntry' | 'generatedTarget' | 'layoutCompletion' | 'layoutEntry';
 
 export interface BiomeStartedHistoryEvent extends LinearHistoryEventBase {
   readonly kind: 'biomeStarted';
@@ -34,6 +35,24 @@ export interface FieldsBatchOutcomeHistoryEvent extends LinearHistoryEventBase {
   readonly activeCageCount: number;
 }
 
+export interface ClockworkBatchStateHistoryEvent extends LinearHistoryEventBase {
+  readonly kind: 'clockworkBatchStateRecorded';
+  readonly origin: ContinuationAddress;
+  readonly goalsRemaining: number;
+  readonly nonGoalRewardsAcquired: number;
+  readonly maxNonGoalRewards: number;
+}
+
+export interface ClockworkGoalAcquiredHistoryEvent extends LinearHistoryEventBase {
+  readonly kind: 'clockworkGoalAcquired';
+  readonly origin: RoomHistoryOrigin;
+}
+
+export interface ClockworkNonGoalRewardSpawnedHistoryEvent extends LinearHistoryEventBase {
+  readonly kind: 'clockworkNonGoalRewardSpawned';
+  readonly origin: RoomHistoryOrigin;
+}
+
 export type RoomCreatedHistoryEvent =
   | (RoomCreatedHistoryEventBase & {
       readonly source: 'biomeEntry' | 'layoutCompletion';
@@ -42,10 +61,18 @@ export type RoomCreatedHistoryEvent =
   | (RoomCreatedHistoryEventBase & {
       readonly source: 'generatedTarget';
       readonly picked: boolean;
-      readonly parentOrigin: OccurrenceAddress;
+      readonly parentOrigin: RoomHistoryOrigin;
       readonly targetOrigin: TargetAddress;
       readonly generationIndex: number;
       readonly generationCount: number;
+    })
+  | (RoomCreatedHistoryEventBase & {
+      readonly source: 'layoutEntry';
+      readonly picked: true;
+      readonly parentOrigin: RoomHistoryOrigin;
+      readonly targetOrigin: FixedEntryTargetAddress;
+      readonly generationIndex: 1;
+      readonly generationCount: 1;
     });
 
 export interface BiomeCompletedHistoryEvent extends LinearHistoryEventBase {
@@ -62,9 +89,9 @@ export interface BiomeCounterResetHistoryEvent extends LinearHistoryEventBase {
 
 export interface TargetGenerationCompletedHistoryEvent extends LinearHistoryEventBase {
   readonly kind: 'targetGenerationCompleted';
-  readonly origin: TargetAddress;
+  readonly origin: FixedEntryTargetAddress | TargetAddress;
   readonly roomOrigin: RoomHistoryOrigin;
-  readonly parentOrigin: OccurrenceAddress;
+  readonly parentOrigin: RoomHistoryOrigin;
   readonly generationIndex: number;
   readonly generationCount: number;
 }
@@ -73,6 +100,9 @@ export type LinearHistoryEvent =
   | BiomeCompletedHistoryEvent
   | BiomeCounterResetHistoryEvent
   | BiomeStartedHistoryEvent
+  | ClockworkBatchStateHistoryEvent
+  | ClockworkGoalAcquiredHistoryEvent
+  | ClockworkNonGoalRewardSpawnedHistoryEvent
   | FieldsBatchOutcomeHistoryEvent
   | RoomCreatedHistoryEvent
   | TargetGenerationCompletedHistoryEvent
@@ -107,6 +137,9 @@ export interface LinearHistoryCounters {
   readonly routeEncounterDepth: number;
   readonly roomHistoryOrdinal: number;
   readonly fieldsMaxDoorsRolled?: number;
+  readonly clockworkGoalsRemaining?: number;
+  readonly clockworkNonGoalRewardsAcquired?: number;
+  readonly clockworkMaxNonGoalRewards?: number;
 }
 
 export interface LinearHistoryLedgers {
@@ -124,7 +157,7 @@ export interface LinearHistoryStateView {
 }
 
 export interface LinearTargetGenerationView {
-  readonly targetOrigin: TargetAddress;
+  readonly targetOrigin: FixedEntryTargetAddress | TargetAddress;
   readonly roomOrigin: RoomHistoryOrigin;
   readonly before: LinearHistoryStateView;
   readonly after: LinearHistoryStateView;

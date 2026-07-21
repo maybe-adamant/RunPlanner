@@ -197,6 +197,7 @@ describe('F completeness', () => {
 
     expect(result).toEqual({
       completion: 'complete',
+      biomeState: {},
       topology: fPlan(project).topology,
       findings: [],
     });

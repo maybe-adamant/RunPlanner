@@ -1,16 +1,21 @@
 import type { Catalog } from '../../catalog';
 import {
   createBiomeAddress,
+  createFixedEntryTargetAddress,
   semanticAddressKey,
   type BiomeAddress,
   type ContinuationAddress,
-  type OccurrenceAddress,
 } from '../../project/addresses';
 import type { EnteredRewardStoreHistoryPolicy } from '../../rewards';
-import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
+import {
+  executeRoomLifecycle,
+  type RoomHistoryOrigin,
+  type RoomLifecycleEvent,
+} from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBatchState,
+  CanonicalFixedEntryRoom,
   CanonicalLinearBiome,
   CanonicalRoom,
   CanonicalTarget,
@@ -67,7 +72,7 @@ function standaloneRoomCreated(
 
 function generatedTargetCreated(
   builder: EventBuilder,
-  parentOrigin: OccurrenceAddress,
+  parentOrigin: RoomHistoryOrigin,
   target: CanonicalTarget,
   generationIndex: number,
   generationCount: number,
@@ -95,10 +100,42 @@ function generatedTargetCreated(
   });
 }
 
+function layoutEntryCreated(
+  builder: EventBuilder,
+  parentOrigin: RoomHistoryOrigin,
+  room: CanonicalFixedEntryRoom,
+): void {
+  const biome = createBiomeAddress(parentOrigin.routeKey, parentOrigin.biomeKey);
+  const targetOrigin = createFixedEntryTargetAddress(biome, room.role);
+  append(builder, {
+    kind: 'roomCreated',
+    origin: room.origin,
+    gameName: room.gameName,
+    encounterProfileKey: room.encounterProfileKey,
+    source: 'layoutEntry',
+    picked: true,
+    parentOrigin,
+    targetOrigin,
+    generationIndex: 1,
+    generationCount: 1,
+  });
+  append(builder, {
+    kind: 'targetGenerationCompleted',
+    origin: targetOrigin,
+    roomOrigin: room.origin,
+    parentOrigin,
+    generationIndex: 1,
+    generationCount: 1,
+  });
+}
+
 function enteredStoreKey(
   policy: EnteredRewardStoreHistoryPolicy,
   room: CanonicalRoom,
 ): string | undefined {
+  if (room.kind === 'authored' && room.clockworkReward === 'goal') {
+    return undefined;
+  }
   switch (policy.kind) {
     case 'fixed':
       return policy.storeKey;
@@ -106,9 +143,9 @@ function enteredStoreKey(
       return undefined;
     case 'resolvedOffer': {
       const resolvedStoreKey =
-        room.kind === 'authored'
-          ? room.incomingReward?.resolvedStoreKey
-          : room.enteredRewardStoreKey;
+        room.kind === 'completion'
+          ? room.enteredRewardStoreKey
+          : room.incomingReward?.resolvedStoreKey;
       if (resolvedStoreKey === undefined) {
         throw new LinearHistoryCompositionContractError(
           `${room.gameName} requires resolved entered-store provenance`,
@@ -130,7 +167,7 @@ function lifecycleInput(catalog: Catalog, room: CanonicalRoom) {
     lifecycleProfileKey: room.lifecycleProfileKey,
     encounterProfileKey: room.encounterProfileKey,
     counterEffects: room.counterEffects,
-    ...(room.kind === 'authored' && room.incomingReward !== undefined
+    ...(room.kind !== 'completion' && room.incomingReward !== undefined
       ? {
           producer: {
             lifecycleProfileKey: room.incomingReward.producerLifecycleKey,
@@ -144,7 +181,7 @@ function lifecycleInput(catalog: Catalog, room: CanonicalRoom) {
 
 function appendGeneratedTargets(
   builder: EventBuilder,
-  parentOrigin: OccurrenceAddress,
+  parentOrigin: RoomHistoryOrigin,
   targets: readonly CanonicalTarget[],
 ): void {
   targets.forEach((target, index) =>
@@ -158,6 +195,15 @@ function appendBatchState(
   batchState: CanonicalBatchState,
 ): void {
   if (batchState.kind !== 'fields') {
+    if (batchState.kind === 'clockwork') {
+      append(builder, {
+        kind: 'clockworkBatchStateRecorded',
+        origin,
+        goalsRemaining: batchState.goalsRemaining,
+        nonGoalRewardsAcquired: batchState.nonGoalRewardsAcquired,
+        maxNonGoalRewards: batchState.maxNonGoalRewards,
+      });
+    }
     return;
   }
   append(builder, {
@@ -176,6 +222,7 @@ function appendRoomLifecycle(
   generatedTargets?: readonly CanonicalTarget[],
   batchState?: CanonicalBatchState,
   batchOrigin?: ContinuationAddress,
+  layoutEntry?: CanonicalFixedEntryRoom,
 ): void {
   if (room.kind === 'authored' && !room.entered) {
     throw new LinearHistoryCompositionContractError(
@@ -183,18 +230,53 @@ function appendRoomLifecycle(
     );
   }
   const fragment = executeRoomLifecycle(catalog, lifecycleInput(catalog, room));
+  const clockworkNonGoalSpawnsBeforeCombat =
+    room.kind === 'authored' &&
+    room.clockworkReward === 'nonGoal' &&
+    fragment.events.some(
+      (event) => event.kind === 'producerRoleAdvanced' && event.lifecyclePoint === 'beforeCombat',
+    );
   let injectedTargets = false;
+  let injectedClockworkReward = false;
   for (const event of fragment.events) {
-    appendLifecycleEvent(builder, event);
-    if (event.kind === 'outgoingGenerationCheckpoint') {
-      if (generatedTargets === undefined) {
+    if (
+      clockworkNonGoalSpawnsBeforeCombat &&
+      event.kind === 'producerRoleAdvanced' &&
+      event.lifecyclePoint === 'beforeCombat'
+    ) {
+      if (injectedClockworkReward) {
         throw new LinearHistoryCompositionContractError(
-          `${room.gameName} reached outgoing generation without canonical targets`,
+          `${room.gameName} reached more than one Clockwork producer point`,
         );
       }
-      if (room.origin.kind !== 'occurrence') {
+      append(builder, { kind: 'clockworkNonGoalRewardSpawned', origin: room.origin });
+      injectedClockworkReward = true;
+    }
+    appendLifecycleEvent(builder, event);
+    if (
+      room.kind === 'authored' &&
+      ((event.kind === 'roomEntered' && room.clockworkReward === 'goal') ||
+        (event.kind === 'encounterCompleted' &&
+          room.clockworkReward === 'nonGoal' &&
+          !clockworkNonGoalSpawnsBeforeCombat))
+    ) {
+      if (injectedClockworkReward) {
         throw new LinearHistoryCompositionContractError(
-          `${room.gameName} derived room cannot own generated targets`,
+          `${room.gameName} reached more than one Clockwork producer point`,
+        );
+      }
+      append(
+        builder,
+        room.clockworkReward === 'goal'
+          ? { kind: 'clockworkGoalAcquired', origin: room.origin }
+          : { kind: 'clockworkNonGoalRewardSpawned', origin: room.origin },
+      );
+      injectedClockworkReward = true;
+    }
+    if (event.kind === 'outgoingGenerationCheckpoint') {
+      if ((generatedTargets === undefined) === (layoutEntry === undefined)) {
+        throw new LinearHistoryCompositionContractError(
+          `${room.gameName} requires exactly one outgoing-generation projection`,
         );
       }
       if (batchState !== undefined) {
@@ -205,11 +287,20 @@ function appendRoomLifecycle(
         }
         appendBatchState(builder, batchOrigin, batchState);
       }
-      appendGeneratedTargets(builder, room.origin, generatedTargets);
+      if (generatedTargets !== undefined) {
+        appendGeneratedTargets(builder, room.origin, generatedTargets);
+      } else {
+        layoutEntryCreated(builder, room.origin, layoutEntry!);
+      }
       injectedTargets = true;
     }
   }
-  if (generatedTargets !== undefined && !injectedTargets) {
+  if (room.kind === 'authored' && room.clockworkReward !== undefined && !injectedClockworkReward) {
+    throw new LinearHistoryCompositionContractError(
+      `${room.gameName} has no Clockwork producer point`,
+    );
+  }
+  if ((generatedTargets !== undefined || layoutEntry !== undefined) && !injectedTargets) {
     throw new LinearHistoryCompositionContractError(
       `${room.gameName} has canonical targets but no outgoing-generation operation`,
     );
@@ -227,8 +318,8 @@ function pickedRoom(targets: readonly CanonicalTarget[], owner: string): Canonic
 }
 
 function requireParent(
-  source: CanonicalAuthoredRoom,
-  parent: OccurrenceAddress,
+  source: CanonicalAuthoredRoom | CanonicalFixedEntryRoom,
+  parent: RoomHistoryOrigin,
   owner: string,
 ): void {
   if (semanticAddressKey(source.origin) !== semanticAddressKey(parent)) {
@@ -282,13 +373,31 @@ export function composeLinearHistory(
   const layout = requireLinearLayout(catalog, snapshot, previous);
   const seed = previous?.afterTransition;
   const entry = snapshot.entryRooms[0];
-  if (snapshot.entryRooms.length !== 1 || entry === undefined) {
+  if (entry === undefined) {
     throw new LinearHistoryCompositionContractError(
-      `${snapshot.biomeKey} history requires one canonical entry room`,
+      `${snapshot.biomeKey} history requires a canonical entry room`,
     );
   }
   const builder: EventBuilder = { events: [], sequenceBase: seed?.sequence ?? 0 };
   const biome: BiomeAddress = createBiomeAddress(snapshot.routeKey, snapshot.biomeKey);
+  const clockworkMaxNonGoalRewards = snapshot.biomeState.maxNonGoalRewards;
+  if (
+    layout.continuation.batchPolicy.kind === 'clockwork' &&
+    (typeof clockworkMaxNonGoalRewards !== 'number' ||
+      !Number.isInteger(clockworkMaxNonGoalRewards))
+  ) {
+    throw new LinearHistoryCompositionContractError(
+      `${snapshot.biomeKey} has no canonical maxNonGoalRewards`,
+    );
+  }
+  const clockworkCounters =
+    layout.continuation.batchPolicy.kind === 'clockwork'
+      ? {
+          clockworkGoalsRemaining: layout.continuation.batchPolicy.initialGoalCount,
+          clockworkNonGoalRewardsAcquired: 0,
+          clockworkMaxNonGoalRewards: clockworkMaxNonGoalRewards as number,
+        }
+      : {};
   append(builder, {
     kind: 'biomeStarted',
     origin: biome,
@@ -298,10 +407,21 @@ export function composeLinearHistory(
       routeEncounterDepth: seed?.ledgers.counters.routeEncounterDepth ?? 1,
       roomHistoryOrdinal: seed?.ledgers.counters.roomHistoryOrdinal ?? 0,
       ...(layout.continuation.batchPolicy.kind === 'fields' ? { fieldsMaxDoorsRolled: 0 } : {}),
+      ...clockworkCounters,
     }),
   });
   standaloneRoomCreated(builder, entry, 'biomeEntry');
   let source = entry;
+
+  for (const fixedEntry of snapshot.entryRooms.slice(1)) {
+    if (fixedEntry.kind !== 'fixedEntry') {
+      throw new LinearHistoryCompositionContractError(
+        `${snapshot.biomeKey} has an authored room after its entry`,
+      );
+    }
+    appendRoomLifecycle(builder, catalog, source, undefined, undefined, undefined, fixedEntry);
+    source = fixedEntry;
+  }
 
   for (const batch of snapshot.batches) {
     requireParent(source, batch.parent.origin, 'batch');
@@ -310,7 +430,14 @@ export function composeLinearHistory(
   }
 
   requireParent(source, snapshot.terminalEntry.predecessor.origin, 'terminal entry');
-  appendRoomLifecycle(builder, catalog, source, snapshot.terminalEntry.targets);
+  appendRoomLifecycle(
+    builder,
+    catalog,
+    source,
+    snapshot.terminalEntry.targets,
+    snapshot.terminalEntry.batchState,
+    snapshot.terminalEntry.origin,
+  );
   const terminal = pickedRoom(
     snapshot.terminalEntry.targets,
     semanticAddressKey(snapshot.terminalEntry.origin),

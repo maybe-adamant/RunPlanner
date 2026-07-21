@@ -26,6 +26,9 @@ interface MutableLedgers {
     routeEncounterDepth: number;
     roomHistoryOrdinal: number;
     fieldsMaxDoorsRolled?: number;
+    clockworkGoalsRemaining?: number;
+    clockworkNonGoalRewardsAcquired?: number;
+    clockworkMaxNonGoalRewards?: number;
   };
 }
 
@@ -41,7 +44,10 @@ interface MutableRoomViews {
 }
 
 interface PendingTargetGeneration {
-  readonly creation: Extract<RoomCreatedHistoryEvent, { readonly source: 'generatedTarget' }>;
+  readonly creation: Extract<
+    RoomCreatedHistoryEvent,
+    { readonly source: 'generatedTarget' | 'layoutEntry' }
+  >;
   readonly before: LinearHistoryStateView;
 }
 
@@ -207,6 +213,7 @@ export function foldLinearHistoryEvents(
     Extract<LinearHistoryEvent, { readonly kind: 'biomeStarted' }>['origin'] | undefined;
   const resetAxes: BiomeTransitionCounterAxis[] = [];
   const fieldsBatchOrigins = new Set<string>();
+  const clockworkBatchOrigins = new Set<string>();
 
   for (const [index, event] of immutableEvents.entries()) {
     const expectedSequence = (seed?.sequence ?? 0) + index + 1;
@@ -224,6 +231,11 @@ export function foldLinearHistoryEvents(
         if (event.counters.fieldsMaxDoorsRolled === undefined) {
           delete ledgers.counters.fieldsMaxDoorsRolled;
         }
+        if (event.counters.clockworkGoalsRemaining === undefined) {
+          delete ledgers.counters.clockworkGoalsRemaining;
+          delete ledgers.counters.clockworkNonGoalRewardsAcquired;
+          delete ledgers.counters.clockworkMaxNonGoalRewards;
+        }
         biomeStarted = true;
         biomeStartOrigin = event.origin;
         break;
@@ -239,7 +251,7 @@ export function foldLinearHistoryEvents(
         namesByOrigin.set(key, event.gameName);
         encounterProfilesByOrigin.set(key, event.encounterProfileKey);
         ledgers.roomCreations.push(event);
-        if (event.source === 'generatedTarget') {
+        if (event.source === 'generatedTarget' || event.source === 'layoutEntry') {
           if (pendingTargetGeneration !== undefined) {
             throw new LinearHistoryFoldContractError('target generations cannot overlap');
           }
@@ -371,6 +383,51 @@ export function foldLinearHistoryEvents(
         if (event.cageOutcome === 'max') {
           ledgers.counters.fieldsMaxDoorsRolled += 1;
         }
+        break;
+      case 'clockworkBatchStateRecorded':
+        if (
+          biomeStartOrigin === undefined ||
+          event.origin.routeKey !== biomeStartOrigin.routeKey ||
+          event.origin.biomeKey !== biomeStartOrigin.biomeKey ||
+          clockworkBatchOrigins.has(semanticAddressKey(event.origin)) ||
+          ledgers.counters.clockworkGoalsRemaining !== event.goalsRemaining ||
+          ledgers.counters.clockworkNonGoalRewardsAcquired !== event.nonGoalRewardsAcquired ||
+          ledgers.counters.clockworkMaxNonGoalRewards !== event.maxNonGoalRewards
+        ) {
+          throw new LinearHistoryFoldContractError(
+            `Clockwork batch ${semanticAddressKey(event.origin)} does not match pre-generation history`,
+          );
+        }
+        clockworkBatchOrigins.add(semanticAddressKey(event.origin));
+        break;
+      case 'clockworkGoalAcquired':
+        if (
+          event.origin.kind !== 'occurrence' ||
+          biomeStartOrigin === undefined ||
+          event.origin.routeKey !== biomeStartOrigin.routeKey ||
+          event.origin.biomeKey !== biomeStartOrigin.biomeKey ||
+          requireRoomViews(viewsByOrigin, event).entry === undefined ||
+          ledgers.counters.clockworkGoalsRemaining === undefined
+        ) {
+          throw new LinearHistoryFoldContractError('Clockwork Goal appeared outside biome I');
+        }
+        ledgers.counters.clockworkGoalsRemaining = Math.max(
+          0,
+          ledgers.counters.clockworkGoalsRemaining - 1,
+        );
+        break;
+      case 'clockworkNonGoalRewardSpawned':
+        if (
+          event.origin.kind !== 'occurrence' ||
+          biomeStartOrigin === undefined ||
+          event.origin.routeKey !== biomeStartOrigin.routeKey ||
+          event.origin.biomeKey !== biomeStartOrigin.biomeKey ||
+          requireRoomViews(viewsByOrigin, event).entry === undefined ||
+          ledgers.counters.clockworkNonGoalRewardsAcquired === undefined
+        ) {
+          throw new LinearHistoryFoldContractError('Clockwork reward appeared outside biome I');
+        }
+        ledgers.counters.clockworkNonGoalRewardsAcquired += 1;
         break;
       case 'encounterDepthAdvanced':
         ledgers.counters.biomeEncounterDepth += event.biomeEncounterDepthDelta;

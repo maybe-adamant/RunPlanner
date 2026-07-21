@@ -452,6 +452,19 @@ loot/use histories, ordinary-source history, Clockwork Goal progress, and I's
 non-goal acquisition count. A final room aggregate cannot safely reconstruct
 these intermediate views.
 
+I initializes `clockworkGoalsRemaining` from the declaration-owned Clockwork
+`initialGoalCount` (currently `5`),
+`clockworkNonGoalRewardsAcquired = 0`, and the authored
+`clockworkMaxNonGoalRewards` at `biomeStarted`. Every generated batch records
+that exact pre-generation view before its targets are created. An entered Goal
+emits `clockworkGoalAcquired` immediately after room entry and clamps the
+remaining count at zero; an entered concrete NonGoal emits
+`clockworkNonGoalRewardSpawned` at its actual reward-spawn boundary and advances
+only the non-goal count. Ordinary rewards spawn after encounter completion;
+Devotion spawns before its declared before-combat acquisition. Unpicked offers
+emit neither event. The preboss carries Goal structurally and therefore only
+confirms the already-zero state.
+
 ### Biome Transition Resets
 
 Biome-local resets occur after the declared completion sequence at the layout

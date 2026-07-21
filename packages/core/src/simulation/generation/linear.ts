@@ -307,7 +307,7 @@ function targetGenerationViews(
 
 function authoredRooms(snapshot: CanonicalLinearBiome): ReadonlyMap<string, CanonicalAuthoredRoom> {
   const rooms = [
-    ...snapshot.entryRooms,
+    ...snapshot.entryRooms.filter((room) => room.kind === 'authored'),
     ...snapshot.batches.flatMap((batch) => batch.targets.map((target) => target.room)),
     ...snapshot.terminalEntry.targets.map((target) => target.room),
   ];
@@ -603,6 +603,11 @@ export function evaluateLinearRoomGeneration(
   }
 
   for (const batch of snapshot.batches) {
+    if (batch.parent.origin.kind !== 'occurrence') {
+      throw new LinearRoomGenerationContractError(
+        `${snapshot.biomeKey} fixed-entry generation is not implemented`,
+      );
+    }
     const source = requireSource(rooms, batch.parent.origin);
     if (layout.continuation.batchPolicy.kind === 'fields') {
       const sourceView = history.rooms.find(
@@ -634,6 +639,11 @@ export function evaluateLinearRoomGeneration(
       pressure,
       findings,
       enteredBiomeCount,
+    );
+  }
+  if (snapshot.terminalEntry.predecessor.origin.kind !== 'occurrence') {
+    throw new LinearRoomGenerationContractError(
+      `${snapshot.biomeKey} fixed-entry terminal generation is not implemented`,
     );
   }
   evaluateTargets(
@@ -676,6 +686,7 @@ export function evaluateLinearRoomTargetCandidate(
   }
   const batch = snapshot.batches.find(
     (candidate) =>
+      candidate.parent.origin.kind === 'occurrence' &&
       candidate.parent.origin.occurrenceId === targetOrigin.parentOccurrenceId &&
       candidate.targets.some((target) => target.origin.exitIndex === targetOrigin.exitIndex),
   );
@@ -688,6 +699,11 @@ export function evaluateLinearRoomTargetCandidate(
     );
   }
   const rooms = authoredRooms(snapshot);
+  if (batch.parent.origin.kind !== 'occurrence') {
+    throw new LinearRoomGenerationContractError(
+      `${snapshot.biomeKey} fixed-entry candidate generation is not implemented`,
+    );
+  }
   const source = requireSource(rooms, batch.parent.origin);
   const view = targetGenerationViews(history).get(semanticAddressKey(targetOrigin));
   if (view === undefined) {

@@ -93,7 +93,7 @@ describe('complete dormant I catalog', () => {
       entries: [{ kind: 'fixedEntry', role: 'story', roomGameName: 'I_Story01' }],
       continuation: {
         progressionPolicy: { kind: 'eligibilityDriven' },
-        batchPolicy: { kind: 'clockwork', fields: [] },
+        batchPolicy: { kind: 'clockwork', initialGoalCount: 5, fields: [] },
         rewardStorePolicy: { kind: 'none' },
         rewardStoreOverrides: [],
       },

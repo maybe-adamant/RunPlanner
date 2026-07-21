@@ -10,6 +10,7 @@ export type {
   CanonicalBatchRewardStore,
   CanonicalBiomeState,
   CanonicalCompletionRoom,
+  CanonicalFixedEntryRoom,
   CanonicalLinearBiome,
   CanonicalLocalReward,
   CanonicalPhysicalExit,

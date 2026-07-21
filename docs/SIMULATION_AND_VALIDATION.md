@@ -258,6 +258,14 @@ layout-derived fixed entry rooms in game order. Most linear biomes currently
 contain only their start; I additionally materializes progressed-save
 `I_Story01` before its first authored Clockwork batch.
 
+A layout-derived entry owns a stable `(routeKey, biomeKey, role)` semantic
+address rather than a fake Room Occurrence ID. Its incoming fixed producer and
+the layout-owned target that creates it use sibling role addresses. History
+therefore records Intro as `biomeEntry`, creates Story as `layoutEntry` at the
+Intro outgoing-generation checkpoint, and lets Story own the first ordinary
+target batch without leaking a rendered row or nullable pseudo-room into game
+history.
+
 `terminalEntry` is a canonical role, not proof that authored persistence used
 the independent `terminal` continuation form. For I, materialization derives
 it from the picked terminal target of the final `ClockworkDoorBatch`;
@@ -294,6 +302,13 @@ A canonical batch records:
 - declaration-derived physical offer facts associated with the materialized
   occurrences;
 - semantic addresses for each fact.
+
+A Clockwork batch additionally records the exact pre-generation
+`goalsRemaining`, `nonGoalRewardsAcquired`, and authored
+`maxNonGoalRewards` view. Each target then owns a derived Goal or NonGoal fact.
+Goal suppresses the dormant concrete Tartarus leaf; NonGoal activates it. When
+the picked target is the generated preboss, that final generated batch becomes
+`terminalEntry` while preserving its batch-state and no-store provenance.
 
 For Fields batches, canonical `batchState` is a typed projection of the
 authored Min/Max outcome plus the declaration- and physical-target-derived
