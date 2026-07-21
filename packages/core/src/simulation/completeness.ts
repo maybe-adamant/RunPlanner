@@ -72,8 +72,11 @@ function requireLinearLayout(catalog: Catalog, biome: BiomeAddress, plan: Linear
   }
   if (
     layout.start.kind !== 'authoredStart' ||
-    layout.continuation.batchPolicy.kind !== 'standard' ||
-    layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore' ||
+    (layout.continuation.batchPolicy.kind !== 'standard' &&
+      layout.continuation.batchPolicy.kind !== 'fields') ||
+    (layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore' &&
+      layout.continuation.rewardStorePolicy.kind !== 'none') ||
+    layout.continuation.rewardStoreOverrides.length !== 0 ||
     layout.terminal.kind !== 'forkedTransition'
   ) {
     throw new CompletenessContractError(

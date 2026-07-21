@@ -46,21 +46,23 @@ function decodeBatchRewardStore(
 ): BatchRewardStoreState {
   const rewardStore = expectRecord(value, path);
   const kind = expectString(rewardStore.kind, `${path}.kind`);
-  if (kind !== layout.continuation.rewardStorePolicy.kind) {
-    failProjectDocument(
-      `${path}.kind`,
-      `expected ${layout.continuation.rewardStorePolicy.kind}, received ${kind}`,
-    );
+  const policy = layout.continuation.rewardStorePolicy;
+  if (kind !== policy.kind) {
+    failProjectDocument(`${path}.kind`, `expected ${policy.kind}, received ${kind}`);
   }
-  if (layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore') {
-    failProjectDocument(path, 'linear project topology requires an authored base-store policy');
+  if (policy.kind === 'none') {
+    expectExactKeys(rewardStore, ['kind'], path);
+    return Object.freeze({ kind: 'none' });
+  }
+  if (policy.kind === 'sourceOfferPoint') {
+    failProjectDocument(path, 'source-derived batch stores are not authorable by this codec');
   }
   expectExactKeys(rewardStore, ['kind', 'baseRewardStoreKey'], path);
   const baseRewardStoreKey = expectString(
     rewardStore.baseRewardStoreKey,
     `${path}.baseRewardStoreKey`,
   );
-  if (!layout.continuation.rewardStorePolicy.storeKeys.includes(baseRewardStoreKey)) {
+  if (!policy.storeKeys.includes(baseRewardStoreKey)) {
     failProjectDocument(
       `${path}.baseRewardStoreKey`,
       `${baseRewardStoreKey} is not available from this batch policy`,
@@ -137,8 +139,11 @@ export function decodeLinearBiomeTopology(
   layout: LinearBiomeLayout,
   path: string,
 ): LinearBiomeTopology {
-  if (layout.continuation.batchPolicy.kind !== 'standard') {
-    failProjectDocument(path, `${layout.biomeKey} does not use standard authored batches`);
+  if (
+    layout.continuation.batchPolicy.kind !== 'standard' &&
+    layout.continuation.batchPolicy.kind !== 'fields'
+  ) {
+    failProjectDocument(path, `${layout.biomeKey} does not use a supported authored batch policy`);
   }
   if (layout.continuation.rewardStoreOverrides.length !== 0) {
     failProjectDocument(path, `${layout.biomeKey} uses source-specific reward-store policies`);

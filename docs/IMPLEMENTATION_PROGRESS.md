@@ -249,6 +249,18 @@ simulation and the shared browser editor. Generic F/G concepts remain covered
 by the shared complete product-loop fixture rather than being duplicated per
 biome.
 
+Phase 6 H Slice 1 is complete. The linear project codec and semantic command
+layer now admit H's declaration-owned Fields batch policy and explicit no-store
+batch authority without admitting source-derived or Clockwork policies. New H
+batches default to semantic Min, `ReplaceFieldsCageOutcome` replaces only that
+batch fact, and complete maximum-capacity cage leaves remain attached to their
+room occurrences. A dormant H fixture closes the exact four-batch,
+seven-ordinary-target spine and forked preboss, round-trips schema version 3,
+and rejects malformed store/state authorities and a fifth ordinary batch. H
+remains outside authorable, simulatable, editable, navigation, profile, and
+project-simulation capabilities. Slice 2, canonical Fields materialization, is
+the current frontier.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -951,8 +963,9 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 biome expansion is the
-next implementation frontier.
+Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slice 1 is complete;
+H Slice 2 canonical Fields materialization is the next implementation
+frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

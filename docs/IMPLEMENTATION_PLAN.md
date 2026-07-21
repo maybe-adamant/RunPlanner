@@ -1301,6 +1301,50 @@ For each biome:
 - add candidate evaluation;
 - activate it only after its full product loop passes.
 
+### H Delivery Slices
+
+H is implemented through these atomic slices:
+
+1. dormant authored topology:
+   - admit the declaration-owned `fields` batch policy and `none` generated-
+     store policy through the linear project codec and semantic commands;
+   - default every ordinary batch to semantic `Min` and expose one explicit
+     `ReplaceFieldsCageOutcome` command;
+   - preserve complete maximum-capacity cage leaves while changing batch
+     state;
+   - close the exact four-batch, seven-ordinary-target, forked-terminal shape
+     through completeness fixtures without activating H capabilities;
+2. canonical Fields materialization:
+   - derive one batch capacity in physical target order;
+   - activate two or three cage slots from semantic Min/Max without mutating
+     dormant leaves;
+   - retain no-combat and capacity-two Max outcomes while omitting the
+     terminal-only cage roll;
+   - materialize the fixed intro, forked terminal, boss, and postboss tail;
+3. H lifecycle and route history:
+   - offer active cages for every generated combat target in physical order;
+   - acquire every active cage only from the picked combat occurrence;
+   - apply non-counting passive phases, per-cage encounter increments,
+     `fieldsMaxDoorsRolled`, fixed store provenance, and G-to-H carried state;
+4. selected H validation:
+   - validate H eligibility, caps, force competition, Bridge timing, miniboss
+     exclusion, preboss timing, Fields outcome support, and cage reward bags;
+   - emit addressed semantic findings without editing authored state;
+5. H candidate evaluation:
+   - expose room, cage reward, terminal reward/shop, purchase, and Min/Max
+     candidate support from the same selected-plan authorities;
+   - preserve selected invalid values and explicit unavailable context;
+6. dormant H editor projection:
+   - project the fixed-count Fields spine, batch outcome, active cage prefix,
+     room leaves, terminal entry, findings, and candidates through shared
+     semantic commands;
+   - keep H outside production navigation and profile capabilities;
+7. H product-loop activation:
+   - promote H to authorable, simulatable, and editable together;
+   - close complete F/G/H profiles, recovery, blocked-prefix behavior,
+     accessibility, interaction, and responsiveness fixtures before moving to
+     I.
+
 Do not create placeholder production behavior that claims a biome is simulated
 when it only has declarations or UI.
 
