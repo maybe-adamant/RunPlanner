@@ -31,7 +31,6 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   }
   const capabilities = createApplicationCapabilities(catalog);
   const simulationScope = createProjectSimulationScope(capabilities);
-  const candidateProjection = createCandidateProjectionService(catalog, simulationScope);
   const editorNavigation = createEditorNavigation(catalog, capabilities);
   const fallbackProject = createInitialProject(catalog, capabilities);
   const startup = restoreStartupProject(
@@ -40,8 +39,17 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     capabilities,
     options.autosaveRecovery,
   );
-  const evaluateProject = (project: ProjectDocument) =>
-    simulateProject(catalog, project, simulationScope);
+  const evaluationCache = new WeakMap<ProjectDocument, ReturnType<typeof simulateProject>>();
+  const evaluateProject = (project: ProjectDocument) => {
+    const existing = evaluationCache.get(project);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const evaluation = simulateProject(catalog, project, simulationScope);
+    evaluationCache.set(project, evaluation);
+    return evaluation;
+  };
+  const candidateProjection = createCandidateProjectionService(catalog, evaluateProject);
   const store = createPlannerStore({
     catalog,
     capabilities,

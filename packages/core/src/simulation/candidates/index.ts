@@ -1,5 +1,6 @@
 export {
   CandidateEvaluationContractError,
+  createPreparedProjectCandidateEvaluator,
   createProjectCandidateEvaluator,
   evaluateProjectCandidate,
   evaluateProjectCandidates,

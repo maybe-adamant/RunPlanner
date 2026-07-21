@@ -90,6 +90,8 @@ export interface ProjectEvaluation {
   readonly summary: ProjectEvaluationSummary;
 }
 
+const evaluationSourceProjects = new WeakMap<ProjectEvaluation, ProjectDocument>();
+
 export interface ProjectSimulationScope {
   readonly simulatableBiomeKeys: readonly string[];
 }
@@ -101,7 +103,18 @@ export class ProjectSimulationContractError extends Error {
   }
 }
 
-function evaluateLinearBiome(
+export function assertProjectEvaluationSource(
+  project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+): void {
+  if (evaluationSourceProjects.get(evaluation) !== project) {
+    throw new ProjectSimulationContractError(
+      'prepared project evaluation does not belong to the authored project identity',
+    );
+  }
+}
+
+export function evaluateLinearBiome(
   catalog: Catalog,
   routeKey: string,
   plan: LinearBiomePlan,
@@ -375,7 +388,7 @@ export function simulateProject(
             ? 'blocked'
             : 'valid';
 
-  return Object.freeze({
+  const evaluation = Object.freeze({
     status,
     projectId: project.projectId,
     catalogVersion: project.catalogVersion,
@@ -383,4 +396,6 @@ export function simulateProject(
     findings,
     summary,
   });
+  evaluationSourceProjects.set(evaluation, project);
+  return evaluation;
 }

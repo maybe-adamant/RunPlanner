@@ -76,7 +76,12 @@ export function ProjectFileControls({ operations }: { readonly operations: Proje
       aria-label="Project profile"
     >
       <ProjectNameControl key={project.name} projectName={project.name} />
-      <span className="profile-status" data-profile-status={profileStatus.toLowerCase()}>
+      <span
+        aria-label={`Profile status: ${profileStatus}`}
+        className="profile-status"
+        data-profile-status={profileStatus.toLowerCase()}
+        role="status"
+      >
         {profileStatus}
       </span>
       <div className="project-file-actions">

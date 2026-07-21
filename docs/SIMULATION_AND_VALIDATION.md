@@ -14,15 +14,14 @@ it will not duplicate it.
 
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
-F/G/P/Q/H/O/I/N audit set. Phase 2.8 dormant declaration closure and the Phase
-3 F simulation vertical slice are complete. F completeness, canonical
-materialization, lifecycle composition, event-folded history, room-generation
-legality, reward-kernel orchestration, and project-level simulation now form
-one public result. The initial Phase 5 candidate foundation now evaluates
-generated F room alternatives through that same room-generation authority;
-the remaining F candidate domains and application projection follow in the
-next slice. The Phase 2.7 F/G authority switch and later schema-version-3
-identity cleanup leave those simulation contracts unchanged.
+F/G/P/Q/H/O/I/N audit set. Phase 2.8 dormant declaration closure and Phase 3's
+complete linear simulation pipeline are complete. F and G now share one public
+completeness, materialization, lifecycle, event-folded history,
+room-generation, reward-kernel, project-simulation, selected-plan validation,
+and candidate result. Phase 5 closes that shared simulator through the editor,
+profile, and recovery product loop while later biomes remain dormant. The
+Phase 2.7 authority switch and schema-version-3 identity cleanup leave those
+simulation contracts unchanged.
 
 ## Core Contract
 
@@ -682,12 +681,18 @@ than a second terminal-only candidate vocabulary.
 
 Ordered candidate queries for one authored snapshot may use one prepared
 candidate evaluator, which owns one shared base project simulation. The
-application keeps that evaluator and its option arrays in a weak cache keyed by
-immutable project identity and semantic owner. A semantic edit therefore
-invalidates the projection once, while repeated renders consume the same
-structures. Reward and shop alternatives still replay their immutable semantic
-replacement because their support depends on bag, peer, lifecycle, and history
-effects; React never performs or memoizes that replay itself.
+application shares its immutable-project `ProjectEvaluation` with that
+evaluator and keeps option arrays in a weak cache keyed by immutable project
+identity and semantic owner. A semantic edit therefore invalidates the
+projection once, while repeated renders consume the same structures. Reward
+and shop alternatives still replay their immutable semantic replacement
+because their support depends on bag, peer, lifecycle, and history effects.
+That replay evaluates the addressed biome through the common linear authority
+and reuses the already-evaluated upstream biome; unrelated later biomes are not
+candidate inputs. Closed reward and shop controls request their option
+projection on focus or pointer intent rather than eagerly rebuilding every
+hidden native-select option. React triggers and presents the application
+projection but never implements the replay rules.
 
 A candidate contact does not require unrelated downstream topology
 to remain complete when the proposed value changes structural capacity. For

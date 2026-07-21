@@ -104,21 +104,6 @@ function countByGameName(
   return counts;
 }
 
-function priorPeerGameNames(
-  view: LinearHistoryStateView,
-  parentOrigin: OccurrenceAddress,
-): readonly string[] {
-  return Object.freeze(
-    view.ledgers.roomCreations
-      .filter(
-        (creation) =>
-          creation.source === 'generatedTarget' &&
-          semanticAddressKey(creation.parentOrigin) === semanticAddressKey(parentOrigin),
-      )
-      .map((creation) => creation.gameName),
-  );
-}
-
 function recentEncounterPhases(catalog: Catalog, view: LinearHistoryStateView) {
   const ordered = new Map<string, { readonly profileKey: string; readonly phaseKeys: string[] }>();
   for (const encounter of view.ledgers.encounterStarts) {
@@ -143,6 +128,63 @@ function recentEncounterPhases(catalog: Catalog, view: LinearHistoryStateView) {
   );
 }
 
+interface StaticRewardViewFacts {
+  readonly peerGameNamesByParent: Map<string, readonly string[]>;
+  readonly recentEncounterPhases: ReturnType<typeof recentEncounterPhases>;
+  readonly roomsEntered: Readonly<Record<string, number>>;
+}
+
+const staticRewardFactsByCatalog = new WeakMap<
+  Catalog,
+  WeakMap<LinearHistoryStateView, StaticRewardViewFacts>
+>();
+
+function staticRewardViewFacts(
+  catalog: Catalog,
+  view: LinearHistoryStateView,
+): StaticRewardViewFacts {
+  let byView = staticRewardFactsByCatalog.get(catalog);
+  if (byView === undefined) {
+    byView = new WeakMap();
+    staticRewardFactsByCatalog.set(catalog, byView);
+  }
+  const existing = byView.get(view);
+  if (existing !== undefined) {
+    return existing;
+  }
+  const facts = Object.freeze({
+    peerGameNamesByParent: new Map<string, readonly string[]>(),
+    recentEncounterPhases: recentEncounterPhases(catalog, view),
+    roomsEntered: Object.freeze(countByGameName(view.ledgers.roomAppearances)),
+  });
+  byView.set(view, facts);
+  return facts;
+}
+
+function priorPeerGameNames(
+  catalog: Catalog,
+  view: LinearHistoryStateView,
+  parentOrigin: OccurrenceAddress,
+): readonly string[] {
+  const facts = staticRewardViewFacts(catalog, view);
+  const parentKey = semanticAddressKey(parentOrigin);
+  const existing = facts.peerGameNamesByParent.get(parentKey);
+  if (existing !== undefined) {
+    return existing;
+  }
+  const names = Object.freeze(
+    view.ledgers.roomCreations
+      .filter(
+        (creation) =>
+          creation.source === 'generatedTarget' &&
+          semanticAddressKey(creation.parentOrigin) === parentKey,
+      )
+      .map((creation) => creation.gameName),
+  );
+  facts.peerGameNamesByParent.set(parentKey, names);
+  return names;
+}
+
 function rewardFacts(
   catalog: Catalog,
   source: CanonicalAuthoredRoom,
@@ -152,6 +194,7 @@ function rewardFacts(
   enteredBiomeCount: number,
   currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
 ): RewardKernelFacts {
+  const staticFacts = staticRewardViewFacts(catalog, view);
   const requirements: RequirementEvaluationContext = Object.freeze({
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
@@ -163,7 +206,7 @@ function rewardFacts(
     records: Object.freeze({
       biomeUseRecord: history.biomeUseRecord,
       lootTypeHistory: history.lootTypeHistory,
-      roomsEntered: Object.freeze(countByGameName(view.ledgers.roomAppearances)),
+      roomsEntered: staticFacts.roomsEntered,
       useRecord: history.useRecord,
     }),
     currentRoomShopOptionNames,
@@ -173,9 +216,9 @@ function rewardFacts(
     lastEventRunDepthCaches: Object.freeze(
       history.lastDevotionDepth === undefined ? {} : { Devotion: history.lastDevotionDepth },
     ),
-    recentEncounterPhases: recentEncounterPhases(catalog, view),
+    recentEncounterPhases: staticFacts.recentEncounterPhases,
     offeredExitCount: sourceDeclaration.exits.length,
-    currentBatchRoomGameNames: priorPeerGameNames(view, source.origin),
+    currentBatchRoomGameNames: priorPeerGameNames(catalog, view, source.origin),
     clockwork: undefined,
     flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
   });

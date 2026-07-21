@@ -30,6 +30,8 @@ export interface CreatePlannerStoreOptions {
 export function createPlannerStore(options: CreatePlannerStoreOptions) {
   requireProjectAuthorable(options.initialProject, options.capabilities);
   return configureStore({
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({ immutableCheck: false, serializableCheck: false }),
     reducer: {
       projectWorkspace: createProjectWorkspaceReducer(
         options.catalog,

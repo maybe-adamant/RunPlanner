@@ -14,6 +14,7 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
+  createPreparedProjectCandidateEvaluator,
   evaluateFCompleteness,
   evaluateFRoomGeneration,
   evaluateProjectCandidate,
@@ -762,5 +763,15 @@ describe('project candidate evaluation', () => {
         'exit 2 has no authored target',
       ),
     );
+  });
+
+  it('rejects a prepared candidate evaluation from another immutable project identity', () => {
+    const project = possibilityProject();
+    const staleEvaluation = simulateProject(catalog, project);
+    const editedProject = Object.freeze({ ...project, name: 'Edited project' });
+
+    expect(() =>
+      createPreparedProjectCandidateEvaluator(catalog, editedProject, staleEvaluation),
+    ).toThrow('prepared project evaluation does not belong to the authored project identity');
   });
 });

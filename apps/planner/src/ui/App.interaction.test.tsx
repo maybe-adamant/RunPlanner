@@ -105,6 +105,33 @@ describe('planner history interaction', () => {
     expect(application.store.getState().editorSession.activeSection).toBe('surface');
     expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
   });
+
+  it('activates route and configured-biome navigation from the keyboard', async () => {
+    const { application, user } = renderPlannerForInteraction();
+
+    const surface = screen.getByRole('button', { name: 'Surface' });
+    surface.focus();
+    await user.keyboard('{Enter}');
+    expect(application.store.getState().editorSession.activeSection).toBe('surface');
+    expect(surface.getAttribute('aria-current')).toBe('page');
+
+    const underworld = screen.getByRole('button', { name: 'Underworld' });
+    underworld.focus();
+    await user.keyboard(' ');
+    await user.selectOptions(screen.getByLabelText('Configured biomes'), '2');
+
+    const oceanus = screen.getByRole('button', { name: 'Oceanus' });
+    oceanus.focus();
+    await user.keyboard('{Enter}');
+    expect(application.store.getState().editorSession.activeUnderworldPanel).toBe('G');
+    expect(oceanus.getAttribute('aria-current')).toBe('page');
+
+    const route = screen.getByRole('button', { name: 'Route' });
+    route.focus();
+    await user.keyboard(' ');
+    expect(application.store.getState().editorSession.activeUnderworldPanel).toBe('route');
+    expect(route.getAttribute('aria-current')).toBe('page');
+  });
 });
 
 describe('project profile interaction', () => {

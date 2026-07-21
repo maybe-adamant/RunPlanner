@@ -2,15 +2,43 @@
 
 import { cleanup, screen, within } from '@testing-library/react';
 import {
+  applyProjectCommand,
+  createBatchRewardStoreAddress,
+  createBiomeAddress,
+  createContinuationAddress,
+  createIncomingRewardAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  createPickedAddress,
+  createProjectDocument,
+  createShopOfferAddress,
+  createTargetAddress,
   encodeProjectDocument,
   semanticAddressKey,
+  simulateProject,
+  type Catalog,
+  type OccurrenceId,
   type ProjectDocument,
   type ProjectEvaluation,
 } from '@run-planner/core';
+import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication, type PlannerApplication } from '../application/createApplication';
+import {
+  createApplicationCapabilities,
+  createProjectSimulationScope,
+} from '../application/capabilityConfiguration';
+import { createCandidateProjectionService } from '../application/candidateProjection';
+import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../application/autosaveRecovery';
 import type { ProfileFileAdapter } from '../application/profileFile';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+  authoredProjectUndoRequested,
+} from '../application/projectWorkspaceSlice';
+import { selectRoomsForCategory } from '../application/roomSelectorProjection';
+import { selectProfileStatus } from '../application/store';
 import { renderPlannerForInteraction } from '../testing/renderPlanner';
 import { semanticOwnerElementId } from './semanticOwner';
 
@@ -91,6 +119,58 @@ const goldenBatches: readonly BatchSpec[] = [
   },
 ];
 
+const goldenGBatches: readonly BatchSpec[] = [
+  {
+    targets: [{ gameName: 'G_Combat01', offer: { rewardType: 'Boon', source: 'HestiaUpgrade' } }],
+  },
+  {
+    storeKey: 'MetaProgress',
+    targets: [
+      { gameName: 'G_Combat02', offer: { rewardType: 'MetaCurrencyBigDrop' } },
+      { gameName: 'G_Combat02', offer: { rewardType: 'MetaCardPointsCommonBigDrop' } },
+    ],
+  },
+  {
+    targets: [
+      { gameName: 'G_Combat03', offer: { rewardType: 'MaxHealthDrop' } },
+      { gameName: 'G_Combat03', offer: { rewardType: 'MaxManaDrop' } },
+      { gameName: 'G_Combat03', offer: { rewardType: 'RoomMoneyDrop' } },
+    ],
+  },
+  {
+    targets: [
+      { gameName: 'G_Combat10', offer: { rewardType: 'SpellDrop' } },
+      { gameName: 'G_Combat11', offer: { rewardType: 'MaxHealthDrop' } },
+      { gameName: 'G_Combat12', offer: { rewardType: 'MaxManaDrop' } },
+    ],
+  },
+  {
+    storeKey: 'MetaProgress',
+    targets: [
+      { gameName: 'G_Combat11', offer: { rewardType: 'MetaCurrencyBigDrop' } },
+      { gameName: 'G_Combat12', offer: { rewardType: 'MetaCardPointsCommonBigDrop' } },
+    ],
+  },
+  {
+    targets: [
+      { gameName: 'G_Shop01' },
+      { gameName: 'G_Combat12', offer: { rewardType: 'StackUpgrade' } },
+    ],
+  },
+  {
+    targets: [
+      { gameName: 'G_MiniBoss01', offer: { rewardType: 'Boon', source: 'HestiaUpgrade' } },
+      { gameName: 'G_MiniBoss02', offer: { rewardType: 'Boon', source: 'ZeusUpgrade' } },
+    ],
+  },
+  {
+    targets: [
+      { gameName: 'G_Combat12', offer: { rewardType: 'Boon', source: 'HestiaUpgrade' } },
+      { gameName: 'G_Combat13', offer: { rewardType: 'TalentDrop' } },
+    ],
+  },
+];
+
 function lastElement(selector: string): HTMLElement {
   const element = [...document.querySelectorAll<HTMLElement>(selector)].at(-1);
   if (element === undefined) {
@@ -117,8 +197,11 @@ function exitRow(batchIndex: number, exitIndex: number): HTMLElement {
   return element;
 }
 
-function roomCategory(gameName: string): 'Combat' | 'Miniboss' {
-  return gameName.startsWith('F_MiniBoss') ? 'Miniboss' : 'Combat';
+function roomCategory(gameName: string): 'Combat' | 'Miniboss' | 'Shop' {
+  if (gameName.includes('_MiniBoss')) {
+    return 'Miniboss';
+  }
+  return gameName.includes('_Shop') ? 'Shop' : 'Combat';
 }
 
 async function replaceOffer(
@@ -182,6 +265,138 @@ async function authorGoldenF(user: PlannerUser): Promise<void> {
   await replaceOffer(user, offerTwo, { rewardType: 'RoomRewardHealDrop' });
 }
 
+function resolvedOffer(offer: OfferSpec): ResolvedRewardOffer {
+  return offer.source === undefined
+    ? Object.freeze({ rewardType: offer.rewardType })
+    : Object.freeze({
+        rewardType: offer.rewardType,
+        payload: Object.freeze({ kind: 'BoonSource' as const, source: offer.source }),
+      });
+}
+
+function targetOccurrenceId(biomeKey: 'F' | 'G', batchIndex: number, exitIndex: number) {
+  return createOccurrenceId(`phase-5-${biomeKey.toLowerCase()}-b${batchIndex}-e${exitIndex}`);
+}
+
+function appendGoldenBatches(
+  project: ProjectDocument,
+  catalog: Catalog,
+  biomeKey: 'F' | 'G',
+  startId: OccurrenceId,
+  batches: readonly BatchSpec[],
+): { readonly parentId: OccurrenceId; readonly project: ProjectDocument } {
+  const biome = createBiomeAddress('Underworld', biomeKey);
+  let nextProject = project;
+  let parentId = startId;
+  for (const [batchOffset, batch] of batches.entries()) {
+    const batchIndex = batchOffset + 1;
+    nextProject = applyProjectCommand(nextProject, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, parentId),
+    });
+    if (batch.storeKey !== undefined) {
+      nextProject = applyProjectCommand(nextProject, catalog, {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(biome, parentId),
+        storeKey: batch.storeKey,
+      });
+    }
+    for (const [targetOffset, target] of batch.targets.entries()) {
+      const exitIndex = targetOffset + 1;
+      const occurrenceId = targetOccurrenceId(biomeKey, batchIndex, exitIndex);
+      nextProject = applyProjectCommand(nextProject, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(biome, parentId, exitIndex),
+        occurrenceId,
+        gameName: target.gameName,
+      });
+      if (target.offer !== undefined) {
+        nextProject = applyProjectCommand(nextProject, catalog, {
+          kind: 'ReplaceIncomingReward',
+          reward: createIncomingRewardAddress(biome, occurrenceId),
+          value: resolvedOffer(target.offer),
+        });
+      }
+    }
+    nextProject = applyProjectCommand(nextProject, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(biome, parentId),
+      exitIndex: 1,
+    });
+    if (batch.targets[0]?.gameName === 'G_Shop01') {
+      nextProject = applyProjectCommand(nextProject, catalog, {
+        kind: 'ReplaceShopOffer',
+        offer: createShopOfferAddress(
+          biome,
+          targetOccurrenceId('G', batchIndex, 1),
+          'MajorNonBoon',
+        ),
+        value: { rewardType: 'RoomRewardHealDrop' },
+      });
+    }
+    parentId = targetOccurrenceId(biomeKey, batchIndex, 1);
+  }
+  return Object.freeze({ parentId, project: nextProject });
+}
+
+function appendGoldenTerminal(
+  project: ProjectDocument,
+  catalog: Catalog,
+  biomeKey: 'F' | 'G',
+  parentId: OccurrenceId,
+): ProjectDocument {
+  const biome = createBiomeAddress('Underworld', biomeKey);
+  const shopId = createOccurrenceId(`phase-5-${biomeKey.toLowerCase()}-terminal-shop`);
+  const freeId = createOccurrenceId(`phase-5-${biomeKey.toLowerCase()}-terminal-free`);
+  let nextProject = applyProjectCommand(project, catalog, {
+    kind: 'CreateTerminalTransition',
+    continuation: createContinuationAddress(biome, parentId),
+    targetOccurrenceIds: [shopId, freeId],
+  });
+  nextProject = applyProjectCommand(nextProject, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(biome, freeId),
+    value: { rewardType: 'StackUpgrade' },
+  });
+  nextProject = applyProjectCommand(nextProject, catalog, {
+    kind: 'SetTerminalPicked',
+    picked: createPickedAddress(biome, parentId),
+    exitIndex: 1,
+  });
+  return applyProjectCommand(nextProject, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(biome, shopId, 'MajorNonBoon'),
+    value: { rewardType: 'RoomRewardHealDrop' },
+  });
+}
+
+function createGoldenFGProject(catalog: Catalog): ProjectDocument {
+  let project = createProjectDocument(catalog, {
+    projectId: 'phase-5-product-loop',
+    name: 'Phase 5 Product Loop',
+    configuredBiomeCounts: { Underworld: 2 },
+  });
+  const fStart = createOccurrenceId('phase-5-f-start');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: createBiomeAddress('Underworld', 'F'),
+    occurrenceId: fStart,
+    gameName: 'F_Opening01',
+  });
+  const f = appendGoldenBatches(project, catalog, 'F', fStart, goldenBatches);
+  project = appendGoldenTerminal(f.project, catalog, 'F', f.parentId);
+
+  const gStart = createOccurrenceId('phase-5-g-start');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: createBiomeAddress('Underworld', 'G'),
+    occurrenceId: gStart,
+    gameName: 'G_Intro',
+  });
+  const g = appendGoldenBatches(project, catalog, 'G', gStart, goldenGBatches);
+  return appendGoldenTerminal(g.project, catalog, 'G', g.parentId);
+}
+
 function createPersistence(): {
   readonly profileFile: ProfileFileAdapter;
   readStoredJson(): string | null;
@@ -197,6 +412,71 @@ function createPersistence(): {
     },
     readStoredJson: () => storedJson,
   };
+}
+
+function createRecoveryPersistence(): {
+  readonly adapter: AutosaveRecoveryAdapter;
+  readonly scheduler: AutosaveScheduler;
+  flush(): void;
+  readStoredJson(): string | null;
+} {
+  let storedJson: string | null = null;
+  let pending: { cancelled: boolean; task: () => void } | null = null;
+  return {
+    adapter: {
+      read: () => storedJson,
+      write: (json) => {
+        storedJson = json;
+      },
+      clear: () => {
+        storedJson = null;
+      },
+    },
+    scheduler: {
+      schedule: (_delayMs, task) => {
+        if (pending !== null) {
+          pending.cancelled = true;
+        }
+        const scheduled = { cancelled: false, task };
+        pending = scheduled;
+        return () => {
+          scheduled.cancelled = true;
+        };
+      },
+    },
+    flush() {
+      if (pending === null || pending.cancelled) {
+        throw new Error('No recovery autosave is pending');
+      }
+      const scheduled = pending;
+      pending = null;
+      scheduled.task();
+    },
+    readStoredJson: () => storedJson,
+  };
+}
+
+function assertAccessibleControlSurface(): void {
+  const ids = [...document.querySelectorAll<HTMLElement>('[id]')].map((element) => element.id);
+  expect(new Set(ids).size).toBe(ids.length);
+  for (const control of document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+    'input, select',
+  )) {
+    expect(
+      control.labels?.length !== 0 ||
+        control.hasAttribute('aria-label') ||
+        control.hasAttribute('aria-labelledby'),
+      `${control.tagName.toLowerCase()}#${control.id} needs an accessible label`,
+    ).toBe(true);
+  }
+  for (const button of document.querySelectorAll<HTMLButtonElement>('button')) {
+    expect(
+      button.textContent?.trim() !== '' ||
+        button.hasAttribute('aria-label') ||
+        button.hasAttribute('aria-labelledby'),
+      'button needs an accessible name',
+    ).toBe(true);
+  }
 }
 
 function currentProject(application: PlannerApplication): ProjectDocument {
@@ -438,4 +718,167 @@ describe('golden F product loop', () => {
     expect(currentProject(application)).toBe(started);
     expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
   }, 30_000);
+
+  it('closes the complete F/G browser loop with profiles, recovery, accessibility, and responsive projections', async () => {
+    const persistence = createPersistence();
+    const recovery = createRecoveryPersistence();
+    const application = createApplication({
+      autosaveRecovery: recovery.adapter,
+      autosaveScheduler: recovery.scheduler,
+      profileFile: persistence.profileFile,
+    });
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGProject(application.catalog)));
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
+
+    const authored = currentProject(application);
+    const evaluated = currentEvaluation(application);
+    expect(evaluated.status).toBe('valid');
+    expect(evaluated.findings).toEqual([]);
+    expect(evaluated.summary).toMatchObject({
+      configuredBiomeCount: 2,
+      evaluatedBiomeCount: 2,
+      validatedBiomeCount: 2,
+      eligibleForExecutionPlan: true,
+    });
+    expect(evaluated.routes[0]?.validatedPrefix).toEqual(['F', 'G']);
+    const gEvaluation = evaluated.routes[0]?.biomes[1];
+    if (gEvaluation?.completion !== 'complete') {
+      throw new Error('Golden G browser project did not produce a complete evaluation');
+    }
+    expect(gEvaluation.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
+      'G_Boss01',
+      'G_PostBoss01',
+    ]);
+
+    const underworld = authored.routes.find((route) => route.routeKey === 'Underworld');
+    const gPlan = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
+    if (gPlan?.topology === null || gPlan?.topology === undefined) {
+      throw new Error('Golden G topology is missing from its authored project');
+    }
+    const text = document.body.textContent ?? '';
+    for (const occurrence of gPlan.topology.occurrences) {
+      const room = application.catalog.rooms.byKey[occurrence.gameName];
+      if (room === undefined) {
+        throw new Error(`Golden G room ${occurrence.gameName} is missing from the catalog`);
+      }
+      expect(text).toContain(room.label);
+      expect(text).not.toContain(occurrence.gameName);
+      expect(text).not.toContain(occurrence.occurrenceId);
+    }
+    for (const label of ['Deep Serpent', 'King Vermin', 'Midshop', 'Hestia', 'Zeus', 'Heal']) {
+      expect(text).toContain(label);
+    }
+    for (const internalName of [
+      'HestiaUpgrade',
+      'ZeusUpgrade',
+      'MetaCurrencyBigDrop',
+      'MetaCardPointsCommonBigDrop',
+      'RoomRewardHealDrop',
+    ]) {
+      expect(text).not.toContain(internalName);
+    }
+    assertAccessibleControlSurface();
+    expect(screen.getByRole('button', { name: 'Oceanus' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+    expect(screen.getByRole('status', { name: 'Profile status: Unsaved' })).toBeTruthy();
+
+    const firstExit = exitRow(1, 1);
+    const alternative = within(firstExit).getByRole('option', { name: 'Combat 02' });
+    expect(alternative.getAttribute('data-candidate-support')).toBe('possible');
+    await view.user.selectOptions(within(firstExit).getByLabelText('Room'), 'G_Combat02');
+    expect(currentProject(application)).not.toEqual(authored);
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(currentProject(application)).toEqual(authored);
+
+    const capabilities = createApplicationCapabilities(application.catalog);
+    const candidateProjection = createCandidateProjectionService(application.catalog, (project) =>
+      simulateProject(application.catalog, project, createProjectSimulationScope(capabilities)),
+    );
+    const firstGContinuation = gPlan.topology.continuations[0];
+    if (firstGContinuation?.kind !== 'batch') {
+      throw new Error('Golden G first decision is missing');
+    }
+    const combatRooms = selectRoomsForCategory(application.catalog, 'G', 'Combat');
+    const candidateStarted = performance.now();
+    const projectedCandidates = candidateProjection.roomTargets(
+      authored,
+      createTargetAddress(
+        createBiomeAddress('Underworld', 'G'),
+        firstGContinuation.parentOccurrenceId,
+        1,
+      ),
+      combatRooms,
+    );
+    const candidateDurationMs = performance.now() - candidateStarted;
+    expect(projectedCandidates).toHaveLength(combatRooms.length);
+    expect(
+      projectedCandidates.every((candidate) => candidate.evaluation.context === 'evaluated'),
+    ).toBe(true);
+
+    const rebuildStarted = performance.now();
+    expect(
+      simulateProject(application.catalog, authored, createProjectSimulationScope(capabilities)),
+    ).toEqual(evaluated);
+    const rebuildDurationMs = performance.now() - rebuildStarted;
+    const editStarted = performance.now();
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'G'),
+          targetOccurrenceId('G', 1, 1),
+        ),
+        gameName: 'G_Combat02',
+      }),
+    );
+    const representativeEditDurationMs = performance.now() - editStarted;
+    const undoStarted = performance.now();
+    application.store.dispatch(authoredProjectUndoRequested());
+    const cachedUndoDurationMs = performance.now() - undoStarted;
+    expect(rebuildDurationMs, `full rebuild took ${rebuildDurationMs.toFixed(1)} ms`).toBeLessThan(
+      750,
+    );
+    expect(
+      candidateDurationMs,
+      `cold G candidate projection took ${candidateDurationMs.toFixed(1)} ms`,
+    ).toBeLessThan(750);
+    expect(
+      representativeEditDurationMs,
+      `representative edit publication took ${representativeEditDurationMs.toFixed(1)} ms`,
+    ).toBeLessThan(750);
+    expect(
+      cachedUndoDurationMs,
+      `cached undo publication took ${cachedUndoDurationMs.toFixed(1)} ms`,
+    ).toBeLessThan(50);
+    expect(currentProject(application)).toEqual(authored);
+    expect(currentEvaluation(application)).toEqual(evaluated);
+
+    recovery.flush();
+    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
+    await view.user.click(screen.getByRole('button', { name: 'Save Profile' }));
+    await screen.findByText('Saved the profile.');
+    expect(persistence.readStoredJson()).toBe(encodeProjectDocument(authored));
+    expect(selectProfileStatus(application.store.getState())).toBe('Clean');
+    await view.user.click(screen.getByRole('button', { name: 'New' }));
+    expect(currentEvaluation(application).status).toBe('empty');
+    await view.user.click(screen.getByRole('button', { name: 'Load Profile' }));
+    await screen.findByText('Loaded the profile.');
+    expect(currentProject(application)).toEqual(authored);
+    expect(currentEvaluation(application)).toEqual(evaluated);
+
+    application.dispose();
+    view.unmount();
+    const recoveredApplication = createApplication({
+      autosaveRecovery: recovery.adapter,
+      autosaveScheduler: recovery.scheduler,
+    });
+    renderPlannerForInteraction({ application: recoveredApplication });
+    expect(selectProfileStatus(recoveredApplication.store.getState())).toBe('Recovered');
+    expect(currentProject(recoveredApplication)).toEqual(authored);
+    expect(currentEvaluation(recoveredApplication)).toEqual(evaluated);
+    expect(screen.getByRole('status', { name: 'Profile status: Recovered' })).toBeTruthy();
+  }, 90_000);
 });

@@ -1,5 +1,5 @@
 import {
-  createProjectCandidateEvaluator,
+  createPreparedProjectCandidateEvaluator,
   semanticAddressKey,
   type BatchRewardStoreAddress,
   type BiomeAddress,
@@ -10,7 +10,7 @@ import {
   type ProjectCandidateEvaluator,
   type ProjectCandidateQuery,
   type ProjectDocument,
-  type ProjectSimulationScope,
+  type ProjectEvaluation,
   type RoomDeclaration,
   type ShopOfferAddress,
   type ShopPurchaseAddress,
@@ -71,12 +71,16 @@ function projectOptions<T>(
   values: readonly T[],
   queries: readonly ProjectCandidateQuery[],
   catalog: Catalog,
-  simulationScope: ProjectSimulationScope,
+  evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
 ): readonly CandidateOptionProjection<T>[] {
   let projectCache = cache.get(project);
   if (projectCache === undefined) {
     projectCache = {
-      evaluator: createProjectCandidateEvaluator(catalog, project, simulationScope),
+      evaluator: createPreparedProjectCandidateEvaluator(
+        catalog,
+        project,
+        evaluateProject(project),
+      ),
       options: new Map(),
     };
     cache.set(project, projectCache);
@@ -106,7 +110,7 @@ interface ProjectCandidateProjectionCache {
 
 export function createCandidateProjectionService(
   catalog: Catalog,
-  simulationScope: ProjectSimulationScope,
+  evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
 ): CandidateProjectionService {
   const cache = new WeakMap<ProjectDocument, ProjectCandidateProjectionCache>();
   const service: CandidateProjectionService = {
@@ -118,7 +122,7 @@ export function createCandidateProjectionService(
         rooms,
         rooms.map((room) => ({ kind: 'startRoom', owner, gameName: room.gameName })),
         catalog,
-        simulationScope,
+        evaluateProject,
       ),
     roomTargets: (project, target, rooms) =>
       projectOptions(
@@ -128,7 +132,7 @@ export function createCandidateProjectionService(
         rooms,
         rooms.map((room) => ({ kind: 'roomTarget', target, gameName: room.gameName })),
         catalog,
-        simulationScope,
+        evaluateProject,
       ),
     batchRewardStores: (project, rewardStore, storeKeys) =>
       projectOptions(
@@ -138,7 +142,7 @@ export function createCandidateProjectionService(
         storeKeys,
         storeKeys.map((storeKey) => ({ kind: 'batchRewardStore', rewardStore, storeKey })),
         catalog,
-        simulationScope,
+        evaluateProject,
       ),
     incomingRewards: (project, reward, offers) =>
       projectOptions(
@@ -148,7 +152,7 @@ export function createCandidateProjectionService(
         offers,
         offers.map((value) => ({ kind: 'incomingReward', reward, value })),
         catalog,
-        simulationScope,
+        evaluateProject,
       ),
     shopOffers: (project, offer, values) =>
       projectOptions(
@@ -158,7 +162,7 @@ export function createCandidateProjectionService(
         values,
         values.map((value) => ({ kind: 'shopOffer', offer, value })),
         catalog,
-        simulationScope,
+        evaluateProject,
       ),
     shopPurchases: (project, purchase, values) =>
       projectOptions(
@@ -168,7 +172,7 @@ export function createCandidateProjectionService(
         values,
         values.map((purchased) => ({ kind: 'shopPurchase', purchase, purchased })),
         catalog,
-        simulationScope,
+        evaluateProject,
       ),
   };
   return Object.freeze(service);
