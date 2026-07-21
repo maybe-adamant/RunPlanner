@@ -1,6 +1,8 @@
 import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../catalog';
 import type { ResolvedRewardOffer, RewardPayload } from '../rewardKernel/model';
 import type {
+  AuthoredBatchState,
+  BatchRewardStoreState,
   LinearBatchContinuation,
   LinearBiomePlan,
   LinearBiomeTopology,
@@ -25,7 +27,11 @@ import type {
 import { createProjectAddress, semanticAddressKey } from './addresses';
 import { createDefaultBatchState } from './batchState';
 import { decodeProjectDocument } from './codec';
-import { createDefaultRoomState, type RoomOccurrenceRole } from './roomState';
+import {
+  createDefaultRoomState,
+  type RoomOccurrenceRole,
+  type RoomStateContext,
+} from './roomState';
 import { ProjectDocumentContractError } from './validation';
 
 export type ProjectCommand =
@@ -46,6 +52,11 @@ export type ProjectCommand =
       readonly kind: 'ReplaceBatchRewardStore';
       readonly rewardStore: BatchRewardStoreAddress;
       readonly storeKey: string;
+    }
+  | {
+      readonly kind: 'ReplaceFieldsCageOutcome';
+      readonly continuation: ContinuationAddress;
+      readonly cageOutcome: 'min' | 'max';
     }
   | {
       readonly kind: 'CreateTerminalTransition';
@@ -147,6 +158,7 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
     case 'CreateStart':
       return command.biome;
     case 'CreateBatch':
+    case 'ReplaceFieldsCageOutcome':
     case 'CreateTerminalTransition':
     case 'ReconcileExitCapacity':
     case 'ReconcileTerminalExitCapacity':
@@ -278,19 +290,66 @@ function authoredStart(layout: LinearBiomeLayout) {
   return layout.start;
 }
 
-function defaultBatchState(layout: LinearBiomeLayout): null {
-  if (layout.continuation.batchPolicy.kind !== 'standard') {
-    throw new Error(`${layout.biomeKey} does not use standard authored batches`);
+function defaultBatchRewardStore(layout: LinearBiomeLayout): BatchRewardStoreState {
+  if (layout.continuation.rewardStoreOverrides.length !== 0) {
+    throw new Error(`${layout.biomeKey} uses source-specific reward-store policies`);
   }
-  const state = createDefaultBatchState(layout.continuation.batchPolicy);
-  if (state !== null) {
-    throw new Error(`${layout.biomeKey} standard batch produced non-null state`);
+  const policy = layout.continuation.rewardStorePolicy;
+  switch (policy.kind) {
+    case 'authoredBaseStore':
+      return Object.freeze({
+        kind: 'authoredBaseStore',
+        baseRewardStoreKey: policy.defaultStoreKey,
+      });
+    case 'none':
+      return Object.freeze({ kind: 'none' });
+    case 'sourceOfferPoint':
+      throw new Error(`${layout.biomeKey} derives its generated store from the source room`);
   }
-  return state;
 }
 
-function resolvedStoreForRoom(room: RoomDeclaration, sharedStoreKey: string): string {
+function defaultBatchState(layout: LinearBiomeLayout): AuthoredBatchState {
+  if (
+    layout.continuation.batchPolicy.kind !== 'standard' &&
+    layout.continuation.batchPolicy.kind !== 'fields'
+  ) {
+    throw new Error(`${layout.biomeKey} does not use a supported authored batch policy`);
+  }
+  return createDefaultBatchState(layout.continuation.batchPolicy);
+}
+
+function defaultSharedStore(layout: LinearBiomeLayout): string | undefined {
+  if (layout.continuation.rewardStoreOverrides.length !== 0) {
+    throw new Error(`${layout.biomeKey} uses source-specific reward-store policies`);
+  }
+  const policy = layout.continuation.rewardStorePolicy;
+  switch (policy.kind) {
+    case 'authoredBaseStore':
+      return policy.defaultStoreKey;
+    case 'none':
+      return undefined;
+    case 'sourceOfferPoint':
+      throw new Error(`${layout.biomeKey} derives its generated store from the source room`);
+  }
+}
+
+function resolvedStoreForRoom(
+  room: RoomDeclaration,
+  sharedStoreKey: string | undefined,
+): string | undefined {
   return room.individualRewardStoreKey ?? room.forcedRewardStoreKey ?? sharedStoreKey;
+}
+
+function roomStateContext(
+  role: RoomOccurrenceRole,
+  resolvedStoreKey: string | undefined,
+  entryActive: boolean,
+): RoomStateContext {
+  return {
+    role,
+    ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
+    entryActive,
+  };
 }
 
 function finalBatchSharedStore(
@@ -299,11 +358,14 @@ function finalBatchSharedStore(
   layout: LinearBiomeLayout,
   continuation: LinearBatchContinuation,
   replacement?: { readonly occurrenceId: OccurrenceId; readonly room: RoomDeclaration },
-): string {
-  if (continuation.rewardStore.kind !== 'authoredBaseStore') {
-    throw new Error('F/G batch must own an authored base store');
+): string | undefined {
+  if (continuation.rewardStore.kind === 'sourceOfferPoint') {
+    throw new Error(`${layout.biomeKey} source-derived batch stores are not implemented`);
   }
-  let storeKey = continuation.rewardStore.baseRewardStoreKey;
+  let storeKey =
+    continuation.rewardStore.kind === 'authoredBaseStore'
+      ? continuation.rewardStore.baseRewardStoreKey
+      : undefined;
   const topology = plan.topology;
   if (topology === null) {
     throw new Error(`${layout.biomeKey} batch has no topology`);
@@ -353,10 +415,10 @@ function resolvedStoreForOccurrence(
   layout: LinearBiomeLayout,
   occurrenceId: OccurrenceId,
   replacementRoom?: RoomDeclaration,
-): string {
+): string | undefined {
   const topology = plan.topology;
   if (topology === null) {
-    return authoredBaseStorePolicy(layout).defaultStoreKey;
+    return defaultSharedStore(layout);
   }
   const occurrence = topology.occurrences.find(
     (candidate) => candidate.occurrenceId === occurrenceId,
@@ -365,10 +427,10 @@ function resolvedStoreForOccurrence(
     replacementRoom ??
     (occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName]);
   if (room === undefined) {
-    return authoredBaseStorePolicy(layout).defaultStoreKey;
+    return defaultSharedStore(layout);
   }
   if (topology.startOccurrenceId === occurrenceId) {
-    return resolvedStoreForRoom(room, authoredBaseStorePolicy(layout).defaultStoreKey);
+    return resolvedStoreForRoom(room, defaultSharedStore(layout));
   }
   const owner = topology.continuations.find((continuation) =>
     continuation.targets.some((target) => target.occurrenceId === occurrenceId),
@@ -385,7 +447,7 @@ function resolvedStoreForOccurrence(
       ),
     );
   }
-  return resolvedStoreForRoom(room, authoredBaseStorePolicy(layout).defaultStoreKey);
+  return resolvedStoreForRoom(room, defaultSharedStore(layout));
 }
 
 function installEntryState(
@@ -404,11 +466,15 @@ function installEntryState(
     plan,
     {
       ...occurrence,
-      state: createDefaultRoomState(catalog, room, {
-        role: occurrenceRole(plan, occurrenceId, command),
-        resolvedStoreKey: resolvedStoreForOccurrence(plan, catalog, layout, occurrenceId),
-        entryActive: true,
-      }),
+      state: createDefaultRoomState(
+        catalog,
+        room,
+        roomStateContext(
+          occurrenceRole(plan, occurrenceId, command),
+          resolvedStoreForOccurrence(plan, catalog, layout, occurrenceId),
+          true,
+        ),
+      ),
     },
     command,
   );
@@ -666,14 +732,15 @@ function createTerminalPlan(
     return {
       occurrenceId,
       gameName: terminalRoom.gameName,
-      state: createDefaultRoomState(catalog, terminalRoom, {
-        role,
-        resolvedStoreKey: resolvedStoreForRoom(
-          terminalRoom,
-          authoredBaseStorePolicy(layout).defaultStoreKey,
+      state: createDefaultRoomState(
+        catalog,
+        terminalRoom,
+        roomStateContext(
+          role,
+          resolvedStoreForRoom(terminalRoom, defaultSharedStore(layout)),
+          false,
         ),
-        entryActive: false,
-      }),
+      ),
     };
   });
   const targets = exitIndexes.map((exitIndex, index) => {
@@ -768,14 +835,15 @@ function applyUnchecked(
       const occurrence = {
         occurrenceId: command.occurrenceId,
         gameName: room.gameName,
-        state: createDefaultRoomState(catalog, room, {
-          role: 'ordinary',
-          resolvedStoreKey: resolvedStoreForRoom(
-            room,
-            authoredBaseStorePolicy(layout).defaultStoreKey,
+        state: createDefaultRoomState(
+          catalog,
+          room,
+          roomStateContext(
+            'ordinary',
+            resolvedStoreForRoom(room, defaultSharedStore(layout)),
+            true,
           ),
-          entryActive: true,
-        }),
+        ),
       };
       return withBiome(document, located, {
         ...plan,
@@ -806,10 +874,7 @@ function applyUnchecked(
             {
               kind: 'batch',
               parentOccurrenceId: command.continuation.parentOccurrenceId,
-              rewardStore: {
-                kind: 'authoredBaseStore',
-                baseRewardStoreKey: authoredBaseStorePolicy(layout).defaultStoreKey,
-              },
+              rewardStore: defaultBatchRewardStore(layout),
               batchState: defaultBatchState(layout),
               targets: [],
               pickedExitIndex: null,
@@ -847,6 +912,38 @@ function applyUnchecked(
                     kind: 'authoredBaseStore',
                     baseRewardStoreKey: command.storeKey,
                   },
+                }
+              : candidate,
+          ),
+        },
+      });
+    }
+    case 'ReplaceFieldsCageOutcome': {
+      if (layout.continuation.batchPolicy.kind !== 'fields') {
+        failCommand(command, 'batch does not expose a Fields cage outcome');
+      }
+      if (command.cageOutcome !== 'min' && command.cageOutcome !== 'max') {
+        failCommand(command, 'cageOutcome must be min or max');
+      }
+      const topology = requireTopology(plan, command);
+      const continuation = requireContinuation(
+        plan,
+        command.continuation.parentOccurrenceId,
+        'batch',
+        command,
+      );
+      if (continuation.batchState?.cageOutcome === command.cageOutcome) {
+        return document;
+      }
+      return withBiome(document, located, {
+        ...plan,
+        topology: {
+          ...topology,
+          continuations: topology.continuations.map((candidate) =>
+            candidate.parentOccurrenceId === continuation.parentOccurrenceId
+              ? {
+                  ...continuation,
+                  batchState: Object.freeze({ cageOutcome: command.cageOutcome }),
                 }
               : candidate,
           ),
@@ -898,14 +995,15 @@ function applyUnchecked(
       const occurrence = {
         occurrenceId: command.occurrenceId,
         gameName: room.gameName,
-        state: createDefaultRoomState(catalog, room, {
-          role: 'ordinary',
-          resolvedStoreKey: resolvedStoreForRoom(
-            room,
-            finalBatchSharedStore(plan, catalog, layout, continuation),
+        state: createDefaultRoomState(
+          catalog,
+          room,
+          roomStateContext(
+            'ordinary',
+            resolvedStoreForRoom(room, finalBatchSharedStore(plan, catalog, layout, continuation)),
+            false,
           ),
-          entryActive: false,
-        }),
+        ),
       };
       const updatedContinuation = {
         ...continuation,
@@ -1105,10 +1203,7 @@ function applyUnchecked(
             {
               kind: 'batch',
               parentOccurrenceId: command.continuation.parentOccurrenceId,
-              rewardStore: {
-                kind: 'authoredBaseStore',
-                baseRewardStoreKey: authoredBaseStorePolicy(layout).defaultStoreKey,
-              },
+              rewardStore: defaultBatchRewardStore(layout),
               batchState: defaultBatchState(layout),
               targets: [],
               pickedExitIndex: null,
@@ -1131,17 +1226,15 @@ function applyUnchecked(
       const replacement = {
         occurrenceId: occurrence.occurrenceId,
         gameName: room.gameName,
-        state: createDefaultRoomState(catalog, room, {
-          role,
-          resolvedStoreKey: resolvedStoreForOccurrence(
-            plan,
-            catalog,
-            layout,
-            occurrence.occurrenceId,
-            room,
+        state: createDefaultRoomState(
+          catalog,
+          room,
+          roomStateContext(
+            role,
+            resolvedStoreForOccurrence(plan, catalog, layout, occurrence.occurrenceId, room),
+            isOccurrenceEntered(plan, occurrence.occurrenceId),
           ),
-          entryActive: isOccurrenceEntered(plan, occurrence.occurrenceId),
-        }),
+        ),
       };
       return withBiome(document, located, replaceOccurrence(plan, replacement, command));
     }
