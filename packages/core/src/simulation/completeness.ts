@@ -1,6 +1,8 @@
-import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../catalog';
+import type { Catalog, HubBiomeLayout, LinearBiomeLayout, RoomDeclaration } from '../catalog';
 import {
   createContinuationAddress,
+  createHubOpenSetAddress,
+  createHubVisitAddress,
   createOccurrenceAddress,
   createPickedAddress,
   createTargetAddress,
@@ -8,6 +10,8 @@ import {
 } from '../project/addresses';
 import type {
   AuthoredBiomeState,
+  HubBiomePlan,
+  HubBiomeTopology,
   LinearBiomePlan,
   LinearBiomeTopology,
   LinearContinuation,
@@ -34,6 +38,19 @@ export type LinearCompletenessResult =
 export type IncompleteFCompletenessResult = IncompleteLinearCompletenessResult;
 export type CompleteFCompletenessResult = CompleteLinearCompletenessResult;
 export type FCompletenessResult = LinearCompletenessResult;
+
+export interface IncompleteHubCompletenessResult {
+  readonly completion: 'incomplete';
+  readonly findings: readonly SemanticFinding[];
+}
+
+export interface CompleteHubCompletenessResult {
+  readonly completion: 'complete';
+  readonly topology: HubBiomeTopology;
+  readonly findings: readonly [];
+}
+
+export type HubCompletenessResult = CompleteHubCompletenessResult | IncompleteHubCompletenessResult;
 
 export class CompletenessContractError extends Error {
   constructor(detail: string) {
@@ -263,4 +280,72 @@ export function evaluateFCompleteness(
     throw new CompletenessContractError('F completeness requires biome F');
   }
   return evaluateLinearCompleteness(catalog, biome, plan);
+}
+
+function requireHubLayout(catalog: Catalog, biome: BiomeAddress, plan: HubBiomePlan) {
+  if (plan.biomeKey !== biome.biomeKey) {
+    throw new CompletenessContractError(
+      `plan biome ${plan.biomeKey} does not match address biome ${biome.biomeKey}`,
+    );
+  }
+  const route = catalog.routes.byKey[biome.routeKey];
+  if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
+    throw new CompletenessContractError(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
+  }
+  const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
+  if (layout?.kind !== 'HubBiome') {
+    throw new CompletenessContractError(`catalog does not provide a Hub ${biome.biomeKey} layout`);
+  }
+  return layout;
+}
+
+export function evaluateHubCompleteness(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  plan: HubBiomePlan,
+): HubCompletenessResult {
+  const layout: HubBiomeLayout = requireHubLayout(catalog, biome, plan);
+  const topology = plan.topology;
+  if (topology === null) {
+    return Object.freeze({
+      completion: 'incomplete',
+      findings: Object.freeze([
+        finding('biomeTopologyMissing', biome, { biomeKey: layout.biomeKey }),
+      ]),
+    });
+  }
+
+  const findings: SemanticFinding[] = [];
+  if (
+    topology.openTargets.length < layout.hub.openCount.min ||
+    topology.openTargets.length > layout.hub.openCount.max
+  ) {
+    findings.push(
+      finding('hubOpenSetIncomplete', createHubOpenSetAddress(biome), {
+        actualCount: topology.openTargets.length,
+        minimumCount: layout.hub.openCount.min,
+        maximumCount: layout.hub.openCount.max,
+      }),
+    );
+  }
+  if (topology.visitOrder.length !== layout.hub.requiredVisits) {
+    findings.push(
+      finding(
+        'hubVisitOrderIncomplete',
+        createHubVisitAddress(biome, topology.visitOrder.length + 1),
+        {
+          actualCount: topology.visitOrder.length,
+          requiredCount: layout.hub.requiredVisits,
+        },
+      ),
+    );
+  }
+  if (findings.length !== 0) {
+    return Object.freeze({ completion: 'incomplete', findings: Object.freeze(findings) });
+  }
+  return Object.freeze({
+    completion: 'complete',
+    topology,
+    findings: Object.freeze([]) as readonly [],
+  });
 }

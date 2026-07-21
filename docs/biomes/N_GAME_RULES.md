@@ -5,17 +5,18 @@
 This document is the concrete game-rule authority for Ephyra (`N`). It defines
 the fixed authored entry rooms, persistent physical hub, ordered pylon visits,
 room-local side rooms, repeated restores, and hub-wide reward effects now
-represented by the dormant N catalog slice without importing the previous Lua
-control shape.
+represented by the N declarations and dormant authored Hub plan without
+importing the previous Lua control shape.
 
 Shared possibility, reward, occurrence, counted-bag, and fixed-completion
 semantics are defined by `../GAME_GENERATION_RULES.md`, `../REWARD_MODEL.md`, and
 `../SIMULATION_AND_VALIDATION.md`. N is a `HubBiome`; it is not a linear biome
 represented with synthetic cycles.
 
-N declarations and focused parity fixtures are ported. N intentionally remains
-non-authorable, non-simulatable, and non-editable until its complete HubBiome
-product loop is implemented.
+N declarations, the schema-version-5 authored Hub plan, semantic commands, and
+structural completeness are ported. N intentionally remains outside
+application authoring capabilities, simulation, and editing until its complete
+HubBiome product loop is implemented.
 
 ## Evidence Status
 
@@ -69,7 +70,7 @@ evidence gap is closed.
 
 The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
 coverage is defined by `../MIGRATION_PROVENANCE.md`. N currently has normalized
-declaration coverage only.
+declaration and dormant authored-model coverage.
 
 | Feature                       | Verified game behavior                                                                                                  | Disposition and planner projection                                                           | Current coverage     | Reconsider when                                        |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------ |
@@ -535,7 +536,7 @@ deriving either counter from a UI row or from visit order alone.
 
 ## Declaration and Authored-Model Contract
 
-The dormant N catalog import includes:
+The N declaration and dormant authored-model slices include:
 
 - `HubBiome` fixed entry, hub, terminal, and completion descriptors;
 - fixed authored room-slot descriptors for layout-owned rooms with leaf state;
@@ -546,8 +547,8 @@ The dormant N catalog import includes:
 - explicit hub reward-lookup production and shop-consumer requirements;
 - pylon spawn/completion and generated-side-room counters.
 
-The Phase 6 authored model requires no arbitrary `CreateHubTarget(gameName)` or
-`ReplaceOccurrenceRoom` command. It needs semantic replacements for:
+The Phase 6 authored model exposes no arbitrary `CreateHubTarget(gameName)` or
+`ReplaceOccurrenceRoom` command. It provides semantic replacements for:
 
 - the open fixed-slot set;
 - one complete reward leaf per open slot;
@@ -555,7 +556,7 @@ The Phase 6 authored model requires no arbitrary `CreateHubTarget(gameName)` or
 - generated state and entered order for each bounded side slot;
 - fixed authored opening, PreHub, and preboss leaf values.
 
-`ClearTopology` may remove the N plan as an explicit destructive action.
+`ClearTopology` may remove the N topology as an explicit destructive action.
 Ordinary upstream replacement retains complete leaf values and may temporarily
 produce invalid state for the validator to report.
 

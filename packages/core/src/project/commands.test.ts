@@ -44,7 +44,7 @@ import {
   undoProjectHistory,
 } from './history';
 import { encodeProjectDocument, parseProjectDocument } from './codec';
-import type { ProjectDocument } from './model';
+import type { LinearBiomePlan, ProjectDocument } from './model';
 
 function collection<T>(values: readonly T[], key: (value: T) => string): CatalogCollection<T> {
   return {
@@ -377,6 +377,14 @@ function emptyProject(): ProjectDocument {
   });
 }
 
+function linearPlan(document: ProjectDocument): LinearBiomePlan {
+  const plan = document.routes[0]?.biomes[0];
+  if (plan?.kind !== 'LinearBiome') {
+    throw new Error('expected linear F plan fixture');
+  }
+  return plan;
+}
+
 function startedProject(): ProjectDocument {
   return applyProjectCommand(emptyProject(), catalog, {
     kind: 'CreateStart',
@@ -613,7 +621,7 @@ describe('ordinary project commands', () => {
     project = createTarget(project, startId, 2, second, 'F_CombatTwoExit');
     project = setPicked(project, startId, 1);
 
-    const topology = project.routes[0]?.biomes[0]?.topology;
+    const topology = linearPlan(project).topology;
     expect(original.routes[0]?.biomes[0]?.topology).toBeNull();
     expect(topology?.occurrences.map((room) => room.gameName)).toEqual([
       'F_Opening01',
@@ -642,7 +650,7 @@ describe('ordinary project commands', () => {
     project = createBatch(project, targetId);
     project = createTarget(project, targetId, 1, downstreamId, 'F_CombatOneExit');
     project = setPicked(project, targetId, 1);
-    const before = project.routes[0]?.biomes[0]?.topology;
+    const before = linearPlan(project).topology;
     if (before === null || before === undefined) {
       throw new Error('expected retained topology fixture');
     }
@@ -652,7 +660,7 @@ describe('ordinary project commands', () => {
       rewardStore: createBatchRewardStoreAddress(biome, startId),
       storeKey: 'MetaProgress',
     });
-    const after = project.routes[0]?.biomes[0]?.topology;
+    const after = linearPlan(project).topology;
     if (after === null || after === undefined) {
       throw new Error('expected topology after store replacement');
     }
@@ -749,7 +757,7 @@ describe('ordinary project commands', () => {
         },
       },
     });
-    expect(roundTripped.routes[0]?.biomes[0]?.topology?.continuations[0]?.pickedExitIndex).toBe(2);
+    expect(linearPlan(roundTripped).topology?.continuations[0]?.pickedExitIndex).toBe(2);
   });
 
   it('re-anchors downstream topology and retains overflow after room replacement', () => {
@@ -779,7 +787,7 @@ describe('ordinary project commands', () => {
       gameName: 'F_CombatOneExit',
     });
 
-    const topology = project.routes[0]?.biomes[0]?.topology;
+    const topology = linearPlan(project).topology;
     const continuation = topology?.continuations.find(
       (candidate) => candidate.parentOccurrenceId === second,
     );
@@ -920,7 +928,7 @@ describe('terminal and destructive project commands', () => {
       continuation,
       targetOccurrenceIds: [shopId, freeId],
     });
-    const topology = project.routes[0]?.biomes[0]?.topology;
+    const topology = linearPlan(project).topology;
     expect(topology?.continuations.at(-1)).toMatchObject({
       kind: 'terminal',
       parentOccurrenceId: parentId,
@@ -1067,7 +1075,7 @@ describe('terminal and destructive project commands', () => {
       kind: 'ReconcileTerminalExitCapacity',
       continuation,
     });
-    const reconciled = project.routes[0]?.biomes[0]?.topology;
+    const reconciled = linearPlan(project).topology;
     expect(reconciled?.continuations.at(-1)?.targets).toEqual([
       { exitIndex: 1, occurrenceId: shopId },
     ]);
@@ -1104,7 +1112,7 @@ describe('terminal and destructive project commands', () => {
       kind: 'ReconcileExitCapacity',
       continuation,
     });
-    const topology = project.routes[0]?.biomes[0]?.topology;
+    const topology = linearPlan(project).topology;
     expect(topology?.continuations.at(-1)?.targets).toEqual([
       { exitIndex: 1, occurrenceId: firstId },
     ]);
@@ -1129,7 +1137,7 @@ describe('terminal and destructive project commands', () => {
       continuation,
       targetOccurrenceIds: [shopId, freeId],
     });
-    let topology = project.routes[0]?.biomes[0]?.topology;
+    let topology = linearPlan(project).topology;
     expect(topology?.occurrences.map((room) => room.occurrenceId)).toEqual([
       startId,
       parentId,
@@ -1142,7 +1150,7 @@ describe('terminal and destructive project commands', () => {
       kind: 'ReplaceWithBatch',
       continuation,
     });
-    topology = project.routes[0]?.biomes[0]?.topology;
+    topology = linearPlan(project).topology;
     expect(topology?.occurrences.map((room) => room.occurrenceId)).toEqual([startId, parentId]);
     expect(topology?.continuations.at(-1)).toEqual({
       kind: 'batch',

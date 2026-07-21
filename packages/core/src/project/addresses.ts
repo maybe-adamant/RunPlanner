@@ -81,6 +81,33 @@ export interface LocalRewardAddress extends BiomeOwnedAddress {
   readonly slotKey: string;
 }
 
+export interface LocalChildAddress extends BiomeOwnedAddress {
+  readonly kind: 'localChild';
+  readonly occurrenceId: OccurrenceId;
+  readonly groupKey: string;
+  readonly slotKey: string;
+}
+
+export interface LocalChildGroupAddress extends BiomeOwnedAddress {
+  readonly kind: 'localChildGroup';
+  readonly occurrenceId: OccurrenceId;
+  readonly groupKey: string;
+}
+
+export interface HubSlotAddress extends BiomeOwnedAddress {
+  readonly kind: 'hubSlot';
+  readonly hubSlotKey: string;
+}
+
+export interface HubOpenSetAddress extends BiomeOwnedAddress {
+  readonly kind: 'hubOpenSet';
+}
+
+export interface HubVisitAddress extends BiomeOwnedAddress {
+  readonly kind: 'hubVisit';
+  readonly visitIndex: number;
+}
+
 export interface ShopPurchaseAddress extends BiomeOwnedAddress {
   readonly kind: 'shopPurchase';
   readonly occurrenceId: OccurrenceId;
@@ -105,6 +132,11 @@ export type SemanticAddress =
   | FixedEntryRoomAddress
   | FixedEntryTargetAddress
   | IncomingRewardAddress
+  | HubSlotAddress
+  | HubOpenSetAddress
+  | HubVisitAddress
+  | LocalChildAddress
+  | LocalChildGroupAddress
   | LocalRewardAddress
   | OccurrenceAddress
   | PickedAddress
@@ -276,6 +308,54 @@ export function createLocalRewardAddress(
   });
 }
 
+export function createLocalChildAddress(
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+  groupKey: string,
+  slotKey: string,
+): LocalChildAddress {
+  return Object.freeze({
+    kind: 'localChild',
+    ...biomeOwner(biome),
+    occurrenceId,
+    groupKey: nonBlank(groupKey, 'groupKey'),
+    slotKey: nonBlank(slotKey, 'slotKey'),
+  });
+}
+
+export function createLocalChildGroupAddress(
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+  groupKey: string,
+): LocalChildGroupAddress {
+  return Object.freeze({
+    kind: 'localChildGroup',
+    ...biomeOwner(biome),
+    occurrenceId,
+    groupKey: nonBlank(groupKey, 'groupKey'),
+  });
+}
+
+export function createHubSlotAddress(biome: BiomeAddress, hubSlotKey: string): HubSlotAddress {
+  return Object.freeze({
+    kind: 'hubSlot',
+    ...biomeOwner(biome),
+    hubSlotKey: nonBlank(hubSlotKey, 'hubSlotKey'),
+  });
+}
+
+export function createHubOpenSetAddress(biome: BiomeAddress): HubOpenSetAddress {
+  return Object.freeze({ kind: 'hubOpenSet', ...biomeOwner(biome) });
+}
+
+export function createHubVisitAddress(biome: BiomeAddress, visitIndex: number): HubVisitAddress {
+  return Object.freeze({
+    kind: 'hubVisit',
+    ...biomeOwner(biome),
+    visitIndex: positiveInteger(visitIndex, 'visitIndex'),
+  });
+}
+
 export function createShopPurchaseAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -321,6 +401,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
         address.occurrenceId,
       ]);
     case 'localReward':
+    case 'localChild':
       return JSON.stringify([
         address.kind,
         address.routeKey,
@@ -329,6 +410,20 @@ export function semanticAddressKey(address: SemanticAddress): string {
         address.groupKey,
         address.slotKey,
       ]);
+    case 'localChildGroup':
+      return JSON.stringify([
+        address.kind,
+        address.routeKey,
+        address.biomeKey,
+        address.occurrenceId,
+        address.groupKey,
+      ]);
+    case 'hubSlot':
+      return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.hubSlotKey]);
+    case 'hubOpenSet':
+      return JSON.stringify([address.kind, address.routeKey, address.biomeKey]);
+    case 'hubVisit':
+      return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.visitIndex]);
     case 'completionRoom':
       return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.role]);
     case 'fixedEntryRoom':

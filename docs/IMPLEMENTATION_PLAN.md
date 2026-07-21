@@ -1297,11 +1297,12 @@ Implement in this order unless concrete dependencies justify a change:
 5. P: linear surface topology and room-internal encounter rules.
 6. Q: forced skeleton and independently generated two-exit miniboss stages.
 
-The rollout has an explicit UX insertion boundary after the complete H/I
-Underworld loop and before N. Complete the contextual room/reward selection
-work in `CONTEXTUAL_EDITOR_UX.md`, then resume controlled expansion with
-N/O/P/Q. This lets later biome editors inherit the stronger selector language
-without prematurely redesigning frontier actions around only linear biomes.
+The rollout has an explicit UX insertion boundary after N and before O. Close
+the second topology family through one complete N product loop, then complete
+the contextual room/reward selection work in `CONTEXTUAL_EDITOR_UX.md` across
+F/G/H/I/N before resuming controlled expansion with O/P/Q. This grounds the
+shared interaction language in both linear and hub editors without waiting for
+the remaining structurally linear Surface biomes.
 
 For each biome, close these acceptance gates:
 
@@ -1407,10 +1408,70 @@ I should close through five slices:
    - close complete F/G/H/I profiles, recovery, blocked-prefix behavior,
      semantic navigation, accessibility, interaction, and responsiveness.
 
+### N Delivery Slices
+
+N closes through eight slices because it establishes the second authored and
+canonical topology family:
+
+1. dormant Hub authorship:
+   - add `HubBiomePlan` and its exact persisted topology to the project union,
+     project codec, route-prefix initializer, semantic-address vocabulary, and
+     command dispatcher;
+   - create the fixed authored Opening, PreHub, and Preboss leaves, author the
+     nine-or-ten-member open set over catalog-fixed slots, and author a
+     six-entry distinct visit sequence separately from open membership;
+   - expose typed side-room generation and entered-order replacements over the
+     declaration-owned bounded local slots;
+   - close schema, round-trip, command, downstream-retention, completeness,
+     and malformed-authority fixtures without activating N capabilities;
+2. canonical Hub materialization:
+   - materialize fixed entries, one persistent Hub board, all open offered
+     targets in normalized physical order, six ordered visits, local side
+     slots, the fixed terminal entry, and derived completion rooms;
+   - preserve physical generation order separately from player visit order and
+     represent parent/Hub restores without duplicate authored occurrences;
+3. N lifecycle and route history:
+   - apply exact Opening, PreHub, main encounter, Soul Pylon, side-room,
+     parent-restore, Hub-restore, Preboss, Boss, and Postboss timing;
+   - preserve room-history, biome-depth, encounter-depth, creation,
+     appearance, and required-object axes at their declared lifecycle points;
+4. N reward simulation:
+   - generate the complete nine-or-ten-offer Hub board once in normalized
+     physical order and let open unvisited targets consume counted bags without
+     emitting acquisitions;
+   - jointly resolve each entered parent's generated side-room sibling batch,
+     acquire only entered rooms, and derive `hubRewardLookup` from the full
+     initial board before validating the fixed Preboss WorldShop;
+5. selected N validation:
+   - validate fixed-slot identity, open count, miniboss availability, six
+     distinct visits, pylons, side-generation pressure, entered ordinals,
+     room/reward support, restores, shop lookup, and terminal completion;
+   - address findings to exact Hub slots, visit positions, parent-local side
+     slots, or leaf owners without editing authorship;
+6. N candidate evaluation:
+   - evaluate open membership, visit choices, side generation and entry order,
+     fixed-entry rewards, Hub rewards, side rewards, Preboss offers, and
+     purchases through the same selected-plan authorities;
+   - preserve selected invalid values and typed unavailable upstream context;
+7. dormant N editor projection:
+   - project fixed entry leaves, the fixed-slot open board, a separate six-step
+     visit timeline, visited-parent side-room state, the fixed Preboss shop,
+     findings, and candidates through semantic commands;
+   - use a structurally truthful board/list interaction without attempting the
+     later contextual visual-polish pass;
+8. N product-loop activation:
+   - promote N to authorable, simulatable, and editable atomically;
+   - close the one-biome Surface prefix, profiles, recovery, blocked-prefix
+     behavior, findings navigation, candidate parity, accessibility,
+     interaction, and responsiveness fixtures.
+
+N must activate before any later Surface biome because application route
+prefixes remain contiguous.
+
 ### Contextual Selection UX Insertion
 
-Before beginning N, harden the complete Underworld editor through the focused
-contract in `CONTEXTUAL_EDITOR_UX.md`:
+After N activates and before beginning O, harden the complete Underworld and N
+editors through the focused contract in `CONTEXTUAL_EDITOR_UX.md`:
 
 - refactor the binary incomplete-biome early return into one progressive
   evaluation carrying a semantic authoring frontier and maximum truthful
@@ -1432,19 +1493,11 @@ contract in `CONTEXTUAL_EDITOR_UX.md`:
   compound reward interaction;
 - preserve selected invalid values and unavailable upstream context without
   automatic repair;
-- close the F/G/H/I interaction, accessibility, and responsiveness fixtures.
+- close the F/G/H/I/N interaction, accessibility, and responsiveness fixtures.
 
 This insertion changes selection guidance, not frontier topology or commands.
 The existing frontier actions remain until every biome supplies concrete
 editor evidence for the later cross-biome review.
-
-### N Planning Boundary
-
-N does not inherit the consolidated linear-biome commit shape. `HubBiome`
-requires its own authored plan, canonical materializer, ordered visit/return
-history, side-room model, candidate surface, and editor projector. Define N's
-concrete slices immediately before implementation. N must activate before any
-later Surface biome because application route prefixes remain contiguous.
 
 ### O Delivery Slices
 

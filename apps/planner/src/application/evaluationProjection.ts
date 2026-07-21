@@ -34,6 +34,14 @@ const findingCopy = {
     title: 'Continue this route',
     description: 'Add another decision or finish the biome at Preboss.',
   },
+  hubOpenSetIncomplete: {
+    title: 'Complete the open Hub set',
+    description: 'Select nine or ten fixed Ephyra slots for the persistent Hub board.',
+  },
+  hubVisitOrderIncomplete: {
+    title: 'Complete the Hub visit order',
+    description: 'Choose six distinct open pylon rooms in player entry order.',
+  },
   pickedShopStateMissing: {
     title: 'Configure the entered shop',
     description: 'The selected shop needs its complete inventory before simulation can continue.',
@@ -206,6 +214,16 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Room reward`;
     case 'localReward':
       return `${biomeLabel} · Local reward ${origin.slotKey}`;
+    case 'localChild':
+      return `${biomeLabel} · Local room ${origin.slotKey}`;
+    case 'localChildGroup':
+      return `${biomeLabel} · Local room order`;
+    case 'hubOpenSet':
+      return `${biomeLabel} · Open Hub rooms`;
+    case 'hubSlot':
+      return `${biomeLabel} · Hub room`;
+    case 'hubVisit':
+      return `${biomeLabel} · Visit ${origin.visitIndex}`;
     case 'occurrence':
       return `${biomeLabel} · Room`;
     case 'shopOffer':

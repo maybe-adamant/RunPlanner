@@ -454,7 +454,7 @@ The common component must support:
 5. resolved-store-aware reward domains;
 6. peer-aware and counted-bag-aware reward presentation;
 7. compact compound reward picker;
-8. complete F/G/H/I interaction, accessibility, and responsiveness closure.
+8. complete F/G/H/I/N interaction, accessibility, and responsiveness closure.
 
 Each slice should leave the existing product loop usable. Frontier actions do
 not change in these slices.
@@ -469,7 +469,9 @@ This work closes when:
   reward selectors;
 - G/H/I receive no contextual claim until every prior biome is complete and
   valid;
-- F/G/H/I room pickers show only context-supported ordinary choices while
+- N receives no contextual claim unless it is the active configured Surface
+  prefix biome;
+- F/G/H/I/N room pickers show only context-supported ordinary choices while
   retaining selected invalid rooms;
 - every room exclusion can be explained from typed game evidence;
 - zero- and one-candidate room categories require no redundant selection;

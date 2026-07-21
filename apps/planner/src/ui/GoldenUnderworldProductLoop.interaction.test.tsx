@@ -998,7 +998,10 @@ describe('golden Underworld product loop', () => {
       (route) => route.routeKey === 'Underworld',
     );
     const g = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
-    expect(g?.topology?.continuations.at(-1)).toMatchObject({
+    if (g?.kind !== 'LinearBiome') {
+      throw new Error('maximum-width fixture lost its G plan');
+    }
+    expect(g.topology?.continuations.at(-1)).toMatchObject({
       kind: 'terminal',
       pickedExitIndex: 3,
     });
@@ -1058,7 +1061,7 @@ describe('golden Underworld product loop', () => {
     ]);
     const underworld = authored.routes.find((route) => route.routeKey === 'Underworld');
     const gPlan = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
-    if (gPlan?.topology === null || gPlan?.topology === undefined) {
+    if (gPlan?.kind !== 'LinearBiome' || gPlan.topology === null) {
       throw new Error('Golden G topology is missing from its authored project');
     }
     const text = document.body.textContent ?? '';
@@ -1090,7 +1093,7 @@ describe('golden Underworld product loop', () => {
     expect(screen.getByRole('status', { name: 'Profile status: Unsaved' })).toBeTruthy();
 
     const hPlan = underworld?.biomes.find((biome) => biome.biomeKey === 'H');
-    if (hPlan?.topology === null || hPlan?.topology === undefined) {
+    if (hPlan?.kind !== 'LinearBiome' || hPlan.topology === null) {
       throw new Error('Golden H topology is missing from its authored project');
     }
     await view.user.click(screen.getByRole('button', { name: 'Fields of Mourning' }));
@@ -1136,7 +1139,7 @@ describe('golden Underworld product loop', () => {
     expect(currentProject(application)).toEqual(authored);
 
     const iPlan = underworld?.biomes.find((biome) => biome.biomeKey === 'I');
-    if (iPlan?.topology === null || iPlan?.topology === undefined) {
+    if (iPlan?.kind !== 'LinearBiome' || iPlan.topology === null) {
       throw new Error('Golden I topology is missing from its authored project');
     }
     await view.user.click(screen.getByRole('button', { name: 'Tartarus' }));

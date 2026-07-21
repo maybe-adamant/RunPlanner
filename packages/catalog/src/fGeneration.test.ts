@@ -55,7 +55,7 @@ const baselineBatches: readonly BatchSpec[] = [
 
 function fPlan(project: ProjectDocument): LinearBiomePlan {
   const plan = project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
-  if (plan?.biomeKey !== 'F') {
+  if (plan?.kind !== 'LinearBiome' || plan.biomeKey !== 'F') {
     throw new Error('missing F possibility fixture plan');
   }
   return plan;

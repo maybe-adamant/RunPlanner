@@ -398,6 +398,27 @@ accessibility, and responsive projections. A separate fixture retains authored
 I state while an incomplete H prefix blocks simulation and reports unavailable
 candidate context. P/Q/O/N remain dormant.
 
+Phase 6 N Slice 1 is complete. Schema version 5 adds the exact `HubBiomePlan`
+union and normalized persistent-Hub topology without changing the active
+product capability matrix. The project codec and route-prefix initializer now
+admit N's fixed authored Opening, PreHub, and Preboss leaves, catalog-fixed
+open-slot occurrences, and a separate ordered visit sequence. Semantic
+commands create and clear the Hub topology, open and close fixed slots,
+append/replace/destructively truncate visits, atomically replace side-room
+entry order, and replace generation, incoming reward, side reward, and
+Preboss-shop leaves without exposing fixed room replacement. Closing a visited
+slot fails until its visit is replaced or removed, while ordinary visit
+replacement retains every room leaf.
+
+Hub completeness requires a nine-or-ten-member open set and six distinct open
+visits after the structural codec has closed fixed identity, occurrence
+ownership, capacity, and parent-local side-state contracts. Focused fixtures
+cover schema rejection, deterministic JSON normalization, fixed defaults,
+partial and complete Hub plans, visit retention, side generation and order,
+leaf replacement, malformed fixed identity, duplicate visits, and unreferenced
+occurrences. N remains non-simulatable, non-editable, absent from Surface
+navigation, and rejected by application profile capabilities.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1100,15 +1121,17 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices and
-all five I slices are complete. The contextual-selection UX insertion defined
-in `CONTEXTUAL_EDITOR_UX.md` is next; N remains the next controlled biome
-expansion after that insertion closes.
+Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
+five I slices, and N Slice 1 are complete. N Slice 2, canonical Hub
+materialization, is next. N will close the second topology family's complete
+product loop before the contextual-selection UX insertion defined in
+`CONTEXTUAL_EDITOR_UX.md`.
 
-That insertion begins by replacing the current incomplete-biome early return
-with the progressive evaluation contract in `SIMULATION_AND_VALIDATION.md`.
-Production does not yet publish prefix materialization, prefix history state,
-or contextual candidates before biome completion.
+After N activates, that insertion begins by replacing the current incomplete-
+biome early return with the progressive evaluation contract in
+`SIMULATION_AND_VALIDATION.md`. Production does not yet publish prefix
+materialization, prefix history state, or contextual candidates before biome
+completion.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

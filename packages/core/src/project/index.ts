@@ -19,6 +19,11 @@ export {
   createFixedEntryRoomAddress,
   createFixedEntryTargetAddress,
   createIncomingRewardAddress,
+  createHubSlotAddress,
+  createHubOpenSetAddress,
+  createHubVisitAddress,
+  createLocalChildAddress,
+  createLocalChildGroupAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -39,6 +44,11 @@ export {
   type FixedEntryRoomAddress,
   type FixedEntryTargetAddress,
   type IncomingRewardAddress,
+  type HubSlotAddress,
+  type HubOpenSetAddress,
+  type HubVisitAddress,
+  type LocalChildAddress,
+  type LocalChildGroupAddress,
   type LocalRewardAddress,
   type OccurrenceAddress,
   type PickedAddress,
@@ -56,6 +66,7 @@ export {
   ProjectCommandContractError,
 } from './commands';
 export { decodeLinearBiomeTopology } from './linearTopology';
+export { decodeHubBiomeTopology } from './hubTopology';
 export { createDefaultBatchState, decodeBatchState } from './batchState';
 export {
   applyProjectHistoryCommand,
@@ -77,6 +88,10 @@ export {
   type BatchRewardStoreState,
   type FieldsCageBatchState,
   type FieldsCombatState,
+  type FixedAuthoredRoomReference,
+  type HubBiomePlan,
+  type HubBiomeTopology,
+  type HubTargetReference,
   type EphyraCombatState,
   type EphyraSideRoomState,
   type SideRoomGeneration,
