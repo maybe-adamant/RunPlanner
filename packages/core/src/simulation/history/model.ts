@@ -32,7 +32,8 @@ export interface FieldsBatchOutcomeHistoryEvent extends LinearHistoryEventBase {
   readonly origin: ContinuationAddress;
   readonly cageOutcome: 'min' | 'max';
   readonly batchCapacity: number;
-  readonly activeCageCount: number;
+  readonly cageTargetCount: number;
+  readonly doorCageRewardCount: number;
 }
 
 export interface ClockworkBatchStateHistoryEvent extends LinearHistoryEventBase {

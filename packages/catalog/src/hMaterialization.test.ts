@@ -2,6 +2,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createContinuationAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
   createProjectDocument,
@@ -167,25 +168,29 @@ describe('canonical H Fields materialization', () => {
         kind: 'fields',
         cageOutcome: 'min',
         batchCapacity: 3,
-        activeCageCount: 2,
+        cageTargetCount: 1,
+        doorCageRewardCount: 2,
       },
       {
         kind: 'fields',
         cageOutcome: 'max',
         batchCapacity: 2,
-        activeCageCount: 2,
+        cageTargetCount: 2,
+        doorCageRewardCount: 2,
       },
       {
         kind: 'fields',
         cageOutcome: 'max',
         batchCapacity: 3,
-        activeCageCount: 3,
+        cageTargetCount: 0,
+        doorCageRewardCount: 3,
       },
       {
         kind: 'fields',
         cageOutcome: 'min',
         batchCapacity: 3,
-        activeCageCount: 2,
+        cageTargetCount: 2,
+        doorCageRewardCount: 2,
       },
     ]);
     const topology = plan(project).topology;
@@ -249,7 +254,8 @@ describe('canonical H Fields materialization', () => {
       kind: 'fields',
       cageOutcome: 'max',
       batchCapacity: 3,
-      activeCageCount: 3,
+      cageTargetCount: 2,
+      doorCageRewardCount: 3,
     });
     expect(maxCombat).toMatchObject({
       gameName: 'H_Combat05',
@@ -264,6 +270,50 @@ describe('canonical H Fields materialization', () => {
     expect(semanticAddressKey(maxCombat!.localRewards![2]!.origin)).toBe(
       '["localReward","Underworld","H","h-materialized-combat05","cages","cage3"]',
     );
+  });
+
+  it('retains the door roll for all-special and mixed target batches', () => {
+    const specialOnly = applyProjectCommand(completeProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, createOccurrenceId('h-materialized-bridge')),
+      gameName: 'H_MiniBoss02',
+    });
+    const specialTopology = plan(specialOnly).topology;
+    if (specialTopology === null) {
+      throw new Error('all-special Fields fixture lost its topology');
+    }
+    const specialBatch = specialTopology.continuations[2];
+    if (specialBatch?.kind !== 'batch') {
+      throw new Error('all-special Fields fixture lost its third batch');
+    }
+    expect(projectLinearBatchState(catalog, biome, specialTopology, specialBatch)).toEqual({
+      kind: 'fields',
+      cageOutcome: 'max',
+      batchCapacity: 3,
+      cageTargetCount: 0,
+      doorCageRewardCount: 3,
+    });
+
+    const mixed = applyProjectCommand(completeProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, createOccurrenceId('h-materialized-bridge')),
+      gameName: 'H_Combat05',
+    });
+    const mixedTopology = plan(mixed).topology;
+    if (mixedTopology === null) {
+      throw new Error('mixed Fields fixture lost its topology');
+    }
+    const mixedBatch = mixedTopology.continuations[2];
+    if (mixedBatch?.kind !== 'batch') {
+      throw new Error('mixed Fields fixture lost its third batch');
+    }
+    expect(projectLinearBatchState(catalog, biome, mixedTopology, mixedBatch)).toEqual({
+      kind: 'fields',
+      cageOutcome: 'max',
+      batchCapacity: 3,
+      cageTargetCount: 1,
+      doorCageRewardCount: 3,
+    });
   });
 
   it('materializes the fixed entry, forked terminal, and H completion tail only once', () => {

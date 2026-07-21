@@ -258,9 +258,12 @@ but possible outcomes.
 
 An H ordinary batch has no Reward Pool selector because its observable rewards
 use declaration-owned RunProgress bindings. It instead renders one batch-owned
-Fields cage outcome selector with Min and Max semantic values. The view may
-show the derived active cage count and current two-Max ceiling as read-only
-context, but it persists neither. Each combat occurrence renders its three
+Fields door-roll selector with Min and Max semantic values. The view shows the
+derived per-door cage count and current two-Max ceiling as read-only context,
+but persists neither. A special-only batch keeps the selector visible because
+a Max result still affects later rolls, while explanatory copy makes clear that
+the current targets do not consume the Fields multi-cage count. Each combat
+occurrence renders its three
 room-owned cage values; the batch projection marks only the derived active
 prefix as participating and leaves a dormant third value retained. A
 non-combat target renders no cage editor, and deferred

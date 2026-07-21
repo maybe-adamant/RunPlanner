@@ -1104,7 +1104,7 @@ describe('golden Underworld product loop', () => {
       expect(hText).not.toContain(occurrence.gameName);
       expect(hText).not.toContain(occurrence.occurrenceId);
     }
-    const fieldsOutcomes = screen.getAllByLabelText('Fields cage outcome');
+    const fieldsOutcomes = screen.getAllByLabelText('Fields door roll');
     expect(fieldsOutcomes).toHaveLength(4);
     expect(
       fieldsOutcomes.every(
@@ -1123,11 +1123,11 @@ describe('golden Underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toEqual(authored);
 
-    await view.user.selectOptions(screen.getAllByLabelText('Fields cage outcome')[3]!, 'max');
+    await view.user.selectOptions(screen.getAllByLabelText('Fields door roll')[3]!, 'max');
     expect(currentEvaluation(application).status).toBe('invalid');
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     await view.user.click(
-      screen.getByRole('button', { name: /Fields cage outcome cannot occur here/ }),
+      screen.getByRole('button', { name: /Fields door roll cannot occur here/ }),
     );
     expect(
       screen.getByRole('button', { name: 'Fields of Mourning' }).getAttribute('aria-current'),

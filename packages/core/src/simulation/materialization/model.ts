@@ -143,7 +143,8 @@ export type CanonicalBatchState =
       readonly kind: 'fields';
       readonly cageOutcome: 'min' | 'max';
       readonly batchCapacity: number;
-      readonly activeCageCount: number;
+      readonly cageTargetCount: number;
+      readonly doorCageRewardCount: number;
     };
 
 export interface CanonicalBatch {

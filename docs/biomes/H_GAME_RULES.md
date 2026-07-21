@@ -232,14 +232,15 @@ batchCapacity = 3
 for each generated H combat target:
     batchCapacity = min(batchCapacity, target.maxCageRewards)
 
-min -> active cage count = 2
-max -> active cage count = batchCapacity
+min -> doorCageRewardCount = 2
+max -> doorCageRewardCount = batchCapacity
 ```
 
-Every combat occurrence in that peer batch receives the same active cage
-count. Non-combat occurrences receive no active cage slots. A batch containing
-no combat target still owns a semantic outcome because a Max outcome can update
-the shared ceiling and affect a later ordinary batch.
+`cageTargetCount` records how many offered rooms can consume that per-door
+count. Every combat occurrence in the peer batch materializes that many active
+cages; non-combat occurrences materialize none. A batch containing no combat
+target therefore has `cageTargetCount = 0` but still owns a semantic outcome
+because a Max result updates the shared ceiling and can affect a later batch.
 
 The semantic outcome cannot be reconstructed from visible cage count. When
 `batchCapacity = 2`, both Min and Max visibly activate two slots, but only Max
@@ -442,7 +443,7 @@ Canonical H history preserves:
 - one non-counting fixed `H_Intro` appearance;
 - one creation event per physical target occurrence, including repeated combat
   identities and unpicked peers;
-- one semantic Fields cage outcome per ordinary generated batch;
+- one semantic Fields door-roll outcome per ordinary generated batch;
 - one `fieldsMaxDoorsRolled` increment per supported Max outcome, including
   capacity-two and no-combat ordinary batches;
 - one RunProgress offer per active cage slot of every generated combat target;
@@ -521,12 +522,12 @@ Fields outcome command retains every target, cage value, and downstream
 continuation. Linear completeness accepts that closed authored form.
 
 Canonical materialization derives batch capacity in physical target order,
-retains the semantic outcome even for no-combat and capacity-two Max batches,
-and exposes only the active two- or three-slot local-reward prefix on each
-combat target. It selects the matching concrete Fields encounter profile and
-materializes the fixed intro, both terminal realizations, neutral boss, and
-postboss without mutating authored cage state. The terminal transition owns no
-synthetic Fields outcome.
+records the number of cage-capable targets, and retains the selected per-door
+cage count even for no-combat and capacity-two Max batches. Only combat targets
+expose the active two- or three-slot local-reward prefix. It selects the
+matching concrete Fields encounter profile and materializes the fixed intro,
+both terminal realizations, neutral boss, and postboss without mutating
+authored cage state. The terminal transition owns no synthetic Fields outcome.
 
 Route history composes that snapshot only after validated G history. Every
 ordinary batch emits its semantic Fields outcome before target creation, so

@@ -805,6 +805,14 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+.fields-batch-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #aaa5af;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .local-reward-editor {
   display: grid;
   gap: 8px;
