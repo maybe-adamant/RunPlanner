@@ -118,13 +118,19 @@ describe('planner history interaction', () => {
     const underworld = screen.getByRole('button', { name: 'Underworld' });
     underworld.focus();
     await user.keyboard(' ');
-    await user.selectOptions(screen.getByLabelText('Configured biomes'), '2');
+    await user.selectOptions(screen.getByLabelText('Configured biomes'), '4');
 
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
     oceanus.focus();
     await user.keyboard('{Enter}');
     expect(application.store.getState().editorSession.activeUnderworldPanel).toBe('G');
     expect(oceanus.getAttribute('aria-current')).toBe('page');
+
+    const tartarus = screen.getByRole('button', { name: 'Tartarus' });
+    tartarus.focus();
+    await user.keyboard(' ');
+    expect(application.store.getState().editorSession.activeUnderworldPanel).toBe('I');
+    expect(tartarus.getAttribute('aria-current')).toBe('page');
 
     const route = screen.getByRole('button', { name: 'Route' });
     route.focus();

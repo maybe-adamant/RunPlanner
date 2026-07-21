@@ -197,6 +197,20 @@ describe('I editor projection', () => {
     });
     expect(screen.getByRole('heading', { name: 'Doors from Hades' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Go to Preboss' })).toBeNull();
+    const firstDecision = screen
+      .getByRole('heading', { name: 'Doors from Hades' })
+      .closest('.decision-card');
+    if (firstDecision === null) {
+      throw new Error('first Clockwork decision card is missing');
+    }
+    const type = within(firstDecision as HTMLElement).getByLabelText('Type');
+    expect(within(type).getByRole('option', { name: 'Preboss' })).toBeTruthy();
+    await user.selectOptions(type, 'Preboss');
+    expect(
+      within(within(firstDecision as HTMLElement).getByLabelText('Room')).getByRole('option', {
+        name: /Preboss/,
+      }),
+    ).toHaveProperty('value', 'I_PreBoss02');
   });
 
   it('derives Goal markers while retaining editable NonGoal reward leaves', () => {

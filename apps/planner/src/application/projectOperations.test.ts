@@ -1,9 +1,4 @@
-import { catalog } from '@run-planner/catalog';
-import {
-  createProjectDocument,
-  createRouteAddress,
-  encodeProjectDocument,
-} from '@run-planner/core';
+import { createRouteAddress, encodeProjectDocument } from '@run-planner/core';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from './createApplication';
@@ -181,7 +176,7 @@ describe('project profile operations', () => {
     expect(failing.store.getState()).toBe(failingState);
   });
 
-  it('rejects malformed or non-authorable profiles atomically', async () => {
+  it('rejects malformed profiles atomically', async () => {
     const profile = createProfileFixture();
     const application = createApplication({ profileFile: profile.adapter });
     configureF(application);
@@ -194,17 +189,6 @@ describe('project profile operations', () => {
       status: 'failure',
       message: 'Load Profile failed: $: must be valid JSON',
     });
-    expect(application.store.getState()).toBe(state);
-
-    const dormantProject = createProjectDocument(catalog, {
-      projectId: 'dormant',
-      name: 'Dormant',
-      configuredBiomeCounts: { Underworld: 4 },
-    });
-    profile.setLoadJson(encodeProjectDocument(dormantProject));
-    const loadResult = await application.projectOperations.loadProfile();
-    expect(loadResult.status).toBe('failure');
-    expect(loadResult.message).toContain('I is not authorable');
     expect(application.store.getState()).toBe(state);
   });
 });

@@ -233,7 +233,7 @@ is separately deferred until concrete NPC gifts and trait state exist.
 | I preboss shop             | ported   | `RoomDataI.lua`, `StoreData.lua`, `biomes/I_GAME_RULES.md`                          | Shop-only `I_PreBoss02` materializes `I_WorldShop` only on entry; its Goal marker remains structural with no free-reward mode.                        |
 | I fixed completion tail    | ported   | `RoomDataI.lua`, boss encounter data, `biomes/I_GAME_RULES.md`                      | Neutral `I_Boss01` and `I_PostBoss01` complete the route without automatic boss rewards or dead ledger state.                                         |
 | I progression/NPC variants | deferred | I encounter sets and persistent requirements                                        | Suppress first-visit, dream, Nemesis, and restored-house variants under the documented progressed NPC-free baseline.                                  |
-| I application activation   | deferred | `biomes/I_GAME_RULES.md`                                                            | Keep I outside editor, navigation, profile, and application simulation capabilities until the full I product loop is implemented.                     |
+| I application activation   | ported   | `biomes/I_GAME_RULES.md`, F/G/H/I product-loop fixture                              | I is authorable, simulatable, editable, profile-safe, recoverable, and route-validated after a complete F/G/H prefix.                                 |
 
 ## N Migration
 
@@ -300,9 +300,9 @@ rooms belong to each biome layout; `Next` is derived only from route order.
 | Surface    | Q     | `LinearBiome` | 23 (22)          | staged / standard       | none                                 | direct              | `Q_Boss01`                 | --   |
 
 The core simulation matrix and application capability matrix now include F, G,
-and H as authorable, simulatable, and editable through one shared linear-biome
-editor. Complete F/G/H prefixes enter profiles, recovery, simulator dispatch,
-candidate scope, and editor navigation together. P/Q/O/I/N remain
+H, and I as authorable, simulatable, and editable through one shared linear-biome
+editor. Complete F/G/H/I prefixes enter profiles, recovery, simulator dispatch,
+candidate scope, and editor navigation together. P/Q/O/N remain
 declaration-only.
 
 The following remaining dispositions are deliberate and exhaustive at this
@@ -314,12 +314,12 @@ boundary; each biome rule document owns its exact room-level instances:
   counter, reward, or history distinction.
 - **Deferred:** persistent NPC entities, Chaos and other structural detours,
   optional interactions, concrete boon/trait identities, affordability, and
-  the remaining P/Q/O/I/N history, candidate, validation, and feedback
+  the remaining P/Q/O/N history, candidate, validation, and feedback
   consumers remain additive future work.
 - **Excluded:** external save/profile predicates, inaccessible or debug-only
   rooms, noncanonical difficulty variants, and automatic boss drops without a
   modeled downstream consumer do not enter production declarations.
-- **Dormant:** P/Q/O/I/N have complete declarations but no connected authored
+- **Dormant:** P/Q/O/N have complete declarations but no connected authored
   topology, materializer, simulator dispatch, semantic findings, or editor
   panel.
 

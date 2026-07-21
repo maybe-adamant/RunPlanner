@@ -2,7 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { SemanticAddress } from '@run-planner/core';
 
 export type PlannerSection = 'underworld' | 'surface' | 'settings';
-export type UnderworldPanel = 'route' | 'F' | 'G' | 'H';
+export type UnderworldPanel = 'route' | 'F' | 'G' | 'H' | 'I';
 
 export interface FindingSelection {
   readonly key: string;
@@ -54,7 +54,8 @@ const editorSessionSlice = createSlice({
           action.payload.origin.kind !== 'route' &&
           (action.payload.origin.biomeKey === 'F' ||
             action.payload.origin.biomeKey === 'G' ||
-            action.payload.origin.biomeKey === 'H')
+            action.payload.origin.biomeKey === 'H' ||
+            action.payload.origin.biomeKey === 'I')
             ? action.payload.origin.biomeKey
             : 'route';
         return;

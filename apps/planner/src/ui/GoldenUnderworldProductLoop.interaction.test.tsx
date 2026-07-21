@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createBiomeFieldAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
@@ -555,6 +556,69 @@ function createGoldenFGHProject(catalog: Catalog): ProjectDocument {
   return appendGoldenTerminal(project, catalog, 'H', combat05, 'H_Combat05');
 }
 
+function createGoldenFGHIProject(catalog: Catalog): ProjectDocument {
+  const biome = createBiomeAddress('Underworld', 'I');
+  let project = applyProjectCommand(createGoldenFGHProject(catalog), catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Underworld'),
+    configuredBiomeCount: 4,
+  });
+  let parent: OccurrenceId | null = null;
+  const batches = [
+    { targets: ['I_Combat01'] },
+    { targets: ['I_Combat02', 'I_Combat03'] },
+    { targets: ['I_Combat05'] },
+    { targets: ['I_Combat06'] },
+    { targets: ['I_Combat09'] },
+  ] as const;
+  for (const [batchIndex, batch] of batches.entries()) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, parent),
+    });
+    for (const [targetIndex, gameName] of batch.targets.entries()) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(biome, parent, targetIndex + 1),
+        occurrenceId: createOccurrenceId(
+          targetIndex === 0
+            ? `phase-6-i-goal-${batchIndex + 1}`
+            : `phase-6-i-peer-${batchIndex + 1}-${targetIndex + 1}`,
+        ),
+        gameName,
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(biome, parent),
+      exitIndex: 1,
+    });
+    parent = createOccurrenceId(`phase-6-i-goal-${batchIndex + 1}`);
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    continuation: createContinuationAddress(biome, parent),
+  });
+  const preboss = createOccurrenceId('phase-6-i-preboss');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, parent, 1),
+    occurrenceId: preboss,
+    gameName: 'I_PreBoss02',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, parent, 2),
+    occurrenceId: createOccurrenceId('phase-6-i-terminal-peer'),
+    gameName: 'I_MiniBoss01',
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'SetPicked',
+    picked: createPickedAddress(biome, parent),
+    exitIndex: 1,
+  });
+}
+
 function createPersistence(): {
   readonly profileFile: ProfileFileAdapter;
   readStoredJson(): string | null;
@@ -836,6 +900,37 @@ describe('golden Underworld product loop', () => {
     ).toBe(true);
   });
 
+  it('keeps authored I visible while an incomplete H prefix blocks its simulation', async () => {
+    const application = createApplication();
+    const project = applyProjectCommand(
+      createGoldenFGHIProject(application.catalog),
+      application.catalog,
+      {
+        kind: 'RemoveBatch',
+        continuation: createContinuationAddress(
+          createBiomeAddress('Underworld', 'H'),
+          createOccurrenceId('phase-6-h-miniboss'),
+        ),
+      },
+    );
+    application.store.dispatch(authoredProjectReplaced(project));
+    const { user } = renderPlannerForInteraction({ application });
+
+    await user.click(screen.getByRole('button', { name: 'Tartarus' }));
+
+    expect(screen.getByText('Blocked', { selector: '.status-badge' })).toBeTruthy();
+    expect(screen.getByLabelText('Maximum NonGoal rewards')).toHaveProperty('value', '3');
+    expect(
+      screen.getByLabelText('Maximum NonGoal rewards').getAttribute('data-candidate-support'),
+    ).toBe('unavailable');
+    expect(currentEvaluation(application).routes[0]?.horizon).toEqual({
+      kind: 'incomplete',
+      biomeKey: 'H',
+      blockedBiomeKeys: ['I'],
+    });
+    expect(currentProject(application)).toBe(project);
+  });
+
   it('navigates, authors, undoes, and redoes G after a validated F prefix', async () => {
     const application = createApplication();
     const { user } = renderPlannerForInteraction({ application });
@@ -910,7 +1005,7 @@ describe('golden Underworld product loop', () => {
     expect(currentEvaluation(application).status).toBe('valid');
   }, 30_000);
 
-  it('closes the complete F/G/H browser loop with profiles, recovery, accessibility, and responsive projections', async () => {
+  it('closes the complete F/G/H/I browser loop with profiles, recovery, accessibility, and responsive projections', async () => {
     stubScrollIntoView();
     const persistence = createPersistence();
     const recovery = createRecoveryPersistence();
@@ -920,7 +1015,7 @@ describe('golden Underworld product loop', () => {
       profileFile: persistence.profileFile,
     });
     application.store.dispatch(
-      authoredProjectReplaced(createGoldenFGHProject(application.catalog)),
+      authoredProjectReplaced(createGoldenFGHIProject(application.catalog)),
     );
     const view = renderPlannerForInteraction({ application });
 
@@ -931,12 +1026,12 @@ describe('golden Underworld product loop', () => {
     expect(evaluated.status).toBe('valid');
     expect(evaluated.findings).toEqual([]);
     expect(evaluated.summary).toMatchObject({
-      configuredBiomeCount: 3,
-      evaluatedBiomeCount: 3,
-      validatedBiomeCount: 3,
+      configuredBiomeCount: 4,
+      evaluatedBiomeCount: 4,
+      validatedBiomeCount: 4,
       eligibleForExecutionPlan: true,
     });
-    expect(evaluated.routes[0]?.validatedPrefix).toEqual(['F', 'G', 'H']);
+    expect(evaluated.routes[0]?.validatedPrefix).toEqual(['F', 'G', 'H', 'I']);
     const gEvaluation = evaluated.routes[0]?.biomes[1];
     if (gEvaluation?.completion !== 'complete') {
       throw new Error('Golden G browser project did not produce a complete evaluation');
@@ -952,6 +1047,14 @@ describe('golden Underworld product loop', () => {
     expect(hEvaluation.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
       'H_Boss01',
       'H_PostBoss01',
+    ]);
+    const iEvaluation = evaluated.routes[0]?.biomes[3];
+    if (iEvaluation?.completion !== 'complete') {
+      throw new Error('Golden I browser project did not produce a complete evaluation');
+    }
+    expect(iEvaluation.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
+      'I_Boss01',
+      'I_PostBoss01',
     ]);
     const underworld = authored.routes.find((route) => route.routeKey === 'Underworld');
     const gPlan = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
@@ -1032,6 +1135,49 @@ describe('golden Underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toEqual(authored);
 
+    const iPlan = underworld?.biomes.find((biome) => biome.biomeKey === 'I');
+    if (iPlan?.topology === null || iPlan?.topology === undefined) {
+      throw new Error('Golden I topology is missing from its authored project');
+    }
+    await view.user.click(screen.getByRole('button', { name: 'Tartarus' }));
+    const iText = document.body.textContent ?? '';
+    for (const occurrence of iPlan.topology.occurrences) {
+      const room = application.catalog.rooms.byKey[occurrence.gameName];
+      if (room === undefined) {
+        throw new Error(`Golden I room ${occurrence.gameName} is missing from the catalog`);
+      }
+      expect(iText).toContain(room.label);
+      expect(iText).not.toContain(occurrence.gameName);
+      expect(iText).not.toContain(occurrence.occurrenceId);
+    }
+    expect(screen.getByLabelText('Maximum NonGoal rewards')).toHaveProperty('value', '3');
+    expect(
+      screen.getByLabelText('Maximum NonGoal rewards').getAttribute('data-candidate-support'),
+    ).not.toBe('unavailable');
+    expect(screen.getAllByText('Clockwork Goal')).toHaveLength(5);
+    expect(screen.getByText('Offer 1')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Go to Preboss' })).toBeNull();
+    assertAccessibleControlSurface();
+
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'I'),
+          createOccurrenceId('phase-6-i-terminal-peer'),
+        ),
+        gameName: 'I_PreBoss02',
+      }),
+    );
+    expect(currentEvaluation(application).status).toBe('invalid');
+    await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
+    await view.user.click(screen.getByRole('button', { name: /Room cannot appear here/ }));
+    expect(screen.getByRole('button', { name: 'Tartarus' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(currentProject(application)).toEqual(authored);
+
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
 
     const firstExit = exitRow(1, 1);
@@ -1063,6 +1209,17 @@ describe('golden Underworld product loop', () => {
     expect(projectedHOutcomes).toHaveLength(2);
     expect(
       projectedHOutcomes.every((candidate) => candidate.evaluation.context === 'evaluated'),
+    ).toBe(true);
+    const iCandidateStarted = performance.now();
+    const projectedIFields = candidateProjection.biomeFields(
+      authored,
+      createBiomeFieldAddress(createBiomeAddress('Underworld', 'I'), 'maxNonGoalRewards'),
+      [3, 4, 5, 6],
+    );
+    const iCandidateDurationMs = performance.now() - iCandidateStarted;
+    expect(projectedIFields).toHaveLength(4);
+    expect(
+      projectedIFields.every((candidate) => candidate.evaluation.context === 'evaluated'),
     ).toBe(true);
     const firstGContinuation = gPlan.topology.continuations[0];
     if (firstGContinuation?.kind !== 'batch') {
@@ -1115,6 +1272,10 @@ describe('golden Underworld product loop', () => {
     expect(
       hCandidateDurationMs,
       `cold H candidate projection took ${hCandidateDurationMs.toFixed(1)} ms`,
+    ).toBeLessThan(750);
+    expect(
+      iCandidateDurationMs,
+      `cold I candidate projection took ${iCandidateDurationMs.toFixed(1)} ms`,
     ).toBeLessThan(750);
     expect(
       representativeEditDurationMs,

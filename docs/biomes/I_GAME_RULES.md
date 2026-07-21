@@ -16,10 +16,10 @@ target can either continue the biome or enter its terminal. That semantic
 outcome is derived from the picked Room Declaration, not persisted as a second
 mode value.
 
-I declarations, focused parity fixtures, dormant authored topology, canonical
+I declarations, focused parity fixtures, authored topology, canonical
 materialization, lifecycle history, selected validation, and candidate
-evaluation are ported. I intentionally remains outside editor projection and
-application capabilities until its complete product loop is implemented.
+evaluation are ported. Its complete editor, navigation, profile, recovery, and
+browser interaction loop is active in production application capabilities.
 
 ## Evidence Status
 
@@ -455,7 +455,7 @@ production `unsupported` predicates or dormant validation codes.
 
 ## Declaration-Port Contract
 
-The dormant I import delivers:
+The I implementation delivers:
 
 1. the derived fixed `I_Intro -> I_Story01` entry sequence with real canonical
    creation, offer, and entry facts;
@@ -478,18 +478,18 @@ The dormant I import delivers:
     `unsupported` requirements.
 
 The declaration import, authored topology, canonical/history projection,
-selected validation, candidates, and editor projection remain dormant behind
-the application capability boundary. Schema version 4 persists
+selected validation, candidates, and editor projection are active through the
+application capability boundary. Schema version 4 persists
 `maxNonGoalRewards`, attaches the first batch to the final fixed entry without
 a fake occurrence, admits repeated generated preboss targets, and requires
 complete WorldShop state only on the picked preboss. Materialization and the
 editor share one offer-time Goal/NonGoal projection; history advances only
-entered producers. Production navigation, profiles, and activation remain for
-the final I slice.
+entered producers. Production navigation, profiles, recovery, and the complete
+F/G/H/I product loop are covered by the final activation fixture.
 
 ## Required Fixtures
 
-Before I activation, focused fixtures must prove:
+I's focused and product-loop fixtures prove:
 
 - the forced `I_Intro -> I_Story01` progressed-save entry;
 - one- and two-exit combat batches before Goal completion;

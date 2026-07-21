@@ -34,7 +34,7 @@ conditional-terminal, and persistent-hub pressure tests.
 Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected linear reward authority, and the authored project/editor use schema
 version 4. All eight biomes close one catalog-wide reference matrix while
-P/Q/O/I/N remain dormant behind the application capability boundary. Phase
+P/Q/O/N remain dormant behind the application capability boundary. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room
@@ -43,15 +43,16 @@ bag, acquisition, and shop orchestration feed the public deterministic
 `simulateProject` composition root. Phase 3 made F simulatable while G remained
 authorable but dormant until its complete product loop landed in Phase 5.
 
-Phase 6 has completed H's full product loop and I's dormant authorship,
-canonical/history, selected-validation/candidate, and editor slices. I now
-persists and edits its bounded Clockwork setting,
+Phase 6 has completed H and I's full product loops. I's authored topology,
+canonical/history, selected-validation/candidate, and editor slices are now
+complete. I persists and edits its bounded Clockwork setting,
 materializes the fixed Intro/Story sequence, derives Goal versus NonGoal in
 physical offer order, advances acquisition counters at entered producer points,
 and represents repeated generated preboss targets without a second terminal
-action. Its dormant editor projects those facts through one decision language,
-including picked-only WorldShop state. I remains outside production navigation,
-profiles, and application capabilities until the activation slice closes.
+action. Its editor projects those facts through one decision language,
+including picked-only WorldShop state. Complete F/G/H/I routes now share
+production navigation, profiles, recovery, simulation, candidates, semantic
+findings, accessibility, and responsive browser interaction.
 
 Phase 4 is complete. The browser editor publishes simulation and semantic
 findings atomically with authored history, supports semantic finding
@@ -80,15 +81,17 @@ responsiveness. The acceptance matrix and browser-only smoke procedure are
 recorded in
 [`docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md`](docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md).
 
-Phase 6 has completed H's full product loop. H is authorable, simulatable, and
-editable alongside F/G; complete F/G/H profiles pass route simulation,
+Phase 6 has completed H and I's full product loops. Both are authorable,
+simulatable, and editable alongside F/G; complete F/G/H/I profiles pass route simulation,
 candidate feedback, recovery, semantic navigation, accessibility, and
 responsiveness fixtures. The shared editor projects fixed-count Fields
 decisions, Min/Max outcomes, active and dormant cage leaves, semantic findings,
-and the forked terminal through existing commands and candidate services.
+the forked Fields terminal, Clockwork Goal/NonGoal roles, repeated generated
+preboss offers, and picked-only WorldShop state through existing commands and
+candidate services.
 Equivalent post-shop witness states merge before crossing biome boundaries,
 preventing proof-only branch multiplication while retaining one ordered
-witness for every distinct downstream state. P/Q/O/I/N remain dormant.
+witness for every distinct downstream state. P/Q/O/N remain dormant.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.
