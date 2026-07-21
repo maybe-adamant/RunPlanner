@@ -297,11 +297,19 @@ interface ProjectEvaluation {
 }
 ```
 
-Complete biome results carry their canonical snapshot, lifecycle history,
-counter ledgers, room-generation proof, reward witnesses, and findings in the
-same object. Incomplete biome results cannot carry those canonical products.
-The UI must never combine history from one authored snapshot with findings or
-candidate decoration from another.
+One route evaluation contains a complete-valid biome prefix, at most one
+progressively evaluated active biome, and a blocked downstream suffix. Only a
+complete and valid biome seeds the next biome. The active biome may carry its
+truthful materialized prefix, lifecycle operations, folded state, counter
+ledgers, generation/reward views, and findings through an addressed coverage
+point.
+
+Complete biome results strengthen that same progressive result with the
+terminal/completion sequence, canonical snapshot, final biome history,
+selected-plan validity, and downstream seed eligibility. Incomplete biome
+results cannot carry those complete-biome products. The UI must never combine
+prefix or final history from one authored snapshot with findings or candidate
+decoration from another.
 
 `empty` identifies a project with no configured biome prefix and no invented
 finding. Ordinary incomplete and invalid plans remain first-class editor states.

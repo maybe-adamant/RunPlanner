@@ -147,24 +147,100 @@ requires it.
 
 Configured biomes process in route order.
 
-For each biome:
+Route evaluation has three ordered regions:
 
-1. Check structural and referenced-leaf completeness.
-2. If incomplete, produce completeness findings and stop semantic processing
-   for that route.
-3. Materialize one canonical biome snapshot.
-4. Append ordered lifecycle events to accumulated route history.
-5. Validate selected facts and evaluate candidates.
-6. If invalid, retain its snapshot and findings but stop before the next
-   biome.
-7. If valid, admit it to the validated prefix and continue.
+```text
+complete-valid biome prefix
+  -> one progressively evaluated active biome
+  -> blocked downstream biome suffix
+```
 
-Later authored biomes remain visible to the editor but are marked as blocked
-by the earlier biome. They do not receive invented local validity against
-history that was never produced.
+Only a complete and valid biome may seed the next biome. The active biome uses
+that exact route-history seed and evaluates the maximum truthful prefix allowed
+by its current authorship. Later authored biomes remain visible and editable,
+but they receive no contextual claim until every predecessor is complete and
+valid.
 
-Biome completion is the materialization gate. An incomplete biome produces no
-canonical snapshot and is not sent through contextual validation.
+For the active biome:
+
+1. check structural contacts and derive the first incomplete semantic owner;
+2. materialize every fully authored entry, decision, target-generation point,
+   picked-room lifecycle, reward offer, and local child before that owner;
+3. fold those operations through the normal history, room-generation, reward,
+   and counter authorities;
+4. publish addressed findings, pre-decision views, and candidate support for
+   every covered owner;
+5. retain the incomplete frontier without inventing terminal or completion
+   facts;
+6. when authorship reaches the declared terminal and completion sequence,
+   strengthen the same result into a complete biome evaluation;
+7. admit a complete valid result to the route prefix, or stop before the next
+   biome when the complete result is invalid.
+
+This is one evaluator and one ordered lifecycle authority. Progressive
+evaluation is not a candidate-only simulator and does not publish a second
+history interpretation.
+
+### Completion and Coverage Axes
+
+Biome authoring completion and evaluation coverage are separate facts:
+
+```ts
+interface ProgressiveBiomeEvaluation {
+  readonly authoring:
+    | { readonly kind: 'incomplete'; readonly frontier: SemanticAddress }
+    | { readonly kind: 'complete' };
+  readonly coverage:
+    | { readonly kind: 'none'; readonly reason: CoverageBlockReason }
+    | {
+        readonly kind: 'prefix';
+        readonly through: BiomeEvaluationPoint;
+        readonly blockedAt?: SemanticAddress;
+      }
+    | { readonly kind: 'complete' };
+}
+```
+
+`BiomeEvaluationPoint` uses a semantic owner and game lifecycle checkpoint,
+not a rendered row or decision index. The editor may translate it to
+`evaluated through Decision 4`, but UI position never becomes simulation
+identity.
+
+An incomplete biome produces no canonical biome snapshot, final biome history,
+completion event, or downstream route seed. It may carry a materialized prefix,
+prefix lifecycle operations, folded history state, generation views, reward
+witnesses, counters, and findings for the owners it actually covered.
+
+A complete biome is the maximal form of that same evaluation. It adds the
+terminal and completion sequence, canonical snapshot, final biome history,
+selected-plan validity, and the ability to seed the next biome when valid.
+
+If a covered selected value has no supporting pre-state, alternatives at that
+owner may still use its last valid pre-decision view for repair. Contextual
+claims after an unsupported upstream state remain unavailable; materialized
+authored structure alone is not evidence of a reachable game state.
+
+### Route Gate
+
+At most one non-validated biome receives progressive contextual evaluation per
+route:
+
+| Route state                      | Contextual evaluation                                           |
+| -------------------------------- | --------------------------------------------------------------- |
+| F incomplete                     | F prefix only; G/H/I blocked                                    |
+| F complete invalid               | F local evaluation and repairs; G/H/I blocked                   |
+| F complete valid, G incomplete   | F seeds G; G prefix evaluated; H/I blocked                      |
+| F/G complete valid, H incomplete | F/G seed H; H prefix evaluated; I blocked                       |
+| F/G/H/I complete and valid       | Complete route is eligible for later execution-plan compilation |
+
+Blocked biome pages may still expose declaration-derived authoring domains.
+They must label contextual state unassessed and must not simulate from defaults
+or hypothetical predecessor completions.
+
+This progressive result is the locked contract for the contextual-selection
+insertion and is not yet the production result shape. Production currently
+returns early with completeness findings when the active biome is incomplete;
+`IMPLEMENTATION_PROGRESS.md` records that replacement as the next work item.
 
 ## Completeness
 
@@ -719,15 +795,21 @@ purchase choices, and policy-owned Fields door-roll outcomes. Preboss uses those
 same incoming-reward and WorldShop addresses rather than a second terminal-only
 candidate vocabulary.
 
-Active F/G/H/I candidate preparation consumes the normal project evaluation;
-there is no candidate-only biome simulator. When upstream history is complete,
-room candidates reuse the biome's exact generation views. H Min/Max candidates
-reuse the addressed pre-outcome support ledger because the proposed value
-cannot change its own prior context. Cage and terminal alternatives apply one
-immutable semantic replacement and replay H through the common linear reward
-authority with the already-evaluated G seed. If normal project simulation
-cannot reach a biome, its candidates report unavailable context rather than
-inventing local history.
+Active F/G/H/I candidate preparation consumes the normal progressive project
+evaluation; there is no candidate-only biome simulator. A candidate is
+assessable when the active biome evaluation covers its exact pre-decision
+point, even when unrelated downstream authorship and the terminal remain
+incomplete. Room candidates reuse the biome's addressed generation views. H
+Min/Max candidates reuse the addressed pre-outcome support ledger because the
+proposed value cannot change its own prior context. Cage and terminal
+alternatives apply one immutable semantic replacement and replay H through the
+common linear reward authority with the already-evaluated G seed.
+
+If a prior biome is not complete and valid, candidates in every later biome
+report unavailable upstream context. If the active biome has not yet covered a
+queried owner because required earlier structure or a supported pre-state is
+missing, that owner reports unavailable local context. Neither case invents
+history from defaults or unauthored futures.
 
 Ordered candidate queries for one authored snapshot may use one prepared
 candidate evaluator, which owns one shared base project simulation. The
@@ -800,7 +882,7 @@ implementation failure rather than correctable user intent.
 
 ## Simulation Result
 
-The implemented result shape is:
+The public project envelope remains:
 
 ```ts
 interface ProjectEvaluation {
@@ -816,9 +898,13 @@ interface ProjectEvaluation {
 Each route simulation records:
 
 - configured biome identity and the currently registered simulation prefix;
-- complete F/G/H/I evaluations with canonical snapshots, lifecycle events, ledgers,
-  room-generation proof, reward witnesses, and findings;
-- incomplete F/G/H/I evaluations without canonical products;
+- complete F/G/H/I evaluations with canonical snapshots, lifecycle events,
+  ledgers, room-generation proof, reward witnesses, and findings;
+- one progressively evaluated active F/G/H/I biome with its exact authoring
+  frontier, coverage point, prefix operations, folded state, addressed
+  generation/reward views, and findings;
+- no canonical snapshot, final biome history, completion event, or downstream
+  seed on an incomplete active biome;
 - validated-prefix identity and an exact route-end, simulator-boundary,
   incomplete, or invalid processing horizon;
 - semantic findings in stable route and phase order;

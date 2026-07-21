@@ -43,17 +43,6 @@ bag, acquisition, and shop orchestration feed the public deterministic
 `simulateProject` composition root. Phase 3 made F simulatable while G remained
 authorable but dormant until its complete product loop landed in Phase 5.
 
-Phase 6 has completed H and I's full product loops. I's authored topology,
-canonical/history, selected-validation/candidate, and editor slices are now
-complete. I persists and edits its bounded Clockwork setting,
-materializes the fixed Intro/Story sequence, derives Goal versus NonGoal in
-physical offer order, advances acquisition counters at entered producer points,
-and represents repeated generated preboss targets without a second terminal
-action. Its editor projects those facts through one decision language,
-including picked-only WorldShop state. Complete F/G/H/I routes now share
-production navigation, profiles, recovery, simulation, candidates, semantic
-findings, accessibility, and responsive browser interaction.
-
 Phase 4 is complete. The browser editor publishes simulation and semantic
 findings atomically with authored history, supports semantic finding
 navigation and keyboard undo/redo, and introduced temporary New, Save, Load,
@@ -62,33 +51,31 @@ interaction fixture authors the representative valid F route through visible
 controls, verifies player-facing labels, and reloads equal authored and
 evaluated state.
 
-Phase 5 is complete. Generated room candidates and every
-active reward/shop value are evaluated through the
-same simulation authorities used by selected-plan validation. F and G now
-share the complete linear simulation, candidate, editor, navigation, and
-finding path; both became authorable, simulatable, and editable while later
-biomes were held for controlled Phase 6 expansion. The current profile workflow saves and loads normalized
-`ProjectDocument` files through one injected adapter, supports undoable project
-names and safe filename suggestions, and tracks the exact explicit save/load
-baseline. Clean, Dirty, Unsaved, and Recovered are derived from that canonical
-baseline contract. A separately injected browser-local recovery channel now
-debounces only authored replacements, capability-decodes startup recovery, and
-preserves unreadable recovery behind an explicit discard/load blockade. The
-complete F/G browser fixture now closes authoring, simulation, validation,
-candidate feedback, profiles, recovery, semantic navigation, accessible
-control naming, keyboard navigation, player-facing labels, and measured
-responsiveness. The acceptance matrix and browser-only smoke procedure are
-recorded in
+Phase 5 is complete. Generated room candidates and every active reward/shop
+value are evaluated through the same simulation authorities used by selected-
+plan validation. F and G now share the complete linear simulation, candidate,
+editor, navigation, and finding path; both became authorable, simulatable, and
+editable while later biomes were held for controlled Phase 6 expansion. The
+current profile workflow saves and loads normalized `ProjectDocument` files
+through one injected adapter, supports undoable project names and safe filename
+suggestions, and tracks the exact explicit save/load baseline. Clean, Dirty,
+Unsaved, and Recovered are derived from that canonical baseline contract. A
+separately injected browser-local recovery channel now debounces only authored
+replacements, capability-decodes startup recovery, and preserves unreadable
+recovery behind an explicit discard/load blockade. The complete F/G browser
+fixture now closes authoring, simulation, validation, candidate feedback,
+profiles, recovery, semantic navigation, accessible control naming, keyboard
+navigation, player-facing labels, and measured responsiveness. The acceptance
+matrix and browser-only smoke procedure are recorded in
 [`docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md`](docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md).
 
 Phase 6 has completed H and I's full product loops. Both are authorable,
-simulatable, and editable alongside F/G; complete F/G/H/I profiles pass route simulation,
-candidate feedback, recovery, semantic navigation, accessibility, and
-responsiveness fixtures. The shared editor projects fixed-count Fields
-decisions, Min/Max outcomes, active and dormant cage leaves, semantic findings,
-the forked Fields terminal, Clockwork Goal/NonGoal roles, repeated generated
-preboss offers, and picked-only WorldShop state through existing commands and
-candidate services.
+simulatable, and editable alongside F/G; complete F/G/H/I profiles pass route
+simulation, candidate feedback, recovery, semantic navigation, accessibility,
+and responsiveness fixtures. The shared editor projects fixed-count Fields
+decisions, Min/Max outcomes, active and dormant cage leaves, the forked Fields
+terminal, Clockwork Goal/NonGoal roles, repeated generated preboss offers, and
+picked-only WorldShop state through existing commands and candidate services.
 Equivalent post-shop witness states merge before crossing biome boundaries,
 preventing proof-only branch multiplication while retaining one ordered
 witness for every distinct downstream state. P/Q/O/N remain dormant.
@@ -159,11 +146,14 @@ graph projection, but it will never own topology or node identity.
 18. [`docs/EDITOR_MODEL.md`](docs/EDITOR_MODEL.md) maps authored and derived
     state into the external editor without leaking UI structure into the
     domain.
-19. [`docs/GAME_INTEGRATION_BOUNDARY.md`](docs/GAME_INTEGRATION_BOUNDARY.md)
+19. [`docs/CONTEXTUAL_EDITOR_UX.md`](docs/CONTEXTUAL_EDITOR_UX.md) defines the
+    contextual room and reward selection contract, grouped and compound
+    pickers, and selected-invalid retention policy.
+20. [`docs/GAME_INTEGRATION_BOUNDARY.md`](docs/GAME_INTEGRATION_BOUNDARY.md)
     records the intentionally deferred app/game contract and conformance loop.
-20. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) defines the
+21. [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) defines the
     development order and acceptance gates.
-21. [`docs/MIGRATION_PROVENANCE.md`](docs/MIGRATION_PROVENANCE.md) tracks the
+22. [`docs/MIGRATION_PROVENANCE.md`](docs/MIGRATION_PROVENANCE.md) tracks the
     disposition and implementation status of inherited evidence.
 
 These documents are one coherent design set. A rule belongs in exactly one
@@ -190,6 +180,7 @@ authority and should be referenced rather than copied elsewhere.
 | Authored state, persistence, topology, identity, and commands           | `AUTHORED_PROJECT_MODEL.md`    |
 | Materialization, history, validation, feedback, and simulation          | `SIMULATION_AND_VALIDATION.md` |
 | UI projection and interaction policy                                    | `EDITOR_MODEL.md`              |
+| Contextual room/reward selection and compact picker behavior            | `CONTEXTUAL_EDITOR_UX.md`      |
 | Future execution artifact and runtime audit                             | `GAME_INTEGRATION_BOUNDARY.md` |
 | Delivery sequence and acceptance                                        | `IMPLEMENTATION_PLAN.md`       |
 | Legacy evidence disposition and port verification status                | `MIGRATION_PROVENANCE.md`      |
@@ -220,6 +211,13 @@ unlikelihood never makes a possible route invalid. Forced and impossible
 boundaries are modeled, while likelihood scores, RNG seeds, and Monte Carlo
 search are outside the product.
 
+Route evaluation admits only complete-valid biomes to its validated prefix.
+The next active biome is evaluated progressively through the maximum truthful
+authored decision point, while every later biome remains editable but
+contextually unassessed. An incomplete active biome may publish prefix
+materialization, lifecycle, history state, findings, and candidate views, but
+never a canonical biome snapshot or downstream route seed.
+
 Room Declarations are unique by Hades `gameName`. Authored Room Occurrences
 have their own stable persisted IDs, so several offers may reference the same
 game room without conflating their leaf state or feedback identity.
@@ -238,7 +236,7 @@ fixtures, the app's catalog and simulator become its implementation authority.
 
 ## Current Scope
 
-The active product slice delivers F, G, and H through one shared linear-biome
+The active product slice delivers F, G, H, and I through one shared route
 pipeline:
 
 - explicit declarations;
@@ -249,9 +247,10 @@ pipeline:
 - a usable editor with undo/redo and browser-local/JSON persistence.
 
 Before Phase 3 simulation, every remaining biome was audited and the full
-feature set was reconciled. H has since completed its full product loop. P, Q,
-O, I, and N remain declaration-complete but inactive; their combined feature
-map is the declaration-freeze authority for later rollout.
+feature set was reconciled. H and I have since completed their full product
+loops. N, O, P, and Q remain declaration-complete but inactive; their combined
+feature map is the declaration-freeze authority for later rollout. Contextual
+room and reward selection is the current insertion boundary before N.
 
 ## Development
 

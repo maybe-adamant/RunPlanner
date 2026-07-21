@@ -849,6 +849,11 @@ Gate:
 - equal normalized inputs produce deeply equal simulation results;
 - findings resolve to stable semantic addresses without UI information.
 
+These Phase 3 gates describe the original complete-biome simulation closure.
+The contextual-selection insertion after H/I deliberately enriches incomplete
+biome results with one progressively evaluated prefix while preserving every
+no-canonical-snapshot and complete-valid route-seed invariant above.
+
 ## Phase 4: Thin Usable F Editor
 
 Phase 4 promotes the existing Phase 2.5 authored-editor smoke surface by
@@ -1241,7 +1246,7 @@ Gate:
   browser smoke procedure;
 - the complete repository validation suite and production build pass;
 - no Tauri packaging, execution-plan compiler, game-module integration, or
-  post-biome UX policy is pulled into Phase 5;
+  contextual-selection UX policy is pulled into Phase 5;
 - H/I/N/O/P/Q remain declaration-only and dormant.
 
 ### Acceptance
@@ -1259,10 +1264,11 @@ Gate:
   projects;
 - the app is useful without Tauri packaging or game execution.
 
-### Phase 7 Data Readiness
+### Contextual UX Data Readiness
 
-Phase 5 candidate evaluation must preserve the game-language facts needed by
-the later shared UX pass without implementing that presentation early:
+Phase 5 candidate evaluation preserves the game-language facts consumed by
+the later contextual-selection work without implementing that presentation
+inside the simulator:
 
 - candidate results retain semantic generation-point ownership;
 - support state and exclusion reasons remain typed simulation facts rather
@@ -1276,8 +1282,8 @@ the later shared UX pass without implementing that presentation early:
   not narrow the simulation result to the needs of the current control.
 
 These are data-shape and ownership constraints, not additional Phase 5 UX
-deliverables. The deferred presentation contract is defined in
-`POST_BIOME_UX_FEEDBACK_AND_FRONTIER.md`.
+deliverables. The presentation contract is defined in
+`CONTEXTUAL_EDITOR_UX.md`.
 
 ## Phase 6: Controlled Biome Expansion
 
@@ -1290,6 +1296,12 @@ Implement in this order unless concrete dependencies justify a change:
 4. O: ship multi-encounter rooms and sequential reward wheels.
 5. P: linear surface topology and room-internal encounter rules.
 6. Q: forced skeleton and independently generated two-exit miniboss stages.
+
+The rollout has an explicit UX insertion boundary after the complete H/I
+Underworld loop and before N. Complete the contextual room/reward selection
+work in `CONTEXTUAL_EDITOR_UX.md`, then resume controlled expansion with
+N/O/P/Q. This lets later biome editors inherit the stronger selector language
+without prematurely redesigning frontier actions around only linear biomes.
 
 For each biome, close these acceptance gates:
 
@@ -1394,6 +1406,37 @@ I should close through five slices:
    - promote I to authorable, simulatable, and editable atomically;
    - close complete F/G/H/I profiles, recovery, blocked-prefix behavior,
      semantic navigation, accessibility, interaction, and responsiveness.
+
+### Contextual Selection UX Insertion
+
+Before beginning N, harden the complete Underworld editor through the focused
+contract in `CONTEXTUAL_EDITOR_UX.md`:
+
+- refactor the binary incomplete-biome early return into one progressive
+  evaluation carrying a semantic authoring frontier and maximum truthful
+  coverage point;
+- publish covered prefix materialization, lifecycle, history state,
+  room-generation views, reward witnesses, findings, and candidate contacts
+  through the normal simulation composition root;
+- preserve the route gate: only a complete-valid F/G/H biome seeds contextual
+  evaluation in its successor, while later biome pages remain editable and
+  unassessed;
+- enrich room candidate evidence so counter, history, cap, and force failures
+  remain distinguishable;
+- add one application-owned contextual option resolver and centralized reason
+  presentation;
+- replace the required Type/Room sequence with one grouped room picker;
+- make reward choices follow their resolved store, generated siblings, source
+  support, and counted-bag state;
+- replace vertically stacked reward and payload selects with one compact
+  compound reward interaction;
+- preserve selected invalid values and unavailable upstream context without
+  automatic repair;
+- close the F/G/H/I interaction, accessibility, and responsiveness fixtures.
+
+This insertion changes selection guidance, not frontier topology or commands.
+The existing frontier actions remain until every biome supplies concrete
+editor evidence for the later cross-biome review.
 
 ### N Planning Boundary
 
@@ -1503,54 +1546,49 @@ activation must preserve route-prefix order: `F -> G -> H -> I` and
 Do not create placeholder production behavior that claims a biome is simulated
 when it only has declarations or UI.
 
-Phase 5 and Phase 6 may retain temporary per-biome candidate and frontier
-controls, but their simulation results and editor boundaries must observe the
-readiness constraints in `POST_BIOME_UX_FEEDBACK_AND_FRONTIER.md`. Phase 7 must
-not require a rewrite of game rules merely to change presentation policy.
+Phase 6 biome editors inherit the contextual selection contract in
+`CONTEXTUAL_EDITOR_UX.md`. Frontier controls may remain layout-specific until
+the later cross-biome review; no biome editor may move frontier game rules into
+React merely to improve its presentation.
 
-## Phase 7: Cross-Biome UX Feedback and Frontier
+## Phase 7: Cross-Biome Frontier and Presentation Review
 
-Begin the major shared UX pass only after every supported biome has completed
-its Phase 6 product loop. The design authority and detailed commit sequence are
-defined in `POST_BIOME_UX_FEEDBACK_AND_FRONTIER.md`.
+Begin only after every supported biome has completed its product loop. This
+phase starts with a fresh audit of the concrete F/G/H/I/N/O/P/Q editors. It
+does not inherit the retired assumption that one unified frontier interaction
+must exist.
 
-Phase 7 keeps the complete authored, simulation, validation, candidate, and
-semantic-command models as its authorities. It replaces temporary per-biome
-presentation decisions without moving game rules into React.
+The complete authored, simulation, validation, candidate, semantic-command,
+and contextual-selection models remain authoritative. Phase 7 decides which
+frontier and feedback presentation ideas are genuinely shared and which remain
+layout-specific.
 
 ### Deliverables
 
-- one shared semantic feedback presentation projection;
-- exact local warning/invalid decoration and upward route/biome/project status
-  propagation;
-- coverage-derived blocked presentation that remains editable;
-- compact primary/related findings presentation and semantic navigation;
-- typed, injected candidate presentation policies;
-- support-first and diagnostic candidate views without authored migration;
-- candidate-aware room categories and selectors across every active biome;
-- one shared frontier-outcome projection covering ordinary, independent-
-  terminal, conditional-terminal, fixed-hub-terminal, and blocked states;
-- a unified ordinary frontier-advance interaction with explicit retained-
-  invalid repair actions;
-- cross-biome accessibility, keyboard, visual-hierarchy, and responsiveness
-  polish.
+- a cross-biome audit of ordinary, independent-terminal,
+  conditional-terminal, direct-terminal, staged, and fixed-hub frontier
+  interactions;
+- an explicit decision record for which frontier actions can share a
+  presentation without weakening their domain semantics;
+- retained-invalid frontier repair policies based on the completed editors;
+- a final review of local findings, upward route/biome/project status,
+  coverage-derived blocked presentation, and semantic navigation;
+- cross-biome accessibility, keyboard, visual-hierarchy, spacing, and
+  responsiveness polish;
+- a concrete commit sequence written only after the audit resolves the shared
+  frontier vocabulary.
 
 ### Acceptance
 
-- every active biome uses the shared feedback and candidate presentation
-  language;
-- selected invalid authored values remain visible and editable under every
-  candidate policy;
-- unselected candidate visibility can change through typed policy without
-  changing simulation or project state;
+- every frontier layout family retains its domain semantics;
+- any shared interaction is justified by at least two completed concrete
+  consumers rather than an F-shaped abstraction;
+- retained invalid topology remains visible and requires explicit repair;
 - blocked owners come from explicit evaluation coverage rather than finding
-  order or UI inference;
-- all frontier layout families retain their domain semantics while ordinary
-  users no longer choose an internal continuation representation;
-- no room eligibility, reward support, force, history, or terminal rule exists
-  only in UI code;
-- representative interaction fixtures cover F/G/H/I/N/O/P/Q feedback,
-  candidate, and frontier behavior;
+  order or rendered position;
+- no frontier, completion, force, or terminal rule exists only in UI code;
+- representative interaction fixtures cover the accepted F/G/H/I/N/O/P/Q
+  frontier and feedback policies;
 - the full repository test suite, production build, accessibility checks, and
   measured responsiveness pass.
 
