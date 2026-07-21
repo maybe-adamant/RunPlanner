@@ -278,7 +278,7 @@ describe('shared structural catalog vocabulary', () => {
           roomGameName: 'G_PreBoss01',
           closesBiomeWhenPicked: true,
         },
-        { kind: 'clockwork', fields: [] },
+        { kind: 'clockwork', initialGoalCount: 5, fields: [] },
       ),
     );
     expect(conditional.biomeLayouts.byKey.G).toMatchObject({
@@ -417,6 +417,39 @@ describe('shared structural catalog vocabulary', () => {
       new CatalogContractError(
         `biomeLayouts[${hIndex}].continuation.batchPolicy.maxOutcomeSupport`,
         'optional and required depths must be disjoint',
+      ),
+    );
+  });
+
+  it('rejects a non-positive Clockwork initial Goal count at the catalog boundary', () => {
+    const iIndex = layoutIndex('I');
+    const iLayout = linearLayout('I');
+    const clockworkPolicy = iLayout.continuation.batchPolicy;
+    if (clockworkPolicy.kind !== 'clockwork') {
+      throw new Error('I Clockwork batch-policy fixture is missing');
+    }
+
+    expect(() =>
+      createCatalog(
+        raw({
+          ...declarations,
+          biomeLayouts: declarations.biomeLayouts.map((layout, index) =>
+            index === iIndex
+              ? {
+                  ...iLayout,
+                  continuation: {
+                    ...iLayout.continuation,
+                    batchPolicy: { ...clockworkPolicy, initialGoalCount: 0 },
+                  },
+                }
+              : layout,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `biomeLayouts[${iIndex}].continuation.batchPolicy.initialGoalCount`,
+        'must be a positive integer',
       ),
     );
   });
@@ -664,7 +697,7 @@ describe('shared structural catalog vocabulary', () => {
                 ...layout,
                 continuation: {
                   ...linearLayout('F').continuation,
-                  batchPolicy: { kind: 'clockwork', fields: [] },
+                  batchPolicy: { kind: 'clockwork', initialGoalCount: 5, fields: [] },
                 },
                 terminal: {
                   kind: 'generatedTarget',
@@ -833,7 +866,7 @@ describe('shared structural catalog vocabulary', () => {
             ...declarations.biomeLayouts[0],
             continuation: {
               ...declarations.biomeLayouts[0].continuation,
-              batchPolicy: { kind: 'clockwork', fields: [] },
+              batchPolicy: { kind: 'clockwork', initialGoalCount: 5, fields: [] },
             },
             terminal: {
               kind: 'generatedTarget',

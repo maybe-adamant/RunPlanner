@@ -348,6 +348,19 @@ terminal pick cannot silently discard an existing continuation. Focused codec,
 command, malformed-authority, bound, and completeness fixtures pass. I remains
 non-simulatable, non-editable, and absent from application capabilities.
 
+Phase 6 I Slice 2 is complete. The canonical linear materializer now gives
+layout-derived Intro/Story rooms stable semantic origins, derives every
+Clockwork target as Goal or NonGoal from the exact pre-generation Goal and
+non-goal counters, retains dormant concrete Tartarus leaves, and converts only
+the picked generated preboss batch into terminal entry. Common linear history
+now creates the fixed Story from the Intro lifecycle, records every Clockwork
+batch state, advances Goal and `BiomeRewardsSpawned`-equivalent non-goal
+counters only on entered producers, and carries route encounter depth and room
+history ordinal from H. A golden fixture closes five acquired Goals, three
+acquired NonGoals, a declined preboss occurrence, the later entered preboss,
+WorldShop, boss, postboss, and biome-local resets. I remains outside selected
+validation, candidates, editor projection, and application capabilities.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1051,7 +1064,7 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices and I
-Slice 1 are complete; I Clockwork materialization and history are the next
+Slices 1-2 are complete; I selected validation and candidates are the next
 implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity

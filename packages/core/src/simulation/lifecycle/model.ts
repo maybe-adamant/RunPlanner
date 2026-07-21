@@ -1,8 +1,12 @@
 import type { EncounterPhaseKind, RoomCounterEffects } from '../../catalog';
-import type { CompletionRoomAddress, OccurrenceAddress } from '../../project/addresses';
+import type {
+  CompletionRoomAddress,
+  FixedEntryRoomAddress,
+  OccurrenceAddress,
+} from '../../project/addresses';
 import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../rewardKernel/model';
 
-export type RoomHistoryOrigin = CompletionRoomAddress | OccurrenceAddress;
+export type RoomHistoryOrigin = CompletionRoomAddress | FixedEntryRoomAddress | OccurrenceAddress;
 
 interface RoomLifecycleEventBase {
   readonly sequence: number;

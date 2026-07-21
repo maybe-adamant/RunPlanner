@@ -190,6 +190,10 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return biomeLabel;
     case 'biomeField':
       return `${biomeLabel} · Setting`;
+    case 'fixedEntryRoom':
+    case 'fixedEntryReward':
+    case 'fixedEntryTarget':
+      return `${biomeLabel} · Fixed Entry`;
     case 'continuation':
       return `${biomeLabel} · Decision`;
     case 'batchRewardStore':

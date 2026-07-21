@@ -314,7 +314,7 @@ function requireLinearLayout(catalog: Catalog, snapshot: CanonicalLinearBiome): 
 
 function authoredRooms(snapshot: CanonicalLinearBiome): ReadonlyMap<string, CanonicalAuthoredRoom> {
   const rooms = [
-    ...snapshot.entryRooms,
+    ...snapshot.entryRooms.filter((room) => room.kind === 'authored'),
     ...snapshot.batches.flatMap((batch) => batch.targets.map((target) => target.room)),
     ...snapshot.terminalEntry.targets.map((target) => target.room),
   ];

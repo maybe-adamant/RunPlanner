@@ -1,8 +1,16 @@
-import type { Catalog, LinearBiomeLayout, RoomDeclaration, RoomTemplateKey } from '../../catalog';
+import type {
+  Catalog,
+  FixedEntryDescriptor,
+  LinearBiomeLayout,
+  RoomDeclaration,
+  RoomTemplateKey,
+} from '../../catalog';
 import {
   createBatchRewardStoreAddress,
   createCompletionRoomAddress,
   createContinuationAddress,
+  createFixedEntryRewardAddress,
+  createFixedEntryRoomAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -29,6 +37,7 @@ import type {
   CanonicalBatchState,
   CanonicalBatchRewardStore,
   CanonicalCompletionRoom,
+  CanonicalFixedEntryRoom,
   CanonicalLinearBiome,
   CanonicalLocalReward,
   CanonicalPhysicalExit,
@@ -41,6 +50,7 @@ import type {
 } from './model';
 
 type LinearAuthoredTemplateKey =
+  | 'ClockworkCombat'
   | 'FixedIntro'
   | 'FixedOpening'
   | 'FieldsCombat'
@@ -48,6 +58,7 @@ type LinearAuthoredTemplateKey =
   | 'Fountain'
   | 'Miniboss'
   | 'Shop'
+  | 'ShopPreboss'
   | 'StandardCombat'
   | 'Story';
 
@@ -62,6 +73,7 @@ interface AuthoredRoomMaterializationContext {
   readonly entered: boolean;
   readonly batchStoreKey?: string;
   readonly activeCageCount?: number;
+  readonly clockworkReward?: 'goal' | 'nonGoal';
 }
 
 interface MaterializedRoomLeaf {
@@ -70,6 +82,7 @@ interface MaterializedRoomLeaf {
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly localRewards?: readonly CanonicalLocalReward[];
   readonly entryState?: CanonicalShopEntryState;
+  readonly clockworkReward?: 'goal' | 'nonGoal';
 }
 
 type AuthoredTemplateMaterializer = (
@@ -137,6 +150,25 @@ function materializeCountedRoom(context: AuthoredRoomMaterializationContext): Ma
       binding.producerLifecycleKey,
       state.offer,
     ),
+  });
+}
+
+function materializeClockworkCombat(
+  context: AuthoredRoomMaterializationContext,
+): MaterializedRoomLeaf {
+  requireStateKind(context, 'counted');
+  if (context.clockworkReward === undefined) {
+    fail(`${context.room.gameName} has no derived Clockwork reward`);
+  }
+  if (context.clockworkReward === 'goal') {
+    return Object.freeze({
+      lifecycleProfileKey: 'ClockworkGoalRoom',
+      clockworkReward: 'goal',
+    });
+  }
+  return Object.freeze({
+    ...materializeCountedRoom(context),
+    clockworkReward: 'nonGoal',
   });
 }
 
@@ -324,6 +356,18 @@ function materializeShopRoom(
   });
 }
 
+function materializeClockworkPreboss(
+  context: AuthoredRoomMaterializationContext,
+): MaterializedRoomLeaf {
+  if (context.role !== 'terminalShop' || context.clockworkReward !== 'goal') {
+    fail(`${context.room.gameName} requires its generated Clockwork terminal role`);
+  }
+  return Object.freeze({
+    ...materializeShopRoom(context, 'TerminalWorldShopRoom'),
+    clockworkReward: 'goal',
+  });
+}
+
 function materializeForkedPreboss(
   context: AuthoredRoomMaterializationContext,
 ): MaterializedRoomLeaf {
@@ -350,6 +394,7 @@ function materializeForkedPreboss(
 }
 
 const authoredTemplateMaterializers = Object.freeze({
+  ClockworkCombat: materializeClockworkCombat,
   FixedIntro: materializeRewardlessRoom,
   FixedOpening: materializeCountedRoom,
   FieldsCombat: materializeFieldsCombat,
@@ -357,6 +402,7 @@ const authoredTemplateMaterializers = Object.freeze({
   Fountain: materializeCountedRoom,
   Miniboss: materializeCountedRoom,
   Shop: materializeShopRoom,
+  ShopPreboss: materializeClockworkPreboss,
   StandardCombat: materializeCountedRoom,
   Story: materializeFixedRoom,
 }) satisfies Readonly<Record<LinearAuthoredTemplateKey, AuthoredTemplateMaterializer>>;
@@ -424,6 +470,7 @@ function materializeAuthoredRoom(
   }
   const leaf = authoredMaterializer(context.room.mode.templateKey, context.room.gameName)(context);
   const encounterProfileKey = leaf.encounterProfileKey ?? context.room.encounterProfileKey;
+  const clockworkReward = leaf.clockworkReward ?? context.clockworkReward;
   requireLifecycleSelection(context.catalog, context.room, leaf, encounterProfileKey);
   return Object.freeze({
     kind: 'authored',
@@ -438,13 +485,69 @@ function materializeAuthoredRoom(
     ...(leaf.incomingReward === undefined ? {} : { incomingReward: leaf.incomingReward }),
     ...(leaf.localRewards === undefined ? {} : { localRewards: leaf.localRewards }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
+    ...(clockworkReward === undefined ? {} : { clockworkReward }),
   });
 }
 
-function roomReference(room: CanonicalAuthoredRoom): CanonicalRoomReference {
+function materializeFixedEntryRoom(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  descriptor: FixedEntryDescriptor,
+): CanonicalFixedEntryRoom {
+  const room = catalog.rooms.byKey[descriptor.roomGameName];
+  if (
+    room?.mode.kind !== 'derived' ||
+    room.mode.classification !== 'fixedEntry' ||
+    room.kind === 'Boss' ||
+    room.kind === 'PostBoss'
+  ) {
+    fail(`${descriptor.roomGameName} is not a fixed-entry room`);
+  }
+  let lifecycleProfileKey: string;
+  let incomingReward: CanonicalResolvedIncomingReward | undefined;
+  if (room.incomingReward.kind === 'none') {
+    lifecycleProfileKey = 'RewardlessRoom';
+  } else if (room.incomingReward.kind === 'fixed') {
+    lifecycleProfileKey = 'StandardRewardRoom';
+    incomingReward = Object.freeze({
+      origin: createFixedEntryRewardAddress(biome, descriptor.role),
+      kind: 'resolved',
+      producerKind: 'fixed',
+      producerLifecycleKey: room.incomingReward.producerLifecycleKey,
+      offer: room.incomingReward.offer,
+      ...(room.forcedRewardStoreKey === undefined
+        ? {}
+        : { resolvedStoreKey: room.forcedRewardStoreKey }),
+    });
+  } else {
+    fail(`${room.gameName} fixed entry has unsupported ${room.incomingReward.kind} producer`);
+  }
+  requireLifecycleSelection(
+    catalog,
+    room,
+    { lifecycleProfileKey, ...(incomingReward === undefined ? {} : { incomingReward }) },
+    room.encounterProfileKey,
+  );
+  return Object.freeze({
+    kind: 'fixedEntry',
+    origin: createFixedEntryRoomAddress(biome, descriptor.role),
+    role: descriptor.role,
+    gameName: room.gameName,
+    encounterProfileKey: room.encounterProfileKey,
+    encounterPhases: encounterPhases(catalog, room),
+    lifecycleProfileKey,
+    counterEffects: room.counters,
+    entered: true,
+    ...(incomingReward === undefined ? {} : { incomingReward }),
+  });
+}
+
+function roomReference(
+  room: CanonicalAuthoredRoom | CanonicalFixedEntryRoom,
+): CanonicalRoomReference {
   return Object.freeze({
     origin: room.origin,
-    occurrenceId: room.occurrenceId,
+    ...(room.kind === 'authored' ? { occurrenceId: room.occurrenceId } : {}),
     gameName: room.gameName,
   });
 }
@@ -464,7 +567,7 @@ function canonicalExit(room: RoomDeclaration, exitIndex: number): CanonicalPhysi
 
 function canonicalRewardStore(
   biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId,
+  parentOccurrenceId: OccurrenceId | null,
   state: BatchRewardStoreState,
 ): CanonicalBatchRewardStore {
   const origin = createBatchRewardStoreAddress(biome, parentOccurrenceId);
@@ -603,6 +706,7 @@ function materializeTarget(
   effect: CanonicalTargetContinuation,
   batchStoreKey?: string,
   activeCageCount?: number,
+  clockworkReward?: 'goal' | 'nonGoal',
 ): CanonicalTarget {
   const occurrence = requireOccurrence(occurrences, target.occurrenceId);
   const room = requireRoom(catalog, occurrence);
@@ -621,6 +725,7 @@ function materializeTarget(
       entered: picked,
       ...(batchStoreKey === undefined ? {} : { batchStoreKey }),
       ...(activeCageCount === undefined ? {} : { activeCageCount }),
+      ...(clockworkReward === undefined ? {} : { clockworkReward }),
     }),
   });
 }
@@ -643,15 +748,34 @@ function requireLinearLayout(
     ((layout.continuation.batchPolicy.kind === 'standard' &&
       layout.continuation.rewardStorePolicy.kind === 'authoredBaseStore') ||
       (layout.continuation.batchPolicy.kind === 'fields' &&
+        layout.continuation.rewardStorePolicy.kind === 'none') ||
+      (layout.continuation.batchPolicy.kind === 'clockwork' &&
         layout.continuation.rewardStorePolicy.kind === 'none'));
+  const supportedEntry =
+    layout?.kind === 'LinearBiome' &&
+    ((layout.start.kind === 'authoredStart' && layout.entries.length === 0) ||
+      (layout.start.kind === 'fixedEntry' &&
+        layout.entries.every((entry) => entry.kind === 'fixedEntry')));
+  const supportedTerminal =
+    layout?.kind === 'LinearBiome' &&
+    ((layout.terminal.kind === 'forkedTransition' &&
+      layout.continuation.batchPolicy.kind !== 'clockwork') ||
+      (layout.terminal.kind === 'generatedTarget' &&
+        layout.continuation.batchPolicy.kind === 'clockwork'));
+  const supportedFields =
+    layout?.kind === 'LinearBiome' &&
+    (layout.continuation.batchPolicy.kind === 'clockwork'
+      ? layout.fields.length === 1 &&
+        layout.fields[0]?.key === 'maxNonGoalRewards' &&
+        layout.fields[0].kind === 'boundedInteger'
+      : layout.fields.length === 0);
   if (
     layout?.kind !== 'LinearBiome' ||
-    layout.start.kind !== 'authoredStart' ||
-    layout.entries.length !== 0 ||
+    !supportedEntry ||
     !supportedContinuation ||
     layout.continuation.rewardStoreOverrides.length !== 0 ||
-    layout.terminal.kind !== 'forkedTransition' ||
-    layout.fields.length !== 0
+    !supportedTerminal ||
+    !supportedFields
   ) {
     fail(`catalog ${biome.biomeKey} layout is not supported by the canonical linear materializer`);
   }
@@ -723,12 +847,203 @@ function materializeCompletionRooms(
   );
 }
 
+interface ClockworkProjectionState {
+  readonly goalsRemaining: number;
+  readonly nonGoalRewardsAcquired: number;
+  readonly maxNonGoalRewards: number;
+}
+
+function clockworkBatchState(state: ClockworkProjectionState): CanonicalBatchState {
+  return Object.freeze({ kind: 'clockwork', ...state });
+}
+
+function clockworkReward(
+  room: RoomDeclaration,
+  state: ClockworkProjectionState,
+  goalAlreadyOffered: boolean,
+  terminalRoomGameName: string,
+): 'goal' | 'nonGoal' {
+  if (room.gameName === terminalRoomGameName) {
+    return 'goal';
+  }
+  if (room.kind !== 'Combat') {
+    return 'nonGoal';
+  }
+  return (state.goalsRemaining > 0 && !goalAlreadyOffered) ||
+    state.nonGoalRewardsAcquired >= state.maxNonGoalRewards
+    ? 'goal'
+    : 'nonGoal';
+}
+
+function advanceClockworkState(
+  state: ClockworkProjectionState,
+  reward: 'goal' | 'nonGoal',
+): ClockworkProjectionState {
+  return reward === 'goal'
+    ? Object.freeze({ ...state, goalsRemaining: Math.max(0, state.goalsRemaining - 1) })
+    : Object.freeze({
+        ...state,
+        nonGoalRewardsAcquired: state.nonGoalRewardsAcquired + 1,
+      });
+}
+
+function materializeClockworkBiome(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: LinearBiomeLayout,
+  completeness: CompleteLinearCompletenessResult,
+): CanonicalLinearBiome {
+  if (
+    layout.start.kind !== 'fixedEntry' ||
+    layout.terminal.kind !== 'generatedTarget' ||
+    layout.continuation.batchPolicy.kind !== 'clockwork'
+  ) {
+    fail(`${layout.biomeKey} is not a Clockwork linear biome`);
+  }
+  const maxNonGoalRewards = completeness.biomeState.maxNonGoalRewards;
+  if (typeof maxNonGoalRewards !== 'number' || !Number.isInteger(maxNonGoalRewards)) {
+    fail(`${layout.biomeKey} has no materializable maxNonGoalRewards`);
+  }
+  let state: ClockworkProjectionState = Object.freeze({
+    goalsRemaining: layout.continuation.batchPolicy.initialGoalCount,
+    nonGoalRewardsAcquired: 0,
+    maxNonGoalRewards,
+  });
+  const entryDescriptors = [layout.start, ...layout.entries] as readonly FixedEntryDescriptor[];
+  const entryRooms = Object.freeze(
+    entryDescriptors.map((descriptor) => materializeFixedEntryRoom(catalog, biome, descriptor)),
+  );
+  const initialSource = entryRooms.at(-1);
+  if (initialSource === undefined) {
+    fail(`${layout.biomeKey} has no fixed entry source`);
+  }
+  let source: CanonicalAuthoredRoom | CanonicalFixedEntryRoom = initialSource;
+  const topology = completeness.topology;
+  const occurrences = new Map(
+    topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
+  );
+  const batches: CanonicalBatch[] = [];
+  let terminalEntry: CanonicalTerminalEntry | undefined;
+
+  for (const [batchIndex, continuation] of topology.continuations.entries()) {
+    if (continuation.kind !== 'batch') {
+      fail(`${layout.biomeKey} Clockwork topology contains an independent terminal transition`);
+    }
+    const expectedParent = source.kind === 'fixedEntry' ? null : source.occurrenceId;
+    if (continuation.parentOccurrenceId !== expectedParent) {
+      fail(`Clockwork batch ${batchIndex + 1} is disconnected from ${source.gameName}`);
+    }
+    const sourceDeclaration: RoomDeclaration | undefined = catalog.rooms.byKey[source.gameName];
+    if (sourceDeclaration === undefined) {
+      fail(`trusted Clockwork source lost room ${source.gameName}`);
+    }
+    const pickedExitIndex = requirePickedExit(continuation);
+    const batchState = clockworkBatchState(state);
+    let goalAlreadyOffered = false;
+    const targets: readonly CanonicalTarget[] = Object.freeze(
+      [...continuation.targets]
+        .sort((left, right) => left.exitIndex - right.exitIndex)
+        .map((target): CanonicalTarget => {
+          const occurrence = requireOccurrence(occurrences, target.occurrenceId);
+          const room = requireRoom(catalog, occurrence);
+          const reward = clockworkReward(
+            room,
+            state,
+            goalAlreadyOffered,
+            layout.terminal.roomGameName,
+          );
+          if (reward === 'goal') {
+            goalAlreadyOffered = true;
+          }
+          const terminal = room.gameName === layout.terminal.roomGameName;
+          return materializeTarget(
+            catalog,
+            biome,
+            occurrences,
+            sourceDeclaration,
+            continuation,
+            target,
+            terminal ? 'terminalShop' : 'ordinary',
+            terminal ? 'entersTerminal' : 'continuesSpine',
+            undefined,
+            undefined,
+            reward,
+          );
+        }),
+    );
+    const picked: CanonicalTarget | undefined = targets.find(
+      (target) => target.exit.index === pickedExitIndex,
+    );
+    if (picked === undefined) {
+      fail(`Clockwork batch ${batchIndex + 1} lost its picked target`);
+    }
+    const pickedReward = picked.room.clockworkReward;
+    if (pickedReward === undefined) {
+      fail(`Clockwork batch ${batchIndex + 1} lost its picked reward`);
+    }
+    state = advanceClockworkState(state, pickedReward);
+    const rewardStore = canonicalRewardStore(biome, continuation.parentOccurrenceId, {
+      kind: 'none',
+    });
+    if (picked.room.gameName === layout.terminal.roomGameName) {
+      terminalEntry = Object.freeze({
+        origin: createContinuationAddress(biome, continuation.parentOccurrenceId),
+        predecessor: roomReference(source),
+        targets,
+        pickedExitIndex,
+        pickedOrigin: createPickedAddress(biome, continuation.parentOccurrenceId),
+        rewardStore,
+        batchState,
+      });
+      break;
+    }
+    batches.push(
+      Object.freeze({
+        origin: createContinuationAddress(biome, continuation.parentOccurrenceId),
+        parent: roomReference(source),
+        rewardStore,
+        batchState,
+        targets,
+        pickedExitIndex,
+        pickedOrigin: createPickedAddress(biome, continuation.parentOccurrenceId),
+      }),
+    );
+    source = picked.room;
+  }
+
+  if (terminalEntry === undefined) {
+    fail(`complete ${layout.biomeKey} Clockwork topology has no picked terminal target`);
+  }
+  const terminalDeclaration = catalog.rooms.byKey[layout.terminal.roomGameName];
+  if (terminalDeclaration === undefined) {
+    fail(`${layout.terminal.roomGameName} has no terminal declaration`);
+  }
+  return Object.freeze({
+    kind: 'LinearBiome',
+    routeKey: biome.routeKey,
+    biomeKey: layout.biomeKey,
+    entryRooms,
+    batches: Object.freeze(batches),
+    terminalEntry,
+    completionRooms: materializeCompletionRooms(
+      catalog,
+      biome,
+      layout,
+      terminalDeclaration.forcedRewardStoreKey,
+    ),
+    biomeState: Object.freeze({ ...completeness.biomeState }),
+  });
+}
+
 export function materializeLinearBiome(
   catalog: Catalog,
   biome: BiomeAddress,
   completeness: CompleteLinearCompletenessResult,
 ): CanonicalLinearBiome {
   const layout = requireLinearLayout(catalog, biome, completeness);
+  if (layout.continuation.batchPolicy.kind === 'clockwork') {
+    return materializeClockworkBiome(catalog, biome, layout, completeness);
+  }
   const topology = completeness.topology;
   const occurrences = new Map(
     topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
@@ -857,6 +1172,6 @@ export function materializeLinearBiome(
       layout,
       terminalDeclaration.forcedRewardStoreKey,
     ),
-    biomeState: Object.freeze({}),
+    biomeState: Object.freeze({ ...completeness.biomeState }),
   });
 }

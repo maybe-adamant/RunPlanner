@@ -7,6 +7,7 @@ import {
   type BiomeAddress,
 } from '../project/addresses';
 import type {
+  AuthoredBiomeState,
   LinearBiomePlan,
   LinearBiomeTopology,
   LinearContinuation,
@@ -22,6 +23,7 @@ export interface IncompleteLinearCompletenessResult {
 
 export interface CompleteLinearCompletenessResult {
   readonly completion: 'complete';
+  readonly biomeState: AuthoredBiomeState;
   readonly topology: LinearBiomeTopology;
   readonly findings: readonly [];
 }
@@ -246,6 +248,7 @@ export function evaluateLinearCompleteness(
   }
   return Object.freeze({
     completion: 'complete',
+    biomeState: plan.state,
     topology,
     findings: Object.freeze([]) as readonly [],
   });

@@ -58,6 +58,7 @@ describe('room lifecycle catalog', () => {
   it('normalizes the reusable linear lifecycle profiles as immutable catalog data', () => {
     expect(catalog.roomLifecycleProfiles.values.map((profile) => profile.key)).toEqual([
       'StandardRewardRoom',
+      'ClockworkGoalRoom',
       'RewardlessRoom',
       'FieldsCombatRoom',
       'WorldShopRoom',
@@ -69,6 +70,9 @@ describe('room lifecycle catalog', () => {
     expect(catalog.roomLifecycleProfiles.byKey.StandardRewardRoom?.producer).toEqual({
       kind: 'required',
       lifecycleProfileKeys: ['RoomReward'],
+    });
+    expect(catalog.roomLifecycleProfiles.byKey.ClockworkGoalRoom?.producer).toEqual({
+      kind: 'none',
     });
     expect(Object.isFrozen(catalog.roomLifecycleProfiles.values)).toBe(true);
     expect(

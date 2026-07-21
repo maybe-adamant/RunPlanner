@@ -368,6 +368,7 @@ export type GeneratedBatchPolicy =
     }
   | {
       readonly kind: 'clockwork';
+      readonly initialGoalCount: number;
       readonly fields: readonly AuthoredFieldDescriptor[];
     };
 
