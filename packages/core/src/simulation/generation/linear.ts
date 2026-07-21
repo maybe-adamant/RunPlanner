@@ -7,15 +7,17 @@ import type {
 } from '../../catalog';
 import { evaluateRequirement, type RequirementEvaluationContext } from '../../requirementEvaluator';
 import type { RequirementExpression } from '../../requirements';
-import { semanticAddressKey, type OccurrenceAddress } from '../../project/addresses';
+import { semanticAddressKey } from '../../project/addresses';
 import type {
   CanonicalLinearHistory,
   LinearHistoryStateView,
   LinearTargetGenerationView,
 } from '../history';
+import type { RoomHistoryOrigin } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
+  CanonicalFixedEntryRoom,
   CanonicalLinearBiome,
   CanonicalPhysicalExit,
   CanonicalTarget,
@@ -44,6 +46,8 @@ interface CandidateEvaluation {
   readonly reasons: readonly RoomGenerationExclusionReason[];
   readonly forceSupport: ForceSupport;
 }
+
+type CanonicalGenerationSource = CanonicalAuthoredRoom | CanonicalFixedEntryRoom;
 
 function countByGameName(
   entries: readonly { readonly gameName: string }[],
@@ -78,6 +82,10 @@ function assertLinearGenerationRequirement(requirement: RequirementExpression): 
         );
       }
       return;
+    case 'currentBatchTargetCount':
+    case 'currentBatchRoomCount':
+    case 'clockworkGoalsRemaining':
+    case 'clockworkNonGoalCapacity':
     case 'minExits':
       return;
     default:
@@ -105,7 +113,7 @@ function assertLinearGenerationForce(force: RoomForce): void {
 
 function priorPeerGameNames(
   view: LinearHistoryStateView,
-  parentOrigin: OccurrenceAddress,
+  parentOrigin: RoomHistoryOrigin,
 ): readonly string[] {
   return Object.freeze(
     view.ledgers.roomCreations
@@ -119,16 +127,24 @@ function priorPeerGameNames(
 }
 
 function projectLinearRoomGenerationRequirementContext(
-  source: CanonicalAuthoredRoom,
+  source: CanonicalGenerationSource,
   sourceDeclaration: RoomDeclaration,
   view: LinearHistoryStateView,
   enteredBiomeCount: number,
 ): RequirementEvaluationContext {
   const roomsEntered = countByGameName(view.ledgers.roomAppearances);
   const shopOptions =
-    source.entryState?.kind === 'shop'
+    source.kind === 'authored' && source.entryState?.kind === 'shop'
       ? new Set(source.entryState.offers.map((offer) => offer.offer.rewardType))
       : new Set<string>();
+  const goalsRemaining = view.ledgers.counters.clockworkGoalsRemaining;
+  const nonGoalRewardsAcquired = view.ledgers.counters.clockworkNonGoalRewardsAcquired;
+  const maxNonGoalRewards = view.ledgers.counters.clockworkMaxNonGoalRewards;
+  const clockworkValues = [goalsRemaining, nonGoalRewardsAcquired, maxNonGoalRewards];
+  const hasClockwork = clockworkValues.every((value) => value !== undefined);
+  if (!hasClockwork && clockworkValues.some((value) => value !== undefined)) {
+    throw new LinearRoomGenerationContractError('linear history has partial Clockwork facts');
+  }
   return Object.freeze({
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
@@ -151,7 +167,13 @@ function projectLinearRoomGenerationRequirementContext(
     recentEncounterPhases: Object.freeze([]),
     offeredExitCount: sourceDeclaration.exits.length,
     currentBatchRoomGameNames: priorPeerGameNames(view, source.origin),
-    clockwork: undefined,
+    clockwork: hasClockwork
+      ? {
+          remainingGoals: goalsRemaining!,
+          nonGoalRewardsAcquired: nonGoalRewardsAcquired!,
+          maxNonGoalRewards: maxNonGoalRewards!,
+        }
+      : undefined,
     flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
   });
 }
@@ -201,7 +223,7 @@ function forceSupport(
 function creationCount(
   view: LinearHistoryStateView,
   gameName: string,
-  parentOrigin?: OccurrenceAddress,
+  parentOrigin?: RoomHistoryOrigin,
 ): number {
   return view.ledgers.roomCreations.filter(
     (creation) =>
@@ -219,7 +241,7 @@ function appearanceCount(view: LinearHistoryStateView, gameName: string): number
 
 function evaluateCandidate(
   catalog: Catalog,
-  source: CanonicalAuthoredRoom,
+  source: CanonicalGenerationSource,
   sourceDeclaration: RoomDeclaration,
   exit: CanonicalPhysicalExit,
   view: LinearHistoryStateView,
@@ -282,12 +304,16 @@ function evaluateCandidate(
 
 function linearCandidatePool(catalog: Catalog, biomeKey: string): readonly RoomDeclaration[] {
   const layout = catalog.biomeLayouts.byKey[biomeKey];
-  if (layout?.kind !== 'LinearBiome' || layout.start.kind !== 'authoredStart') {
+  if (layout?.kind !== 'LinearBiome') {
     throw new LinearRoomGenerationContractError(
       `catalog does not provide ${biomeKey} candidate structure`,
     );
   }
-  const startNames = new Set(layout.start.roomGameNames);
+  const startNames = new Set(
+    layout.start.kind === 'authoredStart'
+      ? layout.start.roomGameNames
+      : [layout.start.roomGameName],
+  );
   return Object.freeze(
     catalog.rooms.values.filter(
       (room) =>
@@ -305,9 +331,11 @@ function targetGenerationViews(
   return new Map(entries.map((view) => [semanticAddressKey(view.targetOrigin), view]));
 }
 
-function authoredRooms(snapshot: CanonicalLinearBiome): ReadonlyMap<string, CanonicalAuthoredRoom> {
+function generationRooms(
+  snapshot: CanonicalLinearBiome,
+): ReadonlyMap<string, CanonicalGenerationSource> {
   const rooms = [
-    ...snapshot.entryRooms.filter((room) => room.kind === 'authored'),
+    ...snapshot.entryRooms,
     ...snapshot.batches.flatMap((batch) => batch.targets.map((target) => target.room)),
     ...snapshot.terminalEntry.targets.map((target) => target.room),
   ];
@@ -412,7 +440,7 @@ function selectedEvidence(entry: LinearForcePressureLedgerEntry): FindingEvidenc
 }
 
 function assertTargetHistoryMatches(
-  source: CanonicalAuthoredRoom,
+  source: CanonicalGenerationSource,
   target: CanonicalTarget,
   view: LinearTargetGenerationView,
 ): void {
@@ -456,7 +484,7 @@ function assertTargetHistoryMatches(
 function evaluateTargetGameName(
   catalog: Catalog,
   pool: readonly RoomDeclaration[],
-  source: CanonicalAuthoredRoom,
+  source: CanonicalGenerationSource,
   targetOrigin: CanonicalTarget['origin'],
   exit: CanonicalPhysicalExit,
   view: LinearTargetGenerationView,
@@ -524,7 +552,7 @@ function evaluateTargetGameName(
 function validateTarget(
   catalog: Catalog,
   pool: readonly RoomDeclaration[],
-  source: CanonicalAuthoredRoom,
+  source: CanonicalGenerationSource,
   target: CanonicalTarget,
   view: LinearTargetGenerationView,
   enteredBiomeCount: number,
@@ -543,9 +571,9 @@ function validateTarget(
 }
 
 function requireSource(
-  rooms: ReadonlyMap<string, CanonicalAuthoredRoom>,
-  origin: OccurrenceAddress,
-): CanonicalAuthoredRoom {
+  rooms: ReadonlyMap<string, CanonicalGenerationSource>,
+  origin: RoomHistoryOrigin,
+): CanonicalGenerationSource {
   const room = rooms.get(semanticAddressKey(origin));
   if (room === undefined || !room.entered) {
     throw new LinearRoomGenerationContractError(
@@ -558,7 +586,7 @@ function requireSource(
 function evaluateTargets(
   catalog: Catalog,
   pool: readonly RoomDeclaration[],
-  source: CanonicalAuthoredRoom,
+  source: CanonicalGenerationSource,
   targets: readonly CanonicalTarget[],
   views: ReadonlyMap<string, LinearTargetGenerationView>,
   pressure: LinearForcePressureLedgerEntry[],
@@ -590,7 +618,7 @@ export function evaluateLinearRoomGeneration(
     );
   }
   const pool = linearCandidatePool(catalog, snapshot.biomeKey);
-  const rooms = authoredRooms(snapshot);
+  const rooms = generationRooms(snapshot);
   const views = targetGenerationViews(history);
   const pressure: LinearForcePressureLedgerEntry[] = [];
   const fieldsCageOutcomes: FieldsCageOutcomeSupportEntry[] = [];
@@ -603,11 +631,6 @@ export function evaluateLinearRoomGeneration(
   }
 
   for (const batch of snapshot.batches) {
-    if (batch.parent.origin.kind !== 'occurrence') {
-      throw new LinearRoomGenerationContractError(
-        `${snapshot.biomeKey} fixed-entry generation is not implemented`,
-      );
-    }
     const source = requireSource(rooms, batch.parent.origin);
     if (layout.continuation.batchPolicy.kind === 'fields') {
       const sourceView = history.rooms.find(
@@ -639,11 +662,6 @@ export function evaluateLinearRoomGeneration(
       pressure,
       findings,
       enteredBiomeCount,
-    );
-  }
-  if (snapshot.terminalEntry.predecessor.origin.kind !== 'occurrence') {
-    throw new LinearRoomGenerationContractError(
-      `${snapshot.biomeKey} fixed-entry terminal generation is not implemented`,
     );
   }
   evaluateTargets(
@@ -684,27 +702,24 @@ export function evaluateLinearRoomTargetCandidate(
       'linear candidate generation inputs do not share one biome owner',
     );
   }
-  const batch = snapshot.batches.find(
-    (candidate) =>
-      candidate.parent.origin.kind === 'occurrence' &&
-      candidate.parent.origin.occurrenceId === targetOrigin.parentOccurrenceId &&
-      candidate.targets.some((target) => target.origin.exitIndex === targetOrigin.exitIndex),
+  const owner = [...snapshot.batches, snapshot.terminalEntry].find((candidate) =>
+    candidate.targets.some(
+      (target) => semanticAddressKey(target.origin) === semanticAddressKey(targetOrigin),
+    ),
   );
-  const target = batch?.targets.find(
+  const target = owner?.targets.find(
     (candidate) => candidate.origin.exitIndex === targetOrigin.exitIndex,
   );
-  if (batch === undefined || target === undefined) {
+  if (owner === undefined || target === undefined) {
     throw new LinearRoomGenerationContractError(
-      `target ${semanticAddressKey(targetOrigin)} is not an ordinary linear batch target`,
+      `target ${semanticAddressKey(targetOrigin)} is not a linear batch target`,
     );
   }
-  const rooms = authoredRooms(snapshot);
-  if (batch.parent.origin.kind !== 'occurrence') {
-    throw new LinearRoomGenerationContractError(
-      `${snapshot.biomeKey} fixed-entry candidate generation is not implemented`,
-    );
-  }
-  const source = requireSource(rooms, batch.parent.origin);
+  const rooms = generationRooms(snapshot);
+  const source = requireSource(
+    rooms,
+    'parent' in owner ? owner.parent.origin : owner.predecessor.origin,
+  );
   const view = targetGenerationViews(history).get(semanticAddressKey(targetOrigin));
   if (view === undefined) {
     throw new LinearRoomGenerationContractError(

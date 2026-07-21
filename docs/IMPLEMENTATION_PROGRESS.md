@@ -361,6 +361,18 @@ acquired NonGoals, a declined preboss occurrence, the later entered preboss,
 WorldShop, boss, postboss, and biome-local resets. I remains outside selected
 validation, candidates, editor projection, and application capabilities.
 
+Phase 6 I Slice 3 is complete. Common selected generation now consumes
+Clockwork Goal and non-goal-capacity facts, validates fixed-entry sources and
+generated preboss batches, and applies preboss force and parent-local creation
+caps through the ordinary room authority. Reward replay carries the fixed
+Story offer, declaration-owned Tartarus bag resolution, dormant Goal leaves,
+and picked-only `I_WorldShop` offers and ordered purchases. A generic biome-
+field candidate joins room, reward, shop-offer, and purchase candidates; all
+proposal paths reuse the selected biome evaluator and preserve the authored
+project. Incomplete or invalid F/G/H prefixes return explicit unavailable
+context. The core simulator can evaluate I, while the application scope still
+ends at H, so I remains non-editable and absent from product capabilities.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1064,7 +1076,7 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices and I
-Slices 1-2 are complete; I selected validation and candidates are the next
+Slices 1-3 are complete; the dormant I editor projection is the next
 implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity

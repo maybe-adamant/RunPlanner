@@ -1,8 +1,10 @@
 import {
   createPreparedProjectCandidateEvaluator,
   semanticAddressKey,
+  type AuthoredFieldValue,
   type BatchRewardStoreAddress,
   type BiomeAddress,
+  type BiomeFieldAddress,
   type Catalog,
   type ContinuationAddress,
   type IncomingRewardAddress,
@@ -26,6 +28,11 @@ export interface CandidateOptionProjection<T> {
 }
 
 export interface CandidateProjectionService {
+  readonly biomeFields: (
+    project: ProjectDocument,
+    field: BiomeFieldAddress,
+    values: readonly AuthoredFieldValue[],
+  ) => readonly CandidateOptionProjection<AuthoredFieldValue>[];
   readonly startRooms: (
     project: ProjectDocument,
     owner: BiomeAddress | OccurrenceAddress,
@@ -74,6 +81,10 @@ function offerKey(value: ResolvedRewardOffer): string {
 
 function domainKey(values: readonly string[]): string {
   return JSON.stringify(values);
+}
+
+function fieldValueKey(value: AuthoredFieldValue): string {
+  return JSON.stringify(value);
 }
 
 function projectOptions<T>(
@@ -126,6 +137,16 @@ export function createCandidateProjectionService(
 ): CandidateProjectionService {
   const cache = new WeakMap<ProjectDocument, ProjectCandidateProjectionCache>();
   const service: CandidateProjectionService = {
+    biomeFields: (project, field, values) =>
+      projectOptions(
+        cache,
+        project,
+        `biome-field:${semanticAddressKey(field)}:${domainKey(values.map(fieldValueKey))}`,
+        values,
+        values.map((value) => ({ kind: 'biomeField', field, value })),
+        catalog,
+        evaluateProject,
+      ),
     startRooms: (project, owner, rooms) =>
       projectOptions(
         cache,

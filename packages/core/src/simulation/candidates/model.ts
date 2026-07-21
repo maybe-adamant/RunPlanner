@@ -1,6 +1,7 @@
 import type {
   BatchRewardStoreAddress,
   BiomeAddress,
+  BiomeFieldAddress,
   ContinuationAddress,
   IncomingRewardAddress,
   LocalRewardAddress,
@@ -9,6 +10,7 @@ import type {
   ShopPurchaseAddress,
   TargetAddress,
 } from '../../project/addresses';
+import type { AuthoredFieldValue } from '../../project/model';
 import type { ResolvedRewardOffer } from '../../rewardKernel/model';
 import type { RoomGenerationExclusionReason } from '../generation';
 import type { FindingCode, SemanticFinding } from '../model';
@@ -34,6 +36,12 @@ export interface BatchRewardStoreCandidateQuery {
   readonly kind: 'batchRewardStore';
   readonly rewardStore: BatchRewardStoreAddress;
   readonly storeKey: string;
+}
+
+export interface BiomeFieldCandidateQuery {
+  readonly kind: 'biomeField';
+  readonly field: BiomeFieldAddress;
+  readonly value: AuthoredFieldValue;
 }
 
 export interface IncomingRewardCandidateQuery {
@@ -68,6 +76,7 @@ export interface ShopPurchaseCandidateQuery {
 
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
+  | BiomeFieldCandidateQuery
   | FieldsCageOutcomeCandidateQuery
   | IncomingRewardCandidateQuery
   | LocalRewardCandidateQuery
@@ -140,6 +149,11 @@ export interface ShopPurchaseCandidateEvidence {
   readonly relevantFindingCodes: readonly FindingCode[];
 }
 
+export interface BiomeFieldCandidateEvidence {
+  readonly candidateValue: AuthoredFieldValue;
+  readonly relevantFindingCodes: readonly FindingCode[];
+}
+
 export interface EvaluatedStartRoomCandidate {
   readonly context: 'evaluated';
   readonly query: StartRoomCandidateQuery;
@@ -154,6 +168,14 @@ export interface EvaluatedBatchRewardStoreCandidate {
   readonly support: CandidateSupport;
   readonly findings: readonly SemanticFinding[];
   readonly evidence: BatchRewardStoreCandidateEvidence;
+}
+
+export interface EvaluatedBiomeFieldCandidate {
+  readonly context: 'evaluated';
+  readonly query: BiomeFieldCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: BiomeFieldCandidateEvidence;
 }
 
 export interface EvaluatedIncomingRewardCandidate {
@@ -198,6 +220,7 @@ export interface EvaluatedShopPurchaseCandidate {
 
 export type ProjectCandidateEvaluation =
   | EvaluatedBatchRewardStoreCandidate
+  | EvaluatedBiomeFieldCandidate
   | EvaluatedFieldsCageOutcomeCandidate
   | EvaluatedIncomingRewardCandidate
   | EvaluatedLocalRewardCandidate

@@ -1,5 +1,5 @@
 import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../../catalog';
-import { semanticAddressKey, type OccurrenceAddress } from '../../project/addresses';
+import { semanticAddressKey } from '../../project/addresses';
 import {
   applyConcreteAcquisition,
   applyOfferProjection,
@@ -32,6 +32,7 @@ import type {
 import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
+  CanonicalFixedEntryRoom,
   CanonicalLinearBiome,
   CanonicalLocalReward,
   CanonicalResolvedIncomingReward,
@@ -44,6 +45,8 @@ import type {
   LinearRewardSimulation,
   LinearRewardStoreSupportEntry,
 } from './model';
+
+type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalFixedEntryRoom;
 
 interface PendingShopState {
   readonly profileKey: string;
@@ -203,7 +206,7 @@ function staticRewardViewFacts(
 function priorPeerGameNames(
   catalog: Catalog,
   view: LinearHistoryStateView,
-  parentOrigin: OccurrenceAddress,
+  parentOrigin: CanonicalRewardRoom['origin'],
 ): readonly string[] {
   const facts = staticRewardViewFacts(catalog, view);
   const parentKey = semanticAddressKey(parentOrigin);
@@ -226,7 +229,7 @@ function priorPeerGameNames(
 
 function rewardFacts(
   catalog: Catalog,
-  source: CanonicalAuthoredRoom,
+  source: CanonicalRewardRoom,
   sourceDeclaration: RoomDeclaration,
   view: LinearHistoryStateView,
   history: RewardHistoryState,
@@ -234,6 +237,14 @@ function rewardFacts(
   currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
 ): RewardKernelFacts {
   const staticFacts = staticRewardViewFacts(catalog, view);
+  const goalsRemaining = view.ledgers.counters.clockworkGoalsRemaining;
+  const nonGoalRewardsAcquired = view.ledgers.counters.clockworkNonGoalRewardsAcquired;
+  const maxNonGoalRewards = view.ledgers.counters.clockworkMaxNonGoalRewards;
+  const clockworkValues = [goalsRemaining, nonGoalRewardsAcquired, maxNonGoalRewards];
+  const hasClockwork = clockworkValues.every((value) => value !== undefined);
+  if (!hasClockwork && clockworkValues.some((value) => value !== undefined)) {
+    throw new LinearRewardSimulationContractError('linear history has partial Clockwork facts');
+  }
   const requirements: RequirementEvaluationContext = Object.freeze({
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
@@ -258,7 +269,13 @@ function rewardFacts(
     recentEncounterPhases: staticFacts.recentEncounterPhases,
     offeredExitCount: sourceDeclaration.exits.length,
     currentBatchRoomGameNames: priorPeerGameNames(catalog, view, source.origin),
-    clockwork: undefined,
+    clockwork: hasClockwork
+      ? {
+          remainingGoals: goalsRemaining!,
+          nonGoalRewardsAcquired: nonGoalRewardsAcquired!,
+          maxNonGoalRewards: maxNonGoalRewards!,
+        }
+      : undefined,
     flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
   });
   return factsWithHistory(Object.freeze({ requirements }), history, currentRoomShopOptionNames);
@@ -302,6 +319,8 @@ function requireLinearLayout(catalog: Catalog, snapshot: CanonicalLinearBiome): 
   const supportedPolicy =
     layout?.kind === 'LinearBiome' &&
     (layout.continuation.rewardStorePolicy.kind === 'authoredBaseStore' ||
+      (layout.continuation.batchPolicy.kind === 'clockwork' &&
+        layout.continuation.rewardStorePolicy.kind === 'none') ||
       (layout.continuation.batchPolicy.kind === 'fields' &&
         layout.continuation.rewardStorePolicy.kind === 'none'));
   if (layout?.kind !== 'LinearBiome' || !supportedPolicy) {
@@ -312,9 +331,9 @@ function requireLinearLayout(catalog: Catalog, snapshot: CanonicalLinearBiome): 
   return layout;
 }
 
-function authoredRooms(snapshot: CanonicalLinearBiome): ReadonlyMap<string, CanonicalAuthoredRoom> {
+function rewardRooms(snapshot: CanonicalLinearBiome): ReadonlyMap<string, CanonicalRewardRoom> {
   const rooms = [
-    ...snapshot.entryRooms.filter((room) => room.kind === 'authored'),
+    ...snapshot.entryRooms,
     ...snapshot.batches.flatMap((batch) => batch.targets.map((target) => target.room)),
     ...snapshot.terminalEntry.targets.map((target) => target.room),
   ];
@@ -334,7 +353,7 @@ function canonicalTargets(snapshot: CanonicalLinearBiome): ReadonlyMap<string, C
 }
 
 function enteredStoreKey(
-  room: CanonicalAuthoredRoom,
+  room: CanonicalRewardRoom,
   declaration: RoomDeclaration,
 ): string | undefined {
   switch (declaration.enteredRewardStoreHistory.kind) {
@@ -480,7 +499,7 @@ interface OfferProcessingContext {
   >;
   readonly binding?: CountedRewardBinding;
   readonly declaration: RoomDeclaration;
-  readonly source: CanonicalAuthoredRoom;
+  readonly source: CanonicalRewardRoom;
   readonly view: LinearHistoryStateView;
   readonly historySequence: number;
   readonly peers: readonly CanonicalResolvedIncomingReward['offer'][];
@@ -817,7 +836,7 @@ function processShopPurchases(
 function processProducerRole(
   catalog: Catalog,
   branches: readonly RewardBranchState[],
-  room: CanonicalAuthoredRoom,
+  room: CanonicalRewardRoom,
   declaration: RoomDeclaration,
   view: LinearHistoryStateView,
   event: Extract<
@@ -973,11 +992,14 @@ export function evaluateLinearRewards(
     );
   }
   const layout = requireLinearLayout(catalog, snapshot);
-  const rooms = authoredRooms(snapshot);
+  const rooms = rewardRooms(snapshot);
   const views = roomViews(history);
   const targets = canonicalTargets(snapshot);
   const batchesByParent = new Map(
     snapshot.batches.map((batch) => [semanticAddressKey(batch.parent.origin), batch]),
+  );
+  const fixedEntryPredecessors = new Set(
+    snapshot.entryRooms.slice(0, -1).map((room) => semanticAddressKey(room.origin)),
   );
   const terminalParentKey = semanticAddressKey(snapshot.terminalEntry.predecessor.origin);
   const expectedStores = new Map<string, string | undefined>();
@@ -1030,7 +1052,7 @@ export function evaluateLinearRewards(
           );
         }
         const incoming = room.incomingReward;
-        const localRewards = room.localRewards ?? [];
+        const localRewards = room.kind === 'authored' ? (room.localRewards ?? []) : [];
         if (incoming === undefined && localRewards.length === 0) {
           branches = branches.map((branch) => advanceBranch(branch, event.sequence));
           break;
@@ -1066,11 +1088,15 @@ export function evaluateLinearRewards(
                 semanticAddressKey(event.targetOrigin),
             )?.before ?? parentViews.preOutgoing!;
           currentShopNames = new Set(
-            parent.entryState?.offers.map((offer) => offer.offer.rewardType) ?? [],
+            (parent.kind === 'authored' ? parent.entryState?.offers : undefined)?.map(
+              (offer) => offer.offer.rewardType,
+            ) ?? [],
           );
           const expectedStore = expectedStores.get(semanticAddressKey(event.targetOrigin));
           const resolvedStores = [
-            ...(incoming === undefined ? [] : [incoming.resolvedStoreKey]),
+            ...(incoming === undefined || countedBinding(declaration, incoming) === undefined
+              ? []
+              : [incoming.resolvedStoreKey]),
             ...localRewards.map((reward) => reward.resolvedStoreKey),
           ];
           if (resolvedStores.some((storeKey) => storeKey !== expectedStore)) {
@@ -1145,6 +1171,11 @@ export function evaluateLinearRewards(
         const targetSet =
           batch?.targets ?? (isTerminal ? snapshot.terminalEntry.targets : undefined);
         if (targetSet === undefined) {
+          if (fixedEntryPredecessors.has(semanticAddressKey(event.origin))) {
+            peers = Object.freeze([]);
+            branches = branches.map((branch) => advanceBranch(branch, event.sequence));
+            break;
+          }
           throw new LinearRewardSimulationContractError(
             `${source.gameName} has no outgoing reward batch`,
           );
@@ -1152,6 +1183,11 @@ export function evaluateLinearRewards(
         let sharedStore: string | undefined;
         if (batch !== undefined) {
           if (batch.rewardStore.kind === 'authoredBaseStore') {
+            if (source.kind !== 'authored') {
+              throw new LinearRewardSimulationContractError(
+                `${source.gameName} cannot own an authored base reward store`,
+              );
+            }
             const support = storeSupport(
               layout,
               batch,
@@ -1192,7 +1228,12 @@ export function evaluateLinearRewards(
         const room = rooms.get(semanticAddressKey(event.origin));
         const declaration = room && catalog.rooms.byKey[room.gameName];
         const roomView = views.get(semanticAddressKey(event.origin));
-        if (room === undefined || declaration === undefined || roomView === undefined) {
+        if (
+          room === undefined ||
+          room.kind !== 'authored' ||
+          declaration === undefined ||
+          roomView === undefined
+        ) {
           throw new LinearRewardSimulationContractError('shop offer point has no authored room');
         }
         branches = processShopInventory(
@@ -1234,6 +1275,10 @@ export function evaluateLinearRewards(
           branches = branches.map((branch) => advanceBranch(branch, event.sequence));
           break;
         }
+        if (room.kind !== 'authored') {
+          branches = branches.map((branch) => advanceBranch(branch, event.sequence));
+          break;
+        }
         const matchingRewards =
           room.localRewards?.filter((reward) => reward.encounterPhaseKey === event.phaseKey) ?? [];
         if (matchingRewards.length === 0) {
@@ -1262,7 +1307,12 @@ export function evaluateLinearRewards(
         const room = rooms.get(semanticAddressKey(event.origin));
         const declaration = room && catalog.rooms.byKey[room.gameName];
         const roomView = views.get(semanticAddressKey(event.origin));
-        if (room === undefined || declaration === undefined || roomView === undefined) {
+        if (
+          room === undefined ||
+          room.kind !== 'authored' ||
+          declaration === undefined ||
+          roomView === undefined
+        ) {
           throw new LinearRewardSimulationContractError('shop purchases have no authored room');
         }
         branches = processShopPurchases(

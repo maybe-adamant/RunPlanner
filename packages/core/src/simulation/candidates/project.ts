@@ -19,6 +19,7 @@ import type {
   CandidateContextUnavailableReason,
   CandidateSupport,
   BatchRewardStoreCandidateQuery,
+  BiomeFieldCandidateQuery,
   FieldsCageOutcomeCandidateQuery,
   IncomingRewardCandidateQuery,
   LocalRewardCandidateQuery,
@@ -36,6 +37,8 @@ type CandidateAddress = Exclude<SemanticAddress, { readonly kind: 'project' | 'r
 
 function queryAddress(query: ProjectCandidateQuery): CandidateAddress {
   switch (query.kind) {
+    case 'biomeField':
+      return query.field;
     case 'startRoom':
       return query.owner;
     case 'roomTarget':
@@ -83,6 +86,8 @@ function immutableOffer(value: ResolvedRewardOffer): ResolvedRewardOffer {
 
 function immutableQuery(query: ProjectCandidateQuery): ProjectCandidateQuery {
   switch (query.kind) {
+    case 'biomeField':
+      return Object.freeze({ ...query, field: Object.freeze({ ...query.field }) });
     case 'startRoom':
       return Object.freeze({ ...query, owner: Object.freeze({ ...query.owner }) });
     case 'roomTarget':
@@ -442,6 +447,7 @@ function evaluateCandidateBiome(
   proposal: ProjectDocument,
   context: PreparedCandidateContext,
   query:
+    | BiomeFieldCandidateQuery
     | FieldsCageOutcomeCandidateQuery
     | IncomingRewardCandidateQuery
     | LocalRewardCandidateQuery
@@ -470,6 +476,39 @@ function evaluateCandidateBiome(
     failCandidate(query, 'candidate biome has an incomplete upstream evaluation');
   }
   return evaluateLinearBiome(catalog, route.routeKey, plan, biomeIndex + 1, previous);
+}
+
+function evaluateBiomeFieldCandidate(
+  catalog: Catalog,
+  project: ProjectDocument,
+  context: PreparedCandidateContext,
+  query: BiomeFieldCandidateQuery,
+): ProjectCandidateEvaluation {
+  const stableQuery = immutableQuery(query) as BiomeFieldCandidateQuery;
+  locateBiomePlan(project, stableQuery);
+  const proposal = applyCandidateCommand(catalog, project, stableQuery, {
+    kind: 'ReplaceBiomeField',
+    field: stableQuery.field,
+    value: stableQuery.value,
+  });
+  const biome = evaluateCandidateBiome(catalog, project, proposal, context, stableQuery);
+  if (typeof biome === 'string') {
+    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  }
+  if (biome.completion === 'incomplete') {
+    failCandidate(stableQuery, 'biome-field proposal made a complete biome incomplete');
+  }
+  const findings = biome.findings;
+  return Object.freeze({
+    context: 'evaluated',
+    query: stableQuery,
+    support: findings.length === 0 ? 'possible' : 'impossible',
+    findings,
+    evidence: Object.freeze({
+      candidateValue: stableQuery.value,
+      relevantFindingCodes: Object.freeze(findings.map((finding) => finding.code)),
+    }),
+  });
 }
 
 function evaluateRewardCandidate(
@@ -705,6 +744,8 @@ function evaluatePreparedProjectCandidates(
   return Object.freeze(
     queries.map((query): ProjectCandidateEvaluation => {
       switch (query.kind) {
+        case 'biomeField':
+          return evaluateBiomeFieldCandidate(catalog, project, context, query);
         case 'startRoom':
           return evaluateStartRoomCandidate(catalog, project, query);
         case 'roomTarget':
