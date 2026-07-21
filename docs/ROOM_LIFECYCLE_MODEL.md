@@ -186,6 +186,7 @@ type RoomLifecycleOperation =
   | { kind: 'enterRoom' }
   | { kind: 'startEncounter'; encounterRole: string }
   | { kind: 'completeEncounter'; encounterRole: string }
+  | { kind: 'runEncounterSequence' }
   | { kind: 'advanceProducer'; point: ProducerLifecyclePointKey }
   | { kind: 'generateOutgoingBatch' }
   | { kind: 'applyShopPurchases'; offerPoint: string }
@@ -205,6 +206,13 @@ O's internal reward wheels. `advanceProducer` does not regenerate an offer; it
 advances an already-resolved producer and emits the acquisition roles bound to
 that point. `commitRoom` appends declared history and updates commit-time
 caches before the selected target prepares.
+
+`runEncounterSequence` executes every phase of one already-materialized
+multi-phase encounter profile in declaration order. It emits start, optional
+depth advancement, and completion for each phase. H uses it for the passive
+Fields phase followed by the active two- or three-cage prefix. Cage reward
+offer and acquisition events remain separate local producers rather than being
+hidden inside this encounter operation.
 
 Do not introduce an unrestricted callback or event DSL. Add or split an
 operation, effect, or event kind only when audited game behavior has an

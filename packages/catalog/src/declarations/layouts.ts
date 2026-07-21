@@ -190,6 +190,9 @@ export const biomeLayouts = [
       progressionPolicy: { kind: 'fixedCount', continuationCount: 4 },
       batchPolicy: {
         kind: 'fields',
+        minDoorCageRewards: 2,
+        maxDoorCageRewards: 3,
+        maxDoorCageCeiling: 2,
         fields: [
           {
             key: 'cageOutcome',

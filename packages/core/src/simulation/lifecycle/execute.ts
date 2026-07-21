@@ -213,12 +213,26 @@ function encounterOperationHandler(
   );
 }
 
+function encounterSequenceOperationHandler(
+  operation: RoomLifecycleOperation,
+  context: ExecutionContext,
+  operationIndex: number,
+  state: ExecutionState,
+): ExecutionState {
+  let next = state;
+  for (const encounterPhase of context.encounter.phases) {
+    next = applyEffects(operation, { ...context, operationIndex, encounterPhase }, next);
+  }
+  return next;
+}
+
 const operationDispatchRegistry = Object.freeze({
   prepareRoom: defaultOperationHandler,
   materializeOfferPoint: defaultOperationHandler,
   enterRoom: defaultOperationHandler,
   startEncounter: encounterOperationHandler,
   completeEncounter: encounterOperationHandler,
+  runEncounterSequence: encounterSequenceOperationHandler,
   advanceProducer: defaultOperationHandler,
   generateOutgoingBatch: defaultOperationHandler,
   applyShopPurchases: defaultOperationHandler,

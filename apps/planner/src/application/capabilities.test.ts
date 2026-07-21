@@ -47,6 +47,14 @@ function catalogBeforeHImport(): Catalog {
     encounterProfiles: declarations.encounterProfiles.filter(
       (profile) => !profile.key.startsWith('H_'),
     ),
+    roomLifecycleProfiles: declarations.roomLifecycleProfiles
+      .filter((profile) => profile.key !== 'FieldsCombatRoom')
+      .map((profile) => ({
+        ...profile,
+        encounterProfileKeys: profile.encounterProfileKeys.filter(
+          (encounterProfileKey) => !encounterProfileKey.startsWith('H_'),
+        ),
+      })),
     exitTypes: declarations.exitTypes.filter((exitType) => exitType.key !== 'FieldsExitDoor'),
     rooms: declarations.rooms.filter((room) => room.biomeKey !== 'H'),
     biomeLayouts: declarations.biomeLayouts.filter((layout) => layout.biomeKey !== 'H'),

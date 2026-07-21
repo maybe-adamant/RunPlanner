@@ -54,6 +54,13 @@ export interface IncomingRewardAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
 }
 
+export interface LocalRewardAddress extends BiomeOwnedAddress {
+  readonly kind: 'localReward';
+  readonly occurrenceId: OccurrenceId;
+  readonly groupKey: string;
+  readonly slotKey: string;
+}
+
 export interface ShopPurchaseAddress extends BiomeOwnedAddress {
   readonly kind: 'shopPurchase';
   readonly occurrenceId: OccurrenceId;
@@ -74,6 +81,7 @@ export type SemanticAddress =
   | CompletionRoomAddress
   | ContinuationAddress
   | IncomingRewardAddress
+  | LocalRewardAddress
   | OccurrenceAddress
   | PickedAddress
   | ShopOfferAddress
@@ -188,6 +196,21 @@ export function createIncomingRewardAddress(
   return Object.freeze({ kind: 'incomingReward', ...biomeOwner(biome), occurrenceId });
 }
 
+export function createLocalRewardAddress(
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+  groupKey: string,
+  slotKey: string,
+): LocalRewardAddress {
+  return Object.freeze({
+    kind: 'localReward',
+    ...biomeOwner(biome),
+    occurrenceId,
+    groupKey: nonBlank(groupKey, 'groupKey'),
+    slotKey: nonBlank(slotKey, 'slotKey'),
+  });
+}
+
 export function createShopPurchaseAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -229,6 +252,15 @@ export function semanticAddressKey(address: SemanticAddress): string {
         address.routeKey,
         address.biomeKey,
         address.occurrenceId,
+      ]);
+    case 'localReward':
+      return JSON.stringify([
+        address.kind,
+        address.routeKey,
+        address.biomeKey,
+        address.occurrenceId,
+        address.groupKey,
+        address.slotKey,
       ]);
     case 'completionRoom':
       return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.role]);

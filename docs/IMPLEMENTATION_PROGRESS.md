@@ -258,8 +258,19 @@ room occurrences. A dormant H fixture closes the exact four-batch,
 seven-ordinary-target spine and forked preboss, round-trips schema version 3,
 and rejects malformed store/state authorities and a fifth ordinary batch. H
 remains outside authorable, simulatable, editable, navigation, profile, and
-project-simulation capabilities. Slice 2, canonical Fields materialization, is
-the current frontier.
+project-simulation capabilities.
+
+Phase 6 H Slice 2 is complete. The common canonical linear materializer now
+admits the exact Fields/no-store policy pair and projects one typed Fields
+batch state containing the authored outcome, physical-target-derived capacity,
+and selected cage count. Combat targets expose only their active, addressed
+local-reward prefix while all three authored cage leaves remain untouched.
+Focused fixtures cover Min, three-cage Max, a no-combat Max batch, a
+capacity-two Max clamp, the fixed intro, both preboss realizations, and the H
+boss/postboss tail. The catalog also owns the exact two/three cage limits and a
+real multi-phase Fields lifecycle profile; local reward offer/acquisition
+events and route history remain Slice 3. H is still absent from all application
+capabilities and simulator dispatch.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
@@ -963,8 +974,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slice 1 is complete;
-H Slice 2 canonical Fields materialization is the next implementation
+Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slices 1 and 2 are
+complete; H Slice 3 lifecycle and route history is the next implementation
 frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
