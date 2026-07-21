@@ -175,6 +175,7 @@ const biomeSimulators: Readonly<Record<string, BiomeSimulator>> = Object.freeze(
   F: evaluateLinearBiome,
   G: evaluateLinearBiome,
   H: evaluateLinearBiome,
+  I: evaluateLinearBiome,
 });
 
 function registeredSimulator(biomeKey: string, simulatableBiomeKeys?: ReadonlySet<string>) {

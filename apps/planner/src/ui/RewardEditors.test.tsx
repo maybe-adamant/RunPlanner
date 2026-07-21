@@ -36,6 +36,11 @@ function projected<T>(
 }
 
 const candidateProjection: CandidateProjectionService = {
+  biomeFields: (_project, owner, values) =>
+    projected(
+      values,
+      values.map((value) => ({ kind: 'biomeField', field: owner, value })),
+    ),
   startRooms: (_project, owner, rooms) =>
     projected(
       rooms,

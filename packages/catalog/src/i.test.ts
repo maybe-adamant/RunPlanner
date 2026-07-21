@@ -323,13 +323,7 @@ describe('complete dormant I catalog', () => {
       incomingReward: { kind: 'shop', shopProfileKey: 'I_WorldShop' },
       enteredRewardStoreHistory: { kind: 'none' },
       caps: { maxAppearancesThisBiome: 1, maxCreationsPerRoom: 1 },
-      force: {
-        kind: 'requirement',
-        requirement: {
-          kind: 'not',
-          requirement: { kind: 'clockworkNonGoalCapacity', reserve: 0 },
-        },
-      },
+      force: { kind: 'always' },
     });
 
     expect(

@@ -3,6 +3,7 @@ import {
   composeLinearHistory,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createBiomeFieldAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
@@ -40,6 +41,7 @@ import { catalog } from './index';
 const biome = createBiomeAddress('Underworld', 'F');
 const gBiome = createBiomeAddress('Underworld', 'G');
 const hBiome = createBiomeAddress('Underworld', 'H');
+const iBiome = createBiomeAddress('Underworld', 'I');
 const startId = createOccurrenceId('golden-start');
 
 interface BatchSpec {
@@ -606,6 +608,68 @@ function selectedGoldenHProject(): ProjectDocument {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(hBiome, createOccurrenceId('golden-h-miniboss')),
     gameName: 'H_Bridge01',
+  });
+}
+
+function selectedGoldenIProject(): ProjectDocument {
+  let project = applyProjectCommand(selectedGoldenHProject(), catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Underworld'),
+    configuredBiomeCount: 4,
+  });
+  let parent: OccurrenceId | null = null;
+  const batches = [
+    { targets: ['I_Combat01'], pickedExitIndex: 1 },
+    { targets: ['I_Combat02', 'I_Combat03'], pickedExitIndex: 1 },
+    { targets: ['I_Combat05'], pickedExitIndex: 1 },
+    { targets: ['I_Combat06'], pickedExitIndex: 1 },
+    { targets: ['I_Combat09'], pickedExitIndex: 1 },
+  ] as const;
+  for (const [batchIndex, batch] of batches.entries()) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(iBiome, parent),
+    });
+    for (const [targetIndex, gameName] of batch.targets.entries()) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(iBiome, parent, targetIndex + 1),
+        occurrenceId: createOccurrenceId(
+          targetIndex === 0
+            ? `golden-i-goal-${batchIndex + 1}`
+            : `golden-i-peer-${batchIndex + 1}-${targetIndex + 1}`,
+        ),
+        gameName,
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(iBiome, parent),
+      exitIndex: batch.pickedExitIndex,
+    });
+    parent = createOccurrenceId(`golden-i-goal-${batchIndex + 1}`);
+  }
+  const preboss = createOccurrenceId('golden-i-preboss');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    continuation: createContinuationAddress(iBiome, parent),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(iBiome, parent, 1),
+    occurrenceId: preboss,
+    gameName: 'I_PreBoss02',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(iBiome, parent, 2),
+    occurrenceId: createOccurrenceId('golden-i-terminal-peer'),
+    gameName: 'I_MiniBoss01',
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'SetPicked',
+    picked: createPickedAddress(iBiome, parent),
+    exitIndex: 1,
   });
 }
 
@@ -1544,6 +1608,172 @@ describe('project simulation composition', () => {
     expect(roomCandidate).toMatchObject({ context: 'evaluated', support: 'possible' });
     expect(storeCandidate).toMatchObject({ context: 'evaluated', support: 'possible' });
     expect(rewardCandidate).toMatchObject({ context: 'evaluated', support: 'possible' });
+  });
+
+  it('validates a complete Clockwork spine and exposes I candidates without activating the app', () => {
+    const project = selectedGoldenIProject();
+    const route = simulateProject(catalog, project).routes[0]!;
+    const evaluation = route.biomes[3];
+
+    expect(evaluation?.findings).toEqual([]);
+    expect(evaluation).toMatchObject({ biomeKey: 'I', completion: 'complete', validity: 'valid' });
+    expect(route.validatedPrefix).toEqual(['F', 'G', 'H', 'I']);
+    if (evaluation?.completion !== 'complete') {
+      throw new Error('golden I evaluation is incomplete');
+    }
+    expect(evaluation.history.biomeCompletion.ledgers.counters).toMatchObject({
+      clockworkGoalsRemaining: 0,
+      clockworkNonGoalRewardsAcquired: 0,
+      clockworkMaxNonGoalRewards: 3,
+    });
+    expect(
+      evaluation.rewards.branches[0]?.events.some(
+        (event) =>
+          event.kind === 'rewardOffered' &&
+          event.origin.kind === 'incomingReward' &&
+          event.origin.occurrenceId === createOccurrenceId('golden-i-peer-2-2'),
+      ),
+    ).toBe(true);
+
+    const terminalParent = createOccurrenceId('golden-i-goal-5');
+    const [
+      field,
+      earlyPreboss,
+      terminalPeer,
+      repeatedPreboss,
+      dormantGoalReward,
+      activeNonGoalReward,
+      shopOffer,
+      purchase,
+    ] = evaluateProjectCandidates(catalog, project, [
+      {
+        kind: 'biomeField',
+        field: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
+        value: 6,
+      },
+      {
+        kind: 'roomTarget',
+        target: createTargetAddress(iBiome, null, 1),
+        gameName: 'I_PreBoss02',
+      },
+      {
+        kind: 'roomTarget',
+        target: createTargetAddress(iBiome, terminalParent, 1),
+        gameName: 'I_Combat07',
+      },
+      {
+        kind: 'roomTarget',
+        target: createTargetAddress(iBiome, terminalParent, 2),
+        gameName: 'I_PreBoss02',
+      },
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(iBiome, createOccurrenceId('golden-i-goal-1')),
+        value: { rewardType: 'StackUpgradeTriple' },
+      },
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(iBiome, createOccurrenceId('golden-i-peer-2-2')),
+        value: { rewardType: 'StackUpgradeTriple' },
+      },
+      {
+        kind: 'shopOffer',
+        offer: createShopOfferAddress(iBiome, createOccurrenceId('golden-i-preboss'), 'Survival'),
+        value: { rewardType: 'ArmorBigBoost' },
+      },
+      {
+        kind: 'shopPurchase',
+        purchase: createShopPurchaseAddress(
+          iBiome,
+          createOccurrenceId('golden-i-preboss'),
+          'Survival',
+        ),
+        purchased: true,
+      },
+    ]);
+
+    expect(field).toMatchObject({ context: 'evaluated', support: 'possible', findings: [] });
+    expect(earlyPreboss).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: { exclusionReasons: ['eligibilityRequirement'] },
+    });
+    expect(terminalPeer).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: { exclusionReasons: ['forcedPool'] },
+    });
+    expect(repeatedPreboss).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: { exclusionReasons: ['maxCreationsPerRoom'] },
+    });
+    expect(dormantGoalReward).toMatchObject({
+      context: 'evaluated',
+      support: 'possible',
+      findings: [],
+    });
+    expect(activeNonGoalReward).toMatchObject({
+      context: 'evaluated',
+      support: 'possible',
+      findings: [],
+    });
+    expect(shopOffer).toMatchObject({ context: 'evaluated', support: 'possible', findings: [] });
+    expect(purchase).toMatchObject({ context: 'evaluated', support: 'possible', findings: [] });
+  });
+
+  it('keeps I candidates behind the validated prefix and the application simulation scope', () => {
+    const project = selectedGoldenIProject();
+    const field = createBiomeFieldAddress(iBiome, 'maxNonGoalRewards');
+    const scoped = simulateProject(catalog, project, {
+      simulatableBiomeKeys: ['F', 'G', 'H'],
+    }).routes[0]!;
+    expect(scoped.biomes.map((evaluation) => evaluation.biomeKey)).toEqual(['F', 'G', 'H']);
+    expect(scoped.horizon).toEqual({
+      kind: 'simulatorBoundary',
+      biomeKey: 'I',
+      blockedBiomeKeys: ['I'],
+    });
+    expect(
+      evaluateProjectCandidate(
+        catalog,
+        project,
+        { kind: 'biomeField', field, value: 4 },
+        { simulatableBiomeKeys: ['F', 'G', 'H'] },
+      ),
+    ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
+
+    const incomplete = applyProjectCommand(project, catalog, {
+      kind: 'RemoveBatch',
+      continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
+    });
+    expect(
+      evaluateProjectCandidate(catalog, incomplete, {
+        kind: 'biomeField',
+        field,
+        value: 4,
+      }),
+    ).toMatchObject({ context: 'unavailable', reason: 'upstreamIncomplete' });
+
+    const invalid = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
+      cageOutcome: 'max',
+    });
+    expect(
+      evaluateProjectCandidate(catalog, invalid, {
+        kind: 'biomeField',
+        field,
+        value: 4,
+      }),
+    ).toMatchObject({ context: 'unavailable', reason: 'upstreamInvalid' });
+    expect(() =>
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'biomeField',
+        field,
+        value: 2,
+      }),
+    ).toThrow(/candidate proposal is malformed.*must be between 3 and 6/);
   });
 
   it('preserves biome encounter depth when the picked G miniboss is Crawler', () => {

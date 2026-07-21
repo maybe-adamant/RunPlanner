@@ -725,13 +725,7 @@ export const iRooms = [
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsPerRoom: 1 },
     eligibility: { kind: 'clockworkGoalsRemaining', range: { max: 0 } },
-    force: {
-      kind: 'requirement',
-      requirement: {
-        kind: 'not',
-        requirement: { kind: 'clockworkNonGoalCapacity', reserve: 0 },
-      },
-    },
+    force: { kind: 'always' },
   },
   {
     gameName: 'I_Boss01',
