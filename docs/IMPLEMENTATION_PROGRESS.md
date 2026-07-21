@@ -456,6 +456,21 @@ history-envelope and completion-materialization reconciliation; reward
 simulation begins in Slice 5 only after those seams are proven against the
 existing F, I, and N outputs.
 
+Phase 6 N Slice 4 is complete. Linear and Hub history now share one restricted
+segment writer, room-lifecycle replay boundary, fixed-entry walker, completion
+tail, biome start/completion/reset envelope, and topology-neutral fold. The
+segment writer cannot emit envelope events; Linear still owns generated
+batches, Fields/Clockwork injections, and generated terminals, while Hub still
+owns its persistent board, visit order, local excursions, restores, and fixed
+terminal realization. Completion-room materialization now has one shared
+primitive with explicit declared-versus-absent entered-store provenance and
+caller-owned contract errors; Linear and Hub snapshot assembly remain
+separate. Existing F, I, H, G, and N fixtures preserve event order, carried and
+local counters, resolved/fixed/absent completion stores, physical board order,
+six Pylon pairs, four parent restores, six Hub restores, and transition state.
+N remains outside simulator dispatch and application capabilities. Slice 5
+adds N reward simulation against this stable canonical history.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1159,14 +1174,13 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, and N Slices 1-3 are complete. N Slice 4, shared biome-envelope
-reconciliation, is next. It extracts common history orchestration and the
-duplicated completion-room materialization primitive while keeping Linear and
-Hub canonical materializers variant-owned. It must not change authored plans,
-canonical snapshots, history events, counters, or transition state. N reward
-simulation moves to Slice 5. N will close the persistent-Hub traversal body's
-complete product loop before the contextual-selection UX insertion defined in
-`CONTEXTUAL_EDITOR_UX.md`.
+five I slices, and N Slices 1-4 are complete. N Slice 5, reward simulation, is
+next. It will resolve the persistent Hub board once in normalized physical
+order, preserve open unvisited targets as offers without acquisitions, resolve
+entered parent-local side batches jointly, and validate the fixed Preboss shop
+against the complete Hub reward lookup. N will close the persistent-Hub
+traversal body's complete product loop before the contextual-selection UX
+insertion defined in `CONTEXTUAL_EDITOR_UX.md`.
 
 After N activates, that insertion begins by replacing the current incomplete-
 biome early return with the progressive evaluation contract in
