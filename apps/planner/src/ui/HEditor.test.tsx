@@ -194,14 +194,21 @@ describe('H editor projection', () => {
     const { store, user } = renderH(hProject(true));
 
     expect(screen.getByRole('heading', { name: 'Fields of Mourning' })).toBeTruthy();
-    const outcomes = screen.getAllByLabelText('Fields cage outcome');
+    const outcomes = screen.getAllByLabelText('Fields door roll');
     const firstOutcome = document.querySelector<HTMLSelectElement>(
       '#batch-editor-h-start-cage-outcome',
     );
     expect(outcomes).toHaveLength(4);
+    expect(within(outcomes[0]!).getByRole('option', { name: 'Min (2)' })).toBeTruthy();
+    expect(within(outcomes[0]!).getByRole('option', { name: 'Max (3)' })).toBeTruthy();
     expect(firstOutcome).toHaveProperty('value', 'min');
     expect(firstOutcome?.getAttribute('data-candidate-support')).toBe('unavailable');
     expect(screen.getAllByLabelText('1 finding').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        'No offered room uses the Fields multi-cage count; Max still affects later Fields rolls.',
+      ),
+    ).toBeTruthy();
 
     const cageGroups = screen.getAllByLabelText('Fields cage rewards');
     const firstCageThree = within(cageGroups[0]!).getByRole('region', { name: 'Cage 3' });

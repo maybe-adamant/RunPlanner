@@ -1126,13 +1126,14 @@ describe('project simulation composition', () => {
         .map((event) => ({
           cageOutcome: event.cageOutcome,
           batchCapacity: event.batchCapacity,
-          activeCageCount: event.activeCageCount,
+          cageTargetCount: event.cageTargetCount,
+          doorCageRewardCount: event.doorCageRewardCount,
         })),
     ).toEqual([
-      { cageOutcome: 'min', batchCapacity: 3, activeCageCount: 2 },
-      { cageOutcome: 'max', batchCapacity: 2, activeCageCount: 2 },
-      { cageOutcome: 'max', batchCapacity: 3, activeCageCount: 3 },
-      { cageOutcome: 'min', batchCapacity: 3, activeCageCount: 2 },
+      { cageOutcome: 'min', batchCapacity: 3, cageTargetCount: 1, doorCageRewardCount: 2 },
+      { cageOutcome: 'max', batchCapacity: 2, cageTargetCount: 2, doorCageRewardCount: 2 },
+      { cageOutcome: 'max', batchCapacity: 3, cageTargetCount: 0, doorCageRewardCount: 3 },
+      { cageOutcome: 'min', batchCapacity: 3, cageTargetCount: 2, doorCageRewardCount: 2 },
     ]);
     expect(history.biomeCompletion.ledgers.counters.fieldsMaxDoorsRolled).toBe(2);
     expect(foldLinearHistoryEvents(history.events, g.history.afterTransition)).toEqual(history);

@@ -367,10 +367,12 @@ export function foldLinearHistoryEvents(
         }
         if (
           !Number.isInteger(event.batchCapacity) ||
-          !Number.isInteger(event.activeCageCount) ||
+          !Number.isInteger(event.cageTargetCount) ||
+          !Number.isInteger(event.doorCageRewardCount) ||
           event.batchCapacity <= 0 ||
-          event.activeCageCount <= 0 ||
-          event.activeCageCount > event.batchCapacity
+          event.cageTargetCount < 0 ||
+          event.doorCageRewardCount <= 0 ||
+          event.doorCageRewardCount > event.batchCapacity
         ) {
           throw new LinearHistoryFoldContractError('Fields batch outcome has invalid cage counts');
         }

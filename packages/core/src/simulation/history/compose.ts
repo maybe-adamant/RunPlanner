@@ -211,7 +211,8 @@ function appendBatchState(
     origin,
     cageOutcome: batchState.cageOutcome,
     batchCapacity: batchState.batchCapacity,
-    activeCageCount: batchState.activeCageCount,
+    cageTargetCount: batchState.cageTargetCount,
+    doorCageRewardCount: batchState.doorCageRewardCount,
   });
 }
 

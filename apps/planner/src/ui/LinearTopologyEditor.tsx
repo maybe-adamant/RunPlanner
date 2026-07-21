@@ -215,7 +215,7 @@ function OrdinaryTargetEditor({
         />
         <RoomStateEditor
           {...(room.state.kind === 'fieldsCombat' && projectedBatchState.kind === 'fields'
-            ? { activeCageCount: projectedBatchState.activeCageCount }
+            ? { activeCageCount: projectedBatchState.doorCageRewardCount }
             : {})}
           biome={biome}
           candidateProjection={candidateProjection}
@@ -275,6 +275,8 @@ function BatchEditor({
           return clockworkBatch.batchState;
         })()
       : projectLinearBatchState(catalog, biome, topology, continuation);
+  const fieldsPolicy =
+    layout.continuation.batchPolicy.kind === 'fields' ? layout.continuation.batchPolicy : undefined;
   const availableExitIndexes = generatedExitIndexes(parentRoom);
   const available = new Set(availableExitIndexes);
   const exitIndexes = [
@@ -372,53 +374,66 @@ function BatchEditor({
         </label>
       )}
 
-      {projectedBatchState.kind === 'fields' && continuation.batchState !== null && (
-        <div className="fields-batch-editor">
-          <label
-            className="field-control"
-            htmlFor={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
-          >
-            <span>Fields cage outcome</span>
-            <select
-              {...candidateSelectState(selectedFieldsOutcome)}
-              aria-label="Fields cage outcome"
-              id={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
-              onChange={(event) =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'ReplaceFieldsCageOutcome',
-                    continuation: address,
-                    cageOutcome: fieldsCageOutcome(event.target.value),
-                  }),
-                )
-              }
-              value={continuation.batchState.cageOutcome}
+      {projectedBatchState.kind === 'fields' &&
+        fieldsPolicy !== undefined &&
+        continuation.batchState !== null && (
+          <div className="fields-batch-editor">
+            <label
+              className="field-control"
+              htmlFor={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
             >
-              {projectedFieldsOutcomes.map((option) => (
-                <option key={option.value} value={option.value} {...candidateSelectState(option)}>
-                  {presentCandidateLabel(option.value === 'min' ? 'Min' : 'Max', option)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <dl className="fields-batch-summary">
-            <div>
-              <dt>Active cages</dt>
-              <dd>
-                {projectedBatchState.activeCageCount} / {projectedBatchState.batchCapacity}
-              </dd>
-            </div>
-            <div>
-              <dt>Prior Max outcomes</dt>
-              <dd>
-                {fieldsSupport === undefined
-                  ? 'Unavailable'
-                  : `${fieldsSupport.fieldsMaxDoorsRolled} / ${fieldsSupport.maxDoorCageCeiling}`}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      )}
+              <span>Fields door roll</span>
+              <select
+                {...candidateSelectState(selectedFieldsOutcome)}
+                aria-label="Fields door roll"
+                id={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
+                onChange={(event) =>
+                  dispatch(
+                    authoredProjectCommandDispatched({
+                      kind: 'ReplaceFieldsCageOutcome',
+                      continuation: address,
+                      cageOutcome: fieldsCageOutcome(event.target.value),
+                    }),
+                  )
+                }
+                value={continuation.batchState.cageOutcome}
+              >
+                {projectedFieldsOutcomes.map((option) => (
+                  <option key={option.value} value={option.value} {...candidateSelectState(option)}>
+                    {presentCandidateLabel(
+                      `${option.value === 'min' ? 'Min' : 'Max'} (${
+                        option.value === 'min'
+                          ? fieldsPolicy.minDoorCageRewards
+                          : projectedBatchState.batchCapacity
+                      })`,
+                      option,
+                    )}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <dl className="fields-batch-summary">
+              <div>
+                <dt>Cages per combat room</dt>
+                <dd>{projectedBatchState.doorCageRewardCount}</dd>
+              </div>
+              <div>
+                <dt>Prior Max outcomes</dt>
+                <dd>
+                  {fieldsSupport === undefined
+                    ? 'Unavailable'
+                    : `${fieldsSupport.fieldsMaxDoorsRolled} / ${fieldsSupport.maxDoorCageCeiling}`}
+                </dd>
+              </div>
+            </dl>
+            {projectedBatchState.cageTargetCount === 0 && (
+              <p className="fields-batch-note">
+                No offered room uses the Fields multi-cage count; Max still affects later Fields
+                rolls.
+              </p>
+            )}
+          </div>
+        )}
 
       <div className="exit-list">
         {exitIndexes.map((exitIndex) => (

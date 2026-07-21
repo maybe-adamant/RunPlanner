@@ -715,7 +715,7 @@ For one candidate, simulation:
 
 The shared query set covers authored starts, ordinary room targets, batch
 reward stores, incoming and free rewards, room-local rewards, WorldShop offers,
-purchase choices, and policy-owned Fields cage outcomes. Preboss uses those
+purchase choices, and policy-owned Fields door-roll outcomes. Preboss uses those
 same incoming-reward and WorldShop addresses rather than a second terminal-only
 candidate vocabulary.
 

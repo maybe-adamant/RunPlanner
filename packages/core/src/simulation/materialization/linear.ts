@@ -638,6 +638,7 @@ function canonicalBatchState(
     fail(`${layout.biomeKey} does not expose a materializable batch state`);
   }
   let batchCapacity = policy.maxDoorCageRewards;
+  let cageTargetCount = 0;
   for (const target of continuation.targets) {
     const occurrence = requireOccurrence(occurrences, target.occurrenceId);
     const room = requireRoom(catalog, occurrence);
@@ -648,6 +649,7 @@ function canonicalBatchState(
     if (cages?.kind !== 'boundedRewardSlots' || cages.key !== 'cages') {
       fail(`${room.gameName} has no Fields cage capacity`);
     }
+    cageTargetCount += 1;
     batchCapacity = Math.min(batchCapacity, cages.maxActiveSlots);
   }
   const cageOutcome = continuation.batchState.cageOutcome;
@@ -655,7 +657,8 @@ function canonicalBatchState(
     kind: 'fields',
     cageOutcome,
     batchCapacity,
-    activeCageCount: cageOutcome === 'min' ? policy.minDoorCageRewards : batchCapacity,
+    cageTargetCount,
+    doorCageRewardCount: cageOutcome === 'min' ? policy.minDoorCageRewards : batchCapacity,
   });
 }
 
@@ -1200,7 +1203,7 @@ export function materializeLinearBiome(
             'ordinary',
             'continuesSpine',
             sharedStoreKey,
-            batchState.kind === 'fields' ? batchState.activeCageCount : undefined,
+            batchState.kind === 'fields' ? batchState.doorCageRewardCount : undefined,
           ),
         ),
       );
