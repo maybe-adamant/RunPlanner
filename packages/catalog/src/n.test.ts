@@ -61,6 +61,7 @@ describe('complete dormant N catalog', () => {
     const layout = requireNLayout();
 
     expect(rooms).toHaveLength(46);
+    expect(layout.initialCounters).toEqual({ biomeDepthCache: 0, biomeEncounterDepth: 1 });
     expect(layout.entries).toEqual([
       { kind: 'fixedAuthoredSlot', slotKey: 'opening', roomGameName: 'N_Opening01' },
       { kind: 'fixedAuthoredSlot', slotKey: 'preHub', roomGameName: 'N_PreHub01' },

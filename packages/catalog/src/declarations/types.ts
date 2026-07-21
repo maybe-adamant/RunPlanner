@@ -185,6 +185,10 @@ export interface RawLinearBiomeLayoutDeclaration {
 export interface RawHubBiomeLayoutDeclaration {
   readonly biomeKey: string;
   readonly kind: 'HubBiome';
+  readonly initialCounters: {
+    readonly biomeDepthCache: number;
+    readonly biomeEncounterDepth: number;
+  };
   readonly entries: readonly EntryDescriptor[];
   readonly hub: {
     readonly roomGameName: string;

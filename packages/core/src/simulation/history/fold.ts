@@ -1,6 +1,8 @@
 import type { BiomeTransitionCounterAxis } from '../../catalog';
 import { semanticAddressKey } from '../../project/addresses';
 import type {
+  CanonicalHubHistory,
+  CanonicalBiomeHistory,
   CanonicalLinearHistory,
   EncounterHistoryEntry,
   EnteredRewardStoreHistoryEntry,
@@ -10,8 +12,12 @@ import type {
   LinearHistoryStateView,
   LinearRoomHistoryViews,
   LinearTargetGenerationView,
+  HistoryEvent,
+  HistoryStateView,
+  RequiredObjectHistoryEntry,
   RoomAppearanceHistoryEntry,
   RoomCreatedHistoryEvent,
+  RoomRestoreHistoryEntry,
 } from './model';
 
 interface MutableLedgers {
@@ -20,6 +26,9 @@ interface MutableLedgers {
   encounterStarts: EncounterHistoryEntry[];
   encounterCompletions: EncounterHistoryEntry[];
   enteredRewardStores: EnteredRewardStoreHistoryEntry[];
+  requiredObjectSpawns: RequiredObjectHistoryEntry[];
+  requiredObjectCompletions: RequiredObjectHistoryEntry[];
+  roomRestores: RoomRestoreHistoryEntry[];
   counters: {
     biomeDepthCache: number;
     biomeEncounterDepth: number;
@@ -29,6 +38,9 @@ interface MutableLedgers {
     clockworkGoalsRemaining?: number;
     clockworkNonGoalRewardsAcquired?: number;
     clockworkMaxNonGoalRewards?: number;
+    numSubRoomsSpawned?: number;
+    soulPylonsSpawned?: number;
+    soulPylonsCompleted?: number;
   };
 }
 
@@ -46,17 +58,21 @@ interface MutableRoomViews {
 interface PendingTargetGeneration {
   readonly creation: Extract<
     RoomCreatedHistoryEvent,
-    { readonly source: 'generatedTarget' | 'layoutEntry' }
+    {
+      readonly source: 'generatedTarget' | 'hubTarget' | 'layoutEntry' | 'localChild';
+    }
   >;
   readonly before: LinearHistoryStateView;
 }
 
-export class LinearHistoryFoldContractError extends Error {
+export class HistoryFoldContractError extends Error {
   constructor(detail: string) {
     super(detail);
-    this.name = 'LinearHistoryFoldContractError';
+    this.name = 'HistoryFoldContractError';
   }
 }
+
+export const LinearHistoryFoldContractError = HistoryFoldContractError;
 
 function frozenCounters(counters: MutableLedgers['counters']): LinearHistoryCounters {
   return Object.freeze({ ...counters });
@@ -69,6 +85,9 @@ function frozenLedgers(ledgers: MutableLedgers): LinearHistoryLedgers {
     encounterStarts: Object.freeze([...ledgers.encounterStarts]),
     encounterCompletions: Object.freeze([...ledgers.encounterCompletions]),
     enteredRewardStores: Object.freeze([...ledgers.enteredRewardStores]),
+    requiredObjectSpawns: Object.freeze([...ledgers.requiredObjectSpawns]),
+    requiredObjectCompletions: Object.freeze([...ledgers.requiredObjectCompletions]),
+    roomRestores: Object.freeze([...ledgers.roomRestores]),
     counters: frozenCounters(ledgers.counters),
   });
 }
@@ -84,7 +103,10 @@ function roomName(
     | { readonly kind: 'encounterCompleted' }
     | { readonly kind: 'encounterStarted' }
     | { readonly kind: 'enteredRewardStoreRecorded' }
+    | { readonly kind: 'requiredObjectCompleted' }
+    | { readonly kind: 'requiredObjectSpawned' }
     | { readonly kind: 'roomEntered' }
+    | { readonly kind: 'roomRestored' }
   >,
 ): string {
   const gameName = namesByOrigin.get(semanticAddressKey(event.origin));
@@ -140,6 +162,13 @@ function encounterKey(event: {
   return JSON.stringify([semanticAddressKey(event.origin), event.phaseKey]);
 }
 
+function requiredObjectKey(event: {
+  readonly origin: LinearRoomHistoryViews['origin'];
+  readonly objectKey: string;
+}) {
+  return JSON.stringify([semanticAddressKey(event.origin), event.objectKey]);
+}
+
 function freezeRoomViews(views: MutableRoomViews): LinearRoomHistoryViews {
   if (
     views.preparation === undefined ||
@@ -190,6 +219,9 @@ export function foldLinearHistoryEvents(
     encounterStarts: [...(seed?.ledgers.encounterStarts ?? [])],
     encounterCompletions: [...(seed?.ledgers.encounterCompletions ?? [])],
     enteredRewardStores: [...(seed?.ledgers.enteredRewardStores ?? [])],
+    requiredObjectSpawns: [...(seed?.ledgers.requiredObjectSpawns ?? [])],
+    requiredObjectCompletions: [...(seed?.ledgers.requiredObjectCompletions ?? [])],
+    roomRestores: [...(seed?.ledgers.roomRestores ?? [])],
     counters: {
       ...(seed?.ledgers.counters ?? {
         biomeDepthCache: 0,
@@ -202,6 +234,7 @@ export function foldLinearHistoryEvents(
   const namesByOrigin = new Map<string, string>();
   const encounterProfilesByOrigin = new Map<string, string>();
   const activeEncounters = new Map<string, EncounterHistoryEntry>();
+  const activeRequiredObjects = new Set<string>();
   const viewsByOrigin = new Map<string, MutableRoomViews>();
   const orderedViews: MutableRoomViews[] = [];
   let pendingTargetGeneration: PendingTargetGeneration | undefined;
@@ -236,6 +269,11 @@ export function foldLinearHistoryEvents(
           delete ledgers.counters.clockworkNonGoalRewardsAcquired;
           delete ledgers.counters.clockworkMaxNonGoalRewards;
         }
+        if (event.counters.numSubRoomsSpawned === undefined) {
+          delete ledgers.counters.numSubRoomsSpawned;
+          delete ledgers.counters.soulPylonsSpawned;
+          delete ledgers.counters.soulPylonsCompleted;
+        }
         biomeStarted = true;
         biomeStartOrigin = event.origin;
         break;
@@ -251,7 +289,20 @@ export function foldLinearHistoryEvents(
         namesByOrigin.set(key, event.gameName);
         encounterProfilesByOrigin.set(key, event.encounterProfileKey);
         ledgers.roomCreations.push(event);
-        if (event.source === 'generatedTarget' || event.source === 'layoutEntry') {
+        if (event.source === 'localChild') {
+          if (ledgers.counters.numSubRoomsSpawned === undefined) {
+            throw new LinearHistoryFoldContractError(
+              'local child generation appeared outside a Hub biome',
+            );
+          }
+          ledgers.counters.numSubRoomsSpawned += 1;
+        }
+        if (
+          event.source === 'generatedTarget' ||
+          event.source === 'hubTarget' ||
+          event.source === 'layoutEntry' ||
+          event.source === 'localChild'
+        ) {
           if (pendingTargetGeneration !== undefined) {
             throw new LinearHistoryFoldContractError('target generations cannot overlap');
           }
@@ -320,6 +371,20 @@ export function foldLinearHistoryEvents(
         pendingTargetGeneration = undefined;
         break;
       }
+      case 'emptyOutgoingGenerationCompleted': {
+        const views = requireRoomViews(viewsByOrigin, event);
+        if (
+          views.preOutgoing === undefined ||
+          views.outgoingGeneration !== undefined ||
+          views.targetGenerations.length !== 0
+        ) {
+          throw new LinearHistoryFoldContractError(
+            `room ${semanticAddressKey(event.origin)} cannot complete empty generation`,
+          );
+        }
+        views.outgoingGeneration = stateView(event.sequence, ledgers);
+        break;
+      }
       case 'roomPrepared': {
         const key = semanticAddressKey(event.origin);
         if (!namesByOrigin.has(key) || viewsByOrigin.has(key)) {
@@ -342,6 +407,29 @@ export function foldLinearHistoryEvents(
         });
         ledgers.roomAppearances.push(entry);
         requireRoomViews(viewsByOrigin, event).entry = stateView(event.sequence, ledgers);
+        break;
+      }
+      case 'requiredObjectSpawned': {
+        const key = requiredObjectKey(event);
+        if (
+          requireRoomViews(viewsByOrigin, event).entry === undefined ||
+          activeRequiredObjects.has(key) ||
+          ledgers.counters.soulPylonsSpawned === undefined
+        ) {
+          throw new LinearHistoryFoldContractError(
+            `${event.objectKey} has an invalid required-object spawn`,
+          );
+        }
+        activeRequiredObjects.add(key);
+        ledgers.requiredObjectSpawns.push(
+          Object.freeze({
+            sequence: event.sequence,
+            origin: event.origin,
+            gameName: roomName(namesByOrigin, event),
+            objectKey: event.objectKey,
+          }),
+        );
+        ledgers.counters.soulPylonsSpawned += 1;
         break;
       }
       case 'encounterStarted': {
@@ -447,6 +535,27 @@ export function foldLinearHistoryEvents(
         ledgers.encounterCompletions.push(Object.freeze({ ...started, sequence: event.sequence }));
         break;
       }
+      case 'requiredObjectCompleted': {
+        const key = requiredObjectKey(event);
+        if (
+          !activeRequiredObjects.delete(key) ||
+          ledgers.counters.soulPylonsCompleted === undefined
+        ) {
+          throw new LinearHistoryFoldContractError(
+            `${event.objectKey} completed without a matching spawn`,
+          );
+        }
+        ledgers.requiredObjectCompletions.push(
+          Object.freeze({
+            sequence: event.sequence,
+            origin: event.origin,
+            gameName: roomName(namesByOrigin, event),
+            objectKey: event.objectKey,
+          }),
+        );
+        ledgers.counters.soulPylonsCompleted += 1;
+        break;
+      }
       case 'outgoingGenerationCheckpoint':
         requireRoomViews(viewsByOrigin, event).preOutgoing = stateView(event.sequence - 1, ledgers);
         break;
@@ -468,6 +577,24 @@ export function foldLinearHistoryEvents(
         const views = requireRoomViews(viewsByOrigin, event);
         views.postCommit = stateView(event.sequence - 1, ledgers);
         views.exit = stateView(event.sequence, ledgers);
+        break;
+      }
+      case 'roomRestored': {
+        const gameName = roomName(namesByOrigin, event);
+        ledgers.roomAppearances.push(
+          Object.freeze({ sequence: event.sequence, origin: event.origin, gameName }),
+        );
+        ledgers.roomRestores.push(
+          Object.freeze({
+            sequence: event.sequence,
+            origin: event.origin,
+            gameName,
+            after: event.after,
+            restoreKind: event.restoreKind,
+          }),
+        );
+        ledgers.counters.biomeDepthCache += event.biomeDepthCacheDelta;
+        ledgers.counters.roomHistoryOrdinal += event.roomHistoryOrdinalDelta;
         break;
       }
       case 'biomeCompleted':
@@ -519,6 +646,9 @@ export function foldLinearHistoryEvents(
   if (activeEncounters.size !== 0) {
     throw new LinearHistoryFoldContractError('history ended with an active encounter');
   }
+  if (activeRequiredObjects.size !== 0) {
+    throw new LinearHistoryFoldContractError('history ended with an active required object');
+  }
   if (pendingTargetGeneration !== undefined) {
     throw new LinearHistoryFoldContractError('history ended during target generation');
   }
@@ -539,4 +669,15 @@ export function foldFHistoryEvents(events: readonly LinearHistoryEvent[]): Canon
     throw new LinearHistoryFoldContractError('F history requires an F biome start');
   }
   return foldLinearHistoryEvents(events);
+}
+
+export function foldHistoryEvents(
+  events: readonly HistoryEvent[],
+  seed?: HistoryStateView,
+): CanonicalBiomeHistory {
+  return foldLinearHistoryEvents(events, seed);
+}
+
+export function foldHubHistoryEvents(events: readonly LinearHistoryEvent[]): CanonicalHubHistory {
+  return foldHistoryEvents(events);
 }

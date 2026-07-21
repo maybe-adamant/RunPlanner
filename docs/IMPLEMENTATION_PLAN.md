@@ -1298,11 +1298,11 @@ Implement in this order unless concrete dependencies justify a change:
 6. Q: forced skeleton and independently generated two-exit miniboss stages.
 
 The rollout has an explicit UX insertion boundary after N and before O. Close
-the second topology family through one complete N product loop, then complete
-the contextual room/reward selection work in `CONTEXTUAL_EDITOR_UX.md` across
-F/G/H/I/N before resuming controlled expansion with O/P/Q. This grounds the
-shared interaction language in both linear and hub editors without waiting for
-the remaining structurally linear Surface biomes.
+the persistent-Hub traversal body through one complete N product loop, then
+complete the contextual room/reward selection work in
+`CONTEXTUAL_EDITOR_UX.md` across F/G/H/I/N before resuming controlled expansion
+with O/P/Q. This grounds the shared interaction language in both linear and hub
+editors without waiting for the remaining structurally linear Surface biomes.
 
 For each biome, close these acceptance gates:
 
@@ -1410,8 +1410,8 @@ I should close through five slices:
 
 ### N Delivery Slices
 
-N closes through eight slices because it establishes the second authored and
-canonical topology family:
+N closes through nine slices because it establishes the persistent-Hub
+traversal body inside the shared biome envelope:
 
 1. dormant Hub authorship:
    - add `HubBiomePlan` and its exact persisted topology to the project union,
@@ -1435,31 +1435,46 @@ canonical topology family:
      parent-restore, Hub-restore, Preboss, Boss, and Postboss timing;
    - preserve room-history, biome-depth, encounter-depth, creation,
      appearance, and required-object axes at their declared lifecycle points;
-4. N reward simulation:
+4. shared biome-envelope reconciliation:
+   - extract one shared history-composition boundary for biome start, fixed
+     entry walking, traversal-body dispatch, terminal walking, completion-tail
+     walking, transition resets, and final history folding;
+   - make linear and Hub history bodies emit their ordered events through the
+     same writer and return the exact terminal predecessor, while retaining
+     their separate authored plans and canonical snapshots;
+   - extract the duplicated completion-room materialization primitive with
+     explicit reward-store provenance, but keep linear and Hub entry, body,
+     terminal, snapshot assembly, and public canonical types variant-owned;
+   - reduce N-specific history composition to the persistent board, open
+     membership, six visit references, parent-local side excursions, and
+     parent/Hub restores;
+   - prove behavior preservation against the existing F, I, and N canonical
+     snapshots and histories before reward simulation is attached;
+5. N reward simulation:
    - generate the complete nine-or-ten-offer Hub board once in normalized
      physical order and let open unvisited targets consume counted bags without
      emitting acquisitions;
    - jointly resolve each entered parent's generated side-room sibling batch,
      acquire only entered rooms, and derive `hubRewardLookup` from the full
      initial board before validating the fixed Preboss WorldShop;
-5. selected N validation:
+6. selected N validation:
    - validate fixed-slot identity, open count, miniboss availability, six
      distinct visits, pylons, side-generation pressure, entered ordinals,
      room/reward support, restores, shop lookup, and terminal completion;
    - address findings to exact Hub slots, visit positions, parent-local side
      slots, or leaf owners without editing authorship;
-6. N candidate evaluation:
+7. N candidate evaluation:
    - evaluate open membership, visit choices, side generation and entry order,
      fixed-entry rewards, Hub rewards, side rewards, Preboss offers, and
      purchases through the same selected-plan authorities;
    - preserve selected invalid values and typed unavailable upstream context;
-7. dormant N editor projection:
+8. dormant N editor projection:
    - project fixed entry leaves, the fixed-slot open board, a separate six-step
      visit timeline, visited-parent side-room state, the fixed Preboss shop,
      findings, and candidates through semantic commands;
    - use a structurally truthful board/list interaction without attempting the
      later contextual visual-polish pass;
-8. N product-loop activation:
+9. N product-loop activation:
    - promote N to authorable, simulatable, and editable atomically;
    - close the one-biome Surface prefix, profiles, recovery, blocked-prefix
      behavior, findings navigation, candidate parity, accessibility,
@@ -1467,6 +1482,97 @@ canonical topology family:
 
 N must activate before any later Surface biome because application route
 prefixes remain contiguous.
+
+Across all nine slices, N must reuse the shared room-lifecycle,
+completion-materialization, history-envelope, history-fold, counter, finding,
+and feedback authorities. Its typed plan and materializer continue to own the
+fixed authored entry/terminal leaves and canonical Hub assembly. Inside history
+composition, Hub-specific code owns only board generation, open membership,
+the six ordered visit references, parent-local side excursions, and restores.
+Opening and PreHub remain a fixed entry chain; PreHub must not become an
+ordinary depth-gated generated candidate. This boundary permits a dedicated
+Hub plan and canonical traversal projection without creating a second history
+stack.
+
+#### Slice 4 Reconciliation Shape
+
+Slice 4 is a behavior-preserving internal composition refactor. It does not
+merge `LinearBiomePlan` and `HubBiomePlan`, replace their canonical snapshot
+discriminants, or add a persisted generic body field. The existing authored
+and canonical types remain the public semantic products.
+
+The shared history order is:
+
+```text
+begin biome from layout counters and optional prior-route seed
+  -> compose fixed entry chain
+  -> compose traversal body
+  -> compose terminal entry
+  -> compose completion tail
+  -> emit completion and declared transition resets
+  -> fold through the topology-neutral canonical history fold
+```
+
+History composition uses the already-materialized snapshot through these
+handoffs:
+
+| Segment             | Receives                                               | Returns                                              |
+| ------------------- | ------------------------------------------------------ | ---------------------------------------------------- |
+| Entry composer      | canonical entry rooms and shared event writer          | last entered source room                             |
+| Body adapter        | last entry, canonical body, shared event writer        | exact terminal predecessor after ordered body events |
+| Terminal adapter    | predecessor, canonical terminal, shared writer         | entered terminal room                                |
+| Completion composer | terminal, canonical completion rooms, shared writer    | completed ordered tail                               |
+| History envelope    | layout counters, optional seed, adapters, reset policy | one topology-neutral `CanonicalBiomeHistory`         |
+
+The linear body adapter owns generated batches, picked-target continuation,
+Fields/Clockwork body state, and generated-terminal realization. The Hub body
+adapter owns `N_Hub`, its one board generation, open target references, visit
+order, local side excursions, and restore events. A fixed authored N Preboss
+is a terminal strategy, not part of the Hub body. Opening and PreHub are entry
+chain members, including their distinct leaf and lifecycle facts.
+
+Materialization remains variant-owned. `materializeLinearBiome` continues to
+own authored starts, derived fixed entries, generated batches, forked or
+generated terminals, and `CanonicalLinearBiome` assembly.
+`materializeHubBiome` continues to own fixed authored entries, the persistent
+board, visits, the fixed authored terminal, and `CanonicalHubBiome` assembly.
+Slice 4 extracts only the shared completion-room primitive because that
+duplication is concrete. Its caller supplies any terminal-derived reward-store
+provenance, and the helper retains the existing declaration and lifecycle
+validation.
+
+Do not introduce a materialization adapter registry, generic public body type,
+or generic snapshot assembler in this slice. Entry and terminal realization
+may share smaller primitives later if another concrete consumer demonstrates
+the same contract.
+
+The expected history seam is one shared event writer/lifecycle runner and one
+shared envelope orchestrator with typed linear and Hub body/terminal
+callbacks. Dispatch may use the normalized layout discriminant or direct typed
+composition; it must not switch on biome key, room game name, or UI shape.
+Function ownership is the contract. The slice does not require a particular
+file split merely to make the source tree mirror the conceptual segments.
+
+Slice 4 fixtures must prove:
+
+- representative F and I snapshots, event order, counters, histories, and
+  transition state are unchanged;
+- the representative N snapshot, 26 appearances, physical board order, side
+  generation order, six Pylon pairs, four parent restores, six Hub restores,
+  and transition state are unchanged;
+- PreHub is always the second fixed entry and never appears in room-candidate
+  or generated-target projections;
+- one room occurrence is still created once even when restores add several
+  appearance records;
+- no body adapter can emit biome start, biome completion, transition resets,
+  or directly invoke a topology-specific fold;
+- linear and Hub completion materialization retain their existing resolved,
+  fixed, or absent entered-store behavior.
+
+Slice 4 must not add reward simulation, selected validation, candidates,
+editor projection, application capabilities, schema changes, address changes,
+or compatibility scaffolding. Any golden semantic output change fails the
+slice rather than being accepted as refactor fallout.
 
 ### Contextual Selection UX Insertion
 

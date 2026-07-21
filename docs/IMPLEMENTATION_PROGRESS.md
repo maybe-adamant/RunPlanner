@@ -435,7 +435,26 @@ order, open dead leaves, repeated side-room game names with parent-local
 addresses, generated/unentered/not-generated distinctions, restore identity,
 terminal shop state, derived completion, structural-invalid materialization,
 deep freezing, and authored-state nonmutation. N remains outside simulator
-dispatch and every application capability; Slice 3 owns lifecycle and history.
+dispatch and every application capability; its lifecycle and history are
+recorded by Slice 3 below.
+
+Phase 6 N Slice 3 is complete. The room-lifecycle catalog now distinguishes
+the reward-before-delayed-combat Ephyra Opening, ordinary non-counting PreHub,
+required-Soul-Pylon main targets, no-outgoing side rooms, and the one-time
+persistent Hub board. The canonical Hub history composer creates every fixed,
+Hub, local-child, terminal, and completion room once; executes only entered
+rooms; and records parent/Hub restores without replaying creation, encounter,
+producer, or required-object work. The shared fold now retains required-object
+spawn/completion and restore ledgers plus `numSubRoomsSpawned`, Soul Pylon,
+appearance, creation, depth, encounter, and room-history-ordinal axes at their
+declared lifecycle points. A representative six-visit fixture closes physical
+board order, local availability order, entered-side order, 26 appearances,
+four parent restores, six Hub restores, deterministic transition resets, deep
+freezing, and authored-state nonmutation. N remains outside simulator dispatch
+and application capabilities. Slice 4 is the behavior-preserving shared
+history-envelope and completion-materialization reconciliation; reward
+simulation begins in Slice 5 only after those seams are proven against the
+existing F, I, and N outputs.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
@@ -1140,9 +1159,13 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, and N Slices 1-2 are complete. N Slice 3, exact room lifecycle
-and route history, is next. N will close the second topology family's complete
-product loop before the contextual-selection UX insertion defined in
+five I slices, and N Slices 1-3 are complete. N Slice 4, shared biome-envelope
+reconciliation, is next. It extracts common history orchestration and the
+duplicated completion-room materialization primitive while keeping Linear and
+Hub canonical materializers variant-owned. It must not change authored plans,
+canonical snapshots, history events, counters, or transition state. N reward
+simulation moves to Slice 5. N will close the persistent-Hub traversal body's
+complete product loop before the contextual-selection UX insertion defined in
 `CONTEXTUAL_EDITOR_UX.md`.
 
 After N activates, that insertion begins by replacing the current incomplete-

@@ -1,12 +1,23 @@
-import type { EncounterPhaseKind, RoomCounterEffects } from '../../catalog';
+import type {
+  EncounterPhaseKind,
+  RequiredRoomObjectDescriptor,
+  RoomCounterEffects,
+} from '../../catalog';
 import type {
   CompletionRoomAddress,
   FixedEntryRoomAddress,
+  HubRoomAddress,
+  LocalChildAddress,
   OccurrenceAddress,
 } from '../../project/addresses';
 import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../rewardKernel/model';
 
-export type RoomHistoryOrigin = CompletionRoomAddress | FixedEntryRoomAddress | OccurrenceAddress;
+export type RoomHistoryOrigin =
+  | CompletionRoomAddress
+  | FixedEntryRoomAddress
+  | HubRoomAddress
+  | LocalChildAddress
+  | OccurrenceAddress;
 
 interface RoomLifecycleEventBase {
   readonly sequence: number;
@@ -21,6 +32,11 @@ export type RoomLifecycleEvent =
       readonly offerPoint: string;
     })
   | (RoomLifecycleEventBase & { readonly kind: 'roomEntered' })
+  | (RoomLifecycleEventBase & {
+      readonly kind: 'requiredObjectSpawned';
+      readonly objectKey: RequiredRoomObjectDescriptor['key'];
+      readonly completionRequirement: RequiredRoomObjectDescriptor['completionRequirement'];
+    })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterStarted';
       readonly phaseKey: string;
@@ -37,6 +53,10 @@ export type RoomLifecycleEvent =
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterCompleted';
       readonly phaseKey: string;
+    })
+  | (RoomLifecycleEventBase & {
+      readonly kind: 'requiredObjectCompleted';
+      readonly objectKey: RequiredRoomObjectDescriptor['key'];
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'producerRoleAdvanced';
@@ -73,6 +93,7 @@ export interface RoomLifecycleExecutionInput {
   readonly encounterProfileKey: string;
   readonly producer?: RoomLifecycleProducerInput;
   readonly counterEffects: RoomCounterEffects;
+  readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
 }
 

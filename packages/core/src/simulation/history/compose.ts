@@ -6,7 +6,6 @@ import {
   type BiomeAddress,
   type ContinuationAddress,
 } from '../../project/addresses';
-import type { EnteredRewardStoreHistoryPolicy } from '../../rewards';
 import {
   executeRoomLifecycle,
   type RoomHistoryOrigin,
@@ -21,6 +20,7 @@ import type {
   CanonicalTarget,
 } from '../materialization';
 import { foldLinearHistoryEvents } from './fold';
+import { createRoomLifecycleInput } from './lifecycleInput';
 import type { CanonicalLinearHistory, LinearHistoryEvent, RoomCreatedHistoryEvent } from './model';
 
 export class LinearHistoryCompositionContractError extends Error {
@@ -129,56 +129,6 @@ function layoutEntryCreated(
   });
 }
 
-function enteredStoreKey(
-  policy: EnteredRewardStoreHistoryPolicy,
-  room: CanonicalRoom,
-): string | undefined {
-  if (room.kind === 'authored' && room.clockworkReward === 'goal') {
-    return undefined;
-  }
-  switch (policy.kind) {
-    case 'fixed':
-      return policy.storeKey;
-    case 'none':
-      return undefined;
-    case 'resolvedOffer': {
-      const resolvedStoreKey =
-        room.kind === 'completion'
-          ? room.enteredRewardStoreKey
-          : room.incomingReward?.resolvedStoreKey;
-      if (resolvedStoreKey === undefined) {
-        throw new LinearHistoryCompositionContractError(
-          `${room.gameName} requires resolved entered-store provenance`,
-        );
-      }
-      return resolvedStoreKey;
-    }
-  }
-}
-
-function lifecycleInput(catalog: Catalog, room: CanonicalRoom) {
-  const declaration = catalog.rooms.byKey[room.gameName];
-  if (declaration === undefined) {
-    throw new LinearHistoryCompositionContractError(`unknown canonical room ${room.gameName}`);
-  }
-  const storeKey = enteredStoreKey(declaration.enteredRewardStoreHistory, room);
-  return {
-    origin: room.origin,
-    lifecycleProfileKey: room.lifecycleProfileKey,
-    encounterProfileKey: room.encounterProfileKey,
-    counterEffects: room.counterEffects,
-    ...(room.kind !== 'completion' && room.incomingReward !== undefined
-      ? {
-          producer: {
-            lifecycleProfileKey: room.incomingReward.producerLifecycleKey,
-            offer: room.incomingReward.offer,
-          },
-        }
-      : {}),
-    ...(storeKey === undefined ? {} : { enteredRewardStoreKey: storeKey }),
-  };
-}
-
 function appendGeneratedTargets(
   builder: EventBuilder,
   parentOrigin: RoomHistoryOrigin,
@@ -230,7 +180,7 @@ function appendRoomLifecycle(
       `unpicked occurrence ${semanticAddressKey(room.origin)} cannot execute a lifecycle`,
     );
   }
-  const fragment = executeRoomLifecycle(catalog, lifecycleInput(catalog, room));
+  const fragment = executeRoomLifecycle(catalog, createRoomLifecycleInput(catalog, room));
   const clockworkNonGoalSpawnsBeforeCombat =
     room.kind === 'authored' &&
     room.clockworkReward === 'nonGoal' &&

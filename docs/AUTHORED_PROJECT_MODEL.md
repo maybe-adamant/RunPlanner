@@ -196,7 +196,11 @@ Undo restores the exact removed plans as the prior authored snapshot.
 
 ## Layout Variants
 
-The initial domain contains two structural languages.
+The initial domain contains one shared biome envelope with two traversal-body
+languages. Every biome still has an ordered entry chain, one traversal body, a
+terminal entry, and a completion tail. `LinearBiome` and `HubBiome` distinguish
+how the body is authored; they do not define disconnected persistence,
+lifecycle, history, validation, or feedback stacks.
 
 ### LinearBiome
 
@@ -259,17 +263,23 @@ independent terminal transition or requires a separate `Go to Preboss` action.
 
 ### HubBiome
 
-N uses a hub layout:
+N uses the common envelope with a persistent-Hub body:
 
 ```text
-fixed authored entry rooms
-  -> persistent hub batch
+fixed authored entry chain
+  -> persistent Hub traversal body
       -> ordered pylon visits
       -> optional local side-room visits and parent restores
       -> derived returns to hub
   -> fixed authored terminal room
   -> derived completion rooms
 ```
+
+Opening and PreHub are structural members of the fixed entry chain. PreHub's
+position is layout-owned; it is not represented as a generated room candidate
+whose eligibility happens to become true at depth 2. The fixed Preboss and
+derived Boss/Postboss likewise use the shared terminal and completion
+contracts. Only the middle Hub body requires Hub-specific authored structure.
 
 N's hub declaration fixes the room assigned to each physical slot. The
 authored plan selects which supported slots opened and which six are visited;

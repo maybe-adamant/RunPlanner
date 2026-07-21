@@ -1,4 +1,8 @@
-import type { EncounterPhase, RoomCounterEffects } from '../../catalog';
+import type {
+  EncounterPhase,
+  RequiredRoomObjectDescriptor,
+  RoomCounterEffects,
+} from '../../catalog';
 import type {
   BatchRewardStoreAddress,
   CompletionRoomAddress,
@@ -64,6 +68,7 @@ export interface CanonicalAuthoredRoom {
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;
+  readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly localRewards?: readonly CanonicalLocalReward[];
@@ -122,6 +127,7 @@ export interface CanonicalLocalChildRoom {
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;
+  readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly incomingReward?: CanonicalResolvedIncomingReward;
 }
 

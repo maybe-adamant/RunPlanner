@@ -787,6 +787,16 @@ function normalizeHubLayout(
   return Object.freeze({
     biomeKey: layout.biomeKey,
     kind: 'HubBiome',
+    initialCounters: Object.freeze({
+      biomeDepthCache: requireNonNegativeInteger(
+        layout.initialCounters.biomeDepthCache,
+        `${path}.initialCounters.biomeDepthCache`,
+      ),
+      biomeEncounterDepth: requireNonNegativeInteger(
+        layout.initialCounters.biomeEncounterDepth,
+        `${path}.initialCounters.biomeEncounterDepth`,
+      ),
+    }),
     entries,
     hub: Object.freeze({
       roomGameName: hubRoom.gameName,

@@ -1,0 +1,82 @@
+import type { Catalog } from '../../catalog';
+import type { EnteredRewardStoreHistoryPolicy } from '../../rewards';
+import type { RoomLifecycleExecutionInput } from '../lifecycle';
+import type {
+  CanonicalAuthoredRoom,
+  CanonicalCompletionRoom,
+  CanonicalFixedEntryRoom,
+  CanonicalHubRoom,
+  CanonicalLocalChildRoom,
+} from '../materialization';
+
+export type CanonicalLifecycleRoom =
+  | CanonicalAuthoredRoom
+  | CanonicalCompletionRoom
+  | CanonicalFixedEntryRoom
+  | CanonicalHubRoom
+  | CanonicalLocalChildRoom;
+
+export class HistoryLifecycleInputContractError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = 'HistoryLifecycleInputContractError';
+  }
+}
+
+function enteredStoreKey(
+  policy: EnteredRewardStoreHistoryPolicy,
+  room: CanonicalLifecycleRoom,
+): string | undefined {
+  if (room.kind === 'authored' && room.clockworkReward === 'goal') {
+    return undefined;
+  }
+  switch (policy.kind) {
+    case 'fixed':
+      return policy.storeKey;
+    case 'none':
+      return undefined;
+    case 'resolvedOffer': {
+      const resolvedStoreKey =
+        room.kind === 'completion'
+          ? room.enteredRewardStoreKey
+          : 'incomingReward' in room
+            ? room.incomingReward?.resolvedStoreKey
+            : undefined;
+      if (resolvedStoreKey === undefined) {
+        throw new HistoryLifecycleInputContractError(
+          `${room.gameName} requires resolved entered-store provenance`,
+        );
+      }
+      return resolvedStoreKey;
+    }
+  }
+}
+
+export function createRoomLifecycleInput(
+  catalog: Catalog,
+  room: CanonicalLifecycleRoom,
+): RoomLifecycleExecutionInput {
+  const declaration = catalog.rooms.byKey[room.gameName];
+  if (declaration === undefined) {
+    throw new HistoryLifecycleInputContractError(`unknown canonical room ${room.gameName}`);
+  }
+  const storeKey = enteredStoreKey(declaration.enteredRewardStoreHistory, room);
+  const incomingReward = 'incomingReward' in room ? room.incomingReward : undefined;
+  const requiredObjects = 'requiredObjects' in room ? room.requiredObjects : undefined;
+  return {
+    origin: room.origin,
+    lifecycleProfileKey: room.lifecycleProfileKey,
+    encounterProfileKey: room.encounterProfileKey,
+    counterEffects: room.counterEffects,
+    ...(requiredObjects === undefined ? {} : { requiredObjects }),
+    ...(incomingReward === undefined
+      ? {}
+      : {
+          producer: {
+            lifecycleProfileKey: incomingReward.producerLifecycleKey,
+            offer: incomingReward.offer,
+          },
+        }),
+    ...(storeKey === undefined ? {} : { enteredRewardStoreKey: storeKey }),
+  };
+}

@@ -10,13 +10,18 @@ importing the previous Lua control shape.
 
 Shared possibility, reward, occurrence, counted-bag, and fixed-completion
 semantics are defined by `../GAME_GENERATION_RULES.md`, `../REWARD_MODEL.md`, and
-`../SIMULATION_AND_VALIDATION.md`. N is a `HubBiome`; it is not a linear biome
-represented with synthetic cycles.
+`../SIMULATION_AND_VALIDATION.md`. N uses the same biome envelope as the linear
+biomes: an ordered fixed entry chain, one traversal body, a terminal entry, and
+an ordered completion tail. Its `HubBiome` discriminant describes only the
+distinct persistent-Hub traversal body. It must not turn the Hub visits into
+ordinary generated batches or synthetic authored cycles.
 
 N declarations, the schema-version-5 authored Hub plan, semantic commands,
-structural completeness, and canonical Hub materialization are ported. N
-intentionally remains outside application authoring capabilities, simulation,
-and editing until its complete HubBiome product loop is implemented.
+structural completeness, canonical Hub materialization, exact room lifecycle,
+and event-folded route history are ported. Reward simulation, selected
+validation, candidates, editing, and activation remain later slices. N
+therefore intentionally remains outside application capabilities until its
+complete HubBiome product loop is implemented.
 
 ## Evidence Status
 
@@ -74,23 +79,23 @@ declaration and dormant authored-model coverage.
 
 | Feature                       | Verified game behavior                                                                                                  | Disposition and planner projection                                                           | Current coverage     | Reconsider when                                        |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------ |
-| Fixed entry                   | Opening and PreHub are fixed rooms with independent incoming rewards before the hub                                     | **Exact:** fixed authored room slots followed by a derived hub room                          | documented, declared | --                                                     |
-| Persistent hub                | One physical hub generates one stable offer board and restores it after every visited target                            | **Exact:** one persistent hub batch; returns are derived history events                      | documented, declared | --                                                     |
+| Fixed entry                   | Opening and PreHub are fixed rooms with independent incoming rewards before the hub                                     | **Exact:** fixed authored room slots followed by a derived hub room                          | history ported       | --                                                     |
+| Persistent hub                | One physical hub generates one stable offer board and restores it after every visited target                            | **Exact:** one persistent hub batch; returns are derived history events                      | history ported       | --                                                     |
 | Hub availability              | Nine or ten physical slots open; Story eligibility and one coin-disabled miniboss modify the candidate set              | **Exact:** author one supported 9/10-slot availability outcome under the canonical baseline  | documented, declared | --                                                     |
-| Pylon visits                  | Exactly six distinct open targets are entered in player-selected order                                                  | **Exact:** six unique visit ordinals over the open slot set                                  | documented, declared | --                                                     |
-| Pylon completion              | Every main target spawns a required pylon; boss-door availability reads six spawns                                      | **Exact:** preserve spawn-counter timing and require six completed visits                    | documented, declared | --                                                     |
+| Pylon visits                  | Exactly six distinct open targets are entered in player-selected order                                                  | **Exact:** six unique visit ordinals over the open slot set                                  | history ported       | --                                                     |
+| Pylon completion              | Every main target spawns a required pylon; boss-door availability reads six spawns                                      | **Exact:** preserve spawn-counter timing and require six completed visits                    | history ported       | --                                                     |
 | Hub rewards                   | Every open target receives an incoming offer on initial hub generation; only visited targets acquire it                 | **Exact:** offered dead leaves consume bags and contribute hub reward lookup                 | documented, declared | --                                                     |
 | Side-room offers              | Entered combat rooms own zero to three fixed side slots; generated peers receive offers together                        | **Exact:** bounded local child slots with generated state and entered order                  | documented, declared | --                                                     |
 | Side-room pressure            | A global generated-side-room counter forces a local prefix until half-per-pylon pressure is met, then rolls 30%         | **Exact:** stateful possibility rule over observed availability order                        | documented, declared | --                                                     |
 | Side reward batch             | All generated siblings receive offers before entry and share duplicate/bag constraints while eligibility remains stable | **Exact:** jointly validate one unordered sibling reward assignment                          | documented, declared | --                                                     |
-| Side-room restores            | A side room returns to the same persisted parent, which can then enter another generated side room                      | **Exact:** restore events reuse one parent occurrence; no authored cycle                     | documented, declared | --                                                     |
+| Side-room restores            | A side room returns to the same persisted parent, which can then enter another generated side room                      | **Exact:** restore events reuse one parent occurrence; no authored cycle                     | history ported       | --                                                     |
 | Reward-store ratio            | All N rooms ignore Run/Meta ratio counting; supported generated targets resolve declaration-owned stores                | **Exact:** no hub base-store field; keep concrete counted-bag effects                        | documented, declared | A supported target consumes an unoverridden base store |
 | Preboss shop lookup           | Spell and Hammer shop support reads reward types offered anywhere on the initial hub board                              | **Exact:** derive `hubRewardLookup` from all open hub offers before terminal shop validation | documented, declared | --                                                     |
 | Miniboss pair                 | One miniboss slot is coin-disabled before the 9/10 selection; the survivor is not guaranteed to open                    | **Exact:** at most one of the two fixed miniboss slots may be open                           | documented, declared | --                                                     |
 | Story room                    | Medea owns a fixed physical slot with persistent progression requirements and force pressure                            | **Deferred:** suppress the slot under the shared NPC-free baseline                           | documented           | Persistent NPC entities are implemented                |
 | Midshop room                  | `N_Shop01` is concrete data, but its only physical hub assignment is commented out                                      | **Excluded:** unreachable from the canonical hub                                             | documented           | Game data assigns a live route to the room             |
 | Save/profile variants         | Opening encounter and forced reward introductions, Story, and boss variant depend on persistent state                   | **Excluded:** progressed-save neutral-difficulty baseline                                    | documented           | Save-profile state becomes a project input             |
-| Boss and postboss             | Neutral Polyphemus follows the shop-only preboss and then `N_PostBoss01`                                                | **Exact:** fixed authored preboss leaf plus derived boss/postboss completion                 | documented, declared | --                                                     |
+| Boss and postboss             | Neutral Polyphemus follows the shop-only preboss and then `N_PostBoss01`                                                | **Exact:** fixed authored preboss leaf plus derived boss/postboss completion                 | history ported       | --                                                     |
 | Boss automatic drop           | `MixerNBossDrop` has no modeled downstream ratio consumer                                                               | **Simplified:** no reward leaf, acquisition, or ledger entry                                 | documented           | A downstream consumer makes the fact observable        |
 | Persistent encounter variants | Artemis and Heracles can replace ordinary N encounters                                                                  | **Deferred:** suppress under the shared NPC-free baseline                                    | documented           | Persistent NPC entities are implemented                |
 | Optional interactions         | Natural Chaos, shops, wells, challenges, gathering, rerolls, and postboss interactions add optional state               | **Deferred:** use the shared no-detour/no-action canonical trace                             | documented           | The corresponding authored action enters product scope |
@@ -115,7 +120,13 @@ Persistent conditions explain this baseline. They are not production
 
 ## Layout and Authored Shape
 
-The canonical layout is:
+The canonical layout has four segments:
+
+```text
+fixed entry chain -> Hub traversal body -> fixed terminal -> completion tail
+```
+
+Concretely:
 
 ```text
 N_Opening01
@@ -136,6 +147,14 @@ own authored reward or shop leaves. They are fixed authored room slots, not
 editable topology and not stateless derived rooms. `N_Hub`, its restores, the
 main-room restores after side visits, `N_Boss01`, and `N_PostBoss01` are
 layout-derived structural history.
+
+Only the body differs from an ordinary biome envelope. Entry, terminal, and
+completion placement remain shared domain roles, while their concrete
+materialization stays in the typed Hub variant. History orchestration,
+single-room lifecycle execution, completion walking, counter folding, and route
+transition are shared simulation concerns. The Hub body alone owns one
+persistent board, open membership, six ordered target references, parent-local
+side excursions, and restores.
 
 `O_Intro` is the next biome's start. It is shown above only to make the route
 transition explicit; N's completion sequence ends at `N_PostBoss01`.
@@ -160,6 +179,12 @@ The progressed-save entry is:
 ```text
 N_Opening01 -> N_PreHub01 -> N_Hub
 ```
+
+PreHub is the layout-fixed second entry room. Its observed depth follows from
+the preceding Opening and declared counter effects; it is not an ordinary room
+candidate made selectable by a depth-2 eligibility rule. The fixed entry chain
+therefore walks Opening and then PreHub without creating a generated decision
+between them.
 
 `N_Opening01` legally selects `OpeningEmpty` or `OpeningGeneratedN` in the raw
 game. `OpeningEmpty` is forced only before Apollo has been used or in a dream
@@ -515,6 +540,12 @@ Boss
 PostBoss
 ```
 
+This is a normal ordered biome history after structural expansion. The history
+walker consumes the fixed entry chain, asks the Hub traversal body for its
+ordered room and restore events, then resumes the shared fixed-terminal and
+completion-tail walk. The event fold does not need a separate Hub-specific
+ledger model.
+
 One Room Occurrence can therefore appear in several history records. An
 occurrence identifies one created room entity; it is not a synonym for one
 history ordinal. Hub restores and parent restores advance room-history order
@@ -533,6 +564,43 @@ Encounter-depth events are narrower:
 
 The simulator must emit the real room-history and encounter events rather than
 deriving either counter from a UI row or from visit order alone.
+
+The implemented canonical history composer now emits that exact structure. It
+creates Opening, PreHub, the persistent Hub, every open picked or unpicked Hub
+target, every generated picked or unpicked local child, the fixed Preboss, and
+the derived Boss/Postboss exactly once. Entered main and side rooms execute
+their declared lifecycle fragments; parent and Hub restores append appearance,
+`biomeDepthCache`, and room-history-ordinal facts without replaying creation,
+encounter, required-object, or producer events. One representative six-visit
+fixture closes 26 appearances, six Soul Pylon spawn/completion pairs, six
+generated side rooms, four parent restores, six Hub restores, and the ordered
+biome transition resets.
+
+The next reconciliation must preserve those facts while moving orchestration
+to the shared biome envelope defined in `../SIMULATION_AND_VALIDATION.md`. Its
+concrete N handoff is:
+
+```text
+shared entry walk: Opening -> PreHub
+  -> Hub body: create Hub/board -> visit/side/restore sequence
+  -> return the final restored Hub as terminal predecessor
+  -> shared terminal walk: fixed Preboss
+  -> shared completion walk: Boss -> Postboss
+  -> shared completion/reset/fold
+```
+
+Only the middle history handoff is N-specific. The Hub history body receives
+the already entered PreHub and the shared lifecycle/event writer. It returns
+the exact room that precedes Preboss after all six visits; it does not emit
+biome start, completion, transition resets, or a private folded history. The
+shared envelope owns the calls that walk Opening/PreHub and Preboss around that
+body, regardless of which source file contains the typed adapters.
+
+Materialization remains variant-owned: the Hub materializer may continue to
+resolve its fixed authored entries, persistent body, fixed authored Preboss,
+and `CanonicalHubBiome` assembly. Only the duplicated completion-room primitive
+is shared in this slice. This is an implementation-ownership change, not a
+gameplay, persistence, address, or canonical-snapshot change.
 
 ## Declaration and Authored-Model Contract
 
@@ -571,10 +639,12 @@ not-generated slots retain authored state but produce no canonical offer.
 ## Audit Conclusion
 
 N validates the existing top-level architecture and sharpens its ownership
-language. A persistent hub is one authored offer board with fixed catalog
-slots, while visit order and history order are separate derived axes. Local
-side rooms remain bounded children, and repeated physical restores do not
-require graph cycles or duplicate authored room entities.
+language. N is a shared biome envelope containing one specialized traversal
+body, not a completely separate biome stack. A persistent hub is one authored
+offer board with fixed catalog slots, while visit order and history order are
+separate derived axes. Local side rooms remain bounded children, and repeated
+physical restores do not require graph cycles or duplicate authored room
+entities.
 
 The local side-room availability-rank finding is complete. Local rewards are
 an unordered joint batch, while player-selected entry order is retained only
