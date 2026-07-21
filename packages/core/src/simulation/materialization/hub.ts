@@ -242,7 +242,12 @@ function materializeAuthoredRoom(
     ) {
       fail(`${room.gameName} Hub target has no counted state`);
     }
-    lifecycleProfileKey = 'StandardRewardRoom';
+    lifecycleProfileKey =
+      expectedState === 'hubTarget'
+        ? 'EphyraMainRoom'
+        : room.encounterProfileKey === 'N_Opening'
+          ? 'EphyraOpeningRoom'
+          : 'StandardRewardRoom';
     incomingReward = countedIncomingReward(biome, occurrence, room);
   }
   requireLifecycleSelection(catalog, room, lifecycleProfileKey, incomingReward);
@@ -257,6 +262,7 @@ function materializeAuthoredRoom(
     lifecycleProfileKey,
     counterEffects: room.counters,
     entered,
+    ...(room.requiredObjects === undefined ? {} : { requiredObjects: room.requiredObjects }),
     incomingReward,
     ...(entryState === undefined ? {} : { entryState }),
   });
@@ -275,14 +281,14 @@ function materializeHubRoom(
   ) {
     fail(`${room.gameName} is not a derived reward-free Hub room`);
   }
-  requireLifecycleSelection(catalog, room, 'RewardlessRoom', undefined);
+  requireLifecycleSelection(catalog, room, 'EphyraHubRoom', undefined);
   return Object.freeze({
     kind: 'hub',
     origin: createHubRoomAddress(biome),
     gameName: room.gameName,
     encounterProfileKey: room.encounterProfileKey,
     encounterPhases: encounterPhases(catalog, room),
-    lifecycleProfileKey: 'RewardlessRoom',
+    lifecycleProfileKey: 'EphyraHubRoom',
     counterEffects: room.counters,
     entered: true,
   });
@@ -369,7 +375,7 @@ function materializeLocalSlots(
             )
           : undefined;
       if (incomingReward !== undefined) {
-        requireLifecycleSelection(catalog, sideRoom, 'StandardRewardRoom', incomingReward);
+        requireLifecycleSelection(catalog, sideRoom, 'EphyraSideRoom', incomingReward);
       }
       return Object.freeze({
         kind: 'localChild',
@@ -383,7 +389,7 @@ function materializeLocalSlots(
         enteredOrdinal: authored.enteredOrdinal,
         encounterProfileKey: sideRoom.encounterProfileKey,
         encounterPhases: encounterPhases(catalog, sideRoom),
-        lifecycleProfileKey: 'StandardRewardRoom',
+        lifecycleProfileKey: 'EphyraSideRoom',
         counterEffects: sideRoom.counters,
         entered: authored.enteredOrdinal !== null,
         ...(incomingReward === undefined ? {} : { incomingReward }),

@@ -55,9 +55,13 @@ function eventKinds(executionInput: RoomLifecycleExecutionInput) {
 }
 
 describe('room lifecycle catalog', () => {
-  it('normalizes the reusable linear lifecycle profiles as immutable catalog data', () => {
+  it('normalizes reusable lifecycle profiles as immutable catalog data', () => {
     expect(catalog.roomLifecycleProfiles.values.map((profile) => profile.key)).toEqual([
       'StandardRewardRoom',
+      'EphyraOpeningRoom',
+      'EphyraMainRoom',
+      'EphyraSideRoom',
+      'EphyraHubRoom',
       'ClockworkGoalRoom',
       'RewardlessRoom',
       'FieldsCombatRoom',
@@ -216,6 +220,72 @@ describe('room lifecycle catalog', () => {
       ),
     );
   });
+
+  it('rejects required-object timing outside the room-entry and exit-unlock boundary', () => {
+    const base = declarations.roomLifecycleProfiles.find(
+      (profile) => profile.key === 'EphyraMainRoom',
+    );
+    if (base === undefined) {
+      throw new Error('Ephyra main lifecycle declaration is missing');
+    }
+    const profileIndex = declarations.roomLifecycleProfiles.indexOf(base);
+    const spawnIndex = base.operations.findIndex(
+      (operation) => operation.kind === 'spawnRequiredObjects',
+    );
+    const beforeCombatIndex = base.operations.findIndex(
+      (operation) => operation.kind === 'advanceProducer' && operation.point === 'beforeCombat',
+    );
+    const completionIndex = base.operations.findIndex(
+      (operation) => operation.kind === 'completeRequiredObjects',
+    );
+    const outgoingIndex = base.operations.findIndex(
+      (operation) => operation.kind === 'generateOutgoingBatch',
+    );
+    if (spawnIndex < 0 || beforeCombatIndex < 0 || completionIndex < 0 || outgoingIndex < 0) {
+      throw new Error('Ephyra main lifecycle declaration is incomplete');
+    }
+
+    const lateSpawn = [...base.operations];
+    [lateSpawn[spawnIndex], lateSpawn[beforeCombatIndex]] = [
+      lateSpawn[beforeCombatIndex]!,
+      lateSpawn[spawnIndex]!,
+    ];
+    const prematureOutgoing = [...base.operations];
+    [prematureOutgoing[completionIndex], prematureOutgoing[outgoingIndex]] = [
+      prematureOutgoing[outgoingIndex]!,
+      prematureOutgoing[completionIndex]!,
+    ];
+
+    const cases = [
+      {
+        operations: lateSpawn,
+        error: new CatalogContractError(
+          `roomLifecycleProfiles[${profileIndex}].operations[${beforeCombatIndex}].kind`,
+          'required objects must spawn once immediately after room entry',
+        ),
+      },
+      {
+        operations: prematureOutgoing,
+        error: new CatalogContractError(
+          `roomLifecycleProfiles[${profileIndex}].operations[${completionIndex}].kind`,
+          'generateOutgoingBatch requires completed required objects',
+        ),
+      },
+    ];
+
+    for (const fixture of cases) {
+      expect(() =>
+        createCatalog(
+          malformedCatalog({
+            ...declarations,
+            roomLifecycleProfiles: declarations.roomLifecycleProfiles.map((profile) =>
+              profile.key === base.key ? { ...base, operations: fixture.operations } : profile,
+            ),
+          }),
+        ),
+      ).toThrowError(fixture.error);
+    }
+  });
 });
 
 describe('single-room lifecycle execution', () => {
@@ -290,6 +360,82 @@ describe('single-room lifecycle execution', () => {
     expect(fragment.events.indexOf(roles[1]!)).toBeLessThan(
       fragment.events.findIndex((event) => event.kind === 'outgoingGenerationCheckpoint'),
     );
+  });
+
+  it('acquires the Ephyra opening reward before its delayed counting encounter', () => {
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        origin: createOccurrenceAddress(
+          createBiomeAddress('Surface', 'N'),
+          createOccurrenceId('n-opening-lifecycle-fixture'),
+        ),
+        lifecycleProfileKey: 'EphyraOpeningRoom',
+        encounterProfileKey: 'N_Opening',
+      }),
+    );
+
+    expect(fragment.events.map((event) => event.kind)).toEqual([
+      'roomPrepared',
+      'roomEntered',
+      'producerRoleAdvanced',
+      'encounterStarted',
+      'encounterDepthAdvanced',
+      'encounterCompleted',
+      'outgoingGenerationCheckpoint',
+      'roomCommitted',
+      'roomCountersAdvanced',
+      'roomExited',
+    ]);
+    expect(fragment.events[2]).toMatchObject({
+      kind: 'producerRoleAdvanced',
+      lifecyclePoint: 'roomRewardPickup',
+    });
+  });
+
+  it('executes Ephyra Soul Pylon timing between room entry and outgoing generation', () => {
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        origin: createOccurrenceAddress(
+          createBiomeAddress('Surface', 'N'),
+          createOccurrenceId('n-lifecycle-fixture'),
+        ),
+        lifecycleProfileKey: 'EphyraMainRoom',
+        encounterProfileKey: 'EphyraCombat',
+        requiredObjects: [
+          {
+            key: 'SoulPylon',
+            spawnTiming: 'roomEntry',
+            completionRequirement: 'destroyBeforeExit',
+          },
+        ],
+      }),
+    );
+
+    expect(fragment.events.map((event) => event.kind)).toEqual([
+      'roomPrepared',
+      'roomEntered',
+      'requiredObjectSpawned',
+      'encounterStarted',
+      'encounterDepthAdvanced',
+      'encounterCompleted',
+      'requiredObjectCompleted',
+      'producerRoleAdvanced',
+      'outgoingGenerationCheckpoint',
+      'roomCommitted',
+      'roomCountersAdvanced',
+      'roomExited',
+    ]);
+    expect(fragment.events[2]).toMatchObject({
+      kind: 'requiredObjectSpawned',
+      objectKey: 'SoulPylon',
+      completionRequirement: 'destroyBeforeExit',
+    });
+    expect(fragment.events[6]).toMatchObject({
+      kind: 'requiredObjectCompleted',
+      objectKey: 'SoulPylon',
+    });
   });
 
   it('keeps WorldShop outgoing generation before purchases', () => {
@@ -382,6 +528,13 @@ describe('single-room lifecycle execution', () => {
       [input({ encounterProfileKey: 'Shop' }), 'Shop is incompatible with StandardRewardRoom'],
       [input({ enteredRewardStoreKey: 'Missing' }), 'unknown entered reward store Missing'],
       [inputWithoutProducer(), 'StandardRewardRoom requires a producer'],
+      [
+        input({
+          lifecycleProfileKey: 'EphyraMainRoom',
+          encounterProfileKey: 'EphyraCombat',
+        }),
+        'EphyraMainRoom required-object operations do not match lifecycle input',
+      ],
       [
         input({ lifecycleProfileKey: 'BossRoom', encounterProfileKey: 'F_Boss01' }),
         'BossRoom does not accept a producer',

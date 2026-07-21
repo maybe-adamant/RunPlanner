@@ -91,6 +91,23 @@ const lifecycleEffectRegistry = Object.freeze({
     });
   },
   recordAppearance: (context, state) => appendEvent(state, context, { kind: 'roomEntered' }),
+  recordRequiredObjectSpawns: (context, state) => {
+    const requiredObjects = context.input.requiredObjects;
+    if (requiredObjects === undefined || requiredObjects.length === 0) {
+      throw new LifecycleExecutionContractError(
+        `${context.profile.key} spawned missing required objects`,
+      );
+    }
+    let next = state;
+    for (const object of requiredObjects) {
+      next = appendEvent(next, context, {
+        kind: 'requiredObjectSpawned',
+        objectKey: object.key,
+        completionRequirement: object.completionRequirement,
+      });
+    }
+    return next;
+  },
   recordEncounterStart: (context, state) => {
     const phase = requireEncounterPhase(context);
     return appendEvent(state, context, {
@@ -120,6 +137,22 @@ const lifecycleEffectRegistry = Object.freeze({
       kind: 'encounterCompleted',
       phaseKey: requireEncounterPhase(context).key,
     }),
+  recordRequiredObjectCompletions: (context, state) => {
+    const requiredObjects = context.input.requiredObjects;
+    if (requiredObjects === undefined || requiredObjects.length === 0) {
+      throw new LifecycleExecutionContractError(
+        `${context.profile.key} completed missing required objects`,
+      );
+    }
+    let next = state;
+    for (const object of requiredObjects) {
+      next = appendEvent(next, context, {
+        kind: 'requiredObjectCompleted',
+        objectKey: object.key,
+      });
+    }
+    return next;
+  },
   recordProducerPoint: (context, state) => {
     const operation = requireOperation(context, 'advanceProducer');
     const producer = context.input.producer;
@@ -230,8 +263,10 @@ const operationDispatchRegistry = Object.freeze({
   prepareRoom: defaultOperationHandler,
   materializeOfferPoint: defaultOperationHandler,
   enterRoom: defaultOperationHandler,
+  spawnRequiredObjects: defaultOperationHandler,
   startEncounter: encounterOperationHandler,
   completeEncounter: encounterOperationHandler,
+  completeRequiredObjects: defaultOperationHandler,
   runEncounterSequence: encounterSequenceOperationHandler,
   advanceProducer: defaultOperationHandler,
   generateOutgoingBatch: defaultOperationHandler,
@@ -267,6 +302,17 @@ function resolveExecutionContext(
   if (!profile.encounterProfileKeys.includes(encounter.key)) {
     throw new LifecycleExecutionContractError(
       `${encounter.key} is incompatible with ${profile.key}`,
+    );
+  }
+
+  const hasRequiredObjects = (input.requiredObjects?.length ?? 0) > 0;
+  const hasRequiredObjectOperations = profile.operations.some(
+    (operation) =>
+      operation.kind === 'spawnRequiredObjects' || operation.kind === 'completeRequiredObjects',
+  );
+  if (hasRequiredObjects !== hasRequiredObjectOperations) {
+    throw new LifecycleExecutionContractError(
+      `${profile.key} required-object operations do not match lifecycle input`,
     );
   }
 

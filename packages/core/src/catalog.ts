@@ -75,6 +75,8 @@ export type RoomLifecycleEffectKind =
   | 'recordOutgoingGeneration'
   | 'recordPreparation'
   | 'recordProducerPoint'
+  | 'recordRequiredObjectCompletions'
+  | 'recordRequiredObjectSpawns'
   | 'recordShopPurchases';
 
 export interface OnlyEncounterPhaseSelector {
@@ -94,6 +96,7 @@ export type RoomLifecycleOperation =
       readonly offerPoint: string;
     })
   | (RoomLifecycleOperationBase & { readonly kind: 'enterRoom' })
+  | (RoomLifecycleOperationBase & { readonly kind: 'spawnRequiredObjects' })
   | (RoomLifecycleOperationBase & {
       readonly kind: 'startEncounter';
       readonly encounter: EncounterPhaseSelector;
@@ -102,6 +105,7 @@ export type RoomLifecycleOperation =
       readonly kind: 'completeEncounter';
       readonly encounter: EncounterPhaseSelector;
     })
+  | (RoomLifecycleOperationBase & { readonly kind: 'completeRequiredObjects' })
   | (RoomLifecycleOperationBase & { readonly kind: 'runEncounterSequence' })
   | (RoomLifecycleOperationBase & {
       readonly kind: 'advanceProducer';
@@ -470,6 +474,10 @@ export interface HubSideRoomGenerationPolicy {
 export interface HubBiomeLayout {
   readonly biomeKey: string;
   readonly kind: 'HubBiome';
+  readonly initialCounters: {
+    readonly biomeDepthCache: number;
+    readonly biomeEncounterDepth: number;
+  };
   readonly entries: readonly EntryDescriptor[];
   readonly hub: {
     readonly roomGameName: string;

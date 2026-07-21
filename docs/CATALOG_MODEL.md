@@ -161,7 +161,8 @@ route. The current route model rejects the same biome twice within one route;
 if that product case becomes real, a separate route-placement identity will be
 added without changing global biome identity.
 
-Biome layout declarations own immutable structure:
+Biome layout declarations own one immutable biome envelope and its selected
+traversal-body policy:
 
 - layout kind: initially `LinearBiome` or `HubBiome`;
 - exact biome-local counter baselines at biome entry; route-wide counters are
@@ -204,6 +205,12 @@ or completes the route.
 Concrete structural extensions for F through Q should be added with their
 implementation slice and covered by focused fixtures. A biome is not declared
 supported merely because its letter appears in the route order.
+
+`LinearBiome` and `HubBiome` discriminate the traversal body rather than the
+whole lifecycle/history stack. N still uses the common ordered fixed entry,
+terminal, completion, counter, and route-transition contracts. Its Opening and
+PreHub are fixed entry slots; PreHub is not an ordinary generated candidate
+selected by a depth eligibility rule.
 
 For `HubBiome`, layout declarations own the fixed mapping from semantic hub
 slot to concrete Room Declaration. Authored state selects a supported open set

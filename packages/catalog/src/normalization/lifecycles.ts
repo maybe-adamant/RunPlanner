@@ -28,6 +28,8 @@ const effectKinds = {
   recordOutgoingGeneration: true,
   recordPreparation: true,
   recordProducerPoint: true,
+  recordRequiredObjectCompletions: true,
+  recordRequiredObjectSpawns: true,
   recordShopPurchases: true,
 } as const satisfies Readonly<Record<RoomLifecycleEffectKind, true>>;
 
@@ -43,8 +45,10 @@ const expectedEffects = {
   prepareRoom: ['recordPreparation'],
   materializeOfferPoint: ['recordOfferPoint'],
   enterRoom: ['recordAppearance'],
+  spawnRequiredObjects: ['recordRequiredObjectSpawns'],
   startEncounter: ['recordEncounterStart', 'advanceEncounterDepth'],
   completeEncounter: ['recordEncounterCompletion'],
+  completeRequiredObjects: ['recordRequiredObjectCompletions'],
   runEncounterSequence: [
     'recordEncounterStart',
     'advanceEncounterDepth',
@@ -101,6 +105,8 @@ function normalizeOperation(raw: RoomLifecycleOperation, path: string): RoomLife
   switch (raw.kind) {
     case 'prepareRoom':
     case 'enterRoom':
+    case 'spawnRequiredObjects':
+    case 'completeRequiredObjects':
     case 'generateOutgoingBatch':
     case 'runEncounterSequence':
     case 'commitRoom':
@@ -198,6 +204,9 @@ function validateOperationSequence(
   const materializedOfferPoints = new Map<string, number>();
   const appliedOfferPoints = new Set<string>();
   let encounterActive = false;
+  let encounterCompleted = false;
+  let requiredObjectsSpawned = false;
+  let requiredObjectsCompleted = false;
   let outgoingGenerationCount = 0;
   for (const [index, operation] of operations.entries()) {
     if (index > commitIndex && operation.kind !== 'exitRoom') {
@@ -240,12 +249,39 @@ function validateOperationSequence(
         fail(`${path}[${index}].kind`, 'encounter completion requires an active phase');
       }
       encounterActive = false;
+      encounterCompleted = true;
+    } else if (operation.kind === 'runEncounterSequence') {
+      encounterCompleted = true;
+    } else if (operation.kind === 'spawnRequiredObjects') {
+      if (requiredObjectsSpawned || index !== enterIndex + 1) {
+        fail(
+          `${path}[${index}].kind`,
+          'required objects must spawn once immediately after room entry',
+        );
+      }
+      requiredObjectsSpawned = true;
+    } else if (operation.kind === 'completeRequiredObjects') {
+      if (
+        !requiredObjectsSpawned ||
+        requiredObjectsCompleted ||
+        encounterActive ||
+        !encounterCompleted
+      ) {
+        fail(
+          `${path}[${index}].kind`,
+          'required objects must complete once after encounter completion',
+        );
+      }
+      requiredObjectsCompleted = true;
     } else if (operation.kind === 'generateOutgoingBatch') {
       if (encounterActive) {
         fail(
           `${path}[${index}].kind`,
           'generateOutgoingBatch cannot interrupt an active encounter phase',
         );
+      }
+      if (requiredObjectsSpawned && !requiredObjectsCompleted) {
+        fail(`${path}[${index}].kind`, 'generateOutgoingBatch requires completed required objects');
       }
       outgoingGenerationCount += 1;
       if (outgoingGenerationCount > 1) {
@@ -257,6 +293,9 @@ function validateOperationSequence(
   }
   if (encounterActive) {
     fail(path, 'every started encounter requires one completion');
+  }
+  if (requiredObjectsSpawned !== requiredObjectsCompleted) {
+    fail(path, 'required-object spawn and completion operations must be paired');
   }
 }
 

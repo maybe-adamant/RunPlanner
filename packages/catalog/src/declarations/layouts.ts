@@ -309,6 +309,7 @@ export const biomeLayouts = [
   {
     biomeKey: 'N',
     kind: 'HubBiome',
+    initialCounters: { biomeDepthCache: 0, biomeEncounterDepth: 1 },
     entries: [
       { kind: 'fixedAuthoredSlot', slotKey: 'opening', roomGameName: 'N_Opening01' },
       { kind: 'fixedAuthoredSlot', slotKey: 'preHub', roomGameName: 'N_PreHub01' },

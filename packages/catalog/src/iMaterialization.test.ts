@@ -176,6 +176,9 @@ function carriedHHistory(): CanonicalLinearHistory {
     encounterStarts: Object.freeze([]),
     encounterCompletions: Object.freeze([]),
     enteredRewardStores: Object.freeze([]),
+    requiredObjectSpawns: Object.freeze([]),
+    requiredObjectCompletions: Object.freeze([]),
+    roomRestores: Object.freeze([]),
     counters: Object.freeze({
       biomeDepthCache: 0,
       biomeEncounterDepth: 0,

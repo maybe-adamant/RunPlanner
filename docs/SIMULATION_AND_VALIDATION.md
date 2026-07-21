@@ -315,6 +315,7 @@ interface CanonicalLinearBiome {
   entryRooms: CanonicalRoom[];
   batches: CanonicalBatch[];
   terminalEntry: CanonicalTerminalEntry;
+  completionRooms: CanonicalCompletionRoom[];
   biomeState: CanonicalBiomeState;
 }
 
@@ -352,6 +353,78 @@ interface CanonicalHubVisit {
   hubRestore: CanonicalRoomRestore;
 }
 ```
+
+Both canonical variants project the same biome envelope:
+
+```text
+entryRooms -> traversal body -> terminalEntry -> completionRooms
+```
+
+For a linear biome, `batches` is the traversal body. For N, `hubBoard` plus
+`visits` is the traversal body. Each canonical materializer preserves that
+conceptual order within its own variant. History dispatches the middle segment
+by layout kind while entry walking, room lifecycle execution, terminal
+orchestration, completion walking, event folding, counters, and semantic
+feedback remain shared authorities.
+
+### Shared Biome Envelope Composition
+
+The shared envelope is an internal orchestration contract, not a third
+authored or canonical data model. `LinearBiomePlan` and `HubBiomePlan` remain
+separate persistence languages, and `CanonicalLinearBiome` and
+`CanonicalHubBiome` remain separate materialized products. The common layer
+owns history orchestration across their equivalent semantic segments.
+
+Materialization remains variant-owned because its entry and terminal contracts
+are materially different. Linear materialization may begin from an authored
+start or derived fixed entry and may end through a forked or generated target.
+Hub materialization resolves fixed authored entry leaves and a fixed authored
+terminal around its board and visits. Each variant assembles its existing
+canonical snapshot directly; neither projects through a generic public body or
+snapshot shape.
+
+The one shared materialization primitive is completion-room construction. It
+accepts the declared completion roles plus optional terminal-derived
+reward-store provenance and retains the existing declaration, lifecycle, and
+entered-store validation. Further entry or terminal extraction requires
+another concrete consumer; the shared history envelope does not by itself
+justify a generic materialization adapter registry.
+
+History composition consumes that canonical snapshot through this contract:
+
+| Segment              | Input                                                         | Required output                                           |
+| -------------------- | ------------------------------------------------------------- | --------------------------------------------------------- |
+| fixed-entry composer | canonical entry rooms and the shared lifecycle/event writer   | last entered entry room                                   |
+| body adapter         | that entry room, the canonical body, and the same writer      | exact terminal predecessor after every ordered body event |
+| terminal adapter     | that predecessor, the canonical terminal, and the same writer | entered terminal room                                     |
+| completion composer  | terminal room, completion rooms, and the same writer          | completed ordered tail                                    |
+
+The history envelope alone initializes biome counters and optional route-prefix
+state, emits biome start/completion and declared transition resets, and invokes
+the topology-neutral history fold. A body adapter cannot initialize or finish
+a biome, apply transition resets, or select a different fold.
+
+The linear body adapter owns generated decision batches, picked-target
+continuation, Fields/Clockwork body state, and realization of a generated
+terminal target. The Hub body adapter owns the persistent Hub room and board,
+open target membership, six visit references, parent-local side excursions,
+and parent/Hub restores. N Opening and PreHub belong to the fixed entry
+segment. N Preboss belongs to the fixed terminal strategy. Boss and Postboss
+belong to the shared completion segment.
+
+History dispatch may use the normalized layout discriminant or direct typed
+composition. It must never branch on a biome key, concrete room game name,
+semantic address, or rendered UI shape. This keeps N's structural
+specialization in the middle segment without creating a second history stack.
+The contract applies to function ownership; it does not require source files to
+mirror every conceptual segment.
+
+The reconciliation is behavior preserving. Existing F and I linear fixtures
+and the representative N fixture must retain deeply equal canonical facts,
+exact event order, counter state, transition resets, occurrence identity, and
+restore identity. In particular, PreHub remains the second fixed entry, one
+room occurrence is still created only once, and later restore appearances
+never replay creation or lifecycle work.
 
 `entryRooms` begins with the selected declared start and then contains any
 layout-derived fixed entry rooms in game order. Most linear biomes currently
@@ -399,6 +472,12 @@ as the structural owner of `hubBoard`, not as another authored occurrence. The
 fixed authored Preboss is the Hub snapshot's direct `terminalEntry`; it owns
 the complete WorldShop leaf, while Boss and Postboss remain derived completion
 rooms.
+
+PreHub is therefore not a Hub-only candidate rule. It is the second fixed entry
+in the common envelope, and its depth follows from walking the entry chain.
+After canonical expansion, N history is an ordinary ordered event stream:
+Opening, PreHub, repeated Hub/main/side/restore appearances, Preboss, Boss, and
+Postboss. Only the Hub body determines that middle ordering.
 
 A canonical batch records:
 
@@ -537,6 +616,14 @@ walk derived Boss and PostBoss completion
 The hub lookup is produced before the first selected visit and remains based on
 the full open board. A restore event appends history without creating another
 occurrence, offer, acquisition, or encounter-start event.
+
+The dormant N lifecycle/history slice implements the structural portion of
+this trace: exact fixed-entry, Hub-board, main, side, restore, terminal, and
+completion events fold through the shared history ledgers, including required
+Soul Pylons and generated-side-room counters. The offer, counted-bag,
+acquisition, sibling-batch, `hubRewardLookup`, and Preboss-shop branches remain
+the following N reward-simulation slice; they are not inferred from the
+structural history aggregate.
 
 Every permutation of a parent's entered side slots is legal. Because all
 sibling offers exist before the first entry and supported side acquisitions do

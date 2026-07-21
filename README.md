@@ -81,10 +81,15 @@ preventing proof-only branch multiplication while retaining one ordered
 witness for every distinct downstream state. P/Q/O/N remain dormant.
 
 N now additionally has dormant schema-version-5 Hub authorship, structural
-completeness, and canonical Hub materialization. Its normalized snapshot keeps
-the persistent physical board, ordered visits, parent-local side rooms,
-restores, fixed Preboss shop, and derived completion distinct without
-activating Surface simulation or editing.
+completeness, canonical Hub materialization, exact room lifecycle, and
+event-folded route history. Its normalized snapshot and ledgers keep the
+persistent physical board, ordered visits, parent-local side rooms, Soul
+Pylons, restores, fixed Preboss shop, and derived completion distinct without
+activating Surface simulation or editing. The next slice reconciles Linear and
+Hub history composition through one behavior-preserving biome envelope and
+shares their duplicated completion materializer; canonical materialization
+remains variant-owned. N reward simulation follows after that boundary is
+proven.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

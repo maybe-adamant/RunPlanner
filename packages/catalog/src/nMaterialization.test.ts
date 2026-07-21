@@ -173,12 +173,14 @@ describe('canonical N Hub materialization', () => {
       {
         occurrenceId: fixedOccurrenceIds.opening,
         gameName: 'N_Opening01',
+        lifecycleProfileKey: 'EphyraOpeningRoom',
         entered: true,
         incomingReward: { resolvedStoreKey: 'RunProgress' },
       },
       {
         occurrenceId: fixedOccurrenceIds.preHub,
         gameName: 'N_PreHub01',
+        lifecycleProfileKey: 'StandardRewardRoom',
         entered: true,
         incomingReward: { resolvedStoreKey: 'RunProgress' },
       },
@@ -186,7 +188,7 @@ describe('canonical N Hub materialization', () => {
     expect(snapshot.hubBoard.room).toMatchObject({
       kind: 'hub',
       gameName: 'N_Hub',
-      lifecycleProfileKey: 'RewardlessRoom',
+      lifecycleProfileKey: 'EphyraHubRoom',
       entered: true,
     });
     expect(semanticAddressKey(snapshot.hubBoard.room.origin)).not.toBe(

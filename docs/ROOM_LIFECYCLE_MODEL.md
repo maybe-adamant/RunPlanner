@@ -254,6 +254,7 @@ The first expected effect families are:
 
 - room preparation and resolved encounter-sequence facts;
 - room appearance and current-room facts;
+- required-object spawn and completion facts;
 - encounter occurrence, start, completion, and counting-depth changes;
 - room creation, offer, counted-bag, and offer-projection changes;
 - concrete acquisition and acquisition-driven counter changes;
@@ -267,18 +268,20 @@ kind is a catalog or construction error rather than a silent no-op.
 
 ## Operation Timing Matrix
 
-| Operation               | State it observes                                      | Typical effects and emitted facts                                                                              |
-| ----------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `prepareRoom`           | Post-predecessor-commit history                        | Resolve encounter sequence, optional phase support, and other entry materialization                            |
-| `materializeOfferPoint` | The operation's current state                          | Resolve room-owned shop or wheel offers, consume bags, and apply offer projections                             |
-| `enterRoom`             | Prepared room state                                    | Emit semantic appearance/current-room facts and activate the entered occurrence                                |
-| `startEncounter`        | State before the declared encounter phase              | Emit encounter occurrence/start and increment declared room, biome, and route encounter-depth axes             |
-| `completeEncounter`     | State after the phase's combat or noncombat work       | Emit completion facts and release phase-local blockers                                                         |
-| `advanceProducer`       | State at the producer's named point                    | Resolve acquisition roles, project loot/use history, and update acquisition-driven counters                    |
-| `generateOutgoingBatch` | Current state before this room commits                 | Create targets sequentially, resolve incoming offers, consume counted bags, and apply offer projections        |
-| `applyShopPurchases`    | Already-generated outgoing batch plus active inventory | Explore purchase orders, remove purchased options, and apply purchase acquisitions without rewriting the batch |
-| `commitRoom`            | State after supported room-local work                  | Append declared room history, recompute depth caches, advance route ordinal, and record entered-store policy   |
-| `exitRoom`              | Committed source state plus selected generated target  | Close the fragment and transfer control to the selected target's preparation                                   |
+| Operation                 | State it observes                                      | Typical effects and emitted facts                                                                              |
+| ------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `prepareRoom`             | Post-predecessor-commit history                        | Resolve encounter sequence, optional phase support, and other entry materialization                            |
+| `materializeOfferPoint`   | The operation's current state                          | Resolve room-owned shop or wheel offers, consume bags, and apply offer projections                             |
+| `enterRoom`               | Prepared room state                                    | Emit semantic appearance/current-room facts and activate the entered occurrence                                |
+| `spawnRequiredObjects`    | Entered-room state                                     | Emit declaration-owned required-object spawns and activate their exit blockers                                 |
+| `startEncounter`          | State before the declared encounter phase              | Emit encounter occurrence/start and increment declared room, biome, and route encounter-depth axes             |
+| `completeEncounter`       | State after the phase's combat or noncombat work       | Emit completion facts and release phase-local blockers                                                         |
+| `completeRequiredObjects` | State after the declared required-object work          | Emit paired completion facts and release the corresponding required-object blockers                            |
+| `advanceProducer`         | State at the producer's named point                    | Resolve acquisition roles, project loot/use history, and update acquisition-driven counters                    |
+| `generateOutgoingBatch`   | Current state before this room commits                 | Create targets sequentially, resolve incoming offers, consume counted bags, and apply offer projections        |
+| `applyShopPurchases`      | Already-generated outgoing batch plus active inventory | Explore purchase orders, remove purchased options, and apply purchase acquisitions without rewriting the batch |
+| `commitRoom`              | State after supported room-local work                  | Append declared room history, recompute depth caches, advance route ordinal, and record entered-store policy   |
+| `exitRoom`                | Committed source state plus selected generated target  | Close the fragment and transfer control to the selected target's preparation                                   |
 
 The table describes semantic visibility, not elapsed time or presentation
 callbacks. An effect belongs at the earliest operation after which a supported
@@ -302,6 +305,48 @@ exitRoom
 The incoming offer was resolved by the predecessor. Its concrete acquisition
 updates history before the outgoing batch is evaluated, so the next rooms and
 rewards observe it.
+
+### Ephyra Opening
+
+```text
+prepareRoom
+enterRoom
+advanceProducer(roomRewardPickup)
+startEncounter(OpeningGeneratedN)
+completeEncounter(OpeningGeneratedN)
+generateOutgoingBatch
+commitRoom
+exitRoom
+```
+
+`N_Opening01` is not a standard reward-room ordering. Its encounter starts
+late and the room waits for its reward pickup first. `N_PreHub01` uses the
+standard combat-then-reward profile, while its encounter declaration keeps
+that combat non-counting.
+
+### Ephyra Main Target
+
+```text
+prepareRoom
+enterRoom
+spawnRequiredObjects(SoulPylon)
+advanceProducer(beforeCombat)
+startEncounter(main)
+completeEncounter(main)
+completeRequiredObjects(SoulPylon)
+advanceProducer(afterCombat)
+advanceProducer(roomRewardPickup)
+generateOutgoingBatch
+commitRoom
+exitRoom
+```
+
+Devotion, when supported by a producer, still emits its chosen and spurned
+roles at their declared before/after-combat points. The required Soul Pylon
+spawns at entry and completes after combat but before reward pickup, local
+side-room generation, or exit. Ephyra side rooms use the standard
+combat-then-reward order without outgoing generation; the persistent Hub uses
+entry, one stable-board generation, commit, and exit without a producer.
 
 ### Devotion Room
 
@@ -488,6 +533,10 @@ never depend on an implicit fold initializer or a hidden opening exception.
 G begins at `biomeDepthCache = 1` and `biomeEncounterDepth = 1`, matching the
 game's between-biome depth baseline. Its route encounter depth and room-history
 ordinal are carried from F after F's declared biome-local resets.
+N is the first Surface biome and starts at `biomeDepthCache = 0`,
+`biomeEncounterDepth = 1`, route encounter depth `1`, and room-history ordinal
+`0`. Its Hub history additionally initializes generated-side-room and Soul
+Pylon spawn/completion counters at zero.
 
 Every fragment exposes conceptually distinct states:
 

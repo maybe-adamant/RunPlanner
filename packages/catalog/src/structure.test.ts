@@ -112,6 +112,7 @@ describe('shared structural catalog vocabulary', () => {
     const nLayout = {
       biomeKey: 'N',
       kind: 'HubBiome',
+      initialCounters: { biomeDepthCache: 0, biomeEncounterDepth: 1 },
       entries: [
         { kind: 'fixedAuthoredSlot', slotKey: 'opening', roomGameName: nOpening.gameName },
         { kind: 'fixedEntry', role: 'hubEntry', roomGameName: nEntry.gameName },
@@ -173,6 +174,7 @@ describe('shared structural catalog vocabulary', () => {
 
     expect(catalog.biomeLayouts.byKey.N).toMatchObject({
       kind: 'HubBiome',
+      initialCounters: { biomeDepthCache: 0, biomeEncounterDepth: 1 },
       entries: [
         { kind: 'fixedAuthoredSlot', slotKey: 'opening', roomGameName: 'N_OpeningFixture' },
         { kind: 'fixedEntry', role: 'hubEntry', roomGameName: 'N_EntryFixture' },

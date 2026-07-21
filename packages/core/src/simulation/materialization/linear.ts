@@ -483,6 +483,9 @@ function materializeAuthoredRoom(
     lifecycleProfileKey: leaf.lifecycleProfileKey,
     counterEffects: context.room.counters,
     entered: context.entered,
+    ...(context.room.requiredObjects === undefined
+      ? {}
+      : { requiredObjects: context.room.requiredObjects }),
     ...(leaf.incomingReward === undefined ? {} : { incomingReward: leaf.incomingReward }),
     ...(leaf.localRewards === undefined ? {} : { localRewards: leaf.localRewards }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
