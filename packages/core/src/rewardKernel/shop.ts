@@ -1,4 +1,5 @@
 import { evaluateRequirement } from '../requirementEvaluator';
+import type { RequirementExpression } from '../requirements';
 import { applyConcreteAcquisition, factsWithHistory, resolveAcquisitionRole } from './history';
 import type {
   AuthoredShopOffer,
@@ -21,11 +22,15 @@ function optionSupportsOffer(
   option: ShopOptionEntry,
   authored: AuthoredShopOffer,
   facts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>>,
 ): boolean {
+  const additionalRequirement = additionalOptionRequirements[option.key];
   return (
     option.defaultOffer.rewardType === authored.offer.rewardType &&
     (option.requirement === undefined ||
       evaluateRequirement(option.requirement, facts.requirements)) &&
+    (additionalRequirement === undefined ||
+      evaluateRequirement(additionalRequirement, facts.requirements)) &&
     isOfferSupportedAtResolutionPoint(catalog, authored.offer, facts, 'offer')
   );
 }
@@ -35,6 +40,7 @@ function assignments(
   options: readonly ShopOptionEntry[],
   authored: readonly AuthoredShopOffer[],
   facts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>>,
   used: ReadonlySet<string> = new Set(),
 ): readonly (readonly string[])[] {
   const current = authored[0];
@@ -42,15 +48,22 @@ function assignments(
     return [[]];
   }
   return options.flatMap((option) => {
-    if (used.has(option.key) || !optionSupportsOffer(catalog, option, current, facts)) {
+    if (
+      used.has(option.key) ||
+      !optionSupportsOffer(catalog, option, current, facts, additionalOptionRequirements)
+    ) {
       return [];
     }
     const nextUsed = new Set(used);
     nextUsed.add(option.key);
-    return assignments(catalog, options, authored.slice(1), facts, nextUsed).map((tail) => [
-      option.key,
-      ...tail,
-    ]);
+    return assignments(
+      catalog,
+      options,
+      authored.slice(1),
+      facts,
+      additionalOptionRequirements,
+      nextUsed,
+    ).map((tail) => [option.key, ...tail]);
   });
 }
 
@@ -59,6 +72,7 @@ export function evaluateShopGenerationSupport(
   profile: ShopProfileDeclaration,
   authored: readonly AuthoredShopOffer[],
   facts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
 ): ShopGenerationSupport {
   if (authored.length !== profile.slotCount) {
     return Object.freeze({
@@ -74,13 +88,21 @@ export function evaluateShopGenerationSupport(
     const groupAuthored = authored.slice(offset, offset + group.offerCount);
     groupAuthored.forEach((offer, groupIndex) => {
       if (
-        !group.options.values.some((option) => optionSupportsOffer(catalog, option, offer, facts))
+        !group.options.values.some((option) =>
+          optionSupportsOffer(catalog, option, offer, facts, additionalOptionRequirements),
+        )
       ) {
         unsupportedSlotIndexes.push(offset + groupIndex);
       }
     });
     offset += group.offerCount;
-    const groupAssignments = assignments(catalog, group.options.values, groupAuthored, facts);
+    const groupAssignments = assignments(
+      catalog,
+      group.options.values,
+      groupAuthored,
+      facts,
+      additionalOptionRequirements,
+    );
     witnesses = witnesses.flatMap((prefix) =>
       groupAssignments.map((assignment) => [...prefix, ...assignment]),
     );
@@ -100,8 +122,15 @@ export function findShopGenerationWitnesses(
   profile: ShopProfileDeclaration,
   authored: readonly AuthoredShopOffer[],
   facts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
 ): readonly ShopGenerationWitness[] {
-  return evaluateShopGenerationSupport(catalog, profile, authored, facts).witnesses;
+  return evaluateShopGenerationSupport(
+    catalog,
+    profile,
+    authored,
+    facts,
+    additionalOptionRequirements,
+  ).witnesses;
 }
 
 function permutations(values: readonly number[]): readonly (readonly number[])[] {
@@ -154,6 +183,7 @@ export function evaluateShopPurchases(
   witness: ShopGenerationWitness,
   initialHistory: RewardHistoryState,
   baseFacts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
 ): ShopPurchaseSimulation {
   const generationFacts = factsWithHistory(baseFacts, initialHistory, new Set());
   const witnessIsValid = findShopGenerationWitnesses(
@@ -161,6 +191,7 @@ export function evaluateShopPurchases(
     profile,
     authored,
     generationFacts,
+    additionalOptionRequirements,
   ).some(
     (candidate) =>
       candidate.optionKeys.length === witness.optionKeys.length &&
@@ -269,7 +300,15 @@ export function simulateShopPurchases(
   witness: ShopGenerationWitness,
   initialHistory: RewardHistoryState,
   baseFacts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
 ): readonly ShopPurchaseResult[] {
-  return evaluateShopPurchases(catalog, profile, authored, witness, initialHistory, baseFacts)
-    .results;
+  return evaluateShopPurchases(
+    catalog,
+    profile,
+    authored,
+    witness,
+    initialHistory,
+    baseFacts,
+    additionalOptionRequirements,
+  ).results;
 }

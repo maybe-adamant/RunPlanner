@@ -1213,6 +1213,65 @@ describe('ordered shop transitions', () => {
     ]);
   });
 
+  it('applies declaration-owned option requirements during generation and revalidation', () => {
+    const profile = rewardKernelCatalog.shops.byKey.WorldShop!;
+    const authored: readonly AuthoredShopOffer[] = [
+      {
+        offer: {
+          rewardType: 'RandomLoot',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+        purchased: false,
+      },
+      { offer: { rewardType: 'WeaponUpgradeDrop' }, purchased: false },
+      { offer: { rewardType: 'MaxManaDrop' }, purchased: false },
+    ];
+    const additionalRequirements = {
+      WeaponUpgradeDropEarly: {
+        kind: 'rewardLookupExcludes' as const,
+        lookupKey: 'hubRewardLookup',
+        rewardType: 'WeaponUpgrade',
+      },
+    };
+    const supportedFacts = facts([], {
+      rewardLookups: { hubRewardLookup: new Set() },
+    });
+    const witness = findShopGenerationWitnesses(
+      rewardKernelCatalog,
+      profile,
+      authored,
+      supportedFacts,
+      additionalRequirements,
+    )[0];
+    if (witness === undefined) {
+      throw new Error('WorldShop lookup witness is missing');
+    }
+    const blockedFacts = facts([], {
+      rewardLookups: { hubRewardLookup: new Set(['WeaponUpgrade']) },
+    });
+
+    expect(
+      evaluateShopGenerationSupport(
+        rewardKernelCatalog,
+        profile,
+        authored,
+        blockedFacts,
+        additionalRequirements,
+      ),
+    ).toMatchObject({ witnesses: [], unsupportedSlotIndexes: [1] });
+    expect(
+      simulateShopPurchases(
+        rewardKernelCatalog,
+        profile,
+        authored,
+        witness,
+        createRewardHistoryState(),
+        blockedFacts,
+        additionalRequirements,
+      ),
+    ).toEqual([]);
+  });
+
   it('rejects a generation witness that does not support the authored shop offers', () => {
     const profile = rewardKernelCatalog.shops.byKey.WorldShop!;
     const authored: readonly AuthoredShopOffer[] = [

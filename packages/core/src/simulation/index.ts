@@ -135,17 +135,25 @@ export {
 } from './generation';
 export {
   evaluateFRewards,
+  evaluateHubRewards,
   evaluateLinearRewards,
+  evaluateNRewards,
   FRewardSimulationContractError,
+  HubRewardSimulationContractError,
   LinearRewardSimulationContractError,
   type FRewardBranch,
   type FRewardEvent,
   type FRewardSimulation,
   type FRewardStoreSupportEntry,
+  type HubRewardSimulation,
   type LinearRewardBranch,
   type LinearRewardEvent,
   type LinearRewardSimulation,
   type LinearRewardStoreSupportEntry,
+  type RewardBranch,
+  type RewardEvent,
+  type RewardSimulation,
+  type RewardStoreSupportEntry,
 } from './rewards';
 export {
   HubMaterializationContractError,

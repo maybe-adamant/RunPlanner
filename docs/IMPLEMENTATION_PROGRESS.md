@@ -471,6 +471,24 @@ six Pylon pairs, four parent restores, six Hub restores, and transition state.
 N remains outside simulator dispatch and application capabilities. Slice 5
 adds N reward simulation against this stable canonical history.
 
+Phase 6 N Slice 5 is complete. Shared reward processing now owns branch
+initialization, counted-bag transitions, offer projection, producer
+acquisition, ordered shop generation/purchases, findings, and branch
+equivalence for both linear and Hub traversal. Shop generation accepts the
+declaration-owned per-option requirements consumed by N's fixed WorldShop.
+The Hub reward evaluator consumes all nine or ten open target offers once in
+normalized physical order, including unvisited dead leaves; only the six
+visited targets later acquire their incoming rewards. Each visited parent's
+generated side siblings are resolved as one jointly constrained unordered
+batch, while only authored entered siblings execute acquisition lifecycles.
+`hubRewardLookup` is derived from the full initial board before the Preboss
+inventory is validated, so an unvisited Hammer or Spell still excludes its
+corresponding shop option. Focused fixtures close board order, bag depletion,
+visited-only acquisition, generated-versus-entered side behavior, sibling peer
+constraints, unvisited lookup effects, deterministic freezing, and authored
+and canonical nonmutation. N remains outside simulator dispatch and
+application capabilities until Slice 6 adds selected validation.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1174,13 +1192,14 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, and N Slices 1-4 are complete. N Slice 5, reward simulation, is
-next. It will resolve the persistent Hub board once in normalized physical
-order, preserve open unvisited targets as offers without acquisitions, resolve
-entered parent-local side batches jointly, and validate the fixed Preboss shop
-against the complete Hub reward lookup. N will close the persistent-Hub
-traversal body's complete product loop before the contextual-selection UX
-insertion defined in `CONTEXTUAL_EDITOR_UX.md`.
+five I slices, and N Slices 1-5 are complete. N Slice 6, selected validation,
+is next. It will validate fixed-slot identity, open membership and count,
+miniboss availability, six distinct visits, pylons, side-generation pressure,
+entered ordinals, room/reward support, restores, Hub lookup, fixed Preboss
+shop, and terminal completion at exact semantic owners. N remains dormant
+until the later candidate, editor, and activation slices close the complete
+product loop before the contextual-selection UX insertion defined in
+`CONTEXTUAL_EDITOR_UX.md`.
 
 After N activates, that insertion begins by replacing the current incomplete-
 biome early return with the progressive evaluation contract in
