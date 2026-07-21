@@ -1,7 +1,9 @@
 import type {
   BatchRewardStoreAddress,
   BiomeAddress,
+  ContinuationAddress,
   IncomingRewardAddress,
+  LocalRewardAddress,
   OccurrenceAddress,
   ShopOfferAddress,
   ShopPurchaseAddress,
@@ -40,6 +42,18 @@ export interface IncomingRewardCandidateQuery {
   readonly value: ResolvedRewardOffer;
 }
 
+export interface LocalRewardCandidateQuery {
+  readonly kind: 'localReward';
+  readonly reward: LocalRewardAddress;
+  readonly value: ResolvedRewardOffer;
+}
+
+export interface FieldsCageOutcomeCandidateQuery {
+  readonly kind: 'fieldsCageOutcome';
+  readonly continuation: ContinuationAddress;
+  readonly cageOutcome: 'min' | 'max';
+}
+
 export interface ShopOfferCandidateQuery {
   readonly kind: 'shopOffer';
   readonly offer: ShopOfferAddress;
@@ -54,7 +68,9 @@ export interface ShopPurchaseCandidateQuery {
 
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
+  | FieldsCageOutcomeCandidateQuery
   | IncomingRewardCandidateQuery
+  | LocalRewardCandidateQuery
   | RoomTargetCandidateQuery
   | ShopOfferCandidateQuery
   | ShopPurchaseCandidateQuery
@@ -110,6 +126,15 @@ export interface RewardCandidateEvidence {
   readonly relevantFindingCodes: readonly FindingCode[];
 }
 
+export interface FieldsCageOutcomeCandidateEvidence {
+  readonly candidateOutcome: 'min' | 'max';
+  readonly beforeSequence: number;
+  readonly biomeDepthCache: number;
+  readonly fieldsMaxDoorsRolled: number;
+  readonly maxDoorCageCeiling: number;
+  readonly supportOutcomes: readonly ('min' | 'max')[];
+}
+
 export interface ShopPurchaseCandidateEvidence {
   readonly purchased: boolean;
   readonly relevantFindingCodes: readonly FindingCode[];
@@ -139,6 +164,22 @@ export interface EvaluatedIncomingRewardCandidate {
   readonly evidence: RewardCandidateEvidence;
 }
 
+export interface EvaluatedLocalRewardCandidate {
+  readonly context: 'evaluated';
+  readonly query: LocalRewardCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: RewardCandidateEvidence;
+}
+
+export interface EvaluatedFieldsCageOutcomeCandidate {
+  readonly context: 'evaluated';
+  readonly query: FieldsCageOutcomeCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: FieldsCageOutcomeCandidateEvidence;
+}
+
 export interface EvaluatedShopOfferCandidate {
   readonly context: 'evaluated';
   readonly query: ShopOfferCandidateQuery;
@@ -157,7 +198,9 @@ export interface EvaluatedShopPurchaseCandidate {
 
 export type ProjectCandidateEvaluation =
   | EvaluatedBatchRewardStoreCandidate
+  | EvaluatedFieldsCageOutcomeCandidate
   | EvaluatedIncomingRewardCandidate
+  | EvaluatedLocalRewardCandidate
   | EvaluatedRoomTargetCandidate
   | EvaluatedShopOfferCandidate
   | EvaluatedShopPurchaseCandidate

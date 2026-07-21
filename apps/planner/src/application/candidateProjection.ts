@@ -4,7 +4,9 @@ import {
   type BatchRewardStoreAddress,
   type BiomeAddress,
   type Catalog,
+  type ContinuationAddress,
   type IncomingRewardAddress,
+  type LocalRewardAddress,
   type OccurrenceAddress,
   type ProjectCandidateEvaluation,
   type ProjectCandidateEvaluator,
@@ -44,6 +46,16 @@ export interface CandidateProjectionService {
     reward: IncomingRewardAddress,
     offers: readonly ResolvedRewardOffer[],
   ) => readonly CandidateOptionProjection<ResolvedRewardOffer>[];
+  readonly localRewards: (
+    project: ProjectDocument,
+    reward: LocalRewardAddress,
+    offers: readonly ResolvedRewardOffer[],
+  ) => readonly CandidateOptionProjection<ResolvedRewardOffer>[];
+  readonly fieldsCageOutcomes: (
+    project: ProjectDocument,
+    continuation: ContinuationAddress,
+    outcomes: readonly ('min' | 'max')[],
+  ) => readonly CandidateOptionProjection<'min' | 'max'>[];
   readonly shopOffers: (
     project: ProjectDocument,
     offer: ShopOfferAddress,
@@ -151,6 +163,30 @@ export function createCandidateProjectionService(
         `incoming:${semanticAddressKey(reward)}:${domainKey(offers.map(offerKey))}`,
         offers,
         offers.map((value) => ({ kind: 'incomingReward', reward, value })),
+        catalog,
+        evaluateProject,
+      ),
+    localRewards: (project, reward, offers) =>
+      projectOptions(
+        cache,
+        project,
+        `local:${semanticAddressKey(reward)}:${domainKey(offers.map(offerKey))}`,
+        offers,
+        offers.map((value) => ({ kind: 'localReward', reward, value })),
+        catalog,
+        evaluateProject,
+      ),
+    fieldsCageOutcomes: (project, continuation, outcomes) =>
+      projectOptions(
+        cache,
+        project,
+        `fields:${semanticAddressKey(continuation)}:${domainKey(outcomes)}`,
+        outcomes,
+        outcomes.map((cageOutcome) => ({
+          kind: 'fieldsCageOutcome',
+          continuation,
+          cageOutcome,
+        })),
         catalog,
         evaluateProject,
       ),

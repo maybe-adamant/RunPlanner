@@ -19,7 +19,9 @@ import type {
   CandidateContextUnavailableReason,
   CandidateSupport,
   BatchRewardStoreCandidateQuery,
+  FieldsCageOutcomeCandidateQuery,
   IncomingRewardCandidateQuery,
+  LocalRewardCandidateQuery,
   ProjectCandidateEvaluation,
   ProjectCandidateEvaluator,
   ProjectCandidateQuery,
@@ -42,6 +44,10 @@ function queryAddress(query: ProjectCandidateQuery): CandidateAddress {
       return query.rewardStore;
     case 'incomingReward':
       return query.reward;
+    case 'localReward':
+      return query.reward;
+    case 'fieldsCageOutcome':
+      return query.continuation;
     case 'shopOffer':
       return query.offer;
     case 'shopPurchase':
@@ -88,6 +94,17 @@ function immutableQuery(query: ProjectCandidateQuery): ProjectCandidateQuery {
         ...query,
         reward: Object.freeze({ ...query.reward }),
         value: immutableOffer(query.value),
+      });
+    case 'localReward':
+      return Object.freeze({
+        ...query,
+        reward: Object.freeze({ ...query.reward }),
+        value: immutableOffer(query.value),
+      });
+    case 'fieldsCageOutcome':
+      return Object.freeze({
+        ...query,
+        continuation: Object.freeze({ ...query.continuation }),
       });
     case 'shopOffer':
       return Object.freeze({
@@ -182,6 +199,69 @@ function locateCompleteLinear(
   return evaluation;
 }
 
+interface PreparedCandidateContext {
+  readonly projectEvaluation: ProjectEvaluation;
+  readonly dormantLinearBiomes: Map<string, BiomeProjectEvaluation>;
+}
+
+const dormantLinearCandidateBiomeKeys = new Set(['H']);
+
+function locateCandidateLinear(
+  catalog: Catalog,
+  project: ProjectDocument,
+  context: PreparedCandidateContext,
+  query: ProjectCandidateQuery,
+): CompleteLinearProjectEvaluation | CandidateContextUnavailableReason {
+  const address = queryAddress(query);
+  const route = requireRoute(context.projectEvaluation.routes, query);
+  const located = locateCompleteLinear(route, query);
+  if (located !== 'simulatorUnavailable') {
+    return located;
+  }
+  if (
+    route.horizon.kind !== 'simulatorBoundary' ||
+    route.horizon.biomeKey !== address.biomeKey ||
+    !dormantLinearCandidateBiomeKeys.has(address.biomeKey)
+  ) {
+    return located;
+  }
+
+  const key = `${address.routeKey}:${address.biomeKey}`;
+  let evaluation = context.dormantLinearBiomes.get(key);
+  if (evaluation === undefined) {
+    const authoredRoute = project.routes.find(
+      (candidate) => candidate.routeKey === address.routeKey,
+    );
+    if (authoredRoute === undefined) {
+      failCandidate(query, `project has no route ${address.routeKey}`);
+    }
+    const biomeIndex = authoredRoute.biomes.findIndex(
+      (candidate) => candidate.biomeKey === address.biomeKey,
+    );
+    const plan = biomeIndex < 0 ? undefined : authoredRoute.biomes[biomeIndex];
+    if (biomeIndex < 0 || plan === undefined) {
+      failCandidate(query, `project has no configured biome ${address.biomeKey}`);
+    }
+    let previous: CompleteLinearProjectEvaluation | undefined;
+    if (biomeIndex > 0) {
+      const upstream = route.biomes[biomeIndex - 1];
+      if (upstream === undefined || upstream.completion === 'incomplete') {
+        failCandidate(query, 'dormant candidate biome has no complete upstream evaluation');
+      }
+      previous = upstream;
+    }
+    evaluation = evaluateLinearBiome(
+      catalog,
+      authoredRoute.routeKey,
+      plan,
+      biomeIndex + 1,
+      previous,
+    );
+    context.dormantLinearBiomes.set(key, evaluation);
+  }
+  return evaluation.completion === 'incomplete' ? 'biomeIncomplete' : evaluation;
+}
+
 function support(pressure: LinearForcePressureLedgerEntry): CandidateSupport {
   if (!pressure.selectedPossible) {
     return 'impossible';
@@ -211,14 +291,14 @@ function evidence(pressure: LinearForcePressureLedgerEntry): RoomTargetCandidate
 function evaluateRoomTargetCandidate(
   catalog: Catalog,
   project: ProjectDocument,
-  projectEvaluation: ProjectEvaluation,
+  context: PreparedCandidateContext,
   query: RoomTargetCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RoomTargetCandidateQuery;
   const authoredTargetExists = targetExists(project, stableQuery);
   assertCandidateExists(catalog, stableQuery);
-  const route = requireRoute(projectEvaluation.routes, stableQuery);
-  const biome = locateCompleteLinear(route, stableQuery);
+  const route = requireRoute(context.projectEvaluation.routes, stableQuery);
+  const biome = locateCandidateLinear(catalog, project, context, stableQuery);
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
   }
@@ -287,7 +367,7 @@ function evaluateStartRoomCandidate(
 function evaluateBatchRewardStoreCandidate(
   catalog: Catalog,
   project: ProjectDocument,
-  projectEvaluation: ProjectEvaluation,
+  context: PreparedCandidateContext,
   query: BatchRewardStoreCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as BatchRewardStoreCandidateQuery;
@@ -308,8 +388,7 @@ function evaluateBatchRewardStoreCandidate(
   if (continuation?.kind !== 'batch' || continuation.rewardStore.kind !== 'authoredBaseStore') {
     failCandidate(stableQuery, 'semantic owner has no authored batch reward store');
   }
-  const route = requireRoute(projectEvaluation.routes, stableQuery);
-  const biome = locateCompleteLinear(route, stableQuery);
+  const biome = locateCandidateLinear(catalog, project, context, stableQuery);
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
   }
@@ -359,11 +438,16 @@ function evaluateBatchRewardStoreCandidate(
 }
 
 function rewardCommand(
-  query: IncomingRewardCandidateQuery | ShopOfferCandidateQuery,
+  query: IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery,
 ): ProjectCommand {
-  return query.kind === 'incomingReward'
-    ? { kind: 'ReplaceIncomingReward', reward: query.reward, value: query.value }
-    : { kind: 'ReplaceShopOffer', offer: query.offer, value: query.value };
+  switch (query.kind) {
+    case 'incomingReward':
+      return { kind: 'ReplaceIncomingReward', reward: query.reward, value: query.value };
+    case 'localReward':
+      return { kind: 'ReplaceLocalReward', reward: query.reward, value: query.value };
+    case 'shopOffer':
+      return { kind: 'ReplaceShopOffer', offer: query.offer, value: query.value };
+  }
 }
 
 function applyCandidateCommand(
@@ -382,9 +466,9 @@ function applyCandidateCommand(
 
 function rewardFindings(
   evaluation: CompleteLinearProjectEvaluation,
-  query: IncomingRewardCandidateQuery | ShopOfferCandidateQuery,
+  query: IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery,
 ) {
-  const address = query.kind === 'incomingReward' ? query.reward : query.offer;
+  const address = query.kind === 'shopOffer' ? query.offer : query.reward;
   const exactKey = semanticAddressKey(address);
   return Object.freeze(
     evaluation.rewards.findings.filter((finding) => {
@@ -405,13 +489,19 @@ function rewardFindings(
 
 function evaluateCandidateBiome(
   catalog: Catalog,
+  project: ProjectDocument,
   proposal: ProjectDocument,
-  projectEvaluation: ProjectEvaluation,
-  query: IncomingRewardCandidateQuery | ShopOfferCandidateQuery | ShopPurchaseCandidateQuery,
+  context: PreparedCandidateContext,
+  query:
+    | FieldsCageOutcomeCandidateQuery
+    | IncomingRewardCandidateQuery
+    | LocalRewardCandidateQuery
+    | ShopOfferCandidateQuery
+    | ShopPurchaseCandidateQuery,
 ): BiomeProjectEvaluation | CandidateContextUnavailableReason {
   const address = queryAddress(query);
-  const baselineRoute = requireRoute(projectEvaluation.routes, query);
-  const baselineBiome = locateCompleteLinear(baselineRoute, query);
+  const baselineRoute = requireRoute(context.projectEvaluation.routes, query);
+  const baselineBiome = locateCandidateLinear(catalog, project, context, query);
   if (typeof baselineBiome === 'string') {
     return baselineBiome;
   }
@@ -436,14 +526,14 @@ function evaluateCandidateBiome(
 function evaluateRewardCandidate(
   catalog: Catalog,
   project: ProjectDocument,
-  projectEvaluation: ProjectEvaluation,
-  query: IncomingRewardCandidateQuery | ShopOfferCandidateQuery,
+  context: PreparedCandidateContext,
+  query: IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as
-    IncomingRewardCandidateQuery | ShopOfferCandidateQuery;
+    IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery;
   locateBiomePlan(project, stableQuery);
   const proposal = applyCandidateCommand(catalog, project, stableQuery, rewardCommand(stableQuery));
-  const biome = evaluateCandidateBiome(catalog, proposal, projectEvaluation, stableQuery);
+  const biome = evaluateCandidateBiome(catalog, project, proposal, context, stableQuery);
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
   }
@@ -456,15 +546,112 @@ function evaluateRewardCandidate(
     relevantFindingCodes: Object.freeze(findings.map((finding) => finding.code)),
   });
   const support = findings.length === 0 ? ('possible' as const) : ('impossible' as const);
-  return stableQuery.kind === 'incomingReward'
-    ? Object.freeze({ context: 'evaluated', query: stableQuery, support, findings, evidence })
-    : Object.freeze({ context: 'evaluated', query: stableQuery, support, findings, evidence });
+  switch (stableQuery.kind) {
+    case 'incomingReward':
+      return Object.freeze({
+        context: 'evaluated',
+        query: stableQuery,
+        support,
+        findings,
+        evidence,
+      });
+    case 'localReward':
+      return Object.freeze({
+        context: 'evaluated',
+        query: stableQuery,
+        support,
+        findings,
+        evidence,
+      });
+    case 'shopOffer':
+      return Object.freeze({
+        context: 'evaluated',
+        query: stableQuery,
+        support,
+        findings,
+        evidence,
+      });
+  }
+}
+
+function evaluateFieldsCageOutcomeCandidate(
+  catalog: Catalog,
+  project: ProjectDocument,
+  context: PreparedCandidateContext,
+  query: FieldsCageOutcomeCandidateQuery,
+): ProjectCandidateEvaluation {
+  const stableQuery = immutableQuery(query) as FieldsCageOutcomeCandidateQuery;
+  if (stableQuery.cageOutcome !== 'min' && stableQuery.cageOutcome !== 'max') {
+    failCandidate(stableQuery, `unknown Fields cage outcome ${String(stableQuery.cageOutcome)}`);
+  }
+  const plan = locateBiomePlan(project, stableQuery);
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  const continuation = plan.topology?.continuations.find(
+    (candidate) =>
+      candidate.kind === 'batch' &&
+      candidate.parentOccurrenceId === stableQuery.continuation.parentOccurrenceId,
+  );
+  if (
+    layout?.kind !== 'LinearBiome' ||
+    layout.continuation.batchPolicy.kind !== 'fields' ||
+    continuation?.kind !== 'batch'
+  ) {
+    failCandidate(stableQuery, 'semantic owner has no Fields cage outcome');
+  }
+  const biome = locateCandidateLinear(catalog, project, context, stableQuery);
+  if (typeof biome === 'string') {
+    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  }
+  const exactKey = semanticAddressKey(stableQuery.continuation);
+  const selected = biome.roomGeneration.fieldsCageOutcomes.find(
+    (entry) => semanticAddressKey(entry.origin) === exactKey,
+  );
+  if (selected === undefined) {
+    failCandidate(stableQuery, 'Fields outcome has no simulation support entry');
+  }
+  const selectedPossible = selected.supportOutcomes.includes(stableQuery.cageOutcome);
+  const findings = selectedPossible
+    ? Object.freeze([])
+    : Object.freeze([
+        Object.freeze({
+          code: 'fieldsCageOutcomeUnavailable' as const,
+          severity: 'error' as const,
+          phase: 'roomGeneration' as const,
+          origin: stableQuery.continuation,
+          evidence: Object.freeze({
+            beforeSequence: selected.beforeSequence,
+            biomeDepthCache: selected.biomeDepthCache,
+            fieldsMaxDoorsRolled: selected.fieldsMaxDoorsRolled,
+            maxDoorCageCeiling: selected.maxDoorCageCeiling,
+            selectedOutcome: stableQuery.cageOutcome,
+            supportOutcomes: selected.supportOutcomes,
+          }),
+        }),
+      ]);
+  return Object.freeze({
+    context: 'evaluated',
+    query: stableQuery,
+    support: selectedPossible
+      ? selected.supportOutcomes.length === 1
+        ? 'forced'
+        : 'possible'
+      : 'impossible',
+    findings,
+    evidence: Object.freeze({
+      candidateOutcome: stableQuery.cageOutcome,
+      beforeSequence: selected.beforeSequence,
+      biomeDepthCache: selected.biomeDepthCache,
+      fieldsMaxDoorsRolled: selected.fieldsMaxDoorsRolled,
+      maxDoorCageCeiling: selected.maxDoorCageCeiling,
+      supportOutcomes: selected.supportOutcomes,
+    }),
+  });
 }
 
 function evaluateShopPurchaseCandidate(
   catalog: Catalog,
   project: ProjectDocument,
-  projectEvaluation: ProjectEvaluation,
+  context: PreparedCandidateContext,
   query: ShopPurchaseCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as ShopPurchaseCandidateQuery;
@@ -474,7 +661,7 @@ function evaluateShopPurchaseCandidate(
     purchase: stableQuery.purchase,
     purchased: stableQuery.purchased,
   });
-  const biome = evaluateCandidateBiome(catalog, proposal, projectEvaluation, stableQuery);
+  const biome = evaluateCandidateBiome(catalog, project, proposal, context, stableQuery);
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
   }
@@ -548,16 +735,20 @@ export function createPreparedProjectCandidateEvaluator(
   projectEvaluation: ProjectEvaluation,
 ): ProjectCandidateEvaluator {
   assertProjectEvaluationSource(project, projectEvaluation);
+  const context: PreparedCandidateContext = {
+    projectEvaluation,
+    dormantLinearBiomes: new Map(),
+  };
   return Object.freeze({
     evaluate: (queries: readonly ProjectCandidateQuery[]) =>
-      evaluatePreparedProjectCandidates(catalog, project, projectEvaluation, queries),
+      evaluatePreparedProjectCandidates(catalog, project, context, queries),
   });
 }
 
 function evaluatePreparedProjectCandidates(
   catalog: Catalog,
   project: ProjectDocument,
-  projectEvaluation: ProjectEvaluation,
+  context: PreparedCandidateContext,
   queries: readonly ProjectCandidateQuery[],
 ): readonly ProjectCandidateEvaluation[] {
   if (queries.length === 0) {
@@ -569,14 +760,17 @@ function evaluatePreparedProjectCandidates(
         case 'startRoom':
           return evaluateStartRoomCandidate(catalog, project, query);
         case 'roomTarget':
-          return evaluateRoomTargetCandidate(catalog, project, projectEvaluation, query);
+          return evaluateRoomTargetCandidate(catalog, project, context, query);
         case 'batchRewardStore':
-          return evaluateBatchRewardStoreCandidate(catalog, project, projectEvaluation, query);
+          return evaluateBatchRewardStoreCandidate(catalog, project, context, query);
+        case 'fieldsCageOutcome':
+          return evaluateFieldsCageOutcomeCandidate(catalog, project, context, query);
         case 'incomingReward':
+        case 'localReward':
         case 'shopOffer':
-          return evaluateRewardCandidate(catalog, project, projectEvaluation, query);
+          return evaluateRewardCandidate(catalog, project, context, query);
         case 'shopPurchase':
-          return evaluateShopPurchaseCandidate(catalog, project, projectEvaluation, query);
+          return evaluateShopPurchaseCandidate(catalog, project, context, query);
       }
     }),
   );

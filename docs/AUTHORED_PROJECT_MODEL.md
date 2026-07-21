@@ -417,7 +417,7 @@ Lib control persistence.
 
 UI code dispatches commands rather than mutating project records directly.
 
-The implemented F/G command set is:
+The implemented linear command set is:
 
 ```ts
 type ProjectCommand =
@@ -482,8 +482,18 @@ type ProjectCommand =
       value: ResolvedRewardOffer;
     }
   | {
+      kind: 'ReplaceLocalReward';
+      reward: LocalRewardAddress;
+      value: ResolvedRewardOffer;
+    }
+  | {
+      kind: 'ReplaceFieldsCageOutcome';
+      continuation: ContinuationAddress;
+      cageOutcome: 'min' | 'max';
+    }
+  | {
       kind: 'ReplaceShopOffer';
-      shopOffer: ShopOfferAddress;
+      offer: ShopOfferAddress;
       value: ResolvedRewardOffer;
     }
   | {
@@ -541,7 +551,10 @@ slots is structurally valid. Current simulation treats permutations with the
 same generated/entered sets and rewards as equivalent at final parent exit,
 while retaining ordinals for exact history and eventual execution intent.
 
-Planned leaf extensions remain concrete replacements:
+The H local-cage command replaces one declaration-owned bounded reward slot.
+It rejects unknown group/slot addresses, retains sibling cages and topology,
+and sends the proposal through the ordinary project decoder. Planned leaf
+extensions for other room-local structures remain concrete replacements:
 
 ```ts
 type RoomCommand =

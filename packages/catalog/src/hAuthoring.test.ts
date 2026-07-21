@@ -2,6 +2,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createContinuationAddress,
+  createLocalRewardAddress,
   createOccurrenceId,
   createPickedAddress,
   createProjectDocument,
@@ -200,6 +201,50 @@ describe('dormant H authored topology', () => {
           createOccurrenceId('not-a-fields-batch'),
         ),
         cageOutcome: 'max',
+      }),
+    ).toThrowError(ProjectCommandContractError);
+  });
+
+  it('replaces one addressed Fields cage reward without disturbing sibling leaves', () => {
+    let project = startH(createHProject());
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(hBiome, createOccurrenceId('h-start')),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(hBiome, createOccurrenceId('h-start'), 1),
+      occurrenceId: createOccurrenceId('h-combat'),
+      gameName: 'H_Combat09',
+    });
+    const before = hPlan(project).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === createOccurrenceId('h-combat'),
+    );
+    if (before?.state.kind !== 'fieldsCombat') {
+      throw new Error('Fields combat fixture has no cage state');
+    }
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(hBiome, createOccurrenceId('h-combat'), 'cages', 'cage2'),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    const after = hPlan(project).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === createOccurrenceId('h-combat'),
+    );
+    expect(after?.state).toEqual({
+      ...before.state,
+      cages: { ...before.state.cages, cage2: { rewardType: 'MaxHealthDrop' } },
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(hBiome, createOccurrenceId('h-combat'), 'cages', 'cage4'),
+        value: { rewardType: 'MaxManaDrop' },
       }),
     ).toThrowError(ProjectCommandContractError);
   });

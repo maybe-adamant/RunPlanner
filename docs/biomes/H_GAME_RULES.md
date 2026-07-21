@@ -14,10 +14,10 @@ batches add one H-specific semantic outcome that activates bounded cage slots
 owned by each combat occurrence.
 
 H declarations, dormant authored topology, canonical Fields materialization,
-route history, reward replay, selected validation, and focused parity fixtures
-are ported. H intentionally remains non-authorable, non-simulatable, and
-non-editable at the application capability boundary until its complete product
-loop is implemented.
+route history, reward replay, selected validation, candidate evaluation, and
+focused parity fixtures are ported. H intentionally remains non-authorable,
+non-simulatable, and non-editable at the application capability boundary until
+its complete product loop is implemented.
 
 ## Evidence Status
 
@@ -551,9 +551,15 @@ declaration-driven walk validates combat depth restrictions, sequential force
 competition, Bridge and miniboss caps/exclusions, and the forced preboss after
 four entered ordinary rooms. Invalid values remain authored.
 
-H does not yet evaluate candidates or project an editor. The application
-capability boundary and project simulator dispatch therefore continue to
-reject H profiles until the complete product loop is ready.
+H candidates now reuse the selected-plan room, Fields, reward-bag, shop, and
+purchase authorities. A candidate-only dormant resolver composes H after a
+valid G prefix; it preserves selected invalid values and returns explicit
+unavailable context for incomplete H without adding H to project simulator
+dispatch.
+
+H does not yet project an editor. The application capability boundary and
+project simulator dispatch therefore continue to reject H profiles until the
+complete product loop is ready.
 
 ## Model Conclusions
 

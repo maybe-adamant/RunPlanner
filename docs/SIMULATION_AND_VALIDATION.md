@@ -698,10 +698,21 @@ For one candidate, simulation:
 5. returns typed support, findings, and evidence without publishing or
    persisting scratch state.
 
-The initial F query set covers authored starts, ordinary room targets, batch
-reward stores, incoming and free rewards, WorldShop offers, and purchase
-choices. Preboss uses those same incoming-reward and WorldShop addresses rather
-than a second terminal-only candidate vocabulary.
+The shared query set covers authored starts, ordinary room targets, batch
+reward stores, incoming and free rewards, room-local rewards, WorldShop offers,
+purchase choices, and policy-owned Fields cage outcomes. Preboss uses those
+same incoming-reward and WorldShop addresses rather than a second terminal-only
+candidate vocabulary.
+
+H candidate preparation is deliberately narrower than simulation activation.
+When normal project simulation stops at the H boundary after valid G, the
+prepared candidate evaluator may compose and cache one dormant selected H
+evaluation. Room candidates reuse its exact generation views; Min/Max
+candidates reuse the addressed pre-outcome support ledger because the proposed
+value cannot change its own prior context. Cage and terminal alternatives
+apply one immutable semantic replacement and replay H through the common
+linear reward authority with the already-evaluated G seed. This candidate-only
+path does not add H to simulator dispatch or application capabilities.
 
 Ordered candidate queries for one authored snapshot may use one prepared
 candidate evaluator, which owns one shared base project simulation. The
