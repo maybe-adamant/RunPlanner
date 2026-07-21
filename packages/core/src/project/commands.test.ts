@@ -531,7 +531,7 @@ describe('route prefix commands', () => {
     });
 
     expect(configured.routes[0]?.biomes).toEqual([
-      { kind: 'LinearBiome', biomeKey: 'F', topology: null },
+      { kind: 'LinearBiome', biomeKey: 'F', state: {}, topology: null },
     ]);
     expect(
       applyProjectCommand(configured, catalog, {

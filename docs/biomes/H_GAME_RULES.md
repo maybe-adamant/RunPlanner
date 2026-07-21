@@ -513,7 +513,7 @@ simulator.
 
 ## Current Product Boundary
 
-The schema-version-3 project codec and semantic commands can author H's
+The current project codec and semantic commands can author H's
 fixed start, four ordinary batches, seven-target bound, Fields Min/Max state,
 complete dormant cage leaves, and forked terminal entry. Ordinary H batches
 own `{ kind: 'none' }` generated-store state and default to Min; the explicit

@@ -1,4 +1,5 @@
 import type { Catalog } from '../catalog';
+import { createDefaultBiomeState } from './biomeState';
 import { decodeProjectDocument } from './codec';
 import { PROJECT_DOCUMENT_SCHEMA_VERSION, type ProjectDocument } from './model';
 import { ProjectDocumentContractError } from './validation';
@@ -41,11 +42,21 @@ export function createProjectDocument(
 
     return {
       routeKey: route.key,
-      biomes: route.biomeKeys.slice(0, configuredCount).map((biomeKey) => ({
-        kind: 'LinearBiome',
-        biomeKey,
-        topology: null,
-      })),
+      biomes: route.biomeKeys.slice(0, configuredCount).map((biomeKey) => {
+        const layout = catalog.biomeLayouts.byKey[biomeKey];
+        if (layout?.kind !== 'LinearBiome') {
+          throw new ProjectDocumentContractError(
+            `configuredBiomeCounts.${route.key}`,
+            `${biomeKey} has no supported linear plan initializer`,
+          );
+        }
+        return {
+          kind: 'LinearBiome' as const,
+          biomeKey,
+          state: createDefaultBiomeState(layout),
+          topology: null,
+        };
+      }),
     };
   });
 

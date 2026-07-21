@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
   createDefaultRoomState,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -28,14 +29,14 @@ function occurrence(occurrenceId: string, gameName: string, role: RoomOccurrence
 
 function projectWithTopology(topology: unknown): unknown {
   return {
-    schemaVersion: 3,
+    schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
     projectId: 'project-topology',
     name: 'F Topology',
     catalogVersion: catalog.version,
     routes: [
       {
         routeKey: 'Underworld',
-        biomes: [{ kind: 'LinearBiome', biomeKey: 'F', topology }],
+        biomes: [{ kind: 'LinearBiome', biomeKey: 'F', state: {}, topology }],
       },
       { routeKey: 'Surface', biomes: [] },
     ],
@@ -44,7 +45,7 @@ function projectWithTopology(topology: unknown): unknown {
 
 function projectWithGTopology(topology: unknown): unknown {
   return {
-    schemaVersion: 3,
+    schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
     projectId: 'project-g-topology',
     name: 'G Topology',
     catalogVersion: catalog.version,
@@ -52,8 +53,8 @@ function projectWithGTopology(topology: unknown): unknown {
       {
         routeKey: 'Underworld',
         biomes: [
-          { kind: 'LinearBiome', biomeKey: 'F', topology: null },
-          { kind: 'LinearBiome', biomeKey: 'G', topology },
+          { kind: 'LinearBiome', biomeKey: 'F', state: {}, topology: null },
+          { kind: 'LinearBiome', biomeKey: 'G', state: {}, topology },
         ],
       },
       { routeKey: 'Surface', biomes: [] },
@@ -135,7 +136,7 @@ describe('F/G linear project topology', () => {
     expect(topology.occurrences.at(-1)?.state.kind).toBe('freeReward');
 
     const encoded = encodeProjectDocument(project);
-    expect(encoded).toContain('"schemaVersion": 3');
+    expect(encoded).toContain('"schemaVersion": 4');
     expect(encoded).not.toContain('"storeKey"');
     expect(parseProjectDocument(encoded, catalog)).toEqual(project);
     expect(encodeProjectDocument(parseProjectDocument(encoded, catalog))).toBe(encoded);

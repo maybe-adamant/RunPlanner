@@ -10,12 +10,12 @@ It does not define simulation algorithms or React rendering.
 
 ## Cross-Biome Freeze Status
 
-The schema version 3 examples in this document describe the reconciled
+The schema version 4 examples in this document describe the reconciled
 F/G/P/Q/H/O/I/N model. Occurrence identity, downstream retention, possibility
 support, generated-store ownership, conditional-terminal batches, fixed
 authored layout slots, and persistent hub topology are settled. Production now
-reads schema version 3 for the implemented F/G/H slice and rejects earlier
-versions without compatibility scaffolding.
+reads schema version 4 for the implemented F/G/H and dormant I-authorship slice
+and rejects earlier versions without compatibility scaffolding.
 
 ## Core Distinction
 
@@ -683,7 +683,7 @@ representative top-level shape is:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 3;
+  schemaVersion: 4;
   projectId: string;
   name: string;
   catalogVersion: string;
@@ -698,11 +698,12 @@ interface AuthoredRoutePlan {
 interface LinearBiomePlan {
   kind: 'LinearBiome';
   biomeKey: string;
+  state: Readonly<Record<string, boolean | number | string>>;
   topology: LinearBiomeTopology | null;
 }
 
 interface LinearBiomeTopology {
-  startOccurrenceId: OccurrenceId;
+  startOccurrenceId: OccurrenceId | null;
   occurrences: readonly RoomOccurrence[];
   continuations: readonly LinearContinuation[];
 }
@@ -752,7 +753,7 @@ interface RewardWheelState {
 type LinearContinuation =
   | {
       kind: 'batch';
-      parentOccurrenceId: OccurrenceId;
+      parentOccurrenceId: OccurrenceId | null;
       rewardStore:
         | {
             kind: 'authoredBaseStore';
@@ -770,7 +771,7 @@ type LinearContinuation =
     }
   | {
       kind: 'terminal';
-      parentOccurrenceId: OccurrenceId;
+      parentOccurrenceId: OccurrenceId | null;
       targets: readonly LinearTargetReference[];
       pickedExitIndex: number | null;
     };
@@ -780,6 +781,14 @@ The `batch` record does not persist a continuation-effect discriminant. Its
 normalized batch policy and each target's resolved Room Declaration establish
 which roles are admitted. For I, a picked `I_PreBoss02` derives
 `completeBiome`; every picked ordinary target derives `continueBiome`.
+
+`LinearBiomePlan.state` contains exactly the declaration-owned biome fields,
+with complete defaults and no undeclared keys. I currently uses it for
+`maxNonGoalRewards`; biomes with no authored fields persist `{}`. A null
+`startOccurrenceId` and null first-continuation parent are reserved for a
+layout-derived fixed-entry sequence. They mean "continue after the final fixed
+entry," not an absent room or a positional UI row. Authored-start layouts still
+require a concrete occurrence ID.
 
 `sourceOfferPoint` carries no second address or store value. The continuation's
 parent occurrence is already its source, and the normalized layout policy owns

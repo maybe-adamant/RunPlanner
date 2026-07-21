@@ -733,6 +733,9 @@ export function materializeLinearBiome(
   const occurrences = new Map(
     topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
   );
+  if (topology.startOccurrenceId === null) {
+    fail(`${layout.biomeKey} derived entry materialization is not implemented`);
+  }
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
   const startRoom = requireRoom(catalog, startOccurrence);
   const canonicalByOccurrence = new Map<OccurrenceId, CanonicalAuthoredRoom>();
@@ -749,6 +752,9 @@ export function materializeLinearBiome(
   const batches: CanonicalBatch[] = [];
   let terminalEntry: CanonicalTerminalEntry | undefined;
   for (const continuation of topology.continuations) {
+    if (continuation.parentOccurrenceId === null) {
+      fail(`${layout.biomeKey} derived entry continuation is not implemented`);
+    }
     const parent = canonicalByOccurrence.get(continuation.parentOccurrenceId);
     if (parent === undefined) {
       fail(
