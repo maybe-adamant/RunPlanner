@@ -72,6 +72,47 @@ function freezeRecord<T>(value: Readonly<Record<string, T>>): Readonly<Record<st
   return Object.freeze({ ...value });
 }
 
+function orderedRecord<T>(value: Readonly<Record<string, T>>): readonly (readonly [string, T])[] {
+  return Object.freeze(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => Object.freeze([key, entry] as const)),
+  );
+}
+
+function equivalentBranchStateKey(branch: RewardBranchState): string {
+  const history = branch.history;
+  return JSON.stringify({
+    bags: orderedRecord(branch.bags),
+    history: {
+      offerHistory: history.offerHistory,
+      useRecord: orderedRecord(history.useRecord),
+      biomeUseRecord: orderedRecord(history.biomeUseRecord),
+      currentRoomUseRecord: orderedRecord(history.currentRoomUseRecord),
+      lootTypeHistory: orderedRecord(history.lootTypeHistory),
+      lootBiomeRecord: orderedRecord(history.lootBiomeRecord),
+      consumableRecord: orderedRecord(history.consumableRecord),
+      upgradableTraitCount: history.upgradableTraitCount,
+      lastDevotionDepth: history.lastDevotionDepth,
+    },
+    pendingShops: orderedRecord(branch.pendingShops),
+    processedThroughHistorySequence: branch.processedThroughHistorySequence,
+  });
+}
+
+function mergeEquivalentBranchStates(
+  branches: readonly RewardBranchState[],
+): readonly RewardBranchState[] {
+  const merged = new Map<string, RewardBranchState>();
+  for (const branch of branches) {
+    const key = equivalentBranchStateKey(branch);
+    if (!merged.has(key)) {
+      merged.set(key, branch);
+    }
+  }
+  return Object.freeze([...merged.values()]);
+}
+
 function appendRewardEvent(
   branch: RewardBranchState,
   historySequence: number,
@@ -770,7 +811,7 @@ function processShopPurchases(
       );
     }
   }
-  return Object.freeze(next);
+  return mergeEquivalentBranchStates(next);
 }
 
 function processProducerRole(

@@ -570,7 +570,7 @@ function appendGoldenH(project: ProjectDocument): ProjectDocument {
   return decodeProjectDocument(raw, catalog);
 }
 
-function evaluateDormantH(project: ProjectDocument) {
+function evaluateH(project: ProjectDocument) {
   const g = simulateProject(catalog, project).routes[0]?.biomes[1];
   if (g?.completion !== 'complete' || g.validity !== 'valid') {
     throw new Error('golden G validation seed is unavailable');
@@ -851,7 +851,7 @@ describe('project simulation composition', () => {
       selectedPossible: true,
       biomeDepthCache: 10,
     });
-    expect(evaluation.rewards.branches.length).toBeGreaterThan(0);
+    expect(evaluation.rewards.branches).toHaveLength(1);
   });
 
   it('retains complete canonical products and addressed findings for invalid F', () => {
@@ -1023,7 +1023,7 @@ describe('project simulation composition', () => {
     });
   });
 
-  it('composes dormant H Fields history and rewards from carried G state', () => {
+  it('composes H Fields history and rewards from carried G state', () => {
     const fgResult = simulateProject(catalog, completeGoldenFGProject());
     const g = fgResult.routes[0]!.biomes[1];
     if (g?.completion !== 'complete') {
@@ -1137,7 +1137,7 @@ describe('project simulation composition', () => {
   });
 
   it('validates the selected H force pools, Fields outcomes, and terminal timing', () => {
-    const result = evaluateDormantH(selectedGoldenHProject());
+    const result = evaluateH(selectedGoldenHProject());
 
     expect(result.generation.findings).toEqual([]);
     expect(result.generation.validity).toBe('valid');
@@ -1212,7 +1212,7 @@ describe('project simulation composition', () => {
       continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
       cageOutcome: 'max',
     });
-    const ceiling = evaluateDormantH(ceilingProject).generation;
+    const ceiling = evaluateH(ceilingProject).generation;
     expect(ceiling.fieldsCageOutcomes[3]).toMatchObject({
       biomeDepthCache: 3,
       fieldsMaxDoorsRolled: 2,
@@ -1240,7 +1240,7 @@ describe('project simulation composition', () => {
       occurrence: createOccurrenceAddress(hBiome, createOccurrenceId('golden-h-combat03')),
       gameName: 'H_Bridge01',
     });
-    const timing = evaluateDormantH(timingProject).generation;
+    const timing = evaluateH(timingProject).generation;
     const pressureByTarget = new Map(
       timing.forcePressure.map((entry) => [semanticAddressKey(entry.targetOrigin), entry]),
     );
@@ -1277,7 +1277,7 @@ describe('project simulation composition', () => {
       occurrence: createOccurrenceAddress(hBiome, createOccurrenceId('golden-h-combat04')),
       gameName: 'H_MiniBoss02',
     });
-    const exclusion = evaluateDormantH(exclusionProject).generation.forcePressure.find(
+    const exclusion = evaluateH(exclusionProject).generation.forcePressure.find(
       (entry) =>
         semanticAddressKey(entry.targetOrigin) ===
         semanticAddressKey(createTargetAddress(hBiome, createOccurrenceId('golden-h-bridge'), 2)),
@@ -1297,7 +1297,7 @@ describe('project simulation composition', () => {
     };
     let project = selectedGoldenHProject();
     project = replaceGoldenHCage(project, 'golden-h-combat02', 'cage1', hestia);
-    const result = evaluateDormantH(project);
+    const result = evaluateH(project);
 
     expect(result.rewards.validity).toBe('invalid');
     expect(result.rewards.findings).toContainEqual(
@@ -1315,7 +1315,7 @@ describe('project simulation composition', () => {
     );
   });
 
-  it('evaluates dormant H room, Fields, cage, and terminal candidates without activation', () => {
+  it('evaluates active H room, Fields, cage, and terminal candidates', () => {
     const project = selectedGoldenHProject();
     const before = encodeProjectDocument(project);
     const evaluations = evaluateProjectCandidates(catalog, project, [
@@ -1422,8 +1422,9 @@ describe('project simulation composition', () => {
     expect(encodeProjectDocument(project)).toBe(before);
 
     const simulation = simulateProject(catalog, project).routes[0];
-    expect(simulation?.biomes.map((evaluation) => evaluation.biomeKey)).toEqual(['F', 'G']);
-    expect(simulation?.horizon).toMatchObject({ kind: 'simulatorBoundary', biomeKey: 'H' });
+    expect(simulation?.biomes.map((evaluation) => evaluation.biomeKey)).toEqual(['F', 'G', 'H']);
+    expect(simulation?.validatedPrefix).toEqual(['F', 'G', 'H']);
+    expect(simulation?.horizon).toEqual({ kind: 'routeEnd' });
   }, 15_000);
 
   it('preserves an invalid Fields selection and exposes incomplete H candidate context', () => {

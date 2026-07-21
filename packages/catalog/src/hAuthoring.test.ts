@@ -142,7 +142,7 @@ function completeHProject(): ProjectDocument {
   });
 }
 
-describe('dormant H authored topology', () => {
+describe('H authored topology', () => {
   it('creates no-store Fields batches with complete cage defaults and semantic replacement', () => {
     let project = startH(createHProject());
     project = applyProjectCommand(project, catalog, {

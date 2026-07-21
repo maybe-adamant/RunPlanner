@@ -15,13 +15,13 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. Phase 2.8 dormant declaration closure and Phase 3's
-complete linear simulation pipeline are complete. F and G now share one public
+complete linear simulation pipeline are complete. F, G, and H now share one public
 completeness, materialization, lifecycle, event-folded history,
 room-generation, reward-kernel, project-simulation, selected-plan validation,
-and candidate result. Phase 5 closes that shared simulator through the editor,
-profile, and recovery product loop while later biomes remain dormant. The
-Phase 2.7 authority switch and schema-version-3 identity cleanup leave those
-simulation contracts unchanged.
+and candidate result. Phase 5 closed F/G through the editor, profile, and
+recovery product loop; Phase 6 extended the same boundary through H. P/Q/O/I/N
+remain dormant. The Phase 2.7 authority switch and schema-version-3 identity
+cleanup leave those simulation contracts unchanged.
 
 ## Core Contract
 
@@ -704,15 +704,15 @@ purchase choices, and policy-owned Fields cage outcomes. Preboss uses those
 same incoming-reward and WorldShop addresses rather than a second terminal-only
 candidate vocabulary.
 
-H candidate preparation is deliberately narrower than simulation activation.
-When normal project simulation stops at the H boundary after valid G, the
-prepared candidate evaluator may compose and cache one dormant selected H
-evaluation. Room candidates reuse its exact generation views; Min/Max
-candidates reuse the addressed pre-outcome support ledger because the proposed
-value cannot change its own prior context. Cage and terminal alternatives
-apply one immutable semantic replacement and replay H through the common
-linear reward authority with the already-evaluated G seed. This candidate-only
-path does not add H to simulator dispatch or application capabilities.
+Active F/G/H candidate preparation consumes the normal project evaluation;
+there is no candidate-only biome simulator. When upstream history is complete,
+room candidates reuse the biome's exact generation views. H Min/Max candidates
+reuse the addressed pre-outcome support ledger because the proposed value
+cannot change its own prior context. Cage and terminal alternatives apply one
+immutable semantic replacement and replay H through the common linear reward
+authority with the already-evaluated G seed. If normal project simulation
+cannot reach a biome, its candidates report unavailable context rather than
+inventing local history.
 
 Ordered candidate queries for one authored snapshot may use one prepared
 candidate evaluator, which owns one shared base project simulation. The
@@ -801,20 +801,20 @@ interface ProjectEvaluation {
 Each route simulation records:
 
 - configured biome identity and the currently registered simulation prefix;
-- complete F/G evaluations with canonical snapshots, lifecycle events, ledgers,
+- complete F/G/H evaluations with canonical snapshots, lifecycle events, ledgers,
   room-generation proof, reward witnesses, and findings;
-- incomplete F/G evaluations without canonical products;
+- incomplete F/G/H evaluations without canonical products;
 - validated-prefix identity and an exact route-end, simulator-boundary,
   incomplete, or invalid processing horizon;
 - semantic findings in stable route and phase order;
 - whether the route is eligible for future execution-plan compilation.
 
-The core registry contains complete F and G simulators. Project simulation may
+The core registry contains complete F, G, and H simulators. Project simulation may
 also receive an application-owned simulation scope; reaching a registered
 biome outside that scope records a `simulatorBoundary` horizon without
 dispatching the biome or inventing local findings. The current application
-scope includes F and G, and both application interaction fixtures and direct
-core conformance fixtures exercise the full F-to-G prefix.
+scope includes F, G, and H, and both application interaction fixtures and
+direct core conformance fixtures exercise the full F-to-H prefix.
 An entirely unconfigured project has explicit `empty` status, no findings, and
 is not eligible for execution-plan compilation.
 Candidate results and UI decoration are deliberately absent from this Phase 3

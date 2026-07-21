@@ -23,8 +23,10 @@ The UI may tolerate incomplete and invalid authored plans. It must not hide,
 repair, or silently delete them merely to keep the view visually legal.
 
 The batch-level Reward Pool projection described below follows the locked
-F/G/P/Q/H/O/I-compatible schema version 3 contract. The implemented F editor
-now projects and edits that batch-owned value directly.
+F/G/P/Q/H/O/I-compatible schema version 3 contract. The active F/G editor
+projects and edits that batch-owned value directly; H projects its
+policy-owned Fields outcome and room-local cages through the same semantic
+command surface.
 
 ## Application Shell
 

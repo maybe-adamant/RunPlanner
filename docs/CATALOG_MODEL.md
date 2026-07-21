@@ -563,12 +563,14 @@ later-biome capability remain unchanged.
 
 Phase 5 promotes G to simulatable and editable after its complete simulator,
 candidate projection, shared linear-biome editor, navigation, and interaction
-fixtures land. The current application capability matrix therefore makes F
-and G authorable, simulatable, and editable. Every later biome remains dormant.
+fixtures land. Phase 6 promotes H after its authored Fields topology,
+materialization, lifecycle, validation, candidate, editor, profile, and
+recovery paths close as one product loop.
 
-P, Q, H, O, I, and N are also declaration-complete in the normalized catalog,
-but they are not authorable, simulatable, or editable. Their presence proves
-that declaration coverage and product activation remain independent.
+The current application capability matrix therefore makes F, G, and H
+authorable, simulatable, and editable. P, Q, O, I, and N are
+declaration-complete but inactive. Their presence proves that declaration
+coverage and product activation remain independent.
 
 Every active capability must reference a declared biome, and every
 editable biome must also be authorable. Project creation and loading, semantic
@@ -602,8 +604,9 @@ identity may exist while their application capabilities remain inactive.
 
 The verified H/I/N/O/P/Q game-rule audits, dormant imports, and cross-biome
 closure are complete. Those slices extend normalized catalog vocabulary only
-where concrete game facts require it, and remain inactive until their authored
-topology, simulator, validation, and editor loop is complete.
+where concrete game facts require it. H has completed its authored topology,
+simulator, validation, and editor loop and is active; I, N, O, P, and Q remain
+inactive until each closes the same product boundary.
 `biomes/P_GAME_RULES.md`, `biomes/Q_GAME_RULES.md`, `biomes/H_GAME_RULES.md`,
 `biomes/O_GAME_RULES.md`, `biomes/I_GAME_RULES.md`, and `biomes/N_GAME_RULES.md` are completed audit
 authorities. Their shared vocabulary is reconciled by this design set; future

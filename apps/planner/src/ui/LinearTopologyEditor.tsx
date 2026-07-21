@@ -339,10 +339,7 @@ function BatchEditor({
             className="field-control"
             htmlFor={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
           >
-            <span className="field-label-with-marker">
-              Fields cage outcome
-              <SemanticOwnerMarker address={address} />
-            </span>
+            <span>Fields cage outcome</span>
             <select
               {...candidateSelectState(selectedFieldsOutcome)}
               aria-label="Fields cage outcome"

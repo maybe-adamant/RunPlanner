@@ -32,9 +32,9 @@ linear, scripted-linear, batch-local-slot, ordered multi-encounter,
 conditional-terminal, and persistent-hub pressure tests.
 
 Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
-connected F/G reward authority, and the authored project/editor use schema
+connected linear reward authority, and the authored project/editor use schema
 version 3. All eight biomes close one catalog-wide reference matrix while
-P/Q/H/O/I/N remain dormant behind the application capability boundary. Phase
+P/Q/O/I/N remain dormant behind the application capability boundary. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room
@@ -55,8 +55,8 @@ Phase 5 is complete. Generated room candidates and every
 active reward/shop value are evaluated through the
 same simulation authorities used by selected-plan validation. F and G now
 share the complete linear simulation, candidate, editor, navigation, and
-finding path; both are authorable, simulatable, and editable while later
-biomes remain dormant. The current profile workflow saves and loads normalized
+finding path; both became authorable, simulatable, and editable while later
+biomes were held for controlled Phase 6 expansion. The current profile workflow saves and loads normalized
 `ProjectDocument` files through one injected adapter, supports undoable project
 names and safe filename suggestions, and tracks the exact explicit save/load
 baseline. Clean, Dirty, Unsaved, and Recovered are derived from that canonical
@@ -70,14 +70,15 @@ responsiveness. The acceptance matrix and browser-only smoke procedure are
 recorded in
 [`docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md`](docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md).
 
-Phase 6 now includes dormant H authored topology, canonical Fields
-materialization, route-history/reward replay, selected validation, and
-candidate evaluation plus a dormant editor projection. The shared editor now
-projects fixed-count Fields decisions, Min/Max outcomes, active and dormant
-cage leaves, semantic findings, and the forked terminal through existing
-commands and candidate services. Application capabilities, project simulation,
-profile loading, and navigation remain limited to F/G; H activation is the
-final controlled H slice.
+Phase 6 has completed H's full product loop. H is authorable, simulatable, and
+editable alongside F/G; complete F/G/H profiles pass route simulation,
+candidate feedback, recovery, semantic navigation, accessibility, and
+responsiveness fixtures. The shared editor projects fixed-count Fields
+decisions, Min/Max outcomes, active and dormant cage leaves, semantic findings,
+and the forked terminal through existing commands and candidate services.
+Equivalent post-shop witness states merge before crossing biome boundaries,
+preventing proof-only branch multiplication while retaining one ordered
+witness for every distinct downstream state. P/Q/O/I/N remain dormant.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.
@@ -224,7 +225,8 @@ fixtures, the app's catalog and simulator become its implementation authority.
 
 ## Current Scope
 
-The first complete product slice delivers F with shared F/G foundations:
+The active product slice delivers F, G, and H through one shared linear-biome
+pipeline:
 
 - explicit declarations;
 - authored linear-biome topology;
@@ -234,10 +236,9 @@ The first complete product slice delivers F with shared F/G foundations:
 - a usable editor with undo/redo and browser-local/JSON persistence.
 
 Before Phase 3 simulation, every remaining biome was audited and the full
-feature set was reconciled. Declarations can now be imported without editor or
-simulation activation. This model-coherence gate does not change the later
-full-loop rollout order. P, Q, H, O, I, and N are closed; their combined
-feature map is the declaration-freeze authority.
+feature set was reconciled. H has since completed its full product loop. P, Q,
+O, I, and N remain declaration-complete but inactive; their combined feature
+map is the declaration-freeze authority for later rollout.
 
 ## Development
 

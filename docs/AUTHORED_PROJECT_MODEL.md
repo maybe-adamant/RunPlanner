@@ -14,7 +14,7 @@ The schema version 3 examples in this document describe the reconciled
 F/G/P/Q/H/O/I/N model. Occurrence identity, downstream retention, possibility
 support, generated-store ownership, conditional-terminal batches, fixed
 authored layout slots, and persistent hub topology are settled. Production now
-reads schema version 3 for the implemented F/G slice and rejects earlier
+reads schema version 3 for the implemented F/G/H slice and rejects earlier
 versions without compatibility scaffolding.
 
 ## Core Distinction

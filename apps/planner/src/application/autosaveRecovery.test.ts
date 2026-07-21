@@ -270,7 +270,7 @@ describe('autosave recovery lifecycle', () => {
     const dormantProject = createProjectDocument(catalog, {
       projectId: 'dormant-recovery',
       name: 'Dormant Recovery',
-      configuredBiomeCounts: { Underworld: 3 },
+      configuredBiomeCounts: { Underworld: 4 },
     });
     const recovery = createRecoveryFixture(encodeProjectDocument(dormantProject));
     const application = createApplication({
@@ -280,7 +280,7 @@ describe('autosave recovery lifecycle', () => {
 
     expect(selectProfileSession(application.store.getState()).recoveryStatus).toBe('blocked');
     expect(selectProfileSession(application.store.getState()).recoveryError).toContain(
-      'H is not authorable',
+      'I is not authorable',
     );
     expect(selectProjectEvaluation(application.store.getState()).status).toBe('empty');
     expect(recovery.raw).toBe(encodeProjectDocument(dormantProject));

@@ -7,9 +7,9 @@ import {
 } from './capabilities';
 
 export const activeCapabilityDefinition = Object.freeze({
-  authorableBiomeKeys: Object.freeze(['F', 'G']),
-  simulatableBiomeKeys: Object.freeze(['F', 'G']),
-  editableBiomeKeys: Object.freeze(['F', 'G']),
+  authorableBiomeKeys: Object.freeze(['F', 'G', 'H']),
+  simulatableBiomeKeys: Object.freeze(['F', 'G', 'H']),
+  editableBiomeKeys: Object.freeze(['F', 'G', 'H']),
 }) satisfies PlannerCapabilityDefinition;
 
 export function createApplicationCapabilities(catalog: Catalog): PlannerCapabilities {

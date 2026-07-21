@@ -196,10 +196,10 @@ is separately deferred until concrete NPC gifts and trait state exist.
 | H forked preboss          | ported   | `RoomDataH.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/H_GAME_RULES.md` | Shop-then-fill owns one free-reward capacity; the terminal-only unobservable cage roll has no field.                                        |
 | H fixed completion tail   | ported   | `RoomDataH.lua`, `RewardLogic.lua`, `biomes/H_GAME_RULES.md`                  | Neutral `H_Boss01` and `H_PostBoss01` are ordered completion rooms with fixed RunProgress boss provenance.                                  |
 | H selected validation     | ported   | `EventLogic.lua`, normalized H declarations, `biomes/H_GAME_RULES.md`         | Addressed findings cover Fields support, room legality/force pools, terminal timing, and cage reward support without editing authorship.    |
-| H candidate evaluation    | ported   | selected H validation/reward authorities, `biomes/H_GAME_RULES.md`            | Rooms, Min/Max, cages, terminal rewards, shop offers, and purchases project support without enabling H simulator dispatch.                  |
-| H editor projection       | ported   | authored H topology, candidate authorities, `EDITOR_MODEL.md`                 | Shared linear controls project fixed-count Fields batches, bounded cage leaves, findings, and forked terminal state without H navigation.   |
+| H candidate evaluation    | ported   | selected H validation/reward authorities, `biomes/H_GAME_RULES.md`            | Rooms, Min/Max, cages, terminal rewards, shop offers, and purchases project support through the active selected-plan evaluator.             |
+| H editor projection       | ported   | authored H topology, candidate authorities, `EDITOR_MODEL.md`                 | Shared linear controls project fixed-count Fields batches, bounded cage leaves, findings, and forked terminal state through H navigation.   |
 | H persistent NPC variants | deferred | H encounter sets and NPC encounter data                                       | Suppress unconfigured Nemesis variants; later persistent entities compose before history.                                                   |
-| H simulation activation   | deferred | `biomes/H_GAME_RULES.md`                                                      | Keep dormant until the reconciled vocabulary and full H product loop are implemented.                                                       |
+| H simulation activation   | ported   | `biomes/H_GAME_RULES.md`, F/G/H product-loop fixture                          | H is authorable, simulatable, editable, profile-safe, recoverable, and route-validated after a complete F/G prefix.                         |
 
 ## O Migration
 
@@ -296,12 +296,11 @@ rooms belong to each biome layout; `Next` is derived only from route order.
 | Surface    | P     | `LinearBiome` | 28 (26)          | eligibility / standard  | authored Run/Meta                    | forked              | `P_Boss01`, `P_PostBoss01` | Q    |
 | Surface    | Q     | `LinearBiome` | 23 (22)          | staged / standard       | none                                 | direct              | `Q_Boss01`                 | --   |
 
-The core simulation matrix and application capability matrix now include F and
-G as authorable, simulatable, and editable through one shared linear-biome
-editor. P/Q/O/I/N remain declaration-only. H owns dormant core authored,
-simulation, validation, candidate, and editor-projection surfaces, but cannot
-enter application-created profiles, simulator dispatch, active selector scope,
-or editor navigation.
+The core simulation matrix and application capability matrix now include F, G,
+and H as authorable, simulatable, and editable through one shared linear-biome
+editor. Complete F/G/H prefixes enter profiles, recovery, simulator dispatch,
+candidate scope, and editor navigation together. P/Q/O/I/N remain
+declaration-only.
 
 The following remaining dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:
@@ -319,10 +318,7 @@ boundary; each biome rule document owns its exact room-level instances:
   modeled downstream consumer do not enter production declarations.
 - **Dormant:** P/Q/O/I/N have complete declarations but no connected authored
   topology, materializer, simulator dispatch, semantic findings, or editor
-  panel. H additionally has dormant authored topology, canonical
-  materialization, history, reward replay, selected validation, candidate
-  evaluation, and editor projection, but still has no simulator dispatch,
-  navigation, profile support, or product capability.
+  panel.
 
 No generic `unsupported` field, compatibility scaffold, placeholder
 materializer, or route-qualified duplicate biome authority remains.

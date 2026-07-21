@@ -43,7 +43,7 @@ const sections: readonly { key: PlannerSection; label: string }[] = [
 ];
 
 function asUnderworldPanel(biomeKey: string): UnderworldPanel {
-  if (biomeKey !== 'F' && biomeKey !== 'G') {
+  if (biomeKey !== 'F' && biomeKey !== 'G' && biomeKey !== 'H') {
     throw new Error(`${biomeKey} is not an Underworld editor panel`);
   }
   return biomeKey as UnderworldPanel;
@@ -172,7 +172,7 @@ export function App({
     underworld.biomes.some((biome) => biome.biomeKey === panel.biomeKey),
   );
   const activeBiomeKey =
-    activeUnderworldPanel === 'F' || activeUnderworldPanel === 'G'
+    activeUnderworldPanel === 'F' || activeUnderworldPanel === 'G' || activeUnderworldPanel === 'H'
       ? activeUnderworldPanel
       : undefined;
   const activeBiomePlan = underworld.biomes.find((biome) => biome.biomeKey === activeBiomeKey);

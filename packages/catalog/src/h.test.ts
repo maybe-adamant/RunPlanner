@@ -37,7 +37,7 @@ function requireShop(binding: RewardProducerBinding | undefined): ShopRewardBind
   return binding;
 }
 
-describe('complete dormant H catalog', () => {
+describe('complete H catalog', () => {
   it('normalizes the four-room Fields spine without a generated reward store', () => {
     const rooms = catalog.rooms.values.filter((room) => room.biomeKey === 'H');
     const layout = requireHLayout();

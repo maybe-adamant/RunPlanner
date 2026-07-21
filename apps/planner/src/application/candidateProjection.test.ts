@@ -14,7 +14,7 @@ import { createCandidateProjectionService, presentCandidateLabel } from './candi
 import { selectRoomsForCategory } from './roomSelectorProjection';
 
 const biome = createBiomeAddress('Underworld', 'F');
-const simulationScope = Object.freeze({ simulatableBiomeKeys: Object.freeze(['F', 'G']) });
+const simulationScope = Object.freeze({ simulatableBiomeKeys: Object.freeze(['F', 'G', 'H']) });
 
 function project() {
   return createProjectDocument(catalog, {

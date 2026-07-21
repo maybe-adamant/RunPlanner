@@ -7,10 +7,12 @@ import {
   createBiomeAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
   createProjectDocument,
+  createRouteAddress,
   createShopOfferAddress,
   createTargetAddress,
   encodeProjectDocument,
@@ -350,7 +352,7 @@ function appendGoldenBatches(
 function appendGoldenTerminal(
   project: ProjectDocument,
   catalog: Catalog,
-  biomeKey: 'F' | 'G',
+  biomeKey: 'F' | 'G' | 'H',
   parentId: OccurrenceId,
   parentGameName: string,
 ): ProjectDocument {
@@ -428,6 +430,129 @@ function createGoldenFGProject(
   );
   const g = appendGoldenBatches(project, catalog, 'G', gStart, gBatches);
   return appendGoldenTerminal(g.project, catalog, 'G', g.parentId, g.parentGameName);
+}
+
+function createGoldenFGHProject(catalog: Catalog): ProjectDocument {
+  const biome = createBiomeAddress('Underworld', 'H');
+  const start = createOccurrenceId('phase-6-h-start');
+  const combat02 = createOccurrenceId('phase-6-h-combat02');
+  const combat09 = createOccurrenceId('phase-6-h-combat09');
+  const combat03 = createOccurrenceId('phase-6-h-combat03');
+  const miniboss = createOccurrenceId('phase-6-h-miniboss');
+  const bridge = createOccurrenceId('phase-6-h-bridge');
+  const combat05 = createOccurrenceId('phase-6-h-combat05');
+  const combat04 = createOccurrenceId('phase-6-h-combat04');
+  let project = applyProjectCommand(createGoldenFGProject(catalog), catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Underworld'),
+    configuredBiomeCount: 3,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome,
+    occurrenceId: start,
+    gameName: 'H_Intro',
+  });
+  const batches = [
+    {
+      parent: start,
+      targets: [{ occurrenceId: combat02, gameName: 'H_Combat02' }],
+      cageOutcome: 'min' as const,
+    },
+    {
+      parent: combat02,
+      targets: [
+        { occurrenceId: combat09, gameName: 'H_Combat09' },
+        { occurrenceId: combat03, gameName: 'H_Combat03' },
+      ],
+      cageOutcome: 'max' as const,
+    },
+    {
+      parent: combat09,
+      targets: [
+        { occurrenceId: miniboss, gameName: 'H_MiniBoss01' },
+        { occurrenceId: bridge, gameName: 'H_Bridge01' },
+      ],
+      cageOutcome: 'max' as const,
+    },
+    {
+      parent: miniboss,
+      targets: [
+        { occurrenceId: combat05, gameName: 'H_Combat05' },
+        { occurrenceId: combat04, gameName: 'H_Combat04' },
+      ],
+      cageOutcome: 'min' as const,
+    },
+  ];
+  for (const batch of batches) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, batch.parent),
+    });
+    if (batch.cageOutcome === 'max') {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFieldsCageOutcome',
+        continuation: createContinuationAddress(biome, batch.parent),
+        cageOutcome: batch.cageOutcome,
+      });
+    }
+    for (const [targetOffset, target] of batch.targets.entries()) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(biome, batch.parent, targetOffset + 1),
+        occurrenceId: target.occurrenceId,
+        gameName: target.gameName,
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(biome, batch.parent),
+      exitIndex: 1,
+    });
+  }
+
+  const cageOffers: Readonly<Record<string, readonly OfferSpec[]>> = {
+    [combat02]: [
+      { rewardType: 'RoomMoneyDrop' },
+      { rewardType: 'WeaponUpgrade' },
+      { rewardType: 'Boon', source: 'HestiaUpgrade' },
+    ],
+    [combat09]: [
+      { rewardType: 'HermesUpgrade' },
+      { rewardType: 'TalentDrop' },
+      { rewardType: 'Boon', source: 'HestiaUpgrade' },
+    ],
+    [combat03]: [
+      { rewardType: 'Boon', source: 'ApolloUpgrade' },
+      { rewardType: 'Boon', source: 'ZeusUpgrade' },
+      { rewardType: 'Boon', source: 'DemeterUpgrade' },
+    ],
+    [combat05]: [
+      { rewardType: 'MaxHealthDrop' },
+      { rewardType: 'Boon', source: 'ApolloUpgrade' },
+      { rewardType: 'Boon', source: 'HestiaUpgrade' },
+    ],
+    [combat04]: [
+      { rewardType: 'MaxManaDrop' },
+      { rewardType: 'RoomMoneyDrop' },
+      { rewardType: 'Boon', source: 'DemeterUpgrade' },
+    ],
+  };
+  for (const [occurrenceId, offers] of Object.entries(cageOffers)) {
+    for (const [slotOffset, offer] of offers.entries()) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(
+          biome,
+          createOccurrenceId(occurrenceId),
+          'cages',
+          `cage${slotOffset + 1}`,
+        ),
+        value: resolvedOffer(offer),
+      });
+    }
+  }
+  return appendGoldenTerminal(project, catalog, 'H', combat05, 'H_Combat05');
 }
 
 function createPersistence(): {
@@ -544,7 +669,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('golden F product loop', () => {
+describe('golden Underworld product loop', () => {
   it('authors, validates, labels, saves, and reloads the representative F project through the browser UI', async () => {
     const persistence = createPersistence();
     const application = createApplication({ profileFile: persistence.profileFile });
@@ -785,7 +910,8 @@ describe('golden F product loop', () => {
     expect(currentEvaluation(application).status).toBe('valid');
   }, 30_000);
 
-  it('closes the complete F/G browser loop with profiles, recovery, accessibility, and responsive projections', async () => {
+  it('closes the complete F/G/H browser loop with profiles, recovery, accessibility, and responsive projections', async () => {
+    stubScrollIntoView();
     const persistence = createPersistence();
     const recovery = createRecoveryPersistence();
     const application = createApplication({
@@ -793,7 +919,9 @@ describe('golden F product loop', () => {
       autosaveScheduler: recovery.scheduler,
       profileFile: persistence.profileFile,
     });
-    application.store.dispatch(authoredProjectReplaced(createGoldenFGProject(application.catalog)));
+    application.store.dispatch(
+      authoredProjectReplaced(createGoldenFGHProject(application.catalog)),
+    );
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
@@ -803,12 +931,12 @@ describe('golden F product loop', () => {
     expect(evaluated.status).toBe('valid');
     expect(evaluated.findings).toEqual([]);
     expect(evaluated.summary).toMatchObject({
-      configuredBiomeCount: 2,
-      evaluatedBiomeCount: 2,
-      validatedBiomeCount: 2,
+      configuredBiomeCount: 3,
+      evaluatedBiomeCount: 3,
+      validatedBiomeCount: 3,
       eligibleForExecutionPlan: true,
     });
-    expect(evaluated.routes[0]?.validatedPrefix).toEqual(['F', 'G']);
+    expect(evaluated.routes[0]?.validatedPrefix).toEqual(['F', 'G', 'H']);
     const gEvaluation = evaluated.routes[0]?.biomes[1];
     if (gEvaluation?.completion !== 'complete') {
       throw new Error('Golden G browser project did not produce a complete evaluation');
@@ -817,7 +945,14 @@ describe('golden F product loop', () => {
       'G_Boss01',
       'G_PostBoss01',
     ]);
-
+    const hEvaluation = evaluated.routes[0]?.biomes[2];
+    if (hEvaluation?.completion !== 'complete') {
+      throw new Error('Golden H browser project did not produce a complete evaluation');
+    }
+    expect(hEvaluation.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
+      'H_Boss01',
+      'H_PostBoss01',
+    ]);
     const underworld = authored.routes.find((route) => route.routeKey === 'Underworld');
     const gPlan = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
     if (gPlan?.topology === null || gPlan?.topology === undefined) {
@@ -851,6 +986,54 @@ describe('golden F product loop', () => {
     );
     expect(screen.getByRole('status', { name: 'Profile status: Unsaved' })).toBeTruthy();
 
+    const hPlan = underworld?.biomes.find((biome) => biome.biomeKey === 'H');
+    if (hPlan?.topology === null || hPlan?.topology === undefined) {
+      throw new Error('Golden H topology is missing from its authored project');
+    }
+    await view.user.click(screen.getByRole('button', { name: 'Fields of Mourning' }));
+    const hText = document.body.textContent ?? '';
+    for (const occurrence of hPlan.topology.occurrences) {
+      const room = application.catalog.rooms.byKey[occurrence.gameName];
+      if (room === undefined) {
+        throw new Error(`Golden H room ${occurrence.gameName} is missing from the catalog`);
+      }
+      expect(hText).toContain(room.label);
+      expect(hText).not.toContain(occurrence.gameName);
+      expect(hText).not.toContain(occurrence.occurrenceId);
+    }
+    const fieldsOutcomes = screen.getAllByLabelText('Fields cage outcome');
+    expect(fieldsOutcomes).toHaveLength(4);
+    expect(
+      fieldsOutcomes.every(
+        (control) => control.getAttribute('data-candidate-support') !== 'unavailable',
+      ),
+    ).toBe(true);
+    expect(screen.getAllByLabelText('Fields cage rewards')).toHaveLength(5);
+    assertAccessibleControlSurface();
+
+    const firstCage = within(screen.getAllByLabelText('Fields cage rewards')[0]!).getByRole(
+      'region',
+      { name: 'Cage 1' },
+    );
+    await view.user.selectOptions(within(firstCage).getByLabelText('Reward'), 'MaxManaDrop');
+    expect(currentProject(application)).not.toEqual(authored);
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(currentProject(application)).toEqual(authored);
+
+    await view.user.selectOptions(screen.getAllByLabelText('Fields cage outcome')[3]!, 'max');
+    expect(currentEvaluation(application).status).toBe('invalid');
+    await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
+    await view.user.click(
+      screen.getByRole('button', { name: /Fields cage outcome cannot occur here/ }),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Fields of Mourning' }).getAttribute('aria-current'),
+    ).toBe('page');
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(currentProject(application)).toEqual(authored);
+
+    await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
+
     const firstExit = exitRow(1, 1);
     const alternative = within(firstExit).getByRole('option', { name: 'Combat 02' });
     expect(alternative.getAttribute('data-candidate-support')).toBe('possible');
@@ -863,6 +1046,24 @@ describe('golden F product loop', () => {
     const candidateProjection = createCandidateProjectionService(application.catalog, (project) =>
       simulateProject(application.catalog, project, createProjectSimulationScope(capabilities)),
     );
+    const firstHContinuation = hPlan.topology.continuations[0];
+    if (firstHContinuation?.kind !== 'batch') {
+      throw new Error('Golden H first decision is missing');
+    }
+    const hCandidateStarted = performance.now();
+    const projectedHOutcomes = candidateProjection.fieldsCageOutcomes(
+      authored,
+      createContinuationAddress(
+        createBiomeAddress('Underworld', 'H'),
+        firstHContinuation.parentOccurrenceId,
+      ),
+      ['min', 'max'],
+    );
+    const hCandidateDurationMs = performance.now() - hCandidateStarted;
+    expect(projectedHOutcomes).toHaveLength(2);
+    expect(
+      projectedHOutcomes.every((candidate) => candidate.evaluation.context === 'evaluated'),
+    ).toBe(true);
     const firstGContinuation = gPlan.topology.continuations[0];
     if (firstGContinuation?.kind !== 'batch') {
       throw new Error('Golden G first decision is missing');
@@ -910,6 +1111,10 @@ describe('golden F product loop', () => {
     expect(
       candidateDurationMs,
       `cold G candidate projection took ${candidateDurationMs.toFixed(1)} ms`,
+    ).toBeLessThan(750);
+    expect(
+      hCandidateDurationMs,
+      `cold H candidate projection took ${hCandidateDurationMs.toFixed(1)} ms`,
     ).toBeLessThan(750);
     expect(
       representativeEditDurationMs,

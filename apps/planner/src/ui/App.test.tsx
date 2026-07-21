@@ -72,10 +72,12 @@ describe('App', () => {
     expect(application.editorNavigation.routes.Underworld?.biomePanels).toEqual([
       { biomeKey: 'F', label: 'Erebus' },
       { biomeKey: 'G', label: 'Oceanus' },
+      { biomeKey: 'H', label: 'Fields of Mourning' },
     ]);
     expect(application.editorNavigation.routes.Underworld?.configurablePrefixBiomePanels).toEqual([
       { biomeKey: 'F', label: 'Erebus' },
       { biomeKey: 'G', label: 'Oceanus' },
+      { biomeKey: 'H', label: 'Fields of Mourning' },
     ]);
     expect(application.editorNavigation.routes.Surface?.biomePanels).toEqual([]);
     expect(application.editorNavigation.routes.Surface?.configurablePrefixBiomePanels).toEqual([]);
