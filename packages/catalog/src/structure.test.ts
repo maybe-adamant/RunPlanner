@@ -24,6 +24,14 @@ function linearLayout(biomeKey: string) {
   return layout;
 }
 
+function layoutIndex(biomeKey: string): number {
+  const index = declarations.biomeLayouts.findIndex((layout) => layout.biomeKey === biomeKey);
+  if (index < 0) {
+    throw new Error(`missing biome layout fixture ${biomeKey}`);
+  }
+  return index;
+}
+
 function encounterIndex(key: string): number {
   const index = declarations.encounterProfiles.findIndex((profile) => profile.key === key);
   if (index < 0) {
@@ -298,6 +306,10 @@ describe('shared structural catalog vocabulary', () => {
                     minDoorCageRewards: 2,
                     maxDoorCageRewards: 3,
                     maxDoorCageCeiling: 2,
+                    maxOutcomeSupport: {
+                      optionalBiomeDepths: [1, 2, 3],
+                      requiredBiomeDepths: [4, 5],
+                    },
                     fields: [
                       {
                         key: 'cageOutcome',
@@ -338,6 +350,10 @@ describe('shared structural catalog vocabulary', () => {
           minDoorCageRewards: 2,
           maxDoorCageRewards: 3,
           maxDoorCageCeiling: 2,
+          maxOutcomeSupport: {
+            optionalBiomeDepths: [1, 2, 3],
+            requiredBiomeDepths: [4, 5],
+          },
           fields: [
             {
               key: 'cageOutcome',
@@ -357,6 +373,52 @@ describe('shared structural catalog vocabulary', () => {
         },
       },
     });
+  });
+
+  it('rejects malformed Fields Max-outcome support at the catalog boundary', () => {
+    const hIndex = layoutIndex('H');
+    const hLayout = linearLayout('H');
+    const fieldsPolicy = hLayout.continuation.batchPolicy;
+    if (fieldsPolicy.kind !== 'fields') {
+      throw new Error('H Fields batch-policy fixture is missing');
+    }
+
+    const replaceHPolicy = (maxOutcomeSupport: unknown) => ({
+      ...declarations,
+      biomeLayouts: declarations.biomeLayouts.map((layout, index) =>
+        index === hIndex
+          ? {
+              ...hLayout,
+              continuation: {
+                ...hLayout.continuation,
+                batchPolicy: { ...fieldsPolicy, maxOutcomeSupport },
+              },
+            }
+          : layout,
+      ),
+    });
+
+    expect(() => createCatalog(raw(replaceHPolicy(undefined)))).toThrowError(
+      new CatalogContractError(
+        `biomeLayouts[${hIndex}].continuation.batchPolicy.maxOutcomeSupport`,
+        'is required',
+      ),
+    );
+    expect(() =>
+      createCatalog(
+        raw(
+          replaceHPolicy({
+            optionalBiomeDepths: [1, 2],
+            requiredBiomeDepths: [2, 3],
+          }),
+        ),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `biomeLayouts[${hIndex}].continuation.batchPolicy.maxOutcomeSupport`,
+        'optional and required depths must be disjoint',
+      ),
+    );
   });
 
   it.each([

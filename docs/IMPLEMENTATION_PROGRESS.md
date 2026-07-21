@@ -287,6 +287,20 @@ bags/history, fixed H store provenance, physical cage-offer order, and
 picked-only acquisition timing without adding H to simulator dispatch or
 application capabilities.
 
+Phase 6 H Slice 4 is complete. Common linear room-generation validation now
+projects one addressed Fields outcome-support entry per ordinary H batch from
+the source room's pre-commit `biomeDepthCache`, prior
+`fieldsMaxDoorsRolled`, and the declaration-owned ceiling. Unsupported Min/Max
+values emit `fieldsCageOutcomeUnavailable` at the continuation while remaining
+authored. The existing declaration-driven candidate walk now validates H's
+combat depth restrictions, appearance/creation caps, Bridge exact-two window,
+sequential Bridge/miniboss force competition, entered-miniboss exclusion, and
+forced preboss timing. Reward replay supplies addressed cage bag/source
+findings. Golden G-to-H fixtures cover a valid selected trace, the Max ceiling,
+the complete Fields support table, early and repeated Bridge offers, miniboss
+exclusion, terminal pressure, and a carried-bag cage failure without adding H
+to simulator dispatch or application capabilities.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -989,8 +1003,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slices 1 through 3 are
-complete; H Slice 4 selected validation is the next implementation frontier.
+Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slices 1 through 4 are
+complete; H Slice 5 candidate evaluation is the next implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

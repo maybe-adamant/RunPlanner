@@ -1,4 +1,10 @@
-import type { Catalog, ExitCompatibilityPolicy, RoomDeclaration, RoomForce } from '../../catalog';
+import type {
+  Catalog,
+  ExitCompatibilityPolicy,
+  GeneratedBatchPolicy,
+  RoomDeclaration,
+  RoomForce,
+} from '../../catalog';
 import { evaluateRequirement, type RequirementEvaluationContext } from '../../requirementEvaluator';
 import type { RequirementExpression } from '../../requirements';
 import { semanticAddressKey, type OccurrenceAddress } from '../../project/addresses';
@@ -9,11 +15,14 @@ import type {
 } from '../history';
 import type {
   CanonicalAuthoredRoom,
+  CanonicalBatch,
   CanonicalLinearBiome,
   CanonicalPhysicalExit,
   CanonicalTarget,
 } from '../materialization';
 import type {
+  FieldsCageOutcome,
+  FieldsCageOutcomeSupportEntry,
   LinearForcePressureLedgerEntry,
   LinearRoomGenerationValidation,
   LinearRoomTargetCandidateValidation,
@@ -306,7 +315,7 @@ function authoredRooms(snapshot: CanonicalLinearBiome): ReadonlyMap<string, Cano
 }
 
 function finding(
-  code: 'targetRoomSupportEmpty' | 'targetRoomUnavailable',
+  code: 'fieldsCageOutcomeUnavailable' | 'targetRoomSupportEmpty' | 'targetRoomUnavailable',
   origin: SemanticFinding['origin'],
   evidence: FindingEvidence,
 ): SemanticFinding {
@@ -316,6 +325,70 @@ function finding(
     phase: 'roomGeneration',
     origin,
     evidence: Object.freeze(evidence),
+  });
+}
+
+function fieldsCageOutcomeEvidence(entry: FieldsCageOutcomeSupportEntry): FindingEvidence {
+  return {
+    beforeSequence: entry.beforeSequence,
+    biomeDepthCache: entry.biomeDepthCache,
+    fieldsMaxDoorsRolled: entry.fieldsMaxDoorsRolled,
+    maxDoorCageCeiling: entry.maxDoorCageCeiling,
+    selectedOutcome: entry.selectedOutcome,
+    supportOutcomes: entry.supportOutcomes,
+  };
+}
+
+export function supportedFieldsCageOutcomes(
+  batchPolicy: Extract<GeneratedBatchPolicy, { readonly kind: 'fields' }>,
+  biomeDepthCache: number,
+  fieldsMaxDoorsRolled: number,
+): readonly FieldsCageOutcome[] {
+  if (
+    !Number.isInteger(biomeDepthCache) ||
+    biomeDepthCache < 1 ||
+    !Number.isInteger(fieldsMaxDoorsRolled) ||
+    fieldsMaxDoorsRolled < 0
+  ) {
+    throw new LinearRoomGenerationContractError('Fields outcome support has invalid counters');
+  }
+  if (fieldsMaxDoorsRolled >= batchPolicy.maxDoorCageCeiling) {
+    return Object.freeze(['min']);
+  }
+  if (batchPolicy.maxOutcomeSupport.requiredBiomeDepths.includes(biomeDepthCache)) {
+    return Object.freeze(['max']);
+  }
+  return batchPolicy.maxOutcomeSupport.optionalBiomeDepths.includes(biomeDepthCache)
+    ? Object.freeze(['min', 'max'])
+    : Object.freeze(['min']);
+}
+
+function evaluateFieldsCageOutcome(
+  batchPolicy: Extract<GeneratedBatchPolicy, { readonly kind: 'fields' }>,
+  batch: CanonicalBatch,
+  view: LinearHistoryStateView,
+): FieldsCageOutcomeSupportEntry {
+  if (batch.batchState.kind !== 'fields') {
+    throw new LinearRoomGenerationContractError('Fields layout lost its canonical batch state');
+  }
+  const fieldsMaxDoorsRolled = view.ledgers.counters.fieldsMaxDoorsRolled;
+  if (fieldsMaxDoorsRolled === undefined) {
+    throw new LinearRoomGenerationContractError('Fields history lost its Max outcome counter');
+  }
+  const supportOutcomes = supportedFieldsCageOutcomes(
+    batchPolicy,
+    view.ledgers.counters.biomeDepthCache,
+    fieldsMaxDoorsRolled,
+  );
+  return Object.freeze({
+    origin: batch.origin,
+    beforeSequence: view.sequence,
+    biomeDepthCache: view.ledgers.counters.biomeDepthCache,
+    fieldsMaxDoorsRolled,
+    maxDoorCageCeiling: batchPolicy.maxDoorCageCeiling,
+    selectedOutcome: batch.batchState.cageOutcome,
+    supportOutcomes,
+    selectedPossible: supportOutcomes.includes(batch.batchState.cageOutcome),
   });
 }
 
@@ -520,13 +593,42 @@ export function evaluateLinearRoomGeneration(
   const rooms = authoredRooms(snapshot);
   const views = targetGenerationViews(history);
   const pressure: LinearForcePressureLedgerEntry[] = [];
+  const fieldsCageOutcomes: FieldsCageOutcomeSupportEntry[] = [];
   const findings: SemanticFinding[] = [];
+  const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
+  if (layout?.kind !== 'LinearBiome') {
+    throw new LinearRoomGenerationContractError(
+      `catalog does not provide ${snapshot.biomeKey} linear generation policy`,
+    );
+  }
 
   for (const batch of snapshot.batches) {
+    const source = requireSource(rooms, batch.parent.origin);
+    if (layout.continuation.batchPolicy.kind === 'fields') {
+      const sourceView = history.rooms.find(
+        (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
+      )?.preOutgoing;
+      if (sourceView === undefined) {
+        throw new LinearRoomGenerationContractError(
+          `Fields source ${semanticAddressKey(source.origin)} has no pre-generation view`,
+        );
+      }
+      const support = evaluateFieldsCageOutcome(layout.continuation.batchPolicy, batch, sourceView);
+      fieldsCageOutcomes.push(support);
+      if (!support.selectedPossible) {
+        findings.push(
+          finding(
+            'fieldsCageOutcomeUnavailable',
+            support.origin,
+            fieldsCageOutcomeEvidence(support),
+          ),
+        );
+      }
+    }
     evaluateTargets(
       catalog,
       pool,
-      requireSource(rooms, batch.parent.origin),
+      source,
       batch.targets,
       views,
       pressure,
@@ -549,6 +651,7 @@ export function evaluateLinearRoomGeneration(
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
     forcePressure: Object.freeze(pressure),
+    fieldsCageOutcomes: Object.freeze(fieldsCageOutcomes),
     findings: Object.freeze(findings),
   });
 }

@@ -11,7 +11,8 @@ export type CompletenessFindingCode =
   | 'pickedTargetMissing'
   | 'targetMissing';
 
-export type RoomGenerationFindingCode = 'targetRoomSupportEmpty' | 'targetRoomUnavailable';
+export type RoomGenerationFindingCode =
+  'fieldsCageOutcomeUnavailable' | 'targetRoomSupportEmpty' | 'targetRoomUnavailable';
 
 export type RewardGenerationFindingCode =
   | 'baseRewardStoreUnavailable'

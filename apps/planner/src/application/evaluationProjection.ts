@@ -22,6 +22,10 @@ export interface StatusPresentation {
 }
 
 const findingCopy = {
+  fieldsCageOutcomeUnavailable: {
+    title: 'Fields cage outcome cannot occur here',
+    description: 'The selected Min or Max outcome is unavailable at this point in the Fields.',
+  },
   biomeTopologyMissing: {
     title: 'Start this biome',
     description: 'Choose a starting room before building its route.',

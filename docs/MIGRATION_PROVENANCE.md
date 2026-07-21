@@ -195,6 +195,7 @@ is separately deferred until concrete NPC gifts and trait state exist.
 | H bridge                  | ported   | `RoomDataH.lua`, bridge encounters, `biomes/H_GAME_RULES.md`                  | Exact-two eligibility, always-forced pool membership, caps, two exits, and progressed-save Echo Story projection normalize.                 |
 | H forked preboss          | ported   | `RoomDataH.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/H_GAME_RULES.md` | Shop-then-fill owns one free-reward capacity; the terminal-only unobservable cage roll has no field.                                        |
 | H fixed completion tail   | ported   | `RoomDataH.lua`, `RewardLogic.lua`, `biomes/H_GAME_RULES.md`                  | Neutral `H_Boss01` and `H_PostBoss01` are ordered completion rooms with fixed RunProgress boss provenance.                                  |
+| H selected validation     | ported   | `EventLogic.lua`, normalized H declarations, `biomes/H_GAME_RULES.md`         | Addressed findings cover Fields support, room legality/force pools, terminal timing, and cage reward support without editing authorship.    |
 | H persistent NPC variants | deferred | H encounter sets and NPC encounter data                                       | Suppress unconfigured Nemesis variants; later persistent entities compose before history.                                                   |
 | H simulation activation   | deferred | `biomes/H_GAME_RULES.md`                                                      | Keep dormant until the reconciled vocabulary and full H product loop are implemented.                                                       |
 
@@ -316,8 +317,8 @@ boundary; each biome rule document owns its exact room-level instances:
 - **Dormant:** P/Q/O/I/N have complete declarations but no connected authored
   topology, materializer, simulator dispatch, semantic findings, or editor
   panel. H additionally has dormant authored topology, canonical
-  materialization, history, and reward replay, but still has no selected
-  validation, candidates, editor projection, simulator dispatch, or product
+  materialization, history, reward replay, and selected validation, but still
+  has no candidates, editor projection, simulator dispatch, or product
   capability.
 
 No generic `unsupported` field, compatibility scaffold, placeholder

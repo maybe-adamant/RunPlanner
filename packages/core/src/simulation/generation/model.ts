@@ -1,4 +1,4 @@
-import type { TargetAddress } from '../../project/addresses';
+import type { ContinuationAddress, TargetAddress } from '../../project/addresses';
 import type { SemanticFinding } from '../model';
 
 export type RoomGenerationExclusionReason =
@@ -32,10 +32,24 @@ export interface LinearForcePressureLedgerEntry {
   readonly selectedExclusionReasons: readonly RoomGenerationExclusionReason[];
 }
 
+export type FieldsCageOutcome = 'min' | 'max';
+
+export interface FieldsCageOutcomeSupportEntry {
+  readonly origin: ContinuationAddress;
+  readonly beforeSequence: number;
+  readonly biomeDepthCache: number;
+  readonly fieldsMaxDoorsRolled: number;
+  readonly maxDoorCageCeiling: number;
+  readonly selectedOutcome: FieldsCageOutcome;
+  readonly supportOutcomes: readonly FieldsCageOutcome[];
+  readonly selectedPossible: boolean;
+}
+
 export interface LinearRoomGenerationValidation {
   readonly biomeKey: string;
   readonly validity: 'invalid' | 'valid';
   readonly forcePressure: readonly LinearForcePressureLedgerEntry[];
+  readonly fieldsCageOutcomes: readonly FieldsCageOutcomeSupportEntry[];
   readonly findings: readonly SemanticFinding[];
 }
 
