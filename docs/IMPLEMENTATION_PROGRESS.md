@@ -312,6 +312,20 @@ owns one bounded cage leaf without disturbing sibling cages or topology.
 Fixtures cover possible, forced, impossible, selected-invalid, and incomplete-
 context results plus unchanged authorship and dormant simulator isolation.
 
+Phase 6 H Slice 6 is complete. The common linear editor now consumes one pure
+batch-state projection for standard and Fields batches. H decisions render
+Min/Max candidate state, derived active-cage capacity and prior-Max context,
+and all three persisted cage leaves with an explicit active/dormant prefix.
+Room-local reward replacement reuses the shared reward editor and semantic
+`ReplaceLocalReward` command. Fixed-count progression admits four ordinary
+batches before the independent terminal frontier, while terminal targets stay
+outside ordinary target bounds. A scoped finding index lets the dormant biome
+surface render its own addressed findings without publishing H into the active
+project evaluation. Interaction fixtures cover semantic edits, terminal
+realizations, contextual candidate unavailability, and both sides of the
+fixed-count frontier. Production capabilities, profiles, simulator dispatch,
+and navigation remain F/G-only.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1014,8 +1028,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slices 1 through 5 are
-complete; H Slice 6 dormant editor projection is the next implementation
+Phases 2.8, 3, 4, and 5 have no pending items. Phase 6 H Slices 1 through 6 are
+complete; H Slice 7 product-loop activation is the next implementation
 frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity

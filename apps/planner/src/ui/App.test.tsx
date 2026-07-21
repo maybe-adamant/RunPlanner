@@ -397,7 +397,7 @@ describe('App', () => {
     expect(markup).toContain('data-selected="true"');
   });
 
-  it('disables frontier commands that exceed authored topology bounds', () => {
+  it('bounds ordinary frontier decisions without bounding the terminal transition', () => {
     const application = createApplication();
     configureF(application);
     const biome = createBiomeAddress('Underworld', 'F');
@@ -451,6 +451,7 @@ describe('App', () => {
       </Provider>,
     );
     expect(markup).toContain('disabled="" type="button">Add Next Decision');
-    expect(markup).toContain('disabled="" type="button">Go to Preboss');
+    expect(markup).toContain('type="button">Go to Preboss');
+    expect(markup).not.toContain('disabled="" type="button">Go to Preboss');
   });
 });

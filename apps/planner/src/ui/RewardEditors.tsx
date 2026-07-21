@@ -2,6 +2,7 @@ import type {
   Catalog,
   CountedRewardBinding,
   IncomingRewardAddress,
+  LocalRewardAddress,
   ProjectDocument,
   ShopOfferAddress,
 } from '@run-planner/core';
@@ -17,6 +18,7 @@ import { candidateSelectState } from './candidatePresentation';
 
 export type RewardCandidateOwner =
   | { readonly kind: 'incomingReward'; readonly address: IncomingRewardAddress }
+  | { readonly kind: 'localReward'; readonly address: LocalRewardAddress }
   | { readonly kind: 'shopOffer'; readonly address: ShopOfferAddress };
 
 interface RewardValueEditorProps {
@@ -40,9 +42,14 @@ function projectRewardOptions(
   owner: RewardCandidateOwner,
   offers: readonly ResolvedRewardOffer[],
 ): readonly CandidateOptionProjection<ResolvedRewardOffer>[] {
-  return owner.kind === 'incomingReward'
-    ? service.incomingRewards(project, owner.address, offers)
-    : service.shopOffers(project, owner.address, offers);
+  switch (owner.kind) {
+    case 'incomingReward':
+      return service.incomingRewards(project, owner.address, offers);
+    case 'localReward':
+      return service.localRewards(project, owner.address, offers);
+    case 'shopOffer':
+      return service.shopOffers(project, owner.address, offers);
+  }
 }
 
 interface RewardSelectOption {

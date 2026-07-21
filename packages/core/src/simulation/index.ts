@@ -122,6 +122,7 @@ export {
 export {
   LinearMaterializationContractError,
   materializeLinearBiome,
+  projectLinearBatchState,
   type CanonicalAuthoredRoom,
   type CanonicalBatch,
   type CanonicalBatchState,

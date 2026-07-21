@@ -1,4 +1,8 @@
-export { LinearMaterializationContractError, materializeLinearBiome } from './linear';
+export {
+  LinearMaterializationContractError,
+  materializeLinearBiome,
+  projectLinearBatchState,
+} from './linear';
 export type {
   CanonicalAuthoredRoom,
   CanonicalBatch,

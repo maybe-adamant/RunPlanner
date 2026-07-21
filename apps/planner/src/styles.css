@@ -769,6 +769,75 @@ select {
   background: rgb(255 255 255 / 2%);
 }
 
+.fields-batch-editor {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(260px, 1fr);
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #34353e;
+  background: rgb(126 101 154 / 6%);
+}
+
+.fields-batch-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.fields-batch-summary div {
+  padding: 7px 9px;
+  border: 1px solid #3a3b45;
+  border-radius: 8px;
+  background: rgb(12 13 17 / 24%);
+}
+
+.fields-batch-summary dt {
+  color: #8e8b95;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fields-batch-summary dd {
+  margin: 4px 0 0;
+  color: #eee7dc;
+  font-variant-numeric: tabular-nums;
+}
+
+.local-reward-editor {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #353640;
+}
+
+.local-reward-slot {
+  padding: 10px;
+  border: 1px solid #373842;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 2%);
+}
+
+.local-reward-slot[data-active='false'] {
+  opacity: 0.62;
+}
+
+.local-reward-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.local-reward-heading h4 {
+  margin: 0;
+  color: #f2ede5;
+  font-size: 0.9rem;
+}
+
 .purchase-control {
   display: flex;
   align-items: center;
@@ -895,7 +964,9 @@ select {
   }
 
   .room-selector,
-  .paired-payload {
+  .paired-payload,
+  .fields-batch-editor,
+  .fields-batch-summary {
     grid-template-columns: 1fr;
   }
 }

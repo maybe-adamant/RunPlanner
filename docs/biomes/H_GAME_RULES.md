@@ -14,10 +14,10 @@ batches add one H-specific semantic outcome that activates bounded cage slots
 owned by each combat occurrence.
 
 H declarations, dormant authored topology, canonical Fields materialization,
-route history, reward replay, selected validation, candidate evaluation, and
-focused parity fixtures are ported. H intentionally remains non-authorable,
-non-simulatable, and non-editable at the application capability boundary until
-its complete product loop is implemented.
+route history, reward replay, selected validation, candidate evaluation,
+dormant editor projection, and focused parity fixtures are ported. H
+intentionally remains non-authorable, non-simulatable, and non-editable at the
+application capability boundary until its complete product loop is activated.
 
 ## Evidence Status
 
@@ -557,9 +557,13 @@ valid G prefix; it preserves selected invalid values and returns explicit
 unavailable context for incomplete H without adding H to project simulator
 dispatch.
 
-H does not yet project an editor. The application capability boundary and
-project simulator dispatch therefore continue to reject H profiles until the
-complete product loop is ready.
+The common linear editor now projects H through a dormant interaction harness.
+It consumes the declaration-derived fixed-count frontier, pure Fields batch
+state, Min/Max and reward candidates, all three persisted cage leaves with an
+active/dormant prefix, scoped semantic findings, and the existing forked
+terminal editor. This adds no H panel or profile capability. The application
+capability boundary and project simulator dispatch continue to reject H
+profiles until product-loop activation.
 
 ## Model Conclusions
 

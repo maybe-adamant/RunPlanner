@@ -9,6 +9,7 @@ import {
   encodeProjectDocument,
   evaluateLinearCompleteness,
   materializeLinearBiome,
+  projectLinearBatchState,
   semanticAddressKey,
   type CompleteLinearCompletenessResult,
   type LinearBiomePlan,
@@ -187,6 +188,15 @@ describe('canonical H Fields materialization', () => {
         activeCageCount: 2,
       },
     ]);
+    const topology = plan(project).topology;
+    if (topology === null) {
+      throw new Error('complete H fixture lost its topology');
+    }
+    expect(
+      topology.continuations
+        .filter((continuation) => continuation.kind === 'batch')
+        .map((continuation) => projectLinearBatchState(catalog, biome, topology, continuation)),
+    ).toEqual(snapshot.batches.map((batch) => batch.batchState));
 
     const minCombat = snapshot.batches[0]?.targets[0]?.room;
     expect(minCombat).toMatchObject({

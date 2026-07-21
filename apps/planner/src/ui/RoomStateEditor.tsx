@@ -9,6 +9,7 @@ import type {
 } from '@run-planner/core';
 import {
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
 } from '@run-planner/core';
@@ -24,6 +25,7 @@ import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 import { SemanticOwnerMarker } from './EvaluationFeedback';
 
 interface RoomStateEditorProps {
+  readonly activeCageCount?: number;
   readonly biome: BiomeAddress;
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
@@ -105,6 +107,7 @@ function countedBinding(
 }
 
 export function RoomStateEditor({
+  activeCageCount,
   biome,
   candidateProjection,
   catalog,
@@ -165,7 +168,73 @@ export function RoomStateEditor({
       </div>
     );
   }
-  if (state.kind === 'fieldsCombat' || state.kind === 'shipCombat') {
+  if (state.kind === 'fieldsCombat') {
+    const cages = room.localChildren.find(
+      (child) => child.kind === 'boundedRewardSlots' && child.key === 'cages',
+    );
+    if (cages?.kind !== 'boundedRewardSlots') {
+      throw new Error(`${room.gameName} has no bounded Fields cages`);
+    }
+    if (
+      activeCageCount === undefined ||
+      activeCageCount < 0 ||
+      activeCageCount > cages.slotKeys.length
+    ) {
+      throw new Error(`${room.gameName} has no valid active Fields cage prefix`);
+    }
+    return (
+      <div className="local-reward-editor" aria-label="Fields cage rewards">
+        {cages.slotKeys.map((slotKey, index) => {
+          const offer = state.cages[slotKey];
+          if (offer === undefined) {
+            throw new Error(`${room.gameName} cage ${slotKey} is missing`);
+          }
+          const address = createLocalRewardAddress(
+            biome,
+            occurrence.occurrenceId,
+            cages.key,
+            slotKey,
+          );
+          const active = index < activeCageCount;
+          return (
+            <section
+              aria-label={`Cage ${index + 1}`}
+              className="local-reward-slot"
+              data-active={active}
+              key={slotKey}
+            >
+              <div className="local-reward-heading">
+                <div className="owner-markers">
+                  <h4>Cage {index + 1}</h4>
+                  <SemanticOwnerMarker address={address} />
+                </div>
+                <span className="neutral-status">{active ? 'Active' : 'Dormant'}</span>
+              </div>
+              <CountedRewardEditor
+                binding={cages.reward}
+                candidateOwner={{ kind: 'localReward', address }}
+                candidateProjection={candidateProjection}
+                catalog={catalog}
+                idPrefix={`${idPrefix}-${slotKey}`}
+                offer={offer}
+                onReplace={(value) =>
+                  dispatch(
+                    authoredProjectCommandDispatched({
+                      kind: 'ReplaceLocalReward',
+                      reward: address,
+                      value,
+                    }),
+                  )
+                }
+                project={project}
+              />
+            </section>
+          );
+        })}
+      </div>
+    );
+  }
+  if (state.kind === 'shipCombat') {
     throw new Error(`${room.gameName} ${state.kind} editor is not active`);
   }
   if (state.kind === 'ephyraCombat') {
