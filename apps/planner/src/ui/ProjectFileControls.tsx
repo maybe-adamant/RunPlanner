@@ -7,7 +7,13 @@ import type {
   ProjectOperations,
 } from '../application/projectOperations';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../application/store';
+import {
+  selectPresentProject,
+  selectProfileSession,
+  selectProfileStatus,
+  useAppDispatch,
+  useAppSelector,
+} from '../application/store';
 import { SemanticOwnerMarker } from './EvaluationFeedback';
 
 const projectAddress = createProjectAddress();
@@ -46,6 +52,8 @@ function ProjectNameControl({ projectName }: { readonly projectName: string }) {
 
 export function ProjectFileControls({ operations }: { readonly operations: ProjectOperations }) {
   const project = useAppSelector(selectPresentProject);
+  const profileSession = useAppSelector(selectProfileSession);
+  const profileStatus = useAppSelector(selectProfileStatus);
   const [result, setResult] = useState<ProjectOperationResult | null>(null);
   const [pendingOperation, setPendingOperation] = useState<ProjectOperation | null>(null);
 
@@ -68,6 +76,9 @@ export function ProjectFileControls({ operations }: { readonly operations: Proje
       aria-label="Project profile"
     >
       <ProjectNameControl key={project.name} projectName={project.name} />
+      <span className="profile-status" data-profile-status={profileStatus.toLowerCase()}>
+        {profileStatus}
+      </span>
       <div className="project-file-actions">
         <button onClick={() => setResult(operations.createNew())} type="button">
           New
@@ -86,7 +97,22 @@ export function ProjectFileControls({ operations }: { readonly operations: Proje
         >
           {pendingOperation === 'loadProfile' ? 'Loading…' : 'Load Profile'}
         </button>
+        {profileSession.recoveryStatus === 'blocked' && (
+          <button onClick={() => setResult(operations.discardAutosaveRecovery())} type="button">
+            Discard Autosave
+          </button>
+        )}
       </div>
+      {profileSession.recoveryError !== null && (
+        <p className="project-operation-result" data-status="failure" role="alert">
+          {profileSession.recoveryError}
+        </p>
+      )}
+      {profileSession.autosaveError !== null && (
+        <p className="project-operation-result" data-status="failure" role="alert">
+          {profileSession.autosaveError}
+        </p>
+      )}
       {result !== null && (
         <p
           className="project-operation-result"

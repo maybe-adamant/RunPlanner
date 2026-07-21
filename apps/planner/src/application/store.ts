@@ -4,13 +4,18 @@ import {
   canUndoProjectHistory,
   type Catalog,
   type ProjectDocument,
+  encodeProjectDocument,
 } from '@run-planner/core';
 import { useDispatch, useSelector } from 'react-redux';
 
 import type { PlannerCapabilities } from './capabilities';
 import { editorSessionReducer } from './editorSessionSlice';
 import { indexFindingsByOwner } from './evaluationProjection';
-import { profileSessionReducer } from './profileSessionSlice';
+import {
+  createInitialProfileSessionState,
+  createProfileSessionReducer,
+  type ProfileSessionState,
+} from './profileSessionSlice';
 import { requireProjectAuthorable } from './projectDocuments';
 import { createProjectWorkspaceReducer, type ProjectEvaluator } from './projectWorkspaceSlice';
 
@@ -18,6 +23,7 @@ export interface CreatePlannerStoreOptions {
   readonly catalog: Catalog;
   readonly capabilities: PlannerCapabilities;
   readonly initialProject: ProjectDocument;
+  readonly initialProfileSession?: ProfileSessionState;
   readonly evaluateProject: ProjectEvaluator;
 }
 
@@ -32,7 +38,9 @@ export function createPlannerStore(options: CreatePlannerStoreOptions) {
         options.evaluateProject,
       ),
       editorSession: editorSessionReducer,
-      profileSession: profileSessionReducer,
+      profileSession: createProfileSessionReducer(
+        options.initialProfileSession ?? createInitialProfileSessionState(),
+      ),
     },
   });
 }
@@ -47,6 +55,21 @@ export const selectPresentProject = (state: RootState) => state.projectWorkspace
 export const selectProjectEvaluation = (state: RootState) => state.projectWorkspace.evaluation;
 export const selectExplicitProfileBaselineJson = (state: RootState) =>
   state.profileSession.explicitBaselineJson;
+export const selectProfileSession = (state: RootState) => state.profileSession;
+export type ProfileStatus = 'Clean' | 'Dirty' | 'Recovered' | 'Unsaved';
+export const selectProfileStatus = createSelector(
+  selectPresentProject,
+  selectProfileSession,
+  (project, session): ProfileStatus => {
+    if (session.recoveryStatus === 'recovered') {
+      return 'Recovered';
+    }
+    if (session.explicitBaselineJson === null) {
+      return 'Unsaved';
+    }
+    return encodeProjectDocument(project) === session.explicitBaselineJson ? 'Clean' : 'Dirty';
+  },
+);
 export const selectProjectFindingsByOwner = createSelector(selectProjectEvaluation, (evaluation) =>
   indexFindingsByOwner(evaluation.findings),
 );

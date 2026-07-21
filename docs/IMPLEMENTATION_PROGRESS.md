@@ -196,8 +196,30 @@ publishes fresh history, evaluation, and normalized explicit baseline.
 New clears that explicit baseline. Save/load cancellation, adapter failure,
 decode failure, and dormant-biome rejection retain the current project,
 evaluation, history, and baseline. Application, browser-adapter, core-command,
-and interaction fixtures cover those lifecycle contacts. Dirty-state
-presentation and the separate autosave recovery channel remain Commit 6 work.
+and interaction fixtures cover those lifecycle contacts.
+
+Phase 5 Commit 6 is complete. The visible profile state is derived from the
+canonical current project and exact explicit save/load baseline: New is
+Unsaved, equal snapshots are Clean, unequal snapshots are Dirty, and startup
+recovery remains Recovered until an explicit save/load establishes a new
+profile state. Undoing to the baseline therefore becomes clean without an
+imperative dirty flag.
+
+Browser-local recovery is a separately injected adapter and debounced observer.
+Only effective authored-project replacements schedule it; navigation,
+evaluation publication, profile-session updates, and autosave result actions do
+not. Startup recovery capability-decodes before store construction and receives
+fresh history and simulation without writing merely because the app booted.
+
+Malformed, capability-invalid, or unreadable recovery opens the safe fallback
+project while preserving the raw value and suspending writes. Explicit Discard
+Autosave or a successfully decoded profile load clears that blockade; a clear
+failure leaves the current workspace and recovery value untouched. Autosave
+write failure is visible but never removes or blocks the editable project.
+Deterministic scheduler and browser-storage fixtures cover debounce,
+cancellation, undo-to-clean, recovered-unsaved behavior, corruption,
+capability rejection, discard/load unblocking, and recovery read/write/clear
+failures.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
@@ -901,8 +923,8 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, and 4 have no pending items. Phase 5 Commit 6, dirty state and
-autosave recovery, is the next implementation frontier.
+Phases 2.8, 3, and 4 have no pending items. Phase 5 Commit 7, F/G product-loop
+closure, is the next implementation frontier.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete
