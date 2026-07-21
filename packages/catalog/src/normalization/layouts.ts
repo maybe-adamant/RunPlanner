@@ -251,6 +251,28 @@ function normalizeBatchPolicy(rawPolicy: GeneratedBatchPolicy, path: string): Ge
     ) {
       fail(`${path}.fields`, 'fields policy requires cageOutcome enum [min, max] with default min');
     }
+    const minDoorCageRewards = requirePositiveInteger(
+      rawPolicy.minDoorCageRewards,
+      `${path}.minDoorCageRewards`,
+    );
+    const maxDoorCageRewards = requirePositiveInteger(
+      rawPolicy.maxDoorCageRewards,
+      `${path}.maxDoorCageRewards`,
+    );
+    if (minDoorCageRewards > maxDoorCageRewards) {
+      fail(`${path}.minDoorCageRewards`, 'must not exceed maxDoorCageRewards');
+    }
+    const maxDoorCageCeiling = requirePositiveInteger(
+      rawPolicy.maxDoorCageCeiling,
+      `${path}.maxDoorCageCeiling`,
+    );
+    return Object.freeze({
+      kind: rawPolicy.kind,
+      fields,
+      minDoorCageRewards,
+      maxDoorCageRewards,
+      maxDoorCageCeiling,
+    });
   } else if (fields.length !== 0) {
     fail(`${path}.fields`, `${rawPolicy.kind} policy does not own authored batch fields`);
   }
@@ -445,6 +467,28 @@ function normalizeLinearLayout(
     layout.continuation.batchPolicy,
     `${path}.continuation.batchPolicy`,
   );
+  if (batchPolicy.kind === 'fields') {
+    for (const room of rooms.values) {
+      if (
+        room.biomeKey !== layout.biomeKey ||
+        room.mode.kind !== 'authored' ||
+        room.mode.templateKey !== 'FieldsCombat'
+      ) {
+        continue;
+      }
+      const cages = room.localChildren[0];
+      if (
+        cages?.kind !== 'boundedRewardSlots' ||
+        cages.maxActiveSlots < batchPolicy.minDoorCageRewards ||
+        cages.maxActiveSlots > batchPolicy.maxDoorCageRewards
+      ) {
+        fail(
+          `${path}.continuation.batchPolicy`,
+          `${room.gameName} cage capacity must be within ${batchPolicy.minDoorCageRewards}..${batchPolicy.maxDoorCageRewards}`,
+        );
+      }
+    }
+  }
   const terminal = normalizeTerminal(layout.terminal, layout.biomeKey, rooms, `${path}.terminal`);
   if (terminal.kind === 'fixedAuthoredSlot') {
     fail(`${path}.terminal.kind`, 'fixed authored terminals require HubBiome');

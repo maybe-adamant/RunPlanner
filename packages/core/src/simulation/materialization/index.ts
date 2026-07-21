@@ -2,10 +2,12 @@ export { LinearMaterializationContractError, materializeLinearBiome } from './li
 export type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
+  CanonicalBatchState,
   CanonicalBatchRewardStore,
   CanonicalBiomeState,
   CanonicalCompletionRoom,
   CanonicalLinearBiome,
+  CanonicalLocalReward,
   CanonicalPhysicalExit,
   CanonicalResolvedIncomingReward,
   CanonicalRoom,

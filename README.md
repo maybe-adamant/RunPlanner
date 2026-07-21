@@ -70,12 +70,13 @@ responsiveness. The acceptance matrix and browser-only smoke procedure are
 recorded in
 [`docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md`](docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md).
 
-Phase 6 has begun with dormant H authored-topology support. The core project
-codec and semantic commands now express H's fixed four-batch Fields spine,
-no-store batch authority, Min/Max cage outcome, complete bounded cage leaves,
-and forked preboss while application capabilities remain limited to F/G.
-Canonical H materialization, history, validation, candidates, editor
-projection, and activation remain subsequent controlled slices.
+Phase 6 now includes dormant H authored topology and canonical Fields
+materialization. The core derives Min/Max cage capacity from physical targets,
+projects only each combat occurrence's active cage prefix, retains clamped and
+no-combat Max outcomes, and materializes H's intro, forked preboss, boss, and
+postboss without changing authored leaves. Application capabilities remain
+limited to F/G; H history, validation, candidates, editor projection, and
+activation remain subsequent controlled slices.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

@@ -295,6 +295,13 @@ A canonical batch records:
   occurrences;
 - semantic addresses for each fact.
 
+For Fields batches, canonical `batchState` is a typed projection of the
+authored Min/Max outcome plus the declaration- and physical-target-derived
+batch capacity and selected cage count. A no-combat batch still retains that
+semantic result, while each combat room exposes only its active addressed
+local-reward prefix. Capacity derivation never removes or rewrites dormant
+authored cage leaves.
+
 A canonical room records authored occurrence ID, concrete game room identity,
 resolved encounter phases, room-local state, local children, offers,
 acquisitions, and return addresses. It does not copy labels, candidate arrays,

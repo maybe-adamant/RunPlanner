@@ -4,13 +4,14 @@ import type {
   CompletionRoomAddress,
   ContinuationAddress,
   IncomingRewardAddress,
+  LocalRewardAddress,
   OccurrenceAddress,
   PickedAddress,
   ShopOfferAddress,
   ShopPurchaseAddress,
   TargetAddress,
 } from '../../project/addresses';
-import type { AuthoredBatchState, OccurrenceId } from '../../project/model';
+import type { OccurrenceId } from '../../project/model';
 import type { ResolvedRewardOffer } from '../../rewardKernel/model';
 
 export interface CanonicalResolvedIncomingReward {
@@ -36,6 +37,15 @@ export interface CanonicalShopEntryState {
   readonly offers: readonly CanonicalShopOffer[];
 }
 
+export interface CanonicalLocalReward {
+  readonly origin: LocalRewardAddress;
+  readonly groupKey: string;
+  readonly slotKey: string;
+  readonly producerLifecycleKey: string;
+  readonly offer: ResolvedRewardOffer;
+  readonly resolvedStoreKey: string;
+}
+
 export interface CanonicalAuthoredRoom {
   readonly kind: 'authored';
   readonly origin: OccurrenceAddress;
@@ -47,6 +57,7 @@ export interface CanonicalAuthoredRoom {
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;
   readonly incomingReward?: CanonicalResolvedIncomingReward;
+  readonly localRewards?: readonly CanonicalLocalReward[];
   readonly entryState?: CanonicalShopEntryState;
 }
 
@@ -102,11 +113,20 @@ export type CanonicalBatchRewardStore =
   | { readonly origin: BatchRewardStoreAddress; readonly kind: 'sourceOfferPoint' }
   | { readonly origin: BatchRewardStoreAddress; readonly kind: 'none' };
 
+export type CanonicalBatchState =
+  | { readonly kind: 'standard' }
+  | {
+      readonly kind: 'fields';
+      readonly cageOutcome: 'min' | 'max';
+      readonly batchCapacity: number;
+      readonly activeCageCount: number;
+    };
+
 export interface CanonicalBatch {
   readonly origin: ContinuationAddress;
   readonly parent: CanonicalRoomReference;
   readonly rewardStore: CanonicalBatchRewardStore;
-  readonly batchState: AuthoredBatchState;
+  readonly batchState: CanonicalBatchState;
   readonly targets: readonly CanonicalTarget[];
   readonly pickedExitIndex: number;
   readonly pickedOrigin: PickedAddress;

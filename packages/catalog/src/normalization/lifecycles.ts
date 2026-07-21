@@ -45,6 +45,11 @@ const expectedEffects = {
   enterRoom: ['recordAppearance'],
   startEncounter: ['recordEncounterStart', 'advanceEncounterDepth'],
   completeEncounter: ['recordEncounterCompletion'],
+  runEncounterSequence: [
+    'recordEncounterStart',
+    'advanceEncounterDepth',
+    'recordEncounterCompletion',
+  ],
   advanceProducer: ['recordProducerPoint'],
   generateOutgoingBatch: ['recordOutgoingGeneration'],
   applyShopPurchases: ['recordShopPurchases'],
@@ -97,6 +102,7 @@ function normalizeOperation(raw: RoomLifecycleOperation, path: string): RoomLife
     case 'prepareRoom':
     case 'enterRoom':
     case 'generateOutgoingBatch':
+    case 'runEncounterSequence':
     case 'commitRoom':
     case 'exitRoom':
       return Object.freeze({
@@ -262,16 +268,27 @@ function validateEncounterCompatibility(
   const usesOnlyEncounter = profile.operations.some(
     (operation) => operation.kind === 'startEncounter' || operation.kind === 'completeEncounter',
   );
-  if (!usesOnlyEncounter) {
-    return;
+  const usesEncounterSequence = profile.operations.some(
+    (operation) => operation.kind === 'runEncounterSequence',
+  );
+  if (usesOnlyEncounter && usesEncounterSequence) {
+    fail(path, 'cannot combine only-encounter operations with an encounter sequence');
+  }
+  if (
+    profile.operations.filter((operation) => operation.kind === 'runEncounterSequence').length > 1
+  ) {
+    fail(path, 'lifecycle may run at most one encounter sequence');
   }
   for (const [index, key] of profile.encounterProfileKeys.entries()) {
     const encounter = encounterProfiles.byKey[key];
-    if (encounter?.phases.length !== 1) {
+    if (usesOnlyEncounter && encounter?.phases.length !== 1) {
       fail(
         `${path}.encounterProfileKeys[${index}]`,
         `${key} must expose exactly one phase for the only selector`,
       );
+    }
+    if (usesEncounterSequence && (encounter?.phases.length ?? 0) === 0) {
+      fail(`${path}.encounterProfileKeys[${index}]`, `${key} must expose encounter phases`);
     }
   }
 }

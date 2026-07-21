@@ -155,7 +155,7 @@ derived entry         routeKey + biomeKey + entry role
 derived completion    routeKey + biomeKey + completion role
 fixed authored room   routeKey + biomeKey + fixedSlotKey
 room leaf             routeKey + biomeKey + occurrenceId + aspect
-local child           routeKey + biomeKey + occurrenceId + localSlotKey + aspect
+local child           routeKey + biomeKey + occurrenceId + groupKey + localSlotKey + aspect
 ```
 
 React components may use the persisted occurrence ID as their key. Rendered

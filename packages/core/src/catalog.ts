@@ -102,6 +102,7 @@ export type RoomLifecycleOperation =
       readonly kind: 'completeEncounter';
       readonly encounter: EncounterPhaseSelector;
     })
+  | (RoomLifecycleOperationBase & { readonly kind: 'runEncounterSequence' })
   | (RoomLifecycleOperationBase & {
       readonly kind: 'advanceProducer';
       readonly point: ProducerLifecyclePointKey;
@@ -357,6 +358,9 @@ export type GeneratedBatchPolicy =
   | {
       readonly kind: 'fields';
       readonly fields: readonly AuthoredFieldDescriptor[];
+      readonly minDoorCageRewards: number;
+      readonly maxDoorCageRewards: number;
+      readonly maxDoorCageCeiling: number;
     }
   | {
       readonly kind: 'clockwork';

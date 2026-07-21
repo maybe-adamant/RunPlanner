@@ -59,6 +59,7 @@ describe('room lifecycle catalog', () => {
     expect(catalog.roomLifecycleProfiles.values.map((profile) => profile.key)).toEqual([
       'StandardRewardRoom',
       'RewardlessRoom',
+      'FieldsCombatRoom',
       'WorldShopRoom',
       'TerminalRewardRoom',
       'TerminalWorldShopRoom',
@@ -73,6 +74,28 @@ describe('room lifecycle catalog', () => {
     expect(
       Object.isFrozen(catalog.roomLifecycleProfiles.byKey.StandardRewardRoom?.operations),
     ).toBe(true);
+  });
+
+  it('executes every active Fields encounter phase in declaration order', () => {
+    const events = executeRoomLifecycle(
+      catalog,
+      inputWithoutProducer({
+        lifecycleProfileKey: 'FieldsCombatRoom',
+        encounterProfileKey: 'H_FieldsCombatCage2',
+      }),
+    ).events;
+
+    expect(
+      events.filter((event) => event.kind === 'encounterStarted').map((event) => event.phaseKey),
+    ).toEqual(['Passive', 'Cage01', 'Cage02']);
+    expect(
+      events
+        .filter((event) => event.kind === 'encounterDepthAdvanced')
+        .map((event) => event.phaseKey),
+    ).toEqual(['Cage01', 'Cage02']);
+    expect(
+      events.filter((event) => event.kind === 'encounterCompleted').map((event) => event.phaseKey),
+    ).toEqual(['Passive', 'Cage01', 'Cage02']);
   });
 
   it('rejects unknown operation, effect, producer point, and encounter references', () => {
