@@ -186,9 +186,9 @@ is separately deferred until concrete NPC gifts and trait state exist.
 | H physical exits          | ported   | extracted map topology, `biomes/H_GAME_RULES.md`                              | One exit for intro, Combat01, Miniboss02, and preboss; two for every other supported generated H room.                                      |
 | H combat declarations     | ported   | `RoomSets.lua`, `RoomDataH.lua`, `biomes/H_GAME_RULES.md`                     | All 15 concrete rooms preserve depth restrictions, raw cage capacities, no top-level reward, and three bounded local reward values.         |
 | Fields cage batch state   | ported   | `RoomLogic.lua`, `EventLogic.lua`, `biomes/H_GAME_RULES.md`                   | Semantic Min/Max state, exact decoding, and the Min default exist; visible cage count and the hidden ceiling are not persisted.             |
-| Fields ceiling derivation | ready    | `EventLogic.lua`, `biomes/H_GAME_RULES.md`                                    | Derive the two-Max ceiling and no-combat ordinary-batch updates during Phase 3 history composition.                                         |
+| Fields ceiling derivation | ported   | `EventLogic.lua`, `biomes/H_GAME_RULES.md`                                    | Typed ordinary-batch events derive the Max counter, including capacity-two and no-combat outcomes.                                          |
 | H encounter projection    | ported   | H generated encounters, `RoomLogic.lua`, `biomes/H_GAME_RULES.md`             | Two- and three-cage profiles declare a non-counting passive phase and one counting phase per effective cage.                                |
-| H cage reward lifecycle   | ready    | `RoomLogic.lua`, `LootData.lua`, `RewardLogic.lua`, `biomes/H_GAME_RULES.md`  | Resolve every active picked/unpicked cage offer through one ordered RunProgress batch; acquire all active cages only on entry.              |
+| H cage reward lifecycle   | ported   | `RoomLogic.lua`, `LootData.lua`, `RewardLogic.lua`, `biomes/H_GAME_RULES.md`  | Shared reward replay resolves every active picked/unpicked cage offer in physical order and acquires only the entered occurrence's cages.   |
 | H generated-store policy  | ported   | `RoomDataH.lua`, `RoomLogic.lua`, `biomes/H_GAME_RULES.md`                    | `none` is normalized: supported targets are reward-free or declaration-owned RunProgress; no generic Run/Meta value is persisted.           |
 | Fields optional rewards   | deferred | `RoomDataH.lua`, `RoomLogic.lua`, `LootData.lua`, `biomes/H_GAME_RULES.md`    | Canonical v1 trace acquires none; do not fold the isolated optional bag into cage slots or batch state.                                     |
 | H minibosses              | ported   | `RoomDataH.lua`, miniboss encounters, `biomes/H_GAME_RULES.md`                | Exact exits, one-creation caps, entered mutual exclusion, force window, counting profiles, and forced RunProgress Boons normalize.          |
@@ -313,8 +313,12 @@ boundary; each biome rule document owns its exact room-level instances:
 - **Excluded:** external save/profile predicates, inaccessible or debug-only
   rooms, noncanonical difficulty variants, and automatic boss drops without a
   modeled downstream consumer do not enter production declarations.
-- **Dormant:** P/Q/H/O/I/N have complete declarations but no authored topology
-  codec, materializer, simulator dispatch, semantic findings, or editor panel.
+- **Dormant:** P/Q/O/I/N have complete declarations but no connected authored
+  topology, materializer, simulator dispatch, semantic findings, or editor
+  panel. H additionally has dormant authored topology, canonical
+  materialization, history, and reward replay, but still has no selected
+  validation, candidates, editor projection, simulator dispatch, or product
+  capability.
 
 No generic `unsupported` field, compatibility scaffold, placeholder
 materializer, or route-qualified duplicate biome authority remains.

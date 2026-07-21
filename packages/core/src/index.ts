@@ -191,6 +191,7 @@ export {
   type BiomeCompletedHistoryEvent,
   type BiomeCounterResetHistoryEvent,
   type BiomeStartedHistoryEvent,
+  type FieldsBatchOutcomeHistoryEvent,
   type CanonicalFHistory,
   type CanonicalLinearHistory,
   type CanonicalAuthoredRoom,

@@ -219,10 +219,24 @@ function materializeFieldsCombat(
   if (storeKey === undefined) {
     fail(`${context.room.gameName} has no Fields cage reward store`);
   }
-  const localRewards = descriptor.slotKeys.slice(0, activeCageCount).map((slotKey) => {
+  const encounterProfileKey = fieldsEncounterProfileKey(
+    context.catalog,
+    context.room.biomeKey,
+    activeCageCount,
+  );
+  const encounter = context.catalog.encounterProfiles.byKey[encounterProfileKey];
+  const cagePhases = encounter?.phases.filter((phase) => phase.countsEncounterDepth) ?? [];
+  if (cagePhases.length !== activeCageCount) {
+    fail(`${context.room.gameName} has no complete active cage encounter sequence`);
+  }
+  const localRewards = descriptor.slotKeys.slice(0, activeCageCount).map((slotKey, index) => {
     const offer = state.cages[slotKey];
+    const encounterPhase = cagePhases[index];
     if (offer === undefined) {
       fail(`${context.room.gameName} is missing authored cage ${slotKey}`);
+    }
+    if (encounterPhase === undefined) {
+      fail(`${context.room.gameName} is missing encounter phase for ${slotKey}`);
     }
     return Object.freeze({
       origin: createLocalRewardAddress(
@@ -233,6 +247,7 @@ function materializeFieldsCombat(
       ),
       groupKey: descriptor.key,
       slotKey,
+      encounterPhaseKey: encounterPhase.key,
       producerLifecycleKey: descriptor.reward.producerLifecycleKey,
       offer,
       resolvedStoreKey: storeKey,
@@ -240,11 +255,7 @@ function materializeFieldsCombat(
   });
   return Object.freeze({
     lifecycleProfileKey: 'FieldsCombatRoom',
-    encounterProfileKey: fieldsEncounterProfileKey(
-      context.catalog,
-      context.room.biomeKey,
-      activeCageCount,
-    ),
+    encounterProfileKey,
     localRewards: Object.freeze(localRewards),
   });
 }

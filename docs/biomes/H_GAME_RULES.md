@@ -14,9 +14,10 @@ batches add one H-specific semantic outcome that activates bounded cage slots
 owned by each combat occurrence.
 
 H declarations, dormant authored topology, canonical Fields materialization,
-and focused parity fixtures are ported. H intentionally remains non-authorable,
-non-simulatable, and non-editable at the application capability boundary until
-its complete product loop is implemented.
+route history, reward replay, and focused parity fixtures are ported. H
+intentionally remains non-authorable, non-simulatable, and non-editable at the
+application capability boundary until its complete product loop is
+implemented.
 
 ## Evidence Status
 
@@ -65,9 +66,9 @@ declaration, dormant authored-topology, and canonical-materialization coverage.
 | Physical exits              | Intro, Combat01, Miniboss02, and preboss have one; other supported generated rooms have two                                          | **Exact:** declaration-owned ordered physical exits                                                  | documented, declared, authored, materialized | --                                                            |
 | Combat peer repetition      | Combat rooms have no creation cap and may be offered again until entered; current-room repeat and entered appearance are rejected    | **Exact:** repeated Room Occurrences with concrete game identity                                     | declared                                     | --                                                            |
 | Fields cage batch           | One Min/Max result and one effective capacity apply to every combat target in a generated peer batch                                 | **Exact:** batch-owned semantic outcome activates room-owned bounded local slots                     | documented, declared, authored, materialized | --                                                            |
-| Maximum-cage ceiling        | At most two Max outcomes update `FieldsMaxDoorsRolled`; capacity clamping does not suppress the update                               | **Exact:** history-derived counter from semantic batch outcomes                                      | documented                                   | --                                                            |
-| Passive and cage encounters | The ambient combat encounter does not count; every entered cage encounter counts                                                     | **Exact:** zero-count ambient phase plus one counting phase per active cage                          | documented, declared, materialized           | --                                                            |
-| Cage rewards                | Every generated combat target receives two or three RunProgress cage offers; only entered target cages are fought and acquired       | **Exact:** offer every active local slot; acquire every active slot of the picked target             | documented, declared, authored, materialized | --                                                            |
+| Maximum-cage ceiling        | At most two Max outcomes update `FieldsMaxDoorsRolled`; capacity clamping does not suppress the update                               | **Exact:** history-derived counter from semantic batch outcomes                                      | documented, history                          | --                                                            |
+| Passive and cage encounters | The ambient combat encounter does not count; every entered cage encounter counts                                                     | **Exact:** zero-count ambient phase plus one counting phase per active cage                          | documented, declared, materialized, history  | --                                                            |
+| Cage rewards                | Every generated combat target receives two or three RunProgress cage offers; only entered target cages are fought and acquired       | **Exact:** offer every active local slot; acquire every active slot of the picked target             | documented, declared, authored, replayed     | --                                                            |
 | Generated base store        | Door generation computes Run/Meta, but every supported target is reward-free or resolves `BaseH.IndividualRewardStore = RunProgress` | **Simplified:** use batch policy `none`; preserve every concrete RunProgress offer and ledger effect | documented, declared, authored, materialized | A supported H target consumes an unoverridden base store      |
 | Fields optional rewards     | Entered combat rooms independently spawn zero to four non-required rewards from a separate bag                                       | **Deferred:** canonical v1 trace acquires none and emits no authored optional-reward state           | documented                                   | Optional pickup simulation becomes product scope              |
 | Minibosses                  | Two mutually exclusive entered variants force Boons and compete under a depth force window                                           | **Exact:** separate declarations, sequential creation caps, and counting encounters                  | declared, materialized                       | --                                                            |
@@ -524,10 +525,26 @@ materializes the fixed intro, both terminal realizations, neutral boss, and
 postboss without mutating authored cage state. The terminal transition owns no
 synthetic Fields outcome.
 
-H does not yet compose lifecycle history, validate selected game or reward
-support, evaluate candidates, or project an editor. The application capability
-boundary therefore continues to reject H profiles and semantic edits until the
-complete product loop is ready.
+Route history composes that snapshot only after validated G history. Every
+ordinary batch emits its semantic Fields outcome before target creation, so
+the folded state exposes the correct `fieldsMaxDoorsRolled` value at each
+generation checkpoint. Actual materialized encounter-profile identity is
+recorded rather than reconstructed from the room declaration: the entered
+combat occurrence therefore contributes one non-counting Passive phase and
+exactly one counting phase per active cage. Fixed RunProgress provenance is
+recorded for entered miniboss, Bridge, preboss, and boss rooms but not for H
+combat rooms.
+
+Reward replay begins from G's carried reward bags and history. It resolves
+each target's ordinary producer and then every active cage in physical order,
+retaining one peer context across the batch. Active cages on unpicked combat
+targets emit offers and consume bag support but never acquire; each active cage
+on the picked combat target acquires at its matching encounter completion.
+
+H does not yet validate selected room/Fields support, evaluate candidates, or
+project an editor. The application capability boundary and project simulator
+dispatch therefore continue to reject H profiles until the complete product
+loop is ready.
 
 ## Model Conclusions
 

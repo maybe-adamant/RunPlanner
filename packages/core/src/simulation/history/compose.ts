@@ -3,12 +3,14 @@ import {
   createBiomeAddress,
   semanticAddressKey,
   type BiomeAddress,
+  type ContinuationAddress,
   type OccurrenceAddress,
 } from '../../project/addresses';
 import type { EnteredRewardStoreHistoryPolicy } from '../../rewards';
 import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,
+  CanonicalBatchState,
   CanonicalLinearBiome,
   CanonicalRoom,
   CanonicalTarget,
@@ -57,6 +59,7 @@ function standaloneRoomCreated(
     kind: 'roomCreated',
     origin: room.origin,
     gameName: room.gameName,
+    encounterProfileKey: room.encounterProfileKey,
     source,
     picked: true,
   });
@@ -73,6 +76,7 @@ function generatedTargetCreated(
     kind: 'roomCreated',
     origin: target.room.origin,
     gameName: target.room.gameName,
+    encounterProfileKey: target.room.encounterProfileKey,
     source: 'generatedTarget',
     picked: target.picked,
     parentOrigin,
@@ -148,11 +152,30 @@ function appendGeneratedTargets(
   );
 }
 
+function appendBatchState(
+  builder: EventBuilder,
+  origin: ContinuationAddress,
+  batchState: CanonicalBatchState,
+): void {
+  if (batchState.kind !== 'fields') {
+    return;
+  }
+  append(builder, {
+    kind: 'fieldsBatchOutcomeRecorded',
+    origin,
+    cageOutcome: batchState.cageOutcome,
+    batchCapacity: batchState.batchCapacity,
+    activeCageCount: batchState.activeCageCount,
+  });
+}
+
 function appendRoomLifecycle(
   builder: EventBuilder,
   catalog: Catalog,
   room: CanonicalRoom,
   generatedTargets?: readonly CanonicalTarget[],
+  batchState?: CanonicalBatchState,
+  batchOrigin?: ContinuationAddress,
 ): void {
   if (room.kind === 'authored' && !room.entered) {
     throw new LinearHistoryCompositionContractError(
@@ -173,6 +196,14 @@ function appendRoomLifecycle(
         throw new LinearHistoryCompositionContractError(
           `${room.gameName} derived room cannot own generated targets`,
         );
+      }
+      if (batchState !== undefined) {
+        if (batchOrigin === undefined) {
+          throw new LinearHistoryCompositionContractError(
+            `${room.gameName} has batch state without a continuation origin`,
+          );
+        }
+        appendBatchState(builder, batchOrigin, batchState);
       }
       appendGeneratedTargets(builder, room.origin, generatedTargets);
       injectedTargets = true;
@@ -266,6 +297,7 @@ export function composeLinearHistory(
       biomeEncounterDepth: layout.initialCounters.biomeEncounterDepth,
       routeEncounterDepth: seed?.ledgers.counters.routeEncounterDepth ?? 1,
       roomHistoryOrdinal: seed?.ledgers.counters.roomHistoryOrdinal ?? 0,
+      ...(layout.continuation.batchPolicy.kind === 'fields' ? { fieldsMaxDoorsRolled: 0 } : {}),
     }),
   });
   standaloneRoomCreated(builder, entry, 'biomeEntry');
@@ -273,7 +305,7 @@ export function composeLinearHistory(
 
   for (const batch of snapshot.batches) {
     requireParent(source, batch.parent.origin, 'batch');
-    appendRoomLifecycle(builder, catalog, source, batch.targets);
+    appendRoomLifecycle(builder, catalog, source, batch.targets, batch.batchState, batch.origin);
     source = pickedRoom(batch.targets, semanticAddressKey(batch.origin));
   }
 

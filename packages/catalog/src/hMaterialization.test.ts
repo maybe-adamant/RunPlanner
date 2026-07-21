@@ -198,6 +198,7 @@ describe('canonical H Fields materialization', () => {
 
     expect(minCombat?.localRewards?.[1]).toMatchObject({
       groupKey: 'cages',
+      encounterPhaseKey: 'Cage02',
       resolvedStoreKey: 'RunProgress',
     });
     expect(semanticAddressKey(minCombat!.localRewards![1]!.origin)).toBe(

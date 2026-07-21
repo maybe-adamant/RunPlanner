@@ -18,6 +18,7 @@ export type {
   CanonicalLinearHistory,
   EncounterHistoryEntry,
   EnteredRewardStoreHistoryEntry,
+  FieldsBatchOutcomeHistoryEvent,
   FHistoryCounters,
   FHistoryEvent,
   FHistoryLedgers,
