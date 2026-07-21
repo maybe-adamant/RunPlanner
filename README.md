@@ -51,7 +51,7 @@ interaction fixture authors the representative valid F route through visible
 controls, verifies player-facing labels, and reloads equal authored and
 evaluated state.
 
-Phase 5 Commits 1 through 5 are complete. Generated room candidates and every
+Phase 5 Commits 1 through 6 are complete. Generated room candidates and every
 active reward/shop value are evaluated through the
 same simulation authorities used by selected-plan validation. F and G now
 share the complete linear simulation, candidate, editor, navigation, and
@@ -59,7 +59,12 @@ finding path; both are authorable, simulatable, and editable while later
 biomes remain dormant. The current profile workflow saves and loads normalized
 `ProjectDocument` files through one injected adapter, supports undoable project
 names and safe filename suggestions, and tracks the exact explicit save/load
-baseline. Dirty-state presentation and autosave recovery are the next slice.
+baseline. Clean, Dirty, Unsaved, and Recovered are derived from that canonical
+baseline contract. A separately injected browser-local recovery channel now
+debounces only authored replacements, capability-decodes startup recovery, and
+preserves unreadable recovery behind an explicit discard/load blockade. The
+remaining Phase 5 work is the F/G product-loop, accessibility, and measured
+responsiveness closure.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

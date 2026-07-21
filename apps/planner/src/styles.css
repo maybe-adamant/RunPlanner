@@ -201,6 +201,26 @@ button:disabled {
   color: #fffaf2;
 }
 
+.profile-status {
+  padding: 3px 8px;
+  border: 1px solid #3b3c45;
+  border-radius: 999px;
+  color: #aaa7af;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+}
+
+.profile-status[data-profile-status='clean'] {
+  border-color: #3c684e;
+  color: #9bd7af;
+}
+
+.profile-status[data-profile-status='dirty'],
+.profile-status[data-profile-status='recovered'] {
+  border-color: #755d32;
+  color: #e6c27a;
+}
+
 .project-operation-result {
   margin: 0;
   color: #aaa7af;

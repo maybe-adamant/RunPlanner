@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 
 import { createBrowserProfileFileAdapter } from './application/browserProfileFileAdapter';
+import {
+  createBrowserAutosaveRecoveryAdapter,
+  createBrowserAutosaveScheduler,
+} from './application/browserAutosaveRecoveryAdapter';
 import { createApplication } from './application/createApplication';
 import './styles.css';
 import { App } from './ui/App';
@@ -14,6 +18,13 @@ if (rootElement === null) {
 }
 
 const application = createApplication({
+  autosaveRecovery: createBrowserAutosaveRecoveryAdapter({
+    storage: () => globalThis.localStorage,
+  }),
+  autosaveScheduler: createBrowserAutosaveScheduler<number>({
+    clearTimeout: (handle) => globalThis.window.clearTimeout(handle),
+    setTimeout: (task, delayMs) => globalThis.window.setTimeout(task, delayMs),
+  }),
   profileFile: createBrowserProfileFileAdapter({
     Blob: globalThis.Blob,
     URL: globalThis.URL,

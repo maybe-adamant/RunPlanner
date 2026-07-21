@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { encodeProjectDocument } from '@run-planner/core';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '../application/createApplication';
+import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../application/autosaveRecovery';
 import type { ProfileFileAdapter } from '../application/profileFile';
 import { renderPlannerForInteraction } from '../testing/renderPlanner';
 
@@ -135,15 +137,23 @@ describe('project profile interaction', () => {
     const application = createApplication({ profileFile });
     const { user } = renderPlannerForInteraction({ application });
 
+    expect(screen.getByText('Unsaved')).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
     const savedEvaluation = application.store.getState().projectWorkspace.evaluation;
     await user.click(screen.getByRole('button', { name: 'Save Profile' }));
     expect(await screen.findByText('Saved the profile.')).toBeTruthy();
+    expect(screen.getByText('Clean')).toBeTruthy();
+
+    await user.clear(screen.getByRole('textbox', { name: 'Project name' }));
+    await user.type(screen.getByRole('textbox', { name: 'Project name' }), 'Edited after save');
+    await user.click(screen.getByRole('button', { name: 'Rename' }));
+    expect(screen.getByText('Dirty')).toBeTruthy();
     expect(profileJson).not.toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'New' }));
     expect(configuredBiomeCount(application)).toBe(0);
     expect(screen.getByText('Created a new project.')).toBeTruthy();
+    expect(screen.getByText('Unsaved')).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Load Profile' }));
     expect(await screen.findByText('Loaded the profile.')).toBeTruthy();
@@ -151,6 +161,56 @@ describe('project profile interaction', () => {
     expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
     expect(application.store.getState().projectWorkspace.history.future).toEqual([]);
     expect(application.store.getState().projectWorkspace.evaluation).toEqual(savedEvaluation);
+    expect(screen.getByText('Clean')).toBeTruthy();
+  });
+
+  it('presents a restored startup project as recovered', () => {
+    const source = createApplication();
+    const json = encodeProjectDocument(source.store.getState().projectWorkspace.history.present);
+    const application = createApplication({
+      autosaveRecovery: {
+        read: () => json,
+        write: () => {},
+        clear: () => {},
+      },
+      autosaveScheduler: { schedule: () => () => {} },
+    });
+
+    renderPlannerForInteraction({ application });
+
+    expect(screen.getByText('Recovered')).toBeTruthy();
+  });
+
+  it('presents corrupt recovery and exposes its explicit discard action', async () => {
+    let recoveryJson: string | null = '{not json';
+    const recovery: AutosaveRecoveryAdapter = {
+      read: () => recoveryJson,
+      write: (json) => {
+        recoveryJson = json;
+      },
+      clear: () => {
+        recoveryJson = null;
+      },
+    };
+    const scheduler: AutosaveScheduler = {
+      schedule: () => () => {},
+    };
+    const application = createApplication({
+      autosaveRecovery: recovery,
+      autosaveScheduler: scheduler,
+    });
+    const { user } = renderPlannerForInteraction({ application });
+
+    expect(screen.getByRole('alert').textContent).toBe(
+      'Autosave recovery failed: $: must be valid JSON',
+    );
+    expect(screen.getByText('Unsaved')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Discard Autosave' }));
+
+    expect(recoveryJson).toBeNull();
+    expect(screen.queryByText('Autosave recovery failed: $: must be valid JSON')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Discard Autosave' })).toBeNull();
+    expect(screen.getByText('Discarded the unreadable autosave.')).toBeTruthy();
   });
 
   it('presents a load failure and retains the current workspace', async () => {

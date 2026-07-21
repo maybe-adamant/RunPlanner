@@ -1,6 +1,7 @@
 import { encodeProjectDocument, type Catalog } from '@run-planner/core';
 
 import type { PlannerCapabilities } from './capabilities';
+import type { AutosaveRecoveryAdapter } from './autosaveRecovery';
 import { createInitialProject } from './projectBootstrap';
 import { parseAuthorableProjectDocument } from './projectDocuments';
 import type { ProfileFileAdapter } from './profileFile';
@@ -8,10 +9,11 @@ import {
   newProjectCreated,
   profileLoadSucceeded,
   profileSaveSucceeded,
+  recoveryDiscarded,
 } from './profileSessionSlice';
-import { selectPresentProject, type PlannerStore } from './store';
+import { selectPresentProject, selectProfileSession, type PlannerStore } from './store';
 
-export type ProjectOperation = 'loadProfile' | 'new' | 'saveProfile';
+export type ProjectOperation = 'discardRecovery' | 'loadProfile' | 'new' | 'saveProfile';
 
 export type ProjectOperationResult = {
   readonly operation: ProjectOperation;
@@ -21,11 +23,13 @@ export type ProjectOperationResult = {
 
 export interface ProjectOperations {
   createNew(): ProjectOperationResult;
+  discardAutosaveRecovery(): ProjectOperationResult;
   saveProfile(): Promise<ProjectOperationResult>;
   loadProfile(): Promise<ProjectOperationResult>;
 }
 
 interface CreateProjectOperationsOptions {
+  readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly capabilities: PlannerCapabilities;
   readonly catalog: Catalog;
   readonly profileFile: ProfileFileAdapter;
@@ -33,6 +37,7 @@ interface CreateProjectOperationsOptions {
 }
 
 const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freeze({
+  discardRecovery: 'Discard Autosave',
   loadProfile: 'Load Profile',
   new: 'New project',
   saveProfile: 'Save Profile',
@@ -111,6 +116,21 @@ export function createProjectOperations(
         return failure('new', error);
       }
     },
+    discardAutosaveRecovery(): ProjectOperationResult {
+      try {
+        if (selectProfileSession(options.store.getState()).recoveryStatus !== 'blocked') {
+          throw new Error('No unreadable autosave is awaiting discard');
+        }
+        if (options.autosaveRecovery === undefined) {
+          throw new Error('Autosave recovery is unavailable in this environment');
+        }
+        options.autosaveRecovery.clear();
+        options.store.dispatch(recoveryDiscarded());
+        return result('discardRecovery', 'success', 'Discarded the unreadable autosave.');
+      } catch (error) {
+        return failure('discardRecovery', error);
+      }
+    },
     async saveProfile(): Promise<ProjectOperationResult> {
       try {
         const snapshot = currentProject();
@@ -136,6 +156,12 @@ export function createProjectOperations(
         }
         const project = parseAuthorableProjectDocument(json, options.catalog, options.capabilities);
         const baselineJson = encodeProjectDocument(project);
+        if (selectProfileSession(options.store.getState()).recoveryStatus === 'blocked') {
+          if (options.autosaveRecovery === undefined) {
+            throw new Error('Autosave recovery is unavailable in this environment');
+          }
+          options.autosaveRecovery.clear();
+        }
         options.store.dispatch(profileLoadSucceeded({ project, baselineJson }));
         return result('loadProfile', 'success', 'Loaded the profile.');
       } catch (error) {
