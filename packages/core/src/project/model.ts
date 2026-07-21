@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../rewardKernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 4 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 5 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -117,7 +117,30 @@ export interface LinearBiomePlan {
   readonly topology: LinearBiomeTopology | null;
 }
 
-export type AuthoredBiomePlan = LinearBiomePlan;
+export interface FixedAuthoredRoomReference {
+  readonly fixedSlotKey: string;
+  readonly occurrenceId: OccurrenceId;
+}
+
+export interface HubTargetReference {
+  readonly hubSlotKey: string;
+  readonly occurrenceId: OccurrenceId;
+}
+
+export interface HubBiomeTopology {
+  readonly occurrences: readonly RoomOccurrence[];
+  readonly fixedRooms: readonly FixedAuthoredRoomReference[];
+  readonly openTargets: readonly HubTargetReference[];
+  readonly visitOrder: readonly string[];
+}
+
+export interface HubBiomePlan {
+  readonly kind: 'HubBiome';
+  readonly biomeKey: string;
+  readonly topology: HubBiomeTopology | null;
+}
+
+export type AuthoredBiomePlan = HubBiomePlan | LinearBiomePlan;
 
 export interface AuthoredRoutePlan {
   readonly routeKey: string;

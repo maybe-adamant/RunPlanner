@@ -2,11 +2,15 @@ export {
   CompletenessContractError,
   evaluateFCompleteness,
   evaluateLinearCompleteness,
+  evaluateHubCompleteness,
+  type CompleteHubCompletenessResult,
   type CompleteFCompletenessResult,
   type CompleteLinearCompletenessResult,
   type FCompletenessResult,
   type IncompleteFCompletenessResult,
   type IncompleteLinearCompletenessResult,
+  type IncompleteHubCompletenessResult,
+  type HubCompletenessResult,
   type LinearCompletenessResult,
 } from './completeness';
 export {

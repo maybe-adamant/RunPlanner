@@ -44,18 +44,20 @@ export function createProjectDocument(
       routeKey: route.key,
       biomes: route.biomeKeys.slice(0, configuredCount).map((biomeKey) => {
         const layout = catalog.biomeLayouts.byKey[biomeKey];
-        if (layout?.kind !== 'LinearBiome') {
+        if (layout === undefined) {
           throw new ProjectDocumentContractError(
             `configuredBiomeCounts.${route.key}`,
-            `${biomeKey} has no supported linear plan initializer`,
+            `${biomeKey} has no authored plan initializer`,
           );
         }
-        return {
-          kind: 'LinearBiome' as const,
-          biomeKey,
-          state: createDefaultBiomeState(layout),
-          topology: null,
-        };
+        return layout.kind === 'LinearBiome'
+          ? {
+              kind: 'LinearBiome' as const,
+              biomeKey,
+              state: createDefaultBiomeState(layout),
+              topology: null,
+            }
+          : { kind: 'HubBiome' as const, biomeKey, topology: null };
       }),
     };
   });

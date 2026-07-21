@@ -392,7 +392,7 @@ function hPlan(project: ProjectDocument): LinearBiomePlan {
   const plan = project.routes
     .find((route) => route.routeKey === 'Underworld')
     ?.biomes.find((biomePlan) => biomePlan.biomeKey === 'H');
-  if (plan === undefined) {
+  if (plan?.kind !== 'LinearBiome') {
     throw new Error('golden project has no H plan');
   }
   return plan;

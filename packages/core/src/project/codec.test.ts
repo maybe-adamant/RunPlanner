@@ -207,7 +207,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 4, received 1'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 5, received 1'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -219,7 +219,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 4, received 2'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 5, received 2'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -231,7 +231,19 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 4, received 3'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 5, received 3'));
+    expect(() =>
+      decodeProjectDocument(
+        {
+          ...(rawDocument([
+            { routeKey: 'Underworld', biomes: [] },
+            { routeKey: 'Surface', biomes: [] },
+          ]) as Record<string, unknown>),
+          schemaVersion: 4,
+        },
+        catalog,
+      ),
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 5, received 4'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -275,7 +287,7 @@ describe('project document codec', () => {
     ).toThrowError(
       new ProjectDocumentContractError(
         'configuredBiomeCounts.Underworld',
-        'H has no supported linear plan initializer',
+        'H has no authored plan initializer',
       ),
     );
   });

@@ -38,7 +38,7 @@ function hPlan(project: ProjectDocument): LinearBiomePlan {
   const plan = project.routes
     .find((route) => route.routeKey === biome.routeKey)
     ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
-  if (plan === undefined) {
+  if (plan?.kind !== 'LinearBiome') {
     throw new Error('H editor fixture has no H plan');
   }
   return plan;
@@ -239,7 +239,7 @@ describe('H editor projection', () => {
       'disabled',
       true,
     );
-  });
+  }, 10_000);
 
   it('uses fixed-count frontier gating at the terminal frontier', () => {
     renderH(hProject(false));

@@ -285,6 +285,11 @@ function evaluateRoute(
       });
       break;
     }
+    if (plan.kind !== 'LinearBiome') {
+      throw new ProjectSimulationContractError(
+        `${plan.biomeKey} has a registered linear simulator but a ${plan.kind} plan`,
+      );
+    }
 
     const previous = evaluations.at(-1);
     if (previous?.completion === 'incomplete') {

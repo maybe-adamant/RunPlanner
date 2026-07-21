@@ -7,6 +7,8 @@ export type SimulationPhase = 'completeness' | 'rewardGeneration' | 'roomGenerat
 export type CompletenessFindingCode =
   | 'biomeTopologyMissing'
   | 'continuationMissing'
+  | 'hubOpenSetIncomplete'
+  | 'hubVisitOrderIncomplete'
   | 'pickedShopStateMissing'
   | 'pickedTargetMissing'
   | 'targetMissing';

@@ -109,10 +109,11 @@ function repeatedRoomTopology() {
 describe('F/G linear project topology', () => {
   it('normalizes a picked spine while preserving repeated room occurrences', () => {
     const project = decodeProjectDocument(projectWithTopology(repeatedRoomTopology()), catalog);
-    const topology = project.routes[0]?.biomes[0]?.topology;
-    if (topology === null || topology === undefined) {
+    const plan = project.routes[0]?.biomes[0];
+    if (plan?.kind !== 'LinearBiome' || plan.topology === null) {
       throw new Error('expected F topology');
     }
+    const topology = plan.topology;
 
     expect(topology.continuations.map((continuation) => continuation.parentOccurrenceId)).toEqual([
       'start',
@@ -136,7 +137,7 @@ describe('F/G linear project topology', () => {
     expect(topology.occurrences.at(-1)?.state.kind).toBe('freeReward');
 
     const encoded = encodeProjectDocument(project);
-    expect(encoded).toContain('"schemaVersion": 4');
+    expect(encoded).toContain('"schemaVersion": 5');
     expect(encoded).not.toContain('"storeKey"');
     expect(parseProjectDocument(encoded, catalog)).toEqual(project);
     expect(encodeProjectDocument(parseProjectDocument(encoded, catalog))).toBe(encoded);
@@ -175,10 +176,11 @@ describe('F/G linear project topology', () => {
     };
 
     const project = decodeProjectDocument(projectWithGTopology(topology), catalog);
-    const decoded = project.routes[0]?.biomes[1]?.topology;
-    if (decoded === null || decoded === undefined) {
+    const plan = project.routes[0]?.biomes[1];
+    if (plan?.kind !== 'LinearBiome' || plan.topology === null) {
       throw new Error('expected G topology');
     }
+    const decoded = plan.topology;
 
     expect(decoded.occurrences.slice(-3).map((room) => room.state.kind)).toEqual([
       'shop',

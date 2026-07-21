@@ -27,7 +27,7 @@ function plan(project: ProjectDocument): LinearBiomePlan {
   const result = project.routes
     .find((route) => route.routeKey === 'Underworld')
     ?.biomes.find((candidate) => candidate.biomeKey === 'H');
-  if (result === undefined) {
+  if (result?.kind !== 'LinearBiome') {
     throw new Error('fixture has no H plan');
   }
   return result;

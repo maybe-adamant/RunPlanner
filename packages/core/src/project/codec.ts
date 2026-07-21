@@ -1,5 +1,6 @@
 import type { Catalog, RouteDeclaration } from '../catalog';
 import { decodeBiomeState } from './biomeState';
+import { decodeHubBiomeTopology } from './hubTopology';
 import { decodeLinearBiomeTopology } from './linearTopology';
 import {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
@@ -25,7 +26,6 @@ function decodeBiomePlan(
   catalog: Catalog,
 ): AuthoredBiomePlan {
   const plan = expectRecord(value, path);
-  expectExactKeys(plan, ['kind', 'biomeKey', 'state', 'topology'], path);
 
   const layout = catalog.biomeLayouts.byKey[expectedBiomeKey];
   if (layout === undefined) {
@@ -36,26 +36,31 @@ function decodeBiomePlan(
   if (kind !== layout.kind) {
     fail(`${path}.kind`, `expected ${layout.kind}, received ${kind}`);
   }
-  if (layout.kind !== 'LinearBiome') {
-    fail(path, `${expectedBiomeKey} is not authorable by the linear project codec`);
-  }
-
   const biomeKey = expectString(plan.biomeKey, `${path}.biomeKey`);
   if (biomeKey !== expectedBiomeKey) {
     fail(`${path}.biomeKey`, `expected contiguous biome ${expectedBiomeKey}`);
   }
 
+  if (layout.kind === 'LinearBiome') {
+    expectExactKeys(plan, ['kind', 'biomeKey', 'state', 'topology'], path);
+    const topology =
+      plan.topology === null
+        ? null
+        : decodeLinearBiomeTopology(plan.topology, catalog, layout, `${path}.topology`);
+    return Object.freeze({
+      kind: 'LinearBiome',
+      biomeKey,
+      state: decodeBiomeState(plan.state, layout, `${path}.state`),
+      topology,
+    });
+  }
+
+  expectExactKeys(plan, ['kind', 'biomeKey', 'topology'], path);
   const topology =
     plan.topology === null
       ? null
-      : decodeLinearBiomeTopology(plan.topology, catalog, layout, `${path}.topology`);
-
-  return Object.freeze({
-    kind: 'LinearBiome',
-    biomeKey,
-    state: decodeBiomeState(plan.state, layout, `${path}.state`),
-    topology,
-  });
+      : decodeHubBiomeTopology(plan.topology, catalog, layout, `${path}.topology`);
+  return Object.freeze({ kind: 'HubBiome', biomeKey, topology });
 }
 
 function decodeRoutePlan(

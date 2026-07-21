@@ -33,7 +33,7 @@ conditional-terminal, and persistent-hub pressure tests.
 
 Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected linear reward authority, and the authored project/editor use schema
-version 4. All eight biomes close one catalog-wide reference matrix while
+version 5. All eight biomes close one catalog-wide reference matrix while
 P/Q/O/N remain dormant behind the application capability boundary. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are

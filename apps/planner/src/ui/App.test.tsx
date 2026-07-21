@@ -318,17 +318,14 @@ describe('App', () => {
     const project = application.store.getState().projectWorkspace.history.present;
     const underworld = project.routes.find((route) => route.routeKey === 'Underworld');
     const plan = underworld?.biomes.find((biomePlan) => biomePlan.biomeKey === 'F');
-    const topology = plan?.topology;
-    const terminal = topology?.continuations.find(
+    if (underworld === undefined || plan?.kind !== 'LinearBiome' || plan.topology === null) {
+      throw new Error('terminal omission fixture is incomplete');
+    }
+    const topology = plan.topology;
+    const terminal = topology.continuations.find(
       (continuation) => continuation.kind === 'terminal',
     );
-    if (
-      underworld === undefined ||
-      plan === undefined ||
-      topology === undefined ||
-      topology === null ||
-      terminal === undefined
-    ) {
+    if (terminal === undefined) {
       throw new Error('terminal omission fixture is incomplete');
     }
     const projectWithMissingOffer = decodeProjectDocument(

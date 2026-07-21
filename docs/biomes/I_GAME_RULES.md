@@ -479,13 +479,14 @@ The I implementation delivers:
 
 The declaration import, authored topology, canonical/history projection,
 selected validation, candidates, and editor projection are active through the
-application capability boundary. Schema version 4 persists
-`maxNonGoalRewards`, attaches the first batch to the final fixed entry without
-a fake occurrence, admits repeated generated preboss targets, and requires
-complete WorldShop state only on the picked preboss. Materialization and the
-editor share one offer-time Goal/NonGoal projection; history advances only
-entered producers. Production navigation, profiles, recovery, and the complete
-F/G/H/I product loop are covered by the final activation fixture.
+application capability boundary. Schema version 4 introduced the persisted
+`maxNonGoalRewards`, final-fixed-entry batch ownership, repeated generated
+preboss targets, and picked-preboss WorldShop completeness contract; schema
+version 5 retains those semantics beside dormant N Hub authorship.
+Materialization and the editor share one offer-time Goal/NonGoal projection;
+history advances only entered producers. Production navigation, profiles,
+recovery, and the complete F/G/H/I product loop are covered by the final
+activation fixture.
 
 ## Required Fixtures
 

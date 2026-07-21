@@ -10,12 +10,13 @@ It does not define simulation algorithms or React rendering.
 
 ## Cross-Biome Freeze Status
 
-The schema version 4 examples in this document describe the reconciled
+The schema version 5 examples in this document describe the reconciled
 F/G/P/Q/H/O/I/N model. Occurrence identity, downstream retention, possibility
 support, generated-store ownership, conditional-terminal batches, fixed
 authored layout slots, and persistent hub topology are settled. Production now
-reads schema version 4 for the implemented F/G/H/I product surface
-and rejects earlier versions without compatibility scaffolding.
+reads schema version 5 for the implemented F/G/H/I product surface and dormant
+N authored surface and rejects earlier versions without compatibility
+scaffolding.
 
 ## Core Distinction
 
@@ -683,7 +684,7 @@ representative top-level shape is:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 4;
+  schemaVersion: 5;
   projectId: string;
   name: string;
   catalogVersion: string;

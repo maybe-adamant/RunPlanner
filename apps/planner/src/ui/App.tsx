@@ -253,7 +253,7 @@ export function App({
                 route={underworld}
                 routeEvaluation={underworldEvaluation}
               />
-            ) : activeBiomePlan !== undefined ? (
+            ) : activeBiomePlan?.kind === 'LinearBiome' ? (
               <LinearBiomeEditor
                 candidateProjection={candidateProjection}
                 catalog={catalog}

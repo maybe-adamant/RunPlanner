@@ -132,6 +132,9 @@ function locateBiomePlan(project: ProjectDocument, query: ProjectCandidateQuery)
   if (biome === undefined) {
     failCandidate(query, `project has no configured biome ${address.biomeKey}`);
   }
+  if (biome.kind !== 'LinearBiome') {
+    failCandidate(query, `${address.biomeKey} does not use linear candidate evaluation`);
+  }
   return biome;
 }
 
@@ -469,6 +472,9 @@ function evaluateCandidateBiome(
   const plan = route.biomes[biomeIndex];
   if (biomeIndex < 0 || plan === undefined) {
     failCandidate(query, `candidate proposal has no configured biome ${address.biomeKey}`);
+  }
+  if (plan.kind !== 'LinearBiome') {
+    failCandidate(query, `${address.biomeKey} does not use linear candidate evaluation`);
   }
 
   const previous = biomeIndex === 0 ? undefined : baselineRoute.biomes[biomeIndex - 1];

@@ -34,7 +34,7 @@ function iPlan(project: ProjectDocument): LinearBiomePlan {
   const plan = project.routes
     .find((route) => route.routeKey === biome.routeKey)
     ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
-  if (plan === undefined) {
+  if (plan?.kind !== 'LinearBiome') {
     throw new Error('I editor fixture has no I plan');
   }
   return plan;

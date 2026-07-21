@@ -79,8 +79,12 @@ describe('project workspace application state', () => {
     store.dispatch(authoredProjectCommandDispatched(command));
     const editedState = store.getState();
     const editedHistory = selectProjectHistory(editedState);
+    const editedPlan = editedHistory.present.routes[0]?.biomes[0];
+    if (editedPlan?.kind !== 'LinearBiome') {
+      throw new Error('expected edited linear F plan');
+    }
     expect(editedHistory.past).toEqual([original, configured]);
-    expect(editedHistory.present.routes[0]?.biomes[0]?.topology?.startOccurrenceId).toBe('f-start');
+    expect(editedPlan.topology?.startOccurrenceId).toBe('f-start');
     expect(editedHistory.future).toEqual([]);
     expect(evaluateProject).toHaveBeenCalledTimes(3);
     expect(evaluateProject.mock.calls[2]?.[0]).toBe(editedHistory.present);
