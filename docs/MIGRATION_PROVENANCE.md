@@ -119,7 +119,7 @@ scripts.
 | I reward structures                       | ported | I game data, `biomes/I_GAME_RULES.md`                                            | `TartarusRewards`, derived Goal/NonGoal producers, folded counters, and `I_WorldShop` normalize with parity fixtures.                                                         |
 | N reward structures                       | ported | N game data, `biomes/N_GAME_RULES.md`                                            | Persistent HubRewards offers, local ordinary/hard side-room bags, and the named hub-wide preboss shop lookup now normalize with parity fixtures.                              |
 | O reward structures                       | ported | `RoomDataO.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/O_GAME_RULES.md`    | Phase-owned wheels, ordered offers/acquisitions, and source-derived outgoing stores normalize without duplicating authority.                                                  |
-| P reward structures                       | ported | `RoomDataP.lua`, `biomes/P_GAME_RULES.md`                                        | The NPC-free reward baseline normalizes while simulation remains dormant until N/O history exists.                                                                            |
+| P reward structures                       | ported | `RoomDataP.lua`, `biomes/P_GAME_RULES.md`                                        | The NPC-free reward baseline normalizes and replays after complete N/O history while application activation remains dormant.                                                  |
 | Q reward structures                       | ported | `RoomDataQ.lua`, `LootData.lua`, `StoreData.lua`, `biomes/Q_GAME_RULES.md`       | `TyphonBossRewards`, `Q_WorldShop`, explicit no-reward producers, and the no-generated-store policy are connected to Q declarations.                                          |
 
 The RunProgress port follows `LootData.lua` entry order rather than the
@@ -274,7 +274,7 @@ been replaced by the occurrence-based conditional-terminal contract in
 | P forked preboss               | ported   | `RoomDataP.lua`, `RoomLogic.lua`, `biomes/P_GAME_RULES.md`                    | Shop-then-fill normalizes with one free reward; predecessor exit count determines active terminal capacity.                |
 | P fixed completion tail        | ported   | `RoomDataP.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/P_GAME_RULES.md` | `P_Boss01` and `P_PostBoss01` are ordered before Q entry and only the resolved boss-offer store ledger effect remains.     |
 | P persistent NPC variants      | deferred | P encounter sets and NPC encounter data                                       | Suppress unconfigured Heracles/Athena/Icarus variants; later entities compose into the spine before history.               |
-| P simulation activation        | deferred | `biomes/P_GAME_RULES.md`                                                      | Requires validated N/O Surface history for reward-store support and other carried state.                                   |
+| P simulation core              | ported   | `biomes/P_GAME_RULES.md`, N/O/P simulation fixture                            | Reuses the linear authorities after validated N/O history; candidate/editor/application activation remains dormant.        |
 
 ## Q Migration
 
@@ -310,7 +310,8 @@ The core simulation matrix and application capability matrix now include F, G,
 H, I, N, and O as authorable, simulatable, and editable. Complete F/G/H/I and
 N/O prefixes enter profiles, recovery, simulator dispatch, candidate scope,
 and editor navigation together. N uses its Hub editor and canonical evaluator;
-O uses the shared linear editor and evaluator; P/Q remain declaration-only.
+O uses the shared linear editor and evaluator. P has a dormant shared-linear
+simulation core; Q remains declaration-only.
 
 The following remaining dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:

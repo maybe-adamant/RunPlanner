@@ -267,7 +267,7 @@ export function evaluateNBiome(
   return evaluateHubBiome(catalog, routeKey, plan);
 }
 
-const implementedBiomeKeys = new Set(['F', 'G', 'H', 'I', 'N', 'O']);
+const implementedBiomeKeys = new Set(['F', 'G', 'H', 'I', 'N', 'O', 'P']);
 
 function hasRegisteredSimulator(
   biomeKey: string,

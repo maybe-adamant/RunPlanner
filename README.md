@@ -34,7 +34,8 @@ conditional-terminal, and persistent-hub pressure tests.
 Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected linear reward authority, and the authored project/editor use schema
 version 5. All eight biomes close one catalog-wide reference matrix while
-P/Q remain dormant behind the application capability boundary. Phase
+P/Q remain dormant behind the application capability boundary. P's complete
+N/O/P simulation core is available below that boundary; Q remains declaration-only. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room
@@ -80,8 +81,8 @@ Equivalent post-shop witness states merge before crossing biome boundaries,
 preventing proof-only branch multiplication while retaining one ordered
 witness for every distinct downstream state. O now has active authorship,
 canonical lifecycle/reward replay, selected validation, candidates, and editor
-projection through its ship-wheel model. P/Q remain declaration-only and
-outside current application capabilities.
+projection through its ship-wheel model. P has a dormant shared-linear core;
+P/Q remain outside current application capabilities.
 
 N has schema-version-5 Hub authorship, structural
 completeness, canonical Hub materialization, exact room lifecycle, and
@@ -143,7 +144,7 @@ graph projection, but it will never own topology or node identity.
 8. [`docs/biomes/G_GAME_RULES.md`](docs/biomes/G_GAME_RULES.md) defines Oceanus game behavior,
    projection decisions, and current feature coverage.
 9. [`docs/biomes/P_GAME_RULES.md`](docs/biomes/P_GAME_RULES.md) pressure-tests that model
-   against P and defines the dormant P declaration contract.
+   against P and defines the P declaration and shared-linear simulation contract.
 10. [`docs/biomes/Q_GAME_RULES.md`](docs/biomes/Q_GAME_RULES.md) defines Q's scripted stages,
     independently generated miniboss peers, reward-free spine, and repeat-run
     completion contract.
@@ -190,7 +191,7 @@ authority and should be referenced rather than copied elsewhere.
 | Shared picker, door, cap, force, and generated-decision game rules      | `GAME_GENERATION_RULES.md`     |
 | F behavior, projection decisions, topology, and feature coverage        | `biomes/F_GAME_RULES.md`       |
 | G behavior, projection decisions, topology, and feature coverage        | `biomes/G_GAME_RULES.md`       |
-| P topology, encounter, exit, and dormant declaration rules              | `biomes/P_GAME_RULES.md`       |
+| P topology, encounter, exit, and dormant simulation rules               | `biomes/P_GAME_RULES.md`       |
 | Q scripted topology, rewards, counters, and repeat-run completion       | `biomes/Q_GAME_RULES.md`       |
 | H cage batches, bridge, counters, rewards, and completion               | `biomes/H_GAME_RULES.md`       |
 | O ship phases, wheels, outgoing stores, counters, and completion        | `biomes/O_GAME_RULES.md`       |
