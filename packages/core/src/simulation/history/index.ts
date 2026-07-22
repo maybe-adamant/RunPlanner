@@ -45,6 +45,7 @@ export type {
   LinearHistoryStateView,
   LinearRoomHistoryViews,
   LinearTargetGenerationView,
+  LinearOfferPointView,
   RequiredObjectHistoryEntry,
   RoomAppearanceHistoryEntry,
   RoomCreatedHistoryEvent,

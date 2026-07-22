@@ -22,6 +22,9 @@ export const roomLifecycleProfiles = [
       'I_MiniBoss01',
       'I_MiniBoss02',
       'N_PreHub',
+      'O_MiniBoss01',
+      'O_MiniBoss02',
+      'O_Story01',
     ],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
@@ -227,6 +230,41 @@ export const roomLifecycleProfiles = [
     ],
   },
   {
+    key: 'DevotionRoom',
+    encounterProfileKeys: ['O_Devotion01'],
+    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      {
+        kind: 'advanceProducer',
+        point: 'beforeCombat',
+        effects: ['recordProducerPoint'],
+      },
+      {
+        kind: 'startEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
+      },
+      {
+        kind: 'completeEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterCompletion'],
+      },
+      {
+        kind: 'advanceProducer',
+        point: 'afterCombat',
+        effects: ['recordProducerPoint'],
+      },
+      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
+      {
+        kind: 'commitRoom',
+        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
+      },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
     key: 'FieldsCombatRoom',
     encounterProfileKeys: ['H_FieldsCombatCage2', 'H_FieldsCombatCage3'],
     producer: { kind: 'none' },
@@ -236,6 +274,31 @@ export const roomLifecycleProfiles = [
       {
         kind: 'runEncounterSequence',
         effects: ['recordEncounterStart', 'advanceEncounterDepth', 'recordEncounterCompletion'],
+      },
+      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
+      {
+        kind: 'commitRoom',
+        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
+      },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
+    key: 'ShipCombatRoom',
+    encounterProfileKeys: ['ShipCombat'],
+    producer: { kind: 'none' },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      {
+        kind: 'runRewardEncounterSequence',
+        effects: [
+          'recordPhaseOfferPoint',
+          'recordEncounterStart',
+          'advanceEncounterDepth',
+          'recordEncounterCompletion',
+          'recordPhaseOfferAcquisition',
+        ],
       },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
@@ -335,7 +398,7 @@ export const roomLifecycleProfiles = [
   },
   {
     key: 'BossRoom',
-    encounterProfileKeys: ['F_Boss01', 'G_Boss01', 'H_Boss01', 'I_Boss01', 'N_Boss01'],
+    encounterProfileKeys: ['F_Boss01', 'G_Boss01', 'H_Boss01', 'I_Boss01', 'N_Boss01', 'O_Boss01'],
     producer: { kind: 'none' },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },
@@ -365,6 +428,7 @@ export const roomLifecycleProfiles = [
       'H_PostBoss01',
       'I_PostBoss01',
       'N_PostBoss01',
+      'O_PostBoss01',
     ],
     producer: { kind: 'none' },
     operations: [

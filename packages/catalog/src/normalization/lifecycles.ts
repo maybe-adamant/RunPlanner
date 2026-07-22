@@ -25,6 +25,8 @@ const effectKinds = {
   recordEnteredRewardStore: true,
   recordExit: true,
   recordOfferPoint: true,
+  recordPhaseOfferAcquisition: true,
+  recordPhaseOfferPoint: true,
   recordOutgoingGeneration: true,
   recordPreparation: true,
   recordProducerPoint: true,
@@ -53,6 +55,13 @@ const expectedEffects = {
     'recordEncounterStart',
     'advanceEncounterDepth',
     'recordEncounterCompletion',
+  ],
+  runRewardEncounterSequence: [
+    'recordPhaseOfferPoint',
+    'recordEncounterStart',
+    'advanceEncounterDepth',
+    'recordEncounterCompletion',
+    'recordPhaseOfferAcquisition',
   ],
   advanceProducer: ['recordProducerPoint'],
   generateOutgoingBatch: ['recordOutgoingGeneration'],
@@ -109,6 +118,7 @@ function normalizeOperation(raw: RoomLifecycleOperation, path: string): RoomLife
     case 'completeRequiredObjects':
     case 'generateOutgoingBatch':
     case 'runEncounterSequence':
+    case 'runRewardEncounterSequence':
     case 'commitRoom':
     case 'exitRoom':
       return Object.freeze({
@@ -250,7 +260,10 @@ function validateOperationSequence(
       }
       encounterActive = false;
       encounterCompleted = true;
-    } else if (operation.kind === 'runEncounterSequence') {
+    } else if (
+      operation.kind === 'runEncounterSequence' ||
+      operation.kind === 'runRewardEncounterSequence'
+    ) {
       encounterCompleted = true;
     } else if (operation.kind === 'spawnRequiredObjects') {
       if (requiredObjectsSpawned || index !== enterIndex + 1) {
@@ -308,13 +321,18 @@ function validateEncounterCompatibility(
     (operation) => operation.kind === 'startEncounter' || operation.kind === 'completeEncounter',
   );
   const usesEncounterSequence = profile.operations.some(
-    (operation) => operation.kind === 'runEncounterSequence',
+    (operation) =>
+      operation.kind === 'runEncounterSequence' || operation.kind === 'runRewardEncounterSequence',
   );
   if (usesOnlyEncounter && usesEncounterSequence) {
     fail(path, 'cannot combine only-encounter operations with an encounter sequence');
   }
   if (
-    profile.operations.filter((operation) => operation.kind === 'runEncounterSequence').length > 1
+    profile.operations.filter(
+      (operation) =>
+        operation.kind === 'runEncounterSequence' ||
+        operation.kind === 'runRewardEncounterSequence',
+    ).length > 1
   ) {
     fail(path, 'lifecycle may run at most one encounter sequence');
   }

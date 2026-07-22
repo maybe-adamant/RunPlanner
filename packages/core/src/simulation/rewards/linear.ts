@@ -19,6 +19,8 @@ import type {
   CanonicalFixedEntryRoom,
   CanonicalLinearBiome,
   CanonicalLocalReward,
+  CanonicalRewardWheel,
+  CanonicalRewardWheelOffer,
   CanonicalResolvedIncomingReward,
   CanonicalTarget,
 } from '../materialization';
@@ -39,6 +41,7 @@ import {
   initializeRewardBranches,
   offerEvidence,
   processProducerRole,
+  processJointUnorderedOffers,
   processRewardOffer,
   processShopInventory,
   processShopPurchases,
@@ -140,7 +143,7 @@ function enteredStoreKey(
 
 function storeSupport(
   layout: LinearBiomeLayout,
-  batch: CanonicalBatch,
+  batch: Pick<CanonicalBatch, 'rewardStore'>,
   source: CanonicalAuthoredRoom,
   sourceDeclaration: RoomDeclaration,
   view: LinearHistoryStateView,
@@ -231,12 +234,36 @@ function localRewardBinding(
   return descriptor.reward;
 }
 
-function processLocalRewardAcquisition(
+function rewardWheelBinding(
+  catalog: Catalog,
+  declaration: RoomDeclaration,
+  wheel: CanonicalRewardWheel,
+): CountedRewardBinding {
+  const profile = catalog.encounterProfiles.byKey[declaration.encounterProfileKey];
+  const descriptor = profile?.phases.find(
+    (phase) => phase.key === wheel.encounterPhaseKey,
+  )?.offerPoint;
+  if (
+    descriptor === undefined ||
+    descriptor.key !== wheel.wheelKey ||
+    descriptor.reward.producerLifecycleKey !== wheel.producerLifecycleKey ||
+    !descriptor.reward.storeKeys.includes(wheel.storeKey)
+  ) {
+    throw new LinearRewardSimulationContractError(
+      `${declaration.gameName} does not own reward wheel ${wheel.wheelKey}`,
+    );
+  }
+  return descriptor.reward;
+}
+
+function processOwnedRewardAcquisition(
   catalog: Catalog,
   branches: readonly RewardBranchState[],
   room: CanonicalAuthoredRoom,
   declaration: RoomDeclaration,
-  reward: CanonicalLocalReward,
+  reward: Pick<CanonicalLocalReward | CanonicalRewardWheelOffer, 'offer' | 'origin'> & {
+    readonly producerLifecycleKey: string;
+  },
   view: LinearHistoryStateView,
   historySequence: number,
   findings: Map<string, SemanticFinding>,
@@ -491,8 +518,10 @@ export function evaluateLinearRewards(
           );
         }
         let sharedStore: string | undefined;
-        if (batch !== undefined) {
-          if (batch.rewardStore.kind === 'authoredBaseStore') {
+        const rewardStore =
+          batch?.rewardStore ?? (isTerminal ? snapshot.terminalEntry.rewardStore : undefined);
+        if (rewardStore !== undefined) {
+          if (rewardStore.kind === 'authoredBaseStore') {
             if (source.kind !== 'authored') {
               throw new LinearRewardSimulationContractError(
                 `${source.gameName} cannot own an authored base reward store`,
@@ -500,7 +529,7 @@ export function evaluateLinearRewards(
             }
             const support = storeSupport(
               layout,
-              batch,
+              { rewardStore },
               source,
               declaration,
               sourceViews.preOutgoing ?? sourceViews.preparation,
@@ -521,7 +550,20 @@ export function evaluateLinearRewards(
                 }),
               );
             }
-          } else if (batch.rewardStore.kind !== 'none') {
+          } else if (rewardStore.kind === 'sourceOfferPoint') {
+            if (source.kind !== 'authored') {
+              throw new LinearRewardSimulationContractError(
+                `${source.gameName} cannot own a source reward wheel`,
+              );
+            }
+            const wheel = source.rewardWheels?.at(-1);
+            if (wheel === undefined) {
+              throw new LinearRewardSimulationContractError(
+                `${source.gameName} lost its active source reward wheel`,
+              );
+            }
+            sharedStore = wheel.storeKey;
+          } else if (rewardStore.kind !== 'none') {
             throw new LinearRewardSimulationContractError(
               `${source.gameName} exposes an unsupported generated reward store`,
             );
@@ -546,26 +588,97 @@ export function evaluateLinearRewards(
         ) {
           throw new LinearRewardSimulationContractError('shop offer point has no authored room');
         }
-        branches = processShopInventory(
+        if (event.offerPoint === 'shopInventory') {
+          branches = processShopInventory(
+            branches,
+            {
+              catalog,
+              room,
+              declaration,
+              historySequence: event.sequence,
+              facts: (branchHistory, shopNames = new Set()) =>
+                rewardFacts(
+                  catalog,
+                  room,
+                  declaration,
+                  roomView.preparation,
+                  branchHistory,
+                  enteredBiomeCount,
+                  shopNames,
+                ),
+              fail,
+            },
+            findings,
+          );
+          break;
+        }
+        const wheel = room.rewardWheels?.find(
+          (candidate) => candidate.wheelKey === event.offerPoint,
+        );
+        const view = roomView.offerPoints?.find(
+          (candidate) => candidate.offerPoint === event.offerPoint,
+        )?.before;
+        if (wheel === undefined || view === undefined) {
+          throw new LinearRewardSimulationContractError(
+            `${room.gameName} has no canonical ${event.offerPoint} materialization`,
+          );
+        }
+        const binding = rewardWheelBinding(catalog, declaration, wheel);
+        branches = processJointUnorderedOffers(
           branches,
-          {
+          wheel.offers.map((offer) => ({
             catalog,
-            room,
-            declaration,
+            reward: {
+              ...offer,
+              producerLifecycleKey: wheel.producerLifecycleKey,
+              resolvedStoreKey: wheel.storeKey,
+            },
+            binding,
             historySequence: event.sequence,
-            facts: (branchHistory, shopNames = new Set()) =>
-              rewardFacts(
-                catalog,
-                room,
-                declaration,
-                roomView.preparation,
-                branchHistory,
-                enteredBiomeCount,
-                shopNames,
-              ),
-            fail,
-          },
+            peers: Object.freeze([]),
+            facts: (branchHistory: RewardHistoryState) =>
+              rewardFacts(catalog, room, declaration, view, branchHistory, enteredBiomeCount),
+          })),
           findings,
+        );
+        break;
+      }
+      case 'offerPointAcquired': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        const declaration = room && catalog.rooms.byKey[room.gameName];
+        const roomView = views.get(semanticAddressKey(event.origin));
+        if (
+          room === undefined ||
+          room.kind !== 'authored' ||
+          declaration === undefined ||
+          roomView === undefined
+        ) {
+          throw new LinearRewardSimulationContractError(
+            'reward-wheel acquisition has no authored room',
+          );
+        }
+        const wheel = room.rewardWheels?.find(
+          (candidate) => candidate.wheelKey === event.offerPoint,
+        );
+        const picked = wheel?.offers.find((offer) => offer.picked);
+        const view = roomView.offerPoints?.find(
+          (candidate) => candidate.offerPoint === event.offerPoint,
+        )?.acquisitionBefore;
+        if (wheel === undefined || picked === undefined || view === undefined) {
+          throw new LinearRewardSimulationContractError(
+            `${room.gameName} has no canonical ${event.offerPoint} acquisition`,
+          );
+        }
+        branches = processOwnedRewardAcquisition(
+          catalog,
+          branches,
+          room,
+          declaration,
+          { ...picked, producerLifecycleKey: wheel.producerLifecycleKey },
+          view,
+          event.sequence,
+          findings,
+          enteredBiomeCount,
         );
         break;
       }
@@ -618,7 +731,7 @@ export function evaluateLinearRewards(
             `${room.gameName}.${event.phaseKey} does not own exactly one local reward`,
           );
         }
-        branches = processLocalRewardAcquisition(
+        branches = processOwnedRewardAcquisition(
           catalog,
           branches,
           room,

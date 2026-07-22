@@ -187,6 +187,7 @@ type RoomLifecycleOperation =
   | { kind: 'startEncounter'; encounterRole: string }
   | { kind: 'completeEncounter'; encounterRole: string }
   | { kind: 'runEncounterSequence' }
+  | { kind: 'runRewardEncounterSequence' }
   | { kind: 'advanceProducer'; point: ProducerLifecyclePointKey }
   | { kind: 'generateOutgoingBatch' }
   | { kind: 'applyShopPurchases'; offerPoint: string }
@@ -213,6 +214,22 @@ depth advancement, and completion for each phase. H uses it for the passive
 Fields phase followed by the active two- or three-cage prefix. Cage reward
 offer and acquisition events remain separate local producers rather than being
 hidden inside this encounter operation.
+
+`runRewardEncounterSequence` adds declaration-owned phase offer points around
+that same encounter sequence. For every selected O ShipCombat phase it emits
+the phase offer before encounter start and the picked acquisition after
+encounter completion when the phase declares an offer point. Intro has no
+offer and no encounter-depth increment; Combat1 and the conditionally selected
+Combat2 each increment encounter depth once, materialize one complete active
+wheel jointly, and acquire only its selected offer. The canonical room passes
+the selected encounter-phase prefix to the executor; the executor rejects a
+non-prefix selection or omission of a required phase.
+
+History exposes both materialization and acquisition checkpoints for each
+phase offer point. Reward simulation evaluates all active offers at the former
+state, consumes only the picked offer at the latter state, and resolves the
+room's outgoing store from the final active wheel. Dormant wheel capacity emits
+no lifecycle event.
 
 Room-creation history retains the concrete materialized encounter-profile key.
 Consumers must not recover it from the maximum-capacity Room Declaration: an H

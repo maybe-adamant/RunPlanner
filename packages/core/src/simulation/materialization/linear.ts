@@ -1,5 +1,6 @@
 import type {
   Catalog,
+  EncounterPhase,
   FixedEntryDescriptor,
   LinearBiomeLayout,
   RoomDeclaration,
@@ -14,6 +15,8 @@ import {
   createLocalRewardAddress,
   createOccurrenceAddress,
   createPickedAddress,
+  createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
@@ -41,6 +44,7 @@ import type {
   CanonicalLocalReward,
   CanonicalPhysicalExit,
   CanonicalResolvedIncomingReward,
+  CanonicalRewardWheel,
   CanonicalRoomReference,
   CanonicalShopEntryState,
   CanonicalTarget,
@@ -51,6 +55,7 @@ import { materializeCompletionRooms } from './completion';
 
 type LinearAuthoredTemplateKey =
   | 'ClockworkCombat'
+  | 'Devotion'
   | 'FixedIntro'
   | 'FixedOpening'
   | 'FieldsCombat'
@@ -59,6 +64,7 @@ type LinearAuthoredTemplateKey =
   | 'Miniboss'
   | 'Shop'
   | 'ShopPreboss'
+  | 'ShipCombat'
   | 'StandardCombat'
   | 'Story';
 
@@ -79,8 +85,10 @@ interface AuthoredRoomMaterializationContext {
 interface MaterializedRoomLeaf {
   readonly lifecycleProfileKey: string;
   readonly encounterProfileKey?: string;
+  readonly encounterPhases?: readonly EncounterPhase[];
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly localRewards?: readonly CanonicalLocalReward[];
+  readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
   readonly clockworkReward?: 'goal' | 'nonGoal';
 }
@@ -193,6 +201,13 @@ function materializeFixedRoom(context: AuthoredRoomMaterializationContext): Mate
   });
 }
 
+function materializeDevotion(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
+  return Object.freeze({
+    ...materializeFixedRoom(context),
+    lifecycleProfileKey: 'DevotionRoom',
+  });
+}
+
 function materializeRewardlessRoom(
   context: AuthoredRoomMaterializationContext,
 ): MaterializedRoomLeaf {
@@ -293,6 +308,74 @@ function materializeFieldsCombat(
   });
 }
 
+function materializeShipCombat(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
+  const state = requireStateKind(context, 'shipCombat');
+  const profile = context.catalog.encounterProfiles.byKey[context.room.encounterProfileKey];
+  if (profile === undefined || profile.key !== 'ShipCombat') {
+    fail(`${context.room.gameName} has no ShipCombat encounter profile`);
+  }
+  const encounterPhases = profile.phases.slice(0, state.encounterCount);
+  if (
+    encounterPhases.length !== state.encounterCount ||
+    encounterPhases[0]?.key !== 'Intro' ||
+    encounterPhases[1]?.offerPoint?.key !== 'wheel1' ||
+    (state.encounterCount === 3 && encounterPhases[2]?.offerPoint?.key !== 'wheel2')
+  ) {
+    fail(`${context.room.gameName} cannot materialize ${state.encounterCount} encounters`);
+  }
+  const rewardWheels: CanonicalRewardWheel[] = encounterPhases.flatMap((phase) => {
+    const descriptor = phase.offerPoint;
+    if (descriptor === undefined) {
+      return [];
+    }
+    const wheel = state.wheels[descriptor.key];
+    if (wheel === undefined) {
+      fail(`${context.room.gameName} is missing ${descriptor.key}`);
+    }
+    const offers = descriptor.offerKeys.slice(0, wheel.offerCount).map((offerKey, index) => {
+      const offer = wheel.offers[offerKey];
+      if (offer === undefined) {
+        fail(`${context.room.gameName}.${descriptor.key} is missing ${offerKey}`);
+      }
+      return Object.freeze({
+        origin: createRewardWheelOfferAddress(
+          context.biome,
+          context.occurrence.occurrenceId,
+          descriptor.key,
+          offerKey,
+        ),
+        offerKey,
+        offer,
+        picked: wheel.pickedOfferIndex === index + 1,
+      });
+    });
+    if (offers.filter((offer) => offer.picked).length !== 1) {
+      fail(`${context.room.gameName}.${descriptor.key} has no unique active pick`);
+    }
+    return [
+      Object.freeze({
+        origin: createRewardWheelAddress(
+          context.biome,
+          context.occurrence.occurrenceId,
+          descriptor.key,
+        ),
+        wheelKey: descriptor.key,
+        encounterPhaseKey: phase.key,
+        producerLifecycleKey: descriptor.reward.producerLifecycleKey,
+        storeKey: wheel.storeKey,
+        offers: Object.freeze(offers),
+        pickedOfferIndex: wheel.pickedOfferIndex,
+      }),
+    ];
+  });
+  return Object.freeze({
+    lifecycleProfileKey: 'ShipCombatRoom',
+    encounterProfileKey: profile.key,
+    encounterPhases: Object.freeze(encounterPhases),
+    rewardWheels: Object.freeze(rewardWheels),
+  });
+}
+
 function materializeShopEntry(
   context: AuthoredRoomMaterializationContext,
   shop: ShopState,
@@ -356,15 +439,16 @@ function materializeShopRoom(
   });
 }
 
-function materializeClockworkPreboss(
-  context: AuthoredRoomMaterializationContext,
-): MaterializedRoomLeaf {
-  if (context.role !== 'terminalShop' || context.clockworkReward !== 'goal') {
-    fail(`${context.room.gameName} requires its generated Clockwork terminal role`);
+function materializeShopPreboss(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
+  if (
+    context.role !== 'terminalShop' ||
+    (context.clockworkReward !== undefined && context.clockworkReward !== 'goal')
+  ) {
+    fail(`${context.room.gameName} requires its terminal shop role`);
   }
   return Object.freeze({
     ...materializeShopRoom(context, 'TerminalWorldShopRoom'),
-    clockworkReward: 'goal',
+    ...(context.clockworkReward === undefined ? {} : { clockworkReward: 'goal' as const }),
   });
 }
 
@@ -395,6 +479,7 @@ function materializeForkedPreboss(
 
 const authoredTemplateMaterializers = Object.freeze({
   ClockworkCombat: materializeClockworkCombat,
+  Devotion: materializeDevotion,
   FixedIntro: materializeRewardlessRoom,
   FixedOpening: materializeCountedRoom,
   FieldsCombat: materializeFieldsCombat,
@@ -402,7 +487,8 @@ const authoredTemplateMaterializers = Object.freeze({
   Fountain: materializeCountedRoom,
   Miniboss: materializeCountedRoom,
   Shop: materializeShopRoom,
-  ShopPreboss: materializeClockworkPreboss,
+  ShopPreboss: materializeShopPreboss,
+  ShipCombat: materializeShipCombat,
   StandardCombat: materializeCountedRoom,
   Story: materializeFixedRoom,
 }) satisfies Readonly<Record<LinearAuthoredTemplateKey, AuthoredTemplateMaterializer>>;
@@ -470,6 +556,8 @@ function materializeAuthoredRoom(
   }
   const leaf = authoredMaterializer(context.room.mode.templateKey, context.room.gameName)(context);
   const encounterProfileKey = leaf.encounterProfileKey ?? context.room.encounterProfileKey;
+  const selectedEncounterPhases =
+    leaf.encounterPhases ?? encounterPhases(context.catalog, context.room, encounterProfileKey);
   const clockworkReward = leaf.clockworkReward ?? context.clockworkReward;
   requireLifecycleSelection(context.catalog, context.room, leaf, encounterProfileKey);
   return Object.freeze({
@@ -478,7 +566,7 @@ function materializeAuthoredRoom(
     occurrenceId: context.occurrence.occurrenceId,
     gameName: context.room.gameName,
     encounterProfileKey,
-    encounterPhases: encounterPhases(context.catalog, context.room, encounterProfileKey),
+    encounterPhases: selectedEncounterPhases,
     lifecycleProfileKey: leaf.lifecycleProfileKey,
     counterEffects: context.room.counters,
     entered: context.entered,
@@ -487,6 +575,7 @@ function materializeAuthoredRoom(
       : { requiredObjects: context.room.requiredObjects }),
     ...(leaf.incomingReward === undefined ? {} : { incomingReward: leaf.incomingReward }),
     ...(leaf.localRewards === undefined ? {} : { localRewards: leaf.localRewards }),
+    ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
   });
@@ -609,10 +698,20 @@ function requireRoom(catalog: Catalog, occurrence: RoomOccurrence): RoomDeclarat
 function finalSharedRewardStoreKey(
   catalog: Catalog,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  source: CanonicalAuthoredRoom,
+  rewardStore: BatchRewardStoreState,
   targets: LinearContinuation['targets'],
-  initialStoreKey: string | undefined,
 ): string | undefined {
-  let storeKey = initialStoreKey;
+  let storeKey: string | undefined;
+  if (rewardStore.kind === 'authoredBaseStore') {
+    storeKey = rewardStore.baseRewardStoreKey;
+  } else if (rewardStore.kind === 'sourceOfferPoint') {
+    const wheel = source.rewardWheels?.at(-1);
+    if (wheel === undefined) {
+      fail(`${source.gameName} has no active source reward wheel`);
+    }
+    storeKey = wheel.storeKey;
+  }
   for (const target of targets) {
     const occurrence = requireOccurrence(occurrences, target.occurrenceId);
     const room = requireRoom(catalog, occurrence);
@@ -751,6 +850,7 @@ function requireLinearLayout(
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
   const supportedContinuation =
     layout?.kind === 'LinearBiome' &&
+    layout.continuation.progressionPolicy.kind !== 'staged' &&
     ((layout.continuation.batchPolicy.kind === 'standard' &&
       layout.continuation.rewardStorePolicy.kind === 'authoredBaseStore') ||
       (layout.continuation.batchPolicy.kind === 'fields' &&
@@ -766,6 +866,8 @@ function requireLinearLayout(
     layout?.kind === 'LinearBiome' &&
     ((layout.terminal.kind === 'forkedTransition' &&
       layout.continuation.batchPolicy.kind !== 'clockwork') ||
+      (layout.terminal.kind === 'directTransition' &&
+        layout.continuation.batchPolicy.kind === 'standard') ||
       (layout.terminal.kind === 'generatedTarget' &&
         layout.continuation.batchPolicy.kind === 'clockwork'));
   const supportedFields =
@@ -779,7 +881,6 @@ function requireLinearLayout(
     layout?.kind !== 'LinearBiome' ||
     !supportedEntry ||
     !supportedContinuation ||
-    layout.continuation.rewardStoreOverrides.length !== 0 ||
     !supportedTerminal ||
     !supportedFields
   ) {
@@ -1130,15 +1231,12 @@ export function materializeLinearBiome(
 
     if (continuation.kind === 'batch') {
       const batchState = canonicalBatchState(catalog, layout, occurrences, continuation);
-      const baseStoreKey =
-        continuation.rewardStore.kind === 'authoredBaseStore'
-          ? continuation.rewardStore.baseRewardStoreKey
-          : undefined;
       const sharedStoreKey = finalSharedRewardStoreKey(
         catalog,
         occurrences,
+        parent,
+        continuation.rewardStore,
         continuation.targets,
-        baseStoreKey,
       );
       const targets = Object.freeze(
         continuation.targets.map((target) =>
@@ -1177,6 +1275,21 @@ export function materializeLinearBiome(
       continue;
     }
 
+    const terminalRewardStore =
+      layout.terminal.kind === 'directTransition' ? continuation.rewardStore : undefined;
+    if (layout.terminal.kind === 'directTransition' && terminalRewardStore === undefined) {
+      fail(`${layout.biomeKey} direct terminal has no reward store`);
+    }
+    const terminalStoreKey =
+      terminalRewardStore === undefined
+        ? undefined
+        : finalSharedRewardStoreKey(
+            catalog,
+            occurrences,
+            parent,
+            terminalRewardStore,
+            continuation.targets,
+          );
     const targets = Object.freeze(
       continuation.targets.map((target) =>
         materializeTarget(
@@ -1186,8 +1299,11 @@ export function materializeLinearBiome(
           parentRoom,
           continuation,
           target,
-          target.exitIndex === 1 ? 'terminalShop' : 'terminalFreeReward',
+          layout.terminal.kind === 'directTransition' || target.exitIndex === 1
+            ? 'terminalShop'
+            : 'terminalFreeReward',
           'entersTerminal',
+          terminalStoreKey,
         ),
       ),
     );
@@ -1197,6 +1313,15 @@ export function materializeLinearBiome(
       targets,
       pickedExitIndex,
       pickedOrigin: createPickedAddress(biome, continuation.parentOccurrenceId),
+      ...(terminalRewardStore === undefined
+        ? {}
+        : {
+            rewardStore: canonicalRewardStore(
+              biome,
+              continuation.parentOccurrenceId,
+              terminalRewardStore,
+            ),
+          }),
     });
   }
 
@@ -1207,6 +1332,8 @@ export function materializeLinearBiome(
   if (terminalDeclaration === undefined) {
     fail(`${layout.terminal.roomGameName} has no terminal declaration`);
   }
+  const enteredTerminal = terminalEntry.targets.find((target) => target.picked)?.room;
+  const completionStoreKey = enteredTerminal?.incomingReward?.resolvedStoreKey;
   return Object.freeze({
     kind: 'LinearBiome',
     routeKey: biome.routeKey,
@@ -1220,9 +1347,11 @@ export function materializeLinearBiome(
       completion: layout.completion,
       enteredStorePolicy: {
         kind: 'declared',
-        ...(terminalDeclaration.forcedRewardStoreKey === undefined
-          ? {}
-          : { resolvedOfferStoreKey: terminalDeclaration.forcedRewardStoreKey }),
+        ...(completionStoreKey === undefined
+          ? terminalDeclaration.forcedRewardStoreKey === undefined
+            ? {}
+            : { resolvedOfferStoreKey: terminalDeclaration.forcedRewardStoreKey }
+          : { resolvedOfferStoreKey: completionStoreKey }),
       },
       lifecycleProducerPolicy: 'encounterCompatible',
       fail,

@@ -90,13 +90,15 @@ function requireLinearLayout(catalog: Catalog, biome: BiomeAddress, plan: Linear
     );
   }
   if (
+    layout.continuation.progressionPolicy.kind === 'staged' ||
     (layout.continuation.batchPolicy.kind !== 'standard' &&
       layout.continuation.batchPolicy.kind !== 'fields' &&
       layout.continuation.batchPolicy.kind !== 'clockwork') ||
     (layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore' &&
       layout.continuation.rewardStorePolicy.kind !== 'none') ||
-    layout.continuation.rewardStoreOverrides.length !== 0 ||
-    (layout.terminal.kind !== 'forkedTransition' && layout.terminal.kind !== 'generatedTarget')
+    (layout.terminal.kind !== 'forkedTransition' &&
+      layout.terminal.kind !== 'generatedTarget' &&
+      layout.terminal.kind !== 'directTransition')
   ) {
     throw new CompletenessContractError(
       `catalog ${biome.biomeKey} layout is not supported by linear completeness`,

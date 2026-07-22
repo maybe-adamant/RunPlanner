@@ -90,6 +90,15 @@ const lifecycleEffectRegistry = Object.freeze({
       offerPoint: operation.offerPoint,
     });
   },
+  recordPhaseOfferPoint: (context, state) => {
+    const offerPoint = requireEncounterPhase(context).offerPoint;
+    return offerPoint === undefined
+      ? state
+      : appendEvent(state, context, {
+          kind: 'offerPointMaterialized',
+          offerPoint: offerPoint.key,
+        });
+  },
   recordAppearance: (context, state) => appendEvent(state, context, { kind: 'roomEntered' }),
   recordRequiredObjectSpawns: (context, state) => {
     const requiredObjects = context.input.requiredObjects;
@@ -137,6 +146,15 @@ const lifecycleEffectRegistry = Object.freeze({
       kind: 'encounterCompleted',
       phaseKey: requireEncounterPhase(context).key,
     }),
+  recordPhaseOfferAcquisition: (context, state) => {
+    const offerPoint = requireEncounterPhase(context).offerPoint;
+    return offerPoint === undefined
+      ? state
+      : appendEvent(state, context, {
+          kind: 'offerPointAcquired',
+          offerPoint: offerPoint.key,
+        });
+  },
   recordRequiredObjectCompletions: (context, state) => {
     const requiredObjects = context.input.requiredObjects;
     if (requiredObjects === undefined || requiredObjects.length === 0) {
@@ -268,6 +286,7 @@ const operationDispatchRegistry = Object.freeze({
   completeEncounter: encounterOperationHandler,
   completeRequiredObjects: defaultOperationHandler,
   runEncounterSequence: encounterSequenceOperationHandler,
+  runRewardEncounterSequence: encounterSequenceOperationHandler,
   advanceProducer: defaultOperationHandler,
   generateOutgoingBatch: defaultOperationHandler,
   applyShopPurchases: defaultOperationHandler,
@@ -293,17 +312,34 @@ function resolveExecutionContext(
       `unknown room lifecycle profile ${input.lifecycleProfileKey}`,
     );
   }
-  const encounter = catalog.encounterProfiles.byKey[input.encounterProfileKey];
-  if (encounter === undefined) {
+  const declaredEncounter = catalog.encounterProfiles.byKey[input.encounterProfileKey];
+  if (declaredEncounter === undefined) {
     throw new LifecycleExecutionContractError(
       `unknown encounter profile ${input.encounterProfileKey}`,
     );
   }
-  if (!profile.encounterProfileKeys.includes(encounter.key)) {
+  if (!profile.encounterProfileKeys.includes(declaredEncounter.key)) {
     throw new LifecycleExecutionContractError(
-      `${encounter.key} is incompatible with ${profile.key}`,
+      `${declaredEncounter.key} is incompatible with ${profile.key}`,
     );
   }
+  const selectedPhases = input.encounterPhases ?? declaredEncounter.phases;
+  if (
+    (selectedPhases.length === 0 && declaredEncounter.phases.length !== 0) ||
+    selectedPhases.length > declaredEncounter.phases.length ||
+    selectedPhases.some((phase, index) => phase.key !== declaredEncounter.phases[index]?.key) ||
+    declaredEncounter.phases
+      .slice(selectedPhases.length)
+      .some((phase) => phase.presence === undefined)
+  ) {
+    throw new LifecycleExecutionContractError(
+      `${declaredEncounter.key} selected an invalid active encounter-phase prefix`,
+    );
+  }
+  const encounter: EncounterProfile =
+    selectedPhases === declaredEncounter.phases
+      ? declaredEncounter
+      : Object.freeze({ ...declaredEncounter, phases: Object.freeze([...selectedPhases]) });
 
   const hasRequiredObjects = (input.requiredObjects?.length ?? 0) > 0;
   const hasRequiredObjectOperations = profile.operations.some(

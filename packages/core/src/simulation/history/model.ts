@@ -233,10 +233,19 @@ export interface LinearTargetGenerationView {
   readonly after: LinearHistoryStateView;
 }
 
+export interface LinearOfferPointView {
+  readonly offerPoint: string;
+  readonly before: LinearHistoryStateView;
+  readonly after: LinearHistoryStateView;
+  readonly acquisitionBefore?: LinearHistoryStateView;
+  readonly acquisitionAfter?: LinearHistoryStateView;
+}
+
 export interface LinearRoomHistoryViews {
   readonly origin: RoomHistoryOrigin;
   readonly preparation: LinearHistoryStateView;
   readonly entry: LinearHistoryStateView;
+  readonly offerPoints?: readonly LinearOfferPointView[];
   readonly preOutgoing?: LinearHistoryStateView;
   readonly targetGenerations: readonly LinearTargetGenerationView[];
   readonly outgoingGeneration?: LinearHistoryStateView;

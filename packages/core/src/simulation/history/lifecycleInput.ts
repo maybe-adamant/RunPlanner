@@ -67,6 +67,7 @@ export function createRoomLifecycleInput(
     origin: room.origin,
     lifecycleProfileKey: room.lifecycleProfileKey,
     encounterProfileKey: room.encounterProfileKey,
+    encounterPhases: room.encounterPhases,
     counterEffects: room.counterEffects,
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
     ...(incomingReward === undefined

@@ -98,6 +98,7 @@ export interface LinearBatchContinuation {
 export interface LinearTerminalContinuation {
   readonly kind: 'terminal';
   readonly parentOccurrenceId: OccurrenceId | null;
+  readonly rewardStore?: BatchRewardStoreState;
   readonly targets: readonly LinearTargetReference[];
   readonly pickedExitIndex: number | null;
 }

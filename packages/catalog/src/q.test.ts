@@ -4,7 +4,13 @@ import type {
   RewardProducerBinding,
   ShopRewardBinding,
 } from '@run-planner/core';
-import { createDefaultRoomState } from '@run-planner/core';
+import {
+  CompletenessContractError,
+  createBiomeAddress,
+  createDefaultRoomState,
+  createProjectDocument,
+  evaluateLinearCompleteness,
+} from '@run-planner/core';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';
@@ -32,6 +38,24 @@ function requireQLayout(): LinearBiomeLayout {
 }
 
 describe('complete dormant Q catalog', () => {
+  it('keeps staged progression outside the generic linear evaluator until Q implementation', () => {
+    const project = createProjectDocument(catalog, {
+      projectId: 'dormant-q-gate',
+      name: 'Dormant Q Gate',
+      configuredBiomeCounts: { Surface: 4 },
+    });
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'Q');
+    if (plan?.kind !== 'LinearBiome') {
+      throw new Error('fixture lost dormant Q plan');
+    }
+
+    expect(() =>
+      evaluateLinearCompleteness(catalog, createBiomeAddress('Surface', 'Q'), plan),
+    ).toThrowError(CompletenessContractError);
+  });
+
   it('normalizes the scripted reward-free layout and exact stage pools', () => {
     const rooms = catalog.rooms.values.filter((room) => room.biomeKey === 'Q');
     expect(rooms).toHaveLength(23);

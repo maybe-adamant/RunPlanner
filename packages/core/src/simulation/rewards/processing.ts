@@ -1,5 +1,5 @@
 import type { Catalog, RoomDeclaration } from '../../catalog';
-import { semanticAddressKey } from '../../project/addresses';
+import { semanticAddressKey, type SemanticAddress } from '../../project/addresses';
 import {
   applyConcreteAcquisition,
   applyOfferProjection,
@@ -27,7 +27,6 @@ import type {
   CanonicalAuthoredRoom,
   CanonicalFixedEntryRoom,
   CanonicalLocalChildRoom,
-  CanonicalLocalReward,
   CanonicalResolvedIncomingReward,
 } from '../materialization';
 import type { FindingEvidence, RewardGenerationFindingCode, SemanticFinding } from '../model';
@@ -247,10 +246,12 @@ function withBag(
 
 export interface OfferProcessingContext {
   readonly catalog: Catalog;
-  readonly reward: Pick<
-    CanonicalResolvedIncomingReward | CanonicalLocalReward,
-    'offer' | 'origin' | 'producerLifecycleKey' | 'resolvedStoreKey'
-  >;
+  readonly reward: {
+    readonly origin: SemanticAddress;
+    readonly offer: CanonicalResolvedIncomingReward['offer'];
+    readonly producerLifecycleKey: string;
+    readonly resolvedStoreKey?: string;
+  };
   readonly binding?: CountedRewardBinding;
   readonly historySequence: number;
   readonly peers: readonly CanonicalResolvedIncomingReward['offer'][];

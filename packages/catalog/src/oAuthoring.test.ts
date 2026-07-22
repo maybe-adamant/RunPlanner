@@ -2,6 +2,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createContinuationAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
@@ -261,6 +262,44 @@ describe('O authored topology', () => {
     }
   });
 
+  it('replaces fixed Devotion payloads without changing their reward type', () => {
+    const devotion = createOccurrenceId('o-devotion');
+    let project = appendRoom(
+      startO(createOProject()),
+      createOccurrenceId('o-intro'),
+      devotion,
+      'O_Devotion01',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(oBiome, devotion),
+      value: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'HeraUpgrade',
+          spurnedSource: 'PoseidonUpgrade',
+        },
+      },
+    });
+
+    expect(occurrence(project, devotion).state).toEqual({
+      kind: 'fixed',
+      payload: {
+        kind: 'DevotionPair',
+        chosenSource: 'HeraUpgrade',
+        spurnedSource: 'PoseidonUpgrade',
+      },
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(oBiome, devotion),
+        value: { rewardType: 'Story' },
+      }),
+    ).toThrowError(ProjectCommandContractError);
+  });
+
   it('authors a single entered direct preboss occurrence', () => {
     const roomIds = Array.from({ length: 6 }, (_, index) =>
       createOccurrenceId(`o-batch-${index + 1}`),
@@ -285,6 +324,7 @@ describe('O authored topology', () => {
     expect(oPlan(project).topology?.continuations.at(-1)).toEqual({
       kind: 'terminal',
       parentOccurrenceId: parent,
+      rewardStore: { kind: 'sourceOfferPoint' },
       targets: [{ exitIndex: 1, occurrenceId: createOccurrenceId('o-preboss') }],
       pickedExitIndex: 1,
     });
@@ -298,6 +338,11 @@ describe('O authored topology', () => {
     const malformed = JSON.parse(encodeProjectDocument(project));
     malformed.routes[1].biomes[1].topology.continuations.at(-1).pickedExitIndex = null;
     expect(() => decodeProjectDocument(malformed, catalog)).toThrowError(
+      ProjectDocumentContractError,
+    );
+    const missingStore = JSON.parse(encodeProjectDocument(project));
+    delete missingStore.routes[1].biomes[1].topology.continuations.at(-1).rewardStore;
+    expect(() => decodeProjectDocument(missingStore, catalog)).toThrowError(
       ProjectDocumentContractError,
     );
   });
