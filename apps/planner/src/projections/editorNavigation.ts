@@ -1,4 +1,4 @@
-import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { Catalog, CatalogCollection } from '@run-planner/engine/catalog-schema';
 
 export interface BiomeEditorNavigationItem {
   readonly biomeKey: string;
@@ -7,11 +7,12 @@ export interface BiomeEditorNavigationItem {
 
 export interface RouteEditorNavigation {
   readonly routeKey: string;
+  readonly label: string;
   readonly biomePanels: readonly BiomeEditorNavigationItem[];
 }
 
 export interface EditorNavigation {
-  readonly routes: Readonly<Record<string, RouteEditorNavigation>>;
+  readonly routes: CatalogCollection<RouteEditorNavigation>;
 }
 
 export function createEditorNavigation(catalog: Catalog): EditorNavigation {
@@ -26,11 +27,15 @@ export function createEditorNavigation(catalog: Catalog): EditorNavigation {
     const biomePanels = route.biomeKeys.map(navigationItem);
     return Object.freeze({
       routeKey: route.key,
+      label: route.label,
       biomePanels: Object.freeze(biomePanels),
     });
   });
 
   return Object.freeze({
-    routes: Object.freeze(Object.fromEntries(routes.map((route) => [route.routeKey, route]))),
+    routes: Object.freeze({
+      values: Object.freeze(routes),
+      byKey: Object.freeze(Object.fromEntries(routes.map((route) => [route.routeKey, route]))),
+    }),
   });
 }

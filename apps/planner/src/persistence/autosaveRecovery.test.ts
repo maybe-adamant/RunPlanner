@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { type AutosaveRecoveryAdapter, type AutosaveScheduler } from './autosaveRecovery';
 import { createApplication } from '../composition/createApplication';
-import { sectionSelected } from '../state/editorSessionSlice';
+import { settingsSelected } from '../state/editorSessionSlice';
 import type { ProfileFileAdapter } from './profileFile';
 import { profileSaveSucceeded } from '../state/profileSessionSlice';
 import {
@@ -157,7 +157,7 @@ describe('autosave recovery lifecycle', () => {
     });
     const baselineJson = encodeProjectDocument(selectPresentProject(application.store.getState()));
 
-    application.store.dispatch(sectionSelected('settings'));
+    application.store.dispatch(settingsSelected());
     application.store.dispatch(profileSaveSucceeded({ baselineJson }));
     expect(scheduler.delays).toEqual([]);
 

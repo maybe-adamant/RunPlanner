@@ -105,7 +105,7 @@ describe('planner history interaction', () => {
 
     await user.click(screen.getByRole('button', { name: 'Surface' }));
 
-    expect(application.store.getState().editorSession.activeSection).toBe('surface');
+    expect(application.store.getState().editorSession.activeRouteKey).toBe('Surface');
     expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
   });
 
@@ -115,7 +115,7 @@ describe('planner history interaction', () => {
     const surface = screen.getByRole('button', { name: 'Surface' });
     surface.focus();
     await user.keyboard('{Enter}');
-    expect(application.store.getState().editorSession.activeSection).toBe('surface');
+    expect(application.store.getState().editorSession.activeRouteKey).toBe('Surface');
     expect(surface.getAttribute('aria-current')).toBe('page');
 
     const underworld = screen.getByRole('button', { name: 'Underworld' });
@@ -126,19 +126,19 @@ describe('planner history interaction', () => {
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
     oceanus.focus();
     await user.keyboard('{Enter}');
-    expect(application.store.getState().editorSession.activeUnderworldPanel).toBe('G');
+    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBe('G');
     expect(oceanus.getAttribute('aria-current')).toBe('page');
 
     const tartarus = screen.getByRole('button', { name: 'Tartarus' });
     tartarus.focus();
     await user.keyboard(' ');
-    expect(application.store.getState().editorSession.activeUnderworldPanel).toBe('I');
+    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBe('I');
     expect(tartarus.getAttribute('aria-current')).toBe('page');
 
     const route = screen.getByRole('button', { name: 'Route' });
     route.focus();
     await user.keyboard(' ');
-    expect(application.store.getState().editorSession.activeUnderworldPanel).toBe('route');
+    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBeNull();
     expect(route.getAttribute('aria-current')).toBe('page');
   });
 });
