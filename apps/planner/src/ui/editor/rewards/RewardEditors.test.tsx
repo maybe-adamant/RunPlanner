@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 import type {
   CandidateOptionProjection,
   CandidateProjectionService,
-} from '../projections/candidateProjection';
+} from '../../../projections/candidateProjection';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 
 const biome = createBiomeAddress('Underworld', 'F');

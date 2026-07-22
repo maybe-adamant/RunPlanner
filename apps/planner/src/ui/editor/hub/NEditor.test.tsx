@@ -8,14 +8,14 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createPlannerCapabilities } from '../composition/capabilities';
-import { createCandidateProjectionService } from '../projections/candidateProjection';
+import { createPlannerCapabilities } from '../../../composition/capabilities';
+import { createCandidateProjectionService } from '../../../projections/candidateProjection';
 import {
   createPlannerStore,
   selectPresentProject,
   selectProjectEvaluation,
   useAppSelector,
-} from '../state/store';
+} from '../../../state/store';
 import {
   createEmptyNProject as emptyProject,
   createRepresentativeNProject as representativeProject,
@@ -24,7 +24,7 @@ import {
   nOccurrenceId as occurrenceId,
   nVisitSlotKeys as visitSlotKeys,
   requireNPlan as nPlan,
-} from '../testing/surfaceProject';
+} from '../../../../test/fixtures/surfaceProject';
 import { HubBiomeEditor } from './HubBiomeEditor';
 
 const activeScope = Object.freeze({ simulatableBiomeKeys: Object.freeze(['N']) });

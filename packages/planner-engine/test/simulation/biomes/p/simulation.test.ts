@@ -12,7 +12,7 @@ import {
   createRepresentativeNOPProject,
   pBiome,
   pOccurrenceId,
-} from '../../../../../../apps/planner/src/testing/surfaceProject';
+} from '../../../../../../apps/planner/test/fixtures/surfaceProject';
 
 describe('P core loop', () => {
   it('replays a complete N/O/P prefix through the shared linear authorities', () => {

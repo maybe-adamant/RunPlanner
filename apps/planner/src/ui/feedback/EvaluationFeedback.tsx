@@ -9,9 +9,9 @@ import {
   presentFinding,
   semanticFindingKey,
   type StatusPresentation,
-} from '../projections/evaluationProjection';
-import { findingSelected } from '../state/editorSessionSlice';
-import { selectProjectFindingsByOwner, useAppDispatch, useAppSelector } from '../state/store';
+} from '../../projections/evaluationProjection';
+import { findingSelected } from '../../state/editorSessionSlice';
+import { selectProjectFindingsByOwner, useAppDispatch, useAppSelector } from '../../state/store';
 import { semanticOwnerElementId } from './semanticOwner';
 
 const scopedFindings = createContext<ReturnType<typeof indexFindingsByOwner> | undefined>(

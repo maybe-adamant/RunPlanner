@@ -5,15 +5,15 @@ import { useState } from 'react';
 import {
   presentCandidateLabel,
   type CandidateProjectionService,
-} from '../projections/candidateProjection';
+} from '../../../projections/candidateProjection';
 import {
   roomCategoryForKind,
   roomSelectorCategories,
   selectRoomsForTargetCategory,
   type RoomSelectorCategory,
-} from '../projections/roomSelectorProjection';
-import { selectPresentProject, useAppSelector } from '../state/store';
-import { candidateSelectState } from './candidatePresentation';
+} from '../../../projections/roomSelectorProjection';
+import { selectPresentProject, useAppSelector } from '../../../state/store';
+import { candidateSelectState } from '../../feedback/candidatePresentation';
 
 interface RoomSelectorProps {
   readonly biomeKey: string;

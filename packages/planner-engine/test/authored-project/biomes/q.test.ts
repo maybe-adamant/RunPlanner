@@ -20,7 +20,7 @@ import {
   createRepresentativeNOPQProject,
   qBiome,
   qOccurrenceIds,
-} from '../../../../../apps/planner/src/testing/surfaceProject';
+} from '../../../../../apps/planner/test/fixtures/surfaceProject';
 
 function qPlan(project: ProjectDocument): LinearBiomePlan {
   const plan = project.routes

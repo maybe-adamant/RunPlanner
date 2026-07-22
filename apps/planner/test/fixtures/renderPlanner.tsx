@@ -3,8 +3,11 @@ import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 
-import { createApplication, type PlannerApplication } from '../composition/createApplication';
-import { App } from '../ui/App';
+import {
+  createApplication,
+  type PlannerApplication,
+} from '../../src/composition/createApplication';
+import { App } from '../../src/ui/shell/App';
 
 interface RenderPlannerOptions {
   readonly application?: PlannerApplication;

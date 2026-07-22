@@ -4,10 +4,13 @@ import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { encodeProjectDocument } from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createApplication } from '../composition/createApplication';
-import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../persistence/autosaveRecovery';
-import type { ProfileFileAdapter } from '../persistence/profileFile';
-import { renderPlannerForInteraction } from '../testing/renderPlanner';
+import { createApplication } from '../../composition/createApplication';
+import type {
+  AutosaveRecoveryAdapter,
+  AutosaveScheduler,
+} from '../../persistence/autosaveRecovery';
+import type { ProfileFileAdapter } from '../../persistence/profileFile';
+import { renderPlannerForInteraction } from '../../../test/fixtures/renderPlanner';
 
 afterEach(cleanup);
 

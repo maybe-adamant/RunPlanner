@@ -12,16 +12,22 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createApplication, type PlannerApplication } from '../composition/createApplication';
-import { createProjectSimulationScope } from '../composition/capabilityConfiguration';
-import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../persistence/autosaveRecovery';
-import type { ProfileFileAdapter } from '../persistence/profileFile';
+import {
+  createApplication,
+  type PlannerApplication,
+} from '../../src/composition/createApplication';
+import { createProjectSimulationScope } from '../../src/composition/capabilityConfiguration';
+import type {
+  AutosaveRecoveryAdapter,
+  AutosaveScheduler,
+} from '../../src/persistence/autosaveRecovery';
+import type { ProfileFileAdapter } from '../../src/persistence/profileFile';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
   authoredProjectUndoRequested,
-} from '../state/projectWorkspaceSlice';
-import { selectProfileStatus } from '../state/store';
+} from '../../src/state/projectWorkspaceSlice';
+import { selectProfileStatus } from '../../src/state/store';
 import {
   createRepresentativeNOPQProject,
   nBiome,
@@ -32,8 +38,8 @@ import {
   pOccurrenceId,
   qBiome,
   qOccurrenceIds,
-} from '../testing/surfaceProject';
-import { renderPlannerForInteraction } from '../testing/renderPlanner';
+} from '../fixtures/surfaceProject';
+import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
 afterEach(() => {
   cleanup();
