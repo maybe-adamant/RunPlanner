@@ -74,6 +74,7 @@ export {
 export { decodeLinearBiomeTopology } from './linearTopology';
 export { decodeHubBiomeTopology } from './hubTopology';
 export { createDefaultBatchState, decodeBatchState } from './batchState';
+export { resolvedStoreForOccurrence as resolveLinearOccurrenceRewardStore } from './commands/topology-linear';
 export {
   applyProjectHistoryCommand,
   canRedoProjectHistory,

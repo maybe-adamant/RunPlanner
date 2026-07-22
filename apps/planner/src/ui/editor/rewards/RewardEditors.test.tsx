@@ -43,6 +43,7 @@ function projected<T>(
 }
 
 const candidateProjection: CandidateProjectionService = {
+  countedRewardTypes: (_project, _owner, _binding, selectedRewardType) => [selectedRewardType],
   biomeFields: (_project, owner, values) =>
     projected(
       values,
@@ -173,7 +174,7 @@ describe('reward editor projections', () => {
     expect(markup).not.toContain('>ZeusUpgrade</option>');
   });
 
-  it('renders the static producer reward union without leaf store ownership', () => {
+  it('renders the producer-resolved reward domain instead of the binding union', () => {
     const room = catalog.rooms.byKey.F_Combat02;
     if (room?.incomingReward.kind !== 'countedChoice') {
       throw new Error('F_Combat02 counted reward binding is missing');
@@ -192,6 +193,7 @@ describe('reward editor projections', () => {
     );
 
     expect(markup).toContain('Boon');
+    expect(markup).not.toContain('Ashes');
     expect(markup).not.toContain('Reward pool');
   });
 });
