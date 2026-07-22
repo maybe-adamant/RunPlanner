@@ -157,7 +157,7 @@ export function evaluateRewardCandidate(
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
   }
-  if (biome.completion === 'incomplete') {
+  if (biome.authoring === 'incomplete') {
     failCandidate(stableQuery, 'reward proposal made a complete biome incomplete');
   }
   const findings = rewardFindings(biome, stableQuery);
@@ -275,7 +275,7 @@ function evaluateLinearMutation(
   if (typeof evaluation === 'string') {
     return evaluation;
   }
-  if (evaluation.completion === 'incomplete' || evaluation.kind !== 'LinearBiome') {
+  if (evaluation.authoring === 'incomplete' || evaluation.kind !== 'LinearBiome') {
     failCandidate(query, 'ship proposal did not produce a complete linear biome');
   }
   return evaluation;
@@ -491,7 +491,7 @@ export function evaluateShopPurchaseCandidate(
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
   }
-  if (biome.completion === 'incomplete') {
+  if (biome.authoring === 'incomplete') {
     failCandidate(stableQuery, 'purchase proposal made a complete biome incomplete');
   }
   const exactKey = semanticAddressKey(stableQuery.purchase);

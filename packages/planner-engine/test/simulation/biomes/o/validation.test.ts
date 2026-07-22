@@ -303,7 +303,7 @@ function validProject(): ProjectDocument {
 
 function evaluateN(document: ProjectDocument): CompleteHubProjectEvaluation {
   const evaluation = evaluateHubBiome(catalog, 'Surface', nPlan(document));
-  if (evaluation.completion !== 'complete') {
+  if (evaluation.authoring !== 'complete') {
     throw new Error('fixture N is incomplete');
   }
   return evaluation;
@@ -315,7 +315,7 @@ function evaluateO(document: ProjectDocument): CompleteLinearProjectEvaluation {
     throw new Error(`fixture N is invalid: ${n.findings.map((finding) => finding.code)}`);
   }
   const evaluation = evaluateLinearBiome(catalog, 'Surface', oPlan(document), 2, n);
-  if (evaluation.completion !== 'complete') {
+  if (evaluation.authoring !== 'complete') {
     throw new Error('fixture O is incomplete');
   }
   return evaluation;

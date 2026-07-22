@@ -491,8 +491,13 @@ describe('selected N validation', () => {
   it('closes the complete fixed board, visit, side-pressure, pylon, restore, and terminal trace', () => {
     const result = selected();
 
-    expect(result).toMatchObject({ biomeKey: 'N', completion: 'complete', validity: 'valid' });
-    if (result.completion !== 'complete') {
+    expect(result).toMatchObject({
+      biomeKey: 'N',
+      authoring: 'complete',
+      coverage: { kind: 'complete' },
+      validity: 'valid',
+    });
+    if (result.authoring !== 'complete') {
       throw new Error('selected N fixture is incomplete');
     }
     expect(result.findings).toEqual([]);
@@ -547,8 +552,8 @@ describe('selected N validation', () => {
     });
 
     const result = selected(project);
-    expect(result).toMatchObject({ completion: 'complete', validity: 'invalid' });
-    if (result.completion !== 'complete') {
+    expect(result).toMatchObject({ authoring: 'complete', validity: 'invalid' });
+    if (result.authoring !== 'complete') {
       throw new Error('miniboss constraint fixture is incomplete');
     }
     expect(result.roomGeneration.openSlotConstraints[0]).toMatchObject({
@@ -578,8 +583,8 @@ describe('selected N validation', () => {
     });
 
     const result = selected(project);
-    expect(result).toMatchObject({ completion: 'complete', validity: 'invalid' });
-    if (result.completion !== 'complete') {
+    expect(result).toMatchObject({ authoring: 'complete', validity: 'invalid' });
+    if (result.authoring !== 'complete') {
       throw new Error('side pressure fixture is incomplete');
     }
     expect(result.roomGeneration.findings).toContainEqual(
@@ -616,7 +621,7 @@ describe('selected N validation', () => {
     });
 
     const result = selected(project);
-    if (result.completion !== 'complete') {
+    if (result.authoring !== 'complete') {
       throw new Error('later pressure fixture is incomplete');
     }
     expect(result.roomGeneration.findings).toContainEqual(
@@ -636,8 +641,8 @@ describe('selected N validation', () => {
 
   it('combines lookup-aware Preboss findings without moving their semantic owner', () => {
     const result = selected(representativeProject(false));
-    expect(result).toMatchObject({ completion: 'complete', validity: 'invalid' });
-    if (result.completion !== 'complete') {
+    expect(result).toMatchObject({ authoring: 'complete', validity: 'invalid' });
+    if (result.authoring !== 'complete') {
       throw new Error('shop validation fixture is incomplete');
     }
     expect(result.findings).toContainEqual(
@@ -655,7 +660,8 @@ describe('selected N validation', () => {
       configuredBiomeCounts: { Surface: 1 },
     });
     expect(evaluateHubBiome(catalog, 'Surface', plan(incomplete))).toMatchObject({
-      completion: 'incomplete',
+      authoring: 'incomplete',
+      coverage: { kind: 'none', reason: 'notEvaluated' },
       biomeKey: 'N',
     });
 
@@ -665,9 +671,12 @@ describe('selected N validation', () => {
     );
     expect(surface).toMatchObject({
       status: 'valid',
-      biomes: [{ biomeKey: 'N', completion: 'complete', validity: 'valid' }],
-      validatedPrefix: ['N'],
-      horizon: { kind: 'routeEnd' },
+      biomes: [{ biomeKey: 'N', authoring: 'complete', validity: 'valid' }],
+      processing: {
+        completeValidPrefix: ['N'],
+        active: null,
+        blockedSuffix: [],
+      },
     });
   });
 
@@ -890,9 +899,12 @@ describe('N candidate evaluation', () => {
     ).toMatchObject({ context: 'unavailable', reason: 'biomeIncomplete' });
     expect(simulateProject(catalog, representativeProject()).routes[1]).toMatchObject({
       status: 'valid',
-      biomes: [{ biomeKey: 'N', completion: 'complete', validity: 'valid' }],
-      validatedPrefix: ['N'],
-      horizon: { kind: 'routeEnd' },
+      biomes: [{ biomeKey: 'N', authoring: 'complete', validity: 'valid' }],
+      processing: {
+        completeValidPrefix: ['N'],
+        active: null,
+        blockedSuffix: [],
+      },
     });
   });
 

@@ -11,7 +11,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   type FindingCode,
-  type ProjectBiomeEvaluation,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
   type SemanticFinding,
@@ -101,21 +100,21 @@ describe('evaluation presentation', () => {
       label: 'Blocked',
       tone: 'blocked',
     });
-    expect(presentBiomeStatus({ completion: 'incomplete' } as ProjectBiomeEvaluation)).toEqual({
+    expect(presentBiomeStatus({ authoring: 'incomplete' })).toEqual({
       label: 'Incomplete',
       tone: 'incomplete',
     });
     expect(
       presentBiomeStatus({
-        completion: 'complete',
+        authoring: 'complete',
         validity: 'valid',
-      } as ProjectBiomeEvaluation),
+      }),
     ).toEqual({ label: 'Complete · Valid', tone: 'valid' });
     expect(
       presentBiomeStatus({
-        completion: 'complete',
+        authoring: 'complete',
         validity: 'invalid',
-      } as ProjectBiomeEvaluation),
+      }),
     ).toEqual({ label: 'Complete · Invalid', tone: 'invalid' });
   });
 

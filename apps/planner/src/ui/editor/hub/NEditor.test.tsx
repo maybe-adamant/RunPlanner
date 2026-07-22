@@ -90,8 +90,12 @@ describe('N editor projection', () => {
       simulateProject(catalog, store.getState().projectWorkspace.history.present).routes[1],
     ).toMatchObject({
       status: 'incomplete',
-      biomes: [{ kind: 'HubBiome', biomeKey: 'N', completion: 'incomplete' }],
-      horizon: { kind: 'incomplete', biomeKey: 'N' },
+      biomes: [{ kind: 'HubBiome', biomeKey: 'N', authoring: 'incomplete' }],
+      processing: {
+        completeValidPrefix: [],
+        active: { kind: 'incomplete', biomeKey: 'N' },
+        blockedSuffix: [],
+      },
     });
   });
 

@@ -2,7 +2,6 @@ import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/au
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
   type FindingCode,
-  type ProjectBiomeEvaluation,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
   type SemanticFinding,
@@ -19,6 +18,10 @@ export interface StatusPresentation {
   readonly label: string;
   readonly tone: 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
 }
+
+export type BiomeStatusEvaluation =
+  | { readonly authoring: 'incomplete' }
+  | { readonly authoring: 'complete'; readonly validity: 'invalid' | 'valid' };
 
 const findingCopy = {
   fieldsCageOutcomeUnavailable: {
@@ -175,12 +178,12 @@ export function presentRouteStatus(evaluation: ProjectRouteEvaluation): StatusPr
 }
 
 export function presentBiomeStatus(
-  evaluation: ProjectBiomeEvaluation | undefined,
+  evaluation: BiomeStatusEvaluation | undefined,
 ): StatusPresentation {
   if (evaluation === undefined) {
     return blockedBiomeStatus;
   }
-  if (evaluation.completion === 'incomplete') {
+  if (evaluation.authoring === 'incomplete') {
     return incompleteBiomeStatus;
   }
   return evaluation.validity === 'valid' ? validBiomeStatus : invalidBiomeStatus;

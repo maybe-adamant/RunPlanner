@@ -34,7 +34,7 @@ export function evaluateBiomeFieldCandidate(
   if (typeof biome === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
   }
-  if (biome.completion === 'incomplete') {
+  if (biome.authoring === 'incomplete') {
     failCandidate(stableQuery, 'biome-field proposal made a complete biome incomplete');
   }
   const findings = biome.findings;

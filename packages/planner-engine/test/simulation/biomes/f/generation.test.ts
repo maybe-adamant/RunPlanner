@@ -677,7 +677,7 @@ describe('project candidate evaluation', () => {
       const selectedBiome = selectedEvaluation.routes
         .find((route) => route.routeKey === 'Underworld')
         ?.biomes.find((evaluation) => evaluation.biomeKey === 'F');
-      if (selectedBiome?.kind !== 'LinearBiome' || selectedBiome.completion !== 'complete') {
+      if (selectedBiome?.kind !== 'LinearBiome' || selectedBiome.authoring !== 'complete') {
         throw new Error('selected candidate parity fixture did not produce complete F');
       }
       const targetKey = semanticAddressKey(target);

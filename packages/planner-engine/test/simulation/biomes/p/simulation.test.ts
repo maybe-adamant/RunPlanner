@@ -22,17 +22,20 @@ describe('P core loop', () => {
     expect(evaluation.status, JSON.stringify(evaluation.findings, null, 2)).toBe('valid');
     expect(evaluation.routes[1]).toMatchObject({
       status: 'valid',
-      validatedPrefix: ['N', 'O', 'P'],
-      horizon: { kind: 'routeEnd' },
+      processing: {
+        completeValidPrefix: ['N', 'O', 'P'],
+        active: null,
+        blockedSuffix: [],
+      },
       biomes: [
-        { biomeKey: 'N', completion: 'complete', validity: 'valid' },
-        { biomeKey: 'O', completion: 'complete', validity: 'valid' },
-        { biomeKey: 'P', completion: 'complete', validity: 'valid' },
+        { biomeKey: 'N', authoring: 'complete', coverage: { kind: 'complete' }, validity: 'valid' },
+        { biomeKey: 'O', authoring: 'complete', coverage: { kind: 'complete' }, validity: 'valid' },
+        { biomeKey: 'P', authoring: 'complete', coverage: { kind: 'complete' }, validity: 'valid' },
       ],
     });
     const p = evaluation.routes[1]?.biomes[2];
     expect(p?.kind).toBe('LinearBiome');
-    if (p?.kind !== 'LinearBiome' || p.completion !== 'complete') {
+    if (p?.kind !== 'LinearBiome' || p.authoring !== 'complete') {
       throw new Error('P fixture did not complete');
     }
     expect(p.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
@@ -74,7 +77,7 @@ describe('P core loop', () => {
     });
     const p = simulateProject(catalog, project).routes[1]?.biomes[2];
 
-    expect(p).toMatchObject({ kind: 'LinearBiome', completion: 'complete', validity: 'invalid' });
+    expect(p).toMatchObject({ kind: 'LinearBiome', authoring: 'complete', validity: 'invalid' });
     expect(p?.findings).toContainEqual(
       expect.objectContaining({
         code: 'targetRoomUnavailable',

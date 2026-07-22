@@ -223,14 +223,14 @@ function unavailableReason(
   query: ProjectCandidateQuery,
 ): CandidateContextUnavailableReason {
   const address = queryAddress(query);
-  const { horizon } = route;
-  if (horizon.kind === 'incomplete') {
-    return horizon.biomeKey === address.biomeKey ? 'biomeIncomplete' : 'upstreamIncomplete';
+  const { active } = route.processing;
+  if (active?.kind === 'incomplete') {
+    return active.biomeKey === address.biomeKey ? 'biomeIncomplete' : 'upstreamIncomplete';
   }
-  if (horizon.kind === 'invalid') {
+  if (active?.kind === 'invalid') {
     return 'upstreamInvalid';
   }
-  failCandidate(query, 'simulation omitted the candidate biome without a processing horizon');
+  failCandidate(query, 'simulation omitted the candidate biome without an active route region');
 }
 
 function locateCompleteLinear(
@@ -242,7 +242,7 @@ function locateCompleteLinear(
   if (evaluation === undefined) {
     return unavailableReason(route, query);
   }
-  if (evaluation.completion === 'incomplete') {
+  if (evaluation.authoring === 'incomplete') {
     return 'biomeIncomplete';
   }
   if (evaluation.kind !== 'LinearBiome') {
@@ -273,7 +273,7 @@ export function locateCandidateHub(
     (candidate) => candidate.biomeKey === address.biomeKey,
   );
   if (activeEvaluation !== undefined) {
-    if (activeEvaluation.completion === 'incomplete') {
+    if (activeEvaluation.authoring === 'incomplete') {
       return 'biomeIncomplete';
     }
     if (activeEvaluation.kind !== 'HubBiome') {
@@ -358,9 +358,9 @@ export function evaluateCandidateBiome(
   }
 
   const previous = biomeIndex === 0 ? undefined : baselineRoute.biomes[biomeIndex - 1];
-  if (previous?.completion === 'incomplete') {
+  if (previous?.authoring === 'incomplete') {
     failCandidate(query, 'candidate biome has an incomplete upstream evaluation');
   }
-  const previousComplete = previous?.completion === 'complete' ? previous : undefined;
+  const previousComplete = previous?.authoring === 'complete' ? previous : undefined;
   return evaluateLinearBiome(catalog, route.routeKey, plan, biomeIndex + 1, previousComplete);
 }

@@ -176,13 +176,16 @@ describe('N/O/P/Q Surface product loop', () => {
     });
     expect(evaluated.routes[1]).toMatchObject({
       status: 'valid',
-      validatedPrefix: ['N', 'O', 'P', 'Q'],
-      horizon: { kind: 'routeEnd' },
+      processing: {
+        completeValidPrefix: ['N', 'O', 'P', 'Q'],
+        active: null,
+        blockedSuffix: [],
+      },
       biomes: [
-        { biomeKey: 'N', completion: 'complete', validity: 'valid' },
-        { biomeKey: 'O', completion: 'complete', validity: 'valid' },
-        { biomeKey: 'P', completion: 'complete', validity: 'valid' },
-        { biomeKey: 'Q', completion: 'complete', validity: 'valid' },
+        { biomeKey: 'N', authoring: 'complete', validity: 'valid' },
+        { biomeKey: 'O', authoring: 'complete', validity: 'valid' },
+        { biomeKey: 'P', authoring: 'complete', validity: 'valid' },
+        { biomeKey: 'Q', authoring: 'complete', validity: 'valid' },
       ],
     });
     expect(screen.getByRole('heading', { name: 'City of Ephyra' })).toBeTruthy();
@@ -353,7 +356,10 @@ describe('N/O/P/Q Surface product loop', () => {
     await view.user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
     expect(application.store.getState().projectWorkspace.evaluation).toMatchObject({
       status: 'incomplete',
-      routes: [{ status: 'empty' }, { status: 'incomplete', validatedPrefix: [] }],
+      routes: [
+        { status: 'empty' },
+        { status: 'incomplete', processing: { completeValidPrefix: [] } },
+      ],
     });
     expect(screen.getByRole('button', { name: 'City of Ephyra' })).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));

@@ -51,18 +51,3 @@ export interface SemanticFinding {
   readonly origin: SemanticAddress;
   readonly evidence: FindingEvidence;
 }
-
-export interface IncompleteBiomeEvaluation {
-  readonly completion: 'incomplete';
-  readonly findings: readonly SemanticFinding[];
-}
-
-export interface CompleteBiomeEvaluation<Snapshot> {
-  readonly completion: 'complete';
-  readonly validity: 'invalid' | 'valid';
-  readonly snapshot: Snapshot;
-  readonly findings: readonly SemanticFinding[];
-}
-
-export type BiomeEvaluation<Snapshot> =
-  CompleteBiomeEvaluation<Snapshot> | IncompleteBiomeEvaluation;

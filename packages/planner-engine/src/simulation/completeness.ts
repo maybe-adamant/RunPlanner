@@ -12,6 +12,7 @@ import {
   createPickedAddress,
   createTargetAddress,
   type BiomeAddress,
+  type SemanticAddress,
 } from '../authored-project/addresses';
 import type {
   AuthoredBiomeState,
@@ -27,6 +28,7 @@ import type { CompletenessFindingCode, FindingEvidence, SemanticFinding } from '
 
 export interface IncompleteLinearCompletenessResult {
   readonly completion: 'incomplete';
+  readonly frontier: SemanticAddress;
   readonly findings: readonly SemanticFinding[];
 }
 
@@ -42,6 +44,7 @@ export type LinearCompletenessResult =
 
 export interface IncompleteHubCompletenessResult {
   readonly completion: 'incomplete';
+  readonly frontier: SemanticAddress;
   readonly findings: readonly SemanticFinding[];
 }
 
@@ -191,10 +194,12 @@ export function evaluateLinearCompleteness(
   const layout: LinearBiomeLayout = requireLinearLayout(catalog, biome, plan);
   const topology = plan.topology;
   if (topology === null) {
+    const frontier = biome;
     return Object.freeze({
       completion: 'incomplete',
+      frontier,
       findings: Object.freeze([
-        finding('biomeTopologyMissing', biome, { biomeKey: layout.biomeKey }),
+        finding('biomeTopologyMissing', frontier, { biomeKey: layout.biomeKey }),
       ]),
     });
   }
@@ -263,7 +268,11 @@ export function evaluateLinearCompleteness(
   }
 
   if (findings.length !== 0) {
-    return Object.freeze({ completion: 'incomplete', findings: Object.freeze(findings) });
+    return Object.freeze({
+      completion: 'incomplete',
+      frontier: findings[0]!.origin,
+      findings: Object.freeze(findings),
+    });
   }
   return Object.freeze({
     completion: 'complete',
@@ -298,10 +307,12 @@ export function evaluateHubCompleteness(
   const layout: HubBiomeLayout = requireHubLayout(catalog, biome, plan);
   const topology = plan.topology;
   if (topology === null) {
+    const frontier = biome;
     return Object.freeze({
       completion: 'incomplete',
+      frontier,
       findings: Object.freeze([
-        finding('biomeTopologyMissing', biome, { biomeKey: layout.biomeKey }),
+        finding('biomeTopologyMissing', frontier, { biomeKey: layout.biomeKey }),
       ]),
     });
   }
@@ -332,7 +343,11 @@ export function evaluateHubCompleteness(
     );
   }
   if (findings.length !== 0) {
-    return Object.freeze({ completion: 'incomplete', findings: Object.freeze(findings) });
+    return Object.freeze({
+      completion: 'incomplete',
+      frontier: findings[0]!.origin,
+      findings: Object.freeze(findings),
+    });
   }
   return Object.freeze({
     completion: 'complete',

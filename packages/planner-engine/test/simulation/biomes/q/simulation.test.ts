@@ -21,11 +21,14 @@ describe('Q simulation', () => {
     expect(evaluation.status, JSON.stringify(evaluation.findings, null, 2)).toBe('valid');
     expect(evaluation.routes[1]).toMatchObject({
       status: 'valid',
-      validatedPrefix: ['N', 'O', 'P', 'Q'],
-      horizon: { kind: 'routeEnd' },
+      processing: {
+        completeValidPrefix: ['N', 'O', 'P', 'Q'],
+        active: null,
+        blockedSuffix: [],
+      },
     });
     const q = evaluation.routes[1]?.biomes[3];
-    if (q?.kind !== 'LinearBiome' || q.completion !== 'complete') {
+    if (q?.kind !== 'LinearBiome' || q.authoring !== 'complete') {
       throw new Error('Q fixture did not complete');
     }
     expect(
@@ -84,8 +87,8 @@ describe('Q simulation', () => {
     });
     const q = simulateProject(catalog, project).routes[1]?.biomes[3];
 
-    expect(q).toMatchObject({ kind: 'LinearBiome', completion: 'complete', validity: 'valid' });
-    if (q?.kind !== 'LinearBiome' || q.completion !== 'complete') {
+    expect(q).toMatchObject({ kind: 'LinearBiome', authoring: 'complete', validity: 'valid' });
+    if (q?.kind !== 'LinearBiome' || q.authoring !== 'complete') {
       throw new Error('Q repeated-peer fixture did not complete');
     }
     expect(q.snapshot.batches[2]?.targets.map((target) => target.room.gameName)).toEqual([
@@ -110,7 +113,7 @@ describe('Q simulation', () => {
     }
 
     const q = simulateProject(catalog, project).routes[1]?.biomes[3];
-    expect(q).toMatchObject({ kind: 'LinearBiome', completion: 'complete', validity: 'invalid' });
+    expect(q).toMatchObject({ kind: 'LinearBiome', authoring: 'complete', validity: 'invalid' });
     expect(q?.findings.some((finding) => finding.code === 'rewardBagEntryUnavailable')).toBe(true);
     const minibossOrigins = new Set(
       [

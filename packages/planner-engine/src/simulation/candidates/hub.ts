@@ -78,7 +78,7 @@ function hubSlotFindings(
     return Object.freeze([]);
   }
   return Object.freeze(
-    evaluation.completion === 'incomplete'
+    evaluation.authoring === 'incomplete'
       ? evaluation.findings.filter((finding) => finding.code === 'hubOpenSetIncomplete')
       : evaluation.roomGeneration.findings.filter(
           (finding) =>
@@ -201,7 +201,7 @@ export function evaluateHubVisitCandidate(
       stableQuery.visit.routeKey,
       locateHubBiomePlan(proposal, stableQuery),
     );
-    if (evaluation.completion === 'incomplete') {
+    if (evaluation.authoring === 'incomplete') {
       failCandidate(stableQuery, 'Hub visit proposal made a complete biome incomplete');
     }
     findings = Object.freeze(
@@ -295,7 +295,7 @@ export function evaluateSideRoomGenerationCandidate(
       stableQuery.sideRoom.routeKey,
       locateHubBiomePlan(proposal, stableQuery),
     );
-    if (evaluation.completion === 'incomplete') {
+    if (evaluation.authoring === 'incomplete') {
       failCandidate(stableQuery, 'side-generation proposal made a complete biome incomplete');
     }
     selected =
@@ -356,7 +356,7 @@ export function evaluateSideRoomEntryOrderCandidate(
     stableQuery.group.routeKey,
     locateHubBiomePlan(proposal, stableQuery),
   );
-  if (evaluation.completion === 'incomplete') {
+  if (evaluation.authoring === 'incomplete') {
     failCandidate(stableQuery, 'side-entry proposal made a complete biome incomplete');
   }
   const findings = Object.freeze(

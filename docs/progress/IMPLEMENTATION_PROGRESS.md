@@ -1380,10 +1380,17 @@ Phases 0 through 6 are complete. F/G/H/I and N/O/P/Q all participate in the
 production catalog, authored model, simulator, validator, candidates, editor,
 profiles, recovery, and navigation.
 
-Phase 7 is pending. The all-biome entry audit and frontier decision record are
-captured in `../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`, and the concrete commit
-sequence is defined in `IMPLEMENTATION_PLAN.md`. Production does not yet
-publish prefix materialization, prefix history state, or contextual candidates
-before biome completion. The current room selector still uses Type then Room,
-and reward type/payload controls remain separate. Those are Phase 7 work, not
-missing Phase 6 activation.
+Phase 7 Commit 1 is complete. Project evaluation now publishes independent
+biome authoring and coverage axes plus explicit complete-valid prefix, active
+biome, and blocked-suffix route regions. Incomplete biomes expose their exact
+semantic authoring frontier without a canonical snapshot, and complete-valid
+biomes retain their prior canonical products and downstream-seeding behavior.
+Underworld and Surface fixtures cover incomplete, invalid, active, blocked, and
+complete route states.
+
+Phase 7 Commit 2 is next. Production does not yet publish prefix
+materialization, prefix history state, or contextual candidates before biome
+completion; incomplete coverage is explicitly `notEvaluated` until the Linear
+progressive evaluator lands. The current room selector still uses Type then
+Room, and reward type/payload controls remain separate. Those are Phase 7 work,
+not missing Phase 6 activation.

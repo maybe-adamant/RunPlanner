@@ -184,18 +184,26 @@ history interpretation.
 Biome authoring completion and evaluation coverage are separate facts:
 
 ```ts
-interface ProgressiveBiomeEvaluation {
-  readonly authoring:
-    | { readonly kind: 'incomplete'; readonly frontier: SemanticAddress }
-    | { readonly kind: 'complete' };
-  readonly coverage:
-    | { readonly kind: 'none'; readonly reason: CoverageBlockReason }
-    | {
-        readonly kind: 'prefix';
-        readonly through: BiomeEvaluationPoint;
-        readonly blockedAt?: SemanticAddress;
-      }
-    | { readonly kind: 'complete' };
+type ProgressiveBiomeEvaluation =
+  | {
+      readonly authoring: 'incomplete';
+      readonly frontier: SemanticAddress;
+      readonly coverage:
+        | { readonly kind: 'none'; readonly reason: 'notEvaluated' }
+        | {
+            readonly kind: 'prefix';
+            readonly through: BiomeEvaluationPoint;
+            readonly blockedAt?: SemanticAddress;
+          };
+    }
+  | {
+      readonly authoring: 'complete';
+      readonly coverage: { readonly kind: 'complete' };
+    };
+
+interface BiomeEvaluationPoint {
+  readonly owner: SemanticAddress;
+  readonly checkpoint: 'beforeTargetGeneration' | 'afterTargetGeneration' | 'afterRoomLifecycle';
 }
 ```
 
@@ -223,6 +231,17 @@ authored structure alone is not evidence of a reachable game state.
 At most one non-validated biome receives progressive contextual evaluation per
 route:
 
+```ts
+interface RouteProcessingRegions {
+  readonly completeValidPrefix: readonly string[];
+  readonly active: {
+    readonly kind: 'incomplete' | 'invalid';
+    readonly biomeKey: string;
+  } | null;
+  readonly blockedSuffix: readonly string[];
+}
+```
+
 | Route state                        | Contextual evaluation                                           |
 | ---------------------------------- | --------------------------------------------------------------- |
 | F incomplete                       | F prefix only; G/H/I blocked                                    |
@@ -239,10 +258,14 @@ Blocked biome pages may still expose declaration-derived authoring domains.
 They must label contextual state unassessed and must not simulate from defaults
 or hypothetical predecessor completions.
 
-This progressive result is the locked contract for the contextual-selection
-insertion and is not yet the production result shape. Production currently
-returns early with completeness findings when the active biome is incomplete;
-`../progress/IMPLEMENTATION_PROGRESS.md` records that replacement as the next work item.
+The authoring/coverage axes and route processing regions are the production
+result shape. Complete biomes already publish `coverage: complete`. Until the
+layout-specific progressive evaluators land, incomplete Linear and Hub biomes
+publish `coverage: { kind: 'none', reason: 'notEvaluated' }`; they still expose
+their exact semantic authoring frontier and never produce a canonical snapshot
+or downstream seed. Linear and Hub prefix coverage replace that temporary
+absence through the next two Phase 7 slices without changing this public
+contract.
 
 ## Completeness
 
