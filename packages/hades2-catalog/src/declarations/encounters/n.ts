@@ -24,17 +24,6 @@ export const nEncounterProfiles = [
     ],
   },
   {
-    key: 'EphyraCombat',
-    phases: [
-      {
-        key: 'Combat',
-        kind: 'combat',
-        countsEncounterDepth: true,
-        baselineEncounterKey: 'GeneratedN',
-      },
-    ],
-  },
-  {
     key: 'EphyraSideRoom',
     phases: [
       {

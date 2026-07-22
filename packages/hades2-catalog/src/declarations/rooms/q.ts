@@ -11,7 +11,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'FortressMainDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'FixedIntro',
+    encounterProfileKey: 'NoEncounter',
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -31,7 +31,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -50,7 +50,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -72,7 +72,7 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -92,7 +92,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -114,7 +114,7 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -134,7 +134,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -153,7 +153,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -172,7 +172,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -191,7 +191,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -210,7 +210,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -229,7 +229,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -251,7 +251,7 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -274,7 +274,7 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -297,7 +297,7 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -320,7 +320,7 @@ export const qRooms = [
     ],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -340,7 +340,7 @@ export const qRooms = [
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'SummitCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -452,7 +452,7 @@ export const qRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'Preboss',
+    encounterProfileKey: 'Shop',
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {

@@ -162,6 +162,7 @@ describe('complete N catalog', () => {
         throw new Error(`missing N_Combat${suffix}`);
       }
       expect(room.mode).toEqual({ kind: 'authored', templateKey: 'EphyraCombat' });
+      expect(room.encounterProfileKey).toBe('SingleCountedCombat');
       expect(room.forcedRewardStoreKey).toBe('HubRewards');
       expect(room.requiredObjects).toEqual([
         {

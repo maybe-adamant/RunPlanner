@@ -3,7 +3,7 @@ import type { RawRoomLifecycleProfileDeclaration } from '../types';
 export const clockworkRoomLifecycleProfiles = [
   {
     key: 'ClockworkGoalRoom',
-    encounterProfileKeys: ['ClockworkCombat'],
+    encounterProfileKeys: ['SingleCountedCombat'],
     producer: { kind: 'none' },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },

@@ -2,10 +2,6 @@ import type { RawEncounterProfileDeclaration } from '../types';
 
 export const iEncounterProfiles = [
   {
-    key: 'ClockworkCombat',
-    phases: [{ key: 'Combat', kind: 'combat', countsEncounterDepth: true }],
-  },
-  {
     key: 'I_Story01',
     phases: [
       {

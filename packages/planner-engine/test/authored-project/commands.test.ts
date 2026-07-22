@@ -288,7 +288,7 @@ const rooms: readonly RoomDeclaration[] = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'Preboss',
+    encounterProfileKey: 'Shop',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [],

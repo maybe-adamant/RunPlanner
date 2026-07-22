@@ -11,7 +11,7 @@ export const hRooms = [
     exits: [{ index: 1, type: 'FieldsExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
-    encounterProfileKey: 'FixedIntro',
+    encounterProfileKey: 'NoEncounter',
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
@@ -699,7 +699,7 @@ export const hRooms = [
     forcedRewardStoreKey: 'RunProgress',
     individualRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'RunProgress' },
-    encounterProfileKey: 'Preboss',
+    encounterProfileKey: 'Shop',
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {

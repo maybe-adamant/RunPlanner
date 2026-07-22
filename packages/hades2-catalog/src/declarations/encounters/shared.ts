@@ -2,11 +2,11 @@ import type { RawEncounterProfileDeclaration } from '../types';
 
 export const sharedEncounterProfiles = [
   {
-    key: 'StandardCombat',
+    key: 'SingleCountedCombat',
     phases: [{ key: 'Combat', kind: 'combat', countsEncounterDepth: true }],
   },
   {
-    key: 'FixedIntro',
+    key: 'NoEncounter',
     phases: [],
   },
   {
@@ -30,9 +30,5 @@ export const sharedEncounterProfiles = [
         baselineEncounterKey: 'Shop',
       },
     ],
-  },
-  {
-    key: 'Preboss',
-    phases: [{ key: 'Preboss', kind: 'nonCombat', countsEncounterDepth: false }],
   },
 ] as const satisfies readonly RawEncounterProfileDeclaration[];

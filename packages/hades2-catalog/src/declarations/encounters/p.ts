@@ -2,10 +2,6 @@ import type { RawEncounterProfileDeclaration } from '../types';
 
 export const pEncounterProfiles = [
   {
-    key: 'OlympusCombat',
-    phases: [{ key: 'Combat', kind: 'combat', countsEncounterDepth: true }],
-  },
-  {
     key: 'P_Story01',
     phases: [
       {

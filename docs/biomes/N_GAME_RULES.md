@@ -355,10 +355,13 @@ eligibility and `ForceIfUnseenForRuns` remain excluded inputs; detailed Medea
 interaction state remains a deferred persistent-NPC feature.
 
 Combat encounter sets contain ordinary generated combat plus Artemis and
-Heracles alternatives. The canonical projection selects the corresponding
-ordinary counting GeneratedN profile. Smaller and Bigger variants change
-combat difficulty but not a modeled reward, counter, or topology fact, so they
-share one semantic Ephyra-combat encounter profile. Both miniboss encounters
+Heracles alternatives. The progressed NPC-free projection excludes the NPC
+alternatives. GeneratedN, GeneratedN_Smaller, and GeneratedN_Bigger change
+enemy composition or difficulty but not a currently modeled reward, counter,
+or topology fact, so ordinary main rooms use the shared counting
+`SingleCountedCombat` encounter profile without claiming a concrete generated
+encounter identity. `EphyraCombat` remains the room template because Soul
+Pylons, side rooms, and HubRewards are biome-specific. Both miniboss encounters
 also count.
 
 ## Pylon Visits and Completion

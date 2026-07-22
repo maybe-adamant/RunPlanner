@@ -297,8 +297,10 @@ Every entered combat uses one counting I encounter. The game distinguishes
 ordinary, smaller-map, first-visit, Goal, and first-repeat Chronos-dialogue
 variants. Under the progressed NPC-free baseline those variants have the same
 modeled counter and reward lifecycle, so the planner intentionally projects
-one counting `ClockworkCombat` encounter profile. Enemy composition and wave
-difficulty remain outside the product.
+the shared counting `SingleCountedCombat` encounter profile. `ClockworkCombat`
+remains the room template because its authored Goal state and reward behavior
+are biome-specific. Enemy composition and wave difficulty remain outside the
+product.
 
 ## Special Rooms
 

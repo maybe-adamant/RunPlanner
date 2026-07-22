@@ -20,7 +20,7 @@ function input(overrides: Partial<RoomLifecycleExecutionInput> = {}): RoomLifecy
   return {
     origin,
     lifecycleProfileKey: 'StandardRewardRoom',
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     producer: {
       lifecycleProfileKey: 'RoomReward',
       offer: {
@@ -185,7 +185,7 @@ describe('single-room lifecycle execution', () => {
           createOccurrenceId('n-lifecycle-fixture'),
         ),
         lifecycleProfileKey: 'EphyraMainRoom',
-        encounterProfileKey: 'EphyraCombat',
+        encounterProfileKey: 'SingleCountedCombat',
         requiredObjects: [
           {
             key: 'SoulPylon',
@@ -265,14 +265,21 @@ describe('single-room lifecycle execution', () => {
   });
 
   it('omits encounter-depth facts for non-counting terminal and completion encounters', () => {
-    expect(
-      eventKinds(
-        input({
-          lifecycleProfileKey: 'TerminalRewardRoom',
-          encounterProfileKey: 'Preboss',
-        }),
-      ),
-    ).not.toContain('encounterDepthAdvanced');
+    const terminalReward = executeRoomLifecycle(
+      catalog,
+      input({
+        lifecycleProfileKey: 'TerminalRewardRoom',
+        encounterProfileKey: 'Shop',
+      }),
+    );
+    expect(terminalReward.events.map((event) => event.kind)).not.toContain(
+      'encounterDepthAdvanced',
+    );
+    expect(terminalReward.events.find((event) => event.kind === 'encounterStarted')).toMatchObject({
+      phaseKey: 'Shop',
+      phaseKind: 'nonCombat',
+      baselineEncounterKey: 'Shop',
+    });
     expect(
       eventKinds(
         inputWithoutProducer({
@@ -294,7 +301,7 @@ describe('single-room lifecycle execution', () => {
   it('omits outgoing generation from terminal profiles and remains deterministic', () => {
     const executionInput = input({
       lifecycleProfileKey: 'TerminalWorldShopRoom',
-      encounterProfileKey: 'Preboss',
+      encounterProfileKey: 'Shop',
       producer: { lifecycleProfileKey: 'RoomReward', offer: { rewardType: 'Shop' } },
     });
     const first = executeRoomLifecycle(catalog, executionInput);
@@ -314,7 +321,7 @@ describe('single-room lifecycle execution', () => {
       [
         input({
           lifecycleProfileKey: 'EphyraMainRoom',
-          encounterProfileKey: 'EphyraCombat',
+          encounterProfileKey: 'SingleCountedCombat',
         }),
         'EphyraMainRoom required-object operations do not match lifecycle input',
       ],
