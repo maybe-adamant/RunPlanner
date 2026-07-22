@@ -84,10 +84,12 @@ describe('App', () => {
     expect(application.editorNavigation.routes.Surface?.biomePanels).toEqual([
       { biomeKey: 'N', label: 'City of Ephyra' },
       { biomeKey: 'O', label: 'Rift of Thessaly' },
+      { biomeKey: 'P', label: 'Mount Olympus' },
     ]);
     expect(application.editorNavigation.routes.Surface?.configurablePrefixBiomePanels).toEqual([
       { biomeKey: 'N', label: 'City of Ephyra' },
       { biomeKey: 'O', label: 'Rift of Thessaly' },
+      { biomeKey: 'P', label: 'Mount Olympus' },
     ]);
   });
 
