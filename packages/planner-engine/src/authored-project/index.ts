@@ -70,7 +70,7 @@ export {
   projectCommandAddress,
   type ProjectCommand,
   ProjectCommandContractError,
-} from './commands';
+} from './commands/dispatch';
 export { decodeLinearBiomeTopology } from './linearTopology';
 export { decodeHubBiomeTopology } from './hubTopology';
 export { createDefaultBatchState, decodeBatchState } from './batchState';
