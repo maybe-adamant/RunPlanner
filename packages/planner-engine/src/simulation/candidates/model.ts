@@ -224,7 +224,13 @@ export interface BatchRewardStoreCandidateEvidence {
 export type RewardCandidateExclusionEvidence =
   | { readonly kind: 'store'; readonly storeKey?: string }
   | { readonly kind: 'bag'; readonly storeKey?: string }
-  | { readonly kind: 'sibling'; readonly priorOffers: readonly string[] }
+  | {
+      readonly kind: 'sibling';
+      readonly priorOffers: readonly {
+        readonly origin: SemanticAddress;
+        readonly offer: ResolvedRewardOffer;
+      }[];
+    }
   | { readonly kind: 'boonSource'; readonly source?: string }
   | {
       readonly kind: 'devotionPair';

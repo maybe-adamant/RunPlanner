@@ -32,6 +32,14 @@ import {
 import { type Catalog, type RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
+import {
+  prepareRewardDomain,
+  projectRewardDomain,
+  rewardDomainOffers,
+  type PreparedRewardDomain,
+  type ProjectedRewardDomain,
+} from './rewardDomainProjection';
+
 export type RewardCandidateOwner =
   | { readonly kind: 'incomingReward'; readonly address: IncomingRewardAddress }
   | { readonly kind: 'localReward'; readonly address: LocalRewardAddress }
@@ -49,12 +57,22 @@ export interface CandidateOptionProjection<T> {
 }
 
 export interface CandidateProjectionService {
+  readonly prepareRewardDomain: (
+    rewardTypes: readonly string[],
+    selected: ResolvedRewardOffer,
+  ) => PreparedRewardDomain;
   readonly countedRewardTypes: (
     project: ProjectDocument,
     owner: CountedRewardCandidateOwner,
     binding: CountedRewardBinding,
     selectedRewardType: string,
   ) => readonly string[];
+  readonly rewardDomain: (
+    project: ProjectDocument,
+    owner: RewardCandidateOwner,
+    rewardTypes: readonly string[],
+    selected: ResolvedRewardOffer,
+  ) => Promise<ProjectedRewardDomain>;
   readonly biomeFields: (
     project: ProjectDocument,
     field: BiomeFieldAddress,
@@ -160,6 +178,22 @@ function fieldValueKey(value: AuthoredFieldValue): string {
   return JSON.stringify(value);
 }
 
+function rewardQueries(
+  owner: RewardCandidateOwner,
+  offers: readonly ResolvedRewardOffer[],
+): readonly ProjectCandidateQuery[] {
+  switch (owner.kind) {
+    case 'incomingReward':
+      return offers.map((value) => ({ kind: 'incomingReward', reward: owner.address, value }));
+    case 'localReward':
+      return offers.map((value) => ({ kind: 'localReward', reward: owner.address, value }));
+    case 'rewardWheelOffer':
+      return offers.map((value) => ({ kind: 'rewardWheelOffer', offer: owner.address, value }));
+    case 'shopOffer':
+      return offers.map((value) => ({ kind: 'shopOffer', offer: owner.address, value }));
+  }
+}
+
 function requireProjectCache(
   cache: WeakMap<ProjectDocument, ProjectCandidateProjectionCache>,
   project: ProjectDocument,
@@ -212,6 +246,42 @@ function projectOptions<T>(
 interface ProjectCandidateProjectionCache {
   readonly evaluator: ProjectCandidateEvaluator;
   readonly options: Map<string, readonly CandidateOptionProjection<unknown>[]>;
+}
+
+async function projectOptionsCooperatively<T>(
+  cache: WeakMap<ProjectDocument, ProjectCandidateProjectionCache>,
+  project: ProjectDocument,
+  key: string,
+  values: readonly T[],
+  queries: readonly ProjectCandidateQuery[],
+  catalog: Catalog,
+  evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
+  yieldToHost: () => Promise<void>,
+): Promise<readonly CandidateOptionProjection<T>[]> {
+  const cached = cache.get(project)?.options.get(key);
+  if (cached !== undefined) {
+    return cached as readonly CandidateOptionProjection<T>[];
+  }
+  await yieldToHost();
+  const projectCache = requireProjectCache(cache, project, catalog, evaluateProject);
+  const existing = projectCache.options.get(key);
+  if (existing !== undefined) {
+    return existing as readonly CandidateOptionProjection<T>[];
+  }
+  const projected: CandidateOptionProjection<T>[] = [];
+  for (const [index, query] of queries.entries()) {
+    const evaluation = projectCache.evaluator.evaluate([query])[0];
+    if (evaluation === undefined) {
+      throw new Error(`candidate projection ${key} omitted value ${index}`);
+    }
+    projected.push(Object.freeze({ value: values[index]!, evaluation }));
+    if (index + 1 < queries.length) {
+      await yieldToHost();
+    }
+  }
+  const result = Object.freeze(projected);
+  projectCache.options.set(key, result);
+  return result;
 }
 
 function requireBiomePlan(project: ProjectDocument, owner: CountedRewardCandidateOwner) {
@@ -321,10 +391,33 @@ function countedRewardTypeDomain(
 export function createCandidateProjectionService(
   catalog: Catalog,
   evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
+  yieldToHost: () => Promise<void> = () =>
+    new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    }),
 ): CandidateProjectionService {
   const cache = new WeakMap<ProjectDocument, ProjectCandidateProjectionCache>();
   const rewardTypeDomainCache = new WeakMap<ProjectDocument, Map<string, readonly string[]>>();
+  const preparedRewardDomainCache = new Map<string, PreparedRewardDomain>();
+  const pendingRewardDomains = new WeakMap<
+    ProjectDocument,
+    Map<string, Promise<ProjectedRewardDomain>>
+  >();
+  const prepareCachedRewardDomain = (
+    rewardTypes: readonly string[],
+    selected: ResolvedRewardOffer,
+  ): PreparedRewardDomain => {
+    const key = domainKey([...rewardTypes, offerKey(selected)]);
+    const existing = preparedRewardDomainCache.get(key);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const prepared = prepareRewardDomain(catalog, rewardTypes, selected);
+    preparedRewardDomainCache.set(key, prepared);
+    return prepared;
+  };
   const service: CandidateProjectionService = {
+    prepareRewardDomain: prepareCachedRewardDomain,
     countedRewardTypes: (project, owner, binding, selectedRewardType) => {
       let projectCache = rewardTypeDomainCache.get(project);
       if (projectCache === undefined) {
@@ -340,6 +433,37 @@ export function createCandidateProjectionService(
       const domain = countedRewardTypeDomain(catalog, binding, storeKey, selectedRewardType);
       projectCache.set(key, domain);
       return domain;
+    },
+    rewardDomain: (project, owner, rewardTypes, selected) => {
+      const prepared = prepareCachedRewardDomain(rewardTypes, selected);
+      const offers = rewardDomainOffers(prepared);
+      const candidateKey = `reward-domain:${semanticAddressKey(owner.address)}:${domainKey(offers.map(offerKey))}`;
+      const pendingKey = `${candidateKey}:selected:${offerKey(selected)}`;
+      let projectPending = pendingRewardDomains.get(project);
+      if (projectPending === undefined) {
+        projectPending = new Map();
+        pendingRewardDomains.set(project, projectPending);
+      }
+      const existing = projectPending.get(pendingKey);
+      if (existing !== undefined) {
+        return existing;
+      }
+      const pending = projectOptionsCooperatively(
+        cache,
+        project,
+        candidateKey,
+        offers,
+        rewardQueries(owner, offers),
+        catalog,
+        evaluateProject,
+        yieldToHost,
+      )
+        .then((candidates) => projectRewardDomain(prepared, candidates))
+        .finally(() => {
+          projectPending?.delete(pendingKey);
+        });
+      projectPending.set(pendingKey, pending);
+      return pending;
     },
     biomeFields: (project, field, values) =>
       projectOptions(

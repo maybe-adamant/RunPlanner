@@ -11,6 +11,14 @@ import {
   type CountedRewardCandidateOwner,
   type RewardCandidateOwner,
 } from '../../../projections/candidateProjection';
+import {
+  type PreparedRewardDomainOption,
+  type PreparedRewardPayloadDomain,
+  type ProjectedRewardDomain,
+  type ProjectedRewardDomainOption,
+  type ProjectedRewardPayloadDomain,
+} from '../../../projections/rewardDomainProjection';
+import { explainCandidateEvaluation } from '../../../projections/contextualOptions';
 import { candidateSelectState } from '../../feedback/candidatePresentation';
 
 interface RewardValueEditorProps {
@@ -32,127 +40,76 @@ interface CountedRewardEditorProps extends Omit<
   readonly candidateOwner: CountedRewardCandidateOwner;
 }
 
-function projectRewardOptions(
-  service: CandidateProjectionService,
-  project: ProjectDocument,
-  owner: RewardCandidateOwner,
-  offers: readonly ResolvedRewardOffer[],
-): readonly CandidateOptionProjection<ResolvedRewardOffer>[] {
-  switch (owner.kind) {
-    case 'incomingReward':
-      return service.incomingRewards(project, owner.address, offers);
-    case 'localReward':
-      return service.localRewards(project, owner.address, offers);
-    case 'rewardWheelOffer':
-      return service.rewardWheelOffers(project, owner.address, offers);
-    case 'shopOffer':
-      return service.shopOffers(project, owner.address, offers);
-  }
-}
-
 interface RewardSelectOption {
+  readonly evaluation?: CandidateOptionProjection<ResolvedRewardOffer>['evaluation'];
+  readonly explanation?: string;
   readonly label: string;
   readonly offer: ResolvedRewardOffer;
   readonly value: string;
 }
 
 interface ProjectedRewardSelectProps {
-  readonly candidateOwner: RewardCandidateOwner;
-  readonly candidateProjection: CandidateProjectionService;
   readonly id: string;
   readonly label: string;
   readonly onChange: (value: string) => void;
+  readonly onActivate: () => Promise<void>;
   readonly options: readonly RewardSelectOption[];
-  readonly project: ProjectDocument;
   readonly value: string;
 }
 
+function isProjectedRewardOption(
+  option: PreparedRewardDomainOption | ProjectedRewardDomainOption,
+): option is ProjectedRewardDomainOption {
+  return 'evaluation' in option;
+}
+
 function ProjectedRewardSelect({
-  candidateOwner,
-  candidateProjection,
   id,
   label,
   onChange,
+  onActivate,
   options,
-  project,
   value,
 }: ProjectedRewardSelectProps) {
-  const projectionKey = JSON.stringify(options.map((option) => option.offer));
-  type Projection = {
-    readonly key: string;
-    readonly options: readonly CandidateOptionProjection<ResolvedRewardOffer>[];
-    readonly project: ProjectDocument;
-  };
-  const projectionRef = useRef<Projection | undefined>(undefined);
-  const [projection, setProjection] = useState<Projection>();
-  const projected =
-    projection?.project === project && projection.key === projectionKey
-      ? projection.options
-      : undefined;
-  const activateProjection = () => {
-    if (
-      projected !== undefined ||
-      (projectionRef.current?.project === project && projectionRef.current.key === projectionKey)
-    ) {
-      return;
-    }
-    const next = {
-      key: projectionKey,
-      options: projectRewardOptions(
-        candidateProjection,
-        project,
-        candidateOwner,
-        options.map((option) => option.offer),
-      ),
-      project,
-    };
-    projectionRef.current = next;
-    setProjection(next);
-  };
   const selectedIndex = options.findIndex((option) => option.value === value);
-  const selected = selectedIndex < 0 ? undefined : projected?.[selectedIndex];
+  const selected = selectedIndex < 0 ? undefined : options[selectedIndex];
+  const assessed = options.every((option) => option.evaluation !== undefined);
+  const candidate = (option: RewardSelectOption | undefined) =>
+    option?.evaluation === undefined
+      ? undefined
+      : { value: option.offer, evaluation: option.evaluation };
   return (
     <label className="field-control" htmlFor={id}>
       <span>{label}</span>
       <select
-        {...candidateSelectState(selected)}
+        {...candidateSelectState(candidate(selected))}
+        aria-busy={!assessed}
+        aria-describedby={selected?.explanation === undefined ? undefined : `${id}-explanation`}
         id={id}
         onChange={(event) => onChange(event.target.value)}
-        onFocus={activateProjection}
-        onPointerDown={activateProjection}
+        onFocus={() => void onActivate()}
+        onPointerDown={() => void onActivate()}
+        onPointerEnter={() => void onActivate()}
         value={value}
       >
         {options.map((option, index) => (
           <option
             key={option.value}
+            title={option.explanation}
             value={option.value}
-            {...candidateSelectState(projected?.[index])}
+            {...candidateSelectState(candidate(options[index]))}
           >
-            {presentCandidateLabel(option.label, projected?.[index])}
+            {presentCandidateLabel(option.label, candidate(options[index]))}
           </option>
         ))}
       </select>
+      {selected?.explanation === undefined ? null : (
+        <small className="candidate-explanation" id={`${id}-explanation`}>
+          {selected.explanation}
+        </small>
+      )}
     </label>
   );
-}
-
-function defaultOffer(catalog: Catalog, rewardType: string): ResolvedRewardOffer {
-  const declaration = catalog.rewards.rewardTypes.byKey[rewardType];
-  if (declaration === undefined) {
-    throw new Error(`Reward type ${rewardType} is missing`);
-  }
-  return {
-    rewardType,
-    ...(declaration.defaultPayload === undefined ? {} : { payload: declaration.defaultPayload }),
-  };
-}
-
-function payloadDomainValues(catalog: Catalog, domainKey: string): readonly string[] {
-  const domain = catalog.rewards.payloadDomains.byKey[domainKey];
-  if (domain?.kind !== 'oneOf') {
-    throw new Error(`Payload value domain ${domainKey} is missing`);
-  }
-  return domain.values;
 }
 
 function sourceLabel(catalog: Catalog, source: string): string {
@@ -164,14 +121,20 @@ function sourceLabel(catalog: Catalog, source: string): string {
 }
 
 function RewardPayloadEditor({
-  candidateOwner,
-  candidateProjection,
   catalog,
+  domain,
   idPrefix,
   onReplace,
   offer,
-  project,
-}: Omit<RewardValueEditorProps, 'rewardTypes'>) {
+  onActivate,
+}: {
+  readonly catalog: Catalog;
+  readonly domain: PreparedRewardPayloadDomain | ProjectedRewardPayloadDomain;
+  readonly idPrefix: string;
+  readonly offer: ResolvedRewardOffer;
+  readonly onActivate: () => Promise<void>;
+  readonly onReplace: (offer: ResolvedRewardOffer) => void;
+}) {
   const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
   if (declaration === undefined) {
     throw new Error(`Reward type ${offer.rewardType} is missing`);
@@ -179,10 +142,24 @@ function RewardPayloadEditor({
   if (declaration.payloadDomain === undefined) {
     return null;
   }
-  const domain = catalog.rewards.payloadDomains.byKey[declaration.payloadDomain];
-  if (domain === undefined || offer.payload === undefined) {
+  if (domain.kind === 'none' || offer.payload === undefined) {
     throw new Error(`${declaration.gameName} has incomplete payload state`);
   }
+
+  const selectOption = (
+    candidate: PreparedRewardDomainOption | ProjectedRewardDomainOption,
+  ): RewardSelectOption => {
+    const explanation = isProjectedRewardOption(candidate)
+      ? explainCandidateEvaluation(catalog, candidate.offerEvaluation)?.message
+      : undefined;
+    return {
+      label: sourceLabel(catalog, candidate.key),
+      offer: candidate.offer,
+      value: candidate.key,
+      ...(isProjectedRewardOption(candidate) ? { evaluation: candidate.offerEvaluation } : {}),
+      ...(explanation === undefined ? {} : { explanation }),
+    };
+  };
 
   if (domain.kind === 'oneOf') {
     if (offer.payload.kind !== 'BoonSource') {
@@ -190,17 +167,17 @@ function RewardPayloadEditor({
     }
     return (
       <ProjectedRewardSelect
-        candidateOwner={candidateOwner}
-        candidateProjection={candidateProjection}
         id={`${idPrefix}-source`}
         label="Source"
-        onChange={(source) => onReplace({ ...offer, payload: { kind: 'BoonSource', source } })}
-        options={domain.values.map((source) => ({
-          label: sourceLabel(catalog, source),
-          offer: { ...offer, payload: { kind: 'BoonSource', source } },
-          value: source,
-        }))}
-        project={project}
+        onActivate={onActivate}
+        onChange={(source) => {
+          const candidate = domain.sources.find((option) => option.key === source);
+          if (candidate === undefined) {
+            throw new Error(`Reward source ${source} is outside its prepared domain`);
+          }
+          onReplace(candidate.offer);
+        }}
+        options={domain.sources.map(selectOption)}
         value={offer.payload.source}
       />
     );
@@ -209,58 +186,35 @@ function RewardPayloadEditor({
   if (offer.payload.kind !== 'DevotionPair') {
     throw new Error(`${declaration.gameName} requires a paired payload`);
   }
-  const values = payloadDomainValues(catalog, domain.valueDomain);
   const { chosenSource, spurnedSource } = offer.payload;
-  const chosenOptions = values
-    .filter((source) => source !== spurnedSource)
-    .map((source) => ({
-      label: sourceLabel(catalog, source),
-      offer: {
-        ...offer,
-        payload: { kind: 'DevotionPair' as const, chosenSource: source, spurnedSource },
-      },
-      value: source,
-    }));
-  const spurnedOptions = values
-    .filter((source) => source !== chosenSource)
-    .map((source) => ({
-      label: sourceLabel(catalog, source),
-      offer: {
-        ...offer,
-        payload: { kind: 'DevotionPair' as const, chosenSource, spurnedSource: source },
-      },
-      value: source,
-    }));
   return (
     <div className="paired-payload">
       <ProjectedRewardSelect
-        candidateOwner={candidateOwner}
-        candidateProjection={candidateProjection}
         id={`${idPrefix}-source-1`}
         label="Chosen source"
-        onChange={(source) =>
-          onReplace({
-            ...offer,
-            payload: { kind: 'DevotionPair', chosenSource: source, spurnedSource },
-          })
-        }
-        options={chosenOptions}
-        project={project}
+        onActivate={onActivate}
+        onChange={(source) => {
+          const candidate = domain.chosenSources.find((option) => option.key === source);
+          if (candidate === undefined) {
+            throw new Error(`Chosen source ${source} is outside its prepared domain`);
+          }
+          onReplace(candidate.offer);
+        }}
+        options={domain.chosenSources.map(selectOption)}
         value={chosenSource}
       />
       <ProjectedRewardSelect
-        candidateOwner={candidateOwner}
-        candidateProjection={candidateProjection}
         id={`${idPrefix}-source-2`}
         label="Spurned source"
-        onChange={(source) =>
-          onReplace({
-            ...offer,
-            payload: { kind: 'DevotionPair', chosenSource, spurnedSource: source },
-          })
-        }
-        options={spurnedOptions}
-        project={project}
+        onActivate={onActivate}
+        onChange={(source) => {
+          const candidate = domain.spurnedSources.find((option) => option.key === source);
+          if (candidate === undefined) {
+            throw new Error(`Spurned source ${source} is outside its prepared domain`);
+          }
+          onReplace(candidate.offer);
+        }}
+        options={domain.spurnedSources.map(selectOption)}
         value={spurnedSource}
       />
     </div>
@@ -277,35 +231,115 @@ export function RewardValueEditor({
   project,
   rewardTypes,
 }: RewardValueEditorProps) {
-  const typeOffers = rewardTypes.map((rewardType) =>
-    rewardType === offer.rewardType ? offer : defaultOffer(catalog, rewardType),
-  );
+  const prepared = candidateProjection.prepareRewardDomain(rewardTypes, offer);
+  const projectionKey = JSON.stringify({ rewardTypes, offer });
+  type Projection = {
+    readonly key: string;
+    readonly domain: ProjectedRewardDomain;
+    readonly project: ProjectDocument;
+  };
+  type PendingProjection = {
+    readonly key: string;
+    readonly project: ProjectDocument;
+    readonly promise: Promise<void>;
+  };
+  const projectionRef = useRef<Projection | undefined>(undefined);
+  const pendingRef = useRef<PendingProjection | undefined>(undefined);
+  const [projection, setProjection] = useState<Projection>();
+  const [projectionError, setProjectionError] = useState<Error>();
+  if (projectionError !== undefined) {
+    throw projectionError;
+  }
+  const projected =
+    projection?.project === project && projection.key === projectionKey
+      ? projection.domain
+      : undefined;
+  const domain = projected ?? prepared;
+  const activateProjection = (): Promise<void> => {
+    if (
+      projected !== undefined ||
+      (projectionRef.current?.project === project && projectionRef.current.key === projectionKey)
+    ) {
+      return Promise.resolve();
+    }
+    const pending = pendingRef.current;
+    if (pending?.project === project && pending.key === projectionKey) {
+      return pending.promise;
+    }
+    const request = {
+      key: projectionKey,
+      project,
+    };
+    const promise = candidateProjection
+      .rewardDomain(project, candidateOwner, rewardTypes, offer)
+      .then(
+        (projectedDomain) => {
+          if (
+            pendingRef.current?.project !== request.project ||
+            pendingRef.current.key !== request.key
+          ) {
+            return;
+          }
+          const next = { ...request, domain: projectedDomain };
+          projectionRef.current = next;
+          pendingRef.current = undefined;
+          setProjection(next);
+        },
+        (error: unknown) => {
+          if (
+            pendingRef.current?.project !== request.project ||
+            pendingRef.current.key !== request.key
+          ) {
+            return;
+          }
+          pendingRef.current = undefined;
+          setProjectionError(error instanceof Error ? error : new Error(String(error)));
+        },
+      );
+    pendingRef.current = { ...request, promise };
+    return promise;
+  };
+  const typeOptions: readonly RewardSelectOption[] = domain.types.map((candidate) => {
+    const declaration = catalog.rewards.rewardTypes.byKey[candidate.key];
+    if (declaration === undefined) {
+      throw new Error(`Reward type ${candidate.key} is missing`);
+    }
+    const explanation = isProjectedRewardOption(candidate)
+      ? explainCandidateEvaluation(catalog, candidate.evaluation)?.message
+      : undefined;
+    return {
+      label: declaration.label,
+      offer: isProjectedRewardOption(candidate) ? candidate.supportingOffer : candidate.offer,
+      value: candidate.key,
+      ...(isProjectedRewardOption(candidate) ? { evaluation: candidate.evaluation } : {}),
+      ...(explanation === undefined ? {} : { explanation }),
+    };
+  });
   return (
     <div className="reward-value-editor">
       <ProjectedRewardSelect
-        candidateOwner={candidateOwner}
-        candidateProjection={candidateProjection}
         id={`${idPrefix}-reward`}
         label="Reward"
-        onChange={(rewardType) => onReplace(defaultOffer(catalog, rewardType))}
-        options={typeOffers.map((candidate) => {
-          const declaration = catalog.rewards.rewardTypes.byKey[candidate.rewardType];
-          if (declaration === undefined) {
-            throw new Error(`Reward type ${candidate.rewardType} is missing`);
+        onActivate={activateProjection}
+        onChange={(rewardType) => {
+          const candidate = domain.types.find((option) => option.key === rewardType);
+          if (candidate === undefined) {
+            throw new Error(`Reward type ${rewardType} is outside its prepared domain`);
           }
-          return { label: declaration.label, offer: candidate, value: candidate.rewardType };
-        })}
-        project={project}
+          onReplace(
+            isProjectedRewardOption(candidate) ? candidate.supportingOffer : candidate.offer,
+          );
+        }}
+        options={typeOptions}
         value={offer.rewardType}
       />
       <RewardPayloadEditor
-        candidateOwner={candidateOwner}
-        candidateProjection={candidateProjection}
         catalog={catalog}
+        domain={domain.payload}
         idPrefix={idPrefix}
         offer={offer}
+        onActivate={activateProjection}
         onReplace={onReplace}
-        project={project}
       />
     </div>
   );

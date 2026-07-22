@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceId,
   createTargetAddress,
 } from '@run-planner/engine/authored-project';
@@ -213,6 +214,66 @@ describe('contextual option projection', () => {
     expect(JSON.stringify(projected.map((option) => option.explanation))).not.toMatch(
       /roomsEntered|SingleCountedCombat|RunProgress|Complete F /,
     );
+  });
+
+  it('names the semantic sibling location without exposing occurrence identifiers', () => {
+    const reward = { rewardType: 'MaxHealthDrop' };
+    const siblingExcluded: ProjectCandidateEvaluation = {
+      context: 'evaluated',
+      query: {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, parent),
+        value: reward,
+      },
+      support: 'impossible',
+      findings: [],
+      evidence: {
+        candidate: reward,
+        relevantFindingCodes: ['rewardBagEntryUnavailable'],
+        exclusions: [
+          {
+            kind: 'sibling',
+            priorOffers: [{ origin: target, offer: reward }],
+          },
+        ],
+      },
+    };
+    const [projected] = createContextualOptionResolver(catalog).resolve(
+      [{ value: reward, evaluation: siblingExcluded }],
+      () => ({ label: 'Max Health', selected: false }),
+    );
+
+    expect(projected?.explanation).toEqual({
+      kind: 'sibling',
+      message: 'This reward conflicts with the offer on Exit 1.',
+    });
+    expect(projected?.explanation?.message).not.toContain(parent);
+
+    const unorderedSibling: ProjectCandidateEvaluation = {
+      ...siblingExcluded,
+      evidence: {
+        ...siblingExcluded.evidence,
+        exclusions: [
+          {
+            kind: 'sibling',
+            priorOffers: [
+              {
+                origin: createLocalRewardAddress(biome, parent, 'sideRooms', 'sideDoor1'),
+                offer: reward,
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const [unordered] = createContextualOptionResolver(catalog).resolve(
+      [{ value: reward, evaluation: unorderedSibling }],
+      () => ({ label: 'Max Health', selected: false }),
+    );
+    expect(unordered?.explanation?.message).toBe(
+      'This reward conflicts with the offer on Side room 1.',
+    );
+    expect(unordered?.explanation?.message).not.toContain('earlier');
   });
 
   it('derives each presentation from its candidate instead of a parallel array position', () => {

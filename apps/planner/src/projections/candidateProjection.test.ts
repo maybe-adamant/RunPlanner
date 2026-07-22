@@ -12,6 +12,7 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { createGoldenFGHIProject, targetOccurrenceId } from '../../test/fixtures/underworldProject';
 import { createCandidateProjectionService, presentCandidateLabel } from './candidateProjection';
 import { selectRoomsForCategory } from './roomSelectorProjection';
 
@@ -25,6 +26,86 @@ function project() {
 }
 
 describe('candidate application projection', () => {
+  it('aggregates complete reward witnesses while retaining an invalid selected source', async () => {
+    const service = createCandidateProjectionService(catalog, (candidate) =>
+      simulateProject(catalog, candidate),
+    );
+    let document = createGoldenFGHIProject(catalog);
+    const first = targetOccurrenceId('F', 2, 1);
+    const second = targetOccurrenceId('F', 2, 2);
+    const zeus = {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
+    };
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, first),
+      value: zeus,
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, second),
+      value: zeus,
+    });
+
+    const domain = await service.rewardDomain(
+      document,
+      { kind: 'incomingReward', address: createIncomingRewardAddress(biome, second) },
+      ['Boon'],
+      zeus,
+    );
+    const boon = domain.types[0];
+    const zeusSource =
+      domain.payload.kind === 'oneOf'
+        ? domain.payload.sources.find((candidate) => candidate.key === 'ZeusUpgrade')
+        : undefined;
+
+    expect(boon?.evaluation).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(boon?.supportingOffer).not.toEqual(zeus);
+    expect(zeusSource?.evaluation).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: {
+        exclusions: [
+          {
+            kind: 'sibling',
+            priorOffers: [{ origin: { kind: 'target', exitIndex: 1 }, offer: zeus }],
+          },
+          { kind: 'boonSource', source: 'ZeusUpgrade' },
+        ],
+      },
+    });
+  });
+
+  it('yields before and between relational reward assessments', async () => {
+    let yieldCount = 0;
+    const service = createCandidateProjectionService(
+      catalog,
+      (candidate) => simulateProject(catalog, candidate),
+      async () => {
+        yieldCount += 1;
+      },
+    );
+    const document = createGoldenFGHIProject(catalog);
+    const occurrenceId = targetOccurrenceId('F', 2, 1);
+    const selected = {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
+    };
+
+    await service.rewardDomain(
+      document,
+      {
+        kind: 'incomingReward',
+        address: createIncomingRewardAddress(biome, occurrenceId),
+      },
+      ['Boon'],
+      selected,
+    );
+
+    expect(yieldCount).toBeGreaterThan(1);
+  });
+
   it('caches stable option structures by immutable project and semantic owner', () => {
     let evaluationCount = 0;
     const service = createCandidateProjectionService(catalog, (project) => {

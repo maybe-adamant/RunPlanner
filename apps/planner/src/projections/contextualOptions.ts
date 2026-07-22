@@ -5,6 +5,7 @@ import type {
   RoomGenerationExclusionEvidence,
 } from '@run-planner/engine/simulation';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import type { CounterAxis } from '@run-planner/engine/requirements';
 
 import type { CandidateOptionProjection } from './candidateProjection';
@@ -147,6 +148,7 @@ function roomExclusionExplanation(
 }
 
 function rewardExclusionExplanation(
+  catalog: Catalog,
   exclusion: RewardCandidateExclusionEvidence,
 ): CandidateExplanation {
   switch (exclusion.kind) {
@@ -161,7 +163,10 @@ function rewardExclusionExplanation(
         message: 'No reachable reward-pool state supports this reward.',
       };
     case 'sibling':
-      return { kind: 'sibling', message: 'This reward conflicts with another offer in the batch.' };
+      return {
+        kind: 'sibling',
+        message: `This reward conflicts with the offer on ${rewardPeerLabel(catalog, exclusion.priorOffers[0]?.origin)}.`,
+      };
     case 'boonSource':
       return { kind: 'boonSource', message: 'This God cannot be offered at this point.' };
     case 'devotionPair':
@@ -175,6 +180,35 @@ function rewardExclusionExplanation(
         kind: 'acquisition',
         message: 'This reward cannot be acquired at this lifecycle point.',
       };
+  }
+}
+
+function numberedLabel(value: string, prefix: string): string {
+  const suffix = value.match(/(\d+)$/)?.[1];
+  return suffix === undefined ? prefix : `${prefix} ${Number(suffix)}`;
+}
+
+function rewardPeerLabel(catalog: Catalog, origin: SemanticAddress | undefined): string {
+  if (origin === undefined) {
+    return 'another offer';
+  }
+  switch (origin.kind) {
+    case 'target':
+      return `Exit ${origin.exitIndex}`;
+    case 'rewardWheelOffer':
+      return numberedLabel(origin.offerKey, 'Offer');
+    case 'localReward':
+      return numberedLabel(origin.slotKey, origin.groupKey === 'cages' ? 'Cage' : 'Side room');
+    case 'hubSlot': {
+      const layout = catalog.biomeLayouts.byKey[origin.biomeKey];
+      const slot =
+        layout?.kind === 'HubBiome'
+          ? layout.hub.slots.find((candidate) => candidate.slotKey === origin.hubSlotKey)
+          : undefined;
+      return slot === undefined ? 'another Hub room' : roomName(catalog, slot.roomGameName);
+    }
+    default:
+      return 'another offer';
   }
 }
 
@@ -198,7 +232,7 @@ function isRoomExclusion(
   }
 }
 
-function explanation(
+export function explainCandidateEvaluation(
   catalog: Catalog,
   evaluation: ProjectCandidateEvaluation,
 ): CandidateExplanation | undefined {
@@ -235,7 +269,7 @@ function explanation(
     if (first !== undefined) {
       return isRoomExclusion(first)
         ? roomExclusionExplanation(catalog, first)
-        : rewardExclusionExplanation(first);
+        : rewardExclusionExplanation(catalog, first);
     }
   }
   return {
@@ -276,7 +310,7 @@ export function createContextualOptionResolver(catalog: Catalog): ContextualOpti
       const projected = Object.freeze(
         options.map((option, index) => {
           const display = presentation[index]!;
-          const candidateExplanation = explanation(catalog, option.evaluation);
+          const candidateExplanation = explainCandidateEvaluation(catalog, option.evaluation);
           return Object.freeze({
             value: option.value,
             label: display.label,

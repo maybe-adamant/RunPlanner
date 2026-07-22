@@ -408,8 +408,18 @@ The production bridge now implements this vocabulary in the application
 projection layer. It consumes typed candidate evidence, preserves the richer
 engine result, and maps unavailable addressed coverage to `unassessed`. The
 grouped room picker consumes the ordered model. Counted reward editors now
-consume a producer-resolved type domain before projecting each concrete offer;
-the compact compound reward picker remains a subsequent slice.
+consume a producer-resolved type domain and one application-owned relational
+payload domain. That domain evaluates complete offers through the existing
+possibility frontier, aggregates Boon and Devotion source choices over concrete
+witnesses, and retains selected-invalid values. A projected option keeps both
+the exact authored offer evaluation and an aggregate supporting witness: a
+Devotion source replacement therefore preserves the other authored source even
+when another pair is what proves aggregate support. Relational assessment yields
+between candidate simulations so opening or hovering a dense Devotion domain
+does not monopolize one browser interaction task. Semantic sibling evidence
+identifies the conflicting Exit, cage, wheel offer, side room, or Hub room
+without exposing occurrence IDs. The compact compound reward picker remains a
+subsequent slice.
 
 Before React consumption, the application projects these options into an
 ordered picker model containing required, semantic-category, unassessed, and

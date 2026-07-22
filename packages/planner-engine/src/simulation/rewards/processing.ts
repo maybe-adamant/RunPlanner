@@ -212,6 +212,33 @@ export function offerEvidence(offer: CanonicalResolvedIncomingReward['offer']): 
   };
 }
 
+function semanticAddressEvidence(origin: SemanticAddress): FindingEvidence {
+  return Object.freeze({ ...origin }) as FindingEvidence;
+}
+
+function resolvedOfferEvidence(offer: CanonicalResolvedIncomingReward['offer']): FindingEvidence {
+  return Object.freeze({
+    rewardType: offer.rewardType,
+    ...(offer.payload === undefined
+      ? {}
+      : { payload: Object.freeze({ ...offer.payload }) as FindingEvidence }),
+  });
+}
+
+function sourceConflictingPeers(
+  offer: CanonicalResolvedIncomingReward['offer'],
+  peers: readonly OfferProcessingPeer[],
+): readonly OfferProcessingPeer[] {
+  const source = offer.payload?.kind === 'BoonSource' ? offer.payload.source : undefined;
+  const conflicts = peers.filter(
+    (peer) =>
+      source !== undefined &&
+      peer.offer.payload?.kind === 'BoonSource' &&
+      peer.offer.payload.source === source,
+  );
+  return conflicts.length === 0 ? peers : conflicts;
+}
+
 export function countedBinding(
   declaration: RoomDeclaration,
   incoming: CanonicalResolvedIncomingReward,
@@ -254,8 +281,13 @@ export interface OfferProcessingContext {
   };
   readonly binding?: CountedRewardBinding;
   readonly historySequence: number;
-  readonly peers: readonly CanonicalResolvedIncomingReward['offer'][];
+  readonly peers: readonly OfferProcessingPeer[];
   readonly facts: RewardFactsFactory;
+}
+
+export interface OfferProcessingPeer {
+  readonly origin: SemanticAddress;
+  readonly offer: CanonicalResolvedIncomingReward['offer'];
 }
 
 function permutations<T>(values: readonly T[]): readonly (readonly T[])[] {
@@ -292,9 +324,13 @@ export function processRewardOffer(
   let sawSourceFailure = false;
   let sawBagInvariantFailure = false;
   let sawSiblingFailure = false;
+  const siblingConflicts = new Map<string, OfferProcessingPeer>();
+  const recordSiblingConflict = (peer: OfferProcessingPeer) => {
+    siblingConflicts.set(semanticAddressKey(peer.origin), peer);
+  };
   for (const originalBranch of branches) {
     const facts = context.facts(originalBranch.history);
-    const peers = { priorOffers: context.peers };
+    const peers = { priorOffers: context.peers.map((peer) => peer.offer) };
     if (!isOfferSupportedAtResolutionPoint(catalog.rewards, reward.offer, facts, 'offer', peers)) {
       sawSourceFailure = true;
       if (
@@ -304,6 +340,7 @@ export function processRewardOffer(
         })
       ) {
         sawSiblingFailure = true;
+        sourceConflictingPeers(reward.offer, context.peers).forEach(recordSiblingConflict);
       }
       continue;
     }
@@ -338,12 +375,15 @@ export function processRewardOffer(
       continue;
     }
     if (
-      context.peers.some((peer) => peer.rewardType === reward.offer.rewardType) &&
+      context.peers.some((peer) => peer.offer.rewardType === reward.offer.rewardType) &&
       store.entries.some(
         (entry) => entry.rewardType === reward.offer.rewardType && !entry.allowDuplicates,
       )
     ) {
       sawSiblingFailure = true;
+      context.peers
+        .filter((peer) => peer.offer.rewardType === reward.offer.rewardType)
+        .forEach(recordSiblingConflict);
     }
     let transitions: readonly RewardBagState[];
     try {
@@ -396,7 +436,12 @@ export function processRewardOffer(
         ...offerEvidence(reward.offer),
         storeKey: reward.resolvedStoreKey ?? null,
         ...(sawSiblingFailure
-          ? { priorOffers: context.peers.map((offer) => offerEvidence(offer)) }
+          ? {
+              priorOffers: [...siblingConflicts.values()].map((peer) => ({
+                origin: semanticAddressEvidence(peer.origin),
+                offer: resolvedOfferEvidence(peer.offer),
+              })),
+            }
           : {}),
       }),
     );
@@ -440,7 +485,7 @@ export function processJointUnorderedOffers(
     for (const ordering of permutations(contexts)) {
       let candidates: readonly RewardBranchState[] = Object.freeze([branch]);
       const localFindings = new Map<string, SemanticFinding>();
-      const priorOffers: CanonicalResolvedIncomingReward['offer'][] = [];
+      const priorOffers: OfferProcessingPeer[] = [];
       for (const context of ordering) {
         candidates = processRewardOffer(
           candidates,
@@ -450,7 +495,7 @@ export function processJointUnorderedOffers(
         if (candidates.length === 0) {
           break;
         }
-        priorOffers.push(context.reward.offer);
+        priorOffers.push({ origin: context.reward.origin, offer: context.reward.offer });
       }
       if (candidates.length === 0) {
         if (representativeFailures.length === 0) {

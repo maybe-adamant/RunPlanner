@@ -21,7 +21,6 @@ import type {
   CanonicalLocalReward,
   CanonicalRewardWheel,
   CanonicalRewardWheelOffer,
-  CanonicalResolvedIncomingReward,
   CanonicalTarget,
 } from '../materialization';
 import type { SemanticFinding } from '../model';
@@ -48,6 +47,7 @@ import {
   processShopPurchases,
   publicRewardBranch,
   rewardFinding,
+  type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
 
@@ -381,7 +381,7 @@ export function evaluateLinearRewards(
   const storeSupportEntries: LinearRewardStoreSupportEntry[] = [];
   const targetHistory: LinearTargetRewardHistoryCheckpoint[] = [];
   const findings = new Map<string, SemanticFinding>();
-  let peers: readonly CanonicalResolvedIncomingReward['offer'][] = Object.freeze([]);
+  let peers: readonly OfferProcessingPeer[] = Object.freeze([]);
   let branches: readonly RewardBranchState[] = initializeRewardBranches(initialBranches);
 
   for (const event of history.events) {
@@ -499,7 +499,10 @@ export function evaluateLinearRewards(
             findings,
           );
           if (event.source === 'generatedTarget') {
-            peers = Object.freeze([...peers, incoming.offer]);
+            peers = Object.freeze([
+              ...peers,
+              { origin: event.targetOrigin, offer: incoming.offer },
+            ]);
           }
         }
         for (const localReward of localRewards) {
@@ -524,7 +527,10 @@ export function evaluateLinearRewards(
             },
             findings,
           );
-          peers = Object.freeze([...peers, localReward.offer]);
+          peers = Object.freeze([
+            ...peers,
+            { origin: localReward.origin, offer: localReward.offer },
+          ]);
         }
         break;
       }

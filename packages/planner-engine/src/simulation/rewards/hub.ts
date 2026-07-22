@@ -14,7 +14,6 @@ import type {
   CanonicalHubRoom,
   CanonicalHubTarget,
   CanonicalLocalChildRoom,
-  CanonicalResolvedIncomingReward,
   HubSimulationMaterialization,
 } from '../materialization';
 import type { SemanticFinding } from '../model';
@@ -33,6 +32,7 @@ import {
   processShopPurchases,
   publicRewardBranch,
   type OfferProcessingContext,
+  type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
 
@@ -176,7 +176,7 @@ function offerContext(
   view: HistoryStateView,
   historySequence: number,
   rewardLookups: Readonly<Record<string, ReadonlySet<string>>>,
-  peers: readonly CanonicalResolvedIncomingReward['offer'][] = Object.freeze([]),
+  peers: readonly OfferProcessingPeer[] = Object.freeze([]),
 ): OfferProcessingContext | undefined {
   const incoming = room.incomingReward;
   if (incoming === undefined) {
@@ -286,7 +286,7 @@ export function evaluateHubRewards(
   const emptyLookups = Object.freeze({});
   const rewardLookup = deriveRewardLookup(catalog, layout, snapshot);
   const findings = new Map<string, SemanticFinding>();
-  let hubBoardPeers: readonly CanonicalResolvedIncomingReward['offer'][] = Object.freeze([]);
+  let hubBoardPeers: readonly OfferProcessingPeer[] = Object.freeze([]);
   let branches: readonly RewardBranchState[] = initializeRewardBranches();
 
   for (const event of history.events) {
@@ -394,7 +394,10 @@ export function evaluateHubRewards(
             ? advanceRewardBranches(branches, event.sequence)
             : processRewardOffer(branches, context, findings);
         if (event.source === 'hubTarget' && room.incomingReward !== undefined) {
-          hubBoardPeers = Object.freeze([...hubBoardPeers, room.incomingReward.offer]);
+          hubBoardPeers = Object.freeze([
+            ...hubBoardPeers,
+            { origin: event.targetOrigin, offer: room.incomingReward.offer },
+          ]);
         }
         break;
       }

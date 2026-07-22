@@ -1,8 +1,10 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
+  createRewardWheelAddress,
   createRewardWheelOfferAddress,
   type AuthoredBiomePlan,
   type ProjectDocument,
@@ -12,13 +14,17 @@ import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/eng
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject } from '../../test/fixtures/underworldProject';
+import { createGoldenFGHIProject, targetOccurrenceId } from '../../test/fixtures/underworldProject';
 import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
+  qBiome,
+  qOccurrenceIds,
 } from '../../test/fixtures/surfaceProject';
 import { createCandidateProjectionService } from './candidateProjection';
 
@@ -242,5 +248,169 @@ describe('producer-resolved reward type domains', () => {
     expect(worldShop?.groups.byKey.Boon?.rewardTypes).not.toContain('MaxHealthDrop');
     expect(worldShop?.groups.byKey.MajorNonBoon?.rewardTypes).toContain('MaxHealthDrop');
     expect(worldShop?.groups.byKey.MajorNonBoon?.rewardTypes).not.toContain('RandomLoot');
+  });
+
+  it('projects sibling conflicts for representative sequential and unordered producers', async () => {
+    const service = createCandidateProjectionService(catalog, (candidate) =>
+      simulateProject(catalog, candidate),
+    );
+    const zeus: ResolvedRewardOffer = {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+    };
+    const expectExclusion = (evaluation: unknown, kind: 'bag' | 'sibling') => {
+      expect(evaluation).toMatchObject({
+        context: 'evaluated',
+        support: 'impossible',
+        evidence: {
+          exclusions: expect.arrayContaining([expect.objectContaining({ kind })]),
+        },
+      });
+    };
+
+    for (const [biome, project, firstId, secondId] of [
+      [
+        createBiomeAddress('Underworld', 'F'),
+        createGoldenFGHIProject(catalog),
+        targetOccurrenceId('F', 2, 1),
+        targetOccurrenceId('F', 2, 2),
+      ],
+      [
+        createBiomeAddress('Underworld', 'G'),
+        createGoldenFGHIProject(catalog),
+        targetOccurrenceId('G', 7, 1),
+        targetOccurrenceId('G', 7, 2),
+      ],
+      [
+        pBiome,
+        createRepresentativeNOPQProject(),
+        pOccurrenceId('P_MiniBoss01', 5, 1),
+        pOccurrenceId('P_Combat09', 5, 2),
+      ],
+    ] as const) {
+      let authored = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(biome, firstId),
+        value: zeus,
+      });
+      authored = applyProjectCommand(authored, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(biome, secondId),
+        value: zeus,
+      });
+      const domain = await service.rewardDomain(
+        authored,
+        { kind: 'incomingReward', address: createIncomingRewardAddress(biome, secondId) },
+        ['Boon'],
+        zeus,
+      );
+      expectExclusion(domain.types[0]?.offerEvaluation, 'sibling');
+      const zeusSource =
+        domain.payload.kind === 'oneOf'
+          ? domain.payload.sources.find((candidate) => candidate.key === 'ZeusUpgrade')
+          : undefined;
+      expectExclusion(zeusSource?.offerEvaluation, 'sibling');
+    }
+
+    const maxHealth: ResolvedRewardOffer = { rewardType: 'MaxHealthDrop' };
+    const hBiome = createBiomeAddress('Underworld', 'H');
+    const hOccurrence = requireOccurrence(
+      createGoldenFGHIProject(catalog),
+      'Underworld',
+      'H',
+      'H_Combat02',
+    );
+    let hProject = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(hBiome, hOccurrence.occurrenceId, 'cages', 'cage1'),
+      value: maxHealth,
+    });
+    hProject = applyProjectCommand(hProject, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(hBiome, hOccurrence.occurrenceId, 'cages', 'cage2'),
+      value: maxHealth,
+    });
+    const hDomain = await service.rewardDomain(
+      hProject,
+      {
+        kind: 'localReward',
+        address: createLocalRewardAddress(hBiome, hOccurrence.occurrenceId, 'cages', 'cage2'),
+      },
+      ['MaxHealthDrop'],
+      maxHealth,
+    );
+    expectExclusion(hDomain.types[0]?.offerEvaluation, 'bag');
+
+    const maxManaSmall: ResolvedRewardOffer = { rewardType: 'MaxManaDropSmall' };
+    let nProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms', 'sideDoor1'),
+      value: maxManaSmall,
+    });
+    nProject = applyProjectCommand(nProject, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms', 'sideDoor2'),
+      value: maxManaSmall,
+    });
+    const nDomain = await service.rewardDomain(
+      nProject,
+      {
+        kind: 'localReward',
+        address: createLocalRewardAddress(
+          nBiome,
+          nOccurrenceId('combat05'),
+          'sideRooms',
+          'sideDoor2',
+        ),
+      },
+      ['MaxManaDropSmall'],
+      maxManaSmall,
+    );
+    expectExclusion(nDomain.types[0]?.offerEvaluation, 'sibling');
+
+    let oProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
+      offerCount: 2,
+    });
+    for (const offerKey of ['offer1', 'offer2'] as const) {
+      oProject = applyProjectCommand(oProject, catalog, {
+        kind: 'ReplaceRewardWheelOffer',
+        offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', offerKey),
+        value: maxHealth,
+      });
+    }
+    const oDomain = await service.rewardDomain(
+      oProject,
+      {
+        kind: 'rewardWheelOffer',
+        address: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer2'),
+      },
+      ['MaxHealthDrop'],
+      maxHealth,
+    );
+    expectExclusion(oDomain.types[0]?.offerEvaluation, 'sibling');
+
+    const talent: ResolvedRewardOffer = { rewardType: 'TalentBigDrop' };
+    let qProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(qBiome, qOccurrenceIds.firstMiniboss1),
+      value: talent,
+    });
+    qProject = applyProjectCommand(qProject, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(qBiome, qOccurrenceIds.firstMiniboss2),
+      value: talent,
+    });
+    const qDomain = await service.rewardDomain(
+      qProject,
+      {
+        kind: 'incomingReward',
+        address: createIncomingRewardAddress(qBiome, qOccurrenceIds.firstMiniboss2),
+      },
+      ['TalentBigDrop'],
+      talent,
+    );
+    expectExclusion(qDomain.types[0]?.offerEvaluation, 'sibling');
   });
 });

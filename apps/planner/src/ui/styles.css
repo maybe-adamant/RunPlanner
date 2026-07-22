@@ -45,6 +45,13 @@ option[data-candidate-support='impossible'] {
   color: #b22626;
 }
 
+.candidate-explanation {
+  display: block;
+  margin-top: 4px;
+  color: #d9b0b0;
+  line-height: 1.25;
+}
+
 button:focus-visible {
   outline: 2px solid #e2b971;
   outline-offset: 3px;
