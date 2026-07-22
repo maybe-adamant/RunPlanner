@@ -1,4 +1,9 @@
-import type { ContinuationAddress, TargetAddress } from '../../project/addresses';
+import type {
+  ContinuationAddress,
+  HubOpenSetAddress,
+  LocalChildAddress,
+  TargetAddress,
+} from '../../project/addresses';
 import type { SemanticFinding } from '../model';
 
 export type RoomGenerationExclusionReason =
@@ -55,6 +60,36 @@ export interface LinearRoomGenerationValidation {
 
 export interface LinearRoomTargetCandidateValidation {
   readonly pressure: LinearForcePressureLedgerEntry;
+  readonly findings: readonly SemanticFinding[];
+}
+
+export interface HubOpenSlotConstraintSupportEntry {
+  readonly origin: HubOpenSetAddress;
+  readonly constraintIndex: number;
+  readonly constrainedSlotKeys: readonly string[];
+  readonly openSlotKeys: readonly string[];
+  readonly maximumOpenCount: number;
+  readonly selectedPossible: boolean;
+}
+
+export type SideRoomGenerationOutcome = 'generated' | 'notGenerated';
+
+export interface HubSideRoomGenerationSupportEntry {
+  readonly origin: LocalChildAddress;
+  readonly visitIndex: number;
+  readonly availabilityRank: number;
+  readonly generatedBefore: number;
+  readonly requiredGeneratedCount: number;
+  readonly selectedOutcome: SideRoomGenerationOutcome;
+  readonly supportOutcomes: readonly SideRoomGenerationOutcome[];
+  readonly selectedPossible: boolean;
+}
+
+export interface HubRoomGenerationValidation {
+  readonly biomeKey: string;
+  readonly validity: 'invalid' | 'valid';
+  readonly openSlotConstraints: readonly HubOpenSlotConstraintSupportEntry[];
+  readonly sideRoomGenerations: readonly HubSideRoomGenerationSupportEntry[];
   readonly findings: readonly SemanticFinding[];
 }
 

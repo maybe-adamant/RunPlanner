@@ -489,6 +489,25 @@ constraints, unvisited lookup effects, deterministic freezing, and authored
 and canonical nonmutation. N remains outside simulator dispatch and
 application capabilities until Slice 6 adds selected validation.
 
+Phase 6 N Slice 6 is complete. One dormant Hub biome evaluator now composes
+completeness, canonical materialization, shared-envelope history, Hub generation
+validation, reward replay, and lookup-aware Preboss shop validation without
+registering N in project dispatch. Selected Hub validation emits one
+declaration-driven open-slot constraint ledger and one availability-ranked
+side-generation pressure entry per local slot. Opening both coin-disabled
+miniboss slots produces findings at both exact Hub slots; omitting a forced
+side slot produces a finding at its parent-local child address while retaining
+the authored outcome. Fixed-slot identity, normalized physical order, six
+distinct open visits, one completed Soul Pylon and Hub restore per visit,
+entered-side ordinals, ordered parent restores, fixed terminal, boss, postboss,
+and biome completion are asserted as canonical contracts. Reward, acquisition,
+bag, lookup, shop-offer, and purchase failures continue to come from the shared
+reward authority at their leaf owners. Focused fixtures close valid selected N,
+both-miniboss invalidity, first and later visit-pressure failures, lookup-aware
+Preboss failure, incomplete authorship, canonical Pylon corruption, deep
+freezing, and dormant project-dispatch isolation. Slice 7 adds candidate
+evaluation through these selected authorities.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1192,14 +1211,13 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, and N Slices 1-5 are complete. N Slice 6, selected validation,
-is next. It will validate fixed-slot identity, open membership and count,
-miniboss availability, six distinct visits, pylons, side-generation pressure,
-entered ordinals, room/reward support, restores, Hub lookup, fixed Preboss
-shop, and terminal completion at exact semantic owners. N remains dormant
-until the later candidate, editor, and activation slices close the complete
-product loop before the contextual-selection UX insertion defined in
-`CONTEXTUAL_EDITOR_UX.md`.
+five I slices, and N Slices 1-6 are complete. N Slice 7, candidate evaluation,
+is next. It will evaluate open membership, visit choices, side generation and
+entry order, fixed-entry rewards, Hub rewards, side rewards, Preboss offers,
+and purchases through the selected N authorities while preserving authored
+invalid values and typed upstream-unavailable context. N remains dormant until
+the later editor and activation slices close the complete product loop before
+the contextual-selection UX insertion defined in `CONTEXTUAL_EDITOR_UX.md`.
 
 After N activates, that insertion begins by replacing the current incomplete-
 biome early return with the progressive evaluation contract in

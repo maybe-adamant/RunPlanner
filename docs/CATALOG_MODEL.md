@@ -612,9 +612,9 @@ identity may exist while their application capabilities remain inactive.
 
 The verified H/I/N/O/P/Q game-rule audits, dormant imports, and cross-biome
 closure are complete. Those slices extend normalized catalog vocabulary only
-where concrete game facts require it. H has completed its authored topology,
-simulator, validation, and editor loop and is active; I, N, O, P, and Q remain
-inactive until each closes the same product boundary.
+where concrete game facts require it. H and I have completed their authored
+topology, simulator, validation, and editor loops and are active; N, O, P, and
+Q remain inactive until each closes the same product boundary.
 `biomes/P_GAME_RULES.md`, `biomes/Q_GAME_RULES.md`, `biomes/H_GAME_RULES.md`,
 `biomes/O_GAME_RULES.md`, `biomes/I_GAME_RULES.md`, and `biomes/N_GAME_RULES.md` are completed audit
 authorities. Their shared vocabulary is reconciled by this design set; future

@@ -7,14 +7,23 @@ export {
   LinearRoomGenerationContractError as FRoomGenerationContractError,
   supportedFieldsCageOutcomes,
 } from './linear';
+export {
+  evaluateHubRoomGeneration,
+  evaluateNRoomGeneration,
+  HubRoomGenerationContractError,
+} from './hub';
 export type {
   FieldsCageOutcome,
   FieldsCageOutcomeSupportEntry,
   FForcePressureLedgerEntry,
   FRoomGenerationValidation,
   FRoomTargetCandidateValidation,
+  HubOpenSlotConstraintSupportEntry,
+  HubRoomGenerationValidation,
+  HubSideRoomGenerationSupportEntry,
   LinearForcePressureLedgerEntry,
   LinearRoomGenerationValidation,
   LinearRoomTargetCandidateValidation,
   RoomGenerationExclusionReason,
+  SideRoomGenerationOutcome,
 } from './model';

@@ -249,6 +249,8 @@ is separately deferred until concrete NPC gifts and trait state exist.
 | N authored Hub plan        | ported   | `AUTHORED_PROJECT_MODEL.md`, `biomes/N_GAME_RULES.md`                               | Schema version 5 persists fixed authored leaves, an open fixed-slot set, six ordered visits, and parent-local side state behind dormant application capabilities.               |
 | N canonical Hub snapshot   | ported   | `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md`                            | Fixed entries, one physical board, ordered visits, local slots, reference-only restores, the fixed terminal shop, and completion rooms materialize without activation.          |
 | N lifecycle and history    | ported   | `ROOM_LIFECYCLE_MODEL.md`, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md` | Exact entry, pylon, side-room, restore, terminal, completion, counter, creation, appearance, encounter, and required-object events fold without activating N.                   |
+| N reward simulation        | ported   | `REWARD_MODEL.md`, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md`         | Full-board and generated-side offers consume shared bags; entered rooms acquire; Hub lookup constrains the fixed WorldShop without activating N.                                |
+| N selected validation      | ported   | `SIMULATION_AND_VALIDATION.md`, normalized N declarations, `biomes/N_GAME_RULES.md` | Open-slot constraints and side pressure preserve authored invalid outcomes as addressed findings; canonical visits, pylons, restores, and completion fail loudly on mismatch.   |
 | N progression/NPC variants | deferred | N encounter sets, Story and persistent requirements                                 | Suppress Medea, Artemis, Heracles, OpeningEmpty, and other save variants under the documented progressed NPC-free baseline.                                                     |
 | N optional interactions    | deferred | N room and obstacle data                                                            | Suppress Chaos detours, gathering, challenges, wells, rerolls, postboss shops, and other no-action surfaces.                                                                    |
 | N simulation activation    | deferred | `biomes/N_GAME_RULES.md`                                                            | Keep dormant until the reconciled vocabulary and full N product loop are implemented.                                                                                           |
@@ -307,8 +309,9 @@ H, and I as authorable, simulatable, and editable through one shared linear-
 biome editor. Complete F/G/H/I prefixes enter profiles, recovery, simulator
 dispatch, candidate scope, and editor navigation together. P/Q/O remain
 declaration-only. N additionally owns a dormant authored Hub plan,
-completeness gate, and canonical materializer but remains outside every
-application capability and simulator dispatch.
+completeness gate, canonical materializer, history, reward replay, and selected
+validator but remains outside every application capability and simulator
+dispatch.
 
 The following remaining dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:
@@ -319,15 +322,15 @@ boundary; each biome rule document owns its exact room-level instances:
   counter, reward, or history distinction.
 - **Deferred:** persistent NPC entities, Chaos and other structural detours,
   optional interactions, concrete boon/trait identities, affordability, and
-  the remaining P/Q/O/N history, candidate, validation, and feedback
-  consumers remain additive future work.
+  the remaining P/Q/O history and N candidate/feedback consumers remain
+  additive future work.
 - **Excluded:** external save/profile predicates, inaccessible or debug-only
   rooms, noncanonical difficulty variants, and automatic boss drops without a
   modeled downstream consumer do not enter production declarations.
 - **Dormant:** P/Q/O have complete declarations but no connected authored
   topology. N has complete declarations plus dormant authored topology,
-  completeness, and canonical materialization. None has active simulator
-  dispatch, selected validation, candidate surface, or an editor panel.
+  completeness, canonical simulation, and selected validation. None has active
+  simulator dispatch, a candidate surface, or an editor panel.
 
 No generic `unsupported` field, compatibility scaffold, placeholder
 materializer, or route-qualified duplicate biome authority remains.
