@@ -849,11 +849,18 @@ describe('N candidate evaluation', () => {
       context: 'evaluated',
       support: 'impossible',
       findings: [{ code: 'rewardBagEntryUnavailable' }],
+      evidence: {
+        exclusions: [
+          { kind: 'sibling', priorOffers: ['MaxManaDropSmall'] },
+          { kind: 'bag', storeKey: 'SubRoomRewards' },
+        ],
+      },
     });
     expect(shopOffer).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
       findings: [{ code: 'shopOfferUnavailable' }],
+      evidence: { exclusions: [{ kind: 'shop' }] },
     });
     expect(shopPurchase).toMatchObject({ context: 'evaluated', support: 'possible' });
     expect(encodeProjectDocument(project)).toBe(before);
@@ -896,7 +903,11 @@ describe('N candidate evaluation', () => {
         open: true,
         occurrenceId: occurrenceId('incomplete-candidate'),
       }),
-    ).toMatchObject({ context: 'unavailable', reason: 'biomeIncomplete' });
+    ).toMatchObject({
+      context: 'unavailable',
+      reason: 'coverageNotReached',
+      evidence: { kind: 'coverageNotReached', requiredCheckpoint: 'afterTargetGeneration' },
+    });
     expect(simulateProject(catalog, representativeProject()).routes[1]).toMatchObject({
       status: 'valid',
       biomes: [{ biomeKey: 'N', authoring: 'complete', validity: 'valid' }],

@@ -1001,12 +1001,12 @@ one authored Room Occurrence; the candidate result never invents or persists a
 second identity.
 
 F/G/H/I/N/O/P/Q candidate preparation consumes the normal project evaluation;
-there is no production candidate-only biome simulator. Today a candidate is
-assessable only after the selected biome is complete enough to publish its
-canonical evaluation. The contextual-selection insertion will broaden that
-same evaluation authority to covered pre-decision prefixes without adding a
-second simulation path. Room candidates reuse the biome's addressed generation
-views. H Min/Max candidates reuse the addressed pre-outcome support ledger
+there is no production candidate-only biome simulator. A candidate is
+assessable when the complete evaluation or progressive prefix has reached its
+semantic owner and required checkpoint. Otherwise it reports addressed
+`coverageNotReached` evidence containing the owner, checkpoint, and current
+coverage. Room candidates reuse the biome's addressed generation views. H
+Min/Max candidates reuse the addressed pre-outcome support ledger
 because the proposed value cannot change its own prior context. Cage and
 terminal alternatives apply one immutable semantic replacement and replay H
 through the common linear reward authority with the already-evaluated G seed.
@@ -1016,9 +1016,11 @@ route evaluation. Slot membership reuses open-count and
 declaration-owned constraint validation; visits replay the six-visit product;
 side generation replays global ranked-prefix pressure; entered order replays
 the exact acquisition trace. Reward and shop proposals use the same immutable
-replacement/replay path as linear biomes. Incomplete N authorship returns typed
-`biomeIncomplete` context, while selected invalid values remain evaluated and
-retain exact findings.
+replacement/replay path as linear biomes. N does not claim per-slot prefix
+coverage while its jointly generated board is incomplete. Once the board or a
+later visit-local region is covered, its candidates use the same addressed
+coverage contract as Linear biomes. Selected invalid values remain evaluated
+and retain exact findings.
 
 If a prior biome is not complete and valid, candidates in every later biome
 report unavailable upstream context. If the active biome has not yet covered a
@@ -1030,7 +1032,10 @@ Ordered candidate queries for one authored snapshot may use one prepared
 candidate evaluator, which owns one shared base project simulation. The
 application shares its immutable-project `ProjectEvaluation` with that
 evaluator and keeps option arrays in a weak cache keyed by immutable project
-identity and semantic owner. A semantic edit therefore invalidates the
+identity and semantic owner. The application-owned contextual resolver maps
+those stable arrays to forced, possible, impossible, or unassessed options,
+centralizes player-facing reason copy, and caches by candidate-array identity
+plus presentation semantics. A semantic edit therefore invalidates the
 projection once, while repeated renders consume the same structures. Reward
 and shop alternatives still replay their immutable semantic replacement
 because their support depends on bag, peer, lifecycle, and history effects.

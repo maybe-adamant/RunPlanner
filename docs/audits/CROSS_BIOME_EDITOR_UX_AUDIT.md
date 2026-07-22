@@ -10,7 +10,7 @@ The biome game-rule documents and normalized layout declarations remain the
 domain authorities. This document records what the completed editors prove
 about shared UX and what must remain layout-specific.
 
-## Current Baseline
+## Phase 7 Entry Baseline
 
 All eight route biomes are authorable, simulatable, editable, profile-safe,
 recoverable, and reachable through catalog-driven navigation. The common
@@ -25,12 +25,13 @@ application already provides:
 - cached candidate projections keyed by immutable project identity;
 - one layout-dispatched route workspace for Linear and Hub biomes.
 
-The remaining contextual gap is real rather than presentational. Production
-route evaluation still stops at the first incomplete biome, and candidate
-queries inside that biome receive blanket `biomeIncomplete` context. Room
-selection still requires native Type and Room selects. Reward type and payload
-remain separate vertical selects. Reward candidate evidence cannot yet explain
-every store, bag, sibling, or source exclusion in player-facing terms.
+This was the baseline at Phase 7 entry. Commits 1 through 4 now evaluate the
+maximum truthful Linear or Hub prefix and project addressed candidate support
+as forced, possible, impossible, or unassessed. An unreached local owner uses
+`coverageNotReached`; later route biomes retain distinct upstream-incomplete
+and upstream-invalid gates. The native Type then Room selects and separate
+reward type/payload selects remain the active UI until the following picker
+slices consume that foundation.
 
 ## Biome Interaction Matrix
 

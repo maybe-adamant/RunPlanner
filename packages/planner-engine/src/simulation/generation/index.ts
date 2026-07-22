@@ -19,6 +19,8 @@ export type {
   LinearForcePressureLedgerEntry,
   LinearRoomGenerationValidation,
   LinearRoomTargetCandidateValidation,
+  RequirementEvaluationEvidence,
+  RoomGenerationExclusionEvidence,
   RoomGenerationExclusionReason,
   SideRoomGenerationOutcome,
 } from './model';

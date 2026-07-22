@@ -1579,7 +1579,7 @@ describe('project simulation composition', () => {
     });
   }, 15_000);
 
-  it('preserves an invalid Fields selection and exposes incomplete H candidate context', () => {
+  it('preserves an invalid Fields selection and evaluates covered incomplete H context', () => {
     let invalid = selectedGoldenHProject();
     invalid = applyProjectCommand(invalid, catalog, {
       kind: 'ReplaceFieldsCageOutcome',
@@ -1620,7 +1620,7 @@ describe('project simulation composition', () => {
         ),
         value: { rewardType: 'MaxHealthDrop' },
       }),
-    ).toMatchObject({ context: 'unavailable', reason: 'biomeIncomplete' });
+    ).toMatchObject({ context: 'evaluated', support: 'impossible' });
   });
 
   it('evaluates G room, store, and reward candidates through the shared linear authorities', () => {
@@ -1738,7 +1738,10 @@ describe('project simulation composition', () => {
     expect(earlyPreboss).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
-      evidence: { exclusionReasons: ['eligibilityRequirement'] },
+      evidence: {
+        exclusionReasons: ['eligibilityRequirement'],
+        exclusions: [{ kind: 'eligibilityRequirement', evaluation: { satisfied: false } }],
+      },
     });
     expect(terminalPeer).toMatchObject({
       context: 'evaluated',
@@ -1748,7 +1751,10 @@ describe('project simulation composition', () => {
     expect(repeatedPreboss).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
-      evidence: { exclusionReasons: ['maxCreationsPerRoom'] },
+      evidence: {
+        exclusionReasons: ['maxCreationsPerRoom'],
+        exclusions: [{ kind: 'maxCreationsPerRoom', actual: 1, maximum: 1 }],
+      },
     });
     expect(dormantGoalReward).toMatchObject({
       context: 'evaluated',

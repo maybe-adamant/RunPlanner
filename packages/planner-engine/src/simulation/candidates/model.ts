@@ -12,6 +12,7 @@ import type {
   OccurrenceAddress,
   RewardWheelAddress,
   RewardWheelOfferAddress,
+  SemanticAddress,
   ShopOfferAddress,
   ShopPurchaseAddress,
   TargetAddress,
@@ -22,13 +23,26 @@ import type {
   SideRoomGeneration,
 } from '../../authored-project/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
-import type { RoomGenerationExclusionReason } from '../generation';
+import type { RoomGenerationExclusionEvidence, RoomGenerationExclusionReason } from '../generation';
 import type { FindingCode, SemanticFinding } from '../model';
+import type { BiomeEvaluationCheckpoint, BiomeEvaluationCoverage } from '../project';
 
 export type CandidateSupport = 'forced' | 'impossible' | 'possible';
 
 export type CandidateContextUnavailableReason =
-  'biomeIncomplete' | 'upstreamIncomplete' | 'upstreamInvalid';
+  'coverageNotReached' | 'upstreamIncomplete' | 'upstreamInvalid';
+
+export type CandidateContextUnavailableEvidence =
+  | {
+      readonly kind: 'coverageNotReached';
+      readonly requiredOwner: SemanticAddress;
+      readonly requiredCheckpoint: BiomeEvaluationCheckpoint;
+      readonly coverage: BiomeEvaluationCoverage;
+    }
+  | {
+      readonly kind: 'upstreamIncomplete' | 'upstreamInvalid';
+      readonly upstreamBiomeKey: string;
+    };
 
 export interface RoomTargetCandidateQuery {
   readonly kind: 'roomTarget';
@@ -163,6 +177,7 @@ export interface UnavailableCandidateEvaluation {
   readonly context: 'unavailable';
   readonly query: ProjectCandidateQuery;
   readonly reason: CandidateContextUnavailableReason;
+  readonly evidence: CandidateContextUnavailableEvidence;
 }
 
 export interface RoomTargetCandidateEvidence {
@@ -180,6 +195,7 @@ export interface RoomTargetCandidateEvidence {
   readonly requiredForcedRoomGameNames: readonly string[];
   readonly supportRoomGameNames: readonly string[];
   readonly exclusionReasons: readonly RoomGenerationExclusionReason[];
+  readonly exclusions: readonly RoomGenerationExclusionEvidence[];
 }
 
 export interface EvaluatedRoomTargetCandidate {
@@ -202,11 +218,27 @@ export interface BatchRewardStoreCandidateEvidence {
   readonly currentMetaRatio: number | null;
   readonly metaSelectionValue: number;
   readonly supportStoreKeys: readonly string[];
+  readonly exclusions: readonly RewardCandidateExclusionEvidence[];
 }
+
+export type RewardCandidateExclusionEvidence =
+  | { readonly kind: 'store'; readonly storeKey?: string }
+  | { readonly kind: 'bag'; readonly storeKey?: string }
+  | { readonly kind: 'sibling'; readonly priorOffers: readonly string[] }
+  | { readonly kind: 'boonSource'; readonly source?: string }
+  | {
+      readonly kind: 'devotionPair';
+      readonly chosenSource?: string;
+      readonly spurnedSource?: string;
+    }
+  | { readonly kind: 'payload' }
+  | { readonly kind: 'shop' }
+  | { readonly kind: 'acquisition' };
 
 export interface RewardCandidateEvidence {
   readonly candidate: ResolvedRewardOffer;
   readonly relevantFindingCodes: readonly FindingCode[];
+  readonly exclusions: readonly RewardCandidateExclusionEvidence[];
 }
 
 export interface FieldsCageOutcomeCandidateEvidence {

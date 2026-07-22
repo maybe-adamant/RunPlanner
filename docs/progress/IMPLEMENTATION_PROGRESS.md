@@ -1411,9 +1411,17 @@ or invalid N never seeds O. Focused fixtures cover pre-board entry, board-only
 coverage, partial visits, board and side blocking, N-to-O gating, canonical
 strengthening, determinism, and immutability.
 
-Phase 7 Commit 4 is next. Candidate queries still use blanket incomplete
-context where addressed prefix coverage could support them, and typed
-requirement/store/bag/peer/source evidence has not yet been projected into the
-shared contextual-option vocabulary. The current room selector still uses
-Type then Room, and reward type/payload controls remain separate; those are
-later Phase 7 work.
+Phase 7 Commit 4 is complete. Candidate queries now consume complete or
+progressive biome products and require an exact semantic-owner witness before
+claiming support. Covered owners produce normal forced/possible/impossible
+assessments; unreached owners publish `coverageNotReached` with the required
+owner, checkpoint, and current coverage; later route biomes retain distinct
+upstream-incomplete and upstream-invalid evidence. Room generation carries
+typed requirement, counter, compatibility, force, repeat, and cap exclusions,
+while reward proposals preserve store, bag, sibling, Boon-source, and
+Devotion-pair evidence. The application owns one cached `ContextualOption`
+resolver with centralized explanation copy and fixtures for all four states.
+
+Phase 7 Commit 5 is next. The current room selector still uses native Type then
+Room controls; it must be replaced by the grouped contextual picker without
+moving room eligibility into React or changing N's fixed-slot Hub semantics.

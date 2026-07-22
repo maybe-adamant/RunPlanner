@@ -5,6 +5,7 @@ import type {
   OccurrenceAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
+import type { CounterAxis, HistoryRecord, NumericRange } from '../../requirements/model';
 import type { SemanticFinding } from '../model';
 
 export type RoomGenerationExclusionReason =
@@ -18,6 +19,104 @@ export type RoomGenerationExclusionReason =
   | 'maxCreationsThisRun'
   | 'notCandidate'
   | 'physicalExitUnavailable';
+
+export type RequirementEvaluationEvidence =
+  | {
+      readonly kind: 'all' | 'any';
+      readonly satisfied: boolean;
+      readonly children: readonly RequirementEvaluationEvidence[];
+    }
+  | {
+      readonly kind: 'not';
+      readonly satisfied: boolean;
+      readonly child: RequirementEvaluationEvidence;
+    }
+  | {
+      readonly kind: 'counterRange';
+      readonly satisfied: boolean;
+      readonly axis: CounterAxis;
+      readonly actual: number;
+      readonly expected: NumericRange;
+    }
+  | {
+      readonly kind: 'recordCount' | 'distinctRecordKeyCount';
+      readonly satisfied: boolean;
+      readonly record: HistoryRecord;
+      readonly keys: readonly string[];
+      readonly actual: number;
+      readonly expected: NumericRange;
+    }
+  | {
+      readonly kind: 'recentEncounterPhaseCount';
+      readonly satisfied: boolean;
+      readonly profileKey: string;
+      readonly phaseKey: string;
+      readonly roomWindow: number;
+      readonly actual: number;
+      readonly expected: NumericRange;
+    }
+  | {
+      readonly kind: 'minExits';
+      readonly satisfied: boolean;
+      readonly actual: number;
+      readonly minimum: number;
+    }
+  | {
+      readonly kind: 'currentBatchTargetCount';
+      readonly satisfied: boolean;
+      readonly actual: number;
+      readonly expected: NumericRange;
+    }
+  | {
+      readonly kind: 'currentBatchRoomCount';
+      readonly satisfied: boolean;
+      readonly roomGameNames: readonly string[];
+      readonly actual: number;
+      readonly expected: NumericRange;
+    }
+  | {
+      readonly kind: 'clockworkGoalsRemaining';
+      readonly satisfied: boolean;
+      readonly actual: number;
+      readonly expected: NumericRange;
+    }
+  | {
+      readonly kind: 'clockworkNonGoalCapacity';
+      readonly satisfied: boolean;
+      readonly acquired: number;
+      readonly maximum: number;
+      readonly reserve: number;
+    };
+
+export type RoomGenerationExclusionEvidence =
+  | { readonly kind: 'notCandidate' }
+  | { readonly kind: 'physicalExitUnavailable'; readonly exitIndex: number }
+  | {
+      readonly kind: 'exitIncompatible';
+      readonly compatibilityPolicyKey: string;
+      readonly sourceGameName: string;
+      readonly candidateGameName: string;
+    }
+  | { readonly kind: 'currentRoomRepeat'; readonly sourceGameName: string }
+  | {
+      readonly kind: 'forceMinimum';
+      readonly axis: 'biomeDepthCache' | 'biomeEncounterDepth';
+      readonly actual: number;
+      readonly minimum: number;
+    }
+  | {
+      readonly kind: 'eligibilityRequirement';
+      readonly evaluation: RequirementEvaluationEvidence;
+    }
+  | {
+      readonly kind: 'maxCreationsThisRun' | 'maxCreationsPerRoom' | 'maxAppearancesThisBiome';
+      readonly actual: number;
+      readonly maximum: number;
+    }
+  | {
+      readonly kind: 'forcedPool';
+      readonly requiredRoomGameNames: readonly string[];
+    };
 
 export interface LinearForcePressureLedgerEntry {
   readonly targetOrigin: TargetAddress;
@@ -36,6 +135,7 @@ export interface LinearForcePressureLedgerEntry {
   readonly supportRoomGameNames: readonly string[];
   readonly selectedPossible: boolean;
   readonly selectedExclusionReasons: readonly RoomGenerationExclusionReason[];
+  readonly selectedExclusions: readonly RoomGenerationExclusionEvidence[];
 }
 
 export type FieldsCageOutcome = 'min' | 'max';

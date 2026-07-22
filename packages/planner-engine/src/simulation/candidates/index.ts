@@ -7,6 +7,7 @@ export {
 export { CandidateEvaluationContractError } from './context';
 export {
   type CandidateContextUnavailableReason,
+  type CandidateContextUnavailableEvidence,
   type CandidateSupport,
   type BatchRewardStoreCandidateEvidence,
   type BatchRewardStoreCandidateQuery,
@@ -42,6 +43,7 @@ export {
   type ProjectCandidateEvaluator,
   type ProjectCandidateQuery,
   type RewardCandidateEvidence,
+  type RewardCandidateExclusionEvidence,
   type RewardWheelOfferCandidateQuery,
   type RewardWheelOfferCountCandidateEvidence,
   type RewardWheelOfferCountCandidateQuery,
