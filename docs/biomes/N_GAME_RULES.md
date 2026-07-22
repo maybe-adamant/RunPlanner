@@ -661,6 +661,17 @@ local-slot projections; parent and Hub restores reference those existing room
 entities. Generated-but-unentered side slots retain canonical offers, while
 not-generated slots retain authored state but produce no canonical offer.
 
+Incomplete N authoring uses the same materializer, lifecycle fold, reward
+kernel, and generation validator through the maximum truthful Hub prefix. A
+partial open set stops after fixed entry and before board generation. A
+complete open set materializes all nine or ten offers as one atomic
+`hubOpenSet` region, after which complete authored visits extend coverage in
+visit order with their local side state. An unsupported board, main-room
+lifecycle, side generation, or entered side-room lifecycle stops derived
+coverage at that semantic owner without deleting later authored visits. Only
+the complete six-visit form adds fixed Preboss, Boss/Postboss completion,
+biome completion, and the O route seed.
+
 ## Audit Conclusion
 
 N validates the existing top-level architecture and sharpens its ownership

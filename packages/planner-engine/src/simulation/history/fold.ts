@@ -760,6 +760,8 @@ export function foldLinearHistoryPrefixEvents(
   return foldLinearHistoryEventStream(events, seed, 'prefix') as LinearBiomeHistoryPrefix;
 }
 
+export const foldBiomeHistoryPrefixEvents = foldLinearHistoryPrefixEvents;
+
 export function foldHistoryEvents(
   events: readonly HistoryEvent[],
   seed?: HistoryStateView,

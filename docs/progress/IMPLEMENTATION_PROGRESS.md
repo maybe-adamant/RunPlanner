@@ -1399,8 +1399,21 @@ Cross-variant fixtures cover eligibility-driven F/G/P, Fields H, Clockwork I,
 ship-wheel O, staged Q, fixed I entry, invalid-prefix blocking, and complete
 canonical strengthening.
 
-Phase 7 Commit 3 is next. Hub biome N still publishes `notEvaluated` while
-incomplete and needs joint-board, ordered-visit, local-side-state, fixed-preboss,
-and completion-region progressive coverage. The current room selector still
-uses Type then Room, and reward type/payload controls remain separate; those are
+Phase 7 Commit 3 is complete. Incomplete N evaluation now materializes fixed
+Opening/PreHub entry, treats the 9/10-slot open board as one atomic generation
+region, and extends coverage through complete authored visits with side-room
+generation, entry order, parent restores, Hub restores, reward witnesses, and
+counter state. Unsupported board rewards or constraints and unsupported visit
+or side state clamp derived coverage at their semantic owner while retained
+later visits remain authored. Complete six-visit N still strengthens through
+the existing fixed Preboss and Boss/Postboss canonical path, and an incomplete
+or invalid N never seeds O. Focused fixtures cover pre-board entry, board-only
+coverage, partial visits, board and side blocking, N-to-O gating, canonical
+strengthening, determinism, and immutability.
+
+Phase 7 Commit 4 is next. Candidate queries still use blanket incomplete
+context where addressed prefix coverage could support them, and typed
+requirement/store/bag/peer/source evidence has not yet been projected into the
+shared contextual-option vocabulary. The current room selector still uses
+Type then Room, and reward type/payload controls remain separate; those are
 later Phase 7 work.

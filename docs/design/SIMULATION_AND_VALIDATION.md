@@ -268,10 +268,16 @@ next generation point. Persisted downstream authorship remains untouched but
 receives no contextual claim. A Linear biome whose authored start cannot yet be
 materialized publishes `coverage: none`.
 
-Incomplete Hub biomes still publish
-`coverage: { kind: 'none', reason: 'notEvaluated' }` until the Hub progressive
-slice lands. Neither layout publishes a canonical snapshot, completion event,
-or downstream seed while incomplete.
+Incomplete Hub biomes publish the same partial products through fixed entry,
+the jointly generated board, and complete visits in authored order. Board
+coverage is atomic under the `hubOpenSet` semantic owner: fewer than the
+required open slots stops before board generation, while a complete 9/10-slot
+set generates and evaluates every open offer together. Later visits extend
+coverage by `hubVisit` owner, including side generation, entered local rooms,
+parent restores, and the Hub restore. An unsupported board or visit state
+clamps derived coverage at that semantic region while retaining later authored
+visits. Neither layout publishes a canonical snapshot, completion event, or
+downstream seed while incomplete.
 
 ## Completeness
 
@@ -1109,10 +1115,10 @@ Each route simulation records:
 - configured biome identity and the validated route prefix;
 - complete F/G/H/I/N/O/P/Q evaluations with layout-typed canonical snapshots, lifecycle events,
   ledgers, room-generation proof, reward witnesses, and findings;
-- Linear incomplete active-biome evaluation with covered-prefix
+- Linear and Hub incomplete active-biome evaluation with covered-prefix
   materialization, partial lifecycle history, counters, generation proof,
-  reward witnesses, and addressed findings; Hub progressive materialization is
-  the remaining layout-specific insertion;
+  reward witnesses, and addressed findings; Hub board coverage remains one
+  all-or-nothing semantic generation region rather than a physical-slot prefix;
 - no canonical snapshot, final biome history, completion event, or downstream
   seed on an incomplete active biome;
 - validated-prefix identity and an exact route-end, incomplete, or invalid

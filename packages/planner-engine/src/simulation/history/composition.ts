@@ -3,14 +3,14 @@ import { createBiomeAddress, type BiomeAddress } from '../../authored-project/ad
 import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
 import type { CanonicalCompletionRoom } from '../materialization';
 import { foldHistoryEvents } from './fold';
-import { foldLinearHistoryPrefixEvents } from './fold';
+import { foldBiomeHistoryPrefixEvents } from './fold';
 import { createRoomLifecycleInput, type CanonicalLifecycleRoom } from './lifecycleInput';
 import type {
   CanonicalBiomeHistory,
   HistoryCounters,
   HistoryEvent,
   HistoryStateView,
-  LinearBiomeHistoryPrefix,
+  BiomeHistoryPrefix,
 } from './model';
 
 type EnvelopeHistoryEvent = Extract<
@@ -160,7 +160,7 @@ export function composeBiomeHistoryPrefix({
   initialCounters,
   seed,
   compose,
-}: BiomeHistoryPrefixOptions): LinearBiomeHistoryPrefix {
+}: BiomeHistoryPrefixOptions): BiomeHistoryPrefix {
   const builder: EventBuilder = { events: [], sequenceBase: seed?.sequence ?? 0 };
   appendEnvelope(builder, {
     kind: 'biomeStarted',
@@ -168,7 +168,7 @@ export function composeBiomeHistoryPrefix({
     counters: Object.freeze({ ...initialCounters }),
   });
   compose(segmentWriter(builder));
-  return foldLinearHistoryPrefixEvents(builder.events, seed);
+  return foldBiomeHistoryPrefixEvents(builder.events, seed);
 }
 
 export function composeFixedEntryChain<Room extends CanonicalLifecycleRoom>(
