@@ -10,6 +10,8 @@ import type {
   LocalChildGroupAddress,
   LocalRewardAddress,
   OccurrenceAddress,
+  RewardWheelAddress,
+  RewardWheelOfferAddress,
   ShopOfferAddress,
   ShopPurchaseAddress,
   TargetAddress,
@@ -66,6 +68,36 @@ export interface FieldsCageOutcomeCandidateQuery {
   readonly cageOutcome: 'min' | 'max';
 }
 
+export interface ShipEncounterCountCandidateQuery {
+  readonly kind: 'shipEncounterCount';
+  readonly occurrence: OccurrenceAddress;
+  readonly encounterCount: 2 | 3;
+}
+
+export interface RewardWheelOfferCountCandidateQuery {
+  readonly kind: 'rewardWheelOfferCount';
+  readonly wheel: RewardWheelAddress;
+  readonly offerCount: number;
+}
+
+export interface RewardWheelStoreCandidateQuery {
+  readonly kind: 'rewardWheelStore';
+  readonly wheel: RewardWheelAddress;
+  readonly storeKey: string;
+}
+
+export interface RewardWheelOfferCandidateQuery {
+  readonly kind: 'rewardWheelOffer';
+  readonly offer: RewardWheelOfferAddress;
+  readonly value: ResolvedRewardOffer;
+}
+
+export interface RewardWheelPickedCandidateQuery {
+  readonly kind: 'rewardWheelPicked';
+  readonly wheel: RewardWheelAddress;
+  readonly pickedOfferIndex: number;
+}
+
 export interface HubSlotCandidateQuery {
   readonly kind: 'hubSlot';
   readonly slot: HubSlotAddress;
@@ -111,7 +143,12 @@ export type ProjectCandidateQuery =
   | HubVisitCandidateQuery
   | IncomingRewardCandidateQuery
   | LocalRewardCandidateQuery
+  | RewardWheelOfferCandidateQuery
+  | RewardWheelOfferCountCandidateQuery
+  | RewardWheelPickedCandidateQuery
+  | RewardWheelStoreCandidateQuery
   | RoomTargetCandidateQuery
+  | ShipEncounterCountCandidateQuery
   | ShopOfferCandidateQuery
   | ShopPurchaseCandidateQuery
   | SideRoomEntryOrderCandidateQuery
@@ -175,6 +212,32 @@ export interface FieldsCageOutcomeCandidateEvidence {
   readonly fieldsMaxDoorsRolled: number;
   readonly maxDoorCageCeiling: number;
   readonly supportOutcomes: readonly ('min' | 'max')[];
+}
+
+export interface ShipEncounterCountCandidateEvidence {
+  readonly candidateEncounterCount: 2 | 3;
+  readonly beforeSequence: number;
+  readonly supportEncounterCounts: readonly number[];
+  readonly relevantFindingCodes: readonly FindingCode[];
+}
+
+export interface RewardWheelOfferCountCandidateEvidence {
+  readonly candidateOfferCount: number;
+  readonly minimumOfferCount: number;
+  readonly maximumOfferCount: number;
+  readonly relevantFindingCodes: readonly FindingCode[];
+}
+
+export interface RewardWheelStoreCandidateEvidence {
+  readonly candidateStoreKey: string;
+  readonly supportedStoreKeys: readonly string[];
+  readonly relevantFindingCodes: readonly FindingCode[];
+}
+
+export interface RewardWheelPickedCandidateEvidence {
+  readonly candidatePickedOfferIndex: number;
+  readonly activeOfferIndexes: readonly number[];
+  readonly relevantFindingCodes: readonly FindingCode[];
 }
 
 export interface HubSlotCandidateEvidence {
@@ -267,6 +330,46 @@ export interface EvaluatedFieldsCageOutcomeCandidate {
   readonly evidence: FieldsCageOutcomeCandidateEvidence;
 }
 
+export interface EvaluatedShipEncounterCountCandidate {
+  readonly context: 'evaluated';
+  readonly query: ShipEncounterCountCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: ShipEncounterCountCandidateEvidence;
+}
+
+export interface EvaluatedRewardWheelOfferCountCandidate {
+  readonly context: 'evaluated';
+  readonly query: RewardWheelOfferCountCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: RewardWheelOfferCountCandidateEvidence;
+}
+
+export interface EvaluatedRewardWheelStoreCandidate {
+  readonly context: 'evaluated';
+  readonly query: RewardWheelStoreCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: RewardWheelStoreCandidateEvidence;
+}
+
+export interface EvaluatedRewardWheelOfferCandidate {
+  readonly context: 'evaluated';
+  readonly query: RewardWheelOfferCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: RewardCandidateEvidence;
+}
+
+export interface EvaluatedRewardWheelPickedCandidate {
+  readonly context: 'evaluated';
+  readonly query: RewardWheelPickedCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: RewardWheelPickedCandidateEvidence;
+}
+
 export interface EvaluatedHubSlotCandidate {
   readonly context: 'evaluated';
   readonly query: HubSlotCandidateQuery;
@@ -323,7 +426,12 @@ export type ProjectCandidateEvaluation =
   | EvaluatedHubVisitCandidate
   | EvaluatedIncomingRewardCandidate
   | EvaluatedLocalRewardCandidate
+  | EvaluatedRewardWheelOfferCandidate
+  | EvaluatedRewardWheelOfferCountCandidate
+  | EvaluatedRewardWheelPickedCandidate
+  | EvaluatedRewardWheelStoreCandidate
   | EvaluatedRoomTargetCandidate
+  | EvaluatedShipEncounterCountCandidate
   | EvaluatedShopOfferCandidate
   | EvaluatedShopPurchaseCandidate
   | EvaluatedSideRoomEntryOrderCandidate

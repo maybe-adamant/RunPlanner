@@ -585,6 +585,15 @@ Run/Meta batches observe the same ordered store ledger as the room lifecycle.
 Wheel bag failures and encounter-count failures are addressed to their exact
 offer or room owners, while direct preboss support is validated at source BDC 7. The complete N/O fixture remains dormant at the application boundary.
 
+Phase 6 O Slice 4 is complete. Candidate vocabulary now includes only O's new
+semantic values: ShipCombat encounter count plus wheel offer count, store,
+offer, and picked index. Each candidate applies the existing semantic command
+to a temporary project and consumes normal N/O evaluation; room candidates
+also receive the selected reward-history checkpoints required by acquired-
+source eligibility. Fixtures prove candidate/selected consistency, retained
+invalid encounter state, route-carried bag support, and unavailable O context
+when the application-owned simulation scope still ends after N.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1290,7 +1299,7 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, and O Slices 1-3 are complete. By explicit
+five I slices, all nine N slices, and O Slices 1-4 are complete. By explicit
 implementation-order decision, the remaining O/P/Q Phase 6 slices now precede
 the contextual-selection UX insertion. They reuse the existing editor and
 candidate language while preserving the typed data required by that later UX

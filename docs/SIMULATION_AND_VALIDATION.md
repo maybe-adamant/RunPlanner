@@ -1092,14 +1092,15 @@ Each route simulation records:
 - semantic findings in stable route and phase order;
 - whether the route is eligible for future execution-plan compilation.
 
-The core registry contains complete F, G, H, I, and N simulators, with function
+The core registry contains complete F, G, H, I, N, and dormant O simulators, with function
 dispatch selected by normalized layout kind after biome implementation scope is
 confirmed. Project simulation may also receive an application-owned simulation scope; reaching a registered
 biome outside that scope records a `simulatorBoundary` horizon without
 dispatching the biome or inventing local findings. The current application
 scope includes F, G, H, I, and N. Application interaction fixtures and direct
 core conformance fixtures exercise the full F-to-I prefix and the one-biome N
-Surface prefix.
+Surface prefix. O's direct core fixtures exercise the N/O prefix while the
+application scope continues to stop at O.
 An entirely unconfigured project has explicit `empty` status, no findings, and
 is not eligible for execution-plan compilation.
 Candidate results and UI decoration are deliberately absent from this Phase 3

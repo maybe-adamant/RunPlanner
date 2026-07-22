@@ -81,7 +81,8 @@ preventing proof-only branch multiplication while retaining one ordered
 witness for every distinct downstream state. O now has dormant authorship,
 canonical lifecycle/reward replay, and selected validation through its ship
 wheel model; P/Q remain declaration-only and all three remain outside current
-application capabilities.
+application capabilities. O's dormant core also exposes normal project-
+candidate evaluation for its encounter and wheel values.
 
 N has schema-version-5 Hub authorship, structural
 completeness, canonical Hub materialization, exact room lifecycle, and
