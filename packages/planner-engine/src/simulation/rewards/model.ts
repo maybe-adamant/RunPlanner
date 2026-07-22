@@ -80,7 +80,3 @@ export type RewardSimulation = HubRewardSimulation | LinearRewardSimulation;
 export type LinearRewardEvent = RewardEvent;
 export type LinearRewardStoreSupportEntry = RewardStoreSupportEntry;
 export type LinearRewardBranch = RewardBranch;
-export type FRewardEvent = RewardEvent;
-export type FRewardStoreSupportEntry = RewardStoreSupportEntry;
-export type FRewardBranch = RewardBranch;
-export type FRewardSimulation = LinearRewardSimulation;

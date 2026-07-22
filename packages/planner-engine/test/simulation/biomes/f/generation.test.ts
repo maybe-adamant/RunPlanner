@@ -19,15 +19,15 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   CandidateEvaluationContractError,
-  composeFHistory,
+  composeLinearHistory,
   createPreparedProjectCandidateEvaluator,
-  evaluateFCompleteness,
-  evaluateFRoomGeneration,
+  evaluateLinearCompleteness,
+  evaluateLinearRoomGeneration,
   evaluateProjectCandidate,
   evaluateProjectCandidates,
   materializeLinearBiome,
   simulateProject,
-  type CompleteFCompletenessResult,
+  type CompleteLinearCompletenessResult,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -63,8 +63,8 @@ function fPlan(project: ProjectDocument): LinearBiomePlan {
   return plan;
 }
 
-function complete(project: ProjectDocument): CompleteFCompletenessResult {
-  const result = evaluateFCompleteness(catalog, biome, fPlan(project));
+function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
+  const result = evaluateLinearCompleteness(catalog, biome, fPlan(project));
   if (result.completion !== 'complete') {
     throw new Error(`possibility fixture is incomplete: ${result.findings[0]?.code}`);
   }
@@ -132,8 +132,12 @@ function possibilityProject(batches: readonly BatchSpec[] = baselineBatches): Pr
 
 function evaluate(project: ProjectDocument = possibilityProject()) {
   const snapshot = materializeLinearBiome(catalog, biome, complete(project));
-  const history = composeFHistory(catalog, snapshot);
-  return { snapshot, history, generation: evaluateFRoomGeneration(catalog, snapshot, history) };
+  const history = composeLinearHistory(catalog, snapshot);
+  return {
+    snapshot,
+    history,
+    generation: evaluateLinearRoomGeneration(catalog, snapshot, history, 1),
+  };
 }
 
 function pressure(result: ReturnType<typeof evaluate>, batchIndex: number, exitIndex: number) {
@@ -393,7 +397,7 @@ describe('F room possibility and generation validation', () => {
     });
     const snapshot = materializeLinearBiome(catalog, biome, complete(project));
 
-    expect(() => evaluateFRoomGeneration(catalog, snapshot, baseline.history)).toThrowError(
+    expect(() => evaluateLinearRoomGeneration(catalog, snapshot, baseline.history, 1)).toThrowError(
       /source .* does not match its history appearance/,
     );
   });
@@ -407,7 +411,7 @@ describe('F room possibility and generation validation', () => {
     });
     const snapshot = materializeLinearBiome(catalog, biome, complete(project));
 
-    expect(() => evaluateFRoomGeneration(catalog, snapshot, baseline.history)).toThrowError(
+    expect(() => evaluateLinearRoomGeneration(catalog, snapshot, baseline.history, 1)).toThrowError(
       /target .* does not match its history creation/,
     );
   });

@@ -379,15 +379,3 @@ export function composeLinearHistory(
     fail,
   });
 }
-
-export function composeFHistory(
-  catalog: Catalog,
-  snapshot: CanonicalLinearBiome,
-): CanonicalLinearHistory {
-  if (snapshot.biomeKey !== 'F') {
-    throw new LinearHistoryCompositionContractError(
-      `F history cannot compose biome ${snapshot.biomeKey}`,
-    );
-  }
-  return composeLinearHistory(catalog, snapshot);
-}

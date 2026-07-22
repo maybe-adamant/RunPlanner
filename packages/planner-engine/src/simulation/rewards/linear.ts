@@ -809,14 +809,3 @@ export function evaluateLinearRewards(
     findings: immutableFindings,
   });
 }
-
-export function evaluateFRewards(
-  catalog: Catalog,
-  snapshot: CanonicalLinearBiome,
-  history: CanonicalLinearHistory,
-): LinearRewardSimulation {
-  if (snapshot.biomeKey !== 'F' || history.biomeKey !== 'F') {
-    throw new LinearRewardSimulationContractError('F rewards require biome F');
-  }
-  return evaluateLinearRewards(catalog, snapshot, history, 1);
-}

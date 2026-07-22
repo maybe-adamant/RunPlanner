@@ -978,27 +978,3 @@ export function evaluateLinearRoomTargetCandidate(
     layout.continuation.progressionPolicy.kind === 'staged',
   );
 }
-
-export function evaluateFRoomTargetCandidate(
-  catalog: Catalog,
-  snapshot: CanonicalLinearBiome,
-  history: CanonicalLinearHistory,
-  targetOrigin: CanonicalTarget['origin'],
-  gameName: string,
-): LinearRoomTargetCandidateValidation {
-  if (snapshot.biomeKey !== 'F' || history.biomeKey !== 'F') {
-    throw new LinearRoomGenerationContractError('F candidate generation requires biome F');
-  }
-  return evaluateLinearRoomTargetCandidate(catalog, snapshot, history, targetOrigin, gameName, 1);
-}
-
-export function evaluateFRoomGeneration(
-  catalog: Catalog,
-  snapshot: CanonicalLinearBiome,
-  history: CanonicalLinearHistory,
-): LinearRoomGenerationValidation {
-  if (snapshot.biomeKey !== 'F' || history.biomeKey !== 'F') {
-    throw new LinearRoomGenerationContractError('F generation requires biome F');
-  }
-  return evaluateLinearRoomGeneration(catalog, snapshot, history, 1);
-}

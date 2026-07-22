@@ -14,8 +14,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   CompletenessContractError,
-  evaluateFCompleteness,
-  type FCompletenessResult,
+  evaluateLinearCompleteness,
+  type LinearCompletenessResult,
 } from '@run-planner/engine/simulation';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -34,8 +34,8 @@ function fPlan(project: ProjectDocument): LinearBiomePlan {
   return plan;
 }
 
-function evaluate(project: ProjectDocument): FCompletenessResult {
-  return evaluateFCompleteness(catalog, biome, fPlan(project));
+function evaluate(project: ProjectDocument): LinearCompletenessResult {
+  return evaluateLinearCompleteness(catalog, biome, fPlan(project));
 }
 
 function unstartedProject(): ProjectDocument {
@@ -100,7 +100,11 @@ function completeFProject(gameName = 'F_Combat04'): ProjectDocument {
 describe('F completeness', () => {
   it('rejects evaluation outside the declared F route placement', () => {
     expect(() =>
-      evaluateFCompleteness(catalog, createBiomeAddress('Surface', 'F'), fPlan(startedProject())),
+      evaluateLinearCompleteness(
+        catalog,
+        createBiomeAddress('Surface', 'F'),
+        fPlan(startedProject()),
+      ),
     ).toThrowError(new CompletenessContractError('Surface does not place biome F'));
   });
 

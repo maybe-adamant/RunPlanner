@@ -1,19 +1,12 @@
-export {
-  composeFHistory,
-  composeLinearHistory,
-  LinearHistoryCompositionContractError,
-  LinearHistoryCompositionContractError as FHistoryCompositionContractError,
-} from './compose';
+export { composeLinearHistory, LinearHistoryCompositionContractError } from './compose';
 export { composeHubHistory, composeNHistory, HubHistoryCompositionContractError } from './hub';
 export { projectRecentEncounterPhases, type RecentEncounterPhaseFact } from './facts';
 export {
-  foldFHistoryEvents,
   foldHistoryEvents,
   foldHubHistoryEvents,
   foldLinearHistoryEvents,
   HistoryFoldContractError,
   LinearHistoryFoldContractError,
-  LinearHistoryFoldContractError as FHistoryFoldContractError,
 } from './fold';
 export type {
   BiomeCompletedHistoryEvent,
@@ -22,7 +15,6 @@ export type {
   ClockworkBatchStateHistoryEvent,
   ClockworkGoalAcquiredHistoryEvent,
   ClockworkNonGoalRewardSpawnedHistoryEvent,
-  CanonicalFHistory,
   CanonicalBiomeHistory,
   CanonicalHubHistory,
   CanonicalLinearHistory,
@@ -30,12 +22,6 @@ export type {
   EnteredRewardStoreHistoryEntry,
   EmptyOutgoingGenerationHistoryEvent,
   FieldsBatchOutcomeHistoryEvent,
-  FHistoryCounters,
-  FHistoryEvent,
-  FHistoryLedgers,
-  FHistoryStateView,
-  FRoomHistoryViews,
-  FTargetGenerationView,
   HistoryCounters,
   HistoryEvent,
   HistoryLedgers,

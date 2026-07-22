@@ -1,10 +1,7 @@
 export {
-  evaluateFRoomGeneration,
-  evaluateFRoomTargetCandidate,
   evaluateLinearRoomGeneration,
   evaluateLinearRoomTargetCandidate,
   LinearRoomGenerationContractError,
-  LinearRoomGenerationContractError as FRoomGenerationContractError,
   supportedFieldsCageOutcomes,
 } from './linear';
 export {
@@ -16,9 +13,6 @@ export type {
   EncounterCountSupportEntry,
   FieldsCageOutcome,
   FieldsCageOutcomeSupportEntry,
-  FForcePressureLedgerEntry,
-  FRoomGenerationValidation,
-  FRoomTargetCandidateValidation,
   HubOpenSlotConstraintSupportEntry,
   HubRoomGenerationValidation,
   HubSideRoomGenerationSupportEntry,
