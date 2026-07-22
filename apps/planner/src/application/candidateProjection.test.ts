@@ -1,4 +1,4 @@
-import { catalog } from '@run-planner/catalog';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
@@ -7,7 +7,7 @@ import {
   createProjectDocument,
   createTargetAddress,
   simulateProject,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { describe, expect, it } from 'vitest';
 
 import { createCandidateProjectionService, presentCandidateLabel } from './candidateProjection';

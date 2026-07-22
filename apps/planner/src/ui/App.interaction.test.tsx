@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, screen } from '@testing-library/react';
-import { encodeProjectDocument } from '@run-planner/core';
+import { encodeProjectDocument } from '@run-planner/engine';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '../application/createApplication';

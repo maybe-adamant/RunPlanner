@@ -121,9 +121,9 @@ RunPlanner/
     findings/
 ```
 
-`packages/core` defines pure semantic types and operations. It may define the
+`packages/planner-engine` defines pure semantic types and operations. It may define the
 normalized catalog interface required by simulation, but it cannot import the
-catalog package. `packages/catalog` constructs that interface from explicit
+catalog package. `packages/hades2-catalog` constructs that interface from explicit
 declarations. The planner app is the composition root that constructs the
 catalog, creates application state, invokes the simulator, and binds results
 to React.

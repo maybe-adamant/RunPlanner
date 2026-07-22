@@ -1,5 +1,5 @@
-import { catalog } from '@run-planner/catalog';
-import { simulateProject, summarizeCatalog, type ProjectDocument } from '@run-planner/core';
+import { catalog } from '@run-planner/hades2-catalog';
+import { simulateProject, summarizeCatalog, type ProjectDocument } from '@run-planner/engine';
 
 import {
   createApplicationCapabilities,

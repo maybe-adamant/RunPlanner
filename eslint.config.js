@@ -40,18 +40,18 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/core/src/**/*.ts'],
+    files: ['packages/planner-engine/src/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
-          patterns: [...platformImports, '@run-planner/catalog', '@run-planner/planner'],
+          patterns: [...platformImports, '@run-planner/hades2-catalog', '@run-planner/planner'],
         },
       ],
     },
   },
   {
-    files: ['packages/catalog/src/**/*.ts'],
+    files: ['packages/hades2-catalog/src/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',

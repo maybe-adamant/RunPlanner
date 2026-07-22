@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { catalog } from '@run-planner/catalog';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
@@ -14,7 +14,7 @@ import {
   type LinearBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';

@@ -23,8 +23,8 @@ import {
   type OccurrenceId,
   type ProjectDocument,
   type ProjectEvaluation,
-} from '@run-planner/core';
-import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
+} from '@run-planner/engine';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication, type PlannerApplication } from '../application/createApplication';

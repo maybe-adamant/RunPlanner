@@ -1,4 +1,4 @@
-import type { Catalog, ProjectSimulationScope } from '@run-planner/core';
+import type { Catalog, ProjectSimulationScope } from '@run-planner/engine';
 
 import {
   createPlannerCapabilities,

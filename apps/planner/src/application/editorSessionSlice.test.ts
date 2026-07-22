@@ -1,4 +1,4 @@
-import { createBiomeAddress, createProjectAddress } from '@run-planner/core';
+import { createBiomeAddress, createProjectAddress } from '@run-planner/engine';
 import { describe, expect, it } from 'vitest';
 
 import { editorSessionReducer, findingSelected, sectionSelected } from './editorSessionSlice';

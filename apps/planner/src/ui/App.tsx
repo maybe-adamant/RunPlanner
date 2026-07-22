@@ -4,7 +4,7 @@ import {
   type Catalog,
   type CatalogSummary,
   type ProjectRouteEvaluation,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 
 import { presentProjectStatus, presentRouteStatus } from '../application/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';

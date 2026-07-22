@@ -1,4 +1,4 @@
-import { encodeProjectDocument, type Catalog, type ProjectDocument } from '@run-planner/core';
+import { encodeProjectDocument, type Catalog, type ProjectDocument } from '@run-planner/engine';
 
 import type { PlannerCapabilities } from './capabilities';
 import { parseAuthorableProjectDocument } from './projectDocuments';

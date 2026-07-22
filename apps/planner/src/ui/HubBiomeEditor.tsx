@@ -17,7 +17,7 @@ import {
   type ProjectDocument,
   type RoomOccurrence,
   type SideRoomGeneration,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { useMemo, useRef, useState } from 'react';
 
 import {

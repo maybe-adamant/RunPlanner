@@ -1,4 +1,4 @@
-import { catalog } from '@run-planner/catalog';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createContinuationAddress,
@@ -11,7 +11,7 @@ import {
   ProjectCommandContractError,
   type LinearBiomePlan,
   type ProjectDocument,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { describe, expect, it } from 'vitest';
 
 import {

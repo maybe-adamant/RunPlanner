@@ -1,4 +1,4 @@
-import type { Catalog, ProjectDocument } from '@run-planner/core';
+import type { Catalog, ProjectDocument } from '@run-planner/engine';
 
 import type { PlannerCapabilities } from './capabilities';
 import { createAuthorableProjectDocument } from './projectDocuments';

@@ -1,4 +1,4 @@
-import type { Catalog } from '@run-planner/core';
+import type { Catalog } from '@run-planner/engine';
 
 export type ActiveBiomeCapability = 'authorable' | 'simulatable' | 'editable';
 

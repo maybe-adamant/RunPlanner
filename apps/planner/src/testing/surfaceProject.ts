@@ -1,4 +1,4 @@
-import { catalog } from '@run-planner/catalog';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
@@ -20,8 +20,8 @@ import {
   type HubBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
-} from '@run-planner/core';
-import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
+} from '@run-planner/engine';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
 export const nBiome = createBiomeAddress('Surface', 'N');
 export const oBiome = createBiomeAddress('Surface', 'O');

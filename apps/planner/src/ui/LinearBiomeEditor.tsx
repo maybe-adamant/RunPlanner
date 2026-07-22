@@ -3,7 +3,7 @@ import type {
   Catalog,
   LinearBiomePlan,
   RoomDeclaration,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import {
   createBiomeAddress,
   createBiomeFieldAddress,
@@ -11,7 +11,7 @@ import {
   createFixedEntryRewardAddress,
   createFixedEntryRoomAddress,
   createOccurrenceAddress,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { useState } from 'react';
 
 import {

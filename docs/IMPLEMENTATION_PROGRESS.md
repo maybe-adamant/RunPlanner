@@ -835,8 +835,8 @@ Delivered:
 - npm workspace and lockfile;
 - Linux Node activation through `.nvmrc`;
 - shared strict TypeScript configuration;
-- pure `@run-planner/core` package;
-- explicit `@run-planner/catalog` construction boundary;
+- pure `@run-planner/engine` package;
+- explicit `@run-planner/hades2-catalog` construction boundary;
 - React/Vite planner application;
 - Redux Toolkit editor-session store;
 - application composition root joining catalog, core, store, and UI;
@@ -1044,8 +1044,8 @@ surface without editing JSON.
 
 Delivered:
 
-- isolated `@run-planner/core/reward-kernel` and
-  `@run-planner/catalog/reward-kernel` entry points with no connection to the
+- isolated `@run-planner/engine/reward-kernel` and
+  `@run-planner/hades2-catalog/reward-kernel` entry points with no connection to the
   schema-version-1 project or editor;
 - normalized payload domains, complete resolved-offer defaults, reward types,
   source-support policies, semantic resolution points, acquisition roles, and

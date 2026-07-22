@@ -10,7 +10,7 @@ import {
   type ProjectDocument,
   type ProjectEvaluation,
   type ProjectHistory,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 
 import { requireBiomeCapability, type PlannerCapabilities } from './capabilities';
 import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';

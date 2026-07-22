@@ -5,7 +5,7 @@ import {
   type Catalog,
   type ProjectDocument,
   encodeProjectDocument,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { useDispatch, useSelector } from 'react-redux';
 
 import type { PlannerCapabilities } from './capabilities';

@@ -1,11 +1,11 @@
-import { catalog } from '@run-planner/catalog';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   semanticAddressKey,
   simulateProject,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { describe, expect, it } from 'vitest';
 
 import { createRepresentativeNOPQProject, qBiome, qOccurrenceIds } from '../testing/surfaceProject';

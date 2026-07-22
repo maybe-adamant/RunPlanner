@@ -1,12 +1,12 @@
-import { catalog, createCatalog, type CatalogInput } from '@run-planner/catalog';
-import { declarations } from '@run-planner/catalog/testing';
+import { catalog, createCatalog, type CatalogInput } from '@run-planner/hades2-catalog';
+import { declarations } from '@run-planner/hades2-catalog/testing';
 import {
   createBiomeAddress,
   createProjectDocument,
   encodeProjectDocument,
   simulateProject,
   type Catalog,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { describe, expect, it } from 'vitest';
 
 import {

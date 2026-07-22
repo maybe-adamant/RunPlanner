@@ -7,7 +7,7 @@ import {
   type ProjectRouteEvaluation,
   type SemanticAddress,
   type SemanticFinding,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 
 export type FindingIndex = ReadonlyMap<string, readonly SemanticFinding[]>;
 
