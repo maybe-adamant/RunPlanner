@@ -82,7 +82,8 @@ witness for every distinct downstream state. O now has dormant authorship,
 canonical lifecycle/reward replay, and selected validation through its ship
 wheel model; P/Q remain declaration-only and all three remain outside current
 application capabilities. O's dormant core also exposes normal project-
-candidate evaluation for its encounter and wheel values.
+candidate evaluation for its encounter and wheel values, and the shared linear
+editor can project their complete active/dormant state when invoked directly.
 
 N has schema-version-5 Hub authorship, structural
 completeness, canonical Hub materialization, exact room lifecycle, and

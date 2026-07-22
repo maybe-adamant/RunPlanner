@@ -20,6 +20,8 @@ import {
   type ProjectCandidateQuery,
   type ProjectDocument,
   type ProjectEvaluation,
+  type RewardWheelAddress,
+  type RewardWheelOfferAddress,
   type RoomDeclaration,
   type ShopOfferAddress,
   type ShopPurchaseAddress,
@@ -69,6 +71,31 @@ export interface CandidateProjectionService {
     continuation: ContinuationAddress,
     outcomes: readonly ('min' | 'max')[],
   ) => readonly CandidateOptionProjection<'min' | 'max'>[];
+  readonly shipEncounterCounts: (
+    project: ProjectDocument,
+    occurrence: OccurrenceAddress,
+    values: readonly (2 | 3)[],
+  ) => readonly CandidateOptionProjection<2 | 3>[];
+  readonly rewardWheelOfferCounts: (
+    project: ProjectDocument,
+    wheel: RewardWheelAddress,
+    values: readonly number[],
+  ) => readonly CandidateOptionProjection<number>[];
+  readonly rewardWheelStores: (
+    project: ProjectDocument,
+    wheel: RewardWheelAddress,
+    storeKeys: readonly string[],
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly rewardWheelOffers: (
+    project: ProjectDocument,
+    offer: RewardWheelOfferAddress,
+    values: readonly ResolvedRewardOffer[],
+  ) => readonly CandidateOptionProjection<ResolvedRewardOffer>[];
+  readonly rewardWheelPicks: (
+    project: ProjectDocument,
+    wheel: RewardWheelAddress,
+    values: readonly number[],
+  ) => readonly CandidateOptionProjection<number>[];
   readonly hubSlots: (
     project: ProjectDocument,
     slot: HubSlotAddress,
@@ -234,6 +261,64 @@ export function createCandidateProjectionService(
           kind: 'fieldsCageOutcome',
           continuation,
           cageOutcome,
+        })),
+        catalog,
+        evaluateProject,
+      ),
+    shipEncounterCounts: (project, occurrence, values) =>
+      projectOptions(
+        cache,
+        project,
+        `ship-encounters:${semanticAddressKey(occurrence)}:${domainKey(values.map(String))}`,
+        values,
+        values.map((encounterCount) => ({
+          kind: 'shipEncounterCount',
+          occurrence,
+          encounterCount,
+        })),
+        catalog,
+        evaluateProject,
+      ),
+    rewardWheelOfferCounts: (project, wheel, values) =>
+      projectOptions(
+        cache,
+        project,
+        `wheel-count:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
+        values,
+        values.map((offerCount) => ({ kind: 'rewardWheelOfferCount', wheel, offerCount })),
+        catalog,
+        evaluateProject,
+      ),
+    rewardWheelStores: (project, wheel, storeKeys) =>
+      projectOptions(
+        cache,
+        project,
+        `wheel-store:${semanticAddressKey(wheel)}:${domainKey(storeKeys)}`,
+        storeKeys,
+        storeKeys.map((storeKey) => ({ kind: 'rewardWheelStore', wheel, storeKey })),
+        catalog,
+        evaluateProject,
+      ),
+    rewardWheelOffers: (project, offer, values) =>
+      projectOptions(
+        cache,
+        project,
+        `wheel-offer:${semanticAddressKey(offer)}:${domainKey(values.map(offerKey))}`,
+        values,
+        values.map((value) => ({ kind: 'rewardWheelOffer', offer, value })),
+        catalog,
+        evaluateProject,
+      ),
+    rewardWheelPicks: (project, wheel, values) =>
+      projectOptions(
+        cache,
+        project,
+        `wheel-pick:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
+        values,
+        values.map((pickedOfferIndex) => ({
+          kind: 'rewardWheelPicked',
+          wheel,
+          pickedOfferIndex,
         })),
         catalog,
         evaluateProject,

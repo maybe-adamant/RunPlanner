@@ -4,6 +4,7 @@ import type {
   IncomingRewardAddress,
   LocalRewardAddress,
   ProjectDocument,
+  RewardWheelOfferAddress,
   ShopOfferAddress,
 } from '@run-planner/core';
 import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
@@ -19,6 +20,7 @@ import { candidateSelectState } from './candidatePresentation';
 export type RewardCandidateOwner =
   | { readonly kind: 'incomingReward'; readonly address: IncomingRewardAddress }
   | { readonly kind: 'localReward'; readonly address: LocalRewardAddress }
+  | { readonly kind: 'rewardWheelOffer'; readonly address: RewardWheelOfferAddress }
   | { readonly kind: 'shopOffer'; readonly address: ShopOfferAddress };
 
 interface RewardValueEditorProps {
@@ -47,6 +49,8 @@ function projectRewardOptions(
       return service.incomingRewards(project, owner.address, offers);
     case 'localReward':
       return service.localRewards(project, owner.address, offers);
+    case 'rewardWheelOffer':
+      return service.rewardWheelOffers(project, owner.address, offers);
     case 'shopOffer':
       return service.shopOffers(project, owner.address, offers);
   }
