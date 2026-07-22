@@ -1,10 +1,10 @@
 export {
-  CandidateEvaluationContractError,
   createPreparedProjectCandidateEvaluator,
   createProjectCandidateEvaluator,
   evaluateProjectCandidate,
   evaluateProjectCandidates,
-} from './project';
+} from './dispatch';
+export { CandidateEvaluationContractError } from './context';
 export {
   type CandidateContextUnavailableReason,
   type CandidateSupport,

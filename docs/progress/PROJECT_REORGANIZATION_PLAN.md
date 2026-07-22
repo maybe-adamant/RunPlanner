@@ -11,9 +11,10 @@ This is primarily a structural migration. It does not authorize changes to
 game rules, project persistence, simulation semantics, candidate support,
 editor behavior, or the future execution-plan boundary.
 
-Slices 1 through 7 and Slices 8A-8B are complete. `../design/ARCHITECTURE.md`
-now owns the live repository shape; this document preserves the migration
-sequence and defines the remaining Slice 8C-8D cleanup work.
+Slices 1 through 7, Slices 8A-8B, and the candidate-registry half of Slice 8C
+are complete. `../design/ARCHITECTURE.md` now owns the live repository shape;
+this document preserves the migration sequence and defines the remaining
+linear-materialization half of Slice 8C and Slice 8D cleanup work.
 
 ## Initial Structural Findings
 
