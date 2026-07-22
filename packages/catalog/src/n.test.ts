@@ -60,21 +60,22 @@ describe('complete N catalog', () => {
     const rooms = catalog.rooms.values.filter((room) => room.biomeKey === 'N');
     const layout = requireNLayout();
 
-    expect(rooms).toHaveLength(46);
+    expect(rooms).toHaveLength(47);
     expect(layout.initialCounters).toEqual({ biomeDepthCache: 0, biomeEncounterDepth: 1 });
     expect(layout.entries).toEqual([
       { kind: 'fixedAuthoredSlot', slotKey: 'opening', roomGameName: 'N_Opening01' },
       { kind: 'fixedAuthoredSlot', slotKey: 'preHub', roomGameName: 'N_PreHub01' },
     ]);
-    expect(layout.hub.slots).toHaveLength(25);
+    expect(layout.hub.slots).toHaveLength(26);
     expect(layout.hub.slots.slice(0, 3)).toEqual([
       { slotKey: 'combat01', roomGameName: 'N_Combat01', physicalDoorId: 617113 },
       { slotKey: 'combat02', roomGameName: 'N_Combat02', physicalDoorId: 560725 },
       { slotKey: 'combat03', roomGameName: 'N_Combat03', physicalDoorId: 560702 },
     ]);
-    expect(layout.hub.slots.slice(-2)).toEqual([
+    expect(layout.hub.slots.slice(-3)).toEqual([
       { slotKey: 'miniBoss01', roomGameName: 'N_MiniBoss01', physicalDoorId: 617043 },
       { slotKey: 'miniBoss02', roomGameName: 'N_MiniBoss02', physicalDoorId: 560889 },
+      { slotKey: 'story', roomGameName: 'N_Story01', physicalDoorId: 560848 },
     ]);
     expect(layout.hub.openCount).toEqual({ min: 9, max: 10 });
     expect(layout.hub.openSlotConstraints).toEqual([
@@ -150,7 +151,7 @@ describe('complete N catalog', () => {
   it('declares every pylon target with exact store ownership and physical uniqueness', () => {
     const layout = requireNLayout();
     const physicalDoorIds = layout.hub.slots.map((slot) => slot.physicalDoorId);
-    expect(new Set(physicalDoorIds).size).toBe(25);
+    expect(new Set(physicalDoorIds).size).toBe(26);
 
     for (let index = 1; index <= 23; index += 1) {
       const suffix = String(index).padStart(2, '0');
@@ -183,6 +184,33 @@ describe('complete N catalog', () => {
       expect(room.caps).toEqual({ maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 });
       expect(requireCounted(room.incomingReward).allowedRewardTypes).toEqual(['Boon']);
     }
+
+    const story = catalog.rooms.byKey.N_Story01;
+    if (story === undefined) {
+      throw new Error('missing N_Story01');
+    }
+    expect(story).toMatchObject({
+      label: 'Medea',
+      mode: { kind: 'authored', templateKey: 'Story' },
+      incomingReward: { kind: 'fixed', offer: { rewardType: 'Story' } },
+      enteredRewardStoreHistory: { kind: 'none' },
+      caps: { maxCreationsThisRun: 1 },
+    });
+    expect(story.requiredObjects?.[0]?.key).toBe('SoulPylon');
+    expect(catalog.encounterProfiles.byKey.N_Story01?.phases).toEqual([
+      {
+        key: 'N_Story01',
+        kind: 'story',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'Story_Medea_01',
+      },
+    ]);
+    expect(
+      createDefaultRoomState(catalog, story, {
+        role: 'ordinary',
+        entryActive: false,
+      }),
+    ).toEqual({ kind: 'fixed' });
   });
 
   it('preserves physical side slots, availability rank, and jointly generated rewards', () => {
@@ -378,8 +406,7 @@ describe('complete N catalog', () => {
     expect(preboss.enteredRewardStoreHistory).toEqual({ kind: 'none' });
   });
 
-  it('excludes unsupported Story, midshop, and alternate boss declarations', () => {
-    expect(catalog.rooms.byKey.N_Story01).toBeUndefined();
+  it('excludes the unsupported midshop and alternate boss declarations', () => {
     expect(catalog.rooms.byKey.N_Shop01).toBeUndefined();
     expect(catalog.rooms.byKey.N_Boss02).toBeUndefined();
   });

@@ -168,7 +168,7 @@ describe('N Surface product loop', () => {
       biomes: [{ biomeKey: 'N', completion: 'complete', validity: 'valid' }],
     });
     expect(screen.getByRole('heading', { name: 'City of Ephyra' })).toBeTruthy();
-    expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(25);
+    expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(26);
     expect(screen.getAllByLabelText(/^Visit \d room$/)).toHaveLength(6);
     expect(
       screen.getByRole('button', { name: 'City of Ephyra' }).getAttribute('aria-current'),

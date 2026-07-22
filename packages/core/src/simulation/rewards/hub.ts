@@ -205,8 +205,8 @@ function deriveRewardLookup(
     }
     const declaration = requireDeclaration(catalog, target.room.gameName);
     requireCountedStore(target.room, declaration);
-    if (incoming.producerKind !== 'countedChoice') {
-      fail(`${target.room.gameName} is not a counted Hub-board reward room`);
+    if (incoming.producerKind !== 'countedChoice' && incoming.producerKind !== 'fixed') {
+      fail(`${target.room.gameName} is not a supported Hub-board reward room`);
     }
     if (!uniqueTypes.has(incoming.offer.rewardType)) {
       uniqueTypes.add(incoming.offer.rewardType);

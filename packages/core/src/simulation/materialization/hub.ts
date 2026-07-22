@@ -157,6 +157,28 @@ function countedIncomingReward(
   });
 }
 
+function fixedIncomingReward(
+  biome: BiomeAddress,
+  occurrence: RoomOccurrence,
+  room: RoomDeclaration,
+): CanonicalResolvedIncomingReward {
+  const binding = room.incomingReward;
+  if (binding.kind !== 'fixed' || occurrence.state.kind !== 'fixed') {
+    fail(`${room.gameName} requires a fixed reward binding and state`);
+  }
+  const payload = occurrence.state.payload ?? binding.offer.payload;
+  return Object.freeze({
+    origin: createIncomingRewardAddress(biome, occurrence.occurrenceId),
+    kind: 'resolved',
+    producerKind: 'fixed',
+    producerLifecycleKey: binding.producerLifecycleKey,
+    offer: Object.freeze({
+      rewardType: binding.offer.rewardType,
+      ...(payload === undefined ? {} : { payload }),
+    }),
+  });
+}
+
 function shopEntryState(
   catalog: Catalog,
   biome: BiomeAddress,
@@ -234,20 +256,16 @@ function materializeAuthoredRoom(
     ) {
       fail(`${room.gameName} fixed entry has no counted state`);
     }
-    if (
-      expectedState === 'hubTarget' &&
-      occurrence.state.kind !== 'counted' &&
-      occurrence.state.kind !== 'ephyraCombat'
-    ) {
-      fail(`${room.gameName} Hub target has no counted state`);
-    }
     lifecycleProfileKey =
       expectedState === 'hubTarget'
         ? 'EphyraMainRoom'
         : room.encounterProfileKey === 'N_Opening'
           ? 'EphyraOpeningRoom'
           : 'StandardRewardRoom';
-    incomingReward = countedIncomingReward(biome, occurrence, room);
+    incomingReward =
+      expectedState === 'hubTarget' && occurrence.state.kind === 'fixed'
+        ? fixedIncomingReward(biome, occurrence, room)
+        : countedIncomingReward(biome, occurrence, room);
   }
   requireLifecycleSelection(catalog, room, lifecycleProfileKey, incomingReward);
 

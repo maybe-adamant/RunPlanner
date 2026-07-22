@@ -1212,16 +1212,18 @@ Completed:
    - capability isolation keeps I non-authorable, non-simulatable, and
      non-editable.
 9. dormant N declaration import:
-   - all 46 supported progressed-save declarations normalize: fixed authored
+   - all 47 supported progressed-save declarations normalize: fixed authored
      Opening and PreHub, derived persistent Hub, 23 combat targets, two
-     minibosses, 15 reusable side-room maps, fixed authored preboss, and the
-     neutral Polyphemus/postboss completion tail;
-   - the HubBiome layout owns 25 immutable physical slot mappings, a nine-or-
+     minibosses, the fixed Medea Story target, 15 reusable side-room maps,
+     fixed authored preboss, and the neutral Polyphemus/postboss completion
+     tail;
+   - the HubBiome layout owns 26 immutable physical slot mappings, a nine-or-
      ten open-set bound, at-most-one-miniboss constraint, six required distinct
      visits, derived hub restores, and no generated base reward store;
    - every hub target requires one entry-spawned Soul Pylon destroyed before
      exit; combat targets force HubRewards, minibosses force Boon-only
-     RunProgress, and Combat 12/17 retain their Hammer/Hermes exclusions;
+     RunProgress, Medea produces fixed Story without consuming a counted bag,
+     and Combat 12/17 retain their Hammer/Hermes exclusions;
    - combat occurrences own complete bounded side-room leaves with physical
      door evidence, contiguous availability ranks, separate generated state
      and player entry ordinal, and one jointly validated unordered sibling

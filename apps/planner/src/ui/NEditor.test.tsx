@@ -91,7 +91,7 @@ describe('N editor projection', () => {
     expect(screen.getByRole('heading', { name: 'Opening' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Pre-Hub' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Preboss' })).toBeTruthy();
-    expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(25);
+    expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(26);
     expect(
       nPlan(store.getState().projectWorkspace.history.present).topology?.fixedRooms,
     ).toHaveLength(3);
@@ -105,10 +105,22 @@ describe('N editor projection', () => {
     });
   });
 
+  it('opens the fixed Medea slot without exposing an editable reward selector', async () => {
+    const { user } = renderNEditor(emptyProject());
+    await user.click(screen.getByRole('button', { name: 'Initialize City of Ephyra' }));
+    const storySlot = screen.getByRole('article', { name: 'Medea Hub slot' });
+
+    expect(within(storySlot).getByText('Closed fixed slot.')).toBeTruthy();
+    await user.click(within(storySlot).getByRole('checkbox', { name: 'Medea open' }));
+
+    expect(within(storySlot).getByText('Fixed reward: Story')).toBeTruthy();
+    expect(within(storySlot).queryByRole('combobox')).toBeNull();
+  });
+
   it('edits the physical board, visit timeline, side state, rewards, and shop semantically', async () => {
     const { store, user } = renderNEditor(representativeProject());
 
-    expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(25);
+    expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(26);
     expect(
       screen
         .getAllByRole<HTMLInputElement>('checkbox', { name: / open$/ })

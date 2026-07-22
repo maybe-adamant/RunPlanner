@@ -212,6 +212,25 @@ function tenTargetProject(): ProjectDocument {
   });
 }
 
+function storyProject(visited: boolean): ProjectDocument {
+  let project = applyProjectCommand(representativeProject(), catalog, {
+    kind: 'CloseHubSlot',
+    slot: createHubSlotAddress(biome, 'combat03'),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'OpenHubSlot',
+    slot: createHubSlotAddress(biome, 'story'),
+    occurrenceId: occurrenceId('story'),
+  });
+  return visited
+    ? applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHubVisit',
+        visit: createHubVisitAddress(biome, 6),
+        hubSlotKey: 'story',
+      })
+    : project;
+}
+
 function complete(project: ProjectDocument): CompleteHubCompletenessResult {
   const result = evaluateHubCompleteness(catalog, biome, plan(project));
   if (result.completion !== 'complete') {
@@ -295,6 +314,67 @@ describe('N Hub reward simulation', () => {
           event.kind === 'rewardOffered' && boardOrigins.has(semanticAddressKey(event.origin)),
       ),
     ).toHaveLength(10);
+  });
+
+  it('offers the fixed Story slot without consuming a counted bag or concrete loot', () => {
+    const unvisited = fixture(storyProject(false));
+    const storyTarget = unvisited.snapshot.hubBoard.targets.find(
+      (target) => target.hubSlotKey === 'story',
+    );
+    if (storyTarget?.room.incomingReward === undefined) {
+      throw new Error('fixture lost N_Story01 reward');
+    }
+    const storyOrigin = semanticAddressKey(storyTarget.room.incomingReward.origin);
+    const branch = unvisited.rewards.branches[0]!;
+
+    expect(storyTarget.room).toMatchObject({
+      gameName: 'N_Story01',
+      entered: false,
+      lifecycleProfileKey: 'EphyraMainRoom',
+      incomingReward: {
+        producerKind: 'fixed',
+        offer: { rewardType: 'Story' },
+      },
+    });
+    expect(unvisited.rewards.rewardLookups.hubRewardLookup).toContain('Story');
+    expect(
+      branch.events.filter(
+        (event) =>
+          event.kind === 'rewardOffered' && semanticAddressKey(event.origin) === storyOrigin,
+      ),
+    ).toHaveLength(1);
+    expect(
+      branch.events.filter(
+        (event) =>
+          event.kind === 'concreteAcquisition' && semanticAddressKey(event.origin) === storyOrigin,
+      ),
+    ).toHaveLength(0);
+    expect(
+      branch.bags.HubRewards?.remainingEntryCounts.reduce((total, count) => total + count, 0),
+    ).toBe(3);
+
+    const visited = fixture(storyProject(true));
+    const visitedStory = visited.snapshot.visits[5]?.target.room;
+    expect(visitedStory?.gameName).toBe('N_Story01');
+    expect(visited.history.ledgers.encounterStarts).toContainEqual(
+      expect.objectContaining({
+        gameName: 'N_Story01',
+        phaseKind: 'story',
+        baselineEncounterKey: 'Story_Medea_01',
+      }),
+    );
+    expect(visited.history.ledgers.requiredObjectSpawns).toHaveLength(6);
+    expect(visited.history.ledgers.requiredObjectCompletions).toHaveLength(6);
+    expect(visited.history.biomeCompletion.ledgers.counters.biomeEncounterDepth).toBe(7);
+    expect(
+      visited.rewards.branches[0]?.events.filter(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          visitedStory?.incomingReward !== undefined &&
+          semanticAddressKey(event.origin) ===
+            semanticAddressKey(visitedStory.incomingReward.origin),
+      ),
+    ).toHaveLength(0);
   });
 
   it('jointly consumes all generated side siblings but acquires only entered side rooms', () => {
