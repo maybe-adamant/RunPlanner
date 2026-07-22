@@ -1458,5 +1458,29 @@ by the ordinary reward-candidate authority as unavailable. The lightweight
 domain cache is separate from lazy candidate evaluation, so rendering a reward
 editor does not trigger a second project simulation. Fixtures cover F/G/P
 batches, H cages, I NonGoal rooms, N board/side/shop ownership, O wheels, Q
-minibosses, and retained-invalid replacement. Phase 7 Commit 7 is next:
-relational sibling, bag, Boon-source, and Devotion-pair domains.
+minibosses, and retained-invalid replacement.
+
+Phase 7 Commit 7 is complete. Reward editors now prepare complete offers in the
+application layer, then lazily assess them through the existing addressed
+candidate evaluator. Reward-type support is existential over its concrete
+payloads, Boon sources remain concrete candidates, and each Devotion chosen
+source is supported only when at least one complete chosen/spurned pair is
+supported. The selected source or pair remains present when invalid, while the
+project stores only complete `ResolvedRewardOffer` values. Each option retains
+its exact authored-offer evaluation separately from its aggregate supporting
+witness, so replacing one Devotion source cannot silently replace the other.
+
+The simulator now carries each sequential or unordered peer together with its
+semantic origin. Candidate evidence therefore preserves the actual conflicting
+offer and the application can name Exit, cage, wheel offer, side room, or Hub
+room without leaking occurrence IDs. Counted-bag and peer support still come
+from the same latent possibility frontier; no deterministic bag count or
+probability is projected. Prepared domains are stable and cached outside the
+React draw path, while concrete assessment remains activation-lazy and yields
+between candidate simulations rather than blocking one browser interaction.
+Typed bag, sibling, source, pair, and payload explanations now reach the reward
+editor instead of collapsing to a generic unavailable suffix. Fixtures
+cover sequential F/G/P/Q offers, H cages, N board/side producers, O wheels,
+selected-invalid Boon sources, and complete Devotion-pair aggregation. Phase 7
+Commit 8 is next: replace the stacked selects with the compact compound reward
+picker without changing this domain authority.

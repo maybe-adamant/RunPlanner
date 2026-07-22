@@ -851,7 +851,15 @@ describe('N candidate evaluation', () => {
       findings: [{ code: 'rewardBagEntryUnavailable' }],
       evidence: {
         exclusions: [
-          { kind: 'sibling', priorOffers: ['MaxManaDropSmall'] },
+          {
+            kind: 'sibling',
+            priorOffers: [
+              {
+                origin: { kind: 'localReward', groupKey: 'sideRooms', slotKey: 'sideDoor1' },
+                offer: { rewardType: 'MaxManaDropSmall' },
+              },
+            ],
+          },
           { kind: 'bag', storeKey: 'SubRoomRewards' },
         ],
       },

@@ -657,7 +657,18 @@ describe('project candidate evaluation', () => {
       support: 'impossible',
       evidence: {
         exclusions: [
-          { kind: 'sibling', priorOffers: ['Boon'] },
+          {
+            kind: 'sibling',
+            priorOffers: [
+              {
+                origin: { kind: 'target', exitIndex: 1 },
+                offer: {
+                  rewardType: 'Boon',
+                  payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+                },
+              },
+            ],
+          },
           { kind: 'boonSource', source: 'ZeusUpgrade' },
         ],
       },

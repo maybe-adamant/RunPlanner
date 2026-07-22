@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
@@ -10,12 +12,20 @@ import {
   type ProjectCandidateQuery,
 } from '@run-planner/engine/simulation';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   CandidateOptionProjection,
   CandidateProjectionService,
 } from '../../../projections/candidateProjection';
+import {
+  prepareRewardDomain,
+  projectRewardDomain,
+  rewardDomainOffers,
+  type ProjectedRewardDomain,
+} from '../../../projections/rewardDomainProjection';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 
 const biome = createBiomeAddress('Underworld', 'F');
@@ -43,7 +53,29 @@ function projected<T>(
 }
 
 const candidateProjection: CandidateProjectionService = {
+  prepareRewardDomain: (rewardTypes, selected) =>
+    prepareRewardDomain(catalog, rewardTypes, selected),
   countedRewardTypes: (_project, _owner, _binding, selectedRewardType) => [selectedRewardType],
+  rewardDomain: async (_project, _owner, rewardTypes, selected) => {
+    const prepared = prepareRewardDomain(catalog, rewardTypes, selected);
+    return projectRewardDomain(
+      prepared,
+      rewardDomainOffers(prepared).map((offer) => ({
+        value: offer,
+        evaluation: {
+          context: 'evaluated',
+          query: { kind: 'incomingReward', reward, value: offer },
+          support: 'impossible',
+          findings: [],
+          evidence: {
+            candidate: offer,
+            relevantFindingCodes: ['rewardBagEntryUnavailable'],
+            exclusions: [{ kind: 'bag', storeKey: 'RunProgress' }],
+          },
+        },
+      })),
+    );
+  },
   biomeFields: (_project, owner, values) =>
     projected(
       values,
@@ -195,5 +227,123 @@ describe('reward editor projections', () => {
     expect(markup).toContain('Boon');
     expect(markup).not.toContain('Ashes');
     expect(markup).not.toContain('Reward pool');
+  });
+
+  it('renders the typed explanation for a selected-invalid reward', async () => {
+    const user = userEvent.setup();
+    render(
+      <RewardValueEditor
+        candidateOwner={{ kind: 'incomingReward', address: reward }}
+        candidateProjection={candidateProjection}
+        catalog={catalog}
+        idPrefix="invalid-reward"
+        onReplace={() => undefined}
+        offer={{ rewardType: 'MaxHealthDrop' }}
+        project={project}
+        rewardTypes={['MaxHealthDrop']}
+      />,
+    );
+
+    await user.hover(screen.getByLabelText('Reward'));
+
+    expect(
+      await screen.findByText('No reachable reward-pool state supports this reward.'),
+    ).toBeDefined();
+  });
+
+  it('does not cancel the first pointer interaction while assessment is pending', () => {
+    const pendingProjection: CandidateProjectionService = {
+      ...candidateProjection,
+      rewardDomain: () => new Promise<ProjectedRewardDomain>(() => undefined),
+    };
+    render(
+      <RewardValueEditor
+        candidateOwner={{ kind: 'incomingReward', address: reward }}
+        candidateProjection={pendingProjection}
+        catalog={catalog}
+        idPrefix="pending-reward"
+        onReplace={() => undefined}
+        offer={{ rewardType: 'MaxHealthDrop' }}
+        project={project}
+        rewardTypes={['MaxHealthDrop']}
+      />,
+    );
+
+    const control = screen.getByLabelText('Reward');
+    expect(fireEvent.pointerDown(control)).toBe(true);
+    expect(control.getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('replaces one Devotion source without adopting an aggregate support witness', async () => {
+    const selected = {
+      rewardType: 'Devotion',
+      payload: {
+        kind: 'DevotionPair' as const,
+        chosenSource: 'AphroditeUpgrade',
+        spurnedSource: 'AresUpgrade',
+      },
+    };
+    const supporting = {
+      rewardType: 'Devotion',
+      payload: {
+        kind: 'DevotionPair' as const,
+        chosenSource: 'ApolloUpgrade',
+        spurnedSource: 'ZeusUpgrade',
+      },
+    };
+    const devotionProjection: CandidateProjectionService = {
+      ...candidateProjection,
+      rewardDomain: async (_project, _owner, rewardTypes, offer) => {
+        const prepared = prepareRewardDomain(catalog, rewardTypes, offer);
+        return projectRewardDomain(
+          prepared,
+          rewardDomainOffers(prepared).map((candidate) => ({
+            value: candidate,
+            evaluation: {
+              context: 'evaluated',
+              query: { kind: 'incomingReward', reward, value: candidate },
+              support:
+                JSON.stringify(candidate) === JSON.stringify(supporting)
+                  ? ('possible' as const)
+                  : ('impossible' as const),
+              findings: [],
+              evidence: {
+                candidate,
+                relevantFindingCodes: [],
+                exclusions: [{ kind: 'devotionPair' as const }],
+              },
+            },
+          })),
+        );
+      },
+    };
+    const onReplace = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <RewardValueEditor
+        candidateOwner={{ kind: 'incomingReward', address: reward }}
+        candidateProjection={devotionProjection}
+        catalog={catalog}
+        idPrefix="devotion"
+        onReplace={onReplace}
+        offer={selected}
+        project={project}
+        rewardTypes={['Devotion']}
+      />,
+    );
+
+    const chosen = screen.getByLabelText('Chosen source');
+    await user.hover(chosen);
+    await screen.findAllByText('This Devotion pair is not supported here.');
+    await user.selectOptions(chosen, 'ApolloUpgrade');
+
+    expect(onReplace).toHaveBeenLastCalledWith({
+      rewardType: 'Devotion',
+      payload: {
+        kind: 'DevotionPair',
+        chosenSource: 'ApolloUpgrade',
+        spurnedSource: 'AresUpgrade',
+      },
+    });
   });
 });

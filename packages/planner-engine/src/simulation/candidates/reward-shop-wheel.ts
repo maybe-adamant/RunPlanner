@@ -1,7 +1,9 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
+import type { SemanticAddress } from '../../authored-project/addresses';
 import { type ProjectCommand } from '../../authored-project/commands/dispatch';
 import type { ProjectDocument, RewardWheelState } from '../../authored-project/model';
 import type { Catalog, RewardWheelOfferPoint } from '../../catalog-schema';
+import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
 import type {
   BatchRewardStoreCandidateQuery,
@@ -41,7 +43,9 @@ function evidenceString(finding: SemanticFinding, key: string): string | undefin
   return typeof value === 'string' ? value : undefined;
 }
 
-function evidencePriorOffers(finding: SemanticFinding): readonly string[] {
+function evidencePriorOffers(
+  finding: SemanticFinding,
+): readonly { readonly origin: SemanticAddress; readonly offer: ResolvedRewardOffer }[] {
   const value = finding.evidence.priorOffers;
   if (!Array.isArray(value)) {
     return Object.freeze([]);
@@ -50,9 +54,22 @@ function evidencePriorOffers(finding: SemanticFinding): readonly string[] {
     value.flatMap((entry) =>
       typeof entry === 'object' &&
       entry !== null &&
-      'rewardType' in entry &&
-      typeof entry.rewardType === 'string'
-        ? [entry.rewardType]
+      'origin' in entry &&
+      typeof entry.origin === 'object' &&
+      entry.origin !== null &&
+      'kind' in entry.origin &&
+      typeof entry.origin.kind === 'string' &&
+      'offer' in entry &&
+      typeof entry.offer === 'object' &&
+      entry.offer !== null &&
+      'rewardType' in entry.offer &&
+      typeof entry.offer.rewardType === 'string'
+        ? [
+            Object.freeze({
+              origin: entry.origin as SemanticAddress,
+              offer: entry.offer as ResolvedRewardOffer,
+            }),
+          ]
         : [],
     ),
   );
