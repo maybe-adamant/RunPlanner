@@ -1376,18 +1376,14 @@ Completed:
 
 Pending:
 
-Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, all six O slices, all three P slices, and Q Slices 1-3
-are complete. By explicit implementation-order decision, the final Q Phase 6
-slices now precede
-the contextual-selection UX insertion. They reuse the existing editor and
-candidate language while preserving the typed data required by that later UX
-pass. Production does not yet publish prefix materialization, prefix history
-state, or contextual candidates before biome completion.
+Phases 0 through 6 are complete. F/G/H/I and N/O/P/Q all participate in the
+production catalog, authored model, simulator, validator, candidates, editor,
+profiles, recovery, and navigation.
 
-Every biome-import commit must remain declaration-only and pass its own parity
-and dormant-isolation gate. Later commits must not compensate for an incomplete
-earlier slice.
-
-Phase 2.8 passes without placeholder materializers, dormant biome activation,
-duplicated authority, or pre-schema-version-3 compatibility scaffolding.
+Phase 7 is pending. The all-biome entry audit and frontier decision record are
+captured in `../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`, and the concrete commit
+sequence is defined in `IMPLEMENTATION_PLAN.md`. Production does not yet
+publish prefix materialization, prefix history state, or contextual candidates
+before biome completion. The current room selector still uses Type then Room,
+and reward type/payload controls remain separate. Those are Phase 7 work, not
+missing Phase 6 activation.

@@ -228,8 +228,8 @@ The layout-derived boss/postboss tail is materialized, and `G_Boss01` records
 the RunProgress store resolved for its outgoing boss offer without inventing a
 boss reward.
 
-G editor activation and candidate presentation are live through the shared
-linear-biome editor. The application simulation horizon includes F and G;
+G editor and candidate presentation are live through the shared linear-biome
+editor. The complete Underworld route horizon includes F/G/H/I;
 upstream-invalid or incomplete F leaves configured G visible and editable but
 context-unavailable, without inventing G-local findings. Direct core and
 application interaction fixtures cover complete, incomplete, and blocked G

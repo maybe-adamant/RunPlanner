@@ -223,13 +223,17 @@ authored structure alone is not evidence of a reachable game state.
 At most one non-validated biome receives progressive contextual evaluation per
 route:
 
-| Route state                      | Contextual evaluation                                           |
-| -------------------------------- | --------------------------------------------------------------- |
-| F incomplete                     | F prefix only; G/H/I blocked                                    |
-| F complete invalid               | F local evaluation and repairs; G/H/I blocked                   |
-| F complete valid, G incomplete   | F seeds G; G prefix evaluated; H/I blocked                      |
-| F/G complete valid, H incomplete | F/G seed H; H prefix evaluated; I blocked                       |
-| F/G/H/I complete and valid       | Complete route is eligible for later execution-plan compilation |
+| Route state                        | Contextual evaluation                                           |
+| ---------------------------------- | --------------------------------------------------------------- |
+| F incomplete                       | F prefix only; G/H/I blocked                                    |
+| F complete invalid                 | F local evaluation and repairs; G/H/I blocked                   |
+| F complete valid, G incomplete     | F seeds G; G prefix evaluated; H/I blocked                      |
+| F/G complete valid, H incomplete   | F/G seed H; H prefix evaluated; I blocked                       |
+| F/G/H/I complete and valid         | Complete route is eligible for later execution-plan compilation |
+| N incomplete                       | N semantic prefix only; O/P/Q blocked                           |
+| N complete valid, O incomplete     | N seeds O; O prefix evaluated; P/Q blocked                      |
+| N/O/P complete valid, Q incomplete | N/O/P seed Q; Q prefix evaluated                                |
+| N/O/P/Q complete and valid         | Complete route is eligible for later execution-plan compilation |
 
 Blocked biome pages may still expose declaration-derived authoring domains.
 They must label contextual state unassessed and must not simulate from defaults
@@ -961,7 +965,7 @@ Open proposals carry an occurrence ID because opening a physical slot creates
 one authored Room Occurrence; the candidate result never invents or persists a
 second identity.
 
-Active F/G/H/I/N candidate preparation consumes the normal project evaluation;
+F/G/H/I/N/O/P/Q candidate preparation consumes the normal project evaluation;
 there is no production candidate-only biome simulator. Today a candidate is
 assessable only after the selected biome is complete enough to publish its
 canonical evaluation. The contextual-selection insertion will broaden that
@@ -1062,7 +1066,7 @@ The public project envelope remains:
 
 ```ts
 interface ProjectEvaluation {
-  status: 'empty' | 'valid' | 'incomplete' | 'invalid' | 'blocked';
+  status: 'empty' | 'valid' | 'incomplete' | 'invalid';
   projectId: string;
   catalogVersion: string;
   routes: readonly ProjectRouteEvaluation[];
@@ -1073,7 +1077,7 @@ interface ProjectEvaluation {
 
 Each route simulation records:
 
-- configured biome identity and the currently registered simulation prefix;
+- configured biome identity and the validated route prefix;
 - complete F/G/H/I/N/O/P/Q evaluations with layout-typed canonical snapshots, lifecycle events,
   ledgers, room-generation proof, reward witnesses, and findings;
 - addressed completeness findings for an incomplete active biome; progressive

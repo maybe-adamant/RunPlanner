@@ -15,7 +15,7 @@ owned by each combat occurrence.
 
 H declarations, authored topology, canonical Fields materialization, route
 history, reward replay, selected validation, candidate evaluation, editor
-projection, and focused parity fixtures are ported. H is authorable,
+projection, and focused parity fixtures are implemented. H is authorable,
 simulatable, and editable after F/G through the complete application product
 loop.
 
@@ -509,9 +509,8 @@ authored model to express:
 14. the deferred optional-reward and NPC-free baselines without production
     `unsupported` predicates.
 
-The declaration port includes all supported H rooms and exact physical exits
-in one readable parity matrix. It does not activate H in the editor or
-simulator.
+The declaration contract includes all supported H rooms and exact physical
+exits in one readable parity matrix.
 
 ## Current Product Boundary
 

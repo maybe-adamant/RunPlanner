@@ -368,9 +368,9 @@ The normalized catalog now expresses:
     predicates.
 
 The readable declaration file and focused parity matrix cover every supported
-Q room and exact physical exit. Capability and browser fixtures prove that the
-same catalog and simulator authorities activate Q only through the complete
-application product loop.
+Q room and exact physical exit. Catalog and browser fixtures prove that the
+same declaration, simulator, candidate, and editor authorities close Q through
+the complete application product loop.
 
 ## Model Conclusions
 

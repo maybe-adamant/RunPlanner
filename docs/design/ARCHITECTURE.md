@@ -297,7 +297,7 @@ One simulation attempt produces one coherent immutable result:
 
 ```ts
 interface ProjectEvaluation {
-  status: 'empty' | 'valid' | 'incomplete' | 'invalid' | 'blocked';
+  status: 'empty' | 'valid' | 'incomplete' | 'invalid';
   projectId: string;
   catalogVersion: string;
   routes: readonly ProjectRouteEvaluation[];
@@ -306,12 +306,13 @@ interface ProjectEvaluation {
 }
 ```
 
-One route evaluation contains a complete-valid biome prefix, at most one
-progressively evaluated active biome, and a blocked downstream suffix. Only a
-complete and valid biome seeds the next biome. The active biome may carry its
-truthful materialized prefix, lifecycle operations, folded state, counter
-ledgers, generation/reward views, and findings through an addressed coverage
-point.
+One route evaluation contains a complete-valid biome prefix, at most one active
+biome, and a blocked downstream suffix. Only a complete and valid biome seeds
+the next biome. Production currently publishes completeness findings and no
+canonical snapshot for an incomplete active biome. Phase 7 strengthens that
+same atomic result with truthful prefix lifecycle, folded state, counter,
+generation, reward, finding, and candidate coverage; it does not introduce a
+second evaluation path.
 
 Complete biome results strengthen that same progressive result with the
 terminal/completion sequence, canonical snapshot, final biome history,
