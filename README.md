@@ -90,8 +90,11 @@ and validates the fixed Preboss shop against a lookup derived from every open
 offer. Dormant selected validation now preserves impossible open-set and local
 generation outcomes as findings at their exact Hub-slot or parent-local owners,
 while canonical fixed identity, visits, pylons, restores, and completion remain
-hard contracts. N remains outside Surface simulation and editing until
-its editor projection and product activation land. A dormant candidate resolver
+hard contracts. A dormant Hub editor now projects fixed leaves, the physical
+offer board, the separate visit timeline, parent-local side state, and the fixed
+WorldShop through semantic commands and lazy candidate feedback. N remains
+outside production Surface navigation and simulation until product activation.
+A dormant candidate resolver
 already replays complete N plans for Hub membership, visit, side-room, reward,
 and Preboss alternatives without registering N in normal route simulation.
 

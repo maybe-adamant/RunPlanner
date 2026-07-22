@@ -523,6 +523,20 @@ cover all candidate families, forced/possible/impossible support, semantic
 owners, deep freezing, nonmutation, and dormant isolation. Slice 8 projects the
 dormant N editor.
 
+Phase 6 N Slice 8 is complete. A dedicated dormant `HubBiomeEditor` now
+projects the fixed Opening and Pre-Hub leaves, all 25 catalog-fixed physical
+slots, nine-or-ten-member open authorship, a separate six-position visit
+timeline, visited-parent side generation and entered order, all incoming and
+local reward leaves, and the fixed Preboss WorldShop. Every edit dispatches an
+existing semantic command; fixed room identity and visit membership are never
+reconstructed from rendered position. The application candidate service now
+projects Hub membership, visit, side-generation, and entered-order queries and
+keeps those expensive replays lazy until control intent. A browser interaction
+fixture closes topology initialization, board/visit/side/reward/shop edits,
+exact selected-invalid markers, nonactivation, and the structural command
+boundary. N remains absent from production navigation, configurable route
+prefixes, and simulation scope. Slice 9 activates the complete N product loop.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1226,11 +1240,11 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, and N Slices 1-7 are complete. N Slice 8, dormant editor
-projection, is next. It will project fixed entries, the physical open board, a
-separate six-visit timeline, visited-parent side state, fixed Preboss shop,
-findings, and candidates through existing semantic commands. N remains dormant
-until the later activation slice closes the complete product loop before
+five I slices, and N Slices 1-8 are complete. N Slice 9, product-loop
+activation, is next. It will promote N to the authorable, simulatable, editable
+Surface prefix and close profiles, recovery, blocked-prefix behavior, finding
+navigation, candidate parity, accessibility, interaction, and responsiveness.
+N remains dormant until that activation slice closes the complete product loop before
 the contextual-selection UX insertion defined in `CONTEXTUAL_EDITOR_UX.md`.
 
 After N activates, that insertion begins by replacing the current incomplete-

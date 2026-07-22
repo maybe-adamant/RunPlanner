@@ -89,6 +89,15 @@ a fixed hub slot or persist a second door-count value. Open-set membership and
 visit order remain separate controls because every open unvisited slot still
 owns a real offered reward leaf.
 
+The implemented dormant projection uses a fixed-slot list/board and a separate
+six-position visit list. Membership controls create or remove the one authored
+occurrence owned by a fixed slot; visited slots cannot be closed until their
+visit references are replaced or explicitly removed. Candidate work remains
+lazy on control intent so the 25-slot board does not replay every alternative
+during ordinary rendering. This projection is intentionally structural rather
+than polished; N stays absent from production navigation until its activation
+slice.
+
 For each active side slot, generation and entry may project as simple toggles;
 an entered slot additionally owns a unique ordinal (`1` when it is the only
 entered sibling).

@@ -33,7 +33,10 @@ textarea {
 }
 
 select[data-candidate-support='impossible'],
-.purchase-control[data-candidate-support='impossible'] {
+.purchase-control[data-candidate-support='impossible'],
+.hub-membership-control[data-candidate-support='impossible'],
+.ephyra-side-controls button[data-candidate-support='impossible'],
+.side-order-actions button[data-candidate-support='impossible'] {
   border-color: #ee8f8f;
   color: #f2a0a0;
 }
@@ -846,6 +849,175 @@ select {
   font-size: 0.9rem;
 }
 
+.hub-board,
+.hub-visit-timeline,
+.visited-room-list {
+  margin-top: 16px;
+  border: 1px solid #3a3b45;
+  border-radius: 12px;
+  background: rgb(13 14 18 / 32%);
+  overflow: hidden;
+}
+
+.hub-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+
+.hub-slot-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #34353e;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 2%);
+}
+
+.hub-slot-card[data-open='false'] {
+  color: #8e8b95;
+  background: rgb(10 11 14 / 35%);
+}
+
+.hub-slot-heading,
+.hub-slot-meta,
+.ephyra-side-controls,
+.side-order-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hub-slot-heading {
+  align-items: flex-start;
+}
+
+.hub-slot-heading h3 {
+  margin: 0;
+  color: #f2ede5;
+  font-size: 0.96rem;
+}
+
+.hub-slot-meta {
+  justify-content: flex-start;
+  margin-top: 7px;
+}
+
+.hub-membership-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px;
+  border: 1px solid #3c3d47;
+  border-radius: 7px;
+  color: #c8c3bb;
+  font-size: 0.78rem;
+}
+
+.hub-membership-control input {
+  accent-color: #e2b971;
+}
+
+.hub-visit-list {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.hub-visit-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-top: 1px solid #30313a;
+}
+
+.hub-visit-index {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #4a4b56;
+  border-radius: 50%;
+  color: #e2b971;
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-visit-content {
+  min-width: 0;
+}
+
+.hub-visit-row > button,
+.ephyra-side-controls button,
+.side-order-actions button {
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 1px solid #444550;
+  border-radius: 7px;
+  color: #d8d3cb;
+  background: #24252d;
+  cursor: pointer;
+}
+
+.hub-visit-row > .danger-action {
+  border-color: rgb(202 112 112 / 38%);
+  color: #e5abab;
+  background: rgb(110 43 43 / 16%);
+}
+
+.visited-room-list > .decision-heading {
+  border-bottom: 1px solid #34353e;
+}
+
+.visited-room-card {
+  padding: 14px;
+  border-bottom: 1px solid #30313a;
+}
+
+.visited-room-card:last-child {
+  border-bottom: 0;
+}
+
+.ephyra-side-editor {
+  padding-top: 12px;
+  border-top: 1px solid #353640;
+}
+
+.ephyra-side-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ephyra-side-card {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #373842;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 2%);
+}
+
+.ephyra-side-card[data-generated='false'] .room-state-with-marker {
+  opacity: 0.62;
+}
+
+.ephyra-side-controls {
+  align-items: end;
+}
+
+.ephyra-side-controls .field-control {
+  flex: 1;
+}
+
+.side-order-actions {
+  justify-content: flex-end;
+  margin-top: 7px;
+}
+
 .purchase-control {
   display: flex;
   align-items: center;
@@ -974,7 +1146,17 @@ select {
   .room-selector,
   .paired-payload,
   .fields-batch-editor,
-  .fields-batch-summary {
+  .fields-batch-summary,
+  .hub-slot-grid,
+  .ephyra-side-list {
     grid-template-columns: 1fr;
+  }
+
+  .hub-visit-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .hub-visit-row > button {
+    grid-column: 2;
   }
 }

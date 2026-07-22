@@ -75,6 +75,26 @@ const candidateProjection: CandidateProjectionService = {
         cageOutcome,
       })),
     ),
+  hubSlots: (_project, slot, occurrenceId, values) =>
+    projected(
+      values,
+      values.map((open) => ({ kind: 'hubSlot', slot, open, occurrenceId })),
+    ),
+  hubVisits: (_project, visit, hubSlotKeys) =>
+    projected(
+      hubSlotKeys,
+      hubSlotKeys.map((hubSlotKey) => ({ kind: 'hubVisit', visit, hubSlotKey })),
+    ),
+  sideRoomGenerations: (_project, sideRoom, values) =>
+    projected(
+      values,
+      values.map((generation) => ({ kind: 'sideRoomGeneration', sideRoom, generation })),
+    ),
+  sideRoomEntryOrders: (_project, group, values) =>
+    projected(
+      values,
+      values.map((enteredSlotKeys) => ({ kind: 'sideRoomEntryOrder', group, enteredSlotKeys })),
+    ),
   shopOffers: (_project, owner, offers) =>
     projected(
       offers,

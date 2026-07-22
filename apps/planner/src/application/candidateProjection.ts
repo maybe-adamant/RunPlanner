@@ -7,8 +7,13 @@ import {
   type BiomeFieldAddress,
   type Catalog,
   type ContinuationAddress,
+  type HubSlotAddress,
+  type HubVisitAddress,
   type IncomingRewardAddress,
+  type LocalChildAddress,
+  type LocalChildGroupAddress,
   type LocalRewardAddress,
+  type OccurrenceId,
   type OccurrenceAddress,
   type ProjectCandidateEvaluation,
   type ProjectCandidateEvaluator,
@@ -18,6 +23,7 @@ import {
   type RoomDeclaration,
   type ShopOfferAddress,
   type ShopPurchaseAddress,
+  type SideRoomGeneration,
   type TargetAddress,
 } from '@run-planner/core';
 import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
@@ -63,6 +69,27 @@ export interface CandidateProjectionService {
     continuation: ContinuationAddress,
     outcomes: readonly ('min' | 'max')[],
   ) => readonly CandidateOptionProjection<'min' | 'max'>[];
+  readonly hubSlots: (
+    project: ProjectDocument,
+    slot: HubSlotAddress,
+    occurrenceId: OccurrenceId,
+    values: readonly boolean[],
+  ) => readonly CandidateOptionProjection<boolean>[];
+  readonly hubVisits: (
+    project: ProjectDocument,
+    visit: HubVisitAddress,
+    hubSlotKeys: readonly string[],
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly sideRoomGenerations: (
+    project: ProjectDocument,
+    sideRoom: LocalChildAddress,
+    values: readonly SideRoomGeneration[],
+  ) => readonly CandidateOptionProjection<SideRoomGeneration>[];
+  readonly sideRoomEntryOrders: (
+    project: ProjectDocument,
+    group: LocalChildGroupAddress,
+    values: readonly (readonly string[])[],
+  ) => readonly CandidateOptionProjection<readonly string[]>[];
   readonly shopOffers: (
     project: ProjectDocument,
     offer: ShopOfferAddress,
@@ -207,6 +234,50 @@ export function createCandidateProjectionService(
           kind: 'fieldsCageOutcome',
           continuation,
           cageOutcome,
+        })),
+        catalog,
+        evaluateProject,
+      ),
+    hubSlots: (project, slot, occurrenceId, values) =>
+      projectOptions(
+        cache,
+        project,
+        `hub-slot:${semanticAddressKey(slot)}:${occurrenceId}:${domainKey(values.map(String))}`,
+        values,
+        values.map((open) => ({ kind: 'hubSlot', slot, open, occurrenceId })),
+        catalog,
+        evaluateProject,
+      ),
+    hubVisits: (project, visit, hubSlotKeys) =>
+      projectOptions(
+        cache,
+        project,
+        `hub-visit:${semanticAddressKey(visit)}:${domainKey(hubSlotKeys)}`,
+        hubSlotKeys,
+        hubSlotKeys.map((hubSlotKey) => ({ kind: 'hubVisit', visit, hubSlotKey })),
+        catalog,
+        evaluateProject,
+      ),
+    sideRoomGenerations: (project, sideRoom, values) =>
+      projectOptions(
+        cache,
+        project,
+        `side-generation:${semanticAddressKey(sideRoom)}:${domainKey(values)}`,
+        values,
+        values.map((generation) => ({ kind: 'sideRoomGeneration', sideRoom, generation })),
+        catalog,
+        evaluateProject,
+      ),
+    sideRoomEntryOrders: (project, group, values) =>
+      projectOptions(
+        cache,
+        project,
+        `side-entry-order:${semanticAddressKey(group)}:${domainKey(values.map((value) => JSON.stringify(value)))}`,
+        values,
+        values.map((enteredSlotKeys) => ({
+          kind: 'sideRoomEntryOrder',
+          group,
+          enteredSlotKeys,
         })),
         catalog,
         evaluateProject,
