@@ -628,6 +628,13 @@ and the two-realization forked preboss. A retained upstream-invalid edit now
 marks downstream base-store context unavailable instead of treating the
 missing reward branch as an internal invariant failure.
 
+Phase 6 P Slice 3 is complete. P is authorable, simulatable, and editable only
+after N/O in the contiguous Surface prefix. The representative Surface browser
+fixture now closes complete N/O/P route validation, P candidates and forked
+terminal rendering, semantic navigation, accessible controls, profile round
+trips, autosave recovery, and measured publication/rebuild behavior. Q remains
+dormant at every application contact.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1333,8 +1340,8 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, all six O slices, and P Slices 1-2 are complete.
-By explicit implementation-order decision, the remaining P/Q Phase 6 slices now precede
+five I slices, all nine N slices, all six O slices, and all three P slices are complete.
+By explicit implementation-order decision, the remaining Q Phase 6 slices now precede
 the contextual-selection UX insertion. They reuse the existing editor and
 candidate language while preserving the typed data required by that later UX
 pass. Production does not yet publish prefix materialization, prefix history
