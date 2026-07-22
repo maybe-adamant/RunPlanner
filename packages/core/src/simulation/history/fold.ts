@@ -105,6 +105,7 @@ function roomName(
     | { readonly kind: 'encounterCompleted' }
     | { readonly kind: 'encounterStarted' }
     | { readonly kind: 'enteredRewardStoreRecorded' }
+    | { readonly kind: 'offerPointAcquired' }
     | { readonly kind: 'requiredObjectCompleted' }
     | { readonly kind: 'requiredObjectSpawned' }
     | { readonly kind: 'roomEntered' }
@@ -664,6 +665,20 @@ export function foldLinearHistoryEvents(
           acquisitionBefore: stateView(event.sequence - 1, ledgers),
           acquisitionAfter: stateView(event.sequence, ledgers),
         });
+        if (event.enteredRewardStoreKey !== undefined) {
+          ledgers.enteredRewardStores.push(
+            Object.freeze({
+              sequence: event.sequence,
+              origin: event.origin,
+              gameName: roomName(namesByOrigin, event),
+              storeKey: event.enteredRewardStoreKey,
+            }),
+          );
+          views.offerPoints[index] = Object.freeze({
+            ...views.offerPoints[index],
+            acquisitionAfter: stateView(event.sequence, ledgers),
+          });
+        }
         break;
       }
       case 'producerRoleAdvanced':

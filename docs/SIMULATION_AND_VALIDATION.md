@@ -713,6 +713,16 @@ Important consequences:
 - the I non-goal counter changes only when a concrete non-goal reward spawns
   for the entered occurrence, never when it is merely offered.
 
+Reward simulation publishes an immutable reward-history checkpoint for every
+generated target before that target's offer is resolved. Room-generation
+validation consumes the checkpoint for acquisition-backed eligibility while
+continuing to read room, encounter, counter, and cap facts from canonical
+history. All reward branches must agree on the record families consumed by
+room generation; a divergent eligibility fact is an explicit simulation
+contract failure rather than an arbitrary branch choice. O uses this contact
+for acquired-source requirements and for the optional Combat2 phase selected
+when the room prepares.
+
 ## Requirements
 
 Requirements are normalized typed expressions with registered evaluators.
@@ -758,13 +768,13 @@ Validation checks complete canonical facts in lifecycle order:
 Targets in one generated batch process in physical generation order. Each
 creation and offer updates scratch history before the next peer is validated.
 
-The current F room-generation contact projects only predicates supported by
-the normalized F declarations: `all`, `any`, `not`, biome depth-cache and
-encounter-depth ranges, entered-room record counts, and predecessor exit
-counts. The shared requirement evaluator registry remains the sole predicate
-authority. Encounter, reward, and feature predicates that do not belong to
-the current F generation surface fail the contact contract instead of reading
-invented defaults.
+The linear room-generation contact projects only predicates present on
+supported normalized declarations: boolean composition, biome depth-cache and
+encounter-depth ranges, entered-room and acquired-reward record counts, recent
+encounter phases, and predecessor exit counts. The shared requirement
+evaluator registry remains the sole predicate authority. Encounter, reward,
+and feature predicates outside the supported generation surface fail the
+contact contract instead of reading invented defaults.
 
 Validation never rewrites authored topology, chooses a replacement, or repairs
 an invalid selection.

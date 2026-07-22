@@ -576,6 +576,15 @@ frontier into O, proving route counters, progressed Meta rewards, fixed
 Devotion payload authorship, shop support, and completion provenance without
 activating O.
 
+Phase 6 O Slice 3 is complete. Selected O validation now consumes reward-
+history checkpoints at each target generation point, acquired-source facts,
+recent ShipCombat phases, exact O depth windows, appearance and creation caps,
+force pressure, and the optional Combat2 presence requirement. Active wheel
+stores enter ratio history at their acquisition points, so later authored
+Run/Meta batches observe the same ordered store ledger as the room lifecycle.
+Wheel bag failures and encounter-count failures are addressed to their exact
+offer or room owners, while direct preboss support is validated at source BDC 7. The complete N/O fixture remains dormant at the application boundary.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1281,7 +1290,7 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, and O Slices 1-2 are complete. By explicit
+five I slices, all nine N slices, and O Slices 1-3 are complete. By explicit
 implementation-order decision, the remaining O/P/Q Phase 6 slices now precede
 the contextual-selection UX insertion. They reuse the existing editor and
 candidate language while preserving the typed data required by that later UX

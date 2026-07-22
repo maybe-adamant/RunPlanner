@@ -35,6 +35,7 @@ export type RoomLifecycleEvent =
   | (RoomLifecycleEventBase & {
       readonly kind: 'offerPointAcquired';
       readonly offerPoint: string;
+      readonly enteredRewardStoreKey?: string;
     })
   | (RoomLifecycleEventBase & { readonly kind: 'roomEntered' })
   | (RoomLifecycleEventBase & {
@@ -101,6 +102,7 @@ export interface RoomLifecycleExecutionInput {
   readonly counterEffects: RoomCounterEffects;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
+  readonly offerPointRewardStores?: Readonly<Record<string, string>>;
 }
 
 export interface RoomHistoryFragment {

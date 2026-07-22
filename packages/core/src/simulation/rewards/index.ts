@@ -14,6 +14,7 @@ export type {
   LinearRewardEvent,
   LinearRewardSimulation,
   LinearRewardStoreSupportEntry,
+  LinearTargetRewardHistoryCheckpoint,
   HubRewardSimulation,
   RewardBranch,
   RewardEvent,

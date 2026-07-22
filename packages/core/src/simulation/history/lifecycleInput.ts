@@ -63,6 +63,13 @@ export function createRoomLifecycleInput(
   const storeKey = enteredStoreKey(declaration.enteredRewardStoreHistory, room);
   const incomingReward = 'incomingReward' in room ? room.incomingReward : undefined;
   const requiredObjects = 'requiredObjects' in room ? room.requiredObjects : undefined;
+  const rewardWheels = 'rewardWheels' in room ? room.rewardWheels : undefined;
+  const offerPointRewardStores =
+    rewardWheels === undefined
+      ? undefined
+      : Object.freeze(
+          Object.fromEntries(rewardWheels.map((wheel) => [wheel.wheelKey, wheel.storeKey])),
+        );
   return {
     origin: room.origin,
     lifecycleProfileKey: room.lifecycleProfileKey,
@@ -70,6 +77,7 @@ export function createRoomLifecycleInput(
     encounterPhases: room.encounterPhases,
     counterEffects: room.counterEffects,
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
+    ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),
     ...(incomingReward === undefined
       ? {}
       : {

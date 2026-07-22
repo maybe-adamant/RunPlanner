@@ -78,7 +78,10 @@ terminal, Clockwork Goal/NonGoal roles, repeated generated preboss offers, and
 picked-only WorldShop state through existing commands and candidate services.
 Equivalent post-shop witness states merge before crossing biome boundaries,
 preventing proof-only branch multiplication while retaining one ordered
-witness for every distinct downstream state. P/Q/O remain dormant.
+witness for every distinct downstream state. O now has dormant authorship,
+canonical lifecycle/reward replay, and selected validation through its ship
+wheel model; P/Q remain declaration-only and all three remain outside current
+application capabilities.
 
 N has schema-version-5 Hub authorship, structural
 completeness, canonical Hub materialization, exact room lifecycle, and

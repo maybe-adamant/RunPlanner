@@ -141,6 +141,7 @@ export {
   supportedFieldsCageOutcomes,
   type FieldsCageOutcome,
   type FieldsCageOutcomeSupportEntry,
+  type EncounterCountSupportEntry,
   type FForcePressureLedgerEntry,
   type FRoomGenerationValidation,
   type HubOpenSlotConstraintSupportEntry,
@@ -170,6 +171,7 @@ export {
   type LinearRewardEvent,
   type LinearRewardSimulation,
   type LinearRewardStoreSupportEntry,
+  type LinearTargetRewardHistoryCheckpoint,
   type RewardBranch,
   type RewardEvent,
   type RewardSimulation,
@@ -230,6 +232,7 @@ export {
 export {
   ProjectSimulationContractError,
   evaluateHubBiome,
+  evaluateLinearBiome,
   evaluateNBiome,
   simulateProject,
   type CompleteHubProjectEvaluation,

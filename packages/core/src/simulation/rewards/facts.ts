@@ -7,6 +7,7 @@ import {
   type RewardKernelFacts,
 } from '../../rewardKernel';
 import type { HistoryStateView, RoomCreationSource } from '../history';
+import { projectRecentEncounterPhases } from '../history';
 import type { CanonicalLifecycleRoom } from '../history/lifecycleInput';
 
 function countByGameName(
@@ -19,30 +20,9 @@ function countByGameName(
   return Object.freeze(counts);
 }
 
-function recentEncounterPhases(view: HistoryStateView) {
-  const ordered = new Map<string, { readonly profileKey: string; readonly phaseKeys: string[] }>();
-  for (const encounter of view.ledgers.encounterStarts) {
-    const key = semanticAddressKey(encounter.origin);
-    const current = ordered.get(key);
-    if (current === undefined) {
-      ordered.set(key, {
-        profileKey: encounter.encounterProfileKey,
-        phaseKeys: [encounter.phaseKey],
-      });
-    } else {
-      current.phaseKeys.push(encounter.phaseKey);
-    }
-  }
-  return Object.freeze(
-    [...ordered.values()].map((entry) =>
-      Object.freeze({ profileKey: entry.profileKey, phaseKeys: Object.freeze(entry.phaseKeys) }),
-    ),
-  );
-}
-
 interface StaticRewardViewFacts {
   readonly peerGameNamesBySourceParent: Map<RoomCreationSource, Map<string, readonly string[]>>;
-  readonly recentEncounterPhases: ReturnType<typeof recentEncounterPhases>;
+  readonly recentEncounterPhases: ReturnType<typeof projectRecentEncounterPhases>;
   readonly roomsEntered: Readonly<Record<string, number>>;
 }
 
@@ -63,7 +43,7 @@ function staticRewardViewFacts(catalog: Catalog, view: HistoryStateView): Static
   }
   const facts = Object.freeze({
     peerGameNamesBySourceParent: new Map<RoomCreationSource, Map<string, readonly string[]>>(),
-    recentEncounterPhases: recentEncounterPhases(view),
+    recentEncounterPhases: projectRecentEncounterPhases(view),
     roomsEntered: countByGameName(view.ledgers.roomAppearances),
   });
   byView.set(view, facts);
