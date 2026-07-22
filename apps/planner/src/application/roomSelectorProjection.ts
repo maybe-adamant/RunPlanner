@@ -1,4 +1,10 @@
-import type { Catalog, RoomDeclaration, RoomKind } from '@run-planner/core';
+import type {
+  Catalog,
+  ProjectDocument,
+  RoomDeclaration,
+  RoomKind,
+  TargetAddress,
+} from '@run-planner/core';
 
 export const ordinaryRoomCategories = ['Combat', 'Miniboss', 'Story', 'Fountain', 'Shop'] as const;
 const generatedTargetRoomCategories = Object.freeze([
@@ -57,4 +63,35 @@ export function selectRoomsForCategory(
     }
     return roomCategoryForKind(room.kind) === category;
   });
+}
+
+export function selectRoomsForTargetCategory(
+  catalog: Catalog,
+  project: ProjectDocument,
+  target: TargetAddress,
+  category: RoomSelectorCategory,
+): readonly RoomDeclaration[] {
+  const rooms = selectRoomsForCategory(catalog, target.biomeKey, category);
+  const layout = catalog.biomeLayouts.byKey[target.biomeKey];
+  if (layout?.kind !== 'LinearBiome' || layout.continuation.progressionPolicy.kind !== 'staged') {
+    return rooms;
+  }
+  const plan = project.routes
+    .find((route) => route.routeKey === target.routeKey)
+    ?.biomes.find((biome) => biome.biomeKey === target.biomeKey);
+  if (plan?.kind !== 'LinearBiome' || plan.topology === null) {
+    throw new Error(`${target.biomeKey} staged selector has no linear topology`);
+  }
+  const batches = plan.topology.continuations.filter(
+    (continuation) => continuation.kind === 'batch',
+  );
+  const batchIndex = batches.findIndex(
+    (continuation) => continuation.parentOccurrenceId === target.parentOccurrenceId,
+  );
+  const stage = layout.continuation.progressionPolicy.stages[batchIndex];
+  if (stage === undefined) {
+    throw new Error(`${target.biomeKey} staged selector has no candidate stage ${batchIndex + 1}`);
+  }
+  const stageRooms = new Set(stage.roomGameNames);
+  return rooms.filter((room) => stageRooms.has(room.gameName));
 }

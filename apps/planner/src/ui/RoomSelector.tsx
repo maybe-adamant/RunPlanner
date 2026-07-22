@@ -8,7 +8,7 @@ import {
 import {
   roomCategoryForKind,
   roomSelectorCategories,
-  selectRoomsForCategory,
+  selectRoomsForTargetCategory,
   type RoomSelectorCategory,
 } from '../application/roomSelectorProjection';
 import { selectPresentProject, useAppSelector } from '../application/store';
@@ -39,7 +39,8 @@ function RoomSelectorFields({
   const categories = roomSelectorCategories(catalog, biomeKey);
   const currentCategory = current === undefined ? undefined : roomCategoryForKind(current.kind);
   const [category, setCategory] = useState<RoomSelectorCategory | ''>(currentCategory ?? '');
-  const rooms = category === '' ? [] : selectRoomsForCategory(catalog, biomeKey, category);
+  const rooms =
+    category === '' ? [] : selectRoomsForTargetCategory(catalog, project, target, category);
   const projectedRooms = candidateProjection.roomTargets(project, target, rooms);
   const currentInCategory = current !== undefined && roomCategoryForKind(current.kind) === category;
   const selectedRoom = projectedRooms.find(

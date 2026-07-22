@@ -36,7 +36,7 @@ connected linear reward authority, and the authored project/editor use schema
 version 5. All eight biomes close one catalog-wide reference matrix while
 Q remains dormant behind the application capability boundary. P's complete
 N/O/P product loop is active; Q now has staged core authorship and simulation
-but no candidate/editor activation. Phase
+plus a dormant candidate/editor projection, but no product activation. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room

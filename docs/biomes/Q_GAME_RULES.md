@@ -54,7 +54,8 @@ This audit corrects four inherited assumptions:
 
 The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
 coverage is defined by `../MIGRATION_PROVENANCE.md`. Q has declaration,
-authorship, materialization, history, reward, and selected-validation coverage.
+authorship, materialization, history, reward, candidate, selected-validation,
+and dormant editor coverage.
 
 | Feature                     | Verified game behavior                                                                                              | Disposition and planner projection                                                | Current coverage     | Reconsider when                                                 |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- |
@@ -395,5 +396,5 @@ Q strengthens the shared model in four places:
 
 F, G, P, Q, H, O, I, and N are closed as game-rule/design audits. Their shared
 vocabulary and declaration imports are reconciled. Q's staged plan is
-authorable and simulatable through the core project boundary; application
-editing remains dormant until the remaining Phase 6 slices are implemented.
+authorable, simulatable, and editable through dormant core/application
+surfaces; product activation remains deferred until the final Phase 6 slice.
