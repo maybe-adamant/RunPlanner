@@ -251,6 +251,7 @@ is separately deferred until concrete NPC gifts and trait state exist.
 | N lifecycle and history    | ported   | `ROOM_LIFECYCLE_MODEL.md`, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md` | Exact entry, pylon, side-room, restore, terminal, completion, counter, creation, appearance, encounter, and required-object events fold without activating N.                   |
 | N reward simulation        | ported   | `REWARD_MODEL.md`, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md`         | Full-board and generated-side offers consume shared bags; entered rooms acquire; Hub lookup constrains the fixed WorldShop without activating N.                                |
 | N selected validation      | ported   | `SIMULATION_AND_VALIDATION.md`, normalized N declarations, `biomes/N_GAME_RULES.md` | Open-slot constraints and side pressure preserve authored invalid outcomes as addressed findings; canonical visits, pylons, restores, and completion fail loudly on mismatch.   |
+| N candidate evaluation     | ported   | selected N evaluator, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md`      | Hub slots, visits, side state, fixed/Hub/side rewards, WorldShop offers, and purchases replay immutable proposals without activating N.                                         |
 | N progression/NPC variants | deferred | N encounter sets, Story and persistent requirements                                 | Suppress Medea, Artemis, Heracles, OpeningEmpty, and other save variants under the documented progressed NPC-free baseline.                                                     |
 | N optional interactions    | deferred | N room and obstacle data                                                            | Suppress Chaos detours, gathering, challenges, wells, rerolls, postboss shops, and other no-action surfaces.                                                                    |
 | N simulation activation    | deferred | `biomes/N_GAME_RULES.md`                                                            | Keep dormant until the reconciled vocabulary and full N product loop are implemented.                                                                                           |
@@ -322,15 +323,16 @@ boundary; each biome rule document owns its exact room-level instances:
   counter, reward, or history distinction.
 - **Deferred:** persistent NPC entities, Chaos and other structural detours,
   optional interactions, concrete boon/trait identities, affordability, and
-  the remaining P/Q/O history and N candidate/feedback consumers remain
-  additive future work.
+  the remaining P/Q/O history and N editor/feedback consumers remain additive
+  future work.
 - **Excluded:** external save/profile predicates, inaccessible or debug-only
   rooms, noncanonical difficulty variants, and automatic boss drops without a
   modeled downstream consumer do not enter production declarations.
 - **Dormant:** P/Q/O have complete declarations but no connected authored
   topology. N has complete declarations plus dormant authored topology,
   completeness, canonical simulation, and selected validation. None has active
-  simulator dispatch, a candidate surface, or an editor panel.
+  simulator dispatch or an editor panel. N alone exposes a dormant core
+  candidate surface for its next editor slice.
 
 No generic `unsupported` field, compatibility scaffold, placeholder
 materializer, or route-qualified duplicate biome authority remains.

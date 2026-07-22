@@ -946,6 +946,15 @@ purchase choices, and policy-owned Fields door-roll outcomes. Preboss uses those
 same incoming-reward and WorldShop addresses rather than a second terminal-only
 candidate vocabulary.
 
+N extends that shared vocabulary with four Hub-structural queries: fixed-slot
+open membership, one visit-position replacement, one parent-local generation
+outcome, and one complete parent-local entered order. Fixed-entry and Hub-target
+rewards continue to use `incomingReward`; side-room rewards use `localReward`;
+the fixed Preboss continues to use the common shop-offer and purchase queries.
+Open proposals carry an occurrence ID because opening a physical slot creates
+one authored Room Occurrence; the candidate result never invents or persists a
+second identity.
+
 Active F/G/H/I candidate preparation consumes the normal progressive project
 evaluation; there is no candidate-only biome simulator. A candidate is
 assessable when the active biome evaluation covers its exact pre-decision
@@ -955,6 +964,18 @@ Min/Max candidates reuse the addressed pre-outcome support ledger because the
 proposed value cannot change its own prior context. Cage and terminal
 alternatives apply one immutable semantic replacement and replay H through the
 common linear reward authority with the already-evaluated G seed.
+
+Dormant N candidate preparation is intentionally narrower than activation. If
+normal project simulation stops at the first-biome N boundary, one prepared
+candidate evaluator lazily composes and caches the complete selected N product
+through the dormant Hub evaluator. Slot membership reuses open-count and
+declaration-owned constraint validation; visits replay the six-visit product;
+side generation replays global ranked-prefix pressure; entered order replays
+the exact acquisition trace. Reward and shop proposals use the same immutable
+replacement/replay path as linear biomes. Incomplete N authorship returns typed
+`biomeIncomplete` context, while selected invalid values remain evaluated and
+retain exact findings. N is still absent from route dispatch and application
+capabilities.
 
 If a prior biome is not complete and valid, candidates in every later biome
 report unavailable upstream context. If the active biome has not yet covered a
