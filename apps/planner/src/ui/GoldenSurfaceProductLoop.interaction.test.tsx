@@ -6,6 +6,7 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createOccurrenceAddress,
+  createTargetAddress,
   encodeProjectDocument,
   simulateProject,
 } from '@run-planner/core';
@@ -22,13 +23,15 @@ import {
 } from '../application/projectWorkspaceSlice';
 import { selectProfileStatus } from '../application/store';
 import {
-  createRepresentativeNOPProject,
+  createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
+  qBiome,
+  qOccurrenceIds,
 } from '../testing/surfaceProject';
 import { renderPlannerForInteraction } from '../testing/renderPlanner';
 
@@ -131,7 +134,7 @@ function presentProject(application: PlannerApplication) {
   return application.store.getState().projectWorkspace.history.present;
 }
 
-describe('N/O/P Surface product loop', () => {
+describe('N/O/P/Q Surface product loop', () => {
   it('closes activation, profiles, recovery, findings, candidates, accessibility, and responsiveness', async () => {
     stubScrollIntoView();
     const persistence = createPersistence();
@@ -141,7 +144,7 @@ describe('N/O/P Surface product loop', () => {
       autosaveScheduler: recovery.scheduler,
       profileFile: persistence.profileFile,
     });
-    const authored = createRepresentativeNOPProject();
+    const authored = createRepresentativeNOPQProject();
     application.store.dispatch(authoredProjectReplaced(authored));
     const view = renderPlannerForInteraction({ application });
 
@@ -160,16 +163,23 @@ describe('N/O/P Surface product loop', () => {
       simulatable: true,
       editable: true,
     });
+    expect(application.capabilities.byBiomeKey.Q).toMatchObject({
+      authorable: true,
+      simulatable: true,
+      editable: true,
+    });
     expect(application.editorNavigation.routes.Surface).toMatchObject({
       biomePanels: [
         { biomeKey: 'N', label: 'City of Ephyra' },
         { biomeKey: 'O', label: 'Rift of Thessaly' },
         { biomeKey: 'P', label: 'Mount Olympus' },
+        { biomeKey: 'Q', label: 'Summit' },
       ],
       configurablePrefixBiomePanels: [
         { biomeKey: 'N', label: 'City of Ephyra' },
         { biomeKey: 'O', label: 'Rift of Thessaly' },
         { biomeKey: 'P', label: 'Mount Olympus' },
+        { biomeKey: 'Q', label: 'Summit' },
       ],
     });
 
@@ -180,19 +190,20 @@ describe('N/O/P Surface product loop', () => {
     expect(evaluated.status).toBe('valid');
     expect(evaluated.findings).toEqual([]);
     expect(evaluated.summary).toMatchObject({
-      configuredBiomeCount: 3,
-      evaluatedBiomeCount: 3,
-      validatedBiomeCount: 3,
+      configuredBiomeCount: 4,
+      evaluatedBiomeCount: 4,
+      validatedBiomeCount: 4,
       eligibleForExecutionPlan: true,
     });
     expect(evaluated.routes[1]).toMatchObject({
       status: 'valid',
-      validatedPrefix: ['N', 'O', 'P'],
+      validatedPrefix: ['N', 'O', 'P', 'Q'],
       horizon: { kind: 'routeEnd' },
       biomes: [
         { biomeKey: 'N', completion: 'complete', validity: 'valid' },
         { biomeKey: 'O', completion: 'complete', validity: 'valid' },
         { biomeKey: 'P', completion: 'complete', validity: 'valid' },
+        { biomeKey: 'Q', completion: 'complete', validity: 'valid' },
       ],
     });
     expect(screen.getByRole('heading', { name: 'City of Ephyra' })).toBeTruthy();
@@ -248,6 +259,33 @@ describe('N/O/P Surface product loop', () => {
       { value: 'MetaProgress', evaluation: { context: 'evaluated', support: 'forced' } },
     ]);
 
+    await view.user.click(screen.getByRole('button', { name: 'Summit' }));
+    expect(screen.getByRole('heading', { name: 'Summit' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Preboss from Tail' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Preboss Shop' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Summit' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+    expect(document.body.textContent).not.toContain('Q_Combat');
+    expect(document.body.textContent).not.toContain('editor-q-');
+    assertAccessibleControlSurface();
+
+    const qFoyer = application.catalog.rooms.byKey.Q_Combat10;
+    const qOrdinary = application.catalog.rooms.byKey.Q_Combat01;
+    if (qFoyer === undefined || qOrdinary === undefined) {
+      throw new Error('Q candidate rooms are missing');
+    }
+    expect(
+      application.candidateProjection.roomTargets(
+        authored,
+        createTargetAddress(qBiome, qOccurrenceIds.intro, 1),
+        [qFoyer, qOrdinary],
+      ),
+    ).toMatchObject([
+      { value: { gameName: 'Q_Combat10' }, evaluation: { support: 'possible' } },
+      { value: { gameName: 'Q_Combat01' }, evaluation: { support: 'impossible' } },
+    ]);
+
     await view.user.click(screen.getByRole('button', { name: 'City of Ephyra' }));
 
     const candidateStarted = performance.now();
@@ -282,6 +320,7 @@ describe('N/O/P Surface product loop', () => {
       ['1', 'City of Ephyra'],
       ['2', 'Rift of Thessaly'],
       ['3', 'Mount Olympus'],
+      ['4', 'Summit'],
     ]);
     await view.user.click(
       screen.getAllByRole('button', { name: /Hub room cannot be open together/ })[0]!,

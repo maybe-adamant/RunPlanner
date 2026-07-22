@@ -278,20 +278,20 @@ been replaced by the occurrence-based conditional-terminal contract in
 
 ## Q Migration
 
-| Family                          | Status   | Primary evidence                                                           | Port action                                                                                                                        |
-| ------------------------------- | -------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Q layout and staged pools       | ported   | `RoomDataQ.lua`, physical maps, `biomes/Q_GAME_RULES.md`                   | `LinearBiome` now declares foyer, forced fork, miniboss, ordinary, second fork, and direct-terminal stages.                        |
-| Q intro and foyer baseline      | ported   | `RoomDataQ.lua`, Q intro encounters, `biomes/Q_GAME_RULES.md`              | Reward-free `Q_Intro` and both real foyer maps normalize while first-time and lifetime progression gates remain omitted.           |
-| Q combat declarations           | ported   | `RoomSets.lua`, `RoomDataQ.lua`, extracted map topology                    | All supported combat maps retain exact one/two-exit topology, no-reward leaves, requirements, forces, caps, and counters.          |
-| Q paired miniboss generation    | ported   | `RunLogic.lua`, `RoomLogic.lua`, `RoomDataQ.lua`, `biomes/Q_GAME_RULES.md` | Stage pools let each physical exit reference either peer independently; concrete debug-only `Q_MiniBoss01` stays excluded.         |
-| Q miniboss counters and rewards | ported   | Q miniboss encounters, `LootData.lua`, `biomes/Q_GAME_RULES.md`            | Brute/Stalker/Tail count, Eye does not, and every supported miniboss resolves through concrete `TyphonBossRewards`.                |
-| Q direct preboss shop           | ported   | `RoomDataQ.lua`, `StoreData.lua`, `biomes/Q_GAME_RULES.md`                 | Exact-depth-7 `Q_PreBoss01` owns one direct `Q_WorldShop`; no shop-then-fill policy is present.                                    |
-| Q reward-free batch policy      | ported   | `RoomDataQ.lua`, `RewardLogic.lua`, `biomes/Q_GAME_RULES.md`               | Q continuation batches use explicit no-store policy while miniboss declarations own their forced store.                            |
-| Q completion and exclusions     | ported   | `RoomDataQ.lua`, boss encounters, `biomes/Q_GAME_RULES.md`                 | Neutral `Q_Boss01` completes the route; `Q_Boss02`, Palace postboss/story, debug miniboss, and automatic boss drops stay excluded. |
-| Q staged project authorship     | ported   | `biomes/Q_GAME_RULES.md`                                                   | Ordered stage pools and the direct terminal are enforced by the shared linear codec and semantic commands.                         |
-| Q core simulation               | ported   | `biomes/Q_GAME_RULES.md`                                                   | Staged materialization, lifecycle/history, rewards, selected generation, and direct completion use shared core authorities.        |
-| Q candidate and editor core     | ported   | `biomes/Q_GAME_RULES.md`                                                   | Stage-owned room domains, miniboss rewards, rewardless leaves, and the direct terminal reuse the shared linear editor.             |
-| Q application activation        | deferred | `biomes/Q_GAME_RULES.md`                                                   | Keep dormant until the full Surface product-loop fixtures are implemented.                                                         |
+| Family                          | Status | Primary evidence                                                           | Port action                                                                                                                        |
+| ------------------------------- | ------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Q layout and staged pools       | ported | `RoomDataQ.lua`, physical maps, `biomes/Q_GAME_RULES.md`                   | `LinearBiome` now declares foyer, forced fork, miniboss, ordinary, second fork, and direct-terminal stages.                        |
+| Q intro and foyer baseline      | ported | `RoomDataQ.lua`, Q intro encounters, `biomes/Q_GAME_RULES.md`              | Reward-free `Q_Intro` and both real foyer maps normalize while first-time and lifetime progression gates remain omitted.           |
+| Q combat declarations           | ported | `RoomSets.lua`, `RoomDataQ.lua`, extracted map topology                    | All supported combat maps retain exact one/two-exit topology, no-reward leaves, requirements, forces, caps, and counters.          |
+| Q paired miniboss generation    | ported | `RunLogic.lua`, `RoomLogic.lua`, `RoomDataQ.lua`, `biomes/Q_GAME_RULES.md` | Stage pools let each physical exit reference either peer independently; concrete debug-only `Q_MiniBoss01` stays excluded.         |
+| Q miniboss counters and rewards | ported | Q miniboss encounters, `LootData.lua`, `biomes/Q_GAME_RULES.md`            | Brute/Stalker/Tail count, Eye does not, and every supported miniboss resolves through concrete `TyphonBossRewards`.                |
+| Q direct preboss shop           | ported | `RoomDataQ.lua`, `StoreData.lua`, `biomes/Q_GAME_RULES.md`                 | Exact-depth-7 `Q_PreBoss01` owns one direct `Q_WorldShop`; no shop-then-fill policy is present.                                    |
+| Q reward-free batch policy      | ported | `RoomDataQ.lua`, `RewardLogic.lua`, `biomes/Q_GAME_RULES.md`               | Q continuation batches use explicit no-store policy while miniboss declarations own their forced store.                            |
+| Q completion and exclusions     | ported | `RoomDataQ.lua`, boss encounters, `biomes/Q_GAME_RULES.md`                 | Neutral `Q_Boss01` completes the route; `Q_Boss02`, Palace postboss/story, debug miniboss, and automatic boss drops stay excluded. |
+| Q staged project authorship     | ported | `biomes/Q_GAME_RULES.md`                                                   | Ordered stage pools and the direct terminal are enforced by the shared linear codec and semantic commands.                         |
+| Q core simulation               | ported | `biomes/Q_GAME_RULES.md`                                                   | Staged materialization, lifecycle/history, rewards, selected generation, and direct completion use shared core authorities.        |
+| Q candidate and editor core     | ported | `biomes/Q_GAME_RULES.md`                                                   | Stage-owned room domains, miniboss rewards, rewardless leaves, and the direct terminal reuse the shared linear editor.             |
+| Q application activation        | ported | `biomes/Q_GAME_RULES.md`, N/O/P/Q product-loop fixture                     | Q is authorable, simulatable, editable, profile-safe, recoverable, and route-validated after complete N/O/P.                       |
 
 ## Phase 2.8 Cross-Biome Closure
 
@@ -309,12 +309,12 @@ rooms belong to each biome layout; `Next` is derived only from route order.
 | Surface    | P     | `LinearBiome` | 28 (26)          | eligibility / standard  | authored Run/Meta                    | forked              | `P_Boss01`, `P_PostBoss01` | Q    |
 | Surface    | Q     | `LinearBiome` | 23 (22)          | staged / standard       | none                                 | direct              | `Q_Boss01`                 | --   |
 
-The application capability matrix now includes F, G, H, I, N, O, and P as
-authorable, simulatable, and editable. Complete F/G/H/I and N/O/P prefixes
+The application capability matrix now includes F, G, H, I, N, O, P, and Q as
+authorable, simulatable, and editable. Complete F/G/H/I and N/O/P/Q prefixes
 enter profiles, recovery, candidate scope, and editor navigation together. N
 uses its Hub editor and canonical evaluator; O and P use the shared linear
-editor and evaluator. Q is registered in core simulation for its staged
-N/O/P/Q fixture but remains outside application capabilities.
+editor and evaluator. Q uses the same linear boundary with
+declaration-controlled stages and closes the active Surface route.
 
 The following remaining dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:

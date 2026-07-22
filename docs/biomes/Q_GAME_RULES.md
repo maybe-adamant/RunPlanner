@@ -14,8 +14,8 @@ miniboss offers and the preboss shop.
 
 Q declarations are imported under the progressed-save, neutral-difficulty
 repeat-run baseline. The authored project boundary and core simulator now
-support the staged decision tree, while editor/application capabilities remain
-dormant.
+support the staged decision tree, and the complete application product loop is
+active after the N/O/P Surface prefix.
 
 ## Evidence Status
 
@@ -55,7 +55,7 @@ This audit corrects four inherited assumptions:
 The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
 coverage is defined by `../MIGRATION_PROVENANCE.md`. Q has declaration,
 authorship, materialization, history, reward, candidate, selected-validation,
-and dormant editor coverage.
+editor, profile, and recovery coverage.
 
 | Feature                     | Verified game behavior                                                                                              | Disposition and planner projection                                                | Current coverage     | Reconsider when                                                 |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- |
@@ -368,8 +368,9 @@ The normalized catalog now expresses:
     predicates.
 
 The readable declaration file and focused parity matrix cover every supported
-Q room and exact physical exit. Capability fixtures prove that this catalog
-and core-simulation coverage does not activate Q in the application editor.
+Q room and exact physical exit. Capability and browser fixtures prove that the
+same catalog and simulator authorities activate Q only through the complete
+application product loop.
 
 ## Model Conclusions
 
@@ -396,5 +397,6 @@ Q strengthens the shared model in four places:
 
 F, G, P, Q, H, O, I, and N are closed as game-rule/design audits. Their shared
 vocabulary and declaration imports are reconciled. Q's staged plan is
-authorable, simulatable, and editable through dormant core/application
-surfaces; product activation remains deferred until the final Phase 6 slice.
+authorable, simulatable, and editable through the active application surface.
+The complete N/O/P/Q route is the representative Surface profile and recovery
+contract.
