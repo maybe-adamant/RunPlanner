@@ -172,7 +172,7 @@ export function evaluateLinearBiome(
   routeKey: string,
   plan: LinearBiomePlan,
   enteredBiomeCount: number,
-  previous?: CompleteLinearProjectEvaluation,
+  previous?: CompleteLinearProjectEvaluation | CompleteHubProjectEvaluation,
 ): LinearBiomeProjectEvaluation {
   const origin = createBiomeAddress(routeKey, plan.biomeKey);
   const completeness = evaluateLinearCompleteness(catalog, origin, plan);
@@ -188,18 +188,19 @@ export function evaluateLinearBiome(
 
   const snapshot = materializeLinearBiome(catalog, origin, completeness);
   const history = composeLinearHistory(catalog, snapshot, previous?.history);
-  const roomGeneration = evaluateLinearRoomGeneration(
-    catalog,
-    snapshot,
-    history,
-    enteredBiomeCount,
-  );
   const rewards = evaluateLinearRewards(
     catalog,
     snapshot,
     history,
     enteredBiomeCount,
     previous?.rewards.branches,
+  );
+  const roomGeneration = evaluateLinearRoomGeneration(
+    catalog,
+    snapshot,
+    history,
+    enteredBiomeCount,
+    rewards.targetHistory,
   );
   const findings = Object.freeze([...roomGeneration.findings, ...rewards.findings]);
 
@@ -385,16 +386,8 @@ function evaluateRoute(
       if (previous?.completion === 'incomplete') {
         throw new ProjectSimulationContractError('incomplete biome cannot seed route continuation');
       }
-      if (previous?.completion === 'complete' && previous.kind !== 'LinearBiome') {
-        throw new ProjectSimulationContractError(
-          `${plan.biomeKey} linear continuation cannot consume a ${previous.snapshot.kind} history seed`,
-        );
-      }
-      const previousLinear =
-        previous?.completion === 'complete' && previous.kind === 'LinearBiome'
-          ? previous
-          : undefined;
-      evaluation = evaluateLinearBiome(catalog, route.routeKey, plan, index + 1, previousLinear);
+      const previousComplete = previous?.completion === 'complete' ? previous : undefined;
+      evaluation = evaluateLinearBiome(catalog, route.routeKey, plan, index + 1, previousComplete);
     }
     evaluations.push(evaluation);
     findings.push(...evaluation.findings);

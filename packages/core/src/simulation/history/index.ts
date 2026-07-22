@@ -5,6 +5,7 @@ export {
   LinearHistoryCompositionContractError as FHistoryCompositionContractError,
 } from './compose';
 export { composeHubHistory, composeNHistory, HubHistoryCompositionContractError } from './hub';
+export { projectRecentEncounterPhases, type RecentEncounterPhaseFact } from './facts';
 export {
   foldFHistoryEvents,
   foldHistoryEvents,

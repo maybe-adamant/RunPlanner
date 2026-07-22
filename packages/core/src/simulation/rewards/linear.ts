@@ -29,6 +29,7 @@ import type {
   LinearRewardBranch,
   LinearRewardSimulation,
   LinearRewardStoreSupportEntry,
+  LinearTargetRewardHistoryCheckpoint,
 } from './model';
 import { createRewardFacts, createdPeerGameNames } from './facts';
 import {
@@ -355,6 +356,7 @@ export function evaluateLinearRewards(
   const terminalParentKey = semanticAddressKey(snapshot.terminalEntry.predecessor.origin);
   const expectedStores = new Map<string, string | undefined>();
   const storeSupportEntries: LinearRewardStoreSupportEntry[] = [];
+  const targetHistory: LinearTargetRewardHistoryCheckpoint[] = [];
   const findings = new Map<string, SemanticFinding>();
   let peers: readonly CanonicalResolvedIncomingReward['offer'][] = Object.freeze([]);
   let branches: readonly RewardBranchState[] = initializeRewardBranches(initialBranches);
@@ -380,6 +382,15 @@ export function evaluateLinearRewards(
         }
         const incoming = room.incomingReward;
         const localRewards = room.kind === 'authored' ? (room.localRewards ?? []) : [];
+        if (event.source === 'generatedTarget') {
+          targetHistory.push(
+            Object.freeze({
+              origin: event.targetOrigin,
+              historySequence: event.sequence - 1,
+              histories: Object.freeze(branches.map((branch) => branch.history)),
+            }),
+          );
+        }
         if (incoming === undefined && localRewards.length === 0) {
           branches = advanceRewardBranches(branches, event.sequence);
           break;
@@ -790,6 +801,7 @@ export function evaluateLinearRewards(
     biomeKey: snapshot.biomeKey,
     validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
     storeSupport: Object.freeze(storeSupportEntries),
+    targetHistory: Object.freeze(targetHistory),
     branches: Object.freeze(branches.map(publicRewardBranch)),
     findings: immutableFindings,
   });

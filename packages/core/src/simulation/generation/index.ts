@@ -13,6 +13,7 @@ export {
   HubRoomGenerationContractError,
 } from './hub';
 export type {
+  EncounterCountSupportEntry,
   FieldsCageOutcome,
   FieldsCageOutcomeSupportEntry,
   FForcePressureLedgerEntry,

@@ -8,11 +8,14 @@ import type {
 import { evaluateRequirement, type RequirementEvaluationContext } from '../../requirementEvaluator';
 import type { RequirementExpression } from '../../requirements';
 import { semanticAddressKey } from '../../project/addresses';
+import type { RewardHistoryState } from '../../rewardKernel';
 import type {
   CanonicalLinearHistory,
+  LinearRoomHistoryViews,
   LinearHistoryStateView,
   LinearTargetGenerationView,
 } from '../history';
+import { projectRecentEncounterPhases } from '../history';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,
@@ -22,7 +25,9 @@ import type {
   CanonicalPhysicalExit,
   CanonicalTarget,
 } from '../materialization';
+import type { LinearTargetRewardHistoryCheckpoint } from '../rewards';
 import type {
+  EncounterCountSupportEntry,
   FieldsCageOutcome,
   FieldsCageOutcomeSupportEntry,
   LinearForcePressureLedgerEntry,
@@ -82,6 +87,9 @@ function assertLinearGenerationRequirement(requirement: RequirementExpression): 
         );
       }
       return;
+    case 'distinctRecordKeyCount':
+    case 'recentEncounterPhaseCount':
+      return;
     case 'currentBatchTargetCount':
     case 'currentBatchRoomCount':
     case 'clockworkGoalsRemaining':
@@ -131,6 +139,7 @@ function projectLinearRoomGenerationRequirementContext(
   sourceDeclaration: RoomDeclaration,
   view: LinearHistoryStateView,
   enteredBiomeCount: number,
+  rewardHistory?: RewardHistoryState,
 ): RequirementEvaluationContext {
   const roomsEntered = countByGameName(view.ledgers.roomAppearances);
   const shopOptions =
@@ -154,17 +163,17 @@ function projectLinearRoomGenerationRequirementContext(
       upgradableTraitCount: 0,
     }),
     records: Object.freeze({
-      biomeUseRecord: Object.freeze({}),
-      lootTypeHistory: Object.freeze({}),
+      biomeUseRecord: rewardHistory?.biomeUseRecord ?? Object.freeze({}),
+      lootTypeHistory: rewardHistory?.lootTypeHistory ?? Object.freeze({}),
       roomsEntered: Object.freeze(roomsEntered),
-      useRecord: Object.freeze({}),
+      useRecord: rewardHistory?.useRecord ?? Object.freeze({}),
     }),
     currentRoomShopOptionNames: shopOptions,
     currentRoomRewardType: source.incomingReward?.offer.rewardType,
     rewardLookups: Object.freeze({}),
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze({}),
-    recentEncounterPhases: Object.freeze([]),
+    recentEncounterPhases: projectRecentEncounterPhases(view),
     offeredExitCount: sourceDeclaration.exits.length,
     currentBatchRoomGameNames: priorPeerGameNames(view, source.origin),
     clockwork: hasClockwork
@@ -331,6 +340,40 @@ function targetGenerationViews(
   return new Map(entries.map((view) => [semanticAddressKey(view.targetOrigin), view]));
 }
 
+function sameRecord(
+  left: Readonly<Record<string, number>>,
+  right: Readonly<Record<string, number>>,
+): boolean {
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  return [...keys].every((key) => left[key] === right[key]);
+}
+
+function targetRewardHistories(
+  checkpoints: readonly LinearTargetRewardHistoryCheckpoint[] | undefined,
+): ReadonlyMap<string, RewardHistoryState> {
+  const result = new Map<string, RewardHistoryState>();
+  for (const checkpoint of checkpoints ?? []) {
+    const first = checkpoint.histories[0];
+    if (first === undefined) {
+      continue;
+    }
+    if (
+      checkpoint.histories.some(
+        (history) =>
+          !sameRecord(history.useRecord, first.useRecord) ||
+          !sameRecord(history.biomeUseRecord, first.biomeUseRecord) ||
+          !sameRecord(history.lootTypeHistory, first.lootTypeHistory),
+      )
+    ) {
+      throw new LinearRoomGenerationContractError(
+        `target ${semanticAddressKey(checkpoint.origin)} has divergent reward-history eligibility facts`,
+      );
+    }
+    result.set(semanticAddressKey(checkpoint.origin), first);
+  }
+  return result;
+}
+
 function generationRooms(
   snapshot: CanonicalLinearBiome,
 ): ReadonlyMap<string, CanonicalGenerationSource> {
@@ -343,7 +386,11 @@ function generationRooms(
 }
 
 function finding(
-  code: 'fieldsCageOutcomeUnavailable' | 'targetRoomSupportEmpty' | 'targetRoomUnavailable',
+  code:
+    | 'encounterCountUnavailable'
+    | 'fieldsCageOutcomeUnavailable'
+    | 'targetRoomSupportEmpty'
+    | 'targetRoomUnavailable',
   origin: SemanticFinding['origin'],
   evidence: FindingEvidence,
 ): SemanticFinding {
@@ -353,6 +400,65 @@ function finding(
     phase: 'roomGeneration',
     origin,
     evidence: Object.freeze(evidence),
+  });
+}
+
+function encounterCountEvidence(entry: EncounterCountSupportEntry): FindingEvidence {
+  return {
+    beforeSequence: entry.beforeSequence,
+    selectedEncounterCount: entry.selectedEncounterCount,
+    supportEncounterCounts: entry.supportEncounterCounts,
+  };
+}
+
+function evaluateEncounterCount(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  view: LinearRoomHistoryViews,
+  enteredBiomeCount: number,
+  rewardHistory: RewardHistoryState | undefined,
+): EncounterCountSupportEntry | undefined {
+  const declaration = catalog.rooms.byKey[room.gameName];
+  const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
+  if (declaration === undefined || profile === undefined) {
+    throw new LinearRoomGenerationContractError(`${room.gameName} lost its encounter declaration`);
+  }
+  const optionalIndexes = profile.phases.flatMap((phase, index) =>
+    phase.presence === undefined ? [] : [index],
+  );
+  if (optionalIndexes.length === 0) {
+    return undefined;
+  }
+  const optionalIndex = optionalIndexes[0];
+  const optional =
+    optionalIndex === undefined ? undefined : profile.phases[optionalIndex]?.presence;
+  if (
+    optionalIndexes.length !== 1 ||
+    optional === undefined ||
+    optionalIndex !== profile.phases.length - 1
+  ) {
+    throw new LinearRoomGenerationContractError(
+      `${room.gameName} has unsupported optional encounter-phase structure`,
+    );
+  }
+  assertLinearGenerationRequirement(optional.requirement);
+  const context = projectLinearRoomGenerationRequirementContext(
+    room,
+    declaration,
+    view.preparation,
+    enteredBiomeCount,
+    rewardHistory,
+  );
+  const supportEncounterCounts = evaluateRequirement(optional.requirement, context)
+    ? Object.freeze([optionalIndex, optionalIndex + 1])
+    : Object.freeze([optionalIndex]);
+  const selectedEncounterCount = room.encounterPhases.length;
+  return Object.freeze({
+    origin: room.origin,
+    beforeSequence: view.preparation.sequence,
+    selectedEncounterCount,
+    supportEncounterCounts,
+    selectedPossible: supportEncounterCounts.includes(selectedEncounterCount),
   });
 }
 
@@ -490,6 +596,7 @@ function evaluateTargetGameName(
   view: LinearTargetGenerationView,
   selectedGameName: string,
   enteredBiomeCount: number,
+  rewardHistory: RewardHistoryState | undefined,
 ): LinearRoomTargetCandidateValidation {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
@@ -500,6 +607,7 @@ function evaluateTargetGameName(
     sourceDeclaration,
     view.before,
     enteredBiomeCount,
+    rewardHistory,
   );
   const candidates = pool.map((room) =>
     evaluateCandidate(catalog, source, sourceDeclaration, exit, view.before, room, context),
@@ -556,6 +664,7 @@ function validateTarget(
   target: CanonicalTarget,
   view: LinearTargetGenerationView,
   enteredBiomeCount: number,
+  rewardHistory: RewardHistoryState | undefined,
 ): LinearRoomTargetCandidateValidation {
   assertTargetHistoryMatches(source, target, view);
   return evaluateTargetGameName(
@@ -567,6 +676,7 @@ function validateTarget(
     view,
     target.room.gameName,
     enteredBiomeCount,
+    rewardHistory,
   );
 }
 
@@ -590,8 +700,11 @@ function evaluateTargets(
   targets: readonly CanonicalTarget[],
   views: ReadonlyMap<string, LinearTargetGenerationView>,
   pressure: LinearForcePressureLedgerEntry[],
+  encounterCounts: EncounterCountSupportEntry[],
   findings: SemanticFinding[],
   enteredBiomeCount: number,
+  rewardHistories: ReadonlyMap<string, RewardHistoryState>,
+  roomViews: ReadonlyMap<string, LinearRoomHistoryViews>,
 ): void {
   for (const target of targets) {
     const view = views.get(semanticAddressKey(target.origin));
@@ -600,9 +713,49 @@ function evaluateTargets(
         `target ${semanticAddressKey(target.origin)} has no history generation view`,
       );
     }
-    const result = validateTarget(catalog, pool, source, target, view, enteredBiomeCount);
+    const result = validateTarget(
+      catalog,
+      pool,
+      source,
+      target,
+      view,
+      enteredBiomeCount,
+      rewardHistories.get(semanticAddressKey(target.origin)),
+    );
     pressure.push(result.pressure);
     findings.push(...result.findings);
+    if (
+      target.room.kind === 'authored' &&
+      catalog.encounterProfiles.byKey[target.room.encounterProfileKey]?.phases.some(
+        (phase) => phase.presence !== undefined,
+      )
+    ) {
+      const roomView = roomViews.get(semanticAddressKey(target.room.origin));
+      if (roomView === undefined) {
+        throw new LinearRoomGenerationContractError(
+          `${target.room.gameName} has no room history view`,
+        );
+      }
+      const encounterCount = evaluateEncounterCount(
+        catalog,
+        target.room,
+        roomView,
+        enteredBiomeCount,
+        rewardHistories.get(semanticAddressKey(target.origin)),
+      );
+      if (encounterCount !== undefined) {
+        encounterCounts.push(encounterCount);
+        if (!encounterCount.selectedPossible) {
+          findings.push(
+            finding(
+              'encounterCountUnavailable',
+              encounterCount.origin,
+              encounterCountEvidence(encounterCount),
+            ),
+          );
+        }
+      }
+    }
   }
 }
 
@@ -611,6 +764,7 @@ export function evaluateLinearRoomGeneration(
   snapshot: CanonicalLinearBiome,
   history: CanonicalLinearHistory,
   enteredBiomeCount: number,
+  rewardHistoryCheckpoints?: readonly LinearTargetRewardHistoryCheckpoint[],
 ): LinearRoomGenerationValidation {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new LinearRoomGenerationContractError(
@@ -620,7 +774,10 @@ export function evaluateLinearRoomGeneration(
   const pool = linearCandidatePool(catalog, snapshot.biomeKey);
   const rooms = generationRooms(snapshot);
   const views = targetGenerationViews(history);
+  const roomViews = new Map(history.rooms.map((view) => [semanticAddressKey(view.origin), view]));
+  const rewardHistories = targetRewardHistories(rewardHistoryCheckpoints);
   const pressure: LinearForcePressureLedgerEntry[] = [];
+  const encounterCounts: EncounterCountSupportEntry[] = [];
   const fieldsCageOutcomes: FieldsCageOutcomeSupportEntry[] = [];
   const findings: SemanticFinding[] = [];
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
@@ -660,8 +817,11 @@ export function evaluateLinearRoomGeneration(
       batch.targets,
       views,
       pressure,
+      encounterCounts,
       findings,
       enteredBiomeCount,
+      rewardHistories,
+      roomViews,
     );
   }
   evaluateTargets(
@@ -671,14 +831,18 @@ export function evaluateLinearRoomGeneration(
     snapshot.terminalEntry.targets,
     views,
     pressure,
+    encounterCounts,
     findings,
     enteredBiomeCount,
+    rewardHistories,
+    roomViews,
   );
 
   return Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
     forcePressure: Object.freeze(pressure),
+    encounterCounts: Object.freeze(encounterCounts),
     fieldsCageOutcomes: Object.freeze(fieldsCageOutcomes),
     findings: Object.freeze(findings),
   });
@@ -691,6 +855,7 @@ export function evaluateLinearRoomTargetCandidate(
   targetOrigin: CanonicalTarget['origin'],
   gameName: string,
   enteredBiomeCount: number,
+  rewardHistoryCheckpoints?: readonly LinearTargetRewardHistoryCheckpoint[],
 ): LinearRoomTargetCandidateValidation {
   if (
     snapshot.biomeKey !== history.biomeKey ||
@@ -736,6 +901,7 @@ export function evaluateLinearRoomTargetCandidate(
     view,
     gameName,
     enteredBiomeCount,
+    targetRewardHistories(rewardHistoryCheckpoints).get(semanticAddressKey(targetOrigin)),
   );
 }
 

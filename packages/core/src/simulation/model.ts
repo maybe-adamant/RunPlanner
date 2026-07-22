@@ -14,6 +14,7 @@ export type CompletenessFindingCode =
   | 'targetMissing';
 
 export type RoomGenerationFindingCode =
+  | 'encounterCountUnavailable'
   | 'fieldsCageOutcomeUnavailable'
   | 'hubOpenSlotUnavailable'
   | 'sideRoomGenerationUnavailable'

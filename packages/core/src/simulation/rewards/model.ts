@@ -1,5 +1,9 @@
 import type { RewardBagState, RewardHistoryState } from '../../rewardKernel/model';
-import type { BatchRewardStoreAddress, SemanticAddress } from '../../project/addresses';
+import type {
+  BatchRewardStoreAddress,
+  SemanticAddress,
+  TargetAddress,
+} from '../../project/addresses';
 import type { ConcreteAcquisitionEvent, ResolvedRewardOffer } from '../../rewardKernel/model';
 import type { SemanticFinding } from '../model';
 
@@ -49,6 +53,12 @@ export interface RewardBranch {
   readonly processedThroughHistorySequence: number;
 }
 
+export interface LinearTargetRewardHistoryCheckpoint {
+  readonly origin: TargetAddress;
+  readonly historySequence: number;
+  readonly histories: readonly RewardHistoryState[];
+}
+
 interface RewardSimulationBase {
   readonly biomeKey: string;
   readonly validity: 'invalid' | 'valid';
@@ -58,6 +68,7 @@ interface RewardSimulationBase {
 
 export interface LinearRewardSimulation extends RewardSimulationBase {
   readonly storeSupport: readonly RewardStoreSupportEntry[];
+  readonly targetHistory: readonly LinearTargetRewardHistoryCheckpoint[];
 }
 
 export interface HubRewardSimulation extends RewardSimulationBase {

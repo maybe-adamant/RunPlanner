@@ -133,6 +133,12 @@ spine therefore terminates there. The authored ordinary bound is six
 single-target batches and six ordinary target occurrences. The separately
 bounded terminal transition then contributes the picked preboss occurrence.
 
+`O_Intro` advances `biomeDepthCache` once when it commits. Its outgoing target
+is generated from source BDC 0, the first ordinary room begins from BDC 1, and
+each later ordinary source advances the cache once. This is why the sixth
+ordinary room exposes the direct-preboss decision at source BDC 7; treating
+the intro as a zero-delta room shifts every O depth window by one.
+
 The preboss map's own fixed boss exit and the boss's fixed postboss exit belong
 to the layout's derived completion sequence, not authored continuation state.
 
@@ -472,8 +478,10 @@ The dormant O import delivers:
     stores, recent-room eligibility, BED asymmetry, and depth-5 Shop/Story
     force competition.
 
-The import must remain dormant. It does not add O editor panels, activate
-Surface simulation, or implement persistent NPCs.
+O's authored, canonical lifecycle, reward, and selected-validation core is now
+implemented but remains dormant at the application capability boundary. The
+candidate service, editor projection, and product-loop activation remain the
+later delivery slices. Persistent NPCs remain deferred.
 
 ## Model Conclusions
 

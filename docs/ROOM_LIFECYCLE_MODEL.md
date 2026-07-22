@@ -228,8 +228,11 @@ non-prefix selection or omission of a required phase.
 History exposes both materialization and acquisition checkpoints for each
 phase offer point. Reward simulation evaluates all active offers at the former
 state, consumes only the picked offer at the latter state, and resolves the
-room's outgoing store from the final active wheel. Dormant wheel capacity emits
-no lifecycle event.
+room's outgoing store from the final active wheel. The acquisition event also
+records that active wheel's selected store in entered-store history before a
+later phase or room can evaluate reward-ratio support. A two-wheel room
+therefore contributes two ordered store entries; dormant wheel capacity emits
+no lifecycle or store-ledger event.
 
 Room-creation history retains the concrete materialized encounter-profile key.
 Consumers must not recover it from the maximum-capacity Room Declaration: an H

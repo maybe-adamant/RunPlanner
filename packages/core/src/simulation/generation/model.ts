@@ -2,6 +2,7 @@ import type {
   ContinuationAddress,
   HubOpenSetAddress,
   LocalChildAddress,
+  OccurrenceAddress,
   TargetAddress,
 } from '../../project/addresses';
 import type { SemanticFinding } from '../model';
@@ -50,10 +51,19 @@ export interface FieldsCageOutcomeSupportEntry {
   readonly selectedPossible: boolean;
 }
 
+export interface EncounterCountSupportEntry {
+  readonly origin: OccurrenceAddress;
+  readonly beforeSequence: number;
+  readonly selectedEncounterCount: number;
+  readonly supportEncounterCounts: readonly number[];
+  readonly selectedPossible: boolean;
+}
+
 export interface LinearRoomGenerationValidation {
   readonly biomeKey: string;
   readonly validity: 'invalid' | 'valid';
   readonly forcePressure: readonly LinearForcePressureLedgerEntry[];
+  readonly encounterCounts: readonly EncounterCountSupportEntry[];
   readonly fieldsCageOutcomes: readonly FieldsCageOutcomeSupportEntry[];
   readonly findings: readonly SemanticFinding[];
 }

@@ -66,6 +66,10 @@ const findingCopy = {
     title: 'Room cannot appear here',
     description: 'The selected room is outside the possible room set for this exit.',
   },
+  encounterCountUnavailable: {
+    title: 'Encounter count cannot occur here',
+    description: 'The selected ship encounter count is unavailable when this room begins.',
+  },
   sideRoomGenerationUnavailable: {
     title: 'Side room generation cannot occur here',
     description: 'The selected side-room outcome conflicts with Ephyra generation pressure.',

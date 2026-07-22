@@ -153,6 +153,11 @@ const lifecycleEffectRegistry = Object.freeze({
       : appendEvent(state, context, {
           kind: 'offerPointAcquired',
           offerPoint: offerPoint.key,
+          ...(context.input.offerPointRewardStores?.[offerPoint.key] === undefined
+            ? {}
+            : {
+                enteredRewardStoreKey: context.input.offerPointRewardStores[offerPoint.key],
+              }),
         });
   },
   recordRequiredObjectCompletions: (context, state) => {
@@ -306,6 +311,13 @@ function resolveExecutionContext(
       `unknown entered reward store ${input.enteredRewardStoreKey}`,
     );
   }
+  for (const [offerPoint, storeKey] of Object.entries(input.offerPointRewardStores ?? {})) {
+    if (catalog.rewards.stores.byKey[storeKey] === undefined) {
+      throw new LifecycleExecutionContractError(
+        `unknown reward store ${storeKey} for offer point ${offerPoint}`,
+      );
+    }
+  }
   const profile = catalog.roomLifecycleProfiles.byKey[input.lifecycleProfileKey];
   if (profile === undefined) {
     throw new LifecycleExecutionContractError(
@@ -334,6 +346,20 @@ function resolveExecutionContext(
   ) {
     throw new LifecycleExecutionContractError(
       `${declaredEncounter.key} selected an invalid active encounter-phase prefix`,
+    );
+  }
+  const selectedOfferPoints = new Set(
+    selectedPhases.flatMap((phase) =>
+      phase.offerPoint === undefined ? [] : [phase.offerPoint.key],
+    ),
+  );
+  if (
+    Object.keys(input.offerPointRewardStores ?? {}).some(
+      (offerPoint) => !selectedOfferPoints.has(offerPoint),
+    )
+  ) {
+    throw new LifecycleExecutionContractError(
+      `${declaredEncounter.key} received a store for an inactive offer point`,
     );
   }
   const encounter: EncounterProfile =

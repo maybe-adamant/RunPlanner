@@ -319,6 +319,14 @@ describe('O canonical materialization and lifecycle', () => {
       'roomCountersAdvanced',
       'roomExited',
     ]);
+    expect(
+      events
+        .filter((event) => event.kind === 'offerPointAcquired')
+        .map((event) => [event.offerPoint, event.enteredRewardStoreKey]),
+    ).toEqual([
+      ['wheel1', 'RunProgress'],
+      ['wheel2', 'MetaProgress'],
+    ]);
     const view = history.rooms.find(
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(combat.origin),
     );
@@ -332,6 +340,11 @@ describe('O canonical materialization and lifecycle', () => {
       { key: 'wheel1', offerDepth: 1, acquisitionDepth: 2 },
       { key: 'wheel2', offerDepth: 2, acquisitionDepth: 3 },
     ]);
+    expect(
+      view?.exit.ledgers.enteredRewardStores
+        .filter((entry) => semanticAddressKey(entry.origin) === semanticAddressKey(combat.origin))
+        .map((entry) => entry.storeKey),
+    ).toEqual(['RunProgress', 'MetaProgress']);
     expect(history.events[0]?.sequence).toBe(nHistory.afterTransition.sequence + 1);
     expect(
       (history.events[0] as Extract<(typeof history.events)[number], { kind: 'biomeStarted' }>)
