@@ -1,11 +1,4 @@
-import type {
-  BiomeAddress,
-  RoomOccurrence,
-  ShopPurchaseAddress,
-  ProjectDocument,
-} from '@run-planner/engine/authored-project';
-import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import type { CountedRewardBinding } from '@run-planner/engine/reward-kernel';
+import type { BiomeAddress, RoomOccurrence } from '@run-planner/engine/authored-project';
 import {
   createIncomingRewardAddress,
   createLocalRewardAddress,
@@ -15,18 +8,19 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
 } from '@run-planner/engine/authored-project';
-import { useRef, useState } from 'react';
+import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import type { CountedRewardBinding } from '@run-planner/engine/reward-kernel';
 
 import {
-  candidateSupport,
   presentCandidateLabel,
   type CandidateProjectionService,
 } from '../../../projections/candidateProjection';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
-import { CountedRewardEditor, RewardValueEditor } from '../rewards/RewardEditors';
 import { candidateSelectState } from '../../feedback/candidatePresentation';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
+import { CountedRewardEditor } from '../rewards/RewardEditors';
+import { FieldsCageReward, ShopOfferEditor } from './RoomStateSections';
 
 interface RoomStateEditorProps {
   readonly activeCageCount?: number;
@@ -36,64 +30,6 @@ interface RoomStateEditorProps {
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly entryActive?: boolean;
   readonly occurrence: RoomOccurrence;
-}
-
-interface ShopPurchaseControlProps {
-  readonly address: ShopPurchaseAddress;
-  readonly candidateProjection: CandidateProjectionService;
-  readonly checked: boolean;
-  readonly id: string;
-  readonly onChange: (purchased: boolean) => void;
-  readonly project: ProjectDocument;
-}
-
-function ShopPurchaseControl({
-  address,
-  candidateProjection,
-  checked,
-  id,
-  onChange,
-  project,
-}: ShopPurchaseControlProps) {
-  type Projection = {
-    readonly checked: boolean;
-    readonly project: ProjectDocument;
-    readonly support: ReturnType<typeof candidateSupport>;
-  };
-  const projectionRef = useRef<Projection | undefined>(undefined);
-  const [projection, setProjection] = useState<Projection>();
-  const support =
-    projection?.project === project && projection.checked === checked
-      ? projection.support
-      : 'unavailable';
-  const activateProjection = () => {
-    if (
-      support !== 'unavailable' ||
-      (projectionRef.current?.project === project && projectionRef.current.checked === checked)
-    ) {
-      return;
-    }
-    const candidate = candidateProjection
-      .shopPurchases(project, address, [false, true])
-      .find((option) => option.value === checked);
-    const next = { checked, project, support: candidateSupport(candidate) };
-    projectionRef.current = next;
-    setProjection(next);
-  };
-  return (
-    <label className="purchase-control" data-candidate-support={support} htmlFor={id}>
-      <SemanticOwnerMarker address={address} />
-      <input
-        checked={checked}
-        id={id}
-        onChange={(event) => onChange(event.target.checked)}
-        onFocus={activateProjection}
-        onPointerDown={activateProjection}
-        type="checkbox"
-      />
-      Purchased
-    </label>
-  );
 }
 
 function countedBinding(
@@ -213,38 +149,27 @@ export function RoomStateEditor({
           );
           const active = index < activeCageCount;
           return (
-            <section
-              aria-label={`Cage ${index + 1}`}
-              className="local-reward-slot"
-              data-active={active}
+            <FieldsCageReward
+              active={active}
+              address={address}
+              binding={cages.reward}
+              candidateProjection={candidateProjection}
+              catalog={catalog}
+              idPrefix={`${idPrefix}-${slotKey}`}
               key={slotKey}
-            >
-              <div className="local-reward-heading">
-                <div className="owner-markers">
-                  <h4>Cage {index + 1}</h4>
-                  <SemanticOwnerMarker address={address} />
-                </div>
-                <span className="neutral-status">{active ? 'Active' : 'Dormant'}</span>
-              </div>
-              <CountedRewardEditor
-                binding={cages.reward}
-                candidateOwner={{ kind: 'localReward', address }}
-                candidateProjection={candidateProjection}
-                catalog={catalog}
-                idPrefix={`${idPrefix}-${slotKey}`}
-                offer={offer}
-                onReplace={(value) =>
-                  dispatch(
-                    authoredProjectCommandDispatched({
-                      kind: 'ReplaceLocalReward',
-                      reward: address,
-                      value,
-                    }),
-                  )
-                }
-                project={project}
-              />
-            </section>
+              label={`Cage ${index + 1}`}
+              offer={offer}
+              onReplace={(value) =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceLocalReward',
+                    reward: address,
+                    value,
+                  }),
+                )
+              }
+              project={project}
+            />
           );
         })}
       </div>
@@ -513,48 +438,37 @@ export function RoomStateEditor({
         const offerAddress = createShopOfferAddress(biome, occurrence.occurrenceId, slot.key);
         const purchaseAddress = createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key);
         return (
-          <section className="shop-offer" key={slot.key}>
-            <div className="shop-offer-heading">
-              <div className="owner-markers">
-                <h4>{slot.label}</h4>
-                <SemanticOwnerMarker address={offerAddress} />
-              </div>
-              <ShopPurchaseControl
-                address={purchaseAddress}
-                candidateProjection={candidateProjection}
-                checked={offerState.purchased}
-                id={`${offerPrefix}-purchased`}
-                onChange={(purchased) =>
-                  dispatch(
-                    authoredProjectCommandDispatched({
-                      kind: 'SetShopPurchase',
-                      purchase: purchaseAddress,
-                      purchased,
-                    }),
-                  )
-                }
-                project={project}
-              />
-            </div>
-            <RewardValueEditor
-              candidateOwner={{ kind: 'shopOffer', address: offerAddress }}
-              candidateProjection={candidateProjection}
-              catalog={catalog}
-              idPrefix={offerPrefix}
-              offer={offerState.offer}
-              onReplace={(value) =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'ReplaceShopOffer',
-                    offer: offerAddress,
-                    value,
-                  }),
-                )
-              }
-              project={project}
-              rewardTypes={group.rewardTypes}
-            />
-          </section>
+          <ShopOfferEditor
+            address={offerAddress}
+            candidateProjection={candidateProjection}
+            catalog={catalog}
+            idPrefix={offerPrefix}
+            key={slot.key}
+            label={slot.label}
+            offer={offerState.offer}
+            onPurchase={(purchased) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'SetShopPurchase',
+                  purchase: purchaseAddress,
+                  purchased,
+                }),
+              )
+            }
+            onReplace={(value) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceShopOffer',
+                  offer: offerAddress,
+                  value,
+                }),
+              )
+            }
+            project={project}
+            purchaseAddress={purchaseAddress}
+            purchased={offerState.purchased}
+            rewardTypes={group.rewardTypes}
+          />
         );
       })}
     </div>
