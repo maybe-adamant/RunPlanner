@@ -19,7 +19,7 @@ mode value.
 I declarations, focused parity fixtures, authored topology, canonical
 materialization, lifecycle history, selected validation, and candidate
 evaluation are ported. Its complete editor, navigation, profile, recovery, and
-browser interaction loop is active in production application capabilities.
+browser interaction loop is active in the production application.
 
 ## Evidence Status
 
@@ -482,7 +482,7 @@ The I implementation delivers:
 
 The declaration import, authored topology, canonical/history projection,
 selected validation, candidates, and editor projection are active through the
-application capability boundary. Schema version 4 introduced the persisted
+production application boundary. Schema version 4 introduced the persisted
 `maxNonGoalRewards`, final-fixed-entry batch ownership, repeated generated
 preboss targets, and picked-preboss WorldShop completeness contract; schema
 version 5 retains those semantics beside N Hub authorship.

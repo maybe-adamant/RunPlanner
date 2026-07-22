@@ -1,10 +1,8 @@
-import { encodeProjectDocument } from '@run-planner/engine/authored-project';
+import { encodeProjectDocument, parseProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 
-import type { PlannerCapabilities } from '../composition/capabilities';
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
 import { createInitialProject } from '../composition/projectBootstrap';
-import { parseAuthorableProjectDocument } from './projectDocuments';
 import type { ProfileFileAdapter } from '../persistence/profileFile';
 import {
   newProjectCreated,
@@ -31,7 +29,6 @@ export interface ProjectOperations {
 
 interface CreateProjectOperationsOptions {
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
-  readonly capabilities: PlannerCapabilities;
   readonly catalog: Catalog;
   readonly profileFile: ProfileFileAdapter;
   readonly store: PlannerStore;
@@ -109,9 +106,7 @@ export function createProjectOperations(
   return Object.freeze({
     createNew(): ProjectOperationResult {
       try {
-        options.store.dispatch(
-          newProjectCreated(createInitialProject(options.catalog, options.capabilities)),
-        );
+        options.store.dispatch(newProjectCreated(createInitialProject(options.catalog)));
         return result('new', 'success', 'Created a new project.');
       } catch (error) {
         return failure('new', error);
@@ -155,7 +150,7 @@ export function createProjectOperations(
         if (json === null) {
           return result('loadProfile', 'cancelled', 'Load Profile cancelled.');
         }
-        const project = parseAuthorableProjectDocument(json, options.catalog, options.capabilities);
+        const project = parseProjectDocument(json, options.catalog);
         const baselineJson = encodeProjectDocument(project);
         if (selectProfileSession(options.store.getState()).recoveryStatus === 'blocked') {
           if (options.autosaveRecovery === undefined) {

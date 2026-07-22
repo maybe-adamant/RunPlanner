@@ -8,7 +8,6 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createPlannerCapabilities } from '../../../composition/capabilities';
 import { createCandidateProjectionService } from '../../../projections/candidateProjection';
 import {
   createPlannerStore,
@@ -57,14 +56,8 @@ function NEditorHarness({
 }
 
 function renderNEditor(project: ProjectDocument) {
-  const capabilities = createPlannerCapabilities(catalog, {
-    authorableBiomeKeys: ['N'],
-    simulatableBiomeKeys: ['N'],
-    editableBiomeKeys: ['N'],
-  });
   const evaluateProject = (current: ProjectDocument) => simulateProject(catalog, current);
   const store = createPlannerStore({
-    capabilities,
     catalog,
     evaluateProject,
     initialProject: project,

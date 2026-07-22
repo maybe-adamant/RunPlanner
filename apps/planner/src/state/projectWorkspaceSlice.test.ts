@@ -11,7 +11,6 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createApplicationCapabilities } from '../composition/capabilityConfiguration';
 import { createInitialProject } from '../composition/projectBootstrap';
 import {
   authoredProjectCommandDispatched,
@@ -29,13 +28,11 @@ import {
 } from './store';
 
 function createStore() {
-  const capabilities = createApplicationCapabilities(catalog);
   const evaluateProject = vi.fn((project: ProjectDocument) => simulateProject(catalog, project));
   const store = createPlannerStore({
     catalog,
-    capabilities,
     evaluateProject,
-    initialProject: createInitialProject(catalog, capabilities),
+    initialProject: createInitialProject(catalog),
   });
   return { evaluateProject, store };
 }

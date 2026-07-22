@@ -34,7 +34,7 @@ conditional-terminal, and persistent-hub pressure tests.
 Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected linear reward authority, and the authored project/editor use schema
 version 5. All eight biomes close one catalog-wide reference matrix and
-participate in the application capability boundary. The complete N/O/P/Q
+participate in the complete production application boundary. The complete N/O/P/Q
 Surface product loop is active, including Q's staged authorship, simulation,
 candidate projection, editor, profiles, and recovery. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
@@ -63,7 +63,7 @@ through one injected adapter, supports undoable project names and safe filename
 suggestions, and tracks the exact explicit save/load baseline. Clean, Dirty,
 Unsaved, and Recovered are derived from that canonical baseline contract. A
 separately injected browser-local recovery channel now debounces only authored
-replacements, capability-decodes startup recovery, and preserves unreadable
+replacements, catalog-decodes startup recovery, and preserves unreadable
 recovery behind an explicit discard/load blockade. The complete F/G browser
 fixture now closes authoring, simulation, validation, candidate feedback,
 profiles, recovery, semantic navigation, accessible control naming, keyboard

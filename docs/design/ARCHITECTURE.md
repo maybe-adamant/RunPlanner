@@ -320,8 +320,6 @@ decoration from another.
 
 `empty` identifies a project with no configured biome prefix and no invented
 finding. Ordinary incomplete and invalid plans remain first-class editor states.
-`blocked` identifies a configured biome beyond the registered simulator
-boundary; it is a product-capability fact, not invented game invalidity.
 Malformed project documents, impossible catalog construction, and violated
 internal invariants throw at their contact boundary and do not masquerade as
 user feedback.

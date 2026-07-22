@@ -14,7 +14,6 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createPlannerCapabilities } from '../../../composition/capabilities';
 import { createCandidateProjectionService } from '../../../projections/candidateProjection';
 import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
 import {
@@ -62,15 +61,8 @@ function QEditorHarness({
 }
 
 function renderQ(project = createRepresentativeNOPQProject()) {
-  const active = ['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'];
-  const capabilities = createPlannerCapabilities(catalog, {
-    authorableBiomeKeys: active,
-    simulatableBiomeKeys: active,
-    editableBiomeKeys: active,
-  });
   const evaluateProject = (current: ProjectDocument) => simulateProject(catalog, current);
   const store = createPlannerStore({
-    capabilities,
     catalog,
     evaluateProject,
     initialProject: project,

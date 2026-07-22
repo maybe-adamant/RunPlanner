@@ -3,7 +3,6 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { summarizeCatalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectDocument } from '@run-planner/engine/authored-project';
 
-import { createApplicationCapabilities } from './capabilityConfiguration';
 import { createCandidateProjectionService } from '../projections/candidateProjection';
 import {
   createAutosaveCoordinator,
@@ -31,15 +30,9 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   if ((options.autosaveRecovery === undefined) !== (options.autosaveScheduler === undefined)) {
     throw new Error('Autosave recovery adapter and scheduler must be provided together');
   }
-  const capabilities = createApplicationCapabilities(catalog);
-  const editorNavigation = createEditorNavigation(catalog, capabilities);
-  const fallbackProject = createInitialProject(catalog, capabilities);
-  const startup = restoreStartupProject(
-    fallbackProject,
-    catalog,
-    capabilities,
-    options.autosaveRecovery,
-  );
+  const editorNavigation = createEditorNavigation(catalog);
+  const fallbackProject = createInitialProject(catalog);
+  const startup = restoreStartupProject(fallbackProject, catalog, options.autosaveRecovery);
   const evaluationCache = new WeakMap<ProjectDocument, ReturnType<typeof simulateProject>>();
   const evaluateProject = (project: ProjectDocument) => {
     const existing = evaluationCache.get(project);
@@ -53,7 +46,6 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const candidateProjection = createCandidateProjectionService(catalog, evaluateProject);
   const store = createPlannerStore({
     catalog,
-    capabilities,
     evaluateProject,
     initialProfileSession: startup.profileSession,
     initialProject: startup.project,
@@ -62,7 +54,6 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     ...(options.autosaveRecovery === undefined
       ? {}
       : { autosaveRecovery: options.autosaveRecovery }),
-    capabilities,
     catalog,
     profileFile: options.profileFile ?? createUnavailableProfileFileAdapter(),
     store,
@@ -80,7 +71,6 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   return {
     catalog,
     catalogSummary: summarizeCatalog(catalog),
-    capabilities,
     candidateProjection,
     editorNavigation,
     projectOperations,
