@@ -67,9 +67,7 @@ replacements, capability-decodes startup recovery, and preserves unreadable
 recovery behind an explicit discard/load blockade. The complete F/G browser
 fixture now closes authoring, simulation, validation, candidate feedback,
 profiles, recovery, semantic navigation, accessible control naming, keyboard
-navigation, player-facing labels, and measured responsiveness. The acceptance
-matrix and browser-only smoke procedure are recorded in
-[`docs/progress/PHASE_5_PRODUCT_LOOP_CLOSURE.md`](docs/progress/PHASE_5_PRODUCT_LOOP_CLOSURE.md).
+navigation, player-facing labels, and measured responsiveness.
 
 Phase 6 has completed H, I, N, O, P, and Q's full product loops. All six are
 authorable, simulatable, and editable alongside F/G; complete F/G/H/I and
@@ -163,66 +161,60 @@ graph projection, but it will never own topology or node identity.
 15. [`docs/audits/N_SIDE_ROOM_FINDINGS.md`](docs/audits/N_SIDE_ROOM_FINDINGS.md)
     preserves the runtime evidence behind N's side-room availability ranks;
     the live rule remains in the N biome authority.
-16. [`docs/biomes/F_G_ROOM_TEMPLATES.md`](docs/biomes/F_G_ROOM_TEMPLATES.md) defines the
-    app-native leaf contracts shared by F/G room declarations.
-17. [`docs/design/AUTHORED_PROJECT_MODEL.md`](docs/design/AUTHORED_PROJECT_MODEL.md) defines
+16. [`docs/design/AUTHORED_PROJECT_MODEL.md`](docs/design/AUTHORED_PROJECT_MODEL.md) defines
     persisted project state, topology ownership, identities, and edit commands.
-18. [`docs/design/SIMULATION_AND_VALIDATION.md`](docs/design/SIMULATION_AND_VALIDATION.md)
+17. [`docs/design/SIMULATION_AND_VALIDATION.md`](docs/design/SIMULATION_AND_VALIDATION.md)
     defines the pure derived pipeline, history, counters, validation, and
     findings.
-19. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) maps authored and derived
+18. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) maps authored and derived
     state into the external editor without leaking UI structure into the
     domain.
-20. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md) defines the
+19. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md) defines the
     contextual room and reward selection contract, grouped and compound
     pickers, and selected-invalid retention policy.
-21. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
+20. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
     records the intentionally deferred app/game contract and conformance loop.
-22. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md) defines the
+21. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md) defines the
     development order and acceptance gates.
-23. [`docs/progress/PROJECT_REORGANIZATION_PLAN.md`](docs/progress/PROJECT_REORGANIZATION_PLAN.md)
+22. [`docs/progress/PROJECT_REORGANIZATION_PLAN.md`](docs/progress/PROJECT_REORGANIZATION_PLAN.md)
     defines the post-Phase-6 package, source, test, UI, and documentation
     migration slices and their acceptance gates.
-24. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md) tracks the
+23. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md) tracks the
     disposition and implementation status of inherited evidence.
-25. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
+24. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
     records the completed delivery slices without becoming design authority.
-26. [`docs/progress/PHASE_5_PRODUCT_LOOP_CLOSURE.md`](docs/progress/PHASE_5_PRODUCT_LOOP_CLOSURE.md)
-    preserves the Phase 5 browser acceptance matrix and manual smoke procedure.
 
 These documents are one coherent design set. A rule belongs in exactly one
 authority and should be referenced rather than copied elsewhere.
 
 ## Authority Boundaries
 
-| Concern                                                                 | Authority                                       |
-| ----------------------------------------------------------------------- | ----------------------------------------------- |
-| Product layers, dependencies, lifecycle, and stack                      | `docs/design/ARCHITECTURE.md`                   |
-| Declaration schema, provenance, normalization, and supported game facts | `docs/design/CATALOG_MODEL.md`                  |
-| Single-room operation order and history-fragment boundaries             | `docs/design/ROOM_LIFECYCLE_MODEL.md`           |
-| Reward vocabulary, composition, stores, shops, and offer semantics      | `docs/design/REWARD_MODEL.md`                   |
-| Shared picker, door, cap, force, and generated-decision game rules      | `docs/design/GAME_GENERATION_RULES.md`          |
-| F behavior, projection decisions, topology, and feature coverage        | `docs/biomes/F_GAME_RULES.md`                   |
-| G behavior, projection decisions, topology, and feature coverage        | `docs/biomes/G_GAME_RULES.md`                   |
-| P topology, encounter, exit, and simulation rules                       | `docs/biomes/P_GAME_RULES.md`                   |
-| Q scripted topology, rewards, counters, and repeat-run completion       | `docs/biomes/Q_GAME_RULES.md`                   |
-| H cage batches, bridge, counters, rewards, and completion               | `docs/biomes/H_GAME_RULES.md`                   |
-| O ship phases, wheels, outgoing stores, counters, and completion        | `docs/biomes/O_GAME_RULES.md`                   |
-| I Clockwork counters, conditional terminal, rewards, and completion     | `docs/biomes/I_GAME_RULES.md`                   |
-| N fixed entry, persistent hub, side rooms, restores, and completion     | `docs/biomes/N_GAME_RULES.md`                   |
-| F/G room-template leaf and materialization contracts                    | `docs/biomes/F_G_ROOM_TEMPLATES.md`             |
-| N side-room runtime evidence                                            | `docs/audits/N_SIDE_ROOM_FINDINGS.md`           |
-| Authored state, persistence, topology, identity, and commands           | `docs/design/AUTHORED_PROJECT_MODEL.md`         |
-| Materialization, history, validation, feedback, and simulation          | `docs/design/SIMULATION_AND_VALIDATION.md`      |
-| UI projection and interaction policy                                    | `docs/design/EDITOR_MODEL.md`                   |
-| Contextual room/reward selection and compact picker behavior            | `docs/design/CONTEXTUAL_EDITOR_UX.md`           |
-| Future execution artifact and runtime audit                             | `docs/design/GAME_INTEGRATION_BOUNDARY.md`      |
-| Reward game-data evidence                                               | `docs/audits/REWARD_GAME_DATA_AUDIT.md`         |
-| Delivery sequence and acceptance                                        | `docs/progress/IMPLEMENTATION_PLAN.md`          |
-| Post-Phase-6 repository reorganization                                  | `docs/progress/PROJECT_REORGANIZATION_PLAN.md`  |
-| Legacy evidence disposition and port verification status                | `docs/progress/MIGRATION_PROVENANCE.md`         |
-| Completed implementation slices                                         | `docs/progress/IMPLEMENTATION_PROGRESS.md`      |
-| Phase 5 browser acceptance record                                       | `docs/progress/PHASE_5_PRODUCT_LOOP_CLOSURE.md` |
+| Concern                                                                 | Authority                                      |
+| ----------------------------------------------------------------------- | ---------------------------------------------- |
+| Product layers, dependencies, lifecycle, and stack                      | `docs/design/ARCHITECTURE.md`                  |
+| Declaration schema, provenance, normalization, and supported game facts | `docs/design/CATALOG_MODEL.md`                 |
+| Single-room operation order and history-fragment boundaries             | `docs/design/ROOM_LIFECYCLE_MODEL.md`          |
+| Reward vocabulary, composition, stores, shops, and offer semantics      | `docs/design/REWARD_MODEL.md`                  |
+| Shared picker, door, cap, force, and generated-decision game rules      | `docs/design/GAME_GENERATION_RULES.md`         |
+| F behavior, projection decisions, topology, and feature coverage        | `docs/biomes/F_GAME_RULES.md`                  |
+| G behavior, projection decisions, topology, and feature coverage        | `docs/biomes/G_GAME_RULES.md`                  |
+| P topology, encounter, exit, and simulation rules                       | `docs/biomes/P_GAME_RULES.md`                  |
+| Q scripted topology, rewards, counters, and repeat-run completion       | `docs/biomes/Q_GAME_RULES.md`                  |
+| H cage batches, bridge, counters, rewards, and completion               | `docs/biomes/H_GAME_RULES.md`                  |
+| O ship phases, wheels, outgoing stores, counters, and completion        | `docs/biomes/O_GAME_RULES.md`                  |
+| I Clockwork counters, conditional terminal, rewards, and completion     | `docs/biomes/I_GAME_RULES.md`                  |
+| N fixed entry, persistent hub, side rooms, restores, and completion     | `docs/biomes/N_GAME_RULES.md`                  |
+| N side-room runtime evidence                                            | `docs/audits/N_SIDE_ROOM_FINDINGS.md`          |
+| Authored state, persistence, topology, identity, and commands           | `docs/design/AUTHORED_PROJECT_MODEL.md`        |
+| Materialization, history, validation, feedback, and simulation          | `docs/design/SIMULATION_AND_VALIDATION.md`     |
+| UI projection and interaction policy                                    | `docs/design/EDITOR_MODEL.md`                  |
+| Contextual room/reward selection and compact picker behavior            | `docs/design/CONTEXTUAL_EDITOR_UX.md`          |
+| Future execution artifact and runtime audit                             | `docs/design/GAME_INTEGRATION_BOUNDARY.md`     |
+| Reward game-data evidence                                               | `docs/audits/REWARD_GAME_DATA_AUDIT.md`        |
+| Delivery sequence and acceptance                                        | `docs/progress/IMPLEMENTATION_PLAN.md`         |
+| Post-Phase-6 repository reorganization                                  | `docs/progress/PROJECT_REORGANIZATION_PLAN.md` |
+| Legacy evidence disposition and port verification status                | `docs/progress/MIGRATION_PROVENANCE.md`        |
+| Completed implementation slices                                         | `docs/progress/IMPLEMENTATION_PROGRESS.md`     |
 
 ## Architectural Spine
 
