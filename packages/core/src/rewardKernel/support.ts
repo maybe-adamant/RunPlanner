@@ -65,7 +65,9 @@ function ordinaryPeerSupport(
   facts: RewardKernelFacts,
   peers: RewardPeerContext,
 ): ReadonlySet<string> {
-  const base = ordinaryBaseSupport(catalog, rewardType, facts);
+  const ordinarySources = sourceDomainValues(catalog, rewardType);
+  const acquired = facts.requirements.records.lootTypeHistory;
+  const acquiredSources = new Set(ordinarySources.filter((source) => (acquired[source] ?? 0) > 0));
   const priorSources = new Set<string>();
   for (const offer of peers.priorOffers) {
     if (
@@ -75,8 +77,11 @@ function ordinaryPeerSupport(
       priorSources.add(offer.payload.source);
     }
   }
-  const filtered = new Set([...base].filter((source) => !priorSources.has(source)));
-  return filtered.size > 0 ? filtered : base;
+  const capSources = new Set([...acquiredSources, ...priorSources]);
+  const primary =
+    capSources.size >= ORDINARY_SOURCE_CAP ? acquiredSources : new Set(ordinarySources);
+  const filtered = new Set([...primary].filter((source) => !priorSources.has(source)));
+  return filtered.size > 0 ? filtered : ordinaryBaseSupport(catalog, rewardType, facts);
 }
 
 function devotionSupport(

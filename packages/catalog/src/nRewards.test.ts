@@ -175,7 +175,7 @@ function representativeProject(shopHammerIsReplaced = true): ProjectDocument {
     },
     combat23: {
       rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     },
     miniBoss01: {
       rewardType: 'Boon',
@@ -206,7 +206,10 @@ function tenTargetProject(): ProjectDocument {
     rewardType: 'Boon',
     payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
   });
-  return project;
+  return replaceIncoming(project, 'miniBoss01', {
+    rewardType: 'Boon',
+    payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+  });
 }
 
 function complete(project: ProjectDocument): CompleteHubCompletenessResult {
@@ -266,7 +269,7 @@ describe('N Hub reward simulation', () => {
     ).toBe(2);
   });
 
-  it('uses the same full-board contract for the ten-open-target outcome', () => {
+  it('allows the fifth Hub Boon to repeat a peer source in the ten-target outcome', () => {
     const { snapshot, rewards } = fixture(tenTargetProject());
     const boardOrigins = new Set(
       snapshot.hubBoard.targets.map((target) =>
@@ -276,6 +279,16 @@ describe('N Hub reward simulation', () => {
 
     expect(snapshot.hubBoard.targets).toHaveLength(10);
     expect(rewards.validity).toBe('valid');
+    expect(
+      snapshot.hubBoard.targets
+        .map((target) => target.room.incomingReward?.offer)
+        .filter(
+          (offer) =>
+            offer?.rewardType === 'Boon' &&
+            offer.payload?.kind === 'BoonSource' &&
+            offer.payload.source === 'AphroditeUpgrade',
+        ),
+    ).toHaveLength(2);
     expect(
       rewards.branches[0]?.events.filter(
         (event) =>

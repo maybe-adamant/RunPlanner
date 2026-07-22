@@ -298,17 +298,26 @@ names.
 
 #### Ordinary generated Boon
 
-- Before the four-source cap, all eligible ordinary sources are possible.
-- At the cap, only sources already present in loot history are possible.
-- Earlier same-batch Boon sources are excluded, including unpicked offers.
+- The cap check counts the union of sources already acquired in loot history
+  and earlier same-batch Boon sources, including unpicked offers.
+- Before that union reaches four sources, all eligible ordinary sources are the
+  primary pool. At the cap, the primary pool narrows to acquired sources.
+- Earlier same-batch Boon sources are then excluded from the primary pool.
 - If those exclusions exhaust support, game setup retries with weaker
-  exclusions and finally no exclusions. Same-batch source uniqueness is
-  therefore strict only while another eligible source exists.
+  exclusions and finally no exclusions. The unrestricted retry recomputes the
+  cap without peer sources, so it may restore the full ordinary domain when
+  fewer than four sources have actually been acquired. Same-batch source
+  uniqueness is therefore strict only while the primary pool remains nonempty.
 - Keepsake-forced sources are excluded from the neutral baseline.
 
 This behavior is `Exact` support logic. The planner does not reproduce source
 probabilities. The normalized policy is `ordinaryBoonPeer`, resolved at offer
 generation.
+
+Ephyra makes the fallback observable in an ordinary door batch. `HubRewards`
+contains five duplicate-capable Boon entries, while the ordinary source cap is
+four. A five-Boon Hub board may therefore repeat a source such as Zeus on its
+fifth Boon even though all five offers are materialized simultaneously.
 
 #### Shop RandomLoot and Blind Box
 

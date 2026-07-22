@@ -317,6 +317,14 @@ All 23 combat slots force the counted `HubRewards` store. It contains:
 - Hex, subject to its current-run requirements;
 - five duplicate-capable Boon entries.
 
+Those five entries make Ephyra the ordinary door-batch case where simultaneous
+Boon offers may repeat a god. Earlier Hub Boon sources participate in both the
+peer exclusion and the ordinary four-source cap. On a five-Boon board, the
+fifth source can exhaust the cap-narrowed primary pool and trigger the game's
+unrestricted fallback, allowing a second Zeus or another repeated source. This
+is source-level behavior in addition to the entries' reward-type
+`AllowDuplicates` flag.
+
 `N_Combat12` and `N_Combat17` additionally exclude Hammer and Hermes from this
 effective store. Their declared Devotion exclusion is inert because Devotion
 is not in `HubRewards`; the declared `HephaestusUpgrade` value is a loot source,

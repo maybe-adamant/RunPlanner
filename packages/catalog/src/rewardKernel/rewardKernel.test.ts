@@ -869,6 +869,23 @@ describe('source support', () => {
         },
       ),
     ).not.toContainEqual({ kind: 'BoonSource', source: 'ApolloUpgrade' });
+    const peerCapFallback = supportedPayloads(rewardKernelCatalog, boonType, facts(), {
+      priorOffers: ['AphroditeUpgrade', 'ApolloUpgrade', 'AresUpgrade', 'ZeusUpgrade'].map(
+        (source) => ({
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource' as const, source },
+        }),
+      ),
+    });
+    expect(peerCapFallback).toHaveLength(9);
+    expect(peerCapFallback).toContainEqual({
+      kind: 'BoonSource',
+      source: 'AphroditeUpgrade',
+    });
+    expect(peerCapFallback).toContainEqual({
+      kind: 'BoonSource',
+      source: 'HestiaUpgrade',
+    });
     expect(
       supportedPayloads(
         rewardKernelCatalog,

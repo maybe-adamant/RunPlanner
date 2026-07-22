@@ -169,7 +169,7 @@ export function createRepresentativeNProject(): ProjectDocument {
     },
     combat23: {
       rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     },
     miniBoss01: {
       rewardType: 'Boon',
