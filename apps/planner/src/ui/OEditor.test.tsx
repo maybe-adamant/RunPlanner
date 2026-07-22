@@ -77,6 +77,37 @@ function oProject(withTerminal = false): ProjectDocument {
   });
 }
 
+function oSixBatchProject(): ProjectDocument {
+  let project = oProject();
+  let parentOccurrenceId = combatId;
+  for (const [index, gameName] of [
+    'O_Combat05',
+    'O_Combat06',
+    'O_Combat07',
+    'O_Combat08',
+    'O_Combat09',
+  ].entries()) {
+    const occurrenceId = createOccurrenceId(`editor-o-combat-${index + 2}`);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, parentOccurrenceId),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, parentOccurrenceId, 1),
+      occurrenceId,
+      gameName,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(biome, parentOccurrenceId),
+      exitIndex: 1,
+    });
+    parentOccurrenceId = occurrenceId;
+  }
+  return project;
+}
+
 function OEditorHarness({
   candidateProjection,
 }: {
@@ -156,7 +187,26 @@ describe('O editor projection', () => {
       encounterCount: 3,
       wheels: { wheel1: { offerCount: 2, pickedOfferIndex: 2 } },
     });
-    expect(screen.getByRole('button', { name: 'Go to Preboss' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add Next Decision' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+    expect(screen.getByRole('button', { name: 'Go to Preboss' })).toHaveProperty('disabled', true);
+  });
+
+  it('uses the six-batch fixed-count frontier at the direct terminal', () => {
+    renderO(oSixBatchProject());
+
+    expect(screen.getByRole('button', { name: 'Add Next Decision' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(screen.getByRole('button', { name: 'Go to Preboss' })).toHaveProperty('disabled', false);
+    expect(
+      screen
+        .getAllByRole('button', { name: 'Replace With Preboss' })
+        .every((button) => (button as HTMLButtonElement).disabled),
+    ).toBe(true);
   });
 
   it('projects the direct preboss transition with its entered WorldShop', () => {
