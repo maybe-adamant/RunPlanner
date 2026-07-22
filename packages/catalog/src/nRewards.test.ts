@@ -553,7 +553,7 @@ describe('selected N validation', () => {
     );
   });
 
-  it('keeps incomplete and project-dispatch boundaries outside selected N products', () => {
+  it('keeps incomplete state selected and dispatches complete N through project simulation', () => {
     const incomplete = createProjectDocument(catalog, {
       projectId: 'incomplete-n-validation',
       name: 'Incomplete N Validation',
@@ -569,9 +569,10 @@ describe('selected N validation', () => {
       (route) => route.routeKey === 'Surface',
     );
     expect(surface).toMatchObject({
-      status: 'blocked',
-      biomes: [],
-      horizon: { kind: 'simulatorBoundary', biomeKey: 'N', blockedBiomeKeys: ['N'] },
+      status: 'valid',
+      biomes: [{ biomeKey: 'N', completion: 'complete', validity: 'valid' }],
+      validatedPrefix: ['N'],
+      horizon: { kind: 'routeEnd' },
     });
   });
 
@@ -589,8 +590,8 @@ describe('selected N validation', () => {
   });
 });
 
-describe('dormant N candidate evaluation', () => {
-  it('evaluates Hub membership, visits, side state, and every reward surface without activation', () => {
+describe('N candidate evaluation', () => {
+  it('evaluates Hub membership, visits, side state, and every reward surface through activation', () => {
     const project = representativeProject();
     const before = encodeProjectDocument(project);
     const opening = plan(project).topology?.occurrences.find(
@@ -793,10 +794,27 @@ describe('dormant N candidate evaluation', () => {
       }),
     ).toMatchObject({ context: 'unavailable', reason: 'biomeIncomplete' });
     expect(simulateProject(catalog, representativeProject()).routes[1]).toMatchObject({
-      status: 'blocked',
-      biomes: [],
-      horizon: { kind: 'simulatorBoundary', biomeKey: 'N' },
+      status: 'valid',
+      biomes: [{ biomeKey: 'N', completion: 'complete', validity: 'valid' }],
+      validatedPrefix: ['N'],
+      horizon: { kind: 'routeEnd' },
     });
+  });
+
+  it('does not evaluate N candidates outside the caller simulation scope', () => {
+    expect(
+      evaluateProjectCandidate(
+        catalog,
+        representativeProject(),
+        {
+          kind: 'hubSlot',
+          slot: createHubSlotAddress(biome, 'combat01'),
+          open: true,
+          occurrenceId: occurrenceId('combat01'),
+        },
+        { simulatableBiomeKeys: [] },
+      ),
+    ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
   });
 
   it('rejects malformed Hub candidate domains at their semantic contact', () => {

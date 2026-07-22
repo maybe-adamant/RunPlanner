@@ -3,6 +3,7 @@ import type { SemanticAddress } from '@run-planner/core';
 
 export type PlannerSection = 'underworld' | 'surface' | 'settings';
 export type UnderworldPanel = 'route' | 'F' | 'G' | 'H' | 'I';
+export type SurfacePanel = 'route' | 'N';
 
 export interface FindingSelection {
   readonly key: string;
@@ -12,6 +13,7 @@ export interface FindingSelection {
 interface EditorSessionState {
   readonly activeSection: PlannerSection;
   readonly activeUnderworldPanel: UnderworldPanel;
+  readonly activeSurfacePanel: SurfacePanel;
   readonly selectedFinding: FindingSelection | null;
   readonly findingNavigationRevision: number;
 }
@@ -19,6 +21,7 @@ interface EditorSessionState {
 const initialState: EditorSessionState = {
   activeSection: 'underworld',
   activeUnderworldPanel: 'route',
+  activeSurfacePanel: 'route',
   selectedFinding: null,
   findingNavigationRevision: 0,
 };
@@ -39,6 +42,9 @@ const editorSessionSlice = createSlice({
     },
     underworldPanelSelected(state, action: PayloadAction<UnderworldPanel>) {
       state.activeUnderworldPanel = action.payload;
+    },
+    surfacePanelSelected(state, action: PayloadAction<SurfacePanel>) {
+      state.activeSurfacePanel = action.payload;
     },
     findingSelected(state, action: PayloadAction<FindingSelection>) {
       state.selectedFinding = action.payload;
@@ -62,6 +68,12 @@ const editorSessionSlice = createSlice({
       }
       if (route === 'Surface') {
         state.activeSection = 'surface';
+        state.activeSurfacePanel =
+          action.payload.origin.kind !== 'project' &&
+          action.payload.origin.kind !== 'route' &&
+          action.payload.origin.biomeKey === 'N'
+            ? 'N'
+            : 'route';
         return;
       }
       throw new Error(`Finding references unknown route ${route}`);
@@ -69,6 +81,6 @@ const editorSessionSlice = createSlice({
   },
 });
 
-export const { findingSelected, sectionSelected, underworldPanelSelected } =
+export const { findingSelected, sectionSelected, surfacePanelSelected, underworldPanelSelected } =
   editorSessionSlice.actions;
 export const editorSessionReducer = editorSessionSlice.reducer;

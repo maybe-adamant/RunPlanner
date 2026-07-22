@@ -579,7 +579,7 @@ function appendGoldenH(project: ProjectDocument): ProjectDocument {
 
 function evaluateH(project: ProjectDocument) {
   const g = simulateProject(catalog, project).routes[0]?.biomes[1];
-  if (g?.completion !== 'complete' || g.validity !== 'valid') {
+  if (g?.kind !== 'LinearBiome' || g.completion !== 'complete' || g.validity !== 'valid') {
     throw new Error('golden G validation seed is unavailable');
   }
   const completeness = evaluateLinearCompleteness(catalog, hBiome, hPlan(project));
@@ -850,6 +850,7 @@ describe('project simulation composition', () => {
       blockedBiomeKeys: [],
     });
     expect(evaluation).toEqual({
+      kind: 'LinearBiome',
       biomeKey: 'F',
       origin: biome,
       completion: 'incomplete',
@@ -889,7 +890,7 @@ describe('project simulation composition', () => {
       horizon: { kind: 'routeEnd' },
     });
     expect(evaluation.completion).toBe('complete');
-    if (evaluation.completion !== 'complete') {
+    if (evaluation.kind !== 'LinearBiome' || evaluation.completion !== 'complete') {
       throw new Error('golden F unexpectedly incomplete');
     }
     expect(evaluation.validity).toBe('valid');
@@ -936,7 +937,7 @@ describe('project simulation composition', () => {
       blockedBiomeKeys: [],
     });
     expect(evaluation.completion).toBe('complete');
-    if (evaluation.completion !== 'complete') {
+    if (evaluation.kind !== 'LinearBiome' || evaluation.completion !== 'complete') {
       throw new Error('invalid F unexpectedly incomplete');
     }
     expect(evaluation.validity).toBe('invalid');
@@ -1013,7 +1014,12 @@ describe('project simulation composition', () => {
     expect(result.status).toBe('valid');
     expect(underworld.validatedPrefix).toEqual(['F', 'G']);
     expect(g.completion).toBe('complete');
-    if (f.completion !== 'complete' || g.completion !== 'complete') {
+    if (
+      f.kind !== 'LinearBiome' ||
+      f.completion !== 'complete' ||
+      g.kind !== 'LinearBiome' ||
+      g.completion !== 'complete'
+    ) {
       throw new Error('golden F/G route unexpectedly incomplete');
     }
     expect(g.validity).toBe('valid');
@@ -1095,7 +1101,7 @@ describe('project simulation composition', () => {
   it('composes H Fields history and rewards from carried G state', () => {
     const fgResult = simulateProject(catalog, completeGoldenFGProject());
     const g = fgResult.routes[0]!.biomes[1];
-    if (g?.completion !== 'complete') {
+    if (g?.kind !== 'LinearBiome' || g.completion !== 'complete') {
       throw new Error('golden G history seed is unavailable');
     }
     const project = appendGoldenH(completeGoldenFGProject());
@@ -1619,7 +1625,7 @@ describe('project simulation composition', () => {
     expect(evaluation?.findings).toEqual([]);
     expect(evaluation).toMatchObject({ biomeKey: 'I', completion: 'complete', validity: 'valid' });
     expect(route.validatedPrefix).toEqual(['F', 'G', 'H', 'I']);
-    if (evaluation?.completion !== 'complete') {
+    if (evaluation?.kind !== 'LinearBiome' || evaluation.completion !== 'complete') {
       throw new Error('golden I evaluation is incomplete');
     }
     expect(evaluation.history.biomeCompletion.ledgers.counters).toMatchObject({
@@ -1783,7 +1789,7 @@ describe('project simulation composition', () => {
     const g = result.routes[0]!.biomes[1]!;
 
     expect(g.completion).toBe('complete');
-    if (g.completion !== 'complete') {
+    if (g.kind !== 'LinearBiome' || g.completion !== 'complete') {
       throw new Error('Crawler G route unexpectedly incomplete');
     }
     expect(g.validity).toBe('valid');
@@ -1828,7 +1834,7 @@ describe('project simulation composition', () => {
 
     expect(result.status).toBe('valid');
     expect(g.completion).toBe('complete');
-    if (g.completion !== 'complete') {
+    if (g.kind !== 'LinearBiome' || g.completion !== 'complete') {
       throw new Error('three-exit G terminal unexpectedly incomplete');
     }
     expect(
@@ -1861,7 +1867,7 @@ describe('project simulation composition', () => {
       blockedBiomeKeys: [],
     });
     expect(g.completion).toBe('complete');
-    if (g.completion !== 'complete') {
+    if (g.kind !== 'LinearBiome' || g.completion !== 'complete') {
       throw new Error('invalid G unexpectedly incomplete');
     }
     expect(g.validity).toBe('invalid');
@@ -1892,7 +1898,7 @@ describe('project simulation composition', () => {
     const g = result.routes[0]!.biomes[1]!;
 
     expect(g.completion).toBe('complete');
-    if (g.completion !== 'complete') {
+    if (g.kind !== 'LinearBiome' || g.completion !== 'complete') {
       throw new Error('reward-invalid G unexpectedly incomplete');
     }
     expect(g.rewards.validity).toBe('invalid');
@@ -1909,7 +1915,7 @@ describe('project simulation composition', () => {
     const evaluation = result.routes[0]!.biomes[0]!;
 
     expect(evaluation.completion).toBe('complete');
-    if (evaluation.completion !== 'complete') {
+    if (evaluation.kind !== 'LinearBiome' || evaluation.completion !== 'complete') {
       throw new Error('shop trace unexpectedly incomplete');
     }
     const branch = evaluation.rewards.branches[0]!;

@@ -5,7 +5,7 @@
 This document is the concrete game-rule authority for Ephyra (`N`). It defines
 the fixed authored entry rooms, persistent physical hub, ordered pylon visits,
 room-local side rooms, repeated restores, and hub-wide reward effects now
-represented by the N declarations and dormant authored Hub plan without
+represented by the N declarations and active authored Hub plan without
 importing the previous Lua control shape.
 
 Shared possibility, reward, occurrence, counted-bag, and fixed-completion
@@ -18,11 +18,11 @@ ordinary generated batches or synthetic authored cycles.
 
 N declarations, the schema-version-5 authored Hub plan, semantic commands,
 structural completeness, canonical Hub materialization, exact room lifecycle,
-event-folded route history, reward simulation, selected validation, dormant
-candidate evaluation, and a dormant Hub editor projection are ported.
-Production editing and activation remain the final slice. N therefore
-intentionally remains outside application capabilities until its complete
-HubBiome product loop is activated.
+event-folded route history, reward simulation, selected validation, candidate
+evaluation, and the Hub editor projection are ported. N is authorable,
+simulatable, and editable as the first and currently only active Surface biome;
+profiles, recovery, findings navigation, and candidate projection consume the
+same normal project evaluation.
 
 ## Evidence Status
 
@@ -605,7 +605,7 @@ gameplay, persistence, address, or canonical-snapshot change.
 
 ## Declaration and Authored-Model Contract
 
-The N declaration and dormant authored-model slices include:
+The N declaration and authored-model slices include:
 
 - `HubBiome` fixed entry, hub, terminal, and completion descriptors;
 - fixed authored room-slot descriptors for layout-owned rooms with leaf state;

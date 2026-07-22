@@ -482,7 +482,7 @@ selected validation, candidates, and editor projection are active through the
 application capability boundary. Schema version 4 introduced the persisted
 `maxNonGoalRewards`, final-fixed-entry batch ownership, repeated generated
 preboss targets, and picked-preboss WorldShop completeness contract; schema
-version 5 retains those semantics beside dormant N Hub authorship.
+version 5 retains those semantics beside N Hub authorship.
 Materialization and the editor share one offer-time Goal/NonGoal projection;
 history advances only entered producers. Production navigation, profiles,
 recovery, and the complete F/G/H/I product loop are covered by the final

@@ -15,13 +15,14 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. Phase 2.8 dormant declaration closure and Phase 3's
-complete linear simulation pipeline are complete. F, G, H, and I now share one public
+complete linear simulation pipeline are complete. F, G, H, I, and N now share one public
 completeness, materialization, lifecycle, event-folded history,
 room-generation, reward-kernel, project-simulation, selected-plan validation,
-and candidate result. Phase 5 closed F/G through the editor, profile, and
-recovery product loop; Phase 6 extended the same boundary through H and I. N
-now has a dormant selected product through validation but remains outside
-project dispatch and application capabilities; P/Q/O remain declaration-only.
+and candidate result across layout-specific canonical snapshots. Phase 5
+closed F/G through the editor, profile, and recovery product loop; Phase 6
+extended the same boundary through H, I, and N. N participates in project
+dispatch, application capabilities, profiles, recovery, and the Surface
+editor; P/Q/O remain declaration-only.
 The Phase 2.7 authority switch and schema-version-3 identity cleanup leave
 those simulation contracts unchanged.
 
@@ -619,7 +620,7 @@ The hub lookup is produced before the first selected visit and remains based on
 the full open board. A restore event appends history without creating another
 occurrence, offer, acquisition, or encounter-start event.
 
-The dormant N lifecycle/history and reward slices now implement this trace.
+The active N lifecycle/history and reward path implements this trace.
 Exact fixed-entry, Hub-board, main, side, restore, terminal, and completion
 events fold through the shared history ledgers, including required Soul Pylons
 and generated-side-room counters. Reward replay consumes every open target in
@@ -629,8 +630,8 @@ validates the fixed Preboss shop. These facts remain replaceable simulation
 output; none are inferred from a final room aggregate or persisted beside the
 authored Hub plan.
 
-Dormant selected Hub validation composes those products without registering N
-in route simulation. Its authored-possibility ledgers are deliberately narrow:
+Selected Hub validation composes those products through normal N route
+simulation. Its authored-possibility ledgers are deliberately narrow:
 
 - each declared open-slot constraint records its constrained and selected-open
   slot keys, maximum count, and selected support;
@@ -955,27 +956,27 @@ Open proposals carry an occurrence ID because opening a physical slot creates
 one authored Room Occurrence; the candidate result never invents or persists a
 second identity.
 
-Active F/G/H/I candidate preparation consumes the normal progressive project
-evaluation; there is no candidate-only biome simulator. A candidate is
-assessable when the active biome evaluation covers its exact pre-decision
-point, even when unrelated downstream authorship and the terminal remain
-incomplete. Room candidates reuse the biome's addressed generation views. H
-Min/Max candidates reuse the addressed pre-outcome support ledger because the
-proposed value cannot change its own prior context. Cage and terminal
-alternatives apply one immutable semantic replacement and replay H through the
-common linear reward authority with the already-evaluated G seed.
+Active F/G/H/I/N candidate preparation consumes the normal project evaluation;
+there is no production candidate-only biome simulator. Today a candidate is
+assessable only after the selected biome is complete enough to publish its
+canonical evaluation. The contextual-selection insertion will broaden that
+same evaluation authority to covered pre-decision prefixes without adding a
+second simulation path. Room candidates reuse the biome's addressed generation
+views. H Min/Max candidates reuse the addressed pre-outcome support ledger
+because the proposed value cannot change its own prior context. Cage and
+terminal alternatives apply one immutable semantic replacement and replay H
+through the common linear reward authority with the already-evaluated G seed.
 
-Dormant N candidate preparation is intentionally narrower than activation. If
-normal project simulation stops at the first-biome N boundary, one prepared
-candidate evaluator lazily composes and caches the complete selected N product
-through the dormant Hub evaluator. Slot membership reuses open-count and
+N candidate preparation locates the selected Hub product in normal Surface
+route evaluation. Slot membership reuses open-count and
 declaration-owned constraint validation; visits replay the six-visit product;
 side generation replays global ranked-prefix pressure; entered order replays
 the exact acquisition trace. Reward and shop proposals use the same immutable
 replacement/replay path as linear biomes. Incomplete N authorship returns typed
 `biomeIncomplete` context, while selected invalid values remain evaluated and
-retain exact findings. N is still absent from route dispatch and application
-capabilities.
+retain exact findings. A simulation scope that excludes N returns
+`simulatorUnavailable`; candidate evaluation never bypasses the caller's
+project-simulation boundary.
 
 If a prior biome is not complete and valid, candidates in every later biome
 report unavailable upstream context. If the active biome has not yet covered a
@@ -1070,11 +1071,10 @@ interface ProjectEvaluation {
 Each route simulation records:
 
 - configured biome identity and the currently registered simulation prefix;
-- complete F/G/H/I evaluations with canonical snapshots, lifecycle events,
+- complete F/G/H/I/N evaluations with layout-typed canonical snapshots, lifecycle events,
   ledgers, room-generation proof, reward witnesses, and findings;
-- one progressively evaluated active F/G/H/I biome with its exact authoring
-  frontier, coverage point, prefix operations, folded state, addressed
-  generation/reward views, and findings;
+- addressed completeness findings for an incomplete active biome; progressive
+  prefix materialization remains the next contextual-selection insertion;
 - no canonical snapshot, final biome history, completion event, or downstream
   seed on an incomplete active biome;
 - validated-prefix identity and an exact route-end, simulator-boundary,
@@ -1082,12 +1082,14 @@ Each route simulation records:
 - semantic findings in stable route and phase order;
 - whether the route is eligible for future execution-plan compilation.
 
-The core registry contains complete F, G, H, and I simulators. Project simulation may
-also receive an application-owned simulation scope; reaching a registered
+The core registry contains complete F, G, H, I, and N simulators, with function
+dispatch selected by normalized layout kind after biome implementation scope is
+confirmed. Project simulation may also receive an application-owned simulation scope; reaching a registered
 biome outside that scope records a `simulatorBoundary` horizon without
 dispatching the biome or inventing local findings. The current application
-scope includes F, G, H, and I, and both application interaction fixtures and
-direct core conformance fixtures exercise the full F-to-I prefix.
+scope includes F, G, H, I, and N. Application interaction fixtures and direct
+core conformance fixtures exercise the full F-to-I prefix and the one-biome N
+Surface prefix.
 An entirely unconfigured project has explicit `empty` status, no findings, and
 is not eligible for execution-plan compilation.
 Candidate results and UI decoration are deliberately absent from this Phase 3

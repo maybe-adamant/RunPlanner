@@ -1,24 +1,7 @@
 // @vitest-environment jsdom
 
 import { catalog } from '@run-planner/catalog';
-import {
-  applyProjectCommand,
-  createBiomeAddress,
-  createHubSlotAddress,
-  createHubVisitAddress,
-  createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
-  createLocalRewardAddress,
-  createOccurrenceId,
-  createProjectDocument,
-  createShopOfferAddress,
-  evaluateNBiome,
-  simulateProject,
-  type HubBiomePlan,
-  type ProjectDocument,
-} from '@run-planner/core';
-import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
+import { simulateProject, type ProjectDocument } from '@run-planner/core';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
@@ -26,206 +9,62 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createPlannerCapabilities } from '../application/capabilities';
 import { createCandidateProjectionService } from '../application/candidateProjection';
-import { createPlannerStore, selectPresentProject, useAppSelector } from '../application/store';
+import {
+  createPlannerStore,
+  selectPresentProject,
+  selectProjectEvaluation,
+  useAppSelector,
+} from '../application/store';
+import {
+  createEmptyNProject as emptyProject,
+  createRepresentativeNProject as representativeProject,
+  nBiome as biome,
+  nFixedOccurrenceIds as fixedOccurrenceIds,
+  nOccurrenceId as occurrenceId,
+  nVisitSlotKeys as visitSlotKeys,
+  requireNPlan as nPlan,
+} from '../testing/nProject';
 import { HubBiomeEditor } from './HubBiomeEditor';
 
-const biome = createBiomeAddress('Surface', 'N');
-const fixedOccurrenceIds = {
-  opening: createOccurrenceId('editor-n-opening'),
-  preHub: createOccurrenceId('editor-n-prehub'),
-  preboss: createOccurrenceId('editor-n-preboss'),
-};
-const openSlotKeys = [
-  'combat11',
-  'combat10',
-  'combat09',
-  'combat05',
-  'combat03',
-  'combat02',
-  'combat01',
-  'miniBoss01',
-  'combat23',
-] as const;
-const visitSlotKeys = [
-  'combat05',
-  'miniBoss01',
-  'combat02',
-  'combat11',
-  'combat23',
-  'combat09',
-] as const;
-const dormantScope = Object.freeze({ simulatableBiomeKeys: Object.freeze([]) });
+const activeScope = Object.freeze({ simulatableBiomeKeys: Object.freeze(['N']) });
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
 
-function occurrenceId(slotKey: string) {
-  return createOccurrenceId(`editor-n-${slotKey}`);
-}
-
-function nPlan(project: ProjectDocument): HubBiomePlan {
-  const plan = project.routes
-    .find((route) => route.routeKey === biome.routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
-  if (plan?.kind !== 'HubBiome') {
-    throw new Error('dormant N editor fixture has no Hub plan');
-  }
-  return plan;
-}
-
-function replaceIncoming(
-  project: ProjectDocument,
-  slotKey: string,
-  value: ResolvedRewardOffer,
-): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, occurrenceId(slotKey)),
-    value,
-  });
-}
-
-function replaceLocal(
-  project: ProjectDocument,
-  parentSlotKey: string,
-  sideSlotKey: string,
-  rewardType: string,
-): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLocalReward',
-    reward: createLocalRewardAddress(biome, occurrenceId(parentSlotKey), 'sideRooms', sideSlotKey),
-    value: { rewardType },
-  });
-}
-
-function configureSideRooms(project: ProjectDocument): ProjectDocument {
-  let configured = project;
-  for (const [parentSlotKey, sideSlotKeys] of Object.entries({
-    combat05: ['sideDoor1', 'sideDoor2', 'sideDoor3'],
-    combat02: ['sideDoor1', 'sideDoor2'],
-    combat11: ['sideDoor1'],
-  })) {
-    for (const sideSlotKey of sideSlotKeys) {
-      configured = applyProjectCommand(configured, catalog, {
-        kind: 'ReplaceSideRoomGeneration',
-        sideRoom: createLocalChildAddress(
-          biome,
-          occurrenceId(parentSlotKey),
-          'sideRooms',
-          sideSlotKey,
-        ),
-        generation: 'generated',
-      });
-    }
-  }
-  for (const [parentSlotKey, enteredSlotKeys] of [
-    ['combat05', ['sideDoor2', 'sideDoor1']],
-    ['combat02', ['sideDoor1']],
-    ['combat11', ['sideDoor1']],
-  ] as const) {
-    configured = applyProjectCommand(configured, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(biome, occurrenceId(parentSlotKey), 'sideRooms'),
-      enteredSlotKeys,
-    });
-  }
-  configured = replaceLocal(configured, 'combat05', 'sideDoor1', 'MaxManaDropSmall');
-  configured = replaceLocal(configured, 'combat05', 'sideDoor2', 'MaxHealthDropSmall');
-  configured = replaceLocal(configured, 'combat05', 'sideDoor3', 'EmptyMaxHealthSmallDrop');
-  configured = replaceLocal(configured, 'combat02', 'sideDoor1', 'RoomMoneyTinyDrop');
-  configured = replaceLocal(configured, 'combat02', 'sideDoor2', 'AirBoost');
-  return replaceLocal(configured, 'combat11', 'sideDoor1', 'EarthBoost');
-}
-
-function emptyProject(): ProjectDocument {
-  return createProjectDocument(catalog, {
-    projectId: 'dormant-n-editor',
-    name: 'Dormant N Editor',
-    configuredBiomeCounts: { Surface: 1 },
-  });
-}
-
-function representativeProject(): ProjectDocument {
-  let project = applyProjectCommand(emptyProject(), catalog, {
-    kind: 'CreateHubTopology',
-    biome,
-    fixedOccurrenceIds,
-  });
-  for (const hubSlotKey of openSlotKeys) {
-    project = applyProjectCommand(project, catalog, {
-      kind: 'OpenHubSlot',
-      slot: createHubSlotAddress(biome, hubSlotKey),
-      occurrenceId: occurrenceId(hubSlotKey),
-    });
-  }
-  for (const [index, hubSlotKey] of visitSlotKeys.entries()) {
-    project = applyProjectCommand(project, catalog, {
-      kind: 'AppendHubVisit',
-      visit: createHubVisitAddress(biome, index + 1),
-      hubSlotKey,
-    });
-  }
-  for (const [slotKey, offer] of Object.entries({
-    combat01: { rewardType: 'MaxHealthDropBig' },
-    combat02: { rewardType: 'MaxManaDropBig' },
-    combat03: { rewardType: 'WeaponUpgrade' },
-    combat05: { rewardType: 'HermesUpgrade' },
-    combat09: { rewardType: 'SpellDrop' },
-    combat10: {
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
-    },
-    combat11: {
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'AresUpgrade' },
-    },
-    combat23: {
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
-    },
-    miniBoss01: {
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'HephaestusUpgrade' },
-    },
-  } satisfies Readonly<Record<string, ResolvedRewardOffer>>)) {
-    project = replaceIncoming(project, slotKey, offer);
-  }
-  project = configureSideRooms(project);
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceShopOffer',
-    offer: createShopOfferAddress(biome, fixedOccurrenceIds.preboss, 'MajorNonBoon'),
-    value: { rewardType: 'MaxHealthDrop' },
-  });
-}
-
-function DormantNEditorHarness({
+function NEditorHarness({
   candidateProjection,
 }: {
   readonly candidateProjection: ReturnType<typeof createCandidateProjectionService>;
 }) {
   const project = useAppSelector(selectPresentProject);
+  const evaluation = useAppSelector(selectProjectEvaluation)
+    .routes.find((route) => route.routeKey === biome.routeKey)
+    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
   const plan = nPlan(project);
+  if (evaluation !== undefined && evaluation.kind !== 'HubBiome') {
+    throw new Error('N editor fixture received a non-Hub evaluation');
+  }
   return (
     <HubBiomeEditor
       candidateProjection={candidateProjection}
       catalog={catalog}
-      evaluation={evaluateNBiome(catalog, biome.routeKey, plan)}
+      evaluation={evaluation}
       plan={plan}
       routeKey={biome.routeKey}
     />
   );
 }
 
-function renderDormantN(project: ProjectDocument) {
+function renderNEditor(project: ProjectDocument) {
   const capabilities = createPlannerCapabilities(catalog, {
     authorableBiomeKeys: ['N'],
-    simulatableBiomeKeys: [],
+    simulatableBiomeKeys: ['N'],
     editableBiomeKeys: ['N'],
   });
   const evaluateProject = (current: ProjectDocument) =>
-    simulateProject(catalog, current, dormantScope);
+    simulateProject(catalog, current, activeScope);
   const store = createPlannerStore({
     capabilities,
     catalog,
@@ -236,15 +75,15 @@ function renderDormantN(project: ProjectDocument) {
   const user = userEvent.setup();
   const view = render(
     <Provider store={store}>
-      <DormantNEditorHarness candidateProjection={candidateProjection} />
+      <NEditorHarness candidateProjection={candidateProjection} />
     </Provider>,
   );
   return { store, user, ...view };
 }
 
-describe('dormant N editor projection', () => {
-  it('initializes fixed leaves without activating N route simulation', async () => {
-    const { store, user } = renderDormantN(emptyProject());
+describe('N editor projection', () => {
+  it('initializes fixed leaves through the active Surface simulation', async () => {
+    const { store, user } = renderNEditor(emptyProject());
 
     expect(screen.getByRole('heading', { name: 'City of Ephyra' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Initialize City of Ephyra' }));
@@ -257,17 +96,17 @@ describe('dormant N editor projection', () => {
       nPlan(store.getState().projectWorkspace.history.present).topology?.fixedRooms,
     ).toHaveLength(3);
     expect(
-      simulateProject(catalog, store.getState().projectWorkspace.history.present, dormantScope)
+      simulateProject(catalog, store.getState().projectWorkspace.history.present, activeScope)
         .routes[1],
     ).toMatchObject({
-      status: 'blocked',
-      biomes: [],
-      horizon: { kind: 'simulatorBoundary', biomeKey: 'N' },
+      status: 'incomplete',
+      biomes: [{ kind: 'HubBiome', biomeKey: 'N', completion: 'incomplete' }],
+      horizon: { kind: 'incomplete', biomeKey: 'N' },
     });
   });
 
   it('edits the physical board, visit timeline, side state, rewards, and shop semantically', async () => {
-    const { store, user } = renderDormantN(representativeProject());
+    const { store, user } = renderNEditor(representativeProject());
 
     expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(25);
     expect(

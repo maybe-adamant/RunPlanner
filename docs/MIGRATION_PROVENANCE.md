@@ -243,19 +243,19 @@ is separately deferred until concrete NPC gifts and trait state exist.
 | N persistent hub           | ported   | `RoomDataN.lua`, `RoomLogic.lua`, `biomes/N_GAME_RULES.md`                          | The 25 fixed physical slots, authored 9/10 open-set bounds, constraints, one persistent board, and restore identity normalize.                                                  |
 | N main targets and pylons  | ported   | N room/obstacle/enemy data, `biomes/N_GAME_RULES.md`                                | All 23 combats and two minibosses own required-pylon facts, exact forced stores, and six-visit layout pressure.                                                                 |
 | N side-room topology       | ported   | N room/obstacle logic, `biomes/N_GAME_RULES.md`, `biomes/N_SIDE_ROOM_FINDINGS.md`   | Fixed bounded local slots own physical IDs, availability ranks, generated state, separate entered order, and unordered sibling semantics.                                       |
-| N side-room rewards        | ported   | `LootData.lua`, `RewardData.lua`, generated encounters, `biomes/N_GAME_RULES.md`    | Ordinary/hard counted bags, complete dormant leaves, and non-counting side encounter profiles normalize.                                                                        |
+| N side-room rewards        | ported   | `LootData.lua`, `RewardData.lua`, generated encounters, `biomes/N_GAME_RULES.md`    | Ordinary/hard counted bags, complete leaves, and non-counting side encounter profiles normalize.                                                                                |
 | N hub shop lookup          | ported   | `RoomLogic.lua`, `StoreData.lua`, `biomes/N_GAME_RULES.md`                          | The initial open-board lookup has explicit producer ownership and typed WorldShop option consumers.                                                                             |
 | N terminal and completion  | ported   | `RoomDataN.lua`, `ObstacleDataN.lua`, boss data, `biomes/N_GAME_RULES.md`           | The fixed authored shop-only preboss and derived neutral boss/postboss tail normalize without automatic boss drops.                                                             |
-| N authored Hub plan        | ported   | `AUTHORED_PROJECT_MODEL.md`, `biomes/N_GAME_RULES.md`                               | Schema version 5 persists fixed authored leaves, an open fixed-slot set, six ordered visits, and parent-local side state behind dormant application capabilities.               |
-| N canonical Hub snapshot   | ported   | `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md`                            | Fixed entries, one physical board, ordered visits, local slots, reference-only restores, the fixed terminal shop, and completion rooms materialize without activation.          |
-| N lifecycle and history    | ported   | `ROOM_LIFECYCLE_MODEL.md`, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md` | Exact entry, pylon, side-room, restore, terminal, completion, counter, creation, appearance, encounter, and required-object events fold without activating N.                   |
-| N reward simulation        | ported   | `REWARD_MODEL.md`, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md`         | Full-board and generated-side offers consume shared bags; entered rooms acquire; Hub lookup constrains the fixed WorldShop without activating N.                                |
+| N authored Hub plan        | ported   | `AUTHORED_PROJECT_MODEL.md`, `biomes/N_GAME_RULES.md`                               | Schema version 5 persists fixed authored leaves, an open fixed-slot set, six ordered visits, and parent-local side state through active application capabilities.               |
+| N canonical Hub snapshot   | ported   | `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md`                            | Fixed entries, one physical board, ordered visits, local slots, reference-only restores, the fixed terminal shop, and completion rooms materialize in normal route simulation.  |
+| N lifecycle and history    | ported   | `ROOM_LIFECYCLE_MODEL.md`, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md` | Exact entry, pylon, side-room, restore, terminal, completion, counter, creation, appearance, encounter, and required-object events fold through active N evaluation.            |
+| N reward simulation        | ported   | `REWARD_MODEL.md`, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md`         | Full-board and generated-side offers consume shared bags; entered rooms acquire; Hub lookup constrains the fixed WorldShop in active N evaluation.                              |
 | N selected validation      | ported   | `SIMULATION_AND_VALIDATION.md`, normalized N declarations, `biomes/N_GAME_RULES.md` | Open-slot constraints and side pressure preserve authored invalid outcomes as addressed findings; canonical visits, pylons, restores, and completion fail loudly on mismatch.   |
-| N candidate evaluation     | ported   | selected N evaluator, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md`      | Hub slots, visits, side state, fixed/Hub/side rewards, WorldShop offers, and purchases replay immutable proposals without activating N.                                         |
-| N editor projection        | ported   | `EDITOR_MODEL.md`, `biomes/N_GAME_RULES.md`                                         | A dormant fixed-board and visit-timeline editor dispatches semantic Hub, side-room, reward, and WorldShop commands without production activation.                               |
+| N candidate evaluation     | ported   | selected N evaluator, `SIMULATION_AND_VALIDATION.md`, `biomes/N_GAME_RULES.md`      | Hub slots, visits, side state, fixed/Hub/side rewards, WorldShop offers, and purchases replay immutable proposals from the normal Surface result.                               |
+| N editor projection        | ported   | `EDITOR_MODEL.md`, `biomes/N_GAME_RULES.md`                                         | The active fixed-board and visit-timeline editor dispatches semantic Hub, side-room, reward, and WorldShop commands.                                                            |
 | N progression/NPC variants | deferred | N encounter sets, Story and persistent requirements                                 | Suppress Medea, Artemis, Heracles, OpeningEmpty, and other save variants under the documented progressed NPC-free baseline.                                                     |
 | N optional interactions    | deferred | N room and obstacle data                                                            | Suppress Chaos detours, gathering, challenges, wells, rerolls, postboss shops, and other no-action surfaces.                                                                    |
-| N simulation activation    | deferred | `biomes/N_GAME_RULES.md`                                                            | Keep dormant until the reconciled vocabulary and full N product loop are implemented.                                                                                           |
+| N application activation   | ported   | `biomes/N_GAME_RULES.md`, N Surface product-loop fixture                            | N is authorable, simulatable, editable, profile-safe, recoverable, and route-validated as the one-biome Surface prefix.                                                         |
 
 Persistent NPC assignment and baseline encounter replacement remain shared
 deferred composition features. The old I singleton-preboss workaround has
@@ -307,13 +307,10 @@ rooms belong to each biome layout; `Next` is derived only from route order.
 | Surface    | Q     | `LinearBiome` | 23 (22)          | staged / standard       | none                                 | direct              | `Q_Boss01`                 | --   |
 
 The core simulation matrix and application capability matrix now include F, G,
-H, and I as authorable, simulatable, and editable through one shared linear-
-biome editor. Complete F/G/H/I prefixes enter profiles, recovery, simulator
-dispatch, candidate scope, and editor navigation together. P/Q/O remain
-declaration-only. N additionally owns a dormant authored Hub plan,
-completeness gate, canonical materializer, history, reward replay, and selected
-validator but remains outside every application capability and simulator
-dispatch.
+H, I, and N as authorable, simulatable, and editable. Complete F/G/H/I and N
+prefixes enter profiles, recovery, simulator dispatch, candidate scope, and
+editor navigation together. N uses its Hub editor and canonical evaluator;
+P/Q/O remain declaration-only.
 
 The following remaining dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:
@@ -324,16 +321,13 @@ boundary; each biome rule document owns its exact room-level instances:
   counter, reward, or history distinction.
 - **Deferred:** persistent NPC entities, Chaos and other structural detours,
   optional interactions, concrete boon/trait identities, affordability, and
-  the remaining P/Q/O history and N editor/feedback consumers remain additive
-  future work.
+  the remaining P/Q/O history/editor consumers remain additive future work.
 - **Excluded:** external save/profile predicates, inaccessible or debug-only
   rooms, noncanonical difficulty variants, and automatic boss drops without a
   modeled downstream consumer do not enter production declarations.
-- **Dormant:** P/Q/O have complete declarations but no connected authored
-  topology. N has complete declarations plus dormant authored topology,
-  completeness, canonical simulation, and selected validation. None has active
-  simulator dispatch or a production editor panel. N alone exposes dormant
-  core candidate and editor projections for its activation slice.
+- **Dormant:** P/Q/O have complete declarations but no active product loop.
+  N is active as the first Surface biome; later Surface configuration remains
+  blocked at O so route prefixes stay contiguous.
 
 No generic `unsupported` field, compatibility scaffold, placeholder
 materializer, or route-qualified duplicate biome authority remains.

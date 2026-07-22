@@ -81,8 +81,12 @@ describe('App', () => {
       { biomeKey: 'H', label: 'Fields of Mourning' },
       { biomeKey: 'I', label: 'Tartarus' },
     ]);
-    expect(application.editorNavigation.routes.Surface?.biomePanels).toEqual([]);
-    expect(application.editorNavigation.routes.Surface?.configurablePrefixBiomePanels).toEqual([]);
+    expect(application.editorNavigation.routes.Surface?.biomePanels).toEqual([
+      { biomeKey: 'N', label: 'City of Ephyra' },
+    ]);
+    expect(application.editorNavigation.routes.Surface?.configurablePrefixBiomePanels).toEqual([
+      { biomeKey: 'N', label: 'City of Ephyra' },
+    ]);
   });
 
   it('presents incomplete F feedback and navigates to the exact semantic owner', () => {

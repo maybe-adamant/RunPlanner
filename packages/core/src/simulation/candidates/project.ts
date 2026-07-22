@@ -13,11 +13,11 @@ import {
   type LinearForcePressureLedgerEntry,
 } from '../generation';
 import type {
-  BiomeProjectEvaluation,
   CompleteHubProjectEvaluation,
   CompleteLinearProjectEvaluation,
   HubBiomeProjectEvaluation,
   ProjectEvaluation,
+  ProjectBiomeEvaluation,
   ProjectRouteEvaluation,
   ProjectSimulationScope,
 } from '../project';
@@ -262,12 +262,14 @@ function locateCompleteLinear(
   if (evaluation.completion === 'incomplete') {
     return 'biomeIncomplete';
   }
+  if (evaluation.kind !== 'LinearBiome') {
+    failCandidate(query, `${address.biomeKey} does not have a linear evaluation`);
+  }
   return evaluation;
 }
 
 interface PreparedCandidateContext {
   readonly projectEvaluation: ProjectEvaluation;
-  readonly dormantHubBiomes: Map<string, HubBiomeProjectEvaluation>;
 }
 
 function locateCandidateLinear(
@@ -279,29 +281,24 @@ function locateCandidateLinear(
 }
 
 function locateCandidateHub(
-  catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: ProjectCandidateQuery,
 ): CompleteHubProjectEvaluation | CandidateContextUnavailableReason {
   const address = queryAddress(query);
   const route = requireRoute(context.projectEvaluation.routes, query);
-  if (
-    route.horizon.kind !== 'simulatorBoundary' ||
-    route.horizon.biomeKey !== address.biomeKey ||
-    address.biomeKey !== 'N'
-  ) {
-    return unavailableReason(route, query);
+  const activeEvaluation = route.biomes.find(
+    (candidate) => candidate.biomeKey === address.biomeKey,
+  );
+  if (activeEvaluation !== undefined) {
+    if (activeEvaluation.completion === 'incomplete') {
+      return 'biomeIncomplete';
+    }
+    if (activeEvaluation.kind !== 'HubBiome') {
+      failCandidate(query, `${address.biomeKey} does not have a Hub evaluation`);
+    }
+    return activeEvaluation;
   }
-
-  const key = `${address.routeKey}:${address.biomeKey}`;
-  let evaluation = context.dormantHubBiomes.get(key);
-  if (evaluation === undefined) {
-    const plan = locateHubBiomePlan(project, query);
-    evaluation = evaluateNBiome(catalog, address.routeKey, plan);
-    context.dormantHubBiomes.set(key, evaluation);
-  }
-  return evaluation.completion === 'incomplete' ? 'biomeIncomplete' : evaluation;
+  return unavailableReason(route, query);
 }
 
 function support(pressure: LinearForcePressureLedgerEntry): CandidateSupport {
@@ -580,7 +577,7 @@ function evaluateHubSlotCandidate(
   query: HubSlotCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as HubSlotCandidateQuery;
-  const baseline = locateCandidateHub(catalog, project, context, stableQuery);
+  const baseline = locateCandidateHub(context, stableQuery);
   if (typeof baseline === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: baseline });
   }
@@ -648,7 +645,7 @@ function evaluateHubVisitCandidate(
   query: HubVisitCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as HubVisitCandidateQuery;
-  const baseline = locateCandidateHub(catalog, project, context, stableQuery);
+  const baseline = locateCandidateHub(context, stableQuery);
   if (typeof baseline === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: baseline });
   }
@@ -744,7 +741,7 @@ function evaluateSideRoomGenerationCandidate(
   query: SideRoomGenerationCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as SideRoomGenerationCandidateQuery;
-  const baseline = locateCandidateHub(catalog, project, context, stableQuery);
+  const baseline = locateCandidateHub(context, stableQuery);
   if (typeof baseline === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: baseline });
   }
@@ -821,7 +818,7 @@ function evaluateSideRoomEntryOrderCandidate(
   query: SideRoomEntryOrderCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as SideRoomEntryOrderCandidateQuery;
-  const baseline = locateCandidateHub(catalog, project, context, stableQuery);
+  const baseline = locateCandidateHub(context, stableQuery);
   if (typeof baseline === 'string') {
     return Object.freeze({ context: 'unavailable', query: stableQuery, reason: baseline });
   }
@@ -887,7 +884,7 @@ function rewardFindings(
   );
 }
 
-type CandidateBiomeEvaluation = BiomeProjectEvaluation | HubBiomeProjectEvaluation;
+type CandidateBiomeEvaluation = ProjectBiomeEvaluation;
 
 function locateCandidateBiome(
   catalog: Catalog,
@@ -898,7 +895,7 @@ function locateCandidateBiome(
   const sourcePlan = locateBiomePlan(project, query);
   return sourcePlan.kind === 'LinearBiome'
     ? locateCandidateLinear(context, query)
-    : locateCandidateHub(catalog, project, context, query);
+    : locateCandidateHub(context, query);
 }
 
 function evaluateCandidateBiome(
@@ -946,7 +943,12 @@ function evaluateCandidateBiome(
   if (previous?.completion === 'incomplete') {
     failCandidate(query, 'candidate biome has an incomplete upstream evaluation');
   }
-  return evaluateLinearBiome(catalog, route.routeKey, plan, biomeIndex + 1, previous);
+  if (previous?.completion === 'complete' && previous.kind !== 'LinearBiome') {
+    failCandidate(query, 'linear candidate evaluation cannot consume a Hub history seed');
+  }
+  const previousLinear =
+    previous?.completion === 'complete' && previous.kind === 'LinearBiome' ? previous : undefined;
+  return evaluateLinearBiome(catalog, route.routeKey, plan, biomeIndex + 1, previousLinear);
 }
 
 function evaluateBiomeFieldCandidate(
@@ -1204,7 +1206,6 @@ export function createPreparedProjectCandidateEvaluator(
   assertProjectEvaluationSource(project, projectEvaluation);
   const context: PreparedCandidateContext = {
     projectEvaluation,
-    dormantHubBiomes: new Map(),
   };
   return Object.freeze({
     evaluate: (queries: readonly ProjectCandidateQuery[]) =>

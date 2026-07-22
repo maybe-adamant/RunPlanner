@@ -155,9 +155,9 @@ describe('planner capabilities', () => {
       {
         biomeKey: 'N',
         declared: true,
-        authorable: false,
-        simulatable: false,
-        editable: false,
+        authorable: true,
+        simulatable: true,
+        editable: true,
       },
       {
         biomeKey: 'O',
@@ -183,7 +183,7 @@ describe('planner capabilities', () => {
     ]);
     expect(reusedCapabilities.values).toEqual(capabilities.values);
     expect(createProjectSimulationScope(capabilities)).toEqual({
-      simulatableBiomeKeys: ['F', 'G', 'H', 'I'],
+      simulatableBiomeKeys: ['F', 'G', 'H', 'I', 'N'],
     });
   });
 
@@ -230,7 +230,7 @@ describe('planner capabilities', () => {
     const widenedProject = createAuthorableProjectDocument(catalog, capabilities, {
       projectId: 'fghi-editor-test',
       name: 'F/G/H/I Editor Test',
-      configuredBiomeCounts: { Underworld: 4 },
+      configuredBiomeCounts: { Surface: 1, Underworld: 4 },
     });
     const store = createPlannerStore({
       catalog,
@@ -256,9 +256,9 @@ describe('planner capabilities', () => {
     expect(capabilities.byBiomeKey.N).toEqual({
       biomeKey: 'N',
       declared: true,
-      authorable: false,
-      simulatable: false,
-      editable: false,
+      authorable: true,
+      simulatable: true,
+      editable: true,
     });
     expect(navigation.routes.Underworld?.biomePanels).toEqual([
       { biomeKey: 'F', label: 'Erebus' },
@@ -266,7 +266,9 @@ describe('planner capabilities', () => {
       { biomeKey: 'H', label: 'Fields of Mourning' },
       { biomeKey: 'I', label: 'Tartarus' },
     ]);
-    expect(navigation.routes.Surface?.biomePanels).toEqual([]);
+    expect(navigation.routes.Surface?.biomePanels).toEqual([
+      { biomeKey: 'N', label: 'City of Ephyra' },
+    ]);
     expect(widenedProject.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual([
       'F',
       'G',
@@ -294,9 +296,7 @@ describe('planner capabilities', () => {
           biome: createBiomeAddress('Surface', 'N'),
         }),
       ),
-    ).toThrowError(
-      new PlannerCapabilityContractError('command.ClearTopology', 'N is not authorable'),
-    );
+    ).not.toThrow();
   });
 
   it('keeps P dormant and leaves the F smoke project and selector projection unchanged', () => {
@@ -314,7 +314,9 @@ describe('planner capabilities', () => {
       simulatable: false,
       editable: false,
     });
-    expect(navigation.routes.Surface?.biomePanels).toEqual([]);
+    expect(navigation.routes.Surface?.biomePanels).toEqual([
+      { biomeKey: 'N', label: 'City of Ephyra' },
+    ]);
     expect({ ...project, catalogVersion: preImportProject.catalogVersion }).toEqual(
       preImportProject,
     );
@@ -336,7 +338,9 @@ describe('planner capabilities', () => {
       simulatable: false,
       editable: false,
     });
-    expect(navigation.routes.Surface?.biomePanels).toEqual([]);
+    expect(navigation.routes.Surface?.biomePanels).toEqual([
+      { biomeKey: 'N', label: 'City of Ephyra' },
+    ]);
     expect({ ...project, catalogVersion: preImportProject.catalogVersion }).toEqual(
       preImportProject,
     );
@@ -345,7 +349,7 @@ describe('planner capabilities', () => {
 });
 
 describe('application project capability boundary', () => {
-  it('allows the complete authorable Underworld prefix and rejects Surface', () => {
+  it('allows the complete Underworld prefix and the one-biome Surface prefix', () => {
     const capabilities = createApplicationCapabilities(catalog);
     const fghi = createAuthorableProjectDocument(catalog, capabilities, {
       projectId: 'fghi-project',
@@ -354,14 +358,20 @@ describe('application project capability boundary', () => {
     });
 
     expect(fghi.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G', 'H', 'I']);
+    const surface = createAuthorableProjectDocument(catalog, capabilities, {
+      projectId: 'surface-project',
+      name: 'Surface Project',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    expect(surface.routes[1]?.biomes.map((biome) => biome.biomeKey)).toEqual(['N']);
     expect(() =>
       createAuthorableProjectDocument(catalog, capabilities, {
-        projectId: 'surface-project',
-        name: 'Surface Project',
-        configuredBiomeCounts: { Surface: 1 },
+        projectId: 'surface-o-project',
+        name: 'Surface O Project',
+        configuredBiomeCounts: { Surface: 2 },
       }),
     ).toThrowError(
-      new PlannerCapabilityContractError('configuredBiomeCounts.Surface[0]', 'N is not authorable'),
+      new PlannerCapabilityContractError('configuredBiomeCounts.Surface[1]', 'O is not authorable'),
     );
   });
 
@@ -382,7 +392,6 @@ describe('application project capability boundary', () => {
 
 describe('application capability closure', () => {
   const dormantPlacements = [
-    { routeKey: 'Surface', biomeKey: 'N' },
     { routeKey: 'Surface', biomeKey: 'O' },
     { routeKey: 'Surface', biomeKey: 'P' },
     { routeKey: 'Surface', biomeKey: 'Q' },
@@ -427,14 +436,14 @@ describe('application capability closure', () => {
     }
   });
 
-  it('limits navigation and selector consumers to the editable F/G/H/I surface', () => {
+  it('limits navigation and selector consumers to the editable F/G/H/I/N surface', () => {
     const capabilities = createApplicationCapabilities(catalog);
     const navigation = createEditorNavigation(catalog, capabilities);
     const editorBiomeKeys = Object.values(navigation.routes).flatMap((route) =>
       route.biomePanels.map((panel) => panel.biomeKey),
     );
 
-    expect(editorBiomeKeys).toEqual(['F', 'G', 'H', 'I']);
+    expect(editorBiomeKeys).toEqual(['F', 'G', 'H', 'I', 'N']);
     const selectableRooms = editorBiomeKeys.flatMap((biomeKey) =>
       ordinaryRoomCategories.flatMap((category) =>
         selectRoomsForCategory(catalog, biomeKey, category),
@@ -442,7 +451,7 @@ describe('application capability closure', () => {
     );
     expect(selectableRooms.length).toBeGreaterThan(0);
     expect(new Set(selectableRooms.map((room) => room.biomeKey))).toEqual(
-      new Set(['F', 'G', 'H', 'I']),
+      new Set(['F', 'G', 'H', 'I', 'N']),
     );
     expect(selectableRooms.some((room) => room.mode.kind !== 'authored')).toBe(false);
   });

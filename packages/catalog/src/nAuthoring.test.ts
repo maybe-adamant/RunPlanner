@@ -79,8 +79,8 @@ function appendVisits(project: ProjectDocument, hubSlotKeys: readonly string[]):
   );
 }
 
-describe('dormant N Hub authorship', () => {
-  it('initializes the Surface prefix as a dormant HubBiome plan', () => {
+describe('N Hub authorship', () => {
+  it('initializes the Surface prefix as a HubBiome plan', () => {
     const project = emptyNProject();
 
     expect(nPlan(project)).toEqual({ kind: 'HubBiome', biomeKey: 'N', topology: null });
