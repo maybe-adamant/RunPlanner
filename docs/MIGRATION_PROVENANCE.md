@@ -274,7 +274,7 @@ been replaced by the occurrence-based conditional-terminal contract in
 | P forked preboss               | ported   | `RoomDataP.lua`, `RoomLogic.lua`, `biomes/P_GAME_RULES.md`                    | Shop-then-fill normalizes with one free reward; predecessor exit count determines active terminal capacity.                |
 | P fixed completion tail        | ported   | `RoomDataP.lua`, `RoomLogic.lua`, `RewardLogic.lua`, `biomes/P_GAME_RULES.md` | `P_Boss01` and `P_PostBoss01` are ordered before Q entry and only the resolved boss-offer store ledger effect remains.     |
 | P persistent NPC variants      | deferred | P encounter sets and NPC encounter data                                       | Suppress unconfigured Heracles/Athena/Icarus variants; later entities compose into the spine before history.               |
-| P simulation core              | ported   | `biomes/P_GAME_RULES.md`, N/O/P simulation fixture                            | Reuses the linear authorities after validated N/O history; candidate/editor/application activation remains dormant.        |
+| P simulation/editor core       | ported   | `biomes/P_GAME_RULES.md`, N/O/P simulation and editor fixtures                | Reuses linear authorities after validated N/O history; application activation remains dormant.                             |
 
 ## Q Migration
 
@@ -311,7 +311,7 @@ H, I, N, and O as authorable, simulatable, and editable. Complete F/G/H/I and
 N/O prefixes enter profiles, recovery, simulator dispatch, candidate scope,
 and editor navigation together. N uses its Hub editor and canonical evaluator;
 O uses the shared linear editor and evaluator. P has a dormant shared-linear
-simulation core; Q remains declaration-only.
+simulation, candidate, and editor core; Q remains declaration-only.
 
 The following remaining dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:

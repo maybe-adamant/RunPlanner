@@ -620,6 +620,14 @@ reward history all replay through existing authorities. A representative
 N/O/P fixture proves the complete valid route and an incompatible first target;
 the application simulation scope still stops at P.
 
+Phase 6 P Slice 2 is complete. Existing room, reward, shop, base-store,
+terminal, finding, and linear-editor surfaces project P without new candidate
+vocabulary or React timing rules. Focused fixtures prove source-sensitive room
+candidates, forced Meta-store pressure, collapsed Olympus combat presentation,
+and the two-realization forked preboss. A retained upstream-invalid edit now
+marks downstream base-store context unavailable instead of treating the
+missing reward branch as an internal invariant failure.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1325,7 +1333,7 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, all six O slices, and P Slice 1 are complete.
+five I slices, all nine N slices, all six O slices, and P Slices 1-2 are complete.
 By explicit implementation-order decision, the remaining P/Q Phase 6 slices now precede
 the contextual-selection UX insertion. They reuse the existing editor and
 candidate language while preserving the typed data required by that later UX

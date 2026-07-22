@@ -462,7 +462,7 @@ function evaluateBatchRewardStoreCandidate(
     (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(stableQuery.rewardStore),
   );
   if (selected === undefined) {
-    failCandidate(stableQuery, 'reward store has no simulation support entry');
+    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: 'upstreamInvalid' });
   }
   const possible = selected.supportStoreKeys.includes(stableQuery.storeKey);
   const findings = possible
