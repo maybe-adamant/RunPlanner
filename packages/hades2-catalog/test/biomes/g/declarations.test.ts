@@ -237,6 +237,7 @@ describe('complete G catalog', () => {
       label: 'Narcissus',
       kind: 'Story',
       mode: { kind: 'authored', templateKey: 'Story' },
+      encounterProfileKey: 'G_Story01',
       caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
       eligibility: {
         kind: 'counterRange',
@@ -248,6 +249,14 @@ describe('complete G catalog', () => {
       { index: 1, type: 'OceanusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
     ]);
     expect(requireFixed(story?.incomingReward).offer).toEqual({ rewardType: 'Story' });
+    expect(catalog.encounterProfiles.byKey.G_Story01?.phases).toEqual([
+      {
+        key: 'G_Story01',
+        kind: 'story',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'Story_Narcissus_01',
+      },
+    ]);
 
     const reprieve = catalog.rooms.byKey.G_Reprieve01;
     const reprieveReward = requireCounted(reprieve?.incomingReward);

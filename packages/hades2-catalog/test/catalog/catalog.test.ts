@@ -127,6 +127,23 @@ describe('F catalog migration slice', () => {
       range: { min: 2 },
     });
 
+    expect(catalog.encounterProfiles.byKey.HealthRestore?.phases).toEqual([
+      {
+        key: 'HealthRestore',
+        kind: 'nonCombat',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'HealthRestore',
+      },
+    ]);
+    expect(catalog.encounterProfiles.byKey.Shop?.phases).toEqual([
+      {
+        key: 'Shop',
+        kind: 'nonCombat',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'Shop',
+      },
+    ]);
+
     const opening = catalog.rooms.byKey.F_Opening01;
     const openingReward = requireCounted(opening?.incomingReward);
     expect(openingReward.allowedRewardTypes).toEqual([

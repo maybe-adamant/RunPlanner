@@ -10,16 +10,26 @@ export const sharedEncounterProfiles = [
     phases: [],
   },
   {
-    key: 'Story',
-    phases: [{ key: 'Story', kind: 'story', countsEncounterDepth: false }],
-  },
-  {
     key: 'HealthRestore',
-    phases: [{ key: 'HealthRestore', kind: 'nonCombat', countsEncounterDepth: false }],
+    phases: [
+      {
+        key: 'HealthRestore',
+        kind: 'nonCombat',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'HealthRestore',
+      },
+    ],
   },
   {
     key: 'Shop',
-    phases: [{ key: 'Shop', kind: 'nonCombat', countsEncounterDepth: false }],
+    phases: [
+      {
+        key: 'Shop',
+        kind: 'nonCombat',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'Shop',
+      },
+    ],
   },
   {
     key: 'Preboss',

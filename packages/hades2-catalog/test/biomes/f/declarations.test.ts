@@ -183,7 +183,7 @@ describe('complete F catalog', () => {
       label: 'Arachne',
       kind: 'Story',
       mode: { kind: 'authored', templateKey: 'Story' },
-      encounterProfileKey: 'Story',
+      encounterProfileKey: 'F_Story01',
       caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
       eligibility: {
         kind: 'counterRange',
@@ -193,6 +193,14 @@ describe('complete F catalog', () => {
     });
     expect(story?.exits).toHaveLength(2);
     expect(storyReward.offer).toEqual({ rewardType: 'Story' });
+    expect(catalog.encounterProfiles.byKey.F_Story01?.phases).toEqual([
+      {
+        key: 'F_Story01',
+        kind: 'story',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'Story_Arachne_01',
+      },
+    ]);
 
     const reprieve = catalog.rooms.byKey.F_Reprieve01;
     const reprieveReward = requireCounted(reprieve?.incomingReward);

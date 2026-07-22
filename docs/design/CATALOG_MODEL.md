@@ -325,6 +325,10 @@ Encounter profiles own the baseline ordered room sequence:
 - phase-owned reward offer points;
 - the named point at which optional presence is decided.
 
+Every fixed Story room uses a biome-specific encounter profile carrying its
+concrete game encounter identity. The shared `Story` reward type remains a
+reward-domain concept and must not be reused as a generic encounter identity.
+
 Rooms reference profiles instead of copying phase sequences. This is required
 for O multi-encounter rooms and future persistent NPC replacement. A future NPC
 assignment may replace an addressed phase before simulation; history consumes

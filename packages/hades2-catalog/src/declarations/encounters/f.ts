@@ -14,6 +14,20 @@ export const fOpeningEncounterProfiles = [
   },
 ] as const satisfies readonly RawEncounterProfileDeclaration[];
 
+export const fStoryEncounterProfiles = [
+  {
+    key: 'F_Story01',
+    phases: [
+      {
+        key: 'F_Story01',
+        kind: 'story',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'Story_Arachne_01',
+      },
+    ],
+  },
+] as const satisfies readonly RawEncounterProfileDeclaration[];
+
 export const fMinibossEncounterProfiles = [
   {
     key: 'F_MiniBoss01',
