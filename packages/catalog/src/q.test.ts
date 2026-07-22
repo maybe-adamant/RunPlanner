@@ -5,7 +5,6 @@ import type {
   ShopRewardBinding,
 } from '@run-planner/core';
 import {
-  CompletenessContractError,
   createBiomeAddress,
   createDefaultRoomState,
   createProjectDocument,
@@ -37,8 +36,8 @@ function requireQLayout(): LinearBiomeLayout {
   return layout;
 }
 
-describe('complete dormant Q catalog', () => {
-  it('keeps staged progression outside the generic linear evaluator until Q implementation', () => {
+describe('complete Q catalog', () => {
+  it('admits an incomplete staged plan through the shared completeness boundary', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'dormant-q-gate',
       name: 'Dormant Q Gate',
@@ -51,9 +50,12 @@ describe('complete dormant Q catalog', () => {
       throw new Error('fixture lost dormant Q plan');
     }
 
-    expect(() =>
+    expect(
       evaluateLinearCompleteness(catalog, createBiomeAddress('Surface', 'Q'), plan),
-    ).toThrowError(CompletenessContractError);
+    ).toMatchObject({
+      completion: 'incomplete',
+      findings: [{ code: 'biomeTopologyMissing' }],
+    });
   });
 
   it('normalizes the scripted reward-free layout and exact stage pools', () => {

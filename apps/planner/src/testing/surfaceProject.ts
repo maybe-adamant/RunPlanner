@@ -41,6 +41,19 @@ export const pOccurrenceIds = Object.freeze({
   prebossShop: createOccurrenceId('editor-p-preboss-shop'),
   prebossReward: createOccurrenceId('editor-p-preboss-reward'),
 });
+export const qBiome = createBiomeAddress('Surface', 'Q');
+export const qOccurrenceIds = Object.freeze({
+  intro: createOccurrenceId('editor-q-intro'),
+  foyer: createOccurrenceId('editor-q-foyer'),
+  firstFork: createOccurrenceId('editor-q-first-fork'),
+  firstMiniboss1: createOccurrenceId('editor-q-first-miniboss-1'),
+  firstMiniboss2: createOccurrenceId('editor-q-first-miniboss-2'),
+  ordinary: createOccurrenceId('editor-q-ordinary'),
+  secondFork: createOccurrenceId('editor-q-second-fork'),
+  secondMiniboss1: createOccurrenceId('editor-q-second-miniboss-1'),
+  secondMiniboss2: createOccurrenceId('editor-q-second-miniboss-2'),
+  preboss: createOccurrenceId('editor-q-preboss'),
+});
 export const nFixedOccurrenceIds = Object.freeze({
   opening: createOccurrenceId('editor-n-opening'),
   preHub: createOccurrenceId('editor-n-prehub'),
@@ -437,5 +450,72 @@ export function createRepresentativeNOPProject(): ProjectDocument {
     kind: 'ReplaceShopOffer',
     offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
     value: { rewardType: 'MaxHealthDrop' },
+  });
+}
+
+function appendQBatch(
+  project: ProjectDocument,
+  parentOccurrenceId: OccurrenceId,
+  targets: readonly {
+    readonly occurrenceId: OccurrenceId;
+    readonly gameName: string;
+    readonly exitIndex: number;
+  }[],
+): ProjectDocument {
+  let next = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    continuation: createContinuationAddress(qBiome, parentOccurrenceId),
+  });
+  for (const target of targets) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(qBiome, parentOccurrenceId, target.exitIndex),
+      occurrenceId: target.occurrenceId,
+      gameName: target.gameName,
+    });
+  }
+  return applyProjectCommand(next, catalog, {
+    kind: 'SetPicked',
+    picked: createPickedAddress(qBiome, parentOccurrenceId),
+    exitIndex: 1,
+  });
+}
+
+export function createRepresentativeNOPQProject(): ProjectDocument {
+  let project = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Surface'),
+    configuredBiomeCount: 4,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: qBiome,
+    occurrenceId: qOccurrenceIds.intro,
+    gameName: 'Q_Intro',
+  });
+  project = appendQBatch(project, qOccurrenceIds.intro, [
+    { occurrenceId: qOccurrenceIds.foyer, gameName: 'Q_Combat10', exitIndex: 1 },
+  ]);
+  project = appendQBatch(project, qOccurrenceIds.foyer, [
+    { occurrenceId: qOccurrenceIds.firstFork, gameName: 'Q_Combat03', exitIndex: 1 },
+  ]);
+  project = appendQBatch(project, qOccurrenceIds.firstFork, [
+    { occurrenceId: qOccurrenceIds.firstMiniboss2, gameName: 'Q_MiniBoss05', exitIndex: 2 },
+    { occurrenceId: qOccurrenceIds.firstMiniboss1, gameName: 'Q_MiniBoss02', exitIndex: 1 },
+  ]);
+  project = appendQBatch(project, qOccurrenceIds.firstMiniboss1, [
+    { occurrenceId: qOccurrenceIds.ordinary, gameName: 'Q_Combat01', exitIndex: 1 },
+  ]);
+  project = appendQBatch(project, qOccurrenceIds.ordinary, [
+    { occurrenceId: qOccurrenceIds.secondFork, gameName: 'Q_Combat12', exitIndex: 1 },
+  ]);
+  project = appendQBatch(project, qOccurrenceIds.secondFork, [
+    { occurrenceId: qOccurrenceIds.secondMiniboss1, gameName: 'Q_MiniBoss03', exitIndex: 1 },
+    { occurrenceId: qOccurrenceIds.secondMiniboss2, gameName: 'Q_MiniBoss04', exitIndex: 2 },
+  ]);
+  return applyProjectCommand(project, catalog, {
+    kind: 'CreateTerminalTransition',
+    continuation: createContinuationAddress(qBiome, qOccurrenceIds.secondMiniboss1),
+    targetOccurrenceIds: [qOccurrenceIds.preboss],
   });
 }

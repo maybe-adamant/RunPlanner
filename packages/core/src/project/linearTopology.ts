@@ -18,6 +18,7 @@ import {
   expectString,
   failProjectDocument,
 } from './validation';
+import { stagedProgressionStages, stagedRoomIsAvailable } from './stagedProgression';
 
 interface RawOccurrence {
   readonly occurrenceId: OccurrenceId;
@@ -447,7 +448,15 @@ export function decodeLinearBiomeTopology(
     orderedOccurrenceIds.push(startOccurrenceId);
   }
 
+  const stages = stagedProgressionStages(layout);
+  let stageIndex = 0;
   for (const continuation of orderedContinuations) {
+    if (continuation.kind === 'terminal' && stages !== undefined && stageIndex !== stages.length) {
+      failProjectDocument(
+        path,
+        `${layout.biomeKey} terminal follows ${stages.length} staged batches`,
+      );
+    }
     if (continuation.kind === 'terminal') {
       if (layout.terminal.kind === 'forkedTransition') {
         if (
@@ -509,11 +518,29 @@ export function decodeLinearBiomeTopology(
           `${room.gameName} is layout-derived and cannot be authored`,
         );
       }
+      if (continuation.kind === 'batch' && stages !== undefined) {
+        const stage = stages[stageIndex];
+        if (stage === undefined) {
+          failProjectDocument(
+            `${rawOccurrence.path}.gameName`,
+            `${layout.biomeKey} has no stage ${stageIndex + 1}`,
+          );
+        }
+        if (!stagedRoomIsAvailable(stage, room.gameName)) {
+          failProjectDocument(
+            `${rawOccurrence.path}.gameName`,
+            `${room.gameName} is not available in stage ${stage.key}`,
+          );
+        }
+      }
       roles.set(target.occurrenceId, role);
       if (continuation.pickedExitIndex === target.exitIndex) {
         enteredOccurrences.add(target.occurrenceId);
       }
       orderedOccurrenceIds.push(target.occurrenceId);
+    }
+    if (continuation.kind === 'batch') {
+      stageIndex += 1;
     }
   }
 

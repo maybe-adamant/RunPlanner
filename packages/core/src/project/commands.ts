@@ -54,6 +54,12 @@ import {
   type RoomStateContext,
 } from './roomState';
 import { ProjectDocumentContractError } from './validation';
+import {
+  nextStagedBatchIndex,
+  stagedBatchIndex,
+  stagedProgressionStages,
+  stagedRoomIsAvailable,
+} from './stagedProgression';
 
 export type ProjectCommand =
   | { readonly kind: 'RenameProject'; readonly name: string }
@@ -927,6 +933,10 @@ function createTerminalPlan(
     failCommand(command, `${layout.biomeKey} does not use an authored terminal transition`);
   }
   const topology = requireTopology(plan, command);
+  const stages = stagedProgressionStages(layout);
+  if (stages !== undefined && nextStagedBatchIndex(topology) !== stages.length) {
+    failCommand(command, `${layout.biomeKey} terminal follows ${stages.length} staged batches`);
+  }
   const parent = requireOccurrence(plan, parentOccurrenceId, command);
   if (
     topology.continuations.some(
@@ -1652,6 +1662,10 @@ function applyUnchecked(
         parentOccurrenceId,
         command,
       );
+      const stages = stagedProgressionStages(layout);
+      if (stages !== undefined && nextStagedBatchIndex(topology) >= stages.length) {
+        failCommand(command, `${layout.biomeKey} already has every staged batch`);
+      }
       if (
         topology.continuations.some(
           (continuation) =>
@@ -1898,6 +1912,17 @@ function applyUnchecked(
         );
       }
       const room = requireRoom(catalog, command.gameName, layout.biomeKey, command);
+      const stages = stagedProgressionStages(layout);
+      const stageIndex = stagedBatchIndex(topology, command.target.parentOccurrenceId);
+      if (stages !== undefined) {
+        const stage = stageIndex === undefined ? undefined : stages[stageIndex];
+        if (stage === undefined) {
+          failCommand(command, `${layout.biomeKey} target has no staged candidate pool`);
+        }
+        if (!stagedRoomIsAvailable(stage, room.gameName)) {
+          failCommand(command, `${room.gameName} is not available in stage ${stage.key}`);
+        }
+      }
       if (room.mode.kind !== 'authored') {
         failCommand(command, `${room.gameName} is layout-derived and cannot be authored`);
       }
@@ -2179,6 +2204,21 @@ function applyUnchecked(
         return document;
       }
       const room = requireRoom(catalog, command.gameName, layout.biomeKey, command);
+      const stages = stagedProgressionStages(layout);
+      if (stages !== undefined && plan.topology !== null) {
+        const owner = plan.topology.continuations.find((continuation) =>
+          continuation.targets.some(
+            (target) => target.occurrenceId === command.occurrence.occurrenceId,
+          ),
+        );
+        if (owner?.kind === 'batch') {
+          const stageIndex = stagedBatchIndex(plan.topology, owner.parentOccurrenceId);
+          const stage = stageIndex === undefined ? undefined : stages[stageIndex];
+          if (stage === undefined || !stagedRoomIsAvailable(stage, room.gameName)) {
+            failCommand(command, `${room.gameName} is not available in stage ${stage?.key ?? '?'}`);
+          }
+        }
+      }
       if (
         layout.terminal.kind === 'generatedTarget' &&
         room.gameName === layout.terminal.roomGameName &&
