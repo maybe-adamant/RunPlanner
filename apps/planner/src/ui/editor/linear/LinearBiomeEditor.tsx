@@ -14,15 +14,19 @@ import { useState } from 'react';
 import {
   presentCandidateLabel,
   type CandidateProjectionService,
-} from '../projections/candidateProjection';
-import { allocateOccurrenceId } from '../workspace/occurrenceIds';
-import { presentBiomeStatus } from '../projections/evaluationProjection';
-import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../state/store';
-import { candidateSelectState } from './candidatePresentation';
+} from '../../../projections/candidateProjection';
+import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
+import { presentBiomeStatus } from '../../../projections/evaluationProjection';
+import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
+import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
+import { candidateSelectState } from '../../feedback/candidatePresentation';
 import { LinearTopologyEditor } from './LinearTopologyEditor';
-import { SemanticFindingsScope, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
-import { RoomStateEditor } from './RoomStateEditor';
+import {
+  SemanticFindingsScope,
+  SemanticOwnerMarker,
+  StatusBadge,
+} from '../../feedback/EvaluationFeedback';
+import { RoomStateEditor } from '../rooms/RoomStateEditor';
 
 interface LinearBiomeEditorProps {
   readonly candidateProjection: CandidateProjectionService;

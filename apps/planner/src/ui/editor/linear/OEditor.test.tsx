@@ -18,10 +18,10 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createPlannerCapabilities } from '../composition/capabilities';
-import { createCandidateProjectionService } from '../projections/candidateProjection';
-import { createProjectSimulationScope } from '../composition/capabilityConfiguration';
-import { createPlannerStore, selectPresentProject, useAppSelector } from '../state/store';
+import { createPlannerCapabilities } from '../../../composition/capabilities';
+import { createCandidateProjectionService } from '../../../projections/candidateProjection';
+import { createProjectSimulationScope } from '../../../composition/capabilityConfiguration';
+import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
 const biome = createBiomeAddress('Surface', 'O');

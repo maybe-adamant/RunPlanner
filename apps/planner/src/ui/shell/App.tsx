@@ -2,9 +2,9 @@ import { createRouteAddress, type AuthoredRoutePlan } from '@run-planner/engine/
 import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
 import { type ProjectRouteEvaluation } from '@run-planner/engine/simulation';
 
-import { presentProjectStatus, presentRouteStatus } from '../projections/evaluationProjection';
-import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
-import type { EditorNavigation, RouteEditorNavigation } from '../projections/editorNavigation';
+import { presentProjectStatus, presentRouteStatus } from '../../projections/evaluationProjection';
+import { authoredProjectCommandDispatched } from '../../state/projectWorkspaceSlice';
+import type { EditorNavigation, RouteEditorNavigation } from '../../projections/editorNavigation';
 import {
   sectionSelected,
   surfacePanelSelected,
@@ -12,20 +12,20 @@ import {
   type PlannerSection,
   type SurfacePanel,
   type UnderworldPanel,
-} from '../state/editorSessionSlice';
+} from '../../state/editorSessionSlice';
 import {
   selectPresentProject,
   selectProjectEvaluation,
   useAppDispatch,
   useAppSelector,
-} from '../state/store';
-import type { ProjectOperations } from '../workspace/projectOperations';
-import type { CandidateProjectionService } from '../projections/candidateProjection';
-import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
-import { LinearBiomeEditor } from './LinearBiomeEditor';
-import { ProjectFileControls } from './ProjectFileControls';
-import { ProjectHistoryControls } from './ProjectHistoryControls';
-import { HubBiomeEditor } from './HubBiomeEditor';
+} from '../../state/store';
+import type { ProjectOperations } from '../../workspace/projectOperations';
+import type { CandidateProjectionService } from '../../projections/candidateProjection';
+import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from '../feedback/EvaluationFeedback';
+import { LinearBiomeEditor } from '../editor/linear/LinearBiomeEditor';
+import { ProjectFileControls } from '../project/ProjectFileControls';
+import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
+import { HubBiomeEditor } from '../editor/hub/HubBiomeEditor';
 
 interface AppProps {
   readonly candidateProjection: CandidateProjectionService;

@@ -17,19 +17,19 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { createApplication } from '../composition/createApplication';
+import { createApplication } from '../../composition/createApplication';
 import {
   findingSelected,
   sectionSelected,
   underworldPanelSelected,
-} from '../state/editorSessionSlice';
-import { semanticFindingKey } from '../projections/evaluationProjection';
+} from '../../state/editorSessionSlice';
+import { semanticFindingKey } from '../../projections/evaluationProjection';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
-} from '../state/projectWorkspaceSlice';
+} from '../../state/projectWorkspaceSlice';
 import { App } from './App';
-import { semanticOwnerElementId } from './semanticOwner';
+import { semanticOwnerElementId } from '../feedback/semanticOwner';
 
 function configureF(application: ReturnType<typeof createApplication>): void {
   application.store.dispatch(

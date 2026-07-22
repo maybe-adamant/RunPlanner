@@ -21,12 +21,12 @@ import {
   candidateSupport,
   presentCandidateLabel,
   type CandidateProjectionService,
-} from '../projections/candidateProjection';
-import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../state/store';
-import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
-import { candidateSelectState } from './candidatePresentation';
-import { SemanticOwnerMarker } from './EvaluationFeedback';
+} from '../../../projections/candidateProjection';
+import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
+import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
+import { CountedRewardEditor, RewardValueEditor } from '../rewards/RewardEditors';
+import { candidateSelectState } from '../../feedback/candidatePresentation';
+import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 
 interface RoomStateEditorProps {
   readonly activeCageCount?: number;

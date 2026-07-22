@@ -12,8 +12,8 @@ import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { describe, expect, it } from 'vitest';
 
-import { createApplication } from '../composition/createApplication';
-import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
+import { createApplication } from '../../../composition/createApplication';
+import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { RoomSelector } from './RoomSelector';
 
 describe('RoomSelector', () => {

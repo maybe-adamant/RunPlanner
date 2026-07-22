@@ -12,7 +12,7 @@ import {
   createRepresentativeNOPQProject,
   qBiome,
   qOccurrenceIds,
-} from '../../../../../../apps/planner/src/testing/surfaceProject';
+} from '../../../../../../apps/planner/test/fixtures/surfaceProject';
 
 describe('Q simulation', () => {
   it('replays the scripted Summit sequence through exact stage and lifecycle authorities', () => {

@@ -26,14 +26,14 @@ import { projectClockworkTopology, projectLinearBatchState } from '@run-planner/
 import {
   presentCandidateLabel,
   type CandidateProjectionService,
-} from '../projections/candidateProjection';
-import { allocateOccurrenceId } from '../workspace/occurrenceIds';
-import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../state/store';
-import { candidateSelectState } from './candidatePresentation';
-import { SemanticOwnerMarker } from './EvaluationFeedback';
+} from '../../../projections/candidateProjection';
+import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
+import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
+import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
+import { candidateSelectState } from '../../feedback/candidatePresentation';
+import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 import { RoomSelector } from './RoomSelector';
-import { RoomStateEditor } from './RoomStateEditor';
+import { RoomStateEditor } from '../rooms/RoomStateEditor';
 
 interface LinearTopologyEditorProps {
   readonly biome: BiomeAddress;

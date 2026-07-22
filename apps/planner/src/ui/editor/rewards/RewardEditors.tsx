@@ -14,8 +14,8 @@ import {
   presentCandidateLabel,
   type CandidateOptionProjection,
   type CandidateProjectionService,
-} from '../projections/candidateProjection';
-import { candidateSelectState } from './candidatePresentation';
+} from '../../../projections/candidateProjection';
+import { candidateSelectState } from '../../feedback/candidatePresentation';
 
 export type RewardCandidateOwner =
   | { readonly kind: 'incomingReward'; readonly address: IncomingRewardAddress }

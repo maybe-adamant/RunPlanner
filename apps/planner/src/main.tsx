@@ -8,8 +8,8 @@ import {
   createBrowserAutosaveScheduler,
 } from './persistence/browserAutosaveRecoveryAdapter';
 import { createApplication } from './composition/createApplication';
-import './styles.css';
-import { App } from './ui/App';
+import './ui/styles.css';
+import { App } from './ui/shell/App';
 
 const rootElement = document.getElementById('root');
 
