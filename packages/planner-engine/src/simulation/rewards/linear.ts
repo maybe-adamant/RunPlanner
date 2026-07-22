@@ -1,13 +1,13 @@
-import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../../catalog';
-import { semanticAddressKey } from '../../project/addresses';
+import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../../catalog-schema';
+import { semanticAddressKey } from '../../authored-project/addresses';
 import {
   applyConcreteAcquisition,
   isOfferSupportedAtResolutionPoint,
   resolveAcquisitionRole,
   type RewardHistoryState,
   type RewardKernelFacts,
-} from '../../rewardKernel';
-import type { CountedRewardBinding } from '../../rewards';
+} from '../../reward-kernel';
+import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type {
   CanonicalLinearHistory,
   LinearHistoryStateView,

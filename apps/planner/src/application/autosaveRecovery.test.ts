@@ -2,7 +2,7 @@ import {
   createProjectDocument,
   createRouteAddress,
   encodeProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 

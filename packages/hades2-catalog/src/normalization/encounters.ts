@@ -5,7 +5,7 @@ import type {
   EncounterPhaseKind,
   EncounterProfile,
   RewardWheelOfferPoint,
-} from '@run-planner/engine';
+} from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 
 import type { RawEncounterProfileDeclaration } from '../declarations';

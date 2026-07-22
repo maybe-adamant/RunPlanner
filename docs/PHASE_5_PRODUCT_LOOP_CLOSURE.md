@@ -9,20 +9,20 @@ delivery scope by `IMPLEMENTATION_PLAN.md`.
 
 ## Automated Acceptance Matrix
 
-| Acceptance surface                                                                                 | Named evidence                                                                                                        |
-| -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Complete F browser authoring and validation                                                        | `authors, validates, labels, saves, and reloads the representative F project through the browser UI`                  |
-| G editing after a valid F prefix                                                                   | `navigates, authors, undoes, and redoes G after a validated F prefix`                                                 |
-| Blocked G remains editable without invented validity                                               | `keeps G authoring available while incomplete F blocks its simulation`                                                |
-| Complete F/G simulation, labels, profiles, recovery, navigation, accessibility, and responsiveness | `closes the complete F/G browser loop with profiles, recovery, accessibility, and responsive projections`             |
-| G-specific Crawler exclusion and non-counting timing                                               | `preserves biome encounter depth when the picked G miniboss is Crawler`                                               |
-| G maximum-width preboss simulation and editing                                                     | `materializes the maximum G preboss fork from a three-exit predecessor` and its shared-editor interaction fixture     |
+| Acceptance surface                                                                                 | Named evidence                                                                                                                      |
+| -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Complete F browser authoring and validation                                                        | `authors, validates, labels, saves, and reloads the representative F project through the browser UI`                                |
+| G editing after a valid F prefix                                                                   | `navigates, authors, undoes, and redoes G after a validated F prefix`                                                               |
+| Blocked G remains editable without invented validity                                               | `keeps G authoring available while incomplete F blocks its simulation`                                                              |
+| Complete F/G simulation, labels, profiles, recovery, navigation, accessibility, and responsiveness | `closes the complete F/G browser loop with profiles, recovery, accessibility, and responsive projections`                           |
+| G-specific Crawler exclusion and non-counting timing                                               | `preserves biome encounter depth when the picked G miniboss is Crawler`                                                             |
+| G maximum-width preboss simulation and editing                                                     | `materializes the maximum G preboss fork from a three-exit predecessor` and its shared-editor interaction fixture                   |
 | Candidate and selected-plan parity                                                                 | candidate fixtures in `packages/hades2-catalog/src/fGeneration.test.ts` and `packages/hades2-catalog/src/projectSimulation.test.ts` |
-| Profile save/load and exact derived-state replacement                                              | profile application, adapter, and browser interaction fixtures                                                        |
-| Dirty, clean, unsaved, recovered, corrupt-recovery, and autosave failure behavior                  | profile-session and autosave-recovery application fixtures                                                            |
-| Semantic keyboard history                                                                          | `supports Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, and Ctrl+Y`                                                                   |
-| Keyboard section and biome navigation                                                              | `activates route and configured-biome navigation from the keyboard`                                                   |
-| Text-edit protection                                                                               | `leaves native text and content-editable undo behavior untouched`                                                     |
+| Profile save/load and exact derived-state replacement                                              | profile application, adapter, and browser interaction fixtures                                                                      |
+| Dirty, clean, unsaved, recovered, corrupt-recovery, and autosave failure behavior                  | profile-session and autosave-recovery application fixtures                                                                          |
+| Semantic keyboard history                                                                          | `supports Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, and Ctrl+Y`                                                                                 |
+| Keyboard section and biome navigation                                                              | `activates route and configured-biome navigation from the keyboard`                                                                 |
+| Text-edit protection                                                                               | `leaves native text and content-editable undo behavior untouched`                                                                   |
 
 The complete F/G fixture audits unique control IDs, explicit labels for every
 visible input and select, accessible names for buttons, current-panel

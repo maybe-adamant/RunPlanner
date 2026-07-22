@@ -1,5 +1,5 @@
-import type { Catalog, RoomDeclaration } from '../../catalog';
-import { semanticAddressKey, type SemanticAddress } from '../../project/addresses';
+import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
 import {
   applyConcreteAcquisition,
   applyOfferProjection,
@@ -20,8 +20,8 @@ import {
   type ShopGenerationSupport,
   type ShopGenerationWitness,
   type ShopPurchaseFailure,
-} from '../../rewardKernel';
-import type { CountedRewardBinding } from '../../rewards';
+} from '../../reward-kernel';
+import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type { HistoryEvent } from '../history';
 import type {
   CanonicalAuthoredRoom,

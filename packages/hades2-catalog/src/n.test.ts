@@ -2,11 +2,13 @@ import {
   createDefaultRoomState,
   decodeRoomState,
   ProjectDocumentContractError,
+} from '@run-planner/engine/authored-project';
+import {
   type CountedRewardBinding,
-  type HubBiomeLayout,
   type RewardProducerBinding,
   type ShopRewardBinding,
-} from '@run-planner/engine';
+} from '@run-planner/engine/reward-kernel';
+import { type HubBiomeLayout } from '@run-planner/engine/catalog-schema';
 import { describe, expect, it } from 'vitest';
 
 import { CatalogContractError, createCatalog } from './catalog';

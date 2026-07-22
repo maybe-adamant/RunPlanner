@@ -1,11 +1,16 @@
 import {
   createPreparedProjectCandidateEvaluator,
+  type ProjectCandidateEvaluation,
+  type ProjectCandidateEvaluator,
+  type ProjectCandidateQuery,
+  type ProjectEvaluation,
+} from '@run-planner/engine/simulation';
+import {
   semanticAddressKey,
   type AuthoredFieldValue,
   type BatchRewardStoreAddress,
   type BiomeAddress,
   type BiomeFieldAddress,
-  type Catalog,
   type ContinuationAddress,
   type HubSlotAddress,
   type HubVisitAddress,
@@ -15,19 +20,15 @@ import {
   type LocalRewardAddress,
   type OccurrenceId,
   type OccurrenceAddress,
-  type ProjectCandidateEvaluation,
-  type ProjectCandidateEvaluator,
-  type ProjectCandidateQuery,
   type ProjectDocument,
-  type ProjectEvaluation,
   type RewardWheelAddress,
   type RewardWheelOfferAddress,
-  type RoomDeclaration,
   type ShopOfferAddress,
   type ShopPurchaseAddress,
   type SideRoomGeneration,
   type TargetAddress,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { type Catalog, type RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
 export interface CandidateOptionProjection<T> {

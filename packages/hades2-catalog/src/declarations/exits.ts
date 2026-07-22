@@ -1,4 +1,7 @@
-import type { ExitCompatibilityPolicy, ExitTypeDeclaration } from '@run-planner/engine';
+import type {
+  ExitCompatibilityPolicy,
+  ExitTypeDeclaration,
+} from '@run-planner/engine/catalog-schema';
 
 export const exitCompatibilityPolicies = [
   {

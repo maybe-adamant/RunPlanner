@@ -1,4 +1,5 @@
-import { encodeProjectDocument, type Catalog } from '@run-planner/engine';
+import { encodeProjectDocument } from '@run-planner/engine/authored-project';
+import { type Catalog } from '@run-planner/engine/catalog-schema';
 
 import type { PlannerCapabilities } from './capabilities';
 import type { AutosaveRecoveryAdapter } from './autosaveRecovery';

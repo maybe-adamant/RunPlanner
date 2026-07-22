@@ -2,10 +2,10 @@ import type {
   CountedRewardBinding,
   EnteredRewardStoreHistoryPolicy,
   RewardProducerBinding,
-} from './rewards';
-import type { RewardKernelCatalog } from './rewardKernel/model';
-import type { CounterAxis, RequirementExpression } from './requirements';
-import type { ProducerLifecyclePointKey } from './rewardKernel/model';
+} from '../reward-kernel/bindings';
+import type { RewardKernelCatalog } from '../reward-kernel/model';
+import type { CounterAxis, RequirementExpression } from '../requirements/model';
+import type { ProducerLifecyclePointKey } from '../reward-kernel/model';
 
 export interface CatalogCollection<T> {
   readonly values: readonly T[];

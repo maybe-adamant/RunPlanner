@@ -1,4 +1,4 @@
-import type { Catalog } from '../catalog';
+import type { Catalog } from '../catalog-schema';
 import { applyProjectCommand, type ProjectCommand } from './commands';
 import type { ProjectDocument } from './model';
 

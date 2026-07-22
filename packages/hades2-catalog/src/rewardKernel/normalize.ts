@@ -1,4 +1,5 @@
-import type { CatalogCollection, RequirementExpression } from '@run-planner/engine';
+import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
   AcquisitionLifecycleBinding,
   AcquisitionRoleResolution,

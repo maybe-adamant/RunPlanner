@@ -5,12 +5,12 @@ import {
   projectCommandAddress,
   redoProjectHistory,
   undoProjectHistory,
-  type Catalog,
   type ProjectCommand,
   type ProjectDocument,
-  type ProjectEvaluation,
   type ProjectHistory,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { type Catalog } from '@run-planner/engine/catalog-schema';
+import { type ProjectEvaluation } from '@run-planner/engine/simulation';
 
 import { requireBiomeCapability, type PlannerCapabilities } from './capabilities';
 import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';

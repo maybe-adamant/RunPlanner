@@ -1,10 +1,6 @@
-import {
-  semanticAddressKey,
-  type Catalog,
-  type ProjectEvaluation,
-  type SemanticAddress,
-  type SemanticFinding,
-} from '@run-planner/engine';
+import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
+import { type Catalog } from '@run-planner/engine/catalog-schema';
+import { type ProjectEvaluation, type SemanticFinding } from '@run-planner/engine/simulation';
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
 import {

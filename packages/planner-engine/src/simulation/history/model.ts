@@ -1,4 +1,4 @@
-import type { BiomeTransitionCounterAxis, EncounterPhaseKind } from '../../catalog';
+import type { BiomeTransitionCounterAxis, EncounterPhaseKind } from '../../catalog-schema';
 import type {
   BiomeAddress,
   ContinuationAddress,
@@ -7,7 +7,7 @@ import type {
   HubVisitAddress,
   LocalChildAddress,
   TargetAddress,
-} from '../../project/addresses';
+} from '../../authored-project/addresses';
 import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
 
 interface LinearHistoryEventBase {

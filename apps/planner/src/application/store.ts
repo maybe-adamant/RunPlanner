@@ -2,10 +2,10 @@ import { configureStore, createSelector } from '@reduxjs/toolkit';
 import {
   canRedoProjectHistory,
   canUndoProjectHistory,
-  type Catalog,
   type ProjectDocument,
   encodeProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { useDispatch, useSelector } from 'react-redux';
 
 import type { PlannerCapabilities } from './capabilities';

@@ -1,4 +1,4 @@
-import { createRouteAddress, encodeProjectDocument } from '@run-planner/engine';
+import { createRouteAddress, encodeProjectDocument } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from './createApplication';

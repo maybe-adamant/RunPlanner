@@ -1,11 +1,11 @@
-import type { Catalog, RoomDeclaration } from '../../catalog';
-import { semanticAddressKey } from '../../project/addresses';
-import type { RequirementEvaluationContext } from '../../requirementEvaluator';
+import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import { semanticAddressKey } from '../../authored-project/addresses';
+import type { RequirementEvaluationContext } from '../../requirements/evaluator';
 import {
   factsWithHistory,
   type RewardHistoryState,
   type RewardKernelFacts,
-} from '../../rewardKernel';
+} from '../../reward-kernel';
 import type { HistoryStateView, RoomCreationSource } from '../history';
 import { projectRecentEncounterPhases } from '../history';
 import type { CanonicalLifecycleRoom } from '../history/lifecycleInput';

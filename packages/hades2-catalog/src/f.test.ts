@@ -3,7 +3,7 @@ import type {
   FixedRewardBinding,
   RewardProducerBinding,
   ShopRewardBinding,
-} from '@run-planner/engine';
+} from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
 import { CatalogContractError, createCatalog } from './catalog';

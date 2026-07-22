@@ -1,6 +1,5 @@
 import {
   applyProjectCommand,
-  composeNHistory,
   createBiomeAddress,
   createHubSlotAddress,
   createHubVisitAddress,
@@ -13,6 +12,12 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   encodeProjectDocument,
+  semanticAddressKey,
+  type HubBiomePlan,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
+  composeNHistory,
   evaluateHubCompleteness,
   evaluateNBiome,
   evaluateNRoomGeneration,
@@ -20,12 +25,9 @@ import {
   evaluateProjectCandidate,
   evaluateProjectCandidates,
   materializeHubBiome,
-  semanticAddressKey,
   simulateProject,
   type CompleteHubCompletenessResult,
-  type HubBiomePlan,
-  type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 

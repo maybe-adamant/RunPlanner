@@ -1,10 +1,10 @@
-import type { Catalog, HubBiomeLayout } from '../../catalog';
+import type { Catalog, HubBiomeLayout } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createFixedEntryTargetAddress,
   semanticAddressKey,
   type BiomeAddress,
-} from '../../project/addresses';
+} from '../../authored-project/addresses';
 import type {
   CanonicalAuthoredRoom,
   CanonicalHubBiome,

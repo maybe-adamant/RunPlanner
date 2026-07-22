@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type {
   CountedRewardBinding,
-  RequirementExpression,
   RewardProducerBinding,
-} from '@run-planner/engine';
+} from '@run-planner/engine/reward-kernel';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
 
 import { CatalogContractError, createCatalog } from './catalog';
 import { declarations } from './declarations';

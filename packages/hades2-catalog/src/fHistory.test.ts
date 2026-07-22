@@ -1,6 +1,5 @@
 import {
   applyProjectCommand,
-  composeFHistory,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createContinuationAddress,
@@ -8,15 +7,18 @@ import {
   createPickedAddress,
   createProjectDocument,
   createTargetAddress,
+  semanticAddressKey,
+  type LinearBiomePlan,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
+  composeFHistory,
   evaluateFCompleteness,
   foldFHistoryEvents,
   materializeLinearBiome,
-  semanticAddressKey,
   type CompleteFCompletenessResult,
   type FRoomHistoryViews,
-  type LinearBiomePlan,
-  type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';

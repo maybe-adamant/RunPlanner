@@ -1,10 +1,5 @@
-import type {
-  Catalog,
-  ProjectDocument,
-  RoomDeclaration,
-  RoomKind,
-  TargetAddress,
-} from '@run-planner/engine';
+import type { Catalog, RoomDeclaration, RoomKind } from '@run-planner/engine/catalog-schema';
+import type { ProjectDocument, TargetAddress } from '@run-planner/engine/authored-project';
 
 export const ordinaryRoomCategories = ['Combat', 'Miniboss', 'Story', 'Fountain', 'Shop'] as const;
 const generatedTargetRoomCategories = Object.freeze([

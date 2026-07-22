@@ -1,11 +1,11 @@
-import type { Catalog } from '../catalog';
-import { createBiomeAddress, type BiomeAddress } from '../project/addresses';
+import type { Catalog } from '../catalog-schema';
+import { createBiomeAddress, type BiomeAddress } from '../authored-project/addresses';
 import type {
   AuthoredRoutePlan,
   HubBiomePlan,
   LinearBiomePlan,
   ProjectDocument,
-} from '../project/model';
+} from '../authored-project/model';
 import { evaluateHubCompleteness, evaluateLinearCompleteness } from './completeness';
 import {
   evaluateHubRoomGeneration,

@@ -1,27 +1,27 @@
 import type {
   BiomeAddress,
-  LinearBiomeProjectEvaluation,
-  CanonicalBatchState,
-  Catalog,
-  ClockworkBatchProjection,
   LinearBatchContinuation,
   LinearBiomePlan,
   LinearBiomeTopology,
   LinearTargetReference,
   LinearTerminalContinuation,
   OccurrenceId,
-  RoomDeclaration,
   RoomOccurrence,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import type {
+  LinearBiomeProjectEvaluation,
+  CanonicalBatchState,
+  ClockworkBatchProjection,
+} from '@run-planner/engine/simulation';
+import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
   createBatchRewardStoreAddress,
   createContinuationAddress,
   createOccurrenceAddress,
   createPickedAddress,
   createTargetAddress,
-  projectClockworkTopology,
-  projectLinearBatchState,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { projectClockworkTopology, projectLinearBatchState } from '@run-planner/engine/simulation';
 
 import {
   presentCandidateLabel,

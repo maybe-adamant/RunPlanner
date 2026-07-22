@@ -3,14 +3,14 @@ import type {
   LocalChildDescriptor,
   RewardWheelOfferPoint,
   RoomDeclaration,
-} from '../catalog';
-import type { CountedRewardBinding, ShopRewardBinding } from '../rewards';
+} from '../catalog-schema';
+import type { CountedRewardBinding, ShopRewardBinding } from '../reward-kernel/bindings';
 import type {
   ResolvedRewardOffer,
   RewardPayload,
   RewardTypeDeclaration,
   ShopProfileDeclaration,
-} from '../rewardKernel/model';
+} from '../reward-kernel/model';
 import type {
   AuthoredRoomState,
   EphyraCombatState,

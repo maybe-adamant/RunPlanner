@@ -18,12 +18,11 @@ import {
   createTargetAddress,
   encodeProjectDocument,
   semanticAddressKey,
-  simulateProject,
-  type Catalog,
   type OccurrenceId,
   type ProjectDocument,
-  type ProjectEvaluation,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { simulateProject, type ProjectEvaluation } from '@run-planner/engine/simulation';
+import { type Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

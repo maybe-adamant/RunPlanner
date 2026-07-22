@@ -1,5 +1,5 @@
-import type { BiomeTransitionCounterAxis } from '../../catalog';
-import { semanticAddressKey } from '../../project/addresses';
+import type { BiomeTransitionCounterAxis } from '../../catalog-schema';
+import { semanticAddressKey } from '../../authored-project/addresses';
 import type {
   CanonicalHubHistory,
   CanonicalBiomeHistory,

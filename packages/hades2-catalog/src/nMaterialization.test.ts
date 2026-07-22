@@ -8,14 +8,16 @@ import {
   createOccurrenceId,
   createProjectDocument,
   encodeProjectDocument,
+  semanticAddressKey,
+  type HubBiomePlan,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
   evaluateHubCompleteness,
   HubMaterializationContractError,
   materializeHubBiome,
-  semanticAddressKey,
   type CompleteHubCompletenessResult,
-  type HubBiomePlan,
-  type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';

@@ -15,9 +15,13 @@ import type {
   ShopOfferAddress,
   ShopPurchaseAddress,
   TargetAddress,
-} from '../../project/addresses';
-import type { AuthoredFieldValue, OccurrenceId, SideRoomGeneration } from '../../project/model';
-import type { ResolvedRewardOffer } from '../../rewardKernel/model';
+} from '../../authored-project/addresses';
+import type {
+  AuthoredFieldValue,
+  OccurrenceId,
+  SideRoomGeneration,
+} from '../../authored-project/model';
+import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { RoomGenerationExclusionReason } from '../generation';
 import type { FindingCode, SemanticFinding } from '../model';
 

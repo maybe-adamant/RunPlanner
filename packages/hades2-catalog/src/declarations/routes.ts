@@ -1,4 +1,4 @@
-import type { RouteDeclaration } from '@run-planner/engine';
+import type { RouteDeclaration } from '@run-planner/engine/catalog-schema';
 
 export const routes = [
   {

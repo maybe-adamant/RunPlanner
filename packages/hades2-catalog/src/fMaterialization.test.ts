@@ -9,15 +9,17 @@ import {
   createProjectDocument,
   createShopPurchaseAddress,
   createTargetAddress,
+  semanticAddressKey,
+  type LinearBiomePlan,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
   evaluateFCompleteness,
   LinearMaterializationContractError,
   materializeLinearBiome,
-  semanticAddressKey,
   type CompleteFCompletenessResult,
   type FCompletenessResult,
-  type LinearBiomePlan,
-  type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';

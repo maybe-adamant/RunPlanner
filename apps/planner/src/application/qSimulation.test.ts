@@ -4,8 +4,8 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   semanticAddressKey,
-  simulateProject,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { createRepresentativeNOPQProject, qBiome, qOccurrenceIds } from '../testing/surfaceProject';

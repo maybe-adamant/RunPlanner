@@ -5,11 +5,14 @@ import type {
   LinearBiomeLayout,
   RoomDeclaration,
   RoomForce,
-} from '../../catalog';
-import { evaluateRequirement, type RequirementEvaluationContext } from '../../requirementEvaluator';
-import type { RequirementExpression } from '../../requirements';
-import { semanticAddressKey } from '../../project/addresses';
-import type { RewardHistoryState } from '../../rewardKernel';
+} from '../../catalog-schema';
+import {
+  evaluateRequirement,
+  type RequirementEvaluationContext,
+} from '../../requirements/evaluator';
+import type { RequirementExpression } from '../../requirements/model';
+import { semanticAddressKey } from '../../authored-project/addresses';
+import type { RewardHistoryState } from '../../reward-kernel';
 import type {
   CanonicalLinearHistory,
   LinearRoomHistoryViews,

@@ -1,6 +1,5 @@
 import {
   applyProjectCommand,
-  composeLinearHistory,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createBiomeFieldAddress,
@@ -17,20 +16,23 @@ import {
   createTargetAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  semanticAddressKey,
+  type LinearBiomePlan,
+  type OccurrenceId,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
+  composeLinearHistory,
   evaluateLinearCompleteness,
   evaluateLinearRoomGeneration,
   evaluateLinearRewards,
   foldLinearHistoryEvents,
   evaluateProjectCandidate,
   evaluateProjectCandidates,
-  semanticAddressKey,
   simulateProject,
   supportedFieldsCageOutcomes,
   materializeLinearBiome,
-  type LinearBiomePlan,
-  type OccurrenceId,
-  type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 

@@ -1,8 +1,8 @@
 import type {
   AuthoredFieldDescriptor,
-  CountedRewardBinding,
   LocalChildDescriptor,
-} from '@run-planner/engine';
+} from '@run-planner/engine/catalog-schema';
+import type { CountedRewardBinding } from '@run-planner/engine/reward-kernel';
 
 import type { RawCountedRewardBinding, RawLocalChildDescriptor } from '../declarations';
 

@@ -1,7 +1,6 @@
 import type {
   AuthoredFieldDescriptor,
   CompletionDescriptor,
-  EnteredRewardStoreHistoryPolicy,
   EncounterPhaseKind,
   EntryDescriptor,
   ExitCompatibilityPolicy,
@@ -14,7 +13,6 @@ import type {
   HubTargetCompletionDescriptor,
   LinearStartDescriptor,
   LinearProgressionPolicy,
-  RequirementExpression,
   RewardStorePolicy,
   RoomForce,
   RoomCaps,
@@ -29,7 +27,9 @@ import type {
   TerminalPolicy,
   BiomeDeclaration,
   RouteDeclaration,
-} from '@run-planner/engine';
+} from '@run-planner/engine/catalog-schema';
+import type { EnteredRewardStoreHistoryPolicy } from '@run-planner/engine/reward-kernel';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RawRewardKernelInput } from '../rewardKernel/types';
 
 export interface RawEncounterPhaseDeclaration {

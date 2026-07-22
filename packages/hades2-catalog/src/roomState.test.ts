@@ -3,7 +3,7 @@ import {
   createDefaultRoomState,
   decodeRoomState,
   ProjectDocumentContractError,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
 
 import { createCatalog } from './catalog';
 import { declarations, type RawCatalogInput } from './declarations';

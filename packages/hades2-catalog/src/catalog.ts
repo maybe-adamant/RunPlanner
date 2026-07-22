@@ -1,4 +1,4 @@
-import type { Catalog } from '@run-planner/engine';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import type { RawCatalogInput } from './declarations';
 import { normalizeBiomes } from './normalization/biomes';

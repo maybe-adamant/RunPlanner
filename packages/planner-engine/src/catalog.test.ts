@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { summarizeCatalog, type Catalog, type CatalogCollection } from './catalog';
+import { summarizeCatalog, type Catalog, type CatalogCollection } from './catalog-schema';
 
 function emptyCollection<T>(): CatalogCollection<T> {
   return { values: [], byKey: {} };

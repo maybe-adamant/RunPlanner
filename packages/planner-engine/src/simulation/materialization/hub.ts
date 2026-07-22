@@ -4,7 +4,7 @@ import type {
   HubBiomeLayout,
   LocalChildDescriptor,
   RoomDeclaration,
-} from '../../catalog';
+} from '../../catalog-schema';
 import {
   createHubOpenSetAddress,
   createHubRoomAddress,
@@ -17,7 +17,7 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   type BiomeAddress,
-} from '../../project/addresses';
+} from '../../authored-project/addresses';
 import type {
   EphyraCombatState,
   EphyraSideRoomState,
@@ -25,8 +25,8 @@ import type {
   OccurrenceId,
   RoomOccurrence,
   ShopState,
-} from '../../project/model';
-import type { CountedRewardBinding, ShopRewardBinding } from '../../rewards';
+} from '../../authored-project/model';
+import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
 import type { CompleteHubCompletenessResult } from '../completeness';
 import type {
   CanonicalAuthoredRoom,

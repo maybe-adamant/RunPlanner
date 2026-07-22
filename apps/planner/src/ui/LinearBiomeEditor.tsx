@@ -1,9 +1,6 @@
-import type {
-  LinearBiomeProjectEvaluation,
-  Catalog,
-  LinearBiomePlan,
-  RoomDeclaration,
-} from '@run-planner/engine';
+import type { LinearBiomeProjectEvaluation } from '@run-planner/engine/simulation';
+import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import type { LinearBiomePlan } from '@run-planner/engine/authored-project';
 import {
   createBiomeAddress,
   createBiomeFieldAddress,
@@ -11,7 +8,7 @@ import {
   createFixedEntryRewardAddress,
   createFixedEntryRoomAddress,
   createOccurrenceAddress,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
 import { useState } from 'react';
 
 import {

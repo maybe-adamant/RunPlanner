@@ -1,4 +1,4 @@
-import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../catalog';
+import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../catalog-schema';
 import type {
   LinearBiomeTopology,
   BatchRewardStoreState,

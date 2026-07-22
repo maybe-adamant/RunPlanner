@@ -1,12 +1,11 @@
 import type {
   BiomeAddress,
-  Catalog,
-  CountedRewardBinding,
-  RoomDeclaration,
   RoomOccurrence,
   ShopPurchaseAddress,
   ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import type { CountedRewardBinding } from '@run-planner/engine/reward-kernel';
 import {
   createIncomingRewardAddress,
   createLocalRewardAddress,
@@ -15,7 +14,7 @@ import {
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
 import { useRef, useState } from 'react';
 
 import {

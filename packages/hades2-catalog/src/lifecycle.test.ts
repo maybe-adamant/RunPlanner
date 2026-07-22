@@ -2,10 +2,12 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+} from '@run-planner/engine/authored-project';
+import {
   executeRoomLifecycle,
   LifecycleExecutionContractError,
   type RoomLifecycleExecutionInput,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { CatalogContractError, createCatalog } from './catalog';

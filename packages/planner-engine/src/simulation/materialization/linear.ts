@@ -5,7 +5,7 @@ import type {
   LinearBiomeLayout,
   RoomDeclaration,
   RoomTemplateKey,
-} from '../../catalog';
+} from '../../catalog-schema';
 import {
   createBatchRewardStoreAddress,
   createContinuationAddress,
@@ -21,7 +21,7 @@ import {
   createShopPurchaseAddress,
   createTargetAddress,
   type BiomeAddress,
-} from '../../project/addresses';
+} from '../../authored-project/addresses';
 import type {
   AuthoredRoomState,
   BatchRewardStoreState,
@@ -32,7 +32,7 @@ import type {
   OccurrenceId,
   RoomOccurrence,
   ShopState,
-} from '../../project/model';
+} from '../../authored-project/model';
 import type { CompleteLinearCompletenessResult } from '../completeness';
 import type {
   CanonicalAuthoredRoom,

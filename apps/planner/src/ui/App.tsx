@@ -1,10 +1,6 @@
-import {
-  createRouteAddress,
-  type AuthoredRoutePlan,
-  type Catalog,
-  type CatalogSummary,
-  type ProjectRouteEvaluation,
-} from '@run-planner/engine';
+import { createRouteAddress, type AuthoredRoutePlan } from '@run-planner/engine/authored-project';
+import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
+import { type ProjectRouteEvaluation } from '@run-planner/engine/simulation';
 
 import { presentProjectStatus, presentRouteStatus } from '../application/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';

@@ -4,7 +4,7 @@ import type {
   HistoryRecord,
   NumericRange,
   RequirementExpression,
-} from './requirements';
+} from './model';
 
 export type RequirementKind = RequirementExpression['kind'];
 

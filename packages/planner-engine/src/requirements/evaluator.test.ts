@@ -5,7 +5,7 @@ import {
   hasRequirementEvaluator,
   requirementEvaluatorRegistry,
   type RequirementEvaluationContext,
-} from './requirementEvaluator';
+} from './evaluator';
 
 const baseContext = {
   counters: {

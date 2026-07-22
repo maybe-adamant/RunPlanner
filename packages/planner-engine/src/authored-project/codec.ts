@@ -1,4 +1,4 @@
-import type { Catalog, RouteDeclaration } from '../catalog';
+import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
 import { decodeHubBiomeTopology } from './hubTopology';
 import { decodeLinearBiomeTopology } from './linearTopology';

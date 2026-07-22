@@ -1,4 +1,4 @@
-import type { Catalog } from '../catalog';
+import type { Catalog } from '../catalog-schema';
 import { createDefaultBiomeState } from './biomeState';
 import { decodeProjectDocument } from './codec';
 import { PROJECT_DOCUMENT_SCHEMA_VERSION, type ProjectDocument } from './model';

@@ -7,17 +7,19 @@ import {
   createLocalChildAddress,
   createLocalChildGroupAddress,
   createLocalRewardAddress,
-  type Catalog,
   type EphyraCombatState,
-  type FixedAuthoredSlotDescriptor,
-  type HubBiomeLayout,
   type HubBiomePlan,
-  type HubBiomeProjectEvaluation,
   type OccurrenceId,
   type ProjectDocument,
   type RoomOccurrence,
   type SideRoomGeneration,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import {
+  type Catalog,
+  type FixedAuthoredSlotDescriptor,
+  type HubBiomeLayout,
+} from '@run-planner/engine/catalog-schema';
+import { type HubBiomeProjectEvaluation } from '@run-planner/engine/simulation';
 import { useMemo, useRef, useState } from 'react';
 
 import {

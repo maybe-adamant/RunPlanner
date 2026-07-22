@@ -1,15 +1,15 @@
 import type {
   CountedRewardBinding,
-  LinearBiomeLayout,
   RewardProducerBinding,
   ShopRewardBinding,
-} from '@run-planner/engine';
+} from '@run-planner/engine/reward-kernel';
+import type { LinearBiomeLayout } from '@run-planner/engine/catalog-schema';
 import {
   createBiomeAddress,
   createDefaultRoomState,
   createProjectDocument,
-  evaluateLinearCompleteness,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { evaluateLinearCompleteness } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';

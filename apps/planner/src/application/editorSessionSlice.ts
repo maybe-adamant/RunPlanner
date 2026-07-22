@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { SemanticAddress } from '@run-planner/engine';
+import type { SemanticAddress } from '@run-planner/engine/authored-project';
 
 export type PlannerSection = 'underworld' | 'surface' | 'settings';
 export type UnderworldPanel = 'route' | 'F' | 'G' | 'H' | 'I';

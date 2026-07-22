@@ -9,12 +9,12 @@ import type {
   LinearBiomeLayout,
   LinearProgressionPolicy,
   LinearStartDescriptor,
-  RequirementExpression,
   RewardStorePolicy,
   RoomDeclaration,
   SourceRewardStorePolicyOverride,
   TerminalPolicy,
-} from '@run-planner/engine';
+} from '@run-planner/engine/catalog-schema';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RewardStoreDeclaration } from '@run-planner/engine/reward-kernel';
 
 import type { RawBiomeLayoutDeclaration } from '../declarations';

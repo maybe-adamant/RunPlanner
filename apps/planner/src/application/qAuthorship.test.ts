@@ -6,12 +6,12 @@ import {
   createOccurrenceId,
   createTargetAddress,
   encodeProjectDocument,
-  evaluateLinearCompleteness,
   parseProjectDocument,
   ProjectCommandContractError,
   type LinearBiomePlan,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { evaluateLinearCompleteness } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {

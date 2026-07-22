@@ -1,4 +1,4 @@
-import type { LinearBiomeLayout, StagedCandidatePoolDescriptor } from '../catalog';
+import type { LinearBiomeLayout, StagedCandidatePoolDescriptor } from '../catalog-schema';
 import type { LinearBiomeTopology, OccurrenceId } from './model';
 
 export function stagedProgressionStages(

@@ -1,4 +1,4 @@
-import type { AuthoredFieldDescriptor, LinearBiomeLayout } from '../catalog';
+import type { AuthoredFieldDescriptor, LinearBiomeLayout } from '../catalog-schema';
 import type { AuthoredBiomeState, AuthoredFieldValue } from './model';
 import {
   expectBoolean,

@@ -1,6 +1,5 @@
 import {
   applyProjectCommand,
-  composeLinearHistory,
   createBiomeAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
@@ -9,18 +8,21 @@ import {
   createProjectDocument,
   createTargetAddress,
   encodeProjectDocument,
+  type LinearBiomePlan,
+  type OccurrenceId,
+  type ProjectCommand,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
+  composeLinearHistory,
   evaluateLinearCompleteness,
   LinearHistoryFoldContractError,
   materializeLinearBiome,
   type CanonicalLinearHistory,
   type CompleteLinearCompletenessResult,
-  type LinearBiomePlan,
   type LinearHistoryLedgers,
   type LinearHistoryStateView,
-  type OccurrenceId,
-  type ProjectCommand,
-  type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';

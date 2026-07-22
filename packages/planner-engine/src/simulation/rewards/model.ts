@@ -1,10 +1,10 @@
-import type { RewardBagState, RewardHistoryState } from '../../rewardKernel/model';
+import type { RewardBagState, RewardHistoryState } from '../../reward-kernel/model';
 import type {
   BatchRewardStoreAddress,
   SemanticAddress,
   TargetAddress,
-} from '../../project/addresses';
-import type { ConcreteAcquisitionEvent, ResolvedRewardOffer } from '../../rewardKernel/model';
+} from '../../authored-project/addresses';
+import type { ConcreteAcquisitionEvent, ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { SemanticFinding } from '../model';
 
 interface RewardEventBase {

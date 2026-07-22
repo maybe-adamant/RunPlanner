@@ -3,7 +3,7 @@ import type {
   ExitCompatibilityPolicy,
   ExitTypeDeclaration,
   RoomStructuralTag,
-} from '@run-planner/engine';
+} from '@run-planner/engine/catalog-schema';
 
 import { createCollection, requireNonEmpty } from './common';
 import { fail } from './errors';

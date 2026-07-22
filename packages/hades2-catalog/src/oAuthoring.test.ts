@@ -18,7 +18,7 @@ import {
   type LinearBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';

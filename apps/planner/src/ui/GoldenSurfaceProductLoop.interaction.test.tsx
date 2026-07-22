@@ -8,8 +8,8 @@ import {
   createOccurrenceAddress,
   createTargetAddress,
   encodeProjectDocument,
-  simulateProject,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication, type PlannerApplication } from '../application/createApplication';

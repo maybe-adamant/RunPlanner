@@ -1,6 +1,5 @@
 import {
   applyProjectCommand,
-  composeFHistory,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createContinuationAddress,
@@ -12,15 +11,18 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
-  evaluateFCompleteness,
-  evaluateFRewards,
-  materializeLinearBiome,
   semanticAddressKey,
-  type CompleteFCompletenessResult,
   type LinearBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import {
+  composeFHistory,
+  evaluateFCompleteness,
+  evaluateFRewards,
+  materializeLinearBiome,
+  type CompleteFCompletenessResult,
+} from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
