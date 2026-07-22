@@ -1,12 +1,6 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding } from '@run-planner/engine/reward-kernel';
-import type {
-  IncomingRewardAddress,
-  LocalRewardAddress,
-  ProjectDocument,
-  RewardWheelOfferAddress,
-  ShopOfferAddress,
-} from '@run-planner/engine/authored-project';
+import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { useRef, useState } from 'react';
 
@@ -14,14 +8,10 @@ import {
   presentCandidateLabel,
   type CandidateOptionProjection,
   type CandidateProjectionService,
+  type CountedRewardCandidateOwner,
+  type RewardCandidateOwner,
 } from '../../../projections/candidateProjection';
 import { candidateSelectState } from '../../feedback/candidatePresentation';
-
-export type RewardCandidateOwner =
-  | { readonly kind: 'incomingReward'; readonly address: IncomingRewardAddress }
-  | { readonly kind: 'localReward'; readonly address: LocalRewardAddress }
-  | { readonly kind: 'rewardWheelOffer'; readonly address: RewardWheelOfferAddress }
-  | { readonly kind: 'shopOffer'; readonly address: ShopOfferAddress };
 
 interface RewardValueEditorProps {
   readonly candidateOwner: RewardCandidateOwner;
@@ -34,8 +24,12 @@ interface RewardValueEditorProps {
   readonly project: ProjectDocument;
 }
 
-interface CountedRewardEditorProps extends Omit<RewardValueEditorProps, 'rewardTypes'> {
+interface CountedRewardEditorProps extends Omit<
+  RewardValueEditorProps,
+  'candidateOwner' | 'rewardTypes'
+> {
   readonly binding: CountedRewardBinding;
+  readonly candidateOwner: CountedRewardCandidateOwner;
 }
 
 function projectRewardOptions(
@@ -327,6 +321,12 @@ export function CountedRewardEditor({
   onReplace,
   project,
 }: CountedRewardEditorProps) {
+  const rewardTypes = candidateProjection.countedRewardTypes(
+    project,
+    candidateOwner,
+    binding,
+    offer.rewardType,
+  );
   return (
     <RewardValueEditor
       candidateOwner={candidateOwner}
@@ -336,7 +336,7 @@ export function CountedRewardEditor({
       offer={offer}
       onReplace={onReplace}
       project={project}
-      rewardTypes={binding.allowedRewardTypes}
+      rewardTypes={rewardTypes}
     />
   );
 }

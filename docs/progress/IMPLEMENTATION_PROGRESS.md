@@ -1441,6 +1441,22 @@ editor.
 
 Interaction fixtures cover required-first ordering, selected-invalid retention,
 unavailable disclosure, search and keyboard selection, one-command undo, and
-representative F/H/I/O/P/Q owners. Phase 7 Commit 6 is next: producer-resolved
-reward-type domains must remove the current cross-store union without repairing
-retained authored reward values.
+representative F/H/I/O/P/Q owners.
+
+Phase 7 Commit 6 is complete. Counted reward editors now receive their exact
+type domain from the producer that owns the offer: Linear incoming rewards use
+the canonical batch/forced/source-offer-point resolver, Hub board rewards use
+their declaration-owned store, H cages and N side rooms use their local store,
+and O wheels use their authored wheel store. Shop slots retain their existing
+exact group ownership, while fixed rewards remain non-editable. The application
+deduplicates concrete store entries in declaration order and intersects them
+with the binding filter; React only renders the projected domain.
+
+Changing a parent batch store does not rewrite its authored children. A reward
+that becomes invalid remains appended to the projected domain and is assessed
+by the ordinary reward-candidate authority as unavailable. The lightweight
+domain cache is separate from lazy candidate evaluation, so rendering a reward
+editor does not trigger a second project simulation. Fixtures cover F/G/P
+batches, H cages, I NonGoal rooms, N board/side/shop ownership, O wheels, Q
+minibosses, and retained-invalid replacement. Phase 7 Commit 7 is next:
+relational sibling, bag, Boon-source, and Devotion-pair domains.

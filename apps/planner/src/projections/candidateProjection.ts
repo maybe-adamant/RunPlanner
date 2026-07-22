@@ -6,6 +6,7 @@ import {
   type ProjectEvaluation,
 } from '@run-planner/engine/simulation';
 import {
+  resolveLinearOccurrenceRewardStore,
   semanticAddressKey,
   type AuthoredFieldValue,
   type BatchRewardStoreAddress,
@@ -29,7 +30,18 @@ import {
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
 import { type Catalog, type RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+
+export type RewardCandidateOwner =
+  | { readonly kind: 'incomingReward'; readonly address: IncomingRewardAddress }
+  | { readonly kind: 'localReward'; readonly address: LocalRewardAddress }
+  | { readonly kind: 'rewardWheelOffer'; readonly address: RewardWheelOfferAddress }
+  | { readonly kind: 'shopOffer'; readonly address: ShopOfferAddress };
+
+export type CountedRewardCandidateOwner = Exclude<
+  RewardCandidateOwner,
+  { readonly kind: 'shopOffer' }
+>;
 
 export interface CandidateOptionProjection<T> {
   readonly value: T;
@@ -37,6 +49,12 @@ export interface CandidateOptionProjection<T> {
 }
 
 export interface CandidateProjectionService {
+  readonly countedRewardTypes: (
+    project: ProjectDocument,
+    owner: CountedRewardCandidateOwner,
+    binding: CountedRewardBinding,
+    selectedRewardType: string,
+  ) => readonly string[];
   readonly biomeFields: (
     project: ProjectDocument,
     field: BiomeFieldAddress,
@@ -142,15 +160,12 @@ function fieldValueKey(value: AuthoredFieldValue): string {
   return JSON.stringify(value);
 }
 
-function projectOptions<T>(
+function requireProjectCache(
   cache: WeakMap<ProjectDocument, ProjectCandidateProjectionCache>,
   project: ProjectDocument,
-  key: string,
-  values: readonly T[],
-  queries: readonly ProjectCandidateQuery[],
   catalog: Catalog,
   evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
-): readonly CandidateOptionProjection<T>[] {
+): ProjectCandidateProjectionCache {
   let projectCache = cache.get(project);
   if (projectCache === undefined) {
     projectCache = {
@@ -163,6 +178,19 @@ function projectOptions<T>(
     };
     cache.set(project, projectCache);
   }
+  return projectCache;
+}
+
+function projectOptions<T>(
+  cache: WeakMap<ProjectDocument, ProjectCandidateProjectionCache>,
+  project: ProjectDocument,
+  key: string,
+  values: readonly T[],
+  queries: readonly ProjectCandidateQuery[],
+  catalog: Catalog,
+  evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
+): readonly CandidateOptionProjection<T>[] {
+  const projectCache = requireProjectCache(cache, project, catalog, evaluateProject);
   const existing = projectCache.options.get(key);
   if (existing !== undefined) {
     return existing as readonly CandidateOptionProjection<T>[];
@@ -186,12 +214,133 @@ interface ProjectCandidateProjectionCache {
   readonly options: Map<string, readonly CandidateOptionProjection<unknown>[]>;
 }
 
+function requireBiomePlan(project: ProjectDocument, owner: CountedRewardCandidateOwner) {
+  const address = owner.address;
+  const route = project.routes.find((candidate) => candidate.routeKey === address.routeKey);
+  const plan = route?.biomes.find((candidate) => candidate.biomeKey === address.biomeKey);
+  if (plan === undefined) {
+    throw new Error(`reward producer ${semanticAddressKey(address)} has no authored biome plan`);
+  }
+  return plan;
+}
+
+function requireOccurrence(project: ProjectDocument, owner: CountedRewardCandidateOwner) {
+  const plan = requireBiomePlan(project, owner);
+  const occurrence = plan.topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === owner.address.occurrenceId,
+  );
+  if (occurrence === undefined) {
+    throw new Error(`reward producer ${semanticAddressKey(owner.address)} has no occurrence`);
+  }
+  return { occurrence, plan };
+}
+
+function resolvedCountedStoreKey(
+  catalog: Catalog,
+  project: ProjectDocument,
+  owner: CountedRewardCandidateOwner,
+  binding: CountedRewardBinding,
+): string {
+  let storeKey: string | undefined;
+  switch (owner.kind) {
+    case 'incomingReward': {
+      const { occurrence, plan } = requireOccurrence(project, owner);
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      if (room === undefined) {
+        throw new Error(`reward producer references unknown room ${occurrence.gameName}`);
+      }
+      if (plan.kind === 'LinearBiome') {
+        const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+        if (layout?.kind !== 'LinearBiome') {
+          throw new Error(`${plan.biomeKey} has no Linear reward-store layout`);
+        }
+        storeKey = resolveLinearOccurrenceRewardStore(
+          plan,
+          catalog,
+          layout,
+          occurrence.occurrenceId,
+        );
+      } else {
+        storeKey = room.forcedRewardStoreKey ?? room.individualRewardStoreKey;
+      }
+      break;
+    }
+    case 'localReward':
+      if (binding.storeKeys.length !== 1) {
+        throw new Error(
+          `local reward ${semanticAddressKey(owner.address)} has no exact declaration-owned store`,
+        );
+      }
+      storeKey = binding.storeKeys[0];
+      break;
+    case 'rewardWheelOffer': {
+      const { occurrence, plan } = requireOccurrence(project, owner);
+      if (plan.kind !== 'LinearBiome' || occurrence.state.kind !== 'shipCombat') {
+        throw new Error(`${semanticAddressKey(owner.address)} is not a ShipCombat reward wheel`);
+      }
+      storeKey = occurrence.state.wheels[owner.address.wheelKey]?.storeKey;
+      break;
+    }
+  }
+  if (storeKey === undefined || !binding.storeKeys.includes(storeKey)) {
+    throw new Error(
+      `reward producer ${semanticAddressKey(owner.address)} resolved unsupported store ${String(storeKey)}`,
+    );
+  }
+  return storeKey;
+}
+
+function countedRewardTypeDomain(
+  catalog: Catalog,
+  binding: CountedRewardBinding,
+  storeKey: string,
+  selectedRewardType: string,
+): readonly string[] {
+  const store = catalog.rewards.stores.byKey[storeKey];
+  if (store === undefined) {
+    throw new Error(`reward producer resolved unknown store ${storeKey}`);
+  }
+  const rewardTypes: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of store.entries) {
+    if (!binding.allowedRewardTypes.includes(entry.rewardType) || seen.has(entry.rewardType)) {
+      continue;
+    }
+    seen.add(entry.rewardType);
+    rewardTypes.push(entry.rewardType);
+  }
+  if (!seen.has(selectedRewardType)) {
+    rewardTypes.push(selectedRewardType);
+  }
+  if (rewardTypes.length === 0) {
+    throw new Error(`reward producer store ${storeKey} has no selectable reward types`);
+  }
+  return Object.freeze(rewardTypes);
+}
+
 export function createCandidateProjectionService(
   catalog: Catalog,
   evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
 ): CandidateProjectionService {
   const cache = new WeakMap<ProjectDocument, ProjectCandidateProjectionCache>();
+  const rewardTypeDomainCache = new WeakMap<ProjectDocument, Map<string, readonly string[]>>();
   const service: CandidateProjectionService = {
+    countedRewardTypes: (project, owner, binding, selectedRewardType) => {
+      let projectCache = rewardTypeDomainCache.get(project);
+      if (projectCache === undefined) {
+        projectCache = new Map();
+        rewardTypeDomainCache.set(project, projectCache);
+      }
+      const storeKey = resolvedCountedStoreKey(catalog, project, owner, binding);
+      const key = `reward-types:${semanticAddressKey(owner.address)}:${storeKey}:${selectedRewardType}`;
+      const existing = projectCache.get(key);
+      if (existing !== undefined) {
+        return existing;
+      }
+      const domain = countedRewardTypeDomain(catalog, binding, storeKey, selectedRewardType);
+      projectCache.set(key, domain);
+      return domain;
+    },
     biomeFields: (project, field, values) =>
       projectOptions(
         cache,

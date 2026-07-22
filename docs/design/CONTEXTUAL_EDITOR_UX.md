@@ -407,8 +407,9 @@ interface ContextualOption<T> {
 The production bridge now implements this vocabulary in the application
 projection layer. It consumes typed candidate evidence, preserves the richer
 engine result, and maps unavailable addressed coverage to `unassessed`. The
-existing native controls do not consume it yet; grouped room and compact
-reward pickers remain subsequent slices.
+grouped room picker consumes the ordered model. Counted reward editors now
+consume a producer-resolved type domain before projecting each concrete offer;
+the compact compound reward picker remains a subsequent slice.
 
 Before React consumption, the application projects these options into an
 ordered picker model containing required, semantic-category, unassessed, and

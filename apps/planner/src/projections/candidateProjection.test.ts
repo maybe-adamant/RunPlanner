@@ -1,8 +1,10 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createContinuationAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
@@ -143,5 +145,85 @@ describe('candidate application projection', () => {
 
     expect(options.map((option) => option.value.gameName)).toEqual(['G_Intro']);
     expect(options[0]?.evaluation).toMatchObject({ context: 'evaluated', support: 'forced' });
+  });
+
+  it('resolves the exact batch store while retaining a now-invalid authored reward', () => {
+    let evaluationCount = 0;
+    const service = createCandidateProjectionService(catalog, (project) => {
+      evaluationCount += 1;
+      return simulateProject(catalog, project);
+    });
+    const startId = createOccurrenceId('reward-domain-start');
+    const targetId = createOccurrenceId('reward-domain-target');
+    let document = applyProjectCommand(project(), catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, startId),
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, startId, 1),
+      occurrenceId: targetId,
+      gameName: 'F_Combat02',
+    });
+    const binding = catalog.rooms.byKey.F_Combat02?.incomingReward;
+    const occurrence = document.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === targetId,
+    );
+    if (binding?.kind !== 'countedChoice' || occurrence?.state.kind !== 'counted') {
+      throw new Error('F_Combat02 counted reward fixture is missing');
+    }
+    const owner = {
+      kind: 'incomingReward' as const,
+      address: createIncomingRewardAddress(biome, targetId),
+    };
+    const runDomain = service.countedRewardTypes(
+      document,
+      owner,
+      binding,
+      occurrence.state.offer.rewardType,
+    );
+
+    expect(runDomain).toContain('MaxHealthDrop');
+    expect(runDomain).not.toContain('MetaCurrencyDrop');
+    expect(service.countedRewardTypes(document, owner, binding, 'Boon')).toBe(runDomain);
+    expect(evaluationCount).toBe(0);
+
+    const metaDocument = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, startId),
+      storeKey: 'MetaProgress',
+    });
+    const retainedOccurrence = metaDocument.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === targetId,
+    );
+    if (retainedOccurrence?.state.kind !== 'counted') {
+      throw new Error('F_Combat02 retained reward fixture is missing');
+    }
+    const metaDomain = service.countedRewardTypes(
+      metaDocument,
+      owner,
+      binding,
+      retainedOccurrence.state.offer.rewardType,
+    );
+
+    expect(retainedOccurrence.state.offer).toEqual(occurrence.state.offer);
+    expect(metaDomain).toContain('MetaCurrencyDrop');
+    expect(metaDomain).not.toContain('MaxHealthDrop');
+    expect(metaDomain.at(-1)).toBe('Boon');
+    expect(evaluationCount).toBe(0);
+    const retainedCandidate = service
+      .incomingRewards(metaDocument, owner.address, [retainedOccurrence.state.offer])
+      .at(0);
+    expect(retainedCandidate?.evaluation).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+    });
+    expect(evaluationCount).toBe(1);
   });
 });
