@@ -297,7 +297,7 @@ function BatchEditor({
         )
       : Object.freeze([]);
   const fieldsSupport =
-    evaluation?.completion === 'complete'
+    evaluation?.authoring === 'complete'
       ? evaluation.roomGeneration.fieldsCageOutcomes.find(
           (entry) => entry.origin.parentOccurrenceId === continuation.parentOccurrenceId,
         )

@@ -116,7 +116,9 @@ function OEditorHarness({
     kind: 'LinearBiome',
     biomeKey: biome.biomeKey,
     origin: biome,
-    completion: 'incomplete',
+    authoring: 'incomplete',
+    frontier: biome,
+    coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
     findings: Object.freeze([]),
   });
   return (

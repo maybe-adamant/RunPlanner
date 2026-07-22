@@ -139,7 +139,9 @@ function HEditorHarness({
     kind: 'LinearBiome',
     biomeKey: biome.biomeKey,
     origin: biome,
-    completion: 'incomplete',
+    authoring: 'incomplete',
+    frontier: createContinuationAddress(biome, firstContinuation?.parentOccurrenceId ?? null),
+    coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
     findings:
       firstContinuation === undefined
         ? Object.freeze([])

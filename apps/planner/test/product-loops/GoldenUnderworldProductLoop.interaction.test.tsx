@@ -443,10 +443,10 @@ describe('golden Underworld product loop', () => {
     expect(
       screen.getByLabelText('Maximum NonGoal rewards').getAttribute('data-candidate-support'),
     ).toBe('unavailable');
-    expect(currentEvaluation(application).routes[0]?.horizon).toEqual({
-      kind: 'incomplete',
-      biomeKey: 'H',
-      blockedBiomeKeys: ['I'],
+    expect(currentEvaluation(application).routes[0]?.processing).toEqual({
+      completeValidPrefix: ['F', 'G'],
+      active: { kind: 'incomplete', biomeKey: 'H' },
+      blockedSuffix: ['I'],
     });
     expect(currentProject(application)).toBe(project);
   });
@@ -554,9 +554,9 @@ describe('golden Underworld product loop', () => {
       validatedBiomeCount: 4,
       eligibleForExecutionPlan: true,
     });
-    expect(evaluated.routes[0]?.validatedPrefix).toEqual(['F', 'G', 'H', 'I']);
+    expect(evaluated.routes[0]?.processing.completeValidPrefix).toEqual(['F', 'G', 'H', 'I']);
     const gEvaluation = evaluated.routes[0]?.biomes[1];
-    if (gEvaluation?.completion !== 'complete') {
+    if (gEvaluation?.authoring !== 'complete') {
       throw new Error('Golden G browser project did not produce a complete evaluation');
     }
     expect(gEvaluation.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
@@ -564,7 +564,7 @@ describe('golden Underworld product loop', () => {
       'G_PostBoss01',
     ]);
     const hEvaluation = evaluated.routes[0]?.biomes[2];
-    if (hEvaluation?.completion !== 'complete') {
+    if (hEvaluation?.authoring !== 'complete') {
       throw new Error('Golden H browser project did not produce a complete evaluation');
     }
     expect(hEvaluation.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
@@ -572,7 +572,7 @@ describe('golden Underworld product loop', () => {
       'H_PostBoss01',
     ]);
     const iEvaluation = evaluated.routes[0]?.biomes[3];
-    if (iEvaluation?.completion !== 'complete') {
+    if (iEvaluation?.authoring !== 'complete') {
       throw new Error('Golden I browser project did not produce a complete evaluation');
     }
     expect(iEvaluation.snapshot.completionRooms.map((room) => room.gameName)).toEqual([

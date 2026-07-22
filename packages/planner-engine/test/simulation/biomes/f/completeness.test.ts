@@ -113,6 +113,7 @@ describe('F completeness', () => {
 
     expect(result).toEqual({
       completion: 'incomplete',
+      frontier: biome,
       findings: [
         {
           code: 'biomeTopologyMissing',
@@ -131,6 +132,9 @@ describe('F completeness', () => {
     const result = evaluate(startedProject());
 
     expect(result.completion).toBe('incomplete');
+    expect(result).toMatchObject({
+      frontier: createContinuationAddress(biome, startId),
+    });
     expect(result.findings.map((finding) => finding.code)).toEqual(['continuationMissing']);
     expect(result.findings.map((finding) => semanticAddressKey(finding.origin))).toEqual([
       '["continuation","Underworld","F","f-start"]',
@@ -141,6 +145,9 @@ describe('F completeness', () => {
     const result = evaluate(withOpeningBatch());
 
     expect(result.completion).toBe('incomplete');
+    expect(result).toMatchObject({
+      frontier: createTargetAddress(biome, startId, 1),
+    });
     expect(
       result.findings.map((finding) => ({
         code: finding.code,

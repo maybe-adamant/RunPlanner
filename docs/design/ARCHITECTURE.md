@@ -306,13 +306,13 @@ interface ProjectEvaluation {
 }
 ```
 
-One route evaluation contains a complete-valid biome prefix, at most one active
-biome, and a blocked downstream suffix. Only a complete and valid biome seeds
-the next biome. Production currently publishes completeness findings and no
-canonical snapshot for an incomplete active biome. Phase 7 strengthens that
-same atomic result with truthful prefix lifecycle, folded state, counter,
-generation, reward, finding, and candidate coverage; it does not introduce a
-second evaluation path.
+One route evaluation publishes explicit `completeValidPrefix`, `active`, and
+`blockedSuffix` processing regions. Only a complete and valid biome enters the
+prefix and seeds the next biome. Every biome result separately reports
+authoring state and evaluation coverage. Incomplete active biomes publish their
+semantic authoring frontier and no canonical snapshot; the Linear and Hub
+progressive slices strengthen their initial `notEvaluated` coverage through the
+same atomic result rather than introducing a second evaluation path.
 
 Complete biome results strengthen that same progressive result with the
 terminal/completion sequence, canonical snapshot, final biome history,
