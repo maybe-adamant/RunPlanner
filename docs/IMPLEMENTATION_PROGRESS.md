@@ -611,6 +611,15 @@ N/O browser fixture closes route validation, ship candidates, semantic
 navigation, accessible controls, profile round trips, autosave recovery, and
 responsive wheel projection while P/Q remain dormant.
 
+Phase 6 P Slice 1 is complete. The shared linear evaluator now admits P after
+a complete N/O prefix with no P-specific production abstraction. Its fixed
+empty Intro projection, source-sensitive Indoor/Outdoor exits, authored
+Run/Meta stores, counted Olympus combat, Talos/Dracon encounter-depth
+asymmetry, forked preboss realizations, Prometheus/postboss tail, and carried
+reward history all replay through existing authorities. A representative
+N/O/P fixture proves the complete valid route and an incompatible first target;
+the application simulation scope still stops at P.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1316,8 +1325,8 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, and all six O slices are complete. By explicit
-implementation-order decision, the remaining P/Q Phase 6 slices now precede
+five I slices, all nine N slices, all six O slices, and P Slice 1 are complete.
+By explicit implementation-order decision, the remaining P/Q Phase 6 slices now precede
 the contextual-selection UX insertion. They reuse the existing editor and
 candidate language while preserving the typed data required by that later UX
 pass. Production does not yet publish prefix materialization, prefix history

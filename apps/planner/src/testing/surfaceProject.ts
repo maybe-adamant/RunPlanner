@@ -18,6 +18,7 @@ import {
   createShopOfferAddress,
   createTargetAddress,
   type HubBiomePlan,
+  type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/core';
 import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
@@ -33,6 +34,12 @@ export const oOccurrenceIds = Object.freeze({
   story: createOccurrenceId('editor-o-story'),
   combat02: createOccurrenceId('editor-o-combat02'),
   preboss: createOccurrenceId('editor-o-preboss'),
+});
+export const pBiome = createBiomeAddress('Surface', 'P');
+export const pOccurrenceIds = Object.freeze({
+  intro: createOccurrenceId('editor-p-intro'),
+  prebossShop: createOccurrenceId('editor-p-preboss-shop'),
+  prebossReward: createOccurrenceId('editor-p-preboss-reward'),
 });
 export const nFixedOccurrenceIds = Object.freeze({
   opening: createOccurrenceId('editor-n-opening'),
@@ -205,8 +212,8 @@ export function createRepresentativeNProject(): ProjectDocument {
 
 function appendORoom(
   project: ProjectDocument,
-  parentOccurrenceId: ReturnType<typeof createOccurrenceId>,
-  occurrenceId: ReturnType<typeof createOccurrenceId>,
+  parentOccurrenceId: OccurrenceId,
+  occurrenceId: OccurrenceId,
   gameName: string,
 ): ProjectDocument {
   let next = applyProjectCommand(project, catalog, {
@@ -224,6 +231,55 @@ function appendORoom(
     picked: createPickedAddress(oBiome, parentOccurrenceId),
     exitIndex: 1,
   });
+}
+
+export function pOccurrenceId(
+  gameName: string,
+  batchIndex: number,
+  exitIndex: number,
+): OccurrenceId {
+  return createOccurrenceId(`editor-p-${batchIndex}-${exitIndex}-${gameName.toLowerCase()}`);
+}
+
+function appendPBatch(
+  project: ProjectDocument,
+  parentOccurrenceId: OccurrenceId,
+  batchIndex: number,
+  targets: readonly [string, string],
+  storeKey: 'RunProgress' | 'MetaProgress',
+): { readonly project: ProjectDocument; readonly pickedOccurrenceId: OccurrenceId } {
+  let next = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    continuation: createContinuationAddress(pBiome, parentOccurrenceId),
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(pBiome, parentOccurrenceId),
+    storeKey,
+  });
+  let pickedOccurrenceId: OccurrenceId | undefined;
+  for (const [exitOffset, gameName] of targets.entries()) {
+    const exitIndex = exitOffset + 1;
+    const occurrenceId = pOccurrenceId(gameName, batchIndex, exitIndex);
+    next = applyProjectCommand(next, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(pBiome, parentOccurrenceId, exitIndex),
+      occurrenceId,
+      gameName,
+    });
+    if (exitIndex === 1) {
+      pickedOccurrenceId = occurrenceId;
+    }
+  }
+  next = applyProjectCommand(next, catalog, {
+    kind: 'SetPicked',
+    picked: createPickedAddress(pBiome, parentOccurrenceId),
+    exitIndex: 1,
+  });
+  if (pickedOccurrenceId === undefined) {
+    throw new Error(`P batch ${batchIndex} has no picked target`);
+  }
+  return { project: next, pickedOccurrenceId };
 }
 
 export function createRepresentativeNOProject(): ProjectDocument {
@@ -287,6 +343,99 @@ export function createRepresentativeNOProject(): ProjectDocument {
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceShopOffer',
     offer: createShopOfferAddress(oBiome, oOccurrenceIds.preboss, 'MajorNonBoon'),
+    value: { rewardType: 'MaxHealthDrop' },
+  });
+}
+
+export function createRepresentativeNOPProject(): ProjectDocument {
+  let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Surface'),
+    configuredBiomeCount: 3,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: pBiome,
+    occurrenceId: pOccurrenceIds.intro,
+    gameName: 'P_Intro',
+  });
+  const batches = [
+    { targets: ['P_Combat03', 'P_Combat05'], storeKey: 'RunProgress' },
+    { targets: ['P_Combat02', 'P_Combat06'], storeKey: 'MetaProgress' },
+    { targets: ['P_Combat04', 'P_Combat08'], storeKey: 'RunProgress' },
+    { targets: ['P_Combat07', 'P_Combat11'], storeKey: 'RunProgress' },
+    { targets: ['P_MiniBoss01', 'P_Combat09'], storeKey: 'RunProgress' },
+    { targets: ['P_Combat10', 'P_Combat13'], storeKey: 'RunProgress' },
+    { targets: ['P_Story01', 'P_Reprieve01'], storeKey: 'RunProgress' },
+    { targets: ['P_Combat12', 'P_Shop01'], storeKey: 'RunProgress' },
+    { targets: ['P_Combat15', 'P_Combat14'], storeKey: 'RunProgress' },
+  ] as const;
+  let parentOccurrenceId = pOccurrenceIds.intro;
+  for (const [batchOffset, batch] of batches.entries()) {
+    const result = appendPBatch(
+      project,
+      parentOccurrenceId,
+      batchOffset + 1,
+      batch.targets,
+      batch.storeKey,
+    );
+    project = result.project;
+    parentOccurrenceId = result.pickedOccurrenceId;
+  }
+  const offers = [
+    [1, 1, 'P_Combat03', { rewardType: 'MaxHealthDrop' }],
+    [1, 2, 'P_Combat05', { rewardType: 'MaxManaDrop' }],
+    [2, 1, 'P_Combat02', { rewardType: 'MetaCurrencyBigDrop' }],
+    [2, 2, 'P_Combat06', { rewardType: 'MetaCardPointsCommonBigDrop' }],
+    [3, 1, 'P_Combat04', { rewardType: 'RoomMoneyDrop' }],
+    [3, 2, 'P_Combat08', { rewardType: 'StackUpgrade' }],
+    [
+      5,
+      1,
+      'P_MiniBoss01',
+      {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      },
+    ],
+    [5, 2, 'P_Combat09', { rewardType: 'WeaponUpgrade' }],
+    [4, 1, 'P_Combat07', { rewardType: 'HermesUpgrade' }],
+    [
+      4,
+      2,
+      'P_Combat11',
+      {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
+      },
+    ],
+    [6, 1, 'P_Combat10', { rewardType: 'RoomMoneyDrop' }],
+    [6, 2, 'P_Combat13', { rewardType: 'MaxHealthDrop' }],
+    [7, 2, 'P_Reprieve01', { rewardType: 'MaxManaDrop' }],
+    [8, 1, 'P_Combat12', { rewardType: 'StackUpgrade' }],
+    [9, 1, 'P_Combat15', { rewardType: 'RoomMoneyDrop' }],
+    [9, 2, 'P_Combat14', { rewardType: 'MaxManaDrop' }],
+  ] as const;
+  for (const [batchIndex, exitIndex, gameName, value] of offers) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(pBiome, pOccurrenceId(gameName, batchIndex, exitIndex)),
+      value,
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTerminalTransition',
+    continuation: createContinuationAddress(pBiome, parentOccurrenceId),
+    targetOccurrenceIds: [pOccurrenceIds.prebossShop, pOccurrenceIds.prebossReward],
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetTerminalPicked',
+    picked: createPickedAddress(pBiome, parentOccurrenceId),
+    exitIndex: 1,
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
     value: { rewardType: 'MaxHealthDrop' },
   });
 }

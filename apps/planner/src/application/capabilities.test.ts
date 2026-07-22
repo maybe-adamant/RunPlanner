@@ -71,6 +71,15 @@ function catalogBeforePImport(): Catalog {
           profile.key,
         ),
     ),
+    roomLifecycleProfiles: declarations.roomLifecycleProfiles.map((profile) => ({
+      ...profile,
+      encounterProfileKeys: profile.encounterProfileKeys.filter(
+        (encounterProfileKey) =>
+          !['OlympusCombat', 'P_MiniBoss01', 'P_MiniBoss02', 'P_Boss01', 'P_PostBoss01'].includes(
+            encounterProfileKey,
+          ),
+      ),
+    })),
     exitCompatibilityPolicies: declarations.exitCompatibilityPolicies.filter(
       (policy) => !['TargetOutdoor', 'OutdoorSourceTargetsIndoor'].includes(policy.key),
     ),

@@ -23,7 +23,7 @@ import {
   nOccurrenceId as occurrenceId,
   nVisitSlotKeys as visitSlotKeys,
   requireNPlan as nPlan,
-} from '../testing/nProject';
+} from '../testing/surfaceProject';
 import { HubBiomeEditor } from './HubBiomeEditor';
 
 const activeScope = Object.freeze({ simulatableBiomeKeys: Object.freeze(['N']) });

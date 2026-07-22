@@ -26,7 +26,7 @@ import {
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
-} from '../testing/nProject';
+} from '../testing/surfaceProject';
 import { renderPlannerForInteraction } from '../testing/renderPlanner';
 
 afterEach(() => {
