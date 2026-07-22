@@ -6,7 +6,8 @@ export const standardRoomLifecycleProfiles = [
     encounterProfileKeys: [
       'F_Opening',
       'StandardCombat',
-      'Story',
+      'F_Story01',
+      'G_Story01',
       'HealthRestore',
       'F_MiniBoss01',
       'F_MiniBoss02',
@@ -26,6 +27,7 @@ export const standardRoomLifecycleProfiles = [
       'O_MiniBoss02',
       'O_Story01',
       'OlympusCombat',
+      'P_Story01',
       'P_MiniBoss01',
       'P_MiniBoss02',
       'Q_MiniBoss02',

@@ -6,6 +6,17 @@ export const pEncounterProfiles = [
     phases: [{ key: 'Combat', kind: 'combat', countsEncounterDepth: true }],
   },
   {
+    key: 'P_Story01',
+    phases: [
+      {
+        key: 'P_Story01',
+        kind: 'story',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'Story_Dionysus_01',
+      },
+    ],
+  },
+  {
     key: 'P_MiniBoss01',
     phases: [
       {

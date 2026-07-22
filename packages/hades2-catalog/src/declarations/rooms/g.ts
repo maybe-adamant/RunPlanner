@@ -700,7 +700,7 @@ export const gRooms = [
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: { kind: 'fixed', rewardType: 'Story', producerLifecycleKey: 'RoomReward' },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'Story',
+    encounterProfileKey: 'G_Story01',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
