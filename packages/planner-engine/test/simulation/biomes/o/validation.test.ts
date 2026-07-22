@@ -27,7 +27,7 @@ import {
   evaluateProjectCandidate,
   evaluateProjectCandidates,
   evaluateLinearBiome,
-  evaluateNBiome,
+  evaluateHubBiome,
   type CompleteHubProjectEvaluation,
   type CompleteLinearProjectEvaluation,
 } from '@run-planner/engine/simulation';
@@ -302,7 +302,7 @@ function validProject(): ProjectDocument {
 }
 
 function evaluateN(document: ProjectDocument): CompleteHubProjectEvaluation {
-  const evaluation = evaluateNBiome(catalog, 'Surface', nPlan(document));
+  const evaluation = evaluateHubBiome(catalog, 'Surface', nPlan(document));
   if (evaluation.completion !== 'complete') {
     throw new Error('fixture N is incomplete');
   }
@@ -493,15 +493,6 @@ describe('selected O validation', () => {
       ]),
       evidence: { supportedStoreKeys: ['RunProgress', 'MetaProgress'] },
     });
-    expect(
-      evaluateProjectCandidate(
-        catalog,
-        document,
-        { kind: 'rewardWheelOfferCount', wheel, offerCount: 1 },
-        { simulatableBiomeKeys: ['N'] },
-      ),
-    ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
-
     const invalid = applyProjectCommand(document, catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: createOccurrenceAddress(oBiome, oIds.combat04),

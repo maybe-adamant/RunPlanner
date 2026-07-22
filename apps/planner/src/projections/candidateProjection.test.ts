@@ -14,10 +14,6 @@ import { createCandidateProjectionService, presentCandidateLabel } from './candi
 import { selectRoomsForCategory } from './roomSelectorProjection';
 
 const biome = createBiomeAddress('Underworld', 'F');
-const simulationScope = Object.freeze({
-  simulatableBiomeKeys: Object.freeze(['F', 'G', 'H', 'I']),
-});
-
 function project() {
   return createProjectDocument(catalog, {
     projectId: 'candidate-projection',
@@ -31,7 +27,7 @@ describe('candidate application projection', () => {
     let evaluationCount = 0;
     const service = createCandidateProjectionService(catalog, (project) => {
       evaluationCount += 1;
-      return simulateProject(catalog, project, simulationScope);
+      return simulateProject(catalog, project);
     });
     const document = project();
     const layout = catalog.biomeLayouts.byKey.F;
@@ -51,7 +47,7 @@ describe('candidate application projection', () => {
 
   it('retains stable declaration domains when contextual evaluation is unavailable', () => {
     const service = createCandidateProjectionService(catalog, (project) =>
-      simulateProject(catalog, project, simulationScope),
+      simulateProject(catalog, project),
     );
     const startId = createOccurrenceId('candidate-projection-start');
     let document = applyProjectCommand(project(), catalog, {
@@ -79,7 +75,7 @@ describe('candidate application projection', () => {
 
   it('uses one common label decoration for context-impossible authored values', () => {
     const service = createCandidateProjectionService(catalog, (project) =>
-      simulateProject(catalog, project, simulationScope),
+      simulateProject(catalog, project),
     );
     const document = project();
     const room = catalog.rooms.byKey.F_Combat01!;
@@ -91,7 +87,7 @@ describe('candidate application projection', () => {
 
   it('projects the catalog-authored G start without a biome-specific application rule', () => {
     const service = createCandidateProjectionService(catalog, (project) =>
-      simulateProject(catalog, project, simulationScope),
+      simulateProject(catalog, project),
     );
     const document = createProjectDocument(catalog, {
       projectId: 'g-candidate-projection',

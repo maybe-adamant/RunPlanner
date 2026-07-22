@@ -1,6 +1,6 @@
 import type { ProjectDocument } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
-import type { ProjectEvaluation, ProjectSimulationScope } from '../project';
+import type { ProjectEvaluation } from '../project';
 import { assertProjectEvaluationSource, simulateProject } from '../project';
 import type {
   ProjectCandidateEvaluation,
@@ -32,9 +32,8 @@ export function evaluateProjectCandidate(
   catalog: Catalog,
   project: ProjectDocument,
   query: ProjectCandidateQuery,
-  scope?: ProjectSimulationScope,
 ): ProjectCandidateEvaluation {
-  const evaluation = evaluateProjectCandidates(catalog, project, Object.freeze([query]), scope)[0];
+  const evaluation = evaluateProjectCandidates(catalog, project, Object.freeze([query]))[0];
   if (evaluation === undefined) {
     throw new Error('single candidate evaluation returned no result');
   }
@@ -45,23 +44,21 @@ export function evaluateProjectCandidates(
   catalog: Catalog,
   project: ProjectDocument,
   queries: readonly ProjectCandidateQuery[],
-  scope?: ProjectSimulationScope,
 ): readonly ProjectCandidateEvaluation[] {
   if (queries.length === 0) {
     return Object.freeze([]);
   }
-  return createProjectCandidateEvaluator(catalog, project, scope).evaluate(queries);
+  return createProjectCandidateEvaluator(catalog, project).evaluate(queries);
 }
 
 export function createProjectCandidateEvaluator(
   catalog: Catalog,
   project: ProjectDocument,
-  scope?: ProjectSimulationScope,
 ): ProjectCandidateEvaluator {
   return createPreparedProjectCandidateEvaluator(
     catalog,
     project,
-    simulateProject(catalog, project, scope),
+    simulateProject(catalog, project),
   );
 }
 

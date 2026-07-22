@@ -979,9 +979,7 @@ side generation replays global ranked-prefix pressure; entered order replays
 the exact acquisition trace. Reward and shop proposals use the same immutable
 replacement/replay path as linear biomes. Incomplete N authorship returns typed
 `biomeIncomplete` context, while selected invalid values remain evaluated and
-retain exact findings. A simulation scope that excludes N returns
-`simulatorUnavailable`; candidate evaluation never bypasses the caller's
-project-simulation boundary.
+retain exact findings.
 
 If a prior biome is not complete and valid, candidates in every later biome
 report unavailable upstream context. If the active biome has not yet covered a
@@ -1082,19 +1080,16 @@ Each route simulation records:
   prefix materialization remains the next contextual-selection insertion;
 - no canonical snapshot, final biome history, completion event, or downstream
   seed on an incomplete active biome;
-- validated-prefix identity and an exact route-end, simulator-boundary,
-  incomplete, or invalid processing horizon;
+- validated-prefix identity and an exact route-end, incomplete, or invalid
+  processing horizon;
 - semantic findings in stable route and phase order;
 - whether the route is eligible for future execution-plan compilation.
 
-The core registry contains complete F, G, H, I, N, O, P, and Q simulators, with function
-dispatch selected by normalized layout kind after biome implementation scope is
-confirmed. Project simulation may also receive an application-owned simulation scope; reaching a registered
-biome outside that scope records a `simulatorBoundary` horizon without
-dispatching the biome or inventing local findings. The current application
-scope includes all eight declared biomes. Application interaction fixtures and
-direct core conformance fixtures exercise the complete F/G/H/I and N/O/P/Q
-route prefixes.
+The core contains complete F, G, H, I, N, O, P, and Q simulation, with
+function dispatch selected by normalized layout kind. Every biome placed in a
+production route is authorable, simulatable, and editable. Application
+interaction fixtures and direct core conformance fixtures exercise the
+complete F/G/H/I and N/O/P/Q route prefixes.
 An entirely unconfigured project has explicit `empty` status, no findings, and
 is not eligible for execution-plan compilation. Candidate evaluation consumes
 the same prepared context and legality authorities as selected-plan

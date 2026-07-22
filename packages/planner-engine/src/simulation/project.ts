@@ -56,13 +56,6 @@ export interface CompleteLinearProjectEvaluation {
 
 export type LinearBiomeProjectEvaluation =
   IncompleteLinearProjectEvaluation | CompleteLinearProjectEvaluation;
-export type IncompleteFProjectEvaluation = IncompleteLinearProjectEvaluation & {
-  readonly biomeKey: 'F';
-};
-export type CompleteFProjectEvaluation = CompleteLinearProjectEvaluation & {
-  readonly biomeKey: 'F';
-};
-export type FProjectEvaluation = IncompleteFProjectEvaluation | CompleteFProjectEvaluation;
 
 export interface IncompleteHubProjectEvaluation {
   readonly kind: 'HubBiome';
@@ -93,11 +86,6 @@ export type ProjectBiomeEvaluation = LinearBiomeProjectEvaluation | HubBiomeProj
 export type RouteProcessingHorizon =
   | { readonly kind: 'routeEnd' }
   | {
-      readonly kind: 'simulatorBoundary';
-      readonly biomeKey: string;
-      readonly blockedBiomeKeys: readonly string[];
-    }
-  | {
       readonly kind: 'incomplete' | 'invalid';
       readonly biomeKey: string;
       readonly blockedBiomeKeys: readonly string[];
@@ -115,7 +103,7 @@ export interface RouteEvaluationSummary {
 
 export interface ProjectRouteEvaluation {
   readonly routeKey: string;
-  readonly status: 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
+  readonly status: 'empty' | 'incomplete' | 'invalid' | 'valid';
   readonly configuredBiomeKeys: readonly string[];
   readonly biomes: readonly ProjectBiomeEvaluation[];
   readonly validatedPrefix: readonly string[];
@@ -135,7 +123,7 @@ export interface ProjectEvaluationSummary {
 }
 
 export interface ProjectEvaluation {
-  readonly status: 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
+  readonly status: 'empty' | 'incomplete' | 'invalid' | 'valid';
   readonly projectId: string;
   readonly catalogVersion: string;
   readonly routes: readonly ProjectRouteEvaluation[];
@@ -144,10 +132,6 @@ export interface ProjectEvaluation {
 }
 
 const evaluationSourceProjects = new WeakMap<ProjectEvaluation, ProjectDocument>();
-
-export interface ProjectSimulationScope {
-  readonly simulatableBiomeKeys: readonly string[];
-}
 
 export class ProjectSimulationContractError extends Error {
   constructor(detail: string) {
@@ -256,29 +240,6 @@ export function evaluateHubBiome(
   });
 }
 
-export function evaluateNBiome(
-  catalog: Catalog,
-  routeKey: string,
-  plan: HubBiomePlan,
-): HubBiomeProjectEvaluation {
-  if (plan.biomeKey !== 'N') {
-    throw new ProjectSimulationContractError('N biome evaluation requires biome N');
-  }
-  return evaluateHubBiome(catalog, routeKey, plan);
-}
-
-const implementedBiomeKeys = new Set(['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q']);
-
-function hasRegisteredSimulator(
-  biomeKey: string,
-  simulatableBiomeKeys?: ReadonlySet<string>,
-): boolean {
-  if (simulatableBiomeKeys !== undefined && !simulatableBiomeKeys.has(biomeKey)) {
-    return false;
-  }
-  return implementedBiomeKeys.has(biomeKey);
-}
-
 function assertProjectMatchesCatalog(catalog: Catalog, project: ProjectDocument): void {
   if (project.catalogVersion !== catalog.version) {
     throw new ProjectSimulationContractError(
@@ -308,7 +269,6 @@ function assertProjectMatchesCatalog(catalog: Catalog, project: ProjectDocument)
 function routeStatus(
   configuredBiomeCount: number,
   evaluations: readonly ProjectBiomeEvaluation[],
-  horizon: RouteProcessingHorizon,
 ): ProjectRouteEvaluation['status'] {
   if (configuredBiomeCount === 0) {
     return 'empty';
@@ -322,9 +282,6 @@ function routeStatus(
     )
   ) {
     return 'invalid';
-  }
-  if (horizon.kind === 'simulatorBoundary') {
-    return 'blocked';
   }
   return 'valid';
 }
@@ -342,9 +299,7 @@ function summarizeRoute(
     (evaluation) => evaluation.completion === 'complete' && evaluation.validity === 'invalid',
   ).length;
   const blockedBiomeCount =
-    horizon.kind === 'incomplete' ||
-    horizon.kind === 'invalid' ||
-    horizon.kind === 'simulatorBoundary'
+    horizon.kind === 'incomplete' || horizon.kind === 'invalid'
       ? horizon.blockedBiomeKeys.length
       : 0;
   return Object.freeze({
@@ -359,25 +314,13 @@ function summarizeRoute(
   });
 }
 
-function evaluateRoute(
-  catalog: Catalog,
-  route: AuthoredRoutePlan,
-  simulatableBiomeKeys?: ReadonlySet<string>,
-): ProjectRouteEvaluation {
+function evaluateRoute(catalog: Catalog, route: AuthoredRoutePlan): ProjectRouteEvaluation {
   const evaluations: ProjectBiomeEvaluation[] = [];
   const validatedPrefix: string[] = [];
   const findings: SemanticFinding[] = [];
   let horizon: RouteProcessingHorizon = Object.freeze({ kind: 'routeEnd' });
 
   for (const [index, plan] of route.biomes.entries()) {
-    if (!hasRegisteredSimulator(plan.biomeKey, simulatableBiomeKeys)) {
-      horizon = Object.freeze({
-        kind: 'simulatorBoundary',
-        biomeKey: plan.biomeKey,
-        blockedBiomeKeys: Object.freeze(route.biomes.slice(index).map((biome) => biome.biomeKey)),
-      });
-      break;
-    }
     let evaluation: ProjectBiomeEvaluation;
     if (plan.kind === 'HubBiome') {
       evaluation = evaluateHubBiome(catalog, route.routeKey, plan);
@@ -424,7 +367,7 @@ function evaluateRoute(
   );
   return Object.freeze({
     routeKey: route.routeKey,
-    status: routeStatus(route.biomes.length, frozenEvaluations, horizon),
+    status: routeStatus(route.biomes.length, frozenEvaluations),
     configuredBiomeKeys: Object.freeze(route.biomes.map((biome) => biome.biomeKey)),
     biomes: frozenEvaluations,
     validatedPrefix: frozenValidatedPrefix,
@@ -464,17 +407,9 @@ function summarizeProject(routes: readonly ProjectRouteEvaluation[]): ProjectEva
   });
 }
 
-export function simulateProject(
-  catalog: Catalog,
-  project: ProjectDocument,
-  scope?: ProjectSimulationScope,
-): ProjectEvaluation {
+export function simulateProject(catalog: Catalog, project: ProjectDocument): ProjectEvaluation {
   assertProjectMatchesCatalog(catalog, project);
-  const simulatableBiomeKeys =
-    scope === undefined ? undefined : new Set(scope.simulatableBiomeKeys);
-  const routes = Object.freeze(
-    project.routes.map((route) => evaluateRoute(catalog, route, simulatableBiomeKeys)),
-  );
+  const routes = Object.freeze(project.routes.map((route) => evaluateRoute(catalog, route)));
   const findings = Object.freeze(routes.flatMap((route) => route.findings));
   const summary = summarizeProject(routes);
   const status: ProjectEvaluation['status'] =
@@ -484,9 +419,7 @@ export function simulateProject(
         ? 'invalid'
         : summary.incompleteBiomeCount > 0
           ? 'incomplete'
-          : summary.blockedBiomeCount > 0
-            ? 'blocked'
-            : 'valid';
+          : 'valid';
 
   const evaluation = Object.freeze({
     status,

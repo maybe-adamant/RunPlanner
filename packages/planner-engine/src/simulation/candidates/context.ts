@@ -15,7 +15,7 @@ import type {
   ProjectEvaluation,
   ProjectRouteEvaluation,
 } from '../project';
-import { evaluateLinearBiome, evaluateNBiome } from '../project';
+import { evaluateHubBiome, evaluateLinearBiome } from '../project';
 import type {
   BiomeFieldCandidateQuery,
   CandidateContextUnavailableReason,
@@ -230,9 +230,6 @@ function unavailableReason(
   if (horizon.kind === 'invalid') {
     return 'upstreamInvalid';
   }
-  if (horizon.kind === 'simulatorBoundary') {
-    return 'simulatorUnavailable';
-  }
   failCandidate(query, 'simulation omitted the candidate biome without a processing horizon');
 }
 
@@ -357,7 +354,7 @@ export function evaluateCandidateBiome(
     failCandidate(query, 'candidate proposal changed biome layout kind');
   }
   if (plan.kind === 'HubBiome') {
-    return evaluateNBiome(catalog, route.routeKey, plan);
+    return evaluateHubBiome(catalog, route.routeKey, plan);
   }
 
   const previous = biomeIndex === 0 ? undefined : baselineRoute.biomes[biomeIndex - 1];

@@ -3,10 +3,7 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { summarizeCatalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectDocument } from '@run-planner/engine/authored-project';
 
-import {
-  createApplicationCapabilities,
-  createProjectSimulationScope,
-} from './capabilityConfiguration';
+import { createApplicationCapabilities } from './capabilityConfiguration';
 import { createCandidateProjectionService } from '../projections/candidateProjection';
 import {
   createAutosaveCoordinator,
@@ -35,7 +32,6 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     throw new Error('Autosave recovery adapter and scheduler must be provided together');
   }
   const capabilities = createApplicationCapabilities(catalog);
-  const simulationScope = createProjectSimulationScope(capabilities);
   const editorNavigation = createEditorNavigation(catalog, capabilities);
   const fallbackProject = createInitialProject(catalog, capabilities);
   const startup = restoreStartupProject(
@@ -50,7 +46,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     if (existing !== undefined) {
       return existing;
     }
-    const evaluation = simulateProject(catalog, project, simulationScope);
+    const evaluation = simulateProject(catalog, project);
     evaluationCache.set(project, evaluation);
     return evaluation;
   };

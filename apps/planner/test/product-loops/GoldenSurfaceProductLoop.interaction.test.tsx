@@ -16,7 +16,6 @@ import {
   createApplication,
   type PlannerApplication,
 } from '../../src/composition/createApplication';
-import { createProjectSimulationScope } from '../../src/composition/capabilityConfiguration';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
@@ -340,13 +339,7 @@ describe('N/O/P/Q Surface product loop', () => {
     expect(presentProject(application)).toEqual(authored);
 
     const rebuildStarted = performance.now();
-    expect(
-      simulateProject(
-        application.catalog,
-        authored,
-        createProjectSimulationScope(application.capabilities),
-      ),
-    ).toEqual(evaluated);
+    expect(simulateProject(application.catalog, authored)).toEqual(evaluated);
     const rebuildDurationMs = performance.now() - rebuildStarted;
     const editStarted = performance.now();
     application.store.dispatch(

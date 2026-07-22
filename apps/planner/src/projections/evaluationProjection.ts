@@ -109,7 +109,6 @@ const findingCopy = {
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {
-  blocked: { label: 'Blocked', tone: 'blocked' },
   empty: { label: 'Empty project', tone: 'empty' },
   incomplete: { label: 'Incomplete', tone: 'incomplete' },
   invalid: { label: 'Invalid', tone: 'invalid' },
@@ -117,7 +116,6 @@ const projectStatusCopy = {
 } as const satisfies Readonly<Record<ProjectEvaluation['status'], StatusPresentation>>;
 
 const routeStatusCopy = {
-  blocked: { label: 'Blocked', tone: 'blocked' },
   empty: { label: 'Not configured', tone: 'empty' },
   incomplete: { label: 'Incomplete', tone: 'incomplete' },
   invalid: { label: 'Invalid', tone: 'invalid' },

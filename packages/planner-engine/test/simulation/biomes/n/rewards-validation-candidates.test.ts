@@ -19,7 +19,7 @@ import {
 import {
   composeNHistory,
   evaluateHubCompleteness,
-  evaluateNBiome,
+  evaluateHubBiome,
   evaluateNRoomGeneration,
   evaluateNRewards,
   evaluateProjectCandidate,
@@ -248,7 +248,7 @@ function fixture(project = representativeProject()) {
 }
 
 function selected(project = representativeProject()) {
-  return evaluateNBiome(catalog, 'Surface', plan(project));
+  return evaluateHubBiome(catalog, 'Surface', plan(project));
 }
 
 describe('N Hub reward simulation', () => {
@@ -654,7 +654,7 @@ describe('selected N validation', () => {
       name: 'Incomplete N Validation',
       configuredBiomeCounts: { Surface: 1 },
     });
-    expect(evaluateNBiome(catalog, 'Surface', plan(incomplete))).toMatchObject({
+    expect(evaluateHubBiome(catalog, 'Surface', plan(incomplete))).toMatchObject({
       completion: 'incomplete',
       biomeKey: 'N',
     });
@@ -894,22 +894,6 @@ describe('N candidate evaluation', () => {
       validatedPrefix: ['N'],
       horizon: { kind: 'routeEnd' },
     });
-  });
-
-  it('does not evaluate N candidates outside the caller simulation scope', () => {
-    expect(
-      evaluateProjectCandidate(
-        catalog,
-        representativeProject(),
-        {
-          kind: 'hubSlot',
-          slot: createHubSlotAddress(biome, 'combat01'),
-          open: true,
-          occurrenceId: occurrenceId('combat01'),
-        },
-        { simulatableBiomeKeys: [] },
-      ),
-    ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
   });
 
   it('rejects malformed Hub candidate domains at their semantic contact', () => {

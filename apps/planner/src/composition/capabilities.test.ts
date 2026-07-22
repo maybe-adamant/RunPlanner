@@ -15,10 +15,7 @@ import {
   PlannerCapabilityContractError,
   requireBiomeCapability,
 } from './capabilities';
-import {
-  createApplicationCapabilities,
-  createProjectSimulationScope,
-} from './capabilityConfiguration';
+import { createApplicationCapabilities } from './capabilityConfiguration';
 import { createEditorNavigation } from '../projections/editorNavigation';
 import {
   createAuthorableProjectDocument,
@@ -199,9 +196,6 @@ describe('planner capabilities', () => {
       },
     ]);
     expect(reusedCapabilities.values).toEqual(capabilities.values);
-    expect(createProjectSimulationScope(capabilities)).toEqual({
-      simulatableBiomeKeys: ['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'],
-    });
   });
 
   it('rejects unknown, duplicate, and non-authorable editable capability entries', () => {

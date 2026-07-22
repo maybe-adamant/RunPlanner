@@ -2,7 +2,7 @@ import { semanticAddressKey } from '../../authored-project/addresses';
 import type { HubBiomePlan, ProjectDocument } from '../../authored-project/model';
 import type { Catalog, HubBiomeLayout } from '../../catalog-schema';
 import type { CompleteHubProjectEvaluation, HubBiomeProjectEvaluation } from '../project';
-import { evaluateNBiome } from '../project';
+import { evaluateHubBiome } from '../project';
 import type {
   HubSlotCandidateQuery,
   HubVisitCandidateQuery,
@@ -67,7 +67,7 @@ function hubSlotProposal(
       ? { kind: 'OpenHubSlot', slot: query.slot, occurrenceId: query.occurrenceId }
       : { kind: 'CloseHubSlot', slot: query.slot },
   );
-  return evaluateNBiome(catalog, query.slot.routeKey, locateHubBiomePlan(proposal, query));
+  return evaluateHubBiome(catalog, query.slot.routeKey, locateHubBiomePlan(proposal, query));
 }
 
 function hubSlotFindings(
@@ -196,7 +196,7 @@ export function evaluateHubVisitCandidate(
             visit: stableQuery.visit,
             hubSlotKey: stableQuery.hubSlotKey,
           });
-    const evaluation = evaluateNBiome(
+    const evaluation = evaluateHubBiome(
       catalog,
       stableQuery.visit.routeKey,
       locateHubBiomePlan(proposal, stableQuery),
@@ -290,7 +290,7 @@ export function evaluateSideRoomGenerationCandidate(
             sideRoom: stableQuery.sideRoom,
             generation: stableQuery.generation,
           });
-    const evaluation = evaluateNBiome(
+    const evaluation = evaluateHubBiome(
       catalog,
       stableQuery.sideRoom.routeKey,
       locateHubBiomePlan(proposal, stableQuery),
@@ -351,7 +351,7 @@ export function evaluateSideRoomEntryOrderCandidate(
     group: stableQuery.group,
     enteredSlotKeys: stableQuery.enteredSlotKeys,
   });
-  const evaluation = evaluateNBiome(
+  const evaluation = evaluateHubBiome(
     catalog,
     stableQuery.group.routeKey,
     locateHubBiomePlan(proposal, stableQuery),
