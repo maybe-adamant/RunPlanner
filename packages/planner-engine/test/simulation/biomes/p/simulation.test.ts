@@ -64,16 +64,6 @@ describe('P core loop', () => {
     expect(combat.postCommit.ledgers.counters.biomeEncounterDepth).toBe(
       combat.entry.ledgers.counters.biomeEncounterDepth + 1,
     );
-
-    expect(
-      simulateProject(catalog, project, {
-        simulatableBiomeKeys: ['F', 'G', 'H', 'I', 'N', 'O'],
-      }).routes[1],
-    ).toMatchObject({
-      status: 'blocked',
-      validatedPrefix: ['N', 'O'],
-      horizon: { kind: 'simulatorBoundary', biomeKey: 'P' },
-    });
   });
 
   it('rejects an indoor target on the intro outdoor exit', () => {

@@ -27,8 +27,6 @@ import {
 } from '../../../../test/fixtures/surfaceProject';
 import { HubBiomeEditor } from './HubBiomeEditor';
 
-const activeScope = Object.freeze({ simulatableBiomeKeys: Object.freeze(['N']) });
-
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -64,8 +62,7 @@ function renderNEditor(project: ProjectDocument) {
     simulatableBiomeKeys: ['N'],
     editableBiomeKeys: ['N'],
   });
-  const evaluateProject = (current: ProjectDocument) =>
-    simulateProject(catalog, current, activeScope);
+  const evaluateProject = (current: ProjectDocument) => simulateProject(catalog, current);
   const store = createPlannerStore({
     capabilities,
     catalog,
@@ -97,8 +94,7 @@ describe('N editor projection', () => {
       nPlan(store.getState().projectWorkspace.history.present).topology?.fixedRooms,
     ).toHaveLength(3);
     expect(
-      simulateProject(catalog, store.getState().projectWorkspace.history.present, activeScope)
-        .routes[1],
+      simulateProject(catalog, store.getState().projectWorkspace.history.present).routes[1],
     ).toMatchObject({
       status: 'incomplete',
       biomes: [{ kind: 'HubBiome', biomeKey: 'N', completion: 'incomplete' }],

@@ -20,7 +20,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createPlannerCapabilities } from '../../../composition/capabilities';
 import { createCandidateProjectionService } from '../../../projections/candidateProjection';
-import { createProjectSimulationScope } from '../../../composition/capabilityConfiguration';
 import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
@@ -139,9 +138,7 @@ function renderO(project: ProjectDocument) {
     simulatableBiomeKeys: active,
     editableBiomeKeys: active,
   });
-  const simulationScope = createProjectSimulationScope(capabilities);
-  const evaluateProject = (current: ProjectDocument) =>
-    simulateProject(catalog, current, simulationScope);
+  const evaluateProject = (current: ProjectDocument) => simulateProject(catalog, current);
   const store = createPlannerStore({
     capabilities,
     catalog,

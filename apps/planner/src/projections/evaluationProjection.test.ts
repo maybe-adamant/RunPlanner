@@ -10,8 +10,8 @@ import {
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import {
-  type FProjectEvaluation,
   type FindingCode,
+  type ProjectBiomeEvaluation,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
   type SemanticFinding,
@@ -101,15 +101,21 @@ describe('evaluation presentation', () => {
       label: 'Blocked',
       tone: 'blocked',
     });
-    expect(presentBiomeStatus({ completion: 'incomplete' } as FProjectEvaluation)).toEqual({
+    expect(presentBiomeStatus({ completion: 'incomplete' } as ProjectBiomeEvaluation)).toEqual({
       label: 'Incomplete',
       tone: 'incomplete',
     });
     expect(
-      presentBiomeStatus({ completion: 'complete', validity: 'valid' } as FProjectEvaluation),
+      presentBiomeStatus({
+        completion: 'complete',
+        validity: 'valid',
+      } as ProjectBiomeEvaluation),
     ).toEqual({ label: 'Complete · Valid', tone: 'valid' });
     expect(
-      presentBiomeStatus({ completion: 'complete', validity: 'invalid' } as FProjectEvaluation),
+      presentBiomeStatus({
+        completion: 'complete',
+        validity: 'invalid',
+      } as ProjectBiomeEvaluation),
     ).toEqual({ label: 'Complete · Invalid', tone: 'invalid' });
   });
 

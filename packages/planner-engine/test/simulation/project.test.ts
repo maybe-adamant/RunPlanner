@@ -1549,52 +1549,6 @@ describe('project simulation composition', () => {
     ).toMatchObject({ context: 'unavailable', reason: 'biomeIncomplete' });
   });
 
-  it('keeps the registered G simulator outside an F-only simulation scope', () => {
-    const result = simulateProject(catalog, completeGoldenFGProject(), {
-      simulatableBiomeKeys: ['F'],
-    });
-    const underworld = result.routes[0]!;
-
-    expect(result.status).toBe('blocked');
-    expect(underworld.biomes.map((evaluation) => evaluation.biomeKey)).toEqual(['F']);
-    expect(underworld.validatedPrefix).toEqual(['F']);
-    expect(underworld.horizon).toEqual({
-      kind: 'simulatorBoundary',
-      biomeKey: 'G',
-      blockedBiomeKeys: ['G'],
-    });
-  });
-
-  it('keeps baseline and proposal candidate simulation inside the application scope', () => {
-    const project = completeGoldenFGProject();
-    const scope = { simulatableBiomeKeys: ['F'] } as const;
-
-    expect(
-      evaluateProjectCandidate(
-        catalog,
-        project,
-        {
-          kind: 'roomTarget',
-          target: createTargetAddress(gBiome, createOccurrenceId('golden-g-intro'), 1),
-          gameName: 'G_Combat02',
-        },
-        scope,
-      ),
-    ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
-    expect(
-      evaluateProjectCandidate(
-        catalog,
-        project,
-        {
-          kind: 'incomingReward',
-          reward: createIncomingRewardAddress(gBiome, gOccurrenceId(1, 1)),
-          value: { rewardType: 'MaxHealthDrop' },
-        },
-        scope,
-      ),
-    ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
-  });
-
   it('evaluates G room, store, and reward candidates through the shared linear authorities', () => {
     const project = completeGoldenFGProject();
     const target = createTargetAddress(gBiome, createOccurrenceId('golden-g-intro'), 1);
@@ -1731,27 +1685,9 @@ describe('project simulation composition', () => {
     expect(purchase).toMatchObject({ context: 'evaluated', support: 'possible', findings: [] });
   });
 
-  it('keeps I candidates behind the validated prefix and the application simulation scope', () => {
+  it('keeps I candidates behind the validated prefix', () => {
     const project = selectedGoldenIProject();
     const field = createBiomeFieldAddress(iBiome, 'maxNonGoalRewards');
-    const scoped = simulateProject(catalog, project, {
-      simulatableBiomeKeys: ['F', 'G', 'H'],
-    }).routes[0]!;
-    expect(scoped.biomes.map((evaluation) => evaluation.biomeKey)).toEqual(['F', 'G', 'H']);
-    expect(scoped.horizon).toEqual({
-      kind: 'simulatorBoundary',
-      biomeKey: 'I',
-      blockedBiomeKeys: ['I'],
-    });
-    expect(
-      evaluateProjectCandidate(
-        catalog,
-        project,
-        { kind: 'biomeField', field, value: 4 },
-        { simulatableBiomeKeys: ['F', 'G', 'H'] },
-      ),
-    ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
-
     const incomplete = applyProjectCommand(project, catalog, {
       kind: 'RemoveBatch',
       continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),

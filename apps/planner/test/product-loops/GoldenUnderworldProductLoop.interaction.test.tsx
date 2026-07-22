@@ -20,10 +20,6 @@ import {
   createApplication,
   type PlannerApplication,
 } from '../../src/composition/createApplication';
-import {
-  createApplicationCapabilities,
-  createProjectSimulationScope,
-} from '../../src/composition/capabilityConfiguration';
 import { createCandidateProjectionService } from '../../src/projections/candidateProjection';
 import type {
   AutosaveRecoveryAdapter,
@@ -715,9 +711,8 @@ describe('golden Underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toEqual(authored);
 
-    const capabilities = createApplicationCapabilities(application.catalog);
     const candidateProjection = createCandidateProjectionService(application.catalog, (project) =>
-      simulateProject(application.catalog, project, createProjectSimulationScope(capabilities)),
+      simulateProject(application.catalog, project),
     );
     const firstHContinuation = hPlan.topology.continuations[0];
     if (firstHContinuation?.kind !== 'batch') {
@@ -770,9 +765,7 @@ describe('golden Underworld product loop', () => {
     ).toBe(true);
 
     const rebuildStarted = performance.now();
-    expect(
-      simulateProject(application.catalog, authored, createProjectSimulationScope(capabilities)),
-    ).toEqual(evaluated);
+    expect(simulateProject(application.catalog, authored)).toEqual(evaluated);
     const rebuildDurationMs = performance.now() - rebuildStarted;
     const editStarted = performance.now();
     application.store.dispatch(

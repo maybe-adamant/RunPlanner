@@ -28,7 +28,7 @@ import type { FindingCode, SemanticFinding } from '../model';
 export type CandidateSupport = 'forced' | 'impossible' | 'possible';
 
 export type CandidateContextUnavailableReason =
-  'biomeIncomplete' | 'simulatorUnavailable' | 'upstreamIncomplete' | 'upstreamInvalid';
+  'biomeIncomplete' | 'upstreamIncomplete' | 'upstreamInvalid';
 
 export interface RoomTargetCandidateQuery {
   readonly kind: 'roomTarget';
