@@ -10,8 +10,8 @@ without importing the previous Lua control shape.
 
 Shared picker, physical-door, cap, force, offer/acquisition, occurrence,
 counted-bag, generated-store, direct-preboss, and fixed-completion semantics
-are defined by `../GAME_GENERATION_RULES.md`, `../ROOM_LIFECYCLE_MODEL.md`, and
-`../REWARD_MODEL.md`. O remains a `LinearBiome`. Its combat occurrences add
+are defined by `../design/GAME_GENERATION_RULES.md`, `../design/ROOM_LIFECYCLE_MODEL.md`, and
+`../design/REWARD_MODEL.md`. O remains a `LinearBiome`. Its combat occurrences add
 bounded phase-owned offer points to an ordered room lifecycle; they do not turn
 the top-level biome into a graph or move outgoing topology into the room leaf.
 
@@ -51,32 +51,34 @@ inherit the common recent-ship-room requirement.
 
 ## Feature Projection Map
 
-The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
-coverage is defined by `../MIGRATION_PROVENANCE.md`. O currently has normalized
-declaration coverage only.
+The disposition vocabulary is defined by `../design/CATALOG_MODEL.md`;
+implementation provenance is recorded by
+`../progress/MIGRATION_PROVENANCE.md`. O's supported projection is implemented
+through the complete authored, simulation, candidate, editor, profile, and
+recovery product loop.
 
-| Feature                     | Verified game behavior                                                                                                        | Disposition and planner projection                                                           | Current coverage | Reconsider when                                              |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------ |
-| Linear entered spine        | Fixed intro, six entered preterminal rooms, then direct preboss                                                               | **Exact:** `LinearBiome` with one necessarily picked target per ordinary batch               | declared         | --                                                           |
-| Room-set weights            | Every supported room occurs once except Story, which occurs twice                                                             | **Simplified:** preserve support and forced pools, never likelihood                          | documented       | Probability analysis or seeded replay becomes a product goal |
-| Physical exits              | Every supported preterminal source has one `ShipsExitDoor`                                                                    | **Exact:** one ordered physical target and no top-level unpicked peer                        | declared         | --                                                           |
-| Ship encounter sequence     | Intro plus one mandatory and one conditionally present counting combat are prepared before room entry                         | **Exact:** ordered `ShipCombat` profile with one optional phase                              | declared         | --                                                           |
-| Ship wheels                 | Each counting combat independently offers one or two rewards from one selected Run/Meta store, then acquires one after combat | **Exact:** one bounded room-owned offer point per counting phase                             | declared         | --                                                           |
-| Outgoing store provenance   | The final active wheel's selected store becomes the source room's outgoing generated-batch base store                         | **Exact:** batch reads a source-offer-point store and never persists a competing copy        | declared         | --                                                           |
-| Combat streak restrictions  | Ordinary, early-only, and late-backup maps use three different eligibility families                                           | **Exact:** declaration-owned predicates after game inheritance                               | declared         | --                                                           |
-| Special-room depth behavior | Shop, Story, Reprieve, Devotion, and minibosses depend on distinct BDC/BED and current-run histories                          | **Exact:** normalized current-run requirements and force pools                               | declared         | --                                                           |
-| Miniboss encounter depth    | Charybdis is non-counting; Captain is counting                                                                                | **Exact:** separate encounter profiles                                                       | declared         | --                                                           |
-| Direct preboss              | One forced shop-only preboss follows the sixth preterminal room                                                               | **Exact:** single-target terminal policy, not shop-then-fill                                 | declared         | --                                                           |
-| Boss and postboss           | Neutral Eris links through `O_PostBoss01` to `P_Intro`                                                                        | **Exact:** declaration-driven derived completion sequence                                    | declared         | --                                                           |
-| Boss store history          | Eris's Mixer drop is outside the reward surface, but the entered boss records the store resolved for its linked offer         | **Exact:** resolved-store ledger entry without a boss reward leaf or counted-bag acquisition | declared         | --                                                           |
-| Save/profile variants       | Intro reward, first-time encounters, Story, fountain, miniboss, and boss variant availability depend on persistent state      | **Excluded:** progressed-save neutral-difficulty baseline                                    | documented       | Save-profile or difficulty state becomes a project input     |
-| Persistent NPC replacements | Heracles or Icarus can replace phases, truncate the sequence, and change counters or rewards                                  | **Deferred:** omit and suppress under the shared NPC-free baseline                           | documented       | Persistent NPC entities are implemented                      |
-| Optional interactions       | Natural Chaos, wells, challenges, gathering, shops, rerolls, and familiar events add optional structure or state              | **Deferred:** use the shared no-detour/no-action canonical trace                             | documented       | The corresponding authored action enters product scope       |
+| Feature                     | Verified game behavior                                                                                                        | Disposition and planner projection                                                           | Implementation status | Reconsider when                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------ |
+| Linear entered spine        | Fixed intro, six entered preterminal rooms, then direct preboss                                                               | **Exact:** `LinearBiome` with one necessarily picked target per ordinary batch               | implemented           | --                                                           |
+| Room-set weights            | Every supported room occurs once except Story, which occurs twice                                                             | **Simplified:** preserve support and forced pools, never likelihood                          | implemented           | Probability analysis or seeded replay becomes a product goal |
+| Physical exits              | Every supported preterminal source has one `ShipsExitDoor`                                                                    | **Exact:** one ordered physical target and no top-level unpicked peer                        | implemented           | --                                                           |
+| Ship encounter sequence     | Intro plus one mandatory and one conditionally present counting combat are prepared before room entry                         | **Exact:** ordered `ShipCombat` profile with one optional phase                              | implemented           | --                                                           |
+| Ship wheels                 | Each counting combat independently offers one or two rewards from one selected Run/Meta store, then acquires one after combat | **Exact:** one bounded room-owned offer point per counting phase                             | implemented           | --                                                           |
+| Outgoing store provenance   | The final active wheel's selected store becomes the source room's outgoing generated-batch base store                         | **Exact:** batch reads a source-offer-point store and never persists a competing copy        | implemented           | --                                                           |
+| Combat streak restrictions  | Ordinary, early-only, and late-backup maps use three different eligibility families                                           | **Exact:** declaration-owned predicates after game inheritance                               | implemented           | --                                                           |
+| Special-room depth behavior | Shop, Story, Reprieve, Devotion, and minibosses depend on distinct BDC/BED and current-run histories                          | **Exact:** normalized current-run requirements and force pools                               | implemented           | --                                                           |
+| Miniboss encounter depth    | Charybdis is non-counting; Captain is counting                                                                                | **Exact:** separate encounter profiles                                                       | implemented           | --                                                           |
+| Direct preboss              | One forced shop-only preboss follows the sixth preterminal room                                                               | **Exact:** single-target terminal policy, not shop-then-fill                                 | implemented           | --                                                           |
+| Boss and postboss           | Neutral Eris links through `O_PostBoss01` to `P_Intro`                                                                        | **Exact:** declaration-driven derived completion sequence                                    | implemented           | --                                                           |
+| Boss store history          | Eris's Mixer drop is outside the reward surface, but the entered boss records the store resolved for its linked offer         | **Exact:** resolved-store ledger entry without a boss reward leaf or counted-bag acquisition | implemented           | --                                                           |
+| Save/profile variants       | Intro reward, first-time encounters, Story, fountain, miniboss, and boss variant availability depend on persistent state      | **Excluded:** progressed-save neutral-difficulty baseline                                    | documented boundary   | Save-profile or difficulty state becomes a project input     |
+| Persistent NPC replacements | Heracles or Icarus can replace phases, truncate the sequence, and change counters or rewards                                  | **Deferred:** omit and suppress under the shared NPC-free baseline                           | documented boundary   | Persistent NPC entities are implemented                      |
+| Optional interactions       | Natural Chaos, wells, challenges, gathering, shops, rerolls, and familiar events add optional structure or state              | **Deferred:** use the shared no-detour/no-action canonical trace                             | documented boundary   | The corresponding authored action enters product scope       |
 
 ## Possibility Contract
 
 O uses the possibility-only picker and reward contracts from
-`../GAME_GENERATION_RULES.md` and `../REWARD_MODEL.md`. The Story declaration's
+`../design/GAME_GENERATION_RULES.md` and `../design/REWARD_MODEL.md`. The Story declaration's
 second room-set entry changes random weight only. The second ship combat's
 `0.6` chance and a wheel's `0.8` two-offer chance likewise make both outcomes
 possible; the app does not score their likelihood.
@@ -451,9 +453,9 @@ The canonical O trace excludes or defers:
 These are explicit product boundaries. They do not become generic
 `unsupported` fields or partial production requirements.
 
-## Declaration-Port Contract
+## Normalized Declaration Contract
 
-The dormant O import delivers:
+The normalized O declaration set provides:
 
 1. one `LinearBiome` layout with fixed `O_Intro`, six ordinary continuation
    slots, six ordinary target occurrences, a direct preboss, and an ordered boss/postboss

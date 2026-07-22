@@ -195,8 +195,9 @@ type RoomLifecycleOperation =
   | { kind: 'exitRoom' };
 ```
 
-This is a design vocabulary, not yet a frozen TypeScript signature. Phase 3 may
-refine field names while preserving the ownership and ordering contract.
+This is the stable semantic vocabulary. Production TypeScript may use narrower
+field names and grouped operation inputs, but it must preserve this ownership
+and ordering contract.
 
 `prepareRoom` resolves bounded room-entry structure from the state after the
 predecessor commits. It selects encounter phases and other entry facts; it does
@@ -581,7 +582,7 @@ The simulator need not persist a full state snapshot at every operation. It
 must preserve the event order and be able to evaluate each rule from its exact
 pre-operation view.
 
-Phase 3 composes fragments by threading state and following the picked target:
+Fragment composition threads state while following the picked target:
 
 ```text
 current RoomHistoryFragment
@@ -707,10 +708,9 @@ not grow an independent timing workaround.
 
 ## Implementation Boundary
 
-Phase 2.6 provides pure reward and shop transitions against explicit fact
-snapshots. It intentionally does not decide when a room invokes those
-transitions. Phase 3 introduces lifecycle-profile execution and fragment
-composition.
+Pure reward and shop transitions operate against explicit fact snapshots.
+Lifecycle-profile execution decides when a room invokes those transitions and
+fragment composition threads the resulting state between rooms.
 
 For shops, the required orchestration is:
 

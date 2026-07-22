@@ -62,7 +62,7 @@ alternatives differ on a currently modeled fact, they must be modeled exactly
 or marked deferred; they cannot be called simplified.
 
 These dispositions describe product intent, not delivery progress.
-`MIGRATION_PROVENANCE.md` separately records whether a projection is only
+`../progress/MIGRATION_PROVENANCE.md` separately records whether a projection is only
 documented or is already declared, authored, simulated, and presented.
 
 ## Evidence Sources
@@ -534,10 +534,9 @@ unpicked occurrence.
 
 ## Catalog Versioning
 
-The normalized catalog exposes a version or fingerprint suitable for project
-compatibility checks. The initial implementation may use an explicit catalog
-version updated with semantic declaration changes. A content fingerprint can
-replace or supplement it later.
+The normalized catalog exposes a version suitable for project compatibility
+checks and updates it with semantic declaration changes. A content fingerprint
+can replace or supplement that explicit version later.
 
 Project loading distinguishes:
 
@@ -558,27 +557,10 @@ composition derives the declared biome set from route-placed normalized layouts 
 owns explicit authorable, simulatable, and editable sets. Room, layout, and
 route declarations do not carry those product flags.
 
-The closed Phase 2.8 capability matrix is:
-
-- F and G are authorable;
-- F is editable;
-- no biome is simulatable.
-
-Phase 3 promotes F alone to simulatable after its public project simulator and
-golden closure pass. The Phase 2.8 authorable/editable sets and every dormant
-later-biome capability remain unchanged.
-
-Phase 5 promotes G to simulatable and editable after its complete simulator,
-candidate projection, shared linear-biome editor, navigation, and interaction
-fixtures land. Phase 6 promotes H after its authored Fields topology,
-materialization, lifecycle, validation, candidate, editor, profile, and
-recovery paths close as one product loop, then promotes I after the equivalent
-Clockwork topology, generated-terminal, and WorldShop loop closes.
-
-The current application capability matrix therefore makes F, G, H, and I
-authorable, simulatable, and editable. P, Q, O, and N are
-declaration-complete but inactive. Their presence proves that declaration
-coverage and product activation remain independent.
+The current application capability matrix makes F/G/H/I and N/O/P/Q
+authorable, simulatable, and editable. Their declarations, authored state,
+simulation dispatch, candidates, editor projections, profiles, and recovery
+paths are connected through the same application composition boundary.
 
 Every active capability must reference a declared biome, and every
 editable biome must also be authorable. Project creation and loading, semantic
@@ -586,48 +568,44 @@ command dispatch, simulator dispatch, and editor navigation are
 application contact points that consume this matrix. Pure catalog construction,
 project codecs, and structural declarations remain capability-agnostic.
 
-Adding a dormant declaration therefore expands the catalog without making that
+Adding a future declaration can still expand the catalog without making its
 biome selectable, persistable in an application project, simulatable, or
 visible as an editor entry. Activation is a deliberate composition change made
 only when that product loop is complete.
 
-## Initial F/G Scope and Declaration Freeze
+## Catalog Coverage and Declaration Freeze
 
-The first catalog slice should include only the shared foundations and concrete
-declarations needed to build meaningful F fixtures, followed by G as the reuse
-proof:
+The catalog contains the shared foundations and concrete declarations needed
+for both complete routes:
 
-- global F/G Biome Declarations and their Underworld route references;
-- `LinearBiome` layout metadata;
-- opening, standard combat, miniboss, story, fountain, midshop, and terminal
-  templates used by F/G;
+- global F/G/H/I and N/O/P/Q Biome Declarations and route references;
+- `LinearBiome` and `HubBiome` layout metadata;
+- the room, encounter, reward, shop, local-slot, and terminal templates used by
+  the supported biome projections;
 - required reward types, payloads, concrete acquisitions, stores, bags,
   bindings, and shops;
 - required encounter profiles;
-- eligibility, force, and cap evaluators exercised by F/G;
+- eligibility, force, and cap evaluators exercised by all eight biomes;
 - explicit labels and recursive defaults.
 
-Do not declare later biomes fully supported through placeholders. Their route
-identity may exist while their application capabilities remain inactive.
+Do not declare future biomes or mechanics fully supported through placeholders.
+Their identity may exist while their application capabilities remain inactive.
 
-The verified H/I/N/O/P/Q game-rule audits, dormant imports, and cross-biome
-closure are complete. Those slices extend normalized catalog vocabulary only
-where concrete game facts require it. H and I have completed their authored
-topology, simulator, validation, and editor loops and are active; N, O, P, and
-Q remain inactive until each closes the same product boundary.
-`biomes/P_GAME_RULES.md`, `biomes/Q_GAME_RULES.md`, `biomes/H_GAME_RULES.md`,
-`biomes/O_GAME_RULES.md`, `biomes/I_GAME_RULES.md`, and `biomes/N_GAME_RULES.md` are completed audit
-authorities. Their shared vocabulary is reconciled by this design set; future
-activation must complete one biome product loop without reopening declaration
-ownership.
+The verified F/G/H/I/N/O/P/Q game-rule audits, declaration imports, and
+cross-biome closure are complete. They extend normalized catalog vocabulary
+only where concrete game facts require it.
+`../biomes/P_GAME_RULES.md`, `../biomes/Q_GAME_RULES.md`, `../biomes/H_GAME_RULES.md`,
+`../biomes/O_GAME_RULES.md`, `../biomes/I_GAME_RULES.md`, and
+`../biomes/N_GAME_RULES.md` are completed game-rule authorities. Their shared
+vocabulary is reconciled by this design set.
 
 `GAME_GENERATION_RULES.md` owns shared generation behavior.
 `ROOM_LIFECYCLE_MODEL.md` owns the ordered operations that turn an entered
 occurrence into one composable history fragment.
-`biomes/F_GAME_RULES.md` and `biomes/G_GAME_RULES.md` own their concrete biome facts, while
-`biomes/F_G_ROOM_TEMPLATES.md` defines the template contracts their declarations must
-satisfy. `MIGRATION_PROVENANCE.md` records which exact facts still require
-direct game-data verification while being ported.
+`../biomes/F_GAME_RULES.md` and `../biomes/G_GAME_RULES.md` own their concrete biome facts, while
+`../biomes/F_G_ROOM_TEMPLATES.md` defines the template contracts their declarations must
+satisfy. `../progress/MIGRATION_PROVENANCE.md` records evidence disposition and
+port-verification history.
 
 ## Audit Workflow
 
