@@ -505,8 +505,23 @@ bag, lookup, shop-offer, and purchase failures continue to come from the shared
 reward authority at their leaf owners. Focused fixtures close valid selected N,
 both-miniboss invalidity, first and later visit-pressure failures, lookup-aware
 Preboss failure, incomplete authorship, canonical Pylon corruption, deep
-freezing, and dormant project-dispatch isolation. Slice 7 adds candidate
-evaluation through these selected authorities.
+freezing, and dormant project-dispatch isolation. The candidate layer consumes
+these selected authorities directly.
+
+Phase 6 N Slice 7 is complete. Candidate vocabulary now owns typed Hub-slot,
+Hub-visit, parent-local generation, and parent-local entered-order proposals;
+the existing incoming, local-reward, shop-offer, and purchase queries cover
+fixed-entry, Hub-target, side-room, and Preboss leaves. One prepared evaluator
+lazily caches the dormant selected N product when normal route simulation stops
+at the N boundary. Every candidate applies the smallest immutable proposal and
+reuses open constraints, visit composition, ranked global side pressure,
+reward replay, Hub lookup, and WorldShop purchase authorities. Declaration-
+impossible values remain outside the query domain, selected-invalid values keep
+their exact findings, incomplete N reports typed local context, and authorship,
+project dispatch, and application capabilities remain unchanged. Fixtures
+cover all candidate families, forced/possible/impossible support, semantic
+owners, deep freezing, nonmutation, and dormant isolation. Slice 8 projects the
+dormant N editor.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
@@ -1211,12 +1226,11 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, and N Slices 1-6 are complete. N Slice 7, candidate evaluation,
-is next. It will evaluate open membership, visit choices, side generation and
-entry order, fixed-entry rewards, Hub rewards, side rewards, Preboss offers,
-and purchases through the selected N authorities while preserving authored
-invalid values and typed upstream-unavailable context. N remains dormant until
-the later editor and activation slices close the complete product loop before
+five I slices, and N Slices 1-7 are complete. N Slice 8, dormant editor
+projection, is next. It will project fixed entries, the physical open board, a
+separate six-visit timeline, visited-parent side state, fixed Preboss shop,
+findings, and candidates through existing semantic commands. N remains dormant
+until the later activation slice closes the complete product loop before
 the contextual-selection UX insertion defined in `CONTEXTUAL_EDITOR_UX.md`.
 
 After N activates, that insertion begins by replacing the current incomplete-

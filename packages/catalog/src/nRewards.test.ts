@@ -17,6 +17,8 @@ import {
   evaluateNBiome,
   evaluateNRoomGeneration,
   evaluateNRewards,
+  evaluateProjectCandidate,
+  evaluateProjectCandidates,
   materializeHubBiome,
   semanticAddressKey,
   simulateProject,
@@ -584,5 +586,235 @@ describe('selected N validation', () => {
     };
 
     expect(() => evaluateNRoomGeneration(catalog, snapshot, malformed)).toThrow(/pylon/i);
+  });
+});
+
+describe('dormant N candidate evaluation', () => {
+  it('evaluates Hub membership, visits, side state, and every reward surface without activation', () => {
+    const project = representativeProject();
+    const before = encodeProjectDocument(project);
+    const opening = plan(project).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === fixedOccurrenceIds.opening,
+    );
+    if (opening?.state.kind !== 'counted') {
+      throw new Error('N opening candidate fixture has no counted reward');
+    }
+
+    const [
+      conflictingMiniboss,
+      validTenthSlot,
+      requiredOpenSlot,
+      alternateVisit,
+      duplicateVisit,
+      forcedSideGeneration,
+      blockedEnteredSide,
+      optionalSideGeneration,
+      sideEntryOrder,
+      fixedEntryReward,
+      hubReward,
+      sideReward,
+      shopOffer,
+      shopPurchase,
+    ] = evaluateProjectCandidates(catalog, project, [
+      {
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(biome, 'miniBoss02'),
+        open: true,
+        occurrenceId: occurrenceId('candidate-miniBoss02'),
+      },
+      {
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(biome, 'combat12'),
+        open: true,
+        occurrenceId: occurrenceId('candidate-combat12'),
+      },
+      {
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(biome, 'combat10'),
+        open: false,
+        occurrenceId: occurrenceId('combat10'),
+      },
+      {
+        kind: 'hubVisit',
+        visit: createHubVisitAddress(biome, 1),
+        hubSlotKey: 'combat01',
+      },
+      {
+        kind: 'hubVisit',
+        visit: createHubVisitAddress(biome, 1),
+        hubSlotKey: 'miniBoss01',
+      },
+      {
+        kind: 'sideRoomGeneration',
+        sideRoom: createLocalChildAddress(
+          biome,
+          occurrenceId('combat05'),
+          'sideRooms',
+          'sideDoor1',
+        ),
+        generation: 'generated',
+      },
+      {
+        kind: 'sideRoomGeneration',
+        sideRoom: createLocalChildAddress(
+          biome,
+          occurrenceId('combat05'),
+          'sideRooms',
+          'sideDoor1',
+        ),
+        generation: 'notGenerated',
+      },
+      {
+        kind: 'sideRoomGeneration',
+        sideRoom: createLocalChildAddress(
+          biome,
+          occurrenceId('combat05'),
+          'sideRooms',
+          'sideDoor3',
+        ),
+        generation: 'notGenerated',
+      },
+      {
+        kind: 'sideRoomEntryOrder',
+        group: createLocalChildGroupAddress(biome, occurrenceId('combat05'), 'sideRooms'),
+        enteredSlotKeys: ['sideDoor1', 'sideDoor2'],
+      },
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, fixedOccurrenceIds.opening),
+        value: opening.state.offer,
+      },
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, occurrenceId('miniBoss01')),
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+        },
+      },
+      {
+        kind: 'localReward',
+        reward: createLocalRewardAddress(biome, occurrenceId('combat05'), 'sideRooms', 'sideDoor2'),
+        value: { rewardType: 'MaxManaDropSmall' },
+      },
+      {
+        kind: 'shopOffer',
+        offer: createShopOfferAddress(biome, fixedOccurrenceIds.preboss, 'MajorNonBoon'),
+        value: { rewardType: 'WeaponUpgradeDrop' },
+      },
+      {
+        kind: 'shopPurchase',
+        purchase: createShopPurchaseAddress(biome, fixedOccurrenceIds.preboss, 'MajorNonBoon'),
+        purchased: true,
+      },
+    ]);
+
+    expect(conflictingMiniboss).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: [{ code: 'hubOpenSlotUnavailable' }],
+    });
+    expect(validTenthSlot).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(requiredOpenSlot).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: [{ code: 'hubOpenSetIncomplete' }],
+    });
+    expect(alternateVisit).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(duplicateVisit).toMatchObject({ context: 'evaluated', support: 'impossible' });
+    expect(forcedSideGeneration).toMatchObject({
+      context: 'evaluated',
+      support: 'forced',
+      evidence: { supportOutcomes: ['generated'] },
+    });
+    expect(blockedEnteredSide).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: { enteredOrdinal: 2 },
+    });
+    expect(optionalSideGeneration).toMatchObject({
+      context: 'evaluated',
+      support: 'possible',
+      evidence: { supportOutcomes: ['generated', 'notGenerated'] },
+    });
+    expect(sideEntryOrder).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(fixedEntryReward).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(hubReward).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(sideReward).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: [{ code: 'rewardBagEntryUnavailable' }],
+    });
+    expect(shopOffer).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: [{ code: 'shopOfferUnavailable' }],
+    });
+    expect(shopPurchase).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(encodeProjectDocument(project)).toBe(before);
+    expect(Object.isFrozen(conflictingMiniboss)).toBe(true);
+    expect(Object.isFrozen(sideEntryOrder?.query)).toBe(true);
+  }, 15_000);
+
+  it('preserves selected-invalid support and reports incomplete Hub context explicitly', () => {
+    let invalid = applyProjectCommand(representativeProject(), catalog, {
+      kind: 'OpenHubSlot',
+      slot: createHubSlotAddress(biome, 'miniBoss02'),
+      occurrenceId: occurrenceId('miniBoss02'),
+    });
+    invalid = replaceIncoming(invalid, 'miniBoss02', {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+    });
+    expect(
+      evaluateProjectCandidate(catalog, invalid, {
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(biome, 'miniBoss02'),
+        open: true,
+        occurrenceId: occurrenceId('miniBoss02'),
+      }),
+    ).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: { candidateOpen: true, currentlyOpen: true },
+    });
+
+    const incomplete = createProjectDocument(catalog, {
+      projectId: 'incomplete-n-candidates',
+      name: 'Incomplete N Candidates',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    expect(
+      evaluateProjectCandidate(catalog, incomplete, {
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(biome, 'combat01'),
+        open: true,
+        occurrenceId: occurrenceId('incomplete-candidate'),
+      }),
+    ).toMatchObject({ context: 'unavailable', reason: 'biomeIncomplete' });
+    expect(simulateProject(catalog, representativeProject()).routes[1]).toMatchObject({
+      status: 'blocked',
+      biomes: [],
+      horizon: { kind: 'simulatorBoundary', biomeKey: 'N' },
+    });
+  });
+
+  it('rejects malformed Hub candidate domains at their semantic contact', () => {
+    const project = representativeProject();
+    expect(() =>
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(biome, 'missing'),
+        open: true,
+        occurrenceId: occurrenceId('missing-candidate'),
+      }),
+    ).toThrow(/unknown Hub slot missing/);
+    expect(() =>
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'sideRoomEntryOrder',
+        group: createLocalChildGroupAddress(biome, occurrenceId('combat05'), 'sideRooms'),
+        enteredSlotKeys: ['sideDoor1', 'sideDoor1'],
+      }),
+    ).toThrow(/candidate proposal is malformed.*distinct slots/);
   });
 });

@@ -91,7 +91,9 @@ offer. Dormant selected validation now preserves impossible open-set and local
 generation outcomes as findings at their exact Hub-slot or parent-local owners,
 while canonical fixed identity, visits, pylons, restores, and completion remain
 hard contracts. N remains outside Surface simulation and editing until
-candidates, editor projection, and product activation land.
+its editor projection and product activation land. A dormant candidate resolver
+already replays complete N plans for Hub membership, visit, side-room, reward,
+and Preboss alternatives without registering N in normal route simulation.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

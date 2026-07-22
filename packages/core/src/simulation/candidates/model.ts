@@ -3,14 +3,18 @@ import type {
   BiomeAddress,
   BiomeFieldAddress,
   ContinuationAddress,
+  HubSlotAddress,
+  HubVisitAddress,
   IncomingRewardAddress,
+  LocalChildAddress,
+  LocalChildGroupAddress,
   LocalRewardAddress,
   OccurrenceAddress,
   ShopOfferAddress,
   ShopPurchaseAddress,
   TargetAddress,
 } from '../../project/addresses';
-import type { AuthoredFieldValue } from '../../project/model';
+import type { AuthoredFieldValue, OccurrenceId, SideRoomGeneration } from '../../project/model';
 import type { ResolvedRewardOffer } from '../../rewardKernel/model';
 import type { RoomGenerationExclusionReason } from '../generation';
 import type { FindingCode, SemanticFinding } from '../model';
@@ -62,6 +66,31 @@ export interface FieldsCageOutcomeCandidateQuery {
   readonly cageOutcome: 'min' | 'max';
 }
 
+export interface HubSlotCandidateQuery {
+  readonly kind: 'hubSlot';
+  readonly slot: HubSlotAddress;
+  readonly open: boolean;
+  readonly occurrenceId: OccurrenceId;
+}
+
+export interface HubVisitCandidateQuery {
+  readonly kind: 'hubVisit';
+  readonly visit: HubVisitAddress;
+  readonly hubSlotKey: string;
+}
+
+export interface SideRoomGenerationCandidateQuery {
+  readonly kind: 'sideRoomGeneration';
+  readonly sideRoom: LocalChildAddress;
+  readonly generation: SideRoomGeneration;
+}
+
+export interface SideRoomEntryOrderCandidateQuery {
+  readonly kind: 'sideRoomEntryOrder';
+  readonly group: LocalChildGroupAddress;
+  readonly enteredSlotKeys: readonly string[];
+}
+
 export interface ShopOfferCandidateQuery {
   readonly kind: 'shopOffer';
   readonly offer: ShopOfferAddress;
@@ -78,11 +107,15 @@ export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
   | BiomeFieldCandidateQuery
   | FieldsCageOutcomeCandidateQuery
+  | HubSlotCandidateQuery
+  | HubVisitCandidateQuery
   | IncomingRewardCandidateQuery
   | LocalRewardCandidateQuery
   | RoomTargetCandidateQuery
   | ShopOfferCandidateQuery
   | ShopPurchaseCandidateQuery
+  | SideRoomEntryOrderCandidateQuery
+  | SideRoomGenerationCandidateQuery
   | StartRoomCandidateQuery;
 
 export interface UnavailableCandidateEvaluation {
@@ -144,6 +177,38 @@ export interface FieldsCageOutcomeCandidateEvidence {
   readonly supportOutcomes: readonly ('min' | 'max')[];
 }
 
+export interface HubSlotCandidateEvidence {
+  readonly candidateOpen: boolean;
+  readonly currentlyOpen: boolean;
+  readonly openSlotKeys: readonly string[];
+  readonly minimumOpenCount: number;
+  readonly maximumOpenCount: number;
+  readonly referencedVisitIndexes: readonly number[];
+  readonly relevantFindingCodes: readonly FindingCode[];
+}
+
+export interface HubVisitCandidateEvidence {
+  readonly candidateHubSlotKey: string;
+  readonly openHubSlotKeys: readonly string[];
+  readonly occupiedVisitIndexes: readonly number[];
+  readonly relevantFindingCodes: readonly FindingCode[];
+}
+
+export interface SideRoomGenerationCandidateEvidence {
+  readonly candidateGeneration: SideRoomGeneration;
+  readonly enteredOrdinal: number | null;
+  readonly generatedBefore: number;
+  readonly requiredGeneratedCount: number;
+  readonly supportOutcomes: readonly SideRoomGeneration[];
+  readonly relevantFindingCodes: readonly FindingCode[];
+}
+
+export interface SideRoomEntryOrderCandidateEvidence {
+  readonly candidateEnteredSlotKeys: readonly string[];
+  readonly generatedSlotKeys: readonly string[];
+  readonly relevantFindingCodes: readonly FindingCode[];
+}
+
 export interface ShopPurchaseCandidateEvidence {
   readonly purchased: boolean;
   readonly relevantFindingCodes: readonly FindingCode[];
@@ -202,6 +267,38 @@ export interface EvaluatedFieldsCageOutcomeCandidate {
   readonly evidence: FieldsCageOutcomeCandidateEvidence;
 }
 
+export interface EvaluatedHubSlotCandidate {
+  readonly context: 'evaluated';
+  readonly query: HubSlotCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: HubSlotCandidateEvidence;
+}
+
+export interface EvaluatedHubVisitCandidate {
+  readonly context: 'evaluated';
+  readonly query: HubVisitCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: HubVisitCandidateEvidence;
+}
+
+export interface EvaluatedSideRoomGenerationCandidate {
+  readonly context: 'evaluated';
+  readonly query: SideRoomGenerationCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: SideRoomGenerationCandidateEvidence;
+}
+
+export interface EvaluatedSideRoomEntryOrderCandidate {
+  readonly context: 'evaluated';
+  readonly query: SideRoomEntryOrderCandidateQuery;
+  readonly support: CandidateSupport;
+  readonly findings: readonly SemanticFinding[];
+  readonly evidence: SideRoomEntryOrderCandidateEvidence;
+}
+
 export interface EvaluatedShopOfferCandidate {
   readonly context: 'evaluated';
   readonly query: ShopOfferCandidateQuery;
@@ -222,11 +319,15 @@ export type ProjectCandidateEvaluation =
   | EvaluatedBatchRewardStoreCandidate
   | EvaluatedBiomeFieldCandidate
   | EvaluatedFieldsCageOutcomeCandidate
+  | EvaluatedHubSlotCandidate
+  | EvaluatedHubVisitCandidate
   | EvaluatedIncomingRewardCandidate
   | EvaluatedLocalRewardCandidate
   | EvaluatedRoomTargetCandidate
   | EvaluatedShopOfferCandidate
   | EvaluatedShopPurchaseCandidate
+  | EvaluatedSideRoomEntryOrderCandidate
+  | EvaluatedSideRoomGenerationCandidate
   | EvaluatedStartRoomCandidate
   | UnavailableCandidateEvaluation;
 
