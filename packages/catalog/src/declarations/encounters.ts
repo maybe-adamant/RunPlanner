@@ -620,6 +620,17 @@ export const encounterProfiles = [
     ],
   },
   {
+    key: 'N_Story01',
+    phases: [
+      {
+        key: 'N_Story01',
+        kind: 'story',
+        countsEncounterDepth: false,
+        baselineEncounterKey: 'Story_Medea_01',
+      },
+    ],
+  },
+  {
     key: 'N_Boss01',
     phases: [
       {

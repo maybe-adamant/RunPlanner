@@ -92,7 +92,7 @@ export const roomLifecycleProfiles = [
   },
   {
     key: 'EphyraMainRoom',
-    encounterProfileKeys: ['EphyraCombat', 'N_MiniBoss01', 'N_MiniBoss02'],
+    encounterProfileKeys: ['EphyraCombat', 'N_MiniBoss01', 'N_MiniBoss02', 'N_Story01'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },

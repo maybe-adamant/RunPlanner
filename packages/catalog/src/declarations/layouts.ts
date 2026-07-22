@@ -342,6 +342,7 @@ export const biomeLayouts = [
         { slotKey: 'combat23', roomGameName: 'N_Combat23', physicalDoorId: 561368 },
         { slotKey: 'miniBoss01', roomGameName: 'N_MiniBoss01', physicalDoorId: 617043 },
         { slotKey: 'miniBoss02', roomGameName: 'N_MiniBoss02', physicalDoorId: 560889 },
+        { slotKey: 'story', roomGameName: 'N_Story01', physicalDoorId: 560848 },
       ],
       openCount: { min: 9, max: 10 },
       openSlotConstraints: [
