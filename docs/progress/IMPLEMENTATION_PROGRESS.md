@@ -237,9 +237,7 @@ candidates replay only the addressed biome through the common linear authority;
 branch-invariant reward facts are cached by immutable history-view identity;
 and closed reward/shop controls defer option projection until focus or pointer
 intent. The representative complete F/G fixture guards cold rebuild, cold room
-candidate, semantic edit, and identity-cached undo latency. The full acceptance
-matrix, local measurements, browser-host smoke procedure, and closed scope are
-recorded in `PHASE_5_PRODUCT_LOOP_CLOSURE.md`.
+candidate, semantic edit, and identity-cached undo latency.
 
 G-specific closure fixtures additionally cover the Crawler miniboss's
 non-counting encounter timing and mutual exclusion of the other miniboss

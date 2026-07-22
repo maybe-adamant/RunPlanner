@@ -602,10 +602,9 @@ vocabulary is reconciled by this design set.
 `GAME_GENERATION_RULES.md` owns shared generation behavior.
 `ROOM_LIFECYCLE_MODEL.md` owns the ordered operations that turn an entered
 occurrence into one composable history fragment.
-`../biomes/F_GAME_RULES.md` and `../biomes/G_GAME_RULES.md` own their concrete biome facts, while
-`../biomes/F_G_ROOM_TEMPLATES.md` defines the template contracts their declarations must
-satisfy. `../progress/MIGRATION_PROVENANCE.md` records evidence disposition and
-port-verification history.
+`../biomes/F_GAME_RULES.md` and `../biomes/G_GAME_RULES.md` own their concrete
+biome facts. `../progress/MIGRATION_PROVENANCE.md` records evidence disposition
+and port-verification history.
 
 ## Audit Workflow
 
