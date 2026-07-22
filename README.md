@@ -35,7 +35,8 @@ Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected linear reward authority, and the authored project/editor use schema
 version 5. All eight biomes close one catalog-wide reference matrix while
 Q remains dormant behind the application capability boundary. P's complete
-N/O/P product loop is active; Q remains declaration-only. Phase
+N/O/P product loop is active; Q now has staged core authorship and simulation
+but no candidate/editor activation. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room

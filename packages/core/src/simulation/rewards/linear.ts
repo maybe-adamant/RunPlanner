@@ -95,6 +95,9 @@ function requireLinearLayout(catalog: Catalog, snapshot: CanonicalLinearBiome): 
   const supportedPolicy =
     layout?.kind === 'LinearBiome' &&
     (layout.continuation.rewardStorePolicy.kind === 'authoredBaseStore' ||
+      (layout.continuation.progressionPolicy.kind === 'staged' &&
+        layout.continuation.batchPolicy.kind === 'standard' &&
+        layout.continuation.rewardStorePolicy.kind === 'none') ||
       (layout.continuation.batchPolicy.kind === 'clockwork' &&
         layout.continuation.rewardStorePolicy.kind === 'none') ||
       (layout.continuation.batchPolicy.kind === 'fields' &&

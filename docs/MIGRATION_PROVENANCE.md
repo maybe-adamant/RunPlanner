@@ -289,7 +289,8 @@ been replaced by the occurrence-based conditional-terminal contract in
 | Q reward-free batch policy      | ported   | `RoomDataQ.lua`, `RewardLogic.lua`, `biomes/Q_GAME_RULES.md`               | Q continuation batches use explicit no-store policy while miniboss declarations own their forced store.                            |
 | Q completion and exclusions     | ported   | `RoomDataQ.lua`, boss encounters, `biomes/Q_GAME_RULES.md`                 | Neutral `Q_Boss01` completes the route; `Q_Boss02`, Palace postboss/story, debug miniboss, and automatic boss drops stay excluded. |
 | Q staged project authorship     | ported   | `biomes/Q_GAME_RULES.md`                                                   | Ordered stage pools and the direct terminal are enforced by the shared linear codec and semantic commands.                         |
-| Q simulation activation         | deferred | `biomes/Q_GAME_RULES.md`                                                   | Keep dormant until materialization, validation, candidates, editor, and the full Surface product loop are implemented.             |
+| Q core simulation               | ported   | `biomes/Q_GAME_RULES.md`                                                   | Staged materialization, lifecycle/history, rewards, selected generation, and direct completion use shared core authorities.        |
+| Q application activation        | deferred | `biomes/Q_GAME_RULES.md`                                                   | Keep dormant until candidates, editor, and the full Surface product loop are implemented.                                          |
 
 ## Phase 2.8 Cross-Biome Closure
 
@@ -307,11 +308,12 @@ rooms belong to each biome layout; `Next` is derived only from route order.
 | Surface    | P     | `LinearBiome` | 28 (26)          | eligibility / standard  | authored Run/Meta                    | forked              | `P_Boss01`, `P_PostBoss01` | Q    |
 | Surface    | Q     | `LinearBiome` | 23 (22)          | staged / standard       | none                                 | direct              | `Q_Boss01`                 | --   |
 
-The core simulation matrix and application capability matrix now include F, G,
-H, I, N, O, and P as authorable, simulatable, and editable. Complete F/G/H/I and
-N/O/P prefixes enter profiles, recovery, simulator dispatch, candidate scope,
-and editor navigation together. N uses its Hub editor and canonical evaluator;
-O and P use the shared linear editor and evaluator; Q remains declaration-only.
+The application capability matrix now includes F, G, H, I, N, O, and P as
+authorable, simulatable, and editable. Complete F/G/H/I and N/O/P prefixes
+enter profiles, recovery, candidate scope, and editor navigation together. N
+uses its Hub editor and canonical evaluator; O and P use the shared linear
+editor and evaluator. Q is registered in core simulation for its staged
+N/O/P/Q fixture but remains outside application capabilities.
 
 The following remaining dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:

@@ -2,6 +2,7 @@ import type {
   Catalog,
   ExitCompatibilityPolicy,
   GeneratedBatchPolicy,
+  LinearBiomeLayout,
   RoomDeclaration,
   RoomForce,
 } from '../../catalog';
@@ -333,6 +334,50 @@ function linearCandidatePool(catalog: Catalog, biomeKey: string): readonly RoomD
   );
 }
 
+function stagedCandidatePool(
+  catalog: Catalog,
+  layout: Extract<LinearBiomeLayout, { readonly kind: 'LinearBiome' }>,
+  batchIndex: number,
+): readonly RoomDeclaration[] {
+  const policy = layout.continuation.progressionPolicy;
+  if (policy.kind !== 'staged') {
+    return linearCandidatePool(catalog, layout.biomeKey);
+  }
+  const stage = policy.stages[batchIndex];
+  if (stage === undefined) {
+    throw new LinearRoomGenerationContractError(
+      `${layout.biomeKey} has no candidate stage ${batchIndex + 1}`,
+    );
+  }
+  return Object.freeze(
+    stage.roomGameNames.map((gameName) => {
+      const room = catalog.rooms.byKey[gameName];
+      if (room === undefined) {
+        throw new LinearRoomGenerationContractError(
+          `${layout.biomeKey} stage ${stage.key} lost room ${gameName}`,
+        );
+      }
+      return room;
+    }),
+  );
+}
+
+function terminalCandidatePool(
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+): readonly RoomDeclaration[] {
+  if (layout.continuation.progressionPolicy.kind !== 'staged') {
+    return linearCandidatePool(catalog, layout.biomeKey);
+  }
+  const room = catalog.rooms.byKey[layout.terminal.roomGameName];
+  if (room === undefined) {
+    throw new LinearRoomGenerationContractError(
+      `${layout.biomeKey} lost terminal room ${layout.terminal.roomGameName}`,
+    );
+  }
+  return Object.freeze([room]);
+}
+
 function targetGenerationViews(
   history: CanonicalLinearHistory,
 ): ReadonlyMap<string, LinearTargetGenerationView> {
@@ -597,18 +642,29 @@ function evaluateTargetGameName(
   selectedGameName: string,
   enteredBiomeCount: number,
   rewardHistory: RewardHistoryState | undefined,
+  includeSourceDepth: boolean,
 ): LinearRoomTargetCandidateValidation {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
     throw new LinearRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
-  const context = projectLinearRoomGenerationRequirementContext(
+  const baseContext = projectLinearRoomGenerationRequirementContext(
     source,
     sourceDeclaration,
     view.before,
     enteredBiomeCount,
     rewardHistory,
   );
+  const context = includeSourceDepth
+    ? Object.freeze({
+        ...baseContext,
+        counters: Object.freeze({
+          ...baseContext.counters,
+          biomeDepthCache:
+            baseContext.counters.biomeDepthCache + sourceDeclaration.counters.biomeDepthCache,
+        }),
+      })
+    : baseContext;
   const candidates = pool.map((room) =>
     evaluateCandidate(catalog, source, sourceDeclaration, exit, view.before, room, context),
   );
@@ -631,8 +687,8 @@ function evaluateTargetGameName(
     sourceGameName: source.gameName,
     selectedGameName,
     exitIndex: targetOrigin.exitIndex,
-    biomeDepthCache: view.before.ledgers.counters.biomeDepthCache,
-    biomeEncounterDepth: view.before.ledgers.counters.biomeEncounterDepth,
+    biomeDepthCache: context.counters.biomeDepthCache,
+    biomeEncounterDepth: context.counters.biomeEncounterDepth,
     selectedCreationCount: creationCount(view.before, selectedGameName),
     selectedAppearanceCount: appearanceCount(view.before, selectedGameName),
     selectedParentCreationCount: creationCount(view.before, selectedGameName, source.origin),
@@ -665,6 +721,7 @@ function validateTarget(
   view: LinearTargetGenerationView,
   enteredBiomeCount: number,
   rewardHistory: RewardHistoryState | undefined,
+  includeSourceDepth: boolean,
 ): LinearRoomTargetCandidateValidation {
   assertTargetHistoryMatches(source, target, view);
   return evaluateTargetGameName(
@@ -677,6 +734,7 @@ function validateTarget(
     target.room.gameName,
     enteredBiomeCount,
     rewardHistory,
+    includeSourceDepth,
   );
 }
 
@@ -705,6 +763,7 @@ function evaluateTargets(
   enteredBiomeCount: number,
   rewardHistories: ReadonlyMap<string, RewardHistoryState>,
   roomViews: ReadonlyMap<string, LinearRoomHistoryViews>,
+  includeSourceDepth: boolean,
 ): void {
   for (const target of targets) {
     const view = views.get(semanticAddressKey(target.origin));
@@ -721,6 +780,7 @@ function evaluateTargets(
       view,
       enteredBiomeCount,
       rewardHistories.get(semanticAddressKey(target.origin)),
+      includeSourceDepth,
     );
     pressure.push(result.pressure);
     findings.push(...result.findings);
@@ -771,7 +831,6 @@ export function evaluateLinearRoomGeneration(
       'linear generation inputs do not share one biome owner',
     );
   }
-  const pool = linearCandidatePool(catalog, snapshot.biomeKey);
   const rooms = generationRooms(snapshot);
   const views = targetGenerationViews(history);
   const roomViews = new Map(history.rooms.map((view) => [semanticAddressKey(view.origin), view]));
@@ -787,7 +846,7 @@ export function evaluateLinearRoomGeneration(
     );
   }
 
-  for (const batch of snapshot.batches) {
+  for (const [batchIndex, batch] of snapshot.batches.entries()) {
     const source = requireSource(rooms, batch.parent.origin);
     if (layout.continuation.batchPolicy.kind === 'fields') {
       const sourceView = history.rooms.find(
@@ -812,7 +871,7 @@ export function evaluateLinearRoomGeneration(
     }
     evaluateTargets(
       catalog,
-      pool,
+      stagedCandidatePool(catalog, layout, batchIndex),
       source,
       batch.targets,
       views,
@@ -822,11 +881,12 @@ export function evaluateLinearRoomGeneration(
       enteredBiomeCount,
       rewardHistories,
       roomViews,
+      layout.continuation.progressionPolicy.kind === 'staged',
     );
   }
   evaluateTargets(
     catalog,
-    pool,
+    terminalCandidatePool(catalog, layout),
     requireSource(rooms, snapshot.terminalEntry.predecessor.origin),
     snapshot.terminalEntry.targets,
     views,
@@ -836,6 +896,7 @@ export function evaluateLinearRoomGeneration(
     enteredBiomeCount,
     rewardHistories,
     roomViews,
+    layout.continuation.progressionPolicy.kind === 'staged',
   );
 
   return Object.freeze({
@@ -892,9 +953,18 @@ export function evaluateLinearRoomTargetCandidate(
     );
   }
   assertTargetHistoryMatches(source, target, view);
+  const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
+  if (layout?.kind !== 'LinearBiome') {
+    throw new LinearRoomGenerationContractError(
+      `catalog does not provide ${snapshot.biomeKey} linear generation policy`,
+    );
+  }
+  const batchIndex = 'parent' in owner ? snapshot.batches.indexOf(owner) : -1;
   return evaluateTargetGameName(
     catalog,
-    linearCandidatePool(catalog, snapshot.biomeKey),
+    batchIndex < 0
+      ? terminalCandidatePool(catalog, layout)
+      : stagedCandidatePool(catalog, layout, batchIndex),
     source,
     targetOrigin,
     target.exit,
@@ -902,6 +972,7 @@ export function evaluateLinearRoomTargetCandidate(
     gameName,
     enteredBiomeCount,
     targetRewardHistories(rewardHistoryCheckpoints).get(semanticAddressKey(targetOrigin)),
+    layout.continuation.progressionPolicy.kind === 'staged',
   );
 }
 

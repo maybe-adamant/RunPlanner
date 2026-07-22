@@ -58,6 +58,7 @@ describe('room lifecycle catalog', () => {
   it('normalizes reusable lifecycle profiles as immutable catalog data', () => {
     expect(catalog.roomLifecycleProfiles.values.map((profile) => profile.key)).toEqual([
       'StandardRewardRoom',
+      'RewardlessCombatRoom',
       'EphyraOpeningRoom',
       'EphyraMainRoom',
       'EphyraSideRoom',
