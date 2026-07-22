@@ -1,8 +1,10 @@
-import { encodeProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  encodeProjectDocument,
+  parseProjectDocument,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 
-import type { PlannerCapabilities } from '../composition/capabilities';
-import { parseAuthorableProjectDocument } from '../workspace/projectDocuments';
 import {
   autosaveWriteFailed,
   autosaveWriteSucceeded,
@@ -33,7 +35,6 @@ function errorDetail(error: unknown): string {
 export function restoreStartupProject(
   fallbackProject: ProjectDocument,
   catalog: Catalog,
-  capabilities: PlannerCapabilities,
   recovery: AutosaveRecoveryAdapter | undefined,
 ): StartupProjectState {
   if (recovery === undefined) {
@@ -51,7 +52,7 @@ export function restoreStartupProject(
       });
     }
     return Object.freeze({
-      project: parseAuthorableProjectDocument(json, catalog, capabilities),
+      project: parseProjectDocument(json, catalog),
       profileSession: createInitialProfileSessionState({ recoveryStatus: 'recovered' }),
     });
   } catch (error) {

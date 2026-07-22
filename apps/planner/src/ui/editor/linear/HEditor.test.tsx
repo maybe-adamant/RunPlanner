@@ -19,7 +19,6 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createApplicationCapabilities } from '../../../composition/capabilityConfiguration';
 import {
   createCandidateProjectionService,
   type CandidateProjectionService,
@@ -166,10 +165,8 @@ function HEditorHarness({
 }
 
 function renderH(project: ProjectDocument) {
-  const capabilities = createApplicationCapabilities(catalog);
   const evaluateProject = (current: ProjectDocument) => simulateProject(catalog, current);
   const store = createPlannerStore({
-    capabilities,
     catalog,
     evaluateProject,
     initialProject: project,

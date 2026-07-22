@@ -1,7 +1,5 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
-import { hasBiomeCapability, type PlannerCapabilities } from '../composition/capabilities';
-
 export interface BiomeEditorNavigationItem {
   readonly biomeKey: string;
   readonly label: string;
@@ -10,17 +8,13 @@ export interface BiomeEditorNavigationItem {
 export interface RouteEditorNavigation {
   readonly routeKey: string;
   readonly biomePanels: readonly BiomeEditorNavigationItem[];
-  readonly configurablePrefixBiomePanels: readonly BiomeEditorNavigationItem[];
 }
 
 export interface EditorNavigation {
   readonly routes: Readonly<Record<string, RouteEditorNavigation>>;
 }
 
-export function createEditorNavigation(
-  catalog: Catalog,
-  capabilities: PlannerCapabilities,
-): EditorNavigation {
+export function createEditorNavigation(catalog: Catalog): EditorNavigation {
   const routes = catalog.routes.values.map((route) => {
     const navigationItem = (biomeKey: string): BiomeEditorNavigationItem => {
       const biome = catalog.biomes.byKey[biomeKey];
@@ -29,24 +23,10 @@ export function createEditorNavigation(
       }
       return Object.freeze({ biomeKey, label: biome.label });
     };
-    const biomePanels = route.biomeKeys
-      .filter((biomeKey) => hasBiomeCapability(capabilities, biomeKey, 'editable'))
-      .map(navigationItem);
-    const configurablePrefixBiomePanels: BiomeEditorNavigationItem[] = [];
-    for (const biomeKey of route.biomeKeys) {
-      if (
-        !hasBiomeCapability(capabilities, biomeKey, 'authorable') ||
-        !hasBiomeCapability(capabilities, biomeKey, 'simulatable') ||
-        !hasBiomeCapability(capabilities, biomeKey, 'editable')
-      ) {
-        break;
-      }
-      configurablePrefixBiomePanels.push(navigationItem(biomeKey));
-    }
+    const biomePanels = route.biomeKeys.map(navigationItem);
     return Object.freeze({
       routeKey: route.key,
       biomePanels: Object.freeze(biomePanels),
-      configurablePrefixBiomePanels: Object.freeze(configurablePrefixBiomePanels),
     });
   });
 

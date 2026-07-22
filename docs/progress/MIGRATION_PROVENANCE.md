@@ -310,9 +310,9 @@ rooms belong to each biome layout; `Next` is derived only from route order.
 | Surface    | P     | `LinearBiome` | 28 (26)          | eligibility / standard  | authored Run/Meta                    | forked              | `P_Boss01`, `P_PostBoss01` | Q    |
 | Surface    | Q     | `LinearBiome` | 23 (22)          | staged / standard       | none                                 | direct              | `Q_Boss01`                 | --   |
 
-The application capability matrix now includes F, G, H, I, N, O, P, and Q as
-authorable, simulatable, and editable. Complete F/G/H/I and N/O/P/Q prefixes
-enter profiles, recovery, candidate scope, and editor navigation together. N
+The production catalog routes now include F, G, H, I, N, O, P, and Q as
+complete authoring, simulation, and editor participants. Complete F/G/H/I and
+N/O/P/Q prefixes enter profiles, recovery, candidates, and editor navigation together. N
 uses its Hub editor and canonical evaluator; O and P use the shared linear
 editor and evaluator. Q uses the same linear boundary with
 declaration-controlled stages and closes the active Surface route.

@@ -8,7 +8,6 @@ import {
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { useDispatch, useSelector } from 'react-redux';
 
-import type { PlannerCapabilities } from '../composition/capabilities';
 import { editorSessionReducer } from './editorSessionSlice';
 import { indexFindingsByOwner } from '../projections/evaluationProjection';
 import {
@@ -16,26 +15,22 @@ import {
   createProfileSessionReducer,
   type ProfileSessionState,
 } from './profileSessionSlice';
-import { requireProjectAuthorable } from '../workspace/projectDocuments';
 import { createProjectWorkspaceReducer, type ProjectEvaluator } from './projectWorkspaceSlice';
 
 export interface CreatePlannerStoreOptions {
   readonly catalog: Catalog;
-  readonly capabilities: PlannerCapabilities;
   readonly initialProject: ProjectDocument;
   readonly initialProfileSession?: ProfileSessionState;
   readonly evaluateProject: ProjectEvaluator;
 }
 
 export function createPlannerStore(options: CreatePlannerStoreOptions) {
-  requireProjectAuthorable(options.initialProject, options.capabilities);
   return configureStore({
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({ immutableCheck: false, serializableCheck: false }),
     reducer: {
       projectWorkspace: createProjectWorkspaceReducer(
         options.catalog,
-        options.capabilities,
         options.initialProject,
         options.evaluateProject,
       ),

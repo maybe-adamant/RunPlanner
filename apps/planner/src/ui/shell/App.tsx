@@ -56,30 +56,17 @@ function asSurfacePanel(biomeKey: string): SurfacePanel {
 }
 
 function RouteOverview({
-  catalog,
   label,
   navigation,
   route,
   routeEvaluation,
 }: {
-  readonly catalog: Catalog;
   readonly label: string;
   readonly navigation: RouteEditorNavigation;
   readonly route: AuthoredRoutePlan;
   readonly routeEvaluation: ProjectRouteEvaluation;
 }) {
   const dispatch = useAppDispatch();
-  const currentPrefixAvailable =
-    route.biomes.length <= navigation.configurablePrefixBiomePanels.length;
-  const currentTerminalBiome = route.biomes.at(-1);
-  const currentTerminalDeclaration =
-    currentTerminalBiome === undefined
-      ? undefined
-      : catalog.biomes.byKey[currentTerminalBiome.biomeKey];
-  if (currentTerminalBiome !== undefined && currentTerminalDeclaration === undefined) {
-    throw new Error(`${route.routeKey} references unknown biome ${currentTerminalBiome.biomeKey}`);
-  }
-
   return (
     <section className="route-overview">
       <header className="panel-heading">
@@ -96,9 +83,7 @@ function RouteOverview({
       <label className="field-control" htmlFor={`${route.routeKey}-configured-prefix`}>
         <span>Configured biomes</span>
         <select
-          disabled={
-            navigation.configurablePrefixBiomePanels.length === 0 && route.biomes.length === 0
-          }
+          disabled={navigation.biomePanels.length === 0 && route.biomes.length === 0}
           id={`${route.routeKey}-configured-prefix`}
           onChange={(event) => {
             const configuredBiomeCount = Number(event.target.value);
@@ -122,16 +107,11 @@ function RouteOverview({
           value={route.biomes.length}
         >
           <option value={0}>None</option>
-          {navigation.configurablePrefixBiomePanels.map((biome, index) => (
+          {navigation.biomePanels.map((biome, index) => (
             <option key={biome.biomeKey} value={index + 1}>
               {biome.label}
             </option>
           ))}
-          {!currentPrefixAvailable && currentTerminalDeclaration !== undefined && (
-            <option disabled value={route.biomes.length}>
-              {currentTerminalDeclaration.label} (not active)
-            </option>
-          )}
         </select>
       </label>
       <p className="panel-description">
@@ -284,7 +264,6 @@ export function App({
           <div className="editor-panel" aria-live="polite">
             {displayedUnderworldPanel === 'route' ? (
               <RouteOverview
-                catalog={catalog}
                 label="Underworld"
                 navigation={underworldNavigation}
                 route={underworld}
@@ -332,7 +311,6 @@ export function App({
           <div className="editor-panel" aria-live="polite">
             {displayedSurfacePanel === 'route' ? (
               <RouteOverview
-                catalog={catalog}
                 label="Surface"
                 navigation={surfaceNavigation}
                 route={surface}

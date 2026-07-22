@@ -397,7 +397,7 @@ The user-facing project lifecycle has one explicit file workflow:
 - **Save Profile** writes the normalized `ProjectDocument` through the
   platform profile-file adapter;
 - **Load Profile** decodes one selected profile file and replaces the project
-  only after the entire document passes capability validation.
+  only after the entire document passes catalog validation.
 
 Local Save/Load and Export/Import are not retained as two public persistence
 concepts. Browser Save Profile uses a
@@ -408,9 +408,8 @@ filename is derived from the editable project name, for example
 
 Explicit profile replacement is atomic: successful load resets undo/redo,
 runs one fresh simulation, installs the loaded document as the clean baseline,
-and then queues recovery autosave. Cancellation is a no-op. Decode or
-capability failure leaves the current project, history, evaluation, and clean
-baseline untouched.
+and then queues recovery autosave. Cancellation is a no-op. Decode failure
+leaves the current project, history, evaluation, and clean baseline untouched.
 
 Autosave is a distinct recovery channel, not an implicit Save Profile action.
 It observes effective authored changes only and is debounced. Navigation,
@@ -430,8 +429,8 @@ an imperative flag:
 | Restore autosave at startup | none                      | Recovered / Unsaved            |
 | Autosave write              | unchanged                 | No dirty-state change          |
 
-On startup, a valid recovery document is decoded through the same
-capability-aware project boundary and receives a fresh history and simulation.
+On startup, a valid recovery document is decoded through the same catalog-aware
+project boundary and receives a fresh history and simulation.
 If recovery is corrupt, the editor opens a safe new project, reports the
 failure, preserves the raw recovery value, and suspends further autosave. The
 user may explicitly Discard Autosave, or successfully load a profile, to clear

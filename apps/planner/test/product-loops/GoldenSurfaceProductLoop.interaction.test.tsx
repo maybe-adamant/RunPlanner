@@ -153,34 +153,8 @@ describe('N/O/P/Q Surface product loop', () => {
     application.store.dispatch(authoredProjectReplaced(authored));
     const view = renderPlannerForInteraction({ application });
 
-    expect(application.capabilities.byBiomeKey.N).toMatchObject({
-      authorable: true,
-      simulatable: true,
-      editable: true,
-    });
-    expect(application.capabilities.byBiomeKey.O).toMatchObject({
-      authorable: true,
-      simulatable: true,
-      editable: true,
-    });
-    expect(application.capabilities.byBiomeKey.P).toMatchObject({
-      authorable: true,
-      simulatable: true,
-      editable: true,
-    });
-    expect(application.capabilities.byBiomeKey.Q).toMatchObject({
-      authorable: true,
-      simulatable: true,
-      editable: true,
-    });
     expect(application.editorNavigation.routes.Surface).toMatchObject({
       biomePanels: [
-        { biomeKey: 'N', label: 'City of Ephyra' },
-        { biomeKey: 'O', label: 'Rift of Thessaly' },
-        { biomeKey: 'P', label: 'Mount Olympus' },
-        { biomeKey: 'Q', label: 'Summit' },
-      ],
-      configurablePrefixBiomePanels: [
         { biomeKey: 'N', label: 'City of Ephyra' },
         { biomeKey: 'O', label: 'Rift of Thessaly' },
         { biomeKey: 'P', label: 'Mount Olympus' },

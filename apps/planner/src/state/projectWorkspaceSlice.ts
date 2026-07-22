@@ -2,7 +2,6 @@ import { createAction, type Reducer } from '@reduxjs/toolkit';
 import {
   applyProjectHistoryCommand,
   createProjectHistory,
-  projectCommandAddress,
   redoProjectHistory,
   undoProjectHistory,
   type ProjectCommand,
@@ -12,12 +11,7 @@ import {
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
 
-import { requireBiomeCapability, type PlannerCapabilities } from '../composition/capabilities';
 import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
-import {
-  requireProjectAuthorable,
-  requireRoutePrefixAuthorable,
-} from '../workspace/projectDocuments';
 
 export type ProjectEvaluator = (project: ProjectDocument) => ProjectEvaluation;
 
@@ -47,7 +41,6 @@ function publishWorkspace(
 
 export function createProjectWorkspaceReducer(
   catalog: Catalog,
-  capabilities: PlannerCapabilities,
   initialProject: ProjectDocument,
   evaluateProject: ProjectEvaluator,
 ): Reducer<ProjectWorkspaceState> {
@@ -55,28 +48,6 @@ export function createProjectWorkspaceReducer(
 
   return (state = initialState, action) => {
     if (authoredProjectCommandDispatched.match(action)) {
-      if (action.payload.kind === 'RenameProject') {
-        // Project-root commands do not cross a biome capability boundary.
-      } else if (action.payload.kind === 'ConfigureRoutePrefix') {
-        requireRoutePrefixAuthorable(
-          catalog,
-          capabilities,
-          action.payload.route.routeKey,
-          action.payload.configuredBiomeCount,
-          `command.${action.payload.kind}`,
-        );
-      } else {
-        const address = projectCommandAddress(action.payload);
-        if (address.kind === 'project' || address.kind === 'route') {
-          throw new Error('top-level address escaped top-level command validation');
-        }
-        requireBiomeCapability(
-          capabilities,
-          address.biomeKey,
-          'authorable',
-          `command.${action.payload.kind}`,
-        );
-      }
       const history = applyProjectHistoryCommand(state.history, catalog, action.payload);
       return history === state.history ? state : publishWorkspace(history, evaluateProject);
     }
@@ -89,15 +60,12 @@ export function createProjectWorkspaceReducer(
       return history === state.history ? state : publishWorkspace(history, evaluateProject);
     }
     if (authoredProjectReplaced.match(action)) {
-      requireProjectAuthorable(action.payload, capabilities);
       return publishWorkspace(createProjectHistory(action.payload), evaluateProject);
     }
     if (newProjectCreated.match(action)) {
-      requireProjectAuthorable(action.payload, capabilities);
       return publishWorkspace(createProjectHistory(action.payload), evaluateProject);
     }
     if (profileLoadSucceeded.match(action)) {
-      requireProjectAuthorable(action.payload.project, capabilities);
       return publishWorkspace(createProjectHistory(action.payload.project), evaluateProject);
     }
     return state;

@@ -575,28 +575,19 @@ that alters its semantic meaning.
 The future game execution artifact will carry catalog compatibility data, but
 its exact algorithm remains deferred.
 
-## Product Capability Boundary
+## Production Biome Contract
 
-Catalog presence and product activation are separate facts. Application
-composition derives the declared biome set from route-placed normalized layouts and
-owns explicit authorable, simulatable, and editable sets. Room, layout, and
-route declarations do not carry those product flags.
+Every biome placed in a production catalog route has a normalized layout and a
+complete authored, simulation, candidate, editor, profile, and recovery path.
+Project creation, loading, semantic commands, simulation dispatch, and editor
+navigation consume the same route declarations without a second application
+capability matrix.
 
-The current application capability matrix makes F/G/H/I and N/O/P/Q
-authorable, simulatable, and editable. Their declarations, authored state,
-simulation dispatch, candidates, editor projections, profiles, and recovery
-paths are connected through the same application composition boundary.
-
-Every active capability must reference a declared biome, and every
-editable biome must also be authorable. Project creation and loading, semantic
-command dispatch, simulator dispatch, and editor navigation are
-application contact points that consume this matrix. Pure catalog construction,
-project codecs, and structural declarations remain capability-agnostic.
-
-Adding a future declaration can still expand the catalog without making its
-biome selectable, persistable in an application project, simulatable, or
-visible as an editor entry. Activation is a deliberate composition change made
-only when that product loop is complete.
+Future incomplete biome work must remain outside the assembled production
+catalog until its complete vertical product loop is ready. Focused test
+catalogs may still exercise new declaration vocabulary before production
+assembly. Room, layout, and route declarations do not carry development-status
+flags.
 
 ## Catalog Coverage and Declaration Freeze
 
@@ -613,8 +604,9 @@ for both complete routes:
 - eligibility, force, and cap evaluators exercised by all eight biomes;
 - explicit labels and recursive defaults.
 
-Do not declare future biomes or mechanics fully supported through placeholders.
-Their identity may exist while their application capabilities remain inactive.
+Do not place future biomes or mechanics in production routes through
+placeholders. Catalog route placement is a supported-product contract, not a
+development-progress marker.
 
 The verified F/G/H/I/N/O/P/Q game-rule audits, declaration imports, and
 cross-biome closure are complete. They extend normalized catalog vocabulary
