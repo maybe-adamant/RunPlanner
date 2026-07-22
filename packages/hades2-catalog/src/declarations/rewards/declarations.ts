@@ -414,20 +414,8 @@ const largeEnteredBiomes: RequirementExpression = {
   range: { min: 2 },
 };
 
-function option(
-  key: string,
-  rewardType: string,
-  requirement?: RequirementExpression,
-  purchaseRequirement?: RequirementExpression,
-  acquisitionLifecycle?: RawShopOptionEntryDeclaration['acquisitionLifecycle'],
-): RawShopOptionEntryDeclaration {
-  return {
-    key,
-    rewardType,
-    ...(requirement === undefined ? {} : { requirement }),
-    ...(purchaseRequirement === undefined ? {} : { purchaseRequirement }),
-    ...(acquisitionLifecycle === undefined ? {} : { acquisitionLifecycle }),
-  };
+function option(declaration: RawShopOptionEntryDeclaration): RawShopOptionEntryDeclaration {
+  return declaration;
 }
 
 const worldGroups = [
@@ -435,45 +423,110 @@ const worldGroups = [
     key: 'Boon',
     offerCount: 1,
     options: [
-      option('RandomLoot', 'RandomLoot'),
-      option('BlindBoxLoot', 'BlindBoxLoot', undefined, undefined, [
-        { role: 'box', lifecyclePoint: 'purchase' },
-        { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
-      ]),
-      option('ShopHermesUpgrade', 'ShopHermesUpgrade', shopHermesLegal),
+      option({
+        key: 'RandomLoot',
+        rewardType: 'RandomLoot',
+      }),
+      option({
+        key: 'BlindBoxLoot',
+        rewardType: 'BlindBoxLoot',
+        acquisitionLifecycle: [
+          { role: 'box', lifecyclePoint: 'purchase' },
+          { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
+        ],
+      }),
+      option({
+        key: 'ShopHermesUpgrade',
+        rewardType: 'ShopHermesUpgrade',
+        requirement: shopHermesLegal,
+      }),
     ],
   },
   {
     key: 'MajorNonBoon',
     offerCount: 1,
     options: [
-      option('WeaponUpgradeDropEarly', 'WeaponUpgradeDrop', hammerEarly),
-      option('WeaponUpgradeDropLate', 'WeaponUpgradeDrop', hammerLate),
-      option('RoomRewardHealDrop', 'RoomRewardHealDrop'),
-      option('MaxHealthDrop', 'MaxHealthDrop'),
-      option('ArmorBoost', 'ArmorBoost'),
-      option('MetaCardPointsCommonDrop', 'MetaCardPointsCommonDrop'),
-      option('MetaCurrencyDrop', 'MetaCurrencyDrop'),
-      option('GiftDrop', 'GiftDrop'),
+      option({
+        key: 'WeaponUpgradeDropEarly',
+        rewardType: 'WeaponUpgradeDrop',
+        requirement: hammerEarly,
+      }),
+      option({
+        key: 'WeaponUpgradeDropLate',
+        rewardType: 'WeaponUpgradeDrop',
+        requirement: hammerLate,
+      }),
+      option({
+        key: 'RoomRewardHealDrop',
+        rewardType: 'RoomRewardHealDrop',
+      }),
+      option({
+        key: 'MaxHealthDrop',
+        rewardType: 'MaxHealthDrop',
+      }),
+      option({
+        key: 'ArmorBoost',
+        rewardType: 'ArmorBoost',
+      }),
+      option({
+        key: 'MetaCardPointsCommonDrop',
+        rewardType: 'MetaCardPointsCommonDrop',
+      }),
+      option({
+        key: 'MetaCurrencyDrop',
+        rewardType: 'MetaCurrencyDrop',
+      }),
+      option({
+        key: 'GiftDrop',
+        rewardType: 'GiftDrop',
+      }),
     ],
   },
   {
     key: 'Minor',
     offerCount: 1,
     options: [
-      option('MaxManaDrop', 'MaxManaDrop'),
-      option('StackUpgrade', 'StackUpgrade', stackLegal),
-      option('StoreRewardRandomStack', 'StoreRewardRandomStack', stackLegal),
-      option('SpellDrop', 'SpellDrop', spellLegal),
-      option('TalentDrop', 'TalentDrop', routeTalentLegal),
+      option({
+        key: 'MaxManaDrop',
+        rewardType: 'MaxManaDrop',
+      }),
+      option({
+        key: 'StackUpgrade',
+        rewardType: 'StackUpgrade',
+        requirement: stackLegal,
+      }),
+      option({
+        key: 'StoreRewardRandomStack',
+        rewardType: 'StoreRewardRandomStack',
+        requirement: stackLegal,
+      }),
+      option({
+        key: 'SpellDrop',
+        rewardType: 'SpellDrop',
+        requirement: spellLegal,
+      }),
+      option({
+        key: 'TalentDrop',
+        rewardType: 'TalentDrop',
+        requirement: routeTalentLegal,
+      }),
     ],
   },
 ] as const;
 
 const lateResourceOptions = [
-  option('WeaponPointsRareDrop', 'WeaponPointsRareDrop'),
-  option('CardUpgradePointsDrop', 'CardUpgradePointsDrop'),
-  option('CharonPointsDrop', 'CharonPointsDrop'),
+  option({
+    key: 'WeaponPointsRareDrop',
+    rewardType: 'WeaponPointsRareDrop',
+  }),
+  option({
+    key: 'CardUpgradePointsDrop',
+    rewardType: 'CardUpgradePointsDrop',
+  }),
+  option({
+    key: 'CharonPointsDrop',
+    rewardType: 'CharonPointsDrop',
+  }),
 ];
 
 const stores = [
@@ -637,44 +690,102 @@ const shops = [
         key: 'BoostedBoon',
         offerCount: 1,
         options: [
-          option('BoostedRandomLoot', 'RandomLoot'),
-          option('StackUpgradeBig', 'StackUpgradeBig', stackLegal),
+          option({
+            key: 'BoostedRandomLoot',
+            rewardType: 'RandomLoot',
+          }),
+          option({
+            key: 'StackUpgradeBig',
+            rewardType: 'StackUpgradeBig',
+            requirement: stackLegal,
+          }),
         ],
       },
       {
         key: 'MixedProgress',
         offerCount: 1,
         options: [
-          option('RandomLoot', 'RandomLoot'),
-          option('BlindBoxLoot', 'BlindBoxLoot', undefined, undefined, [
-            { role: 'box', lifecyclePoint: 'purchase' },
-            { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
-          ]),
-          option('MaxHealthDrop', 'MaxHealthDrop'),
-          option('MaxManaDrop', 'MaxManaDrop'),
-          option('StackUpgrade', 'StackUpgrade', stackLegal),
-          option('TalentDrop', 'TalentDrop', talentLegal),
-          option('SpellDrop', 'SpellDrop', spellLegal),
+          option({
+            key: 'RandomLoot',
+            rewardType: 'RandomLoot',
+          }),
+          option({
+            key: 'BlindBoxLoot',
+            rewardType: 'BlindBoxLoot',
+            acquisitionLifecycle: [
+              { role: 'box', lifecyclePoint: 'purchase' },
+              { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
+            ],
+          }),
+          option({
+            key: 'MaxHealthDrop',
+            rewardType: 'MaxHealthDrop',
+          }),
+          option({
+            key: 'MaxManaDrop',
+            rewardType: 'MaxManaDrop',
+          }),
+          option({
+            key: 'StackUpgrade',
+            rewardType: 'StackUpgrade',
+            requirement: stackLegal,
+          }),
+          option({
+            key: 'TalentDrop',
+            rewardType: 'TalentDrop',
+            requirement: talentLegal,
+          }),
+          option({
+            key: 'SpellDrop',
+            rewardType: 'SpellDrop',
+            requirement: spellLegal,
+          }),
         ],
       },
       {
         key: 'Survival',
         offerCount: 1,
         options: [
-          option('HealBigDrop', 'HealBigDrop'),
-          option('ArmorBigBoost', 'ArmorBigBoost'),
-          option('LastStandDrop', 'LastStandDrop'),
+          option({
+            key: 'HealBigDrop',
+            rewardType: 'HealBigDrop',
+          }),
+          option({
+            key: 'ArmorBigBoost',
+            rewardType: 'ArmorBigBoost',
+          }),
+          option({
+            key: 'LastStandDrop',
+            rewardType: 'LastStandDrop',
+          }),
         ],
       },
       {
         key: 'PremiumProgress',
         offerCount: 1,
         options: [
-          option('ShopHermesUpgrade', 'ShopHermesUpgrade', shopHermesLegal),
-          option('ChaosWeaponUpgrade', 'ChaosWeaponUpgrade', chaosHammerLegal),
-          option('BoostedRandomLoot', 'RandomLoot'),
-          option('MaxHealthDropBig', 'MaxHealthDropBig'),
-          option('MaxManaDropBig', 'MaxManaDropBig'),
+          option({
+            key: 'ShopHermesUpgrade',
+            rewardType: 'ShopHermesUpgrade',
+            requirement: shopHermesLegal,
+          }),
+          option({
+            key: 'ChaosWeaponUpgrade',
+            rewardType: 'ChaosWeaponUpgrade',
+            requirement: chaosHammerLegal,
+          }),
+          option({
+            key: 'BoostedRandomLoot',
+            rewardType: 'RandomLoot',
+          }),
+          option({
+            key: 'MaxHealthDropBig',
+            rewardType: 'MaxHealthDropBig',
+          }),
+          option({
+            key: 'MaxManaDropBig',
+            rewardType: 'MaxManaDropBig',
+          }),
         ],
       },
       { key: 'MetaProgress', offerCount: 1, options: lateResourceOptions },
@@ -719,42 +830,105 @@ const shops = [
         key: 'MixedProgress',
         offerCount: 2,
         options: [
-          option('BoostedRandomLoot', 'RandomLoot'),
-          option('StackUpgradeBig', 'StackUpgradeBig', stackLegal),
-          option('RandomLoot', 'RandomLoot'),
-          option('BlindBoxLoot', 'BlindBoxLoot', undefined, undefined, [
-            { role: 'box', lifecyclePoint: 'purchase' },
-            { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
-          ]),
-          option('MaxHealthDrop', 'MaxHealthDrop'),
-          option('MaxManaDrop', 'MaxManaDrop'),
-          option('TalentDrop', 'TalentDrop', talentLegal),
-          option('SpellDrop', 'SpellDrop', spellLegal),
+          option({
+            key: 'BoostedRandomLoot',
+            rewardType: 'RandomLoot',
+          }),
+          option({
+            key: 'StackUpgradeBig',
+            rewardType: 'StackUpgradeBig',
+            requirement: stackLegal,
+          }),
+          option({
+            key: 'RandomLoot',
+            rewardType: 'RandomLoot',
+          }),
+          option({
+            key: 'BlindBoxLoot',
+            rewardType: 'BlindBoxLoot',
+            acquisitionLifecycle: [
+              { role: 'box', lifecyclePoint: 'purchase' },
+              { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
+            ],
+          }),
+          option({
+            key: 'MaxHealthDrop',
+            rewardType: 'MaxHealthDrop',
+          }),
+          option({
+            key: 'MaxManaDrop',
+            rewardType: 'MaxManaDrop',
+          }),
+          option({
+            key: 'TalentDrop',
+            rewardType: 'TalentDrop',
+            requirement: talentLegal,
+          }),
+          option({
+            key: 'SpellDrop',
+            rewardType: 'SpellDrop',
+            requirement: spellLegal,
+          }),
         ],
       },
       {
         key: 'LargeSurvival',
         offerCount: 1,
-        options: [option('HealBigDrop', 'HealBigDrop'), option('ArmorBigBoost', 'ArmorBigBoost')],
+        options: [
+          option({
+            key: 'HealBigDrop',
+            rewardType: 'HealBigDrop',
+          }),
+          option({
+            key: 'ArmorBigBoost',
+            rewardType: 'ArmorBigBoost',
+          }),
+        ],
       },
       {
         key: 'Survival',
         offerCount: 1,
         options: [
-          option('HealBigDrop', 'HealBigDrop'),
-          option('ArmorBigBoost', 'ArmorBigBoost'),
-          option('LastStandDrop', 'LastStandDrop'),
+          option({
+            key: 'HealBigDrop',
+            rewardType: 'HealBigDrop',
+          }),
+          option({
+            key: 'ArmorBigBoost',
+            rewardType: 'ArmorBigBoost',
+          }),
+          option({
+            key: 'LastStandDrop',
+            rewardType: 'LastStandDrop',
+          }),
         ],
       },
       {
         key: 'PremiumProgress',
         offerCount: 1,
         options: [
-          option('ShopHermesUpgrade', 'ShopHermesUpgrade', shopHermesLegal),
-          option('ChaosWeaponUpgrade', 'ChaosWeaponUpgrade', chaosHammerLegal),
-          option('BoostedRandomLoot', 'RandomLoot'),
-          option('MaxHealthDropBig', 'MaxHealthDropBig'),
-          option('MaxManaDropBig', 'MaxManaDropBig'),
+          option({
+            key: 'ShopHermesUpgrade',
+            rewardType: 'ShopHermesUpgrade',
+            requirement: shopHermesLegal,
+          }),
+          option({
+            key: 'ChaosWeaponUpgrade',
+            rewardType: 'ChaosWeaponUpgrade',
+            requirement: chaosHammerLegal,
+          }),
+          option({
+            key: 'BoostedRandomLoot',
+            rewardType: 'RandomLoot',
+          }),
+          option({
+            key: 'MaxHealthDropBig',
+            rewardType: 'MaxHealthDropBig',
+          }),
+          option({
+            key: 'MaxManaDropBig',
+            rewardType: 'MaxManaDropBig',
+          }),
         ],
       },
       { key: 'MetaProgress', offerCount: 1, options: lateResourceOptions },
