@@ -5,7 +5,7 @@ import {
   ProjectDocumentContractError,
 } from '@run-planner/engine/authored-project';
 
-import { createCatalog } from './catalog';
+import { createCatalog } from './compiler/createCatalog';
 import { declarations, type RawCatalogInput } from './declarations';
 import { catalog } from './index';
 

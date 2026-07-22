@@ -36,7 +36,7 @@ import {
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
-import { createCatalog } from './catalog';
+import { createCatalog } from './compiler/createCatalog';
 import { declarations } from './declarations';
 import { catalog } from './index';
 

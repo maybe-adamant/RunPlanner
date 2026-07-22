@@ -1,5 +1,4 @@
 export { ordinarySources, rewardKernelDeclarations } from './declarations';
-export { createRewardKernelCatalog } from './normalize';
 export type {
   RawAcquisitionRoleDeclaration,
   RawConcreteAcquisitionDeclaration,

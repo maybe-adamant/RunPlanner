@@ -11,7 +11,7 @@ import {
 import { evaluateRequirement } from '@run-planner/engine/requirements';
 import { describe, expect, it } from 'vitest';
 
-import { CatalogContractError, createCatalog } from './catalog';
+import { CatalogContractError, createCatalog } from './compiler/createCatalog';
 import { declarations, type RawCatalogInput } from './declarations';
 import { catalog } from './index';
 

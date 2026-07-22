@@ -30,7 +30,7 @@ import type {
 } from '@run-planner/engine/catalog-schema';
 import type { EnteredRewardStoreHistoryPolicy } from '@run-planner/engine/reward-kernel';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
-import type { RawRewardKernelInput } from '../rewardKernel/types';
+import type { RawRewardKernelInput } from './rewards/types';
 
 export interface RawEncounterPhaseDeclaration {
   readonly key: string;

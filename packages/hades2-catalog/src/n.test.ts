@@ -11,7 +11,7 @@ import {
 import { type HubBiomeLayout } from '@run-planner/engine/catalog-schema';
 import { describe, expect, it } from 'vitest';
 
-import { CatalogContractError, createCatalog } from './catalog';
+import { CatalogContractError, createCatalog } from './compiler/createCatalog';
 import { declarations, type RawCatalogInput } from './declarations';
 import { catalog } from './index';
 
