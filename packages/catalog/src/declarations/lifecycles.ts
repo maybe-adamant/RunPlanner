@@ -28,6 +28,10 @@ export const roomLifecycleProfiles = [
       'OlympusCombat',
       'P_MiniBoss01',
       'P_MiniBoss02',
+      'Q_MiniBoss02',
+      'Q_MiniBoss05',
+      'Q_MiniBoss03',
+      'Q_MiniBoss04',
     ],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
@@ -57,6 +61,31 @@ export const roomLifecycleProfiles = [
         kind: 'advanceProducer',
         point: 'roomRewardPickup',
         effects: ['recordProducerPoint'],
+      },
+      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
+      {
+        kind: 'commitRoom',
+        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
+      },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
+    key: 'RewardlessCombatRoom',
+    encounterProfileKeys: ['SummitCombat'],
+    producer: { kind: 'none' },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      {
+        kind: 'startEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
+      },
+      {
+        kind: 'completeEncounter',
+        encounter: { kind: 'only' },
+        effects: ['recordEncounterCompletion'],
       },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {
@@ -409,6 +438,7 @@ export const roomLifecycleProfiles = [
       'N_Boss01',
       'O_Boss01',
       'P_Boss01',
+      'Q_Boss01',
     ],
     producer: { kind: 'none' },
     operations: [

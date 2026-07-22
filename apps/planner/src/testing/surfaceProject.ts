@@ -513,9 +513,32 @@ export function createRepresentativeNOPQProject(): ProjectDocument {
     { occurrenceId: qOccurrenceIds.secondMiniboss1, gameName: 'Q_MiniBoss03', exitIndex: 1 },
     { occurrenceId: qOccurrenceIds.secondMiniboss2, gameName: 'Q_MiniBoss04', exitIndex: 2 },
   ]);
-  return applyProjectCommand(project, catalog, {
+  for (const [occurrenceId, value] of [
+    [
+      qOccurrenceIds.firstMiniboss1,
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+    ],
+    [
+      qOccurrenceIds.firstMiniboss2,
+      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    ],
+    [qOccurrenceIds.secondMiniboss1, { rewardType: 'WeaponUpgrade' }],
+    [qOccurrenceIds.secondMiniboss2, { rewardType: 'StackUpgradeTriple' }],
+  ] as const satisfies readonly (readonly [OccurrenceId, ResolvedRewardOffer])[]) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(qBiome, occurrenceId),
+      value,
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateTerminalTransition',
     continuation: createContinuationAddress(qBiome, qOccurrenceIds.secondMiniboss1),
     targetOccurrenceIds: [qOccurrenceIds.preboss],
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress'),
+    value: { rewardType: 'MaxHealthDropBig' },
   });
 }

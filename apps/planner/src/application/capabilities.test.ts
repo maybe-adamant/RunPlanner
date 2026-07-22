@@ -92,20 +92,28 @@ function catalogBeforePImport(): Catalog {
 }
 
 function catalogBeforeQImport(): Catalog {
+  const qEncounterProfileKeys = [
+    'SummitCombat',
+    'Q_MiniBoss02',
+    'Q_MiniBoss03',
+    'Q_MiniBoss04',
+    'Q_MiniBoss05',
+    'Q_Boss01',
+  ];
   return createCatalog({
     ...declarations,
     version: '0.5.0-biome-identity',
     encounterProfiles: declarations.encounterProfiles.filter(
-      (profile) =>
-        ![
-          'SummitCombat',
-          'Q_MiniBoss02',
-          'Q_MiniBoss03',
-          'Q_MiniBoss04',
-          'Q_MiniBoss05',
-          'Q_Boss01',
-        ].includes(profile.key),
+      (profile) => !qEncounterProfileKeys.includes(profile.key),
     ),
+    roomLifecycleProfiles: declarations.roomLifecycleProfiles
+      .filter((profile) => profile.key !== 'RewardlessCombatRoom')
+      .map((profile) => ({
+        ...profile,
+        encounterProfileKeys: profile.encounterProfileKeys.filter(
+          (encounterProfileKey) => !qEncounterProfileKeys.includes(encounterProfileKey),
+        ),
+      })),
     exitTypes: declarations.exitTypes.filter(
       (exitType) => !['TyphonExitDoor', 'FortressMainDoor'].includes(exitType.key),
     ),

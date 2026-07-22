@@ -62,6 +62,7 @@ type LinearAuthoredTemplateKey =
   | 'ForkedPreboss'
   | 'Fountain'
   | 'Miniboss'
+  | 'RewardlessCombat'
   | 'Shop'
   | 'ShopPreboss'
   | 'ShipCombat'
@@ -486,6 +487,11 @@ const authoredTemplateMaterializers = Object.freeze({
   ForkedPreboss: materializeForkedPreboss,
   Fountain: materializeCountedRoom,
   Miniboss: materializeCountedRoom,
+  RewardlessCombat: (context) =>
+    Object.freeze({
+      ...materializeRewardlessRoom(context),
+      lifecycleProfileKey: 'RewardlessCombatRoom',
+    }),
   Shop: materializeShopRoom,
   ShopPreboss: materializeShopPreboss,
   ShipCombat: materializeShipCombat,
@@ -850,9 +856,10 @@ function requireLinearLayout(
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
   const supportedContinuation =
     layout?.kind === 'LinearBiome' &&
-    layout.continuation.progressionPolicy.kind !== 'staged' &&
     ((layout.continuation.batchPolicy.kind === 'standard' &&
-      layout.continuation.rewardStorePolicy.kind === 'authoredBaseStore') ||
+      (layout.continuation.rewardStorePolicy.kind === 'authoredBaseStore' ||
+        (layout.continuation.progressionPolicy.kind === 'staged' &&
+          layout.continuation.rewardStorePolicy.kind === 'none'))) ||
       (layout.continuation.batchPolicy.kind === 'fields' &&
         layout.continuation.rewardStorePolicy.kind === 'none') ||
       (layout.continuation.batchPolicy.kind === 'clockwork' &&

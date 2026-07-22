@@ -451,7 +451,7 @@ export const qRooms = [
       shopProfileKey: 'Q_WorldShop',
       producerLifecycleKey: 'RoomReward',
     },
-    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+    enteredRewardStoreHistory: { kind: 'none' },
     encounterProfileKey: 'Preboss',
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },

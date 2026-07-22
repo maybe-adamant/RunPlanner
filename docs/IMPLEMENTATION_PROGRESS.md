@@ -644,6 +644,17 @@ continuations when a room is replaced within its stage. Linear completeness
 now accepts that normalized staged tree while Q remains outside simulation and
 editor capabilities.
 
+Phase 6 Q Slice 2 is complete. The canonical linear simulator now materializes
+the fixed Summit intro, six declaration-owned stages, direct `Q_WorldShop`,
+and boss-only completion in order. A rewardless-combat lifecycle preserves Q's
+counting encounters without inventing a reward producer; the four miniboss
+occurrences replay concrete `TyphonBossRewards` offers and preserve Tail/Eye
+encounter-depth asymmetry. Selected generation evaluates only each stage's
+candidate pool at its exact source-room depth, and the direct terminal is
+validated as its own forced pool. Q is registered in core simulation so the
+full N/O/P/Q route can be tested, while application authoring and editing stay
+dormant until the remaining slices close.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1349,8 +1360,8 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, all six O slices, all three P slices, and Q Slice 1 are
-complete. By explicit implementation-order decision, the remaining three Q Phase 6
+five I slices, all nine N slices, all six O slices, all three P slices, and Q Slices 1-2
+are complete. By explicit implementation-order decision, the remaining two Q Phase 6
 slices now precede
 the contextual-selection UX insertion. They reuse the existing editor and
 candidate language while preserving the typed data required by that later UX

@@ -13,8 +13,9 @@ ordinary linear biome and its supported spine is reward-free outside the two
 miniboss offers and the preboss shop.
 
 Q declarations are imported under the progressed-save, neutral-difficulty
-repeat-run baseline. The authored project boundary now supports the staged
-decision tree, while simulation and editor capabilities remain dormant.
+repeat-run baseline. The authored project boundary and core simulator now
+support the staged decision tree, while editor/application capabilities remain
+dormant.
 
 ## Evidence Status
 
@@ -52,12 +53,12 @@ This audit corrects four inherited assumptions:
 ## Feature Projection Map
 
 The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
-coverage is defined by `../MIGRATION_PROVENANCE.md`. Q has documentation and
-declaration coverage only.
+coverage is defined by `../MIGRATION_PROVENANCE.md`. Q has declaration,
+authorship, materialization, history, reward, and selected-validation coverage.
 
 | Feature                     | Verified game behavior                                                                                              | Disposition and planner projection                                                | Current coverage     | Reconsider when                                                 |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- |
-| Scripted linear layout      | Fixed intro, foyer, forced two-exit combat, forced miniboss, ordinary combat, a second forced pair, and direct shop | **Exact:** `LinearBiome` with declaration-driven staged candidate pools           | authored             | --                                                              |
+| Scripted linear layout      | Fixed intro, foyer, forced two-exit combat, forced miniboss, ordinary combat, a second forced pair, and direct shop | **Exact:** `LinearBiome` with declaration-driven staged candidate pools           | simulated            | --                                                              |
 | Room-set weights            | Every listed Q room occurs once                                                                                     | **Simplified:** preserve support and forced pools, never likelihood               | documented           | Probability analysis or seeded replay becomes a product goal    |
 | Foyer variants              | `Q_Combat10/11` are one-exit, reward-free first-stage rooms; `Q_Combat11` has a prior-run encounter-completion gate | **Simplified:** both remain ordinary progressed-save candidates                   | documented, declared | Save-profile state becomes a project input                      |
 | Forced fork rooms           | Three two-exit rooms are forced at source depth 2 and three at source depth 5                                       | **Exact:** room declarations and physical exit fixtures                           | documented, declared | --                                                              |
@@ -128,6 +129,12 @@ The force depths below are evaluated against the current predecessor's
 pre-creation `biomeDepthCache`. The created target enters at the following
 depth. The layout must not shift those predicates to a UI row index or to the
 target's post-entry depth.
+
+The staged evaluator reconstructs that source depth from committed history
+plus the current predecessor's declared depth contribution. The generic
+lifecycle still commits that contribution after outgoing generation; this
+projection exists because Q's scripted room predicates are expressed against
+the current source-room depth rather than the prior committed prefix alone.
 
 | Source `biomeDepthCache` | Candidate stage                          | Physical targets            |
 | ------------------------ | ---------------------------------------- | --------------------------- |
@@ -263,6 +270,7 @@ Q room declarations bind every supported miniboss to it.
 second-half Surface context it exposes its concrete late-run option groups and
 owns its own shop profile and recursive defaults. It is not a
 generated counted reward bag and does not derive from Q's target ratio.
+Entering it records no RunProgress or MetaProgress store provenance.
 
 ## Direct Preboss and Completion
 
@@ -360,7 +368,7 @@ The normalized catalog now expresses:
 
 The readable declaration file and focused parity matrix cover every supported
 Q room and exact physical exit. Capability fixtures prove that this catalog
-coverage does not activate Q in the editor or simulator.
+and core-simulation coverage does not activate Q in the application editor.
 
 ## Model Conclusions
 
@@ -387,5 +395,5 @@ Q strengthens the shared model in four places:
 
 F, G, P, Q, H, O, I, and N are closed as game-rule/design audits. Their shared
 vocabulary and declaration imports are reconciled. Q's staged plan is
-authorable through the core project boundary; simulation and editing remain
-dormant until the remaining Phase 6 slices are implemented.
+authorable and simulatable through the core project boundary; application
+editing remains dormant until the remaining Phase 6 slices are implemented.
