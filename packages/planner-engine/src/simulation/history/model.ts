@@ -272,11 +272,3 @@ export interface CanonicalBiomeHistory {
 
 export type CanonicalLinearHistory = CanonicalBiomeHistory;
 export type CanonicalHubHistory = CanonicalBiomeHistory;
-
-export type FHistoryEvent = LinearHistoryEvent;
-export type FHistoryCounters = LinearHistoryCounters;
-export type FHistoryLedgers = LinearHistoryLedgers;
-export type FHistoryStateView = LinearHistoryStateView;
-export type FTargetGenerationView = LinearTargetGenerationView;
-export type FRoomHistoryViews = LinearRoomHistoryViews;
-export type CanonicalFHistory = CanonicalLinearHistory;

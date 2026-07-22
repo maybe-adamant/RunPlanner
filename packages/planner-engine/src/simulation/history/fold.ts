@@ -717,14 +717,6 @@ export function foldLinearHistoryEvents(
   });
 }
 
-export function foldFHistoryEvents(events: readonly LinearHistoryEvent[]): CanonicalLinearHistory {
-  const start = events[0];
-  if (start?.kind !== 'biomeStarted' || start.origin.biomeKey !== 'F') {
-    throw new LinearHistoryFoldContractError('F history requires an F biome start');
-  }
-  return foldLinearHistoryEvents(events);
-}
-
 export function foldHistoryEvents(
   events: readonly HistoryEvent[],
   seed?: HistoryStateView,

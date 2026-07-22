@@ -102,7 +102,3 @@ export interface HubRoomGenerationValidation {
   readonly sideRoomGenerations: readonly HubSideRoomGenerationSupportEntry[];
   readonly findings: readonly SemanticFinding[];
 }
-
-export type FForcePressureLedgerEntry = LinearForcePressureLedgerEntry;
-export type FRoomGenerationValidation = LinearRoomGenerationValidation;
-export type FRoomTargetCandidateValidation = LinearRoomTargetCandidateValidation;

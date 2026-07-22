@@ -17,11 +17,11 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  composeFHistory,
-  evaluateFCompleteness,
-  evaluateFRewards,
+  composeLinearHistory,
+  evaluateLinearCompleteness,
+  evaluateLinearRewards,
   materializeLinearBiome,
-  type CompleteFCompletenessResult,
+  type CompleteLinearCompletenessResult,
 } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
@@ -44,8 +44,8 @@ function fPlan(project: ProjectDocument): LinearBiomePlan {
   return plan;
 }
 
-function complete(project: ProjectDocument): CompleteFCompletenessResult {
-  const result = evaluateFCompleteness(catalog, biome, fPlan(project));
+function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
+  const result = evaluateLinearCompleteness(catalog, biome, fPlan(project));
   if (result.completion !== 'complete') {
     throw new Error(`reward fixture is incomplete: ${result.findings[0]?.code}`);
   }
@@ -129,8 +129,8 @@ function addTerminal(
 
 function evaluate(project: ProjectDocument) {
   const snapshot = materializeLinearBiome(catalog, biome, complete(project));
-  const history = composeFHistory(catalog, snapshot);
-  return { snapshot, history, rewards: evaluateFRewards(catalog, snapshot, history) };
+  const history = composeLinearHistory(catalog, snapshot);
+  return { snapshot, history, rewards: evaluateLinearRewards(catalog, snapshot, history, 1) };
 }
 
 function firstBranch(result: ReturnType<typeof evaluate>['rewards']) {
@@ -728,7 +728,7 @@ describe('F reward-history simulation', () => {
     });
     const snapshot = materializeLinearBiome(catalog, biome, complete(project));
 
-    expect(() => evaluateFRewards(catalog, snapshot, baseline.history)).toThrowError(
+    expect(() => evaluateLinearRewards(catalog, snapshot, baseline.history, 1)).toThrowError(
       /in the snapshot but .* in history/,
     );
   });

@@ -12,12 +12,12 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  composeFHistory,
-  evaluateFCompleteness,
-  foldFHistoryEvents,
+  composeLinearHistory,
+  evaluateLinearCompleteness,
+  foldLinearHistoryEvents,
   materializeLinearBiome,
-  type CompleteFCompletenessResult,
-  type FRoomHistoryViews,
+  type CompleteLinearCompletenessResult,
+  type LinearRoomHistoryViews,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -104,8 +104,8 @@ function historyProject(): ProjectDocument {
   });
 }
 
-function complete(project: ProjectDocument): CompleteFCompletenessResult {
-  const result = evaluateFCompleteness(catalog, biome, fPlan(project));
+function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
+  const result = evaluateLinearCompleteness(catalog, biome, fPlan(project));
   if (result.completion !== 'complete') {
     throw new Error(`history fixture is incomplete: ${result.findings[0]?.code}`);
   }
@@ -114,10 +114,13 @@ function complete(project: ProjectDocument): CompleteFCompletenessResult {
 
 function history() {
   const snapshot = materializeLinearBiome(catalog, biome, complete(historyProject()));
-  return composeFHistory(catalog, snapshot);
+  return composeLinearHistory(catalog, snapshot);
 }
 
-function roomViews(rooms: readonly FRoomHistoryViews[], occurrenceId: string): FRoomHistoryViews {
+function roomViews(
+  rooms: readonly LinearRoomHistoryViews[],
+  occurrenceId: string,
+): LinearRoomHistoryViews {
   const views = rooms.find(
     (room) => room.origin.kind === 'occurrence' && room.origin.occurrenceId === occurrenceId,
   );
@@ -236,9 +239,12 @@ describe('F lifecycle composition and history ledgers', () => {
       firstCombat.postCommit.ledgers.enteredRewardStores.map((entry) => entry.storeKey),
     ).toEqual(['RunProgress', 'MetaProgress']);
 
-    expect(foldFHistoryEvents(result.events)).toEqual(result);
+    expect(foldLinearHistoryEvents(result.events)).toEqual(result);
     expect(
-      composeFHistory(catalog, materializeLinearBiome(catalog, biome, complete(historyProject()))),
+      composeLinearHistory(
+        catalog,
+        materializeLinearBiome(catalog, biome, complete(historyProject())),
+      ),
     ).toEqual(result);
     expect(result.events.map((event) => event.sequence)).toEqual(
       result.events.map((_, index) => index + 1),

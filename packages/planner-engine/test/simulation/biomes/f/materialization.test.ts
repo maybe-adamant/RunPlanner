@@ -14,11 +14,11 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  evaluateFCompleteness,
+  evaluateLinearCompleteness,
   LinearMaterializationContractError,
   materializeLinearBiome,
-  type CompleteFCompletenessResult,
-  type FCompletenessResult,
+  type CompleteLinearCompletenessResult,
+  type LinearCompletenessResult,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -40,11 +40,11 @@ function fPlan(project: ProjectDocument): LinearBiomePlan {
   return plan;
 }
 
-function completeness(project: ProjectDocument): FCompletenessResult {
-  return evaluateFCompleteness(catalog, biome, fPlan(project));
+function completeness(project: ProjectDocument): LinearCompletenessResult {
+  return evaluateLinearCompleteness(catalog, biome, fPlan(project));
 }
 
-function complete(project: ProjectDocument): CompleteFCompletenessResult {
+function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
   const result = completeness(project);
   if (result.completion !== 'complete') {
     throw new Error(`fixture is incomplete: ${result.findings.map((finding) => finding.code)}`);
@@ -205,7 +205,11 @@ describe('canonical F materialization', () => {
     const incomplete = completeness(emptyFProject());
 
     expect(() =>
-      materializeLinearBiome(catalog, biome, incomplete as unknown as CompleteFCompletenessResult),
+      materializeLinearBiome(
+        catalog,
+        biome,
+        incomplete as unknown as CompleteLinearCompletenessResult,
+      ),
     ).toThrowError(
       new LinearMaterializationContractError(
         'linear materialization requires a complete biome result',

@@ -40,10 +40,6 @@ export interface CompleteLinearCompletenessResult {
 export type LinearCompletenessResult =
   CompleteLinearCompletenessResult | IncompleteLinearCompletenessResult;
 
-export type IncompleteFCompletenessResult = IncompleteLinearCompletenessResult;
-export type CompleteFCompletenessResult = CompleteLinearCompletenessResult;
-export type FCompletenessResult = LinearCompletenessResult;
-
 export interface IncompleteHubCompletenessResult {
   readonly completion: 'incomplete';
   readonly findings: readonly SemanticFinding[];
@@ -275,17 +271,6 @@ export function evaluateLinearCompleteness(
     topology,
     findings: Object.freeze([]) as readonly [],
   });
-}
-
-export function evaluateFCompleteness(
-  catalog: Catalog,
-  biome: BiomeAddress,
-  plan: LinearBiomePlan,
-): FCompletenessResult {
-  if (biome.biomeKey !== 'F' || plan.biomeKey !== 'F') {
-    throw new CompletenessContractError('F completeness requires biome F');
-  }
-  return evaluateLinearCompleteness(catalog, biome, plan);
 }
 
 function requireHubLayout(catalog: Catalog, biome: BiomeAddress, plan: HubBiomePlan) {
