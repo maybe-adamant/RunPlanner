@@ -233,6 +233,17 @@ export interface CanonicalTerminalEntry {
   readonly batchState?: CanonicalBatchState;
 }
 
+export interface MaterializedLinearFrontierGeneration {
+  readonly kind: 'batch' | 'terminal';
+  readonly origin: ContinuationAddress;
+  readonly parent: CanonicalRoomReference;
+  readonly rewardStore?: CanonicalBatchRewardStore;
+  readonly batchState?: CanonicalBatchState;
+  readonly targets: readonly CanonicalTarget[];
+  readonly pickedExitIndex: number | null;
+  readonly pickedOrigin: PickedAddress;
+}
+
 export type CanonicalBiomeState = Readonly<Record<string, boolean | number | string>>;
 
 export interface CanonicalLinearBiome {
@@ -245,6 +256,18 @@ export interface CanonicalLinearBiome {
   readonly completionRooms: readonly CanonicalCompletionRoom[];
   readonly biomeState: CanonicalBiomeState;
 }
+
+export interface MaterializedLinearBiomePrefix {
+  readonly kind: 'LinearBiomePrefix';
+  readonly routeKey: string;
+  readonly biomeKey: string;
+  readonly entryRooms: readonly (CanonicalAuthoredRoom | CanonicalFixedEntryRoom)[];
+  readonly batches: readonly CanonicalBatch[];
+  readonly frontierGeneration?: MaterializedLinearFrontierGeneration;
+  readonly biomeState: CanonicalBiomeState;
+}
+
+export type LinearSimulationMaterialization = CanonicalLinearBiome | MaterializedLinearBiomePrefix;
 
 export interface CanonicalHubTarget {
   readonly origin: HubSlotAddress;

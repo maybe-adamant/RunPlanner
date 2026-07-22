@@ -9,15 +9,15 @@ import {
 } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type {
-  CanonicalLinearHistory,
+  LinearSimulationHistory,
   LinearHistoryStateView,
-  LinearRoomHistoryViews,
+  LinearProgressiveRoomHistoryViews,
 } from '../history';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
   CanonicalFixedEntryRoom,
-  CanonicalLinearBiome,
+  LinearSimulationMaterialization,
   CanonicalLocalReward,
   CanonicalRewardWheel,
   CanonicalRewardWheelOffer,
@@ -90,7 +90,10 @@ function rewardFacts(
     fail,
   });
 }
-function requireLinearLayout(catalog: Catalog, snapshot: CanonicalLinearBiome): LinearBiomeLayout {
+function requireLinearLayout(
+  catalog: Catalog,
+  snapshot: LinearSimulationMaterialization,
+): LinearBiomeLayout {
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   const supportedPolicy =
     layout?.kind === 'LinearBiome' &&
@@ -110,22 +113,34 @@ function requireLinearLayout(catalog: Catalog, snapshot: CanonicalLinearBiome): 
   return layout;
 }
 
-function rewardRooms(snapshot: CanonicalLinearBiome): ReadonlyMap<string, CanonicalRewardRoom> {
+function frontierTargets(snapshot: LinearSimulationMaterialization): readonly CanonicalTarget[] {
+  return snapshot.kind === 'LinearBiome'
+    ? snapshot.terminalEntry.targets
+    : (snapshot.frontierGeneration?.targets ?? []);
+}
+
+function rewardRooms(
+  snapshot: LinearSimulationMaterialization,
+): ReadonlyMap<string, CanonicalRewardRoom> {
   const rooms = [
     ...snapshot.entryRooms,
     ...snapshot.batches.flatMap((batch) => batch.targets.map((target) => target.room)),
-    ...snapshot.terminalEntry.targets.map((target) => target.room),
+    ...frontierTargets(snapshot).map((target) => target.room),
   ];
   return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
 }
 
-function roomViews(history: CanonicalLinearHistory): ReadonlyMap<string, LinearRoomHistoryViews> {
+function roomViews(
+  history: LinearSimulationHistory,
+): ReadonlyMap<string, LinearProgressiveRoomHistoryViews> {
   return new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room]));
 }
 
-function canonicalTargets(snapshot: CanonicalLinearBiome): ReadonlyMap<string, CanonicalTarget> {
+function canonicalTargets(
+  snapshot: LinearSimulationMaterialization,
+): ReadonlyMap<string, CanonicalTarget> {
   return new Map(
-    [...snapshot.batches.flatMap((batch) => batch.targets), ...snapshot.terminalEntry.targets].map(
+    [...snapshot.batches.flatMap((batch) => batch.targets), ...frontierTargets(snapshot)].map(
       (target) => [semanticAddressKey(target.origin), target],
     ),
   );
@@ -336,8 +351,8 @@ function processOwnedRewardAcquisition(
 
 export function evaluateLinearRewards(
   catalog: Catalog,
-  snapshot: CanonicalLinearBiome,
-  history: CanonicalLinearHistory,
+  snapshot: LinearSimulationMaterialization,
+  history: LinearSimulationHistory,
   enteredBiomeCount: number,
   initialBranches?: readonly LinearRewardBranch[],
 ): LinearRewardSimulation {
@@ -353,10 +368,15 @@ export function evaluateLinearRewards(
   const batchesByParent = new Map(
     snapshot.batches.map((batch) => [semanticAddressKey(batch.parent.origin), batch]),
   );
+  const frontierGeneration =
+    snapshot.kind === 'LinearBiomePrefix' ? snapshot.frontierGeneration : undefined;
   const fixedEntryPredecessors = new Set(
     snapshot.entryRooms.slice(0, -1).map((room) => semanticAddressKey(room.origin)),
   );
-  const terminalParentKey = semanticAddressKey(snapshot.terminalEntry.predecessor.origin);
+  const terminalParentKey =
+    snapshot.kind === 'LinearBiome'
+      ? semanticAddressKey(snapshot.terminalEntry.predecessor.origin)
+      : undefined;
   const expectedStores = new Map<string, string | undefined>();
   const storeSupportEntries: LinearRewardStoreSupportEntry[] = [];
   const targetHistory: LinearTargetRewardHistoryCheckpoint[] = [];
@@ -518,11 +538,25 @@ export function evaluateLinearRewards(
           );
         }
         const batch = batchesByParent.get(semanticAddressKey(event.origin));
-        const isTerminal = semanticAddressKey(event.origin) === terminalParentKey;
+        const isTerminal =
+          terminalParentKey !== undefined && semanticAddressKey(event.origin) === terminalParentKey;
+        const isFrontier =
+          frontierGeneration !== undefined &&
+          semanticAddressKey(event.origin) === semanticAddressKey(frontierGeneration.parent.origin);
         const targetSet =
-          batch?.targets ?? (isTerminal ? snapshot.terminalEntry.targets : undefined);
+          batch?.targets ??
+          (isTerminal && snapshot.kind === 'LinearBiome'
+            ? snapshot.terminalEntry.targets
+            : isFrontier
+              ? frontierGeneration.targets
+              : undefined);
         if (targetSet === undefined) {
           if (fixedEntryPredecessors.has(semanticAddressKey(event.origin))) {
+            peers = Object.freeze([]);
+            branches = advanceRewardBranches(branches, event.sequence);
+            break;
+          }
+          if (snapshot.kind === 'LinearBiomePrefix') {
             peers = Object.freeze([]);
             branches = advanceRewardBranches(branches, event.sequence);
             break;
@@ -533,7 +567,12 @@ export function evaluateLinearRewards(
         }
         let sharedStore: string | undefined;
         const rewardStore =
-          batch?.rewardStore ?? (isTerminal ? snapshot.terminalEntry.rewardStore : undefined);
+          batch?.rewardStore ??
+          (isTerminal && snapshot.kind === 'LinearBiome'
+            ? snapshot.terminalEntry.rewardStore
+            : isFrontier
+              ? frontierGeneration.rewardStore
+              : undefined);
         if (rewardStore !== undefined) {
           if (rewardStore.kind === 'authoredBaseStore') {
             if (source.kind !== 'authored') {

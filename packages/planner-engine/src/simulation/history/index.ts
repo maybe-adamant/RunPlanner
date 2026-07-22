@@ -1,4 +1,8 @@
-export { composeLinearHistory, LinearHistoryCompositionContractError } from './compose';
+export {
+  composeLinearHistory,
+  composeLinearHistoryPrefix,
+  LinearHistoryCompositionContractError,
+} from './compose';
 export { composeHubHistory, composeNHistory, HubHistoryCompositionContractError } from './hub';
 export { projectRecentEncounterPhases, type RecentEncounterPhaseFact } from './facts';
 export {
@@ -30,6 +34,9 @@ export type {
   LinearHistoryEvent,
   LinearHistoryLedgers,
   LinearHistoryStateView,
+  LinearBiomeHistoryPrefix,
+  LinearProgressiveRoomHistoryViews,
+  LinearSimulationHistory,
   LinearRoomHistoryViews,
   LinearTargetGenerationView,
   LinearOfferPointView,

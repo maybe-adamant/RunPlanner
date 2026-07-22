@@ -22,14 +22,17 @@ import {
   composeLinearHistory,
   type CanonicalHubHistory,
   type CanonicalLinearHistory,
+  type LinearBiomeHistoryPrefix,
 } from './history';
 import {
   materializeHubBiome,
   materializeLinearBiome,
   type CanonicalHubBiome,
   type CanonicalLinearBiome,
+  type MaterializedLinearBiomePrefix,
 } from './materialization';
 import type { SemanticFinding } from './model';
+import { evaluateProgressiveLinearBiome } from './progressive/linear';
 import {
   evaluateHubRewards,
   evaluateLinearRewards,
@@ -37,15 +40,29 @@ import {
   type LinearRewardSimulation,
 } from './rewards';
 
-export interface IncompleteLinearProjectEvaluation {
+interface IncompleteLinearProjectEvaluationBase {
   readonly kind: 'LinearBiome';
   readonly biomeKey: string;
   readonly origin: BiomeAddress;
   readonly authoring: 'incomplete';
   readonly frontier: SemanticAddress;
-  readonly coverage: IncompleteBiomeEvaluationCoverage;
   readonly findings: readonly SemanticFinding[];
 }
+
+export interface UnevaluatedIncompleteLinearProjectEvaluation extends IncompleteLinearProjectEvaluationBase {
+  readonly coverage: NoBiomeEvaluationCoverage;
+}
+
+export interface PrefixIncompleteLinearProjectEvaluation extends IncompleteLinearProjectEvaluationBase {
+  readonly coverage: PrefixBiomeEvaluationCoverage;
+  readonly materializedPrefix: MaterializedLinearBiomePrefix;
+  readonly history: LinearBiomeHistoryPrefix;
+  readonly roomGeneration: LinearRoomGenerationValidation;
+  readonly rewards: LinearRewardSimulation;
+}
+
+export type IncompleteLinearProjectEvaluation =
+  PrefixIncompleteLinearProjectEvaluation | UnevaluatedIncompleteLinearProjectEvaluation;
 
 export interface CompleteLinearProjectEvaluation {
   readonly kind: 'LinearBiome';
@@ -204,14 +221,55 @@ export function evaluateLinearBiome(
   const origin = createBiomeAddress(routeKey, plan.biomeKey);
   const completeness = evaluateLinearCompleteness(catalog, origin, plan);
   if (completeness.completion === 'incomplete') {
+    const progressive = evaluateProgressiveLinearBiome(
+      catalog,
+      origin,
+      plan,
+      enteredBiomeCount,
+      previous === undefined
+        ? undefined
+        : { history: previous.history, rewardBranches: previous.rewards.branches },
+    );
+    if (progressive === null) {
+      return Object.freeze({
+        kind: 'LinearBiome',
+        biomeKey: plan.biomeKey,
+        origin,
+        authoring: 'incomplete',
+        frontier: completeness.frontier,
+        coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
+        findings: completeness.findings,
+      });
+    }
+    const { materializedPrefix, history, rewards, roomGeneration, blockedAt } = progressive;
+    const semanticFindings = Object.freeze([...roomGeneration.findings, ...rewards.findings]);
+    const lastBatch = materializedPrefix.batches.at(-1);
+    const currentSource =
+      lastBatch?.targets.find((target) => target.picked)?.room ??
+      materializedPrefix.entryRooms.at(-1)!;
+    const through: BiomeEvaluationPoint =
+      materializedPrefix.frontierGeneration === undefined
+        ? Object.freeze({ owner: currentSource.origin, checkpoint: 'beforeTargetGeneration' })
+        : Object.freeze({
+            owner: materializedPrefix.frontierGeneration.pickedOrigin,
+            checkpoint: 'afterTargetGeneration',
+          });
     return Object.freeze({
       kind: 'LinearBiome',
       biomeKey: plan.biomeKey,
       origin,
       authoring: 'incomplete',
       frontier: completeness.frontier,
-      coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
-      findings: completeness.findings,
+      coverage: Object.freeze({
+        kind: 'prefix',
+        through,
+        ...(blockedAt === undefined ? {} : { blockedAt }),
+      }),
+      materializedPrefix,
+      history,
+      roomGeneration,
+      rewards,
+      findings: Object.freeze([...completeness.findings, ...semanticFindings]),
     });
   }
 

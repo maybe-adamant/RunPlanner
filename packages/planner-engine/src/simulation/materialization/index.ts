@@ -1,4 +1,5 @@
 export { materializeLinearBiome } from './linear/dispatch';
+export { materializeLinearBiomePrefix } from './linear/prefix';
 export { LinearMaterializationContractError } from './linear/contract';
 export { projectClockworkTopology, projectLinearBatchState } from './linear/continuations';
 export type { ClockworkBatchProjection, ClockworkTargetProjection } from './linear/continuations';
@@ -18,6 +19,9 @@ export type {
   CanonicalHubTarget,
   CanonicalHubVisit,
   CanonicalLinearBiome,
+  MaterializedLinearBiomePrefix,
+  MaterializedLinearFrontierGeneration,
+  LinearSimulationMaterialization,
   CanonicalLocalChildRoom,
   CanonicalLocalReward,
   CanonicalRewardWheel,
