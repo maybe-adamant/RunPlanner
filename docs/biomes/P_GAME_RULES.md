@@ -10,9 +10,9 @@ Shared picker, physical-door, cap, force, offer/acquisition, generated-store,
 standard linear, and forked-preboss semantics are defined by
 `../GAME_GENERATION_RULES.md`.
 
-P declarations and its shared-linear simulation core are implemented under the
-progressed-save, NPC-free baseline. The core consumes a complete N/O history;
-candidate, editor, and application activation remain dormant. A declaration
+P declarations and its shared-linear simulation, candidate, and editor core are
+implemented under the progressed-save, NPC-free baseline. The core consumes a
+complete N/O history; application activation remains dormant. A declaration
 being normalized does not imply that the biome is an independently valid
 simulation entry point.
 
@@ -48,8 +48,8 @@ empty even though the game can play a non-counting intro combat there.
 
 The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
 coverage is defined by `../MIGRATION_PROVENANCE.md`. P has declaration,
-authorship, materialization, history, reward, and selected-validation coverage.
-Candidates, editor projection, and application activation remain dormant.
+authorship, materialization, history, reward, selected-validation, candidate,
+and editor-projection coverage. Application activation remains dormant.
 
 | Feature                              | Verified game behavior                                                                                                  | Disposition and planner projection                                           | Current coverage     | Reconsider when                                                     |
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------- |
@@ -413,8 +413,9 @@ expresses:
 8. the NPC-free baseline as distinct from future entity-composed variants.
 
 All P rooms and exact physical exits are covered by readable parity matrices.
-The dormant core materializes P only after valid N/O history and does not
-activate P in the editor or implement persistent NPC entities.
+The dormant core materializes P only after valid N/O history and projects its
+existing linear editor only in focused fixtures. It does not activate P in
+application navigation or implement persistent NPC entities.
 
 ## Model Conclusions
 

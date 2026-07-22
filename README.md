@@ -35,7 +35,8 @@ Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected linear reward authority, and the authored project/editor use schema
 version 5. All eight biomes close one catalog-wide reference matrix while
 P/Q remain dormant behind the application capability boundary. P's complete
-N/O/P simulation core is available below that boundary; Q remains declaration-only. Phase
+N/O/P simulation and candidate/editor core is available below that boundary;
+Q remains declaration-only. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room
@@ -81,7 +82,8 @@ Equivalent post-shop witness states merge before crossing biome boundaries,
 preventing proof-only branch multiplication while retaining one ordered
 witness for every distinct downstream state. O now has active authorship,
 canonical lifecycle/reward replay, selected validation, candidates, and editor
-projection through its ship-wheel model. P has a dormant shared-linear core;
+projection through its ship-wheel model. P has a dormant shared-linear
+simulation, candidate, and editor core;
 P/Q remain outside current application capabilities.
 
 N has schema-version-5 Hub authorship, structural

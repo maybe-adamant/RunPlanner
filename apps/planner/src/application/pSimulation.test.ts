@@ -1,7 +1,9 @@
 import { catalog } from '@run-planner/catalog';
 import {
   applyProjectCommand,
+  createBatchRewardStoreAddress,
   createOccurrenceAddress,
+  evaluateProjectCandidate,
   semanticAddressKey,
   simulateProject,
 } from '@run-planner/core';
@@ -89,5 +91,12 @@ describe('dormant P core loop', () => {
         }),
       }),
     );
+    expect(
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'batchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(pBiome, pOccurrenceId('P_Combat07', 4, 1)),
+        storeKey: 'RunProgress',
+      }),
+    ).toMatchObject({ context: 'unavailable', reason: 'upstreamInvalid' });
   });
 });
