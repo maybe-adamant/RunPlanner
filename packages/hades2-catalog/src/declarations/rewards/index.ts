@@ -1,4 +1,5 @@
-export { ordinarySources, rewardKernelDeclarations } from './declarations';
+export { rewardKernelDeclarations } from './declarations';
+export { ordinarySources } from './payloads';
 export type {
   RawAcquisitionRoleDeclaration,
   RawConcreteAcquisitionDeclaration,

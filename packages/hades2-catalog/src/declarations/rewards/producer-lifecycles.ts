@@ -1,0 +1,50 @@
+import type { RawRewardKernelInput } from './types';
+
+export const producerLifecycles = [
+  {
+    key: 'RoomReward',
+    rewardTypes: [
+      'MaxHealthDrop',
+      'MaxHealthDropBig',
+      'MaxHealthDropSmall',
+      'EmptyMaxHealthSmallDrop',
+      'MaxManaDrop',
+      'MaxManaDropBig',
+      'MaxManaDropSmall',
+      'RoomMoneyDrop',
+      'RoomMoneyTripleDrop',
+      'RoomMoneyTinyDrop',
+      'StackUpgrade',
+      'StackUpgradeTriple',
+      'WeaponUpgrade',
+      'HermesUpgrade',
+      'Devotion',
+      'SpellDrop',
+      'TalentDrop',
+      'TalentBigDrop',
+      'MinorTalentDrop',
+      'Boon',
+      'GiftDrop',
+      'MetaCurrencyDrop',
+      'MetaCardPointsCommonDrop',
+      'MetaCurrencyBigDrop',
+      'MetaCardPointsCommonBigDrop',
+      'AirBoost',
+      'EarthBoost',
+      'FireBoost',
+      'WaterBoost',
+      'Story',
+      'Shop',
+    ],
+    defaultLifecyclePoint: 'roomRewardPickup',
+    overrides: [
+      {
+        rewardType: 'Devotion',
+        acquisitionLifecycle: [
+          { role: 'chosenSource', lifecyclePoint: 'beforeCombat' },
+          { role: 'spurnedSource', lifecyclePoint: 'afterCombat' },
+        ],
+      },
+    ],
+  },
+] as const satisfies RawRewardKernelInput['producerLifecycles'];
