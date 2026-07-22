@@ -1,7 +1,9 @@
 import { catalog } from '@run-planner/catalog';
 import {
   applyProjectCommand,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
+  createContinuationAddress,
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
@@ -9,14 +11,29 @@ import {
   createLocalChildGroupAddress,
   createLocalRewardAddress,
   createOccurrenceId,
+  createPickedAddress,
   createProjectDocument,
+  createRewardWheelOfferAddress,
+  createRouteAddress,
   createShopOfferAddress,
+  createTargetAddress,
   type HubBiomePlan,
   type ProjectDocument,
 } from '@run-planner/core';
 import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
 
 export const nBiome = createBiomeAddress('Surface', 'N');
+export const oBiome = createBiomeAddress('Surface', 'O');
+export const oOccurrenceIds = Object.freeze({
+  intro: createOccurrenceId('editor-o-intro'),
+  combat04: createOccurrenceId('editor-o-combat04'),
+  combat07: createOccurrenceId('editor-o-combat07'),
+  combat01: createOccurrenceId('editor-o-combat01'),
+  devotion: createOccurrenceId('editor-o-devotion'),
+  story: createOccurrenceId('editor-o-story'),
+  combat02: createOccurrenceId('editor-o-combat02'),
+  preboss: createOccurrenceId('editor-o-preboss'),
+});
 export const nFixedOccurrenceIds = Object.freeze({
   opening: createOccurrenceId('editor-n-opening'),
   preHub: createOccurrenceId('editor-n-prehub'),
@@ -182,6 +199,94 @@ export function createRepresentativeNProject(): ProjectDocument {
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceShopOffer',
     offer: createShopOfferAddress(nBiome, nFixedOccurrenceIds.preboss, 'MajorNonBoon'),
+    value: { rewardType: 'MaxHealthDrop' },
+  });
+}
+
+function appendORoom(
+  project: ProjectDocument,
+  parentOccurrenceId: ReturnType<typeof createOccurrenceId>,
+  occurrenceId: ReturnType<typeof createOccurrenceId>,
+  gameName: string,
+): ProjectDocument {
+  let next = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    continuation: createContinuationAddress(oBiome, parentOccurrenceId),
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(oBiome, parentOccurrenceId, 1),
+    occurrenceId,
+    gameName,
+  });
+  return applyProjectCommand(next, catalog, {
+    kind: 'SetPicked',
+    picked: createPickedAddress(oBiome, parentOccurrenceId),
+    exitIndex: 1,
+  });
+}
+
+export function createRepresentativeNOProject(): ProjectDocument {
+  let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Surface'),
+    configuredBiomeCount: 2,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: oBiome,
+    occurrenceId: oOccurrenceIds.intro,
+    gameName: 'O_Intro',
+  });
+  for (const [parentOccurrenceId, occurrenceId, gameName] of [
+    [oOccurrenceIds.intro, oOccurrenceIds.combat04, 'O_Combat04'],
+    [oOccurrenceIds.combat04, oOccurrenceIds.combat07, 'O_Combat07'],
+    [oOccurrenceIds.combat07, oOccurrenceIds.combat01, 'O_Combat01'],
+    [oOccurrenceIds.combat01, oOccurrenceIds.devotion, 'O_Devotion01'],
+    [oOccurrenceIds.devotion, oOccurrenceIds.story, 'O_Story01'],
+    [oOccurrenceIds.story, oOccurrenceIds.combat02, 'O_Combat02'],
+  ] as const) {
+    project = appendORoom(project, parentOccurrenceId, occurrenceId, gameName);
+  }
+  for (const [occurrenceId, rewardType] of [
+    [oOccurrenceIds.combat04, 'MaxHealthDrop'],
+    [oOccurrenceIds.combat07, 'MaxManaDrop'],
+    [oOccurrenceIds.combat01, 'RoomMoneyDrop'],
+    [oOccurrenceIds.combat02, 'StackUpgrade'],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, occurrenceId, 'wheel1', 'offer1'),
+      value: { rewardType },
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion),
+    value: {
+      rewardType: 'Devotion',
+      payload: {
+        kind: 'DevotionPair',
+        chosenSource: 'AresUpgrade',
+        spurnedSource: 'HephaestusUpgrade',
+      },
+    },
+  });
+  for (const parentOccurrenceId of [oOccurrenceIds.devotion, oOccurrenceIds.story]) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(oBiome, parentOccurrenceId),
+      storeKey: 'MetaProgress',
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTerminalTransition',
+    continuation: createContinuationAddress(oBiome, oOccurrenceIds.combat02),
+    targetOccurrenceIds: [oOccurrenceIds.preboss],
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(oBiome, oOccurrenceIds.preboss, 'MajorNonBoon'),
     value: { rewardType: 'MaxHealthDrop' },
   });
 }

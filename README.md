@@ -34,7 +34,7 @@ conditional-terminal, and persistent-hub pressure tests.
 Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected linear reward authority, and the authored project/editor use schema
 version 5. All eight biomes close one catalog-wide reference matrix while
-P/Q/O remain dormant behind the application capability boundary. Phase
+P/Q remain dormant behind the application capability boundary. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room
@@ -69,8 +69,8 @@ navigation, player-facing labels, and measured responsiveness. The acceptance
 matrix and browser-only smoke procedure are recorded in
 [`docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md`](docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md).
 
-Phase 6 has completed H, I, and N's full product loops. All three are authorable,
-simulatable, and editable alongside F/G; complete F/G/H/I and N profiles pass route
+Phase 6 has completed H, I, N, and O's full product loops. All four are authorable,
+simulatable, and editable alongside F/G; complete F/G/H/I and N/O profiles pass route
 simulation, candidate feedback, recovery, semantic navigation, accessibility,
 and responsiveness fixtures. The shared editor projects fixed-count Fields
 decisions, Min/Max outcomes, active and dormant cage leaves, the forked Fields
@@ -78,12 +78,10 @@ terminal, Clockwork Goal/NonGoal roles, repeated generated preboss offers, and
 picked-only WorldShop state through existing commands and candidate services.
 Equivalent post-shop witness states merge before crossing biome boundaries,
 preventing proof-only branch multiplication while retaining one ordered
-witness for every distinct downstream state. O now has dormant authorship,
-canonical lifecycle/reward replay, and selected validation through its ship
-wheel model; P/Q remain declaration-only and all three remain outside current
-application capabilities. O's dormant core also exposes normal project-
-candidate evaluation for its encounter and wheel values, and the shared linear
-editor can project their complete active/dormant state when invoked directly.
+witness for every distinct downstream state. O now has active authorship,
+canonical lifecycle/reward replay, selected validation, candidates, and editor
+projection through its ship-wheel model. P/Q remain declaration-only and
+outside current application capabilities.
 
 N has schema-version-5 Hub authorship, structural
 completeness, canonical Hub materialization, exact room lifecycle, and
@@ -100,7 +98,7 @@ offer board, the separate visit timeline, parent-local side state, and the fixed
 WorldShop through semantic commands and lazy candidate feedback. N participates
 atomically in Surface route configuration, project simulation, profiles,
 autosave recovery, findings navigation, and candidate evaluation. Surface
-authoring remains a contiguous one-biome N prefix; O/P/Q stay unavailable.
+authoring remains a contiguous N/O prefix; P/Q stay unavailable.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

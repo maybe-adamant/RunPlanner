@@ -276,10 +276,7 @@ export function RoomStateEditor({
     return (
       <div className="ship-combat-editor" aria-label="Ship combat encounters">
         <label className="field-control" htmlFor={`${idPrefix}-encounter-count`}>
-          <span className="field-label-with-marker">
-            Encounters
-            <SemanticOwnerMarker address={occurrenceAddress} />
-          </span>
+          <span>Encounters</span>
           <select
             {...candidateSelectState(selectedEncounterCount)}
             id={`${idPrefix}-encounter-count`}
