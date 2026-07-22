@@ -18,6 +18,8 @@ import type {
   LocalRewardAddress,
   OccurrenceAddress,
   PickedAddress,
+  RewardWheelAddress,
+  RewardWheelOfferAddress,
   ShopOfferAddress,
   ShopPurchaseAddress,
   TargetAddress,
@@ -58,6 +60,23 @@ export interface CanonicalLocalReward {
   readonly resolvedStoreKey: string;
 }
 
+export interface CanonicalRewardWheelOffer {
+  readonly origin: RewardWheelOfferAddress;
+  readonly offerKey: string;
+  readonly offer: ResolvedRewardOffer;
+  readonly picked: boolean;
+}
+
+export interface CanonicalRewardWheel {
+  readonly origin: RewardWheelAddress;
+  readonly wheelKey: string;
+  readonly encounterPhaseKey: string;
+  readonly producerLifecycleKey: string;
+  readonly storeKey: string;
+  readonly offers: readonly CanonicalRewardWheelOffer[];
+  readonly pickedOfferIndex: number;
+}
+
 export interface CanonicalAuthoredRoom {
   readonly kind: 'authored';
   readonly origin: OccurrenceAddress;
@@ -72,6 +91,7 @@ export interface CanonicalAuthoredRoom {
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly incomingReward?: CanonicalResolvedIncomingReward;
   readonly localRewards?: readonly CanonicalLocalReward[];
+  readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
 }
 

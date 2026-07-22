@@ -1,4 +1,5 @@
 import type {
+  EncounterPhase,
   EncounterPhaseKind,
   RequiredRoomObjectDescriptor,
   RoomCounterEffects,
@@ -29,6 +30,10 @@ export type RoomLifecycleEvent =
   | (RoomLifecycleEventBase & { readonly kind: 'roomPrepared' })
   | (RoomLifecycleEventBase & {
       readonly kind: 'offerPointMaterialized';
+      readonly offerPoint: string;
+    })
+  | (RoomLifecycleEventBase & {
+      readonly kind: 'offerPointAcquired';
       readonly offerPoint: string;
     })
   | (RoomLifecycleEventBase & { readonly kind: 'roomEntered' })
@@ -91,6 +96,7 @@ export interface RoomLifecycleExecutionInput {
   readonly origin: RoomHistoryOrigin;
   readonly lifecycleProfileKey: string;
   readonly encounterProfileKey: string;
+  readonly encounterPhases?: readonly EncounterPhase[];
   readonly producer?: RoomLifecycleProducerInput;
   readonly counterEffects: RoomCounterEffects;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];

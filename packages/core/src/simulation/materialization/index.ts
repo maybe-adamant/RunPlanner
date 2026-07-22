@@ -23,6 +23,8 @@ export type {
   CanonicalLinearBiome,
   CanonicalLocalChildRoom,
   CanonicalLocalReward,
+  CanonicalRewardWheel,
+  CanonicalRewardWheelOffer,
   CanonicalPhysicalExit,
   CanonicalResolvedIncomingReward,
   CanonicalRoom,

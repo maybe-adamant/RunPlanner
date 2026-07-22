@@ -72,6 +72,8 @@ export type RoomLifecycleEffectKind =
   | 'recordEnteredRewardStore'
   | 'recordExit'
   | 'recordOfferPoint'
+  | 'recordPhaseOfferAcquisition'
+  | 'recordPhaseOfferPoint'
   | 'recordOutgoingGeneration'
   | 'recordPreparation'
   | 'recordProducerPoint'
@@ -107,6 +109,7 @@ export type RoomLifecycleOperation =
     })
   | (RoomLifecycleOperationBase & { readonly kind: 'completeRequiredObjects' })
   | (RoomLifecycleOperationBase & { readonly kind: 'runEncounterSequence' })
+  | (RoomLifecycleOperationBase & { readonly kind: 'runRewardEncounterSequence' })
   | (RoomLifecycleOperationBase & {
       readonly kind: 'advanceProducer';
       readonly point: ProducerLifecyclePointKey;

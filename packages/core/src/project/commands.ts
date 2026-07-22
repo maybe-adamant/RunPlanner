@@ -767,7 +767,7 @@ function replaceOccurrence(
   };
 }
 
-function reconcileOwnedBatchRewardStore(
+function reconcileOwnedContinuationRewardStore(
   plan: LinearBiomePlan,
   layout: LinearBiomeLayout,
   occurrenceId: OccurrenceId,
@@ -778,17 +778,21 @@ function reconcileOwnedBatchRewardStore(
   const continuation = topology.continuations.find(
     (candidate) => candidate.parentOccurrenceId === occurrenceId,
   );
-  if (continuation?.kind !== 'batch') {
+  if (continuation === undefined) {
+    return plan;
+  }
+  const currentRewardStore = continuation.rewardStore;
+  if (currentRewardStore === undefined) {
     return plan;
   }
   const policy = sourceRewardStorePolicy(layout, replacementRoom);
   const replacementRewardStore =
     policy.kind === 'authoredBaseStore' &&
-    continuation.rewardStore.kind === 'authoredBaseStore' &&
-    policy.storeKeys.includes(continuation.rewardStore.baseRewardStoreKey)
-      ? continuation.rewardStore
+    currentRewardStore.kind === 'authoredBaseStore' &&
+    policy.storeKeys.includes(currentRewardStore.baseRewardStoreKey)
+      ? currentRewardStore
       : defaultBatchRewardStore(layout, replacementRoom);
-  if (replacementRewardStore === continuation.rewardStore) {
+  if (replacementRewardStore === currentRewardStore) {
     return plan;
   }
   return {
@@ -1006,6 +1010,9 @@ function createTerminalPlan(
         {
           kind: 'terminal',
           parentOccurrenceId,
+          ...(layout.terminal.kind === 'directTransition'
+            ? { rewardStore: defaultBatchRewardStore(layout, parentRoom) }
+            : {}),
           targets,
           pickedExitIndex: layout.terminal.kind === 'directTransition' ? 1 : null,
         },
@@ -1409,6 +1416,41 @@ function applyHubUnchecked(
         : withBiome(document, located, { ...plan, topology: null });
     case 'ReplaceIncomingReward': {
       const occurrence = requireHubOccurrence(plan, command.reward.occurrenceId, command);
+      if (occurrence.state.kind === 'fixed') {
+        const room = requireRoom(catalog, occurrence.gameName, layout.biomeKey, command);
+        if (
+          room.incomingReward.kind !== 'fixed' ||
+          command.value.rewardType !== room.incomingReward.offer.rewardType
+        ) {
+          failCommand(command, `${occurrence.gameName} has a fixed reward type`);
+        }
+        const current = {
+          rewardType: room.incomingReward.offer.rewardType,
+          ...(occurrence.state.payload === undefined
+            ? room.incomingReward.offer.payload === undefined
+              ? {}
+              : { payload: room.incomingReward.offer.payload }
+            : { payload: occurrence.state.payload }),
+        };
+        if (sameOffer(current, command.value)) {
+          return document;
+        }
+        return withBiome(
+          document,
+          located,
+          replaceHubOccurrence(
+            plan,
+            {
+              ...occurrence,
+              state: {
+                kind: 'fixed',
+                ...(command.value.payload === undefined ? {} : { payload: command.value.payload }),
+              },
+            },
+            command,
+          ),
+        );
+      }
       if (
         occurrence.state.kind !== 'counted' &&
         occurrence.state.kind !== 'freeReward' &&
@@ -1638,14 +1680,11 @@ function applyUnchecked(
     }
     case 'ReplaceBatchRewardStore': {
       const topology = requireTopology(plan, command);
-      const continuation = requireContinuation(
-        plan,
-        command.rewardStore.parentOccurrenceId,
-        'batch',
-        command,
+      const continuation = topology.continuations.find(
+        (candidate) => candidate.parentOccurrenceId === command.rewardStore.parentOccurrenceId,
       );
-      if (continuation.rewardStore.kind !== 'authoredBaseStore') {
-        failCommand(command, 'batch does not expose an authored base store');
+      if (continuation === undefined || continuation.rewardStore?.kind !== 'authoredBaseStore') {
+        failCommand(command, 'continuation does not expose an authored base store');
       }
       if (!authoredBaseStorePolicy(layout).storeKeys.includes(command.storeKey)) {
         failCommand(command, `${command.storeKey} is not available from this batch policy`);
@@ -2170,7 +2209,7 @@ function applyUnchecked(
       return withBiome(
         document,
         located,
-        reconcileOwnedBatchRewardStore(
+        reconcileOwnedContinuationRewardStore(
           withReplacement,
           layout,
           occurrence.occurrenceId,
@@ -2181,6 +2220,34 @@ function applyUnchecked(
     }
     case 'ReplaceIncomingReward': {
       const occurrence = requireOccurrence(plan, command.reward.occurrenceId, command);
+      if (occurrence.state.kind === 'fixed') {
+        const room = requireRoom(catalog, occurrence.gameName, layout.biomeKey, command);
+        if (
+          room.incomingReward.kind !== 'fixed' ||
+          command.value.rewardType !== room.incomingReward.offer.rewardType
+        ) {
+          failCommand(command, `${occurrence.gameName} has a fixed reward type`);
+        }
+        const current = {
+          rewardType: room.incomingReward.offer.rewardType,
+          ...(occurrence.state.payload === undefined
+            ? room.incomingReward.offer.payload === undefined
+              ? {}
+              : { payload: room.incomingReward.offer.payload }
+            : { payload: occurrence.state.payload }),
+        };
+        if (sameOffer(current, command.value)) {
+          return document;
+        }
+        const replacement = {
+          ...occurrence,
+          state: {
+            kind: 'fixed' as const,
+            ...(command.value.payload === undefined ? {} : { payload: command.value.payload }),
+          },
+        };
+        return withBiome(document, located, replaceOccurrence(plan, replacement, command));
+      }
       if (occurrence.state.kind !== 'counted' && occurrence.state.kind !== 'freeReward') {
         failCommand(command, `${occurrence.gameName} has no replaceable counted reward`);
       }

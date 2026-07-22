@@ -829,6 +829,12 @@ for outgoing door generation. Materialization resolves the batch base store
 from that addressed wheel and rejects a missing or inactive source. The batch
 does not author a duplicate value.
 
+O's direct preboss continuation is also a physical generated-door decision,
+so it carries the same reward-store authority as an ordinary O batch. A
+ShipCombat predecessor resolves it from the final active wheel; another O
+predecessor uses the authored Run/Meta base store. The entered preboss and
+completion tail retain that resolved store provenance.
+
 A reward-free generated batch such as Q's combat spine has no authored base
 store. Forced or individual target stores remain declaration-owned and still
 produce resolved offers, so Q miniboss targets can use `TyphonBossRewards`

@@ -9,6 +9,7 @@ import type {
   LinearHistoryCounters,
   LinearHistoryEvent,
   LinearHistoryLedgers,
+  LinearOfferPointView,
   LinearHistoryStateView,
   LinearRoomHistoryViews,
   LinearTargetGenerationView,
@@ -49,6 +50,7 @@ interface MutableRoomViews {
   preparation?: LinearHistoryStateView;
   entry?: LinearHistoryStateView;
   preOutgoing?: LinearHistoryStateView;
+  readonly offerPoints: LinearOfferPointView[];
   readonly targetGenerations: LinearTargetGenerationView[];
   outgoingGeneration?: LinearHistoryStateView;
   postCommit?: LinearHistoryStateView;
@@ -192,6 +194,9 @@ function freezeRoomViews(views: MutableRoomViews): LinearRoomHistoryViews {
     origin: views.origin,
     preparation: views.preparation,
     entry: views.entry,
+    ...(views.offerPoints.length === 0
+      ? {}
+      : { offerPoints: Object.freeze([...views.offerPoints]) }),
     ...(views.preOutgoing === undefined ? {} : { preOutgoing: views.preOutgoing }),
     targetGenerations: Object.freeze([...views.targetGenerations]),
     ...(views.outgoingGeneration === undefined
@@ -393,6 +398,7 @@ export function foldLinearHistoryEvents(
         const views: MutableRoomViews = {
           origin: event.origin,
           preparation: stateView(event.sequence, ledgers),
+          offerPoints: [],
           targetGenerations: [],
         };
         viewsByOrigin.set(key, views);
@@ -626,7 +632,40 @@ export function foldLinearHistoryEvents(
         ledgers.counters[event.axis] = event.value;
         break;
       }
-      case 'offerPointMaterialized':
+      case 'offerPointMaterialized': {
+        const views = requireRoomViews(viewsByOrigin, event);
+        if (views.offerPoints.some((candidate) => candidate.offerPoint === event.offerPoint)) {
+          throw new LinearHistoryFoldContractError(
+            `${event.offerPoint} materialized more than once in one room`,
+          );
+        }
+        views.offerPoints.push(
+          Object.freeze({
+            offerPoint: event.offerPoint,
+            before: stateView(event.sequence - 1, ledgers),
+            after: stateView(event.sequence, ledgers),
+          }),
+        );
+        break;
+      }
+      case 'offerPointAcquired': {
+        const views = requireRoomViews(viewsByOrigin, event);
+        const index = views.offerPoints.findIndex(
+          (candidate) => candidate.offerPoint === event.offerPoint,
+        );
+        const offerPoint = views.offerPoints[index];
+        if (offerPoint === undefined || offerPoint.acquisitionBefore !== undefined) {
+          throw new LinearHistoryFoldContractError(
+            `${event.offerPoint} has no unique materialized acquisition point`,
+          );
+        }
+        views.offerPoints[index] = Object.freeze({
+          ...offerPoint,
+          acquisitionBefore: stateView(event.sequence - 1, ledgers),
+          acquisitionAfter: stateView(event.sequence, ledgers),
+        });
+        break;
+      }
       case 'producerRoleAdvanced':
       case 'roomCommitted':
       case 'shopPurchasesApplied':

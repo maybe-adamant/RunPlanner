@@ -563,6 +563,19 @@ active-prefix bounds, malformed persistence, direct-terminal round trips, and
 semantic wheel addresses. O remains non-simulatable, non-editable, and outside
 the application capability matrix until its later slices.
 
+Phase 6 O Slice 2 is complete. Canonical materialization now selects the exact
+ShipCombat Intro/Combat1/optional-Combat2 phase prefix, retains each active
+wheel and offer under semantic addresses, resolves ordinary and direct-
+terminal stores from the final active wheel, and appends the preboss,
+Eris, and postboss tail. A dedicated reward encounter lifecycle records wheel
+materialization before its combat and picked acquisition afterward with exact
+encounter-depth timing. Linear history exposes both checkpoints, and reward
+simulation jointly evaluates each active wheel while acquiring only its picked
+offer. The representative fixture carries a fully valid N history and reward
+frontier into O, proving route counters, progressed Meta rewards, fixed
+Devotion payload authorship, shop support, and completion provenance without
+activating O.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1268,7 +1281,7 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, and O Slice 1 are complete. By explicit
+five I slices, all nine N slices, and O Slices 1-2 are complete. By explicit
 implementation-order decision, the remaining O/P/Q Phase 6 slices now precede
 the contextual-selection UX insertion. They reuse the existing editor and
 candidate language while preserving the typed data required by that later UX

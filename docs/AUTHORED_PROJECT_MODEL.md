@@ -808,6 +808,17 @@ type LinearContinuation =
   | {
       kind: 'terminal';
       parentOccurrenceId: OccurrenceId | null;
+      rewardStore?:
+        | {
+            kind: 'authoredBaseStore';
+            baseRewardStoreKey: RewardStoreKey;
+          }
+        | {
+            kind: 'sourceOfferPoint';
+          }
+        | {
+            kind: 'none';
+          };
       targets: readonly LinearTargetReference[];
       pickedExitIndex: number | null;
     };
@@ -835,10 +846,24 @@ ShipCombat selects `sourceOfferPoint`, while another admitted O room restores
 the layout's authored Run/Meta store policy. The command preserves an authored
 store value when it remains valid and never copies a wheel store into the
 continuation.
+
+The optional terminal `rewardStore` exists only for a direct terminal whose
+target is physically generated from the predecessor's doors. O therefore
+applies the same source-profile policy to its direct preboss continuation that
+it applies to an ordinary batch. Forked and generated-target terminals do not
+persist this field. The codec derives that distinction from the layout and
+rejects either a missing direct-terminal store or a store on another terminal
+form.
+
 Both wheel records remain complete at maximum capacity. An inactive second
 combat or second offer emits no events but is never erased from authored state;
 the active counts select the meaningful prefix. `pickedOfferIndex` must address
 that active prefix.
+
+For a declaration-fixed incoming reward, authorship may replace only its
+payload. The declaration remains the authority for the reward type. This is
+how O Devotion owns its chosen/spurned source pair without allowing the fixed
+`Devotion` producer to become a different reward.
 
 `AuthoredBatchState` is decoded against the normalized batch policy selected by
 the biome layout; the persisted document does not carry a user-authored rule

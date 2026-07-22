@@ -253,21 +253,25 @@ export function decodeLinearBiomeTopology(
   for (const [index, rawValue] of rawContinuations.entries()) {
     const continuationPath = `${path}.continuations[${index}]`;
     const rawContinuation = expectRecord(rawValue, continuationPath);
+    const kind = expectString(rawContinuation.kind, `${continuationPath}.kind`);
+    if (kind !== 'batch' && kind !== 'terminal') {
+      failProjectDocument(`${continuationPath}.kind`, `unknown continuation kind ${kind}`);
+    }
     expectExactKeys(
       rawContinuation,
       [
         'kind',
         'parentOccurrenceId',
-        ...(rawContinuation.kind === 'batch' ? ['rewardStore', 'batchState'] : []),
+        ...(kind === 'batch'
+          ? ['rewardStore', 'batchState']
+          : layout.terminal.kind === 'directTransition'
+            ? ['rewardStore']
+            : []),
         'targets',
         'pickedExitIndex',
       ],
       continuationPath,
     );
-    const kind = expectString(rawContinuation.kind, `${continuationPath}.kind`);
-    if (kind !== 'batch' && kind !== 'terminal') {
-      failProjectDocument(`${continuationPath}.kind`, `unknown continuation kind ${kind}`);
-    }
     if (
       kind === 'terminal' &&
       layout.terminal.kind !== 'forkedTransition' &&
@@ -352,7 +356,28 @@ export function decodeLinearBiomeTopology(
             targets,
             pickedExitIndex,
           })
-        : Object.freeze({ kind, parentOccurrenceId, targets, pickedExitIndex });
+        : Object.freeze({
+            kind,
+            parentOccurrenceId,
+            ...(layout.terminal.kind === 'directTransition'
+              ? {
+                  rewardStore: decodeBatchRewardStore(
+                    rawContinuation.rewardStore,
+                    layout,
+                    continuationSourceRoom(
+                      parentOccurrenceId,
+                      layout,
+                      catalog,
+                      occurrenceById,
+                      continuationPath,
+                    ),
+                    `${continuationPath}.rewardStore`,
+                  ),
+                }
+              : {}),
+            targets,
+            pickedExitIndex,
+          });
     continuationByParent.set(parentOccurrenceId, { value: decoded, path: continuationPath });
   }
 
