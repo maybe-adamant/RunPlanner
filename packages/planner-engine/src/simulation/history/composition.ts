@@ -3,12 +3,14 @@ import { createBiomeAddress, type BiomeAddress } from '../../authored-project/ad
 import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
 import type { CanonicalCompletionRoom } from '../materialization';
 import { foldHistoryEvents } from './fold';
+import { foldLinearHistoryPrefixEvents } from './fold';
 import { createRoomLifecycleInput, type CanonicalLifecycleRoom } from './lifecycleInput';
 import type {
   CanonicalBiomeHistory,
   HistoryCounters,
   HistoryEvent,
   HistoryStateView,
+  LinearBiomeHistoryPrefix,
 } from './model';
 
 type EnvelopeHistoryEvent = Extract<
@@ -37,6 +39,7 @@ export interface RoomLifecycleCompositionOptions {
   readonly beforeEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
   readonly afterEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
   readonly outgoing?: (writer: HistorySegmentWriter, parent: CanonicalLifecycleRoom) => void;
+  readonly stopAfterOutgoing?: boolean;
 }
 
 interface BiomeHistoryEnvelopeOptions<Entry, Predecessor, Terminal extends CanonicalLifecycleRoom> {
@@ -118,21 +121,54 @@ export function appendRoomLifecycle(
   const fragment = executeRoomLifecycle(catalog, createRoomLifecycleInput(catalog, room));
   options.prepare?.(fragment.events);
   let projectedOutgoing = false;
+  let reachedOutgoing = false;
   for (const event of fragment.events) {
     options.beforeEvent?.(writer, event);
     appendLifecycleEvent(writer, event, fail);
     options.afterEvent?.(writer, event);
     if (event.kind === 'outgoingGenerationCheckpoint') {
-      if (options.outgoing === undefined || projectedOutgoing) {
+      reachedOutgoing = true;
+      if ((options.outgoing === undefined && !options.stopAfterOutgoing) || projectedOutgoing) {
         fail(`${room.gameName} has no unique canonical outgoing projection`);
       }
-      options.outgoing(writer, room);
-      projectedOutgoing = true;
+      options.outgoing?.(writer, room);
+      projectedOutgoing = options.outgoing !== undefined;
+      if (options.stopAfterOutgoing) {
+        return;
+      }
     }
+  }
+  if (options.stopAfterOutgoing && !reachedOutgoing) {
+    fail(`${room.gameName} has no outgoing checkpoint for prefix composition`);
   }
   if ((options.outgoing !== undefined) !== projectedOutgoing) {
     fail(`${room.gameName} canonical outgoing projection does not match its lifecycle`);
   }
+}
+
+interface BiomeHistoryPrefixOptions {
+  readonly routeKey: string;
+  readonly biomeKey: string;
+  readonly initialCounters: HistoryCounters;
+  readonly seed?: HistoryStateView;
+  readonly compose: (writer: HistorySegmentWriter) => void;
+}
+
+export function composeBiomeHistoryPrefix({
+  routeKey,
+  biomeKey,
+  initialCounters,
+  seed,
+  compose,
+}: BiomeHistoryPrefixOptions): LinearBiomeHistoryPrefix {
+  const builder: EventBuilder = { events: [], sequenceBase: seed?.sequence ?? 0 };
+  appendEnvelope(builder, {
+    kind: 'biomeStarted',
+    origin: createBiomeAddress(routeKey, biomeKey),
+    counters: Object.freeze({ ...initialCounters }),
+  });
+  compose(segmentWriter(builder));
+  return foldLinearHistoryPrefixEvents(builder.events, seed);
 }
 
 export function composeFixedEntryChain<Room extends CanonicalLifecycleRoom>(

@@ -14,8 +14,8 @@ import type { RequirementExpression } from '../../requirements/model';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RewardHistoryState } from '../../reward-kernel';
 import type {
+  LinearSimulationHistory,
   CanonicalLinearHistory,
-  LinearRoomHistoryViews,
   LinearHistoryStateView,
   LinearTargetGenerationView,
 } from '../history';
@@ -26,6 +26,7 @@ import type {
   CanonicalBatch,
   CanonicalFixedEntryRoom,
   CanonicalLinearBiome,
+  LinearSimulationMaterialization,
   CanonicalPhysicalExit,
   CanonicalTarget,
 } from '../materialization';
@@ -382,7 +383,7 @@ function terminalCandidatePool(
 }
 
 function targetGenerationViews(
-  history: CanonicalLinearHistory,
+  history: LinearSimulationHistory,
 ): ReadonlyMap<string, LinearTargetGenerationView> {
   const entries = history.rooms.flatMap((room) => room.targetGenerations);
   return new Map(entries.map((view) => [semanticAddressKey(view.targetOrigin), view]));
@@ -423,12 +424,16 @@ function targetRewardHistories(
 }
 
 function generationRooms(
-  snapshot: CanonicalLinearBiome,
+  snapshot: LinearSimulationMaterialization,
 ): ReadonlyMap<string, CanonicalGenerationSource> {
+  const frontierTargets =
+    snapshot.kind === 'LinearBiome'
+      ? snapshot.terminalEntry.targets
+      : (snapshot.frontierGeneration?.targets ?? []);
   const rooms = [
     ...snapshot.entryRooms,
     ...snapshot.batches.flatMap((batch) => batch.targets.map((target) => target.room)),
-    ...snapshot.terminalEntry.targets.map((target) => target.room),
+    ...frontierTargets.map((target) => target.room),
   ];
   return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
 }
@@ -462,7 +467,7 @@ function encounterCountEvidence(entry: EncounterCountSupportEntry): FindingEvide
 function evaluateEncounterCount(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
-  view: LinearRoomHistoryViews,
+  view: LinearHistoryStateView,
   enteredBiomeCount: number,
   rewardHistory: RewardHistoryState | undefined,
 ): EncounterCountSupportEntry | undefined {
@@ -493,7 +498,7 @@ function evaluateEncounterCount(
   const context = projectLinearRoomGenerationRequirementContext(
     room,
     declaration,
-    view.preparation,
+    view,
     enteredBiomeCount,
     rewardHistory,
   );
@@ -503,7 +508,7 @@ function evaluateEncounterCount(
   const selectedEncounterCount = room.encounterPhases.length;
   return Object.freeze({
     origin: room.origin,
-    beforeSequence: view.preparation.sequence,
+    beforeSequence: view.sequence,
     selectedEncounterCount,
     supportEncounterCounts,
     selectedPossible: supportEncounterCounts.includes(selectedEncounterCount),
@@ -547,7 +552,7 @@ export function supportedFieldsCageOutcomes(
 
 function evaluateFieldsCageOutcome(
   batchPolicy: Extract<GeneratedBatchPolicy, { readonly kind: 'fields' }>,
-  batch: CanonicalBatch,
+  batch: Pick<CanonicalBatch, 'batchState' | 'origin'>,
   view: LinearHistoryStateView,
 ): FieldsCageOutcomeSupportEntry {
   if (batch.batchState.kind !== 'fields') {
@@ -765,7 +770,6 @@ function evaluateTargets(
   findings: SemanticFinding[],
   enteredBiomeCount: number,
   rewardHistories: ReadonlyMap<string, RewardHistoryState>,
-  roomViews: ReadonlyMap<string, LinearRoomHistoryViews>,
   includeSourceDepth: boolean,
 ): void {
   for (const target of targets) {
@@ -793,16 +797,10 @@ function evaluateTargets(
         (phase) => phase.presence !== undefined,
       )
     ) {
-      const roomView = roomViews.get(semanticAddressKey(target.room.origin));
-      if (roomView === undefined) {
-        throw new LinearRoomGenerationContractError(
-          `${target.room.gameName} has no room history view`,
-        );
-      }
       const encounterCount = evaluateEncounterCount(
         catalog,
         target.room,
-        roomView,
+        view.before,
         enteredBiomeCount,
         rewardHistories.get(semanticAddressKey(target.origin)),
       );
@@ -824,8 +822,8 @@ function evaluateTargets(
 
 export function evaluateLinearRoomGeneration(
   catalog: Catalog,
-  snapshot: CanonicalLinearBiome,
-  history: CanonicalLinearHistory,
+  snapshot: LinearSimulationMaterialization,
+  history: LinearSimulationHistory,
   enteredBiomeCount: number,
   rewardHistoryCheckpoints?: readonly LinearTargetRewardHistoryCheckpoint[],
 ): LinearRoomGenerationValidation {
@@ -836,7 +834,6 @@ export function evaluateLinearRoomGeneration(
   }
   const rooms = generationRooms(snapshot);
   const views = targetGenerationViews(history);
-  const roomViews = new Map(history.rooms.map((view) => [semanticAddressKey(view.origin), view]));
   const rewardHistories = targetRewardHistories(rewardHistoryCheckpoints);
   const pressure: LinearForcePressureLedgerEntry[] = [];
   const encounterCounts: EncounterCountSupportEntry[] = [];
@@ -883,24 +880,68 @@ export function evaluateLinearRoomGeneration(
       findings,
       enteredBiomeCount,
       rewardHistories,
-      roomViews,
       layout.continuation.progressionPolicy.kind === 'staged',
     );
   }
-  evaluateTargets(
-    catalog,
-    terminalCandidatePool(catalog, layout),
-    requireSource(rooms, snapshot.terminalEntry.predecessor.origin),
-    snapshot.terminalEntry.targets,
-    views,
-    pressure,
-    encounterCounts,
-    findings,
-    enteredBiomeCount,
-    rewardHistories,
-    roomViews,
-    layout.continuation.progressionPolicy.kind === 'staged',
-  );
+  const finalGeneration =
+    snapshot.kind === 'LinearBiome' ? snapshot.terminalEntry : snapshot.frontierGeneration;
+  if (finalGeneration !== undefined) {
+    const finalPool =
+      snapshot.kind === 'LinearBiome'
+        ? terminalCandidatePool(catalog, layout)
+        : snapshot.frontierGeneration!.kind === 'terminal'
+          ? terminalCandidatePool(catalog, layout)
+          : stagedCandidatePool(catalog, layout, snapshot.batches.length);
+    const sourceOrigin =
+      snapshot.kind === 'LinearBiome'
+        ? snapshot.terminalEntry.predecessor.origin
+        : snapshot.frontierGeneration!.parent.origin;
+    if (
+      layout.continuation.batchPolicy.kind === 'fields' &&
+      snapshot.kind === 'LinearBiomePrefix' &&
+      snapshot.frontierGeneration?.batchState?.kind === 'fields'
+    ) {
+      const sourceView = history.rooms.find(
+        (room) => semanticAddressKey(room.origin) === semanticAddressKey(sourceOrigin),
+      )?.preOutgoing;
+      if (sourceView === undefined) {
+        throw new LinearRoomGenerationContractError(
+          `Fields source ${semanticAddressKey(sourceOrigin)} has no pre-generation view`,
+        );
+      }
+      const support = evaluateFieldsCageOutcome(
+        layout.continuation.batchPolicy,
+        {
+          origin: snapshot.frontierGeneration.origin,
+          batchState: snapshot.frontierGeneration.batchState,
+        },
+        sourceView,
+      );
+      fieldsCageOutcomes.push(support);
+      if (!support.selectedPossible) {
+        findings.push(
+          finding(
+            'fieldsCageOutcomeUnavailable',
+            support.origin,
+            fieldsCageOutcomeEvidence(support),
+          ),
+        );
+      }
+    }
+    evaluateTargets(
+      catalog,
+      finalPool,
+      requireSource(rooms, sourceOrigin),
+      finalGeneration.targets,
+      views,
+      pressure,
+      encounterCounts,
+      findings,
+      enteredBiomeCount,
+      rewardHistories,
+      layout.continuation.progressionPolicy.kind === 'staged',
+    );
+  }
 
   return Object.freeze({
     biomeKey: snapshot.biomeKey,

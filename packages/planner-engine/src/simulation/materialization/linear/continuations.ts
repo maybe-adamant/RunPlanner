@@ -39,7 +39,7 @@ import type {
 import { fail } from './contract';
 import { materializeAuthoredRoom, materializeFixedEntryRoom, type AuthoredRoomRole } from './rooms';
 
-function roomReference(
+export function roomReference(
   room: CanonicalAuthoredRoom | CanonicalFixedEntryRoom,
 ): CanonicalRoomReference {
   return Object.freeze({
@@ -62,7 +62,7 @@ function canonicalExit(room: RoomDeclaration, exitIndex: number): CanonicalPhysi
   });
 }
 
-function canonicalRewardStore(
+export function canonicalRewardStore(
   biome: BiomeAddress,
   parentOccurrenceId: OccurrenceId | null,
   state: BatchRewardStoreState,
@@ -100,10 +100,10 @@ function requireRoom(catalog: Catalog, occurrence: RoomOccurrence): RoomDeclarat
   return room;
 }
 
-function finalSharedRewardStoreKey(
+export function finalSharedRewardStoreKey(
   catalog: Catalog,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
-  source: CanonicalAuthoredRoom,
+  source: CanonicalAuthoredRoom | CanonicalFixedEntryRoom,
   rewardStore: BatchRewardStoreState,
   targets: LinearContinuation['targets'],
 ): string | undefined {
@@ -111,7 +111,7 @@ function finalSharedRewardStoreKey(
   if (rewardStore.kind === 'authoredBaseStore') {
     storeKey = rewardStore.baseRewardStoreKey;
   } else if (rewardStore.kind === 'sourceOfferPoint') {
-    const wheel = source.rewardWheels?.at(-1);
+    const wheel = source.kind === 'authored' ? source.rewardWheels?.at(-1) : undefined;
     if (wheel === undefined) {
       fail(`${source.gameName} has no active source reward wheel`);
     }
@@ -127,7 +127,7 @@ function finalSharedRewardStoreKey(
   return storeKey;
 }
 
-function canonicalBatchState(
+export function canonicalBatchState(
   catalog: Catalog,
   layout: LinearBiomeLayout,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
@@ -205,7 +205,7 @@ function requirePickedExit(continuation: LinearContinuation): number {
   return continuation.pickedExitIndex;
 }
 
-function materializeTarget(
+export function materializeTarget(
   catalog: Catalog,
   biome: BiomeAddress,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
@@ -217,6 +217,7 @@ function materializeTarget(
   batchStoreKey?: string,
   activeCageCount?: number,
   clockworkReward?: 'goal' | 'nonGoal',
+  entered: boolean = continuation.pickedExitIndex === target.exitIndex,
 ): CanonicalTarget {
   const occurrence = requireOccurrence(occurrences, target.occurrenceId);
   const room = requireRoom(catalog, occurrence);
@@ -232,7 +233,7 @@ function materializeTarget(
       room,
       occurrence,
       role,
-      entered: picked,
+      entered,
       ...(batchStoreKey === undefined ? {} : { batchStoreKey }),
       ...(activeCageCount === undefined ? {} : { activeCageCount }),
       ...(clockworkReward === undefined ? {} : { clockworkReward }),

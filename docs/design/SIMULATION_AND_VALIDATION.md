@@ -259,13 +259,19 @@ They must label contextual state unassessed and must not simulate from defaults
 or hypothetical predecessor completions.
 
 The authoring/coverage axes and route processing regions are the production
-result shape. Complete biomes already publish `coverage: complete`. Until the
-layout-specific progressive evaluators land, incomplete Linear and Hub biomes
-publish `coverage: { kind: 'none', reason: 'notEvaluated' }`; they still expose
-their exact semantic authoring frontier and never produce a canonical snapshot
-or downstream seed. Linear and Hub prefix coverage replace that temporary
-absence through the next two Phase 7 slices without changing this public
-contract.
+result shape. Complete biomes publish `coverage: complete`. Incomplete Linear
+biomes now publish a materialized prefix, partial lifecycle history, generation
+proof, reward witnesses, counters, and addressed findings whenever their entry
+can be reached. An unsupported generated choice clamps that prefix at its
+generation, while an unsupported entered-room lifecycle clamps it before the
+next generation point. Persisted downstream authorship remains untouched but
+receives no contextual claim. A Linear biome whose authored start cannot yet be
+materialized publishes `coverage: none`.
+
+Incomplete Hub biomes still publish
+`coverage: { kind: 'none', reason: 'notEvaluated' }` until the Hub progressive
+slice lands. Neither layout publishes a canonical snapshot, completion event,
+or downstream seed while incomplete.
 
 ## Completeness
 
@@ -1103,8 +1109,10 @@ Each route simulation records:
 - configured biome identity and the validated route prefix;
 - complete F/G/H/I/N/O/P/Q evaluations with layout-typed canonical snapshots, lifecycle events,
   ledgers, room-generation proof, reward witnesses, and findings;
-- addressed completeness findings for an incomplete active biome; progressive
-  prefix materialization remains the next contextual-selection insertion;
+- Linear incomplete active-biome evaluation with covered-prefix
+  materialization, partial lifecycle history, counters, generation proof,
+  reward witnesses, and addressed findings; Hub progressive materialization is
+  the remaining layout-specific insertion;
 - no canonical snapshot, final biome history, completion event, or downstream
   seed on an incomplete active biome;
 - validated-prefix identity and an exact route-end, incomplete, or invalid

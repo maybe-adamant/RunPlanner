@@ -6,14 +6,10 @@ import { fail } from './contract';
 import type { CanonicalLinearBiome } from '../model';
 import { assertAuthoredRoomTemplateSupported } from './rooms';
 
-function requireLinearLayout(
+export function requireLinearMaterializationLayout(
   catalog: Catalog,
   biome: BiomeAddress,
-  completeness: CompleteLinearCompletenessResult,
 ): LinearBiomeLayout {
-  if ((completeness as { readonly completion?: unknown }).completion !== 'complete') {
-    fail('linear materialization requires a complete biome result');
-  }
   const route = catalog.routes.byKey[biome.routeKey];
   if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
     fail(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
@@ -71,7 +67,10 @@ export function materializeLinearBiome(
   biome: BiomeAddress,
   completeness: CompleteLinearCompletenessResult,
 ): CanonicalLinearBiome {
-  const layout = requireLinearLayout(catalog, biome, completeness);
+  if ((completeness as { readonly completion?: unknown }).completion !== 'complete') {
+    fail('linear materialization requires a complete biome result');
+  }
+  const layout = requireLinearMaterializationLayout(catalog, biome);
   return layout.continuation.batchPolicy.kind === 'clockwork'
     ? materializeClockworkBiome(catalog, biome, layout, completeness)
     : materializeStandardLinearBiome(catalog, biome, layout, completeness);

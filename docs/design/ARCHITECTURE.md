@@ -310,9 +310,13 @@ One route evaluation publishes explicit `completeValidPrefix`, `active`, and
 `blockedSuffix` processing regions. Only a complete and valid biome enters the
 prefix and seeds the next biome. Every biome result separately reports
 authoring state and evaluation coverage. Incomplete active biomes publish their
-semantic authoring frontier and no canonical snapshot; the Linear and Hub
-progressive slices strengthen their initial `notEvaluated` coverage through the
-same atomic result rather than introducing a second evaluation path.
+semantic authoring frontier and no canonical snapshot. Linear biomes also
+publish one immutable materialized prefix with its partial history,
+room-generation proof, reward witnesses, counters, and findings. The prefix is
+folded by the same lifecycle, reward, and generation authorities as complete
+simulation and is clamped at the first unsupported state. Hub remains
+`notEvaluated` until its layout-specific progressive slice lands; neither case
+introduces a second candidate-only evaluation path.
 
 Complete biome results strengthen that same progressive result with the
 terminal/completion sequence, canonical snapshot, final biome history,

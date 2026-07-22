@@ -1388,9 +1388,19 @@ biomes retain their prior canonical products and downstream-seeding behavior.
 Underworld and Surface fixtures cover incomplete, invalid, active, blocked, and
 complete route states.
 
-Phase 7 Commit 2 is next. Production does not yet publish prefix
-materialization, prefix history state, or contextual candidates before biome
-completion; incomplete coverage is explicitly `notEvaluated` until the Linear
-progressive evaluator lands. The current room selector still uses Type then
-Room, and reward type/payload controls remain separate. Those are Phase 7 work,
-not missing Phase 6 activation.
+Phase 7 Commit 2 is complete. Incomplete F/G/H/I/O/P/Q evaluation now
+materializes the maximum truthful Linear prefix and folds it through the normal
+room lifecycle, history counters, reward simulation, and room-generation
+authorities. Coverage distinguishes the pre-generation and post-generation
+frontiers, selected shops remain generated but unentered until their entry
+state exists, and an unsupported generation or entered-room lifecycle clamps
+context before later authored batches without deleting that authorship.
+Cross-variant fixtures cover eligibility-driven F/G/P, Fields H, Clockwork I,
+ship-wheel O, staged Q, fixed I entry, invalid-prefix blocking, and complete
+canonical strengthening.
+
+Phase 7 Commit 3 is next. Hub biome N still publishes `notEvaluated` while
+incomplete and needs joint-board, ordered-visit, local-side-state, fixed-preboss,
+and completion-region progressive coverage. The current room selector still
+uses Type then Room, and reward type/payload controls remain separate; those are
+later Phase 7 work.

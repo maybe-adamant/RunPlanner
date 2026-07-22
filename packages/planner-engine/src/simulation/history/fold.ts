@@ -10,6 +10,8 @@ import type {
   LinearHistoryEvent,
   LinearHistoryLedgers,
   LinearOfferPointView,
+  LinearBiomeHistoryPrefix,
+  LinearProgressiveRoomHistoryViews,
   LinearHistoryStateView,
   LinearRoomHistoryViews,
   LinearTargetGenerationView,
@@ -172,21 +174,13 @@ function requiredObjectKey(event: {
   return JSON.stringify([semanticAddressKey(event.origin), event.objectKey]);
 }
 
-function freezeRoomViews(views: MutableRoomViews): LinearRoomHistoryViews {
-  if (
-    views.preparation === undefined ||
-    views.entry === undefined ||
-    views.postCommit === undefined ||
-    views.exit === undefined
-  ) {
+function freezeProgressiveRoomViews(views: MutableRoomViews): LinearProgressiveRoomHistoryViews {
+  if (views.preparation === undefined || views.entry === undefined) {
     throw new LinearHistoryFoldContractError(
       `room ${semanticAddressKey(views.origin)} has an incomplete lifecycle view set`,
     );
   }
-  if (
-    (views.preOutgoing === undefined) !== (views.outgoingGeneration === undefined) ||
-    (views.preOutgoing === undefined && views.targetGenerations.length !== 0)
-  ) {
+  if (views.preOutgoing === undefined && views.targetGenerations.length !== 0) {
     throw new LinearHistoryFoldContractError(
       `room ${semanticAddressKey(views.origin)} has an incomplete outgoing-generation view set`,
     );
@@ -203,15 +197,31 @@ function freezeRoomViews(views: MutableRoomViews): LinearRoomHistoryViews {
     ...(views.outgoingGeneration === undefined
       ? {}
       : { outgoingGeneration: views.outgoingGeneration }),
-    postCommit: views.postCommit,
-    exit: views.exit,
+    ...(views.postCommit === undefined ? {} : { postCommit: views.postCommit }),
+    ...(views.exit === undefined ? {} : { exit: views.exit }),
   });
 }
 
-export function foldLinearHistoryEvents(
+function freezeRoomViews(views: MutableRoomViews): LinearRoomHistoryViews {
+  const progressive = freezeProgressiveRoomViews(views);
+  if (progressive.postCommit === undefined || progressive.exit === undefined) {
+    throw new LinearHistoryFoldContractError(
+      `room ${semanticAddressKey(views.origin)} has an incomplete lifecycle view set`,
+    );
+  }
+  if ((progressive.preOutgoing === undefined) !== (progressive.outgoingGeneration === undefined)) {
+    throw new LinearHistoryFoldContractError(
+      `room ${semanticAddressKey(views.origin)} has an incomplete outgoing-generation view set`,
+    );
+  }
+  return progressive as LinearRoomHistoryViews;
+}
+
+function foldLinearHistoryEventStream(
   events: readonly LinearHistoryEvent[],
   seed?: LinearHistoryStateView,
-): CanonicalLinearHistory {
+  mode: 'complete' | 'prefix' = 'complete',
+): CanonicalLinearHistory | LinearBiomeHistoryPrefix {
   const immutableEvents = Object.freeze(
     events.map((event) =>
       event.kind === 'biomeStarted'
@@ -688,14 +698,8 @@ export function foldLinearHistoryEvents(
     }
   }
 
-  if (biomeCompletion === undefined || biomeCompletionOrigin === undefined) {
-    throw new LinearHistoryFoldContractError('history has no biome completion event');
-  }
   if (!biomeStarted) {
     throw new LinearHistoryFoldContractError('history has no biome start event');
-  }
-  if (resetAxes.length !== 2) {
-    throw new LinearHistoryFoldContractError('history has an incomplete biome reset sequence');
   }
   if (activeEncounters.size !== 0) {
     throw new LinearHistoryFoldContractError('history ended with an active encounter');
@@ -706,6 +710,31 @@ export function foldLinearHistoryEvents(
   if (pendingTargetGeneration !== undefined) {
     throw new LinearHistoryFoldContractError('history ended during target generation');
   }
+  if (mode === 'prefix') {
+    if (
+      biomeCompletion !== undefined ||
+      biomeCompletionOrigin !== undefined ||
+      resetAxes.length !== 0 ||
+      biomeStartOrigin === undefined
+    ) {
+      throw new LinearHistoryFoldContractError('prefix history contains biome completion facts');
+    }
+    const lastSequence = immutableEvents.at(-1)?.sequence ?? seed?.sequence ?? 0;
+    return Object.freeze({
+      routeKey: biomeStartOrigin.routeKey,
+      biomeKey: biomeStartOrigin.biomeKey,
+      events: immutableEvents,
+      ledgers: frozenLedgers(ledgers),
+      rooms: Object.freeze(orderedViews.map(freezeProgressiveRoomViews)),
+      current: stateView(lastSequence, ledgers),
+    });
+  }
+  if (biomeCompletion === undefined || biomeCompletionOrigin === undefined) {
+    throw new LinearHistoryFoldContractError('history has no biome completion event');
+  }
+  if (resetAxes.length !== 2) {
+    throw new LinearHistoryFoldContractError('history has an incomplete biome reset sequence');
+  }
   return Object.freeze({
     routeKey: biomeCompletionOrigin.routeKey,
     biomeKey: biomeCompletionOrigin.biomeKey,
@@ -715,6 +744,20 @@ export function foldLinearHistoryEvents(
     biomeCompletion,
     afterTransition: stateView(immutableEvents.at(-1)!.sequence, ledgers),
   });
+}
+
+export function foldLinearHistoryEvents(
+  events: readonly LinearHistoryEvent[],
+  seed?: LinearHistoryStateView,
+): CanonicalLinearHistory {
+  return foldLinearHistoryEventStream(events, seed, 'complete') as CanonicalLinearHistory;
+}
+
+export function foldLinearHistoryPrefixEvents(
+  events: readonly LinearHistoryEvent[],
+  seed?: LinearHistoryStateView,
+): LinearBiomeHistoryPrefix {
+  return foldLinearHistoryEventStream(events, seed, 'prefix') as LinearBiomeHistoryPrefix;
 }
 
 export function foldHistoryEvents(
