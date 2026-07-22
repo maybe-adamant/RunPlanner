@@ -14,7 +14,7 @@ import {
   presentCandidateLabel,
   type CandidateOptionProjection,
   type CandidateProjectionService,
-} from '../application/candidateProjection';
+} from '../projections/candidateProjection';
 import { candidateSelectState } from './candidatePresentation';
 
 export type RewardCandidateOwner =

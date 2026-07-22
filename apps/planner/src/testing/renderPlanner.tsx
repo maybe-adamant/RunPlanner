@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 
-import { createApplication, type PlannerApplication } from '../application/createApplication';
+import { createApplication, type PlannerApplication } from '../composition/createApplication';
 import { App } from '../ui/App';
 
 interface RenderPlannerOptions {

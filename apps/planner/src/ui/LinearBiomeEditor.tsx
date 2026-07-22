@@ -14,11 +14,11 @@ import { useState } from 'react';
 import {
   presentCandidateLabel,
   type CandidateProjectionService,
-} from '../application/candidateProjection';
-import { allocateOccurrenceId } from '../application/occurrenceIds';
-import { presentBiomeStatus } from '../application/evaluationProjection';
-import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../application/store';
+} from '../projections/candidateProjection';
+import { allocateOccurrenceId } from '../workspace/occurrenceIds';
+import { presentBiomeStatus } from '../projections/evaluationProjection';
+import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
+import { selectPresentProject, useAppDispatch, useAppSelector } from '../state/store';
 import { candidateSelectState } from './candidatePresentation';
 import { LinearTopologyEditor } from './LinearTopologyEditor';
 import { SemanticFindingsScope, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';

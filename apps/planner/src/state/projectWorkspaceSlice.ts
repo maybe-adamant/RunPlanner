@@ -12,9 +12,12 @@ import {
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
 
-import { requireBiomeCapability, type PlannerCapabilities } from './capabilities';
+import { requireBiomeCapability, type PlannerCapabilities } from '../composition/capabilities';
 import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
-import { requireProjectAuthorable, requireRoutePrefixAuthorable } from './projectDocuments';
+import {
+  requireProjectAuthorable,
+  requireRoutePrefixAuthorable,
+} from '../workspace/projectDocuments';
 
 export type ProjectEvaluator = (project: ProjectDocument) => ProjectEvaluation;
 

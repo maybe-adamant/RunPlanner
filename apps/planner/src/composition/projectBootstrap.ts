@@ -2,7 +2,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
 
 import type { PlannerCapabilities } from './capabilities';
-import { createAuthorableProjectDocument } from './projectDocuments';
+import { createAuthorableProjectDocument } from '../workspace/projectDocuments';
 
 export function createInitialProject(
   catalog: Catalog,

@@ -17,17 +17,17 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { createApplication } from '../application/createApplication';
+import { createApplication } from '../composition/createApplication';
 import {
   findingSelected,
   sectionSelected,
   underworldPanelSelected,
-} from '../application/editorSessionSlice';
-import { semanticFindingKey } from '../application/evaluationProjection';
+} from '../state/editorSessionSlice';
+import { semanticFindingKey } from '../projections/evaluationProjection';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
-} from '../application/projectWorkspaceSlice';
+} from '../state/projectWorkspaceSlice';
 import { App } from './App';
 import { semanticOwnerElementId } from './semanticOwner';
 

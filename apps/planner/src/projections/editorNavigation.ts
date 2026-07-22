@@ -1,6 +1,6 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
-import { hasBiomeCapability, type PlannerCapabilities } from './capabilities';
+import { hasBiomeCapability, type PlannerCapabilities } from '../composition/capabilities';
 
 export interface BiomeEditorNavigationItem {
   readonly biomeKey: string;

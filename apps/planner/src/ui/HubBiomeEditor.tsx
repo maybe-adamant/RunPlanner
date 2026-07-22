@@ -26,11 +26,11 @@ import {
   candidateSupport,
   presentCandidateLabel,
   type CandidateProjectionService,
-} from '../application/candidateProjection';
-import { presentBiomeStatus } from '../application/evaluationProjection';
-import { allocateOccurrenceId } from '../application/occurrenceIds';
-import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../application/store';
+} from '../projections/candidateProjection';
+import { presentBiomeStatus } from '../projections/evaluationProjection';
+import { allocateOccurrenceId } from '../workspace/occurrenceIds';
+import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
+import { selectPresentProject, useAppDispatch, useAppSelector } from '../state/store';
 import { candidateSelectState } from './candidatePresentation';
 import { SemanticFindingsScope, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
 import { CountedRewardEditor } from './RewardEditors';

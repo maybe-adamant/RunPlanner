@@ -8,15 +8,15 @@ import {
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { useDispatch, useSelector } from 'react-redux';
 
-import type { PlannerCapabilities } from './capabilities';
+import type { PlannerCapabilities } from '../composition/capabilities';
 import { editorSessionReducer } from './editorSessionSlice';
-import { indexFindingsByOwner } from './evaluationProjection';
+import { indexFindingsByOwner } from '../projections/evaluationProjection';
 import {
   createInitialProfileSessionState,
   createProfileSessionReducer,
   type ProfileSessionState,
 } from './profileSessionSlice';
-import { requireProjectAuthorable } from './projectDocuments';
+import { requireProjectAuthorable } from '../workspace/projectDocuments';
 import { createProjectWorkspaceReducer, type ProjectEvaluator } from './projectWorkspaceSlice';
 
 export interface CreatePlannerStoreOptions {

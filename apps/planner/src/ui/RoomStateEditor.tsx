@@ -21,9 +21,9 @@ import {
   candidateSupport,
   presentCandidateLabel,
   type CandidateProjectionService,
-} from '../application/candidateProjection';
-import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../application/store';
+} from '../projections/candidateProjection';
+import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
+import { selectPresentProject, useAppDispatch, useAppSelector } from '../state/store';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 import { candidateSelectState } from './candidatePresentation';
 import { SemanticOwnerMarker } from './EvaluationFeedback';

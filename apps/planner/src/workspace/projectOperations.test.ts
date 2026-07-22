@@ -1,16 +1,16 @@
 import { createRouteAddress, encodeProjectDocument } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { createApplication } from './createApplication';
+import { createApplication } from '../composition/createApplication';
 import { suggestedProfileFileName } from './projectOperations';
-import type { ProfileFileAdapter, ProfileSaveResult } from './profileFile';
-import { authoredProjectCommandDispatched } from './projectWorkspaceSlice';
+import type { ProfileFileAdapter, ProfileSaveResult } from '../persistence/profileFile';
+import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
 import {
   selectExplicitProfileBaselineJson,
   selectPresentProject,
   selectProjectEvaluation,
   selectProjectHistory,
-} from './store';
+} from '../state/store';
 
 interface ProfileFixture {
   readonly adapter: ProfileFileAdapter;

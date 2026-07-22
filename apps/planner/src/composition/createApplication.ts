@@ -7,18 +7,21 @@ import {
   createApplicationCapabilities,
   createProjectSimulationScope,
 } from './capabilityConfiguration';
-import { createCandidateProjectionService } from './candidateProjection';
+import { createCandidateProjectionService } from '../projections/candidateProjection';
 import {
   createAutosaveCoordinator,
   restoreStartupProject,
   type AutosaveRecoveryAdapter,
   type AutosaveScheduler,
-} from './autosaveRecovery';
-import { createEditorNavigation } from './editorNavigation';
+} from '../persistence/autosaveRecovery';
+import { createEditorNavigation } from '../projections/editorNavigation';
 import { createInitialProject } from './projectBootstrap';
-import { createProjectOperations } from './projectOperations';
-import { createUnavailableProfileFileAdapter, type ProfileFileAdapter } from './profileFile';
-import { createPlannerStore } from './store';
+import { createProjectOperations } from '../workspace/projectOperations';
+import {
+  createUnavailableProfileFileAdapter,
+  type ProfileFileAdapter,
+} from '../persistence/profileFile';
+import { createPlannerStore } from '../state/store';
 
 export interface CreateApplicationOptions {
   readonly autosaveDelayMs?: number;

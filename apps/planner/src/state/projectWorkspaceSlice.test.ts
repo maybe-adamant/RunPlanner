@@ -11,8 +11,8 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createApplicationCapabilities } from './capabilityConfiguration';
-import { createInitialProject } from './projectBootstrap';
+import { createApplicationCapabilities } from '../composition/capabilityConfiguration';
+import { createInitialProject } from '../composition/projectBootstrap';
 import {
   authoredProjectCommandDispatched,
   authoredProjectRedoRequested,

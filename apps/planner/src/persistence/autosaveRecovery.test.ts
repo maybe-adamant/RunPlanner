@@ -7,14 +7,14 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
 import { type AutosaveRecoveryAdapter, type AutosaveScheduler } from './autosaveRecovery';
-import { createApplication } from './createApplication';
-import { sectionSelected } from './editorSessionSlice';
+import { createApplication } from '../composition/createApplication';
+import { sectionSelected } from '../state/editorSessionSlice';
 import type { ProfileFileAdapter } from './profileFile';
-import { profileSaveSucceeded } from './profileSessionSlice';
+import { profileSaveSucceeded } from '../state/profileSessionSlice';
 import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
-} from './projectWorkspaceSlice';
+} from '../state/projectWorkspaceSlice';
 import {
   selectExplicitProfileBaselineJson,
   selectPresentProject,
@@ -22,7 +22,7 @@ import {
   selectProfileStatus,
   selectProjectEvaluation,
   selectProjectHistory,
-} from './store';
+} from '../state/store';
 
 interface RecoveryFixture extends AutosaveRecoveryAdapter {
   readonly writes: string[];

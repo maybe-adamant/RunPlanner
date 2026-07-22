@@ -22,12 +22,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   createApplicationCapabilities,
   createProjectSimulationScope,
-} from '../application/capabilityConfiguration';
+} from '../composition/capabilityConfiguration';
 import {
   createCandidateProjectionService,
   type CandidateProjectionService,
-} from '../application/candidateProjection';
-import { createPlannerStore, selectPresentProject, useAppSelector } from '../application/store';
+} from '../projections/candidateProjection';
+import { createPlannerStore, selectPresentProject, useAppSelector } from '../state/store';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
 const biome = createBiomeAddress('Underworld', 'H');

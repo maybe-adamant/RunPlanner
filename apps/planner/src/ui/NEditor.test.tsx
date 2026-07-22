@@ -8,14 +8,14 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createPlannerCapabilities } from '../application/capabilities';
-import { createCandidateProjectionService } from '../application/candidateProjection';
+import { createPlannerCapabilities } from '../composition/capabilities';
+import { createCandidateProjectionService } from '../projections/candidateProjection';
 import {
   createPlannerStore,
   selectPresentProject,
   selectProjectEvaluation,
   useAppSelector,
-} from '../application/store';
+} from '../state/store';
 import {
   createEmptyNProject as emptyProject,
   createRepresentativeNProject as representativeProject,
