@@ -233,9 +233,10 @@ Boon, and a Blind Box. The initial policy vocabulary is closed:
 
 `ordinaryBoonPeer`
 : Resolve one ordinary source while its offer is generated. Apply the ordinary
-four-source cap, exclude sources already offered by earlier Boon peers, and use
-the game's weaker-exclusion and unrestricted fallbacks when those exclusions
-exhaust support.
+four-source cap to the union of acquired sources and sources offered by
+earlier Boon peers, exclude those peer sources from the resulting primary
+pool, and use the game's weaker-exclusion and unrestricted fallbacks when
+those exclusions exhaust support.
 
 `ordinaryNoPeer`
 : Resolve one ordinary source at the declared lifecycle point using current
@@ -866,12 +867,14 @@ eligible entry at all.
 
 Repeated Boon reward types are separate from source selection. Within one door
 batch, ordinary Boon source choices exclude sources already offered by earlier
-peers. After the route reaches the ordinary four-source cap, later choices are
-restricted to already acquired sources. Unpicked sources participate in the
-same-batch exclusion but do not enter acquisition history. If peer exclusions
-exhaust the available source set, game setup retries with weaker exclusions and
-finally no exclusions; source uniqueness is strict only while another source
-remains possible. These are the `ordinaryBoonPeer` rules. Devotion instead uses
+peers. The cap check counts the union of acquired sources and those earlier peer
+sources. Once that union reaches four, the primary pool narrows to acquired
+sources before peer exclusions are applied. Unpicked sources therefore affect
+the cap and exclusion while remaining absent from acquisition history. If peer
+exclusions empty the primary pool, game setup retries with weaker exclusions
+and finally no exclusions; the unrestricted retry recomputes support without
+the peer set. Source uniqueness is strict only while the primary pool remains
+nonempty. These are the `ordinaryBoonPeer` rules. Devotion instead uses
 `devotionAcquiredPair`: its two distinct sources must already be present in
 current-run ordinary god-loot history at offer generation, and the authored
 chosen/spurned order records which member is acquired before and after combat.
