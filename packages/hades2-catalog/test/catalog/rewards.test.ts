@@ -483,6 +483,215 @@ describe('reward-kernel declaration parity', () => {
     });
   });
 
+  it('keeps every reward type label, default, and acquisition role exact', () => {
+    const expectedLabels = {
+      AphroditeUpgrade: 'Aphrodite',
+      ApolloUpgrade: 'Apollo',
+      AresUpgrade: 'Ares',
+      DemeterUpgrade: 'Demeter',
+      HephaestusUpgrade: 'Hephaestus',
+      HeraUpgrade: 'Hera',
+      HestiaUpgrade: 'Hestia',
+      PoseidonUpgrade: 'Poseidon',
+      ZeusUpgrade: 'Zeus',
+      HermesUpgrade: 'Hermes',
+      StackUpgrade: 'Pom of Power',
+      StackUpgradeBig: 'Big Pom of Power',
+      StackUpgradeTriple: 'Triple Pom of Power',
+      WeaponUpgrade: 'Hammer',
+      SpellDrop: "Selene's Gift",
+      MaxHealthDrop: 'Max Health',
+      MaxHealthDropBig: 'Big Max Health',
+      MaxHealthDropSmall: 'Small Max Health',
+      EmptyMaxHealthSmallDrop: 'Empty Small Max Health',
+      MaxManaDrop: 'Max Magick',
+      MaxManaDropBig: 'Big Max Magick',
+      MaxManaDropSmall: 'Small Max Magick',
+      RoomMoneyDrop: 'Gold',
+      RoomMoneyTripleDrop: 'Triple Gold',
+      RoomMoneyTinyDrop: 'Tiny Gold',
+      TalentDrop: 'Path of Stars',
+      TalentBigDrop: 'Big Path of Stars',
+      MinorTalentDrop: 'Minor Path of Stars',
+      RoomRewardHealDrop: 'Heal',
+      HealBigDrop: 'Big Heal',
+      ArmorBoost: 'Armor',
+      ArmorBigBoost: 'Big Armor',
+      AirBoost: 'Air Essence',
+      EarthBoost: 'Earth Essence',
+      FireBoost: 'Fire Essence',
+      WaterBoost: 'Water Essence',
+      StoreRewardRandomStack: 'Pom Slice',
+      LastStandDrop: 'Death Defiance',
+      ChaosWeaponUpgrade: 'Chaos Hammer',
+      GiftDrop: 'Nectar',
+      MetaCurrencyDrop: 'Bones',
+      MetaCurrencyBigDrop: 'Big Bones',
+      MetaCardPointsCommonDrop: 'Ashes',
+      MetaCardPointsCommonBigDrop: 'Big Ashes',
+      WeaponPointsRareDrop: 'Nightmare',
+      CardUpgradePointsDrop: 'Moon Dust',
+      CharonPointsDrop: 'Obol Points',
+      Boon: 'Boon',
+      Devotion: 'Trial',
+      RandomLoot: 'Boon',
+      BlindBoxLoot: 'Mystery Boon',
+      WeaponUpgradeDrop: 'Hammer',
+      ShopHermesUpgrade: 'Hermes Boon',
+      Story: 'Story',
+      Shop: 'Shop',
+      ClockworkGoal: 'Clockwork Goal',
+    } as const;
+    expect(
+      Object.fromEntries(
+        rewardKernelCatalog.rewardTypes.values.map((rewardType) => [
+          rewardType.gameName,
+          rewardType.label,
+        ]),
+      ),
+    ).toEqual(expectedLabels);
+    expect(rewardKernelCatalog.rewardTypes.values.map((rewardType) => rewardType.gameName)).toEqual(
+      Object.keys(expectedLabels),
+    );
+
+    const sourceBearing = rewardKernelCatalog.rewardTypes.values
+      .filter((rewardType) => rewardType.payloadDomain !== undefined)
+      .map((rewardType) => ({
+        gameName: rewardType.gameName,
+        payloadDomain: rewardType.payloadDomain,
+        defaultPayload: rewardType.defaultPayload,
+        sourceSupport: rewardType.sourceSupport,
+        sourceResolution: rewardType.sourceResolution,
+        offerProjection: rewardType.offerProjection,
+        acquisitionRoles: rewardType.acquisitionRoles.values,
+      }));
+    expect(sourceBearing).toEqual([
+      {
+        gameName: 'Boon',
+        payloadDomain: 'BoonSource',
+        defaultPayload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        sourceSupport: 'ordinaryBoonPeer',
+        sourceResolution: { kind: 'offer' },
+        offerProjection: 'none',
+        acquisitionRoles: [
+          {
+            key: 'source',
+            resolution: { kind: 'payloadSource', acquisitionKind: 'loot', field: 'source' },
+          },
+        ],
+      },
+      {
+        gameName: 'Devotion',
+        payloadDomain: 'DevotionPair',
+        defaultPayload: {
+          kind: 'DevotionPair',
+          chosenSource: 'ApolloUpgrade',
+          spurnedSource: 'ZeusUpgrade',
+        },
+        sourceSupport: 'devotionAcquiredPair',
+        sourceResolution: { kind: 'offer' },
+        offerProjection: 'devotionSpacing',
+        acquisitionRoles: [
+          {
+            key: 'chosenSource',
+            resolution: {
+              kind: 'payloadSource',
+              acquisitionKind: 'loot',
+              field: 'chosenSource',
+            },
+          },
+          {
+            key: 'spurnedSource',
+            resolution: {
+              kind: 'payloadSource',
+              acquisitionKind: 'loot',
+              field: 'spurnedSource',
+            },
+          },
+        ],
+      },
+      {
+        gameName: 'RandomLoot',
+        payloadDomain: 'BoonSource',
+        defaultPayload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        sourceSupport: 'ordinaryNoPeer',
+        sourceResolution: { kind: 'offer' },
+        offerProjection: 'none',
+        acquisitionRoles: [
+          {
+            key: 'source',
+            resolution: { kind: 'payloadSource', acquisitionKind: 'loot', field: 'source' },
+          },
+        ],
+      },
+      {
+        gameName: 'BlindBoxLoot',
+        payloadDomain: 'BoonSource',
+        defaultPayload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        sourceSupport: 'ordinaryNoPeer',
+        sourceResolution: { kind: 'acquisitionRole', role: 'hiddenSource' },
+        offerProjection: 'none',
+        acquisitionRoles: [
+          {
+            key: 'box',
+            resolution: { kind: 'self', acquisitionKind: 'consumable' },
+          },
+          {
+            key: 'hiddenSource',
+            resolution: { kind: 'payloadSource', acquisitionKind: 'loot', field: 'source' },
+          },
+        ],
+      },
+    ]);
+    expect(
+      rewardKernelCatalog.rewardTypes.values
+        .filter((rewardType) => rewardType.defaultPayload !== undefined)
+        .map((rewardType) => rewardType.gameName),
+    ).toEqual(sourceBearing.map((rewardType) => rewardType.gameName));
+
+    for (const acquisition of rewardKernelCatalog.acquisitions.values) {
+      if (acquisition.gameName === 'BlindBoxLoot') {
+        continue;
+      }
+      expect(
+        rewardKernelCatalog.rewardTypes.byKey[acquisition.gameName]?.acquisitionRoles.values,
+        acquisition.gameName,
+      ).toEqual([
+        {
+          key: 'self',
+          resolution: { kind: 'self', acquisitionKind: acquisition.kind },
+        },
+      ]);
+    }
+    expect(
+      rewardKernelCatalog.rewardTypes.byKey.WeaponUpgradeDrop?.acquisitionRoles.values,
+    ).toEqual([
+      {
+        key: 'weaponUpgrade',
+        resolution: {
+          kind: 'fixed',
+          acquisition: { kind: 'loot', gameName: 'WeaponUpgrade' },
+        },
+      },
+    ]);
+    expect(
+      rewardKernelCatalog.rewardTypes.byKey.ShopHermesUpgrade?.acquisitionRoles.values,
+    ).toEqual([
+      {
+        key: 'hermes',
+        resolution: {
+          kind: 'fixed',
+          acquisition: { kind: 'loot', gameName: 'HermesUpgrade' },
+        },
+      },
+    ]);
+    expect(
+      ['Story', 'Shop', 'ClockworkGoal'].map(
+        (gameName) => rewardKernelCatalog.rewardTypes.byKey[gameName]?.acquisitionRoles.values,
+      ),
+    ).toEqual([[], [], []]);
+  });
+
   it('keeps the exhaustive acquisition identity and projection registry exact', () => {
     const lootAndUse = rewardKernelCatalog.acquisitions.values
       .filter((entry) => entry.historyProjection === 'lootAndUse')
