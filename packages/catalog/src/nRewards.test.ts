@@ -14,9 +14,12 @@ import {
   createShopPurchaseAddress,
   encodeProjectDocument,
   evaluateHubCompleteness,
+  evaluateNBiome,
+  evaluateNRoomGeneration,
   evaluateNRewards,
   materializeHubBiome,
   semanticAddressKey,
+  simulateProject,
   type CompleteHubCompletenessResult,
   type HubBiomePlan,
   type ProjectDocument,
@@ -218,6 +221,10 @@ function fixture(project = representativeProject()) {
   return { snapshot, history, rewards: evaluateNRewards(catalog, snapshot, history) };
 }
 
+function selected(project = representativeProject()) {
+  return evaluateNBiome(catalog, 'Surface', plan(project));
+}
+
 describe('N Hub reward simulation', () => {
   it('consumes the full physical Hub board while acquiring only six visited targets', () => {
     const { snapshot, rewards } = fixture();
@@ -380,5 +387,202 @@ describe('N Hub reward simulation', () => {
     expect(Object.isFrozen(first.branches)).toBe(true);
     expect(Object.isFrozen(first.branches[0]?.events)).toBe(true);
     expect(Object.isFrozen(first.rewardLookups)).toBe(true);
+  });
+});
+
+describe('selected N validation', () => {
+  it('closes the complete fixed board, visit, side-pressure, pylon, restore, and terminal trace', () => {
+    const result = selected();
+
+    expect(result).toMatchObject({ biomeKey: 'N', completion: 'complete', validity: 'valid' });
+    if (result.completion !== 'complete') {
+      throw new Error('selected N fixture is incomplete');
+    }
+    expect(result.findings).toEqual([]);
+    expect(result.roomGeneration.openSlotConstraints).toEqual([
+      expect.objectContaining({
+        constrainedSlotKeys: ['miniBoss01', 'miniBoss02'],
+        openSlotKeys: ['miniBoss01'],
+        maximumOpenCount: 1,
+        selectedPossible: true,
+      }),
+    ]);
+    expect(result.roomGeneration.sideRoomGenerations.slice(0, 3)).toEqual([
+      expect.objectContaining({
+        visitIndex: 1,
+        availabilityRank: 1,
+        generatedBefore: 0,
+        requiredGeneratedCount: 1,
+        supportOutcomes: ['generated'],
+        selectedPossible: true,
+      }),
+      expect.objectContaining({
+        visitIndex: 1,
+        availabilityRank: 2,
+        generatedBefore: 1,
+        supportOutcomes: ['generated', 'notGenerated'],
+      }),
+      expect.objectContaining({
+        visitIndex: 1,
+        availabilityRank: 3,
+        generatedBefore: 2,
+        supportOutcomes: ['generated', 'notGenerated'],
+      }),
+    ]);
+    expect(result.history.biomeCompletion.ledgers.counters).toMatchObject({
+      soulPylonsSpawned: 6,
+      soulPylonsCompleted: 6,
+      numSubRoomsSpawned: 6,
+    });
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.roomGeneration.sideRoomGenerations)).toBe(true);
+  });
+
+  it('retains both coin-disabled miniboss slots and addresses the selected constraint failure', () => {
+    let project = applyProjectCommand(representativeProject(), catalog, {
+      kind: 'OpenHubSlot',
+      slot: createHubSlotAddress(biome, 'miniBoss02'),
+      occurrenceId: occurrenceId('miniBoss02'),
+    });
+    project = replaceIncoming(project, 'miniBoss02', {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+    });
+
+    const result = selected(project);
+    expect(result).toMatchObject({ completion: 'complete', validity: 'invalid' });
+    if (result.completion !== 'complete') {
+      throw new Error('miniboss constraint fixture is incomplete');
+    }
+    expect(result.roomGeneration.openSlotConstraints[0]).toMatchObject({
+      openSlotKeys: ['miniBoss01', 'miniBoss02'],
+      selectedPossible: false,
+    });
+    expect(
+      result.roomGeneration.findings
+        .filter((finding) => finding.code === 'hubOpenSlotUnavailable')
+        .map((finding) => semanticAddressKey(finding.origin)),
+    ).toEqual([
+      semanticAddressKey(createHubSlotAddress(biome, 'miniBoss01')),
+      semanticAddressKey(createHubSlotAddress(biome, 'miniBoss02')),
+    ]);
+  });
+
+  it('retains a skipped forced side slot and addresses the exact parent-local owner', () => {
+    let project = applyProjectCommand(representativeProject(), catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: createLocalChildGroupAddress(biome, occurrenceId('combat05'), 'sideRooms'),
+      enteredSlotKeys: ['sideDoor2'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: createLocalChildAddress(biome, occurrenceId('combat05'), 'sideRooms', 'sideDoor1'),
+      generation: 'notGenerated',
+    });
+
+    const result = selected(project);
+    expect(result).toMatchObject({ completion: 'complete', validity: 'invalid' });
+    if (result.completion !== 'complete') {
+      throw new Error('side pressure fixture is incomplete');
+    }
+    expect(result.roomGeneration.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'sideRoomGenerationUnavailable',
+        origin: createLocalChildAddress(biome, occurrenceId('combat05'), 'sideRooms', 'sideDoor1'),
+        evidence: expect.objectContaining({
+          visitIndex: 1,
+          availabilityRank: 1,
+          generatedBefore: 0,
+          requiredGeneratedCount: 1,
+          selectedOutcome: 'notGenerated',
+          supportOutcomes: ['generated'],
+        }),
+      }),
+    );
+  });
+
+  it('carries global pressure into the availability-ranked prefix of a later visit', () => {
+    let project = applyProjectCommand(representativeProject(), catalog, {
+      kind: 'ReplaceHubVisit',
+      visit: createHubVisitAddress(biome, 1),
+      hubSlotKey: 'combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: createLocalChildGroupAddress(biome, occurrenceId('combat02'), 'sideRooms'),
+      enteredSlotKeys: [],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: createLocalChildAddress(biome, occurrenceId('combat02'), 'sideRooms', 'sideDoor1'),
+      generation: 'notGenerated',
+    });
+
+    const result = selected(project);
+    if (result.completion !== 'complete') {
+      throw new Error('later pressure fixture is incomplete');
+    }
+    expect(result.roomGeneration.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'sideRoomGenerationUnavailable',
+        origin: createLocalChildAddress(biome, occurrenceId('combat02'), 'sideRooms', 'sideDoor1'),
+        evidence: expect.objectContaining({
+          visitIndex: 3,
+          availabilityRank: 2,
+          generatedBefore: 1,
+          requiredGeneratedCount: 2,
+          supportOutcomes: ['generated'],
+        }),
+      }),
+    );
+  });
+
+  it('combines lookup-aware Preboss findings without moving their semantic owner', () => {
+    const result = selected(representativeProject(false));
+    expect(result).toMatchObject({ completion: 'complete', validity: 'invalid' });
+    if (result.completion !== 'complete') {
+      throw new Error('shop validation fixture is incomplete');
+    }
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'shopOfferUnavailable',
+        origin: createShopOfferAddress(biome, fixedOccurrenceIds.preboss, 'MajorNonBoon'),
+      }),
+    );
+  });
+
+  it('keeps incomplete and project-dispatch boundaries outside selected N products', () => {
+    const incomplete = createProjectDocument(catalog, {
+      projectId: 'incomplete-n-validation',
+      name: 'Incomplete N Validation',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    expect(evaluateNBiome(catalog, 'Surface', plan(incomplete))).toMatchObject({
+      completion: 'incomplete',
+      biomeKey: 'N',
+    });
+
+    const project = representativeProject();
+    const surface = simulateProject(catalog, project).routes.find(
+      (route) => route.routeKey === 'Surface',
+    );
+    expect(surface).toMatchObject({
+      status: 'blocked',
+      biomes: [],
+      horizon: { kind: 'simulatorBoundary', biomeKey: 'N', blockedBiomeKeys: ['N'] },
+    });
+  });
+
+  it('rejects a canonical history that loses one required Pylon completion', () => {
+    const { snapshot, history } = fixture();
+    const malformed = {
+      ...history,
+      ledgers: {
+        ...history.ledgers,
+        requiredObjectCompletions: history.ledgers.requiredObjectCompletions.slice(1),
+      },
+    };
+
+    expect(() => evaluateNRoomGeneration(catalog, snapshot, malformed)).toThrow(/pylon/i);
   });
 });

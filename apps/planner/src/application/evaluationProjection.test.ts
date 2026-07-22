@@ -27,6 +27,7 @@ import {
 
 const allFindingCodes = [
   'fieldsCageOutcomeUnavailable',
+  'hubOpenSlotUnavailable',
   'biomeTopologyMissing',
   'continuationMissing',
   'pickedShopStateMissing',
@@ -34,6 +35,7 @@ const allFindingCodes = [
   'targetMissing',
   'targetRoomSupportEmpty',
   'targetRoomUnavailable',
+  'sideRoomGenerationUnavailable',
   'baseRewardStoreUnavailable',
   'rewardAcquisitionUnavailable',
   'rewardBagSupportEmpty',
@@ -58,7 +60,7 @@ function finding(code: FindingCode, origin: SemanticAddress = biome): SemanticFi
 
 describe('evaluation presentation', () => {
   it('provides explicit player copy for every Phase 3 finding code', () => {
-    expect(allFindingCodes).toHaveLength(16);
+    expect(allFindingCodes).toHaveLength(18);
     for (const code of allFindingCodes) {
       const presentation = presentFinding(finding(code));
       expect(presentation.title).not.toBe(code);

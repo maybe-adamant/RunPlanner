@@ -19,9 +19,11 @@ complete linear simulation pipeline are complete. F, G, H, and I now share one p
 completeness, materialization, lifecycle, event-folded history,
 room-generation, reward-kernel, project-simulation, selected-plan validation,
 and candidate result. Phase 5 closed F/G through the editor, profile, and
-recovery product loop; Phase 6 extended the same boundary through H and I. P/Q/O/N
-remain dormant. The Phase 2.7 authority switch and schema-version-3 identity
-cleanup leave those simulation contracts unchanged.
+recovery product loop; Phase 6 extended the same boundary through H and I. N
+now has a dormant selected product through validation but remains outside
+project dispatch and application capabilities; P/Q/O remain declaration-only.
+The Phase 2.7 authority switch and schema-version-3 identity cleanup leave
+those simulation contracts unchanged.
 
 ## Core Contract
 
@@ -626,6 +628,25 @@ entered rooms, derives `hubRewardLookup` from the full initial board, and then
 validates the fixed Preboss shop. These facts remain replaceable simulation
 output; none are inferred from a final room aggregate or persisted beside the
 authored Hub plan.
+
+Dormant selected Hub validation composes those products without registering N
+in route simulation. Its authored-possibility ledgers are deliberately narrow:
+
+- each declared open-slot constraint records its constrained and selected-open
+  slot keys, maximum count, and selected support;
+- each visited parent-local slot records visit ordinal, availability rank,
+  generated count before evaluation, required pressure count, supported
+  generation outcomes, and selected support.
+
+An unsupported open-set outcome is addressed to every participating invalid
+Hub slot. An unsupported local generation outcome is addressed to the exact
+parent occurrence and side-slot key. Complete-but-invalid authorship is never
+repaired or discarded. Fixed slot identity and physical order, six distinct
+open visits, Pylon spawn/completion, side-entry ordinals, parent and Hub
+restores, fixed Preboss, completion rooms, and biome completion are constructed
+canonical invariants; disagreement at those contacts is a contract failure, not
+a recoverable semantic finding. Reward and shop findings remain owned by the
+reward replay rather than being duplicated by Hub validation.
 
 Every permutation of a parent's entered side slots is legal. Because all
 sibling offers exist before the first entry and supported side acquisitions do

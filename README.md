@@ -87,8 +87,11 @@ history envelope and completion-room materializer while retaining variant-owned
 canonical snapshots. N reward simulation consumes the complete physical Hub
 board, jointly resolves generated side siblings, acquires only entered rooms,
 and validates the fixed Preboss shop against a lookup derived from every open
-offer. N remains outside Surface simulation and editing until selected
-validation, candidates, editor projection, and product activation land.
+offer. Dormant selected validation now preserves impossible open-set and local
+generation outcomes as findings at their exact Hub-slot or parent-local owners,
+while canonical fixed identity, visits, pylons, restores, and completion remain
+hard contracts. N remains outside Surface simulation and editing until
+candidates, editor projection, and product activation land.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.

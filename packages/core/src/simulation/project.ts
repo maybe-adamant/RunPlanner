@@ -1,12 +1,37 @@
 import type { Catalog } from '../catalog';
 import { createBiomeAddress, type BiomeAddress } from '../project/addresses';
-import type { AuthoredRoutePlan, LinearBiomePlan, ProjectDocument } from '../project/model';
-import { evaluateLinearCompleteness } from './completeness';
-import { evaluateLinearRoomGeneration, type LinearRoomGenerationValidation } from './generation';
-import { composeLinearHistory, type CanonicalLinearHistory } from './history';
-import { materializeLinearBiome, type CanonicalLinearBiome } from './materialization';
+import type {
+  AuthoredRoutePlan,
+  HubBiomePlan,
+  LinearBiomePlan,
+  ProjectDocument,
+} from '../project/model';
+import { evaluateHubCompleteness, evaluateLinearCompleteness } from './completeness';
+import {
+  evaluateHubRoomGeneration,
+  evaluateLinearRoomGeneration,
+  type HubRoomGenerationValidation,
+  type LinearRoomGenerationValidation,
+} from './generation';
+import {
+  composeHubHistory,
+  composeLinearHistory,
+  type CanonicalHubHistory,
+  type CanonicalLinearHistory,
+} from './history';
+import {
+  materializeHubBiome,
+  materializeLinearBiome,
+  type CanonicalHubBiome,
+  type CanonicalLinearBiome,
+} from './materialization';
 import type { SemanticFinding } from './model';
-import { evaluateLinearRewards, type LinearRewardSimulation } from './rewards';
+import {
+  evaluateHubRewards,
+  evaluateLinearRewards,
+  type HubRewardSimulation,
+  type LinearRewardSimulation,
+} from './rewards';
 
 export interface IncompleteLinearProjectEvaluation {
   readonly biomeKey: string;
@@ -36,6 +61,28 @@ export type CompleteFProjectEvaluation = CompleteLinearProjectEvaluation & {
   readonly biomeKey: 'F';
 };
 export type FProjectEvaluation = IncompleteFProjectEvaluation | CompleteFProjectEvaluation;
+
+export interface IncompleteHubProjectEvaluation {
+  readonly biomeKey: string;
+  readonly origin: BiomeAddress;
+  readonly completion: 'incomplete';
+  readonly findings: readonly SemanticFinding[];
+}
+
+export interface CompleteHubProjectEvaluation {
+  readonly biomeKey: string;
+  readonly origin: BiomeAddress;
+  readonly completion: 'complete';
+  readonly validity: 'invalid' | 'valid';
+  readonly snapshot: CanonicalHubBiome;
+  readonly history: CanonicalHubHistory;
+  readonly roomGeneration: HubRoomGenerationValidation;
+  readonly rewards: HubRewardSimulation;
+  readonly findings: readonly SemanticFinding[];
+}
+
+export type HubBiomeProjectEvaluation =
+  CompleteHubProjectEvaluation | IncompleteHubProjectEvaluation;
 
 export type RouteProcessingHorizon =
   | { readonly kind: 'routeEnd' }
@@ -161,6 +208,52 @@ export function evaluateLinearBiome(
     rewards,
     findings,
   });
+}
+
+export function evaluateHubBiome(
+  catalog: Catalog,
+  routeKey: string,
+  plan: HubBiomePlan,
+): HubBiomeProjectEvaluation {
+  const origin = createBiomeAddress(routeKey, plan.biomeKey);
+  const completeness = evaluateHubCompleteness(catalog, origin, plan);
+  if (completeness.completion === 'incomplete') {
+    return Object.freeze({
+      biomeKey: plan.biomeKey,
+      origin,
+      completion: 'incomplete',
+      findings: completeness.findings,
+    });
+  }
+
+  const snapshot = materializeHubBiome(catalog, origin, completeness);
+  const history = composeHubHistory(catalog, snapshot);
+  const roomGeneration = evaluateHubRoomGeneration(catalog, snapshot, history);
+  const rewards = evaluateHubRewards(catalog, snapshot, history);
+  const findings = Object.freeze([...roomGeneration.findings, ...rewards.findings]);
+  return Object.freeze({
+    biomeKey: plan.biomeKey,
+    origin,
+    completion: 'complete',
+    validity:
+      roomGeneration.validity === 'valid' && rewards.validity === 'valid' ? 'valid' : 'invalid',
+    snapshot,
+    history,
+    roomGeneration,
+    rewards,
+    findings,
+  });
+}
+
+export function evaluateNBiome(
+  catalog: Catalog,
+  routeKey: string,
+  plan: HubBiomePlan,
+): HubBiomeProjectEvaluation {
+  if (plan.biomeKey !== 'N') {
+    throw new ProjectSimulationContractError('N biome evaluation requires biome N');
+  }
+  return evaluateHubBiome(catalog, routeKey, plan);
 }
 
 type BiomeSimulator = (

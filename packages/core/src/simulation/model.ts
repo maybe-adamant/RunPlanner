@@ -14,7 +14,11 @@ export type CompletenessFindingCode =
   | 'targetMissing';
 
 export type RoomGenerationFindingCode =
-  'fieldsCageOutcomeUnavailable' | 'targetRoomSupportEmpty' | 'targetRoomUnavailable';
+  | 'fieldsCageOutcomeUnavailable'
+  | 'hubOpenSlotUnavailable'
+  | 'sideRoomGenerationUnavailable'
+  | 'targetRoomSupportEmpty'
+  | 'targetRoomUnavailable';
 
 export type RewardGenerationFindingCode =
   | 'baseRewardStoreUnavailable'

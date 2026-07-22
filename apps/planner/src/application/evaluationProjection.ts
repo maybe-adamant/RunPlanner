@@ -42,6 +42,10 @@ const findingCopy = {
     title: 'Complete the Hub visit order',
     description: 'Choose six distinct open pylon rooms in player entry order.',
   },
+  hubOpenSlotUnavailable: {
+    title: 'Hub room cannot be open together',
+    description: 'This fixed Ephyra room conflicts with the selected persistent Hub open set.',
+  },
   pickedShopStateMissing: {
     title: 'Configure the entered shop',
     description: 'The selected shop needs its complete inventory before simulation can continue.',
@@ -61,6 +65,10 @@ const findingCopy = {
   targetRoomUnavailable: {
     title: 'Room cannot appear here',
     description: 'The selected room is outside the possible room set for this exit.',
+  },
+  sideRoomGenerationUnavailable: {
+    title: 'Side room generation cannot occur here',
+    description: 'The selected side-room outcome conflicts with Ephyra generation pressure.',
   },
   baseRewardStoreUnavailable: {
     title: 'Reward pool cannot appear here',
