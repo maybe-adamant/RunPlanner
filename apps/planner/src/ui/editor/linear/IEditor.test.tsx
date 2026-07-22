@@ -20,6 +20,8 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createCandidateProjectionService } from '../../../projections/candidateProjection';
+import { createContextualOptionResolver } from '../../../projections/contextualOptions';
+import { createContextualPickerProjection } from '../../../projections/contextualPicker';
 import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 import { ProjectHistoryControls } from '../../project/ProjectHistoryControls';
@@ -132,6 +134,7 @@ function IEditorHarness({
       <LinearBiomeEditor
         candidateProjection={candidateProjection}
         catalog={catalog}
+        contextualPicker={createContextualPickerProjection(createContextualOptionResolver(catalog))}
         evaluation={evaluation}
         plan={plan}
         routeKey={biome.routeKey}
@@ -194,14 +197,20 @@ describe('I editor projection', () => {
     if (firstDecision === null) {
       throw new Error('first Clockwork decision card is missing');
     }
-    const type = within(firstDecision as HTMLElement).getByLabelText('Type');
-    expect(within(type).getByRole('option', { name: 'Preboss' })).toBeTruthy();
-    await user.selectOptions(type, 'Preboss');
-    expect(
-      within(within(firstDecision as HTMLElement).getByLabelText('Room')).getByRole('option', {
-        name: /Preboss/,
-      }),
-    ).toHaveProperty('value', 'I_PreBoss02');
+    const room = within(firstDecision as HTMLElement).getByLabelText('Room');
+    expect(within(firstDecision as HTMLElement).queryByLabelText('Type')).toBeNull();
+    await user.click(room);
+    const preboss = screen
+      .getAllByRole('option')
+      .find(
+        (candidate) =>
+          candidate.querySelector('.contextual-picker-item-label')?.textContent === 'Preboss',
+      );
+    expect(preboss).toBeDefined();
+    await user.click(preboss!);
+    expect(within(firstDecision as HTMLElement).getByLabelText('Room').textContent).toContain(
+      'Preboss',
+    );
   });
 
   it('derives Goal markers while retaining editable NonGoal reward leaves', () => {

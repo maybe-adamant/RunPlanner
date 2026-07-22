@@ -9,9 +9,11 @@
     "typecheck": "tsc --project tsconfig.json"
   },
   "dependencies": {
+    "@radix-ui/react-popover": "1.1.20",
     "@reduxjs/toolkit": "2.12.0",
-    "@run-planner/hades2-catalog": "0.0.0",
     "@run-planner/engine": "0.0.0",
+    "@run-planner/hades2-catalog": "0.0.0",
+    "cmdk": "1.1.1",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-redux": "9.3.0"

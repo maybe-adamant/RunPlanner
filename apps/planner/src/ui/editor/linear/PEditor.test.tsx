@@ -14,6 +14,8 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createCandidateProjectionService } from '../../../projections/candidateProjection';
+import { createContextualOptionResolver } from '../../../projections/contextualOptions';
+import { createContextualPickerProjection } from '../../../projections/contextualPicker';
 import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
 import {
   createRepresentativeNOPProject,
@@ -53,6 +55,7 @@ function PEditorHarness({
     <LinearBiomeEditor
       candidateProjection={candidateProjection}
       catalog={catalog}
+      contextualPicker={createContextualPickerProjection(createContextualOptionResolver(catalog))}
       evaluation={evaluation}
       plan={pPlan(project)}
       routeKey={pBiome.routeKey}
@@ -127,6 +130,10 @@ describe('P candidates and editor projection', () => {
     expect(screen.getByRole('heading', { name: 'Preboss from Combat 15' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Preboss Shop' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Free Reward' })).toBeTruthy();
+    expect(screen.queryByLabelText('Type')).toBeNull();
+    await user.click(screen.getAllByLabelText('Room')[0]!);
+    expect((await screen.findAllByRole('option')).length).toBeGreaterThan(0);
+    await user.keyboard('{Escape}');
 
     await user.click(screen.getByLabelText('Enter terminal exit 2'));
 

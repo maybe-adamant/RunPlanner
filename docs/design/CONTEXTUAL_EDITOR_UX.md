@@ -13,7 +13,9 @@ validation, and semantic-command authorities.
 
 This document owns contextual selector behavior. `EDITOR_MODEL.md` remains the
 broader authority for editor ownership, topology projection, findings,
-persistence, and undo/redo.
+persistence, and undo/redo. `STRUCTURED_EDITOR_WORKSPACE.md` owns the route rail,
+layout-specific biome structure, inspector, and final placement of these
+controls.
 
 ## Scope
 
@@ -91,6 +93,12 @@ The application presentation layer owns:
 
 React owns accessible interaction and transient picker state. It does not
 reevaluate requirements, bags, force pressure, or sibling legality.
+
+The application also projects the ordered picker sections consumed by React.
+The shared component may mechanically render those sections, manage search and
+focus, and open an unavailable disclosure; it does not decide category order,
+required-first policy, selected-invalid pinning, or ordinary-versus-diagnostic
+visibility from raw candidates.
 
 ## Progressive Evaluation Foundation
 
@@ -402,6 +410,11 @@ engine result, and maps unavailable addressed coverage to `unassessed`. The
 existing native controls do not consume it yet; grouped room and compact
 reward pickers remain subsequent slices.
 
+Before React consumption, the application projects these options into an
+ordered picker model containing required, semantic-category, unassessed, and
+unavailable sections. This preserves one presentation-policy authority while
+allowing room and reward controls to share one accessible component.
+
 This is application/UI vocabulary. It must not replace the richer typed
 simulation assessment or enter persisted state.
 
@@ -462,13 +475,17 @@ The common component must support:
    and Hub coverage shapes;
 3. candidate evidence and presentation-contract hardening;
 4. shared contextual option resolver and reason-copy fixtures;
-5. grouped room picker and layout-policy integration;
-6. resolved-store-aware reward domains;
-7. peer-, source-, and counted-bag-aware reward presentation;
+5. one application-projected contextual-picker model and its first grouped room
+   picker consumer;
+6. resolved-store-aware reward-type domains;
+7. peer-, source-, Devotion-pair, and counted-bag-aware reward payload domains;
 8. compact compound reward picker;
 9. coverage-derived feedback and blocked presentation;
-10. frontier, interaction, accessibility, and responsiveness closure across
-    F/G/H/I/N/O/P/Q.
+10. layout-specific structured-workspace projection;
+11. Linear spine and focused-inspector presentation;
+12. Hub board, visit-timeline, and focused-inspector presentation;
+13. frontier, dialogs, repair, accessibility, performance, and responsiveness
+    closure across F/G/H/I/N/O/P/Q.
 
 Each slice should leave the existing product loop usable. Contextual-selector
 slices do not change frontier topology or commands; the final closure may
@@ -505,5 +522,6 @@ This work closes when:
 The completed audit in `../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md` owns the
 cross-biome inventory and frontier decision record. This document owns the
 shared contextual-selection behavior. `EDITOR_MODEL.md` continues to own the
-broader feedback, navigation, persistence, and interaction boundaries, while
+broader feedback, navigation, persistence, and interaction boundaries.
+`STRUCTURED_EDITOR_WORKSPACE.md` owns structured presentation, while
 `../progress/IMPLEMENTATION_PLAN.md` owns the concrete Phase 7 commit sequence.

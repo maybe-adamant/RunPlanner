@@ -9,12 +9,11 @@ import {
   createFixedEntryRoomAddress,
   createOccurrenceAddress,
 } from '@run-planner/engine/authored-project';
-import { useState } from 'react';
-
 import {
   presentCandidateLabel,
   type CandidateProjectionService,
 } from '../../../projections/candidateProjection';
+import type { ContextualPickerProjectionService } from '../../../projections/contextualPicker';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { presentBiomeStatus } from '../../../projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
@@ -27,10 +26,12 @@ import {
   StatusBadge,
 } from '../../feedback/EvaluationFeedback';
 import { RoomStateEditor } from '../rooms/RoomStateEditor';
+import { ContextualPicker } from '../../controls/ContextualPicker';
 
 interface LinearBiomeEditorProps {
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
+  readonly contextualPicker: ContextualPickerProjectionService;
   readonly evaluation: LinearBiomeProjectEvaluation | undefined;
   readonly plan: LinearBiomePlan;
   readonly routeKey: string;
@@ -67,13 +68,13 @@ function startDeclaration(catalog: Catalog, gameName: string): RoomDeclaration {
 export function LinearBiomeEditor({
   candidateProjection,
   catalog,
+  contextualPicker,
   evaluation,
   plan,
   routeKey,
 }: LinearBiomeEditorProps) {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectPresentProject);
-  const [pendingStart, setPendingStart] = useState('');
   const biomeDeclaration = catalog.biomes.byKey[plan.biomeKey];
   if (biomeDeclaration === undefined) {
     throw new Error(`${plan.biomeKey} biome declaration is missing`);
@@ -250,6 +251,7 @@ export function LinearBiomeEditor({
               biome={biome}
               candidateProjection={candidateProjection}
               catalog={catalog}
+              contextualPicker={contextualPicker}
               evaluation={evaluation}
               plan={plan}
               topology={topology}
@@ -267,6 +269,15 @@ export function LinearBiomeEditor({
 
   if (topology === null) {
     const projectedOptions = candidateProjection.startRooms(project, biome, options);
+    const startPicker = contextualPicker.project(
+      projectedOptions,
+      (option) => ({
+        label: option.value.label,
+        category: option.value.kind,
+        selected: false,
+      }),
+      (room) => room.gameName,
+    );
     return (
       <SemanticFindingsScope findings={evaluation?.findings ?? []}>
         <section className="biome-editor" aria-labelledby={titleId}>
@@ -293,48 +304,22 @@ export function LinearBiomeEditor({
               </p>
             </div>
             <div className="start-room-form">
-              <label htmlFor={startRoomId}>
-                {authoredStartKind === 'opening' ? 'Opening' : 'Starting'} room
-              </label>
-              <select
+              <ContextualPicker
                 id={startRoomId}
-                onChange={(event) => setPendingStart(event.target.value)}
-                value={pendingStart}
-              >
-                <option value="">
-                  Select {authoredStartKind === 'opening' ? 'an opening' : 'a room'}
-                </option>
-                {projectedOptions.map((option) => (
-                  <option
-                    key={option.value.gameName}
-                    value={option.value.gameName}
-                    {...candidateSelectState(option)}
-                  >
-                    {presentCandidateLabel(option.value.label, option)}
-                  </option>
-                ))}
-              </select>
-              <button
-                className="primary-action"
-                disabled={pendingStart === ''}
-                onClick={() => {
-                  if (pendingStart === '') {
-                    return;
-                  }
+                label={`${authoredStartKind === 'opening' ? 'Opening' : 'Starting'} room`}
+                model={startPicker}
+                onSelect={(room) => {
                   dispatch(
                     authoredProjectCommandDispatched({
                       kind: 'CreateStart',
                       biome,
                       occurrenceId: allocateOccurrenceId(),
-                      gameName: pendingStart,
+                      gameName: room.gameName,
                     }),
                   );
-                  setPendingStart('');
                 }}
-                type="button"
-              >
-                Start {biomeLabel}
-              </button>
+                placeholder={`Select ${authoredStartKind === 'opening' ? 'an opening' : 'a room'}`}
+              />
             </div>
           </div>
         </section>
@@ -351,7 +336,15 @@ export function LinearBiomeEditor({
   const startRoom = startDeclaration(catalog, start.gameName);
   const startAddress = createOccurrenceAddress(biome, start.occurrenceId);
   const projectedOptions = candidateProjection.startRooms(project, startAddress, options);
-  const selectedStart = projectedOptions.find((option) => option.value.gameName === start.gameName);
+  const startPicker = contextualPicker.project(
+    projectedOptions,
+    (option) => ({
+      label: option.value.label,
+      category: option.value.kind,
+      selected: option.value.gameName === start.gameName,
+    }),
+    (room) => room.gameName,
+  );
 
   return (
     <SemanticFindingsScope findings={evaluation?.findings ?? []}>
@@ -390,31 +383,21 @@ export function LinearBiomeEditor({
             <span className="room-kind">{startRoom.kind}</span>
             <SemanticOwnerMarker address={startAddress} />
           </div>
-          <label htmlFor={`${startRoomId}-authored`}>Room</label>
-          <select
-            {...candidateSelectState(selectedStart)}
+          <ContextualPicker
             id={`${startRoomId}-authored`}
-            onChange={(event) => {
+            label="Room"
+            model={startPicker}
+            onSelect={(room) => {
               dispatch(
                 authoredProjectCommandDispatched({
                   kind: 'ReplaceOccurrenceRoom',
                   occurrence: startAddress,
-                  gameName: event.target.value,
+                  gameName: room.gameName,
                 }),
               );
             }}
-            value={start.gameName}
-          >
-            {projectedOptions.map((option) => (
-              <option
-                key={option.value.gameName}
-                value={option.value.gameName}
-                {...candidateSelectState(option)}
-              >
-                {presentCandidateLabel(option.value.label, option)}
-              </option>
-            ))}
-          </select>
+            placeholder="Select a room"
+          />
           <RoomStateEditor
             biome={biome}
             candidateProjection={candidateProjection}
@@ -428,6 +411,7 @@ export function LinearBiomeEditor({
           biome={biome}
           candidateProjection={candidateProjection}
           catalog={catalog}
+          contextualPicker={contextualPicker}
           evaluation={evaluation}
           plan={plan}
           topology={topology}

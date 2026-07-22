@@ -24,6 +24,7 @@ import {
 import { projectClockworkTopology, projectLinearBatchState } from '@run-planner/engine/simulation';
 
 import type { CandidateProjectionService } from '../../../projections/candidateProjection';
+import type { ContextualPickerProjectionService } from '../../../projections/contextualPicker';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
@@ -36,6 +37,7 @@ interface LinearTopologyEditorProps {
   readonly biome: BiomeAddress;
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
+  readonly contextualPicker: ContextualPickerProjectionService;
   readonly evaluation: LinearBiomeProjectEvaluation | undefined;
   readonly plan: LinearBiomePlan;
   readonly topology: LinearBiomeTopology;
@@ -93,6 +95,7 @@ function OrdinaryTargetEditor({
   biome,
   candidateProjection,
   catalog,
+  contextualPicker,
   canCreateTarget,
   continuation,
   exitIndex,
@@ -130,6 +133,7 @@ function OrdinaryTargetEditor({
             biomeKey={biome.biomeKey}
             candidateProjection={candidateProjection}
             catalog={catalog}
+            contextualPicker={contextualPicker}
             disabled={!canCreateTarget}
             idPrefix={idPrefix}
             onSelect={(gameName) =>
@@ -197,6 +201,7 @@ function OrdinaryTargetEditor({
           biomeKey={biome.biomeKey}
           candidateProjection={candidateProjection}
           catalog={catalog}
+          contextualPicker={contextualPicker}
           current={roomDeclaration}
           idPrefix={idPrefix}
           onSelect={(gameName) =>
@@ -234,6 +239,7 @@ function BatchEditor({
   catalog,
   clockworkBatch,
   continuation,
+  contextualPicker,
   evaluation,
   plan,
   topology,
@@ -376,6 +382,7 @@ function BatchEditor({
             canCreateTarget={canCreateTarget}
             catalog={catalog}
             continuation={continuation}
+            contextualPicker={contextualPicker}
             evaluation={evaluation}
             exitIndex={exitIndex}
             key={exitIndex}
@@ -738,6 +745,7 @@ export function LinearTopologyEditor({
   biome,
   candidateProjection,
   catalog,
+  contextualPicker,
   evaluation,
   plan,
   topology,
@@ -791,6 +799,7 @@ export function LinearTopologyEditor({
               layout.terminal.kind !== 'generatedTarget'
             }
             catalog={catalog}
+            contextualPicker={contextualPicker}
             {...(() => {
               const clockworkBatch = clockworkBatches.find(
                 (batch) => batch.parentOccurrenceId === continuation.parentOccurrenceId,
@@ -811,6 +820,7 @@ export function LinearTopologyEditor({
               constrainedContinuationCount === undefined && batchCount < layout.bounds.maxBatches
             }
             catalog={catalog}
+            contextualPicker={contextualPicker}
             continuation={continuation}
             evaluation={evaluation}
             key={continuation.parentOccurrenceId ?? 'layout-entry'}
@@ -826,6 +836,7 @@ export function LinearTopologyEditor({
           canAddBatch={canAddBatch}
           canCreateTerminal={canCreateTerminal && frontierTerminalTargetCount > 0}
           catalog={catalog}
+          contextualPicker={contextualPicker}
           evaluation={evaluation}
           parentOccurrenceId={frontier}
           plan={plan}

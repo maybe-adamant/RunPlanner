@@ -199,13 +199,20 @@ or visual polish:
 
 1. progressive evaluation and route gating for Linear and Hub coverage shapes;
 2. typed candidate evidence and one application contextual-option resolver;
-3. grouped contextual room selection;
-4. resolved-store, sibling, source, and counted-bag-aware reward selection;
+3. one application-projected picker model and grouped contextual room selection;
+4. resolved-store reward domains followed by sibling, source, Devotion-pair,
+   and counted-bag-aware payload domains;
 5. one compact compound reward interaction;
 6. coverage-derived feedback hierarchy and blocked presentation;
-7. frontier vocabulary, repair UX, accessibility, spacing, and responsive
-   closure across all eight biomes.
+7. one layout-dispatched structured-workspace projection over authored topology,
+   progressive coverage, findings, and contextual controls;
+8. a picked-path Linear rail and compact generated leaves for F/G/H/I/O/P/Q;
+9. an N-specific Hub board and visit timeline using the same inspector and
+   semantic-focus language without acquiring Linear semantics;
+10. frontier vocabulary, scoped dialogs, repair UX, accessibility, spacing,
+    performance, and responsive closure across all eight biomes.
 
 The implementation may replace controls incrementally. It must not create a
 candidate-only simulator, move game rules into React, or require a wholesale
-editor rewrite.
+editor rewrite. The structured workspace is a replaceable application/UI
+projection and never a second topology authority.

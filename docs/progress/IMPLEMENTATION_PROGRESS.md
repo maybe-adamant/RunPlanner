@@ -1422,6 +1422,25 @@ while reward proposals preserve store, bag, sibling, Boon-source, and
 Devotion-pair evidence. The application owns one cached `ContextualOption`
 resolver with centralized explanation copy and fixtures for all four states.
 
-Phase 7 Commit 5 is next. The current room selector still uses native Type then
-Room controls; it must be replaced by the grouped contextual picker without
-moving room eligibility into React or changing N's fixed-slot Hub semantics.
+The remaining Phase 7 presentation plan now combines contextual selection with
+one layout-specific structured workspace. `CONTEXTUAL_EDITOR_UX.md` retains
+picker semantics, while `STRUCTURED_EDITOR_WORKSPACE.md` owns the route rail,
+Linear rail, Hub board and visit timeline, focused inspector, truthful empty
+outline, and scoped repair presentation. The application projects grouping,
+ordering, structure, coverage, and semantic destinations; React owns accessible
+interaction and transient state only.
+
+Phase 7 Commit 5 is complete. The application now projects `ContextualOption`
+values into ordered required, selected-invalid, semantic-category, unassessed,
+and disclosed-unavailable sections. One shared Radix Popover plus `cmdk`
+control owns only transient search, focus, disclosure, and keyboard interaction.
+Linear start and target room surfaces consume that model as one grouped,
+searchable concrete-room choice, replacing the native Type then Room sequence
+without changing semantic commands, candidate authority, or N's fixed-slot Hub
+editor.
+
+Interaction fixtures cover required-first ordering, selected-invalid retention,
+unavailable disclosure, search and keyboard selection, one-command undo, and
+representative F/H/I/O/P/Q owners. Phase 7 Commit 6 is next: producer-resolved
+reward-type domains must remove the current cross-store union without repairing
+retained authored reward values.

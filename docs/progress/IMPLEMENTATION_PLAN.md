@@ -1686,8 +1686,10 @@ completed inventory and frontier decision record live in
 
 Phase 7 first makes incomplete active-biome evaluation and candidate evidence
 useful during authoring. It then replaces the high-friction room and reward
-controls, reconciles feedback hierarchy, and closes frontier and visual
-presentation without weakening layout-specific semantics.
+controls, reconciles feedback hierarchy, and projects the result through a
+layout-specific structured workspace with a focused inspector. Linear and Hub
+share semantic focus, coverage, findings, and compact controls without being
+forced into the same center-region structure.
 
 ### Commit 1: Progressive Evaluation Contract and Route Gate
 
@@ -1745,10 +1747,17 @@ Deliver:
 - forced, possible, impossible, and unassessed presentation fixtures;
 - immutable-project and semantic-owner projection caching.
 
-### Commit 5: Grouped Contextual Room Picker
+### Commit 5: Contextual Picker and Grouped Room Selection
 
 Deliver:
 
+- one application-owned ordered picker model over `ContextualOption`, including
+  required, semantic-category, unassessed, selected-invalid, and unavailable
+  sections;
+- one accessible reusable picker component that renders the application model
+  and owns only search, focus, disclosure, and interaction state;
+- Radix Popover plus `cmdk` installed at the application boundary and styled
+  through the existing hand-written CSS without a generic wrapper hierarchy;
 - one accessible grouped and searchable concrete-room picker for Linear room
   occurrences;
 - declaration/stage domains refined by contextual support rather than a
@@ -1762,21 +1771,61 @@ Deliver:
 N retains its fixed-slot Hub controls and consumes the common contextual
 vocabulary without acquiring arbitrary room replacement.
 
-### Commit 6: Contextual Reward Domains
+Gate:
+
+- React contains no candidate grouping, force, eligibility, visibility, or
+  reason-copy policy;
+- a concrete room choice remains one explicit semantic command and one undo
+  entry;
+- the shared picker is not left as an unused abstraction.
+
+### Commit 6: Producer-Resolved Reward-Type Domains
 
 Deliver:
 
 - reward domains resolved from the exact producer store before authoring;
-- sequential or unordered sibling, counted-bag, Boon-source, and complete
-  Devotion-pair support where declared;
-- selected-invalid reward retention with distinct store, bag, peer, and source
-  explanations;
+- ordinary reward-type choices that omit unsupported store members while
+  retaining and explaining the currently selected invalid type;
+- declaration-forced, batch-authored, source-offer-point, fixed, wheel, cage,
+  side-room, Goal/NonGoal, and shop producer ownership without a union fallback;
 - representative F/G/P batch, H cage, I NonGoal, N board/side/shop, O wheel,
   and Q miniboss fixtures;
+- unchanged authored rewards when a parent reward pool changes.
+
+Gate:
+
+- RunProgress cannot present MetaProgress-only rewards as supported and vice
+  versa;
+- React does not resolve stores or repair retained authored rewards;
+- every projected type is justified by the existing reward-candidate authority.
+
+### Commit 7: Relational Reward Payload Domains
+
+Deliver:
+
+- sequential or unordered sibling support according to the producer's declared
+  generation order;
+- counted-bag, Boon-source, and complete Devotion-pair assessment through the
+  existing possibility frontier;
+- selected-invalid payload retention with distinct bag, peer, source, pair, and
+  payload explanations;
+- player-facing sibling explanations that identify the semantic conflicting
+  offer without exposing occurrence IDs;
+- support aggregation for a Devotion first source from complete supported pairs;
+- representative jointly generated and sequential fixtures across F/G/P, H, N,
+  O, and Q;
 - no deterministic bag-count presentation when several latent bag states are
   reachable.
 
-### Commit 7: Compact Compound Reward Picker
+Gate:
+
+- the picker never evaluates a reward proposal in isolation when the producer
+  declares sibling interaction;
+- a reward remains possible when at least one reachable latent bag state supports
+  it, regardless of likelihood;
+- no peer, bag, Boon-source, or Devotion-pair rule exists only in React.
+
+### Commit 8: Compact Compound Reward Picker
 
 Deliver:
 
@@ -1789,7 +1838,15 @@ Deliver:
   interaction;
 - cancellation with no authored or history change.
 
-### Commit 8: Feedback Hierarchy and Blocked Presentation
+Gate:
+
+- incomplete reward or payload progress never enters the authored project,
+  autosave, profile document, or undo history;
+- the closed control remains compact at ordinary editor widths;
+- the same interaction composes incoming rewards, cages, wheels, side rooms,
+  shops, and other concrete reward producers without hiding owner differences.
+
+### Commit 9: Feedback Hierarchy and Blocked Presentation
 
 Deliver:
 
@@ -1801,7 +1858,88 @@ Deliver:
 - selected-invalid repair guidance independent of color;
 - cross-route fixtures proving later pages remain visible and editable.
 
-### Commit 9: Frontier and Presentation Closure
+Gate:
+
+- finding and coverage presentation resolves directly from semantic owners;
+- unassessed downstream context is never rendered as local invalidity;
+- compact markers and focused detail carry the same state without requiring
+  color or repeated full inline error text.
+
+### Commit 10: Structured Workspace Projection
+
+Deliver:
+
+- one application-owned structured-workspace projection over normalized layout,
+  authored topology, occurrences, progressive or canonical evaluation,
+  contextual options, and addressed findings;
+- shared route-rail, semantic-focus, coverage, marker, compact-summary, and
+  inspector-destination vocabulary;
+- a Linear projection containing start/fixed entries, picked trunk, generated
+  leaves, retained overflow, active frontier, variant-owned terminal structure,
+  and completion landmarks;
+- a Hub projection containing fixed entries, the joint open board, ordered visit
+  timeline, side-room state, fixed terminal, and completion landmarks;
+- truthful empty-outline facts: exact fixed stages, a projected terminal horizon,
+  or an explicit variable-length state;
+- deterministic projection and semantic-focus fixtures for all eight biomes.
+
+Gate:
+
+- incomplete authored topology is never labeled or treated as canonical;
+- React does not walk topology, calculate route length, interpret force timing,
+  or translate finding owners into rendered positions;
+- N's board remains one joint generation region and does not acquire a false
+  slot-order evaluation prefix.
+
+### Commit 11: Linear Spine and Focused Inspector
+
+Deliver:
+
+- the route rail, Linear structure rail, and focused inspector composition for
+  F/G/H/I/O/P/Q;
+- picked continuations as the visual trunk and unpicked generated targets as
+  compact inspectable leaves;
+- room, incoming reward, assessment, and finding summaries on every compact
+  leaf so visual collapse does not erase simulation-relevant offers;
+- coverage frontier, retained unassessed suffix, and exact semantic finding
+  focus;
+- truthful empty and partial outlines without expected-length or probability
+  decoration;
+- variant-specific terminal presentation for independent F/G/H/P forks, I's
+  generated peer, and O/Q direct terminals.
+
+Gate:
+
+- every authored occurrence and local reward remains reachable through the
+  structure rail or inspector;
+- visual emphasis on the picked path does not suppress unpicked sibling, bag,
+  source, or finding state;
+- no persisted panel, row, lane, or graph identity is introduced.
+
+### Commit 12: Hub Board, Visit Timeline, and Focused Inspector
+
+Deliver:
+
+- N in the same route-rail and inspector shell with an N-specific center region;
+- compact fixed-slot board cells with membership, incoming reward, assessment,
+  and finding summaries;
+- the separate ordered six-visit timeline and parent-local side-room focus;
+- fixed Opening/PreHub, Preboss, Hub return, parent restore, and completion
+  landmarks;
+- coverage and blocked presentation by semantic Hub region rather than rendered
+  board position;
+- keyboard and interaction fixtures for board membership, visit replacement,
+  side-room editing, reward focus, and finding navigation.
+
+Gate:
+
+- N retains fixed slot identity and separate membership versus visit-order
+  semantics;
+- the shared inspector does not introduce arbitrary room replacement or a
+  duplicate exit-count authority;
+- every open unvisited slot keeps its real reward leaf visible and editable.
+
+### Commit 13: Frontier, Dialog, Repair, and Presentation Closure
 
 Deliver:
 
@@ -1809,6 +1947,12 @@ Deliver:
 - concrete policies for F/G/P independent forks, H fixed-count fork, I
   generated terminal peer, O/Q direct terminals, and N fixed Hub completion;
 - retained-overflow and terminal repair flows that require explicit commands;
+- accessible application dialogs replacing browser-native confirmation and
+  describing the exact visible deletion scope;
+- Radix Dialog integrated through explicit application-owned pending-dialog
+  state without placing destructive scope in the component primitive;
+- a dedicated retained-exit repair surface showing unavailable targets and the
+  continuation that must be re-anchored;
 - final keyboard, accessibility, visual hierarchy, spacing, responsive layout,
   and measured interaction/rebuild performance closure;
 - complete F/G/H/I/N/O/P/Q browser interaction fixtures.
@@ -1828,6 +1972,11 @@ at least two consumers with identical semantics.
   replacement or owning structural deletion;
 - every frontier family retains its declaration, command, and simulation
   semantics;
+- Linear biomes expose the picked continuation, generated leaves, coverage, and
+  terminals through a structured rail and focused inspector;
+- N exposes its Hub board and visit timeline through the same focus language
+  without acquiring Linear structure;
+- empty and partial workspaces show only truthful declared or projected facts;
 - no room, reward, bag, force, terminal, completion, or blocking rule exists
   only in React;
 - representative interaction fixtures cover all eight biomes;

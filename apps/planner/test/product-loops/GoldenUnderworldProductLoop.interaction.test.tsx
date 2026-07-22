@@ -71,13 +71,6 @@ function exitRow(batchIndex: number, exitIndex: number): HTMLElement {
   return element;
 }
 
-function roomCategory(gameName: string): 'Combat' | 'Miniboss' | 'Shop' {
-  if (gameName.includes('_MiniBoss')) {
-    return 'Miniboss';
-  }
-  return gameName.includes('_Shop') ? 'Shop' : 'Combat';
-}
-
 async function replaceOffer(
   user: PlannerUser,
   owner: HTMLElement,
@@ -89,11 +82,32 @@ async function replaceOffer(
   }
 }
 
-async function authorGoldenF(user: PlannerUser): Promise<void> {
+async function selectRoom(
+  user: PlannerUser,
+  application: PlannerApplication,
+  trigger: HTMLElement,
+  gameName: string,
+): Promise<void> {
+  const room = application.catalog.rooms.byKey[gameName];
+  if (room === undefined) {
+    throw new Error(`Room ${gameName} is missing from the catalog`);
+  }
+  await user.click(trigger);
+  const options = await screen.findAllByRole('option');
+  const option = options.find(
+    (candidate) =>
+      candidate.querySelector('.contextual-picker-item-label')?.textContent === room.label,
+  );
+  if (option === undefined) {
+    throw new Error(`Room picker does not expose ${room.label}`);
+  }
+  await user.click(option);
+}
+
+async function authorGoldenF(user: PlannerUser, application: PlannerApplication): Promise<void> {
   await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
   await user.click(screen.getByRole('button', { name: 'Erebus' }));
-  await user.selectOptions(screen.getByLabelText('Opening room'), 'F_Opening01');
-  await user.click(screen.getByRole('button', { name: 'Start Erebus' }));
+  await selectRoom(user, application, screen.getByLabelText('Opening room'), 'F_Opening01');
 
   for (const [batchOffset, batch] of goldenBatches.entries()) {
     const batchIndex = batchOffset + 1;
@@ -106,11 +120,9 @@ async function authorGoldenF(user: PlannerUser): Promise<void> {
     }
     for (const [targetOffset, target] of batch.targets.entries()) {
       const exitIndex = targetOffset + 1;
-      await user.selectOptions(
-        within(exitRow(batchIndex, exitIndex)).getByLabelText('Type'),
-        roomCategory(target.gameName),
-      );
-      await user.selectOptions(
+      await selectRoom(
+        user,
+        application,
         within(exitRow(batchIndex, exitIndex)).getByLabelText('Room'),
         target.gameName,
       );
@@ -259,7 +271,7 @@ describe('golden Underworld product loop', () => {
     const application = createApplication({ profileFile: persistence.profileFile });
     const { user } = renderPlannerForInteraction({ application });
 
-    await authorGoldenF(user);
+    await authorGoldenF(user, application);
 
     const authored = currentProject(application);
     const evaluated = currentEvaluation(application);
@@ -338,8 +350,8 @@ describe('golden Underworld product loop', () => {
     expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBe('F');
     expect(document.activeElement?.id).toBe(semanticOwnerElementId(finding.origin));
     expect(scrollIntoView).toHaveBeenCalledOnce();
-    await user.selectOptions(screen.getByLabelText('Opening room'), 'F_Opening01');
-    expect(screen.getByRole('button', { name: 'Start Erebus' })).toHaveProperty('disabled', false);
+    await selectRoom(user, application, screen.getByLabelText('Opening room'), 'F_Opening01');
+    expect(screen.getByRole('heading', { name: 'Opening' })).toBeTruthy();
   });
 
   it('keeps an early invalid terminal editable and navigates to its exact target owner', async () => {
@@ -347,8 +359,7 @@ describe('golden Underworld product loop', () => {
     const { user } = renderPlannerForInteraction({ application });
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
     await user.click(screen.getByRole('button', { name: 'Erebus' }));
-    await user.selectOptions(screen.getByLabelText('Opening room'), 'F_Opening01');
-    await user.click(screen.getByRole('button', { name: 'Start Erebus' }));
+    await selectRoom(user, application, screen.getByLabelText('Opening room'), 'F_Opening01');
     await user.click(screen.getByRole('button', { name: 'Go to Preboss' }));
     await user.click(screen.getByRole('radio', { name: 'Enter terminal exit 1' }));
     const evaluation = currentEvaluation(application);
@@ -373,8 +384,7 @@ describe('golden Underworld product loop', () => {
     const { user } = renderPlannerForInteraction({ application });
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
     await user.click(screen.getByRole('button', { name: 'Erebus' }));
-    await user.selectOptions(screen.getByLabelText('Opening room'), 'F_Opening02');
-    await user.click(screen.getByRole('button', { name: 'Start Erebus' }));
+    await selectRoom(user, application, screen.getByLabelText('Opening room'), 'F_Opening02');
     const beforeShrink = currentProject(application);
     vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
     await user.click(screen.getByRole('button', { name: 'Route' }));
@@ -401,13 +411,16 @@ describe('golden Underworld product loop', () => {
     await user.click(screen.getByRole('button', { name: 'Oceanus' }));
 
     expect(screen.getByText('Blocked', { selector: '.status-badge' })).toBeTruthy();
-    await user.selectOptions(screen.getByLabelText('Starting room'), 'G_Intro');
-    await user.click(screen.getByRole('button', { name: 'Start Oceanus' }));
+    await selectRoom(user, application, screen.getByLabelText('Starting room'), 'G_Intro');
     await user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
-    await user.selectOptions(screen.getByLabelText('Type'), 'Combat');
-
-    const roomOption = screen.getByRole('option', { name: 'Combat 01' });
-    expect(roomOption.getAttribute('data-candidate-support')).toBe('unavailable');
+    await user.click(within(exitRow(1, 1)).getByLabelText('Room'));
+    const roomOption = screen
+      .getAllByRole('option')
+      .find(
+        (candidate) =>
+          candidate.querySelector('.contextual-picker-item-label')?.textContent === 'Combat 01',
+      );
+    expect(roomOption?.getAttribute('data-candidate-state')).toBe('unassessed');
     expect(currentEvaluation(application).routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(
       ['F'],
     );
@@ -454,7 +467,7 @@ describe('golden Underworld product loop', () => {
   it('navigates, authors, undoes, and redoes G after a validated F prefix', async () => {
     const application = createApplication();
     const { user } = renderPlannerForInteraction({ application });
-    await authorGoldenF(user);
+    await authorGoldenF(user, application);
     await user.click(screen.getByRole('button', { name: 'Route' }));
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '2');
     const gFinding = currentEvaluation(application).findings.find(
@@ -475,18 +488,20 @@ describe('golden Underworld product loop', () => {
     expect(document.activeElement?.id).toBe(semanticOwnerElementId(gFinding.origin));
     expect(scrollIntoView).toHaveBeenCalledOnce();
     const start = screen.getByLabelText('Starting room');
-    expect(
-      within(start)
-        .getByRole('option', { name: 'Entrance' })
-        .getAttribute('data-candidate-support'),
-    ).toBe('forced');
-    await user.selectOptions(start, 'G_Intro');
-    await user.click(screen.getByRole('button', { name: 'Start Oceanus' }));
+    await user.click(start);
+    const entrance = screen
+      .getAllByRole('option')
+      .find(
+        (candidate) =>
+          candidate.querySelector('.contextual-picker-item-label')?.textContent === 'Entrance',
+      );
+    expect(entrance?.getAttribute('data-candidate-state')).toBe('forced');
+    await user.click(entrance!);
     const started = currentProject(application);
     expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(screen.getByRole('button', { name: 'Start Oceanus' })).toBeTruthy();
+    expect(screen.getByLabelText('Starting room')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Redo' }));
     expect(currentProject(application)).toBe(started);
     expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
@@ -704,9 +719,15 @@ describe('golden Underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
 
     const firstExit = exitRow(1, 1);
-    const alternative = within(firstExit).getByRole('option', { name: 'Combat 02' });
-    expect(alternative.getAttribute('data-candidate-support')).toBe('possible');
-    await view.user.selectOptions(within(firstExit).getByLabelText('Room'), 'G_Combat02');
+    await view.user.click(within(firstExit).getByLabelText('Room'));
+    const alternative = screen
+      .getAllByRole('option')
+      .find(
+        (candidate) =>
+          candidate.querySelector('.contextual-picker-item-label')?.textContent === 'Combat 02',
+      );
+    expect(alternative?.getAttribute('data-candidate-state')).toBe('possible');
+    await view.user.click(alternative!);
     expect(currentProject(application)).not.toEqual(authored);
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toEqual(authored);

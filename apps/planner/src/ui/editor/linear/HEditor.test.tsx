@@ -23,6 +23,8 @@ import {
   createCandidateProjectionService,
   type CandidateProjectionService,
 } from '../../../projections/candidateProjection';
+import { createContextualOptionResolver } from '../../../projections/contextualOptions';
+import { createContextualPickerProjection } from '../../../projections/contextualPicker';
 import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
@@ -159,6 +161,7 @@ function HEditorHarness({
     <LinearBiomeEditor
       candidateProjection={candidateProjection}
       catalog={catalog}
+      contextualPicker={createContextualPickerProjection(createContextualOptionResolver(catalog))}
       evaluation={evaluation}
       plan={plan}
       routeKey={biome.routeKey}
@@ -188,6 +191,10 @@ describe('H editor projection', () => {
     const { store, user } = renderH(hProject(true));
 
     expect(screen.getByRole('heading', { name: 'Fields of Mourning' })).toBeTruthy();
+    expect(screen.queryByLabelText('Type')).toBeNull();
+    await user.click(screen.getAllByLabelText('Room')[0]!);
+    expect((await screen.findAllByRole('option')).length).toBeGreaterThan(0);
+    await user.keyboard('{Escape}');
     const outcomes = screen.getAllByLabelText('Fields door roll');
     const firstOutcome = document.querySelector<HTMLSelectElement>(
       '#batch-editor-h-start-cage-outcome',
