@@ -43,7 +43,7 @@ describe('complete G catalog', () => {
       kind: 'Intro',
       mode: { kind: 'authored', templateKey: 'FixedIntro' },
       incomingReward: { kind: 'none' },
-      encounterProfileKey: 'FixedIntro',
+      encounterProfileKey: 'NoEncounter',
       counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1 },
       force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
@@ -52,7 +52,7 @@ describe('complete G catalog', () => {
     expect(intro?.exits).toEqual([
       { index: 1, type: 'OceanusExitDoor', compatibilityPolicyKey: 'Unconstrained' },
     ]);
-    expect(catalog.encounterProfiles.byKey.FixedIntro?.phases).toEqual([]);
+    expect(catalog.encounterProfiles.byKey.NoEncounter?.phases).toEqual([]);
 
     expect(catalog.biomeLayouts.byKey.G).toEqual({
       biomeKey: 'G',
@@ -144,7 +144,7 @@ describe('complete G catalog', () => {
           compatibilityPolicyKey: 'Unconstrained',
         })),
       );
-      expect(room.encounterProfileKey).toBe('StandardCombat');
+      expect(room.encounterProfileKey).toBe('SingleCountedCombat');
       expect(room.counters).toEqual({ biomeDepthCache: 1, roomHistoryOrdinal: 1 });
       expect(room.caps).toEqual({ maxAppearancesThisBiome: 1 });
       expect(room.eligibility).toEqual(eligibility);

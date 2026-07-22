@@ -81,7 +81,7 @@ export const fRooms = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -109,7 +109,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -137,7 +137,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -165,7 +165,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -193,7 +193,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -221,7 +221,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -244,7 +244,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -267,7 +267,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -292,7 +292,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -317,7 +317,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -345,7 +345,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -373,7 +373,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -401,7 +401,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
@@ -424,7 +424,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -452,7 +452,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -480,7 +480,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -508,7 +508,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -536,7 +536,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -564,7 +564,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -592,7 +592,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -620,7 +620,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -648,7 +648,7 @@ export const fRooms = [
       producerLifecycleKey: 'RoomReward',
     },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'StandardCombat',
+    encounterProfileKey: 'SingleCountedCombat',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
@@ -866,7 +866,7 @@ export const fRooms = [
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'Preboss',
+    encounterProfileKey: 'Shop',
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {

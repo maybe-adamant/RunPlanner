@@ -258,7 +258,7 @@ RoomLifecycleProfile selects an operation
 ```
 
 For example, `startEncounter(main)` does not hard-code counter arithmetic into
-every StandardCombat profile. It resolves the declared main encounter phase.
+the `SingleCountedCombat` profile. It resolves the declared main encounter phase.
 When that phase has the normalized equivalent of
 `CountsForRoomEncounterDepth`, the operation applies the room, biome, and route
 encounter-depth effects and emits addressed counter-change events before combat

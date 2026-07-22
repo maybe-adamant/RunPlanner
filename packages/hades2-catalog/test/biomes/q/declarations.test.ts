@@ -163,7 +163,7 @@ describe('complete Q catalog', () => {
         mode: { kind: 'authored', templateKey: 'RewardlessCombat' },
         incomingReward: { kind: 'none' },
         enteredRewardStoreHistory: { kind: 'none' },
-        encounterProfileKey: 'SummitCombat',
+        encounterProfileKey: 'SingleCountedCombat',
         counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
         caps: { maxAppearancesThisBiome: 1 },
       });
@@ -252,7 +252,7 @@ describe('complete Q catalog', () => {
       kind: 'Preboss',
       mode: { kind: 'authored', templateKey: 'ShopPreboss' },
       enteredRewardStoreHistory: { kind: 'none' },
-      encounterProfileKey: 'Preboss',
+      encounterProfileKey: 'Shop',
       counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1 },
       eligibility: {

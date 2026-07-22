@@ -91,7 +91,8 @@ therefore expose at most one free preboss reward.
 
 ## Room Families and Caps
 
-- 22 ordinary combat declarations use `StandardCombat`;
+- 22 ordinary combat declarations use the `StandardCombat` room template and
+  shared `SingleCountedCombat` encounter profile;
 - three miniboss declarations use `Miniboss` with concrete encounter profiles;
 - one Story room produces fixed `Story`;
 - one Reprieve uses `Fountain`;

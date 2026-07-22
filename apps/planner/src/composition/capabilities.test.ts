@@ -70,15 +70,13 @@ function catalogBeforePImport(): Catalog {
     version: '0.3.0-fg-structure-v2',
     encounterProfiles: declarations.encounterProfiles.filter(
       (profile) =>
-        !['OlympusCombat', 'P_MiniBoss01', 'P_MiniBoss02', 'P_Boss01', 'P_PostBoss01'].includes(
-          profile.key,
-        ),
+        !['P_MiniBoss01', 'P_MiniBoss02', 'P_Boss01', 'P_PostBoss01'].includes(profile.key),
     ),
     roomLifecycleProfiles: declarations.roomLifecycleProfiles.map((profile) => ({
       ...profile,
       encounterProfileKeys: profile.encounterProfileKeys.filter(
         (encounterProfileKey) =>
-          !['OlympusCombat', 'P_MiniBoss01', 'P_MiniBoss02', 'P_Boss01', 'P_PostBoss01'].includes(
+          !['P_MiniBoss01', 'P_MiniBoss02', 'P_Boss01', 'P_PostBoss01'].includes(
             encounterProfileKey,
           ),
       ),
@@ -96,7 +94,6 @@ function catalogBeforePImport(): Catalog {
 
 function catalogBeforeQImport(): Catalog {
   const qEncounterProfileKeys = [
-    'SummitCombat',
     'Q_MiniBoss02',
     'Q_MiniBoss03',
     'Q_MiniBoss04',

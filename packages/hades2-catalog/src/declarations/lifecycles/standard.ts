@@ -5,7 +5,7 @@ export const standardRoomLifecycleProfiles = [
     key: 'StandardRewardRoom',
     encounterProfileKeys: [
       'F_Opening',
-      'StandardCombat',
+      'SingleCountedCombat',
       'F_Story01',
       'G_Story01',
       'HealthRestore',
@@ -18,7 +18,6 @@ export const standardRoomLifecycleProfiles = [
       'H_MiniBoss01',
       'H_MiniBoss02',
       'H_Bridge01',
-      'ClockworkCombat',
       'I_Story01',
       'I_MiniBoss01',
       'I_MiniBoss02',
@@ -26,7 +25,6 @@ export const standardRoomLifecycleProfiles = [
       'O_MiniBoss01',
       'O_MiniBoss02',
       'O_Story01',
-      'OlympusCombat',
       'P_Story01',
       'P_MiniBoss01',
       'P_MiniBoss02',
@@ -74,7 +72,7 @@ export const standardRoomLifecycleProfiles = [
   },
   {
     key: 'RewardlessCombatRoom',
-    encounterProfileKeys: ['SummitCombat'],
+    encounterProfileKeys: ['SingleCountedCombat'],
     producer: { kind: 'none' },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },
@@ -102,7 +100,7 @@ export const standardRoomLifecycleProfiles = [
 export const specializedRewardRoomLifecycleProfiles = [
   {
     key: 'RewardlessRoom',
-    encounterProfileKeys: ['FixedIntro'],
+    encounterProfileKeys: ['NoEncounter'],
     producer: { kind: 'none' },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },

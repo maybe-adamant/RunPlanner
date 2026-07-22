@@ -131,7 +131,7 @@ describe('complete I catalog', () => {
       mode: { kind: 'derived', classification: 'fixedEntry' },
       exits: [{ index: 1, type: 'TartarusExitDoor' }],
       incomingReward: { kind: 'none' },
-      encounterProfileKey: 'FixedIntro',
+      encounterProfileKey: 'NoEncounter',
       counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     });
     expect(requireRoom('I_Story01')).toMatchObject({
@@ -182,7 +182,7 @@ describe('complete I catalog', () => {
         mode: { kind: 'authored', templateKey: 'ClockworkCombat' },
         forcedRewardStoreKey: 'TartarusRewards',
         enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-        encounterProfileKey: 'ClockworkCombat',
+        encounterProfileKey: 'SingleCountedCombat',
         counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
         caps: { maxAppearancesThisBiome: 1 },
       });
@@ -215,7 +215,7 @@ describe('complete I catalog', () => {
       }
     }
 
-    expect(catalog.encounterProfiles.byKey.ClockworkCombat?.phases).toEqual([
+    expect(catalog.encounterProfiles.byKey.SingleCountedCombat?.phases).toEqual([
       { key: 'Combat', kind: 'combat', countsEncounterDepth: true },
     ]);
   });

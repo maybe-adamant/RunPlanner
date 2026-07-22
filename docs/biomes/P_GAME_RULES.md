@@ -160,10 +160,11 @@ alternatives are equivalent for the currently modeled history facts:
 - no incoming reward is offered or acquired;
 - no supported downstream rule distinguishes the exact intro encounter name.
 
-These alternatives are intentionally simplified to the existing empty
-`FixedIntro` projection. The app preserves the room's structural and counter
-effects but does not record whether an internal intro combat occurred. This is
-a chosen semantic projection, not missing encounter-profile depth.
+These alternatives are intentionally simplified through the `FixedIntro` room
+template and empty `NoEncounter` encounter projection. The app preserves the
+room's structural and counter effects but does not record whether an internal
+intro combat occurred. This is a chosen semantic projection, not missing
+encounter-profile depth.
 
 `PIntroDreamRunEmpty` and the intro's conditional dream-run reward are external
 run-mode behavior and are omitted from the ordinary progressed-save planning
@@ -404,8 +405,8 @@ expresses:
 
 1. source-room `Indoor` and `Outdoor` tags;
 2. physical exit types and their source-sensitive target compatibility;
-3. the existing reward-free empty `FixedIntro` projection;
-4. one counting ordinary Olympus combat profile;
+3. the reward-free `FixedIntro` room with its empty `NoEncounter` projection;
+4. the shared counting `SingleCountedCombat` profile for ordinary combat;
 5. explicit miniboss encounter-depth asymmetry;
 6. the existing forked-preboss policy with one free-reward capacity;
 7. the derived neutral boss/postboss completion sequence and explicit

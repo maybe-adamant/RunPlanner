@@ -97,7 +97,7 @@ const F_Combat04 = {
     { index: 1, type: 'ErebusExitDoor' },
     { index: 2, type: 'ErebusExitDoor' },
   ],
-  encounterProfileKey: 'StandardCombat',
+  encounterProfileKey: 'SingleCountedCombat',
   incomingReward: {
     kind: 'countedChoice',
     stores: ['RunProgress', 'MetaProgress'],
@@ -329,6 +329,19 @@ Every fixed Story room uses a biome-specific encounter profile carrying its
 concrete game encounter identity. The shared `Story` reward type remains a
 reward-domain concept and must not be reused as a generic encounter identity.
 
+`SingleCountedCombat` is the shared canonical one-phase encounter projection
+for ordinary main combat rooms in F, G, I, N, P, and Q. Those rooms may retain
+different room templates, rewards, lifecycle profiles, eligibility, and
+topology without duplicating an encounter profile whose only modeled fact is
+one counting combat phase. H and O retain specialized profiles because their
+multi-phase structures are observable to current consumers.
+
+`NoEncounter` is the shared empty canonical sequence for rooms whose supported
+projection emits no encounter phase. It is not the game's concrete `Empty`
+encounter and is not tied to an Intro room role. Preboss rooms reference the
+concrete `Shop` encounter; their shop or free-reward realization belongs to
+the terminal lifecycle rather than a synthetic Preboss encounter profile.
+
 Rooms reference profiles instead of copying phase sequences. This is required
 for O multi-encounter rooms and future persistent NPC replacement. A future NPC
 assignment may replace an addressed phase before simulation; history consumes
@@ -340,6 +353,14 @@ when they are intentionally simplified under the disposition contract. O and
 future NPC composition may require real ordered phases because their phases
 change modeled rewards or counters; P's baseline does not require them merely
 because the game internally uses them.
+
+Future concrete encounter selection extends this boundary without cloning the
+shared phase topology. A Room Declaration will bind each addressed profile
+phase to a declared candidate source, an authored room occurrence will own the
+selected concrete encounter key, and materialization will validate that choice
+against the room-bound candidates before emitting resolved encounter history.
+Until that feature is implemented, declarations must not carry dormant pools
+or pretend that a collapsed profile names a concrete generated encounter.
 
 ## Reward Declarations
 

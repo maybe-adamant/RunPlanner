@@ -33,7 +33,7 @@ export const ephyraRoomLifecycleProfiles = [
   },
   {
     key: 'EphyraMainRoom',
-    encounterProfileKeys: ['EphyraCombat', 'N_MiniBoss01', 'N_MiniBoss02', 'N_Story01'],
+    encounterProfileKeys: ['SingleCountedCombat', 'N_MiniBoss01', 'N_MiniBoss02', 'N_Story01'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },
@@ -114,7 +114,7 @@ export const ephyraRoomLifecycleProfiles = [
   },
   {
     key: 'EphyraHubRoom',
-    encounterProfileKeys: ['FixedIntro'],
+    encounterProfileKeys: ['NoEncounter'],
     producer: { kind: 'none' },
     operations: [
       { kind: 'prepareRoom', effects: ['recordPreparation'] },

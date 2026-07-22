@@ -78,7 +78,7 @@ describe('shared structural catalog vocabulary', () => {
       biomeKey: 'N',
       kind: 'Intro',
       mode: { kind: 'derived', classification: 'fixedEntry' },
-      encounterProfileKey: 'FixedIntro',
+      encounterProfileKey: 'NoEncounter',
     };
     const nHub = {
       ...boss,
@@ -86,7 +86,7 @@ describe('shared structural catalog vocabulary', () => {
       biomeKey: 'N',
       kind: 'Hub',
       mode: { kind: 'derived', classification: 'hub' },
-      encounterProfileKey: 'FixedIntro',
+      encounterProfileKey: 'NoEncounter',
     };
     const nCombat = {
       ...combat,

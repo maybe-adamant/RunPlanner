@@ -2,10 +2,6 @@ import type { RawEncounterProfileDeclaration } from '../types';
 
 export const qEncounterProfiles = [
   {
-    key: 'SummitCombat',
-    phases: [{ key: 'Combat', kind: 'combat', countsEncounterDepth: true }],
-  },
-  {
     key: 'Q_MiniBoss02',
     phases: [
       {

@@ -55,12 +55,12 @@ describe('complete P catalog', () => {
       ],
       incomingReward: { kind: 'none' },
       enteredRewardStoreHistory: { kind: 'none' },
-      encounterProfileKey: 'FixedIntro',
+      encounterProfileKey: 'NoEncounter',
       counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1 },
       localChildren: [],
     });
-    expect(catalog.encounterProfiles.byKey.FixedIntro?.phases).toEqual([]);
+    expect(catalog.encounterProfiles.byKey.NoEncounter?.phases).toEqual([]);
 
     expect(catalog.biomeLayouts.byKey.P).toEqual({
       biomeKey: 'P',
@@ -137,7 +137,7 @@ describe('complete P catalog', () => {
         mode: { kind: 'authored', templateKey: 'StandardCombat' },
         structuralTags: [isOutdoor ? 'Outdoor' : 'Indoor'],
         enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-        encounterProfileKey: 'OlympusCombat',
+        encounterProfileKey: 'SingleCountedCombat',
         counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
         caps: { maxAppearancesThisBiome: 1 },
       });
@@ -173,7 +173,7 @@ describe('complete P catalog', () => {
       expect(reward.ineligibleRewardTypes).toEqual(['Devotion']);
     }
 
-    expect(catalog.encounterProfiles.byKey.OlympusCombat?.phases).toEqual([
+    expect(catalog.encounterProfiles.byKey.SingleCountedCombat?.phases).toEqual([
       { key: 'Combat', kind: 'combat', countsEncounterDepth: true },
     ]);
   });
@@ -344,7 +344,7 @@ describe('complete P catalog', () => {
       structuralTags: ['Indoor', 'Outdoor'],
       forcedRewardStoreKey: 'RunProgress',
       enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-      encounterProfileKey: 'Preboss',
+      encounterProfileKey: 'Shop',
       counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1 },
       eligibility: {

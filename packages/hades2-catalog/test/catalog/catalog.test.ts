@@ -143,6 +143,32 @@ describe('F catalog migration slice', () => {
         baselineEncounterKey: 'Shop',
       },
     ]);
+    expect(catalog.encounterProfiles.byKey.NoEncounter?.phases).toEqual([]);
+    expect(catalog.encounterProfiles.byKey.Preboss).toBeUndefined();
+    expect(catalog.encounterProfiles.byKey.SingleCountedCombat?.phases).toEqual([
+      { key: 'Combat', kind: 'combat', countsEncounterDepth: true },
+    ]);
+    for (const redundantProfile of [
+      'StandardCombat',
+      'OlympusCombat',
+      'SummitCombat',
+      'ClockworkCombat',
+      'EphyraCombat',
+    ]) {
+      expect(catalog.encounterProfiles.byKey[redundantProfile]).toBeUndefined();
+    }
+    for (const preboss of [
+      'F_PreBoss01',
+      'G_PreBoss01',
+      'H_PreBoss01',
+      'I_PreBoss02',
+      'N_PreBoss01',
+      'O_PreBoss01',
+      'P_PreBoss01',
+      'Q_PreBoss01',
+    ]) {
+      expect(catalog.rooms.byKey[preboss]?.encounterProfileKey).toBe('Shop');
+    }
 
     const opening = catalog.rooms.byKey.F_Opening01;
     const openingReward = requireCounted(opening?.incomingReward);
@@ -161,7 +187,7 @@ describe('F catalog migration slice', () => {
 
     const combat = catalog.rooms.byKey.F_Combat01;
     const combatReward = requireCounted(combat?.incomingReward);
-    expect(combat?.encounterProfileKey).toBe('StandardCombat');
+    expect(combat?.encounterProfileKey).toBe('SingleCountedCombat');
     expect(combat?.eligibility).toEqual({
       kind: 'counterRange',
       axis: 'biomeEncounterDepth',
@@ -227,7 +253,7 @@ describe('F catalog migration slice', () => {
       expect(room.exits.map((exit) => exit.index)).toEqual(
         Array.from({ length: exitCount }, (_, index) => index + 1),
       );
-      expect(room.encounterProfileKey).toBe('StandardCombat');
+      expect(room.encounterProfileKey).toBe('SingleCountedCombat');
       expect(room.counters).toEqual({ biomeDepthCache: 1, roomHistoryOrdinal: 1 });
       expect(room.caps).toEqual({ maxAppearancesThisBiome: 1 });
       expect(room.eligibility).toEqual(

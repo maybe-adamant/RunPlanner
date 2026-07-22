@@ -129,7 +129,8 @@ layouts can represent leaving and returning to a biome spine.
 
 ## Room Families and Caps
 
-- 20 ordinary combat declarations use `StandardCombat`;
+- 20 ordinary combat declarations use the `StandardCombat` room template and
+  shared `SingleCountedCombat` encounter profile;
 - `G_MiniBoss01`, `G_MiniBoss02`, and `G_MiniBoss03` are production rooms;
 - one Story room produces fixed `Story`;
 - one Reprieve uses `Fountain`;

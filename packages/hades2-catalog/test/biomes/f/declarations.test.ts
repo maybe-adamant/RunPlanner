@@ -284,7 +284,7 @@ describe('complete F catalog', () => {
       label: 'Preboss',
       kind: 'Preboss',
       mode: { kind: 'authored', templateKey: 'ForkedPreboss' },
-      encounterProfileKey: 'Preboss',
+      encounterProfileKey: 'Shop',
       counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1 },
       eligibility: {
