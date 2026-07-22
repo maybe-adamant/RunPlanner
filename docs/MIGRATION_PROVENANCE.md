@@ -290,7 +290,8 @@ been replaced by the occurrence-based conditional-terminal contract in
 | Q completion and exclusions     | ported   | `RoomDataQ.lua`, boss encounters, `biomes/Q_GAME_RULES.md`                 | Neutral `Q_Boss01` completes the route; `Q_Boss02`, Palace postboss/story, debug miniboss, and automatic boss drops stay excluded. |
 | Q staged project authorship     | ported   | `biomes/Q_GAME_RULES.md`                                                   | Ordered stage pools and the direct terminal are enforced by the shared linear codec and semantic commands.                         |
 | Q core simulation               | ported   | `biomes/Q_GAME_RULES.md`                                                   | Staged materialization, lifecycle/history, rewards, selected generation, and direct completion use shared core authorities.        |
-| Q application activation        | deferred | `biomes/Q_GAME_RULES.md`                                                   | Keep dormant until candidates, editor, and the full Surface product loop are implemented.                                          |
+| Q candidate and editor core     | ported   | `biomes/Q_GAME_RULES.md`                                                   | Stage-owned room domains, miniboss rewards, rewardless leaves, and the direct terminal reuse the shared linear editor.             |
+| Q application activation        | deferred | `biomes/Q_GAME_RULES.md`                                                   | Keep dormant until the full Surface product-loop fixtures are implemented.                                                         |
 
 ## Phase 2.8 Cross-Biome Closure
 

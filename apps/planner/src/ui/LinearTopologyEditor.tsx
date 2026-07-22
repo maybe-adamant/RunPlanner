@@ -823,15 +823,17 @@ export function LinearTopologyEditor({
   const targetCount = topology.continuations
     .filter((continuation) => continuation.kind === 'batch')
     .reduce((count, continuation) => count + continuation.targets.length, 0);
-  const fixedContinuationCount =
+  const constrainedContinuationCount =
     layout.continuation.progressionPolicy.kind === 'fixedCount'
       ? layout.continuation.progressionPolicy.continuationCount
-      : undefined;
+      : layout.continuation.progressionPolicy.kind === 'staged'
+        ? layout.continuation.progressionPolicy.stages.length
+        : undefined;
   const canAddBatch =
     batchCount < layout.bounds.maxBatches &&
-    (fixedContinuationCount === undefined || batchCount < fixedContinuationCount);
+    (constrainedContinuationCount === undefined || batchCount < constrainedContinuationCount);
   const canCreateTerminal =
-    fixedContinuationCount === undefined || batchCount === fixedContinuationCount;
+    constrainedContinuationCount === undefined || batchCount === constrainedContinuationCount;
   const frontier = frontierOccurrenceId(
     topology,
     layout.terminal.kind === 'generatedTarget' ? layout.terminal.roomGameName : undefined,
@@ -853,7 +855,8 @@ export function LinearTopologyEditor({
             candidateProjection={candidateProjection}
             canCreateTarget={targetCount < layout.bounds.maxTargets}
             canReplaceWithTerminal={
-              fixedContinuationCount === undefined && layout.terminal.kind !== 'generatedTarget'
+              constrainedContinuationCount === undefined &&
+              layout.terminal.kind !== 'generatedTarget'
             }
             catalog={catalog}
             {...(() => {
@@ -873,7 +876,7 @@ export function LinearTopologyEditor({
             biome={biome}
             candidateProjection={candidateProjection}
             canReplaceWithBatch={
-              fixedContinuationCount === undefined && batchCount < layout.bounds.maxBatches
+              constrainedContinuationCount === undefined && batchCount < layout.bounds.maxBatches
             }
             catalog={catalog}
             continuation={continuation}

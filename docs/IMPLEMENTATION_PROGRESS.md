@@ -655,6 +655,17 @@ validated as its own forced pool. Q is registered in core simulation so the
 full N/O/P/Q route can be tested, while application authoring and editing stay
 dormant until the remaining slices close.
 
+Phase 6 Q Slice 3 is complete. The normal project candidate evaluator now
+returns stage-constrained room support and exact source-depth evidence for Q;
+the editor's pure room-domain projection hides rooms outside the current
+declaration-owned stage. The shared linear editor renders one- and two-exit
+stages, rewardless leaves, concrete miniboss reward controls, selected
+findings, and the direct preboss shop without a batch-store control. Staged
+frontier rules expose another batch only before stage six and the direct
+terminal only after it, while destructive downstream operations retain the
+common semantic-command contract. This editor remains behind a dormant Q
+application capability until Slice 4 closes the full Surface loop.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1360,8 +1371,8 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, all six O slices, all three P slices, and Q Slices 1-2
-are complete. By explicit implementation-order decision, the remaining two Q Phase 6
+five I slices, all nine N slices, all six O slices, all three P slices, and Q Slices 1-3
+are complete. By explicit implementation-order decision, the final Q Phase 6
 slices now precede
 the contextual-selection UX insertion. They reuse the existing editor and
 candidate language while preserving the typed data required by that later UX
