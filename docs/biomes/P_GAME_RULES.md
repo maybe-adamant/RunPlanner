@@ -8,7 +8,7 @@ assumptions.
 
 Shared picker, physical-door, cap, force, offer/acquisition, generated-store,
 standard linear, and forked-preboss semantics are defined by
-`../GAME_GENERATION_RULES.md`.
+`../design/GAME_GENERATION_RULES.md`.
 
 P declarations and its shared-linear simulation, candidate, and editor core are
 implemented under the progressed-save, NPC-free baseline. The core consumes a
@@ -46,32 +46,32 @@ empty even though the game can play a non-counting intro combat there.
 
 ## Feature Projection Map
 
-The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
-coverage is defined by `../MIGRATION_PROVENANCE.md`. P has declaration,
+The disposition vocabulary is defined by `../design/CATALOG_MODEL.md`; implementation
+coverage is defined by `../progress/MIGRATION_PROVENANCE.md`. P has declaration,
 authorship, materialization, history, reward, selected-validation, candidate,
 editor-projection, profile, recovery, and application coverage.
 
-| Feature                              | Verified game behavior                                                                                                  | Disposition and planner projection                                           | Current coverage     | Reconsider when                                                     |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------- |
-| Linear layout and terminal           | Fixed `P_Intro`, ordinary generated decisions, and exact-depth-9 `P_PreBoss01`                                          | **Exact:** `LinearBiome` with forked terminal occurrences                    | implemented          | --                                                                  |
-| Typed physical exits                 | Indoor/Outdoor door types impose source-sensitive target-tag rules                                                      | **Exact:** declaration-owned room tags plus normalized exit policies         | documented, declared | --                                                                  |
-| Room-set weights                     | Story and Fountain have doubled weight; other supported rooms have positive ordinary weights                            | **Simplified:** preserve support and forced pools, never likelihood          | documented           | Probability analysis or seeded replay becomes a product goal        |
-| Intro encounter                      | `P_Intro` may play one non-counting, reward-free combat or an empty alternative                                         | **Simplified:** empty fixed intro with the same modeled counters and rewards | implemented          | Combat occurrence or encounter-content timing becomes observable    |
-| Ordinary combat phases               | A non-counting precombat precedes one counting main combat                                                              | **Simplified:** one counting Olympus combat projection                       | implemented          | Internal phases acquire modeled rewards, choices, or timing effects |
-| `P_Combat03` first-time variant      | Save progression can replace the ordinary phase structure                                                               | **Excluded:** use the progressed-save ordinary combat projection             | documented           | Save-profile state becomes a project input                          |
-| Combat and special-room requirements | Current-run caps, counter ranges, force windows, mutual exclusion, and predecessor-exit requirements govern eligibility | **Exact:** explicit declarations and history predicates                      | implemented          | --                                                                  |
-| Reward-store selection               | Surface history drives a `0.20` MetaProgress target and random Run/Meta selection                                       | **Simplified:** retain only possible/forced base-store support               | implemented          | Probability analysis or exact RNG replay is introduced              |
-| Incoming rewards and shops           | Ordinary, fixed, shop, miniboss, and preboss producers use concrete filters and lifecycle timing                        | **Exact:** concrete occurrence reward state and offer/acquisition history    | implemented          | --                                                                  |
-| Miniboss encounter depth             | Talos is non-counting; Mega-Dracon is counting                                                                          | **Exact:** separate encounter profiles                                       | implemented          | --                                                                  |
-| Preboss realizations                 | First terminal creation is Shop; another predecessor exit creates one free RunProgress reward                           | **Exact:** distinct terminal occurrences of the same room declaration        | implemented          | --                                                                  |
-| Fixed boss and postboss tail         | `P_PreBoss01` leads through `P_Boss01` and then `P_PostBoss01` before Q                                                 | **Exact:** layout-derived neutral Prometheus room then postboss              | implemented          | User-selected difficulty becomes a project input                    |
-| Save/profile special-room gates      | Fountain upgrades, Story progression, dialogue, bounty, and other persistent facts affect availability                  | **Excluded:** progressed-save baseline retains current-run rules only        | documented           | Save-profile state becomes a project input                          |
+| Feature                              | Verified game behavior                                                                                                  | Disposition and planner projection                                           | Implementation status | Reconsider when                                                     |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------- |
+| Linear layout and terminal           | Fixed `P_Intro`, ordinary generated decisions, and exact-depth-9 `P_PreBoss01`                                          | **Exact:** `LinearBiome` with forked terminal occurrences                    | implemented           | --                                                                  |
+| Typed physical exits                 | Indoor/Outdoor door types impose source-sensitive target-tag rules                                                      | **Exact:** declaration-owned room tags plus normalized exit policies         | implemented           | --                                                                  |
+| Room-set weights                     | Story and Fountain have doubled weight; other supported rooms have positive ordinary weights                            | **Simplified:** preserve support and forced pools, never likelihood          | implemented           | Probability analysis or seeded replay becomes a product goal        |
+| Intro encounter                      | `P_Intro` may play one non-counting, reward-free combat or an empty alternative                                         | **Simplified:** empty fixed intro with the same modeled counters and rewards | implemented           | Combat occurrence or encounter-content timing becomes observable    |
+| Ordinary combat phases               | A non-counting precombat precedes one counting main combat                                                              | **Simplified:** one counting Olympus combat projection                       | implemented           | Internal phases acquire modeled rewards, choices, or timing effects |
+| `P_Combat03` first-time variant      | Save progression can replace the ordinary phase structure                                                               | **Excluded:** use the progressed-save ordinary combat projection             | documented boundary   | Save-profile state becomes a project input                          |
+| Combat and special-room requirements | Current-run caps, counter ranges, force windows, mutual exclusion, and predecessor-exit requirements govern eligibility | **Exact:** explicit declarations and history predicates                      | implemented           | --                                                                  |
+| Reward-store selection               | Surface history drives a `0.20` MetaProgress target and random Run/Meta selection                                       | **Simplified:** retain only possible/forced base-store support               | implemented           | Probability analysis or exact RNG replay is introduced              |
+| Incoming rewards and shops           | Ordinary, fixed, shop, miniboss, and preboss producers use concrete filters and lifecycle timing                        | **Exact:** concrete occurrence reward state and offer/acquisition history    | implemented           | --                                                                  |
+| Miniboss encounter depth             | Talos is non-counting; Mega-Dracon is counting                                                                          | **Exact:** separate encounter profiles                                       | implemented           | --                                                                  |
+| Preboss realizations                 | First terminal creation is Shop; another predecessor exit creates one free RunProgress reward                           | **Exact:** distinct terminal occurrences of the same room declaration        | implemented           | --                                                                  |
+| Fixed boss and postboss tail         | `P_PreBoss01` leads through `P_Boss01` and then `P_PostBoss01` before Q                                                 | **Exact:** layout-derived neutral Prometheus room then postboss              | implemented           | User-selected difficulty becomes a project input                    |
+| Save/profile special-room gates      | Fountain upgrades, Story progression, dialogue, bounty, and other persistent facts affect availability                  | **Excluded:** progressed-save baseline retains current-run rules only        | documented boundary   | Save-profile state becomes a project input                          |
 
 ## Possibility Contract
 
 P uses the possibility-only room-selection contract from
-`../GAME_GENERATION_RULES.md` and the validation contract from
-`../SIMULATION_AND_VALIDATION.md`. Room-set and encounter-set multiplicity changes
+`../design/GAME_GENERATION_RULES.md` and the validation contract from
+`../design/SIMULATION_AND_VALIDATION.md`. Room-set and encounter-set multiplicity changes
 relative random weight, not validity. Every positive-weight member that remains
 eligible is possible; the simulator does not score how likely it is.
 
@@ -225,7 +225,7 @@ cosmetic add-ons:
 - their availability depends on persistent NPC and save-file state.
 
 This is concrete P evidence for the project-wide persistent-NPC policy owned by
-`../GAME_GENERATION_RULES.md`: a configured persistent NPC is an authored
+`../design/GAME_GENERATION_RULES.md`: a configured persistent NPC is an authored
 persistent entity composed into the room spine before history is materialized.
 The v1 baseline suppresses all NPC encounter variants. The P room declaration
 does not pretend these variants are ordinary equivalent encounter choices.
@@ -260,7 +260,7 @@ are:
 | `P_PreBoss01`   | first Shop, then free forced-RunProgress rewards excluding Devotion and RoomMoneyDrop |
 
 The fixed Story and Shop producers still receive resolved store provenance for
-entered-room ratio history, as described by `../REWARD_MODEL.md`.
+entered-room ratio history, as described by `../design/REWARD_MODEL.md`.
 
 ## Special Rooms
 
@@ -397,9 +397,9 @@ P history preserves:
 `biomeDepthCache`, `biomeEncounterDepth`, and route-wide room-history ordinal
 remain separate axes.
 
-## Declaration-Port Contract
+## Normalized Declaration Contract
 
-The dormant P declaration slice is faithful because the normalized catalog
+The P declaration set is faithful because the normalized catalog
 expresses:
 
 1. source-room `Indoor` and `Outdoor` tags;

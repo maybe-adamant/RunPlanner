@@ -670,7 +670,7 @@ Gate:
 Deliver:
 
 - the canonical linear-biome, room, batch, target, terminal-entry, and
-  completion-room contracts defined by `SIMULATION_AND_VALIDATION.md`;
+  completion-room contracts defined by `../design/SIMULATION_AND_VALIDATION.md`;
 - one common `LinearBiome` materializer that consumes complete normalized
   topology and layout declarations without validating contextual legality;
 - strict room-template materializer dispatch for every authored F template;
@@ -1283,7 +1283,7 @@ inside the simulator:
 
 These are data-shape and ownership constraints, not additional Phase 5 UX
 deliverables. The presentation contract is defined in
-`CONTEXTUAL_EDITOR_UX.md`.
+`../design/CONTEXTUAL_EDITOR_UX.md`.
 
 ## Phase 6: Controlled Biome Expansion
 
@@ -1300,7 +1300,7 @@ Implement in this order unless concrete dependencies justify a change:
 The rollout has an explicit UX insertion boundary after N and before O. Close
 the persistent-Hub traversal body through one complete N product loop, then
 complete the contextual room/reward selection work in
-`CONTEXTUAL_EDITOR_UX.md` across F/G/H/I/N before resuming controlled expansion
+`../design/CONTEXTUAL_EDITOR_UX.md` across F/G/H/I/N before resuming controlled expansion
 with O/P/Q. This grounds the shared interaction language in both linear and hub
 editors without waiting for the remaining structurally linear Surface biomes.
 
@@ -1577,7 +1577,7 @@ slice rather than being accepted as refactor fallout.
 ### Contextual Selection UX Insertion
 
 After N activates and before beginning O, harden the complete Underworld and N
-editors through the focused contract in `CONTEXTUAL_EDITOR_UX.md`:
+editors through the focused contract in `../design/CONTEXTUAL_EDITOR_UX.md`:
 
 - refactor the binary incomplete-biome early return into one progressive
   evaluation carrying a semantic authoring frontier and maximum truthful
@@ -1706,7 +1706,7 @@ Do not create placeholder production behavior that claims a biome is simulated
 when it only has declarations or UI.
 
 Phase 6 biome editors inherit the contextual selection contract in
-`CONTEXTUAL_EDITOR_UX.md`. Frontier controls may remain layout-specific until
+`../design/CONTEXTUAL_EDITOR_UX.md`. Frontier controls may remain layout-specific until
 the later cross-biome review; no biome editor may move frontier game rules into
 React merely to improve its presentation.
 
@@ -1775,7 +1775,7 @@ simulation and shared UX architecture.
 
 ## Phase 9: Simulation Conformance and Game Protocol
 
-Begin only after the readiness gate in `GAME_INTEGRATION_BOUNDARY.md` passes.
+Begin only after the readiness gate in `../design/GAME_INTEGRATION_BOUNDARY.md` passes.
 
 ### Deliverables
 

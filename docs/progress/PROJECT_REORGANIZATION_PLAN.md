@@ -11,11 +11,11 @@ This is primarily a structural migration. It does not authorize changes to
 game rules, project persistence, simulation semantics, candidate support,
 editor behavior, or the future execution-plan boundary.
 
-Until Slice 7 reconciles `ARCHITECTURE.md`, the target repository shape in this
-document supersedes the older scaffold example in that document. All other
-architecture and domain rules remain authoritative.
+Slices 1 through 7 are complete. `../design/ARCHITECTURE.md` now owns the live
+repository shape; this document preserves the migration sequence and defines
+the remaining Slice 8 cleanup work.
 
-## Current Structural Findings
+## Initial Structural Findings
 
 The existing production dependency direction is sound:
 
@@ -569,6 +569,7 @@ docs/design/
   GAME_INTEGRATION_BOUNDARY.md
 
 docs/audits/
+  N_SIDE_ROOM_FINDINGS.md
   REWARD_GAME_DATA_AUDIT.md
 
 docs/progress/
@@ -580,15 +581,15 @@ docs/progress/
 ```
 
 Keep `docs/biomes/` as the biome-specific authority. Move
-`N_SIDE_ROOM_FINDINGS.md` into `docs/audits/` only if its remaining content is
-evidence rather than a live N rule; otherwise fold the live conclusions into
-`N_GAME_RULES.md` and archive only the evidence.
+`../audits/N_SIDE_ROOM_FINDINGS.md` into `docs/audits/` only if its remaining
+content is evidence rather than a live N rule; otherwise fold the live
+conclusions into `../biomes/N_GAME_RULES.md` and archive only the evidence.
 
 Update:
 
 - every Markdown link and README reading-order entry;
-- `AGENTS.md` path guidance;
-- the proposed repository shape and package names in `ARCHITECTURE.md`;
+- `../../AGENTS.md` path guidance;
+- the proposed repository shape and package names in `../design/ARCHITECTURE.md`;
 - current-status paragraphs that still describe active biomes as dormant or
   declaration-only;
 - authority tables so historical progress text is not mistaken for live

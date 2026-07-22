@@ -4,7 +4,7 @@
 
 This progress record maps the Phase 5 acceptance contract to concrete evidence.
 It is not a new design authority. Candidate semantics remain owned by
-`SIMULATION_AND_VALIDATION.md`, editor behavior by `EDITOR_MODEL.md`, and
+`../design/SIMULATION_AND_VALIDATION.md`, editor behavior by `../design/EDITOR_MODEL.md`, and
 delivery scope by `IMPLEMENTATION_PLAN.md`.
 
 ## Automated Acceptance Matrix

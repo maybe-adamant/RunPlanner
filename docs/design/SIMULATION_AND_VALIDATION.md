@@ -14,17 +14,12 @@ it will not duplicate it.
 
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
-F/G/P/Q/H/O/I/N audit set. Phase 2.8 dormant declaration closure and Phase 3's
-complete linear simulation pipeline are complete. F, G, H, I, and N now share one public
+F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
 completeness, materialization, lifecycle, event-folded history,
 room-generation, reward-kernel, project-simulation, selected-plan validation,
-and candidate result across layout-specific canonical snapshots. Phase 5
-closed F/G through the editor, profile, and recovery product loop; Phase 6
-extended the same boundary through H, I, and N. N participates in project
-dispatch, application capabilities, profiles, recovery, and the Surface
-editor; P/Q/O remain declaration-only.
-The Phase 2.7 authority switch and schema-version-3 identity cleanup leave
-those simulation contracts unchanged.
+and candidate-result boundary across layout-specific canonical snapshots. The
+same application composition publishes those results to the editor, profiles,
+and recovery workflow for both complete routes.
 
 ## Core Contract
 
@@ -40,8 +35,8 @@ The operation is:
 - complete enough to return useful incomplete and invalid results;
 - strict about malformed catalogs and violated construction invariants.
 
-The initial implementation performs a full synchronous rebuild after every
-semantic edit. Optimization follows profiling rather than speculation.
+The implementation performs a full synchronous rebuild after every semantic
+edit. Optimization follows profiling rather than speculation.
 
 ## Possibility Support Contract
 
@@ -243,7 +238,7 @@ or hypothetical predecessor completions.
 This progressive result is the locked contract for the contextual-selection
 insertion and is not yet the production result shape. Production currently
 returns early with completeness findings when the active biome is incomplete;
-`IMPLEMENTATION_PROGRESS.md` records that replacement as the next work item.
+`../progress/IMPLEMENTATION_PROGRESS.md` records that replacement as the next work item.
 
 ## Completeness
 
@@ -279,7 +274,7 @@ Any additional state required by the normalized batch policy is equally part
 of completeness. An ordinary H batch requires one concrete semantic
 `cageOutcome`, even when it has no combat target or when Min and Max derive the
 same visible cage count. H terminal transitions deliberately own no cage
-outcome under the observational simplification defined by `biomes/H_GAME_RULES.md`.
+outcome under the observational simplification defined by `../biomes/H_GAME_RULES.md`.
 
 An I combat occurrence is complete when its potential concrete Tartarus reward
 is complete even when Clockwork simulation currently derives Goal. The dormant
@@ -1101,9 +1096,9 @@ scope includes all eight declared biomes. Application interaction fixtures and
 direct core conformance fixtures exercise the complete F/G/H/I and N/O/P/Q
 route prefixes.
 An entirely unconfigured project has explicit `empty` status, no findings, and
-is not eligible for execution-plan compilation.
-Candidate results and UI decoration are deliberately absent from this Phase 3
-contract.
+is not eligible for execution-plan compilation. Candidate evaluation consumes
+the same prepared context and legality authorities as selected-plan
+validation; UI decoration remains a downstream application projection.
 
 The complete result is replaced atomically after an authored edit.
 

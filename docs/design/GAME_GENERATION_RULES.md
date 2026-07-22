@@ -13,9 +13,9 @@ these generation rules observe room-local acquisitions.
 
 It does not own a biome's start, room set, concrete exits, target reward ratio,
 requirements, terminal depth, or biome-specific feature dispositions. Those
-facts remain in `biomes/F_GAME_RULES.md`, `biomes/G_GAME_RULES.md`, `biomes/P_GAME_RULES.md`,
-`biomes/Q_GAME_RULES.md`, `biomes/H_GAME_RULES.md`, `biomes/O_GAME_RULES.md`,
-`biomes/I_GAME_RULES.md`, and `biomes/N_GAME_RULES.md`.
+facts remain in `../biomes/F_GAME_RULES.md`, `../biomes/G_GAME_RULES.md`, `../biomes/P_GAME_RULES.md`,
+`../biomes/Q_GAME_RULES.md`, `../biomes/H_GAME_RULES.md`, `../biomes/O_GAME_RULES.md`,
+`../biomes/I_GAME_RULES.md`, and `../biomes/N_GAME_RULES.md`.
 
 ## Evidence Status
 
@@ -37,7 +37,7 @@ actually uses a shared rule.
 ## Shared Feature Projection Map
 
 The disposition vocabulary is defined by `CATALOG_MODEL.md`; implementation
-coverage is defined by `MIGRATION_PROVENANCE.md`.
+coverage is defined by `../progress/MIGRATION_PROVENANCE.md`.
 
 | Feature                               | Verified game behavior                                                                                             | Disposition and planner projection                                                                  | Current shared coverage                                   | Reconsider when                                              |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------ |
@@ -274,7 +274,7 @@ peer targets or updates batch-level history; it does not move local values out
 of the target occurrences. H is the first concrete use: one semantic cage
 outcome activates the same bounded local-slot prefix on every combat target
 and updates a biome counter even when capacity hides the visible result.
-`biomes/H_GAME_RULES.md` owns the exact outcome support, capacity fold, counter, and
+`../biomes/H_GAME_RULES.md` owns the exact outcome support, capacity fold, counter, and
 the narrow terminal omission.
 
 ## Conditional-Terminal Generated Batches
@@ -305,7 +305,7 @@ entered-room shop state is required and materialized only when that occurrence
 is picked.
 
 Biome authorities own the exact eligibility, force, ordering, and local leaf
-state. `biomes/I_GAME_RULES.md` owns the first concrete policy. Other linear biomes
+state. `../biomes/I_GAME_RULES.md` owns the first concrete policy. Other linear biomes
 continue to use an independent terminal transition unless their game data
 proves the mixed form.
 
@@ -334,7 +334,7 @@ occurrences or authored cycles.
 After the declared visit count is complete, the hub exposes a separate fixed
 terminal role. The persistent board and terminal may coexist structurally;
 neither is encoded as an ordinary linear continuation owned by the restored
-hub. `biomes/N_GAME_RULES.md` owns the exact availability, pylon, side-room, reward,
+hub. `../biomes/N_GAME_RULES.md` owns the exact availability, pylon, side-room, reward,
 and terminal rules.
 
 ## Shop-Then-Fill Preboss Policy

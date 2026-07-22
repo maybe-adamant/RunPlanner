@@ -5,7 +5,7 @@
 This document is the concrete game-rule authority for Erebus (`F`). Shared
 picker, physical-door, cap, force, offer/acquisition, generated-store, standard
 linear, and forked-preboss semantics are defined by
-`../GAME_GENERATION_RULES.md`.
+`../design/GAME_GENERATION_RULES.md`.
 
 Exact room-local exits, requirements, caps, labels, encounter-profile keys,
 and reward bindings appear explicitly in catalog declarations. This document
@@ -30,21 +30,21 @@ sources are:
 
 ## Feature Projection Map
 
-The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
-coverage is defined by `../MIGRATION_PROVENANCE.md`.
+The disposition vocabulary is defined by `../design/CATALOG_MODEL.md`; implementation
+coverage is defined by `../progress/MIGRATION_PROVENANCE.md`.
 
-| Feature                                      | Verified game behavior                                                                                                    | Disposition and planner projection                                                                     | Current coverage                                         | Reconsider when                                            |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ---------------------------------------------------------- |
-| Generated decisions                          | F uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                   | documented, declared, authored, simulated, and presented | --                                                         |
-| Opening baseline                             | `F_Opening01..03` use counting `OpeningGeneratedF` and forced RunProgress in the progressed-save route                    | **Exact:** one counting opening encounter and its resolved reward offer                                | documented, declared, authored, simulated, and presented | --                                                         |
-| Progression encounter variants               | `OpeningEmpty`, `FCastTutorialFight`, and `FIntroFight` depend on persistent progression                                  | **Excluded:** absent from the progressed-save baseline                                                 | documented; progressed baseline declared                 | Save-profile state becomes a project input                 |
-| Ordinary combat identity                     | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition | documented, declared                                     | Combat composition becomes an authored or validated output |
-| Room eligibility and force                   | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | documented, declared; F simulation implemented           | --                                                         |
-| Reward-store selection                       | F targets MetaProgress ratio `0.315` with adjustment speed `10`                                                           | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | documented, declared, and simulated                      | Probability analysis or exact RNG replay is introduced     |
-| Incoming rewards and shops                   | Openings, `F_Combat01`, minibosses, and preboss force RunProgress; other producers retain concrete filters and shops      | **Exact:** occurrence reward state plus declaration-owned overrides                                    | documented, declared, authored, simulated, and presented | --                                                         |
-| Forked preboss                               | Every predecessor exit creates `F_PreBoss01`; first is Shop and at most one additional exit is a free reward              | **Exact:** one or two terminal occurrences of the same declaration                                     | documented, declared, authored, simulated, and presented | --                                                         |
-| Fixed boss and postboss tail                 | `F_PreBoss01` leads through one mutually exclusive Hecate variant and then `F_PostBoss01`                                 | **Exact:** layout-derived `F_Boss01` then `F_PostBoss01` under the neutral difficulty baseline         | documented, declared, and simulated                      | User-selected difficulty becomes a project input           |
-| Story, Fountain, and other progression gates | Dialogue, world upgrades, and persistent progression alter availability                                                   | **Excluded:** progressed-save baseline retains current-run rules only                                  | documented; progressed baseline declared                 | Save-profile state becomes a project input                 |
+| Feature                                      | Verified game behavior                                                                                                    | Disposition and planner projection                                                                     | Implementation status | Reconsider when                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------- | ---------------------------------------------------------- |
+| Generated decisions                          | F uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                   | implemented           | --                                                         |
+| Opening baseline                             | `F_Opening01..03` use counting `OpeningGeneratedF` and forced RunProgress in the progressed-save route                    | **Exact:** one counting opening encounter and its resolved reward offer                                | implemented           | --                                                         |
+| Progression encounter variants               | `OpeningEmpty`, `FCastTutorialFight`, and `FIntroFight` depend on persistent progression                                  | **Excluded:** absent from the progressed-save baseline                                                 | documented boundary   | Save-profile state becomes a project input                 |
+| Ordinary combat identity                     | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition | implemented           | Combat composition becomes an authored or validated output |
+| Room eligibility and force                   | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | implemented           | --                                                         |
+| Reward-store selection                       | F targets MetaProgress ratio `0.315` with adjustment speed `10`                                                           | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | implemented           | Probability analysis or exact RNG replay is introduced     |
+| Incoming rewards and shops                   | Openings, `F_Combat01`, minibosses, and preboss force RunProgress; other producers retain concrete filters and shops      | **Exact:** occurrence reward state plus declaration-owned overrides                                    | implemented           | --                                                         |
+| Forked preboss                               | Every predecessor exit creates `F_PreBoss01`; first is Shop and at most one additional exit is a free reward              | **Exact:** one or two terminal occurrences of the same declaration                                     | implemented           | --                                                         |
+| Fixed boss and postboss tail                 | `F_PreBoss01` leads through one mutually exclusive Hecate variant and then `F_PostBoss01`                                 | **Exact:** layout-derived `F_Boss01` then `F_PostBoss01` under the neutral difficulty baseline         | implemented           | User-selected difficulty becomes a project input           |
+| Story, Fountain, and other progression gates | Dialogue, world upgrades, and persistent progression alter availability                                                   | **Excluded:** progressed-save baseline retains current-run rules only                                  | documented boundary   | Save-profile state becomes a project input                 |
 
 ## Layout
 
@@ -110,8 +110,8 @@ layout engine does not special-case their names.
 
 F targets a MetaProgress entered-room ratio of `0.315` and uses adjustment
 speed `10` under the neutral progressed-save baseline. It uses the shared
-support-only formula from `../REWARD_MODEL.md` within the generated-door lifecycle
-defined by `../GAME_GENERATION_RULES.md`.
+support-only formula from `../design/REWARD_MODEL.md` within the generated-door lifecycle
+defined by `../design/GAME_GENERATION_RULES.md`.
 
 After F's forced RunProgress opening, `currentMetaRatio = 0` and:
 

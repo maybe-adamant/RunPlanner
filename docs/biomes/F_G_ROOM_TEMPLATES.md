@@ -8,7 +8,7 @@ materialization behavior shared by concrete Room Declarations. It is not a UI
 component, Lib control, persistence allocation, or source of topology.
 
 Template materialization produces room-local semantic input. The
-catalog-selected lifecycle profile defined by `../ROOM_LIFECYCLE_MODEL.md`
+catalog-selected lifecycle profile defined by `../design/ROOM_LIFECYCLE_MODEL.md`
 turns that input into an ordered `RoomHistoryFragment`; templates do not own or
 imperatively execute history ordering.
 
@@ -50,7 +50,7 @@ occurrence is picked.
 
 ## Common Reward Fragments
 
-Templates compose the reward values defined in `../REWARD_MODEL.md`:
+Templates compose the reward values defined in `../design/REWARD_MODEL.md`:
 
 ```ts
 type RoomRewardState =

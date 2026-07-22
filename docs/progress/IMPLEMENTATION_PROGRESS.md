@@ -674,7 +674,7 @@ accessibility, profile round trips, autosave recovery, and measured
 publication/rebuild behavior. All eight declared biomes now participate in the
 application capability matrix and Phase 6 is complete.
 
-The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
+The Phase 3 timing foundation is documented in `../design/ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
 and outgoing-generation checkpoints are implemented by the pure single-room
@@ -761,7 +761,7 @@ instance with an entry-mode field.
 
 The cross-biome audits establish P, Q, H, O, I, and N as dormant declaration
 targets.
-`biomes/P_GAME_RULES.md` records its typed source-sensitive exits, reward-free
+`../biomes/P_GAME_RULES.md` records its typed source-sensitive exits, reward-free
 empty-intro simplification, intentionally collapsed counting combat projection,
 miniboss encounter-depth asymmetry, forked preboss, and persistent-NPC
 composition boundary. The F, G, P, Q, H, O, I, and N rule documents now
@@ -769,14 +769,14 @@ distinguish verified game behavior, modeling disposition, canonical
 projection, reconsideration trigger, and current feature coverage. P, Q, H, O,
 I, and N are now declaration-complete and dormant.
 
-`biomes/Q_GAME_RULES.md` records Q's declaration-driven scripted stages, real foyer
+`../biomes/Q_GAME_RULES.md` records Q's declaration-driven scripted stages, real foyer
 variants, independently generated and repeatable miniboss peers, reward-free
 combat spine, Typhon miniboss store, direct Summit shop, Eye/Tail encounter-
 depth asymmetry, and boss-level repeat-run completion. It excludes the Palace
 postboss/story path as narrative progression and proves that reward-free
 generated batches must not author a meaningless base store.
 
-`biomes/H_GAME_RULES.md` records H's four-room count-driven spine, exact physical
+`../biomes/H_GAME_RULES.md` records H's four-room count-driven spine, exact physical
 exits, bridge forced-pool competition, batch-owned semantic Min/Max cage
 outcome, hidden two-Max ceiling updates, room-owned local cage slots, and
 two-or-three counting encounters per entered combat. Its generated batch uses
@@ -785,13 +785,13 @@ declaration-owned RunProgress provenance. It defers
 `FieldsOptionalRewards` under a canonical no-pickup trace and narrowly omits
 the terminal-only cage roll because H has no downstream consumer for it.
 
-`biomes/O_GAME_RULES.md` records O's six-room single-exit spine, ordered Intro plus
+`../biomes/O_GAME_RULES.md` records O's six-room single-exit spine, ordered Intro plus
 one/two counting ShipCombat phases, phase-owned one/two-option wheels,
 source-derived outgoing store, three combat eligibility families, special-room
 BED asymmetry, and direct shop-only preboss. It corrects the legacy assumption
 that early O combat requirements compose with the inherited recent-room rule.
 
-`biomes/I_GAME_RULES.md` records the fixed progressed-save Story entry, five
+`../biomes/I_GAME_RULES.md` records the fixed progressed-save Story entry, five
 acquisition-driven Clockwork Goals, authored three-through-six non-goal cap,
 fixed Tartarus target-store override, exact two-exit reserve, and supported
 special peers. It replaces the old terminal-plus-companion workaround with one
@@ -799,11 +799,11 @@ conditional-terminal `ClockworkDoorBatch`: picking `I_PreBoss02` completes the
 biome, while picking its ordinary peer continues and permits a later preboss
 occurrence.
 
-`biomes/N_GAME_RULES.md` records fixed authored Opening, PreHub, and preboss leaves;
+`../biomes/N_GAME_RULES.md` records fixed authored Opening, PreHub, and preboss leaves;
 one nine-or-ten-target persistent hub offer board over catalog-fixed slots; six
 ordered pylon visits; bounded generated and entered side-room state; parent and
 hub restores; and the full-board reward lookup consumed by the terminal
-WorldShop. `biomes/N_SIDE_ROOM_FINDINGS.md` closes exact local availability
+WorldShop. `../audits/N_SIDE_ROOM_FINDINGS.md` closes exact local availability
 ranks for all multi-side-door maps. Local rewards validate as one unordered
 sibling batch. Eventual hub execution order remains a targeted conformance
 probe rather than unresolved schema work.
@@ -844,7 +844,7 @@ Delivered:
 - ESLint dependency-boundary rules;
 - Prettier configuration;
 - production build and aggregate `npm run check` script;
-- browser-development instructions in `../README.md`.
+- browser-development instructions in `../../README.md`.
 
 Validation at completion:
 
@@ -1173,7 +1173,7 @@ these cross-biome reward-model findings for continued verification:
   god source, holds `allSpellInvested` false, and keeps `pendingSpellDrop` false
   while Surface Shop delivery remains deferred.
 
-`REWARD_GAME_DATA_AUDIT.md` records the exact, simplified, deferred, and
+`../audits/REWARD_GAME_DATA_AUDIT.md` records the exact, simplified, deferred, and
 excluded disposition of the complete reward surface. It also records deferred
 affordability, resource, reroll, and trait depth, plus derived purchase-order
 branching, so production does not grow placeholder predicates for them.

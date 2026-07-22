@@ -399,8 +399,8 @@ The user-facing project lifecycle has one explicit file workflow:
 - **Load Profile** decodes one selected profile file and replaces the project
   only after the entire document passes capability validation.
 
-The temporary Phase 4 distinction between local Save/Load and Export/Import is
-not retained as two public persistence concepts. Browser Save Profile uses a
+Local Save/Load and Export/Import are not retained as two public persistence
+concepts. Browser Save Profile uses a
 download and Browser Load Profile uses an upload. A later desktop host may use
 native file dialogs through the same application contract. The suggested
 filename is derived from the editable project name, for example

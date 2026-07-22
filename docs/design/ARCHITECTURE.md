@@ -86,64 +86,70 @@ validated derived result
 Every arrow points from an authority to a consumer. A downstream layer must
 not write back into an upstream authority as a side effect.
 
-## Proposed Repository Shape
+## Repository Shape
 
-The first scaffold should use one workspace with explicit packages:
+The workspace is organized by current ownership:
 
 ```text
 RunPlanner/
   apps/
     planner/
       src/
-        application/
+        composition/
+        persistence/
+        projections/
+        state/
         ui/
-      src-tauri/              # added later
+        workspace/
+      test/
 
   packages/
-    catalog/
+    hades2-catalog/
       src/
         declarations/
-        normalization/
+        compiler/
+      test/
 
-    core/
+    planner-engine/
       src/
-        model/
-        commands/
-        materialization/
-        history/
-        validation/
-        feedback/
+        catalog-schema/
+        authored-project/
+        requirements/
+        reward-kernel/
+        simulation/
+      test/
 
-  fixtures/
-    projects/
-    canonical/
-    histories/
-    findings/
+  docs/
+    design/
+    biomes/
+    audits/
+    progress/
 ```
 
-`packages/planner-engine` defines pure semantic types and operations. It may define the
-normalized catalog interface required by simulation, but it cannot import the
-catalog package. `packages/hades2-catalog` constructs that interface from explicit
-declarations. The planner app is the composition root that constructs the
-catalog, creates application state, invokes the simulator, and binds results
-to React.
+`packages/planner-engine` defines pure semantic types and operations. It defines
+the normalized catalog interface required by simulation, but its production
+code cannot import the catalog package. `packages/hades2-catalog` constructs
+that interface from explicit declarations. The planner app is the composition
+root that constructs the catalog, creates application state, invokes the
+simulator, and binds results to React. Tests live beside the authority they
+exercise; cross-layer browser fixtures live under `apps/planner/test/`.
 
-This avoids a catalog/core dependency cycle:
+This avoids a catalog/engine dependency cycle:
 
 ```text
-core declares Catalog interface
-catalog implements Catalog construction
-planner composes catalog with core
+planner-engine declares Catalog interface
+hades2-catalog implements Catalog construction
+planner composes hades2-catalog with planner-engine
 ```
 
 ## Dependency Rules
 
-### Core
+### Planner Engine
 
-Core may depend on TypeScript and small pure utility libraries whose behavior
-is deterministic and platform-independent.
+The planner engine may depend on TypeScript and small pure utility libraries
+whose behavior is deterministic and platform-independent.
 
-Core must not depend on:
+The planner engine must not depend on:
 
 - React or JSX;
 - Redux or React Redux;
@@ -153,13 +159,13 @@ Core must not depend on:
 - game-module Lua structures;
 - mutable application singletons.
 
-Core operations receive their inputs explicitly and return new values or typed
-results.
+Planner-engine operations receive their inputs explicitly and return new
+values or typed results.
 
 ### Catalog
 
 Catalog owns raw explicit declarations and declaration normalization. It may
-use core's public declaration and normalized interfaces. It must fail catalog
+use the planner engine's public declaration and normalized interfaces. It must fail catalog
 construction for malformed, unknown, or unsupported current-run facts rather
 than inserting permissive fallback values.
 
@@ -187,7 +193,8 @@ state, but it cannot directly modify topology tables or room payload records.
 
 ### TypeScript
 
-TypeScript is the common implementation language for catalog, core, and UI.
+TypeScript is the common implementation language for catalog, planner engine,
+and UI.
 Discriminated unions should represent layout variants, room state variants,
 reward bindings, commands, lifecycle events, and findings.
 
@@ -336,7 +343,7 @@ render React application
 
 Do not use mutable service tables that acquire properties during composition.
 Construct complete named collaborators and return new system objects. Tests
-can compose the same core with fixture catalogs and in-memory project
+can compose the same planner engine with fixture catalogs and in-memory project
 repositories.
 
 ## Persistence Boundary
@@ -434,7 +441,7 @@ Do not introduce:
 - a UI tree as the authored topology authority;
 - persisted Redux store snapshots as the project format;
 - a second validator in the future game module;
-- game-module APIs inside the core package;
+- game-module APIs inside the planner-engine package;
 - arbitrary executable plan code;
 - a graph library as topology storage;
 - silent repair of invalid user choices;

@@ -3,7 +3,7 @@
 ## Purpose
 
 This document preserves the runtime-derived availability ranks used by the N
-side-room generation model. `N_GAME_RULES.md` remains the design authority;
+side-room generation model. `../biomes/N_GAME_RULES.md` remains the design authority;
 this file records the evidence that cannot be recovered from Lua declarations
 alone.
 
@@ -25,15 +25,8 @@ order in which physical door obstacles ran their availability checks.
 | `N_Combat22` | `N_Sub14`, `N_Sub02`            |
 | `N_Combat23` | `N_Sub13`, `N_Sub15`, `N_Sub12` |
 
-## Model Conclusions
+## Authority Boundary
 
-- Availability rank is the only side-room order used by generation pressure.
-  When the minimum side-room count has not been met, the game forces a prefix
-  of this ranked list.
-- Generated sibling rewards are resolved before player entry and form one
-  unordered joint batch for duplicate and counted-bag validation. Incidental
-  callback iteration does not define a second room rank.
-- Generated side rooms may be entered in any player-selected order. Authored
-  entered ordinals preserve exact history and eventual execution intent, but
-  entry permutations do not change the modeled final state on return to the
-  parent room.
+This table is runtime evidence, not a second side-room design authority.
+`../biomes/N_GAME_RULES.md` owns the live availability-pressure, joint reward
+batch, and player-selected entry-order contracts derived from it.

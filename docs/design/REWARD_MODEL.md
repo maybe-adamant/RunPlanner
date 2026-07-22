@@ -12,7 +12,7 @@ reward declaration kinds mean and how they compose. `ROOM_LIFECYCLE_MODEL.md`
 owns when a room invokes offer and acquisition transitions.
 `SIMULATION_AND_VALIDATION.md` owns transition evaluation, counted-bag mutation,
 and legality.
-`REWARD_GAME_DATA_AUDIT.md` records the underlying game evidence and the exact,
+`../audits/REWARD_GAME_DATA_AUDIT.md` records the underlying game evidence and the exact,
 simplified, deferred, or excluded disposition of each audited mechanic.
 
 ## Cross-Biome Freeze Status
@@ -21,10 +21,9 @@ Possibility-only evaluation is locked. The generated-batch base-store and
 resolved-offer-only leaf split described below is the globally frozen
 F/G/P/Q/H/O/I/N contract. N confirms that one persistent heterogeneous board
 can use `none` while every target resolves declaration-owned provenance. The
-implemented F/G/H/I project, commands, catalog, simulator, and editor now use
-this contract as their sole connected reward authority. Declaration-owned
-biome state and fixed-entry continuation ownership do not change this reward
-contract.
+implemented F/G/H/I and N/O/P/Q product loops use this contract as their sole
+connected reward authority. Declaration-owned biome state and fixed-entry
+continuation ownership do not change this reward contract.
 
 ## Composition
 
@@ -387,7 +386,7 @@ When no entry in the entire bag is eligible, the game appends a complete base
 set without discarding ineligible leftovers. It can do this twice. If no entry
 is eligible after the second refill, the offer falls back to
 `RoomRewardHealDrop`. This is one global picker rule, not repeated store data.
-The complete store-and-consumer proof in `REWARD_GAME_DATA_AUDIT.md` establishes
+The complete store-and-consumer proof in `../audits/REWARD_GAME_DATA_AUDIT.md` establishes
 that every supported planner call has an eligible entry after the first refill.
 The simulator therefore appends at most one complete set and treats a
 still-empty supported call as an invariant failure. It does not reproduce the
@@ -571,7 +570,7 @@ The entered `I_PreBoss02` owns `I_WorldShop`. An unpicked preboss occurrence
 requires no shop state because the room was not entered. Its inherited Goal
 marker is a structural countdown producer after the counter has already
 reached zero, not a reward leaf or a free-reward realization.
-`biomes/I_GAME_RULES.md` owns the exact batch ordering and
+`../biomes/I_GAME_RULES.md` owns the exact batch ordering and
 conditional-terminal lifecycle.
 
 ### N Persistent Hub Composition
@@ -606,7 +605,7 @@ The full initial hub offer board also derives `hubRewardLookup`. N's entered
 `WorldShop` preboss validates Hex and Hammer option support against that lookup,
 including reward types offered behind unvisited hub doors. This cross-room
 consumer is separate from counted-bag depletion and acquisition history.
-`biomes/N_GAME_RULES.md` owns the concrete bags, room filters, local-slot topology,
+`../biomes/N_GAME_RULES.md` owns the concrete bags, room filters, local-slot topology,
 and lifecycle order.
 
 ## Authored and Materialized Counted Offers
@@ -737,9 +736,9 @@ inspect the current shop therefore see the complete generated shop inventory
 at that checkpoint, not a post-purchase remainder. This query is not a
 counted-store lookup.
 
-The normalized requirement kind is `notInCurrentRoomShopOptions`; the Phase 1
-prototype name `notInStore` is retired when Phase 2.6 establishes the shared
-reward-kernel requirement boundary.
+The normalized requirement kind is `notInCurrentRoomShopOptions`; the legacy
+prototype name `notInStore` is retired at the shared reward-kernel requirement
+boundary.
 
 Purchases remove options and update acquisition history after the outgoing
 batch already exists. They cannot change that batch or the selected next room's
@@ -955,10 +954,10 @@ concrete Hex/Talent and delivery state if those deferred features are added.
 The editor only renders normalized domains and simulation results. It does not
 recompute reward legality.
 
-## Documented Later Reward Structures
+## Biome-Owned Reward Structures
 
-`biomes/H_GAME_RULES.md`, `biomes/O_GAME_RULES.md`, `biomes/I_GAME_RULES.md`, and
-`biomes/N_GAME_RULES.md` are the authorities for cages, wheels, derived Goal/NonGoal
-realizations, and persistent hub/side-room rewards. Those contracts remain
-documentation-only until their dormant declaration and later activation
-slices.
+`../biomes/H_GAME_RULES.md`, `../biomes/O_GAME_RULES.md`, `../biomes/I_GAME_RULES.md`, and
+`../biomes/N_GAME_RULES.md` are the authorities for cages, wheels, derived
+Goal/NonGoal realizations, and persistent hub/side-room rewards. All four are
+implemented through their active biome product loops; their biome-specific
+rules remain outside this shared reward authority.

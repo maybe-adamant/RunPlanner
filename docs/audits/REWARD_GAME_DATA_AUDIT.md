@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document records the game-data evidence behind `REWARD_MODEL.md` and the
+This document records the game-data evidence behind `../design/REWARD_MODEL.md` and the
 Phase 2.6 reward-kernel closure. It is an audit note, not a
 second design authority. When this document and the model disagree, the model
 must be reconciled before implementation proceeds.
@@ -542,7 +542,7 @@ Boon can therefore introduce a fourth ordinary source after the same shop's
 outgoing batch already offered a fifth source. The purchase first affects room
 generation at the selected next room's outgoing-generation checkpoint. The
 canonical profile and source-backed fixture are specified in
-`ROOM_LIFECYCLE_MODEL.md`.
+`../design/ROOM_LIFECYCLE_MODEL.md`.
 
 Exact money, health, last-stand inventory, prices, discounts, and affordability
 are `Deferred`. V1 authors whether an offered option was purchased under a
