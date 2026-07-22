@@ -3,7 +3,7 @@ import type { SemanticAddress } from '@run-planner/core';
 
 export type PlannerSection = 'underworld' | 'surface' | 'settings';
 export type UnderworldPanel = 'route' | 'F' | 'G' | 'H' | 'I';
-export type SurfacePanel = 'route' | 'N';
+export type SurfacePanel = 'route' | 'N' | 'O' | 'P' | 'Q';
 
 export interface FindingSelection {
   readonly key: string;
@@ -71,8 +71,11 @@ const editorSessionSlice = createSlice({
         state.activeSurfacePanel =
           action.payload.origin.kind !== 'project' &&
           action.payload.origin.kind !== 'route' &&
-          action.payload.origin.biomeKey === 'N'
-            ? 'N'
+          (action.payload.origin.biomeKey === 'N' ||
+            action.payload.origin.biomeKey === 'O' ||
+            action.payload.origin.biomeKey === 'P' ||
+            action.payload.origin.biomeKey === 'Q')
+            ? action.payload.origin.biomeKey
             : 'route';
         return;
       }

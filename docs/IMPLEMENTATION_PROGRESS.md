@@ -604,6 +604,13 @@ direct-preboss frontier, so React contains no encounter or terminal timing
 rule. Focused interaction fixtures prove semantic edits and the entered direct
 WorldShop while O remains absent from production navigation.
 
+Phase 6 O Slice 6 is complete. O is authorable, simulatable, and editable only
+after N in the contiguous Surface prefix. Surface navigation now dispatches
+typed Hub or Linear editors without flattening their evaluations. One complete
+N/O browser fixture closes route validation, ship candidates, semantic
+navigation, accessible controls, profile round trips, autosave recovery, and
+responsive wheel projection while P/Q remain dormant.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1309,8 +1316,8 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, and O Slices 1-5 are complete. By explicit
-implementation-order decision, the remaining O/P/Q Phase 6 slices now precede
+five I slices, all nine N slices, and all six O slices are complete. By explicit
+implementation-order decision, the remaining P/Q Phase 6 slices now precede
 the contextual-selection UX insertion. They reuse the existing editor and
 candidate language while preserving the typed data required by that later UX
 pass. Production does not yet publish prefix materialization, prefix history

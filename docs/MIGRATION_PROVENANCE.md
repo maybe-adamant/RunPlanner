@@ -215,7 +215,7 @@ is separately deferred until concrete NPC gifts and trait state exist.
 | O direct preboss             | ported   | `RoomDataO.lua`, `RoomLogic.lua`, `biomes/O_GAME_RULES.md`                        | The BDC-7 direct shop-only terminal is separate from forked shop-then-fill policy.                                                 |
 | O fixed completion tail      | ported   | `RoomDataO.lua`, `RewardLogic.lua`, `biomes/O_GAME_RULES.md`                      | Neutral `O_Boss01` and `O_PostBoss01` are ordered before `P_Intro`, with resolved boss-offer store provenance.                     |
 | O progression/NPC variants   | deferred | O encounter sets and NPC encounter data                                           | Suppress first-time, Heracles, and Icarus variants; later persistent entities replace addressed phases before history.             |
-| O simulation activation      | deferred | `biomes/O_GAME_RULES.md`                                                          | Keep dormant until the reconciled vocabulary and full O product loop are implemented.                                              |
+| O simulation activation      | ported   | `biomes/O_GAME_RULES.md`, N/O product-loop fixture                                | O is authorable, simulatable, editable, profile-safe, recoverable, and route-validated after a complete N prefix.                  |
 
 ## I Migration
 
@@ -255,7 +255,7 @@ is separately deferred until concrete NPC gifts and trait state exist.
 | N editor projection        | ported   | `EDITOR_MODEL.md`, `biomes/N_GAME_RULES.md`                                         | The active fixed-board and visit-timeline editor dispatches semantic Hub, side-room, reward, and WorldShop commands.                                                            |
 | N progression/NPC variants | deferred | N encounter sets and persistent requirements                                        | Preserve Medea's fixed Story spine while omitting her save-profile force and internal NPC state; suppress Artemis, Heracles, OpeningEmpty, and other save variants.             |
 | N optional interactions    | deferred | N room and obstacle data                                                            | Suppress Chaos detours, gathering, challenges, wells, rerolls, postboss shops, and other no-action surfaces.                                                                    |
-| N application activation   | ported   | `biomes/N_GAME_RULES.md`, N Surface product-loop fixture                            | N is authorable, simulatable, editable, profile-safe, recoverable, and route-validated as the one-biome Surface prefix.                                                         |
+| N application activation   | ported   | `biomes/N_GAME_RULES.md`, Surface product-loop fixture                              | N is authorable, simulatable, editable, profile-safe, recoverable, and route-validated as the first Surface biome.                                                              |
 
 Persistent NPC assignment and baseline encounter replacement remain shared
 deferred composition features. The old I singleton-preboss workaround has
@@ -307,10 +307,10 @@ rooms belong to each biome layout; `Next` is derived only from route order.
 | Surface    | Q     | `LinearBiome` | 23 (22)          | staged / standard       | none                                 | direct              | `Q_Boss01`                 | --   |
 
 The core simulation matrix and application capability matrix now include F, G,
-H, I, and N as authorable, simulatable, and editable. Complete F/G/H/I and N
-prefixes enter profiles, recovery, simulator dispatch, candidate scope, and
-editor navigation together. N uses its Hub editor and canonical evaluator;
-P/Q/O remain declaration-only.
+H, I, N, and O as authorable, simulatable, and editable. Complete F/G/H/I and
+N/O prefixes enter profiles, recovery, simulator dispatch, candidate scope,
+and editor navigation together. N uses its Hub editor and canonical evaluator;
+O uses the shared linear editor and evaluator; P/Q remain declaration-only.
 
 The following remaining dispositions are deliberate and exhaustive at this
 boundary; each biome rule document owns its exact room-level instances:

@@ -84,6 +84,18 @@ describe('editor finding navigation', () => {
     expect(selected.activeSurfacePanel).toBe('N');
   });
 
+  it('routes an O finding to the Rift of Thessaly panel', () => {
+    const selection = {
+      key: 'o-finding-key',
+      origin: createBiomeAddress('Surface', 'O'),
+    } as const;
+
+    const selected = editorSessionReducer(undefined, findingSelected(selection));
+
+    expect(selected.activeSection).toBe('surface');
+    expect(selected.activeSurfacePanel).toBe('O');
+  });
+
   it('selects a project-root finding without inventing route navigation', () => {
     const settings = editorSessionReducer(undefined, sectionSelected('settings'));
     const selection = { key: 'project-finding-key', origin: createProjectAddress() } as const;

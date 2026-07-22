@@ -162,9 +162,9 @@ describe('planner capabilities', () => {
       {
         biomeKey: 'O',
         declared: true,
-        authorable: false,
-        simulatable: false,
-        editable: false,
+        authorable: true,
+        simulatable: true,
+        editable: true,
       },
       {
         biomeKey: 'P',
@@ -183,7 +183,7 @@ describe('planner capabilities', () => {
     ]);
     expect(reusedCapabilities.values).toEqual(capabilities.values);
     expect(createProjectSimulationScope(capabilities)).toEqual({
-      simulatableBiomeKeys: ['F', 'G', 'H', 'I', 'N'],
+      simulatableBiomeKeys: ['F', 'G', 'H', 'I', 'N', 'O'],
     });
   });
 
@@ -268,6 +268,7 @@ describe('planner capabilities', () => {
     ]);
     expect(navigation.routes.Surface?.biomePanels).toEqual([
       { biomeKey: 'N', label: 'City of Ephyra' },
+      { biomeKey: 'O', label: 'Rift of Thessaly' },
     ]);
     expect(widenedProject.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual([
       'F',
@@ -316,6 +317,7 @@ describe('planner capabilities', () => {
     });
     expect(navigation.routes.Surface?.biomePanels).toEqual([
       { biomeKey: 'N', label: 'City of Ephyra' },
+      { biomeKey: 'O', label: 'Rift of Thessaly' },
     ]);
     expect({ ...project, catalogVersion: preImportProject.catalogVersion }).toEqual(
       preImportProject,
@@ -340,6 +342,7 @@ describe('planner capabilities', () => {
     });
     expect(navigation.routes.Surface?.biomePanels).toEqual([
       { biomeKey: 'N', label: 'City of Ephyra' },
+      { biomeKey: 'O', label: 'Rift of Thessaly' },
     ]);
     expect({ ...project, catalogVersion: preImportProject.catalogVersion }).toEqual(
       preImportProject,
@@ -349,7 +352,7 @@ describe('planner capabilities', () => {
 });
 
 describe('application project capability boundary', () => {
-  it('allows the complete Underworld prefix and the one-biome Surface prefix', () => {
+  it('allows the complete Underworld prefix and the two-biome Surface prefix', () => {
     const capabilities = createApplicationCapabilities(catalog);
     const fghi = createAuthorableProjectDocument(catalog, capabilities, {
       projectId: 'fghi-project',
@@ -364,15 +367,12 @@ describe('application project capability boundary', () => {
       configuredBiomeCounts: { Surface: 1 },
     });
     expect(surface.routes[1]?.biomes.map((biome) => biome.biomeKey)).toEqual(['N']);
-    expect(() =>
-      createAuthorableProjectDocument(catalog, capabilities, {
-        projectId: 'surface-o-project',
-        name: 'Surface O Project',
-        configuredBiomeCounts: { Surface: 2 },
-      }),
-    ).toThrowError(
-      new PlannerCapabilityContractError('configuredBiomeCounts.Surface[1]', 'O is not authorable'),
-    );
+    const surfaceO = createAuthorableProjectDocument(catalog, capabilities, {
+      projectId: 'surface-o-project',
+      name: 'Surface O Project',
+      configuredBiomeCounts: { Surface: 2 },
+    });
+    expect(surfaceO.routes[1]?.biomes.map((biome) => biome.biomeKey)).toEqual(['N', 'O']);
   });
 
   it('loads I authored state through both profile decode contacts', () => {
@@ -392,7 +392,6 @@ describe('application project capability boundary', () => {
 
 describe('application capability closure', () => {
   const dormantPlacements = [
-    { routeKey: 'Surface', biomeKey: 'O' },
     { routeKey: 'Surface', biomeKey: 'P' },
     { routeKey: 'Surface', biomeKey: 'Q' },
   ] as const;
@@ -436,14 +435,14 @@ describe('application capability closure', () => {
     }
   });
 
-  it('limits navigation and selector consumers to the editable F/G/H/I/N surface', () => {
+  it('limits navigation and selector consumers to the editable F/G/H/I/N/O surface', () => {
     const capabilities = createApplicationCapabilities(catalog);
     const navigation = createEditorNavigation(catalog, capabilities);
     const editorBiomeKeys = Object.values(navigation.routes).flatMap((route) =>
       route.biomePanels.map((panel) => panel.biomeKey),
     );
 
-    expect(editorBiomeKeys).toEqual(['F', 'G', 'H', 'I', 'N']);
+    expect(editorBiomeKeys).toEqual(['F', 'G', 'H', 'I', 'N', 'O']);
     const selectableRooms = editorBiomeKeys.flatMap((biomeKey) =>
       ordinaryRoomCategories.flatMap((category) =>
         selectRoomsForCategory(catalog, biomeKey, category),
@@ -451,7 +450,7 @@ describe('application capability closure', () => {
     );
     expect(selectableRooms.length).toBeGreaterThan(0);
     expect(new Set(selectableRooms.map((room) => room.biomeKey))).toEqual(
-      new Set(['F', 'G', 'H', 'I', 'N']),
+      new Set(['F', 'G', 'H', 'I', 'N', 'O']),
     );
     expect(selectableRooms.some((room) => room.mode.kind !== 'authored')).toBe(false);
   });

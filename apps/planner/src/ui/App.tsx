@@ -53,7 +53,7 @@ function asUnderworldPanel(biomeKey: string): UnderworldPanel {
 }
 
 function asSurfacePanel(biomeKey: string): SurfacePanel {
-  if (biomeKey !== 'N') {
+  if (biomeKey !== 'N' && biomeKey !== 'O' && biomeKey !== 'P' && biomeKey !== 'Q') {
     throw new Error(`${biomeKey} is not a Surface editor panel`);
   }
   return biomeKey;
@@ -201,7 +201,7 @@ export function App({
   const configuredSurfacePanels = surfaceNavigation.biomePanels.filter((panel) =>
     surface.biomes.some((biome) => biome.biomeKey === panel.biomeKey),
   );
-  const activeSurfaceBiomeKey = activeSurfacePanel === 'N' ? activeSurfacePanel : undefined;
+  const activeSurfaceBiomeKey = activeSurfacePanel === 'route' ? undefined : activeSurfacePanel;
   const activeSurfaceBiomePlan = surface.biomes.find(
     (biome) => biome.biomeKey === activeSurfaceBiomeKey,
   );
@@ -209,11 +209,18 @@ export function App({
     (biome) => biome.biomeKey === activeSurfaceBiomeKey,
   );
   if (
+    activeSurfaceBiomePlan !== undefined &&
     activeSurfaceBiomeEvaluation !== undefined &&
-    activeSurfaceBiomeEvaluation.kind !== 'HubBiome'
+    activeSurfaceBiomePlan.kind !== activeSurfaceBiomeEvaluation.kind
   ) {
-    throw new Error(`${activeSurfaceBiomeEvaluation.biomeKey} did not produce a Hub evaluation`);
+    throw new Error(
+      `${activeSurfaceBiomeEvaluation.biomeKey} plan and evaluation kinds do not match`,
+    );
   }
+  const activeSurfaceHubEvaluation =
+    activeSurfaceBiomeEvaluation?.kind === 'HubBiome' ? activeSurfaceBiomeEvaluation : undefined;
+  const activeSurfaceLinearEvaluation =
+    activeSurfaceBiomeEvaluation?.kind === 'LinearBiome' ? activeSurfaceBiomeEvaluation : undefined;
   const displayedSurfacePanel =
     activeSurfaceBiomeKey !== undefined && activeSurfaceBiomePlan !== undefined
       ? activeSurfaceBiomeKey
@@ -339,7 +346,15 @@ export function App({
               <HubBiomeEditor
                 candidateProjection={candidateProjection}
                 catalog={catalog}
-                evaluation={activeSurfaceBiomeEvaluation}
+                evaluation={activeSurfaceHubEvaluation}
+                plan={activeSurfaceBiomePlan}
+                routeKey={surface.routeKey}
+              />
+            ) : activeSurfaceBiomePlan?.kind === 'LinearBiome' ? (
+              <LinearBiomeEditor
+                candidateProjection={candidateProjection}
+                catalog={catalog}
+                evaluation={activeSurfaceLinearEvaluation}
                 plan={activeSurfaceBiomePlan}
                 routeKey={surface.routeKey}
               />

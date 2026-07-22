@@ -15,9 +15,9 @@ are defined by `../GAME_GENERATION_RULES.md`, `../ROOM_LIFECYCLE_MODEL.md`, and
 bounded phase-owned offer points to an ordered room lifecycle; they do not turn
 the top-level biome into a graph or move outgoing topology into the room leaf.
 
-O declarations and its dormant authorship, simulation, candidate, and editor
-loop are implemented. O intentionally remains outside the application-owned
-capability boundary until its complete product loop is activated.
+O declarations and its complete authorship, simulation, candidate, editor,
+profile, recovery, and navigation loop are implemented and active after N in
+the Surface route prefix.
 
 ## Evidence Status
 
@@ -478,14 +478,12 @@ The dormant O import delivers:
     stores, recent-room eligibility, BED asymmetry, and depth-5 Shop/Story
     force competition.
 
-O's authored, canonical lifecycle, reward, selected-validation, and candidate
-core is now implemented but remains dormant at the application capability
-boundary. Ship-specific candidates cover encounter count and wheel count,
-store, offer, and pick values through normal project evaluation. The dormant
-linear editor renders both bounded wheels, marks the active prefix, and edits
-their complete semantic state without reproducing encounter timing. Product-
-loop activation remains the final O delivery slice. Persistent NPCs remain
-deferred.
+O's authored, canonical lifecycle, reward, selected-validation, candidate, and
+editor loop is active after the complete N prefix. Ship-specific candidates
+cover encounter count and wheel count, store, offer, and pick values through
+normal project evaluation. The linear editor renders both bounded wheels,
+marks the active prefix, and edits their complete semantic state without
+reproducing encounter timing. Persistent NPCs remain deferred.
 
 ## Model Conclusions
 

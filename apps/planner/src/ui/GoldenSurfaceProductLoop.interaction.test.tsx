@@ -4,6 +4,7 @@ import { cleanup, screen, within } from '@testing-library/react';
 import {
   createHubSlotAddress,
   createHubVisitAddress,
+  createOccurrenceAddress,
   encodeProjectDocument,
   simulateProject,
 } from '@run-planner/core';
@@ -19,7 +20,13 @@ import {
   authoredProjectUndoRequested,
 } from '../application/projectWorkspaceSlice';
 import { selectProfileStatus } from '../application/store';
-import { createRepresentativeNProject, nBiome, nOccurrenceId } from '../testing/nProject';
+import {
+  createRepresentativeNOProject,
+  nBiome,
+  nOccurrenceId,
+  oBiome,
+  oOccurrenceIds,
+} from '../testing/nProject';
 import { renderPlannerForInteraction } from '../testing/renderPlanner';
 
 afterEach(() => {
@@ -95,7 +102,8 @@ function createRecoveryPersistence(): {
 
 function assertAccessibleControlSurface(): void {
   const ids = [...document.querySelectorAll<HTMLElement>('[id]')].map((element) => element.id);
-  expect(new Set(ids).size).toBe(ids.length);
+  const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+  expect(new Set(ids).size, `duplicate ids: ${duplicateIds.join(', ')}`).toBe(ids.length);
   for (const control of document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
     'input, select',
   )) {
@@ -120,7 +128,7 @@ function presentProject(application: PlannerApplication) {
   return application.store.getState().projectWorkspace.history.present;
 }
 
-describe('N Surface product loop', () => {
+describe('N/O Surface product loop', () => {
   it('closes activation, profiles, recovery, findings, candidates, accessibility, and responsiveness', async () => {
     stubScrollIntoView();
     const persistence = createPersistence();
@@ -130,7 +138,7 @@ describe('N Surface product loop', () => {
       autosaveScheduler: recovery.scheduler,
       profileFile: persistence.profileFile,
     });
-    const authored = createRepresentativeNProject();
+    const authored = createRepresentativeNOProject();
     application.store.dispatch(authoredProjectReplaced(authored));
     const view = renderPlannerForInteraction({ application });
 
@@ -140,13 +148,19 @@ describe('N Surface product loop', () => {
       editable: true,
     });
     expect(application.capabilities.byBiomeKey.O).toMatchObject({
-      authorable: false,
-      simulatable: false,
-      editable: false,
+      authorable: true,
+      simulatable: true,
+      editable: true,
     });
     expect(application.editorNavigation.routes.Surface).toMatchObject({
-      biomePanels: [{ biomeKey: 'N', label: 'City of Ephyra' }],
-      configurablePrefixBiomePanels: [{ biomeKey: 'N', label: 'City of Ephyra' }],
+      biomePanels: [
+        { biomeKey: 'N', label: 'City of Ephyra' },
+        { biomeKey: 'O', label: 'Rift of Thessaly' },
+      ],
+      configurablePrefixBiomePanels: [
+        { biomeKey: 'N', label: 'City of Ephyra' },
+        { biomeKey: 'O', label: 'Rift of Thessaly' },
+      ],
     });
 
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
@@ -156,16 +170,19 @@ describe('N Surface product loop', () => {
     expect(evaluated.status).toBe('valid');
     expect(evaluated.findings).toEqual([]);
     expect(evaluated.summary).toMatchObject({
-      configuredBiomeCount: 1,
-      evaluatedBiomeCount: 1,
-      validatedBiomeCount: 1,
+      configuredBiomeCount: 2,
+      evaluatedBiomeCount: 2,
+      validatedBiomeCount: 2,
       eligibleForExecutionPlan: true,
     });
     expect(evaluated.routes[1]).toMatchObject({
       status: 'valid',
-      validatedPrefix: ['N'],
+      validatedPrefix: ['N', 'O'],
       horizon: { kind: 'routeEnd' },
-      biomes: [{ biomeKey: 'N', completion: 'complete', validity: 'valid' }],
+      biomes: [
+        { biomeKey: 'N', completion: 'complete', validity: 'valid' },
+        { biomeKey: 'O', completion: 'complete', validity: 'valid' },
+      ],
     });
     expect(screen.getByRole('heading', { name: 'City of Ephyra' })).toBeTruthy();
     expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(26);
@@ -176,6 +193,29 @@ describe('N Surface product loop', () => {
     expect(document.body.textContent).not.toContain('N_Combat');
     expect(document.body.textContent).not.toContain('editor-n-');
     assertAccessibleControlSurface();
+
+    await view.user.click(screen.getByRole('button', { name: 'Rift of Thessaly' }));
+    expect(screen.getByRole('heading', { name: 'Rift of Thessaly' })).toBeTruthy();
+    expect(screen.getAllByLabelText('Ship combat encounters')).toHaveLength(4);
+    expect(screen.getByRole('heading', { name: 'Preboss from Combat 02' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Rift of Thessaly' }).getAttribute('aria-current'),
+    ).toBe('page');
+    expect(document.body.textContent).not.toContain('O_Combat');
+    expect(document.body.textContent).not.toContain('editor-o-');
+    assertAccessibleControlSurface();
+
+    const encounterCandidates = application.candidateProjection.shipEncounterCounts(
+      authored,
+      createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
+      [2, 3],
+    );
+    expect(encounterCandidates.map((candidate) => candidate.evaluation)).toMatchObject([
+      { context: 'evaluated', support: 'forced' },
+      { context: 'evaluated', support: 'impossible' },
+    ]);
+
+    await view.user.click(screen.getByRole('button', { name: 'City of Ephyra' }));
 
     const candidateStarted = performance.now();
     const minibossCandidates = application.candidateProjection.hubSlots(
@@ -207,6 +247,7 @@ describe('N Surface product loop', () => {
     ).toEqual([
       ['0', 'None'],
       ['1', 'City of Ephyra'],
+      ['2', 'Rift of Thessaly'],
     ]);
     await view.user.click(
       screen.getAllByRole('button', { name: /Hub room cannot be open together/ })[0]!,
