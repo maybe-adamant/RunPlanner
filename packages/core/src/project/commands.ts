@@ -4,6 +4,7 @@ import type {
   FixedAuthoredSlotDescriptor,
   HubBiomeLayout,
   LinearBiomeLayout,
+  RewardWheelOfferPoint,
   RoomDeclaration,
 } from '../catalog';
 import type { ResolvedRewardOffer, RewardPayload } from '../rewardKernel/model';
@@ -36,6 +37,8 @@ import type {
   LocalRewardAddress,
   OccurrenceAddress,
   PickedAddress,
+  RewardWheelAddress,
+  RewardWheelOfferAddress,
   RouteAddress,
   SemanticAddress,
   ShopOfferAddress,
@@ -112,6 +115,31 @@ export type ProjectCommand =
       readonly kind: 'ReplaceFieldsCageOutcome';
       readonly continuation: ContinuationAddress;
       readonly cageOutcome: 'min' | 'max';
+    }
+  | {
+      readonly kind: 'ReplaceShipEncounterCount';
+      readonly occurrence: OccurrenceAddress;
+      readonly encounterCount: 2 | 3;
+    }
+  | {
+      readonly kind: 'ReplaceRewardWheelOfferCount';
+      readonly wheel: RewardWheelAddress;
+      readonly offerCount: number;
+    }
+  | {
+      readonly kind: 'ReplaceRewardWheelStore';
+      readonly wheel: RewardWheelAddress;
+      readonly storeKey: string;
+    }
+  | {
+      readonly kind: 'ReplaceRewardWheelOffer';
+      readonly offer: RewardWheelOfferAddress;
+      readonly value: ResolvedRewardOffer;
+    }
+  | {
+      readonly kind: 'ReplaceRewardWheelPicked';
+      readonly wheel: RewardWheelAddress;
+      readonly pickedOfferIndex: number;
     }
   | {
       readonly kind: 'CreateTerminalTransition';
@@ -232,6 +260,14 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
       return command.group;
     case 'ReplaceBiomeField':
       return command.field;
+    case 'ReplaceShipEncounterCount':
+      return command.occurrence;
+    case 'ReplaceRewardWheelOfferCount':
+    case 'ReplaceRewardWheelStore':
+    case 'ReplaceRewardWheelPicked':
+      return command.wheel;
+    case 'ReplaceRewardWheelOffer':
+      return command.offer;
     case 'CreateBatch':
     case 'ReplaceFieldsCageOutcome':
     case 'CreateTerminalTransition':
@@ -325,6 +361,35 @@ function requireOccurrence(
   return occurrence;
 }
 
+function requireRewardWheel(
+  plan: LinearBiomePlan,
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+  address: RewardWheelAddress | RewardWheelOfferAddress,
+  command: ProjectCommand,
+): {
+  readonly occurrence: RoomOccurrence;
+  readonly state: Extract<RoomOccurrence['state'], { readonly kind: 'shipCombat' }>;
+  readonly descriptor: RewardWheelOfferPoint;
+} {
+  const occurrence = requireOccurrence(plan, address.occurrenceId, command);
+  if (occurrence.state.kind !== 'shipCombat') {
+    failCommand(command, `${occurrence.gameName} has no reward wheels`);
+  }
+  const room = requireRoom(catalog, occurrence.gameName, layout.biomeKey, command);
+  const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
+  const descriptor = profile?.phases.find(
+    (phase) => phase.offerPoint?.key === address.wheelKey,
+  )?.offerPoint;
+  if (descriptor === undefined) {
+    failCommand(command, `${occurrence.gameName} has no wheel ${address.wheelKey}`);
+  }
+  if (occurrence.state.wheels[address.wheelKey] === undefined) {
+    failCommand(command, `${occurrence.gameName} is missing wheel state ${address.wheelKey}`);
+  }
+  return { occurrence, state: occurrence.state, descriptor };
+}
+
 function requireRoom(
   catalog: Catalog,
   gameName: string,
@@ -351,20 +416,25 @@ function generatedExitIndexes(room: RoomDeclaration): readonly number[] {
 
 function authoredBaseStorePolicy(layout: LinearBiomeLayout) {
   const policy = layout.continuation.rewardStorePolicy;
-  if (
-    policy.kind !== 'authoredBaseStore' ||
-    layout.continuation.rewardStoreOverrides.length !== 0
-  ) {
+  if (policy.kind !== 'authoredBaseStore') {
     throw new Error(`${layout.biomeKey} does not author a generated base store`);
   }
   return policy;
 }
 
-function defaultBatchRewardStore(layout: LinearBiomeLayout): BatchRewardStoreState {
-  if (layout.continuation.rewardStoreOverrides.length !== 0) {
-    throw new Error(`${layout.biomeKey} uses source-specific reward-store policies`);
-  }
-  const policy = layout.continuation.rewardStorePolicy;
+function sourceRewardStorePolicy(layout: LinearBiomeLayout, sourceRoom: RoomDeclaration) {
+  return (
+    layout.continuation.rewardStoreOverrides.find(
+      (override) => override.sourceEncounterProfileKey === sourceRoom.encounterProfileKey,
+    )?.policy ?? layout.continuation.rewardStorePolicy
+  );
+}
+
+function defaultBatchRewardStore(
+  layout: LinearBiomeLayout,
+  sourceRoom: RoomDeclaration,
+): BatchRewardStoreState {
+  const policy = sourceRewardStorePolicy(layout, sourceRoom);
   switch (policy.kind) {
     case 'authoredBaseStore':
       return Object.freeze({
@@ -374,7 +444,7 @@ function defaultBatchRewardStore(layout: LinearBiomeLayout): BatchRewardStoreSta
     case 'none':
       return Object.freeze({ kind: 'none' });
     case 'sourceOfferPoint':
-      throw new Error(`${layout.biomeKey} derives its generated store from the source room`);
+      return Object.freeze({ kind: 'sourceOfferPoint' });
   }
 }
 
@@ -390,9 +460,6 @@ function defaultBatchState(layout: LinearBiomeLayout): AuthoredBatchState {
 }
 
 function defaultSharedStore(layout: LinearBiomeLayout): string | undefined {
-  if (layout.continuation.rewardStoreOverrides.length !== 0) {
-    throw new Error(`${layout.biomeKey} uses source-specific reward-store policies`);
-  }
   const policy = layout.continuation.rewardStorePolicy;
   switch (policy.kind) {
     case 'authoredBaseStore':
@@ -430,17 +497,34 @@ function finalBatchSharedStore(
   continuation: LinearBatchContinuation,
   replacement?: { readonly occurrenceId: OccurrenceId; readonly room: RoomDeclaration },
 ): string | undefined {
+  const topology = plan.topology;
+  if (topology === null) {
+    throw new Error(`${layout.biomeKey} batch has no topology`);
+  }
   if (continuation.rewardStore.kind === 'sourceOfferPoint') {
-    throw new Error(`${layout.biomeKey} source-derived batch stores are not implemented`);
+    if (continuation.parentOccurrenceId === null) {
+      throw new Error(`${layout.biomeKey} source-derived batch has no authored source`);
+    }
+    const source = topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === continuation.parentOccurrenceId,
+    );
+    if (source === undefined) {
+      throw new Error(`${layout.biomeKey} source-derived batch lost its source occurrence`);
+    }
+    if (source.state.kind !== 'shipCombat') {
+      throw new Error(`${source.gameName} has no source reward wheel`);
+    }
+    const wheelKey = source.state.encounterCount === 3 ? 'wheel2' : 'wheel1';
+    const wheel = source.state.wheels[wheelKey];
+    if (wheel === undefined) {
+      throw new Error(`${source.gameName} is missing ${wheelKey}`);
+    }
+    return wheel.storeKey;
   }
   let storeKey =
     continuation.rewardStore.kind === 'authoredBaseStore'
       ? continuation.rewardStore.baseRewardStoreKey
       : undefined;
-  const topology = plan.topology;
-  if (topology === null) {
-    throw new Error(`${layout.biomeKey} batch has no topology`);
-  }
   const targetsInPhysicalOrder = [...continuation.targets].sort(
     (left, right) => left.exitIndex - right.exitIndex,
   );
@@ -683,6 +767,43 @@ function replaceOccurrence(
   };
 }
 
+function reconcileOwnedBatchRewardStore(
+  plan: LinearBiomePlan,
+  layout: LinearBiomeLayout,
+  occurrenceId: OccurrenceId,
+  replacementRoom: RoomDeclaration,
+  command: ProjectCommand,
+): LinearBiomePlan {
+  const topology = requireTopology(plan, command);
+  const continuation = topology.continuations.find(
+    (candidate) => candidate.parentOccurrenceId === occurrenceId,
+  );
+  if (continuation?.kind !== 'batch') {
+    return plan;
+  }
+  const policy = sourceRewardStorePolicy(layout, replacementRoom);
+  const replacementRewardStore =
+    policy.kind === 'authoredBaseStore' &&
+    continuation.rewardStore.kind === 'authoredBaseStore' &&
+    policy.storeKeys.includes(continuation.rewardStore.baseRewardStoreKey)
+      ? continuation.rewardStore
+      : defaultBatchRewardStore(layout, replacementRoom);
+  if (replacementRewardStore === continuation.rewardStore) {
+    return plan;
+  }
+  return {
+    ...plan,
+    topology: {
+      ...topology,
+      continuations: topology.continuations.map((candidate) =>
+        candidate.parentOccurrenceId === occurrenceId
+          ? { ...continuation, rewardStore: replacementRewardStore }
+          : candidate,
+      ),
+    },
+  };
+}
+
 function samePayload(left: RewardPayload | undefined, right: RewardPayload | undefined): boolean {
   if (left === undefined || right === undefined) {
     return left === right;
@@ -798,8 +919,8 @@ function createTerminalPlan(
   targetOccurrenceIds: readonly OccurrenceId[],
   command: ProjectCommand,
 ): LinearBiomePlan {
-  if (layout.terminal.kind !== 'forkedTransition') {
-    failCommand(command, `${layout.biomeKey} does not use a forked terminal transition`);
+  if (layout.terminal.kind !== 'forkedTransition' && layout.terminal.kind !== 'directTransition') {
+    failCommand(command, `${layout.biomeKey} does not use an authored terminal transition`);
   }
   const topology = requireTopology(plan, command);
   const parent = requireOccurrence(plan, parentOccurrenceId, command);
@@ -817,14 +938,20 @@ function createTerminalPlan(
   }
 
   const terminalRoom = requireRoom(catalog, layout.terminal.roomGameName, layout.biomeKey, command);
-  if (terminalRoom.entryOfferPolicy === undefined) {
+  if (layout.terminal.kind === 'forkedTransition' && terminalRoom.entryOfferPolicy === undefined) {
     failCommand(command, `${terminalRoom.gameName} has no terminal offer policy`);
   }
-  if (exitIndexes.length > 1 + terminalRoom.entryOfferPolicy.maxFreeRewards) {
+  if (
+    layout.terminal.kind === 'forkedTransition' &&
+    exitIndexes.length > 1 + terminalRoom.entryOfferPolicy!.maxFreeRewards
+  ) {
     failCommand(
       command,
       `${parent.gameName} exceeds ${terminalRoom.gameName} terminal exit capacity`,
     );
+  }
+  if (layout.terminal.kind === 'directTransition' && exitIndexes.length !== 1) {
+    failCommand(command, `${parent.gameName} direct terminal requires exactly one exit`);
   }
   if (targetOccurrenceIds.length !== exitIndexes.length) {
     failCommand(command, `requires ${exitIndexes.length} terminal occurrence IDs`);
@@ -843,7 +970,10 @@ function createTerminalPlan(
     if (occurrenceId === undefined) {
       failCommand(command, `missing terminal occurrence ID for exit ${exitIndex}`);
     }
-    const role: RoomOccurrenceRole = exitIndex === 1 ? 'terminalShop' : 'terminalFreeReward';
+    const role: RoomOccurrenceRole =
+      layout.terminal.kind === 'directTransition' || exitIndex === 1
+        ? 'terminalShop'
+        : 'terminalFreeReward';
     return {
       occurrenceId,
       gameName: terminalRoom.gameName,
@@ -853,7 +983,7 @@ function createTerminalPlan(
         roomStateContext(
           role,
           resolvedStoreForRoom(terminalRoom, defaultSharedStore(layout)),
-          false,
+          layout.terminal.kind === 'directTransition',
         ),
       ),
     };
@@ -873,7 +1003,12 @@ function createTerminalPlan(
       occurrences: [...topology.occurrences, ...terminalOccurrences],
       continuations: [
         ...topology.continuations,
-        { kind: 'terminal', parentOccurrenceId, targets, pickedExitIndex: null },
+        {
+          kind: 'terminal',
+          parentOccurrenceId,
+          targets,
+          pickedExitIndex: layout.terminal.kind === 'directTransition' ? 1 : null,
+        },
       ],
     },
   };
@@ -1468,7 +1603,13 @@ function applyUnchecked(
         (parentOccurrenceId === null && layout.start.kind === 'fixedEntry'
           ? { startOccurrenceId: null, occurrences: [], continuations: [] }
           : requireTopology(plan, command));
-      continuationSourceRoom({ ...plan, topology }, catalog, layout, parentOccurrenceId, command);
+      const sourceRoom = continuationSourceRoom(
+        { ...plan, topology },
+        catalog,
+        layout,
+        parentOccurrenceId,
+        command,
+      );
       if (
         topology.continuations.some(
           (continuation) =>
@@ -1486,7 +1627,7 @@ function applyUnchecked(
             {
               kind: 'batch',
               parentOccurrenceId,
-              rewardStore: defaultBatchRewardStore(layout),
+              rewardStore: defaultBatchRewardStore(layout, sourceRoom),
               batchState: defaultBatchState(layout),
               targets: [],
               pickedExitIndex: null,
@@ -1561,6 +1702,118 @@ function applyUnchecked(
           ),
         },
       });
+    }
+    case 'ReplaceShipEncounterCount': {
+      const occurrence = requireOccurrence(plan, command.occurrence.occurrenceId, command);
+      if (occurrence.state.kind !== 'shipCombat') {
+        failCommand(command, `${occurrence.gameName} has no ShipCombat encounter count`);
+      }
+      if (command.encounterCount !== 2 && command.encounterCount !== 3) {
+        failCommand(command, 'encounterCount must be 2 or 3');
+      }
+      if (occurrence.state.encounterCount === command.encounterCount) {
+        return document;
+      }
+      return withBiome(
+        document,
+        located,
+        replaceOccurrence(
+          plan,
+          {
+            ...occurrence,
+            state: { ...occurrence.state, encounterCount: command.encounterCount },
+          },
+          command,
+        ),
+      );
+    }
+    case 'ReplaceRewardWheelOfferCount':
+    case 'ReplaceRewardWheelStore':
+    case 'ReplaceRewardWheelPicked':
+    case 'ReplaceRewardWheelOffer': {
+      const address = command.kind === 'ReplaceRewardWheelOffer' ? command.offer : command.wheel;
+      const { occurrence, state, descriptor } = requireRewardWheel(
+        plan,
+        catalog,
+        layout,
+        address,
+        command,
+      );
+      const wheel = state.wheels[address.wheelKey];
+      if (wheel === undefined) {
+        failCommand(command, `${occurrence.gameName} lost wheel ${address.wheelKey}`);
+      }
+      let replacement: typeof wheel;
+      if (command.kind === 'ReplaceRewardWheelOfferCount') {
+        if (
+          !Number.isInteger(command.offerCount) ||
+          command.offerCount < descriptor.offerCount.min ||
+          command.offerCount > descriptor.offerCount.max
+        ) {
+          failCommand(
+            command,
+            `offerCount must be between ${descriptor.offerCount.min} and ${descriptor.offerCount.max}`,
+          );
+        }
+        if (wheel.offerCount === command.offerCount) {
+          return document;
+        }
+        replacement = {
+          ...wheel,
+          offerCount: command.offerCount,
+          pickedOfferIndex: Math.min(wheel.pickedOfferIndex, command.offerCount),
+        };
+      } else if (command.kind === 'ReplaceRewardWheelStore') {
+        if (!descriptor.reward.storeKeys.includes(command.storeKey)) {
+          failCommand(command, `${command.storeKey} is not available from ${address.wheelKey}`);
+        }
+        if (wheel.storeKey === command.storeKey) {
+          return document;
+        }
+        replacement = { ...wheel, storeKey: command.storeKey };
+      } else if (command.kind === 'ReplaceRewardWheelPicked') {
+        if (
+          !Number.isInteger(command.pickedOfferIndex) ||
+          command.pickedOfferIndex < 1 ||
+          command.pickedOfferIndex > wheel.offerCount
+        ) {
+          failCommand(command, 'pickedOfferIndex must address an active offer');
+        }
+        if (wheel.pickedOfferIndex === command.pickedOfferIndex) {
+          return document;
+        }
+        replacement = { ...wheel, pickedOfferIndex: command.pickedOfferIndex };
+      } else {
+        if (!descriptor.offerKeys.includes(command.offer.offerKey)) {
+          failCommand(command, `unknown wheel offer ${command.offer.offerKey}`);
+        }
+        const current = wheel.offers[command.offer.offerKey];
+        if (current === undefined) {
+          failCommand(command, `missing wheel offer ${command.offer.offerKey}`);
+        }
+        if (sameOffer(current, command.value)) {
+          return document;
+        }
+        replacement = {
+          ...wheel,
+          offers: { ...wheel.offers, [command.offer.offerKey]: command.value },
+        };
+      }
+      return withBiome(
+        document,
+        located,
+        replaceOccurrence(
+          plan,
+          {
+            ...occurrence,
+            state: {
+              ...state,
+              wheels: { ...state.wheels, [address.wheelKey]: replacement },
+            },
+          },
+          command,
+        ),
+      );
     }
     case 'CreateTerminalTransition':
       if (command.continuation.parentOccurrenceId === null) {
@@ -1852,6 +2105,13 @@ function applyUnchecked(
         command,
       );
       const withoutTerminal = removeContinuationSubtree(topology, continuation);
+      const sourceRoom = continuationSourceRoom(
+        { ...plan, topology: withoutTerminal },
+        catalog,
+        layout,
+        command.continuation.parentOccurrenceId,
+        command,
+      );
       return withBiome(document, located, {
         ...plan,
         topology: {
@@ -1861,7 +2121,7 @@ function applyUnchecked(
             {
               kind: 'batch',
               parentOccurrenceId: command.continuation.parentOccurrenceId,
-              rewardStore: defaultBatchRewardStore(layout),
+              rewardStore: defaultBatchRewardStore(layout, sourceRoom),
               batchState: defaultBatchState(layout),
               targets: [],
               pickedExitIndex: null,
@@ -1906,7 +2166,18 @@ function applyUnchecked(
           ),
         ),
       };
-      return withBiome(document, located, replaceOccurrence(plan, replacement, command));
+      const withReplacement = replaceOccurrence(plan, replacement, command);
+      return withBiome(
+        document,
+        located,
+        reconcileOwnedBatchRewardStore(
+          withReplacement,
+          layout,
+          occurrence.occurrenceId,
+          room,
+          command,
+        ),
+      );
     }
     case 'ReplaceIncomingReward': {
       const occurrence = requireOccurrence(plan, command.reward.occurrenceId, command);

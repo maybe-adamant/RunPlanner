@@ -549,6 +549,20 @@ timeline, side state, WorldShop, selected-invalid repair loop, candidate parity,
 accessible naming, JSON profile round trip, recovery, and measured rebuild/edit
 responsiveness.
 
+Phase 6 O Slice 1 is complete. The linear project codec and semantic command
+layer now admit O's source-profile reward authority and direct terminal form.
+Ordinary batches after ShipCombat persist only `sourceOfferPoint`; batches
+after other O rooms retain the authored Run/Meta base-store authority. Replacing
+a source room reconciles that owned authority without copying wheel state or
+discarding downstream topology. Typed commands replace encounter count, wheel
+offer count, wheel store, individual offers, and the picked active offer while
+retaining complete dormant wheel capacity. O's direct preboss transition owns
+one entered shop occurrence and no separate terminal-pick step. Focused
+fixtures close both authority directions, dormant second-wheel retention,
+active-prefix bounds, malformed persistence, direct-terminal round trips, and
+semantic wheel addresses. O remains non-simulatable, non-editable, and outside
+the application capability matrix until its later slices.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1254,14 +1268,12 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, and all nine N slices are complete. The contextual-selection UX
-insertion defined in `CONTEXTUAL_EDITOR_UX.md` is next, before O begins.
-
-Now that N is active, that insertion begins by replacing the current incomplete-
-biome early return with the progressive evaluation contract in
-`SIMULATION_AND_VALIDATION.md`. Production does not yet publish prefix
-materialization, prefix history state, or contextual candidates before biome
-completion.
+five I slices, all nine N slices, and O Slice 1 are complete. By explicit
+implementation-order decision, the remaining O/P/Q Phase 6 slices now precede
+the contextual-selection UX insertion. They reuse the existing editor and
+candidate language while preserving the typed data required by that later UX
+pass. Production does not yet publish prefix materialization, prefix history
+state, or contextual candidates before biome completion.
 
 Every biome-import commit must remain declaration-only and pass its own parity
 and dormant-isolation gate. Later commits must not compensate for an incomplete

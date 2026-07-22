@@ -503,6 +503,31 @@ type ProjectCommand =
       cageOutcome: 'min' | 'max';
     }
   | {
+      kind: 'ReplaceShipEncounterCount';
+      occurrence: OccurrenceAddress;
+      encounterCount: 2 | 3;
+    }
+  | {
+      kind: 'ReplaceRewardWheelOfferCount';
+      wheel: RewardWheelAddress;
+      offerCount: 1 | 2;
+    }
+  | {
+      kind: 'ReplaceRewardWheelStore';
+      wheel: RewardWheelAddress;
+      storeKey: RewardStoreKey;
+    }
+  | {
+      kind: 'ReplaceRewardWheelOffer';
+      offer: RewardWheelOfferAddress;
+      value: ResolvedRewardOffer;
+    }
+  | {
+      kind: 'ReplaceRewardWheelPicked';
+      wheel: RewardWheelAddress;
+      pickedOfferIndex: 1 | 2;
+    }
+  | {
       kind: 'ReplaceShopOffer';
       offer: ShopOfferAddress;
       value: ResolvedRewardOffer;
@@ -805,6 +830,11 @@ require a concrete occurrence ID.
 parent occurrence is already its source, and the normalized layout policy owns
 how to select that source's semantic offer point. O resolves the last active
 ShipCombat wheel from the occurrence's authored encounter-count state.
+Replacing the source room also reconciles the owned continuation's authority:
+ShipCombat selects `sourceOfferPoint`, while another admitted O room restores
+the layout's authored Run/Meta store policy. The command preserves an authored
+store value when it remains valid and never copies a wheel store into the
+continuation.
 Both wheel records remain complete at maximum capacity. An inactive second
 combat or second offer emits no events but is never erased from authored state;
 the active counts select the meaningful prefix. `pickedOfferIndex` must address

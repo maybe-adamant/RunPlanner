@@ -94,6 +94,19 @@ export interface LocalChildGroupAddress extends BiomeOwnedAddress {
   readonly groupKey: string;
 }
 
+export interface RewardWheelAddress extends BiomeOwnedAddress {
+  readonly kind: 'rewardWheel';
+  readonly occurrenceId: OccurrenceId;
+  readonly wheelKey: string;
+}
+
+export interface RewardWheelOfferAddress extends BiomeOwnedAddress {
+  readonly kind: 'rewardWheelOffer';
+  readonly occurrenceId: OccurrenceId;
+  readonly wheelKey: string;
+  readonly offerKey: string;
+}
+
 export interface HubSlotAddress extends BiomeOwnedAddress {
   readonly kind: 'hubSlot';
   readonly hubSlotKey: string;
@@ -145,6 +158,8 @@ export type SemanticAddress =
   | LocalRewardAddress
   | OccurrenceAddress
   | PickedAddress
+  | RewardWheelAddress
+  | RewardWheelOfferAddress
   | ShopOfferAddress
   | ShopPurchaseAddress
   | TargetAddress;
@@ -341,6 +356,34 @@ export function createLocalChildGroupAddress(
   });
 }
 
+export function createRewardWheelAddress(
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+  wheelKey: string,
+): RewardWheelAddress {
+  return Object.freeze({
+    kind: 'rewardWheel',
+    ...biomeOwner(biome),
+    occurrenceId,
+    wheelKey: nonBlank(wheelKey, 'wheelKey'),
+  });
+}
+
+export function createRewardWheelOfferAddress(
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+  wheelKey: string,
+  offerKey: string,
+): RewardWheelOfferAddress {
+  return Object.freeze({
+    kind: 'rewardWheelOffer',
+    ...biomeOwner(biome),
+    occurrenceId,
+    wheelKey: nonBlank(wheelKey, 'wheelKey'),
+    offerKey: nonBlank(offerKey, 'offerKey'),
+  });
+}
+
 export function createHubSlotAddress(biome: BiomeAddress, hubSlotKey: string): HubSlotAddress {
   return Object.freeze({
     kind: 'hubSlot',
@@ -426,6 +469,23 @@ export function semanticAddressKey(address: SemanticAddress): string {
         address.biomeKey,
         address.occurrenceId,
         address.groupKey,
+      ]);
+    case 'rewardWheel':
+      return JSON.stringify([
+        address.kind,
+        address.routeKey,
+        address.biomeKey,
+        address.occurrenceId,
+        address.wheelKey,
+      ]);
+    case 'rewardWheelOffer':
+      return JSON.stringify([
+        address.kind,
+        address.routeKey,
+        address.biomeKey,
+        address.occurrenceId,
+        address.wheelKey,
+        address.offerKey,
       ]);
     case 'hubSlot':
       return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.hubSlotKey]);
