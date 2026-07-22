@@ -289,6 +289,16 @@ prefix as participating and leaves a dormant third value retained. A
 non-combat target renders no cage editor, and deferred
 `FieldsOptionalRewards` render no controls.
 
+An O ShipCombat occurrence renders one encounter-count selector and both
+declaration-bounded reward wheels. The selected two- or three-phase value marks
+`wheel2` dormant or active without deleting its retained state. Each wheel
+owns its Run/Meta store, active offer count, ordered maximum-capacity offers,
+and one picked active offer. Dormant wheels and offers remain editable and
+visibly dormant; the outgoing decision exposes no duplicate store selector
+because its `sourceOfferPoint` policy derives from the last active wheel. The
+editor dispatches only ship and reward-wheel semantic commands and does not
+encode phase timing.
+
 Display labels remain separate from persisted game identifiers:
 
 ```ts
@@ -321,6 +331,8 @@ owner address and projects them into UI destinations:
 | Conditional terminal target | target row and biome-completion marker |
 | Room occurrence             | room editor                            |
 | Occurrence plus slot        | local reward/child editor              |
+| Reward wheel                | wheel count, store, and picked offer   |
+| Reward wheel offer          | ordered wheel reward editor            |
 
 Finding resolution is direct lookup. It never scans rows for a matching game
 room name.

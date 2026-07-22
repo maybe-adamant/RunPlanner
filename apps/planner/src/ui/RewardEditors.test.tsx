@@ -75,6 +75,35 @@ const candidateProjection: CandidateProjectionService = {
         cageOutcome,
       })),
     ),
+  shipEncounterCounts: (_project, occurrence, values) =>
+    projected(
+      values,
+      values.map((encounterCount) => ({
+        kind: 'shipEncounterCount',
+        occurrence,
+        encounterCount,
+      })),
+    ),
+  rewardWheelOfferCounts: (_project, wheel, values) =>
+    projected(
+      values,
+      values.map((offerCount) => ({ kind: 'rewardWheelOfferCount', wheel, offerCount })),
+    ),
+  rewardWheelStores: (_project, wheel, storeKeys) =>
+    projected(
+      storeKeys,
+      storeKeys.map((storeKey) => ({ kind: 'rewardWheelStore', wheel, storeKey })),
+    ),
+  rewardWheelOffers: (_project, offer, values) =>
+    projected(
+      values,
+      values.map((value) => ({ kind: 'rewardWheelOffer', offer, value })),
+    ),
+  rewardWheelPicks: (_project, wheel, values) =>
+    projected(
+      values,
+      values.map((pickedOfferIndex) => ({ kind: 'rewardWheelPicked', wheel, pickedOfferIndex })),
+    ),
   hubSlots: (_project, slot, occurrenceId, values) =>
     projected(
       values,

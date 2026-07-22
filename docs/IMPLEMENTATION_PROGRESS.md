@@ -594,6 +594,16 @@ source eligibility. Fixtures prove candidate/selected consistency, retained
 invalid encounter state, route-carried bag support, and unavailable O context
 when the application-owned simulation scope still ends after N.
 
+Phase 6 O Slice 5 is complete. The shared room editor now projects ShipCombat
+encounter count and both maximum-capacity wheel owners, including active and
+dormant wheel/offer state, wheel store, active offer count, ordered offers,
+and exactly one picked active offer. Reward editors address wheel offers
+directly and candidate projection exposes the five ship-specific query kinds.
+The common linear topology editor already provides O's one-exit decisions and
+direct-preboss frontier, so React contains no encounter or terminal timing
+rule. Focused interaction fixtures prove semantic edits and the entered direct
+WorldShop while O remains absent from production navigation.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,
@@ -1299,7 +1309,7 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, all nine N slices, and O Slices 1-4 are complete. By explicit
+five I slices, all nine N slices, and O Slices 1-5 are complete. By explicit
 implementation-order decision, the remaining O/P/Q Phase 6 slices now precede
 the contextual-selection UX insertion. They reuse the existing editor and
 candidate language while preserving the typed data required by that later UX
