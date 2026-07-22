@@ -17,6 +17,8 @@ import {
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createTargetAddress,
+  evaluateProjectCandidate,
+  evaluateProjectCandidates,
   evaluateLinearBiome,
   evaluateNBiome,
   semanticAddressKey,
@@ -435,5 +437,84 @@ describe('selected O validation', () => {
         }),
       }),
     );
+  });
+
+  it('evaluates ship-specific candidates through the selected O simulation', () => {
+    const document = validProject();
+    const wheel = createRewardWheelAddress(oBiome, oIds.combat04, 'wheel1');
+    const evaluations = evaluateProjectCandidates(catalog, document, [
+      {
+        kind: 'shipEncounterCount',
+        occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
+        encounterCount: 2,
+      },
+      {
+        kind: 'shipEncounterCount',
+        occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
+        encounterCount: 3,
+      },
+      { kind: 'rewardWheelOfferCount', wheel, offerCount: 2 },
+      { kind: 'rewardWheelStore', wheel, storeKey: 'MetaProgress' },
+      {
+        kind: 'rewardWheelOffer',
+        offer: createRewardWheelOfferAddress(oBiome, oIds.combat04, 'wheel1', 'offer1'),
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+        },
+      },
+      { kind: 'rewardWheelPicked', wheel, pickedOfferIndex: 1 },
+    ]);
+
+    expect(evaluations.map((evaluation) => evaluation.context)).toEqual([
+      'evaluated',
+      'evaluated',
+      'evaluated',
+      'evaluated',
+      'evaluated',
+      'evaluated',
+    ]);
+    expect(
+      evaluations.map((evaluation) =>
+        evaluation.context === 'evaluated' ? evaluation.support : 'unavailable',
+      ),
+    ).toEqual(['forced', 'impossible', 'possible', 'impossible', 'possible', 'forced']);
+    expect(evaluations[1]).toMatchObject({
+      context: 'evaluated',
+      findings: [{ code: 'encounterCountUnavailable' }],
+      evidence: { supportEncounterCounts: [2] },
+    });
+    expect(evaluations[3]).toMatchObject({
+      context: 'evaluated',
+      findings: expect.arrayContaining([
+        expect.objectContaining({ code: 'rewardBagEntryUnavailable' }),
+      ]),
+      evidence: { supportedStoreKeys: ['RunProgress', 'MetaProgress'] },
+    });
+    expect(
+      evaluateProjectCandidate(
+        catalog,
+        document,
+        { kind: 'rewardWheelOfferCount', wheel, offerCount: 1 },
+        { simulatableBiomeKeys: ['N'] },
+      ),
+    ).toMatchObject({ context: 'unavailable', reason: 'simulatorUnavailable' });
+
+    const invalid = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
+      encounterCount: 3,
+    });
+    expect(
+      evaluateProjectCandidate(catalog, invalid, {
+        kind: 'shipEncounterCount',
+        occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
+        encounterCount: 3,
+      }),
+    ).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: [{ code: 'encounterCountUnavailable' }],
+    });
   });
 });

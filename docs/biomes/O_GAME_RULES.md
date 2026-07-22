@@ -478,10 +478,12 @@ The dormant O import delivers:
     stores, recent-room eligibility, BED asymmetry, and depth-5 Shop/Story
     force competition.
 
-O's authored, canonical lifecycle, reward, and selected-validation core is now
-implemented but remains dormant at the application capability boundary. The
-candidate service, editor projection, and product-loop activation remain the
-later delivery slices. Persistent NPCs remain deferred.
+O's authored, canonical lifecycle, reward, selected-validation, and candidate
+core is now implemented but remains dormant at the application capability
+boundary. Ship-specific candidates cover encounter count and wheel count,
+store, offer, and pick values through normal project evaluation. The editor
+projection and product-loop activation remain the later delivery slices.
+Persistent NPCs remain deferred.
 
 ## Model Conclusions
 
