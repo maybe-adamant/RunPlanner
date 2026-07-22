@@ -1,10 +1,7 @@
-export {
-  LinearMaterializationContractError,
-  materializeLinearBiome,
-  projectClockworkTopology,
-  projectLinearBatchState,
-} from './linear';
-export type { ClockworkBatchProjection, ClockworkTargetProjection } from './linear';
+export { materializeLinearBiome } from './linear/dispatch';
+export { LinearMaterializationContractError } from './linear/contract';
+export { projectClockworkTopology, projectLinearBatchState } from './linear/continuations';
+export type { ClockworkBatchProjection, ClockworkTargetProjection } from './linear/continuations';
 export { HubMaterializationContractError, materializeHubBiome } from './hub';
 export type {
   CanonicalAuthoredRoom,
