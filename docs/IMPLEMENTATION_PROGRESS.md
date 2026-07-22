@@ -666,6 +666,14 @@ terminal only after it, while destructive downstream operations retain the
 common semantic-command contract. This editor remains behind a dormant Q
 application capability until Slice 4 closes the full Surface loop.
 
+Phase 6 Q Slice 4 is complete. Q is authorable, simulatable, and editable only
+after the complete N/O/P prefix. The representative Surface browser fixture
+now closes N/O/P/Q route validation, staged room candidates, the rewardless
+spine, miniboss reward controls, the direct Summit shop, navigation,
+accessibility, profile round trips, autosave recovery, and measured
+publication/rebuild behavior. All eight declared biomes now participate in the
+application capability matrix and Phase 6 is complete.
+
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
 producer-role timing, exact encounter-depth timing, commit counter effects,

@@ -1081,7 +1081,7 @@ interface ProjectEvaluation {
 Each route simulation records:
 
 - configured biome identity and the currently registered simulation prefix;
-- complete F/G/H/I/N evaluations with layout-typed canonical snapshots, lifecycle events,
+- complete F/G/H/I/N/O/P/Q evaluations with layout-typed canonical snapshots, lifecycle events,
   ledgers, room-generation proof, reward witnesses, and findings;
 - addressed completeness findings for an incomplete active biome; progressive
   prefix materialization remains the next contextual-selection insertion;
@@ -1092,15 +1092,14 @@ Each route simulation records:
 - semantic findings in stable route and phase order;
 - whether the route is eligible for future execution-plan compilation.
 
-The core registry contains complete F, G, H, I, N, and dormant O simulators, with function
+The core registry contains complete F, G, H, I, N, O, P, and Q simulators, with function
 dispatch selected by normalized layout kind after biome implementation scope is
 confirmed. Project simulation may also receive an application-owned simulation scope; reaching a registered
 biome outside that scope records a `simulatorBoundary` horizon without
 dispatching the biome or inventing local findings. The current application
-scope includes F, G, H, I, and N. Application interaction fixtures and direct
-core conformance fixtures exercise the full F-to-I prefix and the one-biome N
-Surface prefix. O's direct core fixtures exercise the N/O prefix while the
-application scope continues to stop at O.
+scope includes all eight declared biomes. Application interaction fixtures and
+direct core conformance fixtures exercise the complete F/G/H/I and N/O/P/Q
+route prefixes.
 An entirely unconfigured project has explicit `empty` status, no findings, and
 is not eligible for execution-plan compilation.
 Candidate results and UI decoration are deliberately absent from this Phase 3
