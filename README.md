@@ -126,21 +126,23 @@ authority and should be referenced rather than copied elsewhere.
     Ephyra.
 15. [`docs/audits/N_SIDE_ROOM_FINDINGS.md`](docs/audits/N_SIDE_ROOM_FINDINGS.md)
     — runtime evidence for Ephyra side-room availability.
-16. [`docs/design/AUTHORED_PROJECT_MODEL.md`](docs/design/AUTHORED_PROJECT_MODEL.md)
+16. [`docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md)
+    — all-biome contextual-selection, frontier, repair, and feedback inventory.
+17. [`docs/design/AUTHORED_PROJECT_MODEL.md`](docs/design/AUTHORED_PROJECT_MODEL.md)
     — persistence, topology ownership, identity, and semantic commands.
-17. [`docs/design/SIMULATION_AND_VALIDATION.md`](docs/design/SIMULATION_AND_VALIDATION.md)
+18. [`docs/design/SIMULATION_AND_VALIDATION.md`](docs/design/SIMULATION_AND_VALIDATION.md)
     — materialization, history, validation, feedback, and simulation.
-18. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) — editor
+19. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) — editor
     projection, navigation, persistence UX, and interaction ownership.
-19. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md)
+20. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md)
     — contextual room/reward selection and compact picker behavior.
-20. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
+21. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
     — future execution artifact and runtime conformance loop.
-21. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md)
+22. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md)
     — forward delivery sequence and acceptance gates.
-22. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md)
+23. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md)
     — inherited evidence disposition and port verification.
-23. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
+24. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
     — completed delivery history; not design authority.
 
 ## Source Evidence

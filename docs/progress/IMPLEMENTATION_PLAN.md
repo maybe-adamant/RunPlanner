@@ -850,9 +850,9 @@ Gate:
 - findings resolve to stable semantic addresses without UI information.
 
 These Phase 3 gates describe the original complete-biome simulation closure.
-The contextual-selection insertion after H/I deliberately enriches incomplete
-biome results with one progressively evaluated prefix while preserving every
-no-canonical-snapshot and complete-valid route-seed invariant above.
+Phase 7 deliberately enriches incomplete biome results with one progressively
+evaluated prefix while preserving every no-canonical-snapshot and
+complete-valid route-seed invariant above.
 
 ## Phase 4: Thin Usable F Editor
 
@@ -1297,12 +1297,10 @@ Implement in this order unless concrete dependencies justify a change:
 5. P: linear surface topology and room-internal encounter rules.
 6. Q: forced skeleton and independently generated two-exit miniboss stages.
 
-The rollout has an explicit UX insertion boundary after N and before O. Close
-the persistent-Hub traversal body through one complete N product loop, then
-complete the contextual room/reward selection work in
-`../design/CONTEXTUAL_EDITOR_UX.md` across F/G/H/I/N before resuming controlled expansion
-with O/P/Q. This grounds the shared interaction language in both linear and hub
-editors without waiting for the remaining structurally linear Surface biomes.
+The original rollout placed a UX insertion after N and before O. Delivery order
+deliberately changed so O/P/Q could complete the cross-biome pressure test
+first. The contextual room/reward work now begins in Phase 7 across all eight
+active biomes; it is not an activation gate inside Phase 6.
 
 For each biome, close these acceptance gates:
 
@@ -1574,37 +1572,6 @@ editor projection, application capabilities, schema changes, address changes,
 or compatibility scaffolding. Any golden semantic output change fails the
 slice rather than being accepted as refactor fallout.
 
-### Contextual Selection UX Insertion
-
-After N activates and before beginning O, harden the complete Underworld and N
-editors through the focused contract in `../design/CONTEXTUAL_EDITOR_UX.md`:
-
-- refactor the binary incomplete-biome early return into one progressive
-  evaluation carrying a semantic authoring frontier and maximum truthful
-  coverage point;
-- publish covered prefix materialization, lifecycle, history state,
-  room-generation views, reward witnesses, findings, and candidate contacts
-  through the normal simulation composition root;
-- preserve the route gate: only a complete-valid F/G/H biome seeds contextual
-  evaluation in its successor, while later biome pages remain editable and
-  unassessed;
-- enrich room candidate evidence so counter, history, cap, and force failures
-  remain distinguishable;
-- add one application-owned contextual option resolver and centralized reason
-  presentation;
-- replace the required Type/Room sequence with one grouped room picker;
-- make reward choices follow their resolved store, generated siblings, source
-  support, and counted-bag state;
-- replace vertically stacked reward and payload selects with one compact
-  compound reward interaction;
-- preserve selected invalid values and unavailable upstream context without
-  automatic repair;
-- close the F/G/H/I/N interaction, accessibility, and responsiveness fixtures.
-
-This insertion changes selection guidance, not frontier topology or commands.
-The existing frontier actions remain until every biome supplies concrete
-editor evidence for the later cross-biome review.
-
 ### O Delivery Slices
 
 O should close through six slices after N:
@@ -1705,49 +1672,165 @@ activation must preserve route-prefix order: `F -> G -> H -> I` and
 Do not create placeholder production behavior that claims a biome is simulated
 when it only has declarations or UI.
 
-Phase 6 biome editors inherit the contextual selection contract in
-`../design/CONTEXTUAL_EDITOR_UX.md`. Frontier controls may remain layout-specific until
-the later cross-biome review; no biome editor may move frontier game rules into
-React merely to improve its presentation.
+Phase 6 biome editors preserve the data required by the contextual-selection
+contract in `../design/CONTEXTUAL_EDITOR_UX.md`, but they do not claim that
+contract is already presented. Frontier controls remain layout-specific; no
+biome editor may move frontier game rules into React merely to improve its
+presentation.
 
-## Phase 7: Cross-Biome Frontier and Presentation Review
+## Phase 7: Contextual Editing and Cross-Biome UX
 
-Begin only after every supported biome has completed its product loop. This
-phase starts with a fresh audit of the concrete F/G/H/I/N/O/P/Q editors. It
-does not inherit the retired assumption that one unified frontier interaction
-must exist.
+Begin only after every supported biome has completed its product loop. The
+completed inventory and frontier decision record live in
+`../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`.
 
-The complete authored, simulation, validation, candidate, semantic-command,
-and contextual-selection models remain authoritative. Phase 7 decides which
-frontier and feedback presentation ideas are genuinely shared and which remain
-layout-specific.
+Phase 7 first makes incomplete active-biome evaluation and candidate evidence
+useful during authoring. It then replaces the high-friction room and reward
+controls, reconciles feedback hierarchy, and closes frontier and visual
+presentation without weakening layout-specific semantics.
 
-### Deliverables
+### Commit 1: Progressive Evaluation Contract and Route Gate
 
-- a cross-biome audit of ordinary, independent-terminal,
-  conditional-terminal, direct-terminal, staged, and fixed-hub frontier
-  interactions;
-- an explicit decision record for which frontier actions can share a
-  presentation without weakening their domain semantics;
-- retained-invalid frontier repair policies based on the completed editors;
-- a final review of local findings, upward route/biome/project status,
-  coverage-derived blocked presentation, and semantic navigation;
-- cross-biome accessibility, keyboard, visual-hierarchy, spacing, and
-  responsiveness polish;
-- a concrete commit sequence written only after the audit resolves the shared
-  frontier vocabulary.
+Deliver:
 
-### Acceptance
+- one typed progressive biome result carrying authoring completion and maximum
+  truthful semantic coverage;
+- explicit complete-valid prefix, one active biome, and blocked downstream
+  route regions;
+- unchanged canonical snapshots, final history, completion, and downstream
+  seeding for complete-valid biomes;
+- no canonical snapshot or invented future facts for an incomplete biome;
+- route fixtures covering incomplete, invalid, valid, and blocked Underworld
+  and Surface states.
 
-- every frontier layout family retains its domain semantics;
-- any shared interaction is justified by at least two completed concrete
-  consumers rather than an F-shaped abstraction;
-- retained invalid topology remains visible and requires explicit repair;
-- blocked owners come from explicit evaluation coverage rather than finding
-  order or rendered position;
-- no frontier, completion, force, or terminal rule exists only in UI code;
-- representative interaction fixtures cover the accepted F/G/H/I/N/O/P/Q
-  frontier and feedback policies;
+The public result must remain one atomic project evaluation. Do not introduce a
+candidate-only simulator or UI row coordinate.
+
+### Commit 2: Linear Progressive Coverage
+
+Deliver:
+
+- covered-prefix materialization, lifecycle, history, counters, generation
+  views, reward witnesses, and findings for Linear biomes;
+- concrete coverage fixtures for eligibility-driven F/G/P, fixed-count H/O,
+  conditional-terminal I, and staged Q;
+- exact pre-decision ownership across ordinary batches, Fields outcomes,
+  Clockwork Goal/NonGoal, ship wheels, and staged pools;
+- strengthening of the same result to the existing complete canonical
+  evaluation when the terminal and completion sequence are authored.
+
+### Commit 3: Hub Progressive Coverage
+
+Deliver:
+
+- N coverage through fixed entry, complete joint open board, ordered visits
+  with parent-local side state, fixed preboss, and completion;
+- an explicit semantic-region boundary for the jointly generated board rather
+  than rendered slot-order prefix claims;
+- the same no-canonical-snapshot and no-downstream-seed rules as Linear
+  incompleteness;
+- focused partial-N and N-to-O route-gate fixtures.
+
+### Commit 4: Candidate Evidence and Contextual Projection
+
+Deliver:
+
+- addressed coverage-not-reached evidence replacing blanket active-biome
+  `biomeIncomplete` results while retaining distinct upstream-incomplete and
+  upstream-invalid reasons;
+- typed room requirement, counter, cap, force, compatibility, store, bag,
+  sibling, Boon-source, and Devotion-pair evidence;
+- one application-owned `ContextualOption` resolver with centralized
+  player-facing explanations;
+- forced, possible, impossible, and unassessed presentation fixtures;
+- immutable-project and semantic-owner projection caching.
+
+### Commit 5: Grouped Contextual Room Picker
+
+Deliver:
+
+- one accessible grouped and searchable concrete-room picker for Linear room
+  occurrences;
+- declaration/stage domains refined by contextual support rather than a
+  required Type then Room interaction;
+- required-first ordering, selected-invalid pinning, and an inspectable
+  unavailable disclosure;
+- zero- and one-option category behavior without implicit authoring;
+- keyboard, screen-reader, interaction, and responsiveness fixtures across
+  representative F/H/I/O/P/Q owners.
+
+N retains its fixed-slot Hub controls and consumes the common contextual
+vocabulary without acquiring arbitrary room replacement.
+
+### Commit 6: Contextual Reward Domains
+
+Deliver:
+
+- reward domains resolved from the exact producer store before authoring;
+- sequential or unordered sibling, counted-bag, Boon-source, and complete
+  Devotion-pair support where declared;
+- selected-invalid reward retention with distinct store, bag, peer, and source
+  explanations;
+- representative F/G/P batch, H cage, I NonGoal, N board/side/shop, O wheel,
+  and Q miniboss fixtures;
+- no deterministic bag-count presentation when several latent bag states are
+  reachable.
+
+### Commit 7: Compact Compound Reward Picker
+
+Deliver:
+
+- one closed-row reward summary and one accessible transient interaction;
+- immediate commit for payload-free rewards, one Boon-source step, and ordered
+  chosen/spurned Devotion steps;
+- support aggregation for Devotion first-source choices from complete pair
+  candidates;
+- one complete `ResolvedRewardOffer` command and one undo entry per finished
+  interaction;
+- cancellation with no authored or history change.
+
+### Commit 8: Feedback Hierarchy and Blocked Presentation
+
+Deliver:
+
+- local candidate guidance beside post-command semantic findings;
+- upward biome, route, and project status summaries;
+- coverage-derived unassessed and blocked presentation for downstream owners;
+- exact semantic navigation without finding-order or rendered-position
+  inference;
+- selected-invalid repair guidance independent of color;
+- cross-route fixtures proving later pages remain visible and editable.
+
+### Commit 9: Frontier and Presentation Closure
+
+Deliver:
+
+- one shared frontier presentation container with variant-owned actions;
+- concrete policies for F/G/P independent forks, H fixed-count fork, I
+  generated terminal peer, O/Q direct terminals, and N fixed Hub completion;
+- retained-overflow and terminal repair flows that require explicit commands;
+- final keyboard, accessibility, visual hierarchy, spacing, responsive layout,
+  and measured interaction/rebuild performance closure;
+- complete F/G/H/I/N/O/P/Q browser interaction fixtures.
+
+Do not invent a universal frontier action. Shared labels or components require
+at least two consumers with identical semantics.
+
+### Phase Acceptance
+
+- every covered active-biome owner receives truthful contextual support before
+  downstream completion is authored;
+- every later route biome remains editable but unassessed until its validated
+  predecessor prefix exists;
+- every room and reward exclusion exposed in ordinary UX has typed game
+  evidence and centralized player-facing copy;
+- selected invalid topology and leaf state remain visible and require explicit
+  replacement or owning structural deletion;
+- every frontier family retains its declaration, command, and simulation
+  semantics;
+- no room, reward, bag, force, terminal, completion, or blocking rule exists
+  only in React;
+- representative interaction fixtures cover all eight biomes;
 - the full repository test suite, production build, accessibility checks, and
   measured responsiveness pass.
 

@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This document defines the first focused UX hardening work for the standalone
-editor. It begins after the complete F/G/H/I Underworld product loop and before
-the next biome expansion.
+This document defines the contextual-selection foundation for Phase 7 of the
+standalone editor. It begins after the complete F/G/H/I and N/O/P/Q product
+loops, using all eight concrete editors rather than an F-shaped projection.
 
 The work is organized by user-facing ideas rather than by a global visual
 redesign. Its goal is to make room and reward authoring context-aware, compact,
@@ -31,10 +31,12 @@ and presentation boundary. They consume one progressive biome evaluation
 foundation from `SIMULATION_AND_VALIDATION.md`; authoring-prefix support is not
 a seventh UI feature or a second candidate simulator.
 
-Frontier-action redesign is deliberately deferred until every supported biome
-is active. The current `Add Next Decision`, layout-specific `Go to Preboss`,
-and I conditional-terminal behavior remain valid temporary interactions. This
-document makes no claim that they should eventually collapse into one action.
+The cross-biome frontier audit is now recorded in
+`../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`. Contextual selection lands before
+the final frontier and presentation closure because frontier guidance consumes
+the same progressive coverage and candidate evidence. The current
+`Add Next Decision`, layout-specific `Go to Preboss`, I conditional-terminal,
+N fixed-Hub, and O/Q direct-terminal behaviors do not collapse into one action.
 
 The broad visual treatment of route findings, enrichment color, graph views,
 and final application styling are also outside this first set. Existing
@@ -110,10 +112,12 @@ complete-valid route prefix
   -> blocked downstream biome suffix
 ```
 
-F must be complete and valid before G receives contextual evaluation. G stays
-fully editable before then, but its contextual room, store, peer, and bag
-states are unassessed. The editor must not derive a G seed from F defaults,
-partial history, or hypothetical future completion.
+Each route remains ordered. F must be complete and valid before G receives
+contextual evaluation, and N must be complete and valid before O receives it.
+Later biome pages stay fully editable, but their contextual room, store, peer,
+bag, wheel, Hub, and local-child states are unassessed. The editor must not
+derive a downstream seed from predecessor defaults, partial history, or
+hypothetical future completion.
 
 Within the active biome, a selector is assessed when evaluation coverage has
 reached its exact semantic pre-decision point. Missing unrelated downstream
@@ -447,17 +451,22 @@ The common component must support:
 
 ## Recommended Delivery Order
 
-1. progressive biome evaluation and validated-route-prefix gating;
-2. candidate evidence and presentation-contract hardening;
-3. shared contextual option resolver and reason-copy fixtures;
-4. grouped room picker and room-policy integration;
-5. resolved-store-aware reward domains;
-6. peer-aware and counted-bag-aware reward presentation;
-7. compact compound reward picker;
-8. complete F/G/H/I/N interaction, accessibility, and responsiveness closure.
+1. preserve the completed cross-biome audit and decision record;
+2. progressive biome evaluation and validated-route-prefix gating for Linear
+   and Hub coverage shapes;
+3. candidate evidence and presentation-contract hardening;
+4. shared contextual option resolver and reason-copy fixtures;
+5. grouped room picker and layout-policy integration;
+6. resolved-store-aware reward domains;
+7. peer-, source-, and counted-bag-aware reward presentation;
+8. compact compound reward picker;
+9. coverage-derived feedback and blocked presentation;
+10. frontier, interaction, accessibility, and responsiveness closure across
+    F/G/H/I/N/O/P/Q.
 
-Each slice should leave the existing product loop usable. Frontier actions do
-not change in these slices.
+Each slice should leave the existing product loop usable. Contextual-selector
+slices do not change frontier topology or commands; the final closure may
+change presentation only after the variant-owned action contract is preserved.
 
 ## Acceptance
 
@@ -467,12 +476,12 @@ This work closes when:
   decision without publishing a canonical snapshot;
 - a missing downstream decision or Preboss does not block earlier room and
   reward selectors;
-- G/H/I receive no contextual claim until every prior biome is complete and
-  valid;
-- N receives no contextual claim unless it is the active configured Surface
-  prefix biome;
-- F/G/H/I/N room pickers show only context-supported ordinary choices while
-  retaining selected invalid rooms;
+- every downstream biome receives no contextual claim until every prior biome
+  on its route is complete and valid;
+- N's joint Hub board and ordered traversal publish coverage by semantic
+  region rather than rendered slot order;
+- F/G/H/I/O/P/Q room pickers show only context-supported ordinary choices
+  while retaining selected invalid rooms; N retains its fixed-slot controls;
 - every room exclusion can be explained from typed game evidence;
 - zero- and one-candidate room categories require no redundant selection;
 - reward choices follow their resolved store before authoring;
@@ -482,20 +491,13 @@ This work closes when:
 - incomplete payloads never enter the authored project or undo history;
 - unavailable upstream context is not presented as local invalidity;
 - no room, reward, bag, or force rule is implemented in React;
-- representative browser fixtures, accessibility checks, responsiveness
-  measurements, and the full repository validation suite pass.
+- representative F/G/H/I/N/O/P/Q browser fixtures, accessibility checks,
+  responsiveness measurements, and the full repository validation suite pass.
 
-## Deferred Questions
+## Phase 7 Integration
 
-After N/O/P/Q are fully active, perform a fresh cross-biome review of:
-
-- `Add Next Decision` and `Go to Preboss`;
-- forced terminal creation;
-- conditional-terminal I batches;
-- fixed N hub completion;
-- direct O/Q terminals;
-- retained-invalid frontier repair;
-- global finding hierarchy and final visual polish.
-
-That review begins from the concrete completed editors. It is not constrained
-by the retired assumption that one unified frontier interaction must exist.
+The completed audit in `../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md` owns the
+cross-biome inventory and frontier decision record. This document owns the
+shared contextual-selection behavior. `EDITOR_MODEL.md` continues to own the
+broader feedback, navigation, persistence, and interaction boundaries, while
+`../progress/IMPLEMENTATION_PLAN.md` owns the concrete Phase 7 commit sequence.

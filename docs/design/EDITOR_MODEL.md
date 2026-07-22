@@ -22,11 +22,12 @@ authored project + simulation result
 The UI may tolerate incomplete and invalid authored plans. It must not hide,
 repair, or silently delete them merely to keep the view visually legal.
 
-The batch-level Reward Pool projection described below follows the locked
-F/G/P/Q/H/O/I-compatible current project-schema contract. The active F/G editor
-projects and edits that batch-owned value directly; H projects its
-policy-owned Fields outcome and room-local cages through the same semantic
-command surface.
+The batch-level projection follows the locked all-biome project contract.
+F/G/P author an ordinary batch Reward Pool, H authors its Fields outcome, I
+authors Clockwork-local state without a base store, O may derive its outgoing
+store from a source wheel, and Q owns no ordinary base store. N projects its
+fixed Hub board rather than a Linear batch. All variants use the same semantic
+command and finding ownership rules.
 
 ## Application Shell
 
@@ -168,11 +169,13 @@ with physical exit targets. Radio semantics are appropriate because exactly
 one target continues. A single-exit decision may select its newly specified
 target in the same semantic command group.
 
-F/G terminal sections use the same physical-exit language. They render one
-terminal occurrence per active predecessor exit, with the policy-derived Shop
-or Free Reward editor aligned to that exit. Selecting the entered terminal
-target is single-choice topology; the editor does not add a second preboss
-entry-mode selector.
+F/G/H/P forked terminal sections use the same physical-exit language. They
+render one terminal occurrence per active predecessor exit, with the
+policy-derived Shop or Free Reward editor aligned to that exit. Selecting the
+entered terminal target is single-choice topology; the editor does not add a
+second preboss entry-mode selector. O/Q direct terminals own one automatically
+entered shop occurrence, while N owns a fixed authored terminal outside the
+Linear frontier.
 
 I keeps its post-goal preboss and ordinary peer in one decision card because
 they are one game batch. `Add Next Decision` is I's only frontier-advance
@@ -201,14 +204,19 @@ reward remains dormant in authored state. When an upstream edit makes that
 same occurrence NonGoal, the editor exposes the retained reward value; it does
 not install a new default or ask the user to author Goal versus NonGoal.
 
-The active frontier offers policy-admitted structural actions rather than a
-persistent `Next Step` field:
+The active frontier offers layout-policy-admitted structural actions rather
+than a persistent `Next Step` field:
 
 - Add Next Decision;
 - Go to Preboss, only for layouts with an independent terminal transition;
 - replace terminal outcome with continuing rooms where the layout permits;
 - remove from this decision;
 - clear biome through an explicit destructive action.
+
+The shared frontier presentation and variant-owned action sets are recorded in
+`../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`. React may share the container, but
+it does not reinterpret independent, generated, direct, or fixed terminal
+semantics.
 
 ## Downstream Editing
 

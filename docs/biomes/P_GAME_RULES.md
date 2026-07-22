@@ -444,4 +444,4 @@ has proved that a batch can derive its store from a source-owned offer point.
 I has since confirmed declaration-owned forced-store resolution and a
 conditional-terminal generated batch. N has now confirmed the fixed-slot
 persistent-hub form without revising that reward ownership. The combined shape
-is frozen for the Phase 3 simulator contract.
+is the stable all-biome simulator contract.

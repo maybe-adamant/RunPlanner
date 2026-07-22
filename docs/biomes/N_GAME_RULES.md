@@ -629,7 +629,7 @@ gameplay, persistence, address, or canonical-snapshot change.
 
 ## Declaration and Authored-Model Contract
 
-The N declaration and authored-model slices include:
+The N declaration and authored-model contract includes:
 
 - `HubBiome` fixed entry, hub, terminal, and completion descriptors;
 - fixed authored room-slot descriptors for layout-owned rooms with leaf state;
@@ -640,7 +640,7 @@ The N declaration and authored-model slices include:
 - explicit hub reward-lookup production and shop-consumer requirements;
 - pylon spawn/completion and generated-side-room counters.
 
-The Phase 6 authored model exposes no arbitrary `CreateHubTarget(gameName)` or
+The authored model exposes no arbitrary `CreateHubTarget(gameName)` or
 `ReplaceOccurrenceRoom` command. It provides semantic replacements for:
 
 - the open fixed-slot set;
