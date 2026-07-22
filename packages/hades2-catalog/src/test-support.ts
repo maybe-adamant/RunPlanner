@@ -31,3 +31,4 @@ export type {
   RawShopProfileDeclaration,
   RawShopSlotDeclaration,
 } from './declarations/rewards';
+export { createRewardKernelCatalog } from './compiler/rewards/normalize';

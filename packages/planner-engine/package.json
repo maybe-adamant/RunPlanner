@@ -12,5 +12,8 @@
   },
   "scripts": {
     "typecheck": "tsc --project tsconfig.json"
+  },
+  "devDependencies": {
+    "@run-planner/hades2-catalog": "0.0.0"
   }
 }

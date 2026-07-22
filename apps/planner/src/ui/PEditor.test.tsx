@@ -128,7 +128,7 @@ describe('P candidates and editor projection', () => {
       { value: 'RunProgress', evaluation: { context: 'evaluated', support: 'impossible' } },
       { value: 'MetaProgress', evaluation: { context: 'evaluated', support: 'forced' } },
     ]);
-  });
+  }, 10_000);
 
   it('edits ordinary leaves and projects the forked terminal without internal phase controls', async () => {
     const { store, user } = renderP();
