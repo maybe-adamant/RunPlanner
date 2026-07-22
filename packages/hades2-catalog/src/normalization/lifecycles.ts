@@ -5,7 +5,7 @@ import type {
   RoomLifecycleOperation,
   RoomLifecycleProfile,
   RoomLifecycleProducerPolicy,
-} from '@run-planner/engine';
+} from '@run-planner/engine/catalog-schema';
 import type {
   ProducerLifecyclePointKey,
   ProducerLifecycleProfileDeclaration,

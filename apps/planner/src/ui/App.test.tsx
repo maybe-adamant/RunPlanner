@@ -14,7 +14,7 @@ import {
   createTargetAddress,
   decodeProjectDocument,
   semanticAddressKey,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '../application/createApplication';

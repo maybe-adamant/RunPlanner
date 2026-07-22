@@ -1,5 +1,5 @@
-import type { Catalog } from '../../catalog';
-import type { EnteredRewardStoreHistoryPolicy } from '../../rewards';
+import type { Catalog } from '../../catalog-schema';
+import type { EnteredRewardStoreHistoryPolicy } from '../../reward-kernel/bindings';
 import type { RoomLifecycleExecutionInput } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,

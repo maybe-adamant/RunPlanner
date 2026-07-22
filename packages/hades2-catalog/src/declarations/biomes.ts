@@ -1,4 +1,4 @@
-import type { BiomeDeclaration } from '@run-planner/engine';
+import type { BiomeDeclaration } from '@run-planner/engine/catalog-schema';
 
 export const biomes = [
   { key: 'F', label: 'Erebus' },

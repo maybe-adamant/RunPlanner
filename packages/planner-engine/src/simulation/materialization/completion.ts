@@ -1,5 +1,5 @@
-import type { Catalog, CompletionDescriptor, RoomDeclaration } from '../../catalog';
-import { createCompletionRoomAddress, type BiomeAddress } from '../../project/addresses';
+import type { Catalog, CompletionDescriptor, RoomDeclaration } from '../../catalog-schema';
+import { createCompletionRoomAddress, type BiomeAddress } from '../../authored-project/addresses';
 import type { CanonicalCompletionRoom } from './model';
 
 export type CompletionEnteredStorePolicy =

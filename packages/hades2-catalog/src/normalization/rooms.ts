@@ -1,11 +1,8 @@
 import type {
   CatalogCollection,
-  EnteredRewardStoreHistoryPolicy,
   EncounterProfile,
   ExitTypeDeclaration,
   ForkedPrebossEntryPolicy,
-  RequirementExpression,
-  RewardProducerBinding,
   RoomCaps,
   RoomDeclaration,
   RoomExit,
@@ -13,8 +10,16 @@ import type {
   RoomTemplateKey,
   RoomMode,
   RoomStructuralTag,
-} from '@run-planner/engine';
-import type { RewardKernelCatalog, RewardStoreDeclaration } from '@run-planner/engine/reward-kernel';
+} from '@run-planner/engine/catalog-schema';
+import type {
+  EnteredRewardStoreHistoryPolicy,
+  RewardProducerBinding,
+} from '@run-planner/engine/reward-kernel';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
+import type {
+  RewardKernelCatalog,
+  RewardStoreDeclaration,
+} from '@run-planner/engine/reward-kernel';
 
 import type { RawForkedPrebossEntryPolicy, RawRoomDeclaration } from '../declarations';
 import {

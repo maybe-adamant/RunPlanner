@@ -1,9 +1,9 @@
-import type { Catalog, HubBiomeLayout } from '../../catalog';
+import type { Catalog, HubBiomeLayout } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createHubSlotAddress,
   semanticAddressKey,
-} from '../../project/addresses';
+} from '../../authored-project/addresses';
 import type { CanonicalHubHistory, RoomHistoryViews } from '../history';
 import type { CanonicalHubBiome, CanonicalHubVisit } from '../materialization';
 import type { FindingEvidence, SemanticFinding } from '../model';

@@ -1,11 +1,14 @@
-import type { LinearBiomeLayout, RequirementExpression } from '@run-planner/engine';
+import type { LinearBiomeLayout } from '@run-planner/engine/catalog-schema';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
 import {
   createDefaultRoomState,
   decodeRoomState,
-  evaluateRequirement,
   ProjectDocumentContractError,
+} from '@run-planner/engine/authored-project';
+import {
+  evaluateRequirement,
   type RequirementEvaluationContext,
-} from '@run-planner/engine';
+} from '@run-planner/engine/requirements';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';

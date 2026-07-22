@@ -1,15 +1,14 @@
+import type { CountedRewardBinding } from '@run-planner/engine/reward-kernel';
+import type { LinearBiomeLayout, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type {
-  CountedRewardBinding,
-  LinearBiomeLayout,
   RequirementEvaluationContext,
   RequirementExpression,
-  RoomDeclaration,
-} from '@run-planner/engine';
+} from '@run-planner/engine/requirements';
 import {
   createDefaultBatchState,
   createDefaultRoomState,
-  evaluateRequirement,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { evaluateRequirement } from '@run-planner/engine/requirements';
 import { describe, expect, it } from 'vitest';
 
 import { CatalogContractError, createCatalog } from './catalog';

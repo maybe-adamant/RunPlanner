@@ -1,6 +1,6 @@
-import type { Catalog, HubBiomeLayout, RoomDeclaration } from '../../catalog';
-import { semanticAddressKey } from '../../project/addresses';
-import type { RewardHistoryState, RewardKernelFacts } from '../../rewardKernel';
+import type { Catalog, HubBiomeLayout, RoomDeclaration } from '../../catalog-schema';
+import { semanticAddressKey } from '../../authored-project/addresses';
+import type { RewardHistoryState, RewardKernelFacts } from '../../reward-kernel';
 import type {
   CanonicalHubHistory,
   HistoryStateView,

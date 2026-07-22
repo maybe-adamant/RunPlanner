@@ -1,4 +1,8 @@
-import type { BiomeDeclaration, CatalogCollection, RouteDeclaration } from '@run-planner/engine';
+import type {
+  BiomeDeclaration,
+  CatalogCollection,
+  RouteDeclaration,
+} from '@run-planner/engine/catalog-schema';
 
 import { createCollection, requireNonEmpty } from './common';
 import { fail } from './errors';

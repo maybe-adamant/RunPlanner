@@ -1,10 +1,10 @@
-import type { Catalog } from '../../catalog';
+import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createFixedEntryTargetAddress,
   semanticAddressKey,
   type ContinuationAddress,
-} from '../../project/addresses';
+} from '../../authored-project/addresses';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,

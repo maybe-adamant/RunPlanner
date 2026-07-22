@@ -1,7 +1,5 @@
 import {
   applyProjectCommand,
-  CandidateEvaluationContractError,
-  composeFHistory,
   createBiomeAddress,
   createBatchRewardStoreAddress,
   createContinuationAddress,
@@ -14,19 +12,23 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
+  semanticAddressKey,
+  type LinearBiomePlan,
+  type ProjectDocument,
+  type RoomOccurrence,
+} from '@run-planner/engine/authored-project';
+import {
+  CandidateEvaluationContractError,
+  composeFHistory,
   createPreparedProjectCandidateEvaluator,
   evaluateFCompleteness,
   evaluateFRoomGeneration,
   evaluateProjectCandidate,
   evaluateProjectCandidates,
   materializeLinearBiome,
-  semanticAddressKey,
   simulateProject,
   type CompleteFCompletenessResult,
-  type LinearBiomePlan,
-  type ProjectDocument,
-  type RoomOccurrence,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';

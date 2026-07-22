@@ -1,4 +1,4 @@
-import type { CatalogCollection } from '@run-planner/engine';
+import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
 
 import { fail } from './errors';
 

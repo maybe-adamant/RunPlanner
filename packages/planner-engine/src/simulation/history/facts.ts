@@ -1,4 +1,4 @@
-import { semanticAddressKey } from '../../project/addresses';
+import { semanticAddressKey } from '../../authored-project/addresses';
 import type { HistoryStateView } from './model';
 
 export interface RecentEncounterPhaseFact {

@@ -1,6 +1,6 @@
-import type { CatalogCollection } from '../catalog';
-import type { RequirementEvaluationContext } from '../requirementEvaluator';
-import type { RequirementExpression } from '../requirements';
+import type { CatalogCollection } from '../catalog-schema';
+import type { RequirementEvaluationContext } from '../requirements/evaluator';
+import type { RequirementExpression } from '../requirements/model';
 
 export type AcquisitionKind = 'consumable' | 'loot' | 'resource';
 export type HistoryProjectionKey = 'consumableAndUse' | 'lootAndUse';

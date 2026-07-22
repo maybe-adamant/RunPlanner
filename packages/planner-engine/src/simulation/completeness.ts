@@ -1,4 +1,9 @@
-import type { Catalog, HubBiomeLayout, LinearBiomeLayout, RoomDeclaration } from '../catalog';
+import type {
+  Catalog,
+  HubBiomeLayout,
+  LinearBiomeLayout,
+  RoomDeclaration,
+} from '../catalog-schema';
 import {
   createContinuationAddress,
   createHubOpenSetAddress,
@@ -7,7 +12,7 @@ import {
   createPickedAddress,
   createTargetAddress,
   type BiomeAddress,
-} from '../project/addresses';
+} from '../authored-project/addresses';
 import type {
   AuthoredBiomeState,
   HubBiomePlan,
@@ -17,7 +22,7 @@ import type {
   LinearContinuation,
   OccurrenceId,
   RoomOccurrence,
-} from '../project/model';
+} from '../authored-project/model';
 import type { CompletenessFindingCode, FindingEvidence, SemanticFinding } from './model';
 
 export interface IncompleteLinearCompletenessResult {

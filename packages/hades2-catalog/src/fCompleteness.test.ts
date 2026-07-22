@@ -8,13 +8,15 @@ import {
   createPickedAddress,
   createProjectDocument,
   createTargetAddress,
-  CompletenessContractError,
-  evaluateFCompleteness,
   semanticAddressKey,
-  type FCompletenessResult,
   type LinearBiomePlan,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import {
+  CompletenessContractError,
+  evaluateFCompleteness,
+  type FCompletenessResult,
+} from '@run-planner/engine/simulation';
 
 import { catalog } from './index';
 

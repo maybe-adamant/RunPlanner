@@ -5,10 +5,10 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
-  simulateProject,
   type ProjectCommand,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApplicationCapabilities } from './capabilityConfiguration';

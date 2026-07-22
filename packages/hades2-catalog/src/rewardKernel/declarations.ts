@@ -1,4 +1,4 @@
-import type { RequirementExpression } from '@run-planner/engine';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
   RawConcreteAcquisitionDeclaration,
   RawRewardKernelInput,

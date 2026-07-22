@@ -5,8 +5,8 @@ import type {
   RoomLifecycleEffectKind,
   RoomLifecycleOperation,
   RoomLifecycleProfile,
-} from '../../catalog';
-import type { ProducerRewardLifecycleDeclaration } from '../../rewardKernel/model';
+} from '../../catalog-schema';
+import type { ProducerRewardLifecycleDeclaration } from '../../reward-kernel/model';
 import type { RoomHistoryFragment, RoomLifecycleEvent, RoomLifecycleExecutionInput } from './model';
 
 type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];

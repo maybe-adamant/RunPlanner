@@ -1,4 +1,4 @@
-import type { Catalog } from '@run-planner/engine';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import { hasBiomeCapability, type PlannerCapabilities } from './capabilities';
 

@@ -1,14 +1,14 @@
-import type { Catalog, HubBiomeLayout, RewardWheelOfferPoint } from '../../catalog';
-import { semanticAddressKey, type SemanticAddress } from '../../project/addresses';
-import { applyProjectCommand, type ProjectCommand } from '../../project/commands';
+import type { Catalog, HubBiomeLayout, RewardWheelOfferPoint } from '../../catalog-schema';
+import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
+import { applyProjectCommand, type ProjectCommand } from '../../authored-project/commands';
 import type {
   AuthoredBiomePlan,
   HubBiomePlan,
   LinearBiomePlan,
   ProjectDocument,
   RewardWheelState,
-} from '../../project/model';
-import type { ResolvedRewardOffer } from '../../rewardKernel/model';
+} from '../../authored-project/model';
+import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import {
   evaluateLinearRoomTargetCandidate,
   type LinearForcePressureLedgerEntry,

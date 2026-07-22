@@ -1,5 +1,5 @@
 import { createAction, createReducer, type Reducer } from '@reduxjs/toolkit';
-import type { ProjectDocument } from '@run-planner/engine';
+import type { ProjectDocument } from '@run-planner/engine/authored-project';
 
 export interface ProfileSessionState {
   readonly explicitBaselineJson: string | null;

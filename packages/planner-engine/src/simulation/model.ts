@@ -1,4 +1,4 @@
-import type { SemanticAddress } from '../project/addresses';
+import type { SemanticAddress } from '../authored-project/addresses';
 
 export type FindingSeverity = 'error' | 'warning';
 

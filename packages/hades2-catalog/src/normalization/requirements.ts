@@ -1,6 +1,7 @@
-import type { CatalogCollection, NumericRange, RequirementExpression } from '@run-planner/engine';
+import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
+import type { NumericRange, RequirementExpression } from '@run-planner/engine/requirements';
 import type { RewardTypeDeclaration } from '@run-planner/engine/reward-kernel';
-import { hasRequirementEvaluator } from '@run-planner/engine';
+import { hasRequirementEvaluator } from '@run-planner/engine/requirements';
 
 import {
   freezeUniqueStrings,

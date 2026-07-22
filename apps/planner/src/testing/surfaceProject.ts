@@ -20,7 +20,7 @@ import {
   type HubBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
 export const nBiome = createBiomeAddress('Surface', 'N');

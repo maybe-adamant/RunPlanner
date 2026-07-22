@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./reward-kernel": "./src/rewardKernel/index.ts",
+    "./catalog-schema": "./src/catalog-schema/index.ts",
+    "./authored-project": "./src/authored-project/index.ts",
+    "./requirements": "./src/requirements/index.ts",
+    "./reward-kernel": "./src/reward-kernel/index.ts",
     "./simulation": "./src/simulation/index.ts"
   },
   "scripts": {

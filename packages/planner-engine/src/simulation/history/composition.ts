@@ -1,5 +1,5 @@
-import type { BiomeTransitionCounterReset, Catalog } from '../../catalog';
-import { createBiomeAddress, type BiomeAddress } from '../../project/addresses';
+import type { BiomeTransitionCounterReset, Catalog } from '../../catalog-schema';
+import { createBiomeAddress, type BiomeAddress } from '../../authored-project/addresses';
 import { executeRoomLifecycle, type RoomLifecycleEvent } from '../lifecycle';
 import type { CanonicalCompletionRoom } from '../materialization';
 import { foldHistoryEvents } from './fold';

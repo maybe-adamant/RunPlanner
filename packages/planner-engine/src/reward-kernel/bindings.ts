@@ -1,5 +1,5 @@
-import type { ResolvedRewardOffer } from './rewardKernel/model';
-import type { RequirementExpression } from './requirements';
+import type { ResolvedRewardOffer } from './model';
+import type { RequirementExpression } from '../requirements/model';
 
 export interface CountedRewardBinding {
   readonly kind: 'countedChoice';

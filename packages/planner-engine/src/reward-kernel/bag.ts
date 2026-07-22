@@ -1,4 +1,4 @@
-import { evaluateRequirement } from '../requirementEvaluator';
+import { evaluateRequirement } from '../requirements/evaluator';
 import type {
   CountedOfferTransitionOptions,
   ResolvedRewardOffer,

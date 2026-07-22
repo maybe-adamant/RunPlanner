@@ -7,7 +7,7 @@ import {
   parseProjectDocument,
   ProjectDocumentContractError,
   type RoomOccurrenceRole,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
 
 import { catalog } from './index';
 

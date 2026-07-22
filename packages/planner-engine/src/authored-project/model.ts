@@ -1,4 +1,4 @@
-import type { ResolvedRewardOffer, RewardPayload } from '../rewardKernel/model';
+import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 5 as const;
 

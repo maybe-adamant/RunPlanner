@@ -1,9 +1,9 @@
+import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
 import type {
-  CatalogCollection,
   FixedRewardBinding,
   NoneRewardBinding,
   RewardProducerBinding,
-} from '@run-planner/engine';
+} from '@run-planner/engine/reward-kernel';
 import type {
   ProducerLifecycleProfileDeclaration,
   ResolvedRewardOffer,

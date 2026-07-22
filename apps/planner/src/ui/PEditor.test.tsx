@@ -4,10 +4,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBatchRewardStoreAddress,
   createTargetAddress,
-  simulateProject,
   type LinearBiomePlan,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';

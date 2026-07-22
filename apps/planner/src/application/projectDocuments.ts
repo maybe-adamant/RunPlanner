@@ -2,10 +2,10 @@ import {
   createProjectDocument,
   decodeProjectDocument,
   parseProjectDocument,
-  type Catalog,
   type CreateProjectDocumentOptions,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { type Catalog } from '@run-planner/engine/catalog-schema';
 
 import { requireBiomeCapability, type PlannerCapabilities } from './capabilities';
 

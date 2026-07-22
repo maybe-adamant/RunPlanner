@@ -17,18 +17,20 @@ import {
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createTargetAddress,
-  evaluateProjectCandidate,
-  evaluateProjectCandidates,
-  evaluateLinearBiome,
-  evaluateNBiome,
   semanticAddressKey,
-  type CompleteHubProjectEvaluation,
-  type CompleteLinearProjectEvaluation,
   type HubBiomePlan,
   type LinearBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import {
+  evaluateProjectCandidate,
+  evaluateProjectCandidates,
+  evaluateLinearBiome,
+  evaluateNBiome,
+  type CompleteHubProjectEvaluation,
+  type CompleteLinearProjectEvaluation,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';

@@ -1,4 +1,7 @@
-import { evaluateRequirement, type RequirementEvaluationContext } from '@run-planner/engine';
+import {
+  evaluateRequirement,
+  type RequirementEvaluationContext,
+} from '@run-planner/engine/requirements';
 import {
   applyConcreteAcquisition,
   applyOfferProjection,

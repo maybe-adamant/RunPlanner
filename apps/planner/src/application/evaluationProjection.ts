@@ -1,13 +1,12 @@
+import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
+import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
-  semanticAddressKey,
-  type Catalog,
   type FindingCode,
   type ProjectBiomeEvaluation,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
-  type SemanticAddress,
   type SemanticFinding,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 
 export type FindingIndex = ReadonlyMap<string, readonly SemanticFinding[]>;
 

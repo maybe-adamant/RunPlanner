@@ -1,5 +1,5 @@
-import { evaluateRequirement } from '../requirementEvaluator';
-import type { RequirementExpression } from '../requirements';
+import { evaluateRequirement } from '../requirements/evaluator';
+import type { RequirementExpression } from '../requirements/model';
 import { applyConcreteAcquisition, factsWithHistory, resolveAcquisitionRole } from './history';
 import type {
   AuthoredShopOffer,

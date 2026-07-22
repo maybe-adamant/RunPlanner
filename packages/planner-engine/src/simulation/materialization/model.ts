@@ -2,7 +2,7 @@ import type {
   EncounterPhase,
   RequiredRoomObjectDescriptor,
   RoomCounterEffects,
-} from '../../catalog';
+} from '../../catalog-schema';
 import type {
   BatchRewardStoreAddress,
   CompletionRoomAddress,
@@ -23,9 +23,9 @@ import type {
   ShopOfferAddress,
   ShopPurchaseAddress,
   TargetAddress,
-} from '../../project/addresses';
-import type { OccurrenceId } from '../../project/model';
-import type { ResolvedRewardOffer } from '../../rewardKernel/model';
+} from '../../authored-project/addresses';
+import type { OccurrenceId } from '../../authored-project/model';
+import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 
 export interface CanonicalResolvedIncomingReward {
   readonly origin: FixedEntryRewardAddress | IncomingRewardAddress | LocalRewardAddress;

@@ -8,15 +8,17 @@ import {
   createProjectDocument,
   createTargetAddress,
   encodeProjectDocument,
-  evaluateLinearCompleteness,
-  materializeLinearBiome,
-  projectLinearBatchState,
   semanticAddressKey,
-  type CompleteLinearCompletenessResult,
   type LinearBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import {
+  evaluateLinearCompleteness,
+  materializeLinearBiome,
+  projectLinearBatchState,
+  type CompleteLinearCompletenessResult,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from './index';

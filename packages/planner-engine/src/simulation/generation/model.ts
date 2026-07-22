@@ -4,7 +4,7 @@ import type {
   LocalChildAddress,
   OccurrenceAddress,
   TargetAddress,
-} from '../../project/addresses';
+} from '../../authored-project/addresses';
 import type { SemanticFinding } from '../model';
 
 export type RoomGenerationExclusionReason =

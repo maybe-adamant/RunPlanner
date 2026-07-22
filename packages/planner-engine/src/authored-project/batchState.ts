@@ -1,4 +1,4 @@
-import type { GeneratedBatchPolicy } from '../catalog';
+import type { GeneratedBatchPolicy } from '../catalog-schema';
 import type { AuthoredBatchState } from './model';
 import { expectExactKeys, expectRecord, expectString, failProjectDocument } from './validation';
 

@@ -1,4 +1,12 @@
 export { consumeCountedOffer, createRewardBagState } from './bag';
+export type {
+  CountedRewardBinding,
+  EnteredRewardStoreHistoryPolicy,
+  FixedRewardBinding,
+  NoneRewardBinding,
+  RewardProducerBinding,
+  ShopRewardBinding,
+} from './bindings';
 export {
   applyConcreteAcquisition,
   applyOfferProjection,

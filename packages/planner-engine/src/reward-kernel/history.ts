@@ -1,4 +1,4 @@
-import type { RequirementEvaluationContext } from '../requirementEvaluator';
+import type { RequirementEvaluationContext } from '../requirements/evaluator';
 import type {
   ConcreteAcquisitionAddress,
   ConcreteAcquisitionEvent,

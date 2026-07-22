@@ -6,8 +6,8 @@ import type {
   LinearBiomeLayout,
   RewardWheelOfferPoint,
   RoomDeclaration,
-} from '../catalog';
-import type { ResolvedRewardOffer, RewardPayload } from '../rewardKernel/model';
+} from '../catalog-schema';
+import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
 import { createDefaultBiomeState, replaceBiomeStateField } from './biomeState';
 import type {
   AuthoredBatchState,

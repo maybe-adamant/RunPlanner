@@ -9,11 +9,10 @@ import {
   createPickedAddress,
   createProjectDocument,
   createTargetAddress,
-  simulateProject,
   type LinearBiomePlan,
-  type LinearBiomeProjectEvaluation,
   type ProjectDocument,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { simulateProject, type LinearBiomeProjectEvaluation } from '@run-planner/engine/simulation';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';

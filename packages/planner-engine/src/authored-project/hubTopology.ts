@@ -1,4 +1,4 @@
-import type { Catalog, FixedAuthoredSlotDescriptor, HubBiomeLayout } from '../catalog';
+import type { Catalog, FixedAuthoredSlotDescriptor, HubBiomeLayout } from '../catalog-schema';
 import type {
   FixedAuthoredRoomReference,
   HubBiomeTopology,

@@ -4,9 +4,9 @@ import {
   createBiomeAddress,
   createProjectDocument,
   encodeProjectDocument,
-  simulateProject,
-  type Catalog,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { simulateProject } from '@run-planner/engine/simulation';
+import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { describe, expect, it } from 'vitest';
 
 import {

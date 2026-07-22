@@ -7,13 +7,15 @@ import {
   createProjectAddress,
   createTargetAddress,
   semanticAddressKey,
+  type SemanticAddress,
+} from '@run-planner/engine/authored-project';
+import {
   type FProjectEvaluation,
   type FindingCode,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
-  type SemanticAddress,
   type SemanticFinding,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {

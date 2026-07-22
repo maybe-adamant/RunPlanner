@@ -1,12 +1,12 @@
+import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { CountedRewardBinding } from '@run-planner/engine/reward-kernel';
 import type {
-  Catalog,
-  CountedRewardBinding,
   IncomingRewardAddress,
   LocalRewardAddress,
   ProjectDocument,
   RewardWheelOfferAddress,
   ShopOfferAddress,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { useRef, useState } from 'react';
 

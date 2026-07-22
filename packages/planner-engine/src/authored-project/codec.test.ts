@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { BiomeLayout, Catalog, CatalogCollection, RouteDeclaration } from '../catalog';
+import type { BiomeLayout, Catalog, CatalogCollection, RouteDeclaration } from '../catalog-schema';
 import {
   decodeProjectDocument,
   encodeProjectDocument,

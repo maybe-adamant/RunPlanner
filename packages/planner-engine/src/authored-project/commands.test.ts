@@ -7,8 +7,8 @@ import type {
   LinearBiomeLayout,
   RoomDeclaration,
   RouteDeclaration,
-} from '../catalog';
-import type { CountedRewardBinding } from '../rewards';
+} from '../catalog-schema';
+import type { CountedRewardBinding } from '../reward-kernel/bindings';
 import type {
   PayloadDomainDeclaration,
   ProducerLifecycleProfileDeclaration,
@@ -16,7 +16,7 @@ import type {
   RewardStoreDeclaration,
   RewardTypeDeclaration,
   ShopProfileDeclaration,
-} from '../rewardKernel/model';
+} from '../reward-kernel/model';
 import {
   createBiomeAddress,
   createBatchRewardStoreAddress,

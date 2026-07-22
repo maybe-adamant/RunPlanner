@@ -3,10 +3,9 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createOccurrenceAddress,
-  evaluateProjectCandidate,
   semanticAddressKey,
-  simulateProject,
-} from '@run-planner/engine';
+} from '@run-planner/engine/authored-project';
+import { evaluateProjectCandidate, simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { createRepresentativeNOPProject, pBiome, pOccurrenceId } from '../testing/surfaceProject';

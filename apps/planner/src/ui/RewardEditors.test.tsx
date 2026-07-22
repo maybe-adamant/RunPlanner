@@ -4,9 +4,11 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
-} from '@run-planner/engine';
+} from '@run-planner/engine/simulation';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 

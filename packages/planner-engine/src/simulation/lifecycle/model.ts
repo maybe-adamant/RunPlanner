@@ -3,15 +3,15 @@ import type {
   EncounterPhaseKind,
   RequiredRoomObjectDescriptor,
   RoomCounterEffects,
-} from '../../catalog';
+} from '../../catalog-schema';
 import type {
   CompletionRoomAddress,
   FixedEntryRoomAddress,
   HubRoomAddress,
   LocalChildAddress,
   OccurrenceAddress,
-} from '../../project/addresses';
-import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../rewardKernel/model';
+} from '../../authored-project/addresses';
+import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../reward-kernel/model';
 
 export type RoomHistoryOrigin =
   | CompletionRoomAddress
