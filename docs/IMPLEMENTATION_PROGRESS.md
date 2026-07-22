@@ -511,17 +511,18 @@ these selected authorities directly.
 Phase 6 N Slice 7 is complete. Candidate vocabulary now owns typed Hub-slot,
 Hub-visit, parent-local generation, and parent-local entered-order proposals;
 the existing incoming, local-reward, shop-offer, and purchase queries cover
-fixed-entry, Hub-target, side-room, and Preboss leaves. One prepared evaluator
-lazily caches the dormant selected N product when normal route simulation stops
-at the N boundary. Every candidate applies the smallest immutable proposal and
+fixed-entry, Hub-target, side-room, and Preboss leaves. This staging slice
+temporarily evaluated selected N behind the dormant project boundary. Every
+candidate applies the smallest immutable proposal and
 reuses open constraints, visit composition, ranked global side pressure,
 reward replay, Hub lookup, and WorldShop purchase authorities. Declaration-
 impossible values remain outside the query domain, selected-invalid values keep
 their exact findings, incomplete N reports typed local context, and authorship,
 project dispatch, and application capabilities remain unchanged. Fixtures
 cover all candidate families, forced/possible/impossible support, semantic
-owners, deep freezing, nonmutation, and dormant isolation. Slice 8 projects the
-dormant N editor.
+owners, deep freezing, nonmutation, and dormant isolation. That staging-only
+simulator path is removed by Slice 9, where candidates consume normal scoped
+project evaluation. Slice 8 projects the dormant N editor.
 
 Phase 6 N Slice 8 is complete. A dedicated dormant `HubBiomeEditor` now
 projects the fixed Opening and Pre-Hub leaves, all 25 catalog-fixed physical
@@ -536,6 +537,17 @@ fixture closes topology initialization, board/visit/side/reward/shop edits,
 exact selected-invalid markers, nonactivation, and the structural command
 boundary. N remains absent from production navigation, configurable route
 prefixes, and simulation scope. Slice 9 activates the complete N product loop.
+
+Phase 6 N Slice 9 is complete. N is authorable, simulatable, and editable as
+the one-biome Surface prefix. Project simulation now dispatches typed linear or
+Hub evaluators without flattening their canonical products; prepared candidate
+evaluation consumes the active Hub result rather than a candidate-only route
+path. Surface navigation, semantic finding routing, profiles, autosave recovery,
+and the application simulation scope activate N together while O/P/Q remain
+dormant. One representative browser fixture closes the physical board, visit
+timeline, side state, WorldShop, selected-invalid repair loop, candidate parity,
+accessible naming, JSON profile round trip, recovery, and measured rebuild/edit
+responsiveness.
 
 The Phase 3 timing foundation is documented in `ROOM_LIFECYCLE_MODEL.md`. Its
 initial F profile set, closed operations/effects, room-addressed events,
@@ -1240,14 +1252,10 @@ Completed:
 Pending:
 
 Phases 2.8, 3, 4, and 5 have no pending items. All seven Phase 6 H slices, all
-five I slices, and N Slices 1-8 are complete. N Slice 9, product-loop
-activation, is next. It will promote N to the authorable, simulatable, editable
-Surface prefix and close profiles, recovery, blocked-prefix behavior, finding
-navigation, candidate parity, accessibility, interaction, and responsiveness.
-N remains dormant until that activation slice closes the complete product loop before
-the contextual-selection UX insertion defined in `CONTEXTUAL_EDITOR_UX.md`.
+five I slices, and all nine N slices are complete. The contextual-selection UX
+insertion defined in `CONTEXTUAL_EDITOR_UX.md` is next, before O begins.
 
-After N activates, that insertion begins by replacing the current incomplete-
+Now that N is active, that insertion begins by replacing the current incomplete-
 biome early return with the progressive evaluation contract in
 `SIMULATION_AND_VALIDATION.md`. Production does not yet publish prefix
 materialization, prefix history state, or contextual candidates before biome

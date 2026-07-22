@@ -55,7 +55,7 @@ function requireShop(binding: RewardProducerBinding | undefined): ShopRewardBind
   return binding;
 }
 
-describe('complete dormant N catalog', () => {
+describe('complete N catalog', () => {
   it('normalizes one fixed persistent hub board and its completion sequence', () => {
     const rooms = catalog.rooms.values.filter((room) => room.biomeKey === 'N');
     const layout = requireNLayout();

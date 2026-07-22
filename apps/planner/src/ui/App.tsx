@@ -11,8 +11,10 @@ import { authoredProjectCommandDispatched } from '../application/projectWorkspac
 import type { EditorNavigation, RouteEditorNavigation } from '../application/editorNavigation';
 import {
   sectionSelected,
+  surfacePanelSelected,
   underworldPanelSelected,
   type PlannerSection,
+  type SurfacePanel,
   type UnderworldPanel,
 } from '../application/editorSessionSlice';
 import {
@@ -27,6 +29,7 @@ import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from './EvaluationF
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 import { ProjectFileControls } from './ProjectFileControls';
 import { ProjectHistoryControls } from './ProjectHistoryControls';
+import { HubBiomeEditor } from './HubBiomeEditor';
 
 interface AppProps {
   readonly candidateProjection: CandidateProjectionService;
@@ -47,6 +50,13 @@ function asUnderworldPanel(biomeKey: string): UnderworldPanel {
     throw new Error(`${biomeKey} is not an Underworld editor panel`);
   }
   return biomeKey as UnderworldPanel;
+}
+
+function asSurfacePanel(biomeKey: string): SurfacePanel {
+  if (biomeKey !== 'N') {
+    throw new Error(`${biomeKey} is not a Surface editor panel`);
+  }
+  return biomeKey;
 }
 
 function RouteOverview({
@@ -147,6 +157,7 @@ export function App({
   const activeUnderworldPanel = useAppSelector(
     (state) => state.editorSession.activeUnderworldPanel,
   );
+  const activeSurfacePanel = useAppSelector((state) => state.editorSession.activeSurfacePanel);
   const project = useAppSelector(selectPresentProject);
   const evaluation = useAppSelector(selectProjectEvaluation);
   const dispatch = useAppDispatch();
@@ -182,8 +193,31 @@ export function App({
   const activeBiomeEvaluation = underworldEvaluation.biomes.find(
     (biome) => biome.biomeKey === activeBiomeKey,
   );
+  if (activeBiomeEvaluation !== undefined && activeBiomeEvaluation.kind !== 'LinearBiome') {
+    throw new Error(`${activeBiomeEvaluation.biomeKey} did not produce a linear evaluation`);
+  }
   const displayedUnderworldPanel =
     activeBiomeKey !== undefined && activeBiomePlan !== undefined ? activeBiomeKey : 'route';
+  const configuredSurfacePanels = surfaceNavigation.biomePanels.filter((panel) =>
+    surface.biomes.some((biome) => biome.biomeKey === panel.biomeKey),
+  );
+  const activeSurfaceBiomeKey = activeSurfacePanel === 'N' ? activeSurfacePanel : undefined;
+  const activeSurfaceBiomePlan = surface.biomes.find(
+    (biome) => biome.biomeKey === activeSurfaceBiomeKey,
+  );
+  const activeSurfaceBiomeEvaluation = surfaceEvaluation.biomes.find(
+    (biome) => biome.biomeKey === activeSurfaceBiomeKey,
+  );
+  if (
+    activeSurfaceBiomeEvaluation !== undefined &&
+    activeSurfaceBiomeEvaluation.kind !== 'HubBiome'
+  ) {
+    throw new Error(`${activeSurfaceBiomeEvaluation.biomeKey} did not produce a Hub evaluation`);
+  }
+  const displayedSurfacePanel =
+    activeSurfaceBiomeKey !== undefined && activeSurfaceBiomePlan !== undefined
+      ? activeSurfaceBiomeKey
+      : 'route';
 
   return (
     <main className="app-shell">
@@ -271,22 +305,45 @@ export function App({
           <nav className="panel-navigation" aria-label="Surface panels">
             <p className="navigation-label">Surface</p>
             <button
-              aria-current="page"
+              aria-current={displayedSurfacePanel === 'route' ? 'page' : undefined}
               className="panel-navigation-item"
-              data-active="true"
+              data-active={displayedSurfacePanel === 'route'}
+              onClick={() => dispatch(surfacePanelSelected('route'))}
               type="button"
             >
               Route
             </button>
+            {configuredSurfacePanels.map((panel) => (
+              <button
+                aria-current={panel.biomeKey === displayedSurfacePanel ? 'page' : undefined}
+                className="panel-navigation-item"
+                data-active={panel.biomeKey === displayedSurfacePanel}
+                key={panel.biomeKey}
+                onClick={() => dispatch(surfacePanelSelected(asSurfacePanel(panel.biomeKey)))}
+                type="button"
+              >
+                {panel.label}
+              </button>
+            ))}
           </nav>
           <div className="editor-panel" aria-live="polite">
-            <RouteOverview
-              catalog={catalog}
-              label="Surface"
-              navigation={surfaceNavigation}
-              route={surface}
-              routeEvaluation={surfaceEvaluation}
-            />
+            {displayedSurfacePanel === 'route' ? (
+              <RouteOverview
+                catalog={catalog}
+                label="Surface"
+                navigation={surfaceNavigation}
+                route={surface}
+                routeEvaluation={surfaceEvaluation}
+              />
+            ) : activeSurfaceBiomePlan?.kind === 'HubBiome' ? (
+              <HubBiomeEditor
+                candidateProjection={candidateProjection}
+                catalog={catalog}
+                evaluation={activeSurfaceBiomeEvaluation}
+                plan={activeSurfaceBiomePlan}
+                routeKey={surface.routeKey}
+              />
+            ) : null}
           </div>
         </div>
       )}

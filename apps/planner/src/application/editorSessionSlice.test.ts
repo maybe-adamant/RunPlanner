@@ -16,6 +16,7 @@ describe('editor finding navigation', () => {
     expect(selected).toEqual({
       activeSection: 'underworld',
       activeUnderworldPanel: 'F',
+      activeSurfacePanel: 'route',
       selectedFinding: selection,
       findingNavigationRevision: 1,
     });
@@ -69,6 +70,18 @@ describe('editor finding navigation', () => {
 
     expect(selected.activeSection).toBe('underworld');
     expect(selected.activeUnderworldPanel).toBe('I');
+  });
+
+  it('routes an N finding to the City of Ephyra panel', () => {
+    const selection = {
+      key: 'n-finding-key',
+      origin: createBiomeAddress('Surface', 'N'),
+    } as const;
+
+    const selected = editorSessionReducer(undefined, findingSelected(selection));
+
+    expect(selected.activeSection).toBe('surface');
+    expect(selected.activeSurfacePanel).toBe('N');
   });
 
   it('selects a project-root finding without inventing route navigation', () => {

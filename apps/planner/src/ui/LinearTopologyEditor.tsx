@@ -1,6 +1,6 @@
 import type {
   BiomeAddress,
-  BiomeProjectEvaluation,
+  LinearBiomeProjectEvaluation,
   CanonicalBatchState,
   Catalog,
   ClockworkBatchProjection,
@@ -39,7 +39,7 @@ interface LinearTopologyEditorProps {
   readonly biome: BiomeAddress;
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
-  readonly evaluation: BiomeProjectEvaluation | undefined;
+  readonly evaluation: LinearBiomeProjectEvaluation | undefined;
   readonly plan: LinearBiomePlan;
   readonly topology: LinearBiomeTopology;
 }

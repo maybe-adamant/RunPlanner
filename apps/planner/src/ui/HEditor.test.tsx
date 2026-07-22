@@ -10,7 +10,7 @@ import {
   createProjectDocument,
   createTargetAddress,
   simulateProject,
-  type BiomeProjectEvaluation,
+  type LinearBiomeProjectEvaluation,
   type LinearBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
@@ -140,7 +140,8 @@ function HEditorHarness({
   const project = useAppSelector(selectPresentProject);
   const plan = hPlan(project);
   const firstContinuation = plan.topology?.continuations[0];
-  const evaluation: BiomeProjectEvaluation = Object.freeze({
+  const evaluation: LinearBiomeProjectEvaluation = Object.freeze({
+    kind: 'LinearBiome',
     biomeKey: biome.biomeKey,
     origin: biome,
     completion: 'incomplete',

@@ -34,7 +34,7 @@ conditional-terminal, and persistent-hub pressure tests.
 Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
 connected linear reward authority, and the authored project/editor use schema
 version 5. All eight biomes close one catalog-wide reference matrix while
-P/Q/O/N remain dormant behind the application capability boundary. Phase
+P/Q/O remain dormant behind the application capability boundary. Phase
 3 is complete: F completeness, single-room lifecycle execution, canonical
 materialization, and event-folded history through the biome transition are
 implemented. F room-generation possibility, force pressure, contextual room
@@ -69,8 +69,8 @@ navigation, player-facing labels, and measured responsiveness. The acceptance
 matrix and browser-only smoke procedure are recorded in
 [`docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md`](docs/PHASE_5_PRODUCT_LOOP_CLOSURE.md).
 
-Phase 6 has completed H and I's full product loops. Both are authorable,
-simulatable, and editable alongside F/G; complete F/G/H/I profiles pass route
+Phase 6 has completed H, I, and N's full product loops. All three are authorable,
+simulatable, and editable alongside F/G; complete F/G/H/I and N profiles pass route
 simulation, candidate feedback, recovery, semantic navigation, accessibility,
 and responsiveness fixtures. The shared editor projects fixed-count Fields
 decisions, Min/Max outcomes, active and dormant cage leaves, the forked Fields
@@ -78,25 +78,24 @@ terminal, Clockwork Goal/NonGoal roles, repeated generated preboss offers, and
 picked-only WorldShop state through existing commands and candidate services.
 Equivalent post-shop witness states merge before crossing biome boundaries,
 preventing proof-only branch multiplication while retaining one ordered
-witness for every distinct downstream state. P/Q/O/N remain dormant.
+witness for every distinct downstream state. P/Q/O remain dormant.
 
-N now additionally has dormant schema-version-5 Hub authorship, structural
+N has schema-version-5 Hub authorship, structural
 completeness, canonical Hub materialization, exact room lifecycle, and
 event-folded route history. Linear and Hub traversal now share one restricted
 history envelope and completion-room materializer while retaining variant-owned
 canonical snapshots. N reward simulation consumes the complete physical Hub
 board, jointly resolves generated side siblings, acquires only entered rooms,
 and validates the fixed Preboss shop against a lookup derived from every open
-offer. Dormant selected validation now preserves impossible open-set and local
+offer. Selected validation preserves impossible open-set and local
 generation outcomes as findings at their exact Hub-slot or parent-local owners,
 while canonical fixed identity, visits, pylons, restores, and completion remain
-hard contracts. A dormant Hub editor now projects fixed leaves, the physical
+hard contracts. The active Hub editor projects fixed leaves, the physical
 offer board, the separate visit timeline, parent-local side state, and the fixed
-WorldShop through semantic commands and lazy candidate feedback. N remains
-outside production Surface navigation and simulation until product activation.
-A dormant candidate resolver
-already replays complete N plans for Hub membership, visit, side-room, reward,
-and Preboss alternatives without registering N in normal route simulation.
+WorldShop through semantic commands and lazy candidate feedback. N participates
+atomically in Surface route configuration, project simulation, profiles,
+autosave recovery, findings navigation, and candidate evaluation. Surface
+authoring remains a contiguous one-biome N prefix; O/P/Q stay unavailable.
 
 The previous Lua/ImGui planner remains a behavioral prototype and source of
 verified domain decisions. It is not the architecture authority for this app.
@@ -254,21 +253,21 @@ fixtures, the app's catalog and simulator become its implementation authority.
 
 ## Current Scope
 
-The active product slice delivers F, G, H, and I through one shared route
-pipeline:
+The active product slice delivers F, G, H, I, and N through shared route
+evaluation and layout-specific editor projections:
 
 - explicit declarations;
-- authored linear-biome topology;
+- authored linear- or Hub-biome topology;
 - complete room and reward leaf defaults;
 - materialized history;
 - validation and semantic feedback;
 - a usable editor with undo/redo and browser-local/JSON persistence.
 
 Before Phase 3 simulation, every remaining biome was audited and the full
-feature set was reconciled. H and I have since completed their full product
-loops. N, O, P, and Q remain declaration-complete but inactive; their combined
+feature set was reconciled. H, I, and N have since completed their full product
+loops. O, P, and Q remain declaration-complete but inactive; their combined
 feature map is the declaration-freeze authority for later rollout. Contextual
-room and reward selection is the current insertion boundary before N.
+room and reward selection is the current insertion boundary before O.
 
 ## Development
 
