@@ -45,7 +45,7 @@ describe('candidate application projection', () => {
     expect(first.every((option) => option.evaluation.context === 'evaluated')).toBe(true);
   });
 
-  it('retains stable declaration domains when contextual evaluation is unavailable', () => {
+  it('evaluates the addressed target in an incomplete but covered biome prefix', () => {
     const service = createCandidateProjectionService(catalog, (project) =>
       simulateProject(catalog, project),
     );
@@ -60,15 +60,54 @@ describe('candidate application projection', () => {
       kind: 'CreateBatch',
       continuation: createContinuationAddress(biome, startId),
     });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, startId, 1),
+      occurrenceId: createOccurrenceId('candidate-projection-target'),
+      gameName: 'F_Combat02',
+    });
     const rooms = selectRoomsForCategory(catalog, 'F', 'Combat');
     const options = service.roomTargets(document, createTargetAddress(biome, startId, 1), rooms);
+
+    expect(options).toHaveLength(22);
+    expect(options.every((option) => option.evaluation.context === 'evaluated')).toBe(true);
+    expect(
+      options.some(
+        (option) =>
+          option.evaluation.context === 'evaluated' && option.evaluation.support === 'possible',
+      ),
+    ).toBe(true);
+  });
+
+  it('retains a blank physical-exit domain as unassessed until its target is authored', () => {
+    const service = createCandidateProjectionService(catalog, (project) =>
+      simulateProject(catalog, project),
+    );
+    const startId = createOccurrenceId('candidate-blank-start');
+    let document = applyProjectCommand(project(), catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, startId),
+    });
+    const options = service.roomTargets(
+      document,
+      createTargetAddress(biome, startId, 1),
+      selectRoomsForCategory(catalog, 'F', 'Combat'),
+    );
 
     expect(options).toHaveLength(22);
     expect(
       options.every(
         (option) =>
           option.evaluation.context === 'unavailable' &&
-          option.evaluation.reason === 'biomeIncomplete',
+          option.evaluation.reason === 'coverageNotReached' &&
+          option.evaluation.evidence.kind === 'coverageNotReached' &&
+          option.evaluation.evidence.requiredCheckpoint === 'afterTargetGeneration',
       ),
     ).toBe(true);
   });

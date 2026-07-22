@@ -2,10 +2,9 @@ import { semanticAddressKey } from '../../authored-project/addresses';
 import { type ProjectCommand } from '../../authored-project/commands/dispatch';
 import type { ProjectDocument, RewardWheelState } from '../../authored-project/model';
 import type { Catalog, RewardWheelOfferPoint } from '../../catalog-schema';
-import type { CompleteHubProjectEvaluation, CompleteLinearProjectEvaluation } from '../project';
+import type { SemanticFinding } from '../model';
 import type {
   BatchRewardStoreCandidateQuery,
-  CandidateContextUnavailableReason,
   IncomingRewardCandidateQuery,
   LocalRewardCandidateQuery,
   ProjectCandidateEvaluation,
@@ -16,19 +15,113 @@ import type {
   ShipEncounterCountCandidateQuery,
   ShopOfferCandidateQuery,
   ShopPurchaseCandidateQuery,
+  RewardCandidateExclusionEvidence,
 } from './model';
 
 import {
   applyCandidateCommand,
+  coverageNotReached,
   evaluateCandidateBiome,
   failCandidate,
   immutableQuery,
+  isCandidateContextUnavailable,
   locateBiomePlan,
   locateCandidateBiome,
   locateCandidateLinear,
   locateLinearBiomePlan,
+  unavailableCandidate,
+  type CandidateContextUnavailable,
+  type CandidateHubBiomeEvaluation,
+  type CandidateLinearBiomeEvaluation,
   type PreparedCandidateContext,
 } from './context';
+
+function evidenceString(finding: SemanticFinding, key: string): string | undefined {
+  const value = finding.evidence[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function evidencePriorOffers(finding: SemanticFinding): readonly string[] {
+  const value = finding.evidence.priorOffers;
+  if (!Array.isArray(value)) {
+    return Object.freeze([]);
+  }
+  return Object.freeze(
+    value.flatMap((entry) =>
+      typeof entry === 'object' &&
+      entry !== null &&
+      'rewardType' in entry &&
+      typeof entry.rewardType === 'string'
+        ? [entry.rewardType]
+        : [],
+    ),
+  );
+}
+
+function rewardExclusions(
+  findings: readonly SemanticFinding[],
+): readonly RewardCandidateExclusionEvidence[] {
+  return Object.freeze(
+    findings.flatMap((finding): readonly RewardCandidateExclusionEvidence[] => {
+      const priorOffers = evidencePriorOffers(finding);
+      const peerExclusions: readonly RewardCandidateExclusionEvidence[] =
+        priorOffers.length === 0 ? [] : [Object.freeze({ kind: 'sibling', priorOffers })];
+      switch (finding.code) {
+        case 'baseRewardStoreUnavailable': {
+          const storeKey =
+            evidenceString(finding, 'storeKey') ?? evidenceString(finding, 'authoredStoreKey');
+          return [
+            ...peerExclusions,
+            Object.freeze(storeKey === undefined ? { kind: 'store' } : { kind: 'store', storeKey }),
+          ];
+        }
+        case 'rewardBagEntryUnavailable':
+        case 'rewardBagSupportEmpty': {
+          const storeKey = evidenceString(finding, 'storeKey');
+          return [
+            ...peerExclusions,
+            Object.freeze(storeKey === undefined ? { kind: 'bag' } : { kind: 'bag', storeKey }),
+          ];
+        }
+        case 'rewardSourceUnavailable': {
+          const chosenSource = evidenceString(finding, 'chosenSource');
+          const spurnedSource = evidenceString(finding, 'spurnedSource');
+          if (chosenSource !== undefined || spurnedSource !== undefined) {
+            return [
+              ...peerExclusions,
+              Object.freeze({
+                kind: 'devotionPair',
+                ...(chosenSource === undefined ? {} : { chosenSource }),
+                ...(spurnedSource === undefined ? {} : { spurnedSource }),
+              }),
+            ];
+          }
+          const source = evidenceString(finding, 'source');
+          return [
+            ...peerExclusions,
+            Object.freeze({
+              kind: 'boonSource',
+              ...(source === undefined ? {} : { source }),
+            }),
+          ];
+        }
+        case 'rewardPayloadInvalid':
+          return [...peerExclusions, Object.freeze({ kind: 'payload' })];
+        case 'shopOfferUnavailable':
+        case 'shopPurchaseUnavailable':
+          return [...peerExclusions, Object.freeze({ kind: 'shop' })];
+        case 'rewardAcquisitionUnavailable':
+          return [...peerExclusions, Object.freeze({ kind: 'acquisition' })];
+        default:
+          return peerExclusions;
+      }
+    }),
+  );
+}
+
+function simulationFindings(evaluation: CandidateLinearBiomeEvaluation) {
+  return Object.freeze([...evaluation.roomGeneration.findings, ...evaluation.rewards.findings]);
+}
 
 export function evaluateBatchRewardStoreCandidate(
   catalog: Catalog,
@@ -55,14 +148,14 @@ export function evaluateBatchRewardStoreCandidate(
     failCandidate(stableQuery, 'semantic owner has no authored batch reward store');
   }
   const biome = locateCandidateLinear(context, stableQuery);
-  if (typeof biome === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  if (isCandidateContextUnavailable(biome)) {
+    return unavailableCandidate(stableQuery, biome);
   }
   const selected = biome.rewards.storeSupport.find(
     (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(stableQuery.rewardStore),
   );
   if (selected === undefined) {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: 'upstreamInvalid' });
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));
   }
   const possible = selected.supportStoreKeys.includes(stableQuery.storeKey);
   const findings = possible
@@ -99,6 +192,9 @@ export function evaluateBatchRewardStoreCandidate(
       currentMetaRatio: selected.currentMetaRatio,
       metaSelectionValue: selected.metaSelectionValue,
       supportStoreKeys: selected.supportStoreKeys,
+      exclusions: possible
+        ? Object.freeze([])
+        : Object.freeze([{ kind: 'store' as const, storeKey: stableQuery.storeKey }]),
     }),
   });
 }
@@ -117,7 +213,7 @@ function rewardCommand(
 }
 
 function rewardFindings(
-  evaluation: CompleteHubProjectEvaluation | CompleteLinearProjectEvaluation,
+  evaluation: CandidateHubBiomeEvaluation | CandidateLinearBiomeEvaluation,
   query: IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery,
 ) {
   const address = query.kind === 'shopOffer' ? query.offer : query.reward;
@@ -139,6 +235,51 @@ function rewardFindings(
   );
 }
 
+function rewardOwnerCovered(
+  evaluation: CandidateHubBiomeEvaluation | CandidateLinearBiomeEvaluation,
+  query: IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery,
+): boolean {
+  const address = query.kind === 'shopOffer' ? query.offer : query.reward;
+  const exactKey = semanticAddressKey(address);
+  const exactRewardWitness =
+    evaluation.rewards.findings.some(
+      (finding) => semanticAddressKey(finding.origin) === exactKey,
+    ) ||
+    evaluation.rewards.branches.some((branch) =>
+      branch.events.some((event) => semanticAddressKey(event.origin) === exactKey),
+    );
+  if (exactRewardWitness) {
+    return true;
+  }
+  if (query.kind === 'shopOffer') {
+    return evaluation.history.rooms.some(
+      (room) =>
+        room.origin.kind === 'occurrence' &&
+        room.origin.occurrenceId === address.occurrenceId &&
+        room.postCommit !== undefined,
+    );
+  }
+  if (query.kind === 'localReward') {
+    const localAddress = query.reward;
+    return evaluation.history.events.some(
+      (event) =>
+        event.origin.kind === 'localChild' &&
+        event.origin.routeKey === localAddress.routeKey &&
+        event.origin.biomeKey === localAddress.biomeKey &&
+        event.origin.occurrenceId === localAddress.occurrenceId &&
+        event.origin.groupKey === localAddress.groupKey &&
+        event.origin.slotKey === localAddress.slotKey,
+    );
+  }
+  return evaluation.history.events.some(
+    (event) =>
+      event.origin.kind === 'occurrence' &&
+      event.origin.routeKey === address.routeKey &&
+      event.origin.biomeKey === address.biomeKey &&
+      event.origin.occurrenceId === address.occurrenceId,
+  );
+}
+
 export function evaluateRewardCandidate(
   catalog: Catalog,
   project: ProjectDocument,
@@ -149,21 +290,22 @@ export function evaluateRewardCandidate(
     IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery;
   locateBiomePlan(project, stableQuery);
   const baseline = locateCandidateBiome(project, context, stableQuery);
-  if (typeof baseline === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: baseline });
+  if (isCandidateContextUnavailable(baseline)) {
+    return unavailableCandidate(stableQuery, baseline);
+  }
+  if (!rewardOwnerCovered(baseline, stableQuery)) {
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
   }
   const proposal = applyCandidateCommand(catalog, project, stableQuery, rewardCommand(stableQuery));
   const biome = evaluateCandidateBiome(catalog, project, proposal, context, stableQuery);
-  if (typeof biome === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
-  }
-  if (biome.authoring === 'incomplete') {
-    failCandidate(stableQuery, 'reward proposal made a complete biome incomplete');
+  if (isCandidateContextUnavailable(biome)) {
+    return unavailableCandidate(stableQuery, biome);
   }
   const findings = rewardFindings(biome, stableQuery);
   const evidence = Object.freeze({
     candidate: stableQuery.value,
     relevantFindingCodes: Object.freeze(findings.map((finding) => finding.code)),
+    exclusions: rewardExclusions(findings),
   });
   const support = findings.length === 0 ? ('possible' as const) : ('impossible' as const);
   switch (stableQuery.kind) {
@@ -265,18 +407,39 @@ function evaluateLinearMutation(
     | RewardWheelStoreCandidateQuery
     | ShipEncounterCountCandidateQuery,
   command: ProjectCommand,
-): CompleteLinearProjectEvaluation | CandidateContextUnavailableReason {
+): CandidateLinearBiomeEvaluation | CandidateContextUnavailable {
   const baseline = locateCandidateLinear(context, query);
-  if (typeof baseline === 'string') {
+  if (isCandidateContextUnavailable(baseline)) {
     return baseline;
+  }
+  const ownerCovered =
+    query.kind === 'shipEncounterCount'
+      ? baseline.roomGeneration.encounterCounts.some(
+          (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(query.occurrence),
+        )
+      : baseline.history.rooms.some(
+          (room) =>
+            room.origin.kind === 'occurrence' &&
+            room.origin.occurrenceId ===
+              (query.kind === 'rewardWheelOffer'
+                ? query.offer.occurrenceId
+                : query.wheel.occurrenceId) &&
+            room.offerPoints?.some(
+              (offerPoint) =>
+                offerPoint.offerPoint ===
+                (query.kind === 'rewardWheelOffer' ? query.offer.wheelKey : query.wheel.wheelKey),
+            ) === true,
+        );
+  if (!ownerCovered) {
+    return coverageNotReached(query, baseline);
   }
   const proposal = applyCandidateCommand(catalog, project, query, command);
   const evaluation = evaluateCandidateBiome(catalog, project, proposal, context, query);
-  if (typeof evaluation === 'string') {
+  if (isCandidateContextUnavailable(evaluation)) {
     return evaluation;
   }
-  if (evaluation.authoring === 'incomplete' || evaluation.kind !== 'LinearBiome') {
-    failCandidate(query, 'ship proposal did not produce a complete linear biome');
+  if (evaluation.kind !== 'LinearBiome') {
+    failCandidate(query, 'ship proposal changed its linear layout kind');
   }
   return evaluation;
 }
@@ -294,17 +457,17 @@ export function evaluateShipEncounterCountCandidate(
     occurrence: stableQuery.occurrence,
     encounterCount: stableQuery.encounterCount,
   });
-  if (typeof evaluation === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: evaluation });
+  if (isCandidateContextUnavailable(evaluation)) {
+    return unavailableCandidate(stableQuery, evaluation);
   }
   const selected = evaluation.roomGeneration.encounterCounts.find(
     (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(stableQuery.occurrence),
   );
   if (selected === undefined) {
-    failCandidate(stableQuery, 'ShipCombat occurrence has no encounter-count support');
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, evaluation));
   }
   const findings = Object.freeze(
-    evaluation.findings.filter(
+    simulationFindings(evaluation).filter(
       (finding) =>
         finding.code !== 'encounterCountUnavailable' ||
         semanticAddressKey(finding.origin) === semanticAddressKey(stableQuery.occurrence),
@@ -342,10 +505,10 @@ export function evaluateRewardWheelOfferCountCandidate(
     wheel: stableQuery.wheel,
     offerCount: stableQuery.offerCount,
   });
-  if (typeof evaluation === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: evaluation });
+  if (isCandidateContextUnavailable(evaluation)) {
+    return unavailableCandidate(stableQuery, evaluation);
   }
-  const findings = evaluation.findings;
+  const findings = simulationFindings(evaluation);
   return Object.freeze({
     context: 'evaluated',
     query: stableQuery,
@@ -378,10 +541,10 @@ export function evaluateRewardWheelStoreCandidate(
     wheel: stableQuery.wheel,
     storeKey: stableQuery.storeKey,
   });
-  if (typeof evaluation === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: evaluation });
+  if (isCandidateContextUnavailable(evaluation)) {
+    return unavailableCandidate(stableQuery, evaluation);
   }
-  const findings = evaluation.findings;
+  const findings = simulationFindings(evaluation);
   return Object.freeze({
     context: 'evaluated',
     query: stableQuery,
@@ -413,12 +576,14 @@ export function evaluateRewardWheelOfferCandidate(
     offer: stableQuery.offer,
     value: stableQuery.value,
   });
-  if (typeof evaluation === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: evaluation });
+  if (isCandidateContextUnavailable(evaluation)) {
+    return unavailableCandidate(stableQuery, evaluation);
   }
   const exactKey = semanticAddressKey(stableQuery.offer);
   const findings = Object.freeze(
-    evaluation.findings.filter((finding) => semanticAddressKey(finding.origin) === exactKey),
+    simulationFindings(evaluation).filter(
+      (finding) => semanticAddressKey(finding.origin) === exactKey,
+    ),
   );
   return Object.freeze({
     context: 'evaluated',
@@ -428,6 +593,7 @@ export function evaluateRewardWheelOfferCandidate(
     evidence: Object.freeze({
       candidate: stableQuery.value,
       relevantFindingCodes: Object.freeze(findings.map((finding) => finding.code)),
+      exclusions: rewardExclusions(findings),
     }),
   });
 }
@@ -445,10 +611,10 @@ export function evaluateRewardWheelPickedCandidate(
     wheel: stableQuery.wheel,
     pickedOfferIndex: stableQuery.pickedOfferIndex,
   });
-  if (typeof evaluation === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: evaluation });
+  if (isCandidateContextUnavailable(evaluation)) {
+    return unavailableCandidate(stableQuery, evaluation);
   }
-  const findings = evaluation.findings;
+  const findings = simulationFindings(evaluation);
   const activeOfferIndexes = Object.freeze(
     Array.from({ length: wheel.offerCount }, (_, index) => index + 1),
   );
@@ -479,8 +645,17 @@ export function evaluateShopPurchaseCandidate(
   const stableQuery = immutableQuery(query) as ShopPurchaseCandidateQuery;
   locateBiomePlan(project, stableQuery);
   const baseline = locateCandidateBiome(project, context, stableQuery);
-  if (typeof baseline === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: baseline });
+  if (isCandidateContextUnavailable(baseline)) {
+    return unavailableCandidate(stableQuery, baseline);
+  }
+  const purchaseRoomCovered = baseline.history.rooms.some(
+    (room) =>
+      room.origin.kind === 'occurrence' &&
+      room.origin.occurrenceId === stableQuery.purchase.occurrenceId &&
+      room.postCommit !== undefined,
+  );
+  if (!purchaseRoomCovered) {
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
   }
   const proposal = applyCandidateCommand(catalog, project, stableQuery, {
     kind: 'SetShopPurchase',
@@ -488,11 +663,8 @@ export function evaluateShopPurchaseCandidate(
     purchased: stableQuery.purchased,
   });
   const biome = evaluateCandidateBiome(catalog, project, proposal, context, stableQuery);
-  if (typeof biome === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
-  }
-  if (biome.authoring === 'incomplete') {
-    failCandidate(stableQuery, 'purchase proposal made a complete biome incomplete');
+  if (isCandidateContextUnavailable(biome)) {
+    return unavailableCandidate(stableQuery, biome);
   }
   const exactKey = semanticAddressKey(stableQuery.purchase);
   const findings = Object.freeze(

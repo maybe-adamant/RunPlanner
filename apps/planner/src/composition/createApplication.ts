@@ -4,6 +4,7 @@ import { summarizeCatalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectDocument } from '@run-planner/engine/authored-project';
 
 import { createCandidateProjectionService } from '../projections/candidateProjection';
+import { createContextualOptionResolver } from '../projections/contextualOptions';
 import {
   createAutosaveCoordinator,
   restoreStartupProject,
@@ -44,6 +45,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     return evaluation;
   };
   const candidateProjection = createCandidateProjectionService(catalog, evaluateProject);
+  const contextualOptions = createContextualOptionResolver(catalog);
   const store = createPlannerStore({
     catalog,
     evaluateProject,
@@ -72,6 +74,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     catalog,
     catalogSummary: summarizeCatalog(catalog),
     candidateProjection,
+    contextualOptions,
     editorNavigation,
     projectOperations,
     store,

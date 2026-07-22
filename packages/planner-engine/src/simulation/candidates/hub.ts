@@ -1,7 +1,8 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { HubBiomePlan, ProjectDocument } from '../../authored-project/model';
 import type { Catalog, HubBiomeLayout } from '../../catalog-schema';
-import type { CompleteHubProjectEvaluation, HubBiomeProjectEvaluation } from '../project';
+import type { SemanticFinding } from '../model';
+import type { HubBiomeProjectEvaluation } from '../project';
 import { evaluateHubBiome } from '../project';
 import type {
   HubSlotCandidateQuery,
@@ -14,10 +15,14 @@ import type {
 
 import {
   applyCandidateCommand,
+  coverageNotReached,
   failCandidate,
   immutableQuery,
+  isCandidateContextUnavailable,
   locateCandidateHub,
   locateHubBiomePlan,
+  unavailableCandidate,
+  type CandidateHubBiomeEvaluation,
   type PreparedCandidateContext,
 } from './context';
 
@@ -43,7 +48,7 @@ function hubSlotProposal(
   query: HubSlotCandidateQuery,
   plan: HubBiomePlan,
   layout: HubBiomeLayout,
-  baseline: CompleteHubProjectEvaluation,
+  baseline: CandidateHubBiomeEvaluation,
   open: boolean,
 ): HubBiomeProjectEvaluation | undefined {
   const topology = plan.topology!;
@@ -79,7 +84,12 @@ function hubSlotFindings(
   }
   return Object.freeze(
     evaluation.authoring === 'incomplete'
-      ? evaluation.findings.filter((finding) => finding.code === 'hubOpenSetIncomplete')
+      ? evaluation.findings.filter(
+          (finding) =>
+            finding.code === 'hubOpenSetIncomplete' ||
+            (finding.code === 'hubOpenSlotUnavailable' &&
+              semanticAddressKey(finding.origin) === semanticAddressKey(query.slot)),
+        )
       : evaluation.roomGeneration.findings.filter(
           (finding) =>
             finding.code === 'hubOpenSlotUnavailable' &&
@@ -96,8 +106,8 @@ export function evaluateHubSlotCandidate(
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as HubSlotCandidateQuery;
   const baseline = locateCandidateHub(context, stableQuery);
-  if (typeof baseline === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: baseline });
+  if (isCandidateContextUnavailable(baseline)) {
+    return unavailableCandidate(stableQuery, baseline);
   }
   const { layout, plan } = requireHubCandidateLayout(catalog, project, stableQuery);
   const slot = layout.hub.slots.find(
@@ -105,6 +115,9 @@ export function evaluateHubSlotCandidate(
   );
   if (slot === undefined) {
     failCandidate(stableQuery, `unknown Hub slot ${stableQuery.slot.hubSlotKey}`);
+  }
+  if (baseline.authoring === 'incomplete' && baseline.materializedPrefix.hubBoard === undefined) {
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
   }
   const topology = plan.topology!;
   const current = topology.openTargets.find(
@@ -164,8 +177,8 @@ export function evaluateHubVisitCandidate(
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as HubVisitCandidateQuery;
   const baseline = locateCandidateHub(context, stableQuery);
-  if (typeof baseline === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: baseline });
+  if (isCandidateContextUnavailable(baseline)) {
+    return unavailableCandidate(stableQuery, baseline);
   }
   const { layout, plan } = requireHubCandidateLayout(catalog, project, stableQuery);
   if (!layout.hub.slots.some((slot) => slot.slotKey === stableQuery.hubSlotKey)) {
@@ -177,6 +190,21 @@ export function evaluateHubVisitCandidate(
   if (current === undefined) {
     failCandidate(stableQuery, `unknown Hub visit ${stableQuery.visit.visitIndex}`);
   }
+  const coveredVisits =
+    baseline.authoring === 'complete'
+      ? baseline.snapshot.visits
+      : [
+          ...baseline.materializedPrefix.visits,
+          ...(baseline.materializedPrefix.frontierVisit === undefined
+            ? []
+            : [baseline.materializedPrefix.frontierVisit]),
+        ];
+  const visitCovered = coveredVisits.some(
+    (visit) => visit.visitIndex === stableQuery.visit.visitIndex,
+  );
+  if (!visitCovered) {
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
+  }
   const openHubSlotKeys = Object.freeze(topology.openTargets.map((target) => target.hubSlotKey));
   const occupiedVisitIndexes = Object.freeze(
     topology.visitOrder.flatMap((hubSlotKey, index) =>
@@ -186,7 +214,7 @@ export function evaluateHubVisitCandidate(
   const structurallyPossible =
     openHubSlotKeys.includes(stableQuery.hubSlotKey) &&
     occupiedVisitIndexes.every((index) => index === stableQuery.visit.visitIndex);
-  let findings = Object.freeze([]) as CompleteHubProjectEvaluation['findings'];
+  let findings = Object.freeze([]) as readonly SemanticFinding[];
   if (structurallyPossible) {
     const proposal =
       current === stableQuery.hubSlotKey
@@ -201,11 +229,12 @@ export function evaluateHubVisitCandidate(
       stableQuery.visit.routeKey,
       locateHubBiomePlan(proposal, stableQuery),
     );
-    if (evaluation.authoring === 'incomplete') {
-      failCandidate(stableQuery, 'Hub visit proposal made a complete biome incomplete');
-    }
     findings = Object.freeze(
-      evaluation.findings.filter((finding) => finding.code !== 'hubOpenSlotUnavailable'),
+      'roomGeneration' in evaluation
+        ? [...evaluation.roomGeneration.findings, ...evaluation.rewards.findings].filter(
+            (finding) => finding.code !== 'hubOpenSlotUnavailable',
+          )
+        : [],
     );
   }
   const possibleChoices = openHubSlotKeys.filter(
@@ -260,8 +289,8 @@ export function evaluateSideRoomGenerationCandidate(
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as SideRoomGenerationCandidateQuery;
   const baseline = locateCandidateHub(context, stableQuery);
-  if (typeof baseline === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: baseline });
+  if (isCandidateContextUnavailable(baseline)) {
+    return unavailableCandidate(stableQuery, baseline);
   }
   const { state, group } = requireSideRoomState(catalog, project, stableQuery);
   if (!group.slots.some((slot) => slot.slotKey === stableQuery.sideRoom.slotKey)) {
@@ -275,12 +304,12 @@ export function evaluateSideRoomGenerationCandidate(
     (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(stableQuery.sideRoom),
   );
   if (baselineEntry === undefined) {
-    failCandidate(stableQuery, 'side room has no selected generation support entry');
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
   }
   const structurallyPossible =
     stableQuery.generation === 'generated' || sideRoom.enteredOrdinal === null;
   let selected = baselineEntry;
-  let findings = Object.freeze([]) as CompleteHubProjectEvaluation['findings'];
+  let findings = Object.freeze([]) as readonly SemanticFinding[];
   if (structurallyPossible) {
     const proposal =
       sideRoom.generation === stableQuery.generation
@@ -295,8 +324,8 @@ export function evaluateSideRoomGenerationCandidate(
       stableQuery.sideRoom.routeKey,
       locateHubBiomePlan(proposal, stableQuery),
     );
-    if (evaluation.authoring === 'incomplete') {
-      failCandidate(stableQuery, 'side-generation proposal made a complete biome incomplete');
+    if (!('roomGeneration' in evaluation)) {
+      return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
     }
     selected =
       evaluation.roomGeneration.sideRoomGenerations.find(
@@ -337,10 +366,18 @@ export function evaluateSideRoomEntryOrderCandidate(
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as SideRoomEntryOrderCandidateQuery;
   const baseline = locateCandidateHub(context, stableQuery);
-  if (typeof baseline === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: baseline });
+  if (isCandidateContextUnavailable(baseline)) {
+    return unavailableCandidate(stableQuery, baseline);
   }
   const { state, group } = requireSideRoomState(catalog, project, stableQuery);
+  const groupCovered = baseline.roomGeneration.sideRoomGenerations.some(
+    (entry) =>
+      entry.origin.occurrenceId === stableQuery.group.occurrenceId &&
+      entry.origin.groupKey === stableQuery.group.groupKey,
+  );
+  if (!groupCovered) {
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
+  }
   const generatedSlotKeys = Object.freeze(
     group.slots.flatMap((slot) =>
       state.sideRooms[slot.slotKey]?.generation === 'generated' ? [slot.slotKey] : [],
@@ -356,15 +393,14 @@ export function evaluateSideRoomEntryOrderCandidate(
     stableQuery.group.routeKey,
     locateHubBiomePlan(proposal, stableQuery),
   );
-  if (evaluation.authoring === 'incomplete') {
-    failCandidate(stableQuery, 'side-entry proposal made a complete biome incomplete');
-  }
   const findings = Object.freeze(
-    evaluation.findings.filter(
-      (finding) =>
-        finding.code !== 'hubOpenSlotUnavailable' &&
-        finding.code !== 'sideRoomGenerationUnavailable',
-    ),
+    'roomGeneration' in evaluation
+      ? [...evaluation.roomGeneration.findings, ...evaluation.rewards.findings].filter(
+          (finding) =>
+            finding.code !== 'hubOpenSlotUnavailable' &&
+            finding.code !== 'sideRoomGenerationUnavailable',
+        )
+      : [],
   );
   return Object.freeze({
     context: 'evaluated',

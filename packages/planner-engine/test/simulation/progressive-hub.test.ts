@@ -7,7 +7,7 @@ import {
   createLocalChildGroupAddress,
   createLocalRewardAddress,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { evaluateProjectCandidate, simulateProject } from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
@@ -61,7 +61,8 @@ function incompleteEvaluation(project: ReturnType<typeof createRepresentativeNPr
 
 describe('Hub progressive biome evaluation', () => {
   it('covers fixed entry and stops before an incomplete joint Hub board', () => {
-    const { evaluation } = incompleteEvaluation(incompleteOpenBoard());
+    const project = incompleteOpenBoard();
+    const { evaluation } = incompleteEvaluation(project);
 
     expect(evaluation.frontier).toEqual({
       kind: 'hubOpenSet',
@@ -86,6 +87,23 @@ describe('Hub progressive biome evaluation', () => {
         (event) => event.kind === 'roomCreated' && event.source === 'hubTarget',
       ),
     ).toBe(false);
+    const ninthSlotKey = nOpenSlotKeys[8]!;
+    expect(
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(nBiome, ninthSlotKey),
+        open: true,
+        occurrenceId: nOccurrenceId(ninthSlotKey),
+      }),
+    ).toMatchObject({
+      context: 'unavailable',
+      reason: 'coverageNotReached',
+      evidence: {
+        kind: 'coverageNotReached',
+        requiredOwner: createHubSlotAddress(nBiome, ninthSlotKey),
+        requiredCheckpoint: 'afterTargetGeneration',
+      },
+    });
   });
 
   it('publishes the complete open board as one semantic generation region', () => {
@@ -159,6 +177,37 @@ describe('Hub progressive biome evaluation', () => {
     );
     expect(project.routes.find((route) => route.routeKey === 'Surface')?.biomes[0]).toMatchObject({
       topology: { visitOrder: expect.arrayContaining(['combat05', 'miniBoss01', 'combat02']) },
+    });
+    expect(
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'hubVisit',
+        visit: createHubVisitAddress(nBiome, 1),
+        hubSlotKey: 'combat05',
+      }),
+    ).toMatchObject({
+      context: 'unavailable',
+      reason: 'coverageNotReached',
+      evidence: {
+        kind: 'coverageNotReached',
+        requiredOwner: createHubVisitAddress(nBiome, 1),
+      },
+    });
+    expect(
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(nBiome, 'miniBoss02'),
+        open: true,
+        occurrenceId: nOccurrenceId('miniBoss02'),
+      }),
+    ).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: [
+        {
+          code: 'hubOpenSlotUnavailable',
+          origin: createHubSlotAddress(nBiome, 'miniBoss02'),
+        },
+      ],
     });
   });
 

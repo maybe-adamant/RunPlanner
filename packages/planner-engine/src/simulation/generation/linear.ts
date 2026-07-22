@@ -15,7 +15,6 @@ import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RewardHistoryState } from '../../reward-kernel';
 import type {
   LinearSimulationHistory,
-  CanonicalLinearHistory,
   LinearHistoryStateView,
   LinearTargetGenerationView,
 } from '../history';
@@ -25,7 +24,6 @@ import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
   CanonicalFixedEntryRoom,
-  CanonicalLinearBiome,
   LinearSimulationMaterialization,
   CanonicalPhysicalExit,
   CanonicalTarget,
@@ -38,6 +36,8 @@ import type {
   LinearForcePressureLedgerEntry,
   LinearRoomGenerationValidation,
   LinearRoomTargetCandidateValidation,
+  RequirementEvaluationEvidence,
+  RoomGenerationExclusionEvidence,
   RoomGenerationExclusionReason,
 } from './model';
 import type { FindingEvidence, SemanticFinding } from '../model';
@@ -54,6 +54,7 @@ type ForceSupport = 'none' | 'optional' | 'required';
 interface CandidateEvaluation {
   readonly room: RoomDeclaration;
   readonly reasons: readonly RoomGenerationExclusionReason[];
+  readonly exclusions: readonly RoomGenerationExclusionEvidence[];
   readonly forceSupport: ForceSupport;
 }
 
@@ -234,6 +235,133 @@ function forceSupport(
   }
 }
 
+function requirementEvidence(
+  requirement: RequirementExpression,
+  context: RequirementEvaluationContext,
+): RequirementEvaluationEvidence {
+  const satisfied = evaluateRequirement(requirement, context);
+  switch (requirement.kind) {
+    case 'all':
+    case 'any':
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        children: Object.freeze(
+          requirement.requirements.map((child) => requirementEvidence(child, context)),
+        ),
+      });
+    case 'not':
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        child: requirementEvidence(requirement.requirement, context),
+      });
+    case 'counterRange':
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        axis: requirement.axis,
+        actual: context.counters[requirement.axis],
+        expected: requirement.range,
+      });
+    case 'recordCount': {
+      const record = context.records[requirement.record];
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        record: requirement.record,
+        keys: requirement.keys,
+        actual: requirement.keys.reduce((total, key) => total + (record[key] ?? 0), 0),
+        expected: requirement.range,
+      });
+    }
+    case 'distinctRecordKeyCount': {
+      const record = context.records[requirement.record];
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        record: requirement.record,
+        keys: requirement.keys,
+        actual: requirement.keys.filter((key) => (record[key] ?? 0) > 0).length,
+        expected: requirement.range,
+      });
+    }
+    case 'recentEncounterPhaseCount': {
+      const recentRooms = context.recentEncounterPhases.slice(-requirement.roomWindow);
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        profileKey: requirement.profileKey,
+        phaseKey: requirement.phaseKey,
+        roomWindow: requirement.roomWindow,
+        actual: recentRooms.reduce(
+          (total, room) =>
+            total +
+            (room.profileKey === requirement.profileKey &&
+            room.phaseKeys.includes(requirement.phaseKey)
+              ? 1
+              : 0),
+          0,
+        ),
+        expected: requirement.range,
+      });
+    }
+    case 'minExits':
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        actual: context.offeredExitCount,
+        minimum: requirement.count,
+      });
+    case 'currentBatchTargetCount':
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        actual: context.currentBatchRoomGameNames.length,
+        expected: requirement.range,
+      });
+    case 'currentBatchRoomCount':
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        roomGameNames: requirement.roomGameNames,
+        actual: context.currentBatchRoomGameNames.filter((gameName) =>
+          requirement.roomGameNames.includes(gameName),
+        ).length,
+        expected: requirement.range,
+      });
+    case 'clockworkGoalsRemaining':
+      if (context.clockwork === undefined) {
+        throw new LinearRoomGenerationContractError(
+          'Clockwork requirement evidence has no Clockwork facts',
+        );
+      }
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        actual: context.clockwork.remainingGoals,
+        expected: requirement.range,
+      });
+    case 'clockworkNonGoalCapacity':
+      if (context.clockwork === undefined) {
+        throw new LinearRoomGenerationContractError(
+          'Clockwork requirement evidence has no Clockwork facts',
+        );
+      }
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        acquired: context.clockwork.nonGoalRewardsAcquired,
+        maximum: context.clockwork.maxNonGoalRewards,
+        reserve: requirement.reserve,
+      });
+    default:
+      throw new LinearRoomGenerationContractError(
+        `linear room generation cannot explain ${requirement.kind}`,
+      );
+  }
+}
+
 function creationCount(
   view: LinearHistoryStateView,
   gameName: string,
@@ -263,11 +391,13 @@ function evaluateCandidate(
   context: RequirementEvaluationContext,
 ): CandidateEvaluation {
   const reasons: RoomGenerationExclusionReason[] = [];
+  const exclusions: RoomGenerationExclusionEvidence[] = [];
   if (room.force !== undefined) {
     assertLinearGenerationForce(room.force);
   }
   if (exit.kind === 'unavailable') {
     reasons.push('physicalExitUnavailable');
+    exclusions.push({ kind: 'physicalExitUnavailable', exitIndex: exit.index });
   } else {
     const policy = catalog.exitCompatibilityPolicies.byKey[exit.compatibilityPolicyKey];
     if (policy === undefined) {
@@ -277,18 +407,35 @@ function evaluateCandidate(
     }
     if (!compatible(policy, sourceDeclaration, room)) {
       reasons.push('exitIncompatible');
+      exclusions.push({
+        kind: 'exitIncompatible',
+        compatibilityPolicyKey: exit.compatibilityPolicyKey,
+        sourceGameName: source.gameName,
+        candidateGameName: room.gameName,
+      });
     }
   }
   if (room.gameName === source.gameName) {
     reasons.push('currentRoomRepeat');
+    exclusions.push({ kind: 'currentRoomRepeat', sourceGameName: source.gameName });
   }
   if (room.force?.kind === 'depthWindow' && context.counters[room.force.axis] < room.force.start) {
     reasons.push('forceMinimum');
+    exclusions.push({
+      kind: 'forceMinimum',
+      axis: room.force.axis as 'biomeDepthCache' | 'biomeEncounterDepth',
+      actual: context.counters[room.force.axis],
+      minimum: room.force.start,
+    });
   }
   if (room.eligibility !== undefined) {
     assertLinearGenerationRequirement(room.eligibility);
     if (!evaluateRequirement(room.eligibility, context)) {
       reasons.push('eligibilityRequirement');
+      exclusions.push({
+        kind: 'eligibilityRequirement',
+        evaluation: requirementEvidence(room.eligibility, context),
+      });
     }
   }
   if (
@@ -296,22 +443,38 @@ function evaluateCandidate(
     creationCount(view, room.gameName) >= room.caps.maxCreationsThisRun
   ) {
     reasons.push('maxCreationsThisRun');
+    exclusions.push({
+      kind: 'maxCreationsThisRun',
+      actual: creationCount(view, room.gameName),
+      maximum: room.caps.maxCreationsThisRun,
+    });
   }
   if (
     room.caps.maxCreationsPerRoom !== undefined &&
     creationCount(view, room.gameName, source.origin) >= room.caps.maxCreationsPerRoom
   ) {
     reasons.push('maxCreationsPerRoom');
+    exclusions.push({
+      kind: 'maxCreationsPerRoom',
+      actual: creationCount(view, room.gameName, source.origin),
+      maximum: room.caps.maxCreationsPerRoom,
+    });
   }
   if (
     room.caps.maxAppearancesThisBiome !== undefined &&
     appearanceCount(view, room.gameName) >= room.caps.maxAppearancesThisBiome
   ) {
     reasons.push('maxAppearancesThisBiome');
+    exclusions.push({
+      kind: 'maxAppearancesThisBiome',
+      actual: appearanceCount(view, room.gameName),
+      maximum: room.caps.maxAppearancesThisBiome,
+    });
   }
   return Object.freeze({
     room,
     reasons: Object.freeze(reasons),
+    exclusions: Object.freeze(exclusions),
     forceSupport: reasons.length === 0 ? forceSupport(room.force, context) : 'none',
   });
 }
@@ -685,8 +848,15 @@ function evaluateTargetGameName(
       : eligible.filter((candidate) => candidate.forceSupport !== 'none');
   const selected = candidates.find((candidate) => candidate.room.gameName === selectedGameName);
   const reasons = [...(selected?.reasons ?? ['notCandidate'])] as RoomGenerationExclusionReason[];
+  const exclusions: RoomGenerationExclusionEvidence[] = [
+    ...(selected?.exclusions ?? [{ kind: 'notCandidate' as const }]),
+  ];
   if (selected !== undefined && selected.reasons.length === 0 && !support.includes(selected)) {
     reasons.push('forcedPool');
+    exclusions.push({
+      kind: 'forcedPool',
+      requiredRoomGameNames: Object.freeze(required.map((candidate) => candidate.room.gameName)),
+    });
   }
   const selectedPossible = selected !== undefined && support.includes(selected);
   const pressure: LinearForcePressureLedgerEntry = Object.freeze({
@@ -710,6 +880,7 @@ function evaluateTargetGameName(
     supportRoomGameNames: Object.freeze(support.map((candidate) => candidate.room.gameName)),
     selectedPossible,
     selectedExclusionReasons: Object.freeze(reasons),
+    selectedExclusions: Object.freeze(exclusions),
   });
   const findings: SemanticFinding[] = [];
   if (support.length === 0) {
@@ -955,8 +1126,8 @@ export function evaluateLinearRoomGeneration(
 
 export function evaluateLinearRoomTargetCandidate(
   catalog: Catalog,
-  snapshot: CanonicalLinearBiome,
-  history: CanonicalLinearHistory,
+  snapshot: LinearSimulationMaterialization,
+  history: LinearSimulationHistory,
   targetOrigin: CanonicalTarget['origin'],
   gameName: string,
   enteredBiomeCount: number,
@@ -972,7 +1143,12 @@ export function evaluateLinearRoomTargetCandidate(
       'linear candidate generation inputs do not share one biome owner',
     );
   }
-  const owner = [...snapshot.batches, snapshot.terminalEntry].find((candidate) =>
+  const finalGeneration =
+    snapshot.kind === 'LinearBiome' ? snapshot.terminalEntry : snapshot.frontierGeneration;
+  const owner = [
+    ...snapshot.batches,
+    ...(finalGeneration === undefined ? [] : [finalGeneration]),
+  ].find((candidate) =>
     candidate.targets.some(
       (target) => semanticAddressKey(target.origin) === semanticAddressKey(targetOrigin),
     ),
@@ -1003,12 +1179,14 @@ export function evaluateLinearRoomTargetCandidate(
       `catalog does not provide ${snapshot.biomeKey} linear generation policy`,
     );
   }
-  const batchIndex = 'parent' in owner ? snapshot.batches.indexOf(owner) : -1;
+  const batchIndex = snapshot.batches.findIndex((batch) => batch === owner);
   return evaluateTargetGameName(
     catalog,
-    batchIndex < 0
-      ? terminalCandidatePool(catalog, layout)
-      : stagedCandidatePool(catalog, layout, batchIndex),
+    batchIndex >= 0
+      ? stagedCandidatePool(catalog, layout, batchIndex)
+      : snapshot.kind === 'LinearBiomePrefix' && snapshot.frontierGeneration?.kind === 'batch'
+        ? stagedCandidatePool(catalog, layout, snapshot.batches.length)
+        : terminalCandidatePool(catalog, layout),
     source,
     targetOrigin,
     target.exit,

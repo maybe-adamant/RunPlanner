@@ -291,11 +291,20 @@ export function processRewardOffer(
   const next: RewardBranchState[] = [];
   let sawSourceFailure = false;
   let sawBagInvariantFailure = false;
+  let sawSiblingFailure = false;
   for (const originalBranch of branches) {
     const facts = context.facts(originalBranch.history);
     const peers = { priorOffers: context.peers };
     if (!isOfferSupportedAtResolutionPoint(catalog.rewards, reward.offer, facts, 'offer', peers)) {
       sawSourceFailure = true;
+      if (
+        context.peers.length > 0 &&
+        isOfferSupportedAtResolutionPoint(catalog.rewards, reward.offer, facts, 'offer', {
+          priorOffers: [],
+        })
+      ) {
+        sawSiblingFailure = true;
+      }
       continue;
     }
 
@@ -327,6 +336,14 @@ export function processRewardOffer(
     if (prepared === undefined || store === undefined) {
       sawBagInvariantFailure = true;
       continue;
+    }
+    if (
+      context.peers.some((peer) => peer.rewardType === reward.offer.rewardType) &&
+      store.entries.some(
+        (entry) => entry.rewardType === reward.offer.rewardType && !entry.allowDuplicates,
+      )
+    ) {
+      sawSiblingFailure = true;
     }
     let transitions: readonly RewardBagState[];
     try {
@@ -378,6 +395,9 @@ export function processRewardOffer(
       rewardFinding(code, reward.origin, {
         ...offerEvidence(reward.offer),
         storeKey: reward.resolvedStoreKey ?? null,
+        ...(sawSiblingFailure
+          ? { priorOffers: context.peers.map((offer) => offerEvidence(offer)) }
+          : {}),
       }),
     );
   }

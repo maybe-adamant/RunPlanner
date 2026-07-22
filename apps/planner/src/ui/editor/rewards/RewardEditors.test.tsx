@@ -27,7 +27,12 @@ const project = createProjectDocument(catalog, {
 });
 
 function unavailable(query: ProjectCandidateQuery): ProjectCandidateEvaluation {
-  return { context: 'unavailable', query, reason: 'biomeIncomplete' };
+  return {
+    context: 'unavailable',
+    query,
+    reason: 'upstreamIncomplete',
+    evidence: { kind: 'upstreamIncomplete', upstreamBiomeKey: 'F' },
+  };
 }
 
 function projected<T>(

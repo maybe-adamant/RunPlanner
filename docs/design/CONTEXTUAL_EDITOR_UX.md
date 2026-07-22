@@ -396,6 +396,12 @@ interface ContextualOption<T> {
 }
 ```
 
+The production bridge now implements this vocabulary in the application
+projection layer. It consumes typed candidate evidence, preserves the richer
+engine result, and maps unavailable addressed coverage to `unassessed`. The
+existing native controls do not consume it yet; grouped room and compact
+reward pickers remain subsequent slices.
+
 This is application/UI vocabulary. It must not replace the richer typed
 simulation assessment or enter persisted state.
 

@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createOccurrenceAddress,
+  createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { evaluateProjectCandidate, simulateProject } from '@run-planner/engine/simulation';
@@ -12,6 +13,7 @@ import {
   createRepresentativeNOPProject,
   pBiome,
   pOccurrenceId,
+  pOccurrenceIds,
 } from '../../../../../../apps/planner/test/fixtures/surfaceProject';
 
 describe('P core loop', () => {
@@ -89,10 +91,33 @@ describe('P core loop', () => {
     );
     expect(
       evaluateProjectCandidate(catalog, project, {
+        kind: 'roomTarget',
+        target: createTargetAddress(pBiome, pOccurrenceIds.intro, 1),
+        gameName: 'P_Combat02',
+      }),
+    ).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: {
+        exclusions: [
+          {
+            kind: 'exitIncompatible',
+            sourceGameName: 'P_Intro',
+            candidateGameName: 'P_Combat02',
+          },
+        ],
+      },
+    });
+    expect(
+      evaluateProjectCandidate(catalog, project, {
         kind: 'batchRewardStore',
         rewardStore: createBatchRewardStoreAddress(pBiome, pOccurrenceId('P_Combat07', 4, 1)),
         storeKey: 'RunProgress',
       }),
-    ).toMatchObject({ context: 'unavailable', reason: 'upstreamInvalid' });
+    ).toMatchObject({
+      context: 'unavailable',
+      reason: 'coverageNotReached',
+      evidence: { kind: 'coverageNotReached', requiredCheckpoint: 'afterTargetGeneration' },
+    });
   });
 });

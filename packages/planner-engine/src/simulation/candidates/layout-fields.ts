@@ -9,11 +9,14 @@ import type {
 
 import {
   applyCandidateCommand,
+  coverageNotReached,
   evaluateCandidateBiome,
   failCandidate,
   immutableQuery,
+  isCandidateContextUnavailable,
   locateCandidateLinear,
   locateLinearBiomePlan,
+  unavailableCandidate,
   type PreparedCandidateContext,
 } from './context';
 
@@ -31,13 +34,10 @@ export function evaluateBiomeFieldCandidate(
     value: stableQuery.value,
   });
   const biome = evaluateCandidateBiome(catalog, project, proposal, context, stableQuery);
-  if (typeof biome === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  if (isCandidateContextUnavailable(biome)) {
+    return unavailableCandidate(stableQuery, biome);
   }
-  if (biome.authoring === 'incomplete') {
-    failCandidate(stableQuery, 'biome-field proposal made a complete biome incomplete');
-  }
-  const findings = biome.findings;
+  const findings = Object.freeze([...biome.roomGeneration.findings, ...biome.rewards.findings]);
   return Object.freeze({
     context: 'evaluated',
     query: stableQuery,
@@ -75,15 +75,15 @@ export function evaluateFieldsCageOutcomeCandidate(
     failCandidate(stableQuery, 'semantic owner has no Fields cage outcome');
   }
   const biome = locateCandidateLinear(context, stableQuery);
-  if (typeof biome === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  if (isCandidateContextUnavailable(biome)) {
+    return unavailableCandidate(stableQuery, biome);
   }
   const exactKey = semanticAddressKey(stableQuery.continuation);
   const selected = biome.roomGeneration.fieldsCageOutcomes.find(
     (entry) => semanticAddressKey(entry.origin) === exactKey,
   );
   if (selected === undefined) {
-    failCandidate(stableQuery, 'Fields outcome has no simulation support entry');
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));
   }
   const selectedPossible = selected.supportOutcomes.includes(stableQuery.cageOutcome);
   const findings = selectedPossible

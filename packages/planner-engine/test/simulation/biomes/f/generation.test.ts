@@ -460,6 +460,18 @@ describe('project candidate evaluation', () => {
         (candidate) => candidate.context === 'evaluated' && candidate.support !== 'impossible',
       ),
     ).not.toHaveLength(0);
+    const impossibleStores = stores.filter(
+      (candidate) => candidate.context === 'evaluated' && candidate.support === 'impossible',
+    );
+    expect(impossibleStores.length).toBeGreaterThan(0);
+    expect(
+      impossibleStores.every(
+        (candidate) =>
+          candidate.context === 'evaluated' &&
+          'exclusions' in candidate.evidence &&
+          candidate.evidence.exclusions.some((exclusion) => exclusion.kind === 'store'),
+      ),
+    ).toBe(true);
     const selectedStoreFindings = simulateProject(catalog, project).findings.filter(
       (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(store),
     );
@@ -612,6 +624,73 @@ describe('project candidate evaluation', () => {
     }
   });
 
+  it('preserves typed Boon peer and Devotion pair exclusions', () => {
+    let project = possibilityProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, batchOccurrenceId(2, 1)),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, batchOccurrenceId(2, 2)),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+
+    expect(
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, batchOccurrenceId(2, 2)),
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+        },
+      }),
+    ).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: {
+        exclusions: [
+          { kind: 'sibling', priorOffers: ['Boon'] },
+          { kind: 'boonSource', source: 'ZeusUpgrade' },
+        ],
+      },
+    });
+
+    expect(
+      evaluateProjectCandidate(catalog, possibilityProject(), {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, batchOccurrenceId(1, 1)),
+        value: {
+          rewardType: 'Devotion',
+          payload: {
+            kind: 'DevotionPair',
+            chosenSource: 'ApolloUpgrade',
+            spurnedSource: 'PoseidonUpgrade',
+          },
+        },
+      }),
+    ).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: {
+        exclusions: [
+          {
+            kind: 'devotionPair',
+            chosenSource: 'ApolloUpgrade',
+            spurnedSource: 'PoseidonUpgrade',
+          },
+        ],
+      },
+    });
+  });
+
   it('reports possible, forced, and impossible room support without mutating the project', () => {
     const project = possibilityProject();
     const before = JSON.stringify(project);
@@ -638,6 +717,12 @@ describe('project candidate evaluation', () => {
       evidence: {
         candidateGameName: 'F_Combat20',
         exclusionReasons: ['forcedPool'],
+        exclusions: [
+          {
+            kind: 'forcedPool',
+            requiredRoomGameNames: expect.arrayContaining(['F_MiniBoss03']),
+          },
+        ],
       },
       findings: [
         expect.objectContaining({
@@ -720,15 +805,72 @@ describe('project candidate evaluation', () => {
     });
   });
 
-  it('reports unavailable context for a target in an incomplete biome', () => {
-    expect(roomCandidate(incompleteFProject(), 1, 1, 'F_Combat03')).toEqual({
-      context: 'unavailable',
-      query: {
-        kind: 'roomTarget',
-        target: targetAddress(1, 1),
-        gameName: 'F_Combat03',
+  it('explains early depth exclusions with counter and requirement evidence', () => {
+    expect(roomCandidate(possibilityProject(), 1, 1, 'F_MiniBoss01')).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: {
+        exclusionReasons: ['forceMinimum', 'eligibilityRequirement'],
+        exclusions: [
+          {
+            kind: 'forceMinimum',
+            axis: 'biomeDepthCache',
+            actual: 0,
+            minimum: 4,
+          },
+          {
+            kind: 'eligibilityRequirement',
+            evaluation: {
+              kind: 'all',
+              satisfied: false,
+              children: expect.arrayContaining([
+                {
+                  kind: 'counterRange',
+                  axis: 'biomeDepthCache',
+                  actual: 0,
+                  expected: { min: 4 },
+                  satisfied: false,
+                },
+              ]),
+            },
+          },
+        ],
       },
-      reason: 'biomeIncomplete',
+    });
+  });
+
+  it('evaluates a target reached by an incomplete biome prefix', () => {
+    expect(roomCandidate(incompleteFProject(), 1, 1, 'F_Combat03')).toMatchObject({
+      context: 'evaluated',
+      support: 'possible',
+      evidence: {
+        candidateGameName: 'F_Combat03',
+        biomeDepthCache: 0,
+        biomeEncounterDepth: 2,
+      },
+    });
+  });
+
+  it('reports addressed coverage when an invalid prefix has not reached a later target', () => {
+    const batches = baselineBatches.map((batch, index) =>
+      index === 5 ? { targets: ['F_MiniBoss01', 'F_Combat20'], pickedExitIndex: 2 } : batch,
+    );
+    const laterTarget = createTargetAddress(biome, batchOccurrenceId(6, 2), 1);
+    expect(
+      evaluateProjectCandidate(catalog, possibilityProject(batches), {
+        kind: 'roomTarget',
+        target: laterTarget,
+        gameName: 'F_Combat13',
+      }),
+    ).toMatchObject({
+      context: 'unavailable',
+      reason: 'coverageNotReached',
+      evidence: {
+        kind: 'coverageNotReached',
+        requiredOwner: laterTarget,
+        requiredCheckpoint: 'afterTargetGeneration',
+        coverage: { kind: 'prefix' },
+      },
     });
   });
 
@@ -739,17 +881,21 @@ describe('project candidate evaluation', () => {
       index === 5 ? { targets: ['F_Combat20', 'F_MiniBoss01'], pickedExitIndex: 2 } : batch,
     );
 
-    expect(evaluateProjectCandidate(catalog, withGTarget(incompleteFProject()), query)).toEqual({
+    expect(
+      evaluateProjectCandidate(catalog, withGTarget(incompleteFProject()), query),
+    ).toMatchObject({
       context: 'unavailable',
       query,
       reason: 'upstreamIncomplete',
+      evidence: { kind: 'upstreamIncomplete', upstreamBiomeKey: 'F' },
     });
     expect(
       evaluateProjectCandidate(catalog, withGTarget(possibilityProject(invalidBatches)), query),
-    ).toEqual({
+    ).toMatchObject({
       context: 'unavailable',
       query,
       reason: 'upstreamInvalid',
+      evidence: { kind: 'upstreamInvalid', upstreamBiomeKey: 'F' },
     });
   });
 

@@ -1,3 +1,4 @@
+import { semanticAddressKey } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import {
@@ -14,14 +15,21 @@ import type {
 
 import {
   failCandidate,
+  coverageNotReached,
   immutableQuery,
+  isCandidateContextUnavailable,
   locateCandidateLinear,
   locateLinearBiomePlan,
   requireRoute,
+  unavailableCandidate,
   type PreparedCandidateContext,
 } from './context';
 
-function targetExists(project: ProjectDocument, query: RoomTargetCandidateQuery): boolean {
+function targetExists(
+  catalog: Catalog,
+  project: ProjectDocument,
+  query: RoomTargetCandidateQuery,
+): boolean {
   const topology = locateLinearBiomePlan(project, query).topology;
   if (topology === null) {
     failCandidate(query, 'biome topology has not been started');
@@ -32,7 +40,24 @@ function targetExists(project: ProjectDocument, query: RoomTargetCandidateQuery)
   if (continuation?.kind !== 'batch') {
     failCandidate(query, 'target parent does not own an ordinary generated batch');
   }
-  return continuation.targets.some((candidate) => candidate.exitIndex === query.target.exitIndex);
+  if (continuation.targets.some((candidate) => candidate.exitIndex === query.target.exitIndex)) {
+    return true;
+  }
+  const parent = topology.occurrences.find(
+    (occurrence) => occurrence.occurrenceId === query.target.parentOccurrenceId,
+  );
+  const layout = catalog.biomeLayouts.byKey[query.target.biomeKey];
+  const fixedParent =
+    query.target.parentOccurrenceId === null && layout?.kind === 'LinearBiome'
+      ? ([...layout.entries].reverse().find((entry) => entry.kind === 'fixedEntry') ??
+        (layout.start.kind === 'fixedEntry' ? layout.start : undefined))
+      : undefined;
+  const parentGameName = parent?.gameName ?? fixedParent?.roomGameName;
+  const parentRoom = parentGameName === undefined ? undefined : catalog.rooms.byKey[parentGameName];
+  if (!parentRoom?.exits.some((exit) => exit.index === query.target.exitIndex)) {
+    failCandidate(query, `exit ${query.target.exitIndex} has no authored target`);
+  }
+  return false;
 }
 
 function assertCandidateExists(catalog: Catalog, query: RoomTargetCandidateQuery): void {
@@ -68,6 +93,7 @@ function evidence(pressure: LinearForcePressureLedgerEntry): RoomTargetCandidate
     requiredForcedRoomGameNames: pressure.requiredForcedRoomGameNames,
     supportRoomGameNames: pressure.supportRoomGameNames,
     exclusionReasons: pressure.selectedExclusionReasons,
+    exclusions: pressure.selectedExclusions,
   });
 }
 
@@ -78,15 +104,22 @@ export function evaluateRoomTargetCandidate(
   query: RoomTargetCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RoomTargetCandidateQuery;
-  const authoredTargetExists = targetExists(project, stableQuery);
+  const authoredTargetExists = targetExists(catalog, project, stableQuery);
   assertCandidateExists(catalog, stableQuery);
   const route = requireRoute(context.projectEvaluation.routes, stableQuery);
   const biome = locateCandidateLinear(context, stableQuery);
-  if (typeof biome === 'string') {
-    return Object.freeze({ context: 'unavailable', query: stableQuery, reason: biome });
+  if (isCandidateContextUnavailable(biome)) {
+    return unavailableCandidate(stableQuery, biome);
   }
   if (!authoredTargetExists) {
-    failCandidate(stableQuery, `exit ${stableQuery.target.exitIndex} has no authored target`);
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));
+  }
+  if (
+    !biome.roomGeneration.forcePressure.some(
+      (entry) => semanticAddressKey(entry.targetOrigin) === semanticAddressKey(stableQuery.target),
+    )
+  ) {
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));
   }
 
   const enteredBiomeCount = route.configuredBiomeKeys.indexOf(stableQuery.target.biomeKey) + 1;
@@ -95,7 +128,7 @@ export function evaluateRoomTargetCandidate(
   }
   const candidate = evaluateLinearRoomTargetCandidate(
     catalog,
-    biome.snapshot,
+    biome.authoring === 'complete' ? biome.snapshot : biome.materializedPrefix,
     biome.history,
     stableQuery.target,
     stableQuery.gameName,
