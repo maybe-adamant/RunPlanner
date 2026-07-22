@@ -20,8 +20,9 @@ import { describe, expect, it } from 'vitest';
 import { createApplication } from '../../composition/createApplication';
 import {
   findingSelected,
-  sectionSelected,
-  underworldPanelSelected,
+  routePanelSelected,
+  routeSelected,
+  settingsSelected,
 } from '../../state/editorSessionSlice';
 import { semanticFindingKey } from '../../projections/evaluationProjection';
 import {
@@ -39,7 +40,7 @@ function configureF(application: ReturnType<typeof createApplication>): void {
       configuredBiomeCount: 1,
     }),
   );
-  application.store.dispatch(underworldPanelSelected('F'));
+  application.store.dispatch(routePanelSelected({ routeKey: 'Underworld', biomeKey: 'F' }));
 }
 
 describe('App', () => {
@@ -69,13 +70,13 @@ describe('App', () => {
     expect(markup).toContain('Empty project');
     expect(markup).toContain('Project findings');
     expect(markup).toContain('Configure a biome to begin simulation.');
-    expect(application.editorNavigation.routes.Underworld?.biomePanels).toEqual([
+    expect(application.editorNavigation.routes.byKey.Underworld?.biomePanels).toEqual([
       { biomeKey: 'F', label: 'Erebus' },
       { biomeKey: 'G', label: 'Oceanus' },
       { biomeKey: 'H', label: 'Fields of Mourning' },
       { biomeKey: 'I', label: 'Tartarus' },
     ]);
-    expect(application.editorNavigation.routes.Surface?.biomePanels).toEqual([
+    expect(application.editorNavigation.routes.byKey.Surface?.biomePanels).toEqual([
       { biomeKey: 'N', label: 'City of Ephyra' },
       { biomeKey: 'O', label: 'Rift of Thessaly' },
       { biomeKey: 'P', label: 'Mount Olympus' },
@@ -92,7 +93,7 @@ describe('App', () => {
       throw new Error('configured F should have an incomplete finding');
     }
 
-    application.store.dispatch(sectionSelected('settings'));
+    application.store.dispatch(settingsSelected());
     const historyBeforeNavigation = application.store.getState().projectWorkspace.history;
     application.store.dispatch(
       findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
@@ -111,8 +112,8 @@ describe('App', () => {
     );
 
     expect(finding.code).toBe('biomeTopologyMissing');
-    expect(state.editorSession.activeSection).toBe('underworld');
-    expect(state.editorSession.activeUnderworldPanel).toBe('F');
+    expect(state.editorSession.activeRouteKey).toBe('Underworld');
+    expect(state.editorSession.activeBiomeKeyByRoute.Underworld).toBe('F');
     expect(state.projectWorkspace.history).toBe(historyBeforeNavigation);
     expect(markup).toContain('Start this biome');
     expect(markup).toContain('Choose a starting room before building its route.');
@@ -125,7 +126,7 @@ describe('App', () => {
 
   it('projects route-local and top-level session navigation without authoring history', () => {
     const application = createApplication();
-    application.store.dispatch(underworldPanelSelected('route'));
+    application.store.dispatch(routePanelSelected({ routeKey: 'Underworld', biomeKey: null }));
     let markup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App
@@ -141,7 +142,7 @@ describe('App', () => {
     expect(markup).toContain('0 configured');
     expect(markup).not.toContain('Choose an opening room');
 
-    application.store.dispatch(sectionSelected('surface'));
+    application.store.dispatch(routeSelected('Surface'));
     markup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App

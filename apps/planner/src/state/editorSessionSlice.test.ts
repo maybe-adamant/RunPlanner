@@ -1,26 +1,87 @@
-import { createBiomeAddress, createProjectAddress } from '@run-planner/engine/authored-project';
+import {
+  createBiomeAddress,
+  createProjectAddress,
+  createRouteAddress,
+} from '@run-planner/engine/authored-project';
+import { catalog } from '@run-planner/hades2-catalog';
+import type { Catalog, RouteDeclaration } from '@run-planner/engine/catalog-schema';
 import { describe, expect, it } from 'vitest';
 
-import { editorSessionReducer, findingSelected, sectionSelected } from './editorSessionSlice';
+import {
+  createEditorSessionReducer,
+  findingSelected,
+  routePanelSelected,
+  routeSelected,
+  settingsSelected,
+} from './editorSessionSlice';
 
-describe('editor finding navigation', () => {
-  it('selects an F finding and routes to its owning transient panel', () => {
-    const settings = editorSessionReducer(undefined, sectionSelected('settings'));
-    const selection = {
-      key: 'finding-key',
-      origin: createBiomeAddress('Underworld', 'F'),
-    } as const;
+const reducer = createEditorSessionReducer(catalog);
 
-    const selected = editorSessionReducer(settings, findingSelected(selection));
+describe('editor session navigation', () => {
+  it('derives route identity from the catalog instead of application route names', () => {
+    const alternateRoute: RouteDeclaration = {
+      key: 'Alternate',
+      label: 'Alternate Route',
+      biomeKeys: ['F'],
+    };
+    const alternateCatalog: Catalog = {
+      ...catalog,
+      routes: {
+        values: [alternateRoute],
+        byKey: { Alternate: alternateRoute },
+      },
+    };
+    const alternateReducer = createEditorSessionReducer(alternateCatalog);
+    const initial = alternateReducer(undefined, { type: 'test/initialize' });
+    const selected = alternateReducer(
+      initial,
+      findingSelected({
+        key: 'alternate-finding',
+        origin: createBiomeAddress('Alternate', 'F'),
+      }),
+    );
 
-    expect(selected).toEqual({
-      activeSection: 'underworld',
-      activeUnderworldPanel: 'F',
-      activeSurfacePanel: 'route',
-      selectedFinding: selection,
-      findingNavigationRevision: 1,
+    expect(initial.activeRouteKey).toBe('Alternate');
+    expect(selected.activeBiomeKeyByRoute.Alternate).toBe('F');
+  });
+
+  it('seeds the first declared route and one route panel slot per declaration', () => {
+    expect(reducer(undefined, { type: 'test/initialize' })).toEqual({
+      activeRouteKey: 'Underworld',
+      activeBiomeKeyByRoute: { Underworld: null, Surface: null },
+      selectedFinding: null,
+      findingNavigationRevision: 0,
     });
-    expect(settings.selectedFinding).toBeNull();
+  });
+
+  it('selects route panels without losing another route panel selection', () => {
+    const underworld = reducer(
+      undefined,
+      routePanelSelected({ routeKey: 'Underworld', biomeKey: 'G' }),
+    );
+    const surface = reducer(underworld, routePanelSelected({ routeKey: 'Surface', biomeKey: 'N' }));
+    const returned = reducer(surface, routeSelected('Underworld'));
+
+    expect(returned.activeRouteKey).toBe('Underworld');
+    expect(returned.activeBiomeKeyByRoute).toEqual({ Underworld: 'G', Surface: 'N' });
+  });
+
+  it('routes biome and route findings through their semantic owner', () => {
+    const settings = reducer(undefined, settingsSelected());
+    const biomeSelection = {
+      key: 'finding-key',
+      origin: createBiomeAddress('Surface', 'O'),
+    } as const;
+    const selectedBiome = reducer(settings, findingSelected(biomeSelection));
+    const selectedRoute = reducer(
+      selectedBiome,
+      findingSelected({ key: 'route-finding', origin: createRouteAddress('Underworld') }),
+    );
+
+    expect(selectedBiome.activeRouteKey).toBe('Surface');
+    expect(selectedBiome.activeBiomeKeyByRoute.Surface).toBe('O');
+    expect(selectedRoute.activeRouteKey).toBe('Underworld');
+    expect(selectedRoute.activeBiomeKeyByRoute.Underworld).toBeNull();
   });
 
   it('issues a new navigation request when the same finding is selected again', () => {
@@ -28,82 +89,29 @@ describe('editor finding navigation', () => {
       key: 'finding-key',
       origin: createBiomeAddress('Underworld', 'F'),
     } as const;
-    const selected = editorSessionReducer(undefined, findingSelected(selection));
-
-    const selectedAgain = editorSessionReducer(selected, findingSelected(selection));
+    const selected = reducer(undefined, findingSelected(selection));
+    const selectedAgain = reducer(selected, findingSelected(selection));
 
     expect(selectedAgain.selectedFinding).toBe(selection);
     expect(selectedAgain.findingNavigationRevision).toBe(2);
   });
 
-  it('routes a G finding to the Oceanus panel', () => {
-    const selection = {
-      key: 'g-finding-key',
-      origin: createBiomeAddress('Underworld', 'G'),
-    } as const;
-
-    const selected = editorSessionReducer(undefined, findingSelected(selection));
-
-    expect(selected.activeSection).toBe('underworld');
-    expect(selected.activeUnderworldPanel).toBe('G');
-  });
-
-  it('routes an H finding to the Fields of Mourning panel', () => {
-    const selection = {
-      key: 'h-finding-key',
-      origin: createBiomeAddress('Underworld', 'H'),
-    } as const;
-
-    const selected = editorSessionReducer(undefined, findingSelected(selection));
-
-    expect(selected.activeSection).toBe('underworld');
-    expect(selected.activeUnderworldPanel).toBe('H');
-  });
-
-  it('routes an I finding to the Tartarus panel', () => {
-    const selection = {
-      key: 'i-finding-key',
-      origin: createBiomeAddress('Underworld', 'I'),
-    } as const;
-
-    const selected = editorSessionReducer(undefined, findingSelected(selection));
-
-    expect(selected.activeSection).toBe('underworld');
-    expect(selected.activeUnderworldPanel).toBe('I');
-  });
-
-  it('routes an N finding to the City of Ephyra panel', () => {
-    const selection = {
-      key: 'n-finding-key',
-      origin: createBiomeAddress('Surface', 'N'),
-    } as const;
-
-    const selected = editorSessionReducer(undefined, findingSelected(selection));
-
-    expect(selected.activeSection).toBe('surface');
-    expect(selected.activeSurfacePanel).toBe('N');
-  });
-
-  it('routes an O finding to the Rift of Thessaly panel', () => {
-    const selection = {
-      key: 'o-finding-key',
-      origin: createBiomeAddress('Surface', 'O'),
-    } as const;
-
-    const selected = editorSessionReducer(undefined, findingSelected(selection));
-
-    expect(selected.activeSection).toBe('surface');
-    expect(selected.activeSurfacePanel).toBe('O');
-  });
-
-  it('selects a project-root finding without inventing route navigation', () => {
-    const settings = editorSessionReducer(undefined, sectionSelected('settings'));
+  it('keeps the current location when selecting a project-root finding', () => {
+    const settings = reducer(undefined, settingsSelected());
     const selection = { key: 'project-finding-key', origin: createProjectAddress() } as const;
+    const selected = reducer(settings, findingSelected(selection));
 
-    const selected = editorSessionReducer(settings, findingSelected(selection));
-
-    expect(selected.activeSection).toBe('settings');
+    expect(selected.activeRouteKey).toBeNull();
     expect(selected.selectedFinding).toBe(selection);
     expect(selected.findingNavigationRevision).toBe(1);
+  });
+
+  it('rejects session addresses outside the declared route structure', () => {
+    expect(() => reducer(undefined, routeSelected('Unknown'))).toThrow(
+      'Editor navigation references unknown route Unknown',
+    );
+    expect(() =>
+      reducer(undefined, routePanelSelected({ routeKey: 'Underworld', biomeKey: 'N' })),
+    ).toThrow('Editor navigation references biome N outside route Underworld');
   });
 });

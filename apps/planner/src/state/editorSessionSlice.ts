@@ -1,50 +1,52 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction, type Reducer } from '@reduxjs/toolkit';
 import type { SemanticAddress } from '@run-planner/engine/authored-project';
-
-export type PlannerSection = 'underworld' | 'surface' | 'settings';
-export type UnderworldPanel = 'route' | 'F' | 'G' | 'H' | 'I';
-export type SurfacePanel = 'route' | 'N' | 'O' | 'P' | 'Q';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 export interface FindingSelection {
   readonly key: string;
   readonly origin: SemanticAddress;
 }
 
-interface EditorSessionState {
-  readonly activeSection: PlannerSection;
-  readonly activeUnderworldPanel: UnderworldPanel;
-  readonly activeSurfacePanel: SurfacePanel;
+export interface RoutePanelSelection {
+  readonly routeKey: string;
+  readonly biomeKey: string | null;
+}
+
+export interface EditorSessionState {
+  readonly activeRouteKey: string | null;
+  readonly activeBiomeKeyByRoute: Readonly<Record<string, string | null>>;
   readonly selectedFinding: FindingSelection | null;
   readonly findingNavigationRevision: number;
 }
 
-const initialState: EditorSessionState = {
-  activeSection: 'underworld',
-  activeUnderworldPanel: 'route',
-  activeSurfacePanel: 'route',
+const emptyState: EditorSessionState = {
+  activeRouteKey: null,
+  activeBiomeKeyByRoute: {},
   selectedFinding: null,
   findingNavigationRevision: 0,
 };
 
 function routeKey(origin: SemanticAddress): string | null {
-  if (origin.kind === 'project') {
-    return null;
-  }
-  return origin.routeKey;
+  return origin.kind === 'project' ? null : origin.routeKey;
+}
+
+function biomeKey(origin: SemanticAddress): string | null {
+  return origin.kind === 'project' || origin.kind === 'route' ? null : origin.biomeKey;
 }
 
 const editorSessionSlice = createSlice({
   name: 'editorSession',
-  initialState,
+  initialState: emptyState,
   reducers: {
-    sectionSelected(state, action: PayloadAction<PlannerSection>) {
-      state.activeSection = action.payload;
+    routeSelected(state, action: PayloadAction<string>) {
+      state.activeRouteKey = action.payload;
     },
-    underworldPanelSelected(state, action: PayloadAction<UnderworldPanel>) {
-      state.activeUnderworldPanel = action.payload;
+    settingsSelected(state) {
+      state.activeRouteKey = null;
     },
-    surfacePanelSelected(state, action: PayloadAction<SurfacePanel>) {
-      state.activeSurfacePanel = action.payload;
+    routePanelSelected(state, action: PayloadAction<RoutePanelSelection>) {
+      state.activeRouteKey = action.payload.routeKey;
+      state.activeBiomeKeyByRoute[action.payload.routeKey] = action.payload.biomeKey;
     },
     findingSelected(state, action: PayloadAction<FindingSelection>) {
       state.selectedFinding = action.payload;
@@ -53,37 +55,54 @@ const editorSessionSlice = createSlice({
       if (route === null) {
         return;
       }
-      if (route === 'Underworld') {
-        state.activeSection = 'underworld';
-        state.activeUnderworldPanel =
-          action.payload.origin.kind !== 'project' &&
-          action.payload.origin.kind !== 'route' &&
-          (action.payload.origin.biomeKey === 'F' ||
-            action.payload.origin.biomeKey === 'G' ||
-            action.payload.origin.biomeKey === 'H' ||
-            action.payload.origin.biomeKey === 'I')
-            ? action.payload.origin.biomeKey
-            : 'route';
-        return;
-      }
-      if (route === 'Surface') {
-        state.activeSection = 'surface';
-        state.activeSurfacePanel =
-          action.payload.origin.kind !== 'project' &&
-          action.payload.origin.kind !== 'route' &&
-          (action.payload.origin.biomeKey === 'N' ||
-            action.payload.origin.biomeKey === 'O' ||
-            action.payload.origin.biomeKey === 'P' ||
-            action.payload.origin.biomeKey === 'Q')
-            ? action.payload.origin.biomeKey
-            : 'route';
-        return;
-      }
-      throw new Error(`Finding references unknown route ${route}`);
+      state.activeRouteKey = route;
+      state.activeBiomeKeyByRoute[route] = biomeKey(action.payload.origin);
     },
   },
 });
 
-export const { findingSelected, sectionSelected, surfacePanelSelected, underworldPanelSelected } =
+export const { findingSelected, routePanelSelected, routeSelected, settingsSelected } =
   editorSessionSlice.actions;
-export const editorSessionReducer = editorSessionSlice.reducer;
+
+function requireRoute(catalog: Catalog, routeKeyValue: string): void {
+  if (catalog.routes.byKey[routeKeyValue] === undefined) {
+    throw new Error(`Editor navigation references unknown route ${routeKeyValue}`);
+  }
+}
+
+function requirePanel(catalog: Catalog, selection: RoutePanelSelection): void {
+  const route = catalog.routes.byKey[selection.routeKey];
+  if (route === undefined) {
+    throw new Error(`Editor navigation references unknown route ${selection.routeKey}`);
+  }
+  if (selection.biomeKey !== null && !route.biomeKeys.includes(selection.biomeKey)) {
+    throw new Error(
+      `Editor navigation references biome ${selection.biomeKey} outside route ${selection.routeKey}`,
+    );
+  }
+}
+
+export function createEditorSessionReducer(catalog: Catalog): Reducer<EditorSessionState> {
+  const activeBiomeKeyByRoute = Object.fromEntries(
+    catalog.routes.values.map((route) => [route.key, null]),
+  );
+  const initialState: EditorSessionState = {
+    ...emptyState,
+    activeRouteKey: catalog.routes.values[0]?.key ?? null,
+    activeBiomeKeyByRoute,
+  };
+
+  return (state = initialState, action) => {
+    if (routeSelected.match(action)) {
+      requireRoute(catalog, action.payload);
+    } else if (routePanelSelected.match(action)) {
+      requirePanel(catalog, action.payload);
+    } else if (findingSelected.match(action)) {
+      const route = routeKey(action.payload.origin);
+      if (route !== null) {
+        requirePanel(catalog, { routeKey: route, biomeKey: biomeKey(action.payload.origin) });
+      }
+    }
+    return editorSessionSlice.reducer(state, action);
+  };
+}

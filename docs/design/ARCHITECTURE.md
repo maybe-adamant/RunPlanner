@@ -188,6 +188,8 @@ It does not own biome or reward rules.
 The React UI consumes authored state and a coherent derived result. It
 dispatches semantic commands. It may own transient navigation and interaction
 state, but it cannot directly modify topology tables or room payload records.
+Route tabs and per-route panel selection are catalog-driven UI-session state;
+they do not introduce route-specific reducers or authored fields.
 
 ## Technology Responsibilities
 

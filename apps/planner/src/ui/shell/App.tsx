@@ -6,12 +6,9 @@ import { presentProjectStatus, presentRouteStatus } from '../../projections/eval
 import { authoredProjectCommandDispatched } from '../../state/projectWorkspaceSlice';
 import type { EditorNavigation, RouteEditorNavigation } from '../../projections/editorNavigation';
 import {
-  sectionSelected,
-  surfacePanelSelected,
-  underworldPanelSelected,
-  type PlannerSection,
-  type SurfacePanel,
-  type UnderworldPanel,
+  routePanelSelected,
+  routeSelected,
+  settingsSelected,
 } from '../../state/editorSessionSlice';
 import {
   selectPresentProject,
@@ -33,26 +30,6 @@ interface AppProps {
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
   readonly projectOperations: ProjectOperations;
-}
-
-const sections: readonly { key: PlannerSection; label: string }[] = [
-  { key: 'underworld', label: 'Underworld' },
-  { key: 'surface', label: 'Surface' },
-  { key: 'settings', label: 'Settings' },
-];
-
-function asUnderworldPanel(biomeKey: string): UnderworldPanel {
-  if (biomeKey !== 'F' && biomeKey !== 'G' && biomeKey !== 'H' && biomeKey !== 'I') {
-    throw new Error(`${biomeKey} is not an Underworld editor panel`);
-  }
-  return biomeKey as UnderworldPanel;
-}
-
-function asSurfacePanel(biomeKey: string): SurfacePanel {
-  if (biomeKey !== 'N' && biomeKey !== 'O' && biomeKey !== 'P' && biomeKey !== 'Q') {
-    throw new Error(`${biomeKey} is not a Surface editor panel`);
-  }
-  return biomeKey;
 }
 
 function RouteOverview({
@@ -122,6 +99,101 @@ function RouteOverview({
   );
 }
 
+function RouteWorkspace({
+  candidateProjection,
+  catalog,
+  navigation,
+  route,
+  routeEvaluation,
+}: {
+  readonly candidateProjection: CandidateProjectionService;
+  readonly catalog: Catalog;
+  readonly navigation: RouteEditorNavigation;
+  readonly route: AuthoredRoutePlan;
+  readonly routeEvaluation: ProjectRouteEvaluation;
+}) {
+  const dispatch = useAppDispatch();
+  const selectedBiomeKey = useAppSelector(
+    (state) => state.editorSession.activeBiomeKeyByRoute[route.routeKey] ?? null,
+  );
+  const configuredPanels = navigation.biomePanels.filter((panel) =>
+    route.biomes.some((biome) => biome.biomeKey === panel.biomeKey),
+  );
+  const activeBiomePlan = route.biomes.find((biome) => biome.biomeKey === selectedBiomeKey);
+  const activeBiomeEvaluation = routeEvaluation.biomes.find(
+    (biome) => biome.biomeKey === selectedBiomeKey,
+  );
+  if (
+    activeBiomePlan !== undefined &&
+    activeBiomeEvaluation !== undefined &&
+    activeBiomePlan.kind !== activeBiomeEvaluation.kind
+  ) {
+    throw new Error(`${activeBiomeEvaluation.biomeKey} plan and evaluation kinds do not match`);
+  }
+  const displayedBiomeKey = activeBiomePlan?.biomeKey ?? null;
+
+  return (
+    <div className="editor-workspace">
+      <nav className="panel-navigation" aria-label={`${navigation.label} panels`}>
+        <p className="navigation-label">{navigation.label}</p>
+        <button
+          aria-current={displayedBiomeKey === null ? 'page' : undefined}
+          className="panel-navigation-item"
+          data-active={displayedBiomeKey === null}
+          onClick={() => dispatch(routePanelSelected({ routeKey: route.routeKey, biomeKey: null }))}
+          type="button"
+        >
+          Route
+        </button>
+        {configuredPanels.map((panel) => (
+          <button
+            aria-current={panel.biomeKey === displayedBiomeKey ? 'page' : undefined}
+            className="panel-navigation-item"
+            data-active={panel.biomeKey === displayedBiomeKey}
+            key={panel.biomeKey}
+            onClick={() =>
+              dispatch(routePanelSelected({ routeKey: route.routeKey, biomeKey: panel.biomeKey }))
+            }
+            type="button"
+          >
+            {panel.label}
+          </button>
+        ))}
+      </nav>
+      <div className="editor-panel" aria-live="polite">
+        {displayedBiomeKey === null ? (
+          <RouteOverview
+            label={navigation.label}
+            navigation={navigation}
+            route={route}
+            routeEvaluation={routeEvaluation}
+          />
+        ) : activeBiomePlan?.kind === 'HubBiome' ? (
+          <HubBiomeEditor
+            candidateProjection={candidateProjection}
+            catalog={catalog}
+            evaluation={
+              activeBiomeEvaluation?.kind === 'HubBiome' ? activeBiomeEvaluation : undefined
+            }
+            plan={activeBiomePlan}
+            routeKey={route.routeKey}
+          />
+        ) : activeBiomePlan?.kind === 'LinearBiome' ? (
+          <LinearBiomeEditor
+            candidateProjection={candidateProjection}
+            catalog={catalog}
+            evaluation={
+              activeBiomeEvaluation?.kind === 'LinearBiome' ? activeBiomeEvaluation : undefined
+            }
+            plan={activeBiomePlan}
+            routeKey={route.routeKey}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function App({
   candidateProjection,
   catalog,
@@ -129,78 +201,25 @@ export function App({
   editorNavigation,
   projectOperations,
 }: AppProps) {
-  const activeSection = useAppSelector((state) => state.editorSession.activeSection);
-  const activeUnderworldPanel = useAppSelector(
-    (state) => state.editorSession.activeUnderworldPanel,
-  );
-  const activeSurfacePanel = useAppSelector((state) => state.editorSession.activeSurfacePanel);
+  const activeRouteKey = useAppSelector((state) => state.editorSession.activeRouteKey);
   const project = useAppSelector(selectPresentProject);
   const evaluation = useAppSelector(selectProjectEvaluation);
   const dispatch = useAppDispatch();
-  const underworld = project.routes.find((route) => route.routeKey === 'Underworld');
-  const surface = project.routes.find((route) => route.routeKey === 'Surface');
-  const underworldNavigation = editorNavigation.routes.Underworld;
-  const surfaceNavigation = editorNavigation.routes.Surface;
-  const underworldEvaluation = evaluation.routes.find((route) => route.routeKey === 'Underworld');
-  const surfaceEvaluation = evaluation.routes.find((route) => route.routeKey === 'Surface');
+  const activeRoute = project.routes.find((route) => route.routeKey === activeRouteKey);
+  const activeRouteEvaluation = evaluation.routes.find(
+    (route) => route.routeKey === activeRouteKey,
+  );
+  const activeRouteNavigation =
+    activeRouteKey === null ? undefined : editorNavigation.routes.byKey[activeRouteKey];
 
   if (
-    underworld === undefined ||
-    surface === undefined ||
-    underworldNavigation === undefined ||
-    surfaceNavigation === undefined ||
-    underworldEvaluation === undefined ||
-    surfaceEvaluation === undefined
+    activeRouteKey !== null &&
+    (activeRoute === undefined ||
+      activeRouteEvaluation === undefined ||
+      activeRouteNavigation === undefined)
   ) {
-    throw new Error('Authored project is missing a declared route');
+    throw new Error(`Editor session references unavailable route ${activeRouteKey}`);
   }
-
-  const configuredUnderworldPanels = underworldNavigation.biomePanels.filter((panel) =>
-    underworld.biomes.some((biome) => biome.biomeKey === panel.biomeKey),
-  );
-  const activeBiomeKey =
-    activeUnderworldPanel === 'F' ||
-    activeUnderworldPanel === 'G' ||
-    activeUnderworldPanel === 'H' ||
-    activeUnderworldPanel === 'I'
-      ? activeUnderworldPanel
-      : undefined;
-  const activeBiomePlan = underworld.biomes.find((biome) => biome.biomeKey === activeBiomeKey);
-  const activeBiomeEvaluation = underworldEvaluation.biomes.find(
-    (biome) => biome.biomeKey === activeBiomeKey,
-  );
-  if (activeBiomeEvaluation !== undefined && activeBiomeEvaluation.kind !== 'LinearBiome') {
-    throw new Error(`${activeBiomeEvaluation.biomeKey} did not produce a linear evaluation`);
-  }
-  const displayedUnderworldPanel =
-    activeBiomeKey !== undefined && activeBiomePlan !== undefined ? activeBiomeKey : 'route';
-  const configuredSurfacePanels = surfaceNavigation.biomePanels.filter((panel) =>
-    surface.biomes.some((biome) => biome.biomeKey === panel.biomeKey),
-  );
-  const activeSurfaceBiomeKey = activeSurfacePanel === 'route' ? undefined : activeSurfacePanel;
-  const activeSurfaceBiomePlan = surface.biomes.find(
-    (biome) => biome.biomeKey === activeSurfaceBiomeKey,
-  );
-  const activeSurfaceBiomeEvaluation = surfaceEvaluation.biomes.find(
-    (biome) => biome.biomeKey === activeSurfaceBiomeKey,
-  );
-  if (
-    activeSurfaceBiomePlan !== undefined &&
-    activeSurfaceBiomeEvaluation !== undefined &&
-    activeSurfaceBiomePlan.kind !== activeSurfaceBiomeEvaluation.kind
-  ) {
-    throw new Error(
-      `${activeSurfaceBiomeEvaluation.biomeKey} plan and evaluation kinds do not match`,
-    );
-  }
-  const activeSurfaceHubEvaluation =
-    activeSurfaceBiomeEvaluation?.kind === 'HubBiome' ? activeSurfaceBiomeEvaluation : undefined;
-  const activeSurfaceLinearEvaluation =
-    activeSurfaceBiomeEvaluation?.kind === 'LinearBiome' ? activeSurfaceBiomeEvaluation : undefined;
-  const displayedSurfacePanel =
-    activeSurfaceBiomeKey !== undefined && activeSurfaceBiomePlan !== undefined
-      ? activeSurfaceBiomeKey
-      : 'route';
 
   return (
     <main className="app-shell">
@@ -219,125 +238,44 @@ export function App({
       <ProjectFileControls operations={projectOperations} />
 
       <nav className="route-tabs" aria-label="Planner sections">
-        {sections.map((section) => (
+        {editorNavigation.routes.values.map((route) => (
           <button
-            aria-current={section.key === activeSection ? 'page' : undefined}
+            aria-current={route.routeKey === activeRouteKey ? 'page' : undefined}
             className="route-tab"
-            data-active={section.key === activeSection}
-            key={section.key}
-            onClick={() => dispatch(sectionSelected(section.key))}
+            data-active={route.routeKey === activeRouteKey}
+            key={route.routeKey}
+            onClick={() => dispatch(routeSelected(route.routeKey))}
             type="button"
           >
-            {section.label}
+            {route.label}
           </button>
         ))}
+        <button
+          aria-current={activeRouteKey === null ? 'page' : undefined}
+          className="route-tab"
+          data-active={activeRouteKey === null}
+          onClick={() => dispatch(settingsSelected())}
+          type="button"
+        >
+          Settings
+        </button>
       </nav>
 
       <ProjectFindings catalog={catalog} evaluation={evaluation} />
 
-      {activeSection === 'underworld' && (
-        <div className="editor-workspace">
-          <nav className="panel-navigation" aria-label="Underworld panels">
-            <p className="navigation-label">Underworld</p>
-            <button
-              aria-current={displayedUnderworldPanel === 'route' ? 'page' : undefined}
-              className="panel-navigation-item"
-              data-active={displayedUnderworldPanel === 'route'}
-              onClick={() => dispatch(underworldPanelSelected('route'))}
-              type="button"
-            >
-              Route
-            </button>
-            {configuredUnderworldPanels.map((panel) => (
-              <button
-                aria-current={panel.biomeKey === displayedUnderworldPanel ? 'page' : undefined}
-                className="panel-navigation-item"
-                data-active={panel.biomeKey === displayedUnderworldPanel}
-                key={panel.biomeKey}
-                onClick={() => dispatch(underworldPanelSelected(asUnderworldPanel(panel.biomeKey)))}
-                type="button"
-              >
-                {panel.label}
-              </button>
-            ))}
-          </nav>
-          <div className="editor-panel" aria-live="polite">
-            {displayedUnderworldPanel === 'route' ? (
-              <RouteOverview
-                label="Underworld"
-                navigation={underworldNavigation}
-                route={underworld}
-                routeEvaluation={underworldEvaluation}
-              />
-            ) : activeBiomePlan?.kind === 'LinearBiome' ? (
-              <LinearBiomeEditor
-                candidateProjection={candidateProjection}
-                catalog={catalog}
-                evaluation={activeBiomeEvaluation}
-                plan={activeBiomePlan}
-                routeKey={underworld.routeKey}
-              />
-            ) : null}
-          </div>
-        </div>
-      )}
+      {activeRoute !== undefined &&
+        activeRouteEvaluation !== undefined &&
+        activeRouteNavigation !== undefined && (
+          <RouteWorkspace
+            candidateProjection={candidateProjection}
+            catalog={catalog}
+            navigation={activeRouteNavigation}
+            route={activeRoute}
+            routeEvaluation={activeRouteEvaluation}
+          />
+        )}
 
-      {activeSection === 'surface' && (
-        <div className="editor-workspace">
-          <nav className="panel-navigation" aria-label="Surface panels">
-            <p className="navigation-label">Surface</p>
-            <button
-              aria-current={displayedSurfacePanel === 'route' ? 'page' : undefined}
-              className="panel-navigation-item"
-              data-active={displayedSurfacePanel === 'route'}
-              onClick={() => dispatch(surfacePanelSelected('route'))}
-              type="button"
-            >
-              Route
-            </button>
-            {configuredSurfacePanels.map((panel) => (
-              <button
-                aria-current={panel.biomeKey === displayedSurfacePanel ? 'page' : undefined}
-                className="panel-navigation-item"
-                data-active={panel.biomeKey === displayedSurfacePanel}
-                key={panel.biomeKey}
-                onClick={() => dispatch(surfacePanelSelected(asSurfacePanel(panel.biomeKey)))}
-                type="button"
-              >
-                {panel.label}
-              </button>
-            ))}
-          </nav>
-          <div className="editor-panel" aria-live="polite">
-            {displayedSurfacePanel === 'route' ? (
-              <RouteOverview
-                label="Surface"
-                navigation={surfaceNavigation}
-                route={surface}
-                routeEvaluation={surfaceEvaluation}
-              />
-            ) : activeSurfaceBiomePlan?.kind === 'HubBiome' ? (
-              <HubBiomeEditor
-                candidateProjection={candidateProjection}
-                catalog={catalog}
-                evaluation={activeSurfaceHubEvaluation}
-                plan={activeSurfaceBiomePlan}
-                routeKey={surface.routeKey}
-              />
-            ) : activeSurfaceBiomePlan?.kind === 'LinearBiome' ? (
-              <LinearBiomeEditor
-                candidateProjection={candidateProjection}
-                catalog={catalog}
-                evaluation={activeSurfaceLinearEvaluation}
-                plan={activeSurfaceBiomePlan}
-                routeKey={surface.routeKey}
-              />
-            ) : null}
-          </div>
-        </div>
-      )}
-
-      {activeSection === 'settings' && (
+      {activeRouteKey === null && (
         <section className="settings-panel" aria-live="polite">
           <header className="panel-heading">
             <div>

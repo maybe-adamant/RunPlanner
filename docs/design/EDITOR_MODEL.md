@@ -33,7 +33,7 @@ command surface.
 The initial shell should preserve the useful high-level navigation proven by
 the ImGui prototype:
 
-- horizontal route tabs: Underworld, Surface, Settings;
+- one horizontal tab per catalog route, followed by Settings;
 - route-local biome navigation;
 - a route settings panel;
 - one primary biome editor;
@@ -42,6 +42,16 @@ the ImGui prototype:
 
 The exact desktop composition may evolve. Tabs and panels are presentation,
 not project identity.
+
+Route and panel navigation is one generic UI-session model. The active route
+is a nullable catalog route key, where `null` selects Settings, and each route
+retains its selected biome key or route-overview selection independently.
+Application state and React composition do not define separate Underworld,
+Surface, F, G, or other route-specific navigation fields. The ordered route
+tabs, labels, valid biome panels, and initial route come from the normalized
+catalog. A semantic finding selects its owning route and biome through the same
+generic session action; route- and project-owned findings select the route
+overview or retain the current top-level location respectively.
 
 ## Layout Projectors
 

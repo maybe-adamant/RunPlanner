@@ -8,7 +8,7 @@ import {
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { editorSessionReducer } from './editorSessionSlice';
+import { createEditorSessionReducer } from './editorSessionSlice';
 import { indexFindingsByOwner } from '../projections/evaluationProjection';
 import {
   createInitialProfileSessionState,
@@ -34,7 +34,7 @@ export function createPlannerStore(options: CreatePlannerStoreOptions) {
         options.initialProject,
         options.evaluateProject,
       ),
-      editorSession: editorSessionReducer,
+      editorSession: createEditorSessionReducer(options.catalog),
       profileSession: createProfileSessionReducer(
         options.initialProfileSession ?? createInitialProfileSessionState(),
       ),

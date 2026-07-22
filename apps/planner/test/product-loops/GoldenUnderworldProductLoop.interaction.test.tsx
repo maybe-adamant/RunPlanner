@@ -334,8 +334,8 @@ describe('golden Underworld product loop', () => {
 
     await user.click(screen.getByRole('button', { name: /Start this biome/ }));
 
-    expect(application.store.getState().editorSession.activeSection).toBe('underworld');
-    expect(application.store.getState().editorSession.activeUnderworldPanel).toBe('F');
+    expect(application.store.getState().editorSession.activeRouteKey).toBe('Underworld');
+    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBe('F');
     expect(document.activeElement?.id).toBe(semanticOwnerElementId(finding.origin));
     expect(scrollIntoView).toHaveBeenCalledOnce();
     await user.selectOptions(screen.getByLabelText('Opening room'), 'F_Opening01');
@@ -471,7 +471,7 @@ describe('golden Underworld product loop', () => {
 
     await user.click(screen.getByRole('button', { name: /Start this biome/ }));
 
-    expect(application.store.getState().editorSession.activeUnderworldPanel).toBe('G');
+    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBe('G');
     expect(document.activeElement?.id).toBe(semanticOwnerElementId(gFinding.origin));
     expect(scrollIntoView).toHaveBeenCalledOnce();
     const start = screen.getByLabelText('Starting room');

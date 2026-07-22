@@ -153,7 +153,7 @@ describe('N/O/P/Q Surface product loop', () => {
     application.store.dispatch(authoredProjectReplaced(authored));
     const view = renderPlannerForInteraction({ application });
 
-    expect(application.editorNavigation.routes.Surface).toMatchObject({
+    expect(application.editorNavigation.routes.byKey.Surface).toMatchObject({
       biomePanels: [
         { biomeKey: 'N', label: 'City of Ephyra' },
         { biomeKey: 'O', label: 'Rift of Thessaly' },
@@ -304,8 +304,8 @@ describe('N/O/P/Q Surface product loop', () => {
     await view.user.click(
       screen.getAllByRole('button', { name: /Hub room cannot be open together/ })[0]!,
     );
-    expect(application.store.getState().editorSession.activeSection).toBe('surface');
-    expect(application.store.getState().editorSession.activeSurfacePanel).toBe('N');
+    expect(application.store.getState().editorSession.activeRouteKey).toBe('Surface');
+    expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Surface).toBe('N');
     expect(
       screen.getByRole('button', { name: 'City of Ephyra' }).getAttribute('aria-current'),
     ).toBe('page');
