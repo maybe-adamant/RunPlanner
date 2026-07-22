@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { catalog } from '@run-planner/catalog';
-import { simulateProject, type ProjectDocument } from '@run-planner/core';
+import { catalog } from '@run-planner/hades2-catalog';
+import { simulateProject, type ProjectDocument } from '@run-planner/engine';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';

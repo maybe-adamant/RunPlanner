@@ -6,7 +6,7 @@ import type {
   RoomOccurrence,
   ShopPurchaseAddress,
   ProjectDocument,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import {
   createIncomingRewardAddress,
   createLocalRewardAddress,
@@ -15,7 +15,7 @@ import {
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { useRef, useState } from 'react';
 
 import {

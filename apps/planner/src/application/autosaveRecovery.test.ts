@@ -2,8 +2,8 @@ import {
   createProjectDocument,
   createRouteAddress,
   encodeProjectDocument,
-} from '@run-planner/core';
-import { catalog } from '@run-planner/catalog';
+} from '@run-planner/engine';
+import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
 import { type AutosaveRecoveryAdapter, type AutosaveScheduler } from './autosaveRecovery';

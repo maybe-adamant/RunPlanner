@@ -1,4 +1,4 @@
-import type { Catalog, RoomDeclaration, TargetAddress } from '@run-planner/core';
+import type { Catalog, RoomDeclaration, TargetAddress } from '@run-planner/engine';
 import { useState } from 'react';
 
 import {

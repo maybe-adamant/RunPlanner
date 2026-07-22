@@ -31,8 +31,8 @@ completed checkpoint history into design authority.
 
 - workspace package manager and lockfile;
 - TypeScript strict configuration shared by packages;
-- `packages/core`;
-- `packages/catalog`;
+- `packages/planner-engine`;
+- `packages/hades2-catalog`;
 - `apps/planner` using React and Vite;
 - Redux Toolkit application store;
 - Vitest configuration;

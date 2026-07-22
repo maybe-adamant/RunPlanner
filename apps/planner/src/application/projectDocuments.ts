@@ -5,7 +5,7 @@ import {
   type Catalog,
   type CreateProjectDocumentOptions,
   type ProjectDocument,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 
 import { requireBiomeCapability, type PlannerCapabilities } from './capabilities';
 

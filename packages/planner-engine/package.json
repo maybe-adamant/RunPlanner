@@ -1,0 +1,14 @@
+{
+  "name": "@run-planner/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./reward-kernel": "./src/rewardKernel/index.ts",
+    "./simulation": "./src/simulation/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --project tsconfig.json"
+  }
+}

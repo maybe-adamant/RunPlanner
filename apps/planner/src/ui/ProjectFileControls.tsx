@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { createProjectAddress } from '@run-planner/core';
+import { createProjectAddress } from '@run-planner/engine';
 
 import type {
   ProjectOperation,

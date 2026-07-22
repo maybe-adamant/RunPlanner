@@ -1,4 +1,4 @@
-import { catalog } from '@run-planner/catalog';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
   createEmptyProjectDocument,
@@ -8,7 +8,7 @@ import {
   simulateProject,
   type ProjectCommand,
   type ProjectDocument,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApplicationCapabilities } from './capabilityConfiguration';

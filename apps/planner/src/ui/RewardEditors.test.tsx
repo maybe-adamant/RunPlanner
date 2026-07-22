@@ -1,4 +1,4 @@
-import { catalog } from '@run-planner/catalog';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
   createIncomingRewardAddress,
@@ -6,7 +6,7 @@ import {
   createProjectDocument,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 

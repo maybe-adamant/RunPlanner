@@ -4,7 +4,7 @@ import type {
   RoomDeclaration,
   RoomKind,
   TargetAddress,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 
 export const ordinaryRoomCategories = ['Combat', 'Miniboss', 'Story', 'Fountain', 'Shop'] as const;
 const generatedTargetRoomCategories = Object.freeze([

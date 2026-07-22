@@ -12,7 +12,7 @@ import type {
   OccurrenceId,
   RoomDeclaration,
   RoomOccurrence,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import {
   createBatchRewardStoreAddress,
   createContinuationAddress,
@@ -21,7 +21,7 @@ import {
   createTargetAddress,
   projectClockworkTopology,
   projectLinearBatchState,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 
 import {
   presentCandidateLabel,

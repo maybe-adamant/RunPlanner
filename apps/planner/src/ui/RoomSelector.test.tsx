@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 
-import { catalog } from '@run-planner/catalog';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
   createContinuationAddress,
   createOccurrenceId,
   createRouteAddress,
   createTargetAddress,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { describe, expect, it } from 'vitest';

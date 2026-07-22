@@ -27,8 +27,8 @@ import {
   type ShopPurchaseAddress,
   type SideRoomGeneration,
   type TargetAddress,
-} from '@run-planner/core';
-import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
+} from '@run-planner/engine';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
 export interface CandidateOptionProjection<T> {
   readonly value: T;

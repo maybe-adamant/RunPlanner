@@ -6,8 +6,8 @@ import type {
   ProjectDocument,
   RewardWheelOfferAddress,
   ShopOfferAddress,
-} from '@run-planner/core';
-import type { ResolvedRewardOffer } from '@run-planner/core/reward-kernel';
+} from '@run-planner/engine';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { useRef, useState } from 'react';
 
 import {

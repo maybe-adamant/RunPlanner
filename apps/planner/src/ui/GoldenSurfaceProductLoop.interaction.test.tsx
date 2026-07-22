@@ -9,7 +9,7 @@ import {
   createTargetAddress,
   encodeProjectDocument,
   simulateProject,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication, type PlannerApplication } from '../application/createApplication';

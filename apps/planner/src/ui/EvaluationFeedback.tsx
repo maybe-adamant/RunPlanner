@@ -4,7 +4,7 @@ import {
   type ProjectEvaluation,
   type SemanticAddress,
   type SemanticFinding,
-} from '@run-planner/core';
+} from '@run-planner/engine';
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
 import {
