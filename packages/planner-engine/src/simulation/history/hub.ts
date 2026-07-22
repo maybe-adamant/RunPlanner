@@ -13,15 +13,19 @@ import type {
   CanonicalHubVisit,
   CanonicalLocalChildRoom,
   CanonicalRoomRestore,
+  MaterializedHubBiomePrefix,
+  MaterializedHubVisitFrontier,
 } from '../materialization';
 import {
   appendRoomLifecycle as appendCanonicalRoomLifecycle,
+  appendStandaloneRoomCreated,
+  composeBiomeHistoryPrefix,
   composeBiomeHistoryEnvelope,
   composeFixedEntryChain,
   type HistorySegmentWriter,
 } from './composition';
 import type { CanonicalLifecycleRoom } from './lifecycleInput';
-import type { CanonicalHubHistory, RoomCreatedHistoryEvent } from './model';
+import type { CanonicalHubHistory, HubBiomeHistoryPrefix, RoomCreatedHistoryEvent } from './model';
 
 export class HubHistoryCompositionContractError extends Error {
   constructor(detail: string) {
@@ -48,12 +52,14 @@ function appendRoomLifecycle(
   catalog: Catalog,
   room: CanonicalLifecycleRoom,
   outgoing?: OutgoingProjection,
+  stopAfterOutgoing = false,
 ): void {
   if (!roomEntered(room)) {
     fail(`unentered room ${semanticAddressKey(room.origin)} cannot execute a lifecycle`);
   }
   appendCanonicalRoomLifecycle(writer, catalog, room, fail, {
     ...(outgoing === undefined ? {} : { outgoing }),
+    ...(stopAfterOutgoing ? { stopAfterOutgoing: true } : {}),
   });
 }
 
@@ -207,7 +213,9 @@ function boardProjection(board: CanonicalHubBiome['hubBoard']): OutgoingProjecti
   };
 }
 
-function sideRoomProjection(visit: CanonicalHubVisit): OutgoingProjection {
+function sideRoomProjection(
+  visit: Pick<CanonicalHubVisit, 'localSlots' | 'target' | 'visitIndex'>,
+): OutgoingProjection {
   return (builder, parent) => {
     if (parent.kind !== 'authored' || parent !== visit.target.room) {
       fail(`visit ${visit.visitIndex} side generation has no canonical parent`);
@@ -225,22 +233,128 @@ function sideRoomProjection(visit: CanonicalHubVisit): OutgoingProjection {
   };
 }
 
-function requireHubLayout(catalog: Catalog, snapshot: CanonicalHubBiome): FixedTerminalHubLayout {
+function composeFrontierVisit(
+  writer: HistorySegmentWriter,
+  catalog: Catalog,
+  visit: MaterializedHubVisitFrontier,
+): void {
+  if (visit.kind === 'targetLifecycle') {
+    appendRoomLifecycle(writer, catalog, visit.target.room, undefined, true);
+    return;
+  }
+  if (visit.kind === 'sideGeneration') {
+    appendRoomLifecycle(writer, catalog, visit.target.room, sideRoomProjection(visit), true);
+    return;
+  }
+  appendRoomLifecycle(writer, catalog, visit.target.room, sideRoomProjection(visit));
+  for (const [index, sideRoom] of visit.enteredLocalRooms.entries()) {
+    appendRoomLifecycle(writer, catalog, sideRoom);
+    const restore = visit.parentRestores[index];
+    if (restore === undefined) {
+      if (index !== visit.enteredLocalRooms.length - 1) {
+        fail(`visit ${visit.visitIndex} frontier loses a non-final parent restore`);
+      }
+      return;
+    }
+    appendRestore(writer, restore, visit.target.room, 'parent');
+  }
+  fail(`visit ${visit.visitIndex} local lifecycle frontier has no stopping room`);
+}
+
+function requireHubLayout(
+  catalog: Catalog,
+  snapshot: {
+    readonly routeKey: string;
+    readonly biomeKey: string;
+    readonly hubRoom?: CanonicalHubRoom;
+  },
+): FixedTerminalHubLayout {
   const route = catalog.routes.byKey[snapshot.routeKey];
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (
     route === undefined ||
     route.biomeKeys[0] !== snapshot.biomeKey ||
     layout?.kind !== 'HubBiome' ||
-    layout.hub.roomGameName !== snapshot.hubBoard.room.gameName ||
-    layout.terminal.kind !== 'fixedAuthoredSlot' ||
-    layout.terminal.roomGameName !== snapshot.terminalEntry.gameName ||
-    layout.entries.length !== snapshot.entryRooms.length ||
-    snapshot.visits.length !== layout.hub.requiredVisits
+    (snapshot.hubRoom !== undefined && layout.hub.roomGameName !== snapshot.hubRoom.gameName) ||
+    layout.terminal.kind !== 'fixedAuthoredSlot'
   ) {
     fail(`catalog cannot place canonical ${snapshot.biomeKey} Hub history`);
   }
   return layout as FixedTerminalHubLayout;
+}
+
+export function composeHubHistoryPrefix(
+  catalog: Catalog,
+  snapshot: MaterializedHubBiomePrefix,
+): HubBiomeHistoryPrefix {
+  const layout = requireHubLayout(catalog, snapshot);
+  const entry = snapshot.entryRooms[0];
+  if (
+    entry === undefined ||
+    snapshot.entryRooms.length > layout.entries.length ||
+    (snapshot.frontierEntry !== undefined &&
+      snapshot.frontierEntry.entryIndex !== snapshot.entryRooms.length - 1)
+  ) {
+    fail(`${snapshot.biomeKey} Hub prefix history requires its fixed entry rooms`);
+  }
+  return composeBiomeHistoryPrefix({
+    routeKey: snapshot.routeKey,
+    biomeKey: snapshot.biomeKey,
+    initialCounters: {
+      biomeDepthCache: layout.initialCounters.biomeDepthCache,
+      biomeEncounterDepth: layout.initialCounters.biomeEncounterDepth,
+      routeEncounterDepth: 1,
+      roomHistoryOrdinal: 0,
+      numSubRoomsSpawned: 0,
+      soulPylonsSpawned: 0,
+      soulPylonsCompleted: 0,
+    },
+    compose(writer) {
+      appendStandaloneRoomCreated(writer, entry, 'biomeEntry');
+      if (!entry.entered) {
+        return;
+      }
+      let source = entry;
+      for (const [targetIndex, nextEntry] of snapshot.entryRooms.slice(1).entries()) {
+        const descriptor = layout.entries[targetIndex + 1];
+        if (
+          descriptor?.kind !== 'fixedAuthoredSlot' ||
+          descriptor.roomGameName !== nextEntry.gameName
+        ) {
+          fail(`${snapshot.biomeKey} fixed Hub entry ${targetIndex + 2} does not match its layout`);
+        }
+        appendRoomLifecycle(writer, catalog, source, (outgoingWriter, parent) =>
+          layoutEntryCreated(outgoingWriter, parent, nextEntry, descriptor.slotKey),
+        );
+        source = nextEntry;
+        if (!source.entered) {
+          return;
+        }
+      }
+      if (snapshot.frontierEntry !== undefined) {
+        appendRoomLifecycle(writer, catalog, source, undefined, true);
+        return;
+      }
+      const hubRoom = snapshot.hubRoom;
+      if (hubRoom === undefined) {
+        fail(`${snapshot.biomeKey} Hub prefix ends after entries without a frontier`);
+      }
+      appendRoomLifecycle(writer, catalog, source, (outgoingWriter, parent) =>
+        layoutEntryCreated(outgoingWriter, parent, hubRoom, 'hub'),
+      );
+      if (snapshot.hubBoard === undefined) {
+        appendRoomLifecycle(writer, catalog, hubRoom, undefined, true);
+        return;
+      }
+      appendRoomLifecycle(writer, catalog, hubRoom, boardProjection(snapshot.hubBoard));
+      for (const visit of snapshot.visits) {
+        composeVisit(writer, catalog, visit, hubRoom);
+      }
+      if (snapshot.frontierVisit !== undefined) {
+        composeFrontierVisit(writer, catalog, snapshot.frontierVisit);
+      }
+    },
+  });
 }
 
 function composeVisit(
@@ -277,11 +391,22 @@ export function composeHubHistory(
   catalog: Catalog,
   snapshot: CanonicalHubBiome,
 ): CanonicalHubHistory {
-  const layout = requireHubLayout(catalog, snapshot);
+  const layout = requireHubLayout(catalog, {
+    routeKey: snapshot.routeKey,
+    biomeKey: snapshot.biomeKey,
+    hubRoom: snapshot.hubBoard.room,
+  });
   const biome = createBiomeAddress(snapshot.routeKey, snapshot.biomeKey);
   const entry = snapshot.entryRooms[0];
   if (entry === undefined) {
     fail(`${snapshot.biomeKey} Hub history requires a canonical entry room`);
+  }
+  if (
+    layout.terminal.roomGameName !== snapshot.terminalEntry.gameName ||
+    layout.entries.length !== snapshot.entryRooms.length ||
+    snapshot.visits.length !== layout.hub.requiredVisits
+  ) {
+    fail(`catalog cannot place complete ${snapshot.biomeKey} Hub history`);
   }
   return composeBiomeHistoryEnvelope({
     catalog,

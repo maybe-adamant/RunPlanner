@@ -298,6 +298,17 @@ export interface CanonicalHubVisit {
   readonly hubRestore: CanonicalRoomRestore;
 }
 
+export type MaterializedHubVisitFrontier = Readonly<
+  Omit<CanonicalHubVisit, 'hubRestore'> & {
+    readonly kind: 'targetLifecycle' | 'sideGeneration' | 'localRoomLifecycle';
+  }
+>;
+
+export interface MaterializedHubEntryFrontier {
+  readonly kind: 'lifecycle';
+  readonly entryIndex: number;
+}
+
 export interface CanonicalHubBiome {
   readonly kind: 'HubBiome';
   readonly routeKey: string;
@@ -309,3 +320,18 @@ export interface CanonicalHubBiome {
   readonly completionRooms: readonly CanonicalCompletionRoom[];
   readonly biomeState: CanonicalBiomeState;
 }
+
+export interface MaterializedHubBiomePrefix {
+  readonly kind: 'HubBiomePrefix';
+  readonly routeKey: string;
+  readonly biomeKey: string;
+  readonly entryRooms: readonly CanonicalAuthoredRoom[];
+  readonly hubRoom?: CanonicalHubRoom;
+  readonly hubBoard?: CanonicalHubBoard;
+  readonly visits: readonly CanonicalHubVisit[];
+  readonly frontierEntry?: MaterializedHubEntryFrontier;
+  readonly frontierVisit?: MaterializedHubVisitFrontier;
+  readonly biomeState: CanonicalBiomeState;
+}
+
+export type HubSimulationMaterialization = CanonicalHubBiome | MaterializedHubBiomePrefix;

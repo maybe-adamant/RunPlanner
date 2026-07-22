@@ -314,9 +314,12 @@ semantic authoring frontier and no canonical snapshot. Linear biomes also
 publish one immutable materialized prefix with its partial history,
 room-generation proof, reward witnesses, counters, and findings. The prefix is
 folded by the same lifecycle, reward, and generation authorities as complete
-simulation and is clamped at the first unsupported state. Hub remains
-`notEvaluated` until its layout-specific progressive slice lands; neither case
-introduces a second candidate-only evaluation path.
+simulation and is clamped at the first unsupported state. Hub biomes publish
+the same class of partial products through their fixed entry, one atomic open
+board, and ordered visits with parent-local side state. Hub coverage never
+claims a prefix of rendered board slots: the board is either not generated or
+materialized and evaluated in full. Neither layout introduces a second
+candidate-only evaluation path.
 
 Complete biome results strengthen that same progressive result with the
 terminal/completion sequence, canonical snapshot, final biome history,

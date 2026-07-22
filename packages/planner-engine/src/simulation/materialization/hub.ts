@@ -43,9 +43,9 @@ import type {
 } from './model';
 import { materializeCompletionRooms } from './completion';
 
-type FixedRoomState = 'counted' | 'shop';
-type FixedRoomDescriptor = FixedAuthoredSlotDescriptor & {
-  readonly state: FixedRoomState;
+export type FixedHubRoomState = 'counted' | 'shop';
+export type FixedHubRoomDescriptor = FixedAuthoredSlotDescriptor & {
+  readonly state: FixedHubRoomState;
 };
 type FixedRoomSlotDescriptor = Extract<
   LocalChildDescriptor,
@@ -71,7 +71,7 @@ function encounterPhases(catalog: Catalog, room: RoomDeclaration) {
   return profile.phases;
 }
 
-function requireRoom(catalog: Catalog, gameName: string): RoomDeclaration {
+export function requireHubRoom(catalog: Catalog, gameName: string): RoomDeclaration {
   const room = catalog.rooms.byKey[gameName];
   if (room === undefined) {
     fail(`trusted Hub topology lost room ${gameName}`);
@@ -226,13 +226,13 @@ function shopIncomingReward(
   });
 }
 
-function materializeAuthoredRoom(
+export function materializeHubAuthoredRoom(
   catalog: Catalog,
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
   room: RoomDeclaration,
   entered: boolean,
-  expectedState: FixedRoomState | 'hubTarget',
+  expectedState: FixedHubRoomState | 'hubTarget',
 ): CanonicalAuthoredRoom {
   if (room.mode.kind !== 'authored') {
     fail(`${room.gameName} is not an authored Hub room`);
@@ -285,12 +285,12 @@ function materializeAuthoredRoom(
   });
 }
 
-function materializeHubRoom(
+export function materializeHubRoom(
   catalog: Catalog,
   biome: BiomeAddress,
   layout: HubBiomeLayout,
 ): CanonicalHubRoom {
-  const room = requireRoom(catalog, layout.hub.roomGameName);
+  const room = requireHubRoom(catalog, layout.hub.roomGameName);
   if (
     room.mode.kind !== 'derived' ||
     room.mode.classification !== 'hub' ||
@@ -370,7 +370,7 @@ function materializeLocalSlots(
       if (authored === undefined) {
         fail(`${room.gameName} is missing side-room state ${slot.slotKey}`);
       }
-      const sideRoom = requireRoom(catalog, slot.roomGameName);
+      const sideRoom = requireHubRoom(catalog, slot.roomGameName);
       if (sideRoom.mode.kind !== 'authored' || sideRoom.mode.templateKey !== 'EphyraSideRoom') {
         fail(`${sideRoom.gameName} is not an authored Ephyra side room`);
       }
@@ -415,7 +415,7 @@ function materializeLocalSlots(
   );
 }
 
-function fixedDescriptors(layout: HubBiomeLayout): readonly FixedRoomDescriptor[] {
+export function fixedHubDescriptors(layout: HubBiomeLayout): readonly FixedHubRoomDescriptor[] {
   if (
     layout.entries.some((entry) => entry.kind !== 'fixedAuthoredSlot') ||
     layout.terminal.kind !== 'fixedAuthoredSlot'
@@ -431,14 +431,10 @@ function fixedDescriptors(layout: HubBiomeLayout): readonly FixedRoomDescriptor[
   ]);
 }
 
-function requireHubLayout(
+export function requireHubMaterializationLayout(
   catalog: Catalog,
   biome: BiomeAddress,
-  completeness: CompleteHubCompletenessResult,
 ): HubBiomeLayout {
-  if ((completeness as { readonly completion?: unknown }).completion !== 'complete') {
-    fail('Hub materialization requires a complete biome result');
-  }
   const route = catalog.routes.byKey[biome.routeKey];
   if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
     fail(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
@@ -452,14 +448,14 @@ function requireHubLayout(
   ) {
     fail(`catalog ${biome.biomeKey} layout is not supported by the canonical Hub materializer`);
   }
-  fixedDescriptors(layout);
+  fixedHubDescriptors(layout);
   return layout;
 }
 
-function fixedOccurrence(
+export function fixedHubOccurrence(
   topology: HubBiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
-  descriptor: FixedRoomDescriptor,
+  descriptor: FixedHubRoomDescriptor,
 ): RoomOccurrence {
   const reference = topology.fixedRooms.find(
     (candidate) => candidate.fixedSlotKey === descriptor.slotKey,
@@ -470,7 +466,7 @@ function fixedOccurrence(
   return requireOccurrence(occurrences, reference.occurrenceId);
 }
 
-function materializeBoard(
+export function materializeHubBoard(
   catalog: Catalog,
   biome: BiomeAddress,
   layout: HubBiomeLayout,
@@ -490,12 +486,12 @@ function materializeBoard(
           fail(`trusted Hub topology lost slot ${target.hubSlotKey}`);
         }
         const occurrence = requireOccurrence(occurrences, target.occurrenceId);
-        const room = requireRoom(catalog, occurrence.gameName);
+        const room = requireHubRoom(catalog, occurrence.gameName);
         return Object.freeze({
           origin: createHubSlotAddress(biome, slot.slotKey),
           hubSlotKey: slot.slotKey,
           physicalDoorId: slot.physicalDoorId,
-          room: materializeAuthoredRoom(
+          room: materializeHubAuthoredRoom(
             catalog,
             biome,
             occurrence,
@@ -509,7 +505,7 @@ function materializeBoard(
   });
 }
 
-function materializeVisits(
+export function materializeHubVisits(
   catalog: Catalog,
   biome: BiomeAddress,
   topology: HubBiomeTopology,
@@ -528,7 +524,7 @@ function materializeVisits(
         fail(`trusted Hub visit ${visitIndex} lost open slot ${hubSlotKey}`);
       }
       const occurrence = requireOccurrence(occurrences, target.room.occurrenceId);
-      const room = requireRoom(catalog, occurrence.gameName);
+      const room = requireHubRoom(catalog, occurrence.gameName);
       const localSlots = materializeLocalSlots(catalog, biome, occurrence, room);
       const enteredLocalRooms = Object.freeze(
         localSlots
@@ -565,19 +561,22 @@ export function materializeHubBiome(
   biome: BiomeAddress,
   completeness: CompleteHubCompletenessResult,
 ): CanonicalHubBiome {
-  const layout = requireHubLayout(catalog, biome, completeness);
+  if ((completeness as { readonly completion?: unknown }).completion !== 'complete') {
+    fail('Hub materialization requires a complete biome result');
+  }
+  const layout = requireHubMaterializationLayout(catalog, biome);
   const topology = completeness.topology;
   const occurrences = new Map(
     topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
   );
-  const descriptors = fixedDescriptors(layout);
+  const descriptors = fixedHubDescriptors(layout);
   const fixedRooms = descriptors.map((descriptor) => {
-    const occurrence = fixedOccurrence(topology, occurrences, descriptor);
-    return materializeAuthoredRoom(
+    const occurrence = fixedHubOccurrence(topology, occurrences, descriptor);
+    return materializeHubAuthoredRoom(
       catalog,
       biome,
       occurrence,
-      requireRoom(catalog, occurrence.gameName),
+      requireHubRoom(catalog, occurrence.gameName),
       true,
       descriptor.state,
     );
@@ -588,14 +587,14 @@ export function materializeHubBiome(
     fail(`${layout.biomeKey} has no fixed terminal room`);
   }
   const hubRoom = materializeHubRoom(catalog, biome, layout);
-  const hubBoard = materializeBoard(catalog, biome, layout, topology, occurrences, hubRoom);
+  const hubBoard = materializeHubBoard(catalog, biome, layout, topology, occurrences, hubRoom);
   return Object.freeze({
     kind: 'HubBiome',
     routeKey: biome.routeKey,
     biomeKey: layout.biomeKey,
     entryRooms,
     hubBoard,
-    visits: materializeVisits(catalog, biome, topology, hubBoard),
+    visits: materializeHubVisits(catalog, biome, topology, hubBoard),
     terminalEntry,
     completionRooms: materializeCompletionRooms({
       catalog,

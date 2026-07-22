@@ -4,6 +4,7 @@ export { LinearMaterializationContractError } from './linear/contract';
 export { projectClockworkTopology, projectLinearBatchState } from './linear/continuations';
 export type { ClockworkBatchProjection, ClockworkTargetProjection } from './linear/continuations';
 export { HubMaterializationContractError, materializeHubBiome } from './hub';
+export { materializeHubBiomePrefix } from './hub-prefix';
 export type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
@@ -13,6 +14,10 @@ export type {
   CanonicalCompletionRoom,
   CanonicalFixedEntryRoom,
   CanonicalHubBiome,
+  HubSimulationMaterialization,
+  MaterializedHubBiomePrefix,
+  MaterializedHubEntryFrontier,
+  MaterializedHubVisitFrontier,
   CanonicalHubBoard,
   CanonicalHubRoom,
   CanonicalHubRoomReference,

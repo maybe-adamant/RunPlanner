@@ -3,9 +3,10 @@ import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RewardHistoryState, RewardKernelFacts } from '../../reward-kernel';
 import type {
   CanonicalHubHistory,
+  HubSimulationHistory,
   HistoryStateView,
+  ProgressiveRoomHistoryViews,
   RoomCreatedHistoryEvent,
-  RoomHistoryViews,
 } from '../history';
 import type {
   CanonicalAuthoredRoom,
@@ -14,6 +15,7 @@ import type {
   CanonicalHubTarget,
   CanonicalLocalChildRoom,
   CanonicalResolvedIncomingReward,
+  HubSimulationMaterialization,
 } from '../materialization';
 import type { SemanticFinding } from '../model';
 import { createRewardFacts, createdPeerGameNames } from './facts';
@@ -53,7 +55,10 @@ function fail(detail: string): never {
   throw new HubRewardSimulationContractError(detail);
 }
 
-function requireHubLayout(catalog: Catalog, snapshot: CanonicalHubBiome): HubBiomeLayout {
+function requireHubLayout(
+  catalog: Catalog,
+  snapshot: HubSimulationMaterialization,
+): HubBiomeLayout {
   const route = catalog.routes.byKey[snapshot.routeKey];
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (
@@ -69,25 +74,37 @@ function requireHubLayout(catalog: Catalog, snapshot: CanonicalHubBiome): HubBio
   return layout;
 }
 
-function rewardRooms(snapshot: CanonicalHubBiome): ReadonlyMap<string, CanonicalHubDomainRoom> {
+function rewardRooms(
+  snapshot: HubSimulationMaterialization,
+): ReadonlyMap<string, CanonicalHubDomainRoom> {
+  const board = snapshot.hubBoard;
   const rooms = [
     ...snapshot.entryRooms,
-    snapshot.hubBoard.room,
-    ...snapshot.hubBoard.targets.map((target) => target.room),
+    ...(snapshot.kind === 'HubBiome'
+      ? [snapshot.hubBoard.room]
+      : snapshot.hubRoom === undefined
+        ? []
+        : [snapshot.hubRoom]),
+    ...(board?.targets.map((target) => target.room) ?? []),
     ...snapshot.visits.flatMap((visit) => visit.localSlots),
-    snapshot.terminalEntry,
+    ...(snapshot.kind === 'HubBiomePrefix' ? (snapshot.frontierVisit?.localSlots ?? []) : []),
+    ...(snapshot.kind === 'HubBiome' ? [snapshot.terminalEntry] : []),
   ];
   return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
 }
 
-function roomViews(history: CanonicalHubHistory): ReadonlyMap<string, RoomHistoryViews> {
+function roomViews(
+  history: HubSimulationHistory,
+): ReadonlyMap<string, ProgressiveRoomHistoryViews> {
   return new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room]));
 }
 
-function hubTargets(snapshot: CanonicalHubBiome): ReadonlyMap<string, CanonicalHubTarget> {
-  return new Map(
-    snapshot.hubBoard.targets.map((target) => [semanticAddressKey(target.origin), target]),
-  );
+function hubTargets(
+  snapshot: HubSimulationMaterialization,
+): ReadonlyMap<string, CanonicalHubTarget> {
+  const targets =
+    snapshot.kind === 'HubBiome' ? snapshot.hubBoard.targets : snapshot.hubBoard?.targets;
+  return new Map((targets ?? []).map((target) => [semanticAddressKey(target.origin), target]));
 }
 
 function rewardFacts(
@@ -137,7 +154,7 @@ function requireCountedStore(room: CanonicalHubRewardRoom, declaration: RoomDecl
 }
 
 function generationView(
-  views: ReadonlyMap<string, RoomHistoryViews>,
+  views: ReadonlyMap<string, ProgressiveRoomHistoryViews>,
   event: GeneratedOfferEvent,
 ): HistoryStateView {
   const parentViews = views.get(semanticAddressKey(event.parentOrigin));
@@ -191,14 +208,18 @@ function offerContext(
 function deriveRewardLookup(
   catalog: Catalog,
   layout: HubBiomeLayout,
-  snapshot: CanonicalHubBiome,
+  snapshot: HubSimulationMaterialization,
 ): {
   readonly internal: Readonly<Record<string, ReadonlySet<string>>>;
   readonly public: Readonly<Record<string, readonly string[]>>;
 } {
   const orderedTypes: string[] = [];
   const uniqueTypes = new Set<string>();
-  for (const target of snapshot.hubBoard.targets) {
+  const board = snapshot.hubBoard;
+  if (board === undefined) {
+    return Object.freeze({ internal: Object.freeze({}), public: Object.freeze({}) });
+  }
+  for (const target of board.targets) {
     const incoming = target.room.incomingReward;
     if (incoming === undefined) {
       fail(`${target.room.gameName} has no Hub-board reward`);
@@ -220,7 +241,7 @@ function deriveRewardLookup(
 }
 
 function localOfferGroups(
-  history: CanonicalHubHistory,
+  history: HubSimulationHistory,
 ): ReadonlyMap<
   string,
   readonly Extract<RoomCreatedHistoryEvent, { readonly source: 'localChild' }>[]
@@ -250,8 +271,8 @@ function localOfferGroups(
 
 export function evaluateHubRewards(
   catalog: Catalog,
-  snapshot: CanonicalHubBiome,
-  history: CanonicalHubHistory,
+  snapshot: HubSimulationMaterialization,
+  history: HubSimulationHistory,
 ): HubRewardSimulation {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     fail('Hub reward inputs do not share one biome owner');

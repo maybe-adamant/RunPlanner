@@ -21,6 +21,7 @@ import {
   composeHubHistory,
   composeLinearHistory,
   type CanonicalHubHistory,
+  type HubBiomeHistoryPrefix,
   type CanonicalLinearHistory,
   type LinearBiomeHistoryPrefix,
 } from './history';
@@ -30,8 +31,10 @@ import {
   type CanonicalHubBiome,
   type CanonicalLinearBiome,
   type MaterializedLinearBiomePrefix,
+  type MaterializedHubBiomePrefix,
 } from './materialization';
 import type { SemanticFinding } from './model';
+import { evaluateProgressiveHubBiome } from './progressive/hub';
 import { evaluateProgressiveLinearBiome } from './progressive/linear';
 import {
   evaluateHubRewards,
@@ -81,15 +84,29 @@ export interface CompleteLinearProjectEvaluation {
 export type LinearBiomeProjectEvaluation =
   IncompleteLinearProjectEvaluation | CompleteLinearProjectEvaluation;
 
-export interface IncompleteHubProjectEvaluation {
+interface IncompleteHubProjectEvaluationBase {
   readonly kind: 'HubBiome';
   readonly biomeKey: string;
   readonly origin: BiomeAddress;
   readonly authoring: 'incomplete';
   readonly frontier: SemanticAddress;
-  readonly coverage: IncompleteBiomeEvaluationCoverage;
   readonly findings: readonly SemanticFinding[];
 }
+
+export interface UnevaluatedIncompleteHubProjectEvaluation extends IncompleteHubProjectEvaluationBase {
+  readonly coverage: NoBiomeEvaluationCoverage;
+}
+
+export interface PrefixIncompleteHubProjectEvaluation extends IncompleteHubProjectEvaluationBase {
+  readonly coverage: PrefixBiomeEvaluationCoverage;
+  readonly materializedPrefix: MaterializedHubBiomePrefix;
+  readonly history: HubBiomeHistoryPrefix;
+  readonly roomGeneration: HubRoomGenerationValidation;
+  readonly rewards: HubRewardSimulation;
+}
+
+export type IncompleteHubProjectEvaluation =
+  PrefixIncompleteHubProjectEvaluation | UnevaluatedIncompleteHubProjectEvaluation;
 
 export interface CompleteHubProjectEvaluation {
   readonly kind: 'HubBiome';
@@ -315,14 +332,67 @@ export function evaluateHubBiome(
   const origin = createBiomeAddress(routeKey, plan.biomeKey);
   const completeness = evaluateHubCompleteness(catalog, origin, plan);
   if (completeness.completion === 'incomplete') {
+    const progressive = evaluateProgressiveHubBiome(catalog, origin, plan);
+    if (progressive === null) {
+      return Object.freeze({
+        kind: 'HubBiome',
+        biomeKey: plan.biomeKey,
+        origin,
+        authoring: 'incomplete',
+        frontier: completeness.frontier,
+        coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
+        findings: completeness.findings,
+      });
+    }
+    const { materializedPrefix, history, rewards, roomGeneration, blockedAt } = progressive;
+    const lastVisit = materializedPrefix.visits.at(-1);
+    const frontierVisit = materializedPrefix.frontierVisit;
+    const through: BiomeEvaluationPoint =
+      frontierVisit?.kind === 'targetLifecycle'
+        ? Object.freeze({
+            owner: frontierVisit.target.room.origin,
+            checkpoint: 'beforeTargetGeneration',
+          })
+        : frontierVisit?.kind === 'sideGeneration'
+          ? Object.freeze({ owner: frontierVisit.origin, checkpoint: 'afterTargetGeneration' })
+          : frontierVisit?.kind === 'localRoomLifecycle'
+            ? Object.freeze({
+                owner: frontierVisit.enteredLocalRooms.at(-1)!.origin,
+                checkpoint: 'afterRoomLifecycle',
+              })
+            : lastVisit !== undefined
+              ? Object.freeze({ owner: lastVisit.origin, checkpoint: 'afterRoomLifecycle' })
+              : materializedPrefix.hubBoard !== undefined
+                ? Object.freeze({
+                    owner: materializedPrefix.hubBoard.origin,
+                    checkpoint: 'afterTargetGeneration',
+                  })
+                : Object.freeze({
+                    owner:
+                      materializedPrefix.hubRoom?.origin ??
+                      materializedPrefix.entryRooms.at(-1)!.origin,
+                    checkpoint: 'beforeTargetGeneration',
+                  });
     return Object.freeze({
       kind: 'HubBiome',
       biomeKey: plan.biomeKey,
       origin,
       authoring: 'incomplete',
       frontier: completeness.frontier,
-      coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
-      findings: completeness.findings,
+      coverage: Object.freeze({
+        kind: 'prefix',
+        through,
+        ...(blockedAt === undefined ? {} : { blockedAt }),
+      }),
+      materializedPrefix,
+      history,
+      roomGeneration,
+      rewards,
+      findings: Object.freeze([
+        ...completeness.findings,
+        ...roomGeneration.findings,
+        ...rewards.findings,
+      ]),
     });
   }
 

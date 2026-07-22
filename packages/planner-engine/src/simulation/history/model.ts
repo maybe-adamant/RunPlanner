@@ -241,7 +241,7 @@ export interface LinearOfferPointView {
   readonly acquisitionAfter?: LinearHistoryStateView;
 }
 
-export interface LinearProgressiveRoomHistoryViews {
+export interface ProgressiveRoomHistoryViews {
   readonly origin: RoomHistoryOrigin;
   readonly preparation: LinearHistoryStateView;
   readonly entry: LinearHistoryStateView;
@@ -253,7 +253,9 @@ export interface LinearProgressiveRoomHistoryViews {
   readonly exit?: LinearHistoryStateView;
 }
 
-export interface LinearRoomHistoryViews extends LinearProgressiveRoomHistoryViews {
+export type LinearProgressiveRoomHistoryViews = ProgressiveRoomHistoryViews;
+
+export interface LinearRoomHistoryViews extends ProgressiveRoomHistoryViews {
   readonly postCommit: LinearHistoryStateView;
   readonly exit: LinearHistoryStateView;
 }
@@ -275,16 +277,20 @@ export interface CanonicalBiomeHistory {
   readonly afterTransition: HistoryStateView;
 }
 
-export interface LinearBiomeHistoryPrefix {
+export interface BiomeHistoryPrefix {
   readonly routeKey: string;
   readonly biomeKey: string;
   readonly events: readonly HistoryEvent[];
   readonly ledgers: HistoryLedgers;
-  readonly rooms: readonly LinearProgressiveRoomHistoryViews[];
+  readonly rooms: readonly ProgressiveRoomHistoryViews[];
   readonly current: HistoryStateView;
 }
 
+export type LinearBiomeHistoryPrefix = BiomeHistoryPrefix;
+export type HubBiomeHistoryPrefix = BiomeHistoryPrefix;
+
 export type LinearSimulationHistory = CanonicalLinearHistory | LinearBiomeHistoryPrefix;
+export type HubSimulationHistory = CanonicalHubHistory | HubBiomeHistoryPrefix;
 
 export type CanonicalLinearHistory = CanonicalBiomeHistory;
 export type CanonicalHubHistory = CanonicalBiomeHistory;

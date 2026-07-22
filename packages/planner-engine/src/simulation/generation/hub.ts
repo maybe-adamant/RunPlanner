@@ -4,8 +4,18 @@ import {
   createHubSlotAddress,
   semanticAddressKey,
 } from '../../authored-project/addresses';
-import type { CanonicalHubHistory, RoomHistoryViews } from '../history';
-import type { CanonicalHubBiome, CanonicalHubVisit } from '../materialization';
+import type {
+  CanonicalHubHistory,
+  HubSimulationHistory,
+  ProgressiveRoomHistoryViews,
+} from '../history';
+import type {
+  CanonicalHubBiome,
+  CanonicalHubBoard,
+  CanonicalHubVisit,
+  HubSimulationMaterialization,
+  MaterializedHubVisitFrontier,
+} from '../materialization';
 import type { FindingEvidence, SemanticFinding } from '../model';
 import type {
   HubOpenSlotConstraintSupportEntry,
@@ -41,8 +51,8 @@ function finding(
 
 function requireHubLayout(
   catalog: Catalog,
-  snapshot: CanonicalHubBiome,
-  history: CanonicalHubHistory,
+  snapshot: HubSimulationMaterialization,
+  history: HubSimulationHistory,
 ): HubBiomeLayout {
   const route = catalog.routes.byKey[snapshot.routeKey];
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
@@ -52,23 +62,30 @@ function requireHubLayout(
     route === undefined ||
     route.biomeKeys[0] !== snapshot.biomeKey ||
     layout?.kind !== 'HubBiome' ||
-    layout.hub.roomGameName !== snapshot.hubBoard.room.gameName ||
+    (snapshot.kind === 'HubBiome'
+      ? layout.hub.roomGameName !== snapshot.hubBoard.room.gameName
+      : snapshot.hubRoom !== undefined && layout.hub.roomGameName !== snapshot.hubRoom.gameName) ||
     layout.terminal.kind !== 'fixedAuthoredSlot' ||
-    layout.terminal.roomGameName !== snapshot.terminalEntry.gameName
+    (snapshot.kind === 'HubBiome' &&
+      layout.terminal.roomGameName !== snapshot.terminalEntry.gameName)
   ) {
     fail(`catalog cannot validate canonical ${snapshot.biomeKey} Hub generation`);
   }
   return layout;
 }
 
-function roomViews(history: CanonicalHubHistory): ReadonlyMap<string, RoomHistoryViews> {
+function roomViews(
+  history: HubSimulationHistory,
+): ReadonlyMap<string, ProgressiveRoomHistoryViews> {
   return new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room]));
 }
 
 function assertFixedBoard(
   layout: HubBiomeLayout,
-  snapshot: CanonicalHubBiome,
-  history: CanonicalHubHistory,
+  snapshot: Pick<HubSimulationMaterialization, 'routeKey' | 'biomeKey'> & {
+    readonly hubBoard: CanonicalHubBoard;
+  },
+  history: HubSimulationHistory,
 ): void {
   if (
     snapshot.hubBoard.targets.length < layout.hub.openCount.min ||
@@ -121,7 +138,9 @@ function assertFixedBoard(
 }
 
 function validateOpenSlotConstraints(
-  snapshot: CanonicalHubBiome,
+  snapshot: Pick<HubSimulationMaterialization, 'biomeKey'> & {
+    readonly hubBoard: CanonicalHubBoard;
+  },
   layout: HubBiomeLayout,
   findings: SemanticFinding[],
 ): readonly HubOpenSlotConstraintSupportEntry[] {
@@ -166,10 +185,18 @@ function requiredGeneratedCount(layout: HubBiomeLayout, visitIndex: number): num
 
 function assertVisitIdentity(
   layout: HubBiomeLayout,
-  snapshot: CanonicalHubBiome,
-  history: CanonicalHubHistory,
+  snapshot: Pick<HubSimulationMaterialization, 'biomeKey'> & {
+    readonly hubBoard: CanonicalHubBoard;
+    readonly visits: readonly CanonicalHubVisit[];
+  },
+  history: HubSimulationHistory,
+  complete: boolean,
+  frontierVisit?: MaterializedHubVisitFrontier,
 ): void {
-  if (snapshot.visits.length !== layout.hub.requiredVisits) {
+  if (
+    snapshot.visits.length > layout.hub.requiredVisits ||
+    (complete && snapshot.visits.length !== layout.hub.requiredVisits)
+  ) {
     fail(`${snapshot.biomeKey} selected validation requires ${layout.hub.requiredVisits} visits`);
   }
   const visitedSlots = new Set<string>();
@@ -208,17 +235,33 @@ function assertVisitIdentity(
     visitedSlots.add(visit.target.hubSlotKey);
   });
   if (
-    history.ledgers.requiredObjectSpawns.length !== layout.hub.requiredVisits ||
-    history.ledgers.requiredObjectCompletions.length !== layout.hub.requiredVisits ||
-    spawnKeys.size !== layout.hub.requiredVisits ||
-    completionKeys.size !== layout.hub.requiredVisits ||
-    hubRestores.length !== layout.hub.requiredVisits ||
-    history.biomeCompletion.ledgers.counters.soulPylonsSpawned !== layout.hub.requiredVisits ||
-    history.biomeCompletion.ledgers.counters.soulPylonsCompleted !== layout.hub.requiredVisits
+    frontierVisit !== undefined &&
+    (frontierVisit.visitIndex !== snapshot.visits.length + 1 ||
+      visitedSlots.has(frontierVisit.target.hubSlotKey) ||
+      !snapshot.hubBoard.targets.includes(frontierVisit.target))
+  ) {
+    fail(`Hub frontier visit ${frontierVisit.visitIndex} is not the next distinct board target`);
+  }
+  const expectedVisitCount = snapshot.visits.length + (frontierVisit === undefined ? 0 : 1);
+  const finalCounters =
+    'biomeCompletion' in history
+      ? history.biomeCompletion.ledgers.counters
+      : history.current.ledgers.counters;
+  if (
+    history.ledgers.requiredObjectSpawns.length !== expectedVisitCount ||
+    history.ledgers.requiredObjectCompletions.length !== expectedVisitCount ||
+    spawnKeys.size !== expectedVisitCount ||
+    completionKeys.size !== expectedVisitCount ||
+    hubRestores.length !== snapshot.visits.length ||
+    finalCounters.soulPylonsSpawned !== expectedVisitCount ||
+    finalCounters.soulPylonsCompleted !== expectedVisitCount
   ) {
     fail(`${snapshot.biomeKey} history does not close exactly one pylon and Hub restore per visit`);
   }
-  const expectedParentRestores = snapshot.visits.flatMap((visit) => visit.parentRestores);
+  const expectedParentRestores = [
+    ...snapshot.visits.flatMap((visit) => visit.parentRestores),
+    ...(frontierVisit?.parentRestores ?? []),
+  ];
   const actualParentRestores = history.ledgers.roomRestores.filter(
     (restore) => restore.restoreKind === 'parent',
   );
@@ -265,11 +308,14 @@ function assertLocalEntryOrder(visit: CanonicalHubVisit): void {
 
 function validateVisitSidePressure(
   layout: HubBiomeLayout,
-  visit: CanonicalHubVisit,
-  views: ReadonlyMap<string, RoomHistoryViews>,
+  visit: Pick<CanonicalHubVisit, 'localSlots' | 'origin' | 'target' | 'visitIndex'>,
+  views: ReadonlyMap<string, ProgressiveRoomHistoryViews>,
   findings: SemanticFinding[],
+  completeVisit = true,
 ): readonly HubSideRoomGenerationSupportEntry[] {
-  assertLocalEntryOrder(visit);
+  if (completeVisit) {
+    assertLocalEntryOrder(visit as CanonicalHubVisit);
+  }
   const view = views.get(semanticAddressKey(visit.target.room.origin));
   const generatedBeforeVisit = view?.preOutgoing?.ledgers.counters.numSubRoomsSpawned;
   if (generatedBeforeVisit === undefined) {
@@ -352,18 +398,42 @@ function assertTerminalCompletion(
 
 export function evaluateHubRoomGeneration(
   catalog: Catalog,
-  snapshot: CanonicalHubBiome,
-  history: CanonicalHubHistory,
+  snapshot: HubSimulationMaterialization,
+  history: HubSimulationHistory,
 ): HubRoomGenerationValidation {
   const layout = requireHubLayout(catalog, snapshot, history);
-  assertFixedBoard(layout, snapshot, history);
-  assertVisitIdentity(layout, snapshot, history);
-  assertTerminalCompletion(layout, snapshot, history);
+  const board = snapshot.hubBoard;
+  if (board === undefined) {
+    return Object.freeze({
+      biomeKey: snapshot.biomeKey,
+      validity: 'valid',
+      openSlotConstraints: Object.freeze([]),
+      sideRoomGenerations: Object.freeze([]),
+      findings: Object.freeze([]),
+    });
+  }
+  const withBoard = { ...snapshot, hubBoard: board };
+  assertFixedBoard(layout, withBoard, history);
+  const frontierVisit = snapshot.kind === 'HubBiomePrefix' ? snapshot.frontierVisit : undefined;
+  assertVisitIdentity(layout, withBoard, history, snapshot.kind === 'HubBiome', frontierVisit);
+  if (snapshot.kind === 'HubBiome') {
+    if (!('biomeCompletion' in history)) {
+      fail(`${snapshot.biomeKey} complete Hub snapshot requires complete history`);
+    }
+    assertTerminalCompletion(layout, snapshot, history);
+  }
   const findings: SemanticFinding[] = [];
-  const openSlotConstraints = validateOpenSlotConstraints(snapshot, layout, findings);
+  const openSlotConstraints = validateOpenSlotConstraints(withBoard, layout, findings);
   const views = roomViews(history);
   const sideRoomGenerations = Object.freeze(
-    snapshot.visits.flatMap((visit) => validateVisitSidePressure(layout, visit, views, findings)),
+    [
+      ...snapshot.visits.map((visit) => ({ visit, complete: true })),
+      ...(frontierVisit === undefined || frontierVisit.kind === 'targetLifecycle'
+        ? []
+        : [{ visit: frontierVisit, complete: false }]),
+    ].flatMap(({ visit, complete }) =>
+      validateVisitSidePressure(layout, visit, views, findings, complete),
+    ),
   );
   return Object.freeze({
     biomeKey: snapshot.biomeKey,

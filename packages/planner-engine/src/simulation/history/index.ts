@@ -3,7 +3,12 @@ export {
   composeLinearHistoryPrefix,
   LinearHistoryCompositionContractError,
 } from './compose';
-export { composeHubHistory, composeNHistory, HubHistoryCompositionContractError } from './hub';
+export {
+  composeHubHistory,
+  composeHubHistoryPrefix,
+  composeNHistory,
+  HubHistoryCompositionContractError,
+} from './hub';
 export { projectRecentEncounterPhases, type RecentEncounterPhaseFact } from './facts';
 export {
   foldHistoryEvents,
@@ -35,6 +40,10 @@ export type {
   LinearHistoryLedgers,
   LinearHistoryStateView,
   LinearBiomeHistoryPrefix,
+  BiomeHistoryPrefix,
+  HubBiomeHistoryPrefix,
+  HubSimulationHistory,
+  ProgressiveRoomHistoryViews,
   LinearProgressiveRoomHistoryViews,
   LinearSimulationHistory,
   LinearRoomHistoryViews,
