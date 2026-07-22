@@ -46,11 +46,15 @@ function decodePickedExitIndex(value: unknown, path: string): number | null {
 function decodeBatchRewardStore(
   value: unknown,
   layout: LinearBiomeLayout,
+  sourceRoom: RoomDeclaration,
   path: string,
 ): BatchRewardStoreState {
   const rewardStore = expectRecord(value, path);
   const kind = expectString(rewardStore.kind, `${path}.kind`);
-  const policy = layout.continuation.rewardStorePolicy;
+  const policy =
+    layout.continuation.rewardStoreOverrides.find(
+      (override) => override.sourceEncounterProfileKey === sourceRoom.encounterProfileKey,
+    )?.policy ?? layout.continuation.rewardStorePolicy;
   if (kind !== policy.kind) {
     failProjectDocument(`${path}.kind`, `expected ${policy.kind}, received ${kind}`);
   }
@@ -59,7 +63,8 @@ function decodeBatchRewardStore(
     return Object.freeze({ kind: 'none' });
   }
   if (policy.kind === 'sourceOfferPoint') {
-    failProjectDocument(path, 'source-derived batch stores are not authorable by this codec');
+    expectExactKeys(rewardStore, ['kind'], path);
+    return Object.freeze({ kind: 'sourceOfferPoint' });
   }
   expectExactKeys(rewardStore, ['kind', 'baseRewardStoreKey'], path);
   const baseRewardStoreKey = expectString(
@@ -137,6 +142,31 @@ function requireRoom(
   return room;
 }
 
+function continuationSourceRoom(
+  parentOccurrenceId: OccurrenceId | null,
+  layout: LinearBiomeLayout,
+  catalog: Catalog,
+  occurrenceById: ReadonlyMap<OccurrenceId, RawOccurrence>,
+  path: string,
+): RoomDeclaration {
+  if (parentOccurrenceId !== null) {
+    const source = occurrenceById.get(parentOccurrenceId);
+    if (source === undefined) {
+      failProjectDocument(path, `unknown source occurrence ${parentOccurrenceId}`);
+    }
+    return requireRoom(source, catalog, layout.biomeKey);
+  }
+  if (layout.start.kind !== 'fixedEntry') {
+    failProjectDocument(path, `${layout.biomeKey} has no derived entry source`);
+  }
+  const descriptor = layout.entries.at(-1) ?? layout.start;
+  const room = catalog.rooms.byKey[descriptor.roomGameName];
+  if (room === undefined || room.biomeKey !== layout.biomeKey) {
+    failProjectDocument(path, `unknown fixed entry ${descriptor.roomGameName}`);
+  }
+  return room;
+}
+
 export function decodeLinearBiomeTopology(
   value: unknown,
   catalog: Catalog,
@@ -149,9 +179,6 @@ export function decodeLinearBiomeTopology(
     layout.continuation.batchPolicy.kind !== 'clockwork'
   ) {
     failProjectDocument(path, `${layout.biomeKey} does not use a supported authored batch policy`);
-  }
-  if (layout.continuation.rewardStoreOverrides.length !== 0) {
-    failProjectDocument(path, `${layout.biomeKey} uses source-specific reward-store policies`);
   }
   const topology = expectRecord(value, path);
   expectExactKeys(topology, ['startOccurrenceId', 'occurrences', 'continuations'], path);
@@ -214,7 +241,9 @@ export function decodeLinearBiomeTopology(
   const maximumTerminalExitIndex =
     layout.terminal.kind === 'forkedTransition'
       ? Math.min(maximumExitIndex, 1 + terminalRoom.entryOfferPolicy!.maxFreeRewards)
-      : 0;
+      : layout.terminal.kind === 'directTransition'
+        ? 1
+        : 0;
   const rawContinuations = expectArray(topology.continuations, `${path}.continuations`);
   const continuationByParent = new Map<OccurrenceId | null, DecodedContinuation>();
   let batchCount = 0;
@@ -239,7 +268,11 @@ export function decodeLinearBiomeTopology(
     if (kind !== 'batch' && kind !== 'terminal') {
       failProjectDocument(`${continuationPath}.kind`, `unknown continuation kind ${kind}`);
     }
-    if (kind === 'terminal' && layout.terminal.kind !== 'forkedTransition') {
+    if (
+      kind === 'terminal' &&
+      layout.terminal.kind !== 'forkedTransition' &&
+      layout.terminal.kind !== 'directTransition'
+    ) {
       failProjectDocument(
         `${continuationPath}.kind`,
         `${layout.biomeKey} does not use an independent terminal transition`,
@@ -302,6 +335,13 @@ export function decodeLinearBiomeTopology(
             rewardStore: decodeBatchRewardStore(
               rawContinuation.rewardStore,
               layout,
+              continuationSourceRoom(
+                parentOccurrenceId,
+                layout,
+                catalog,
+                occurrenceById,
+                continuationPath,
+              ),
               `${continuationPath}.rewardStore`,
             ),
             batchState: decodeBatchState(
@@ -384,14 +424,23 @@ export function decodeLinearBiomeTopology(
 
   for (const continuation of orderedContinuations) {
     if (continuation.kind === 'terminal') {
-      if (
-        terminalRoom.entryOfferPolicy === undefined ||
-        continuation.targets.length > 1 + terminalRoom.entryOfferPolicy.maxFreeRewards
+      if (layout.terminal.kind === 'forkedTransition') {
+        if (
+          terminalRoom.entryOfferPolicy === undefined ||
+          continuation.targets.length > 1 + terminalRoom.entryOfferPolicy.maxFreeRewards
+        ) {
+          failProjectDocument(
+            path,
+            `terminal transition exceeds ${terminalRoom.entryOfferPolicy?.maxFreeRewards ?? 0} free rewards`,
+          );
+        }
+      } else if (
+        layout.terminal.kind !== 'directTransition' ||
+        continuation.targets.length !== 1 ||
+        continuation.targets[0]?.exitIndex !== 1 ||
+        continuation.pickedExitIndex !== 1
       ) {
-        failProjectDocument(
-          path,
-          `terminal transition exceeds ${terminalRoom.entryOfferPolicy?.maxFreeRewards ?? 0} free rewards`,
-        );
+        failProjectDocument(path, 'direct terminal requires one picked target on exit 1');
       }
     }
 
@@ -415,7 +464,10 @@ export function decodeLinearBiomeTopology(
             `terminal target must be ${layout.terminal.roomGameName}`,
           );
         }
-        role = target.exitIndex === 1 ? 'terminalShop' : 'terminalFreeReward';
+        role =
+          layout.terminal.kind === 'directTransition' || target.exitIndex === 1
+            ? 'terminalShop'
+            : 'terminalFreeReward';
       } else if (
         layout.terminal.kind === 'generatedTarget' &&
         room.gameName === layout.terminal.roomGameName
