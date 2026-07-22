@@ -1,221 +1,60 @@
 # Run Planner
 
-Run Planner is a standalone desktop planning and simulation application for
-Hades II Run Director routes.
+Run Planner is a standalone Hades II route-authoring and simulation
+application for Run Director.
 
-The application owns the sophisticated part of the product:
+The application owns:
 
-- route and biome authoring;
-- room, encounter, and reward declarations;
-- decision-tree editing;
-- deterministic simulation;
-- semantic validation and feedback;
-- project persistence and undo/redo;
-- eventual compilation of a declarative execution-plan document.
+- route, biome, room, encounter, and reward declarations;
+- linear decision-tree and Ephyra Hub authoring;
+- deterministic game-language materialization and history;
+- possibility, force, eligibility, and reward-store evaluation;
+- semantic validation, findings, and contextual candidate feedback;
+- project profiles, autosave recovery, and undo/redo;
+- the future compilation of a declarative execution-plan document.
 
-The game module is deliberately outside the current implementation scope. It
-will eventually accept a JSON execution plan, translate that trusted document
-through fixed runtime adapters, and audit the real game against the app's
-simulation. It will not contain a second planner or simulator.
+The game module is intentionally outside the current implementation scope. It
+will eventually consume a validated execution plan through fixed runtime
+adapters and audit the real run against the app's simulation. It will not own a
+second planner or simulator.
 
-## Status
+## Current Product
 
-Phases 0 and 1 are complete: the TypeScript application foundation and focused
-F/G normalized catalog now exist, including the pure current-run requirement
-evaluator registry. Phase 2 is complete with the versioned authored-project
-codec, configured-route defaults, recursive F/G room state, non-null linear
-topology, complete F/G semantic commands, and authored undo/redo history. Phase
-2.5 is complete with the F-configured application state, route shell, and
-command-bound Erebus topology and leaf editor. The post-editor audit and
-cross-biome design reconciliation are complete. P, Q, H, O, I, and N close the
-linear, scripted-linear, batch-local-slot, ordered multi-encounter,
-conditional-terminal, and persistent-hub pressure tests.
+All eight route biomes participate in the production catalog and complete
+application loop:
 
-Phases 2.6, 2.7, and 2.8 are complete. The audited reward kernel is the sole
-connected linear reward authority, and the authored project/editor use schema
-version 5. All eight biomes close one catalog-wide reference matrix and
-participate in the complete production application boundary. The complete N/O/P/Q
-Surface product loop is active, including Q's staged authorship, simulation,
-candidate projection, editor, profiles, and recovery. Phase
-3 is complete: F completeness, single-room lifecycle execution, canonical
-materialization, and event-folded history through the biome transition are
-implemented. F room-generation possibility, force pressure, contextual room
-legality, and semantic generation findings are also implemented. F reward,
-bag, acquisition, and shop orchestration feed the public deterministic
-`simulateProject` composition root. Phase 3 made F simulatable while G remained
-authorable but dormant until its complete product loop landed in Phase 5.
+```text
+Underworld: F -> G -> H -> I
+Surface:    N -> O -> P -> Q
+```
 
-Phase 4 is complete. The browser editor publishes simulation and semantic
-findings atomically with authored history, supports semantic finding
-navigation and keyboard undo/redo, and introduced temporary New, Save, Load,
-Export, and Import operations over normalized project JSON. A browser
-interaction fixture authors the representative valid F route through visible
-controls, verifies player-facing labels, and reloads equal authored and
-evaluated state.
+Each route participant has declarations, authored state, simulation,
+candidates, editor projection, profile persistence, recovery, and semantic
+finding navigation. The editor supports the shared linear layout, H's
+fixed-count Fields decisions, I's conditional terminal flow, O's ordered ship
+encounters and reward wheels, Q's staged progression, and N's persistent Hub,
+visit timeline, side rooms, and WorldShop.
 
-Phase 5 is complete. Generated room candidates and every active reward/shop
-value are evaluated through the same simulation authorities used by selected-
-plan validation. F and G now share the complete linear simulation, candidate,
-editor, navigation, and finding path; both became authorable, simulatable, and
-editable while later biomes were held for controlled Phase 6 expansion. The
-current profile workflow saves and loads normalized `ProjectDocument` files
-through one injected adapter, supports undoable project names and safe filename
-suggestions, and tracks the exact explicit save/load baseline. Clean, Dirty,
-Unsaved, and Recovered are derived from that canonical baseline contract. A
-separately injected browser-local recovery channel now debounces only authored
-replacements, catalog-decodes startup recovery, and preserves unreadable
-recovery behind an explicit discard/load blockade. The complete F/G browser
-fixture now closes authoring, simulation, validation, candidate feedback,
-profiles, recovery, semantic navigation, accessible control naming, keyboard
-navigation, player-facing labels, and measured responsiveness.
+The browser application is the active development host. Desktop packaging and
+the app/game execution boundary remain deliberate later steps.
 
-Phase 6 has completed H, I, N, O, P, and Q's full product loops. All six are
-authorable, simulatable, and editable alongside F/G; complete F/G/H/I and
-N/O/P/Q profiles pass route
-simulation, candidate feedback, recovery, semantic navigation, accessibility,
-and responsiveness fixtures. The shared editor projects fixed-count Fields
-decisions, Min/Max outcomes, active and dormant cage leaves, the forked Fields
-terminal, Clockwork Goal/NonGoal roles, repeated generated preboss offers, and
-picked-only WorldShop state through existing commands and candidate services.
-Equivalent post-shop witness states merge before crossing biome boundaries,
-preventing proof-only branch multiplication while retaining one ordered
-witness for every distinct downstream state. O now has active authorship,
-canonical lifecycle/reward replay, selected validation, candidates, and editor
-projection through its ship-wheel model. P reuses the shared-linear simulation,
-candidate, and editor core as an active Surface participant. Q closes the
-Surface route through its declaration-owned staged sequence and direct shop.
+## Architecture
 
-N has schema-version-5 Hub authorship, structural
-completeness, canonical Hub materialization, exact room lifecycle, and
-event-folded route history. Linear and Hub traversal now share one restricted
-history envelope and completion-room materializer while retaining variant-owned
-canonical snapshots. N reward simulation consumes the complete physical Hub
-board, jointly resolves generated side siblings, acquires only entered rooms,
-and validates the fixed Preboss shop against a lookup derived from every open
-offer. Selected validation preserves impossible open-set and local
-generation outcomes as findings at their exact Hub-slot or parent-local owners,
-while canonical fixed identity, visits, pylons, restores, and completion remain
-hard contracts. The active Hub editor projects fixed leaves, the physical
-offer board, the separate visit timeline, parent-local side state, and the fixed
-WorldShop through semantic commands and lazy candidate feedback. N participates
-atomically in Surface route configuration, project simulation, profiles,
-autosave recovery, findings navigation, and candidate evaluation. Surface
-authoring is a contiguous N/O/P/Q prefix.
+The repository is split by ownership:
 
-The previous Lua/ImGui planner remains a behavioral prototype and source of
-verified domain decisions. It is not the architecture authority for this app.
-Useful rules are brought forward deliberately; Lib controls, ImGui drawing,
-managed-storage codecs, and module lifecycle contracts are not.
+```text
+packages/hades2-catalog   Hades II declarations and catalog construction
+packages/planner-engine   pure authored model, reward kernel, simulation, and validation
+apps/planner              application composition, Redux session state, and React UI
+```
 
-## Initial Technology Direction
+The core dependency direction is:
 
-The initial application stack is:
+```text
+catalog construction -> pure planner engine <- application composition -> React UI
+```
 
-- TypeScript for the catalog, authored model, simulator, and UI;
-- React for UI projection;
-- Vite for development and builds;
-- Redux Toolkit for explicit authored edit commands and application state;
-- Vitest for catalog, model, simulation, and UI-adapter tests;
-- shadcn/ui and Tailwind CSS for selectively adopted UI components;
-- Tauri 2 later, after the browser-hosted app needs desktop file and packaging
-  capabilities.
-
-React Flow is not a foundation dependency. It may later provide an optional
-graph projection, but it will never own topology or node identity.
-
-## Documentation Reading Order
-
-1. [`docs/design/ARCHITECTURE.md`](docs/design/ARCHITECTURE.md) defines product boundaries,
-   package dependencies, lifecycle, and technology responsibilities.
-2. [`docs/design/CATALOG_MODEL.md`](docs/design/CATALOG_MODEL.md) defines declaration
-   families, source evidence, normalization, and supported game-rule scope.
-3. [`docs/design/REWARD_MODEL.md`](docs/design/REWARD_MODEL.md) defines reward types, resolved
-   offers, offer projections, counted bags, concrete acquisitions, history
-   projections, producer bindings, shops, and reward lifecycle semantics.
-4. [`docs/audits/REWARD_GAME_DATA_AUDIT.md`](docs/audits/REWARD_GAME_DATA_AUDIT.md) records
-   the game evidence and exact, simplified, deferred, or excluded disposition
-   behind the reward model.
-5. [`docs/design/GAME_GENERATION_RULES.md`](docs/design/GAME_GENERATION_RULES.md) defines
-   shared picker, door, cap, force, and generated-decision rules.
-6. [`docs/design/ROOM_LIFECYCLE_MODEL.md`](docs/design/ROOM_LIFECYCLE_MODEL.md) defines the
-   ordered single-room lifecycle, history-fragment boundary, typed effects,
-   counter/cache timing, and additive audit contract.
-7. [`docs/biomes/F_GAME_RULES.md`](docs/biomes/F_GAME_RULES.md) defines Erebus game behavior,
-   projection decisions, and current feature coverage.
-8. [`docs/biomes/G_GAME_RULES.md`](docs/biomes/G_GAME_RULES.md) defines Oceanus game behavior,
-   projection decisions, and current feature coverage.
-9. [`docs/biomes/P_GAME_RULES.md`](docs/biomes/P_GAME_RULES.md) pressure-tests that model
-   against P and defines the P declaration and shared-linear simulation contract.
-10. [`docs/biomes/Q_GAME_RULES.md`](docs/biomes/Q_GAME_RULES.md) defines Q's scripted stages,
-    independently generated miniboss peers, reward-free spine, and repeat-run
-    completion contract.
-11. [`docs/biomes/H_GAME_RULES.md`](docs/biomes/H_GAME_RULES.md) defines H's cage batches,
-    bridge competition, encounter multiplicity, and Fields reward projection.
-12. [`docs/biomes/O_GAME_RULES.md`](docs/biomes/O_GAME_RULES.md) defines O's ship encounter
-    phases, reward wheels, source-derived outgoing stores, and special rooms.
-13. [`docs/biomes/I_GAME_RULES.md`](docs/biomes/I_GAME_RULES.md) defines Clockwork Goal and
-    non-goal acquisition, special peers, and repeated mixed preboss batches.
-14. [`docs/biomes/N_GAME_RULES.md`](docs/biomes/N_GAME_RULES.md) defines Ephyra's fixed
-    entry, persistent hub board, ordered pylon visits, side rooms, and terminal
-    shop effects.
-15. [`docs/audits/N_SIDE_ROOM_FINDINGS.md`](docs/audits/N_SIDE_ROOM_FINDINGS.md)
-    preserves the runtime evidence behind N's side-room availability ranks;
-    the live rule remains in the N biome authority.
-16. [`docs/design/AUTHORED_PROJECT_MODEL.md`](docs/design/AUTHORED_PROJECT_MODEL.md) defines
-    persisted project state, topology ownership, identities, and edit commands.
-17. [`docs/design/SIMULATION_AND_VALIDATION.md`](docs/design/SIMULATION_AND_VALIDATION.md)
-    defines the pure derived pipeline, history, counters, validation, and
-    findings.
-18. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) maps authored and derived
-    state into the external editor without leaking UI structure into the
-    domain.
-19. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md) defines the
-    contextual room and reward selection contract, grouped and compound
-    pickers, and selected-invalid retention policy.
-20. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
-    records the intentionally deferred app/game contract and conformance loop.
-21. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md) defines the
-    development order and acceptance gates.
-22. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md) tracks the
-    disposition and implementation status of inherited evidence.
-23. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
-    records the completed delivery slices without becoming design authority.
-
-These documents are one coherent design set. A rule belongs in exactly one
-authority and should be referenced rather than copied elsewhere.
-
-## Authority Boundaries
-
-| Concern                                                                 | Authority                                  |
-| ----------------------------------------------------------------------- | ------------------------------------------ |
-| Product layers, dependencies, lifecycle, and stack                      | `docs/design/ARCHITECTURE.md`              |
-| Declaration schema, provenance, normalization, and supported game facts | `docs/design/CATALOG_MODEL.md`             |
-| Single-room operation order and history-fragment boundaries             | `docs/design/ROOM_LIFECYCLE_MODEL.md`      |
-| Reward vocabulary, composition, stores, shops, and offer semantics      | `docs/design/REWARD_MODEL.md`              |
-| Shared picker, door, cap, force, and generated-decision game rules      | `docs/design/GAME_GENERATION_RULES.md`     |
-| F behavior, projection decisions, topology, and feature coverage        | `docs/biomes/F_GAME_RULES.md`              |
-| G behavior, projection decisions, topology, and feature coverage        | `docs/biomes/G_GAME_RULES.md`              |
-| P topology, encounter, exit, and simulation rules                       | `docs/biomes/P_GAME_RULES.md`              |
-| Q scripted topology, rewards, counters, and repeat-run completion       | `docs/biomes/Q_GAME_RULES.md`              |
-| H cage batches, bridge, counters, rewards, and completion               | `docs/biomes/H_GAME_RULES.md`              |
-| O ship phases, wheels, outgoing stores, counters, and completion        | `docs/biomes/O_GAME_RULES.md`              |
-| I Clockwork counters, conditional terminal, rewards, and completion     | `docs/biomes/I_GAME_RULES.md`              |
-| N fixed entry, persistent hub, side rooms, restores, and completion     | `docs/biomes/N_GAME_RULES.md`              |
-| N side-room runtime evidence                                            | `docs/audits/N_SIDE_ROOM_FINDINGS.md`      |
-| Authored state, persistence, topology, identity, and commands           | `docs/design/AUTHORED_PROJECT_MODEL.md`    |
-| Materialization, history, validation, feedback, and simulation          | `docs/design/SIMULATION_AND_VALIDATION.md` |
-| UI projection and interaction policy                                    | `docs/design/EDITOR_MODEL.md`              |
-| Contextual room/reward selection and compact picker behavior            | `docs/design/CONTEXTUAL_EDITOR_UX.md`      |
-| Future execution artifact and runtime audit                             | `docs/design/GAME_INTEGRATION_BOUNDARY.md` |
-| Reward game-data evidence                                               | `docs/audits/REWARD_GAME_DATA_AUDIT.md`    |
-| Delivery sequence and acceptance                                        | `docs/progress/IMPLEMENTATION_PLAN.md`     |
-| Legacy evidence disposition and port verification status                | `docs/progress/MIGRATION_PROVENANCE.md`    |
-| Completed implementation slices                                         | `docs/progress/IMPLEMENTATION_PROGRESS.md` |
-
-## Architectural Spine
-
-The app preserves the established planning cycle in a framework-independent
-form:
+The architectural spine is:
 
 ```text
 declarations
@@ -228,61 +67,99 @@ declarations
   -> editor presentation
 ```
 
-The authored project and immutable declarations are the only durable semantic
-inputs. History, validation, candidate decoration, and UI projections are
-derived and replaceable.
+The authored project and immutable catalog declarations are the durable
+semantic inputs. Materialization, history, validation, candidates, findings,
+and UI projections are replaceable derived results.
 
-Simulation models possibility, not probability. An authored outcome is valid
-when it belongs to the support set derived from exact game state; extreme
-unlikelihood never makes a possible route invalid. Forced and impossible
-boundaries are modeled, while likelihood scores, RNG seeds, and Monte Carlo
-search are outside the product.
+Important modeling contracts:
 
-Route evaluation admits only complete-valid biomes to its validated prefix.
-The next active biome is evaluated progressively through the maximum truthful
-authored decision point, while every later biome remains editable but
-contextually unassessed. An incomplete active biome may publish prefix
-materialization, lifecycle, history state, findings, and candidate views, but
-never a canonical biome snapshot or downstream route seed.
+- simulation models possibility, not probability;
+- game Room Declarations are unique, while authored Room Occurrences are
+  repeatable and own stable persisted IDs;
+- incomplete and context-invalid authored states remain editable;
+- only complete-valid biomes advance the validated route prefix;
+- the next active biome may publish a truthful partial evaluation without
+  producing a canonical biome snapshot;
+- catalog route placement means the biome's complete product loop is
+  supported;
+- route tabs, panel selection, findings selection, and other UI-session state
+  never enter authored history.
 
-Room Declarations are unique by Hades `gameName`. Authored Room Occurrences
-have their own stable persisted IDs, so several offers may reference the same
-game room without conflating their leaf state or feedback identity.
+## Technology
+
+- TypeScript for catalog, authored model, simulator, and UI;
+- React and Redux Toolkit for UI projection and application state;
+- Vite for browser development and production builds;
+- Vitest for domain, application, and interaction fixtures;
+- Tauri 2 later, when desktop file and packaging capabilities are needed.
+
+React Flow is not a foundation dependency. If introduced, it may render a
+projection of canonical topology but will never own topology or node identity.
+
+## Documentation Reading Order
+
+The documents below are one coherent design set. A rule belongs in one
+authority and should be referenced rather than copied elsewhere.
+
+1. [`docs/design/ARCHITECTURE.md`](docs/design/ARCHITECTURE.md) — product
+   boundaries, dependencies, lifecycle, and technology responsibilities.
+2. [`docs/design/CATALOG_MODEL.md`](docs/design/CATALOG_MODEL.md) — declaration
+   families, provenance, normalization, and supported game-rule scope.
+3. [`docs/design/REWARD_MODEL.md`](docs/design/REWARD_MODEL.md) — rewards,
+   stores, bags, shops, offer resolution, and acquisition semantics.
+4. [`docs/audits/REWARD_GAME_DATA_AUDIT.md`](docs/audits/REWARD_GAME_DATA_AUDIT.md)
+   — reward evidence and exact, simplified, deferred, or excluded disposition.
+5. [`docs/design/GAME_GENERATION_RULES.md`](docs/design/GAME_GENERATION_RULES.md)
+   — shared picker, door, cap, force, and generated-decision rules.
+6. [`docs/design/ROOM_LIFECYCLE_MODEL.md`](docs/design/ROOM_LIFECYCLE_MODEL.md) —
+   ordered room lifecycle, history fragments, effects, and counter timing.
+7. [`docs/biomes/F_GAME_RULES.md`](docs/biomes/F_GAME_RULES.md) — Erebus.
+8. [`docs/biomes/G_GAME_RULES.md`](docs/biomes/G_GAME_RULES.md) — Oceanus.
+9. [`docs/biomes/P_GAME_RULES.md`](docs/biomes/P_GAME_RULES.md) — Mount Olympus.
+10. [`docs/biomes/Q_GAME_RULES.md`](docs/biomes/Q_GAME_RULES.md) — Summit.
+11. [`docs/biomes/H_GAME_RULES.md`](docs/biomes/H_GAME_RULES.md) — Fields of
+    Mourning.
+12. [`docs/biomes/O_GAME_RULES.md`](docs/biomes/O_GAME_RULES.md) — Rift of
+    Thessaly.
+13. [`docs/biomes/I_GAME_RULES.md`](docs/biomes/I_GAME_RULES.md) — Tartarus.
+14. [`docs/biomes/N_GAME_RULES.md`](docs/biomes/N_GAME_RULES.md) — City of
+    Ephyra.
+15. [`docs/audits/N_SIDE_ROOM_FINDINGS.md`](docs/audits/N_SIDE_ROOM_FINDINGS.md)
+    — runtime evidence for Ephyra side-room availability.
+16. [`docs/design/AUTHORED_PROJECT_MODEL.md`](docs/design/AUTHORED_PROJECT_MODEL.md)
+    — persistence, topology ownership, identity, and semantic commands.
+17. [`docs/design/SIMULATION_AND_VALIDATION.md`](docs/design/SIMULATION_AND_VALIDATION.md)
+    — materialization, history, validation, feedback, and simulation.
+18. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) — editor
+    projection, navigation, persistence UX, and interaction ownership.
+19. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md)
+    — contextual room/reward selection and compact picker behavior.
+20. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
+    — future execution artifact and runtime conformance loop.
+21. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md)
+    — forward delivery sequence and acceptance gates.
+22. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md)
+    — inherited evidence disposition and port verification.
+23. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
+    — completed delivery history; not design authority.
 
 ## Source Evidence
 
-During migration, two existing sources remain useful evidence:
+Two external sources remain useful evidence:
 
-- `../run-director-modpack/Submodules/adamantRunDirector-Run_Planner/`
-  contains the Lua prototype and its revamp documents;
+- `../run-director-modpack/Submodules/adamantRunDirector-Run_Planner/` contains
+  the earlier Lua/ImGui prototype and revamp documents;
 - `../../1GameData/Scripts/` contains the game-data reference used to verify
   declarations and simulation rules.
 
-Neither is imported at runtime. Once a rule has been ported and covered by app
-fixtures, the app's catalog and simulator become its implementation authority.
-
-## Current Scope
-
-The active product slice delivers F, G, H, I, and N through shared route
-evaluation and layout-specific editor projections:
-
-- explicit declarations;
-- authored linear- or Hub-biome topology;
-- complete room and reward leaf defaults;
-- materialized history;
-- validation and semantic feedback;
-- a usable editor with undo/redo and browser-local/JSON persistence.
-
-Before Phase 3 simulation, every remaining biome was audited and the full
-feature set was reconciled. H, I, and N have since completed their full product
-loops. O, P, and Q remain declaration-complete but inactive; their combined
-feature map is the declaration-freeze authority for later rollout. Contextual
-room and reward selection is the current insertion boundary before O.
+Neither is imported at runtime. Verified rules move into the catalog,
+simulator, and focused fixtures; the previous control, storage, draw, and Lib
+lifecycle machinery is not an API contract.
 
 ## Development
 
-The repository uses the Linux-native Node installation already managed by
-`nvm`. From WSL:
+The repository uses the Linux-native Node installation selected by `.nvmrc`.
+From WSL:
 
 ```bash
 cd /home/ayyatma/wsl-projects/modding/modpacks/RunPlanner
@@ -292,17 +169,14 @@ npm install
 npm run dev
 ```
 
-Activating `nvm` is important on systems where Windows npm also appears in the
-WSL `PATH`; workspace symlinks must be created by Linux npm.
+Activating `nvm` matters on systems where Windows npm also appears in the WSL
+`PATH`; workspace symlinks must be created by Linux npm.
 
-Run the complete local validation suite with:
+Run the complete validation suite with:
 
 ```bash
 npm run check
 ```
 
-Individual commands are available for `typecheck`, `test`, `lint`,
-`format:check`, and `build`.
-
-Implementation status is recorded separately in
-[`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md).
+Individual scripts are available for `typecheck`, `test`, `test:watch`,
+`lint`, `format`, `format:check`, and `build`.
