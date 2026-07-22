@@ -18,10 +18,11 @@ ordinary generated batches or synthetic authored cycles.
 
 N declarations, the schema-version-5 authored Hub plan, semantic commands,
 structural completeness, canonical Hub materialization, exact room lifecycle,
-event-folded route history, reward simulation, selected validation, and dormant
-candidate evaluation are ported. Editing and activation remain later slices. N
-therefore intentionally remains outside application capabilities until its
-complete HubBiome product loop is implemented.
+event-folded route history, reward simulation, selected validation, dormant
+candidate evaluation, and a dormant Hub editor projection are ported.
+Production editing and activation remain the final slice. N therefore
+intentionally remains outside application capabilities until its complete
+HubBiome product loop is activated.
 
 ## Evidence Status
 
@@ -76,7 +77,7 @@ evidence gap is closed.
 The disposition vocabulary is defined by `../CATALOG_MODEL.md`; implementation
 coverage is defined by `../MIGRATION_PROVENANCE.md`. N currently has normalized
 declaration, dormant authored-model, canonical-history, reward-simulation,
-selected-validation, and candidate coverage.
+selected-validation, candidate, and dormant-editor coverage.
 
 | Feature                       | Verified game behavior                                                                                                  | Disposition and planner projection                                                           | Current coverage           | Reconsider when                                        |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------ |

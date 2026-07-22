@@ -5,6 +5,7 @@ import {
   type FindingCode,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
+  type HubBiomeProjectEvaluation,
   type SemanticAddress,
   type SemanticFinding,
 } from '@run-planner/core';
@@ -174,7 +175,7 @@ export function presentRouteStatus(evaluation: ProjectRouteEvaluation): StatusPr
 }
 
 export function presentBiomeStatus(
-  evaluation: BiomeProjectEvaluation | undefined,
+  evaluation: BiomeProjectEvaluation | HubBiomeProjectEvaluation | undefined,
 ): StatusPresentation {
   if (evaluation === undefined) {
     return blockedBiomeStatus;

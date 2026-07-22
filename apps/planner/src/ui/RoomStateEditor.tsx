@@ -146,7 +146,7 @@ export function RoomStateEditor({
       </div>
     );
   }
-  if (state.kind === 'counted' || state.kind === 'freeReward') {
+  if (state.kind === 'counted' || state.kind === 'freeReward' || state.kind === 'ephyraCombat') {
     const rewardAddress = createIncomingRewardAddress(biome, occurrence.occurrenceId);
     if (state.kind === 'counted' && clockworkReward === 'goal') {
       return (
@@ -248,9 +248,6 @@ export function RoomStateEditor({
   }
   if (state.kind === 'shipCombat') {
     throw new Error(`${room.gameName} ${state.kind} editor is not active`);
-  }
-  if (state.kind === 'ephyraCombat') {
-    throw new Error(`${room.gameName} Ephyra editor is not active`);
   }
   if (entryActive === false || state.shop === undefined) {
     return (
