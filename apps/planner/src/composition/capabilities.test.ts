@@ -19,15 +19,18 @@ import {
   createApplicationCapabilities,
   createProjectSimulationScope,
 } from './capabilityConfiguration';
-import { createEditorNavigation } from './editorNavigation';
+import { createEditorNavigation } from '../projections/editorNavigation';
 import {
   createAuthorableProjectDocument,
   decodeAuthorableProjectDocument,
   parseAuthorableProjectDocument,
-} from './projectDocuments';
-import { authoredProjectCommandDispatched } from './projectWorkspaceSlice';
-import { createPlannerStore } from './store';
-import { ordinaryRoomCategories, selectRoomsForCategory } from './roomSelectorProjection';
+} from '../workspace/projectDocuments';
+import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
+import { createPlannerStore } from '../state/store';
+import {
+  ordinaryRoomCategories,
+  selectRoomsForCategory,
+} from '../projections/roomSelectorProjection';
 
 function createFEditorProject(
   catalogValue: Catalog,

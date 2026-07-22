@@ -1,15 +1,15 @@
 import { encodeProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 
-import type { PlannerCapabilities } from './capabilities';
-import { parseAuthorableProjectDocument } from './projectDocuments';
+import type { PlannerCapabilities } from '../composition/capabilities';
+import { parseAuthorableProjectDocument } from '../workspace/projectDocuments';
 import {
   autosaveWriteFailed,
   autosaveWriteSucceeded,
   createInitialProfileSessionState,
   type ProfileSessionState,
-} from './profileSessionSlice';
-import { selectPresentProject, selectProfileSession, type PlannerStore } from './store';
+} from '../state/profileSessionSlice';
+import { selectPresentProject, selectProfileSession, type PlannerStore } from '../state/store';
 
 export interface AutosaveRecoveryAdapter {
   read(): string | null;

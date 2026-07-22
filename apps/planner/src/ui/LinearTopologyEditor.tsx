@@ -26,10 +26,10 @@ import { projectClockworkTopology, projectLinearBatchState } from '@run-planner/
 import {
   presentCandidateLabel,
   type CandidateProjectionService,
-} from '../application/candidateProjection';
-import { allocateOccurrenceId } from '../application/occurrenceIds';
-import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../application/store';
+} from '../projections/candidateProjection';
+import { allocateOccurrenceId } from '../workspace/occurrenceIds';
+import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
+import { selectPresentProject, useAppDispatch, useAppSelector } from '../state/store';
 import { candidateSelectState } from './candidatePresentation';
 import { SemanticOwnerMarker } from './EvaluationFeedback';
 import { RoomSelector } from './RoomSelector';

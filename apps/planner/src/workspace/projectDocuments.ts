@@ -7,7 +7,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 
-import { requireBiomeCapability, type PlannerCapabilities } from './capabilities';
+import { requireBiomeCapability, type PlannerCapabilities } from '../composition/capabilities';
 
 export function requireRoutePrefixAuthorable(
   catalog: Catalog,

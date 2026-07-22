@@ -5,14 +5,14 @@ import { useState } from 'react';
 import {
   presentCandidateLabel,
   type CandidateProjectionService,
-} from '../application/candidateProjection';
+} from '../projections/candidateProjection';
 import {
   roomCategoryForKind,
   roomSelectorCategories,
   selectRoomsForTargetCategory,
   type RoomSelectorCategory,
-} from '../application/roomSelectorProjection';
-import { selectPresentProject, useAppSelector } from '../application/store';
+} from '../projections/roomSelectorProjection';
+import { selectPresentProject, useAppSelector } from '../state/store';
 import { candidateSelectState } from './candidatePresentation';
 
 interface RoomSelectorProps {

@@ -2,12 +2,12 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 
-import { createBrowserProfileFileAdapter } from './application/browserProfileFileAdapter';
+import { createBrowserProfileFileAdapter } from './persistence/browserProfileFileAdapter';
 import {
   createBrowserAutosaveRecoveryAdapter,
   createBrowserAutosaveScheduler,
-} from './application/browserAutosaveRecoveryAdapter';
-import { createApplication } from './application/createApplication';
+} from './persistence/browserAutosaveRecoveryAdapter';
+import { createApplication } from './composition/createApplication';
 import './styles.css';
 import { App } from './ui/App';
 

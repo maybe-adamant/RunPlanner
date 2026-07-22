@@ -14,10 +14,10 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createPlannerCapabilities } from '../application/capabilities';
-import { createCandidateProjectionService } from '../application/candidateProjection';
-import { createProjectSimulationScope } from '../application/capabilityConfiguration';
-import { createPlannerStore, selectPresentProject, useAppSelector } from '../application/store';
+import { createPlannerCapabilities } from '../composition/capabilities';
+import { createCandidateProjectionService } from '../projections/candidateProjection';
+import { createProjectSimulationScope } from '../composition/capabilityConfiguration';
+import { createPlannerStore, selectPresentProject, useAppSelector } from '../state/store';
 import { createRepresentativeNOPQProject, qBiome, qOccurrenceIds } from '../testing/surfaceProject';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 

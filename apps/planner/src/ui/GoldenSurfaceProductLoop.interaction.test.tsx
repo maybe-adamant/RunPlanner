@@ -12,16 +12,16 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createApplication, type PlannerApplication } from '../application/createApplication';
-import { createProjectSimulationScope } from '../application/capabilityConfiguration';
-import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../application/autosaveRecovery';
-import type { ProfileFileAdapter } from '../application/profileFile';
+import { createApplication, type PlannerApplication } from '../composition/createApplication';
+import { createProjectSimulationScope } from '../composition/capabilityConfiguration';
+import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../persistence/autosaveRecovery';
+import type { ProfileFileAdapter } from '../persistence/profileFile';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
   authoredProjectUndoRequested,
-} from '../application/projectWorkspaceSlice';
-import { selectProfileStatus } from '../application/store';
+} from '../state/projectWorkspaceSlice';
+import { selectProfileStatus } from '../state/store';
 import {
   createRepresentativeNOPQProject,
   nBiome,

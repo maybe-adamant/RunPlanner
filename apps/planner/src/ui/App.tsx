@@ -2,9 +2,9 @@ import { createRouteAddress, type AuthoredRoutePlan } from '@run-planner/engine/
 import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
 import { type ProjectRouteEvaluation } from '@run-planner/engine/simulation';
 
-import { presentProjectStatus, presentRouteStatus } from '../application/evaluationProjection';
-import { authoredProjectCommandDispatched } from '../application/projectWorkspaceSlice';
-import type { EditorNavigation, RouteEditorNavigation } from '../application/editorNavigation';
+import { presentProjectStatus, presentRouteStatus } from '../projections/evaluationProjection';
+import { authoredProjectCommandDispatched } from '../state/projectWorkspaceSlice';
+import type { EditorNavigation, RouteEditorNavigation } from '../projections/editorNavigation';
 import {
   sectionSelected,
   surfacePanelSelected,
@@ -12,15 +12,15 @@ import {
   type PlannerSection,
   type SurfacePanel,
   type UnderworldPanel,
-} from '../application/editorSessionSlice';
+} from '../state/editorSessionSlice';
 import {
   selectPresentProject,
   selectProjectEvaluation,
   useAppDispatch,
   useAppSelector,
-} from '../application/store';
-import type { ProjectOperations } from '../application/projectOperations';
-import type { CandidateProjectionService } from '../application/candidateProjection';
+} from '../state/store';
+import type { ProjectOperations } from '../workspace/projectOperations';
+import type { CandidateProjectionService } from '../projections/candidateProjection';
 import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from './EvaluationFeedback';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 import { ProjectFileControls } from './ProjectFileControls';

@@ -1,18 +1,18 @@
 import { encodeProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 
-import type { PlannerCapabilities } from './capabilities';
-import type { AutosaveRecoveryAdapter } from './autosaveRecovery';
-import { createInitialProject } from './projectBootstrap';
+import type { PlannerCapabilities } from '../composition/capabilities';
+import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
+import { createInitialProject } from '../composition/projectBootstrap';
 import { parseAuthorableProjectDocument } from './projectDocuments';
-import type { ProfileFileAdapter } from './profileFile';
+import type { ProfileFileAdapter } from '../persistence/profileFile';
 import {
   newProjectCreated,
   profileLoadSucceeded,
   profileSaveSucceeded,
   recoveryDiscarded,
-} from './profileSessionSlice';
-import { selectPresentProject, selectProfileSession, type PlannerStore } from './store';
+} from '../state/profileSessionSlice';
+import { selectPresentProject, selectProfileSession, type PlannerStore } from '../state/store';
 
 export type ProjectOperation = 'discardRecovery' | 'loadProfile' | 'new' | 'saveProfile';
 

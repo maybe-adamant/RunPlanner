@@ -26,21 +26,21 @@ import { type Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createApplication, type PlannerApplication } from '../application/createApplication';
+import { createApplication, type PlannerApplication } from '../composition/createApplication';
 import {
   createApplicationCapabilities,
   createProjectSimulationScope,
-} from '../application/capabilityConfiguration';
-import { createCandidateProjectionService } from '../application/candidateProjection';
-import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../application/autosaveRecovery';
-import type { ProfileFileAdapter } from '../application/profileFile';
+} from '../composition/capabilityConfiguration';
+import { createCandidateProjectionService } from '../projections/candidateProjection';
+import type { AutosaveRecoveryAdapter, AutosaveScheduler } from '../persistence/autosaveRecovery';
+import type { ProfileFileAdapter } from '../persistence/profileFile';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
   authoredProjectUndoRequested,
-} from '../application/projectWorkspaceSlice';
-import { selectRoomsForCategory } from '../application/roomSelectorProjection';
-import { selectProfileStatus } from '../application/store';
+} from '../state/projectWorkspaceSlice';
+import { selectRoomsForCategory } from '../projections/roomSelectorProjection';
+import { selectProfileStatus } from '../state/store';
 import { renderPlannerForInteraction } from '../testing/renderPlanner';
 import { semanticOwnerElementId } from './semanticOwner';
 
