@@ -1,21 +1,21 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
-import type { RawCatalogInput } from './declarations';
-import { normalizeBiomes } from './normalization/biomes';
-import { requireNonEmpty } from './normalization/common';
-import { normalizeEncounterProfiles } from './normalization/encounters';
-import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './normalization/exits';
+import type { RawCatalogInput } from '../declarations';
+import { normalizeBiomes } from './biomes';
+import { requireNonEmpty } from './common';
+import { normalizeEncounterProfiles } from './encounters';
+import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './exits';
 import {
   normalizeBiomeLayouts,
   validateDerivedRoomOwnership,
   validateRewardLookupOwnership,
-} from './normalization/layouts';
-import { normalizeRooms } from './normalization/rooms';
-import { normalizeRoomLifecycleProfiles } from './normalization/lifecycles';
-import { normalizeRoutes } from './normalization/routes';
-import { createRewardKernelCatalog } from './rewardKernel/normalize';
+} from './layouts';
+import { normalizeRooms } from './rooms';
+import { normalizeRoomLifecycleProfiles } from './lifecycles';
+import { normalizeRoutes } from './routes';
+import { createRewardKernelCatalog } from './rewards/normalize';
 
-export { CatalogContractError } from './normalization/errors';
+export { CatalogContractError } from './errors';
 
 export function createCatalog(input: RawCatalogInput): Catalog {
   requireNonEmpty(input.version, 'version');

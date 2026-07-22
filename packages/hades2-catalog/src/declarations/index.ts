@@ -11,7 +11,7 @@ import { nRooms } from './rooms/n';
 import { oRooms } from './rooms/o';
 import { pRooms } from './rooms/p';
 import { qRooms } from './rooms/q';
-import { rewardKernelDeclarations } from '../rewardKernel/declarations';
+import { rewardKernelDeclarations } from './rewards/declarations';
 import { routes } from './routes';
 import type { RawCatalogInput, RawRoomDeclaration } from './types';
 

@@ -1,5 +1,5 @@
 import { catalog, createCatalog, type CatalogInput } from '@run-planner/hades2-catalog';
-import { declarations } from '@run-planner/hades2-catalog/testing';
+import { declarations } from '@run-planner/hades2-catalog/test-support';
 import {
   createBiomeAddress,
   createProjectDocument,

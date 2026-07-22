@@ -23,10 +23,10 @@ import {
 } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
-import { CatalogContractError } from '../normalization/errors';
-import { ordinarySources, rewardKernelDeclarations } from './index';
-import { createRewardKernelCatalog } from './normalize';
-import type { RawRewardKernelInput } from './types';
+import { CatalogContractError } from './compiler/errors';
+import { ordinarySources, rewardKernelDeclarations } from './declarations/rewards';
+import { createRewardKernelCatalog } from './compiler/rewards/normalize';
+import type { RawRewardKernelInput } from './declarations/rewards/types';
 
 const rewardKernelCatalog = createRewardKernelCatalog(rewardKernelDeclarations);
 

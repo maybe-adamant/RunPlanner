@@ -21,14 +21,14 @@ import type {
   SourceResolutionPoint,
 } from '@run-planner/engine/reward-kernel';
 
-import { createCollection, requireNonEmpty, requirePositiveInteger } from '../normalization/common';
-import { fail } from '../normalization/errors';
-import { normalizeRequirement } from '../normalization/requirements';
+import { createCollection, requireNonEmpty, requirePositiveInteger } from '../common';
+import { fail } from '../errors';
+import { normalizeRequirement } from '../requirements';
 import type {
   RawRewardKernelInput,
   RawRewardTypeDeclaration,
   RawShopOptionEntryDeclaration,
-} from './types';
+} from '../../declarations/rewards/types';
 
 const ACQUISITION_KINDS = ['consumable', 'loot', 'resource'] as const;
 const HISTORY_PROJECTIONS = ['consumableAndUse', 'lootAndUse'] as const;

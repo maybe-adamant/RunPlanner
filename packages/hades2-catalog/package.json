@@ -5,8 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./reward-kernel": "./src/rewardKernel/index.ts",
-    "./testing": "./src/testing.ts"
+    "./test-support": "./src/test-support.ts"
   },
   "scripts": {
     "typecheck": "tsc --project tsconfig.json"

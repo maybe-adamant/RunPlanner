@@ -1,7 +1,7 @@
 import type { RawCatalogInput } from './declarations';
 import { describe, expect, it } from 'vitest';
 
-import { CatalogContractError, createCatalog } from './catalog';
+import { CatalogContractError, createCatalog } from './compiler/createCatalog';
 import { declarations } from './declarations';
 
 function raw(value: unknown): RawCatalogInput {

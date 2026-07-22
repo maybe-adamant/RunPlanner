@@ -5,7 +5,7 @@ import type {
 } from '@run-planner/engine/reward-kernel';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 
-import { CatalogContractError, createCatalog } from './catalog';
+import { CatalogContractError, createCatalog } from './compiler/createCatalog';
 import { declarations } from './declarations';
 import { catalog } from './index';
 
