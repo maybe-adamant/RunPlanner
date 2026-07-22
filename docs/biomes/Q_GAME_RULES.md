@@ -13,8 +13,8 @@ ordinary linear biome and its supported spine is reward-free outside the two
 miniboss offers and the preboss shop.
 
 Q declarations are imported under the progressed-save, neutral-difficulty
-repeat-run baseline. Simulation, authoring, and editor support remain dormant;
-normalization does not activate those product capabilities.
+repeat-run baseline. The authored project boundary now supports the staged
+decision tree, while simulation and editor capabilities remain dormant.
 
 ## Evidence Status
 
@@ -57,7 +57,7 @@ declaration coverage only.
 
 | Feature                     | Verified game behavior                                                                                              | Disposition and planner projection                                                | Current coverage     | Reconsider when                                                 |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------- |
-| Scripted linear layout      | Fixed intro, foyer, forced two-exit combat, forced miniboss, ordinary combat, a second forced pair, and direct shop | **Exact:** `LinearBiome` with declaration-driven staged candidate pools           | documented, declared | --                                                              |
+| Scripted linear layout      | Fixed intro, foyer, forced two-exit combat, forced miniboss, ordinary combat, a second forced pair, and direct shop | **Exact:** `LinearBiome` with declaration-driven staged candidate pools           | authored             | --                                                              |
 | Room-set weights            | Every listed Q room occurs once                                                                                     | **Simplified:** preserve support and forced pools, never likelihood               | documented           | Probability analysis or seeded replay becomes a product goal    |
 | Foyer variants              | `Q_Combat10/11` are one-exit, reward-free first-stage rooms; `Q_Combat11` has a prior-run encounter-completion gate | **Simplified:** both remain ordinary progressed-save candidates                   | documented, declared | Save-profile state becomes a project input                      |
 | Forced fork rooms           | Three two-exit rooms are forced at source depth 2 and three at source depth 5                                       | **Exact:** room declarations and physical exit fixtures                           | documented, declared | --                                                              |
@@ -386,6 +386,6 @@ Q strengthens the shared model in four places:
   and need not universally contain a postboss room.
 
 F, G, P, Q, H, O, I, and N are closed as game-rule/design audits. Their shared
-vocabulary and dormant declaration imports are reconciled; Q remains
-non-authorable, non-simulatable, and non-editable until its complete Phase 6
-product loop is implemented.
+vocabulary and declaration imports are reconciled. Q's staged plan is
+authorable through the core project boundary; simulation and editing remain
+dormant until the remaining Phase 6 slices are implemented.

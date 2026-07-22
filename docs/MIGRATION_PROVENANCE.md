@@ -288,7 +288,8 @@ been replaced by the occurrence-based conditional-terminal contract in
 | Q direct preboss shop           | ported   | `RoomDataQ.lua`, `StoreData.lua`, `biomes/Q_GAME_RULES.md`                 | Exact-depth-7 `Q_PreBoss01` owns one direct `Q_WorldShop`; no shop-then-fill policy is present.                                    |
 | Q reward-free batch policy      | ported   | `RoomDataQ.lua`, `RewardLogic.lua`, `biomes/Q_GAME_RULES.md`               | Q continuation batches use explicit no-store policy while miniboss declarations own their forced store.                            |
 | Q completion and exclusions     | ported   | `RoomDataQ.lua`, boss encounters, `biomes/Q_GAME_RULES.md`                 | Neutral `Q_Boss01` completes the route; `Q_Boss02`, Palace postboss/story, debug miniboss, and automatic boss drops stay excluded. |
-| Q simulation activation         | deferred | `biomes/Q_GAME_RULES.md`                                                   | Keep dormant until the full Surface prefix and shared cross-biome vocabulary are implemented.                                      |
+| Q staged project authorship     | ported   | `biomes/Q_GAME_RULES.md`                                                   | Ordered stage pools and the direct terminal are enforced by the shared linear codec and semantic commands.                         |
+| Q simulation activation         | deferred | `biomes/Q_GAME_RULES.md`                                                   | Keep dormant until materialization, validation, candidates, editor, and the full Surface product loop are implemented.             |
 
 ## Phase 2.8 Cross-Biome Closure
 

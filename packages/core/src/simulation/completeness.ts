@@ -90,7 +90,6 @@ function requireLinearLayout(catalog: Catalog, biome: BiomeAddress, plan: Linear
     );
   }
   if (
-    layout.continuation.progressionPolicy.kind === 'staged' ||
     (layout.continuation.batchPolicy.kind !== 'standard' &&
       layout.continuation.batchPolicy.kind !== 'fields' &&
       layout.continuation.batchPolicy.kind !== 'clockwork') ||
