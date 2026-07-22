@@ -1,6 +1,6 @@
 import type { Catalog, HubBiomeLayout, RewardWheelOfferPoint } from '../../catalog-schema';
 import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
-import { applyProjectCommand, type ProjectCommand } from '../../authored-project/commands';
+import { applyProjectCommand, type ProjectCommand } from '../../authored-project/commands/dispatch';
 import type {
   AuthoredBiomePlan,
   HubBiomePlan,

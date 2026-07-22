@@ -1,5 +1,5 @@
 import type { Catalog } from '../catalog-schema';
-import { applyProjectCommand, type ProjectCommand } from './commands';
+import { applyProjectCommand, type ProjectCommand } from './commands/dispatch';
 import type { ProjectDocument } from './model';
 
 export interface ProjectHistory {
