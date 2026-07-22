@@ -15,6 +15,8 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createCandidateProjectionService } from '../../../projections/candidateProjection';
+import { createContextualOptionResolver } from '../../../projections/contextualOptions';
+import { createContextualPickerProjection } from '../../../projections/contextualPicker';
 import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
 import {
   createRepresentativeNOPQProject,
@@ -53,6 +55,7 @@ function QEditorHarness({
     <LinearBiomeEditor
       candidateProjection={candidateProjection}
       catalog={catalog}
+      contextualPicker={createContextualPickerProjection(createContextualOptionResolver(catalog))}
       evaluation={evaluation}
       plan={qPlan(project)}
       routeKey={qBiome.routeKey}
@@ -78,8 +81,8 @@ function renderQ(project = createRepresentativeNOPQProject()) {
 }
 
 describe('Q candidates and editor projection', () => {
-  it('uses the declaration-owned pool for every staged room candidate', () => {
-    const { candidateProjection, project } = renderQ();
+  it('uses the declaration-owned pool for every staged room candidate', async () => {
+    const { candidateProjection, project, user } = renderQ();
     const firstFork = catalog.rooms.byKey.Q_Combat03;
     const ordinary = catalog.rooms.byKey.Q_Combat01;
     if (firstFork === undefined || ordinary === undefined) {
@@ -109,9 +112,10 @@ describe('Q candidates and editor projection', () => {
     if (foyerDecision === null) {
       throw new Error('Q foyer decision is missing');
     }
-    const roomOptions = within(foyerDecision)
+    await user.click(within(foyerDecision).getByLabelText('Room'));
+    const roomOptions = screen
       .getAllByRole('option')
-      .map((option) => option.textContent);
+      .map((option) => option.querySelector('.contextual-picker-item-label')?.textContent);
     expect(roomOptions).toContain('Combat 10');
     expect(roomOptions).toContain('Combat 11');
     expect(roomOptions).not.toContain('Combat 01');

@@ -37,9 +37,9 @@ the ImGui prototype:
 - one horizontal tab per catalog route, followed by Settings;
 - route-local biome navigation;
 - a route settings panel;
-- one primary biome editor;
+- one layout-specific biome structure workspace;
 - a route status and findings surface;
-- a details/inspector area when richer room editing needs it.
+- one focused semantic inspector.
 
 The exact desktop composition may evolve. Tabs and panels are presentation,
 not project identity.
@@ -119,6 +119,32 @@ state while changing the exact history/execution trace.
 
 Projectors consume normalized domain state and never infer topology from
 rendered components.
+
+## Structured Workspace Presentation
+
+The primary editor presents a route rail, one layout-specific biome-structure
+region, and a focused semantic inspector. This is a structured projection over
+the existing Linear and Hub layout authorities, not a graph canvas or a second
+serialized UI tree.
+
+For Linear biomes, the picked continuation forms the visual trunk and generated
+unpicked targets remain compact inspectable leaves. Visual emphasis does not
+change their game meaning: unpicked rewards still participate in sibling, bag,
+source, and possibility evaluation. For N, the center region remains the fixed
+Hub board plus ordered visit timeline rather than a false Linear spine.
+
+The structure projection consumes authored topology plus progressive or
+canonical evaluation. An incomplete biome is never described as canonical. Its
+coverage frontier, retained later authorship, and blocked or unassessed regions
+remain visibly distinct.
+
+A configured empty biome may show a read-only declared outline around its live
+frontier. Fixed-count layouts may show exact remaining stages; variable layouts
+show only a truthfully projected terminal horizon or state that length varies.
+The UI never derives an expected route length or interprets force rules locally.
+
+`STRUCTURED_EDITOR_WORKSPACE.md` owns the concrete route-rail, Linear, Hub,
+inspector, coverage, empty-outline, dialog, and repair presentation contracts.
 
 ## Rows Versus Domain Language
 
@@ -460,6 +486,10 @@ blank fallback project booted successfully.
 Do not begin with a freeform graph canvas. Linear and hub layouts have stronger
 semantic structure than arbitrary nodes and edges, and a structured editor is
 easier to make readable and accessible.
+
+The structured workspace in `STRUCTURED_EDITOR_WORKSPACE.md` is the primary
+authoring surface. A later graph remains an optional overview projection rather
+than a prerequisite for showing the picked path or Hub visit structure.
 
 React Flow may later provide:
 

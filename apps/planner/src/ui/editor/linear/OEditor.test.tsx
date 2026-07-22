@@ -19,6 +19,8 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createCandidateProjectionService } from '../../../projections/candidateProjection';
+import { createContextualOptionResolver } from '../../../projections/contextualOptions';
+import { createContextualPickerProjection } from '../../../projections/contextualPicker';
 import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
@@ -125,6 +127,7 @@ function OEditorHarness({
     <LinearBiomeEditor
       candidateProjection={candidateProjection}
       catalog={catalog}
+      contextualPicker={createContextualPickerProjection(createContextualOptionResolver(catalog))}
       evaluation={evaluation}
       plan={plan}
       routeKey={biome.routeKey}
@@ -154,6 +157,10 @@ describe('O editor projection', () => {
     const { store, user } = renderO(oProject());
 
     expect(screen.getByRole('heading', { name: 'Rift of Thessaly' })).toBeTruthy();
+    expect(screen.queryByLabelText('Type')).toBeNull();
+    await user.click(screen.getAllByLabelText('Room')[0]!);
+    expect((await screen.findAllByRole('option')).length).toBeGreaterThan(0);
+    await user.keyboard('{Escape}');
     const ship = screen.getByLabelText('Ship combat encounters');
     const wheels = within(ship).getAllByRole('region', { name: /Reward wheel/ });
     expect(wheels).toHaveLength(2);

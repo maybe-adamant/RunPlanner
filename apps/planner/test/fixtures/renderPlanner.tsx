@@ -24,6 +24,7 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
         candidateProjection={application.candidateProjection}
         catalog={application.catalog}
         catalogSummary={application.catalogSummary}
+        contextualPicker={application.contextualPicker}
         editorNavigation={application.editorNavigation}
         projectOperations={application.projectOperations}
       />

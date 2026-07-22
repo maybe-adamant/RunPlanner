@@ -18,6 +18,7 @@ import {
 } from '../../state/store';
 import type { ProjectOperations } from '../../workspace/projectOperations';
 import type { CandidateProjectionService } from '../../projections/candidateProjection';
+import type { ContextualPickerProjectionService } from '../../projections/contextualPicker';
 import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from '../feedback/EvaluationFeedback';
 import { LinearBiomeEditor } from '../editor/linear/LinearBiomeEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -28,6 +29,7 @@ interface AppProps {
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
+  readonly contextualPicker: ContextualPickerProjectionService;
   readonly editorNavigation: EditorNavigation;
   readonly projectOperations: ProjectOperations;
 }
@@ -102,12 +104,14 @@ function RouteOverview({
 function RouteWorkspace({
   candidateProjection,
   catalog,
+  contextualPicker,
   navigation,
   route,
   routeEvaluation,
 }: {
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
+  readonly contextualPicker: ContextualPickerProjectionService;
   readonly navigation: RouteEditorNavigation;
   readonly route: AuthoredRoutePlan;
   readonly routeEvaluation: ProjectRouteEvaluation;
@@ -182,6 +186,7 @@ function RouteWorkspace({
           <LinearBiomeEditor
             candidateProjection={candidateProjection}
             catalog={catalog}
+            contextualPicker={contextualPicker}
             evaluation={
               activeBiomeEvaluation?.kind === 'LinearBiome' ? activeBiomeEvaluation : undefined
             }
@@ -198,6 +203,7 @@ export function App({
   candidateProjection,
   catalog,
   catalogSummary,
+  contextualPicker,
   editorNavigation,
   projectOperations,
 }: AppProps) {
@@ -269,6 +275,7 @@ export function App({
           <RouteWorkspace
             candidateProjection={candidateProjection}
             catalog={catalog}
+            contextualPicker={contextualPicker}
             navigation={activeRouteNavigation}
             route={activeRoute}
             routeEvaluation={activeRouteEvaluation}
