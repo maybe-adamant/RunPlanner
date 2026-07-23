@@ -1,5 +1,4 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
-import type { ProjectDocument } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import {
   evaluateLinearRoomTargetCandidate,
@@ -19,7 +18,7 @@ import {
   immutableQuery,
   isCandidateContextUnavailable,
   locateCandidateLinear,
-  locateLinearBiomePlan,
+  locateIndexedLinearPlan,
   requireRoute,
   unavailableCandidate,
   type PreparedCandidateContext,
@@ -27,10 +26,13 @@ import {
 
 function targetExists(
   catalog: Catalog,
-  project: ProjectDocument,
+  context: PreparedCandidateContext,
   query: RoomTargetCandidateQuery,
 ): boolean {
-  const topology = locateLinearBiomePlan(project, query).topology;
+  if (context.index.targetsByOwner.has(semanticAddressKey(query.target))) {
+    return true;
+  }
+  const topology = locateIndexedLinearPlan(context, query).topology;
   if (topology === null) {
     failCandidate(query, 'biome topology has not been started');
   }
@@ -39,9 +41,6 @@ function targetExists(
   );
   if (continuation?.kind !== 'batch') {
     failCandidate(query, 'target parent does not own an ordinary generated batch');
-  }
-  if (continuation.targets.some((candidate) => candidate.exitIndex === query.target.exitIndex)) {
-    return true;
   }
   const parent = topology.occurrences.find(
     (occurrence) => occurrence.occurrenceId === query.target.parentOccurrenceId,
@@ -99,14 +98,13 @@ function evidence(pressure: LinearForcePressureLedgerEntry): RoomTargetCandidate
 
 export function evaluateRoomTargetCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: RoomTargetCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RoomTargetCandidateQuery;
-  const authoredTargetExists = targetExists(catalog, project, stableQuery);
+  const authoredTargetExists = targetExists(catalog, context, stableQuery);
   assertCandidateExists(catalog, stableQuery);
-  const route = requireRoute(context.projectEvaluation.routes, stableQuery);
+  const route = requireRoute(context, stableQuery);
   const biome = locateCandidateLinear(context, stableQuery);
   if (isCandidateContextUnavailable(biome)) {
     return unavailableCandidate(stableQuery, biome);
@@ -146,11 +144,11 @@ export function evaluateRoomTargetCandidate(
 
 export function evaluateStartRoomCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
+  context: PreparedCandidateContext,
   query: StartRoomCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as StartRoomCandidateQuery;
-  const plan = locateLinearBiomePlan(project, stableQuery);
+  const plan = locateIndexedLinearPlan(context, stableQuery);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
   if (layout?.kind !== 'LinearBiome' || layout.start.kind !== 'authoredStart') {
     failCandidate(stableQuery, `${plan.biomeKey} has no authored start candidate domain`);

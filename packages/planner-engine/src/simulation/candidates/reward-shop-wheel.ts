@@ -27,10 +27,11 @@ import {
   failCandidate,
   immutableQuery,
   isCandidateContextUnavailable,
-  locateBiomePlan,
   locateCandidateBiome,
   locateCandidateLinear,
-  locateLinearBiomePlan,
+  locateIndexedBiome,
+  locateIndexedOccurrence,
+  locateIndexedLinearPlan,
   unavailableCandidate,
   type CandidateContextUnavailable,
   type CandidateHubBiomeEvaluation,
@@ -142,12 +143,11 @@ function simulationFindings(evaluation: CandidateLinearBiomeEvaluation) {
 
 export function evaluateBatchRewardStoreCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: BatchRewardStoreCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as BatchRewardStoreCandidateQuery;
-  const plan = locateLinearBiomePlan(project, stableQuery);
+  const plan = locateIndexedLinearPlan(context, stableQuery);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
   if (
     layout?.kind !== 'LinearBiome' ||
@@ -305,8 +305,8 @@ export function evaluateRewardCandidate(
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as
     IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery;
-  locateBiomePlan(project, stableQuery);
-  const baseline = locateCandidateBiome(project, context, stableQuery);
+  locateIndexedBiome(context, stableQuery);
+  const baseline = locateCandidateBiome(context, stableQuery);
   if (isCandidateContextUnavailable(baseline)) {
     return unavailableCandidate(stableQuery, baseline);
   }
@@ -314,7 +314,7 @@ export function evaluateRewardCandidate(
     return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
   }
   const proposal = applyCandidateCommand(catalog, project, stableQuery, rewardCommand(stableQuery));
-  const biome = evaluateCandidateBiome(catalog, project, proposal, context, stableQuery);
+  const biome = evaluateCandidateBiome(catalog, proposal, context, stableQuery);
   if (isCandidateContextUnavailable(biome)) {
     return unavailableCandidate(stableQuery, biome);
   }
@@ -355,7 +355,7 @@ export function evaluateRewardCandidate(
 
 function requireShipOccurrence(
   catalog: Catalog,
-  project: ProjectDocument,
+  context: PreparedCandidateContext,
   query:
     | RewardWheelOfferCandidateQuery
     | RewardWheelOfferCountCandidateQuery
@@ -371,11 +371,12 @@ function requireShipOccurrence(
         occurrenceId: (query.kind === 'rewardWheelOffer' ? query.offer : query.wheel).occurrenceId,
       },
 ) {
-  const plan = locateLinearBiomePlan(project, query);
-  const occurrence = plan.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === occurrenceAddress.occurrenceId,
-  );
-  if (occurrence?.state.kind !== 'shipCombat') {
+  const occurrence = locateIndexedOccurrence(
+    context,
+    query,
+    occurrenceAddress.occurrenceId,
+  ).occurrence;
+  if (occurrence.state.kind !== 'shipCombat') {
     failCandidate(query, 'semantic owner is not a ShipCombat room');
   }
   const room = catalog.rooms.byKey[occurrence.gameName];
@@ -388,7 +389,7 @@ function requireShipOccurrence(
 
 function requireRewardWheel(
   catalog: Catalog,
-  project: ProjectDocument,
+  context: PreparedCandidateContext,
   query:
     | RewardWheelOfferCandidateQuery
     | RewardWheelOfferCountCandidateQuery
@@ -399,7 +400,7 @@ function requireRewardWheel(
   readonly wheel: RewardWheelState;
 } {
   const address = query.kind === 'rewardWheelOffer' ? query.offer : query.wheel;
-  const ship = requireShipOccurrence(catalog, project, query);
+  const ship = requireShipOccurrence(catalog, context, query);
   const descriptor = ship.profile.phases.find(
     (phase) => phase.offerPoint?.key === address.wheelKey,
   )?.offerPoint;
@@ -451,7 +452,7 @@ function evaluateLinearMutation(
     return coverageNotReached(query, baseline);
   }
   const proposal = applyCandidateCommand(catalog, project, query, command);
-  const evaluation = evaluateCandidateBiome(catalog, project, proposal, context, query);
+  const evaluation = evaluateCandidateBiome(catalog, proposal, context, query);
   if (isCandidateContextUnavailable(evaluation)) {
     return evaluation;
   }
@@ -468,7 +469,7 @@ export function evaluateShipEncounterCountCandidate(
   query: ShipEncounterCountCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as ShipEncounterCountCandidateQuery;
-  requireShipOccurrence(catalog, project, stableQuery);
+  requireShipOccurrence(catalog, context, stableQuery);
   const evaluation = evaluateLinearMutation(catalog, project, context, stableQuery, {
     kind: 'ReplaceShipEncounterCount',
     occurrence: stableQuery.occurrence,
@@ -516,7 +517,7 @@ export function evaluateRewardWheelOfferCountCandidate(
   query: RewardWheelOfferCountCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RewardWheelOfferCountCandidateQuery;
-  const { descriptor } = requireRewardWheel(catalog, project, stableQuery);
+  const { descriptor } = requireRewardWheel(catalog, context, stableQuery);
   const evaluation = evaluateLinearMutation(catalog, project, context, stableQuery, {
     kind: 'ReplaceRewardWheelOfferCount',
     wheel: stableQuery.wheel,
@@ -552,7 +553,7 @@ export function evaluateRewardWheelStoreCandidate(
   query: RewardWheelStoreCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RewardWheelStoreCandidateQuery;
-  const { descriptor } = requireRewardWheel(catalog, project, stableQuery);
+  const { descriptor } = requireRewardWheel(catalog, context, stableQuery);
   const evaluation = evaluateLinearMutation(catalog, project, context, stableQuery, {
     kind: 'ReplaceRewardWheelStore',
     wheel: stableQuery.wheel,
@@ -587,7 +588,7 @@ export function evaluateRewardWheelOfferCandidate(
   query: RewardWheelOfferCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RewardWheelOfferCandidateQuery;
-  requireRewardWheel(catalog, project, stableQuery);
+  requireRewardWheel(catalog, context, stableQuery);
   const evaluation = evaluateLinearMutation(catalog, project, context, stableQuery, {
     kind: 'ReplaceRewardWheelOffer',
     offer: stableQuery.offer,
@@ -622,7 +623,7 @@ export function evaluateRewardWheelPickedCandidate(
   query: RewardWheelPickedCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RewardWheelPickedCandidateQuery;
-  const { wheel } = requireRewardWheel(catalog, project, stableQuery);
+  const { wheel } = requireRewardWheel(catalog, context, stableQuery);
   const evaluation = evaluateLinearMutation(catalog, project, context, stableQuery, {
     kind: 'ReplaceRewardWheelPicked',
     wheel: stableQuery.wheel,
@@ -660,8 +661,8 @@ export function evaluateShopPurchaseCandidate(
   query: ShopPurchaseCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as ShopPurchaseCandidateQuery;
-  locateBiomePlan(project, stableQuery);
-  const baseline = locateCandidateBiome(project, context, stableQuery);
+  locateIndexedBiome(context, stableQuery);
+  const baseline = locateCandidateBiome(context, stableQuery);
   if (isCandidateContextUnavailable(baseline)) {
     return unavailableCandidate(stableQuery, baseline);
   }
@@ -679,7 +680,7 @@ export function evaluateShopPurchaseCandidate(
     purchase: stableQuery.purchase,
     purchased: stableQuery.purchased,
   });
-  const biome = evaluateCandidateBiome(catalog, project, proposal, context, stableQuery);
+  const biome = evaluateCandidateBiome(catalog, proposal, context, stableQuery);
   if (isCandidateContextUnavailable(biome)) {
     return unavailableCandidate(stableQuery, biome);
   }

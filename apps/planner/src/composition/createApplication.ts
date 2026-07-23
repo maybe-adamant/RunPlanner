@@ -1,5 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProject, type CandidateEvaluationEvent } from '@run-planner/engine/simulation';
 import { summarizeCatalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectDocument } from '@run-planner/engine/authored-project';
 
@@ -28,7 +28,15 @@ export interface CreateApplicationOptions {
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly autosaveScheduler?: AutosaveScheduler;
   readonly profileFile?: ProfileFileAdapter;
+  readonly observeEvaluationWork?: (event: ApplicationEvaluationEvent) => void;
 }
+
+export type ApplicationEvaluationEvent =
+  | CandidateEvaluationEvent
+  | {
+      readonly kind: 'projectEvaluation';
+      readonly project: ProjectDocument;
+    };
 
 export function createApplication(options: CreateApplicationOptions = {}) {
   if ((options.autosaveRecovery === undefined) !== (options.autosaveScheduler === undefined)) {
@@ -43,11 +51,18 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     if (existing !== undefined) {
       return existing;
     }
+    options.observeEvaluationWork?.(Object.freeze({ kind: 'projectEvaluation', project }));
     const evaluation = simulateProject(catalog, project);
     evaluationCache.set(project, evaluation);
     return evaluation;
   };
-  const candidateProjection = createCandidateProjectionService(catalog, evaluateProject);
+  const candidateProjection = createCandidateProjectionService(
+    catalog,
+    evaluateProject,
+    options.observeEvaluationWork === undefined
+      ? {}
+      : { observeCandidateEvaluation: options.observeEvaluationWork },
+  );
   const contextualOptions = createContextualOptionResolver(catalog);
   const contextualPicker = createContextualPickerProjection(contextualOptions);
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);

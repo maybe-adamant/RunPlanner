@@ -15,7 +15,7 @@ import {
   immutableQuery,
   isCandidateContextUnavailable,
   locateCandidateLinear,
-  locateLinearBiomePlan,
+  locateIndexedLinearPlan,
   unavailableCandidate,
   type PreparedCandidateContext,
 } from './context';
@@ -27,13 +27,13 @@ export function evaluateBiomeFieldCandidate(
   query: BiomeFieldCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as BiomeFieldCandidateQuery;
-  locateLinearBiomePlan(project, stableQuery);
+  locateIndexedLinearPlan(context, stableQuery);
   const proposal = applyCandidateCommand(catalog, project, stableQuery, {
     kind: 'ReplaceBiomeField',
     field: stableQuery.field,
     value: stableQuery.value,
   });
-  const biome = evaluateCandidateBiome(catalog, project, proposal, context, stableQuery);
+  const biome = evaluateCandidateBiome(catalog, proposal, context, stableQuery);
   if (isCandidateContextUnavailable(biome)) {
     return unavailableCandidate(stableQuery, biome);
   }
@@ -52,7 +52,6 @@ export function evaluateBiomeFieldCandidate(
 
 export function evaluateFieldsCageOutcomeCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: FieldsCageOutcomeCandidateQuery,
 ): ProjectCandidateEvaluation {
@@ -60,7 +59,7 @@ export function evaluateFieldsCageOutcomeCandidate(
   if (stableQuery.cageOutcome !== 'min' && stableQuery.cageOutcome !== 'max') {
     failCandidate(stableQuery, `unknown Fields cage outcome ${String(stableQuery.cageOutcome)}`);
   }
-  const plan = locateLinearBiomePlan(project, stableQuery);
+  const plan = locateIndexedLinearPlan(context, stableQuery);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
   const continuation = plan.topology?.continuations.find(
     (candidate) =>

@@ -1,6 +1,8 @@
 export {
   createPreparedProjectCandidateEvaluator,
+  createPreparedProjectCandidateSession,
   createProjectCandidateEvaluator,
+  createProjectCandidateSession,
   evaluateProjectCandidate,
   evaluateProjectCandidates,
 } from './dispatch';
@@ -41,6 +43,9 @@ export {
   type LocalRewardCandidateQuery,
   type ProjectCandidateEvaluation,
   type ProjectCandidateEvaluator,
+  type ProjectCandidateSession,
+  type CandidateEvaluationEvent,
+  type ProjectCandidateSessionOptions,
   type ProjectCandidateQuery,
   type RewardCandidateEvidence,
   type RewardCandidateExclusionEvidence,

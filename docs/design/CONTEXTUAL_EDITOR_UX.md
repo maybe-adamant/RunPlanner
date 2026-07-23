@@ -15,7 +15,8 @@ This document owns contextual selector behavior. `EDITOR_MODEL.md` remains the
 broader authority for editor ownership, topology projection, findings,
 persistence, and undo/redo. `STRUCTURED_EDITOR_WORKSPACE.md` owns the route rail,
 layout-specific biome structure, inspector, and final placement of these
-controls.
+controls. `CANDIDATE_EVALUATION_MODEL.md` owns candidate-session preparation,
+domain evaluation, and replay scope below this presentation policy.
 
 ## Scope
 

@@ -1891,6 +1891,114 @@ Gate:
 - N's board remains one joint generation region and does not acquire a false
   slot-order evaluation prefix.
 
+### Candidate-System Refactor Gate
+
+Phase 7 pauses here before Commit 11. The architecture and replay contracts are
+defined by `../design/CANDIDATE_EVALUATION_MODEL.md`. The refactor lands through
+the following reviewed slices.
+
+#### Refactor Slice 1: Session Boundary and Measurement
+
+Deliver:
+
+- one prepared candidate session bound to an exact immutable
+  `ProjectDocument` and its published `ProjectEvaluation`;
+- stable route, biome, occurrence, target, and semantic-owner indexes;
+- the existing scalar candidate API preserved through a compatibility adapter;
+- instrumentation for the representative G product-loop and dense reward
+  domains that distinguishes project rebuilds from addressed-biome candidate
+  replay.
+
+Gate:
+
+- the candidate session consumes the exact Redux-published evaluation;
+- current candidate support, evidence, and finding fixtures remain unchanged;
+- measurements count replay work as well as wall-clock duration.
+
+#### Refactor Slice 2: Reward Producer Domains
+
+Deliver:
+
+- typed reward-producer frontiers captured before each covered offer or atomic
+  offer group during selected reward evaluation;
+- complete reward-domain evaluation from one prepared producer context;
+- sequential peers, unordered groups, bags, latent branches, Boon sources,
+  Devotion pairs, shops, and selected-invalid repair through the existing
+  reward authorities;
+- removal of full addressed-biome replay from ordinary reward and shop-offer
+  domains.
+
+Gate:
+
+- all 72 complete Devotion pairs reuse one producer frontier;
+- reward-domain evaluation applies no temporary project command and performs no
+  addressed-biome rebuild;
+- selected-plan and candidate support agree for the same exact offer.
+
+#### Refactor Slice 3: Room and Direct-Ledger Domains
+
+Deliver:
+
+- one prepared room-generation context per target owner;
+- complete room-domain assessment without repeated owner lookup or
+  target-generation map construction;
+- indexed start-room, batch-store, and Fields support ledgers;
+- exact force, requirement, cap, compatibility, counter, and reward-history
+  evidence retained.
+
+Gate:
+
+- every room option for one target shares one pre-generation context;
+- room replacement support remains independent of retained downstream repair.
+
+#### Refactor Slice 4: Room-Local Lifecycle Domains
+
+Deliver:
+
+- scoped occurrence-lifecycle evaluation for O encounter count, reward wheels,
+  shop purchases, and other room-local candidate families;
+- unchanged lifecycle timing and acquisition ordering;
+- full-biome fallback retained only for explicitly documented broad fields.
+
+Gate:
+
+- local room controls do not rebuild unrelated earlier or later rooms;
+- scalar compatibility results and domain results remain semantically
+  identical.
+
+#### Refactor Slice 5: Hub Regions
+
+Deliver:
+
+- prepared N joint-board, visit, and parent-local side-room contexts;
+- membership, visit, side generation, and entered-order evaluation at their
+  declared region boundaries;
+- unchanged atomic Hub board and ordered visit semantics.
+
+Gate:
+
+- no candidate path invents a slot-order Hub prefix;
+- N reward and structural candidates retain selected-plan parity.
+
+#### Refactor Slice 6: Structured Workspace Consumption and Closure
+
+Deliver:
+
+- structured workspace bound to the project candidate session;
+- its lazy contextual resolver as the primary React candidate contact;
+- removal of direct render-time candidate requests from the replaced editor
+  path;
+- comparable reruns of the isolated G product-loop benchmark and complete
+  suite;
+- removal of temporary timeout headroom when measurements justify it.
+
+Gate:
+
+- one project simulation occurs per authored revision;
+- ordinary reward domains perform zero full addressed-biome candidate replays;
+- interactive candidate work is proportional to the focused owner and domain;
+- Phase 7 Commit 11 may resume.
+
 ### Commit 11: Linear Spine and Focused Inspector
 
 Deliver:

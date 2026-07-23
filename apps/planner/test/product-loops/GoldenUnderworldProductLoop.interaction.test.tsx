@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createApplication,
+  type ApplicationEvaluationEvent,
   type PlannerApplication,
 } from '../../src/composition/createApplication';
 import { createCandidateProjectionService } from '../../src/projections/candidateProjection';
@@ -493,9 +494,13 @@ describe('golden Underworld product loop', () => {
   // Temporary headroom until the post-Phase-7 candidate-system refactor removes
   // repeated full-project simulation from interactive candidate evaluation.
   it('navigates, authors, undoes, and redoes G after a validated F prefix', async () => {
-    const application = createApplication();
+    const evaluationWork: ApplicationEvaluationEvent[] = [];
+    const application = createApplication({
+      observeEvaluationWork: (event) => evaluationWork.push(event),
+    });
     const { user } = renderPlannerForInteraction({ application });
     await authorGoldenF(user, application);
+    evaluationWork.length = 0;
     await user.click(screen.getByRole('button', { name: 'Route' }));
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '2');
     const gFinding = currentEvaluation(application).findings.find(
@@ -533,6 +538,14 @@ describe('golden Underworld product loop', () => {
     await user.click(screen.getByRole('button', { name: 'Redo' }));
     expect(currentProject(application)).toBe(started);
     expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
+
+    const projectEvaluations = evaluationWork.filter((event) => event.kind === 'projectEvaluation');
+    expect(projectEvaluations.length).toBeGreaterThan(0);
+    expect(new Set(projectEvaluations.map((event) => event.project)).size).toBe(
+      projectEvaluations.length,
+    );
+    expect(evaluationWork.some((event) => event.kind === 'queryBatch')).toBe(true);
+    expect(evaluationWork.filter((event) => event.kind === 'biomeReplay')).toEqual([]);
   }, 60_000);
 
   it('renders and edits the maximum-width G preboss fork through the shared editor', async () => {

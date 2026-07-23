@@ -133,20 +133,23 @@ authority and should be referenced rather than copied elsewhere.
     — persistence, topology ownership, identity, and semantic commands.
 18. [`docs/design/SIMULATION_AND_VALIDATION.md`](docs/design/SIMULATION_AND_VALIDATION.md)
     — materialization, history, validation, feedback, and simulation.
-19. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) — editor
+19. [`docs/design/CANDIDATE_EVALUATION_MODEL.md`](docs/design/CANDIDATE_EVALUATION_MODEL.md)
+    — project-bound candidate sessions, decision contexts, replay horizons,
+    and the candidate-system refactor.
+20. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) — editor
     projection, navigation, persistence UX, and interaction ownership.
-20. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md)
+21. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md)
     — contextual room/reward selection and compact picker behavior.
-21. [`docs/design/STRUCTURED_EDITOR_WORKSPACE.md`](docs/design/STRUCTURED_EDITOR_WORKSPACE.md)
+22. [`docs/design/STRUCTURED_EDITOR_WORKSPACE.md`](docs/design/STRUCTURED_EDITOR_WORKSPACE.md)
     — route rail, layout-specific biome structure, focused inspector, coverage,
     and repair presentation.
-22. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
+23. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
     — future execution artifact and runtime conformance loop.
-23. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md)
+24. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md)
     — forward delivery sequence and acceptance gates.
-24. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md)
+25. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md)
     — inherited evidence disposition and port verification.
-25. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
+26. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
     — completed delivery history; not design authority.
 
 ## Source Evidence

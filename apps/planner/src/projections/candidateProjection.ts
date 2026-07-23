@@ -1,5 +1,6 @@
 import {
-  createPreparedProjectCandidateEvaluator,
+  createPreparedProjectCandidateSession,
+  type CandidateEvaluationEvent,
   type ProjectCandidateEvaluation,
   type ProjectCandidateEvaluator,
   type ProjectCandidateQuery,
@@ -56,7 +57,38 @@ export interface CandidateOptionProjection<T> {
   readonly evaluation: ProjectCandidateEvaluation;
 }
 
+export interface CandidateProjectionSession {
+  readonly project: ProjectDocument;
+  readonly evaluation: ProjectEvaluation;
+  readonly prepareRewardDomain: (
+    rewardTypes: readonly string[],
+    selected: ResolvedRewardOffer,
+  ) => PreparedRewardDomain;
+  readonly countedRewardTypes: (
+    owner: CountedRewardCandidateOwner,
+    binding: CountedRewardBinding,
+    selectedRewardType: string,
+  ) => readonly string[];
+  readonly rewardDomain: (
+    owner: RewardCandidateOwner,
+    rewardTypes: readonly string[],
+    selected: ResolvedRewardOffer,
+  ) => Promise<ProjectedRewardDomain>;
+  readonly startRooms: (
+    owner: BiomeAddress | OccurrenceAddress,
+    rooms: readonly RoomDeclaration[],
+  ) => readonly CandidateOptionProjection<RoomDeclaration>[];
+  readonly roomTargets: (
+    target: TargetAddress,
+    rooms: readonly RoomDeclaration[],
+  ) => readonly CandidateOptionProjection<RoomDeclaration>[];
+}
+
 export interface CandidateProjectionService {
+  readonly bind: (
+    project: ProjectDocument,
+    evaluation: ProjectEvaluation,
+  ) => CandidateProjectionSession;
   readonly prepareRewardDomain: (
     rewardTypes: readonly string[],
     selected: ResolvedRewardOffer,
@@ -166,6 +198,11 @@ export interface CandidateProjectionService {
   ) => readonly CandidateOptionProjection<boolean>[];
 }
 
+export interface CandidateProjectionServiceOptions {
+  readonly observeCandidateEvaluation?: (event: CandidateEvaluationEvent) => void;
+  readonly yieldToHost?: () => Promise<void>;
+}
+
 function offerKey(value: ResolvedRewardOffer): string {
   return JSON.stringify(value);
 }
@@ -195,36 +232,46 @@ function rewardQueries(
 }
 
 function requireProjectCache(
-  cache: WeakMap<ProjectDocument, ProjectCandidateProjectionCache>,
+  cache: WeakMap<ProjectDocument, WeakMap<ProjectEvaluation, ProjectCandidateProjectionCache>>,
   project: ProjectDocument,
+  evaluation: ProjectEvaluation,
   catalog: Catalog,
-  evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
+  options: CandidateProjectionServiceOptions,
 ): ProjectCandidateProjectionCache {
-  let projectCache = cache.get(project);
+  let byEvaluation = cache.get(project);
+  if (byEvaluation === undefined) {
+    byEvaluation = new WeakMap();
+    cache.set(project, byEvaluation);
+  }
+  let projectCache = byEvaluation.get(evaluation);
   if (projectCache === undefined) {
     projectCache = {
-      evaluator: createPreparedProjectCandidateEvaluator(
+      evaluator: createPreparedProjectCandidateSession(
         catalog,
         project,
-        evaluateProject(project),
+        evaluation,
+        options.observeCandidateEvaluation === undefined
+          ? {}
+          : { observe: options.observeCandidateEvaluation },
       ),
       options: new Map(),
     };
-    cache.set(project, projectCache);
+    byEvaluation.set(evaluation, projectCache);
   }
   return projectCache;
 }
 
 function projectOptions<T>(
-  cache: WeakMap<ProjectDocument, ProjectCandidateProjectionCache>,
+  cache: WeakMap<ProjectDocument, WeakMap<ProjectEvaluation, ProjectCandidateProjectionCache>>,
   project: ProjectDocument,
+  evaluation: ProjectEvaluation,
   key: string,
   values: readonly T[],
   queries: readonly ProjectCandidateQuery[],
   catalog: Catalog,
-  evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
+  options: CandidateProjectionServiceOptions,
 ): readonly CandidateOptionProjection<T>[] {
-  const projectCache = requireProjectCache(cache, project, catalog, evaluateProject);
+  const projectCache = requireProjectCache(cache, project, evaluation, catalog, options);
   const existing = projectCache.options.get(key);
   if (existing !== undefined) {
     return existing as readonly CandidateOptionProjection<T>[];
@@ -249,21 +296,22 @@ interface ProjectCandidateProjectionCache {
 }
 
 async function projectOptionsCooperatively<T>(
-  cache: WeakMap<ProjectDocument, ProjectCandidateProjectionCache>,
+  cache: WeakMap<ProjectDocument, WeakMap<ProjectEvaluation, ProjectCandidateProjectionCache>>,
   project: ProjectDocument,
+  evaluation: ProjectEvaluation,
   key: string,
   values: readonly T[],
   queries: readonly ProjectCandidateQuery[],
   catalog: Catalog,
-  evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
+  options: CandidateProjectionServiceOptions,
   yieldToHost: () => Promise<void>,
 ): Promise<readonly CandidateOptionProjection<T>[]> {
-  const cached = cache.get(project)?.options.get(key);
+  const cached = cache.get(project)?.get(evaluation)?.options.get(key);
   if (cached !== undefined) {
     return cached as readonly CandidateOptionProjection<T>[];
   }
   await yieldToHost();
-  const projectCache = requireProjectCache(cache, project, catalog, evaluateProject);
+  const projectCache = requireProjectCache(cache, project, evaluation, catalog, options);
   const existing = projectCache.options.get(key);
   if (existing !== undefined) {
     return existing as readonly CandidateOptionProjection<T>[];
@@ -391,18 +439,38 @@ function countedRewardTypeDomain(
 export function createCandidateProjectionService(
   catalog: Catalog,
   evaluateProject: (project: ProjectDocument) => ProjectEvaluation,
-  yieldToHost: () => Promise<void> = () =>
-    new Promise((resolve) => {
-      setTimeout(resolve, 0);
-    }),
+  options: CandidateProjectionServiceOptions = {},
 ): CandidateProjectionService {
-  const cache = new WeakMap<ProjectDocument, ProjectCandidateProjectionCache>();
+  const yieldToHost =
+    options.yieldToHost ??
+    (() =>
+      new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      }));
+  const cache = new WeakMap<
+    ProjectDocument,
+    WeakMap<ProjectEvaluation, ProjectCandidateProjectionCache>
+  >();
+  const legacyEvaluationCache = new WeakMap<ProjectDocument, ProjectEvaluation>();
   const rewardTypeDomainCache = new WeakMap<ProjectDocument, Map<string, readonly string[]>>();
   const preparedRewardDomainCache = new Map<string, PreparedRewardDomain>();
   const pendingRewardDomains = new WeakMap<
     ProjectDocument,
-    Map<string, Promise<ProjectedRewardDomain>>
+    WeakMap<ProjectEvaluation, Map<string, Promise<ProjectedRewardDomain>>>
   >();
+  const boundSessionCache = new WeakMap<
+    ProjectDocument,
+    WeakMap<ProjectEvaluation, CandidateProjectionSession>
+  >();
+  const legacyEvaluationFor = (project: ProjectDocument): ProjectEvaluation => {
+    const existing = legacyEvaluationCache.get(project);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const evaluation = evaluateProject(project);
+    legacyEvaluationCache.set(project, evaluation);
+    return evaluation;
+  };
   const prepareCachedRewardDomain = (
     rewardTypes: readonly string[],
     selected: ResolvedRewardOffer,
@@ -416,119 +484,198 @@ export function createCandidateProjectionService(
     preparedRewardDomainCache.set(key, prepared);
     return prepared;
   };
+  const countedRewardTypesFor = (
+    project: ProjectDocument,
+    owner: CountedRewardCandidateOwner,
+    binding: CountedRewardBinding,
+    selectedRewardType: string,
+  ): readonly string[] => {
+    let projectCache = rewardTypeDomainCache.get(project);
+    if (projectCache === undefined) {
+      projectCache = new Map();
+      rewardTypeDomainCache.set(project, projectCache);
+    }
+    const storeKey = resolvedCountedStoreKey(catalog, project, owner, binding);
+    const key = `reward-types:${semanticAddressKey(owner.address)}:${storeKey}:${selectedRewardType}`;
+    const existing = projectCache.get(key);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const domain = countedRewardTypeDomain(catalog, binding, storeKey, selectedRewardType);
+    projectCache.set(key, domain);
+    return domain;
+  };
+  const rewardDomainFor = (
+    project: ProjectDocument,
+    evaluation: ProjectEvaluation,
+    owner: RewardCandidateOwner,
+    rewardTypes: readonly string[],
+    selected: ResolvedRewardOffer,
+  ): Promise<ProjectedRewardDomain> => {
+    const prepared = prepareCachedRewardDomain(rewardTypes, selected);
+    const offers = rewardDomainOffers(prepared);
+    const candidateKey = `reward-domain:${semanticAddressKey(owner.address)}:${domainKey(offers.map(offerKey))}`;
+    const pendingKey = `${candidateKey}:selected:${offerKey(selected)}`;
+    let byEvaluation = pendingRewardDomains.get(project);
+    if (byEvaluation === undefined) {
+      byEvaluation = new WeakMap();
+      pendingRewardDomains.set(project, byEvaluation);
+    }
+    let projectPending = byEvaluation.get(evaluation);
+    if (projectPending === undefined) {
+      projectPending = new Map();
+      byEvaluation.set(evaluation, projectPending);
+    }
+    const existing = projectPending.get(pendingKey);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const pending = projectOptionsCooperatively(
+      cache,
+      project,
+      evaluation,
+      candidateKey,
+      offers,
+      rewardQueries(owner, offers),
+      catalog,
+      options,
+      yieldToHost,
+    )
+      .then((candidates) => projectRewardDomain(prepared, candidates))
+      .finally(() => {
+        projectPending?.delete(pendingKey);
+      });
+    projectPending.set(pendingKey, pending);
+    return pending;
+  };
+  const startRoomsFor = (
+    project: ProjectDocument,
+    evaluation: ProjectEvaluation,
+    owner: BiomeAddress | OccurrenceAddress,
+    rooms: readonly RoomDeclaration[],
+  ) =>
+    projectOptions(
+      cache,
+      project,
+      evaluation,
+      `start:${semanticAddressKey(owner)}:${domainKey(rooms.map((room) => room.gameName))}`,
+      rooms,
+      rooms.map((room) => ({ kind: 'startRoom', owner, gameName: room.gameName })),
+      catalog,
+      options,
+    );
+  const roomTargetsFor = (
+    project: ProjectDocument,
+    evaluation: ProjectEvaluation,
+    target: TargetAddress,
+    rooms: readonly RoomDeclaration[],
+  ) =>
+    projectOptions(
+      cache,
+      project,
+      evaluation,
+      `target:${semanticAddressKey(target)}:${domainKey(rooms.map((room) => room.gameName))}`,
+      rooms,
+      rooms.map((room) => ({ kind: 'roomTarget', target, gameName: room.gameName })),
+      catalog,
+      options,
+    );
+  const bind = (
+    project: ProjectDocument,
+    evaluation: ProjectEvaluation,
+  ): CandidateProjectionSession => {
+    let byEvaluation = boundSessionCache.get(project);
+    if (byEvaluation === undefined) {
+      byEvaluation = new WeakMap();
+      boundSessionCache.set(project, byEvaluation);
+    }
+    const existing = byEvaluation.get(evaluation);
+    if (existing !== undefined) {
+      return existing;
+    }
+    requireProjectCache(cache, project, evaluation, catalog, options);
+    const session = Object.freeze({
+      project,
+      evaluation,
+      prepareRewardDomain: prepareCachedRewardDomain,
+      countedRewardTypes: (
+        owner: CountedRewardCandidateOwner,
+        binding: CountedRewardBinding,
+        selectedRewardType: string,
+      ) => countedRewardTypesFor(project, owner, binding, selectedRewardType),
+      rewardDomain: (
+        owner: RewardCandidateOwner,
+        rewardTypes: readonly string[],
+        selected: ResolvedRewardOffer,
+      ) => rewardDomainFor(project, evaluation, owner, rewardTypes, selected),
+      startRooms: (owner: BiomeAddress | OccurrenceAddress, rooms: readonly RoomDeclaration[]) =>
+        startRoomsFor(project, evaluation, owner, rooms),
+      roomTargets: (target: TargetAddress, rooms: readonly RoomDeclaration[]) =>
+        roomTargetsFor(project, evaluation, target, rooms),
+    });
+    byEvaluation.set(evaluation, session);
+    return session;
+  };
   const service: CandidateProjectionService = {
+    bind,
     prepareRewardDomain: prepareCachedRewardDomain,
-    countedRewardTypes: (project, owner, binding, selectedRewardType) => {
-      let projectCache = rewardTypeDomainCache.get(project);
-      if (projectCache === undefined) {
-        projectCache = new Map();
-        rewardTypeDomainCache.set(project, projectCache);
-      }
-      const storeKey = resolvedCountedStoreKey(catalog, project, owner, binding);
-      const key = `reward-types:${semanticAddressKey(owner.address)}:${storeKey}:${selectedRewardType}`;
-      const existing = projectCache.get(key);
-      if (existing !== undefined) {
-        return existing;
-      }
-      const domain = countedRewardTypeDomain(catalog, binding, storeKey, selectedRewardType);
-      projectCache.set(key, domain);
-      return domain;
-    },
-    rewardDomain: (project, owner, rewardTypes, selected) => {
-      const prepared = prepareCachedRewardDomain(rewardTypes, selected);
-      const offers = rewardDomainOffers(prepared);
-      const candidateKey = `reward-domain:${semanticAddressKey(owner.address)}:${domainKey(offers.map(offerKey))}`;
-      const pendingKey = `${candidateKey}:selected:${offerKey(selected)}`;
-      let projectPending = pendingRewardDomains.get(project);
-      if (projectPending === undefined) {
-        projectPending = new Map();
-        pendingRewardDomains.set(project, projectPending);
-      }
-      const existing = projectPending.get(pendingKey);
-      if (existing !== undefined) {
-        return existing;
-      }
-      const pending = projectOptionsCooperatively(
-        cache,
-        project,
-        candidateKey,
-        offers,
-        rewardQueries(owner, offers),
-        catalog,
-        evaluateProject,
-        yieldToHost,
-      )
-        .then((candidates) => projectRewardDomain(prepared, candidates))
-        .finally(() => {
-          projectPending?.delete(pendingKey);
-        });
-      projectPending.set(pendingKey, pending);
-      return pending;
-    },
+    countedRewardTypes: (project, owner, binding, selectedRewardType) =>
+      countedRewardTypesFor(project, owner, binding, selectedRewardType),
+    rewardDomain: (project, owner, rewardTypes, selected) =>
+      rewardDomainFor(project, legacyEvaluationFor(project), owner, rewardTypes, selected),
     biomeFields: (project, field, values) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `biome-field:${semanticAddressKey(field)}:${domainKey(values.map(fieldValueKey))}`,
         values,
         values.map((value) => ({ kind: 'biomeField', field, value })),
         catalog,
-        evaluateProject,
+        options,
       ),
     startRooms: (project, owner, rooms) =>
-      projectOptions(
-        cache,
-        project,
-        `start:${semanticAddressKey(owner)}:${domainKey(rooms.map((room) => room.gameName))}`,
-        rooms,
-        rooms.map((room) => ({ kind: 'startRoom', owner, gameName: room.gameName })),
-        catalog,
-        evaluateProject,
-      ),
+      startRoomsFor(project, legacyEvaluationFor(project), owner, rooms),
     roomTargets: (project, target, rooms) =>
-      projectOptions(
-        cache,
-        project,
-        `target:${semanticAddressKey(target)}:${domainKey(rooms.map((room) => room.gameName))}`,
-        rooms,
-        rooms.map((room) => ({ kind: 'roomTarget', target, gameName: room.gameName })),
-        catalog,
-        evaluateProject,
-      ),
+      roomTargetsFor(project, legacyEvaluationFor(project), target, rooms),
     batchRewardStores: (project, rewardStore, storeKeys) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `store:${semanticAddressKey(rewardStore)}:${domainKey(storeKeys)}`,
         storeKeys,
         storeKeys.map((storeKey) => ({ kind: 'batchRewardStore', rewardStore, storeKey })),
         catalog,
-        evaluateProject,
+        options,
       ),
     incomingRewards: (project, reward, offers) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `incoming:${semanticAddressKey(reward)}:${domainKey(offers.map(offerKey))}`,
         offers,
         offers.map((value) => ({ kind: 'incomingReward', reward, value })),
         catalog,
-        evaluateProject,
+        options,
       ),
     localRewards: (project, reward, offers) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `local:${semanticAddressKey(reward)}:${domainKey(offers.map(offerKey))}`,
         offers,
         offers.map((value) => ({ kind: 'localReward', reward, value })),
         catalog,
-        evaluateProject,
+        options,
       ),
     fieldsCageOutcomes: (project, continuation, outcomes) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `fields:${semanticAddressKey(continuation)}:${domainKey(outcomes)}`,
         outcomes,
         outcomes.map((cageOutcome) => ({
@@ -537,12 +684,13 @@ export function createCandidateProjectionService(
           cageOutcome,
         })),
         catalog,
-        evaluateProject,
+        options,
       ),
     shipEncounterCounts: (project, occurrence, values) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `ship-encounters:${semanticAddressKey(occurrence)}:${domainKey(values.map(String))}`,
         values,
         values.map((encounterCount) => ({
@@ -551,42 +699,46 @@ export function createCandidateProjectionService(
           encounterCount,
         })),
         catalog,
-        evaluateProject,
+        options,
       ),
     rewardWheelOfferCounts: (project, wheel, values) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `wheel-count:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
         values,
         values.map((offerCount) => ({ kind: 'rewardWheelOfferCount', wheel, offerCount })),
         catalog,
-        evaluateProject,
+        options,
       ),
     rewardWheelStores: (project, wheel, storeKeys) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `wheel-store:${semanticAddressKey(wheel)}:${domainKey(storeKeys)}`,
         storeKeys,
         storeKeys.map((storeKey) => ({ kind: 'rewardWheelStore', wheel, storeKey })),
         catalog,
-        evaluateProject,
+        options,
       ),
     rewardWheelOffers: (project, offer, values) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `wheel-offer:${semanticAddressKey(offer)}:${domainKey(values.map(offerKey))}`,
         values,
         values.map((value) => ({ kind: 'rewardWheelOffer', offer, value })),
         catalog,
-        evaluateProject,
+        options,
       ),
     rewardWheelPicks: (project, wheel, values) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `wheel-pick:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
         values,
         values.map((pickedOfferIndex) => ({
@@ -595,42 +747,46 @@ export function createCandidateProjectionService(
           pickedOfferIndex,
         })),
         catalog,
-        evaluateProject,
+        options,
       ),
     hubSlots: (project, slot, occurrenceId, values) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `hub-slot:${semanticAddressKey(slot)}:${occurrenceId}:${domainKey(values.map(String))}`,
         values,
         values.map((open) => ({ kind: 'hubSlot', slot, open, occurrenceId })),
         catalog,
-        evaluateProject,
+        options,
       ),
     hubVisits: (project, visit, hubSlotKeys) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `hub-visit:${semanticAddressKey(visit)}:${domainKey(hubSlotKeys)}`,
         hubSlotKeys,
         hubSlotKeys.map((hubSlotKey) => ({ kind: 'hubVisit', visit, hubSlotKey })),
         catalog,
-        evaluateProject,
+        options,
       ),
     sideRoomGenerations: (project, sideRoom, values) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `side-generation:${semanticAddressKey(sideRoom)}:${domainKey(values)}`,
         values,
         values.map((generation) => ({ kind: 'sideRoomGeneration', sideRoom, generation })),
         catalog,
-        evaluateProject,
+        options,
       ),
     sideRoomEntryOrders: (project, group, values) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `side-entry-order:${semanticAddressKey(group)}:${domainKey(values.map((value) => JSON.stringify(value)))}`,
         values,
         values.map((enteredSlotKeys) => ({
@@ -639,27 +795,29 @@ export function createCandidateProjectionService(
           enteredSlotKeys,
         })),
         catalog,
-        evaluateProject,
+        options,
       ),
     shopOffers: (project, offer, values) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `shop-offer:${semanticAddressKey(offer)}:${domainKey(values.map(offerKey))}`,
         values,
         values.map((value) => ({ kind: 'shopOffer', offer, value })),
         catalog,
-        evaluateProject,
+        options,
       ),
     shopPurchases: (project, purchase, values) =>
       projectOptions(
         cache,
         project,
+        legacyEvaluationFor(project),
         `shop-purchase:${semanticAddressKey(purchase)}:${domainKey(values.map(String))}`,
         values,
         values.map((purchased) => ({ kind: 'shopPurchase', purchase, purchased })),
         catalog,
-        evaluateProject,
+        options,
       ),
   };
   return Object.freeze(service);
