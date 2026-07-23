@@ -11,12 +11,7 @@ export {
 } from './completeness';
 export {
   CandidateEvaluationContractError,
-  createPreparedProjectCandidateEvaluator,
   createPreparedProjectCandidateSession,
-  createProjectCandidateEvaluator,
-  createProjectCandidateSession,
-  evaluateProjectCandidate,
-  evaluateProjectCandidates,
   type CandidateContextUnavailableReason,
   type CandidateContextUnavailableEvidence,
   type CandidateSupport,

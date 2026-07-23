@@ -21,7 +21,7 @@ import {
   type ApplicationEvaluationEvent,
   type PlannerApplication,
 } from '../../src/composition/createApplication';
-import { createCandidateProjectionService } from '../../src/projections/candidateProjection';
+import { createCandidateSessionFactory } from '../../src/projections/candidateProjection';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
@@ -777,16 +777,13 @@ describe('golden Underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toEqual(authored);
 
-    const candidateProjection = createCandidateProjectionService(application.catalog, (project) =>
-      simulateProject(application.catalog, project),
-    );
+    const candidates = createCandidateSessionFactory(application.catalog).bind(authored, evaluated);
     const firstHContinuation = hPlan.topology.continuations[0];
     if (firstHContinuation?.kind !== 'batch') {
       throw new Error('Golden H first decision is missing');
     }
     const hCandidateStarted = performance.now();
-    const projectedHOutcomes = candidateProjection.fieldsCageOutcomes(
-      authored,
+    const projectedHOutcomes = candidates.fieldsCageOutcomes(
       createContinuationAddress(
         createBiomeAddress('Underworld', 'H'),
         firstHContinuation.parentOccurrenceId,
@@ -799,8 +796,7 @@ describe('golden Underworld product loop', () => {
       projectedHOutcomes.every((candidate) => candidate.evaluation.context === 'evaluated'),
     ).toBe(true);
     const iCandidateStarted = performance.now();
-    const projectedIFields = candidateProjection.biomeFields(
-      authored,
+    const projectedIFields = candidates.biomeFields(
       createBiomeFieldAddress(createBiomeAddress('Underworld', 'I'), 'maxNonGoalRewards'),
       [3, 4, 5, 6],
     );
@@ -815,8 +811,7 @@ describe('golden Underworld product loop', () => {
     }
     const combatRooms = selectRoomsForCategory(application.catalog, 'G', 'Combat');
     const candidateStarted = performance.now();
-    const projectedCandidates = candidateProjection.roomTargets(
-      authored,
+    const projectedCandidates = candidates.roomTargets(
       createTargetAddress(
         createBiomeAddress('Underworld', 'G'),
         firstGContinuation.parentOccurrenceId,

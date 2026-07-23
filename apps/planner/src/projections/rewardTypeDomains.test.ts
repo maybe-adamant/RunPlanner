@@ -26,7 +26,7 @@ import {
   qBiome,
   qOccurrenceIds,
 } from '../../test/fixtures/surfaceProject';
-import { createCandidateProjectionService } from './candidateProjection';
+import { createCandidateSessionFactory } from './candidateProjection';
 
 function requirePlan(
   project: ProjectDocument,
@@ -75,8 +75,9 @@ function requireIncomingOffer(occurrence: RoomOccurrence): ResolvedRewardOffer {
 describe('producer-resolved reward type domains', () => {
   it('resolves F, G, H, and I producers without a binding-union fallback', () => {
     const project = createGoldenFGHIProject(catalog);
-    const service = createCandidateProjectionService(catalog, (candidate) =>
-      simulateProject(catalog, candidate),
+    const service = createCandidateSessionFactory(catalog).bind(
+      project,
+      simulateProject(catalog, project),
     );
 
     for (const [biomeKey, gameName] of [
@@ -85,7 +86,6 @@ describe('producer-resolved reward type domains', () => {
     ] as const) {
       const occurrence = requireOccurrence(project, 'Underworld', biomeKey, gameName);
       const domain = service.countedRewardTypes(
-        project,
         {
           kind: 'incomingReward',
           address: createIncomingRewardAddress(
@@ -109,7 +109,6 @@ describe('producer-resolved reward type domains', () => {
       throw new Error('H cage fixture is missing');
     }
     const hDomain = service.countedRewardTypes(
-      project,
       {
         kind: 'localReward',
         address: createLocalRewardAddress(
@@ -128,7 +127,6 @@ describe('producer-resolved reward type domains', () => {
 
     const iOccurrence = requireOccurrence(project, 'Underworld', 'I', 'I_Combat03');
     const iDomain = service.countedRewardTypes(
-      project,
       {
         kind: 'incomingReward',
         address: createIncomingRewardAddress(
@@ -146,13 +144,13 @@ describe('producer-resolved reward type domains', () => {
 
   it('resolves N, O, P, and Q producer families and keeps shop groups separate', () => {
     const project = createRepresentativeNOPQProject();
-    const service = createCandidateProjectionService(catalog, (candidate) =>
-      simulateProject(catalog, candidate),
+    const service = createCandidateSessionFactory(catalog).bind(
+      project,
+      simulateProject(catalog, project),
     );
 
     const nOccurrence = requireOccurrence(project, 'Surface', 'N', 'N_Combat05');
     const nDomain = service.countedRewardTypes(
-      project,
       {
         kind: 'incomingReward',
         address: createIncomingRewardAddress(nBiome, nOccurrence.occurrenceId),
@@ -181,7 +179,6 @@ describe('producer-resolved reward type domains', () => {
       throw new Error('N side-door reward producer is missing');
     }
     const nSideDomain = service.countedRewardTypes(
-      project,
       {
         kind: 'localReward',
         address: createLocalRewardAddress(
@@ -211,7 +208,6 @@ describe('producer-resolved reward type domains', () => {
     }
     const oWheelState = oOccurrence.state.wheels.wheel1;
     const oDomain = service.countedRewardTypes(
-      project,
       {
         kind: 'rewardWheelOffer',
         address: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
@@ -228,7 +224,6 @@ describe('producer-resolved reward type domains', () => {
     ] as const) {
       const occurrence = requireOccurrence(project, 'Surface', biomeKey, gameName);
       const domain = service.countedRewardTypes(
-        project,
         {
           kind: 'incomingReward',
           address: createIncomingRewardAddress(
@@ -251,9 +246,9 @@ describe('producer-resolved reward type domains', () => {
   });
 
   it('projects sibling conflicts for representative sequential and unordered producers', async () => {
-    const service = createCandidateProjectionService(catalog, (candidate) =>
-      simulateProject(catalog, candidate),
-    );
+    const factory = createCandidateSessionFactory(catalog, {
+      yieldToHost: () => Promise.resolve(),
+    });
     const zeus: ResolvedRewardOffer = {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
@@ -298,12 +293,13 @@ describe('producer-resolved reward type domains', () => {
         reward: createIncomingRewardAddress(biome, secondId),
         value: zeus,
       });
-      const domain = await service.rewardDomain(
-        authored,
-        { kind: 'incomingReward', address: createIncomingRewardAddress(biome, secondId) },
-        ['Boon'],
-        zeus,
-      );
+      const domain = await factory
+        .bind(authored, simulateProject(catalog, authored))
+        .rewardDomain(
+          { kind: 'incomingReward', address: createIncomingRewardAddress(biome, secondId) },
+          ['Boon'],
+          zeus,
+        );
       expectExclusion(domain.types[0]?.offerEvaluation, 'sibling');
       const zeusSource =
         domain.payload.kind === 'oneOf'
@@ -330,8 +326,7 @@ describe('producer-resolved reward type domains', () => {
       reward: createLocalRewardAddress(hBiome, hOccurrence.occurrenceId, 'cages', 'cage2'),
       value: maxHealth,
     });
-    const hDomain = await service.rewardDomain(
-      hProject,
+    const hDomain = await factory.bind(hProject, simulateProject(catalog, hProject)).rewardDomain(
       {
         kind: 'localReward',
         address: createLocalRewardAddress(hBiome, hOccurrence.occurrenceId, 'cages', 'cage2'),
@@ -352,8 +347,7 @@ describe('producer-resolved reward type domains', () => {
       reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms', 'sideDoor2'),
       value: maxManaSmall,
     });
-    const nDomain = await service.rewardDomain(
-      nProject,
+    const nDomain = await factory.bind(nProject, simulateProject(catalog, nProject)).rewardDomain(
       {
         kind: 'localReward',
         address: createLocalRewardAddress(
@@ -380,8 +374,7 @@ describe('producer-resolved reward type domains', () => {
         value: maxHealth,
       });
     }
-    const oDomain = await service.rewardDomain(
-      oProject,
+    const oDomain = await factory.bind(oProject, simulateProject(catalog, oProject)).rewardDomain(
       {
         kind: 'rewardWheelOffer',
         address: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer2'),
@@ -402,8 +395,7 @@ describe('producer-resolved reward type domains', () => {
       reward: createIncomingRewardAddress(qBiome, qOccurrenceIds.firstMiniboss2),
       value: talent,
     });
-    const qDomain = await service.rewardDomain(
-      qProject,
+    const qDomain = await factory.bind(qProject, simulateProject(catalog, qProject)).rewardDomain(
       {
         kind: 'incomingReward',
         address: createIncomingRewardAddress(qBiome, qOccurrenceIds.firstMiniboss2),

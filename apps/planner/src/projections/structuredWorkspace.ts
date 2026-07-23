@@ -65,7 +65,7 @@ import { assertProjectEvaluationSource } from '@run-planner/engine/simulation';
 
 import type {
   CandidateOptionProjection,
-  CandidateProjectionService,
+  CandidateSessionFactory,
   CountedRewardCandidateOwner,
   RewardCandidateOwner,
 } from './candidateProjection';
@@ -426,7 +426,7 @@ export interface StructuredWorkspaceProjectionService {
 }
 
 export interface StructuredWorkspaceContextualServices {
-  readonly candidateProjection: CandidateProjectionService;
+  readonly candidateSessions: CandidateSessionFactory;
   readonly contextualPicker: ContextualPickerProjectionService;
   readonly rewardPicker: RewardPickerProjectionService;
 }
@@ -1759,7 +1759,7 @@ function createWorkspaceContextualResolver(
   roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>,
   rewardControls: ReadonlyMap<string, WorkspaceRewardControl>,
 ): WorkspaceContextualResolver {
-  const candidates = services.candidateProjection.bind(project, evaluation);
+  const candidates = services.candidateSessions.bind(project, evaluation);
   const roomCache = new WeakMap<WorkspaceRoomPickerControl, WorkspaceRoomInteraction>();
   const rewardCache = new WeakMap<WorkspaceRewardControl, WorkspaceRewardInteraction>();
   const generatedRoomControls = new Map<string, WorkspaceRoomPickerControl>();

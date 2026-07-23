@@ -13,7 +13,11 @@ import { simulateProject, type CandidateEvaluationEvent } from '@run-planner/eng
 import { describe, expect, it } from 'vitest';
 
 import { createGoldenFGHIProject, targetOccurrenceId } from '../../test/fixtures/underworldProject';
-import { createCandidateProjectionService, presentCandidateLabel } from './candidateProjection';
+import {
+  createCandidateSessionFactory,
+  presentCandidateLabel,
+  type CandidateSessionFactoryOptions,
+} from './candidateProjection';
 import { selectRoomsForCategory } from './roomSelectorProjection';
 
 const biome = createBiomeAddress('Underworld', 'F');
@@ -25,11 +29,18 @@ function project() {
   });
 }
 
+function candidatesFor(
+  document: ReturnType<typeof project>,
+  options: CandidateSessionFactoryOptions = {},
+) {
+  return createCandidateSessionFactory(catalog, options).bind(
+    document,
+    simulateProject(catalog, document),
+  );
+}
+
 describe('candidate application projection', () => {
   it('aggregates complete reward witnesses while retaining an invalid selected source', async () => {
-    const service = createCandidateProjectionService(catalog, (candidate) =>
-      simulateProject(catalog, candidate),
-    );
     let document = createGoldenFGHIProject(catalog);
     const first = targetOccurrenceId('F', 2, 1);
     const second = targetOccurrenceId('F', 2, 2);
@@ -48,8 +59,7 @@ describe('candidate application projection', () => {
       value: zeus,
     });
 
-    const domain = await service.rewardDomain(
-      document,
+    const domain = await candidatesFor(document).rewardDomain(
       { kind: 'incomingReward', address: createIncomingRewardAddress(biome, second) },
       ['Boon'],
       zeus,
@@ -79,16 +89,12 @@ describe('candidate application projection', () => {
 
   it('yields before and between relational reward assessments', async () => {
     let yieldCount = 0;
-    const service = createCandidateProjectionService(
-      catalog,
-      (candidate) => simulateProject(catalog, candidate),
-      {
-        yieldToHost: async () => {
-          yieldCount += 1;
-        },
-      },
-    );
     const document = createGoldenFGHIProject(catalog);
+    const service = candidatesFor(document, {
+      yieldToHost: async () => {
+        yieldCount += 1;
+      },
+    });
     const occurrenceId = targetOccurrenceId('F', 2, 1);
     const selected = {
       rewardType: 'Boon',
@@ -96,7 +102,6 @@ describe('candidate application projection', () => {
     };
 
     await service.rewardDomain(
-      document,
       {
         kind: 'incomingReward',
         address: createIncomingRewardAddress(biome, occurrenceId),
@@ -110,15 +115,11 @@ describe('candidate application projection', () => {
 
   it('reuses one producer frontier across the dense Devotion domain', async () => {
     const events: CandidateEvaluationEvent[] = [];
-    const service = createCandidateProjectionService(
-      catalog,
-      (candidate) => simulateProject(catalog, candidate),
-      {
-        observeCandidateEvaluation: (event) => events.push(event),
-        yieldToHost: () => Promise.resolve(),
-      },
-    );
     const document = createGoldenFGHIProject(catalog);
+    const service = candidatesFor(document, {
+      observeCandidateEvaluation: (event) => events.push(event),
+      yieldToHost: () => Promise.resolve(),
+    });
     const occurrenceId = targetOccurrenceId('F', 2, 1);
     const selected = {
       rewardType: 'Devotion',
@@ -130,7 +131,6 @@ describe('candidate application projection', () => {
     };
 
     await service.rewardDomain(
-      document,
       {
         kind: 'incomingReward',
         address: createIncomingRewardAddress(biome, occurrenceId),
@@ -144,33 +144,27 @@ describe('candidate application projection', () => {
   });
 
   it('caches stable option structures by immutable project and semantic owner', () => {
-    let evaluationCount = 0;
-    const service = createCandidateProjectionService(catalog, (project) => {
-      evaluationCount += 1;
-      return simulateProject(catalog, project);
-    });
     const document = project();
+    const evaluation = simulateProject(catalog, document);
+    const factory = createCandidateSessionFactory(catalog);
+    const service = factory.bind(document, evaluation);
     const layout = catalog.biomeLayouts.byKey.F;
     if (layout?.kind !== 'LinearBiome' || layout.start.kind !== 'authoredStart') {
       throw new Error('F authored start domain is missing');
     }
     const rooms = layout.start.roomGameNames.map((gameName) => catalog.rooms.byKey[gameName]!);
 
-    const first = service.startRooms(document, biome, rooms);
-    const second = service.startRooms(document, biome, rooms);
+    const first = service.startRooms(biome, rooms);
+    const second = service.startRooms(biome, rooms);
 
     expect(second).toBe(first);
-    expect(evaluationCount).toBe(1);
+    expect(factory.bind(document, evaluation)).toBe(service);
     expect(first.map((option) => option.value.gameName)).toEqual(layout.start.roomGameNames);
     expect(first.every((option) => option.evaluation.context === 'evaluated')).toBe(true);
   });
 
   it('binds projection work to the exact published project evaluation', () => {
-    let fallbackEvaluationCount = 0;
-    const service = createCandidateProjectionService(catalog, () => {
-      fallbackEvaluationCount += 1;
-      throw new Error('bound candidate projection must not rebuild project evaluation');
-    });
+    const factory = createCandidateSessionFactory(catalog);
     const document = project();
     const evaluation = simulateProject(catalog, document);
     const layout = catalog.biomeLayouts.byKey.F;
@@ -179,24 +173,18 @@ describe('candidate application projection', () => {
     }
     const rooms = layout.start.roomGameNames.map((gameName) => catalog.rooms.byKey[gameName]!);
 
-    const first = service.bind(document, evaluation);
-    const second = service.bind(document, evaluation);
+    const first = factory.bind(document, evaluation);
+    const second = factory.bind(document, evaluation);
     const options = first.startRooms(biome, rooms);
 
     expect(second).toBe(first);
     expect(first.project).toBe(document);
     expect(first.evaluation).toBe(evaluation);
     expect(options.map((option) => option.value.gameName)).toEqual(layout.start.roomGameNames);
-    expect(fallbackEvaluationCount).toBe(0);
   });
 
   it('evaluates the addressed target in an incomplete but covered biome prefix', () => {
     const events: CandidateEvaluationEvent[] = [];
-    const service = createCandidateProjectionService(
-      catalog,
-      (project) => simulateProject(catalog, project),
-      { observeCandidateEvaluation: (event) => events.push(event) },
-    );
     const startId = createOccurrenceId('candidate-projection-start');
     let document = applyProjectCommand(project(), catalog, {
       kind: 'CreateStart',
@@ -215,7 +203,9 @@ describe('candidate application projection', () => {
       gameName: 'F_Combat02',
     });
     const rooms = selectRoomsForCategory(catalog, 'F', 'Combat');
-    const options = service.roomTargets(document, createTargetAddress(biome, startId, 1), rooms);
+    const options = candidatesFor(document, {
+      observeCandidateEvaluation: (event) => events.push(event),
+    }).roomTargets(createTargetAddress(biome, startId, 1), rooms);
 
     expect(options).toHaveLength(22);
     expect(options.every((option) => option.evaluation.context === 'evaluated')).toBe(true);
@@ -229,9 +219,6 @@ describe('candidate application projection', () => {
   });
 
   it('retains a blank physical-exit domain as unassessed until its target is authored', () => {
-    const service = createCandidateProjectionService(catalog, (project) =>
-      simulateProject(catalog, project),
-    );
     const startId = createOccurrenceId('candidate-blank-start');
     let document = applyProjectCommand(project(), catalog, {
       kind: 'CreateStart',
@@ -243,8 +230,7 @@ describe('candidate application projection', () => {
       kind: 'CreateBatch',
       continuation: createContinuationAddress(biome, startId),
     });
-    const options = service.roomTargets(
-      document,
+    const options = candidatesFor(document).roomTargets(
       createTargetAddress(biome, startId, 1),
       selectRoomsForCategory(catalog, 'F', 'Combat'),
     );
@@ -262,21 +248,15 @@ describe('candidate application projection', () => {
   });
 
   it('uses one common label decoration for context-impossible authored values', () => {
-    const service = createCandidateProjectionService(catalog, (project) =>
-      simulateProject(catalog, project),
-    );
     const document = project();
     const room = catalog.rooms.byKey.F_Combat01!;
-    const option = service.startRooms(document, biome, [room])[0];
+    const option = candidatesFor(document).startRooms(biome, [room])[0];
 
     expect(option?.evaluation).toMatchObject({ context: 'evaluated', support: 'impossible' });
     expect(presentCandidateLabel(room.label, option)).toBe('Combat 01 — unavailable');
   });
 
   it('projects the catalog-authored G start without a biome-specific application rule', () => {
-    const service = createCandidateProjectionService(catalog, (project) =>
-      simulateProject(catalog, project),
-    );
     const document = createProjectDocument(catalog, {
       projectId: 'g-candidate-projection',
       name: 'G Candidate Projection',
@@ -288,17 +268,18 @@ describe('candidate application projection', () => {
     }
     const rooms = layout.start.roomGameNames.map((gameName) => catalog.rooms.byKey[gameName]!);
 
-    const options = service.startRooms(document, createBiomeAddress('Underworld', 'G'), rooms);
+    const options = candidatesFor(document).startRooms(
+      createBiomeAddress('Underworld', 'G'),
+      rooms,
+    );
 
     expect(options.map((option) => option.value.gameName)).toEqual(['G_Intro']);
     expect(options[0]?.evaluation).toMatchObject({ context: 'evaluated', support: 'forced' });
   });
 
-  it('resolves the exact batch store while retaining a now-invalid authored reward', () => {
-    let evaluationCount = 0;
-    const service = createCandidateProjectionService(catalog, (project) => {
-      evaluationCount += 1;
-      return simulateProject(catalog, project);
+  it('resolves the exact batch store while retaining a now-invalid authored reward', async () => {
+    const factory = createCandidateSessionFactory(catalog, {
+      yieldToHost: () => Promise.resolve(),
     });
     const startId = createOccurrenceId('reward-domain-start');
     const targetId = createOccurrenceId('reward-domain-target');
@@ -329,8 +310,8 @@ describe('candidate application projection', () => {
       kind: 'incomingReward' as const,
       address: createIncomingRewardAddress(biome, targetId),
     };
-    const runDomain = service.countedRewardTypes(
-      document,
+    const runSession = factory.bind(document, simulateProject(catalog, document));
+    const runDomain = runSession.countedRewardTypes(
       owner,
       binding,
       occurrence.state.offer.rewardType,
@@ -338,8 +319,7 @@ describe('candidate application projection', () => {
 
     expect(runDomain).toContain('MaxHealthDrop');
     expect(runDomain).not.toContain('MetaCurrencyDrop');
-    expect(service.countedRewardTypes(document, owner, binding, 'Boon')).toBe(runDomain);
-    expect(evaluationCount).toBe(0);
+    expect(runSession.countedRewardTypes(owner, binding, 'Boon')).toBe(runDomain);
 
     const metaDocument = applyProjectCommand(document, catalog, {
       kind: 'ReplaceBatchRewardStore',
@@ -352,8 +332,8 @@ describe('candidate application projection', () => {
     if (retainedOccurrence?.state.kind !== 'counted') {
       throw new Error('F_Combat02 retained reward fixture is missing');
     }
-    const metaDomain = service.countedRewardTypes(
-      metaDocument,
+    const metaSession = factory.bind(metaDocument, simulateProject(catalog, metaDocument));
+    const metaDomain = metaSession.countedRewardTypes(
       owner,
       binding,
       retainedOccurrence.state.offer.rewardType,
@@ -363,14 +343,14 @@ describe('candidate application projection', () => {
     expect(metaDomain).toContain('MetaCurrencyDrop');
     expect(metaDomain).not.toContain('MaxHealthDrop');
     expect(metaDomain.at(-1)).toBe('Boon');
-    expect(evaluationCount).toBe(0);
-    const retainedCandidate = service
-      .incomingRewards(metaDocument, owner.address, [retainedOccurrence.state.offer])
-      .at(0);
-    expect(retainedCandidate?.evaluation).toMatchObject({
+    const retainedDomain = await metaSession.rewardDomain(
+      owner,
+      [retainedOccurrence.state.offer.rewardType],
+      retainedOccurrence.state.offer,
+    );
+    expect(retainedDomain.types[0]?.offerEvaluation).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
     });
-    expect(evaluationCount).toBe(1);
   });
 });

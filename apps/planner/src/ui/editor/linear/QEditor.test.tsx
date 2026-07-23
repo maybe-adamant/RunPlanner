@@ -72,20 +72,20 @@ function renderQ(project = createRepresentativeNOPQProject()) {
     evaluateProject,
     initialProject: project,
   });
-  const { candidateProjection, structuredWorkspace } =
-    createStructuredWorkspaceTestServices(evaluateProject);
+  const { candidateSessions, structuredWorkspace } = createStructuredWorkspaceTestServices();
+  const candidates = candidateSessions.bind(project, selectProjectEvaluation(store.getState()));
   const user = userEvent.setup();
   const view = render(
     <Provider store={store}>
       <QEditorHarness structuredWorkspace={structuredWorkspace} />
     </Provider>,
   );
-  return { candidateProjection, project, store, user, ...view };
+  return { candidates, project, store, user, ...view };
 }
 
 describe('Q candidates and editor projection', () => {
   it('uses the declaration-owned pool for every staged room candidate', async () => {
-    const { candidateProjection, project, user } = renderQ();
+    const { candidates, user } = renderQ();
     const firstFork = catalog.rooms.byKey.Q_Combat03;
     const ordinary = catalog.rooms.byKey.Q_Combat01;
     if (firstFork === undefined || ordinary === undefined) {
@@ -93,11 +93,10 @@ describe('Q candidates and editor projection', () => {
     }
 
     expect(
-      candidateProjection.roomTargets(
-        project,
-        createTargetAddress(qBiome, qOccurrenceIds.foyer, 1),
-        [firstFork, ordinary],
-      ),
+      candidates.roomTargets(createTargetAddress(qBiome, qOccurrenceIds.foyer, 1), [
+        firstFork,
+        ordinary,
+      ]),
     ).toMatchObject([
       {
         value: { gameName: 'Q_Combat03' },

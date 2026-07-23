@@ -26,7 +26,6 @@ import {
 import {
   CandidateEvaluationContractError,
   createPreparedProjectCandidateSession,
-  evaluateProjectCandidate,
   evaluateLinearBiome,
   evaluateHubBiome,
   simulateProject,
@@ -38,6 +37,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
+import { bindTestCandidateSession } from '../../candidateSession';
 const nBiome = createBiomeAddress('Surface', 'N');
 const oBiome = createBiomeAddress('Surface', 'O');
 const oIds = {
@@ -443,11 +443,13 @@ describe('selected O validation', () => {
       }),
     );
     expect(
-      evaluateProjectCandidate(catalog, document, {
-        kind: 'rewardWheelOffer',
-        offer: createRewardWheelOfferAddress(oBiome, oIds.combat04, 'wheel1', 'offer1'),
-        value: { rewardType: 'SpellDrop' },
-      }),
+      bindTestCandidateSession(catalog, document).evaluate([
+        {
+          kind: 'rewardWheelOffer',
+          offer: createRewardWheelOfferAddress(oBiome, oIds.combat04, 'wheel1', 'offer1'),
+          value: { rewardType: 'SpellDrop' },
+        },
+      ])[0],
     ).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
@@ -521,22 +523,26 @@ describe('selected O validation', () => {
       encounterCount: 3,
     });
     expect(
-      evaluateProjectCandidate(catalog, invalid, {
-        kind: 'shipEncounterCount',
-        occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
-        encounterCount: 3,
-      }),
+      bindTestCandidateSession(catalog, invalid).evaluate([
+        {
+          kind: 'shipEncounterCount',
+          occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
+          encounterCount: 3,
+        },
+      ])[0],
     ).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
       findings: [{ code: 'encounterCountUnavailable' }],
     });
     expect(() =>
-      evaluateProjectCandidate(catalog, document, {
-        kind: 'shipEncounterCount',
-        occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
-        encounterCount: 4 as 2,
-      }),
+      bindTestCandidateSession(catalog, document).evaluate([
+        {
+          kind: 'shipEncounterCount',
+          occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
+          encounterCount: 4 as 2,
+        },
+      ]),
     ).toThrow(
       new CandidateEvaluationContractError(
         {
@@ -577,11 +583,13 @@ describe('selected O validation', () => {
   it('evaluates an eligible dormant second wheel inside the owning room lifecycle', () => {
     const document = validProject();
     const occurrence = createOccurrenceAddress(oBiome, oIds.combat07);
-    const candidate = evaluateProjectCandidate(catalog, document, {
-      kind: 'shipEncounterCount',
-      occurrence,
-      encounterCount: 3,
-    });
+    const candidate = bindTestCandidateSession(catalog, document).evaluate([
+      {
+        kind: 'shipEncounterCount',
+        occurrence,
+        encounterCount: 3,
+      },
+    ])[0];
     const selected = applyProjectCommand(document, catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
@@ -609,11 +617,13 @@ describe('selected O validation', () => {
       encounterCount: 3,
     });
     const wheel = createRewardWheelAddress(oBiome, oIds.combat07, 'wheel1');
-    const candidate = evaluateProjectCandidate(catalog, document, {
-      kind: 'rewardWheelStore',
-      wheel,
-      storeKey: 'MetaProgress',
-    });
+    const candidate = bindTestCandidateSession(catalog, document).evaluate([
+      {
+        kind: 'rewardWheelStore',
+        wheel,
+        storeKey: 'MetaProgress',
+      },
+    ])[0];
     const selected = applyProjectCommand(document, catalog, {
       kind: 'ReplaceRewardWheelStore',
       wheel,

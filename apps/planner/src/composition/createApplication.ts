@@ -3,7 +3,7 @@ import { simulateProject, type CandidateEvaluationEvent } from '@run-planner/eng
 import { summarizeCatalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectDocument } from '@run-planner/engine/authored-project';
 
-import { createCandidateProjectionService } from '../projections/candidateProjection';
+import { createCandidateSessionFactory } from '../projections/candidateProjection';
 import { createContextualOptionResolver } from '../projections/contextualOptions';
 import { createContextualPickerProjection } from '../projections/contextualPicker';
 import { createRewardPickerProjection } from '../projections/rewardPicker';
@@ -56,9 +56,8 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     evaluationCache.set(project, evaluation);
     return evaluation;
   };
-  const candidateProjection = createCandidateProjectionService(
+  const candidateSessions = createCandidateSessionFactory(
     catalog,
-    evaluateProject,
     options.observeEvaluationWork === undefined
       ? {}
       : { observeCandidateEvaluation: options.observeEvaluationWork },
@@ -67,7 +66,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const contextualPicker = createContextualPickerProjection(contextualOptions);
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
   const structuredWorkspace = createStructuredWorkspaceProjection(catalog, {
-    candidateProjection,
+    candidateSessions,
     contextualPicker,
     rewardPicker,
   });
@@ -98,12 +97,8 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   return {
     catalog,
     catalogSummary: summarizeCatalog(catalog),
-    candidateProjection,
-    contextualOptions,
-    contextualPicker,
     editorNavigation,
     projectOperations,
-    rewardPicker,
     store,
     structuredWorkspace,
     dispose(): void {

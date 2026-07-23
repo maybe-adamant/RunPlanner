@@ -25,10 +25,7 @@ import {
   oOccurrenceIds,
 } from '../../test/fixtures/surfaceProject';
 import { createGoldenFGHIProject, targetOccurrenceId } from '../../test/fixtures/underworldProject';
-import {
-  createCandidateProjectionService,
-  type CandidateProjectionService,
-} from './candidateProjection';
+import { createCandidateSessionFactory, type CandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
@@ -38,15 +35,13 @@ import {
   type WorkspaceLinearBiome,
 } from './structuredWorkspace';
 
-const evaluateProject = (project: ReturnType<typeof createProjectDocument>) =>
-  simulateProject(catalog, project);
-const candidateProjection = createCandidateProjectionService(catalog, evaluateProject, {
+const candidateSessions = createCandidateSessionFactory(catalog, {
   yieldToHost: () => Promise.resolve(),
 });
 const contextualPicker = createContextualPickerProjection(createContextualOptionResolver(catalog));
 const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
 const projection = createStructuredWorkspaceProjection(catalog, {
-  candidateProjection,
+  candidateSessions,
   contextualPicker,
   rewardPicker,
 });
@@ -476,8 +471,8 @@ describe('structured workspace projection', () => {
     };
     const evaluateTrackedProject = (project: ReturnType<typeof createProjectDocument>) =>
       simulateProject(trackedCatalog, project);
-    const baseCandidates = createCandidateProjectionService(trackedCatalog, evaluateTrackedProject);
-    const trackedCandidates: CandidateProjectionService = {
+    const baseCandidates = createCandidateSessionFactory(trackedCatalog);
+    const trackedCandidates: CandidateSessionFactory = {
       ...baseCandidates,
       bind(project, evaluation) {
         const session = baseCandidates.bind(project, evaluation);
@@ -496,7 +491,7 @@ describe('structured workspace projection', () => {
       createContextualOptionResolver(trackedCatalog),
     );
     const trackedProjection = createStructuredWorkspaceProjection(trackedCatalog, {
-      candidateProjection: trackedCandidates,
+      candidateSessions: trackedCandidates,
       contextualPicker: trackedContextualPicker,
       rewardPicker: createRewardPickerProjection(trackedCatalog, trackedContextualPicker),
     });

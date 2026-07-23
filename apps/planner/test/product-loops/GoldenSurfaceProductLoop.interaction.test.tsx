@@ -16,6 +16,7 @@ import {
   createApplication,
   type PlannerApplication,
 } from '../../src/composition/createApplication';
+import { createCandidateSessionFactory } from '../../src/projections/candidateProjection';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
@@ -166,6 +167,7 @@ describe('N/O/P/Q Surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'City of Ephyra' }));
 
     const evaluated = application.store.getState().projectWorkspace.evaluation;
+    const candidates = createCandidateSessionFactory(application.catalog).bind(authored, evaluated);
     expect(evaluated.status).toBe('valid');
     expect(evaluated.findings).toEqual([]);
     expect(evaluated.summary).toMatchObject({
@@ -209,8 +211,7 @@ describe('N/O/P/Q Surface product loop', () => {
     expect(document.body.textContent).not.toContain('editor-o-');
     assertAccessibleControlSurface();
 
-    const encounterCandidates = application.candidateProjection.shipEncounterCounts(
-      authored,
+    const encounterCandidates = candidates.shipEncounterCounts(
       createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
       [2, 3],
     );
@@ -231,8 +232,7 @@ describe('N/O/P/Q Surface product loop', () => {
     assertAccessibleControlSurface();
 
     expect(
-      application.candidateProjection.batchRewardStores(
-        authored,
+      candidates.batchRewardStores(
         createBatchRewardStoreAddress(pBiome, pOccurrenceId('P_Combat03', 1, 1)),
         ['RunProgress', 'MetaProgress'],
       ),
@@ -258,11 +258,10 @@ describe('N/O/P/Q Surface product loop', () => {
       throw new Error('Q candidate rooms are missing');
     }
     expect(
-      application.candidateProjection.roomTargets(
-        authored,
-        createTargetAddress(qBiome, qOccurrenceIds.intro, 1),
-        [qFoyer, qOrdinary],
-      ),
+      candidates.roomTargets(createTargetAddress(qBiome, qOccurrenceIds.intro, 1), [
+        qFoyer,
+        qOrdinary,
+      ]),
     ).toMatchObject([
       { value: { gameName: 'Q_Combat10' }, evaluation: { support: 'possible' } },
       { value: { gameName: 'Q_Combat01' }, evaluation: { support: 'impossible' } },
@@ -271,8 +270,7 @@ describe('N/O/P/Q Surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'City of Ephyra' }));
 
     const candidateStarted = performance.now();
-    const minibossCandidates = application.candidateProjection.hubSlots(
-      authored,
+    const minibossCandidates = candidates.hubSlots(
       createHubSlotAddress(nBiome, 'miniBoss02'),
       nOccurrenceId('candidate-miniBoss02'),
       [false, true],
