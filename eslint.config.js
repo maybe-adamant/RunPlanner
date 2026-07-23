@@ -40,6 +40,52 @@ export default tseslint.config(
     },
   },
   {
+    files: ['apps/planner/src/ui/**/*.{ts,tsx}'],
+    ignores: ['apps/planner/src/ui/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@run-planner/engine/simulation',
+              importNames: ['createPreparedProjectCandidateSession', 'simulateProject'],
+              message:
+                'React consumes published evaluation and workspace interactions; it does not run simulation.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['**/projections/candidateProjection'],
+              importNames: ['createCandidateSessionFactory'],
+              message: 'Candidate-session construction belongs to application composition.',
+            },
+            {
+              group: ['**/projections/contextualOptions'],
+              importNames: ['createContextualOptionResolver'],
+              message: 'Contextual projection authority belongs behind the structured workspace.',
+            },
+            {
+              group: ['**/projections/contextualPicker'],
+              importNames: ['createContextualPickerProjection'],
+              message: 'Contextual projection authority belongs behind the structured workspace.',
+            },
+            {
+              group: ['**/projections/rewardPicker'],
+              importNames: ['createRewardPickerProjection'],
+              message: 'Reward projection authority belongs behind the structured workspace.',
+            },
+            {
+              group: ['**/projections/structuredWorkspace'],
+              importNames: ['createStructuredWorkspaceProjection'],
+              message: 'Structured-workspace construction belongs to application composition.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['packages/planner-engine/src/**/*.ts'],
     rules: {
       'no-restricted-imports': [

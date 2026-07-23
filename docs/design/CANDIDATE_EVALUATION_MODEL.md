@@ -21,32 +21,32 @@ between them:
 Candidate results are replaceable derived data. They never enter the authored
 project, profile document, autosave, undo history, or canonical game history.
 
-## Current System and Refactor Motivation
+## Current Production Shape and Refactor Motivation
 
-The current production path already avoids an eager candidate-only project
-simulation. One semantic edit, undo, or redo creates a new immutable
+One semantic edit, undo, redo, or profile replacement creates a new immutable
 `ProjectDocument` and one matching `ProjectEvaluation`. Candidate preparation
-shares that base evaluation.
+binds that exact pair and never acquires another project evaluation.
 
-The remaining cost occurs after candidate contact:
+Before the candidate refactor, the application expanded control domains into
+independent scalar queries. Reward, shop, room-lifecycle, and Hub alternatives
+could apply temporary commands and replay the complete addressed biome once per
+value. A 72-pair Devotion domain therefore repeated the same materialization,
+history walk, and selected-biome evaluation 72 times.
 
-1. the application expands one control domain into scalar candidate queries;
-2. the prepared evaluator dispatches every scalar query independently;
-3. direct candidates read existing generation or reward-support ledgers;
-4. complex candidates apply one temporary semantic command;
-5. reward, shop, room-lifecycle, and Hub alternatives may reevaluate the whole
-   addressed biome once per scalar value.
+Production now prepares one semantic context per contacted owner:
 
-The replay is scoped to the addressed biome and reuses the already-evaluated
-upstream seed; it is not normally a second full-project simulation. It is still
-too broad. A dense reward domain, including 72 complete Devotion pairs, repeats
-the same materialization, history walk, and selected-biome evaluation for every
-alternative even though all alternatives share one semantic producer and one
-pre-decision state.
+- room targets use their selected-simulation generation context;
+- rewards use typed producer frontiers;
+- O lifecycle controls use occurrence-local contexts;
+- N controls use joint-board, ordered-visit, or parent-local regions;
+- shops use joint inventory or ordered purchase contexts;
+- only explicitly broad biome fields retain a full addressed-biome fallback.
 
-Project-identity option caching avoids repeated work for the same immutable
-snapshot. It cannot help the first contact, and every semantic edit correctly
-creates a new identity and invalidates the old candidate session.
+The structured workspace owns every declaration-derived interaction domain.
+React activates one zero-argument loader through a shared adapter and cannot
+construct a candidate request. Project-identity caching avoids repeated contact
+for the same immutable snapshot; a semantic edit correctly invalidates the
+workspace and every interaction result.
 
 ## Core Decision
 
@@ -130,11 +130,10 @@ No cache crosses a `ProjectDocument` identity. A semantic edit, undo, redo,
 profile load, or new project receives a new evaluation and candidate session.
 Navigation, focus, search, and disclosure do not invalidate it.
 
-The primary API is domain-shaped rather than scalar-shaped. A scalar
-`ProjectCandidateQuery` adapter may exist only as temporary migration
-scaffolding. It must reuse the same prepared context, and it is deleted once
-all consumers have moved to the production session factory. Tests do not give
-that adapter a permanent reason to exist.
+The application API is domain-shaped rather than scalar-shaped. The former
+scalar compatibility service has been deleted. Engine fixtures bind the same
+production session factory, workspace fixtures compose the production
+structured-workspace boundary, and React fixtures activate its descriptors.
 
 ## Evaluation Strategies
 
@@ -311,13 +310,13 @@ horizons, and cache behavior without changing evaluation semantics.
 
 ## Delivery Boundary
 
-The candidate refactor lands before Phase 7 Commit 11 resumes.
-`../progress/IMPLEMENTATION_PLAN.md` owns its numbered delivery slices and
-acceptance gates. Slices 7-9 close composition access, generalize
-workspace-owned interactions, and enforce the boundary after the Slice 6
-consumption bridge.
+The candidate refactor is complete. `../progress/IMPLEMENTATION_PLAN.md`
+preserves its numbered delivery slices and acceptance gates;
+`../progress/IMPLEMENTATION_PROGRESS.md` records their completion evidence.
+Phase 7 Commit 11 may resume against the sealed workspace-interaction
+boundary.
 
-The complete refactor must establish:
+The completed refactor establishes:
 
 - one project/evaluation-bound candidate session;
 - one prepared context per contacted semantic owner;

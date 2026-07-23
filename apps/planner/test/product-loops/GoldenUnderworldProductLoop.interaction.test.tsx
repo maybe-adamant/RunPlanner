@@ -491,8 +491,6 @@ describe('golden Underworld product loop', () => {
     expect(currentProject(application)).toBe(project);
   });
 
-  // Temporary headroom until the post-Phase-7 candidate-system refactor removes
-  // repeated full-project simulation from interactive candidate evaluation.
   it('navigates, authors, undoes, and redoes G after a validated F prefix', async () => {
     const evaluationWork: ApplicationEvaluationEvent[] = [];
     const application = createApplication({
