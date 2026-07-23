@@ -1636,3 +1636,31 @@ Focused N shop and O wheel fixtures likewise record only their query batch and
 zero biome replays. The complete suite passes with 69 test files and 528 tests.
 The isolated candidate-projection file completed in 6.30 seconds wall time,
 with its ten tests spending 417 milliseconds in test bodies on 2026-07-23.
+
+Candidate-System Refactor Slice 3 is complete. Linear room generation now
+prepares one ephemeral candidate context per reached target while evaluating the
+selected room. That context retains the exact candidate pool, source and exit,
+pre-generation history view, reward-history branch, route entry count, staged
+depth policy, requirement results, force pressure, and cap ledgers. It evaluates
+every alternate game name from the same precomputed eligibility and force pool;
+creation, appearance, and same-parent creation counts are indexed once per
+target. Candidate queries no longer rebuild canonical room maps,
+target-generation views, reward-history maps, rescan count ledgers, or scan
+batches to rediscover their owner.
+
+The prepared candidate session indexes those room contexts by semantic target
+owner. It also indexes authored and blank physical target slots, batch-parent
+ownership, authored start-room domains, batch reward-store support, and Fields
+cage-outcome support. These direct domains do not rescan topology, layouts, or
+selected validation arrays for every option. Missing indexed context retains
+the existing addressed-coverage result rather than inventing support.
+
+Parity fixtures retain exact force, requirement, counter, creation, appearance,
+parent-creation, compatibility, and reward-history evidence. A focused repair
+fixture replaces an early two-exit F room candidate with one-exit
+`F_Combat01`: room-generation support remains possible from the target's
+pre-generation context while the retained second downstream exit remains
+visible as `physicalExitUnavailable`. The 22-option incomplete-prefix
+application domain evaluates as one query batch with no biome replay. The
+complete suite passes with 69 test files and 529 tests, including the existing
+Underworld and Surface product-loop responsiveness gates.

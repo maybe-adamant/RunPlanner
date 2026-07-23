@@ -170,8 +170,8 @@ export function evaluateBatchRewardStoreCandidate(
   if (isCandidateContextUnavailable(biome)) {
     return unavailableCandidate(stableQuery, biome);
   }
-  const selected = biome.rewards.storeSupport.find(
-    (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(stableQuery.rewardStore),
+  const selected = context.index.batchRewardStoresByOwner.get(
+    semanticAddressKey(stableQuery.rewardStore),
   );
   if (selected === undefined) {
     return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));

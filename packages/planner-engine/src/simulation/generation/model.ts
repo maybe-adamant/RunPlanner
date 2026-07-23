@@ -173,6 +173,11 @@ export interface LinearRoomTargetCandidateValidation {
   readonly findings: readonly SemanticFinding[];
 }
 
+export interface LinearRoomTargetCandidateContext {
+  readonly targetOrigin: TargetAddress;
+  readonly evaluateGameName: (gameName: string) => LinearRoomTargetCandidateValidation;
+}
+
 export interface HubOpenSlotConstraintSupportEntry {
   readonly origin: HubOpenSetAddress;
   readonly constraintIndex: number;

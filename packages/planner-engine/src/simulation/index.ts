@@ -146,7 +146,6 @@ export {
 export {
   evaluateHubRoomGeneration,
   evaluateLinearRoomGeneration,
-  evaluateLinearRoomTargetCandidate,
   evaluateNRoomGeneration,
   HubRoomGenerationContractError,
   LinearRoomGenerationContractError,

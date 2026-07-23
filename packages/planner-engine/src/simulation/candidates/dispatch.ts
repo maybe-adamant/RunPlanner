@@ -90,6 +90,7 @@ export function createPreparedProjectCandidateSession(
 ): ProjectCandidateSession {
   assertProjectEvaluationSource(project, projectEvaluation);
   const context: PreparedCandidateContext = prepareCandidateContext(
+    catalog,
     project,
     projectEvaluation,
     options,

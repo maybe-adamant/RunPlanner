@@ -800,6 +800,32 @@ describe('project candidate evaluation', () => {
     }
   });
 
+  it('assesses room support before retained downstream exit repair', () => {
+    const project = possibilityProject();
+    const candidate = roomCandidate(project, 1, 1, 'F_Combat01');
+    const retained = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, batchOccurrenceId(1, 1)),
+      gameName: 'F_Combat01',
+    });
+    const retainedBiome = simulateProject(catalog, retained).routes[0]?.biomes[0];
+
+    expect(candidate).toMatchObject({
+      context: 'evaluated',
+      support: 'possible',
+      findings: [],
+    });
+    expect(retainedBiome?.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'targetRoomUnavailable',
+        origin: createTargetAddress(biome, batchOccurrenceId(1, 1), 2),
+        evidence: expect.objectContaining({
+          exclusionReasons: ['physicalExitUnavailable'],
+        }),
+      }),
+    );
+  });
+
   it('keeps an already-authored impossible room assessable', () => {
     const batches = baselineBatches.map((batch, index) =>
       index === 5 ? { targets: ['F_Combat20', 'F_MiniBoss01'], pickedExitIndex: 2 } : batch,

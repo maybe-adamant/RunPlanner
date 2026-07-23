@@ -1,5 +1,6 @@
 import {
   createBiomeAddress,
+  createContinuationAddress,
   createOccurrenceAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -19,6 +20,11 @@ import type {
 } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
+import {
+  linearRoomTargetCandidateContexts,
+  type FieldsCageOutcomeSupportEntry,
+  type LinearRoomTargetCandidateContext,
+} from '../generation';
 import type {
   CompleteHubProjectEvaluation,
   CompleteLinearProjectEvaluation,
@@ -30,6 +36,7 @@ import type {
   ProjectRouteEvaluation,
 } from '../project';
 import { evaluateHubBiome, evaluateLinearBiome } from '../project';
+import type { LinearRewardStoreSupportEntry } from '../rewards';
 import type {
   BiomeFieldCandidateQuery,
   CandidateContextUnavailableReason,
@@ -439,6 +446,11 @@ export interface IndexedCandidateTarget {
   readonly target: LinearTargetReference;
 }
 
+export interface IndexedStartRoomDomain {
+  readonly biome: IndexedCandidateBiome;
+  readonly supportedGameNames: readonly string[];
+}
+
 export interface PreparedCandidateIndex {
   readonly routesByKey: ReadonlyMap<
     string,
@@ -450,9 +462,16 @@ export interface PreparedCandidateIndex {
   readonly biomesByOwner: ReadonlyMap<string, IndexedCandidateBiome>;
   readonly occurrencesByOwner: ReadonlyMap<string, IndexedCandidateOccurrence>;
   readonly targetsByOwner: ReadonlyMap<string, IndexedCandidateTarget>;
+  readonly batchTargetParentsByOwner: ReadonlySet<string>;
+  readonly targetSlotsByOwner: ReadonlySet<string>;
+  readonly roomTargetContextsByOwner: ReadonlyMap<string, LinearRoomTargetCandidateContext>;
+  readonly startRoomDomainsByOwner: ReadonlyMap<string, IndexedStartRoomDomain>;
+  readonly batchRewardStoresByOwner: ReadonlyMap<string, LinearRewardStoreSupportEntry>;
+  readonly fieldsCageOutcomesByOwner: ReadonlyMap<string, FieldsCageOutcomeSupportEntry>;
 }
 
 export function prepareCandidateContext(
+  catalog: Catalog,
   project: ProjectDocument,
   projectEvaluation: ProjectEvaluation,
   options: ProjectCandidateSessionOptions = {},
@@ -467,6 +486,12 @@ export function prepareCandidateContext(
   const biomesByOwner = new Map<string, IndexedCandidateBiome>();
   const occurrencesByOwner = new Map<string, IndexedCandidateOccurrence>();
   const targetsByOwner = new Map<string, IndexedCandidateTarget>();
+  const batchTargetParentsByOwner = new Set<string>();
+  const targetSlotsByOwner = new Set<string>();
+  const roomTargetContextsByOwner = new Map<string, LinearRoomTargetCandidateContext>();
+  const startRoomDomainsByOwner = new Map<string, IndexedStartRoomDomain>();
+  const batchRewardStoresByOwner = new Map<string, LinearRewardStoreSupportEntry>();
+  const fieldsCageOutcomesByOwner = new Map<string, FieldsCageOutcomeSupportEntry>();
 
   for (const route of project.routes) {
     const routeEvaluation = projectEvaluation.routes.find(
@@ -488,6 +513,44 @@ export function prepareCandidateContext(
         ...(evaluation === undefined ? {} : { evaluation }),
       });
       biomesByOwner.set(semanticAddressKey(biomeAddress), biome);
+      const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+      let candidateContexts: ReadonlyMap<string, LinearRoomTargetCandidateContext> | undefined;
+      if (plan.kind === 'LinearBiome') {
+        if (layout?.kind !== 'LinearBiome') {
+          throw new Error(`candidate index has no linear layout for ${plan.biomeKey}`);
+        }
+        if (layout.start.kind === 'authoredStart') {
+          const domain = Object.freeze({
+            biome,
+            supportedGameNames: layout.start.roomGameNames,
+          });
+          startRoomDomainsByOwner.set(semanticAddressKey(biomeAddress), domain);
+          if (plan.topology !== null && plan.topology.startOccurrenceId !== null) {
+            startRoomDomainsByOwner.set(
+              semanticAddressKey(
+                createOccurrenceAddress(biomeAddress, plan.topology.startOccurrenceId),
+              ),
+              domain,
+            );
+          }
+        }
+        if (evaluation !== undefined) {
+          if (evaluation.kind !== 'LinearBiome') {
+            throw new Error(`candidate index evaluation kind changed for ${plan.biomeKey}`);
+          }
+          if ('roomGeneration' in evaluation) {
+            candidateContexts = linearRoomTargetCandidateContexts(evaluation.roomGeneration);
+            for (const entry of evaluation.rewards.storeSupport) {
+              batchRewardStoresByOwner.set(semanticAddressKey(entry.origin), entry);
+            }
+            for (const entry of evaluation.roomGeneration.fieldsCageOutcomes) {
+              fieldsCageOutcomesByOwner.set(semanticAddressKey(entry.origin), entry);
+            }
+          }
+        }
+      } else if (evaluation !== undefined && evaluation.kind !== 'HubBiome') {
+        throw new Error(`candidate index evaluation kind changed for ${plan.biomeKey}`);
+      }
       if (plan.topology === null) {
         continue;
       }
@@ -503,7 +566,37 @@ export function prepareCandidateContext(
       if (plan.kind !== 'LinearBiome') {
         continue;
       }
+      if (layout?.kind !== 'LinearBiome') {
+        throw new Error(`candidate index has no linear layout for ${plan.biomeKey}`);
+      }
       for (const continuation of plan.topology.continuations) {
+        if (continuation.kind === 'batch') {
+          const parentGameName =
+            continuation.parentOccurrenceId === null
+              ? ([...layout.entries].reverse().find((entry) => entry.kind === 'fixedEntry')
+                  ?.roomGameName ??
+                (layout.start.kind === 'fixedEntry' ? layout.start.roomGameName : undefined))
+              : occurrencesById.get(continuation.parentOccurrenceId)?.gameName;
+          const parentRoom =
+            parentGameName === undefined ? undefined : catalog.rooms.byKey[parentGameName];
+          if (parentRoom === undefined) {
+            throw new Error(
+              `candidate index batch ${String(continuation.parentOccurrenceId)} has no parent room`,
+            );
+          }
+          batchTargetParentsByOwner.add(
+            semanticAddressKey(
+              createContinuationAddress(biomeAddress, continuation.parentOccurrenceId),
+            ),
+          );
+          for (const exit of parentRoom.exits) {
+            targetSlotsByOwner.add(
+              semanticAddressKey(
+                createTargetAddress(biomeAddress, continuation.parentOccurrenceId, exit.index),
+              ),
+            );
+          }
+        }
         for (const target of continuation.targets) {
           const occurrence = occurrencesById.get(target.occurrenceId);
           if (occurrence === undefined) {
@@ -511,12 +604,20 @@ export function prepareCandidateContext(
               `candidate index target ${target.occurrenceId} has no authored occurrence`,
             );
           }
-          targetsByOwner.set(
-            semanticAddressKey(
-              createTargetAddress(biomeAddress, continuation.parentOccurrenceId, target.exitIndex),
-            ),
-            Object.freeze({ biome, continuation, occurrence, target }),
+          const targetAddress = createTargetAddress(
+            biomeAddress,
+            continuation.parentOccurrenceId,
+            target.exitIndex,
           );
+          const targetKey = semanticAddressKey(targetAddress);
+          targetSlotsByOwner.add(targetKey);
+          targetsByOwner.set(targetKey, Object.freeze({ biome, continuation, occurrence, target }));
+          if (candidateContexts !== undefined) {
+            const candidateContext = candidateContexts.get(targetKey);
+            if (candidateContext !== undefined) {
+              roomTargetContextsByOwner.set(targetKey, candidateContext);
+            }
+          }
         }
       }
     }
@@ -531,6 +632,12 @@ export function prepareCandidateContext(
       biomesByOwner,
       occurrencesByOwner,
       targetsByOwner,
+      batchTargetParentsByOwner,
+      targetSlotsByOwner,
+      roomTargetContextsByOwner,
+      startRoomDomainsByOwner,
+      batchRewardStoresByOwner,
+      fieldsCageOutcomesByOwner,
     }),
   });
 }

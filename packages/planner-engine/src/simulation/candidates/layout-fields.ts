@@ -78,9 +78,7 @@ export function evaluateFieldsCageOutcomeCandidate(
     return unavailableCandidate(stableQuery, biome);
   }
   const exactKey = semanticAddressKey(stableQuery.continuation);
-  const selected = biome.roomGeneration.fieldsCageOutcomes.find(
-    (entry) => semanticAddressKey(entry.origin) === exactKey,
-  );
+  const selected = context.index.fieldsCageOutcomesByOwner.get(exactKey);
   if (selected === undefined) {
     return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));
   }
