@@ -57,7 +57,7 @@ function QEditorHarness({
   return (
     <LinearBiomeEditor
       catalog={catalog}
-      contextual={structuredWorkspace.project(project, projectEvaluation).contextual}
+      interactions={structuredWorkspace.project(project, projectEvaluation).interactions}
       evaluation={evaluation}
       plan={qPlan(project)}
       routeKey={qBiome.routeKey}

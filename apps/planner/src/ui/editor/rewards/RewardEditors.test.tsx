@@ -19,7 +19,7 @@ import type {
   CandidateSessionFactoryOptions,
   RewardCandidateOwner,
 } from '../../../projections/candidateProjection';
-import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
+import type { WorkspaceInteractionCatalog } from '../../../projections/structuredWorkspace';
 import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
 import {
   createRepresentativeNOProject,
@@ -51,21 +51,21 @@ const blindBoxOwner: RewardCandidateOwner = {
 
 afterEach(cleanup);
 
-function contextualFor(
+function interactionsFor(
   project: ProjectDocument,
   options: CandidateSessionFactoryOptions = {},
-): WorkspaceContextualResolver {
+): WorkspaceInteractionCatalog {
   const { structuredWorkspace } = createStructuredWorkspaceTestServices(options);
-  return structuredWorkspace.project(project, simulateProject(catalog, project)).contextual;
+  return structuredWorkspace.project(project, simulateProject(catalog, project)).interactions;
 }
 
 function renderReward({
-  contextual,
+  interactions,
   offer,
   onReplace = () => undefined,
   owner = firstOwner,
 }: {
-  readonly contextual: WorkspaceContextualResolver;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly offer: ResolvedRewardOffer;
   readonly onReplace?: (offer: ResolvedRewardOffer) => void;
   readonly owner?: RewardCandidateOwner;
@@ -73,8 +73,8 @@ function renderReward({
   return render(
     <RewardValueEditor
       candidateOwner={owner}
-      contextual={contextual}
       idPrefix="reward-editor"
+      interactions={interactions}
       offer={offer}
       onReplace={onReplace}
     />,
@@ -97,8 +97,8 @@ describe('reward editor projections', () => {
     const markup = renderToStaticMarkup(
       <RewardValueEditor
         candidateOwner={{ kind: 'incomingReward', address: firstReward }}
-        contextual={contextualFor(project)}
         idPrefix="trial"
+        interactions={interactionsFor(project)}
         onReplace={() => undefined}
         offer={{
           rewardType: 'Devotion',
@@ -128,8 +128,8 @@ describe('reward editor projections', () => {
     render(
       <CountedRewardEditor
         candidateOwner={{ kind: 'incomingReward', address: firstReward }}
-        contextual={contextualFor(project)}
         idPrefix="combat-03"
+        interactions={interactionsFor(project)}
         offer={boon}
         onReplace={() => undefined}
       />,
@@ -158,7 +158,7 @@ describe('reward editor projections', () => {
     });
     const user = userEvent.setup();
     renderReward({
-      contextual: contextualFor(project),
+      interactions: interactionsFor(project),
       offer: maxHealth,
       owner: { kind: 'incomingReward', address: secondReward },
     });
@@ -175,7 +175,7 @@ describe('reward editor projections', () => {
     const pending = deferredHostYield();
     const user = userEvent.setup();
     renderReward({
-      contextual: contextualFor(project, { yieldToHost: () => pending.promise }),
+      interactions: interactionsFor(project, { yieldToHost: () => pending.promise }),
       offer: { rewardType: 'MaxHealthDrop' },
     });
 
@@ -194,7 +194,7 @@ describe('reward editor projections', () => {
     const onReplace = vi.fn();
     const user = userEvent.setup();
     renderReward({
-      contextual: contextualFor(project),
+      interactions: interactionsFor(project),
       offer: {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
@@ -219,7 +219,7 @@ describe('reward editor projections', () => {
     const onReplace = vi.fn();
     const user = userEvent.setup();
     renderReward({
-      contextual: contextualFor(project),
+      interactions: interactionsFor(project),
       offer: {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
@@ -248,18 +248,18 @@ describe('reward editor projections', () => {
     const project = createGoldenFGHIProject(catalog);
     const pending = deferredHostYield();
     const selected = { rewardType: 'MaxHealthDrop' } as const;
-    const renderEditor = (contextual: WorkspaceContextualResolver) => (
+    const renderEditor = (interactions: WorkspaceInteractionCatalog) => (
       <RewardValueEditor
         candidateOwner={{ kind: 'incomingReward', address: firstReward }}
-        contextual={contextual}
         idPrefix="stale-project"
+        interactions={interactions}
         offer={selected}
         onReplace={() => undefined}
       />
     );
     const user = userEvent.setup();
     const view = render(
-      renderEditor(contextualFor(project, { yieldToHost: () => pending.promise })),
+      renderEditor(interactionsFor(project, { yieldToHost: () => pending.promise })),
     );
     await user.click(screen.getByLabelText('Reward'));
 
@@ -268,7 +268,7 @@ describe('reward editor projections', () => {
       reward: firstReward,
       value: { rewardType: 'MaxManaDrop' },
     });
-    view.rerender(renderEditor(contextualFor(replacement)));
+    view.rerender(renderEditor(interactionsFor(replacement)));
     await act(async () => {
       pending.reject(new Error('stale projection'));
       await Promise.resolve();
@@ -280,14 +280,14 @@ describe('reward editor projections', () => {
   it('ignores a stale projection failure after the producer context changes', async () => {
     const project = createGoldenFGHIProject(catalog);
     const pending = deferredHostYield();
-    const staleContextual = contextualFor(project, {
+    const staleInteractions = interactionsFor(project, {
       yieldToHost: () => pending.promise,
     });
     const renderEditor = (owner: typeof firstReward) => (
       <RewardValueEditor
         candidateOwner={{ kind: 'incomingReward', address: owner }}
-        contextual={owner === firstReward ? staleContextual : contextualFor(project)}
         idPrefix="stale-context"
+        interactions={owner === firstReward ? staleInteractions : interactionsFor(project)}
         offer={{ rewardType: 'MaxHealthDrop' }}
         onReplace={() => undefined}
       />
@@ -309,14 +309,14 @@ describe('reward editor projections', () => {
     const project = createGoldenFGHIProject(catalog);
     const pending = deferredHostYield();
     const selected = { rewardType: 'MaxHealthDrop' } as const;
-    const staleContextual = contextualFor(project, {
+    const staleInteractions = interactionsFor(project, {
       yieldToHost: () => pending.promise,
     });
     const renderEditor = (owner: typeof firstReward) => (
       <RewardValueEditor
         candidateOwner={{ kind: 'incomingReward', address: owner }}
-        contextual={owner === firstReward ? staleContextual : contextualFor(project)}
         idPrefix="returning-context"
+        interactions={owner === firstReward ? staleInteractions : interactionsFor(project)}
         offer={selected}
         onReplace={() => undefined}
       />
@@ -343,7 +343,7 @@ describe('reward editor projections', () => {
       payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
     };
     const user = userEvent.setup();
-    renderReward({ contextual: contextualFor(project), offer: blindBox, owner: blindBoxOwner });
+    renderReward({ interactions: interactionsFor(project), offer: blindBox, owner: blindBoxOwner });
 
     const trigger = screen.getByLabelText('Reward');
     expect(trigger.textContent).toContain('Mystery Boon · Apollo (eventual)');
@@ -367,7 +367,7 @@ describe('reward editor projections', () => {
     const onReplace = vi.fn();
     const user = userEvent.setup();
     renderReward({
-      contextual: contextualFor(project),
+      interactions: interactionsFor(project),
       offer: selected,
       onReplace,
       owner: devotionOwner,
@@ -407,7 +407,7 @@ describe('reward editor projections', () => {
     const onReplace = vi.fn();
     const user = userEvent.setup();
     renderReward({
-      contextual: contextualFor(project),
+      interactions: interactionsFor(project),
       offer: {
         rewardType: 'Devotion',
         payload: {
@@ -437,7 +437,7 @@ describe('reward editor projections', () => {
     const onReplace = vi.fn();
     const user = userEvent.setup();
     renderReward({
-      contextual: contextualFor(project),
+      interactions: interactionsFor(project),
       offer: {
         rewardType: 'Devotion',
         payload: {

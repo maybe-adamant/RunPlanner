@@ -49,7 +49,7 @@ function NEditorHarness({
   return (
     <HubBiomeEditor
       catalog={catalog}
-      contextual={structuredWorkspace.project(project, projectEvaluation).contextual}
+      interactions={structuredWorkspace.project(project, projectEvaluation).interactions}
       evaluation={evaluation}
       plan={plan}
       routeKey={biome.routeKey}

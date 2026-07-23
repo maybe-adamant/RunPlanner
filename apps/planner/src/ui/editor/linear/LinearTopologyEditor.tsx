@@ -23,7 +23,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { projectClockworkTopology, projectLinearBatchState } from '@run-planner/engine/simulation';
 
-import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
+import type { WorkspaceInteractionCatalog } from '../../../projections/structuredWorkspace';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { useAppDispatch } from '../../../state/store';
@@ -35,8 +35,8 @@ import { RoomStateEditor } from '../rooms/RoomStateEditor';
 interface LinearTopologyEditorProps {
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
-  readonly contextual: WorkspaceContextualResolver;
   readonly evaluation: LinearBiomeProjectEvaluation | undefined;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly plan: LinearBiomePlan;
   readonly topology: LinearBiomeTopology;
 }
@@ -92,7 +92,7 @@ function OrdinaryTargetEditor({
   available,
   biome,
   catalog,
-  contextual,
+  interactions,
   canCreateTarget,
   continuation,
   exitIndex,
@@ -127,7 +127,7 @@ function OrdinaryTargetEditor({
             </div>
           </div>
           <RoomSelector
-            contextual={contextual}
+            interactions={interactions}
             disabled={!canCreateTarget}
             idPrefix={idPrefix}
             onSelect={(gameName) =>
@@ -192,7 +192,7 @@ function OrdinaryTargetEditor({
           </div>
         </div>
         <RoomSelector
-          contextual={contextual}
+          interactions={interactions}
           idPrefix={idPrefix}
           onSelect={(gameName) =>
             dispatch(
@@ -211,7 +211,7 @@ function OrdinaryTargetEditor({
             : {})}
           biome={biome}
           catalog={catalog}
-          contextual={contextual}
+          interactions={interactions}
           {...(clockworkReward === undefined ? {} : { clockworkReward })}
           entryActive={continuation.pickedExitIndex === exitIndex}
           occurrence={room}
@@ -228,7 +228,7 @@ function BatchEditor({
   catalog,
   clockworkBatch,
   continuation,
-  contextual,
+  interactions,
   evaluation,
   plan,
   topology,
@@ -280,7 +280,6 @@ function BatchEditor({
     continuation.pickedExitIndex === null || available.has(continuation.pickedExitIndex);
   const address = createContinuationAddress(biome, continuation.parentOccurrenceId);
   const rewardStoreAddress = createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId);
-  const rewardStorePolicy = layout.continuation.rewardStorePolicy;
   const fieldsSupport =
     evaluation?.authoring === 'complete'
       ? evaluation.roomGeneration.fieldsCageOutcomes.find(
@@ -310,7 +309,7 @@ function BatchEditor({
       {continuation.rewardStore.kind === 'authoredBaseStore' && (
         <BatchRewardStoreControl
           address={rewardStoreAddress}
-          contextual={contextual}
+          interactions={interactions}
           id={`batch-${continuation.parentOccurrenceId}-reward-store`}
           onReplace={(storeKey) =>
             dispatch(
@@ -321,12 +320,6 @@ function BatchEditor({
               }),
             )
           }
-          storeKeys={
-            rewardStorePolicy.kind === 'authoredBaseStore'
-              ? rewardStorePolicy.storeKeys
-              : Object.freeze([])
-          }
-          value={continuation.rewardStore.baseRewardStoreKey}
         />
       )}
 
@@ -335,10 +328,9 @@ function BatchEditor({
         continuation.batchState !== null && (
           <FieldsBatchControl
             batchState={projectedBatchState}
-            contextual={contextual}
+            interactions={interactions}
             continuation={address}
             id={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
-            minDoorCageRewards={fieldsPolicy.minDoorCageRewards}
             onReplace={(cageOutcome) =>
               dispatch(
                 authoredProjectCommandDispatched({
@@ -349,7 +341,6 @@ function BatchEditor({
               )
             }
             {...(fieldsSupport === undefined ? {} : { priorMaxOutcomes: fieldsSupport })}
-            value={continuation.batchState.cageOutcome}
           />
         )}
 
@@ -361,7 +352,7 @@ function BatchEditor({
             canCreateTarget={canCreateTarget}
             catalog={catalog}
             continuation={continuation}
-            contextual={contextual}
+            interactions={interactions}
             evaluation={evaluation}
             exitIndex={exitIndex}
             key={exitIndex}
@@ -444,7 +435,7 @@ function TerminalEditor({
   biome,
   canReplaceWithBatch,
   catalog,
-  contextual,
+  interactions,
   continuation,
   topology,
 }: TerminalEditorProps) {
@@ -567,7 +558,7 @@ function TerminalEditor({
                 <RoomStateEditor
                   biome={biome}
                   catalog={catalog}
-                  contextual={contextual}
+                  interactions={interactions}
                   entryActive={continuation.pickedExitIndex === target.exitIndex}
                   occurrence={room}
                 />
@@ -723,7 +714,7 @@ function frontierOccurrenceId(
 export function LinearTopologyEditor({
   biome,
   catalog,
-  contextual,
+  interactions,
   evaluation,
   plan,
   topology,
@@ -776,7 +767,7 @@ export function LinearTopologyEditor({
               layout.terminal.kind !== 'generatedTarget'
             }
             catalog={catalog}
-            contextual={contextual}
+            interactions={interactions}
             {...(() => {
               const clockworkBatch = clockworkBatches.find(
                 (batch) => batch.parentOccurrenceId === continuation.parentOccurrenceId,
@@ -796,7 +787,7 @@ export function LinearTopologyEditor({
               constrainedContinuationCount === undefined && batchCount < layout.bounds.maxBatches
             }
             catalog={catalog}
-            contextual={contextual}
+            interactions={interactions}
             continuation={continuation}
             evaluation={evaluation}
             key={continuation.parentOccurrenceId ?? 'layout-entry'}
@@ -811,7 +802,7 @@ export function LinearTopologyEditor({
           canAddBatch={canAddBatch}
           canCreateTerminal={canCreateTerminal && frontierTerminalTargetCount > 0}
           catalog={catalog}
-          contextual={contextual}
+          interactions={interactions}
           evaluation={evaluation}
           parentOccurrenceId={frontier}
           plan={plan}

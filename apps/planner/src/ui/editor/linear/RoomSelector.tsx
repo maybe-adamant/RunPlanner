@@ -1,18 +1,19 @@
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import { useState } from 'react';
 
 import type { ContextualPickerModel } from '../../../projections/contextualPicker';
-import type {
-  WorkspaceContextualResolver,
-  WorkspaceRoomInteraction,
-  WorkspaceRoomPickerControl,
+import {
+  requireWorkspaceInteraction,
+  workspaceInteractionKey,
+  type WorkspaceInteractionCatalog,
+  type WorkspaceRoomPickerControl,
 } from '../../../projections/structuredWorkspace';
 import { ContextualPicker } from '../../controls/ContextualPicker';
+import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 
 interface RoomSelectorProps {
-  readonly contextual: WorkspaceContextualResolver;
   readonly disabled?: boolean;
   readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly label?: string;
   readonly onSelect: (gameName: string) => void;
   readonly owner: WorkspaceRoomPickerControl['address'];
@@ -24,20 +25,20 @@ const emptyModel: ContextualPickerModel<RoomDeclaration> = Object.freeze({
 });
 
 export function RoomSelector({
-  contextual,
   disabled = false,
   idPrefix,
+  interactions,
   label = 'Room',
   onSelect,
   owner,
   placeholder = 'Select a room',
 }: RoomSelectorProps) {
-  const interaction = contextual.resolveRoom(owner);
-  const [projection, setProjection] = useState<{
-    readonly interaction: WorkspaceRoomInteraction;
-    readonly model: ContextualPickerModel<RoomDeclaration>;
-  }>();
-  const model = projection?.interaction === interaction ? projection.model : emptyModel;
+  const interaction = requireWorkspaceInteraction(
+    interactions.rooms,
+    workspaceInteractionKey(owner),
+  );
+  const projection = useWorkspaceInteraction(interaction);
+  const model = projection.result ?? emptyModel;
 
   return (
     <ContextualPicker
@@ -46,8 +47,8 @@ export function RoomSelector({
       label={label}
       model={model}
       onOpenChange={(open) => {
-        if (open && projection?.interaction !== interaction) {
-          setProjection(Object.freeze({ interaction, model: interaction.load() }));
+        if (open) {
+          projection.activate();
         }
       }}
       onSelect={(room) => onSelect(room.gameName)}

@@ -20,7 +20,7 @@ import {
 import { type HubBiomeProjectEvaluation } from '@run-planner/engine/simulation';
 import { useMemo } from 'react';
 
-import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
+import type { WorkspaceInteractionCatalog } from '../../../projections/structuredWorkspace';
 import { presentBiomeStatus } from '../../../projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { useAppDispatch } from '../../../state/store';
@@ -41,8 +41,8 @@ import {
 
 interface HubBiomeEditorProps {
   readonly catalog: Catalog;
-  readonly contextual: WorkspaceContextualResolver;
   readonly evaluation: HubBiomeProjectEvaluation | undefined;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly plan: HubBiomePlan;
   readonly routeKey: string;
 }
@@ -50,13 +50,13 @@ interface HubBiomeEditorProps {
 function EphyraSideRooms({
   biome,
   catalog,
-  contextual,
+  interactions,
   occurrence,
   state,
 }: {
   readonly biome: ReturnType<typeof createBiomeAddress>;
   readonly catalog: Catalog;
-  readonly contextual: WorkspaceContextualResolver;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly occurrence: RoomOccurrence;
   readonly state: EphyraCombatState;
 }) {
@@ -159,9 +159,9 @@ function EphyraSideRooms({
               <div className="ephyra-side-controls">
                 <SideGenerationControl
                   address={childAddress}
-                  contextual={contextual}
                   entered={entered}
                   generation={sideState.generation}
+                  interactions={interactions}
                   label={sideRoom.label}
                   onReplace={(generation) =>
                     dispatch(
@@ -175,9 +175,9 @@ function EphyraSideRooms({
                 />
                 <SideEntryAction
                   ariaLabel={`${entered ? 'Remove' : 'Enter'} ${sideRoom.label}`}
-                  contextual={contextual}
                   disabled={sideState.generation !== 'generated'}
                   group={groupAddress}
+                  interactions={interactions}
                   onApply={() => replaceEntryOrder(toggledOrder)}
                   proposedOrder={toggledOrder}
                 >
@@ -188,9 +188,9 @@ function EphyraSideRooms({
                 <div className="side-order-actions">
                   <SideEntryAction
                     ariaLabel={`Move ${sideRoom.label} earlier`}
-                    contextual={contextual}
                     disabled={enteredIndex === 0}
                     group={groupAddress}
+                    interactions={interactions}
                     onApply={() => replaceEntryOrder(earlierOrder)}
                     proposedOrder={earlierOrder}
                   >
@@ -198,9 +198,9 @@ function EphyraSideRooms({
                   </SideEntryAction>
                   <SideEntryAction
                     ariaLabel={`Move ${sideRoom.label} later`}
-                    contextual={contextual}
                     disabled={enteredIndex === enteredSlotKeys.length - 1}
                     group={groupAddress}
+                    interactions={interactions}
                     onApply={() => replaceEntryOrder(laterOrder)}
                     proposedOrder={laterOrder}
                   >
@@ -215,8 +215,8 @@ function EphyraSideRooms({
                 <SemanticOwnerMarker address={rewardAddress} />
                 <CountedRewardEditor
                   candidateOwner={{ kind: 'localReward', address: rewardAddress }}
-                  contextual={contextual}
                   idPrefix={`side-${occurrence.occurrenceId}-${slot.slotKey}`}
+                  interactions={interactions}
                   offer={sideState.offer}
                   onReplace={(value) =>
                     dispatch(
@@ -260,8 +260,8 @@ function requireOccurrence(
 
 export function HubBiomeEditor({
   catalog,
-  contextual,
   evaluation,
+  interactions,
   plan,
   routeKey,
 }: HubBiomeEditorProps) {
@@ -339,15 +339,6 @@ export function HubBiomeEditor({
 
   const openBySlot = new Map(topology.openTargets.map((target) => [target.hubSlotKey, target]));
   const visited = new Set(topology.visitOrder);
-  const roomLabels = Object.fromEntries(
-    layout.hub.slots.map((slot) => {
-      const room = catalog.rooms.byKey[slot.roomGameName];
-      if (room === undefined) {
-        throw new Error(`Hub slot ${slot.slotKey} references missing ${slot.roomGameName}`);
-      }
-      return [slot.slotKey, room.label];
-    }),
-  );
   const fixedByKey = new Map(topology.fixedRooms.map((fixed) => [fixed.fixedSlotKey, fixed]));
   const entryDescriptors = descriptors.filter(
     (descriptor) => descriptor.slotKey !== terminalSlotKey,
@@ -415,8 +406,8 @@ export function HubBiomeEditor({
                 <RoomStateEditor
                   biome={biome}
                   catalog={catalog}
-                  contextual={contextual}
                   entryActive={true}
+                  interactions={interactions}
                   occurrence={occurrence}
                 />
               </article>
@@ -471,13 +462,12 @@ export function HubBiomeEditor({
                       </div>
                     </div>
                     <HubSlotMembership
-                      candidateOccurrenceId={candidateOccurrenceId}
-                      contextual={contextual}
                       disabled={
                         isVisited ||
                         (target === undefined &&
                           topology.openTargets.length >= layout.hub.openCount.max)
                       }
+                      interactions={interactions}
                       label={room.label}
                       onChange={(open) =>
                         dispatch(
@@ -506,8 +496,8 @@ export function HubBiomeEditor({
                     <RoomStateEditor
                       biome={biome}
                       catalog={catalog}
-                      contextual={contextual}
                       entryActive={isVisited}
+                      interactions={interactions}
                       occurrence={occurrence}
                     />
                   )}
@@ -544,51 +534,31 @@ export function HubBiomeEditor({
                       <span className="visually-hidden">Visit {visitIndex}</span>
                       <SemanticOwnerMarker address={visit} />
                     </div>
-                    {current !== undefined ? (
-                      <HubVisitControl
-                        contextual={contextual}
-                        current={current}
-                        hubSlotKeys={topology.openTargets.map((target) => target.hubSlotKey)}
-                        labels={roomLabels}
-                        onReplace={(hubSlotKey) =>
-                          dispatch(
-                            authoredProjectCommandDispatched({
-                              kind: 'ReplaceHubVisit',
-                              visit,
-                              hubSlotKey,
-                            }),
-                          )
-                        }
-                        visit={visit}
-                      />
-                    ) : (
-                      <select
-                        aria-label={`Visit ${visitIndex} room`}
-                        disabled={!isNext || availableForAppend.length === 0}
-                        onChange={(event) => {
-                          if (event.target.value === '') {
-                            return;
-                          }
-                          dispatch(
-                            authoredProjectCommandDispatched({
-                              kind: 'AppendHubVisit',
-                              visit,
-                              hubSlotKey: event.target.value,
-                            }),
-                          );
-                        }}
-                        value=""
-                      >
-                        <option value="">
-                          {isNext ? 'Choose next room' : 'Complete prior visit'}
-                        </option>
-                        {availableForAppend.map((target) => (
-                          <option key={target.hubSlotKey} value={target.hubSlotKey}>
-                            {roomLabels[target.hubSlotKey] ?? target.hubSlotKey}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    <HubVisitControl
+                      disabled={
+                        current === undefined && (!isNext || availableForAppend.length === 0)
+                      }
+                      interactions={interactions}
+                      onReplace={(hubSlotKey) =>
+                        dispatch(
+                          authoredProjectCommandDispatched(
+                            current === undefined
+                              ? {
+                                  kind: 'AppendHubVisit',
+                                  visit,
+                                  hubSlotKey,
+                                }
+                              : {
+                                  kind: 'ReplaceHubVisit',
+                                  visit,
+                                  hubSlotKey,
+                                },
+                          ),
+                        )
+                      }
+                      placeholder={isNext ? 'Choose next room' : 'Complete prior visit'}
+                      visit={visit}
+                    />
                   </div>
                   {current !== undefined && (
                     <button
@@ -656,7 +626,7 @@ export function HubBiomeEditor({
                 <EphyraSideRooms
                   biome={biome}
                   catalog={catalog}
-                  contextual={contextual}
+                  interactions={interactions}
                   occurrence={occurrence}
                   state={occurrence.state}
                 />
@@ -690,8 +660,8 @@ export function HubBiomeEditor({
               <RoomStateEditor
                 biome={biome}
                 catalog={catalog}
-                contextual={contextual}
                 entryActive={true}
+                interactions={interactions}
                 occurrence={occurrence}
               />
             </article>

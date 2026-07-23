@@ -128,7 +128,7 @@ function OEditorHarness({
   return (
     <LinearBiomeEditor
       catalog={catalog}
-      contextual={structuredWorkspace.project(project, projectEvaluation).contextual}
+      interactions={structuredWorkspace.project(project, projectEvaluation).interactions}
       evaluation={evaluation?.kind === 'LinearBiome' ? evaluation : undefined}
       plan={plan}
       routeKey={biome.routeKey}

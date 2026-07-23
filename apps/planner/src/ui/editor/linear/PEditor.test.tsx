@@ -57,7 +57,7 @@ function PEditorHarness({
   return (
     <LinearBiomeEditor
       catalog={catalog}
-      contextual={structuredWorkspace.project(project, projectEvaluation).contextual}
+      interactions={structuredWorkspace.project(project, projectEvaluation).interactions}
       evaluation={evaluation}
       plan={pPlan(project)}
       routeKey={pBiome.routeKey}

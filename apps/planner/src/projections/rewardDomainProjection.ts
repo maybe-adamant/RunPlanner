@@ -38,6 +38,10 @@ export interface PreparedRewardDomain {
 }
 
 export interface ProjectedRewardDomain {
+  readonly offers: readonly {
+    readonly evaluation: ProjectCandidateEvaluation;
+    readonly value: ResolvedRewardOffer;
+  }[];
   readonly types: readonly ProjectedRewardDomainOption[];
   readonly payload: ProjectedRewardPayloadDomain;
 }
@@ -296,15 +300,21 @@ export function projectRewardDomain(
     readonly evaluation: ProjectCandidateEvaluation;
   }[],
 ): ProjectedRewardDomain {
+  const offers = Object.freeze(
+    evaluatedOffers.map((candidate) =>
+      Object.freeze({ evaluation: candidate.evaluation, value: candidate.value }),
+    ),
+  );
   const evaluations = new Map(
     evaluatedOffers.map((candidate) => [offerKey(candidate.value), candidate.evaluation]),
   );
   const types = projectOptions(prepared.types, evaluations);
   switch (prepared.payload.kind) {
     case 'none':
-      return Object.freeze({ types, payload: Object.freeze({ kind: 'none' }) });
+      return Object.freeze({ offers, types, payload: Object.freeze({ kind: 'none' }) });
     case 'oneOf':
       return Object.freeze({
+        offers,
         types,
         payload: Object.freeze({
           kind: 'oneOf',
@@ -313,6 +323,7 @@ export function projectRewardDomain(
       });
     case 'distinctPair':
       return Object.freeze({
+        offers,
         types,
         payload: Object.freeze({
           kind: 'distinctPair',
