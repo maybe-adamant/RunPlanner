@@ -1,8 +1,19 @@
-import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../../catalog-schema';
-import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
+import type {
+  Catalog,
+  EncounterPhase,
+  LinearBiomeLayout,
+  RoomDeclaration,
+} from '../../catalog-schema';
+import {
+  createBiomeAddress,
+  semanticAddressKey,
+  type SemanticAddress,
+} from '../../authored-project/addresses';
+import type { ShipCombatState, ShopState } from '../../authored-project/model';
 import { type RewardHistoryState, type RewardKernelFacts } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type {
+  EncounterHistoryEntry,
   LinearSimulationHistory,
   LinearHistoryStateView,
   LinearProgressiveRoomHistoryViews,
@@ -17,6 +28,7 @@ import type {
   CanonicalRewardWheel,
   CanonicalTarget,
 } from '../materialization';
+import { materializeShipCombatState } from '../materialization';
 import type { SemanticFinding } from '../model';
 import type {
   LinearRewardBranch,
@@ -27,9 +39,13 @@ import type {
 import { createRewardFacts, createdPeerGameNames } from './facts';
 import {
   indexRewardProducerFrontier,
+  registerRoomLifecycleCandidateContexts,
   registerRewardProducerFrontiers,
+  type RoomLifecycleCandidateResult,
   type RewardProducerCandidateResult,
   type RewardProducerFrontier,
+  type ShipLifecycleCandidateContext,
+  type ShopPurchaseCandidateContext,
 } from './frontiers';
 import {
   addRewardFinding,
@@ -309,6 +325,247 @@ function candidateResult(
   });
 }
 
+function lifecycleCandidateResult(
+  findings: Map<string, SemanticFinding>,
+  branches: readonly RewardBranchState[],
+): RoomLifecycleCandidateResult {
+  return candidateResult(findings, branches);
+}
+
+interface WheelLifecycleView {
+  readonly generation: LinearHistoryStateView;
+  readonly acquisition: LinearHistoryStateView;
+  readonly acquisitionSequence: number;
+}
+
+function projectedEncounterEntry(
+  room: CanonicalAuthoredRoom,
+  phase: EncounterPhase,
+  sequence: number,
+): EncounterHistoryEntry {
+  return Object.freeze({
+    sequence,
+    origin: room.origin,
+    gameName: room.gameName,
+    encounterProfileKey: room.encounterProfileKey,
+    phaseKey: phase.key,
+    phaseKind: phase.kind,
+    ...(phase.baselineEncounterKey === undefined
+      ? {}
+      : { baselineEncounterKey: phase.baselineEncounterKey }),
+  });
+}
+
+function projectDormantWheelView(
+  room: CanonicalAuthoredRoom,
+  phase: EncounterPhase,
+  generation: LinearHistoryStateView,
+): WheelLifecycleView {
+  const start = projectedEncounterEntry(room, phase, generation.sequence + 2);
+  const completion = projectedEncounterEntry(room, phase, generation.sequence + 4);
+  const encounterDelta = phase.countsEncounterDepth ? 1 : 0;
+  const acquisition = Object.freeze({
+    sequence: completion.sequence,
+    ledgers: Object.freeze({
+      ...generation.ledgers,
+      encounterStarts: Object.freeze([...generation.ledgers.encounterStarts, start]),
+      encounterCompletions: Object.freeze([...generation.ledgers.encounterCompletions, completion]),
+      counters: Object.freeze({
+        ...generation.ledgers.counters,
+        biomeEncounterDepth: generation.ledgers.counters.biomeEncounterDepth + encounterDelta,
+        routeEncounterDepth: generation.ledgers.counters.routeEncounterDepth + encounterDelta,
+      }),
+    }),
+  });
+  return Object.freeze({
+    generation,
+    acquisition,
+    acquisitionSequence: acquisition.sequence + 1,
+  });
+}
+
+function wheelLifecycleViews(
+  history: LinearSimulationHistory,
+  room: CanonicalAuthoredRoom,
+  roomView: LinearProgressiveRoomHistoryViews,
+  wheel: CanonicalRewardWheel,
+): WheelLifecycleView {
+  const selected = roomView.offerPoints?.find(
+    (candidate) => candidate.offerPoint === wheel.wheelKey,
+  );
+  if (selected !== undefined) {
+    const acquisitionEvent = history.events.find(
+      (candidate) =>
+        candidate.kind === 'offerPointAcquired' &&
+        semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
+        candidate.offerPoint === wheel.wheelKey,
+    );
+    if (selected.acquisitionBefore === undefined || acquisitionEvent === undefined) {
+      return fail(`${room.gameName}.${wheel.wheelKey} has no acquisition lifecycle view`);
+    }
+    return Object.freeze({
+      generation: selected.before,
+      acquisition: selected.acquisitionBefore,
+      acquisitionSequence: acquisitionEvent.sequence,
+    });
+  }
+  const phase = room.encounterPhases.find((candidate) => candidate.key === wheel.encounterPhaseKey);
+  const generation = roomView.preOutgoing;
+  if (phase === undefined || generation === undefined) {
+    return fail(`${room.gameName}.${wheel.wheelKey} has no dormant lifecycle view`);
+  }
+  return projectDormantWheelView(room, phase, generation);
+}
+
+function prepareShipLifecycleCandidateContext(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  declaration: RoomDeclaration,
+  roomView: LinearProgressiveRoomHistoryViews,
+  history: LinearSimulationHistory,
+  branchesBeforeFirstWheel: readonly RewardBranchState[],
+  enteredBiomeCount: number,
+): ShipLifecycleCandidateContext {
+  const activeWheelKeys = Object.freeze(room.rewardWheels?.map((wheel) => wheel.wheelKey) ?? []);
+  return Object.freeze({
+    origin: room.origin,
+    activeWheelKeys,
+    evaluateState: (state: ShipCombatState): RoomLifecycleCandidateResult => {
+      const ship = materializeShipCombatState(
+        catalog,
+        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+        declaration,
+        Object.freeze({
+          occurrenceId: room.occurrenceId,
+          gameName: room.gameName,
+          state,
+        }),
+      );
+      const candidateRoom = Object.freeze({
+        ...room,
+        encounterPhases: ship.encounterPhases,
+        rewardWheels: ship.rewardWheels,
+      });
+      const candidateFindings = new Map<string, SemanticFinding>();
+      let candidateBranches = branchesBeforeFirstWheel;
+      for (const wheel of ship.rewardWheels) {
+        if (candidateBranches.length === 0) {
+          break;
+        }
+        const lifecycleView = wheelLifecycleViews(history, candidateRoom, roomView, wheel);
+        const binding = rewardWheelBinding(catalog, declaration, wheel);
+        candidateBranches = processJointUnorderedOffers(
+          candidateBranches,
+          wheel.offers.map((offer) => ({
+            catalog,
+            reward: {
+              ...offer,
+              producerLifecycleKey: wheel.producerLifecycleKey,
+              resolvedStoreKey: wheel.storeKey,
+            },
+            binding,
+            historySequence: lifecycleView.generation.sequence + 1,
+            peers: Object.freeze([]),
+            facts: (branchHistory: RewardHistoryState) =>
+              rewardFacts(
+                catalog,
+                candidateRoom,
+                declaration,
+                lifecycleView.generation,
+                branchHistory,
+                enteredBiomeCount,
+              ),
+          })),
+          candidateFindings,
+        );
+        const picked = wheel.offers.find((offer) => offer.picked);
+        if (picked === undefined) {
+          return fail(`${room.gameName}.${wheel.wheelKey} has no picked offer`);
+        }
+        if (candidateBranches.length > 0) {
+          candidateBranches = processOwnedRewardAcquisition(
+            catalog,
+            candidateBranches,
+            candidateRoom,
+            declaration,
+            Object.freeze({ ...picked, producerLifecycleKey: wheel.producerLifecycleKey }),
+            lifecycleView.acquisition,
+            lifecycleView.acquisitionSequence,
+            candidateFindings,
+            enteredBiomeCount,
+          );
+        }
+      }
+      return lifecycleCandidateResult(candidateFindings, candidateBranches);
+    },
+  });
+}
+
+function prepareShopPurchaseCandidateContext(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  declaration: RoomDeclaration,
+  roomView: LinearProgressiveRoomHistoryViews,
+  branchesBeforePurchases: readonly RewardBranchState[],
+  historySequence: number,
+  enteredBiomeCount: number,
+): ShopPurchaseCandidateContext {
+  if (room.entryState?.kind !== 'shop') {
+    return fail(`${room.gameName} has no shop purchase state`);
+  }
+  const entryState = room.entryState;
+  const purchaseOrigins = Object.freeze(entryState.offers.map((offer) => offer.purchaseOrigin));
+  return Object.freeze({
+    origin: room.origin,
+    purchaseOrigins,
+    evaluateState: (state: ShopState): RoomLifecycleCandidateResult => {
+      const candidateFindings = new Map<string, SemanticFinding>();
+      const candidateRoom = Object.freeze({
+        ...room,
+        entryState: Object.freeze({
+          kind: 'shop' as const,
+          profileKey: state.profileKey,
+          offers: Object.freeze(
+            entryState.offers.map((offer) => {
+              const candidate = state.offers[offer.offerKey];
+              if (candidate === undefined) {
+                return fail(`${room.gameName} lost shop offer ${offer.offerKey}`);
+              }
+              return Object.freeze({
+                ...offer,
+                offer: candidate.offer,
+                purchased: candidate.purchased,
+              });
+            }),
+          ),
+        }),
+      });
+      const candidateBranches = processShopPurchases(
+        branchesBeforePurchases,
+        {
+          catalog,
+          room: candidateRoom,
+          declaration,
+          historySequence,
+          facts: (branchHistory, shopNames = new Set()) =>
+            rewardFacts(
+              catalog,
+              candidateRoom,
+              declaration,
+              roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+              branchHistory,
+              enteredBiomeCount,
+              shopNames,
+            ),
+          fail,
+        },
+        candidateFindings,
+      );
+      return lifecycleCandidateResult(candidateFindings, candidateBranches);
+    },
+  });
+}
+
 export function evaluateLinearRewards(
   catalog: Catalog,
   snapshot: LinearSimulationMaterialization,
@@ -342,6 +599,8 @@ export function evaluateLinearRewards(
   const targetHistory: LinearTargetRewardHistoryCheckpoint[] = [];
   const findings = new Map<string, SemanticFinding>();
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
+  const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
+  const shopPurchaseContexts = new Map<string, ShopPurchaseCandidateContext>();
   let peers: readonly OfferProcessingPeer[] = Object.freeze([]);
   let branches: readonly RewardBranchState[] = initializeRewardBranches(initialBranches);
 
@@ -800,6 +1059,21 @@ export function evaluateLinearRewards(
           );
         }
         const binding = rewardWheelBinding(catalog, declaration, wheel);
+        const roomKey = semanticAddressKey(room.origin);
+        if (room.rewardWheels?.[0] === wheel && !shipLifecycleContexts.has(roomKey)) {
+          shipLifecycleContexts.set(
+            roomKey,
+            prepareShipLifecycleCandidateContext(
+              catalog,
+              room,
+              declaration,
+              roomView,
+              history,
+              branches,
+              enteredBiomeCount,
+            ),
+          );
+        }
         const contexts = wheel.offers.map((offer) => ({
           catalog,
           reward: {
@@ -999,6 +1273,21 @@ export function evaluateLinearRewards(
         ) {
           throw new LinearRewardSimulationContractError('shop purchases have no authored room');
         }
+        const roomKey = semanticAddressKey(room.origin);
+        if (!shopPurchaseContexts.has(roomKey)) {
+          shopPurchaseContexts.set(
+            roomKey,
+            prepareShopPurchaseCandidateContext(
+              catalog,
+              room,
+              declaration,
+              roomView,
+              branches,
+              event.sequence,
+              enteredBiomeCount,
+            ),
+          );
+        }
         branches = processShopPurchases(
           branches,
           {
@@ -1038,5 +1327,9 @@ export function evaluateLinearRewards(
     findings: immutableFindings,
   });
   registerRewardProducerFrontiers(simulation, producerFrontiers);
+  registerRoomLifecycleCandidateContexts(simulation, {
+    shipsByOwner: shipLifecycleContexts,
+    shopsByOwner: shopPurchaseContexts,
+  });
   return simulation;
 }

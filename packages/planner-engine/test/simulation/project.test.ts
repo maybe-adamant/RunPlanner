@@ -24,6 +24,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   composeLinearHistory,
+  createPreparedProjectCandidateSession,
   evaluateLinearCompleteness,
   evaluateLinearRoomGeneration,
   evaluateLinearRewards,
@@ -33,6 +34,7 @@ import {
   simulateProject,
   supportedFieldsCageOutcomes,
   materializeLinearBiome,
+  type CandidateEvaluationEvent,
 } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
@@ -1621,6 +1623,32 @@ describe('project simulation composition', () => {
         value: { rewardType: 'MaxHealthDrop' },
       }),
     ).toMatchObject({ context: 'evaluated', support: 'impossible' });
+  });
+
+  it('evaluates a covered shop purchase from its room-local lifecycle context', () => {
+    const project = selectedGoldenHProject();
+    const events: CandidateEvaluationEvent[] = [];
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      project,
+      simulateProject(catalog, project),
+      { observe: (event) => events.push(event) },
+    );
+
+    expect(
+      session.evaluate([
+        {
+          kind: 'shopPurchase',
+          purchase: createShopPurchaseAddress(
+            hBiome,
+            createOccurrenceId('golden-h-terminal-shop'),
+            'MajorNonBoon',
+          ),
+          purchased: true,
+        },
+      ])[0],
+    ).toMatchObject({ context: 'evaluated', support: 'possible', findings: [] });
+    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 1 }]);
   });
 
   it('evaluates G room, store, and reward candidates through the shared linear authorities', () => {

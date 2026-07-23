@@ -1664,3 +1664,35 @@ visible as `physicalExitUnavailable`. The 22-option incomplete-prefix
 application domain evaluates as one query batch with no biome replay. The
 complete suite passes with 69 test files and 529 tests, including the existing
 Underworld and Surface product-loop responsiveness gates.
+
+Candidate-System Refactor Slice 4 is complete. Linear reward simulation now
+publishes ephemeral room-lifecycle candidate contexts alongside its producer
+frontiers. A ShipCombat context captures the reachable reward branches before
+the first active wheel and reevaluates encounter count, active offer count,
+store, and picked-offer alternatives through the owning room's ordered wheel
+sequence. The shared ShipCombat materializer remains the structural authority
+for active phases and maximum-capacity authored wheel state. Activating a
+dormant second wheel projects its exact offer, encounter-depth, completion, and
+acquisition checkpoints; changing the first wheel carries the resulting reward
+history through the later wheel before support is reported.
+
+Linear WorldShop purchase contexts are captured at `shopPurchasesApplied`,
+after the outgoing batch has already been generated. They therefore reuse the
+selected joint-inventory witness and replay only ordered purchase application,
+preserving the one-room-delayed effect of purchases on later room generation.
+The session indexes encounter-count support, ShipCombat occurrence contexts,
+and exact shop-purchase owners. Linear ship and purchase candidates no longer
+apply temporary project commands or rebuild unrelated earlier and later rooms.
+Hub shop purchases retain their documented full-Hub fallback until Refactor
+Slice 5 owns N's joint regions.
+
+Coverage is now consistent with the candidate model: a structurally present
+shop after an earlier blocking reward failure has no local purchase context and
+is unassessed rather than receiving an answer from an unrelated full-biome
+replay. Parity fixtures cover eligible dormant-wheel activation, first-wheel
+changes flowing through wheel 2, encounter-count force support, invalid wheel
+stores, and Linear shop purchases. O's six room-local scalar queries and the
+focused Linear purchase query each record one query batch and zero biome
+replays. The complete suite passes with 69 test files and 532 tests; the
+Underworld and Surface product-loop responsiveness gates, typechecks, lint,
+format check, and production build also pass.

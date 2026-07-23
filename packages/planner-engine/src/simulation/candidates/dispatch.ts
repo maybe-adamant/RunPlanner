@@ -127,15 +127,15 @@ function evaluatePreparedProjectCandidates(
         case 'fieldsCageOutcome':
           return evaluateFieldsCageOutcomeCandidate(catalog, context, query);
         case 'shipEncounterCount':
-          return evaluateShipEncounterCountCandidate(catalog, project, context, query);
+          return evaluateShipEncounterCountCandidate(catalog, context, query);
         case 'rewardWheelOfferCount':
-          return evaluateRewardWheelOfferCountCandidate(catalog, project, context, query);
+          return evaluateRewardWheelOfferCountCandidate(catalog, context, query);
         case 'rewardWheelStore':
-          return evaluateRewardWheelStoreCandidate(catalog, project, context, query);
+          return evaluateRewardWheelStoreCandidate(catalog, context, query);
         case 'rewardWheelOffer':
           return evaluateRewardWheelOfferCandidate(catalog, context, query);
         case 'rewardWheelPicked':
-          return evaluateRewardWheelPickedCandidate(catalog, project, context, query);
+          return evaluateRewardWheelPickedCandidate(catalog, context, query);
         case 'hubSlot':
           return evaluateHubSlotCandidate(catalog, project, context, query);
         case 'hubVisit':
@@ -145,7 +145,7 @@ function evaluatePreparedProjectCandidates(
         case 'shopOffer':
           return evaluateRewardCandidate(catalog, context, query);
         case 'shopPurchase':
-          return evaluateShopPurchaseCandidate(catalog, project, context, query);
+          return evaluateShopPurchaseCandidate(catalog, context, query);
         case 'sideRoomEntryOrder':
           return evaluateSideRoomEntryOrderCandidate(catalog, project, context, query);
         case 'sideRoomGeneration':
