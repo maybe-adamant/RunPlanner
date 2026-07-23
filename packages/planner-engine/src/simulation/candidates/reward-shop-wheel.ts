@@ -26,9 +26,7 @@ import type {
 } from './model';
 
 import {
-  applyCandidateCommand,
   coverageNotReached,
-  evaluateCandidateBiome,
   failCandidate,
   immutableQuery,
   isCandidateContextUnavailable,
@@ -897,39 +895,6 @@ export function evaluateShopPurchaseCandidate(
   );
   if (!purchaseRoomCovered) {
     return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
-  }
-  if (baseline.kind === 'HubBiome') {
-    const proposal = applyCandidateCommand(catalog, context.project, stableQuery, {
-      kind: 'SetShopPurchase',
-      purchase: stableQuery.purchase,
-      purchased: stableQuery.purchased,
-    });
-    const evaluation = evaluateCandidateBiome(catalog, proposal, context, stableQuery);
-    if (isCandidateContextUnavailable(evaluation)) {
-      return unavailableCandidate(stableQuery, evaluation);
-    }
-    const exactKey = semanticAddressKey(stableQuery.purchase);
-    const findings = Object.freeze(
-      evaluation.rewards.findings.filter(
-        (finding) =>
-          semanticAddressKey(finding.origin) === exactKey ||
-          (finding.code === 'shopPurchaseUnavailable' &&
-            finding.origin.kind === 'occurrence' &&
-            finding.origin.routeKey === stableQuery.purchase.routeKey &&
-            finding.origin.biomeKey === stableQuery.purchase.biomeKey &&
-            finding.origin.occurrenceId === stableQuery.purchase.occurrenceId),
-      ),
-    );
-    return Object.freeze({
-      context: 'evaluated',
-      query: stableQuery,
-      support: findings.length === 0 ? 'possible' : 'impossible',
-      findings,
-      evidence: Object.freeze({
-        purchased: stableQuery.purchased,
-        relevantFindingCodes: Object.freeze(findings.map((finding) => finding.code)),
-      }),
-    });
   }
   const candidateContext = context.index.shopPurchaseContextsByOwner.get(
     semanticAddressKey(stableQuery.purchase),

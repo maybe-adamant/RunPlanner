@@ -9,7 +9,7 @@ import {
   semanticAddressKey,
   type SemanticAddress,
 } from '../../authored-project/addresses';
-import type { ShipCombatState, ShopState } from '../../authored-project/model';
+import type { ShipCombatState } from '../../authored-project/model';
 import { type RewardHistoryState, type RewardKernelFacts } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type {
@@ -64,6 +64,7 @@ import {
   type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
+import { prepareShopPurchaseCandidateContext } from './shop-candidates';
 
 type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalFixedEntryRoom;
 
@@ -496,71 +497,6 @@ function prepareShipLifecycleCandidateContext(
           );
         }
       }
-      return lifecycleCandidateResult(candidateFindings, candidateBranches);
-    },
-  });
-}
-
-function prepareShopPurchaseCandidateContext(
-  catalog: Catalog,
-  room: CanonicalAuthoredRoom,
-  declaration: RoomDeclaration,
-  roomView: LinearProgressiveRoomHistoryViews,
-  branchesBeforePurchases: readonly RewardBranchState[],
-  historySequence: number,
-  enteredBiomeCount: number,
-): ShopPurchaseCandidateContext {
-  if (room.entryState?.kind !== 'shop') {
-    return fail(`${room.gameName} has no shop purchase state`);
-  }
-  const entryState = room.entryState;
-  const purchaseOrigins = Object.freeze(entryState.offers.map((offer) => offer.purchaseOrigin));
-  return Object.freeze({
-    origin: room.origin,
-    purchaseOrigins,
-    evaluateState: (state: ShopState): RoomLifecycleCandidateResult => {
-      const candidateFindings = new Map<string, SemanticFinding>();
-      const candidateRoom = Object.freeze({
-        ...room,
-        entryState: Object.freeze({
-          kind: 'shop' as const,
-          profileKey: state.profileKey,
-          offers: Object.freeze(
-            entryState.offers.map((offer) => {
-              const candidate = state.offers[offer.offerKey];
-              if (candidate === undefined) {
-                return fail(`${room.gameName} lost shop offer ${offer.offerKey}`);
-              }
-              return Object.freeze({
-                ...offer,
-                offer: candidate.offer,
-                purchased: candidate.purchased,
-              });
-            }),
-          ),
-        }),
-      });
-      const candidateBranches = processShopPurchases(
-        branchesBeforePurchases,
-        {
-          catalog,
-          room: candidateRoom,
-          declaration,
-          historySequence,
-          facts: (branchHistory, shopNames = new Set()) =>
-            rewardFacts(
-              catalog,
-              candidateRoom,
-              declaration,
-              roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
-              branchHistory,
-              enteredBiomeCount,
-              shopNames,
-            ),
-          fail,
-        },
-        candidateFindings,
-      );
       return lifecycleCandidateResult(candidateFindings, candidateBranches);
     },
   });
@@ -1277,15 +1213,24 @@ export function evaluateLinearRewards(
         if (!shopPurchaseContexts.has(roomKey)) {
           shopPurchaseContexts.set(
             roomKey,
-            prepareShopPurchaseCandidateContext(
+            prepareShopPurchaseCandidateContext({
               catalog,
               room,
               declaration,
-              roomView,
-              branches,
-              event.sequence,
-              enteredBiomeCount,
-            ),
+              branchesBeforePurchases: branches,
+              historySequence: event.sequence,
+              facts: (candidateRoom, branchHistory, shopNames) =>
+                rewardFacts(
+                  catalog,
+                  candidateRoom,
+                  declaration,
+                  roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+                  branchHistory,
+                  enteredBiomeCount,
+                  shopNames,
+                ),
+              fail,
+            }),
           );
         }
         branches = processShopPurchases(

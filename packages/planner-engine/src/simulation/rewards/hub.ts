@@ -21,9 +21,11 @@ import type { SemanticFinding } from '../model';
 import { createRewardFacts, createdPeerGameNames } from './facts';
 import {
   indexRewardProducerFrontier,
+  registerRoomLifecycleCandidateContexts,
   registerRewardProducerFrontiers,
   type RewardProducerCandidateResult,
   type RewardProducerFrontier,
+  type ShopPurchaseCandidateContext,
 } from './frontiers';
 import type { HubRewardSimulation } from './model';
 import {
@@ -43,6 +45,7 @@ import {
   type OfferProcessingPeer,
   type RewardBranchState,
 } from './processing';
+import { prepareShopPurchaseCandidateContext } from './shop-candidates';
 
 type CanonicalHubRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 type CanonicalHubRewardSource = CanonicalAuthoredRoom | CanonicalHubRoom;
@@ -305,6 +308,7 @@ export function evaluateHubRewards(
   const rewardLookup = deriveRewardLookup(catalog, layout, snapshot);
   const findings = new Map<string, SemanticFinding>();
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
+  const shopPurchaseContexts = new Map<string, ShopPurchaseCandidateContext>();
   let hubBoardPeers: readonly OfferProcessingPeer[] = Object.freeze([]);
   let branches: readonly RewardBranchState[] = initializeRewardBranches();
 
@@ -695,6 +699,31 @@ export function evaluateHubRewards(
         if (room?.kind !== 'authored' || declaration === undefined || roomView === undefined) {
           fail('Hub shop purchases have no authored room');
         }
+        const roomKey = semanticAddressKey(room.origin);
+        if (!shopPurchaseContexts.has(roomKey)) {
+          shopPurchaseContexts.set(
+            roomKey,
+            prepareShopPurchaseCandidateContext({
+              catalog,
+              room,
+              declaration,
+              branchesBeforePurchases: branches,
+              historySequence: event.sequence,
+              facts: (candidateRoom, branchHistory, shopNames) =>
+                rewardFacts(
+                  catalog,
+                  candidateRoom,
+                  declaration,
+                  roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+                  branchHistory,
+                  'self',
+                  rewardLookup.internal,
+                  shopNames,
+                ),
+              fail,
+            }),
+          );
+        }
         branches = processShopPurchases(
           branches,
           {
@@ -734,6 +763,10 @@ export function evaluateHubRewards(
     rewardLookups: rewardLookup.public,
   });
   registerRewardProducerFrontiers(simulation, producerFrontiers);
+  registerRoomLifecycleCandidateContexts(simulation, {
+    shipsByOwner: new Map(),
+    shopsByOwner: shopPurchaseContexts,
+  });
   return simulation;
 }
 

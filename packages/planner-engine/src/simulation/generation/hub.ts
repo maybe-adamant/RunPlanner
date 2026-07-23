@@ -1,8 +1,10 @@
 import type { Catalog, HubBiomeLayout } from '../../catalog-schema';
 import {
   createBiomeAddress,
+  createHubOpenSetAddress,
   createHubSlotAddress,
   semanticAddressKey,
+  type BiomeAddress,
 } from '../../authored-project/addresses';
 import type {
   CanonicalHubHistory,
@@ -137,20 +139,22 @@ function assertFixedBoard(
   });
 }
 
-function validateOpenSlotConstraints(
-  snapshot: Pick<HubSimulationMaterialization, 'biomeKey'> & {
-    readonly hubBoard: CanonicalHubBoard;
-  },
+export function evaluateHubOpenSetConstraints(
   layout: HubBiomeLayout,
-  findings: SemanticFinding[],
-): readonly HubOpenSlotConstraintSupportEntry[] {
-  const openKeys = new Set(snapshot.hubBoard.targets.map((target) => target.hubSlotKey));
-  return Object.freeze(
+  biome: BiomeAddress,
+  openSlotKeys: readonly string[],
+): {
+  readonly entries: readonly HubOpenSlotConstraintSupportEntry[];
+  readonly findings: readonly SemanticFinding[];
+} {
+  const openKeys = new Set(openSlotKeys);
+  const findings: SemanticFinding[] = [];
+  const entries = Object.freeze(
     layout.hub.openSlotConstraints.map((constraint, constraintIndex) => {
       const constrainedOpen = constraint.slotKeys.filter((slotKey) => openKeys.has(slotKey));
       const selectedPossible = constrainedOpen.length <= constraint.max;
       const entry: HubOpenSlotConstraintSupportEntry = Object.freeze({
-        origin: snapshot.hubBoard.origin,
+        origin: createHubOpenSetAddress(biome),
         constraintIndex,
         constrainedSlotKeys: constraint.slotKeys,
         openSlotKeys: Object.freeze(constrainedOpen),
@@ -158,12 +162,13 @@ function validateOpenSlotConstraints(
         selectedPossible,
       });
       if (!selectedPossible) {
-        for (const target of snapshot.hubBoard.targets) {
-          if (!constrainedOpen.includes(target.hubSlotKey)) {
+        const constrainedOpenSet = new Set(constrainedOpen);
+        for (const hubSlotKey of openSlotKeys) {
+          if (!constrainedOpenSet.has(hubSlotKey)) {
             continue;
           }
           findings.push(
-            finding('hubOpenSlotUnavailable', target.origin, {
+            finding('hubOpenSlotUnavailable', createHubSlotAddress(biome, hubSlotKey), {
               constraintIndex,
               constrainedSlotKeys: constraint.slotKeys,
               openSlotKeys: entry.openSlotKeys,
@@ -176,6 +181,7 @@ function validateOpenSlotConstraints(
       return entry;
     }),
   );
+  return Object.freeze({ entries, findings: Object.freeze(findings) });
 }
 
 function requiredGeneratedCount(layout: HubBiomeLayout, visitIndex: number): number {
@@ -422,8 +428,13 @@ export function evaluateHubRoomGeneration(
     }
     assertTerminalCompletion(layout, snapshot, history);
   }
-  const findings: SemanticFinding[] = [];
-  const openSlotConstraints = validateOpenSlotConstraints(withBoard, layout, findings);
+  const openSet = evaluateHubOpenSetConstraints(
+    layout,
+    createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
+    board.targets.map((target) => target.hubSlotKey),
+  );
+  const findings: SemanticFinding[] = [...openSet.findings];
+  const openSlotConstraints = openSet.entries;
   const views = roomViews(history);
   const sideRoomGenerations = Object.freeze(
     [

@@ -509,6 +509,13 @@ export type CandidateEvaluationEvent =
       readonly routeKey: string;
       readonly biomeKey: string;
       readonly scope: 'hubBiome' | 'linearBiome';
+    }
+  | {
+      readonly kind: 'regionReplay';
+      readonly queryKind: ProjectCandidateQuery['kind'];
+      readonly routeKey: string;
+      readonly biomeKey: string;
+      readonly scope: 'hubVisit' | 'hubLocal';
     };
 
 export interface ProjectCandidateSessionOptions {
