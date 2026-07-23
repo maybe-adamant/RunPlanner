@@ -1,7 +1,14 @@
 import type { Catalog, RoomDeclaration, RoomKind } from '@run-planner/engine/catalog-schema';
 import type { ProjectDocument, TargetAddress } from '@run-planner/engine/authored-project';
 
-export const ordinaryRoomCategories = ['Combat', 'Miniboss', 'Story', 'Fountain', 'Shop'] as const;
+export const ordinaryRoomCategories = [
+  'Combat',
+  'Miniboss',
+  'Story',
+  'Trial',
+  'Fountain',
+  'Shop',
+] as const;
 const generatedTargetRoomCategories = Object.freeze([
   ...ordinaryRoomCategories,
   'Preboss',
@@ -29,13 +36,14 @@ export function roomCategoryForKind(kind: RoomKind): RoomSelectorCategory | unde
       return kind;
     case 'Reprieve':
       return 'Fountain';
+    case 'Devotion':
+      return 'Trial';
     case 'Preboss':
       return 'Preboss';
     case 'Intro':
     case 'Opening':
     case 'PreHub':
     case 'Boss':
-    case 'Devotion':
     case 'Hub':
     case 'PostBoss':
       return undefined;

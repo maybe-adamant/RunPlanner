@@ -7,6 +7,7 @@ import { createCandidateProjectionService } from '../projections/candidateProjec
 import { createContextualOptionResolver } from '../projections/contextualOptions';
 import { createContextualPickerProjection } from '../projections/contextualPicker';
 import { createRewardPickerProjection } from '../projections/rewardPicker';
+import { createStructuredWorkspaceProjection } from '../projections/structuredWorkspace';
 import {
   createAutosaveCoordinator,
   restoreStartupProject,
@@ -50,6 +51,11 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const contextualOptions = createContextualOptionResolver(catalog);
   const contextualPicker = createContextualPickerProjection(contextualOptions);
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
+  const structuredWorkspace = createStructuredWorkspaceProjection(catalog, {
+    candidateProjection,
+    contextualPicker,
+    rewardPicker,
+  });
   const store = createPlannerStore({
     catalog,
     evaluateProject,
@@ -84,6 +90,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     projectOperations,
     rewardPicker,
     store,
+    structuredWorkspace,
     dispose(): void {
       autosaveCoordinator?.dispose();
     },
