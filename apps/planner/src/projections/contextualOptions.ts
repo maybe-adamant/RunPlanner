@@ -243,6 +243,11 @@ export function explainCandidateEvaluation(
           kind: 'coverage',
           message: 'This decision has not been reached by the current evaluated prefix.',
         };
+      case 'producerFrontierUnavailable':
+        return {
+          kind: 'producerFrontierUnavailable',
+          message: 'The current simulation does not reach this reward producer.',
+        };
       case 'upstreamIncomplete':
         return {
           kind: 'upstreamIncomplete',

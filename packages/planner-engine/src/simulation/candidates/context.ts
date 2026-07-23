@@ -144,6 +144,18 @@ export function coverageNotReached(
   });
 }
 
+export function producerFrontierUnavailable(
+  query: ProjectCandidateQuery,
+): CandidateContextUnavailable {
+  return Object.freeze({
+    reason: 'producerFrontierUnavailable',
+    evidence: Object.freeze({
+      kind: 'producerFrontierUnavailable',
+      producer: queryAddress(query),
+    }),
+  });
+}
+
 export function isCandidateContextUnavailable(
   value: unknown,
 ): value is CandidateContextUnavailable {

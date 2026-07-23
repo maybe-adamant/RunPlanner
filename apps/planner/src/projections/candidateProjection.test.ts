@@ -108,7 +108,7 @@ describe('candidate application projection', () => {
     expect(yieldCount).toBeGreaterThan(1);
   });
 
-  it('measures the current dense Devotion domain replay baseline', async () => {
+  it('reuses one producer frontier across the dense Devotion domain', async () => {
     const events: CandidateEvaluationEvent[] = [];
     const service = createCandidateProjectionService(
       catalog,
@@ -140,7 +140,7 @@ describe('candidate application projection', () => {
     );
 
     expect(events.filter((event) => event.kind === 'queryBatch')).toHaveLength(72);
-    expect(events.filter((event) => event.kind === 'biomeReplay')).toHaveLength(72);
+    expect(events.filter((event) => event.kind === 'biomeReplay')).toHaveLength(0);
   });
 
   it('caches stable option structures by immutable project and semantic owner', () => {

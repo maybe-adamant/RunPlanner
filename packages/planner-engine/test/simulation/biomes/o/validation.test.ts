@@ -24,10 +24,13 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  createPreparedProjectCandidateSession,
   evaluateProjectCandidate,
   evaluateProjectCandidates,
   evaluateLinearBiome,
   evaluateHubBiome,
+  simulateProject,
+  type CandidateEvaluationEvent,
   type CompleteHubProjectEvaluation,
   type CompleteLinearProjectEvaluation,
 } from '@run-planner/engine/simulation';
@@ -439,6 +442,17 @@ describe('selected O validation', () => {
         }),
       }),
     );
+    expect(
+      evaluateProjectCandidate(catalog, document, {
+        kind: 'rewardWheelOffer',
+        offer: createRewardWheelOfferAddress(oBiome, oIds.combat04, 'wheel1', 'offer1'),
+        value: { rewardType: 'SpellDrop' },
+      }),
+    ).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: [expect.objectContaining({ code: 'rewardBagEntryUnavailable' })],
+    });
   });
 
   it('evaluates ship-specific candidates through the selected O simulation', () => {
@@ -509,5 +523,30 @@ describe('selected O validation', () => {
       support: 'impossible',
       findings: [{ code: 'encounterCountUnavailable' }],
     });
+  });
+
+  it('evaluates one wheel offer from its prepared producer frontier', () => {
+    const document = validProject();
+    const events: CandidateEvaluationEvent[] = [];
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      document,
+      simulateProject(catalog, document),
+      { observe: (event) => events.push(event) },
+    );
+
+    expect(
+      session.evaluate([
+        {
+          kind: 'rewardWheelOffer',
+          offer: createRewardWheelOfferAddress(oBiome, oIds.combat04, 'wheel1', 'offer1'),
+          value: {
+            rewardType: 'Boon',
+            payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+          },
+        },
+      ])[0],
+    ).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 1 }]);
   });
 });

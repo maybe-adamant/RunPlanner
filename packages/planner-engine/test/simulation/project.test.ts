@@ -1757,9 +1757,8 @@ describe('project simulation composition', () => {
       },
     });
     expect(dormantGoalReward).toMatchObject({
-      context: 'evaluated',
-      support: 'possible',
-      findings: [],
+      context: 'unavailable',
+      reason: 'producerFrontierUnavailable',
     });
     expect(activeNonGoalReward).toMatchObject({
       context: 'evaluated',

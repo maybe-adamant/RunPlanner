@@ -1,5 +1,5 @@
 import type { Catalog, HubBiomeLayout, RoomDeclaration } from '../../catalog-schema';
-import { semanticAddressKey } from '../../authored-project/addresses';
+import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
 import type { RewardHistoryState, RewardKernelFacts } from '../../reward-kernel';
 import type {
   CanonicalHubHistory,
@@ -14,10 +14,17 @@ import type {
   CanonicalHubRoom,
   CanonicalHubTarget,
   CanonicalLocalChildRoom,
+  CanonicalResolvedIncomingReward,
   HubSimulationMaterialization,
 } from '../materialization';
 import type { SemanticFinding } from '../model';
 import { createRewardFacts, createdPeerGameNames } from './facts';
+import {
+  indexRewardProducerFrontier,
+  registerRewardProducerFrontiers,
+  type RewardProducerCandidateResult,
+  type RewardProducerFrontier,
+} from './frontiers';
 import type { HubRewardSimulation } from './model';
 import {
   advanceRewardBranches,
@@ -26,6 +33,7 @@ import {
   freezeRecord,
   initializeRewardBranches,
   processJointUnorderedOffers,
+  processOwnedRewardAcquisition,
   processProducerRole,
   processRewardOffer,
   processShopInventory,
@@ -269,6 +277,16 @@ function localOfferGroups(
   );
 }
 
+function candidateResult(
+  findings: Map<string, SemanticFinding>,
+  branches: readonly RewardBranchState[],
+): RewardProducerCandidateResult {
+  return Object.freeze({
+    findings: Object.freeze([...findings.values()]),
+    supported: branches.length > 0,
+  });
+}
+
 export function evaluateHubRewards(
   catalog: Catalog,
   snapshot: HubSimulationMaterialization,
@@ -286,6 +304,7 @@ export function evaluateHubRewards(
   const emptyLookups = Object.freeze({});
   const rewardLookup = deriveRewardLookup(catalog, layout, snapshot);
   const findings = new Map<string, SemanticFinding>();
+  const producerFrontiers = new Map<string, RewardProducerFrontier>();
   let hubBoardPeers: readonly OfferProcessingPeer[] = Object.freeze([]);
   let branches: readonly RewardBranchState[] = initializeRewardBranches();
 
@@ -321,7 +340,7 @@ export function evaluateHubRewards(
           if (source?.kind !== 'authored' || group === undefined) {
             fail(`${event.gameName} lost its parent-local reward group`);
           }
-          const contexts = group.flatMap((childEvent) => {
+          const groupEntries = group.flatMap((childEvent) => {
             const child = rooms.get(semanticAddressKey(childEvent.origin));
             if (child?.kind !== 'localChild') {
               fail(`${childEvent.gameName} lost its canonical local room`);
@@ -335,11 +354,102 @@ export function evaluateHubRewards(
               childEvent.sequence,
               emptyLookups,
             );
-            return context === undefined ? [] : [context];
+            return context === undefined ? [] : [{ child, context }];
           });
-          if (contexts.length !== group.length) {
+          if (groupEntries.length !== group.length) {
             fail(`${source.gameName} generated a side room without a reward`);
           }
+          const contexts = groupEntries.map((entry) => entry.context);
+          const frontierBranches = branches;
+          const owners = Object.freeze(contexts.map((context) => context.reward.origin));
+          const ownerKeys = new Set(owners.map(semanticAddressKey));
+          const acquisitionsByOwner = new Map(
+            groupEntries.map((entry) => {
+              const childKey = semanticAddressKey(entry.child.origin);
+              const childView = views.get(childKey);
+              const view = childView?.preOutgoing ?? childView?.entry;
+              const events = Object.freeze(
+                history.events.filter(
+                  (candidate) =>
+                    candidate.kind === 'producerRoleAdvanced' &&
+                    semanticAddressKey(candidate.origin) === childKey,
+                ),
+              );
+              return [
+                semanticAddressKey(entry.context.reward.origin),
+                Object.freeze({
+                  sequence: events.at(-1)?.sequence ?? view?.sequence,
+                  view,
+                }),
+              ] as const;
+            }),
+          );
+          indexRewardProducerFrontier(
+            producerFrontiers,
+            Object.freeze({
+              generationPolicy: 'jointUnordered',
+              generationHistorySequence: event.sequence,
+              reachableBranchCount: frontierBranches.length,
+              acquisitionHorizon: 'ownEnteredLifecycle',
+              owners,
+              evaluateOffer: (
+                owner: SemanticAddress,
+                offer: CanonicalResolvedIncomingReward['offer'],
+              ) => {
+                const ownerKey = semanticAddressKey(owner);
+                if (!ownerKeys.has(ownerKey)) {
+                  return fail('Hub local reward frontier received a foreign owner');
+                }
+                const candidateFindings = new Map<string, SemanticFinding>();
+                let candidateBranches = processJointUnorderedOffers(
+                  frontierBranches,
+                  contexts.map((context) =>
+                    semanticAddressKey(context.reward.origin) === ownerKey
+                      ? {
+                          ...context,
+                          reward: Object.freeze({ ...context.reward, offer }),
+                        }
+                      : context,
+                  ),
+                  candidateFindings,
+                );
+                const entry = groupEntries.find(
+                  (candidate) => semanticAddressKey(candidate.context.reward.origin) === ownerKey,
+                );
+                if (entry === undefined) {
+                  return fail('Hub local reward frontier lost its canonical room');
+                }
+                const acquisition = acquisitionsByOwner.get(ownerKey);
+                if (
+                  candidateBranches.length > 0 &&
+                  acquisition !== undefined &&
+                  acquisition.sequence !== undefined &&
+                  acquisition.view !== undefined
+                ) {
+                  candidateBranches = processOwnedRewardAcquisition(
+                    catalog,
+                    candidateBranches,
+                    Object.freeze({ ...entry.context.reward, offer }),
+                    acquisition.sequence,
+                    (branchHistory) =>
+                      createRewardFacts({
+                        catalog,
+                        source: entry.child,
+                        sourceDeclaration: requireDeclaration(catalog, entry.child.gameName),
+                        view: acquisition.view!,
+                        history: branchHistory,
+                        enteredBiomeCount: 1,
+                        currentBatchRoomGameNames: Object.freeze([]),
+                        fail,
+                      }),
+                    candidateFindings,
+                    fail,
+                  );
+                }
+                return candidateResult(candidateFindings, candidateBranches);
+              },
+            }),
+          );
           branches = processJointUnorderedOffers(branches, contexts, findings);
           processedLocalParents.add(parentKey);
           break;
@@ -389,6 +499,73 @@ export function evaluateHubRewards(
           emptyLookups,
           event.source === 'hubTarget' ? hubBoardPeers : Object.freeze([]),
         );
+        if (context !== undefined && room.incomingReward !== undefined) {
+          const incoming = room.incomingReward;
+          const frontierBranches = branches;
+          const incomingOwnerKey = semanticAddressKey(incoming.origin);
+          const acquisitionEvents = history.events.filter(
+            (candidate) =>
+              candidate.kind === 'producerRoleAdvanced' &&
+              semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
+          );
+          const candidateRoomView = views.get(semanticAddressKey(room.origin));
+          const acquisitionView = candidateRoomView?.preOutgoing ?? candidateRoomView?.entry;
+          const acquisitionSequence =
+            acquisitionEvents.at(-1)?.sequence ?? acquisitionView?.sequence;
+          indexRewardProducerFrontier(
+            producerFrontiers,
+            Object.freeze({
+              generationPolicy: 'sequential',
+              generationHistorySequence: event.sequence,
+              reachableBranchCount: frontierBranches.length,
+              acquisitionHorizon: 'ownEnteredLifecycle',
+              owners: Object.freeze([incoming.origin]),
+              evaluateOffer: (
+                owner: SemanticAddress,
+                offer: CanonicalResolvedIncomingReward['offer'],
+              ) => {
+                if (semanticAddressKey(owner) !== incomingOwnerKey) {
+                  return fail('Hub sequential reward frontier received a foreign owner');
+                }
+                const candidateFindings = new Map<string, SemanticFinding>();
+                let candidateBranches = processRewardOffer(
+                  frontierBranches,
+                  {
+                    ...context,
+                    reward: Object.freeze({ ...context.reward, offer }),
+                  },
+                  candidateFindings,
+                );
+                if (candidateBranches.length === 0) {
+                  return candidateResult(candidateFindings, candidateBranches);
+                }
+                if (acquisitionView === undefined || acquisitionSequence === undefined) {
+                  return candidateResult(candidateFindings, candidateBranches);
+                }
+                candidateBranches = processOwnedRewardAcquisition(
+                  catalog,
+                  candidateBranches,
+                  Object.freeze({ ...incoming, offer }),
+                  acquisitionSequence,
+                  (branchHistory) =>
+                    createRewardFacts({
+                      catalog,
+                      source: room,
+                      sourceDeclaration: requireDeclaration(catalog, room.gameName),
+                      view: acquisitionView,
+                      history: branchHistory,
+                      enteredBiomeCount: 1,
+                      currentBatchRoomGameNames: Object.freeze([]),
+                      fail,
+                    }),
+                  candidateFindings,
+                  fail,
+                );
+                return candidateResult(candidateFindings, candidateBranches);
+              },
+            }),
+          );
+        }
         branches =
           context === undefined
             ? advanceRewardBranches(branches, event.sequence)
@@ -408,28 +585,76 @@ export function evaluateHubRewards(
         if (room?.kind !== 'authored' || declaration === undefined || roomView === undefined) {
           fail('Hub shop offer point has no authored room');
         }
-        branches = processShopInventory(
-          branches,
-          {
-            catalog,
-            room,
-            declaration,
-            historySequence: event.sequence,
-            facts: (branchHistory, shopNames = new Set()) =>
-              rewardFacts(
-                catalog,
-                room,
-                declaration,
-                roomView.preparation,
-                branchHistory,
-                'self',
-                rewardLookup.internal,
-                shopNames,
-              ),
-            fail,
-          },
-          findings,
+        const frontierBranches = branches;
+        const owners = Object.freeze(
+          (room.entryState?.kind === 'shop' ? room.entryState.offers : []).map(
+            (offer) => offer.offerOrigin,
+          ),
         );
+        const ownerKeys = new Set(owners.map(semanticAddressKey));
+        const shopContext = {
+          catalog,
+          room,
+          declaration,
+          historySequence: event.sequence,
+          facts: (branchHistory: RewardHistoryState, shopNames: ReadonlySet<string> = new Set()) =>
+            rewardFacts(
+              catalog,
+              room,
+              declaration,
+              roomView.preparation,
+              branchHistory,
+              'self',
+              rewardLookup.internal,
+              shopNames,
+            ),
+          fail,
+        };
+        if (owners.length > 0) {
+          indexRewardProducerFrontier(
+            producerFrontiers,
+            Object.freeze({
+              generationPolicy: 'jointShopInventory',
+              generationHistorySequence: event.sequence,
+              reachableBranchCount: frontierBranches.length,
+              acquisitionHorizon: 'generationOnly',
+              owners,
+              evaluateOffer: (
+                owner: SemanticAddress,
+                offer: CanonicalResolvedIncomingReward['offer'],
+              ) => {
+                if (room.entryState?.kind !== 'shop') {
+                  return fail(`${room.gameName} lost its shop candidate state`);
+                }
+                const ownerKey = semanticAddressKey(owner);
+                if (!ownerKeys.has(ownerKey)) {
+                  return fail('Hub shop reward frontier received a foreign owner');
+                }
+                const candidateRoom = Object.freeze({
+                  ...room,
+                  entryState: Object.freeze({
+                    ...room.entryState,
+                    offers: Object.freeze(
+                      room.entryState.offers.map((entry) =>
+                        semanticAddressKey(entry.offerOrigin) === ownerKey
+                          ? Object.freeze({ ...entry, offer })
+                          : entry,
+                      ),
+                    ),
+                  }),
+                });
+                const candidateFindings = new Map<string, SemanticFinding>();
+                const candidateBranches = processShopInventory(
+                  frontierBranches,
+                  { ...shopContext, room: candidateRoom },
+                  candidateFindings,
+                );
+                return candidateResult(candidateFindings, candidateBranches);
+              },
+            }),
+          );
+        }
+        branches = processShopInventory(branches, shopContext, findings);
         break;
       }
       case 'producerRoleAdvanced': {
@@ -501,13 +726,15 @@ export function evaluateHubRewards(
   }
 
   const immutableFindings = Object.freeze([...findings.values()]);
-  return Object.freeze({
+  const simulation: HubRewardSimulation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
     branches: Object.freeze(branches.map(publicRewardBranch)),
     findings: immutableFindings,
     rewardLookups: rewardLookup.public,
   });
+  registerRewardProducerFrontiers(simulation, producerFrontiers);
+  return simulation;
 }
 
 export function evaluateNRewards(

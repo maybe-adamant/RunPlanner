@@ -792,6 +792,71 @@ export function processProducerRole(
   return Object.freeze(next);
 }
 
+export function processOwnedRewardAcquisition(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  reward: {
+    readonly offer: CanonicalResolvedIncomingReward['offer'];
+    readonly origin: SemanticAddress;
+    readonly producerLifecycleKey: string;
+  },
+  historySequence: number,
+  facts: RewardFactsFactory,
+  findings: Map<string, SemanticFinding>,
+  fail: (detail: string) => never,
+): readonly RewardBranchState[] {
+  const producer = catalog.rewards.producerLifecycles.byKey[reward.producerLifecycleKey];
+  const lifecycle = producer?.rewardTypes.byKey[reward.offer.rewardType];
+  if (lifecycle === undefined) {
+    return fail(`${reward.producerLifecycleKey} does not support ${reward.offer.rewardType}`);
+  }
+  let current = branches;
+  for (const binding of lifecycle.acquisitionLifecycle) {
+    const next: RewardBranchState[] = [];
+    for (const branch of current) {
+      const branchFacts = facts(branch.history);
+      if (
+        !isOfferSupportedAtResolutionPoint(catalog.rewards, reward.offer, branchFacts, {
+          acquisitionRole: binding.role,
+        })
+      ) {
+        continue;
+      }
+      const acquisition = resolveAcquisitionRole(
+        catalog.rewards,
+        reward.offer,
+        binding.role,
+        binding.lifecyclePoint,
+      );
+      const history = applyConcreteAcquisition(
+        catalog.rewards,
+        branch.history,
+        acquisition.acquisition,
+      );
+      next.push(
+        appendRewardEvent(Object.freeze({ ...branch, history }), historySequence, {
+          kind: 'concreteAcquisition',
+          origin: reward.origin,
+          acquisition,
+        }),
+      );
+    }
+    if (next.length === 0) {
+      addRewardFinding(
+        findings,
+        rewardFinding('rewardAcquisitionUnavailable', reward.origin, {
+          ...offerEvidence(reward.offer),
+          role: binding.role,
+          lifecyclePoint: binding.lifecyclePoint,
+        }),
+      );
+      return Object.freeze([]);
+    }
+    current = Object.freeze(next);
+  }
+  return Object.freeze(current.map((branch) => advanceRewardBranch(branch, historySequence)));
+}
+
 export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
   return Object.freeze({
     bags: branch.bags,

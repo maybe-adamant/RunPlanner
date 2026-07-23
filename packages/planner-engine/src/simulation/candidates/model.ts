@@ -32,7 +32,7 @@ import type { ProjectEvaluation } from '../project';
 export type CandidateSupport = 'forced' | 'impossible' | 'possible';
 
 export type CandidateContextUnavailableReason =
-  'coverageNotReached' | 'upstreamIncomplete' | 'upstreamInvalid';
+  'coverageNotReached' | 'producerFrontierUnavailable' | 'upstreamIncomplete' | 'upstreamInvalid';
 
 export type CandidateContextUnavailableEvidence =
   | {
@@ -44,6 +44,10 @@ export type CandidateContextUnavailableEvidence =
   | {
       readonly kind: 'upstreamIncomplete' | 'upstreamInvalid';
       readonly upstreamBiomeKey: string;
+    }
+  | {
+      readonly kind: 'producerFrontierUnavailable';
+      readonly producer: SemanticAddress;
     };
 
 export interface RoomTargetCandidateQuery {

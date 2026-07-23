@@ -497,7 +497,7 @@ describe('project candidate evaluation', () => {
     }
   });
 
-  it('evaluates selected incoming rewards, shop offers, and purchases with selected-plan parity', () => {
+  it('evaluates reached reward producers and leaves blocked downstream producers unavailable', () => {
     let project = possibilityProject();
     const shopId = batchOccurrenceId(5, 1);
     project = applyProjectCommand(project, catalog, {
@@ -541,13 +541,18 @@ describe('project candidate evaluation', () => {
     ]);
     const selected = simulateProject(catalog, project).findings;
 
-    for (const result of results) {
-      expect(result.context).toBe('evaluated');
-      if (result.context !== 'evaluated') {
-        continue;
-      }
-      expect(result.support === 'impossible').toBe(result.findings.length > 0);
-      for (const finding of result.findings) {
+    expect(results[0]).toMatchObject({
+      context: 'unavailable',
+      reason: 'producerFrontierUnavailable',
+    });
+    expect(results[1]).toMatchObject({
+      context: 'unavailable',
+      reason: 'producerFrontierUnavailable',
+    });
+    expect(results[2]).toMatchObject({ context: 'evaluated' });
+    if (results[2]?.context === 'evaluated') {
+      expect(results[2].support === 'impossible').toBe(results[2].findings.length > 0);
+      for (const finding of results[2].findings) {
         expect(selected).toContainEqual(finding);
       }
     }
@@ -613,17 +618,10 @@ describe('project candidate evaluation', () => {
       offer: offerAddress,
       value: alternateShopOffer,
     });
-    const authoredAlternateShop = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: offerAddress,
-      value: alternateShopOffer,
+    expect(alternateShop).toMatchObject({
+      context: 'unavailable',
+      reason: 'producerFrontierUnavailable',
     });
-    expect(alternateShop.context).toBe('evaluated');
-    if (alternateShop.context === 'evaluated') {
-      for (const finding of alternateShop.findings) {
-        expect(simulateProject(catalog, authoredAlternateShop).findings).toContainEqual(finding);
-      }
-    }
   });
 
   it('preserves typed Boon peer and Devotion pair exclusions', () => {
@@ -985,22 +983,6 @@ describe('project candidate evaluation', () => {
       },
     ]);
 
-    expect(events).toEqual([
-      { kind: 'queryBatch', queryCount: 2 },
-      {
-        kind: 'biomeReplay',
-        queryKind: 'incomingReward',
-        routeKey: 'Underworld',
-        biomeKey: 'F',
-        scope: 'linearBiome',
-      },
-      {
-        kind: 'biomeReplay',
-        queryKind: 'incomingReward',
-        routeKey: 'Underworld',
-        biomeKey: 'F',
-        scope: 'linearBiome',
-      },
-    ]);
+    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 2 }]);
   });
 });
