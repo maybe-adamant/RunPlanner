@@ -3,6 +3,7 @@ export { materializeLinearBiomePrefix } from './linear/prefix';
 export { LinearMaterializationContractError } from './linear/contract';
 export { projectClockworkTopology, projectLinearBatchState } from './linear/continuations';
 export type { ClockworkBatchProjection, ClockworkTargetProjection } from './linear/continuations';
+export { materializeShipCombatState, type MaterializedShipCombatState } from './linear/rooms';
 export { HubMaterializationContractError, materializeHubBiome } from './hub';
 export { materializeHubBiomePrefix } from './hub-prefix';
 export type {

@@ -539,8 +539,6 @@ describe('project candidate evaluation', () => {
         purchased: firstOffer.purchased,
       },
     ]);
-    const selected = simulateProject(catalog, project).findings;
-
     expect(results[0]).toMatchObject({
       context: 'unavailable',
       reason: 'producerFrontierUnavailable',
@@ -549,29 +547,19 @@ describe('project candidate evaluation', () => {
       context: 'unavailable',
       reason: 'producerFrontierUnavailable',
     });
-    expect(results[2]).toMatchObject({ context: 'evaluated' });
-    if (results[2]?.context === 'evaluated') {
-      expect(results[2].support === 'impossible').toBe(results[2].findings.length > 0);
-      for (const finding of results[2].findings) {
-        expect(selected).toContainEqual(finding);
-      }
-    }
+    expect(results[2]).toMatchObject({
+      context: 'unavailable',
+      reason: 'coverageNotReached',
+    });
     const purchasedCandidate = evaluateProjectCandidate(catalog, project, {
       kind: 'shopPurchase',
       purchase: purchaseAddress,
       purchased: true,
     });
-    const authoredPurchase = applyProjectCommand(project, catalog, {
-      kind: 'SetShopPurchase',
-      purchase: purchaseAddress,
-      purchased: true,
+    expect(purchasedCandidate).toMatchObject({
+      context: 'unavailable',
+      reason: 'coverageNotReached',
     });
-    expect(purchasedCandidate.context).toBe('evaluated');
-    if (purchasedCandidate.context === 'evaluated') {
-      for (const finding of purchasedCandidate.findings) {
-        expect(simulateProject(catalog, authoredPurchase).findings).toContainEqual(finding);
-      }
-    }
 
     const earlyIncomingId = batchOccurrenceId(1, 1);
     const alternateIncoming = evaluateProjectCandidate(catalog, project, {

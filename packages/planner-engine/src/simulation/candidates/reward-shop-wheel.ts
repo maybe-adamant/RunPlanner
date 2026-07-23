@@ -1,7 +1,11 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { SemanticAddress } from '../../authored-project/addresses';
-import { type ProjectCommand } from '../../authored-project/commands/dispatch';
-import type { ProjectDocument, RewardWheelState } from '../../authored-project/model';
+import type {
+  OccurrenceId,
+  RewardWheelState,
+  ShipCombatState,
+  ShopState,
+} from '../../authored-project/model';
 import type { Catalog, RewardWheelOfferPoint } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
@@ -30,7 +34,6 @@ import {
   isCandidateContextUnavailable,
   locateCandidateBiome,
   locateCandidateLinear,
-  locateIndexedBiome,
   locateIndexedOccurrence,
   locateIndexedLinearPlan,
   producerFrontierUnavailable,
@@ -137,10 +140,6 @@ function rewardExclusions(
       }
     }),
   );
-}
-
-function simulationFindings(evaluation: CandidateLinearBiomeEvaluation) {
-  return Object.freeze([...evaluation.roomGeneration.findings, ...evaluation.rewards.findings]);
 }
 
 export function evaluateBatchRewardStoreCandidate(
@@ -479,84 +478,151 @@ function requireRewardWheel(
   return { descriptor, wheel };
 }
 
-function evaluateLinearMutation(
-  catalog: Catalog,
-  project: ProjectDocument,
+function requireShipLifecycleContext(
   context: PreparedCandidateContext,
   query:
-    | RewardWheelOfferCandidateQuery
     | RewardWheelOfferCountCandidateQuery
     | RewardWheelPickedCandidateQuery
     | RewardWheelStoreCandidateQuery
     | ShipEncounterCountCandidateQuery,
-  command: ProjectCommand,
-): CandidateLinearBiomeEvaluation | CandidateContextUnavailable {
+  occurrenceId: OccurrenceId,
+) {
   const baseline = locateCandidateLinear(context, query);
   if (isCandidateContextUnavailable(baseline)) {
     return baseline;
   }
-  const ownerCovered =
-    query.kind === 'shipEncounterCount'
-      ? baseline.roomGeneration.encounterCounts.some(
-          (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(query.occurrence),
-        )
-      : baseline.history.rooms.some(
-          (room) =>
-            room.origin.kind === 'occurrence' &&
-            room.origin.occurrenceId ===
-              (query.kind === 'rewardWheelOffer'
-                ? query.offer.occurrenceId
-                : query.wheel.occurrenceId) &&
-            room.offerPoints?.some(
-              (offerPoint) =>
-                offerPoint.offerPoint ===
-                (query.kind === 'rewardWheelOffer' ? query.offer.wheelKey : query.wheel.wheelKey),
-            ) === true,
-        );
-  if (!ownerCovered) {
+  const occurrence = locateIndexedOccurrence(context, query, occurrenceId).occurrence;
+  const candidateContext = context.index.shipLifecycleContextsByOwner.get(
+    semanticAddressKey({
+      kind: 'occurrence',
+      routeKey:
+        query.kind === 'shipEncounterCount' ? query.occurrence.routeKey : query.wheel.routeKey,
+      biomeKey:
+        query.kind === 'shipEncounterCount' ? query.occurrence.biomeKey : query.wheel.biomeKey,
+      occurrenceId: occurrence.occurrenceId,
+    }),
+  );
+  if (candidateContext === undefined) {
     return coverageNotReached(query, baseline);
   }
-  const proposal = applyCandidateCommand(catalog, project, query, command);
-  const evaluation = evaluateCandidateBiome(catalog, proposal, context, query);
-  if (isCandidateContextUnavailable(evaluation)) {
-    return evaluation;
+  return { baseline, candidateContext, occurrence };
+}
+
+function replaceWheel(
+  state: ShipCombatState,
+  wheelKey: string,
+  wheel: RewardWheelState,
+): ShipCombatState {
+  return Object.freeze({
+    ...state,
+    wheels: Object.freeze({ ...state.wheels, [wheelKey]: Object.freeze(wheel) }),
+  });
+}
+
+function lifecycleFindings(
+  findings: readonly SemanticFinding[],
+  owner:
+    | RewardWheelOfferCountCandidateQuery['wheel']
+    | RewardWheelPickedCandidateQuery['wheel']
+    | RewardWheelStoreCandidateQuery['wheel'],
+): readonly SemanticFinding[] {
+  const roomKey = semanticAddressKey({
+    kind: 'occurrence',
+    routeKey: owner.routeKey,
+    biomeKey: owner.biomeKey,
+    occurrenceId: owner.occurrenceId,
+  });
+  return Object.freeze(
+    findings.filter(
+      (finding) =>
+        semanticAddressKey(finding.origin) === semanticAddressKey(owner) ||
+        ('occurrenceId' in finding.origin &&
+          semanticAddressKey({
+            kind: 'occurrence',
+            routeKey: finding.origin.routeKey,
+            biomeKey: finding.origin.biomeKey,
+            occurrenceId: finding.origin.occurrenceId,
+          }) === roomKey),
+    ),
+  );
+}
+
+function encounterCountFinding(
+  query: ShipEncounterCountCandidateQuery,
+  beforeSequence: number,
+  supportEncounterCounts: readonly number[],
+): SemanticFinding {
+  return Object.freeze({
+    code: 'encounterCountUnavailable',
+    severity: 'error',
+    phase: 'roomGeneration',
+    origin: query.occurrence,
+    evidence: Object.freeze({
+      beforeSequence,
+      selectedEncounterCount: query.encounterCount,
+      supportEncounterCounts,
+    }),
+  });
+}
+
+function requireActiveWheel(
+  query:
+    | RewardWheelOfferCountCandidateQuery
+    | RewardWheelPickedCandidateQuery
+    | RewardWheelStoreCandidateQuery,
+  activeWheelKeys: readonly string[],
+  baseline: CandidateLinearBiomeEvaluation,
+): CandidateContextUnavailable | undefined {
+  if (!activeWheelKeys.includes(query.wheel.wheelKey)) {
+    return coverageNotReached(query, baseline);
   }
-  if (evaluation.kind !== 'LinearBiome') {
-    failCandidate(query, 'ship proposal changed its linear layout kind');
-  }
-  return evaluation;
+  return undefined;
 }
 
 export function evaluateShipEncounterCountCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: ShipEncounterCountCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as ShipEncounterCountCandidateQuery;
-  requireShipOccurrence(catalog, context, stableQuery);
-  const evaluation = evaluateLinearMutation(catalog, project, context, stableQuery, {
-    kind: 'ReplaceShipEncounterCount',
-    occurrence: stableQuery.occurrence,
-    encounterCount: stableQuery.encounterCount,
-  });
-  if (isCandidateContextUnavailable(evaluation)) {
-    return unavailableCandidate(stableQuery, evaluation);
+  if (stableQuery.encounterCount !== 2 && stableQuery.encounterCount !== 3) {
+    failCandidate(stableQuery, 'encounterCount must be 2 or 3');
   }
-  const selected = evaluation.roomGeneration.encounterCounts.find(
-    (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(stableQuery.occurrence),
+  const ship = requireShipOccurrence(catalog, context, stableQuery);
+  const prepared = requireShipLifecycleContext(
+    context,
+    stableQuery,
+    stableQuery.occurrence.occurrenceId,
+  );
+  if (isCandidateContextUnavailable(prepared)) {
+    return unavailableCandidate(stableQuery, prepared);
+  }
+  const selected = context.index.encounterCountsByOwner.get(
+    semanticAddressKey(stableQuery.occurrence),
   );
   if (selected === undefined) {
-    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, evaluation));
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, prepared.baseline));
   }
-  const findings = Object.freeze(
-    simulationFindings(evaluation).filter(
-      (finding) =>
-        finding.code !== 'encounterCountUnavailable' ||
-        semanticAddressKey(finding.origin) === semanticAddressKey(stableQuery.occurrence),
-    ),
-  );
-  const possible = selected.selectedPossible && findings.length === 0;
+  const structurallyPossible = selected.supportEncounterCounts.includes(stableQuery.encounterCount);
+  const rewardResult = structurallyPossible
+    ? prepared.candidateContext.evaluateState(
+        Object.freeze({ ...ship.state, encounterCount: stableQuery.encounterCount }),
+      )
+    : undefined;
+  const findings = Object.freeze([
+    ...(structurallyPossible
+      ? []
+      : [
+          encounterCountFinding(
+            stableQuery,
+            selected.beforeSequence,
+            selected.supportEncounterCounts,
+          ),
+        ]),
+    ...(rewardResult?.findings ?? []),
+  ]);
+  const possible =
+    structurallyPossible && rewardResult?.supported === true && findings.length === 0;
   return Object.freeze({
     context: 'evaluated',
     query: stableQuery,
@@ -577,26 +643,51 @@ export function evaluateShipEncounterCountCandidate(
 
 export function evaluateRewardWheelOfferCountCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: RewardWheelOfferCountCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RewardWheelOfferCountCandidateQuery;
-  const { descriptor } = requireRewardWheel(catalog, context, stableQuery);
-  const evaluation = evaluateLinearMutation(catalog, project, context, stableQuery, {
-    kind: 'ReplaceRewardWheelOfferCount',
-    wheel: stableQuery.wheel,
-    offerCount: stableQuery.offerCount,
-  });
-  if (isCandidateContextUnavailable(evaluation)) {
-    return unavailableCandidate(stableQuery, evaluation);
+  const { descriptor, wheel } = requireRewardWheel(catalog, context, stableQuery);
+  if (
+    !Number.isInteger(stableQuery.offerCount) ||
+    stableQuery.offerCount < descriptor.offerCount.min ||
+    stableQuery.offerCount > descriptor.offerCount.max
+  ) {
+    failCandidate(
+      stableQuery,
+      `offerCount must be between ${descriptor.offerCount.min} and ${descriptor.offerCount.max}`,
+    );
   }
-  const findings = simulationFindings(evaluation);
+  const ship = requireShipOccurrence(catalog, context, stableQuery);
+  const prepared = requireShipLifecycleContext(
+    context,
+    stableQuery,
+    stableQuery.wheel.occurrenceId,
+  );
+  if (isCandidateContextUnavailable(prepared)) {
+    return unavailableCandidate(stableQuery, prepared);
+  }
+  const inactive = requireActiveWheel(
+    stableQuery,
+    prepared.candidateContext.activeWheelKeys,
+    prepared.baseline,
+  );
+  if (inactive !== undefined) {
+    return unavailableCandidate(stableQuery, inactive);
+  }
+  const result = prepared.candidateContext.evaluateState(
+    replaceWheel(ship.state, stableQuery.wheel.wheelKey, {
+      ...wheel,
+      offerCount: stableQuery.offerCount,
+      pickedOfferIndex: Math.min(wheel.pickedOfferIndex, stableQuery.offerCount),
+    }),
+  );
+  const findings = lifecycleFindings(result.findings, stableQuery.wheel);
   return Object.freeze({
     context: 'evaluated',
     query: stableQuery,
     support:
-      findings.length === 0
+      result.supported && findings.length === 0
         ? descriptor.offerCount.min === descriptor.offerCount.max
           ? 'forced'
           : 'possible'
@@ -613,26 +704,46 @@ export function evaluateRewardWheelOfferCountCandidate(
 
 export function evaluateRewardWheelStoreCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: RewardWheelStoreCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RewardWheelStoreCandidateQuery;
-  const { descriptor } = requireRewardWheel(catalog, context, stableQuery);
-  const evaluation = evaluateLinearMutation(catalog, project, context, stableQuery, {
-    kind: 'ReplaceRewardWheelStore',
-    wheel: stableQuery.wheel,
-    storeKey: stableQuery.storeKey,
-  });
-  if (isCandidateContextUnavailable(evaluation)) {
-    return unavailableCandidate(stableQuery, evaluation);
+  const { descriptor, wheel } = requireRewardWheel(catalog, context, stableQuery);
+  if (!descriptor.reward.storeKeys.includes(stableQuery.storeKey)) {
+    failCandidate(
+      stableQuery,
+      `${stableQuery.storeKey} is not available from ${stableQuery.wheel.wheelKey}`,
+    );
   }
-  const findings = simulationFindings(evaluation);
+  const ship = requireShipOccurrence(catalog, context, stableQuery);
+  const prepared = requireShipLifecycleContext(
+    context,
+    stableQuery,
+    stableQuery.wheel.occurrenceId,
+  );
+  if (isCandidateContextUnavailable(prepared)) {
+    return unavailableCandidate(stableQuery, prepared);
+  }
+  const inactive = requireActiveWheel(
+    stableQuery,
+    prepared.candidateContext.activeWheelKeys,
+    prepared.baseline,
+  );
+  if (inactive !== undefined) {
+    return unavailableCandidate(stableQuery, inactive);
+  }
+  const result = prepared.candidateContext.evaluateState(
+    replaceWheel(ship.state, stableQuery.wheel.wheelKey, {
+      ...wheel,
+      storeKey: stableQuery.storeKey,
+    }),
+  );
+  const findings = lifecycleFindings(result.findings, stableQuery.wheel);
   return Object.freeze({
     context: 'evaluated',
     query: stableQuery,
     support:
-      findings.length === 0
+      result.supported && findings.length === 0
         ? descriptor.reward.storeKeys.length === 1
           ? 'forced'
           : 'possible'
@@ -694,21 +805,42 @@ export function evaluateRewardWheelOfferCandidate(
 
 export function evaluateRewardWheelPickedCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: RewardWheelPickedCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RewardWheelPickedCandidateQuery;
   const { wheel } = requireRewardWheel(catalog, context, stableQuery);
-  const evaluation = evaluateLinearMutation(catalog, project, context, stableQuery, {
-    kind: 'ReplaceRewardWheelPicked',
-    wheel: stableQuery.wheel,
-    pickedOfferIndex: stableQuery.pickedOfferIndex,
-  });
-  if (isCandidateContextUnavailable(evaluation)) {
-    return unavailableCandidate(stableQuery, evaluation);
+  if (
+    !Number.isInteger(stableQuery.pickedOfferIndex) ||
+    stableQuery.pickedOfferIndex < 1 ||
+    stableQuery.pickedOfferIndex > wheel.offerCount
+  ) {
+    failCandidate(stableQuery, 'pickedOfferIndex must address an active offer');
   }
-  const findings = simulationFindings(evaluation);
+  const ship = requireShipOccurrence(catalog, context, stableQuery);
+  const prepared = requireShipLifecycleContext(
+    context,
+    stableQuery,
+    stableQuery.wheel.occurrenceId,
+  );
+  if (isCandidateContextUnavailable(prepared)) {
+    return unavailableCandidate(stableQuery, prepared);
+  }
+  const inactive = requireActiveWheel(
+    stableQuery,
+    prepared.candidateContext.activeWheelKeys,
+    prepared.baseline,
+  );
+  if (inactive !== undefined) {
+    return unavailableCandidate(stableQuery, inactive);
+  }
+  const result = prepared.candidateContext.evaluateState(
+    replaceWheel(ship.state, stableQuery.wheel.wheelKey, {
+      ...wheel,
+      pickedOfferIndex: stableQuery.pickedOfferIndex,
+    }),
+  );
+  const findings = lifecycleFindings(result.findings, stableQuery.wheel);
   const activeOfferIndexes = Object.freeze(
     Array.from({ length: wheel.offerCount }, (_, index) => index + 1),
   );
@@ -716,7 +848,7 @@ export function evaluateRewardWheelPickedCandidate(
     context: 'evaluated',
     query: stableQuery,
     support:
-      findings.length === 0
+      result.supported && findings.length === 0
         ? activeOfferIndexes.length === 1
           ? 'forced'
           : 'possible'
@@ -732,12 +864,27 @@ export function evaluateRewardWheelPickedCandidate(
 
 export function evaluateShopPurchaseCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: ShopPurchaseCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as ShopPurchaseCandidateQuery;
-  locateIndexedBiome(context, stableQuery);
+  if (typeof stableQuery.purchased !== 'boolean') {
+    failCandidate(stableQuery, 'purchased must be a boolean');
+  }
+  const { occurrence } = locateIndexedOccurrence(
+    context,
+    stableQuery,
+    stableQuery.purchase.occurrenceId,
+  );
+  if (
+    occurrence.state.kind !== 'shop' ||
+    occurrence.state.shop?.offers[stableQuery.purchase.offerKey] === undefined
+  ) {
+    failCandidate(
+      stableQuery,
+      `${occurrence.gameName} has no shop purchase ${stableQuery.purchase.offerKey}`,
+    );
+  }
   const baseline = locateCandidateBiome(context, stableQuery);
   if (isCandidateContextUnavailable(baseline)) {
     return unavailableCandidate(stableQuery, baseline);
@@ -751,18 +898,61 @@ export function evaluateShopPurchaseCandidate(
   if (!purchaseRoomCovered) {
     return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
   }
-  const proposal = applyCandidateCommand(catalog, project, stableQuery, {
-    kind: 'SetShopPurchase',
-    purchase: stableQuery.purchase,
-    purchased: stableQuery.purchased,
-  });
-  const biome = evaluateCandidateBiome(catalog, proposal, context, stableQuery);
-  if (isCandidateContextUnavailable(biome)) {
-    return unavailableCandidate(stableQuery, biome);
+  if (baseline.kind === 'HubBiome') {
+    const proposal = applyCandidateCommand(catalog, context.project, stableQuery, {
+      kind: 'SetShopPurchase',
+      purchase: stableQuery.purchase,
+      purchased: stableQuery.purchased,
+    });
+    const evaluation = evaluateCandidateBiome(catalog, proposal, context, stableQuery);
+    if (isCandidateContextUnavailable(evaluation)) {
+      return unavailableCandidate(stableQuery, evaluation);
+    }
+    const exactKey = semanticAddressKey(stableQuery.purchase);
+    const findings = Object.freeze(
+      evaluation.rewards.findings.filter(
+        (finding) =>
+          semanticAddressKey(finding.origin) === exactKey ||
+          (finding.code === 'shopPurchaseUnavailable' &&
+            finding.origin.kind === 'occurrence' &&
+            finding.origin.routeKey === stableQuery.purchase.routeKey &&
+            finding.origin.biomeKey === stableQuery.purchase.biomeKey &&
+            finding.origin.occurrenceId === stableQuery.purchase.occurrenceId),
+      ),
+    );
+    return Object.freeze({
+      context: 'evaluated',
+      query: stableQuery,
+      support: findings.length === 0 ? 'possible' : 'impossible',
+      findings,
+      evidence: Object.freeze({
+        purchased: stableQuery.purchased,
+        relevantFindingCodes: Object.freeze(findings.map((finding) => finding.code)),
+      }),
+    });
   }
+  const candidateContext = context.index.shopPurchaseContextsByOwner.get(
+    semanticAddressKey(stableQuery.purchase),
+  );
+  if (candidateContext === undefined) {
+    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
+  }
+  const shop = occurrence.state.shop;
+  const selectedOffer = shop.offers[stableQuery.purchase.offerKey]!;
+  const candidateState: ShopState = Object.freeze({
+    ...shop,
+    offers: Object.freeze({
+      ...shop.offers,
+      [stableQuery.purchase.offerKey]: Object.freeze({
+        ...selectedOffer,
+        purchased: stableQuery.purchased,
+      }),
+    }),
+  });
+  const result = candidateContext.evaluateState(candidateState);
   const exactKey = semanticAddressKey(stableQuery.purchase);
   const findings = Object.freeze(
-    biome.rewards.findings.filter(
+    result.findings.filter(
       (finding) =>
         semanticAddressKey(finding.origin) === exactKey ||
         (finding.code === 'shopPurchaseUnavailable' &&
@@ -775,7 +965,7 @@ export function evaluateShopPurchaseCandidate(
   return Object.freeze({
     context: 'evaluated',
     query: stableQuery,
-    support: findings.length === 0 ? 'possible' : 'impossible',
+    support: result.supported && findings.length === 0 ? 'possible' : 'impossible',
     findings,
     evidence: Object.freeze({
       purchased: stableQuery.purchased,

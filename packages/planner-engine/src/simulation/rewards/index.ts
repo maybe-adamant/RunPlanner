@@ -2,9 +2,14 @@ export { evaluateLinearRewards, LinearRewardSimulationContractError } from './li
 export { evaluateHubRewards, evaluateNRewards, HubRewardSimulationContractError } from './hub';
 export {
   rewardProducerFrontier,
+  roomLifecycleCandidateContexts,
+  type RoomLifecycleCandidateContextIndex,
+  type RoomLifecycleCandidateResult,
   type RewardProducerCandidateResult,
   type RewardProducerFrontier,
   type RewardProducerGenerationPolicy,
+  type ShipLifecycleCandidateContext,
+  type ShopPurchaseCandidateContext,
 } from './frontiers';
 export type {
   LinearRewardBranch,

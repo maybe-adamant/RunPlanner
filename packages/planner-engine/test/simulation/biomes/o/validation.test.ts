@@ -24,9 +24,9 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  CandidateEvaluationContractError,
   createPreparedProjectCandidateSession,
   evaluateProjectCandidate,
-  evaluateProjectCandidates,
   evaluateLinearBiome,
   evaluateHubBiome,
   simulateProject,
@@ -458,7 +458,14 @@ describe('selected O validation', () => {
   it('evaluates ship-specific candidates through the selected O simulation', () => {
     const document = validProject();
     const wheel = createRewardWheelAddress(oBiome, oIds.combat04, 'wheel1');
-    const evaluations = evaluateProjectCandidates(catalog, document, [
+    const events: CandidateEvaluationEvent[] = [];
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      document,
+      simulateProject(catalog, document),
+      { observe: (event) => events.push(event) },
+    );
+    const evaluations = session.evaluate([
       {
         kind: 'shipEncounterCount',
         occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
@@ -507,6 +514,7 @@ describe('selected O validation', () => {
       ]),
       evidence: { supportedStoreKeys: ['RunProgress', 'MetaProgress'] },
     });
+    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 6 }]);
     const invalid = applyProjectCommand(document, catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
@@ -523,6 +531,22 @@ describe('selected O validation', () => {
       support: 'impossible',
       findings: [{ code: 'encounterCountUnavailable' }],
     });
+    expect(() =>
+      evaluateProjectCandidate(catalog, document, {
+        kind: 'shipEncounterCount',
+        occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
+        encounterCount: 4 as 2,
+      }),
+    ).toThrow(
+      new CandidateEvaluationContractError(
+        {
+          kind: 'shipEncounterCount',
+          occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
+          encounterCount: 4 as 2,
+        },
+        'encounterCount must be 2 or 3',
+      ),
+    );
   });
 
   it('evaluates one wheel offer from its prepared producer frontier', () => {
@@ -548,5 +572,62 @@ describe('selected O validation', () => {
       ])[0],
     ).toMatchObject({ context: 'evaluated', support: 'possible' });
     expect(events).toEqual([{ kind: 'queryBatch', queryCount: 1 }]);
+  });
+
+  it('evaluates an eligible dormant second wheel inside the owning room lifecycle', () => {
+    const document = validProject();
+    const occurrence = createOccurrenceAddress(oBiome, oIds.combat07);
+    const candidate = evaluateProjectCandidate(catalog, document, {
+      kind: 'shipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const selected = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const selectedO = evaluateO(selected);
+    const localFindings = selectedO.findings.filter(
+      (finding) =>
+        'occurrenceId' in finding.origin && finding.origin.occurrenceId === oIds.combat07,
+    );
+
+    expect(candidate).toMatchObject({
+      context: 'evaluated',
+      support: localFindings.length === 0 ? 'possible' : 'impossible',
+      findings: localFindings,
+      evidence: { supportEncounterCounts: [2, 3] },
+    });
+  });
+
+  it('carries a first-wheel candidate through the later wheel in the same room', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oIds.combat07);
+    const document = applyProjectCommand(validProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const wheel = createRewardWheelAddress(oBiome, oIds.combat07, 'wheel1');
+    const candidate = evaluateProjectCandidate(catalog, document, {
+      kind: 'rewardWheelStore',
+      wheel,
+      storeKey: 'MetaProgress',
+    });
+    const selected = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel,
+      storeKey: 'MetaProgress',
+    });
+    const localFindings = evaluateO(selected).findings.filter(
+      (finding) =>
+        'occurrenceId' in finding.origin && finding.origin.occurrenceId === oIds.combat07,
+    );
+
+    expect(candidate).toMatchObject({
+      context: 'evaluated',
+      support: localFindings.length === 0 ? 'possible' : 'impossible',
+      findings: localFindings,
+    });
   });
 });

@@ -22,6 +22,7 @@ import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import {
   linearRoomTargetCandidateContexts,
+  type EncounterCountSupportEntry,
   type FieldsCageOutcomeSupportEntry,
   type LinearRoomTargetCandidateContext,
 } from '../generation';
@@ -36,7 +37,12 @@ import type {
   ProjectRouteEvaluation,
 } from '../project';
 import { evaluateHubBiome, evaluateLinearBiome } from '../project';
-import type { LinearRewardStoreSupportEntry } from '../rewards';
+import {
+  roomLifecycleCandidateContexts,
+  type LinearRewardStoreSupportEntry,
+  type ShipLifecycleCandidateContext,
+  type ShopPurchaseCandidateContext,
+} from '../rewards';
 import type {
   BiomeFieldCandidateQuery,
   CandidateContextUnavailableReason,
@@ -468,6 +474,9 @@ export interface PreparedCandidateIndex {
   readonly startRoomDomainsByOwner: ReadonlyMap<string, IndexedStartRoomDomain>;
   readonly batchRewardStoresByOwner: ReadonlyMap<string, LinearRewardStoreSupportEntry>;
   readonly fieldsCageOutcomesByOwner: ReadonlyMap<string, FieldsCageOutcomeSupportEntry>;
+  readonly encounterCountsByOwner: ReadonlyMap<string, EncounterCountSupportEntry>;
+  readonly shipLifecycleContextsByOwner: ReadonlyMap<string, ShipLifecycleCandidateContext>;
+  readonly shopPurchaseContextsByOwner: ReadonlyMap<string, ShopPurchaseCandidateContext>;
 }
 
 export function prepareCandidateContext(
@@ -492,6 +501,9 @@ export function prepareCandidateContext(
   const startRoomDomainsByOwner = new Map<string, IndexedStartRoomDomain>();
   const batchRewardStoresByOwner = new Map<string, LinearRewardStoreSupportEntry>();
   const fieldsCageOutcomesByOwner = new Map<string, FieldsCageOutcomeSupportEntry>();
+  const encounterCountsByOwner = new Map<string, EncounterCountSupportEntry>();
+  const shipLifecycleContextsByOwner = new Map<string, ShipLifecycleCandidateContext>();
+  const shopPurchaseContextsByOwner = new Map<string, ShopPurchaseCandidateContext>();
 
   for (const route of project.routes) {
     const routeEvaluation = projectEvaluation.routes.find(
@@ -545,6 +557,21 @@ export function prepareCandidateContext(
             }
             for (const entry of evaluation.roomGeneration.fieldsCageOutcomes) {
               fieldsCageOutcomesByOwner.set(semanticAddressKey(entry.origin), entry);
+            }
+            for (const entry of evaluation.roomGeneration.encounterCounts) {
+              encounterCountsByOwner.set(semanticAddressKey(entry.origin), entry);
+            }
+            const lifecycleContexts = roomLifecycleCandidateContexts(evaluation.rewards);
+            for (const [owner, candidateContext] of lifecycleContexts.shipsByOwner) {
+              shipLifecycleContextsByOwner.set(owner, candidateContext);
+            }
+            for (const candidateContext of lifecycleContexts.shopsByOwner.values()) {
+              for (const purchaseOrigin of candidateContext.purchaseOrigins) {
+                shopPurchaseContextsByOwner.set(
+                  semanticAddressKey(purchaseOrigin),
+                  candidateContext,
+                );
+              }
             }
           }
         }
@@ -638,6 +665,9 @@ export function prepareCandidateContext(
       startRoomDomainsByOwner,
       batchRewardStoresByOwner,
       fieldsCageOutcomesByOwner,
+      encounterCountsByOwner,
+      shipLifecycleContextsByOwner,
+      shopPurchaseContextsByOwner,
     }),
   });
 }

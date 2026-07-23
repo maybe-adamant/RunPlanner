@@ -70,6 +70,11 @@ interface MaterializedRoomLeaf {
   readonly clockworkReward?: 'goal' | 'nonGoal';
 }
 
+export interface MaterializedShipCombatState {
+  readonly encounterPhases: readonly EncounterPhase[];
+  readonly rewardWheels: readonly CanonicalRewardWheel[];
+}
+
 type AuthoredTemplateMaterializer = (
   context: AuthoredRoomMaterializationContext,
 ) => MaterializedRoomLeaf;
@@ -274,11 +279,19 @@ function materializeFieldsCombat(
   });
 }
 
-function materializeShipCombat(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
-  const state = requireStateKind(context, 'shipCombat');
-  const profile = context.catalog.encounterProfiles.byKey[context.room.encounterProfileKey];
+export function materializeShipCombatState(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  room: RoomDeclaration,
+  occurrence: RoomOccurrence,
+): MaterializedShipCombatState {
+  if (occurrence.state.kind !== 'shipCombat') {
+    fail(`${occurrence.gameName} expected shipCombat state, received ${occurrence.state.kind}`);
+  }
+  const state = occurrence.state;
+  const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
   if (profile === undefined || profile.key !== 'ShipCombat') {
-    fail(`${context.room.gameName} has no ShipCombat encounter profile`);
+    fail(`${room.gameName} has no ShipCombat encounter profile`);
   }
   const encounterPhases = profile.phases.slice(0, state.encounterCount);
   if (
@@ -287,7 +300,7 @@ function materializeShipCombat(context: AuthoredRoomMaterializationContext): Mat
     encounterPhases[1]?.offerPoint?.key !== 'wheel1' ||
     (state.encounterCount === 3 && encounterPhases[2]?.offerPoint?.key !== 'wheel2')
   ) {
-    fail(`${context.room.gameName} cannot materialize ${state.encounterCount} encounters`);
+    fail(`${room.gameName} cannot materialize ${state.encounterCount} encounters`);
   }
   const rewardWheels: CanonicalRewardWheel[] = encounterPhases.flatMap((phase) => {
     const descriptor = phase.offerPoint;
@@ -296,17 +309,17 @@ function materializeShipCombat(context: AuthoredRoomMaterializationContext): Mat
     }
     const wheel = state.wheels[descriptor.key];
     if (wheel === undefined) {
-      fail(`${context.room.gameName} is missing ${descriptor.key}`);
+      fail(`${room.gameName} is missing ${descriptor.key}`);
     }
     const offers = descriptor.offerKeys.slice(0, wheel.offerCount).map((offerKey, index) => {
       const offer = wheel.offers[offerKey];
       if (offer === undefined) {
-        fail(`${context.room.gameName}.${descriptor.key} is missing ${offerKey}`);
+        fail(`${room.gameName}.${descriptor.key} is missing ${offerKey}`);
       }
       return Object.freeze({
         origin: createRewardWheelOfferAddress(
-          context.biome,
-          context.occurrence.occurrenceId,
+          biome,
+          occurrence.occurrenceId,
           descriptor.key,
           offerKey,
         ),
@@ -316,15 +329,11 @@ function materializeShipCombat(context: AuthoredRoomMaterializationContext): Mat
       });
     });
     if (offers.filter((offer) => offer.picked).length !== 1) {
-      fail(`${context.room.gameName}.${descriptor.key} has no unique active pick`);
+      fail(`${room.gameName}.${descriptor.key} has no unique active pick`);
     }
     return [
       Object.freeze({
-        origin: createRewardWheelAddress(
-          context.biome,
-          context.occurrence.occurrenceId,
-          descriptor.key,
-        ),
+        origin: createRewardWheelAddress(biome, occurrence.occurrenceId, descriptor.key),
         wheelKey: descriptor.key,
         encounterPhaseKey: phase.key,
         producerLifecycleKey: descriptor.reward.producerLifecycleKey,
@@ -335,10 +344,23 @@ function materializeShipCombat(context: AuthoredRoomMaterializationContext): Mat
     ];
   });
   return Object.freeze({
-    lifecycleProfileKey: 'ShipCombatRoom',
-    encounterProfileKey: profile.key,
     encounterPhases: Object.freeze(encounterPhases),
     rewardWheels: Object.freeze(rewardWheels),
+  });
+}
+
+function materializeShipCombat(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
+  const ship = materializeShipCombatState(
+    context.catalog,
+    context.biome,
+    context.room,
+    context.occurrence,
+  );
+  return Object.freeze({
+    lifecycleProfileKey: 'ShipCombatRoom',
+    encounterProfileKey: 'ShipCombat',
+    encounterPhases: ship.encounterPhases,
+    rewardWheels: ship.rewardWheels,
   });
 }
 
