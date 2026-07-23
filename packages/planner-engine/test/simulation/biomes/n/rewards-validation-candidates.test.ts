@@ -23,7 +23,6 @@ import {
   evaluateHubBiome,
   evaluateNRoomGeneration,
   evaluateNRewards,
-  evaluateProjectCandidate,
   materializeHubBiome,
   simulateProject,
   type CandidateEvaluationEvent,
@@ -34,6 +33,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
+import { bindTestCandidateSession } from '../../candidateSession';
 const biome = createBiomeAddress('Surface', 'N');
 const fixedOccurrenceIds = {
   opening: createOccurrenceId('n-reward-opening'),
@@ -926,12 +926,14 @@ describe('N candidate evaluation', () => {
       payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
     });
     expect(
-      evaluateProjectCandidate(catalog, invalid, {
-        kind: 'hubSlot',
-        slot: createHubSlotAddress(biome, 'miniBoss02'),
-        open: true,
-        occurrenceId: occurrenceId('miniBoss02'),
-      }),
+      bindTestCandidateSession(catalog, invalid).evaluate([
+        {
+          kind: 'hubSlot',
+          slot: createHubSlotAddress(biome, 'miniBoss02'),
+          open: true,
+          occurrenceId: occurrenceId('miniBoss02'),
+        },
+      ])[0],
     ).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
@@ -944,12 +946,14 @@ describe('N candidate evaluation', () => {
       configuredBiomeCounts: { Surface: 1 },
     });
     expect(
-      evaluateProjectCandidate(catalog, incomplete, {
-        kind: 'hubSlot',
-        slot: createHubSlotAddress(biome, 'combat01'),
-        open: true,
-        occurrenceId: occurrenceId('incomplete-candidate'),
-      }),
+      bindTestCandidateSession(catalog, incomplete).evaluate([
+        {
+          kind: 'hubSlot',
+          slot: createHubSlotAddress(biome, 'combat01'),
+          open: true,
+          occurrenceId: occurrenceId('incomplete-candidate'),
+        },
+      ])[0],
     ).toMatchObject({
       context: 'unavailable',
       reason: 'coverageNotReached',
@@ -973,7 +977,7 @@ describe('N candidate evaluation', () => {
       visit: createHubVisitAddress(biome, 1),
       hubSlotKey: 'combat03',
     };
-    const candidate = evaluateProjectCandidate(catalog, project, query);
+    const candidate = bindTestCandidateSession(catalog, project).evaluate([query])[0];
     const selectedProject = applyProjectCommand(project, catalog, {
       kind: 'ReplaceHubVisit',
       visit: query.visit,
@@ -1001,71 +1005,87 @@ describe('N candidate evaluation', () => {
 
   it('rejects malformed Hub candidate domains at their semantic contact', () => {
     const project = representativeProject();
+    const candidates = bindTestCandidateSession(catalog, project);
     expect(() =>
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'hubSlot',
-        slot: createHubSlotAddress(biome, 'missing'),
-        open: true,
-        occurrenceId: occurrenceId('missing-candidate'),
-      }),
+      candidates.evaluate([
+        {
+          kind: 'hubSlot',
+          slot: createHubSlotAddress(biome, 'missing'),
+          open: true,
+          occurrenceId: occurrenceId('missing-candidate'),
+        },
+      ]),
     ).toThrow(/unknown Hub slot missing/);
     expect(() =>
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'hubSlot',
-        slot: createHubSlotAddress(biome, 'combat01'),
-        open: 'yes' as unknown as boolean,
-        occurrenceId: occurrenceId('combat01'),
-      }),
+      candidates.evaluate([
+        {
+          kind: 'hubSlot',
+          slot: createHubSlotAddress(biome, 'combat01'),
+          open: 'yes' as unknown as boolean,
+          occurrenceId: occurrenceId('combat01'),
+        },
+      ]),
     ).toThrow(/open must be a boolean/);
     expect(() =>
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'hubSlot',
-        slot: createHubSlotAddress(biome, 'combat12'),
-        open: true,
-        occurrenceId: occurrenceId('combat01'),
-      }),
+      candidates.evaluate([
+        {
+          kind: 'hubSlot',
+          slot: createHubSlotAddress(biome, 'combat12'),
+          open: true,
+          occurrenceId: occurrenceId('combat01'),
+        },
+      ]),
     ).toThrow(/occurrence n-reward-combat01 already exists/);
     for (const malformedOccurrenceId of [
       '' as ReturnType<typeof occurrenceId>,
       42 as unknown as ReturnType<typeof occurrenceId>,
     ]) {
       expect(() =>
-        evaluateProjectCandidate(catalog, project, {
-          kind: 'hubSlot',
-          slot: createHubSlotAddress(biome, 'combat12'),
-          open: true,
-          occurrenceId: malformedOccurrenceId,
-        }),
+        candidates.evaluate([
+          {
+            kind: 'hubSlot',
+            slot: createHubSlotAddress(biome, 'combat12'),
+            open: true,
+            occurrenceId: malformedOccurrenceId,
+          },
+        ]),
       ).toThrow(/occurrenceId must be a non-blank string/);
     }
     expect(() =>
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'sideRoomGeneration',
-        sideRoom: createLocalChildAddress(
-          biome,
-          occurrenceId('combat05'),
-          'sideRooms',
-          'sideDoor1',
-        ),
-        generation: 'sometimes' as 'generated',
-      }),
+      candidates.evaluate([
+        {
+          kind: 'sideRoomGeneration',
+          sideRoom: createLocalChildAddress(
+            biome,
+            occurrenceId('combat05'),
+            'sideRooms',
+            'sideDoor1',
+          ),
+          generation: 'sometimes' as 'generated',
+        },
+      ]),
     ).toThrow(/unknown side-room generation sometimes/);
     expect(() =>
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'sideRoomEntryOrder',
-        group: createLocalChildGroupAddress(biome, occurrenceId('combat05'), 'sideRooms'),
-        enteredSlotKeys: ['sideDoor1', 'sideDoor1'],
-      }),
-    ).toThrow(/candidate proposal is malformed.*distinct slots/);
-    expect(() =>
-      evaluateProjectCandidate(catalog, storyProject(true), {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, occurrenceId('story')),
-        value: {
-          rewardType: 'Boon',
-          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      candidates.evaluate([
+        {
+          kind: 'sideRoomEntryOrder',
+          group: createLocalChildGroupAddress(biome, occurrenceId('combat05'), 'sideRooms'),
+          enteredSlotKeys: ['sideDoor1', 'sideDoor1'],
         },
-      }),
+      ]),
+    ).toThrow(/candidate proposal is malformed.*distinct slots/);
+    const story = storyProject(true);
+    expect(() =>
+      bindTestCandidateSession(catalog, story).evaluate([
+        {
+          kind: 'incomingReward',
+          reward: createIncomingRewardAddress(biome, occurrenceId('story')),
+          value: {
+            rewardType: 'Boon',
+            payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+          },
+        },
+      ]),
     ).toThrow(/N_Story01 has a fixed reward type/);
   });
 

@@ -20,12 +20,9 @@ import {
 import {
   CandidateEvaluationContractError,
   composeLinearHistory,
-  createPreparedProjectCandidateEvaluator,
   createPreparedProjectCandidateSession,
   evaluateLinearCompleteness,
   evaluateLinearRoomGeneration,
-  evaluateProjectCandidate,
-  evaluateProjectCandidates,
   materializeLinearBiome,
   simulateProject,
   type CandidateEvaluationEvent,
@@ -35,6 +32,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
+import { bindTestCandidateSession } from '../../candidateSession';
 const biome = createBiomeAddress('Underworld', 'F');
 const gBiome = createBiomeAddress('Underworld', 'G');
 const startId = createOccurrenceId('possibility-start');
@@ -175,11 +173,13 @@ function roomCandidate(
   exitIndex: number,
   gameName: string,
 ) {
-  return evaluateProjectCandidate(catalog, project, {
-    kind: 'roomTarget',
-    target: targetAddress(batchIndex, exitIndex),
-    gameName,
-  });
+  return bindTestCandidateSession(catalog, project).evaluate([
+    {
+      kind: 'roomTarget',
+      target: targetAddress(batchIndex, exitIndex),
+      gameName,
+    },
+  ])[0]!;
 }
 
 function withGTarget(project: ProjectDocument): ProjectDocument {
@@ -438,18 +438,23 @@ describe('F room possibility and generation validation', () => {
 describe('project candidate evaluation', () => {
   it('projects authored F starts and base reward stores through semantic owners', () => {
     const project = possibilityProject();
-    const opening = evaluateProjectCandidate(catalog, project, {
-      kind: 'startRoom',
-      owner: createOccurrenceAddress(biome, startId),
-      gameName: 'F_Opening02',
-    });
-    const unsupportedOpening = evaluateProjectCandidate(catalog, project, {
-      kind: 'startRoom',
-      owner: createOccurrenceAddress(biome, startId),
-      gameName: 'F_Combat01',
-    });
+    const candidates = bindTestCandidateSession(catalog, project);
+    const opening = candidates.evaluate([
+      {
+        kind: 'startRoom',
+        owner: createOccurrenceAddress(biome, startId),
+        gameName: 'F_Opening02',
+      },
+    ])[0];
+    const unsupportedOpening = candidates.evaluate([
+      {
+        kind: 'startRoom',
+        owner: createOccurrenceAddress(biome, startId),
+        gameName: 'F_Combat01',
+      },
+    ])[0];
     const store = createBatchRewardStoreAddress(biome, startId);
-    const stores = evaluateProjectCandidates(catalog, project, [
+    const stores = candidates.evaluate([
       { kind: 'batchRewardStore', rewardStore: store, storeKey: 'RunProgress' },
       { kind: 'batchRewardStore', rewardStore: store, storeKey: 'MetaProgress' },
     ]);
@@ -526,7 +531,8 @@ describe('project candidate evaluation', () => {
     }
     const offerAddress = createShopOfferAddress(biome, shopId, firstOfferKey);
     const purchaseAddress = createShopPurchaseAddress(biome, shopId, firstOfferKey);
-    const results = evaluateProjectCandidates(catalog, project, [
+    const candidates = bindTestCandidateSession(catalog, project);
+    const results = candidates.evaluate([
       {
         kind: 'incomingReward',
         reward: createIncomingRewardAddress(biome, incomingId),
@@ -551,22 +557,26 @@ describe('project candidate evaluation', () => {
       context: 'unavailable',
       reason: 'coverageNotReached',
     });
-    const purchasedCandidate = evaluateProjectCandidate(catalog, project, {
-      kind: 'shopPurchase',
-      purchase: purchaseAddress,
-      purchased: true,
-    });
+    const purchasedCandidate = candidates.evaluate([
+      {
+        kind: 'shopPurchase',
+        purchase: purchaseAddress,
+        purchased: true,
+      },
+    ])[0];
     expect(purchasedCandidate).toMatchObject({
       context: 'unavailable',
       reason: 'coverageNotReached',
     });
 
     const earlyIncomingId = batchOccurrenceId(1, 1);
-    const alternateIncoming = evaluateProjectCandidate(catalog, project, {
-      kind: 'incomingReward',
-      reward: createIncomingRewardAddress(biome, earlyIncomingId),
-      value: { rewardType: 'StackUpgrade' },
-    });
+    const alternateIncoming = candidates.evaluate([
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, earlyIncomingId),
+        value: { rewardType: 'StackUpgrade' },
+      },
+    ])[0]!;
     const authoredImpossibleIncoming = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(biome, earlyIncomingId),
@@ -601,11 +611,13 @@ describe('project candidate evaluation', () => {
         ? {}
         : { payload: alternateDeclaration.defaultPayload }),
     };
-    const alternateShop = evaluateProjectCandidate(catalog, project, {
-      kind: 'shopOffer',
-      offer: offerAddress,
-      value: alternateShopOffer,
-    });
+    const alternateShop = candidates.evaluate([
+      {
+        kind: 'shopOffer',
+        offer: offerAddress,
+        value: alternateShopOffer,
+      },
+    ])[0];
     expect(alternateShop).toMatchObject({
       context: 'unavailable',
       reason: 'producerFrontierUnavailable',
@@ -632,14 +644,16 @@ describe('project candidate evaluation', () => {
     });
 
     expect(
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, batchOccurrenceId(2, 2)),
-        value: {
-          rewardType: 'Boon',
-          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      bindTestCandidateSession(catalog, project).evaluate([
+        {
+          kind: 'incomingReward',
+          reward: createIncomingRewardAddress(biome, batchOccurrenceId(2, 2)),
+          value: {
+            rewardType: 'Boon',
+            payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+          },
         },
-      }),
+      ])[0],
     ).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
@@ -662,19 +676,22 @@ describe('project candidate evaluation', () => {
       },
     });
 
+    const devotionProject = possibilityProject();
     expect(
-      evaluateProjectCandidate(catalog, possibilityProject(), {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, batchOccurrenceId(1, 1)),
-        value: {
-          rewardType: 'Devotion',
-          payload: {
-            kind: 'DevotionPair',
-            chosenSource: 'ApolloUpgrade',
-            spurnedSource: 'PoseidonUpgrade',
+      bindTestCandidateSession(catalog, devotionProject).evaluate([
+        {
+          kind: 'incomingReward',
+          reward: createIncomingRewardAddress(biome, batchOccurrenceId(1, 1)),
+          value: {
+            rewardType: 'Devotion',
+            payload: {
+              kind: 'DevotionPair',
+              chosenSource: 'ApolloUpgrade',
+              spurnedSource: 'PoseidonUpgrade',
+            },
           },
         },
-      }),
+      ])[0],
     ).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
@@ -694,7 +711,7 @@ describe('project candidate evaluation', () => {
     const project = possibilityProject();
     const before = JSON.stringify(project);
 
-    const [possible, forced, impossible] = evaluateProjectCandidates(catalog, project, [
+    const [possible, forced, impossible] = bindTestCandidateSession(catalog, project).evaluate([
       { kind: 'roomTarget', target: targetAddress(5, 1), gameName: 'F_Combat20' },
       { kind: 'roomTarget', target: targetAddress(6, 1), gameName: 'F_MiniBoss03' },
       { kind: 'roomTarget', target: targetAddress(6, 1), gameName: 'F_Combat20' },
@@ -881,12 +898,15 @@ describe('project candidate evaluation', () => {
       index === 5 ? { targets: ['F_MiniBoss01', 'F_Combat20'], pickedExitIndex: 2 } : batch,
     );
     const laterTarget = createTargetAddress(biome, batchOccurrenceId(6, 2), 1);
+    const project = possibilityProject(batches);
     expect(
-      evaluateProjectCandidate(catalog, possibilityProject(batches), {
-        kind: 'roomTarget',
-        target: laterTarget,
-        gameName: 'F_Combat13',
-      }),
+      bindTestCandidateSession(catalog, project).evaluate([
+        {
+          kind: 'roomTarget',
+          target: laterTarget,
+          gameName: 'F_Combat13',
+        },
+      ])[0],
     ).toMatchObject({
       context: 'unavailable',
       reason: 'coverageNotReached',
@@ -906,17 +926,15 @@ describe('project candidate evaluation', () => {
       index === 5 ? { targets: ['F_Combat20', 'F_MiniBoss01'], pickedExitIndex: 2 } : batch,
     );
 
-    expect(
-      evaluateProjectCandidate(catalog, withGTarget(incompleteFProject()), query),
-    ).toMatchObject({
+    const incomplete = withGTarget(incompleteFProject());
+    expect(bindTestCandidateSession(catalog, incomplete).evaluate([query])[0]).toMatchObject({
       context: 'unavailable',
       query,
       reason: 'upstreamIncomplete',
       evidence: { kind: 'upstreamIncomplete', upstreamBiomeKey: 'F' },
     });
-    expect(
-      evaluateProjectCandidate(catalog, withGTarget(possibilityProject(invalidBatches)), query),
-    ).toMatchObject({
+    const invalid = withGTarget(possibilityProject(invalidBatches));
+    expect(bindTestCandidateSession(catalog, invalid).evaluate([query])[0]).toMatchObject({
       context: 'unavailable',
       query,
       reason: 'upstreamInvalid',
@@ -929,11 +947,13 @@ describe('project candidate evaluation', () => {
     const missingTarget = createTargetAddress(biome, startId, 2);
 
     expect(() =>
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'roomTarget',
-        target: missingTarget,
-        gameName: 'F_Combat03',
-      }),
+      bindTestCandidateSession(catalog, project).evaluate([
+        {
+          kind: 'roomTarget',
+          target: missingTarget,
+          gameName: 'F_Combat03',
+        },
+      ]),
     ).toThrow(
       new CandidateEvaluationContractError(
         { kind: 'roomTarget', target: missingTarget, gameName: 'F_Combat03' },
@@ -948,7 +968,7 @@ describe('project candidate evaluation', () => {
     const editedProject = Object.freeze({ ...project, name: 'Edited project' });
 
     expect(() =>
-      createPreparedProjectCandidateEvaluator(catalog, editedProject, staleEvaluation),
+      createPreparedProjectCandidateSession(catalog, editedProject, staleEvaluation),
     ).toThrow('prepared project evaluation does not belong to the authored project identity');
   });
 

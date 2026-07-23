@@ -1,10 +1,9 @@
 import type { ProjectDocument } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectEvaluation } from '../project';
-import { assertProjectEvaluationSource, simulateProject } from '../project';
+import { assertProjectEvaluationSource } from '../project';
 import type {
   ProjectCandidateEvaluation,
-  ProjectCandidateEvaluator,
   ProjectCandidateQuery,
   ProjectCandidateSession,
   ProjectCandidateSessionOptions,
@@ -30,57 +29,6 @@ import {
   evaluateShopPurchaseCandidate,
 } from './reward-shop-wheel';
 import { evaluateRoomTargetCandidate, evaluateStartRoomCandidate } from './room-topology';
-
-export function evaluateProjectCandidate(
-  catalog: Catalog,
-  project: ProjectDocument,
-  query: ProjectCandidateQuery,
-): ProjectCandidateEvaluation {
-  const evaluation = evaluateProjectCandidates(catalog, project, Object.freeze([query]))[0];
-  if (evaluation === undefined) {
-    throw new Error('single candidate evaluation returned no result');
-  }
-  return evaluation;
-}
-
-export function evaluateProjectCandidates(
-  catalog: Catalog,
-  project: ProjectDocument,
-  queries: readonly ProjectCandidateQuery[],
-): readonly ProjectCandidateEvaluation[] {
-  if (queries.length === 0) {
-    return Object.freeze([]);
-  }
-  return createProjectCandidateEvaluator(catalog, project).evaluate(queries);
-}
-
-export function createProjectCandidateEvaluator(
-  catalog: Catalog,
-  project: ProjectDocument,
-): ProjectCandidateEvaluator {
-  return createProjectCandidateSession(catalog, project);
-}
-
-export function createProjectCandidateSession(
-  catalog: Catalog,
-  project: ProjectDocument,
-  options: ProjectCandidateSessionOptions = {},
-): ProjectCandidateSession {
-  return createPreparedProjectCandidateSession(
-    catalog,
-    project,
-    simulateProject(catalog, project),
-    options,
-  );
-}
-
-export function createPreparedProjectCandidateEvaluator(
-  catalog: Catalog,
-  project: ProjectDocument,
-  projectEvaluation: ProjectEvaluation,
-): ProjectCandidateEvaluator {
-  return createPreparedProjectCandidateSession(catalog, project, projectEvaluation);
-}
 
 export function createPreparedProjectCandidateSession(
   catalog: Catalog,

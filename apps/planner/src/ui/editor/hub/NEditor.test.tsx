@@ -64,7 +64,7 @@ function renderNEditor(project: ProjectDocument) {
     evaluateProject,
     initialProject: project,
   });
-  const { structuredWorkspace } = createStructuredWorkspaceTestServices(evaluateProject);
+  const { structuredWorkspace } = createStructuredWorkspaceTestServices();
   const user = userEvent.setup();
   const view = render(
     <Provider store={store}>

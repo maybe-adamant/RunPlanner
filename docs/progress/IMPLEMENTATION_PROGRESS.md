@@ -1756,3 +1756,26 @@ reduced from 60 seconds to 30 seconds. The two-worker complete suite passes with
 consumption bridge, but Phase 7 Commit 11 remains paused while Refactor Slices
 7-9 seal application composition, move every live candidate family to
 workspace-owned interactions, and enforce the no-render-evaluation boundary.
+
+Candidate-System Refactor Slice 7 is complete. Application composition now
+creates one production `CandidateSessionFactory` whose only capability is
+binding an exact immutable `ProjectDocument` and published
+`ProjectEvaluation`. The broad candidate projection, contextual-picker,
+reward-picker, and contextual-option services are no longer returned by
+`createApplication()`. Structured-workspace construction is their single
+internal composition path, and no candidate layer can request a fresh project
+evaluation through a general callback.
+
+The scalar application compatibility service and the engine's test-only scalar
+candidate constructors/evaluators have been deleted. Engine fixtures bind the
+same prepared production session used by the application. Workspace and React
+fixtures construct the production session factory and structured workspace;
+their setup and scheduling seams do not implement alternate candidate
+semantics. Reward-editor interaction coverage now crosses that real boundary,
+including producer-resolved domains, pending work, stale completion rejection,
+compound Boon/Devotion selection, and shop-specific Blind Box payloads.
+
+The full repository gate passes with 69 test files and 536 tests, followed by
+typecheck, lint, formatting, build, and diff checks. Slice 8 may now replace the
+broad contextual resolver methods with workspace-owned zero-argument
+interaction descriptors.

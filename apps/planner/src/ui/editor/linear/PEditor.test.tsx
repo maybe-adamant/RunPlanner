@@ -73,20 +73,20 @@ function renderP() {
     evaluateProject,
     initialProject: project,
   });
-  const { candidateProjection, structuredWorkspace } =
-    createStructuredWorkspaceTestServices(evaluateProject);
+  const { candidateSessions, structuredWorkspace } = createStructuredWorkspaceTestServices();
+  const candidates = candidateSessions.bind(project, selectProjectEvaluation(store.getState()));
   const user = userEvent.setup();
   const view = render(
     <Provider store={store}>
       <PEditorHarness structuredWorkspace={structuredWorkspace} />
     </Provider>,
   );
-  return { candidateProjection, project, store, user, ...view };
+  return { candidates, project, store, user, ...view };
 }
 
 describe('P candidates and editor projection', () => {
   it('projects exit compatibility and carried store pressure through normal candidates', () => {
-    const { candidateProjection, project } = renderP();
+    const { candidates } = renderP();
     const indoor = catalog.rooms.byKey.P_Combat02;
     const outdoor = catalog.rooms.byKey.P_Combat05;
     if (indoor === undefined || outdoor === undefined) {
@@ -94,11 +94,10 @@ describe('P candidates and editor projection', () => {
     }
 
     expect(
-      candidateProjection.roomTargets(
-        project,
-        createTargetAddress(pBiome, pOccurrenceIds.intro, 1),
-        [indoor, outdoor],
-      ),
+      candidates.roomTargets(createTargetAddress(pBiome, pOccurrenceIds.intro, 1), [
+        indoor,
+        outdoor,
+      ]),
     ).toMatchObject([
       {
         value: { gameName: 'P_Combat02' },
@@ -114,8 +113,7 @@ describe('P candidates and editor projection', () => {
       },
     ]);
     expect(
-      candidateProjection.batchRewardStores(
-        project,
+      candidates.batchRewardStores(
         createBatchRewardStoreAddress(pBiome, pOccurrenceId('P_Combat03', 1, 1)),
         ['RunProgress', 'MetaProgress'],
       ),

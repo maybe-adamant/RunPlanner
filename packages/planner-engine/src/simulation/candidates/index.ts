@@ -1,11 +1,4 @@
-export {
-  createPreparedProjectCandidateEvaluator,
-  createPreparedProjectCandidateSession,
-  createProjectCandidateEvaluator,
-  createProjectCandidateSession,
-  evaluateProjectCandidate,
-  evaluateProjectCandidates,
-} from './dispatch';
+export { createPreparedProjectCandidateSession } from './dispatch';
 export { CandidateEvaluationContractError } from './context';
 export {
   type CandidateContextUnavailableReason,

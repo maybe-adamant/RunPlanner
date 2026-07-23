@@ -6,9 +6,10 @@ import {
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { evaluateProjectCandidate, simulateProject } from '@run-planner/engine/simulation';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { bindTestCandidateSession } from '../../candidateSession';
 import {
   createRepresentativeNOPProject,
   pBiome,
@@ -78,6 +79,7 @@ describe('P core loop', () => {
       gameName: 'P_Combat02',
     });
     const p = simulateProject(catalog, project).routes[1]?.biomes[2];
+    const candidates = bindTestCandidateSession(catalog, project);
 
     expect(p).toMatchObject({ kind: 'LinearBiome', authoring: 'complete', validity: 'invalid' });
     expect(p?.findings).toContainEqual(
@@ -90,11 +92,13 @@ describe('P core loop', () => {
       }),
     );
     expect(
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'roomTarget',
-        target: createTargetAddress(pBiome, pOccurrenceIds.intro, 1),
-        gameName: 'P_Combat02',
-      }),
+      candidates.evaluate([
+        {
+          kind: 'roomTarget',
+          target: createTargetAddress(pBiome, pOccurrenceIds.intro, 1),
+          gameName: 'P_Combat02',
+        },
+      ])[0],
     ).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
@@ -109,11 +113,13 @@ describe('P core loop', () => {
       },
     });
     expect(
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'batchRewardStore',
-        rewardStore: createBatchRewardStoreAddress(pBiome, pOccurrenceId('P_Combat07', 4, 1)),
-        storeKey: 'RunProgress',
-      }),
+      candidates.evaluate([
+        {
+          kind: 'batchRewardStore',
+          rewardStore: createBatchRewardStoreAddress(pBiome, pOccurrenceId('P_Combat07', 4, 1)),
+          storeKey: 'RunProgress',
+        },
+      ])[0],
     ).toMatchObject({
       context: 'unavailable',
       reason: 'coverageNotReached',

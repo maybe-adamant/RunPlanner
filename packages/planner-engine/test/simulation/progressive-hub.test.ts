@@ -9,12 +9,12 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
-  evaluateProjectCandidate,
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
+import { bindTestCandidateSession } from './candidateSession';
 import {
   createEmptyNProject,
   createRepresentativeNOProject,
@@ -93,12 +93,14 @@ describe('Hub progressive biome evaluation', () => {
     ).toBe(false);
     const ninthSlotKey = nOpenSlotKeys[8]!;
     expect(
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'hubSlot',
-        slot: createHubSlotAddress(nBiome, ninthSlotKey),
-        open: true,
-        occurrenceId: nOccurrenceId(ninthSlotKey),
-      }),
+      bindTestCandidateSession(catalog, project).evaluate([
+        {
+          kind: 'hubSlot',
+          slot: createHubSlotAddress(nBiome, ninthSlotKey),
+          open: true,
+          occurrenceId: nOccurrenceId(ninthSlotKey),
+        },
+      ])[0],
     ).toMatchObject({
       context: 'unavailable',
       reason: 'coverageNotReached',
@@ -182,12 +184,15 @@ describe('Hub progressive biome evaluation', () => {
     expect(project.routes.find((route) => route.routeKey === 'Surface')?.biomes[0]).toMatchObject({
       topology: { visitOrder: expect.arrayContaining(['combat05', 'miniBoss01', 'combat02']) },
     });
+    const candidates = bindTestCandidateSession(catalog, project);
     expect(
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'hubVisit',
-        visit: createHubVisitAddress(nBiome, 1),
-        hubSlotKey: 'combat05',
-      }),
+      candidates.evaluate([
+        {
+          kind: 'hubVisit',
+          visit: createHubVisitAddress(nBiome, 1),
+          hubSlotKey: 'combat05',
+        },
+      ])[0],
     ).toMatchObject({
       context: 'unavailable',
       reason: 'coverageNotReached',
@@ -197,12 +202,14 @@ describe('Hub progressive biome evaluation', () => {
       },
     });
     expect(
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'hubSlot',
-        slot: createHubSlotAddress(nBiome, 'miniBoss02'),
-        open: true,
-        occurrenceId: nOccurrenceId('miniBoss02'),
-      }),
+      candidates.evaluate([
+        {
+          kind: 'hubSlot',
+          slot: createHubSlotAddress(nBiome, 'miniBoss02'),
+          open: true,
+          occurrenceId: nOccurrenceId('miniBoss02'),
+        },
+      ])[0],
     ).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
@@ -302,7 +309,7 @@ describe('Hub progressive biome evaluation', () => {
       sideRoom,
       generation: 'notGenerated' as const,
     };
-    const candidate = evaluateProjectCandidate(catalog, project, query);
+    const candidate = bindTestCandidateSession(catalog, project).evaluate([query])[0];
     const proposal = applyProjectCommand(project, catalog, {
       kind: 'ReplaceSideRoomGeneration',
       sideRoom,

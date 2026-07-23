@@ -29,8 +29,6 @@ import {
   evaluateLinearRoomGeneration,
   evaluateLinearRewards,
   foldLinearHistoryEvents,
-  evaluateProjectCandidate,
-  evaluateProjectCandidates,
   simulateProject,
   supportedFieldsCageOutcomes,
   materializeLinearBiome,
@@ -40,6 +38,8 @@ import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
 import { createCatalog } from '@run-planner/hades2-catalog';
+
+import { bindTestCandidateSession } from './candidateSession';
 import { declarations } from '@run-planner/hades2-catalog/test-support';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -1468,7 +1468,7 @@ describe('project simulation composition', () => {
   it('evaluates active H room, Fields, cage, and terminal candidates', () => {
     const project = selectedGoldenHProject();
     const before = encodeProjectDocument(project);
-    const evaluations = evaluateProjectCandidates(catalog, project, [
+    const evaluations = bindTestCandidateSession(catalog, project).evaluate([
       {
         kind: 'roomTarget',
         target: createTargetAddress(hBiome, createOccurrenceId('golden-h-start'), 1),
@@ -1590,11 +1590,13 @@ describe('project simulation composition', () => {
     });
     const invalidBefore = encodeProjectDocument(invalid);
     expect(
-      evaluateProjectCandidate(catalog, invalid, {
-        kind: 'fieldsCageOutcome',
-        continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
-        cageOutcome: 'max',
-      }),
+      bindTestCandidateSession(catalog, invalid).evaluate([
+        {
+          kind: 'fieldsCageOutcome',
+          continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
+          cageOutcome: 'max',
+        },
+      ])[0],
     ).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
@@ -1612,16 +1614,18 @@ describe('project simulation composition', () => {
       continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
     });
     expect(
-      evaluateProjectCandidate(catalog, incomplete, {
-        kind: 'localReward',
-        reward: createLocalRewardAddress(
-          hBiome,
-          createOccurrenceId('golden-h-combat02'),
-          'cages',
-          'cage1',
-        ),
-        value: { rewardType: 'MaxHealthDrop' },
-      }),
+      bindTestCandidateSession(catalog, incomplete).evaluate([
+        {
+          kind: 'localReward',
+          reward: createLocalRewardAddress(
+            hBiome,
+            createOccurrenceId('golden-h-combat02'),
+            'cages',
+            'cage1',
+          ),
+          value: { rewardType: 'MaxHealthDrop' },
+        },
+      ])[0],
     ).toMatchObject({ context: 'evaluated', support: 'impossible' });
   });
 
@@ -1656,19 +1660,18 @@ describe('project simulation composition', () => {
     const target = createTargetAddress(gBiome, createOccurrenceId('golden-g-intro'), 1);
     const rewardStore = createBatchRewardStoreAddress(gBiome, createOccurrenceId('golden-g-intro'));
     const reward = createIncomingRewardAddress(gBiome, gOccurrenceId(1, 1));
-    const [roomCandidate, storeCandidate, rewardCandidate] = evaluateProjectCandidates(
+    const [roomCandidate, storeCandidate, rewardCandidate] = bindTestCandidateSession(
       catalog,
       project,
-      [
-        { kind: 'roomTarget', target, gameName: 'G_Combat02' },
-        { kind: 'batchRewardStore', rewardStore, storeKey: 'RunProgress' },
-        {
-          kind: 'incomingReward',
-          reward,
-          value: { rewardType: 'MaxHealthDrop' },
-        },
-      ],
-    );
+    ).evaluate([
+      { kind: 'roomTarget', target, gameName: 'G_Combat02' },
+      { kind: 'batchRewardStore', rewardStore, storeKey: 'RunProgress' },
+      {
+        kind: 'incomingReward',
+        reward,
+        value: { rewardType: 'MaxHealthDrop' },
+      },
+    ]);
 
     expect(roomCandidate).toMatchObject({ context: 'evaluated', support: 'possible' });
     expect(storeCandidate).toMatchObject({ context: 'evaluated', support: 'possible' });
@@ -1715,7 +1718,7 @@ describe('project simulation composition', () => {
       activeNonGoalReward,
       shopOffer,
       purchase,
-    ] = evaluateProjectCandidates(catalog, project, [
+    ] = bindTestCandidateSession(catalog, project).evaluate([
       {
         kind: 'biomeField',
         field: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
@@ -1805,11 +1808,13 @@ describe('project simulation composition', () => {
       continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
     });
     expect(
-      evaluateProjectCandidate(catalog, incomplete, {
-        kind: 'biomeField',
-        field,
-        value: 4,
-      }),
+      bindTestCandidateSession(catalog, incomplete).evaluate([
+        {
+          kind: 'biomeField',
+          field,
+          value: 4,
+        },
+      ])[0],
     ).toMatchObject({ context: 'unavailable', reason: 'upstreamIncomplete' });
 
     const invalid = applyProjectCommand(project, catalog, {
@@ -1818,18 +1823,22 @@ describe('project simulation composition', () => {
       cageOutcome: 'max',
     });
     expect(
-      evaluateProjectCandidate(catalog, invalid, {
-        kind: 'biomeField',
-        field,
-        value: 4,
-      }),
+      bindTestCandidateSession(catalog, invalid).evaluate([
+        {
+          kind: 'biomeField',
+          field,
+          value: 4,
+        },
+      ])[0],
     ).toMatchObject({ context: 'unavailable', reason: 'upstreamInvalid' });
     expect(() =>
-      evaluateProjectCandidate(catalog, project, {
-        kind: 'biomeField',
-        field,
-        value: 2,
-      }),
+      bindTestCandidateSession(catalog, project).evaluate([
+        {
+          kind: 'biomeField',
+          field,
+          value: 2,
+        },
+      ]),
     ).toThrow(/candidate proposal is malformed.*must be between 3 and 6/);
   });
 
@@ -1860,12 +1869,15 @@ describe('project simulation composition', () => {
       crawler!.entry.ledgers.counters.biomeEncounterDepth,
     );
 
+    const candidates = bindTestCandidateSession(catalog, project);
     for (const gameName of ['G_MiniBoss01', 'G_MiniBoss03']) {
-      const candidate = evaluateProjectCandidate(catalog, project, {
-        kind: 'roomTarget',
-        target: createTargetAddress(gBiome, gOccurrenceId(7, 1), 1),
-        gameName,
-      });
+      const candidate = candidates.evaluate([
+        {
+          kind: 'roomTarget',
+          target: createTargetAddress(gBiome, gOccurrenceId(7, 1), 1),
+          gameName,
+        },
+      ])[0]!;
       expect(candidate).toMatchObject({ context: 'evaluated', support: 'impossible' });
       if (candidate.context !== 'evaluated' || !('exclusionReasons' in candidate.evidence)) {
         throw new Error(`${gameName} candidate context is unavailable`);

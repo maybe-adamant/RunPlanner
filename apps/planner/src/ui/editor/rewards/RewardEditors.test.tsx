@@ -2,358 +2,102 @@
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
-  createOccurrenceId,
-  createProjectDocument,
+  createShopOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import {
-  type ProjectCandidateEvaluation,
-  type ProjectCandidateQuery,
-} from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
-  CandidateOptionProjection,
-  CandidateProjectionService,
+  CandidateSessionFactoryOptions,
+  RewardCandidateOwner,
 } from '../../../projections/candidateProjection';
-import { createContextualOptionResolver } from '../../../projections/contextualOptions';
-import { createContextualPickerProjection } from '../../../projections/contextualPicker';
-import {
-  prepareRewardDomain,
-  projectRewardDomain,
-  rewardDomainOffers,
-  type ProjectedRewardDomain,
-} from '../../../projections/rewardDomainProjection';
-import { createRewardPickerProjection } from '../../../projections/rewardPicker';
 import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
+import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
 import {
-  CountedRewardEditor as ProductionCountedRewardEditor,
-  RewardValueEditor as ProductionRewardValueEditor,
-} from './RewardEditors';
+  createRepresentativeNOProject,
+  oBiome,
+  oOccurrenceIds,
+} from '../../../../test/fixtures/surfaceProject';
+import {
+  createGoldenFGHIProject,
+  targetOccurrenceId,
+} from '../../../../test/fixtures/underworldProject';
+import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 
 const biome = createBiomeAddress('Underworld', 'F');
-const reward = createIncomingRewardAddress(biome, createOccurrenceId('reward-editor'));
-const project = createProjectDocument(catalog, {
-  projectId: 'reward-editor',
-  name: 'Reward editor',
-  configuredBiomeCounts: { Underworld: 1 },
-});
-const rewardPicker = createRewardPickerProjection(
-  catalog,
-  createContextualPickerProjection(createContextualOptionResolver(catalog)),
-);
+const firstReward = createIncomingRewardAddress(biome, targetOccurrenceId('F', 2, 1));
+const secondReward = createIncomingRewardAddress(biome, targetOccurrenceId('F', 2, 2));
+const firstOwner: RewardCandidateOwner = { kind: 'incomingReward', address: firstReward };
+const devotionOwner: RewardCandidateOwner = {
+  kind: 'incomingReward',
+  address: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion),
+};
+const blindBoxOwner: RewardCandidateOwner = {
+  kind: 'shopOffer',
+  address: createShopOfferAddress(
+    createBiomeAddress('Underworld', 'G'),
+    targetOccurrenceId('G', 6, 1),
+    'Boon',
+  ),
+};
 
 afterEach(cleanup);
 
-function unavailable(query: ProjectCandidateQuery): ProjectCandidateEvaluation {
-  return {
-    context: 'unavailable',
-    query,
-    reason: 'upstreamIncomplete',
-    evidence: { kind: 'upstreamIncomplete', upstreamBiomeKey: 'F' },
-  };
-}
-
-function projected<T>(
-  values: readonly T[],
-  queries: readonly ProjectCandidateQuery[],
-): readonly CandidateOptionProjection<T>[] {
-  return values.map((value, index) => ({ value, evaluation: unavailable(queries[index]!) }));
-}
-
-const candidateProjection: CandidateProjectionService = {
-  bind: () => {
-    throw new Error('bound candidate projection is not used by this legacy editor fixture');
-  },
-  prepareRewardDomain: (rewardTypes, selected) =>
-    prepareRewardDomain(catalog, rewardTypes, selected),
-  countedRewardTypes: (_project, _owner, _binding, selectedRewardType) => [selectedRewardType],
-  rewardDomain: async (_project, _owner, rewardTypes, selected) => {
-    const prepared = prepareRewardDomain(catalog, rewardTypes, selected);
-    return projectRewardDomain(
-      prepared,
-      rewardDomainOffers(prepared).map((offer) => ({
-        value: offer,
-        evaluation: {
-          context: 'evaluated',
-          query: { kind: 'incomingReward', reward, value: offer },
-          support: 'impossible',
-          findings: [],
-          evidence: {
-            candidate: offer,
-            relevantFindingCodes: ['rewardBagEntryUnavailable'],
-            exclusions: [{ kind: 'bag', storeKey: 'RunProgress' }],
-          },
-        },
-      })),
-    );
-  },
-  biomeFields: (_project, owner, values) =>
-    projected(
-      values,
-      values.map((value) => ({ kind: 'biomeField', field: owner, value })),
-    ),
-  startRooms: (_project, owner, rooms) =>
-    projected(
-      rooms,
-      rooms.map((room) => ({ kind: 'startRoom', owner, gameName: room.gameName })),
-    ),
-  roomTargets: (_project, target, rooms) =>
-    projected(
-      rooms,
-      rooms.map((room) => ({ kind: 'roomTarget', target, gameName: room.gameName })),
-    ),
-  batchRewardStores: (_project, rewardStore, storeKeys) =>
-    projected(
-      storeKeys,
-      storeKeys.map((storeKey) => ({ kind: 'batchRewardStore', rewardStore, storeKey })),
-    ),
-  incomingRewards: (_project, owner, offers) =>
-    projected(
-      offers,
-      offers.map((value) => ({ kind: 'incomingReward', reward: owner, value })),
-    ),
-  localRewards: (_project, owner, offers) =>
-    projected(
-      offers,
-      offers.map((value) => ({ kind: 'localReward', reward: owner, value })),
-    ),
-  fieldsCageOutcomes: (_project, continuation, outcomes) =>
-    projected(
-      outcomes,
-      outcomes.map((cageOutcome) => ({
-        kind: 'fieldsCageOutcome',
-        continuation,
-        cageOutcome,
-      })),
-    ),
-  shipEncounterCounts: (_project, occurrence, values) =>
-    projected(
-      values,
-      values.map((encounterCount) => ({
-        kind: 'shipEncounterCount',
-        occurrence,
-        encounterCount,
-      })),
-    ),
-  rewardWheelOfferCounts: (_project, wheel, values) =>
-    projected(
-      values,
-      values.map((offerCount) => ({ kind: 'rewardWheelOfferCount', wheel, offerCount })),
-    ),
-  rewardWheelStores: (_project, wheel, storeKeys) =>
-    projected(
-      storeKeys,
-      storeKeys.map((storeKey) => ({ kind: 'rewardWheelStore', wheel, storeKey })),
-    ),
-  rewardWheelOffers: (_project, offer, values) =>
-    projected(
-      values,
-      values.map((value) => ({ kind: 'rewardWheelOffer', offer, value })),
-    ),
-  rewardWheelPicks: (_project, wheel, values) =>
-    projected(
-      values,
-      values.map((pickedOfferIndex) => ({ kind: 'rewardWheelPicked', wheel, pickedOfferIndex })),
-    ),
-  hubSlots: (_project, slot, occurrenceId, values) =>
-    projected(
-      values,
-      values.map((open) => ({ kind: 'hubSlot', slot, open, occurrenceId })),
-    ),
-  hubVisits: (_project, visit, hubSlotKeys) =>
-    projected(
-      hubSlotKeys,
-      hubSlotKeys.map((hubSlotKey) => ({ kind: 'hubVisit', visit, hubSlotKey })),
-    ),
-  sideRoomGenerations: (_project, sideRoom, values) =>
-    projected(
-      values,
-      values.map((generation) => ({ kind: 'sideRoomGeneration', sideRoom, generation })),
-    ),
-  sideRoomEntryOrders: (_project, group, values) =>
-    projected(
-      values,
-      values.map((enteredSlotKeys) => ({ kind: 'sideRoomEntryOrder', group, enteredSlotKeys })),
-    ),
-  shopOffers: (_project, owner, offers) =>
-    projected(
-      offers,
-      offers.map((value) => ({ kind: 'shopOffer', offer: owner, value })),
-    ),
-  shopPurchases: (_project, owner, values) =>
-    projected(
-      values,
-      values.map((purchased) => ({ kind: 'shopPurchase', purchase: owner, purchased })),
-    ),
-};
-
-function supportOnly(
-  ...supportedOffers: readonly ResolvedRewardOffer[]
-): CandidateProjectionService {
-  const supportedKeys = new Set(supportedOffers.map((offer) => JSON.stringify(offer)));
-  return {
-    ...candidateProjection,
-    rewardDomain: async (_project, _owner, rewardTypes, offer) => {
-      const prepared = prepareRewardDomain(catalog, rewardTypes, offer);
-      return projectRewardDomain(
-        prepared,
-        rewardDomainOffers(prepared).map((candidate) => ({
-          value: candidate,
-          evaluation: {
-            context: 'evaluated',
-            query: { kind: 'incomingReward', reward, value: candidate },
-            support: supportedKeys.has(JSON.stringify(candidate))
-              ? ('possible' as const)
-              : ('impossible' as const),
-            findings: [],
-            evidence: {
-              candidate,
-              relevantFindingCodes: [],
-              exclusions: [{ kind: 'devotionPair' as const }],
-            },
-          },
-        })),
-      );
-    },
-  };
-}
-
-function testContextualResolver(
-  projection: CandidateProjectionService,
-  owner: Parameters<CandidateProjectionService['rewardDomain']>[1],
-  rewardTypes: readonly string[],
-  currentProject: ProjectDocument,
+function contextualFor(
+  project: ProjectDocument,
+  options: CandidateSessionFactoryOptions = {},
 ): WorkspaceContextualResolver {
-  const interaction = {
-    choiceLabel: rewardPicker.choiceLabel,
-    load: (seed: ResolvedRewardOffer) =>
-      projection.rewardDomain(currentProject, owner, rewardTypes, seed),
-    model: rewardPicker.project,
-    rewardTypes,
-    selected: { rewardType: rewardTypes[0] ?? 'Boon' },
-    summary: rewardPicker.summary,
-  };
-  return {
-    resolveBatchRewardStores: () => {
-      throw new Error('batch reward stores are not used by reward editor fixtures');
-    },
-    resolveBiomeFields: () => {
-      throw new Error('biome fields are not used by reward editor fixtures');
-    },
-    resolveFieldsCageOutcomes: () => {
-      throw new Error('Fields outcomes are not used by reward editor fixtures');
-    },
-    resolveHubSlots: () => {
-      throw new Error('Hub slots are not used by reward editor fixtures');
-    },
-    resolveHubVisits: () => {
-      throw new Error('Hub visits are not used by reward editor fixtures');
-    },
-    resolveRoom: () => {
-      throw new Error('room resolution is not used by reward editor fixtures');
-    },
-    resolveReward: () => interaction,
-    resolveRewardWheelOfferCounts: () => {
-      throw new Error('wheel counts are not used by reward editor fixtures');
-    },
-    resolveRewardWheelPicks: () => {
-      throw new Error('wheel picks are not used by reward editor fixtures');
-    },
-    resolveRewardWheelStores: () => {
-      throw new Error('wheel stores are not used by reward editor fixtures');
-    },
-    resolveShipEncounterCounts: () => {
-      throw new Error('ship encounter counts are not used by reward editor fixtures');
-    },
-    resolveShopPurchases: () => {
-      throw new Error('shop purchases are not used by reward editor fixtures');
-    },
-    resolveSideRoomEntryOrders: () => {
-      throw new Error('side-room entry order is not used by reward editor fixtures');
-    },
-    resolveSideRoomGenerations: () => {
-      throw new Error('side-room generation is not used by reward editor fixtures');
-    },
-  };
+  const { structuredWorkspace } = createStructuredWorkspaceTestServices(options);
+  return structuredWorkspace.project(project, simulateProject(catalog, project)).contextual;
 }
 
-function RewardValueEditor({
-  candidateOwner,
-  candidateProjection: projection,
-  idPrefix,
+function renderReward({
+  contextual,
   offer,
-  onReplace,
-  project: currentProject,
-  rewardTypes,
+  onReplace = () => undefined,
+  owner = firstOwner,
 }: {
-  readonly candidateOwner: Parameters<CandidateProjectionService['rewardDomain']>[1];
-  readonly candidateProjection: CandidateProjectionService;
-  readonly idPrefix: string;
+  readonly contextual: WorkspaceContextualResolver;
   readonly offer: ResolvedRewardOffer;
-  readonly onReplace: (offer: ResolvedRewardOffer) => void;
-  readonly project: ProjectDocument;
-  readonly rewardPicker: typeof rewardPicker;
-  readonly rewardTypes: readonly string[];
+  readonly onReplace?: (offer: ResolvedRewardOffer) => void;
+  readonly owner?: RewardCandidateOwner;
 }) {
-  return (
-    <ProductionRewardValueEditor
-      candidateOwner={candidateOwner}
-      contextual={testContextualResolver(projection, candidateOwner, rewardTypes, currentProject)}
-      idPrefix={idPrefix}
+  return render(
+    <RewardValueEditor
+      candidateOwner={owner}
+      contextual={contextual}
+      idPrefix="reward-editor"
       offer={offer}
       onReplace={onReplace}
-    />
+    />,
   );
 }
 
-function CountedRewardEditor({
-  binding,
-  candidateOwner,
-  candidateProjection: projection,
-  idPrefix,
-  offer,
-  onReplace,
-  project: currentProject,
-}: {
-  readonly binding: Parameters<CandidateProjectionService['countedRewardTypes']>[2];
-  readonly candidateOwner: Parameters<CandidateProjectionService['countedRewardTypes']>[1];
-  readonly candidateProjection: CandidateProjectionService;
-  readonly idPrefix: string;
-  readonly offer: ResolvedRewardOffer;
-  readonly onReplace: (offer: ResolvedRewardOffer) => void;
-  readonly project: ProjectDocument;
-  readonly rewardPicker: typeof rewardPicker;
-}) {
-  const rewardTypes = projection.countedRewardTypes(
-    currentProject,
-    candidateOwner,
-    binding,
-    offer.rewardType,
-  );
-  return (
-    <ProductionCountedRewardEditor
-      candidateOwner={candidateOwner}
-      contextual={testContextualResolver(projection, candidateOwner, rewardTypes, currentProject)}
-      idPrefix={idPrefix}
-      offer={offer}
-      onReplace={onReplace}
-    />
-  );
+function deferredHostYield() {
+  let resolve!: () => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
 }
 
 describe('reward editor projections', () => {
   it('renders one compact summary without leaking game source names', () => {
+    const project = createGoldenFGHIProject(catalog);
     const markup = renderToStaticMarkup(
       <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: reward }}
-        candidateProjection={candidateProjection}
+        candidateOwner={{ kind: 'incomingReward', address: firstReward }}
+        contextual={contextualFor(project)}
         idPrefix="trial"
         onReplace={() => undefined}
         offer={{
@@ -364,9 +108,6 @@ describe('reward editor projections', () => {
             spurnedSource: 'ZeusUpgrade',
           },
         }}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={['Devotion']}
       />,
     );
 
@@ -377,81 +118,66 @@ describe('reward editor projections', () => {
   });
 
   it('renders the producer-resolved reward domain instead of the binding union', async () => {
-    const room = catalog.rooms.byKey.F_Combat02;
+    const project = createGoldenFGHIProject(catalog);
+    const room = catalog.rooms.byKey.F_Combat03;
     if (room?.incomingReward.kind !== 'countedChoice') {
-      throw new Error('F_Combat02 counted reward binding is missing');
+      throw new Error('F_Combat03 counted reward binding is missing');
     }
     const boon = room.incomingReward.defaultOffersByStore.RunProgress!;
-    const maxHealth = { rewardType: 'MaxHealthDrop' } as const;
-    const countedRewardTypes = vi.fn(() => ['Boon', 'MaxHealthDrop'] as const);
-    const producerProjection: CandidateProjectionService = {
-      ...supportOnly(boon, maxHealth),
-      countedRewardTypes,
-    };
-    const owner = { kind: 'incomingReward' as const, address: reward };
     const user = userEvent.setup();
     render(
       <CountedRewardEditor
-        binding={room.incomingReward}
-        candidateOwner={owner}
-        candidateProjection={producerProjection}
+        candidateOwner={{ kind: 'incomingReward', address: firstReward }}
+        contextual={contextualFor(project)}
+        idPrefix="combat-03"
         offer={boon}
-        idPrefix="combat-02"
         onReplace={() => undefined}
-        project={project}
-        rewardPicker={rewardPicker}
       />,
     );
 
     await user.click(screen.getByLabelText('Reward'));
     await screen.findByText('Reward type');
-    const listbox = screen.getByRole('listbox');
+    const listbox = await screen.findByRole('listbox');
     expect(within(listbox).getByText('Boon')).toBeTruthy();
     expect(within(listbox).getByText('Max Health')).toBeTruthy();
     expect(within(listbox).queryByText('Ashes')).toBeNull();
-    expect(countedRewardTypes).toHaveBeenCalledWith(project, owner, room.incomingReward, 'Boon');
   });
 
   it('renders the typed explanation for a selected-invalid reward', async () => {
+    const maxHealth = { rewardType: 'MaxHealthDrop' } as const;
+    let project = createGoldenFGHIProject(catalog);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: firstReward,
+      value: maxHealth,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: secondReward,
+      value: maxHealth,
+    });
     const user = userEvent.setup();
-    render(
-      <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: reward }}
-        candidateProjection={candidateProjection}
-        idPrefix="invalid-reward"
-        onReplace={() => undefined}
-        offer={{ rewardType: 'MaxHealthDrop' }}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={['MaxHealthDrop']}
-      />,
-    );
+    renderReward({
+      contextual: contextualFor(project),
+      offer: maxHealth,
+      owner: { kind: 'incomingReward', address: secondReward },
+    });
 
     await user.click(screen.getByLabelText('Reward'));
 
     expect(
-      await screen.findAllByText('No reachable reward-pool state supports this reward.'),
+      await screen.findAllByText('This reward conflicts with the offer on Exit 1.'),
     ).toHaveLength(2);
   });
 
   it('keeps a pending interaction open and exposes an explicit cancel action', async () => {
-    const pendingProjection: CandidateProjectionService = {
-      ...candidateProjection,
-      rewardDomain: () => new Promise<ProjectedRewardDomain>(() => undefined),
-    };
+    const project = createGoldenFGHIProject(catalog);
+    const pending = deferredHostYield();
     const user = userEvent.setup();
-    render(
-      <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: reward }}
-        candidateProjection={pendingProjection}
-        idPrefix="pending-reward"
-        onReplace={() => undefined}
-        offer={{ rewardType: 'MaxHealthDrop' }}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={['MaxHealthDrop']}
-      />,
-    );
+    renderReward({
+      contextual: contextualFor(project, { yieldToHost: () => pending.promise }),
+      offer: { rewardType: 'MaxHealthDrop' },
+    });
 
     const control = screen.getByLabelText('Reward');
     await user.click(control);
@@ -463,55 +189,43 @@ describe('reward editor projections', () => {
   });
 
   it('commits a payload-free reward immediately after its type is chosen', async () => {
+    const project = createGoldenFGHIProject(catalog);
     const maxHealth = { rewardType: 'MaxHealthDrop' } as const;
     const onReplace = vi.fn();
     const user = userEvent.setup();
-    render(
-      <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: reward }}
-        candidateProjection={supportOnly(maxHealth)}
-        idPrefix="primitive"
-        offer={{
-          rewardType: 'Boon',
-          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-        }}
-        onReplace={onReplace}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={['Boon', 'MaxHealthDrop']}
-      />,
-    );
+    renderReward({
+      contextual: contextualFor(project),
+      offer: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+      onReplace,
+    });
 
     await user.click(screen.getByLabelText('Reward'));
     await screen.findByText('Reward type');
-    await user.click(within(screen.getByRole('listbox')).getByText('Max Health'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Max Health'));
 
     expect(onReplace).toHaveBeenCalledOnce();
     expect(onReplace).toHaveBeenCalledWith(maxHealth);
   });
 
   it('commits one complete Boon through keyboard-focused compound steps', async () => {
+    const project = createGoldenFGHIProject(catalog);
     const apollo = {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
     };
     const onReplace = vi.fn();
     const user = userEvent.setup();
-    render(
-      <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: reward }}
-        candidateProjection={supportOnly(apollo)}
-        idPrefix="boon"
-        offer={{
-          rewardType: 'Boon',
-          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
-        }}
-        onReplace={onReplace}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={['Boon']}
-      />,
-    );
+    renderReward({
+      contextual: contextualFor(project),
+      offer: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      },
+      onReplace,
+    });
 
     const trigger = screen.getByLabelText('Reward');
     trigger.focus();
@@ -531,38 +245,32 @@ describe('reward editor projections', () => {
   });
 
   it('ignores a stale projection failure after the project identity changes', async () => {
-    let rejectProjection!: (reason?: unknown) => void;
-    const staleProjection: CandidateProjectionService = {
-      ...candidateProjection,
-      rewardDomain: () =>
-        new Promise<ProjectedRewardDomain>((_resolve, reject) => {
-          rejectProjection = reject;
-        }),
-    };
-    const user = userEvent.setup();
-    const renderEditor = (currentProject: ProjectDocument) => (
+    const project = createGoldenFGHIProject(catalog);
+    const pending = deferredHostYield();
+    const selected = { rewardType: 'MaxHealthDrop' } as const;
+    const renderEditor = (contextual: WorkspaceContextualResolver) => (
       <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: reward }}
-        candidateProjection={staleProjection}
+        candidateOwner={{ kind: 'incomingReward', address: firstReward }}
+        contextual={contextual}
         idPrefix="stale-project"
-        offer={{ rewardType: 'MaxHealthDrop' }}
+        offer={selected}
         onReplace={() => undefined}
-        project={currentProject}
-        rewardPicker={rewardPicker}
-        rewardTypes={['MaxHealthDrop']}
       />
     );
-    const view = render(renderEditor(project));
+    const user = userEvent.setup();
+    const view = render(
+      renderEditor(contextualFor(project, { yieldToHost: () => pending.promise })),
+    );
     await user.click(screen.getByLabelText('Reward'));
 
-    const replacement = createProjectDocument(catalog, {
-      projectId: 'replacement-project',
-      name: 'Replacement project',
-      configuredBiomeCounts: { Underworld: 1 },
+    const replacement = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: firstReward,
+      value: { rewardType: 'MaxManaDrop' },
     });
-    view.rerender(renderEditor(replacement));
+    view.rerender(renderEditor(contextualFor(replacement)));
     await act(async () => {
-      rejectProjection(new Error('stale projection'));
+      pending.reject(new Error('stale projection'));
       await Promise.resolve();
     });
 
@@ -570,37 +278,27 @@ describe('reward editor projections', () => {
   });
 
   it('ignores a stale projection failure after the producer context changes', async () => {
-    let rejectProjection!: (reason?: unknown) => void;
-    const staleProjection: CandidateProjectionService = {
-      ...candidateProjection,
-      rewardDomain: () =>
-        new Promise<ProjectedRewardDomain>((_resolve, reject) => {
-          rejectProjection = reject;
-        }),
-    };
-    const replacementReward = createIncomingRewardAddress(
-      biome,
-      createOccurrenceId('replacement-reward-editor'),
-    );
-    const renderEditor = (candidateAddress: typeof reward, rewardTypes: readonly string[]) => (
+    const project = createGoldenFGHIProject(catalog);
+    const pending = deferredHostYield();
+    const staleContextual = contextualFor(project, {
+      yieldToHost: () => pending.promise,
+    });
+    const renderEditor = (owner: typeof firstReward) => (
       <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: candidateAddress }}
-        candidateProjection={staleProjection}
+        candidateOwner={{ kind: 'incomingReward', address: owner }}
+        contextual={owner === firstReward ? staleContextual : contextualFor(project)}
         idPrefix="stale-context"
         offer={{ rewardType: 'MaxHealthDrop' }}
         onReplace={() => undefined}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={rewardTypes}
       />
     );
     const user = userEvent.setup();
-    const view = render(renderEditor(reward, ['MaxHealthDrop']));
+    const view = render(renderEditor(firstReward));
     await user.click(screen.getByLabelText('Reward'));
 
-    view.rerender(renderEditor(replacementReward, ['MaxHealthDrop', 'Boon']));
+    view.rerender(renderEditor(secondReward));
     await act(async () => {
-      rejectProjection(new Error('stale projection'));
+      pending.reject(new Error('stale projection'));
       await Promise.resolve();
     });
 
@@ -608,83 +306,56 @@ describe('reward editor projections', () => {
   });
 
   it('does not resurrect a completed stale interaction when its context returns', async () => {
-    let resolveProjection!: (domain: ProjectedRewardDomain) => void;
-    const staleProjection: CandidateProjectionService = {
-      ...candidateProjection,
-      rewardDomain: () =>
-        new Promise<ProjectedRewardDomain>((resolve) => {
-          resolveProjection = resolve;
-        }),
-    };
+    const project = createGoldenFGHIProject(catalog);
+    const pending = deferredHostYield();
     const selected = { rewardType: 'MaxHealthDrop' } as const;
-    const prepared = prepareRewardDomain(catalog, ['MaxHealthDrop'], selected);
-    const projectedDomain = projectRewardDomain(
-      prepared,
-      rewardDomainOffers(prepared).map((value) => ({
-        value,
-        evaluation: unavailable({ kind: 'incomingReward', reward, value }),
-      })),
-    );
-    const replacementReward = createIncomingRewardAddress(
-      biome,
-      createOccurrenceId('returning-reward-editor'),
-    );
-    const renderEditor = (candidateAddress: typeof reward) => (
+    const staleContextual = contextualFor(project, {
+      yieldToHost: () => pending.promise,
+    });
+    const renderEditor = (owner: typeof firstReward) => (
       <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: candidateAddress }}
-        candidateProjection={staleProjection}
+        candidateOwner={{ kind: 'incomingReward', address: owner }}
+        contextual={owner === firstReward ? staleContextual : contextualFor(project)}
         idPrefix="returning-context"
         offer={selected}
         onReplace={() => undefined}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={['MaxHealthDrop']}
       />
     );
     const user = userEvent.setup();
-    const view = render(renderEditor(reward));
+    const view = render(renderEditor(firstReward));
     await user.click(screen.getByLabelText('Reward'));
 
-    view.rerender(renderEditor(replacementReward));
+    view.rerender(renderEditor(secondReward));
     await act(async () => {
-      resolveProjection(projectedDomain);
+      pending.resolve();
       await Promise.resolve();
     });
-    view.rerender(renderEditor(reward));
+    view.rerender(renderEditor(firstReward));
 
     expect(screen.getByLabelText('Reward').getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByText('Reward type')).toBeNull();
   });
 
   it('labels a Blind Box source as an eventual result', async () => {
+    const project = createGoldenFGHIProject(catalog);
     const blindBox = {
       rewardType: 'BlindBoxLoot',
       payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
     };
     const user = userEvent.setup();
-    render(
-      <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: reward }}
-        candidateProjection={supportOnly(blindBox)}
-        idPrefix="blind-box"
-        offer={blindBox}
-        onReplace={() => undefined}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={['BlindBoxLoot']}
-      />,
-    );
+    renderReward({ contextual: contextualFor(project), offer: blindBox, owner: blindBoxOwner });
 
     const trigger = screen.getByLabelText('Reward');
     expect(trigger.textContent).toContain('Mystery Boon · Apollo (eventual)');
     await user.click(trigger);
     await screen.findByText('Reward type');
-    await user.click(within(screen.getByRole('listbox')).getByText('Mystery Boon'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
 
     expect(await screen.findByText('Eventual God')).toBeTruthy();
   });
 
   it('commits one complete Devotion offer only after both Gods are chosen', async () => {
+    const project = createRepresentativeNOProject();
     const selected = {
       rewardType: 'Devotion',
       payload: {
@@ -693,40 +364,24 @@ describe('reward editor projections', () => {
         spurnedSource: 'AresUpgrade',
       },
     };
-    const supporting = {
-      rewardType: 'Devotion',
-      payload: {
-        kind: 'DevotionPair' as const,
-        chosenSource: 'ApolloUpgrade',
-        spurnedSource: 'ZeusUpgrade',
-      },
-    };
     const onReplace = vi.fn();
     const user = userEvent.setup();
-    render(
-      <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: reward }}
-        candidateProjection={supportOnly(supporting)}
-        idPrefix="devotion"
-        onReplace={onReplace}
-        offer={selected}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={['Devotion']}
-      />,
-    );
+    renderReward({
+      contextual: contextualFor(project),
+      offer: selected,
+      onReplace,
+      owner: devotionOwner,
+    });
 
     await user.click(screen.getByLabelText('Reward'));
     await screen.findByText('Reward type');
-    await user.click(within(screen.getByRole('listbox')).getByText('Trial'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Trial'));
     await screen.findByText('Chosen God');
-    await user.click(within(screen.getByRole('listbox')).getByText('Apollo'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
 
     expect(onReplace).not.toHaveBeenCalled();
     await screen.findByText('Spurned God');
-    expect(within(screen.getByRole('listbox')).getByText('Ares')).toBeTruthy();
-    expect(within(screen.getByRole('listbox')).getByText('Current · unavailable')).toBeTruthy();
-    await user.click(within(screen.getByRole('listbox')).getByText('Zeus'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Hephaestus'));
 
     expect(onReplace).toHaveBeenCalledOnce();
     expect(onReplace).toHaveBeenCalledWith({
@@ -734,90 +389,72 @@ describe('reward editor projections', () => {
       payload: {
         kind: 'DevotionPair',
         chosenSource: 'ApolloUpgrade',
-        spurnedSource: 'ZeusUpgrade',
+        spurnedSource: 'HephaestusUpgrade',
       },
     });
   });
 
   it('allows the authored spurned God to become the new chosen God', async () => {
+    const project = createRepresentativeNOProject();
     const supported = {
       rewardType: 'Devotion',
       payload: {
         kind: 'DevotionPair' as const,
         chosenSource: 'AresUpgrade',
-        spurnedSource: 'ZeusUpgrade',
+        spurnedSource: 'HephaestusUpgrade',
       },
     };
     const onReplace = vi.fn();
     const user = userEvent.setup();
-    render(
-      <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: reward }}
-        candidateProjection={supportOnly(supported)}
-        idPrefix="devotion-swap"
-        onReplace={onReplace}
-        offer={{
-          rewardType: 'Devotion',
-          payload: {
-            kind: 'DevotionPair',
-            chosenSource: 'AphroditeUpgrade',
-            spurnedSource: 'AresUpgrade',
-          },
-        }}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={['Devotion']}
-      />,
-    );
+    renderReward({
+      contextual: contextualFor(project),
+      offer: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'AphroditeUpgrade',
+          spurnedSource: 'AresUpgrade',
+        },
+      },
+      onReplace,
+      owner: devotionOwner,
+    });
 
     await user.click(screen.getByLabelText('Reward'));
     await screen.findByText('Reward type');
-    await user.click(within(screen.getByRole('listbox')).getByText('Trial'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Trial'));
     await screen.findByText('Chosen God');
-    await user.click(within(screen.getByRole('listbox')).getByText('Ares'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Ares'));
     await screen.findByText('Spurned God');
-    await user.click(within(screen.getByRole('listbox')).getByText('Zeus'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Hephaestus'));
 
     expect(onReplace).toHaveBeenCalledOnce();
     expect(onReplace).toHaveBeenCalledWith(supported);
   });
 
   it('cancels partial Devotion progress without authoring a replacement', async () => {
-    const supporting = {
-      rewardType: 'Devotion',
-      payload: {
-        kind: 'DevotionPair' as const,
-        chosenSource: 'ApolloUpgrade',
-        spurnedSource: 'ZeusUpgrade',
-      },
-    };
+    const project = createRepresentativeNOProject();
     const onReplace = vi.fn();
     const user = userEvent.setup();
-    render(
-      <RewardValueEditor
-        candidateOwner={{ kind: 'incomingReward', address: reward }}
-        candidateProjection={supportOnly(supporting)}
-        idPrefix="cancel-devotion"
-        offer={{
-          rewardType: 'Devotion',
-          payload: {
-            kind: 'DevotionPair',
-            chosenSource: 'AphroditeUpgrade',
-            spurnedSource: 'AresUpgrade',
-          },
-        }}
-        onReplace={onReplace}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={['Devotion']}
-      />,
-    );
+    renderReward({
+      contextual: contextualFor(project),
+      offer: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'AphroditeUpgrade',
+          spurnedSource: 'AresUpgrade',
+        },
+      },
+      onReplace,
+      owner: devotionOwner,
+    });
 
     await user.click(screen.getByLabelText('Reward'));
     await screen.findByText('Reward type');
-    await user.click(within(screen.getByRole('listbox')).getByText('Trial'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Trial'));
     await screen.findByText('Chosen God');
-    await user.click(within(screen.getByRole('listbox')).getByText('Apollo'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
     await screen.findByText('Spurned God');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
