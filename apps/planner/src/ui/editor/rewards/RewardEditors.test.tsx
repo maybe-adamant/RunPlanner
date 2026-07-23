@@ -6,6 +6,7 @@ import {
   createBiomeAddress,
   createIncomingRewardAddress,
   createShopOfferAddress,
+  encodeProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
@@ -13,6 +14,7 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -20,6 +22,7 @@ import type {
   RewardCandidateOwner,
 } from '../../../projections/candidateProjection';
 import type { WorkspaceInteractionCatalog } from '../../../projections/structuredWorkspace';
+import type { StructuredWorkspaceProjectionService } from '../../../projections/structuredWorkspace';
 import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
 import {
   createRepresentativeNOProject,
@@ -30,6 +33,13 @@ import {
   createGoldenFGHIProject,
   targetOccurrenceId,
 } from '../../../../test/fixtures/underworldProject';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectRedoRequested,
+  authoredProjectUndoRequested,
+} from '../../../state/projectWorkspaceSlice';
+import { profileLoadSucceeded } from '../../../state/profileSessionSlice';
+import { createPlannerStore, useAppSelector, type PlannerStore } from '../../../state/store';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 
 const biome = createBiomeAddress('Underworld', 'F');
@@ -89,6 +99,47 @@ function deferredHostYield() {
     reject = rejectPromise;
   });
   return { promise, reject, resolve };
+}
+
+function projectRewardOffer(project: ProjectDocument): ResolvedRewardOffer {
+  const occurrence = project.routes
+    .flatMap((route) => route.biomes)
+    .flatMap((plan) => plan.topology?.occurrences ?? [])
+    .find((candidate) => candidate.occurrenceId === firstReward.occurrenceId);
+  if (occurrence?.state.kind !== 'counted') {
+    throw new Error('Reward lifecycle harness has no counted occurrence');
+  }
+  return occurrence.state.offer;
+}
+
+function StoreRewardHarness({
+  structuredWorkspace,
+}: {
+  readonly structuredWorkspace: StructuredWorkspaceProjectionService;
+}) {
+  const workspace = useAppSelector((state) => state.projectWorkspace);
+  return (
+    <RewardValueEditor
+      candidateOwner={firstOwner}
+      idPrefix="lifecycle-stale"
+      interactions={
+        structuredWorkspace.project(workspace.history.present, workspace.evaluation).interactions
+      }
+      offer={projectRewardOffer(workspace.history.present)}
+      onReplace={() => undefined}
+    />
+  );
+}
+
+function renderStoreReward(
+  store: PlannerStore,
+  structuredWorkspace: StructuredWorkspaceProjectionService,
+) {
+  return render(
+    <Provider store={store}>
+      <StoreRewardHarness structuredWorkspace={structuredWorkspace} />
+    </Provider>,
+  );
 }
 
 describe('reward editor projections', () => {
@@ -331,6 +382,60 @@ describe('reward editor projections', () => {
       await Promise.resolve();
     });
     view.rerender(renderEditor(firstReward));
+
+    expect(screen.getByLabelText('Reward').getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByText('Reward type')).toBeNull();
+  });
+
+  it('rejects stale reward work across edit, undo, redo, and profile replacement', async () => {
+    const project = createGoldenFGHIProject(catalog);
+    const pending = deferredHostYield();
+    const { structuredWorkspace } = createStructuredWorkspaceTestServices({
+      yieldToHost: () => pending.promise,
+    });
+    const store = createPlannerStore({
+      catalog,
+      evaluateProject: (current) => simulateProject(catalog, current),
+      initialProject: project,
+    });
+    const user = userEvent.setup();
+    renderStoreReward(store, structuredWorkspace);
+    await user.click(screen.getByLabelText('Reward'));
+
+    act(() => {
+      store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceIncomingReward',
+          reward: firstReward,
+          value: { rewardType: 'MaxManaDrop' },
+        }),
+      );
+    });
+    expect(screen.getByLabelText('Reward').getAttribute('aria-expanded')).toBe('false');
+    act(() => {
+      store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(screen.getByLabelText('Reward').getAttribute('aria-expanded')).toBe('false');
+    act(() => {
+      store.dispatch(authoredProjectRedoRequested());
+    });
+    expect(screen.getByLabelText('Reward').getAttribute('aria-expanded')).toBe('false');
+    const loadedProject = applyProjectCommand(project, catalog, {
+      kind: 'RenameProject',
+      name: 'Loaded Profile',
+    });
+    act(() => {
+      store.dispatch(
+        profileLoadSucceeded({
+          baselineJson: encodeProjectDocument(loadedProject),
+          project: loadedProject,
+        }),
+      );
+    });
+    await act(async () => {
+      pending.reject(new Error('stale lifecycle projection'));
+      await Promise.resolve();
+    });
 
     expect(screen.getByLabelText('Reward').getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByText('Reward type')).toBeNull();

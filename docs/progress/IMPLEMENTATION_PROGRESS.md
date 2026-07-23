@@ -1802,3 +1802,29 @@ Focused projection and editor coverage passes for all candidate-bearing biome
 editors, and the complete planner application suite passes with 26 files and
 139 tests. Slice 9 may now enforce the import boundary, prove render purity and
 family-local activation, and close the refactor with final measurements.
+
+Candidate-System Refactor Slice 9 is complete. Production React sources now
+have an enforced import boundary against project simulation, candidate-session
+construction, and contextual projection construction. An architecture fixture
+also fixes the public `createApplication()` capability surface and proves that
+`useWorkspaceInteraction` is the only production React caller of lazy
+workspace loaders. The production candidate module exports only its session
+factory and presentation helpers; no scalar compatibility authority or
+alternate test evaluator remains.
+
+Representative render-purity fixtures visit F/G/H/I and N/O/P/Q without
+producing a candidate query batch or reacquiring project evaluation. A
+table-driven interaction fixture activates every published candidate family,
+requires candidate work, constrains any replay evidence to the interaction's
+own route and biome, and proves that the two initial project evaluations remain
+the only project evaluations. Reward interaction coverage rejects stale
+asynchronous failure after one lifecycle crosses edit, undo, redo, and profile
+replacement.
+
+On 2026-07-23, the isolated G author/undo/redo fixture completed in 15.45
+seconds of test work and 23.47 seconds wall time with its 30-second timeout.
+The expanded complete suite passes with 72 test files and 543 tests in 98.71
+seconds wall time. Typechecks, lint including the UI import restrictions,
+formatting, production build, and diff checks also pass. The candidate-system
+refactor is closed; Phase 7 Commit 11 may resume on the workspace-owned
+interaction boundary.
