@@ -1525,4 +1525,66 @@ cover cached hierarchy projection, aggregate counts, unassessed versus blocked
 copy, exact project navigation, a blocked but editable Oceanus page, and an
 independently editable Surface page while Underworld remains incomplete.
 
-Phase 7 Commit 10 is next: structured workspace projection.
+Phase 7 Commit 10 is complete. One application-owned structured-workspace
+projection now joins normalized layout, authored topology and occurrences,
+progressive or canonical evaluation, addressed findings, and semantic focus.
+The projection publishes shared project, route-rail, biome-status, coverage
+marker, compact room-summary, completion-landmark, empty-outline, and inspector
+destination vocabulary. Finding owners resolve to exact structural destinations
+or to their owning decision, room, fixed entry, or joint Hub region; React does
+not need to translate addresses into rendered positions.
+
+Structure nodes carry typed semantic-owner descriptors for starts, decisions,
+targets, Room Occurrences, Hub slots, Hub visits, and N side rooms. Replaceable
+Linear batch targets additionally retain exact room-picker descriptors with
+their declaration-owned candidate domain, selection, and semantic owner;
+independent terminal targets are explicitly read-only. Room summaries retain
+exact incoming, cage, wheel, side-room, shop-offer, and shop-purchase reward
+owners. A project-bound lazy contextual resolver currently composes the
+replaceable room and reward descriptors with the existing application-owned
+candidate, contextual-picker, and reward projections. It publishes grouped
+room models and complete reward interactions only when the inspector asks for
+them, without eagerly evaluating every picker or moving candidate simulation,
+grouping, or explanation policy into React. Contextual composition for decision
+settings, room-lifecycle controls, and Hub membership, visit, or local-child
+selection remains deliberately outside this slice pending the candidate-system
+refactor and React-consumption reassessment.
+
+Linear projections preserve authored starts and fixed entries, every generated
+decision and leaf, the picked trunk, progressively unassessed retained overflow,
+the active semantic frontier, layout-specific terminal realization, and derived
+Boss/PostBoss landmarks. Empty outlines distinguish variable eligibility-driven
+length, exact fixed-count length, and exact declaration-owned stages without
+interpreting force pressure or publishing an expected route length. Incomplete
+topology is explicitly `authored` or `progressive`; only complete evaluation is
+identified as `canonical`.
+
+The Hub projection keeps N as one joint open-board generation region, separate
+from its complete ordered six-position visit timeline. Authored visits retain
+their selected Hub slots while later positions remain explicit unauthored
+frontier slots. It carries fixed entries, all declared
+physical slots, open membership, compact room and reward state, side-room
+generation and entry order, the fixed terminal, and completion landmarks.
+Entered state comes from the canonical or progressive materialization rather
+than authored picked state or fixed-occurrence allocation. Slot
+order never becomes a progressive simulation prefix. Deterministic fixtures
+cover F/G/H/I/N/O/P/Q, all terminal policies, all three Linear outline forms,
+the Hub-visit outline, semantic focus, progressive Linear coverage, blocked
+empty biomes, retained unassessed descendants, payload-aware reward summaries,
+repeated I preboss focus, partial N visits and terminal state, N side rooms, and
+the joint-board invariant. Coverage also proves direct semantic assessment of
+picked, shop-offer, and shop-purchase owners rather than depending on an
+`origin` field name.
+
+Phase 7 pauses after Commit 10 for the candidate-system refactor and
+React-consumption reassessment. Commit 11, Linear spine and focused inspector,
+resumes after that gate.
+
+The pause has an explicit performance baseline. On 2026-07-23, the G
+authoring/undo/redo product-loop test took 27.81 seconds in isolation and timed
+out at 30.288 seconds under the two-worker full suite. Its local 60-second
+timeout is temporary reliability headroom, not an accepted performance target.
+Candidate-refactor closure must rerun the same isolated test and the complete
+suite, record comparable durations, and demonstrate that interactive candidate
+evaluation no longer depends on repeated full-project simulation before Phase 7
+Commit 11 resumes.

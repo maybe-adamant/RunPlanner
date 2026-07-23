@@ -490,6 +490,8 @@ describe('golden Underworld product loop', () => {
     expect(currentProject(application)).toBe(project);
   });
 
+  // Temporary headroom until the post-Phase-7 candidate-system refactor removes
+  // repeated full-project simulation from interactive candidate evaluation.
   it('navigates, authors, undoes, and redoes G after a validated F prefix', async () => {
     const application = createApplication();
     const { user } = renderPlannerForInteraction({ application });
@@ -531,7 +533,7 @@ describe('golden Underworld product loop', () => {
     await user.click(screen.getByRole('button', { name: 'Redo' }));
     expect(currentProject(application)).toBe(started);
     expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
-  }, 30_000);
+  }, 60_000);
 
   it('renders and edits the maximum-width G preboss fork through the shared editor', async () => {
     const application = createApplication();

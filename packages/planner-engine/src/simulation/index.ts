@@ -236,6 +236,7 @@ export {
   type SimulationPhase,
 } from './model';
 export {
+  assertProjectEvaluationSource,
   ProjectSimulationContractError,
   evaluateHubBiome,
   evaluateLinearBiome,

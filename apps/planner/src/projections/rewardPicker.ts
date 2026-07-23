@@ -48,6 +48,20 @@ function hasEventualSource(catalog: Catalog, offer: ResolvedRewardOffer): boolea
   return rewardDeclaration(catalog, offer.rewardType).sourceResolution?.kind === 'acquisitionRole';
 }
 
+export function summarizeRewardOffer(catalog: Catalog, offer: ResolvedRewardOffer): string {
+  const declaration = rewardDeclaration(catalog, offer.rewardType);
+  if (offer.payload === undefined) {
+    return declaration.label;
+  }
+  if (offer.payload.kind === 'BoonSource') {
+    const source = sourceLabel(catalog, offer.payload.source);
+    return hasEventualSource(catalog, offer)
+      ? `${declaration.label} · ${source} (eventual)`
+      : `${declaration.label} · ${source}`;
+  }
+  return `${declaration.label} · ${sourceLabel(catalog, offer.payload.chosenSource)} / ${sourceLabel(catalog, offer.payload.spurnedSource)}`;
+}
+
 function optionLabel(catalog: Catalog, step: RewardPickerStep, key: string): string {
   const declaration = catalog.rewards.rewardTypes.byKey[key];
   if (declaration === undefined) {
@@ -202,19 +216,7 @@ export function createRewardPickerProjection(
         offerKey,
       );
     },
-    summary(offer: ResolvedRewardOffer) {
-      const declaration = rewardDeclaration(catalog, offer.rewardType);
-      if (offer.payload === undefined) {
-        return declaration.label;
-      }
-      if (offer.payload.kind === 'BoonSource') {
-        const source = sourceLabel(catalog, offer.payload.source);
-        return hasEventualSource(catalog, offer)
-          ? `${declaration.label} · ${source} (eventual)`
-          : `${declaration.label} · ${source}`;
-      }
-      return `${declaration.label} · ${sourceLabel(catalog, offer.payload.chosenSource)} / ${sourceLabel(catalog, offer.payload.spurnedSource)}`;
-    },
+    summary: (offer) => summarizeRewardOffer(catalog, offer),
   };
   return Object.freeze(service);
 }
