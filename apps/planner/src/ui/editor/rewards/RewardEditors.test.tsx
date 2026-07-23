@@ -31,7 +31,11 @@ import {
   type ProjectedRewardDomain,
 } from '../../../projections/rewardDomainProjection';
 import { createRewardPickerProjection } from '../../../projections/rewardPicker';
-import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
+import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
+import {
+  CountedRewardEditor as ProductionCountedRewardEditor,
+  RewardValueEditor as ProductionRewardValueEditor,
+} from './RewardEditors';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const reward = createIncomingRewardAddress(biome, createOccurrenceId('reward-editor'));
@@ -219,6 +223,129 @@ function supportOnly(
       );
     },
   };
+}
+
+function testContextualResolver(
+  projection: CandidateProjectionService,
+  owner: Parameters<CandidateProjectionService['rewardDomain']>[1],
+  rewardTypes: readonly string[],
+  currentProject: ProjectDocument,
+): WorkspaceContextualResolver {
+  const interaction = {
+    choiceLabel: rewardPicker.choiceLabel,
+    load: (seed: ResolvedRewardOffer) =>
+      projection.rewardDomain(currentProject, owner, rewardTypes, seed),
+    model: rewardPicker.project,
+    rewardTypes,
+    selected: { rewardType: rewardTypes[0] ?? 'Boon' },
+    summary: rewardPicker.summary,
+  };
+  return {
+    resolveBatchRewardStores: () => {
+      throw new Error('batch reward stores are not used by reward editor fixtures');
+    },
+    resolveBiomeFields: () => {
+      throw new Error('biome fields are not used by reward editor fixtures');
+    },
+    resolveFieldsCageOutcomes: () => {
+      throw new Error('Fields outcomes are not used by reward editor fixtures');
+    },
+    resolveHubSlots: () => {
+      throw new Error('Hub slots are not used by reward editor fixtures');
+    },
+    resolveHubVisits: () => {
+      throw new Error('Hub visits are not used by reward editor fixtures');
+    },
+    resolveRoom: () => {
+      throw new Error('room resolution is not used by reward editor fixtures');
+    },
+    resolveReward: () => interaction,
+    resolveRewardWheelOfferCounts: () => {
+      throw new Error('wheel counts are not used by reward editor fixtures');
+    },
+    resolveRewardWheelPicks: () => {
+      throw new Error('wheel picks are not used by reward editor fixtures');
+    },
+    resolveRewardWheelStores: () => {
+      throw new Error('wheel stores are not used by reward editor fixtures');
+    },
+    resolveShipEncounterCounts: () => {
+      throw new Error('ship encounter counts are not used by reward editor fixtures');
+    },
+    resolveShopPurchases: () => {
+      throw new Error('shop purchases are not used by reward editor fixtures');
+    },
+    resolveSideRoomEntryOrders: () => {
+      throw new Error('side-room entry order is not used by reward editor fixtures');
+    },
+    resolveSideRoomGenerations: () => {
+      throw new Error('side-room generation is not used by reward editor fixtures');
+    },
+  };
+}
+
+function RewardValueEditor({
+  candidateOwner,
+  candidateProjection: projection,
+  idPrefix,
+  offer,
+  onReplace,
+  project: currentProject,
+  rewardTypes,
+}: {
+  readonly candidateOwner: Parameters<CandidateProjectionService['rewardDomain']>[1];
+  readonly candidateProjection: CandidateProjectionService;
+  readonly idPrefix: string;
+  readonly offer: ResolvedRewardOffer;
+  readonly onReplace: (offer: ResolvedRewardOffer) => void;
+  readonly project: ProjectDocument;
+  readonly rewardPicker: typeof rewardPicker;
+  readonly rewardTypes: readonly string[];
+}) {
+  return (
+    <ProductionRewardValueEditor
+      candidateOwner={candidateOwner}
+      contextual={testContextualResolver(projection, candidateOwner, rewardTypes, currentProject)}
+      idPrefix={idPrefix}
+      offer={offer}
+      onReplace={onReplace}
+    />
+  );
+}
+
+function CountedRewardEditor({
+  binding,
+  candidateOwner,
+  candidateProjection: projection,
+  idPrefix,
+  offer,
+  onReplace,
+  project: currentProject,
+}: {
+  readonly binding: Parameters<CandidateProjectionService['countedRewardTypes']>[2];
+  readonly candidateOwner: Parameters<CandidateProjectionService['countedRewardTypes']>[1];
+  readonly candidateProjection: CandidateProjectionService;
+  readonly idPrefix: string;
+  readonly offer: ResolvedRewardOffer;
+  readonly onReplace: (offer: ResolvedRewardOffer) => void;
+  readonly project: ProjectDocument;
+  readonly rewardPicker: typeof rewardPicker;
+}) {
+  const rewardTypes = projection.countedRewardTypes(
+    currentProject,
+    candidateOwner,
+    binding,
+    offer.rewardType,
+  );
+  return (
+    <ProductionCountedRewardEditor
+      candidateOwner={candidateOwner}
+      contextual={testContextualResolver(projection, candidateOwner, rewardTypes, currentProject)}
+      idPrefix={idPrefix}
+      offer={offer}
+      onReplace={onReplace}
+    />
+  );
 }
 
 describe('reward editor projections', () => {

@@ -82,6 +82,55 @@ export interface CandidateProjectionSession {
     target: TargetAddress,
     rooms: readonly RoomDeclaration[],
   ) => readonly CandidateOptionProjection<RoomDeclaration>[];
+  readonly biomeFields: (
+    field: BiomeFieldAddress,
+    values: readonly AuthoredFieldValue[],
+  ) => readonly CandidateOptionProjection<AuthoredFieldValue>[];
+  readonly batchRewardStores: (
+    rewardStore: BatchRewardStoreAddress,
+    storeKeys: readonly string[],
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly fieldsCageOutcomes: (
+    continuation: ContinuationAddress,
+    outcomes: readonly ('min' | 'max')[],
+  ) => readonly CandidateOptionProjection<'min' | 'max'>[];
+  readonly shipEncounterCounts: (
+    occurrence: OccurrenceAddress,
+    values: readonly (2 | 3)[],
+  ) => readonly CandidateOptionProjection<2 | 3>[];
+  readonly rewardWheelOfferCounts: (
+    wheel: RewardWheelAddress,
+    values: readonly number[],
+  ) => readonly CandidateOptionProjection<number>[];
+  readonly rewardWheelStores: (
+    wheel: RewardWheelAddress,
+    storeKeys: readonly string[],
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly rewardWheelPicks: (
+    wheel: RewardWheelAddress,
+    values: readonly number[],
+  ) => readonly CandidateOptionProjection<number>[];
+  readonly hubSlots: (
+    slot: HubSlotAddress,
+    occurrenceId: OccurrenceId,
+    values: readonly boolean[],
+  ) => readonly CandidateOptionProjection<boolean>[];
+  readonly hubVisits: (
+    visit: HubVisitAddress,
+    hubSlotKeys: readonly string[],
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly sideRoomGenerations: (
+    sideRoom: LocalChildAddress,
+    values: readonly SideRoomGeneration[],
+  ) => readonly CandidateOptionProjection<SideRoomGeneration>[];
+  readonly sideRoomEntryOrders: (
+    group: LocalChildGroupAddress,
+    values: readonly (readonly string[])[],
+  ) => readonly CandidateOptionProjection<readonly string[]>[];
+  readonly shopPurchases: (
+    purchase: ShopPurchaseAddress,
+    values: readonly boolean[],
+  ) => readonly CandidateOptionProjection<boolean>[];
 }
 
 export interface CandidateProjectionService {
@@ -612,6 +661,160 @@ export function createCandidateProjectionService(
         startRoomsFor(project, evaluation, owner, rooms),
       roomTargets: (target: TargetAddress, rooms: readonly RoomDeclaration[]) =>
         roomTargetsFor(project, evaluation, target, rooms),
+      biomeFields: (field: BiomeFieldAddress, values: readonly AuthoredFieldValue[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `biome-field:${semanticAddressKey(field)}:${domainKey(values.map(fieldValueKey))}`,
+          values,
+          values.map((value) => ({ kind: 'biomeField', field, value })),
+          catalog,
+          options,
+        ),
+      batchRewardStores: (rewardStore: BatchRewardStoreAddress, storeKeys: readonly string[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `store:${semanticAddressKey(rewardStore)}:${domainKey(storeKeys)}`,
+          storeKeys,
+          storeKeys.map((storeKey) => ({ kind: 'batchRewardStore', rewardStore, storeKey })),
+          catalog,
+          options,
+        ),
+      fieldsCageOutcomes: (
+        continuation: ContinuationAddress,
+        outcomes: readonly ('min' | 'max')[],
+      ) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `fields:${semanticAddressKey(continuation)}:${domainKey(outcomes)}`,
+          outcomes,
+          outcomes.map((cageOutcome) => ({
+            kind: 'fieldsCageOutcome',
+            continuation,
+            cageOutcome,
+          })),
+          catalog,
+          options,
+        ),
+      shipEncounterCounts: (occurrence: OccurrenceAddress, values: readonly (2 | 3)[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `ship-encounters:${semanticAddressKey(occurrence)}:${domainKey(values.map(String))}`,
+          values,
+          values.map((encounterCount) => ({
+            kind: 'shipEncounterCount',
+            occurrence,
+            encounterCount,
+          })),
+          catalog,
+          options,
+        ),
+      rewardWheelOfferCounts: (wheel: RewardWheelAddress, values: readonly number[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `wheel-count:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
+          values,
+          values.map((offerCount) => ({ kind: 'rewardWheelOfferCount', wheel, offerCount })),
+          catalog,
+          options,
+        ),
+      rewardWheelStores: (wheel: RewardWheelAddress, storeKeys: readonly string[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `wheel-store:${semanticAddressKey(wheel)}:${domainKey(storeKeys)}`,
+          storeKeys,
+          storeKeys.map((storeKey) => ({ kind: 'rewardWheelStore', wheel, storeKey })),
+          catalog,
+          options,
+        ),
+      rewardWheelPicks: (wheel: RewardWheelAddress, values: readonly number[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `wheel-pick:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
+          values,
+          values.map((pickedOfferIndex) => ({
+            kind: 'rewardWheelPicked',
+            wheel,
+            pickedOfferIndex,
+          })),
+          catalog,
+          options,
+        ),
+      hubSlots: (slot: HubSlotAddress, occurrenceId: OccurrenceId, values: readonly boolean[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `hub-slot:${semanticAddressKey(slot)}:${occurrenceId}:${domainKey(values.map(String))}`,
+          values,
+          values.map((open) => ({ kind: 'hubSlot', slot, open, occurrenceId })),
+          catalog,
+          options,
+        ),
+      hubVisits: (visit: HubVisitAddress, hubSlotKeys: readonly string[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `hub-visit:${semanticAddressKey(visit)}:${domainKey(hubSlotKeys)}`,
+          hubSlotKeys,
+          hubSlotKeys.map((hubSlotKey) => ({ kind: 'hubVisit', visit, hubSlotKey })),
+          catalog,
+          options,
+        ),
+      sideRoomGenerations: (sideRoom: LocalChildAddress, values: readonly SideRoomGeneration[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `side-generation:${semanticAddressKey(sideRoom)}:${domainKey(values)}`,
+          values,
+          values.map((generation) => ({ kind: 'sideRoomGeneration', sideRoom, generation })),
+          catalog,
+          options,
+        ),
+      sideRoomEntryOrders: (
+        group: LocalChildGroupAddress,
+        values: readonly (readonly string[])[],
+      ) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `side-entry-order:${semanticAddressKey(group)}:${domainKey(values.map((value) => JSON.stringify(value)))}`,
+          values,
+          values.map((enteredSlotKeys) => ({
+            kind: 'sideRoomEntryOrder',
+            group,
+            enteredSlotKeys,
+          })),
+          catalog,
+          options,
+        ),
+      shopPurchases: (purchase: ShopPurchaseAddress, values: readonly boolean[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `shop-purchase:${semanticAddressKey(purchase)}:${domainKey(values.map(String))}`,
+          values,
+          values.map((purchased) => ({ kind: 'shopPurchase', purchase, purchased })),
+          catalog,
+          options,
+        ),
     });
     byEvaluation.set(evaluation, session);
     return session;
@@ -622,33 +825,15 @@ export function createCandidateProjectionService(
     countedRewardTypes: (project, owner, binding, selectedRewardType) =>
       countedRewardTypesFor(project, owner, binding, selectedRewardType),
     rewardDomain: (project, owner, rewardTypes, selected) =>
-      rewardDomainFor(project, legacyEvaluationFor(project), owner, rewardTypes, selected),
+      bind(project, legacyEvaluationFor(project)).rewardDomain(owner, rewardTypes, selected),
     biomeFields: (project, field, values) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `biome-field:${semanticAddressKey(field)}:${domainKey(values.map(fieldValueKey))}`,
-        values,
-        values.map((value) => ({ kind: 'biomeField', field, value })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).biomeFields(field, values),
     startRooms: (project, owner, rooms) =>
-      startRoomsFor(project, legacyEvaluationFor(project), owner, rooms),
+      bind(project, legacyEvaluationFor(project)).startRooms(owner, rooms),
     roomTargets: (project, target, rooms) =>
-      roomTargetsFor(project, legacyEvaluationFor(project), target, rooms),
+      bind(project, legacyEvaluationFor(project)).roomTargets(target, rooms),
     batchRewardStores: (project, rewardStore, storeKeys) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `store:${semanticAddressKey(rewardStore)}:${domainKey(storeKeys)}`,
-        storeKeys,
-        storeKeys.map((storeKey) => ({ kind: 'batchRewardStore', rewardStore, storeKey })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).batchRewardStores(rewardStore, storeKeys),
     incomingRewards: (project, reward, offers) =>
       projectOptions(
         cache,
@@ -672,57 +857,13 @@ export function createCandidateProjectionService(
         options,
       ),
     fieldsCageOutcomes: (project, continuation, outcomes) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `fields:${semanticAddressKey(continuation)}:${domainKey(outcomes)}`,
-        outcomes,
-        outcomes.map((cageOutcome) => ({
-          kind: 'fieldsCageOutcome',
-          continuation,
-          cageOutcome,
-        })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).fieldsCageOutcomes(continuation, outcomes),
     shipEncounterCounts: (project, occurrence, values) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `ship-encounters:${semanticAddressKey(occurrence)}:${domainKey(values.map(String))}`,
-        values,
-        values.map((encounterCount) => ({
-          kind: 'shipEncounterCount',
-          occurrence,
-          encounterCount,
-        })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).shipEncounterCounts(occurrence, values),
     rewardWheelOfferCounts: (project, wheel, values) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `wheel-count:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
-        values,
-        values.map((offerCount) => ({ kind: 'rewardWheelOfferCount', wheel, offerCount })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).rewardWheelOfferCounts(wheel, values),
     rewardWheelStores: (project, wheel, storeKeys) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `wheel-store:${semanticAddressKey(wheel)}:${domainKey(storeKeys)}`,
-        storeKeys,
-        storeKeys.map((storeKey) => ({ kind: 'rewardWheelStore', wheel, storeKey })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).rewardWheelStores(wheel, storeKeys),
     rewardWheelOffers: (project, offer, values) =>
       projectOptions(
         cache,
@@ -735,68 +876,15 @@ export function createCandidateProjectionService(
         options,
       ),
     rewardWheelPicks: (project, wheel, values) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `wheel-pick:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
-        values,
-        values.map((pickedOfferIndex) => ({
-          kind: 'rewardWheelPicked',
-          wheel,
-          pickedOfferIndex,
-        })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).rewardWheelPicks(wheel, values),
     hubSlots: (project, slot, occurrenceId, values) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `hub-slot:${semanticAddressKey(slot)}:${occurrenceId}:${domainKey(values.map(String))}`,
-        values,
-        values.map((open) => ({ kind: 'hubSlot', slot, open, occurrenceId })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).hubSlots(slot, occurrenceId, values),
     hubVisits: (project, visit, hubSlotKeys) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `hub-visit:${semanticAddressKey(visit)}:${domainKey(hubSlotKeys)}`,
-        hubSlotKeys,
-        hubSlotKeys.map((hubSlotKey) => ({ kind: 'hubVisit', visit, hubSlotKey })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).hubVisits(visit, hubSlotKeys),
     sideRoomGenerations: (project, sideRoom, values) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `side-generation:${semanticAddressKey(sideRoom)}:${domainKey(values)}`,
-        values,
-        values.map((generation) => ({ kind: 'sideRoomGeneration', sideRoom, generation })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).sideRoomGenerations(sideRoom, values),
     sideRoomEntryOrders: (project, group, values) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `side-entry-order:${semanticAddressKey(group)}:${domainKey(values.map((value) => JSON.stringify(value)))}`,
-        values,
-        values.map((enteredSlotKeys) => ({
-          kind: 'sideRoomEntryOrder',
-          group,
-          enteredSlotKeys,
-        })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).sideRoomEntryOrders(group, values),
     shopOffers: (project, offer, values) =>
       projectOptions(
         cache,
@@ -809,16 +897,7 @@ export function createCandidateProjectionService(
         options,
       ),
     shopPurchases: (project, purchase, values) =>
-      projectOptions(
-        cache,
-        project,
-        legacyEvaluationFor(project),
-        `shop-purchase:${semanticAddressKey(purchase)}:${domainKey(values.map(String))}`,
-        values,
-        values.map((purchased) => ({ kind: 'shopPurchase', purchase, purchased })),
-        catalog,
-        options,
-      ),
+      bind(project, legacyEvaluationFor(project)).shopPurchases(purchase, values),
   };
   return Object.freeze(service);
 }

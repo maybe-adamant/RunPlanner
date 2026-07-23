@@ -20,11 +20,10 @@ import {
 import { type HubBiomeProjectEvaluation } from '@run-planner/engine/simulation';
 import { useMemo } from 'react';
 
-import { type CandidateProjectionService } from '../../../projections/candidateProjection';
-import type { RewardPickerProjectionService } from '../../../projections/rewardPicker';
+import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
 import { presentBiomeStatus } from '../../../projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
+import { useAppDispatch } from '../../../state/store';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import {
   SemanticFindingsScope,
@@ -41,31 +40,27 @@ import {
 } from './HubCandidateControls';
 
 interface HubBiomeEditorProps {
-  readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
+  readonly contextual: WorkspaceContextualResolver;
   readonly evaluation: HubBiomeProjectEvaluation | undefined;
   readonly plan: HubBiomePlan;
-  readonly rewardPicker: RewardPickerProjectionService;
   readonly routeKey: string;
 }
 
 function EphyraSideRooms({
   biome,
-  candidateProjection,
   catalog,
+  contextual,
   occurrence,
-  rewardPicker,
   state,
 }: {
   readonly biome: ReturnType<typeof createBiomeAddress>;
-  readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
+  readonly contextual: WorkspaceContextualResolver;
   readonly occurrence: RoomOccurrence;
-  readonly rewardPicker: RewardPickerProjectionService;
   readonly state: EphyraCombatState;
 }) {
   const dispatch = useAppDispatch();
-  const project = useAppSelector(selectPresentProject);
   const room = catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) {
     throw new Error(`Ephyra room ${occurrence.gameName} is missing`);
@@ -164,7 +159,7 @@ function EphyraSideRooms({
               <div className="ephyra-side-controls">
                 <SideGenerationControl
                   address={childAddress}
-                  candidateProjection={candidateProjection}
+                  contextual={contextual}
                   entered={entered}
                   generation={sideState.generation}
                   label={sideRoom.label}
@@ -177,15 +172,13 @@ function EphyraSideRooms({
                       }),
                     )
                   }
-                  project={project}
                 />
                 <SideEntryAction
                   ariaLabel={`${entered ? 'Remove' : 'Enter'} ${sideRoom.label}`}
-                  candidateProjection={candidateProjection}
+                  contextual={contextual}
                   disabled={sideState.generation !== 'generated'}
                   group={groupAddress}
                   onApply={() => replaceEntryOrder(toggledOrder)}
-                  project={project}
                   proposedOrder={toggledOrder}
                 >
                   {entered ? 'Remove From Entry Order' : 'Enter Last'}
@@ -195,22 +188,20 @@ function EphyraSideRooms({
                 <div className="side-order-actions">
                   <SideEntryAction
                     ariaLabel={`Move ${sideRoom.label} earlier`}
-                    candidateProjection={candidateProjection}
+                    contextual={contextual}
                     disabled={enteredIndex === 0}
                     group={groupAddress}
                     onApply={() => replaceEntryOrder(earlierOrder)}
-                    project={project}
                     proposedOrder={earlierOrder}
                   >
                     Earlier
                   </SideEntryAction>
                   <SideEntryAction
                     ariaLabel={`Move ${sideRoom.label} later`}
-                    candidateProjection={candidateProjection}
+                    contextual={contextual}
                     disabled={enteredIndex === enteredSlotKeys.length - 1}
                     group={groupAddress}
                     onApply={() => replaceEntryOrder(laterOrder)}
-                    project={project}
                     proposedOrder={laterOrder}
                   >
                     Later
@@ -223,9 +214,8 @@ function EphyraSideRooms({
               >
                 <SemanticOwnerMarker address={rewardAddress} />
                 <CountedRewardEditor
-                  binding={sideRoom.incomingReward}
                   candidateOwner={{ kind: 'localReward', address: rewardAddress }}
-                  candidateProjection={candidateProjection}
+                  contextual={contextual}
                   idPrefix={`side-${occurrence.occurrenceId}-${slot.slotKey}`}
                   offer={sideState.offer}
                   onReplace={(value) =>
@@ -237,8 +227,6 @@ function EphyraSideRooms({
                       }),
                     )
                   }
-                  project={project}
-                  rewardPicker={rewardPicker}
                 />
               </div>
             </article>
@@ -271,15 +259,13 @@ function requireOccurrence(
 }
 
 export function HubBiomeEditor({
-  candidateProjection,
   catalog,
+  contextual,
   evaluation,
   plan,
-  rewardPicker,
   routeKey,
 }: HubBiomeEditorProps) {
   const dispatch = useAppDispatch();
-  const project = useAppSelector(selectPresentProject);
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const declaration = catalog.biomes.byKey[plan.biomeKey];
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -428,11 +414,10 @@ export function HubBiomeEditor({
                 </div>
                 <RoomStateEditor
                   biome={biome}
-                  candidateProjection={candidateProjection}
                   catalog={catalog}
+                  contextual={contextual}
                   entryActive={true}
                   occurrence={occurrence}
-                  rewardPicker={rewardPicker}
                 />
               </article>
             );
@@ -487,7 +472,7 @@ export function HubBiomeEditor({
                     </div>
                     <HubSlotMembership
                       candidateOccurrenceId={candidateOccurrenceId}
-                      candidateProjection={candidateProjection}
+                      contextual={contextual}
                       disabled={
                         isVisited ||
                         (target === undefined &&
@@ -508,7 +493,6 @@ export function HubBiomeEditor({
                         )
                       }
                       open={target !== undefined}
-                      project={project}
                       slotAddress={slotAddress}
                     />
                   </div>
@@ -521,11 +505,10 @@ export function HubBiomeEditor({
                   ) : (
                     <RoomStateEditor
                       biome={biome}
-                      candidateProjection={candidateProjection}
                       catalog={catalog}
+                      contextual={contextual}
                       entryActive={isVisited}
                       occurrence={occurrence}
-                      rewardPicker={rewardPicker}
                     />
                   )}
                 </article>
@@ -563,7 +546,7 @@ export function HubBiomeEditor({
                     </div>
                     {current !== undefined ? (
                       <HubVisitControl
-                        candidateProjection={candidateProjection}
+                        contextual={contextual}
                         current={current}
                         hubSlotKeys={topology.openTargets.map((target) => target.hubSlotKey)}
                         labels={roomLabels}
@@ -576,7 +559,6 @@ export function HubBiomeEditor({
                             }),
                           )
                         }
-                        project={project}
                         visit={visit}
                       />
                     ) : (
@@ -673,10 +655,9 @@ export function HubBiomeEditor({
                 </header>
                 <EphyraSideRooms
                   biome={biome}
-                  candidateProjection={candidateProjection}
                   catalog={catalog}
+                  contextual={contextual}
                   occurrence={occurrence}
-                  rewardPicker={rewardPicker}
                   state={occurrence.state}
                 />
               </article>
@@ -708,11 +689,10 @@ export function HubBiomeEditor({
               </div>
               <RoomStateEditor
                 biome={biome}
-                candidateProjection={candidateProjection}
                 catalog={catalog}
+                contextual={contextual}
                 entryActive={true}
                 occurrence={occurrence}
-                rewardPicker={rewardPicker}
               />
             </article>
           );

@@ -130,10 +130,11 @@ No cache crosses a `ProjectDocument` identity. A semantic edit, undo, redo,
 profile load, or new project receives a new evaluation and candidate session.
 Navigation, focus, search, and disclosure do not invalidate it.
 
-The primary API is domain-shaped rather than scalar-shaped. A compatibility
-adapter may continue to accept scalar `ProjectCandidateQuery` values during
-migration, but it must group them by candidate family and semantic owner and
-reuse the same prepared context.
+The primary API is domain-shaped rather than scalar-shaped. A scalar
+`ProjectCandidateQuery` adapter may exist only as temporary migration
+scaffolding. It must reuse the same prepared context, and it is deleted once
+all consumers have moved to the production session factory. Tests do not give
+that adapter a permanent reason to exist.
 
 ## Evaluation Strategies
 
@@ -268,28 +269,53 @@ or retrieves its candidate session:
 Redux authored project + published evaluation
   -> project-bound candidate projection session
   -> contextual option and picker projection
-  -> structured workspace lazy resolver
-  -> React interaction
+  -> structured workspace interaction catalog
+  -> single UI interaction adapter
+  -> React rendering and activation
 ```
 
 The candidate projection should not hide evaluation acquisition behind a
 general `evaluateProject(project)` callback. Passing the exact published
 evaluation makes identity, ownership, and invalidation explicit.
 
-The structured workspace is the intended React contact. It already carries
-semantic control descriptors and resolves room and reward interaction models
-only when the focused inspector requests them. React should not directly walk
-topology or request candidate domains for every rendered control.
+The structured workspace is the React contact. It owns the exact bound
+candidate session and carries a typed interaction descriptor for every live
+candidate control. Each descriptor captures its semantic owner,
+declaration-owned choice domain, labels, authored selection, and a
+zero-argument lazy loader. React receives neither the session, the unbound
+candidate service, a general evaluation callback, nor an API that accepts an
+owner and arbitrary domain values.
 
-Until structured-workspace consumption replaces the current editor, existing
-React controls may remain compatibility consumers. They must not become a
-second candidate authority.
+One UI interaction adapter is the only React-side caller of workspace loaders.
+It invokes them on open, focus, pointer, or other explicit activation; caches
+results against the immutable workspace interaction identity; and rejects
+pending results after an edit, undo, redo, or profile replacement. Rendering a
+control must not evaluate its candidate domain.
+
+React may render declaration-owned choices and the currently authored value,
+but it does not walk topology to discover candidate owners, rebuild candidate
+grouping, choose a replay horizon, or construct candidate queries. Room and
+reward interactions follow the same contract as biome fields, batch stores,
+Fields outcomes, O wheels, Hub controls, side rooms, and shop purchases.
+
+There is no separate candidate-evaluation harness for tests. Engine candidate
+tests bind the production session factory to a real project/evaluation pair.
+Workspace tests construct the production structured workspace, and React tests
+exercise the production application boundary. Test fixtures may provide
+authored setup, controlled catalogs, and injectable observers, but they must
+not implement a parallel candidate API or alternate evaluation behavior.
+
+Candidate observers are production instrumentation points shared by runtime
+and tests. They may record project evaluations, candidate batches, replay
+horizons, and cache behavior without changing evaluation semantics.
 
 ## Delivery Boundary
 
 The candidate refactor lands before Phase 7 Commit 11 resumes.
 `../progress/IMPLEMENTATION_PLAN.md` owns its numbered delivery slices and
-acceptance gates.
+acceptance gates. Slices 7-9 close composition access, generalize
+workspace-owned interactions, and enforce the boundary after the Slice 6
+consumption bridge.
 
 The complete refactor must establish:
 
@@ -298,6 +324,10 @@ The complete refactor must establish:
 - domain-shaped room and reward evaluation;
 - scoped room-local and Hub region replay;
 - structured-workspace ownership of lazy React candidate contact;
+- declaration-owned interaction domains for every live candidate family;
+- one React-side activation adapter and no render-time evaluation authority;
+- one production candidate-session factory shared by runtime and tests;
+- no scalar compatibility API or alternate test evaluation harness;
 - measured removal of ordinary reward-domain biome replay.
 
 ## Non-Goals
@@ -305,6 +335,7 @@ The complete refactor must establish:
 This refactor does not:
 
 - add incremental Redux simulation across authored project identities;
+- store candidate results or interaction progress in authored Redux history;
 - cache candidate evidence across semantic edits;
 - move simulation rules into React or application presentation code;
 - place candidate arrays or UI grouping in canonical history;

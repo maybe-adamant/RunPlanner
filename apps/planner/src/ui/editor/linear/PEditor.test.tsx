@@ -13,11 +13,14 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createCandidateProjectionService } from '../../../projections/candidateProjection';
-import { createContextualOptionResolver } from '../../../projections/contextualOptions';
-import { createContextualPickerProjection } from '../../../projections/contextualPicker';
-import { createRewardPickerProjection } from '../../../projections/rewardPicker';
-import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
+import type { StructuredWorkspaceProjectionService } from '../../../projections/structuredWorkspace';
+import {
+  createPlannerStore,
+  selectPresentProject,
+  selectProjectEvaluation,
+  useAppSelector,
+} from '../../../state/store';
+import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
 import {
   createRepresentativeNOPProject,
   pBiome,
@@ -39,28 +42,22 @@ function pPlan(project: ProjectDocument): LinearBiomePlan {
 }
 
 function PEditorHarness({
-  candidateProjection,
+  structuredWorkspace,
 }: {
-  readonly candidateProjection: ReturnType<typeof createCandidateProjectionService>;
+  readonly structuredWorkspace: StructuredWorkspaceProjectionService;
 }) {
   const project = useAppSelector(selectPresentProject);
-  const evaluation = useAppSelector((state) =>
-    state.projectWorkspace.evaluation.routes
-      .find((route) => route.routeKey === pBiome.routeKey)
-      ?.biomes.find((biome) => biome.biomeKey === pBiome.biomeKey),
-  );
+  const projectEvaluation = useAppSelector(selectProjectEvaluation);
+  const evaluation = projectEvaluation.routes
+    .find((route) => route.routeKey === pBiome.routeKey)
+    ?.biomes.find((biome) => biome.biomeKey === pBiome.biomeKey);
   if (evaluation?.kind !== 'LinearBiome') {
     throw new Error('P editor fixture has no linear evaluation');
   }
   return (
     <LinearBiomeEditor
-      candidateProjection={candidateProjection}
       catalog={catalog}
-      contextualPicker={createContextualPickerProjection(createContextualOptionResolver(catalog))}
-      rewardPicker={createRewardPickerProjection(
-        catalog,
-        createContextualPickerProjection(createContextualOptionResolver(catalog)),
-      )}
+      contextual={structuredWorkspace.project(project, projectEvaluation).contextual}
       evaluation={evaluation}
       plan={pPlan(project)}
       routeKey={pBiome.routeKey}
@@ -76,11 +73,12 @@ function renderP() {
     evaluateProject,
     initialProject: project,
   });
-  const candidateProjection = createCandidateProjectionService(catalog, evaluateProject);
+  const { candidateProjection, structuredWorkspace } =
+    createStructuredWorkspaceTestServices(evaluateProject);
   const user = userEvent.setup();
   const view = render(
     <Provider store={store}>
-      <PEditorHarness candidateProjection={candidateProjection} />
+      <PEditorHarness structuredWorkspace={structuredWorkspace} />
     </Provider>,
   );
   return { candidateProjection, project, store, user, ...view };

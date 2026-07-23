@@ -12,17 +12,20 @@ import {
   type LinearBiomePlan,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject, type LinearBiomeProjectEvaluation } from '@run-planner/engine/simulation';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createCandidateProjectionService } from '../../../projections/candidateProjection';
-import { createContextualOptionResolver } from '../../../projections/contextualOptions';
-import { createContextualPickerProjection } from '../../../projections/contextualPicker';
-import { createRewardPickerProjection } from '../../../projections/rewardPicker';
-import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
+import type { StructuredWorkspaceProjectionService } from '../../../projections/structuredWorkspace';
+import {
+  createPlannerStore,
+  selectPresentProject,
+  selectProjectEvaluation,
+  useAppSelector,
+} from '../../../state/store';
+import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
 const biome = createBiomeAddress('Surface', 'O');
@@ -109,31 +112,24 @@ function oSixBatchProject(): ProjectDocument {
 }
 
 function OEditorHarness({
-  candidateProjection,
+  structuredWorkspace,
 }: {
-  readonly candidateProjection: ReturnType<typeof createCandidateProjectionService>;
+  readonly structuredWorkspace: StructuredWorkspaceProjectionService;
 }) {
   const project = useAppSelector(selectPresentProject);
   const plan = oPlan(project);
-  const evaluation: LinearBiomeProjectEvaluation = Object.freeze({
-    kind: 'LinearBiome',
-    biomeKey: biome.biomeKey,
-    origin: biome,
-    authoring: 'incomplete',
-    frontier: biome,
-    coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
-    findings: Object.freeze([]),
-  });
+  const projectEvaluation = useAppSelector(selectProjectEvaluation);
+  const evaluation = projectEvaluation.routes
+    .find((route) => route.routeKey === biome.routeKey)
+    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
+  if (evaluation !== undefined && evaluation.kind !== 'LinearBiome') {
+    throw new Error('O editor fixture received a non-Linear evaluation');
+  }
   return (
     <LinearBiomeEditor
-      candidateProjection={candidateProjection}
       catalog={catalog}
-      contextualPicker={createContextualPickerProjection(createContextualOptionResolver(catalog))}
-      rewardPicker={createRewardPickerProjection(
-        catalog,
-        createContextualPickerProjection(createContextualOptionResolver(catalog)),
-      )}
-      evaluation={evaluation}
+      contextual={structuredWorkspace.project(project, projectEvaluation).contextual}
+      evaluation={evaluation?.kind === 'LinearBiome' ? evaluation : undefined}
       plan={plan}
       routeKey={biome.routeKey}
     />
@@ -147,11 +143,11 @@ function renderO(project: ProjectDocument) {
     evaluateProject,
     initialProject: project,
   });
-  const candidateProjection = createCandidateProjectionService(catalog, evaluateProject);
+  const { structuredWorkspace } = createStructuredWorkspaceTestServices(evaluateProject);
   const user = userEvent.setup();
   const view = render(
     <Provider store={store}>
-      <OEditorHarness candidateProjection={candidateProjection} />
+      <OEditorHarness structuredWorkspace={structuredWorkspace} />
     </Provider>,
   );
   return { store, user, ...view };

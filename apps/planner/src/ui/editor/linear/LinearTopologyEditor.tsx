@@ -23,12 +23,10 @@ import {
 } from '@run-planner/engine/authored-project';
 import { projectClockworkTopology, projectLinearBatchState } from '@run-planner/engine/simulation';
 
-import type { CandidateProjectionService } from '../../../projections/candidateProjection';
-import type { ContextualPickerProjectionService } from '../../../projections/contextualPicker';
-import type { RewardPickerProjectionService } from '../../../projections/rewardPicker';
+import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
+import { useAppDispatch } from '../../../state/store';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 import { RoomSelector } from './RoomSelector';
 import { BatchRewardStoreControl, FieldsBatchControl } from './BatchSettings';
@@ -36,12 +34,10 @@ import { RoomStateEditor } from '../rooms/RoomStateEditor';
 
 interface LinearTopologyEditorProps {
   readonly biome: BiomeAddress;
-  readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
-  readonly contextualPicker: ContextualPickerProjectionService;
+  readonly contextual: WorkspaceContextualResolver;
   readonly evaluation: LinearBiomeProjectEvaluation | undefined;
   readonly plan: LinearBiomePlan;
-  readonly rewardPicker: RewardPickerProjectionService;
   readonly topology: LinearBiomeTopology;
 }
 
@@ -95,15 +91,13 @@ function fieldsCageOutcome(value: string): 'min' | 'max' {
 function OrdinaryTargetEditor({
   available,
   biome,
-  candidateProjection,
   catalog,
-  contextualPicker,
+  contextual,
   canCreateTarget,
   continuation,
   exitIndex,
   clockworkReward,
   projectedBatchState,
-  rewardPicker,
   target,
   topology,
 }: LinearTopologyEditorProps & {
@@ -133,10 +127,7 @@ function OrdinaryTargetEditor({
             </div>
           </div>
           <RoomSelector
-            biomeKey={biome.biomeKey}
-            candidateProjection={candidateProjection}
-            catalog={catalog}
-            contextualPicker={contextualPicker}
+            contextual={contextual}
             disabled={!canCreateTarget}
             idPrefix={idPrefix}
             onSelect={(gameName) =>
@@ -149,7 +140,7 @@ function OrdinaryTargetEditor({
                 }),
               )
             }
-            target={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
+            owner={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
           />
         </div>
       </div>
@@ -201,11 +192,7 @@ function OrdinaryTargetEditor({
           </div>
         </div>
         <RoomSelector
-          biomeKey={biome.biomeKey}
-          candidateProjection={candidateProjection}
-          catalog={catalog}
-          contextualPicker={contextualPicker}
-          current={roomDeclaration}
+          contextual={contextual}
           idPrefix={idPrefix}
           onSelect={(gameName) =>
             dispatch(
@@ -216,19 +203,18 @@ function OrdinaryTargetEditor({
               }),
             )
           }
-          target={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
+          owner={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
         />
         <RoomStateEditor
           {...(room.state.kind === 'fieldsCombat' && projectedBatchState.kind === 'fields'
             ? { activeCageCount: projectedBatchState.doorCageRewardCount }
             : {})}
           biome={biome}
-          candidateProjection={candidateProjection}
           catalog={catalog}
+          contextual={contextual}
           {...(clockworkReward === undefined ? {} : { clockworkReward })}
           entryActive={continuation.pickedExitIndex === exitIndex}
           occurrence={room}
-          rewardPicker={rewardPicker}
         />
       </div>
     </div>
@@ -237,20 +223,17 @@ function OrdinaryTargetEditor({
 
 function BatchEditor({
   biome,
-  candidateProjection,
   canCreateTarget,
   canReplaceWithTerminal,
   catalog,
   clockworkBatch,
   continuation,
-  contextualPicker,
+  contextual,
   evaluation,
   plan,
-  rewardPicker,
   topology,
 }: BatchEditorProps) {
   const dispatch = useAppDispatch();
-  const project = useAppSelector(selectPresentProject);
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
   if (layout === undefined) {
     throw new Error(`Biome layout ${biome.biomeKey} is missing`);
@@ -298,26 +281,12 @@ function BatchEditor({
   const address = createContinuationAddress(biome, continuation.parentOccurrenceId);
   const rewardStoreAddress = createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId);
   const rewardStorePolicy = layout.continuation.rewardStorePolicy;
-  const projectedStores =
-    continuation.rewardStore.kind === 'authoredBaseStore' &&
-    rewardStorePolicy.kind === 'authoredBaseStore'
-      ? candidateProjection.batchRewardStores(
-          project,
-          rewardStoreAddress,
-          rewardStorePolicy.storeKeys,
-        )
-      : Object.freeze([]);
   const fieldsSupport =
     evaluation?.authoring === 'complete'
       ? evaluation.roomGeneration.fieldsCageOutcomes.find(
           (entry) => entry.origin.parentOccurrenceId === continuation.parentOccurrenceId,
         )
       : undefined;
-  const projectedFieldsOutcomes =
-    projectedBatchState.kind === 'fields' && continuation.batchState !== null
-      ? candidateProjection.fieldsCageOutcomes(project, address, ['min', 'max'])
-      : Object.freeze([]);
-
   return (
     <section className="decision-card">
       <header className="decision-heading">
@@ -341,6 +310,7 @@ function BatchEditor({
       {continuation.rewardStore.kind === 'authoredBaseStore' && (
         <BatchRewardStoreControl
           address={rewardStoreAddress}
+          contextual={contextual}
           id={`batch-${continuation.parentOccurrenceId}-reward-store`}
           onReplace={(storeKey) =>
             dispatch(
@@ -351,7 +321,11 @@ function BatchEditor({
               }),
             )
           }
-          options={projectedStores}
+          storeKeys={
+            rewardStorePolicy.kind === 'authoredBaseStore'
+              ? rewardStorePolicy.storeKeys
+              : Object.freeze([])
+          }
           value={continuation.rewardStore.baseRewardStoreKey}
         />
       )}
@@ -361,6 +335,8 @@ function BatchEditor({
         continuation.batchState !== null && (
           <FieldsBatchControl
             batchState={projectedBatchState}
+            contextual={contextual}
+            continuation={address}
             id={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
             minDoorCageRewards={fieldsPolicy.minDoorCageRewards}
             onReplace={(cageOutcome) =>
@@ -372,7 +348,6 @@ function BatchEditor({
                 }),
               )
             }
-            options={projectedFieldsOutcomes}
             {...(fieldsSupport === undefined ? {} : { priorMaxOutcomes: fieldsSupport })}
             value={continuation.batchState.cageOutcome}
           />
@@ -383,17 +358,15 @@ function BatchEditor({
           <OrdinaryTargetEditor
             available={available.has(exitIndex)}
             biome={biome}
-            candidateProjection={candidateProjection}
             canCreateTarget={canCreateTarget}
             catalog={catalog}
             continuation={continuation}
-            contextualPicker={contextualPicker}
+            contextual={contextual}
             evaluation={evaluation}
             exitIndex={exitIndex}
             key={exitIndex}
             plan={plan}
             projectedBatchState={projectedBatchState}
-            rewardPicker={rewardPicker}
             {...(() => {
               const reward = clockworkBatch?.targets.find(
                 (candidate) => candidate.exitIndex === exitIndex,
@@ -469,11 +442,10 @@ function BatchEditor({
 
 function TerminalEditor({
   biome,
-  candidateProjection,
   canReplaceWithBatch,
   catalog,
+  contextual,
   continuation,
-  rewardPicker,
   topology,
 }: TerminalEditorProps) {
   const dispatch = useAppDispatch();
@@ -594,11 +566,10 @@ function TerminalEditor({
                 </div>
                 <RoomStateEditor
                   biome={biome}
-                  candidateProjection={candidateProjection}
                   catalog={catalog}
+                  contextual={contextual}
                   entryActive={continuation.pickedExitIndex === target.exitIndex}
                   occurrence={room}
-                  rewardPicker={rewardPicker}
                 />
               </div>
             </div>
@@ -751,12 +722,10 @@ function frontierOccurrenceId(
 
 export function LinearTopologyEditor({
   biome,
-  candidateProjection,
   catalog,
-  contextualPicker,
+  contextual,
   evaluation,
   plan,
-  rewardPicker,
   topology,
 }: LinearTopologyEditorProps) {
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
@@ -801,14 +770,13 @@ export function LinearTopologyEditor({
         continuation.kind === 'batch' ? (
           <BatchEditor
             biome={biome}
-            candidateProjection={candidateProjection}
             canCreateTarget={targetCount < layout.bounds.maxTargets}
             canReplaceWithTerminal={
               constrainedContinuationCount === undefined &&
               layout.terminal.kind !== 'generatedTarget'
             }
             catalog={catalog}
-            contextualPicker={contextualPicker}
+            contextual={contextual}
             {...(() => {
               const clockworkBatch = clockworkBatches.find(
                 (batch) => batch.parentOccurrenceId === continuation.parentOccurrenceId,
@@ -819,23 +787,20 @@ export function LinearTopologyEditor({
             evaluation={evaluation}
             key={continuation.parentOccurrenceId ?? 'layout-entry'}
             plan={plan}
-            rewardPicker={rewardPicker}
             topology={topology}
           />
         ) : (
           <TerminalEditor
             biome={biome}
-            candidateProjection={candidateProjection}
             canReplaceWithBatch={
               constrainedContinuationCount === undefined && batchCount < layout.bounds.maxBatches
             }
             catalog={catalog}
-            contextualPicker={contextualPicker}
+            contextual={contextual}
             continuation={continuation}
             evaluation={evaluation}
             key={continuation.parentOccurrenceId ?? 'layout-entry'}
             plan={plan}
-            rewardPicker={rewardPicker}
             topology={topology}
           />
         ),
@@ -843,15 +808,13 @@ export function LinearTopologyEditor({
       {frontier !== undefined && (
         <FrontierEditor
           biome={biome}
-          candidateProjection={candidateProjection}
           canAddBatch={canAddBatch}
           canCreateTerminal={canCreateTerminal && frontierTerminalTargetCount > 0}
           catalog={catalog}
-          contextualPicker={contextualPicker}
+          contextual={contextual}
           evaluation={evaluation}
           parentOccurrenceId={frontier}
           plan={plan}
-          rewardPicker={rewardPicker}
           topology={topology}
         />
       )}
