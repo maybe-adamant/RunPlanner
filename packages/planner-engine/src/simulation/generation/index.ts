@@ -5,6 +5,7 @@ export {
   supportedFieldsCageOutcomes,
 } from './linear';
 export {
+  evaluateHubOpenSetConstraints,
   evaluateHubRoomGeneration,
   evaluateNRoomGeneration,
   HubRoomGenerationContractError,

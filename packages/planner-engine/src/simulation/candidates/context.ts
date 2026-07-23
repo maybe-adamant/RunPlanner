@@ -1,6 +1,10 @@
 import {
   createBiomeAddress,
   createContinuationAddress,
+  createHubOpenSetAddress,
+  createHubVisitAddress,
+  createLocalChildAddress,
+  createLocalChildGroupAddress,
   createOccurrenceAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -18,7 +22,7 @@ import type {
   ProjectDocument,
   RoomOccurrence,
 } from '../../authored-project/model';
-import type { Catalog } from '../../catalog-schema';
+import type { Catalog, HubBiomeLayout, LocalChildDescriptor } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import {
   linearRoomTargetCandidateContexts,
@@ -47,21 +51,7 @@ import type {
   BiomeFieldCandidateQuery,
   CandidateContextUnavailableReason,
   CandidateContextUnavailableEvidence,
-  FieldsCageOutcomeCandidateQuery,
-  HubSlotCandidateQuery,
-  HubVisitCandidateQuery,
-  IncomingRewardCandidateQuery,
-  LocalRewardCandidateQuery,
   ProjectCandidateQuery,
-  RewardWheelOfferCandidateQuery,
-  RewardWheelOfferCountCandidateQuery,
-  RewardWheelPickedCandidateQuery,
-  RewardWheelStoreCandidateQuery,
-  ShipEncounterCountCandidateQuery,
-  ShopOfferCandidateQuery,
-  ShopPurchaseCandidateQuery,
-  SideRoomEntryOrderCandidateQuery,
-  SideRoomGenerationCandidateQuery,
   ProjectCandidateSessionOptions,
 } from './model';
 
@@ -457,6 +447,26 @@ export interface IndexedStartRoomDomain {
   readonly supportedGameNames: readonly string[];
 }
 
+export interface PreparedHubBoardCandidateContext {
+  readonly layout: HubBiomeLayout;
+  readonly plan: HubBiomePlan;
+  readonly openHubSlotKeys: readonly string[];
+  readonly openHubSlotKeySet: ReadonlySet<string>;
+  readonly occurrenceIds: ReadonlySet<OccurrenceId>;
+  readonly visitedHubSlotKeys: ReadonlySet<string>;
+}
+
+export interface PreparedHubVisitCandidateContext extends PreparedHubBoardCandidateContext {
+  readonly visitIndex: number;
+  readonly currentHubSlotKey: string;
+}
+
+export interface PreparedHubLocalCandidateContext extends PreparedHubBoardCandidateContext {
+  readonly occurrence: RoomOccurrence;
+  readonly group: Extract<LocalChildDescriptor, { readonly kind: 'fixedRoomSlots' }>;
+  readonly visitIndex: number;
+}
+
 export interface PreparedCandidateIndex {
   readonly routesByKey: ReadonlyMap<
     string,
@@ -475,6 +485,9 @@ export interface PreparedCandidateIndex {
   readonly batchRewardStoresByOwner: ReadonlyMap<string, LinearRewardStoreSupportEntry>;
   readonly fieldsCageOutcomesByOwner: ReadonlyMap<string, FieldsCageOutcomeSupportEntry>;
   readonly encounterCountsByOwner: ReadonlyMap<string, EncounterCountSupportEntry>;
+  readonly hubBoardsByOwner: ReadonlyMap<string, PreparedHubBoardCandidateContext>;
+  readonly hubVisitsByOwner: ReadonlyMap<string, PreparedHubVisitCandidateContext>;
+  readonly hubLocalGroupsByOwner: ReadonlyMap<string, PreparedHubLocalCandidateContext>;
   readonly shipLifecycleContextsByOwner: ReadonlyMap<string, ShipLifecycleCandidateContext>;
   readonly shopPurchaseContextsByOwner: ReadonlyMap<string, ShopPurchaseCandidateContext>;
 }
@@ -502,6 +515,9 @@ export function prepareCandidateContext(
   const batchRewardStoresByOwner = new Map<string, LinearRewardStoreSupportEntry>();
   const fieldsCageOutcomesByOwner = new Map<string, FieldsCageOutcomeSupportEntry>();
   const encounterCountsByOwner = new Map<string, EncounterCountSupportEntry>();
+  const hubBoardsByOwner = new Map<string, PreparedHubBoardCandidateContext>();
+  const hubVisitsByOwner = new Map<string, PreparedHubVisitCandidateContext>();
+  const hubLocalGroupsByOwner = new Map<string, PreparedHubLocalCandidateContext>();
   const shipLifecycleContextsByOwner = new Map<string, ShipLifecycleCandidateContext>();
   const shopPurchaseContextsByOwner = new Map<string, ShopPurchaseCandidateContext>();
 
@@ -575,8 +591,18 @@ export function prepareCandidateContext(
             }
           }
         }
-      } else if (evaluation !== undefined && evaluation.kind !== 'HubBiome') {
-        throw new Error(`candidate index evaluation kind changed for ${plan.biomeKey}`);
+      } else if (evaluation !== undefined) {
+        if (evaluation.kind !== 'HubBiome') {
+          throw new Error(`candidate index evaluation kind changed for ${plan.biomeKey}`);
+        }
+        if ('roomGeneration' in evaluation) {
+          const lifecycleContexts = roomLifecycleCandidateContexts(evaluation.rewards);
+          for (const candidateContext of lifecycleContexts.shopsByOwner.values()) {
+            for (const purchaseOrigin of candidateContext.purchaseOrigins) {
+              shopPurchaseContextsByOwner.set(semanticAddressKey(purchaseOrigin), candidateContext);
+            }
+          }
+        }
       }
       if (plan.topology === null) {
         continue;
@@ -584,6 +610,80 @@ export function prepareCandidateContext(
       const occurrencesById = new Map(
         plan.topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
       );
+      if (plan.kind === 'HubBiome') {
+        if (layout?.kind !== 'HubBiome') {
+          throw new Error(`candidate index has no Hub layout for ${plan.biomeKey}`);
+        }
+        const openHubSlotKeys = Object.freeze(
+          plan.topology.openTargets.map((target) => target.hubSlotKey),
+        );
+        const boardContext = Object.freeze({
+          layout,
+          plan,
+          openHubSlotKeys,
+          openHubSlotKeySet: new Set(openHubSlotKeys),
+          occurrenceIds: new Set(
+            plan.topology.occurrences.map((occurrence) => occurrence.occurrenceId),
+          ),
+          visitedHubSlotKeys: new Set(plan.topology.visitOrder),
+        });
+        hubBoardsByOwner.set(
+          semanticAddressKey(createHubOpenSetAddress(biomeAddress)),
+          boardContext,
+        );
+        for (const [index, hubSlotKey] of plan.topology.visitOrder.entries()) {
+          hubVisitsByOwner.set(
+            semanticAddressKey(createHubVisitAddress(biomeAddress, index + 1)),
+            Object.freeze({
+              ...boardContext,
+              visitIndex: index + 1,
+              currentHubSlotKey: hubSlotKey,
+            }),
+          );
+        }
+        const slotByOccurrence = new Map(
+          plan.topology.openTargets.map((target) => [target.occurrenceId, target.hubSlotKey]),
+        );
+        for (const occurrence of plan.topology.occurrences) {
+          const hubSlotKey = slotByOccurrence.get(occurrence.occurrenceId);
+          const visitOffset =
+            hubSlotKey === undefined ? -1 : plan.topology.visitOrder.indexOf(hubSlotKey);
+          if (visitOffset < 0) {
+            continue;
+          }
+          const room = catalog.rooms.byKey[occurrence.gameName];
+          for (const group of room?.localChildren ?? []) {
+            if (group.kind !== 'fixedRoomSlots') {
+              continue;
+            }
+            const candidateContext = Object.freeze({
+              ...boardContext,
+              occurrence,
+              group,
+              visitIndex: visitOffset + 1,
+            });
+            hubLocalGroupsByOwner.set(
+              semanticAddressKey(
+                createLocalChildGroupAddress(biomeAddress, occurrence.occurrenceId, group.key),
+              ),
+              candidateContext,
+            );
+            for (const slot of group.slots) {
+              hubLocalGroupsByOwner.set(
+                semanticAddressKey(
+                  createLocalChildAddress(
+                    biomeAddress,
+                    occurrence.occurrenceId,
+                    group.key,
+                    slot.slotKey,
+                  ),
+                ),
+                candidateContext,
+              );
+            }
+          }
+        }
+      }
       for (const occurrence of plan.topology.occurrences) {
         occurrencesByOwner.set(
           semanticAddressKey(createOccurrenceAddress(biomeAddress, occurrence.occurrenceId)),
@@ -666,6 +766,9 @@ export function prepareCandidateContext(
       batchRewardStoresByOwner,
       fieldsCageOutcomesByOwner,
       encounterCountsByOwner,
+      hubBoardsByOwner,
+      hubVisitsByOwner,
+      hubLocalGroupsByOwner,
       shipLifecycleContextsByOwner,
       shopPurchaseContextsByOwner,
     }),
@@ -681,6 +784,23 @@ export function observeCandidateBiomeReplay(
   context.observe?.(
     Object.freeze({
       kind: 'biomeReplay',
+      queryKind: query.kind,
+      routeKey: address.routeKey,
+      biomeKey: address.biomeKey,
+      scope,
+    }),
+  );
+}
+
+export function observeCandidateRegionReplay(
+  context: PreparedCandidateContext,
+  query: ProjectCandidateQuery,
+  scope: 'hubVisit' | 'hubLocal',
+): void {
+  const address = queryAddress(query);
+  context.observe?.(
+    Object.freeze({
+      kind: 'regionReplay',
       queryKind: query.kind,
       routeKey: address.routeKey,
       biomeKey: address.biomeKey,
@@ -744,22 +864,7 @@ export function evaluateCandidateBiome(
   catalog: Catalog,
   proposal: ProjectDocument,
   context: PreparedCandidateContext,
-  query:
-    | BiomeFieldCandidateQuery
-    | FieldsCageOutcomeCandidateQuery
-    | HubSlotCandidateQuery
-    | HubVisitCandidateQuery
-    | IncomingRewardCandidateQuery
-    | LocalRewardCandidateQuery
-    | RewardWheelOfferCandidateQuery
-    | RewardWheelOfferCountCandidateQuery
-    | RewardWheelPickedCandidateQuery
-    | RewardWheelStoreCandidateQuery
-    | ShipEncounterCountCandidateQuery
-    | ShopOfferCandidateQuery
-    | ShopPurchaseCandidateQuery
-    | SideRoomEntryOrderCandidateQuery
-    | SideRoomGenerationCandidateQuery,
+  query: BiomeFieldCandidateQuery,
 ): CandidateBiomeEvaluation | CandidateContextUnavailable {
   const address = queryAddress(query);
   const baselineRoute = requireRoute(context, query);

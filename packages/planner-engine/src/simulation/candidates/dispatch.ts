@@ -137,7 +137,7 @@ function evaluatePreparedProjectCandidates(
         case 'rewardWheelPicked':
           return evaluateRewardWheelPickedCandidate(catalog, context, query);
         case 'hubSlot':
-          return evaluateHubSlotCandidate(catalog, project, context, query);
+          return evaluateHubSlotCandidate(context, query);
         case 'hubVisit':
           return evaluateHubVisitCandidate(catalog, project, context, query);
         case 'incomingReward':

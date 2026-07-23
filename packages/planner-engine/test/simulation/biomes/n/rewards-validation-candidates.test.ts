@@ -24,7 +24,6 @@ import {
   evaluateNRoomGeneration,
   evaluateNRewards,
   evaluateProjectCandidate,
-  evaluateProjectCandidates,
   materializeHubBiome,
   simulateProject,
   type CandidateEvaluationEvent,
@@ -700,6 +699,13 @@ describe('N candidate evaluation', () => {
   it('evaluates Hub membership, visits, side state, and every reward surface through activation', () => {
     const project = representativeProject();
     const before = encodeProjectDocument(project);
+    const events: CandidateEvaluationEvent[] = [];
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      project,
+      simulateProject(catalog, project),
+      { observe: (event) => events.push(event) },
+    );
     const opening = plan(project).topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === fixedOccurrenceIds.opening,
     );
@@ -722,7 +728,7 @@ describe('N candidate evaluation', () => {
       sideReward,
       shopOffer,
       shopPurchase,
-    ] = evaluateProjectCandidates(catalog, project, [
+    ] = session.evaluate([
       {
         kind: 'hubSlot',
         slot: createHubSlotAddress(biome, 'miniBoss02'),
@@ -876,6 +882,37 @@ describe('N candidate evaluation', () => {
     expect(encodeProjectDocument(project)).toBe(before);
     expect(Object.isFrozen(conflictingMiniboss)).toBe(true);
     expect(Object.isFrozen(sideEntryOrder?.query)).toBe(true);
+    expect(events).toEqual([
+      { kind: 'queryBatch', queryCount: 14 },
+      {
+        kind: 'regionReplay',
+        queryKind: 'hubVisit',
+        routeKey: 'Surface',
+        biomeKey: 'N',
+        scope: 'hubVisit',
+      },
+      {
+        kind: 'regionReplay',
+        queryKind: 'sideRoomGeneration',
+        routeKey: 'Surface',
+        biomeKey: 'N',
+        scope: 'hubLocal',
+      },
+      {
+        kind: 'regionReplay',
+        queryKind: 'sideRoomGeneration',
+        routeKey: 'Surface',
+        biomeKey: 'N',
+        scope: 'hubLocal',
+      },
+      {
+        kind: 'regionReplay',
+        queryKind: 'sideRoomEntryOrder',
+        routeKey: 'Surface',
+        biomeKey: 'N',
+        scope: 'hubLocal',
+      },
+    ]);
   }, 15_000);
 
   it('preserves selected-invalid support and reports incomplete Hub context explicitly', () => {
@@ -929,6 +966,39 @@ describe('N candidate evaluation', () => {
     });
   });
 
+  it('evaluates an alternate visit only through its ordered visit region', () => {
+    const project = representativeProject();
+    const query = {
+      kind: 'hubVisit' as const,
+      visit: createHubVisitAddress(biome, 1),
+      hubSlotKey: 'combat03',
+    };
+    const candidate = evaluateProjectCandidate(catalog, project, query);
+    const selectedProject = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHubVisit',
+      visit: query.visit,
+      hubSlotKey: query.hubSlotKey,
+    });
+    const selectedEvaluation = evaluateHubBiome(catalog, 'Surface', plan(selectedProject));
+    if (selectedEvaluation.authoring !== 'complete') {
+      throw new Error('alternate visit fixture became incomplete');
+    }
+    const selectedRegionFindings = selectedEvaluation.findings.filter(
+      (finding) =>
+        'occurrenceId' in finding.origin &&
+        finding.origin.occurrenceId === occurrenceId('combat03'),
+    );
+
+    expect(selectedRegionFindings).toEqual([
+      expect.objectContaining({ code: 'sideRoomGenerationUnavailable' }),
+    ]);
+    expect(candidate).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: selectedRegionFindings,
+    });
+  });
+
   it('rejects malformed Hub candidate domains at their semantic contact', () => {
     const project = representativeProject();
     expect(() =>
@@ -939,6 +1009,47 @@ describe('N candidate evaluation', () => {
         occurrenceId: occurrenceId('missing-candidate'),
       }),
     ).toThrow(/unknown Hub slot missing/);
+    expect(() =>
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(biome, 'combat01'),
+        open: 'yes' as unknown as boolean,
+        occurrenceId: occurrenceId('combat01'),
+      }),
+    ).toThrow(/open must be a boolean/);
+    expect(() =>
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(biome, 'combat12'),
+        open: true,
+        occurrenceId: occurrenceId('combat01'),
+      }),
+    ).toThrow(/occurrence n-reward-combat01 already exists/);
+    for (const malformedOccurrenceId of [
+      '' as ReturnType<typeof occurrenceId>,
+      42 as unknown as ReturnType<typeof occurrenceId>,
+    ]) {
+      expect(() =>
+        evaluateProjectCandidate(catalog, project, {
+          kind: 'hubSlot',
+          slot: createHubSlotAddress(biome, 'combat12'),
+          open: true,
+          occurrenceId: malformedOccurrenceId,
+        }),
+      ).toThrow(/occurrenceId must be a non-blank string/);
+    }
+    expect(() =>
+      evaluateProjectCandidate(catalog, project, {
+        kind: 'sideRoomGeneration',
+        sideRoom: createLocalChildAddress(
+          biome,
+          occurrenceId('combat05'),
+          'sideRooms',
+          'sideDoor1',
+        ),
+        generation: 'sometimes' as 'generated',
+      }),
+    ).toThrow(/unknown side-room generation sometimes/);
     expect(() =>
       evaluateProjectCandidate(catalog, project, {
         kind: 'sideRoomEntryOrder',
@@ -958,7 +1069,7 @@ describe('N candidate evaluation', () => {
     ).toThrow(/N_Story01 has a fixed reward type/);
   });
 
-  it('evaluates one shop offer from its prepared joint-inventory frontier', () => {
+  it('evaluates Hub shop offers and purchases from prepared terminal frontiers', () => {
     const project = representativeProject();
     const events: CandidateEvaluationEvent[] = [];
     const session = createPreparedProjectCandidateSession(
@@ -968,19 +1079,29 @@ describe('N candidate evaluation', () => {
       { observe: (event) => events.push(event) },
     );
 
-    expect(
-      session.evaluate([
-        {
-          kind: 'shopOffer',
-          offer: createShopOfferAddress(biome, fixedOccurrenceIds.preboss, 'MajorNonBoon'),
-          value: { rewardType: 'WeaponUpgradeDrop' },
-        },
-      ])[0],
-    ).toMatchObject({
+    const [offer, purchase] = session.evaluate([
+      {
+        kind: 'shopOffer',
+        offer: createShopOfferAddress(biome, fixedOccurrenceIds.preboss, 'MajorNonBoon'),
+        value: { rewardType: 'WeaponUpgradeDrop' },
+      },
+      {
+        kind: 'shopPurchase',
+        purchase: createShopPurchaseAddress(biome, fixedOccurrenceIds.preboss, 'Minor'),
+        purchased: true,
+      },
+    ]);
+
+    expect(offer).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
       findings: [{ code: 'shopOfferUnavailable' }],
     });
-    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 1 }]);
+    expect(purchase).toMatchObject({
+      context: 'evaluated',
+      support: 'possible',
+      findings: [],
+    });
+    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 2 }]);
   });
 });

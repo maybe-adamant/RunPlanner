@@ -7,7 +7,11 @@ import {
   createLocalChildGroupAddress,
   createLocalRewardAddress,
 } from '@run-planner/engine/authored-project';
-import { evaluateProjectCandidate, simulateProject } from '@run-planner/engine/simulation';
+import {
+  createPreparedProjectCandidateSession,
+  evaluateProjectCandidate,
+  simulateProject,
+} from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
@@ -278,6 +282,64 @@ describe('Hub progressive biome evaluation', () => {
       soulPylonsSpawned: 1,
       soulPylonsCompleted: 1,
     });
+  });
+
+  it('uses the selected progressive frontier for an incomplete Hub candidate region', () => {
+    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      enteredSlotKeys: ['sideDoor2'],
+    });
+    project = removeVisitsFrom(project, 4);
+    const sideRoom = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat05'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    const query = {
+      kind: 'sideRoomGeneration' as const,
+      sideRoom,
+      generation: 'notGenerated' as const,
+    };
+    const candidate = evaluateProjectCandidate(catalog, project, query);
+    const proposal = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom,
+      generation: query.generation,
+    });
+    const { evaluation } = incompleteEvaluation(proposal);
+
+    expect(evaluation.materializedPrefix.frontierVisit).toMatchObject({
+      kind: 'sideGeneration',
+      visitIndex: 1,
+    });
+    expect(candidate).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: evaluation.roomGeneration.findings.filter(
+        (finding) => finding.code === 'sideRoomGenerationUnavailable',
+      ),
+    });
+  });
+
+  it('returns progressive candidate results for every open Hub visit alternative', () => {
+    const project = createRepresentativeNProject();
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      project,
+      simulateProject(catalog, project),
+    );
+    const candidates = session.evaluate(
+      nOpenSlotKeys.map((hubSlotKey) => ({
+        kind: 'hubVisit' as const,
+        visit: createHubVisitAddress(nBiome, 1),
+        hubSlotKey,
+      })),
+    );
+
+    expect(candidates).toHaveLength(nOpenSlotKeys.length);
+    expect(candidates.every((candidate) => candidate.context === 'evaluated')).toBe(true);
   });
 
   it('clamps an unsupported joint side reward at the parent generation region', () => {

@@ -1696,3 +1696,32 @@ focused Linear purchase query each record one query batch and zero biome
 replays. The complete suite passes with 69 test files and 532 tests; the
 Underworld and Surface product-loop responsiveness gates, typechecks, lint,
 format check, and production build also pass.
+
+Candidate-System Refactor Slice 5 is complete. The prepared candidate session
+now indexes N's atomic open board, each ordered Hub visit, and every visited
+parent's fixed side-room group by semantic owner. The board context retains its
+open-slot, occurrence, and visited-slot sets once per authored project.
+Membership candidates evaluate the shared open-set constraint authority
+directly, including minimum/maximum membership, mutually constrained slots,
+visited-slot closure, and duplicate occurrence identity. They do not
+materialize or replay a Hub biome.
+
+Visit, side-generation, and side-entry-order alternatives preserve the complete
+atomic board and truncate only ordered visits after the addressed visit. They
+evaluate that declared region through the same progressive Hub authority as the
+selected plan, including its first-blocking frontier clamp. They never invent a
+slot-order board prefix or retain an unrelated later visit/terminal suffix.
+Candidate instrumentation records these as `hubVisit` or `hubLocal` region
+replays rather than full-biome replays. Exact coverage gates still prevent
+evaluation beyond the selected progressive prefix, while an alternate reached
+visit retains the same occurrence-local structural and reward findings as the
+corresponding selected plan.
+
+Hub WorldShop purchases now use the same shared pre-purchase lifecycle frontier
+as Linear shops. N's terminal shop captures the reachable reward branches after
+outgoing generation and before ordered purchases, so purchase candidates no
+longer use a full-Hub fallback. The only remaining full addressed-biome
+candidate replay authority is the explicitly broad biome-field path. Focused N,
+O, and project parity tests pass with 52 tests; the complete suite passes with
+69 test files and 535 tests. Planner-engine typecheck, touched-file lint, and
+diff checks also pass.
