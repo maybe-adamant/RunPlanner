@@ -82,6 +82,7 @@ function fail(detail: string): never {
 function rewardFacts(
   catalog: Catalog,
   source: CanonicalRewardRoom,
+  currentRoom: CanonicalRewardRoom | undefined,
   sourceDeclaration: RoomDeclaration,
   view: LinearHistoryStateView,
   history: RewardHistoryState,
@@ -90,7 +91,7 @@ function rewardFacts(
 ): RewardKernelFacts {
   return createRewardFacts({
     catalog,
-    source,
+    currentRoom,
     sourceDeclaration,
     view,
     history,
@@ -310,7 +311,7 @@ function processOwnedRewardAcquisition(
     branches,
     reward,
     historySequence,
-    (history) => rewardFacts(catalog, room, declaration, view, history, enteredBiomeCount),
+    (history) => rewardFacts(catalog, room, room, declaration, view, history, enteredBiomeCount),
     findings,
     fail,
   );
@@ -471,6 +472,7 @@ function prepareShipLifecycleCandidateContext(
               rewardFacts(
                 catalog,
                 candidateRoom,
+                candidateRoom,
                 declaration,
                 lifecycleView.generation,
                 branchHistory,
@@ -579,6 +581,8 @@ export function evaluateLinearRewards(
           throw new LinearRewardSimulationContractError(`${room.gameName} has no declaration`);
         }
         let source = room;
+        let currentRoom: CanonicalRewardRoom | undefined =
+          event.source === 'biomeEntry' ? undefined : room;
         let view = views.get(semanticAddressKey(room.origin))?.preparation;
         let currentShopNames: ReadonlySet<string> = new Set();
         if (event.source === 'generatedTarget') {
@@ -598,6 +602,7 @@ export function evaluateLinearRewards(
             );
           }
           source = parent;
+          currentRoom = parent;
           view =
             parentViews.targetGenerations.find(
               (candidate) =>
@@ -644,6 +649,7 @@ export function evaluateLinearRewards(
               rewardFacts(
                 catalog,
                 source,
+                currentRoom,
                 catalog.rooms.byKey[source.gameName] ?? declaration,
                 view,
                 branchHistory,
@@ -726,6 +732,7 @@ export function evaluateLinearRewards(
               rewardFacts(
                 catalog,
                 source,
+                currentRoom,
                 catalog.rooms.byKey[source.gameName] ?? declaration,
                 view,
                 branchHistory,
@@ -928,6 +935,7 @@ export function evaluateLinearRewards(
               rewardFacts(
                 catalog,
                 room,
+                room,
                 declaration,
                 roomView.preparation,
                 branchHistory,
@@ -1021,7 +1029,7 @@ export function evaluateLinearRewards(
           historySequence: event.sequence,
           peers: Object.freeze([]),
           facts: (branchHistory: RewardHistoryState) =>
-            rewardFacts(catalog, room, declaration, view, branchHistory, enteredBiomeCount),
+            rewardFacts(catalog, room, room, declaration, view, branchHistory, enteredBiomeCount),
         }));
         const frontierBranches = branches;
         const owners = Object.freeze(wheel.offers.map((offer) => offer.origin));
@@ -1151,6 +1159,7 @@ export function evaluateLinearRewards(
             rewardFacts(
               catalog,
               room,
+              room,
               declaration,
               roomView.preOutgoing ?? roomView.entry,
               branchHistory,
@@ -1223,6 +1232,7 @@ export function evaluateLinearRewards(
                 rewardFacts(
                   catalog,
                   candidateRoom,
+                  candidateRoom,
                   declaration,
                   roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
                   branchHistory,
@@ -1243,6 +1253,7 @@ export function evaluateLinearRewards(
             facts: (branchHistory, shopNames = new Set()) =>
               rewardFacts(
                 catalog,
+                room,
                 room,
                 declaration,
                 roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,

@@ -28,6 +28,8 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
+import { bindTestCandidateSession } from '../../candidateSession';
+
 const biome = createBiomeAddress('Underworld', 'F');
 
 interface TargetSpec {
@@ -463,6 +465,36 @@ function devotionProject(): ProjectDocument {
 }
 
 describe('F reward-history simulation', () => {
+  it('treats the opening reward as a biome entry without a current-room predecessor', () => {
+    const start = createOccurrenceId('ratio-start');
+    const downstream = createOccurrenceId('ratio-run');
+    const project = replaceIncoming(ratioBoundaryProject(), start, { rewardType: 'SpellDrop' });
+    const result = evaluate(project).rewards;
+    const [openingCandidate, downstreamCandidate] = bindTestCandidateSession(
+      catalog,
+      project,
+    ).evaluate([
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, start),
+        value: { rewardType: 'SpellDrop' },
+      },
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, downstream),
+        value: { rewardType: 'SpellDrop' },
+      },
+    ]);
+
+    expect(result.validity).toBe('valid');
+    expect(openingCandidate).toMatchObject({ context: 'evaluated', support: 'possible' });
+    expect(downstreamCandidate).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: [{ code: 'rewardBagEntryUnavailable' }],
+    });
+  });
+
   it('validates forced and possible authored base stores from current-room store history', () => {
     const result = evaluate(ratioBoundaryProject()).rewards;
 

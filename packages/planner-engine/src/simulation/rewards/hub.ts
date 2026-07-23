@@ -121,6 +121,7 @@ function hubTargets(
 function rewardFacts(
   catalog: Catalog,
   source: CanonicalHubRewardSource,
+  currentRoom: CanonicalHubRewardSource | undefined,
   sourceDeclaration: RoomDeclaration,
   view: HistoryStateView,
   history: RewardHistoryState,
@@ -130,7 +131,7 @@ function rewardFacts(
 ): RewardKernelFacts {
   return createRewardFacts({
     catalog,
-    source,
+    currentRoom,
     sourceDeclaration,
     view,
     history,
@@ -183,6 +184,7 @@ function offerContext(
   catalog: Catalog,
   room: CanonicalHubRewardRoom,
   source: CanonicalHubRewardSource,
+  currentRoom: CanonicalHubRewardSource | undefined,
   sourceKind: GeneratedOfferEvent['source'] | 'self',
   view: HistoryStateView,
   historySequence: number,
@@ -207,6 +209,7 @@ function offerContext(
       rewardFacts(
         catalog,
         source,
+        currentRoom,
         sourceDeclaration,
         view,
         branchHistory,
@@ -353,6 +356,7 @@ export function evaluateHubRewards(
               catalog,
               child,
               source,
+              source,
               'localChild',
               generationView(views, childEvent),
               childEvent.sequence,
@@ -438,7 +442,7 @@ export function evaluateHubRewards(
                     (branchHistory) =>
                       createRewardFacts({
                         catalog,
-                        source: entry.child,
+                        currentRoom: entry.child,
                         sourceDeclaration: requireDeclaration(catalog, entry.child.gameName),
                         view: acquisition.view!,
                         history: branchHistory,
@@ -463,6 +467,8 @@ export function evaluateHubRewards(
           fail(`${room.gameName} has a non-local creation source`);
         }
         let source: CanonicalHubRewardSource = room;
+        let currentRoom: CanonicalHubRewardSource | undefined =
+          event.source === 'biomeEntry' ? undefined : room;
         let sourceKind: GeneratedOfferEvent['source'] | 'self' = 'self';
         let view = views.get(semanticAddressKey(room.origin))?.preparation;
         if (event.source === 'hubTarget' || event.source === 'layoutEntry') {
@@ -479,6 +485,7 @@ export function evaluateHubRewards(
               fail(`${event.gameName} does not match its Hub slot`);
             }
             source = parent;
+            currentRoom = parent;
           } else {
             if (parent?.kind !== 'authored') {
               fail(`${event.gameName} lost its canonical entry reward source`);
@@ -497,6 +504,7 @@ export function evaluateHubRewards(
           catalog,
           room,
           source,
+          currentRoom,
           sourceKind,
           view,
           event.sequence,
@@ -554,7 +562,7 @@ export function evaluateHubRewards(
                   (branchHistory) =>
                     createRewardFacts({
                       catalog,
-                      source: room,
+                      currentRoom: room,
                       sourceDeclaration: requireDeclaration(catalog, room.gameName),
                       view: acquisitionView,
                       history: branchHistory,
@@ -604,6 +612,7 @@ export function evaluateHubRewards(
           facts: (branchHistory: RewardHistoryState, shopNames: ReadonlySet<string> = new Set()) =>
             rewardFacts(
               catalog,
+              room,
               room,
               declaration,
               roomView.preparation,
@@ -679,7 +688,7 @@ export function evaluateHubRewards(
           (branchHistory) =>
             createRewardFacts({
               catalog,
-              source: room,
+              currentRoom: room,
               sourceDeclaration: declaration,
               view: roomView.preOutgoing ?? roomView.entry,
               history: branchHistory,
@@ -713,6 +722,7 @@ export function evaluateHubRewards(
                 rewardFacts(
                   catalog,
                   candidateRoom,
+                  candidateRoom,
                   declaration,
                   roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
                   branchHistory,
@@ -734,6 +744,7 @@ export function evaluateHubRewards(
             facts: (branchHistory, shopNames = new Set()) =>
               rewardFacts(
                 catalog,
+                room,
                 room,
                 declaration,
                 roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
