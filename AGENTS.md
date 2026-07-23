@@ -85,6 +85,21 @@ declared scripts for:
 - formatting or diff checks;
 - production build when application wiring changes.
 
+Use the narrowest truthful test lane during implementation:
+
+- `npm run test:changed` for tests related to uncommitted source or fixture
+  changes;
+- `npm run test:ui` for leaf React/editor changes;
+- `npm run test:planner` for planner projection, Redux, workspace, UI, and
+  architecture-boundary changes;
+- `npm run test:contract` for application/workspace capability changes;
+- `npm run test:product` for cross-layer browser workflows;
+- `npm run test:engine` or `npm run test:catalog` for their owning packages.
+
+`npm run test` and `npm run check` remain the complete phase, push, and release
+gates. Run the complete gate for test/configuration changes, shared package
+changes with broad downstream impact, and before declaring a phase closed.
+
 Keep tests near their authority:
 
 - declaration normalization tests in the catalog package;

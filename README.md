@@ -187,5 +187,24 @@ Run the complete validation suite with:
 npm run check
 ```
 
-Individual scripts are available for `typecheck`, `test`, `test:watch`,
-`lint`, `format`, `format:check`, and `build`.
+The complete `test` and `check` commands remain the phase, push, and release
+gates. Development uses narrower test lanes:
+
+```bash
+npm run test:changed   # tests related to uncommitted source/test changes
+npm run test:ui        # React component and editor fixtures
+npm run test:planner   # planner core, UI, and architecture contracts
+npm run test:contract  # application/workspace boundary fixtures
+npm run test:product   # full browser product loops
+npm run test:engine    # authored model, simulator, and validation
+npm run test:catalog   # declaration and catalog construction
+```
+
+Vitest's changed-file selection follows the static import graph. Use an
+explicit lane when a change has no uncommitted source file, when validating a
+specific ownership boundary, or when the intended downstream scope is broader
+than the detected graph. Configuration, dependency, shared test setup, and
+cross-layer architecture changes require the complete gate.
+
+Individual scripts are also available for `typecheck`, `test:watch`, `lint`,
+`format`, `format:check`, and `build`.
