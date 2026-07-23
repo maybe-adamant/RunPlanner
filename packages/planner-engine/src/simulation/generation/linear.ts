@@ -35,6 +35,7 @@ import type {
   FieldsCageOutcomeSupportEntry,
   LinearForcePressureLedgerEntry,
   LinearRoomGenerationValidation,
+  LinearRoomTargetCandidateContext,
   LinearRoomTargetCandidateValidation,
   RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
@@ -51,11 +52,22 @@ export class LinearRoomGenerationContractError extends Error {
 
 type ForceSupport = 'none' | 'optional' | 'required';
 
+const candidateContextsByValidation = new WeakMap<
+  LinearRoomGenerationValidation,
+  ReadonlyMap<string, LinearRoomTargetCandidateContext>
+>();
+
 interface CandidateEvaluation {
   readonly room: RoomDeclaration;
   readonly reasons: readonly RoomGenerationExclusionReason[];
   readonly exclusions: readonly RoomGenerationExclusionEvidence[];
   readonly forceSupport: ForceSupport;
+}
+
+interface RoomGenerationCounts {
+  readonly appearancesByGameName: Readonly<Record<string, number>>;
+  readonly creationsByGameName: Readonly<Record<string, number>>;
+  readonly parentCreationsByGameName: Readonly<Record<string, number>>;
 }
 
 type CanonicalGenerationSource = CanonicalAuthoredRoom | CanonicalFixedEntryRoom;
@@ -362,23 +374,24 @@ function requirementEvidence(
   }
 }
 
-function creationCount(
+function roomGenerationCounts(
   view: LinearHistoryStateView,
-  gameName: string,
-  parentOrigin?: RoomHistoryOrigin,
-): number {
-  return view.ledgers.roomCreations.filter(
-    (creation) =>
-      creation.gameName === gameName &&
-      (parentOrigin === undefined ||
-        (creation.source === 'generatedTarget' &&
-          semanticAddressKey(creation.parentOrigin) === semanticAddressKey(parentOrigin))),
-  ).length;
-}
-
-function appearanceCount(view: LinearHistoryStateView, gameName: string): number {
-  return view.ledgers.roomAppearances.filter((appearance) => appearance.gameName === gameName)
-    .length;
+  parentOrigin: RoomHistoryOrigin,
+): RoomGenerationCounts {
+  const parentKey = semanticAddressKey(parentOrigin);
+  return Object.freeze({
+    appearancesByGameName: Object.freeze(countByGameName(view.ledgers.roomAppearances)),
+    creationsByGameName: Object.freeze(countByGameName(view.ledgers.roomCreations)),
+    parentCreationsByGameName: Object.freeze(
+      countByGameName(
+        view.ledgers.roomCreations.filter(
+          (creation) =>
+            creation.source === 'generatedTarget' &&
+            semanticAddressKey(creation.parentOrigin) === parentKey,
+        ),
+      ),
+    ),
+  });
 }
 
 function evaluateCandidate(
@@ -386,7 +399,7 @@ function evaluateCandidate(
   source: CanonicalGenerationSource,
   sourceDeclaration: RoomDeclaration,
   exit: CanonicalPhysicalExit,
-  view: LinearHistoryStateView,
+  counts: RoomGenerationCounts,
   room: RoomDeclaration,
   context: RequirementEvaluationContext,
 ): CandidateEvaluation {
@@ -440,34 +453,34 @@ function evaluateCandidate(
   }
   if (
     room.caps.maxCreationsThisRun !== undefined &&
-    creationCount(view, room.gameName) >= room.caps.maxCreationsThisRun
+    (counts.creationsByGameName[room.gameName] ?? 0) >= room.caps.maxCreationsThisRun
   ) {
     reasons.push('maxCreationsThisRun');
     exclusions.push({
       kind: 'maxCreationsThisRun',
-      actual: creationCount(view, room.gameName),
+      actual: counts.creationsByGameName[room.gameName] ?? 0,
       maximum: room.caps.maxCreationsThisRun,
     });
   }
   if (
     room.caps.maxCreationsPerRoom !== undefined &&
-    creationCount(view, room.gameName, source.origin) >= room.caps.maxCreationsPerRoom
+    (counts.parentCreationsByGameName[room.gameName] ?? 0) >= room.caps.maxCreationsPerRoom
   ) {
     reasons.push('maxCreationsPerRoom');
     exclusions.push({
       kind: 'maxCreationsPerRoom',
-      actual: creationCount(view, room.gameName, source.origin),
+      actual: counts.parentCreationsByGameName[room.gameName] ?? 0,
       maximum: room.caps.maxCreationsPerRoom,
     });
   }
   if (
     room.caps.maxAppearancesThisBiome !== undefined &&
-    appearanceCount(view, room.gameName) >= room.caps.maxAppearancesThisBiome
+    (counts.appearancesByGameName[room.gameName] ?? 0) >= room.caps.maxAppearancesThisBiome
   ) {
     reasons.push('maxAppearancesThisBiome');
     exclusions.push({
       kind: 'maxAppearancesThisBiome',
-      actual: appearanceCount(view, room.gameName),
+      actual: counts.appearancesByGameName[room.gameName] ?? 0,
       maximum: room.caps.maxAppearancesThisBiome,
     });
   }
@@ -803,18 +816,17 @@ function assertTargetHistoryMatches(
   }
 }
 
-function evaluateTargetGameName(
+function prepareTargetGameNameContext(
   catalog: Catalog,
   pool: readonly RoomDeclaration[],
   source: CanonicalGenerationSource,
   targetOrigin: CanonicalTarget['origin'],
   exit: CanonicalPhysicalExit,
   view: LinearTargetGenerationView,
-  selectedGameName: string,
   enteredBiomeCount: number,
   rewardHistory: RewardHistoryState | undefined,
   includeSourceDepth: boolean,
-): LinearRoomTargetCandidateValidation {
+): LinearRoomTargetCandidateContext {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
     throw new LinearRoomGenerationContractError(`unknown source room ${source.gameName}`);
@@ -836,8 +848,9 @@ function evaluateTargetGameName(
         }),
       })
     : baseContext;
+  const counts = roomGenerationCounts(view.before, source.origin);
   const candidates = pool.map((room) =>
-    evaluateCandidate(catalog, source, sourceDeclaration, exit, view.before, room, context),
+    evaluateCandidate(catalog, source, sourceDeclaration, exit, counts, room, context),
   );
   const eligible = candidates.filter((candidate) => candidate.reasons.length === 0);
   const optional = eligible.filter((candidate) => candidate.forceSupport === 'optional');
@@ -846,75 +859,67 @@ function evaluateTargetGameName(
     required.length === 0
       ? eligible
       : eligible.filter((candidate) => candidate.forceSupport !== 'none');
-  const selected = candidates.find((candidate) => candidate.room.gameName === selectedGameName);
-  const reasons = [...(selected?.reasons ?? ['notCandidate'])] as RoomGenerationExclusionReason[];
-  const exclusions: RoomGenerationExclusionEvidence[] = [
-    ...(selected?.exclusions ?? [{ kind: 'notCandidate' as const }]),
-  ];
-  if (selected !== undefined && selected.reasons.length === 0 && !support.includes(selected)) {
-    reasons.push('forcedPool');
-    exclusions.push({
-      kind: 'forcedPool',
-      requiredRoomGameNames: Object.freeze(required.map((candidate) => candidate.room.gameName)),
-    });
-  }
-  const selectedPossible = selected !== undefined && support.includes(selected);
-  const pressure: LinearForcePressureLedgerEntry = Object.freeze({
+  const candidatesByGameName = new Map(
+    candidates.map((candidate) => [candidate.room.gameName, candidate]),
+  );
+  const supportGameNames = new Set(support.map((candidate) => candidate.room.gameName));
+  const requiredRoomGameNames = Object.freeze(required.map((candidate) => candidate.room.gameName));
+  const sharedPressure = Object.freeze({
     targetOrigin,
     beforeSequence: view.before.sequence,
     sourceGameName: source.gameName,
-    selectedGameName,
     exitIndex: targetOrigin.exitIndex,
     biomeDepthCache: context.counters.biomeDepthCache,
     biomeEncounterDepth: context.counters.biomeEncounterDepth,
-    selectedCreationCount: creationCount(view.before, selectedGameName),
-    selectedAppearanceCount: appearanceCount(view.before, selectedGameName),
-    selectedParentCreationCount: creationCount(view.before, selectedGameName, source.origin),
     eligibleRoomGameNames: Object.freeze(eligible.map((candidate) => candidate.room.gameName)),
     optionalForcedRoomGameNames: Object.freeze(
       optional.map((candidate) => candidate.room.gameName),
     ),
-    requiredForcedRoomGameNames: Object.freeze(
-      required.map((candidate) => candidate.room.gameName),
-    ),
+    requiredForcedRoomGameNames: requiredRoomGameNames,
     supportRoomGameNames: Object.freeze(support.map((candidate) => candidate.room.gameName)),
-    selectedPossible,
-    selectedExclusionReasons: Object.freeze(reasons),
-    selectedExclusions: Object.freeze(exclusions),
   });
-  const findings: SemanticFinding[] = [];
-  if (support.length === 0) {
-    findings.push(finding('targetRoomSupportEmpty', targetOrigin, selectedEvidence(pressure)));
-  }
-  if (!selectedPossible) {
-    findings.push(finding('targetRoomUnavailable', targetOrigin, selectedEvidence(pressure)));
-  }
-  return Object.freeze({ pressure, findings: Object.freeze(findings) });
-}
-
-function validateTarget(
-  catalog: Catalog,
-  pool: readonly RoomDeclaration[],
-  source: CanonicalGenerationSource,
-  target: CanonicalTarget,
-  view: LinearTargetGenerationView,
-  enteredBiomeCount: number,
-  rewardHistory: RewardHistoryState | undefined,
-  includeSourceDepth: boolean,
-): LinearRoomTargetCandidateValidation {
-  assertTargetHistoryMatches(source, target, view);
-  return evaluateTargetGameName(
-    catalog,
-    pool,
-    source,
-    target.origin,
-    target.exit,
-    view,
-    target.room.gameName,
-    enteredBiomeCount,
-    rewardHistory,
-    includeSourceDepth,
-  );
+  return Object.freeze({
+    targetOrigin,
+    evaluateGameName: (selectedGameName: string): LinearRoomTargetCandidateValidation => {
+      const selected = candidatesByGameName.get(selectedGameName);
+      const reasons = [
+        ...(selected?.reasons ?? ['notCandidate']),
+      ] as RoomGenerationExclusionReason[];
+      const exclusions: RoomGenerationExclusionEvidence[] = [
+        ...(selected?.exclusions ?? [{ kind: 'notCandidate' as const }]),
+      ];
+      if (
+        selected !== undefined &&
+        selected.reasons.length === 0 &&
+        !supportGameNames.has(selectedGameName)
+      ) {
+        reasons.push('forcedPool');
+        exclusions.push({
+          kind: 'forcedPool',
+          requiredRoomGameNames,
+        });
+      }
+      const selectedPossible = selected !== undefined && supportGameNames.has(selectedGameName);
+      const pressure: LinearForcePressureLedgerEntry = Object.freeze({
+        ...sharedPressure,
+        selectedGameName,
+        selectedCreationCount: counts.creationsByGameName[selectedGameName] ?? 0,
+        selectedAppearanceCount: counts.appearancesByGameName[selectedGameName] ?? 0,
+        selectedParentCreationCount: counts.parentCreationsByGameName[selectedGameName] ?? 0,
+        selectedPossible,
+        selectedExclusionReasons: Object.freeze(reasons),
+        selectedExclusions: Object.freeze(exclusions),
+      });
+      const findings: SemanticFinding[] = [];
+      if (support.length === 0) {
+        findings.push(finding('targetRoomSupportEmpty', targetOrigin, selectedEvidence(pressure)));
+      }
+      if (!selectedPossible) {
+        findings.push(finding('targetRoomUnavailable', targetOrigin, selectedEvidence(pressure)));
+      }
+      return Object.freeze({ pressure, findings: Object.freeze(findings) });
+    },
+  });
 }
 
 function requireSource(
@@ -936,6 +941,7 @@ function evaluateTargets(
   source: CanonicalGenerationSource,
   targets: readonly CanonicalTarget[],
   views: ReadonlyMap<string, LinearTargetGenerationView>,
+  candidateContexts: Map<string, LinearRoomTargetCandidateContext>,
   pressure: LinearForcePressureLedgerEntry[],
   encounterCounts: EncounterCountSupportEntry[],
   findings: SemanticFinding[],
@@ -950,16 +956,20 @@ function evaluateTargets(
         `target ${semanticAddressKey(target.origin)} has no history generation view`,
       );
     }
-    const result = validateTarget(
+    assertTargetHistoryMatches(source, target, view);
+    const candidateContext = prepareTargetGameNameContext(
       catalog,
       pool,
       source,
-      target,
+      target.origin,
+      target.exit,
       view,
       enteredBiomeCount,
       rewardHistories.get(semanticAddressKey(target.origin)),
       includeSourceDepth,
     );
+    candidateContexts.set(semanticAddressKey(target.origin), candidateContext);
+    const result = candidateContext.evaluateGameName(target.room.gameName);
     pressure.push(result.pressure);
     findings.push(...result.findings);
     if (
@@ -1006,6 +1016,7 @@ export function evaluateLinearRoomGeneration(
   const rooms = generationRooms(snapshot);
   const views = targetGenerationViews(history);
   const rewardHistories = targetRewardHistories(rewardHistoryCheckpoints);
+  const candidateContexts = new Map<string, LinearRoomTargetCandidateContext>();
   const pressure: LinearForcePressureLedgerEntry[] = [];
   const encounterCounts: EncounterCountSupportEntry[] = [];
   const fieldsCageOutcomes: FieldsCageOutcomeSupportEntry[] = [];
@@ -1046,6 +1057,7 @@ export function evaluateLinearRoomGeneration(
       source,
       batch.targets,
       views,
+      candidateContexts,
       pressure,
       encounterCounts,
       findings,
@@ -1105,6 +1117,7 @@ export function evaluateLinearRoomGeneration(
       requireSource(rooms, sourceOrigin),
       finalGeneration.targets,
       views,
+      candidateContexts,
       pressure,
       encounterCounts,
       findings,
@@ -1114,7 +1127,7 @@ export function evaluateLinearRoomGeneration(
     );
   }
 
-  return Object.freeze({
+  const validation: LinearRoomGenerationValidation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
     forcePressure: Object.freeze(pressure),
@@ -1122,78 +1135,18 @@ export function evaluateLinearRoomGeneration(
     fieldsCageOutcomes: Object.freeze(fieldsCageOutcomes),
     findings: Object.freeze(findings),
   });
+  candidateContextsByValidation.set(validation, new Map(candidateContexts));
+  return validation;
 }
 
-export function evaluateLinearRoomTargetCandidate(
-  catalog: Catalog,
-  snapshot: LinearSimulationMaterialization,
-  history: LinearSimulationHistory,
-  targetOrigin: CanonicalTarget['origin'],
-  gameName: string,
-  enteredBiomeCount: number,
-  rewardHistoryCheckpoints?: readonly LinearTargetRewardHistoryCheckpoint[],
-): LinearRoomTargetCandidateValidation {
-  if (
-    snapshot.biomeKey !== history.biomeKey ||
-    snapshot.routeKey !== history.routeKey ||
-    targetOrigin.routeKey !== snapshot.routeKey ||
-    targetOrigin.biomeKey !== snapshot.biomeKey
-  ) {
+export function linearRoomTargetCandidateContexts(
+  validation: LinearRoomGenerationValidation,
+): ReadonlyMap<string, LinearRoomTargetCandidateContext> {
+  const contexts = candidateContextsByValidation.get(validation);
+  if (contexts === undefined) {
     throw new LinearRoomGenerationContractError(
-      'linear candidate generation inputs do not share one biome owner',
+      `room generation for ${validation.biomeKey} has no prepared candidate contexts`,
     );
   }
-  const finalGeneration =
-    snapshot.kind === 'LinearBiome' ? snapshot.terminalEntry : snapshot.frontierGeneration;
-  const owner = [
-    ...snapshot.batches,
-    ...(finalGeneration === undefined ? [] : [finalGeneration]),
-  ].find((candidate) =>
-    candidate.targets.some(
-      (target) => semanticAddressKey(target.origin) === semanticAddressKey(targetOrigin),
-    ),
-  );
-  const target = owner?.targets.find(
-    (candidate) => candidate.origin.exitIndex === targetOrigin.exitIndex,
-  );
-  if (owner === undefined || target === undefined) {
-    throw new LinearRoomGenerationContractError(
-      `target ${semanticAddressKey(targetOrigin)} is not a linear batch target`,
-    );
-  }
-  const rooms = generationRooms(snapshot);
-  const source = requireSource(
-    rooms,
-    'parent' in owner ? owner.parent.origin : owner.predecessor.origin,
-  );
-  const view = targetGenerationViews(history).get(semanticAddressKey(targetOrigin));
-  if (view === undefined) {
-    throw new LinearRoomGenerationContractError(
-      `target ${semanticAddressKey(targetOrigin)} has no history generation view`,
-    );
-  }
-  assertTargetHistoryMatches(source, target, view);
-  const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
-  if (layout?.kind !== 'LinearBiome') {
-    throw new LinearRoomGenerationContractError(
-      `catalog does not provide ${snapshot.biomeKey} linear generation policy`,
-    );
-  }
-  const batchIndex = snapshot.batches.findIndex((batch) => batch === owner);
-  return evaluateTargetGameName(
-    catalog,
-    batchIndex >= 0
-      ? stagedCandidatePool(catalog, layout, batchIndex)
-      : snapshot.kind === 'LinearBiomePrefix' && snapshot.frontierGeneration?.kind === 'batch'
-        ? stagedCandidatePool(catalog, layout, snapshot.batches.length)
-        : terminalCandidatePool(catalog, layout),
-    source,
-    targetOrigin,
-    target.exit,
-    view,
-    gameName,
-    enteredBiomeCount,
-    targetRewardHistories(rewardHistoryCheckpoints).get(semanticAddressKey(targetOrigin)),
-    layout.continuation.progressionPolicy.kind === 'staged',
-  );
+  return contexts;
 }

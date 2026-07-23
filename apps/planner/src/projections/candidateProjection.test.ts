@@ -191,8 +191,11 @@ describe('candidate application projection', () => {
   });
 
   it('evaluates the addressed target in an incomplete but covered biome prefix', () => {
-    const service = createCandidateProjectionService(catalog, (project) =>
-      simulateProject(catalog, project),
+    const events: CandidateEvaluationEvent[] = [];
+    const service = createCandidateProjectionService(
+      catalog,
+      (project) => simulateProject(catalog, project),
+      { observeCandidateEvaluation: (event) => events.push(event) },
     );
     const startId = createOccurrenceId('candidate-projection-start');
     let document = applyProjectCommand(project(), catalog, {
@@ -222,6 +225,7 @@ describe('candidate application projection', () => {
           option.evaluation.context === 'evaluated' && option.evaluation.support === 'possible',
       ),
     ).toBe(true);
+    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 22 }]);
   });
 
   it('retains a blank physical-exit domain as unassessed until its target is authored', () => {

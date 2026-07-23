@@ -1,9 +1,10 @@
-import { semanticAddressKey } from '../../authored-project/addresses';
-import type { Catalog } from '../../catalog-schema';
 import {
-  evaluateLinearRoomTargetCandidate,
-  type LinearForcePressureLedgerEntry,
-} from '../generation';
+  createBiomeAddress,
+  createContinuationAddress,
+  semanticAddressKey,
+} from '../../authored-project/addresses';
+import type { Catalog } from '../../catalog-schema';
+import type { LinearForcePressureLedgerEntry } from '../generation';
 import type {
   CandidateSupport,
   ProjectCandidateEvaluation,
@@ -19,41 +20,29 @@ import {
   isCandidateContextUnavailable,
   locateCandidateLinear,
   locateIndexedLinearPlan,
-  requireRoute,
   unavailableCandidate,
   type PreparedCandidateContext,
 } from './context';
 
-function targetExists(
-  catalog: Catalog,
-  context: PreparedCandidateContext,
-  query: RoomTargetCandidateQuery,
-): boolean {
-  if (context.index.targetsByOwner.has(semanticAddressKey(query.target))) {
+function targetExists(context: PreparedCandidateContext, query: RoomTargetCandidateQuery): boolean {
+  const targetKey = semanticAddressKey(query.target);
+  if (context.index.targetsByOwner.has(targetKey)) {
     return true;
   }
   const topology = locateIndexedLinearPlan(context, query).topology;
   if (topology === null) {
     failCandidate(query, 'biome topology has not been started');
   }
-  const continuation = topology.continuations.find(
-    (candidate) => candidate.parentOccurrenceId === query.target.parentOccurrenceId,
+  const parentKey = semanticAddressKey(
+    createContinuationAddress(
+      createBiomeAddress(query.target.routeKey, query.target.biomeKey),
+      query.target.parentOccurrenceId,
+    ),
   );
-  if (continuation?.kind !== 'batch') {
+  if (!context.index.batchTargetParentsByOwner.has(parentKey)) {
     failCandidate(query, 'target parent does not own an ordinary generated batch');
   }
-  const parent = topology.occurrences.find(
-    (occurrence) => occurrence.occurrenceId === query.target.parentOccurrenceId,
-  );
-  const layout = catalog.biomeLayouts.byKey[query.target.biomeKey];
-  const fixedParent =
-    query.target.parentOccurrenceId === null && layout?.kind === 'LinearBiome'
-      ? ([...layout.entries].reverse().find((entry) => entry.kind === 'fixedEntry') ??
-        (layout.start.kind === 'fixedEntry' ? layout.start : undefined))
-      : undefined;
-  const parentGameName = parent?.gameName ?? fixedParent?.roomGameName;
-  const parentRoom = parentGameName === undefined ? undefined : catalog.rooms.byKey[parentGameName];
-  if (!parentRoom?.exits.some((exit) => exit.index === query.target.exitIndex)) {
+  if (!context.index.targetSlotsByOwner.has(targetKey)) {
     failCandidate(query, `exit ${query.target.exitIndex} has no authored target`);
   }
   return false;
@@ -102,9 +91,8 @@ export function evaluateRoomTargetCandidate(
   query: RoomTargetCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RoomTargetCandidateQuery;
-  const authoredTargetExists = targetExists(catalog, context, stableQuery);
+  const authoredTargetExists = targetExists(context, stableQuery);
   assertCandidateExists(catalog, stableQuery);
-  const route = requireRoute(context, stableQuery);
   const biome = locateCandidateLinear(context, stableQuery);
   if (isCandidateContextUnavailable(biome)) {
     return unavailableCandidate(stableQuery, biome);
@@ -112,27 +100,13 @@ export function evaluateRoomTargetCandidate(
   if (!authoredTargetExists) {
     return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));
   }
-  if (
-    !biome.roomGeneration.forcePressure.some(
-      (entry) => semanticAddressKey(entry.targetOrigin) === semanticAddressKey(stableQuery.target),
-    )
-  ) {
+  const candidateContext = context.index.roomTargetContextsByOwner.get(
+    semanticAddressKey(stableQuery.target),
+  );
+  if (candidateContext === undefined) {
     return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));
   }
-
-  const enteredBiomeCount = route.configuredBiomeKeys.indexOf(stableQuery.target.biomeKey) + 1;
-  if (enteredBiomeCount <= 0) {
-    failCandidate(stableQuery, `${stableQuery.target.biomeKey} is not configured on the route`);
-  }
-  const candidate = evaluateLinearRoomTargetCandidate(
-    catalog,
-    biome.authoring === 'complete' ? biome.snapshot : biome.materializedPrefix,
-    biome.history,
-    stableQuery.target,
-    stableQuery.gameName,
-    enteredBiomeCount,
-    biome.rewards.targetHistory,
-  );
+  const candidate = candidateContext.evaluateGameName(stableQuery.gameName);
   return Object.freeze({
     context: 'evaluated',
     query: stableQuery,
@@ -149,23 +123,15 @@ export function evaluateStartRoomCandidate(
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as StartRoomCandidateQuery;
   const plan = locateIndexedLinearPlan(context, stableQuery);
-  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
-  if (layout?.kind !== 'LinearBiome' || layout.start.kind !== 'authoredStart') {
+  const domain = context.index.startRoomDomainsByOwner.get(semanticAddressKey(stableQuery.owner));
+  if (domain === undefined) {
     failCandidate(stableQuery, `${plan.biomeKey} has no authored start candidate domain`);
   }
   const room = catalog.rooms.byKey[stableQuery.gameName];
   if (room === undefined || room.biomeKey !== plan.biomeKey) {
     failCandidate(stableQuery, `catalog has no ${plan.biomeKey} room ${stableQuery.gameName}`);
   }
-  if (stableQuery.owner.kind === 'occurrence') {
-    if (
-      plan.topology === null ||
-      plan.topology.startOccurrenceId !== stableQuery.owner.occurrenceId
-    ) {
-      failCandidate(stableQuery, 'occurrence owner is not the authored biome start');
-    }
-  }
-  const supported = layout.start.roomGameNames;
+  const supported = domain.supportedGameNames;
   const possible = supported.includes(stableQuery.gameName);
   return Object.freeze({
     context: 'evaluated',

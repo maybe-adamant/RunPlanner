@@ -1,6 +1,6 @@
 export {
   evaluateLinearRoomGeneration,
-  evaluateLinearRoomTargetCandidate,
+  linearRoomTargetCandidateContexts,
   LinearRoomGenerationContractError,
   supportedFieldsCageOutcomes,
 } from './linear';
@@ -18,6 +18,7 @@ export type {
   HubSideRoomGenerationSupportEntry,
   LinearForcePressureLedgerEntry,
   LinearRoomGenerationValidation,
+  LinearRoomTargetCandidateContext,
   LinearRoomTargetCandidateValidation,
   RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
