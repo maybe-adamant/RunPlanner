@@ -1,13 +1,11 @@
 import type {
   LocalRewardAddress,
-  ProjectDocument,
   ShopOfferAddress,
   ShopPurchaseAddress,
 } from '@run-planner/engine/authored-project';
-import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
-import type { CandidateProjectionService } from '../../../projections/candidateProjection';
-import type { RewardPickerProjectionService } from '../../../projections/rewardPicker';
+import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 import { CountedRewardEditor, RewardValueEditor } from '../rewards/RewardEditors';
 import { ShopPurchaseControl } from './ShopPurchaseControl';
@@ -15,7 +13,7 @@ import { ShopPurchaseControl } from './ShopPurchaseControl';
 interface FieldsCageRewardProps {
   readonly active: boolean;
   readonly address: LocalRewardAddress;
-  readonly binding: CountedRewardBinding;
+  readonly contextual: WorkspaceContextualResolver;
   readonly idPrefix: string;
   readonly label: string;
   readonly offer: ResolvedRewardOffer;
@@ -25,19 +23,12 @@ interface FieldsCageRewardProps {
 export function FieldsCageReward({
   active,
   address,
-  binding,
-  candidateProjection,
+  contextual,
   idPrefix,
   label,
   offer,
   onReplace,
-  project,
-  rewardPicker,
-}: FieldsCageRewardProps & {
-  readonly candidateProjection: CandidateProjectionService;
-  readonly project: ProjectDocument;
-  readonly rewardPicker: RewardPickerProjectionService;
-}) {
+}: FieldsCageRewardProps) {
   return (
     <section aria-label={label} className="local-reward-slot" data-active={active}>
       <div className="local-reward-heading">
@@ -48,14 +39,11 @@ export function FieldsCageReward({
         <span className="neutral-status">{active ? 'Active' : 'Dormant'}</span>
       </div>
       <CountedRewardEditor
-        binding={binding}
         candidateOwner={{ kind: 'localReward', address }}
-        candidateProjection={candidateProjection}
+        contextual={contextual}
         idPrefix={idPrefix}
         offer={offer}
         onReplace={onReplace}
-        project={project}
-        rewardPicker={rewardPicker}
       />
     </section>
   );
@@ -63,6 +51,7 @@ export function FieldsCageReward({
 
 interface ShopOfferEditorProps {
   readonly address: ShopOfferAddress;
+  readonly contextual: WorkspaceContextualResolver;
   readonly idPrefix: string;
   readonly label: string;
   readonly offer: ResolvedRewardOffer;
@@ -70,27 +59,19 @@ interface ShopOfferEditorProps {
   readonly onReplace: (value: ResolvedRewardOffer) => void;
   readonly purchaseAddress: ShopPurchaseAddress;
   readonly purchased: boolean;
-  readonly rewardTypes: readonly string[];
 }
 
 export function ShopOfferEditor({
   address,
-  candidateProjection,
+  contextual,
   idPrefix,
   label,
   offer,
   onPurchase,
   onReplace,
-  project,
   purchaseAddress,
   purchased,
-  rewardPicker,
-  rewardTypes,
-}: ShopOfferEditorProps & {
-  readonly candidateProjection: CandidateProjectionService;
-  readonly project: ProjectDocument;
-  readonly rewardPicker: RewardPickerProjectionService;
-}) {
+}: ShopOfferEditorProps) {
   return (
     <section className="shop-offer">
       <div className="shop-offer-heading">
@@ -100,22 +81,18 @@ export function ShopOfferEditor({
         </div>
         <ShopPurchaseControl
           address={purchaseAddress}
-          candidateProjection={candidateProjection}
           checked={purchased}
+          contextual={contextual}
           id={`${idPrefix}-purchased`}
           onChange={onPurchase}
-          project={project}
         />
       </div>
       <RewardValueEditor
         candidateOwner={{ kind: 'shopOffer', address }}
-        candidateProjection={candidateProjection}
+        contextual={contextual}
         idPrefix={idPrefix}
         offer={offer}
         onReplace={onReplace}
-        project={project}
-        rewardPicker={rewardPicker}
-        rewardTypes={rewardTypes}
       />
     </section>
   );

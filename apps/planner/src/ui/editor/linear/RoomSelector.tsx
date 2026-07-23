@@ -1,70 +1,58 @@
-import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import type { TargetAddress } from '@run-planner/engine/authored-project';
+import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import { useState } from 'react';
 
-import type { CandidateProjectionService } from '../../../projections/candidateProjection';
-import type { ContextualPickerProjectionService } from '../../../projections/contextualPicker';
-import {
-  roomCategoryForKind,
-  roomSelectorCategories,
-  selectRoomsForTargetCategory,
-} from '../../../projections/roomSelectorProjection';
-import { selectPresentProject, useAppSelector } from '../../../state/store';
+import type { ContextualPickerModel } from '../../../projections/contextualPicker';
+import type {
+  WorkspaceContextualResolver,
+  WorkspaceRoomInteraction,
+  WorkspaceRoomPickerControl,
+} from '../../../projections/structuredWorkspace';
 import { ContextualPicker } from '../../controls/ContextualPicker';
 
 interface RoomSelectorProps {
-  readonly biomeKey: string;
-  readonly candidateProjection: CandidateProjectionService;
-  readonly catalog: Catalog;
-  readonly contextualPicker: ContextualPickerProjectionService;
-  readonly current?: RoomDeclaration;
+  readonly contextual: WorkspaceContextualResolver;
   readonly disabled?: boolean;
   readonly idPrefix: string;
+  readonly label?: string;
   readonly onSelect: (gameName: string) => void;
-  readonly target: TargetAddress;
+  readonly owner: WorkspaceRoomPickerControl['address'];
+  readonly placeholder?: string;
 }
 
+const emptyModel: ContextualPickerModel<RoomDeclaration> = Object.freeze({
+  sections: Object.freeze([]),
+});
+
 export function RoomSelector({
-  biomeKey,
-  candidateProjection,
-  catalog,
-  contextualPicker,
-  current,
+  contextual,
   disabled = false,
   idPrefix,
+  label = 'Room',
   onSelect,
-  target,
+  owner,
+  placeholder = 'Select a room',
 }: RoomSelectorProps) {
-  const project = useAppSelector(selectPresentProject);
-  const categories = roomSelectorCategories(catalog, biomeKey);
-  const roomsByGameName = new Map<string, RoomDeclaration>();
-  for (const category of categories) {
-    for (const room of selectRoomsForTargetCategory(catalog, project, target, category)) {
-      roomsByGameName.set(room.gameName, room);
-    }
-  }
-  if (current !== undefined) {
-    roomsByGameName.set(current.gameName, current);
-  }
-  const rooms = [...roomsByGameName.values()];
-  const projectedRooms = candidateProjection.roomTargets(project, target, rooms);
-  const model = contextualPicker.project(
-    projectedRooms,
-    (option) => ({
-      label: option.value.label,
-      category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
-      selected: option.value.gameName === current?.gameName,
-    }),
-    (room) => room.gameName,
-  );
+  const interaction = contextual.resolveRoom(owner);
+  const [projection, setProjection] = useState<{
+    readonly interaction: WorkspaceRoomInteraction;
+    readonly model: ContextualPickerModel<RoomDeclaration>;
+  }>();
+  const model = projection?.interaction === interaction ? projection.model : emptyModel;
 
   return (
     <ContextualPicker
       disabled={disabled}
       id={`${idPrefix}-room`}
-      label="Room"
+      label={label}
       model={model}
+      onOpenChange={(open) => {
+        if (open && projection?.interaction !== interaction) {
+          setProjection(Object.freeze({ interaction, model: interaction.load() }));
+        }
+      }}
       onSelect={(room) => onSelect(room.gameName)}
-      placeholder={disabled ? 'Topology target limit reached' : 'Select a room'}
+      placeholder={disabled ? 'Topology target limit reached' : placeholder}
+      {...(interaction.selected === undefined ? {} : { triggerLabel: interaction.selected.label })}
     />
   );
 }

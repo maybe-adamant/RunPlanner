@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import {
   applyProjectCommand,
   createBiomeAddress,
@@ -546,7 +546,7 @@ describe('golden Underworld product loop', () => {
     );
     expect(evaluationWork.some((event) => event.kind === 'queryBatch')).toBe(true);
     expect(evaluationWork.filter((event) => event.kind === 'biomeReplay')).toEqual([]);
-  }, 60_000);
+  }, 30_000);
 
   it('renders and edits the maximum-width G preboss fork through the shared editor', async () => {
     const application = createApplication();
@@ -685,6 +685,9 @@ describe('golden Underworld product loop', () => {
     }
     const fieldsOutcomes = screen.getAllByLabelText('Fields door roll');
     expect(fieldsOutcomes).toHaveLength(4);
+    for (const control of fieldsOutcomes) {
+      fireEvent.focus(control);
+    }
     expect(
       fieldsOutcomes.every(
         (control) => control.getAttribute('data-candidate-support') !== 'unavailable',
@@ -730,6 +733,7 @@ describe('golden Underworld product loop', () => {
       expect(iText).not.toContain(occurrence.occurrenceId);
     }
     expect(screen.getByLabelText('Maximum NonGoal rewards')).toHaveProperty('value', '3');
+    fireEvent.focus(screen.getByLabelText('Maximum NonGoal rewards'));
     expect(
       screen.getByLabelText('Maximum NonGoal rewards').getAttribute('data-candidate-support'),
     ).not.toBe('unavailable');

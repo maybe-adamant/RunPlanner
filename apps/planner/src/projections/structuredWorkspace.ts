@@ -22,21 +22,28 @@ import {
   createTargetAddress,
   semanticAddressKey,
   type AuthoredBiomePlan,
+  type AuthoredFieldValue,
   type AuthoredRoomState,
+  type BatchRewardStoreAddress,
   type HubBiomePlan,
   type HubBiomeTopology,
   type BiomeAddress,
+  type BiomeFieldAddress,
   type ContinuationAddress,
   type HubSlotAddress,
   type HubVisitAddress,
   type LocalChildAddress,
+  type LocalChildGroupAddress,
   type LinearBiomePlan,
   type LinearBiomeTopology,
   type OccurrenceId,
   type OccurrenceAddress,
   type ProjectDocument,
+  type RewardWheelAddress,
   type RoomOccurrence,
   type SemanticAddress,
+  type ShopPurchaseAddress,
+  type SideRoomGeneration,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type {
@@ -57,6 +64,7 @@ import type {
 import { assertProjectEvaluationSource } from '@run-planner/engine/simulation';
 
 import type {
+  CandidateOptionProjection,
   CandidateProjectionService,
   CountedRewardCandidateOwner,
   RewardCandidateOwner,
@@ -117,9 +125,8 @@ export type WorkspaceRoomPickerControl =
     }
   | {
       readonly address: TargetAddress;
-      readonly candidateGameNames: readonly string[];
       readonly kind: 'targetRoomPicker';
-      readonly selectedGameName: string;
+      readonly selectedGameName?: string;
     };
 
 interface WorkspaceRewardControlBase {
@@ -182,16 +189,67 @@ export interface WorkspaceRewardInteraction {
     step: RewardPickerStep,
     selected: ResolvedRewardOffer,
   ) => ContextualPickerModel<ResolvedRewardOffer>;
-  readonly rewardTypes: readonly string[];
   readonly selected: ResolvedRewardOffer;
   readonly summary: (offer: ResolvedRewardOffer) => string;
 }
 
+export interface WorkspaceRoomInteraction {
+  readonly load: () => ContextualPickerModel<RoomDeclaration>;
+  readonly selected?: RoomDeclaration;
+}
+
 export interface WorkspaceContextualResolver {
-  readonly resolveReward: (control: WorkspaceRewardControl) => WorkspaceRewardInteraction;
-  readonly resolveRoom: (
-    control: WorkspaceRoomPickerControl,
-  ) => ContextualPickerModel<RoomDeclaration>;
+  readonly resolveBatchRewardStores: (
+    rewardStore: BatchRewardStoreAddress,
+    storeKeys: readonly string[],
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly resolveBiomeFields: (
+    field: BiomeFieldAddress,
+    values: readonly AuthoredFieldValue[],
+  ) => readonly CandidateOptionProjection<AuthoredFieldValue>[];
+  readonly resolveFieldsCageOutcomes: (
+    continuation: ContinuationAddress,
+    outcomes: readonly ('min' | 'max')[],
+  ) => readonly CandidateOptionProjection<'min' | 'max'>[];
+  readonly resolveHubSlots: (
+    slot: HubSlotAddress,
+    occurrenceId: OccurrenceId,
+    values: readonly boolean[],
+  ) => readonly CandidateOptionProjection<boolean>[];
+  readonly resolveHubVisits: (
+    visit: HubVisitAddress,
+    hubSlotKeys: readonly string[],
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly resolveReward: (owner: RewardCandidateOwner['address']) => WorkspaceRewardInteraction;
+  readonly resolveRewardWheelOfferCounts: (
+    wheel: RewardWheelAddress,
+    values: readonly number[],
+  ) => readonly CandidateOptionProjection<number>[];
+  readonly resolveRewardWheelPicks: (
+    wheel: RewardWheelAddress,
+    values: readonly number[],
+  ) => readonly CandidateOptionProjection<number>[];
+  readonly resolveRewardWheelStores: (
+    wheel: RewardWheelAddress,
+    storeKeys: readonly string[],
+  ) => readonly CandidateOptionProjection<string>[];
+  readonly resolveRoom: (owner: WorkspaceRoomPickerControl['address']) => WorkspaceRoomInteraction;
+  readonly resolveShipEncounterCounts: (
+    occurrence: OccurrenceAddress,
+    values: readonly (2 | 3)[],
+  ) => readonly CandidateOptionProjection<2 | 3>[];
+  readonly resolveShopPurchases: (
+    purchase: ShopPurchaseAddress,
+    values: readonly boolean[],
+  ) => readonly CandidateOptionProjection<boolean>[];
+  readonly resolveSideRoomEntryOrders: (
+    group: LocalChildGroupAddress,
+    values: readonly (readonly string[])[],
+  ) => readonly CandidateOptionProjection<readonly string[]>[];
+  readonly resolveSideRoomGenerations: (
+    sideRoom: LocalChildAddress,
+    values: readonly SideRoomGeneration[],
+  ) => readonly CandidateOptionProjection<SideRoomGeneration>[];
 }
 
 export interface WorkspaceCompletionLandmark {
@@ -876,23 +934,13 @@ function roomRewardControls(
 }
 
 function targetRoomPicker(
-  catalog: Catalog,
-  context: ProjectionContext,
   address: TargetAddress,
-  selectedGameName: string,
+  selectedGameName?: string,
 ): WorkspaceRoomPickerControl {
-  const gameNames = new Set<string>();
-  for (const category of roomSelectorCategories(catalog, address.biomeKey)) {
-    for (const room of selectRoomsForTargetCategory(catalog, context.project, address, category)) {
-      gameNames.add(room.gameName);
-    }
-  }
-  gameNames.add(selectedGameName);
   return Object.freeze({
     address,
-    candidateGameNames: Object.freeze([...gameNames]),
     kind: 'targetRoomPicker',
-    selectedGameName,
+    ...(selectedGameName === undefined ? {} : { selectedGameName }),
   });
 }
 
@@ -1240,7 +1288,7 @@ function linearTarget(
             kind: 'linearTarget' as const,
             address,
             interaction: 'replaceable' as const,
-            roomPicker: targetRoomPicker(catalog, context, address, occurrence.gameName),
+            roomPicker: targetRoomPicker(address, occurrence.gameName),
           })
         : Object.freeze({
             kind: 'linearTarget' as const,
@@ -1708,63 +1756,230 @@ function createWorkspaceContextualResolver(
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   services: StructuredWorkspaceContextualServices,
+  roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>,
+  rewardControls: ReadonlyMap<string, WorkspaceRewardControl>,
 ): WorkspaceContextualResolver {
   const candidates = services.candidateProjection.bind(project, evaluation);
-  const roomCache = new WeakMap<
-    WorkspaceRoomPickerControl,
-    ContextualPickerModel<RoomDeclaration>
-  >();
+  const roomCache = new WeakMap<WorkspaceRoomPickerControl, WorkspaceRoomInteraction>();
   const rewardCache = new WeakMap<WorkspaceRewardControl, WorkspaceRewardInteraction>();
+  const generatedRoomControls = new Map<string, WorkspaceRoomPickerControl>();
   return Object.freeze({
-    resolveRoom(control: WorkspaceRoomPickerControl): ContextualPickerModel<RoomDeclaration> {
+    resolveBatchRewardStores: candidates.batchRewardStores,
+    resolveBiomeFields: candidates.biomeFields,
+    resolveFieldsCageOutcomes: candidates.fieldsCageOutcomes,
+    resolveHubSlots: candidates.hubSlots,
+    resolveHubVisits: candidates.hubVisits,
+    resolveRoom(owner: WorkspaceRoomPickerControl['address']): WorkspaceRoomInteraction {
+      const ownerKey = semanticAddressKey(owner);
+      const control =
+        roomControls.get(ownerKey) ??
+        (owner.kind === 'target'
+          ? (() => {
+              const existing = generatedRoomControls.get(ownerKey);
+              if (existing !== undefined) {
+                return existing;
+              }
+              const created = targetRoomPicker(owner);
+              generatedRoomControls.set(ownerKey, created);
+              return created;
+            })()
+          : undefined);
+      if (control === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(`room control ${ownerKey} is missing`);
+      }
       const existing = roomCache.get(control);
       if (existing !== undefined) {
         return existing;
       }
-      const rooms = Object.freeze(
-        control.candidateGameNames.map((gameName) => requireRoom(catalog, gameName)),
-      );
-      const projected =
-        control.kind === 'startRoomPicker'
-          ? candidates.startRooms(control.address, rooms)
-          : candidates.roomTargets(control.address, rooms);
-      const model = services.contextualPicker.project(
-        projected,
-        (option) => ({
-          label: option.value.label,
-          category:
-            control.kind === 'targetRoomPicker'
-              ? (roomCategoryForKind(option.value.kind) ?? option.value.kind)
-              : option.value.kind,
-          selected: option.value.gameName === control.selectedGameName,
-        }),
-        (room) => room.gameName,
-      );
-      roomCache.set(control, model);
-      return model;
+      let model: ContextualPickerModel<RoomDeclaration> | undefined;
+      const interaction = Object.freeze({
+        load(): ContextualPickerModel<RoomDeclaration> {
+          if (model !== undefined) {
+            return model;
+          }
+          const candidateGameNames =
+            control.kind === 'startRoomPicker'
+              ? control.candidateGameNames
+              : (() => {
+                  const gameNames = new Set<string>();
+                  for (const category of roomSelectorCategories(
+                    catalog,
+                    control.address.biomeKey,
+                  )) {
+                    for (const room of selectRoomsForTargetCategory(
+                      catalog,
+                      project,
+                      control.address,
+                      category,
+                    )) {
+                      gameNames.add(room.gameName);
+                    }
+                  }
+                  if (control.selectedGameName !== undefined) {
+                    gameNames.add(control.selectedGameName);
+                  }
+                  return Object.freeze([...gameNames]);
+                })();
+          const rooms = Object.freeze(
+            candidateGameNames.map((gameName) => requireRoom(catalog, gameName)),
+          );
+          const projected =
+            control.kind === 'startRoomPicker'
+              ? candidates.startRooms(control.address, rooms)
+              : candidates.roomTargets(control.address, rooms);
+          model = services.contextualPicker.project(
+            projected,
+            (option) => ({
+              label: option.value.label,
+              category:
+                control.kind === 'targetRoomPicker'
+                  ? (roomCategoryForKind(option.value.kind) ?? option.value.kind)
+                  : option.value.kind,
+              selected: option.value.gameName === control.selectedGameName,
+            }),
+            (room) => room.gameName,
+          );
+          return model;
+        },
+        ...(control.selectedGameName === undefined
+          ? {}
+          : { selected: requireRoom(catalog, control.selectedGameName) }),
+      });
+      roomCache.set(control, interaction);
+      return interaction;
     },
-    resolveReward(control: WorkspaceRewardControl): WorkspaceRewardInteraction {
+    resolveReward(owner: RewardCandidateOwner['address']): WorkspaceRewardInteraction {
+      const ownerKey = semanticAddressKey(owner);
+      const control = rewardControls.get(ownerKey);
+      if (control === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `reward control ${ownerKey} is missing`,
+        );
+      }
       const existing = rewardCache.get(control);
       if (existing !== undefined) {
         return existing;
       }
-      const rewardTypes =
+      const load =
         control.kind === 'countedReward'
-          ? candidates.countedRewardTypes(control.owner, control.binding, control.offer.rewardType)
-          : control.rewardTypes;
+          ? (() => {
+              let rewardTypes: readonly string[] | undefined;
+              return (seed: ResolvedRewardOffer): Promise<ProjectedRewardDomain> => {
+                rewardTypes ??= candidates.countedRewardTypes(
+                  control.owner,
+                  control.binding,
+                  control.offer.rewardType,
+                );
+                return candidates.rewardDomain(control.owner, rewardTypes, seed);
+              };
+            })()
+          : (seed: ResolvedRewardOffer) =>
+              candidates.rewardDomain(control.owner, control.rewardTypes, seed);
       const interaction = Object.freeze({
         choiceLabel: services.rewardPicker.choiceLabel,
-        load: (seed: ResolvedRewardOffer) =>
-          candidates.rewardDomain(control.owner, rewardTypes, seed),
+        load,
         model: services.rewardPicker.project,
-        rewardTypes,
         selected: control.offer,
         summary: services.rewardPicker.summary,
       });
       rewardCache.set(control, interaction);
       return interaction;
     },
+    resolveRewardWheelOfferCounts: candidates.rewardWheelOfferCounts,
+    resolveRewardWheelPicks: candidates.rewardWheelPicks,
+    resolveRewardWheelStores: candidates.rewardWheelStores,
+    resolveShipEncounterCounts: candidates.shipEncounterCounts,
+    resolveShopPurchases: candidates.shopPurchases,
+    resolveSideRoomEntryOrders: candidates.sideRoomEntryOrders,
+    resolveSideRoomGenerations: candidates.sideRoomGenerations,
   });
+}
+
+interface WorkspaceContextualControlIndexes {
+  readonly rewards: ReadonlyMap<string, WorkspaceRewardControl>;
+  readonly rooms: ReadonlyMap<string, WorkspaceRoomPickerControl>;
+}
+
+function indexWorkspaceContextualControls(
+  routes: readonly WorkspaceRoute[],
+): WorkspaceContextualControlIndexes {
+  const rewards = new Map<string, WorkspaceRewardControl>();
+  const rooms = new Map<string, WorkspaceRoomPickerControl>();
+  const indexRoom = (room: WorkspaceRoomSummary | undefined): void => {
+    if (room === undefined) {
+      return;
+    }
+    for (const reward of room.rewardControls) {
+      rewards.set(semanticAddressKey(reward.owner.address), reward);
+    }
+  };
+  const indexOwner = (owner: WorkspaceContextualOwner | undefined): void => {
+    if (owner === undefined) {
+      return;
+    }
+    switch (owner.kind) {
+      case 'startRoom':
+        rooms.set(semanticAddressKey(owner.roomPicker.address), owner.roomPicker);
+        break;
+      case 'linearTarget':
+        if (owner.interaction === 'replaceable') {
+          rooms.set(semanticAddressKey(owner.roomPicker.address), owner.roomPicker);
+        }
+        break;
+      case 'roomState':
+        for (const reward of owner.rewards) {
+          rewards.set(semanticAddressKey(reward.owner.address), reward);
+        }
+        break;
+      case 'hubSideRoom':
+        rewards.set(semanticAddressKey(owner.reward.owner.address), owner.reward);
+        break;
+      case 'hubSlot':
+      case 'hubVisit':
+      case 'linearDecision':
+        break;
+    }
+  };
+  for (const route of routes) {
+    for (const biome of route.biomes) {
+      for (const entry of biome.entries) {
+        indexOwner(entry.contextualOwner);
+        indexRoom(entry.room);
+      }
+      if (biome.kind === 'LinearBiome') {
+        for (const decision of biome.decisions) {
+          indexOwner(decision.contextualOwner);
+          for (const target of decision.targets) {
+            indexOwner(target.contextualOwner);
+            indexOwner(target.room.contextualOwner);
+            indexRoom(target.room);
+          }
+        }
+        for (const target of biome.terminal.targets) {
+          indexOwner(target.contextualOwner);
+          indexOwner(target.room.contextualOwner);
+          indexRoom(target.room);
+        }
+      } else {
+        for (const slot of biome.board.slots) {
+          indexOwner(slot.contextualOwner);
+          indexOwner(slot.room?.contextualOwner);
+          indexRoom(slot.room);
+          for (const sideRoom of slot.sideRooms) {
+            indexOwner(sideRoom.contextualOwner);
+          }
+        }
+        for (const visit of biome.visits) {
+          indexOwner(visit.contextualOwner);
+          indexOwner(visit.room?.contextualOwner);
+          indexRoom(visit.room);
+        }
+        indexOwner(biome.terminal.contextualOwner);
+        indexRoom(biome.terminal.room);
+      }
+    }
+  }
+  return Object.freeze({ rewards, rooms });
 }
 
 export function createStructuredWorkspaceProjection(
@@ -1851,8 +2066,16 @@ export function createStructuredWorkspaceProjection(
       );
       registerDestination(projectContext, projectAddress, 'routeRail');
       registerFindingDestinations(evaluation.findings, focusByOwner);
+      const contextualControls = indexWorkspaceContextualControls(routes);
       const result = Object.freeze({
-        contextual: createWorkspaceContextualResolver(catalog, project, evaluation, services),
+        contextual: createWorkspaceContextualResolver(
+          catalog,
+          project,
+          evaluation,
+          services,
+          contextualControls.rooms,
+          contextualControls.rewards,
+        ),
         focusByOwner: new Map(focusByOwner),
         marker: Object.freeze({
           address: projectAddress,

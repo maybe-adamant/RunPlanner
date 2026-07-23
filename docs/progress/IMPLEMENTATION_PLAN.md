@@ -1980,7 +1980,7 @@ Gate:
 - no candidate path invents a slot-order Hub prefix;
 - N reward and structural candidates retain selected-plan parity.
 
-#### Refactor Slice 6: Structured Workspace Consumption and Closure
+#### Refactor Slice 6: Structured Workspace Consumption Bridge
 
 Deliver:
 
@@ -1997,6 +1997,108 @@ Gate:
 - one project simulation occurs per authored revision;
 - ordinary reward domains perform zero full addressed-biome candidate replays;
 - interactive candidate work is proportional to the focused owner and domain;
+- the live React path no longer receives the unbound candidate, contextual
+  picker, or reward picker services;
+- capability closure may proceed without changing candidate semantics.
+
+#### Refactor Slice 7: Composition Capability Seal
+
+Deliver:
+
+- a production-facing candidate-session factory whose only simulation
+  capability is binding one exact immutable `ProjectDocument` and its published
+  `ProjectEvaluation`;
+- removal of the broad candidate projection, contextual picker, and reward
+  picker services from the public `createApplication()` result;
+- migration of every scalar compatibility consumer, including engine,
+  workspace, benchmark, and React tests, to the same production session factory
+  or structured-workspace/application boundary used at runtime;
+- deletion of the scalar compatibility API before this slice commits;
+- focused fixtures that provide setup and injectable observers without
+  implementing alternate candidate behavior;
+- one audited production dependency path from application composition through
+  the structured workspace to the bound session;
+- no general `evaluateProject(project)` callback below the Redux publication
+  boundary.
+
+Gate:
+
+- `main.tsx`, `App`, and editor component props expose no simulation or
+  candidate-projection service;
+- production candidate acquisition always consumes the exact already-published
+  project/evaluation pair;
+- engine, workspace, benchmark, and React tests exercise the production
+  composition path appropriate to their boundary;
+- test fixtures may observe production evaluation but cannot expose a scalar
+  compatibility service or implement an alternate evaluator;
+- candidate support, evidence, replay instrumentation, and current editor
+  behavior remain unchanged.
+
+#### Refactor Slice 8: Workspace-Owned Interaction Catalog
+
+Deliver:
+
+- structured-workspace interaction descriptors for every live candidate
+  family: start and target rooms, counted and explicit rewards, biome fields,
+  batch stores, Fields outcomes, O encounter and wheel settings, Hub
+  membership and visits, side-room generation and entry order, and shop
+  purchases;
+- declaration-owned choice domains, labels, semantic owners, selected values,
+  and zero-argument lazy loaders captured by those descriptors;
+- removal of React-supplied candidate addresses, value arrays, store lists, and
+  option grouping from candidate requests;
+- one shared UI interaction adapter for activation, immutable-workspace cache
+  identity, pending reward-domain state, and stale-result rejection;
+- replacement of the broad `WorkspaceContextualResolver` methods and the
+  control-specific `useRef`/`useState` lazy implementations with typed
+  workspace interactions.
+
+Gate:
+
+- React may render static choices and authored selections but cannot choose a
+  candidate horizon or construct an evaluation domain;
+- every candidate loader is zero-argument with respect to semantic owner and
+  declaration-owned values;
+- closed, disabled, dormant, and off-focus controls perform no candidate query;
+- undo, redo, profile replacement, or any authored edit invalidates interaction
+  results by immutable workspace identity;
+- all current keyboard, pointer, finding-navigation, and retained-authorship
+  behavior remains intact.
+
+#### Refactor Slice 9: Boundary Enforcement and Closure
+
+Deliver:
+
+- lint/import restrictions preventing `ui/**` from importing candidate-session
+  construction, scalar candidate services, contextual projection authorities,
+  or runtime simulation entry points; type-only published-evaluation imports
+  remain allowed;
+- one allowed UI interaction adapter as the only React-side caller of lazy
+  workspace loaders;
+- architecture tests proving the production application exports only the
+  structured workspace boundary and that no scalar compatibility helper or
+  alternate test evaluation authority remains;
+- representative Underworld and Surface render-purity fixtures covering all
+  eight biomes with zero candidate query batches before interaction;
+- table-driven activation fixtures proving each candidate family evaluates
+  only its addressed owner/domain and does not reacquire the project
+  evaluation;
+- stale asynchronous reward-domain fixtures spanning edit, undo, redo, and
+  profile replacement;
+- final G product-loop and complete-suite measurements, an audit confirming
+  that fixtures compose production authorities, and reconciliation of the
+  candidate design/progress documents.
+
+Gate:
+
+- simulation and candidate-session ownership ends at the application/workspace
+  boundary;
+- no React render path can reach a candidate evaluation authority directly;
+- runtime and tests share the same candidate-session and structured-workspace
+  production boundaries;
+- one user activation produces only the declared owner/domain work and stale
+  results cannot publish into a newer workspace;
+- ordinary candidate interactions perform zero full addressed-biome replay;
 - Phase 7 Commit 11 may resume.
 
 ### Commit 11: Linear Spine and Focused Inspector

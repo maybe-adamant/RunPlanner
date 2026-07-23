@@ -21,13 +21,11 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
     <Provider store={application.store}>
       {options.companion}
       <App
-        candidateProjection={application.candidateProjection}
         catalog={application.catalog}
         catalogSummary={application.catalogSummary}
-        contextualPicker={application.contextualPicker}
         editorNavigation={application.editorNavigation}
         projectOperations={application.projectOperations}
-        rewardPicker={application.rewardPicker}
+        structuredWorkspace={application.structuredWorkspace}
       />
     </Provider>,
   );

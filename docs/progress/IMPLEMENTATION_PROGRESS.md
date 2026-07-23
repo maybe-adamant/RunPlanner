@@ -1537,18 +1537,16 @@ not need to translate addresses into rendered positions.
 Structure nodes carry typed semantic-owner descriptors for starts, decisions,
 targets, Room Occurrences, Hub slots, Hub visits, and N side rooms. Replaceable
 Linear batch targets additionally retain exact room-picker descriptors with
-their declaration-owned candidate domain, selection, and semantic owner;
-independent terminal targets are explicitly read-only. Room summaries retain
-exact incoming, cage, wheel, side-room, shop-offer, and shop-purchase reward
-owners. A project-bound lazy contextual resolver currently composes the
+their selection and semantic owner; the interaction derives their
+declaration-owned candidate domain only when opened. Independent terminal
+targets are explicitly read-only. Room summaries retain exact incoming, cage,
+wheel, side-room, shop-offer, and shop-purchase reward owners. At this
+checkpoint, a project-bound lazy contextual resolver composed only the
 replaceable room and reward descriptors with the existing application-owned
-candidate, contextual-picker, and reward projections. It publishes grouped
-room models and complete reward interactions only when the inspector asks for
-them, without eagerly evaluating every picker or moving candidate simulation,
-grouping, or explanation policy into React. Contextual composition for decision
-settings, room-lifecycle controls, and Hub membership, visit, or local-child
-selection remains deliberately outside this slice pending the candidate-system
-refactor and React-consumption reassessment.
+candidate, contextual-picker, and reward projections. Contextual composition
+for decision settings, room-lifecycle controls, and Hub membership, visit, or
+local-child selection remained deliberately outside Commit 10 pending the
+candidate-system refactor and React-consumption reassessment.
 
 Linear projections preserve authored starts and fixed entries, every generated
 decision and leaf, the picked trunk, progressively unassessed retained overflow,
@@ -1725,3 +1723,36 @@ candidate replay authority is the explicitly broad biome-field path. Focused N,
 O, and project parity tests pass with 52 tests; the complete suite passes with
 69 test files and 535 tests. Planner-engine typecheck, touched-file lint, and
 diff checks also pass.
+
+Candidate-System Refactor Slice 6 is complete. The live application now
+projects one structured workspace from the exact Redux-published
+`ProjectDocument` and `ProjectEvaluation` pair. React receives that workspace's
+contextual resolver rather than the unbound candidate, contextual-picker, and
+reward-picker services. Room and reward interactions resolve lazily from
+workspace-owned semantic descriptors; specialized biome, decision, wheel,
+shop-purchase, and Hub controls invoke explicit typed workspace resolvers only
+when activated. The workspace retains the exact bound option session; React
+cannot access it or implicitly acquire another project evaluation.
+
+Blank physical Linear targets are resolved lazily through the workspace
+boundary without becoming preallocated authored state. Existing authored room
+and reward owners are indexed by semantic address, so retained or unassessed
+controls remain editable while preserving the workspace as the candidate
+contact. Closed room pickers read their authored selection from the descriptor
+without enumerating the room domain. Counted reward interactions likewise defer
+store-backed reward-type resolution until their first load. The scalar
+application service remains temporary Slice 6 migration debt. Slice 7 removes
+it after engine, workspace, benchmark, and React consumers move to the same
+production session-factory and structured-workspace boundaries used at
+runtime; tests do not preserve it as a fixture surface.
+
+The representative G author/undo/redo product loop completed in 13.95 seconds
+of test work and 21.59 seconds wall time in isolation on 2026-07-23, compared
+with the recorded 25.22–27.81 second baselines. It still records one
+`projectEvaluation` per immutable authored identity, at least one candidate
+query batch, and zero full biome replays. The temporary local timeout was
+reduced from 60 seconds to 30 seconds. The two-worker complete suite passes with
+69 test files and 536 tests, including that restored timeout. Slice 6 closes the
+consumption bridge, but Phase 7 Commit 11 remains paused while Refactor Slices
+7-9 seal application composition, move every live candidate family to
+workspace-owned interactions, and enforce the no-render-evaluation boundary.

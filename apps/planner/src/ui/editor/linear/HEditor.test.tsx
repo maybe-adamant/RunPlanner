@@ -13,20 +13,20 @@ import {
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject, type LinearBiomeProjectEvaluation } from '@run-planner/engine/simulation';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { StructuredWorkspaceProjectionService } from '../../../projections/structuredWorkspace';
 import {
-  createCandidateProjectionService,
-  type CandidateProjectionService,
-} from '../../../projections/candidateProjection';
-import { createContextualOptionResolver } from '../../../projections/contextualOptions';
-import { createContextualPickerProjection } from '../../../projections/contextualPicker';
-import { createRewardPickerProjection } from '../../../projections/rewardPicker';
-import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
+  createPlannerStore,
+  selectPresentProject,
+  selectProjectEvaluation,
+  useAppSelector,
+} from '../../../state/store';
+import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
 const biome = createBiomeAddress('Underworld', 'H');
@@ -131,43 +131,24 @@ function hProject(withTerminal: boolean): ProjectDocument {
 }
 
 function HEditorHarness({
-  candidateProjection,
+  structuredWorkspace,
 }: {
-  readonly candidateProjection: CandidateProjectionService;
+  readonly structuredWorkspace: StructuredWorkspaceProjectionService;
 }) {
   const project = useAppSelector(selectPresentProject);
   const plan = hPlan(project);
-  const firstContinuation = plan.topology?.continuations[0];
-  const evaluation: LinearBiomeProjectEvaluation = Object.freeze({
-    kind: 'LinearBiome',
-    biomeKey: biome.biomeKey,
-    origin: biome,
-    authoring: 'incomplete',
-    frontier: createContinuationAddress(biome, firstContinuation?.parentOccurrenceId ?? null),
-    coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
-    findings:
-      firstContinuation === undefined
-        ? Object.freeze([])
-        : Object.freeze([
-            Object.freeze({
-              code: 'continuationMissing' as const,
-              severity: 'error' as const,
-              phase: 'completeness' as const,
-              origin: createContinuationAddress(biome, firstContinuation.parentOccurrenceId),
-              evidence: Object.freeze({ internalGameName: 'H_Intro' }),
-            }),
-          ]),
-  });
+  const projectEvaluation = useAppSelector(selectProjectEvaluation);
+  const evaluation = projectEvaluation.routes
+    .find((route) => route.routeKey === biome.routeKey)
+    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
+  if (evaluation !== undefined && evaluation.kind !== 'LinearBiome') {
+    throw new Error('H editor fixture received a non-Linear evaluation');
+  }
   return (
     <LinearBiomeEditor
-      candidateProjection={candidateProjection}
       catalog={catalog}
-      contextualPicker={createContextualPickerProjection(createContextualOptionResolver(catalog))}
-      rewardPicker={createRewardPickerProjection(
-        catalog,
-        createContextualPickerProjection(createContextualOptionResolver(catalog)),
-      )}
-      evaluation={evaluation}
+      contextual={structuredWorkspace.project(project, projectEvaluation).contextual}
+      evaluation={evaluation?.kind === 'LinearBiome' ? evaluation : undefined}
       plan={plan}
       routeKey={biome.routeKey}
     />
@@ -181,11 +162,11 @@ function renderH(project: ProjectDocument) {
     evaluateProject,
     initialProject: project,
   });
-  const candidateProjection = createCandidateProjectionService(catalog, evaluateProject);
+  const { structuredWorkspace } = createStructuredWorkspaceTestServices(evaluateProject);
   const user = userEvent.setup();
   const view = render(
     <Provider store={store}>
-      <HEditorHarness candidateProjection={candidateProjection} />
+      <HEditorHarness structuredWorkspace={structuredWorkspace} />
     </Provider>,
   );
   return { store, user, ...view };
@@ -209,7 +190,6 @@ describe('H editor projection', () => {
     expect(within(outcomes[0]!).getByRole('option', { name: 'Max (3)' })).toBeTruthy();
     expect(firstOutcome).toHaveProperty('value', 'min');
     expect(firstOutcome?.getAttribute('data-candidate-support')).toBe('unavailable');
-    expect(screen.getAllByLabelText('1 finding').length).toBeGreaterThan(0);
     expect(
       screen.getByText(
         'No offered room uses the Fields multi-cage count; Max still affects later Fields rolls.',

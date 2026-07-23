@@ -1,6 +1,6 @@
 import type { LinearBiomeProjectEvaluation } from '@run-planner/engine/simulation';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import type { LinearBiomePlan } from '@run-planner/engine/authored-project';
+import type { BiomeFieldAddress, LinearBiomePlan } from '@run-planner/engine/authored-project';
 import {
   createBiomeAddress,
   createBiomeFieldAddress,
@@ -9,16 +9,12 @@ import {
   createFixedEntryRoomAddress,
   createOccurrenceAddress,
 } from '@run-planner/engine/authored-project';
-import {
-  presentCandidateLabel,
-  type CandidateProjectionService,
-} from '../../../projections/candidateProjection';
-import type { ContextualPickerProjectionService } from '../../../projections/contextualPicker';
-import type { RewardPickerProjectionService } from '../../../projections/rewardPicker';
+import { presentCandidateLabel } from '../../../projections/candidateProjection';
+import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { presentBiomeStatus } from '../../../projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
-import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
+import { useAppDispatch } from '../../../state/store';
 import { candidateSelectState } from '../../feedback/candidatePresentation';
 import { LinearTopologyEditor } from './LinearTopologyEditor';
 import {
@@ -27,15 +23,14 @@ import {
   StatusBadge,
 } from '../../feedback/EvaluationFeedback';
 import { RoomStateEditor } from '../rooms/RoomStateEditor';
-import { ContextualPicker } from '../../controls/ContextualPicker';
+import { useLazyCandidateOptions } from '../../controls/useLazyCandidateOptions';
+import { RoomSelector } from './RoomSelector';
 
 interface LinearBiomeEditorProps {
-  readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
-  readonly contextualPicker: ContextualPickerProjectionService;
+  readonly contextual: WorkspaceContextualResolver;
   readonly evaluation: LinearBiomeProjectEvaluation | undefined;
   readonly plan: LinearBiomePlan;
-  readonly rewardPicker: RewardPickerProjectionService;
   readonly routeKey: string;
 }
 
@@ -67,17 +62,64 @@ function startDeclaration(catalog: Catalog, gameName: string): RoomDeclaration {
   return room;
 }
 
+function BiomeFieldControl({
+  contextual,
+  fieldAddress,
+  fieldValues,
+  id,
+  onReplace,
+  value,
+}: {
+  readonly contextual: WorkspaceContextualResolver;
+  readonly fieldAddress: BiomeFieldAddress;
+  readonly fieldValues: readonly number[];
+  readonly id: string;
+  readonly onReplace: (value: number) => void;
+  readonly value: number;
+}) {
+  const candidates = useLazyCandidateOptions(contextual, `biome-field:${id}`, () =>
+    contextual.resolveBiomeFields(fieldAddress, fieldValues),
+  );
+  const selected = candidates.options?.find((option) => option.value === value);
+  return (
+    <label className="field-control biome-field" htmlFor={id}>
+      <span className="field-label-with-marker">
+        Maximum NonGoal rewards
+        <SemanticOwnerMarker address={fieldAddress} />
+      </span>
+      <select
+        {...candidateSelectState(selected)}
+        id={id}
+        onChange={(event) => onReplace(Number(event.target.value))}
+        onFocus={candidates.activate}
+        onPointerDown={candidates.activate}
+        value={String(value)}
+      >
+        {fieldValues.map((fieldValue) => {
+          const option = candidates.options?.find((candidate) => candidate.value === fieldValue);
+          return (
+            <option
+              key={String(fieldValue)}
+              value={String(fieldValue)}
+              {...candidateSelectState(option)}
+            >
+              {presentCandidateLabel(String(fieldValue), option)}
+            </option>
+          );
+        })}
+      </select>
+    </label>
+  );
+}
+
 export function LinearBiomeEditor({
-  candidateProjection,
   catalog,
-  contextualPicker,
+  contextual,
   evaluation,
   plan,
-  rewardPicker,
   routeKey,
 }: LinearBiomeEditorProps) {
   const dispatch = useAppDispatch();
-  const project = useAppSelector(selectPresentProject);
   const biomeDeclaration = catalog.biomes.byKey[plan.biomeKey];
   if (biomeDeclaration === undefined) {
     throw new Error(`${plan.biomeKey} biome declaration is missing`);
@@ -116,10 +158,10 @@ export function LinearBiomeEditor({
       { length: boundedField.max - boundedField.min + 1 },
       (_, index) => boundedField.min + index,
     );
-    const projectedFields = candidateProjection.biomeFields(project, fieldAddress, fieldValues);
-    const selectedField = projectedFields.find(
-      (option) => option.value === plan.state.maxNonGoalRewards,
-    );
+    const fieldValue = plan.state.maxNonGoalRewards;
+    if (typeof fieldValue !== 'number') {
+      throw new Error(`${plan.biomeKey} has no numeric maxNonGoalRewards value`);
+    }
     const fixedSourceDescriptor = fixedEntries.at(-1);
     const fixedSourceRoom =
       fixedSourceDescriptor === undefined
@@ -160,36 +202,22 @@ export function LinearBiomeEditor({
             </div>
           </header>
 
-          <label className="field-control biome-field" htmlFor={`${plan.biomeKey}-non-goal-cap`}>
-            <span className="field-label-with-marker">
-              Maximum NonGoal rewards
-              <SemanticOwnerMarker address={fieldAddress} />
-            </span>
-            <select
-              {...candidateSelectState(selectedField)}
-              id={`${plan.biomeKey}-non-goal-cap`}
-              onChange={(event) =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'ReplaceBiomeField',
-                    field: fieldAddress,
-                    value: Number(event.target.value),
-                  }),
-                )
-              }
-              value={String(plan.state.maxNonGoalRewards)}
-            >
-              {projectedFields.map((option) => (
-                <option
-                  key={String(option.value)}
-                  value={String(option.value)}
-                  {...candidateSelectState(option)}
-                >
-                  {presentCandidateLabel(String(option.value), option)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <BiomeFieldControl
+            contextual={contextual}
+            fieldAddress={fieldAddress}
+            fieldValues={fieldValues}
+            id={`${plan.biomeKey}-non-goal-cap`}
+            onReplace={(value) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceBiomeField',
+                  field: fieldAddress,
+                  value,
+                }),
+              )
+            }
+            value={fieldValue}
+          />
 
           <div className="fixed-entry-list" aria-label="Fixed biome entries" role="group">
             {fixedEntries.map((entry) => {
@@ -252,12 +280,10 @@ export function LinearBiomeEditor({
           ) : (
             <LinearTopologyEditor
               biome={biome}
-              candidateProjection={candidateProjection}
               catalog={catalog}
-              contextualPicker={contextualPicker}
+              contextual={contextual}
               evaluation={evaluation}
               plan={plan}
-              rewardPicker={rewardPicker}
               topology={topology}
             />
           )}
@@ -272,16 +298,6 @@ export function LinearBiomeEditor({
     : 'starting';
 
   if (topology === null) {
-    const projectedOptions = candidateProjection.startRooms(project, biome, options);
-    const startPicker = contextualPicker.project(
-      projectedOptions,
-      (option) => ({
-        label: option.value.label,
-        category: option.value.kind,
-        selected: false,
-      }),
-      (room) => room.gameName,
-    );
     return (
       <SemanticFindingsScope findings={evaluation?.findings ?? []}>
         <section className="biome-editor" aria-labelledby={titleId}>
@@ -308,20 +324,21 @@ export function LinearBiomeEditor({
               </p>
             </div>
             <div className="start-room-form">
-              <ContextualPicker
-                id={startRoomId}
+              <RoomSelector
+                contextual={contextual}
+                idPrefix={startRoomId}
                 label={`${authoredStartKind === 'opening' ? 'Opening' : 'Starting'} room`}
-                model={startPicker}
-                onSelect={(room) => {
+                onSelect={(gameName) => {
                   dispatch(
                     authoredProjectCommandDispatched({
                       kind: 'CreateStart',
                       biome,
                       occurrenceId: allocateOccurrenceId(),
-                      gameName: room.gameName,
+                      gameName,
                     }),
                   );
                 }}
+                owner={biome}
                 placeholder={`Select ${authoredStartKind === 'opening' ? 'an opening' : 'a room'}`}
               />
             </div>
@@ -339,16 +356,6 @@ export function LinearBiomeEditor({
   }
   const startRoom = startDeclaration(catalog, start.gameName);
   const startAddress = createOccurrenceAddress(biome, start.occurrenceId);
-  const projectedOptions = candidateProjection.startRooms(project, startAddress, options);
-  const startPicker = contextualPicker.project(
-    projectedOptions,
-    (option) => ({
-      label: option.value.label,
-      category: option.value.kind,
-      selected: option.value.gameName === start.gameName,
-    }),
-    (room) => room.gameName,
-  );
 
   return (
     <SemanticFindingsScope findings={evaluation?.findings ?? []}>
@@ -387,39 +394,37 @@ export function LinearBiomeEditor({
             <span className="room-kind">{startRoom.kind}</span>
             <SemanticOwnerMarker address={startAddress} />
           </div>
-          <ContextualPicker
-            id={`${startRoomId}-authored`}
+          <RoomSelector
+            contextual={contextual}
+            idPrefix={`${startRoomId}-authored`}
             label="Room"
-            model={startPicker}
-            onSelect={(room) => {
+            onSelect={(gameName) => {
               dispatch(
                 authoredProjectCommandDispatched({
                   kind: 'ReplaceOccurrenceRoom',
                   occurrence: startAddress,
-                  gameName: room.gameName,
+                  gameName,
                 }),
               );
             }}
+            owner={startAddress}
             placeholder="Select a room"
           />
           <RoomStateEditor
             biome={biome}
-            candidateProjection={candidateProjection}
             catalog={catalog}
+            contextual={contextual}
             entryActive={true}
             occurrence={start}
-            rewardPicker={rewardPicker}
           />
         </article>
 
         <LinearTopologyEditor
           biome={biome}
-          candidateProjection={candidateProjection}
           catalog={catalog}
-          contextualPicker={contextualPicker}
+          contextual={contextual}
           evaluation={evaluation}
           plan={plan}
-          rewardPicker={rewardPicker}
           topology={topology}
         />
       </section>

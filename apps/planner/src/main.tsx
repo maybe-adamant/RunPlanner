@@ -36,13 +36,11 @@ createRoot(rootElement).render(
   <StrictMode>
     <Provider store={application.store}>
       <App
-        candidateProjection={application.candidateProjection}
         catalog={application.catalog}
         catalogSummary={application.catalogSummary}
-        contextualPicker={application.contextualPicker}
         editorNavigation={application.editorNavigation}
         projectOperations={application.projectOperations}
-        rewardPicker={application.rewardPicker}
+        structuredWorkspace={application.structuredWorkspace}
       />
     </Provider>
   </StrictMode>,

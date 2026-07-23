@@ -21,9 +21,10 @@ import {
   useAppSelector,
 } from '../../state/store';
 import type { ProjectOperations } from '../../workspace/projectOperations';
-import type { CandidateProjectionService } from '../../projections/candidateProjection';
-import type { ContextualPickerProjectionService } from '../../projections/contextualPicker';
-import type { RewardPickerProjectionService } from '../../projections/rewardPicker';
+import type {
+  StructuredWorkspaceProjectionService,
+  WorkspaceContextualResolver,
+} from '../../projections/structuredWorkspace';
 import {
   FindingCount,
   ProjectFindings,
@@ -36,13 +37,11 @@ import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
 import { HubBiomeEditor } from '../editor/hub/HubBiomeEditor';
 
 interface AppProps {
-  readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
-  readonly contextualPicker: ContextualPickerProjectionService;
   readonly editorNavigation: EditorNavigation;
   readonly projectOperations: ProjectOperations;
-  readonly rewardPicker: RewardPickerProjectionService;
+  readonly structuredWorkspace: StructuredWorkspaceProjectionService;
 }
 
 function RouteOverview({
@@ -114,21 +113,17 @@ function RouteOverview({
 }
 
 function RouteWorkspace({
-  candidateProjection,
   catalog,
-  contextualPicker,
+  contextual,
   navigation,
   feedback,
-  rewardPicker,
   route,
   routeEvaluation,
 }: {
-  readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
-  readonly contextualPicker: ContextualPickerProjectionService;
+  readonly contextual: WorkspaceContextualResolver;
   readonly navigation: RouteEditorNavigation;
   readonly feedback: RouteFeedbackPresentation;
-  readonly rewardPicker: RewardPickerProjectionService;
   readonly route: AuthoredRoutePlan;
   readonly routeEvaluation: ProjectRouteEvaluation;
 }) {
@@ -230,25 +225,22 @@ function RouteWorkspace({
           />
         ) : activeBiomePlan?.kind === 'HubBiome' ? (
           <HubBiomeEditor
-            candidateProjection={candidateProjection}
             catalog={catalog}
+            contextual={contextual}
             evaluation={
               activeBiomeEvaluation?.kind === 'HubBiome' ? activeBiomeEvaluation : undefined
             }
             plan={activeBiomePlan}
-            rewardPicker={rewardPicker}
             routeKey={route.routeKey}
           />
         ) : activeBiomePlan?.kind === 'LinearBiome' ? (
           <LinearBiomeEditor
-            candidateProjection={candidateProjection}
             catalog={catalog}
-            contextualPicker={contextualPicker}
+            contextual={contextual}
             evaluation={
               activeBiomeEvaluation?.kind === 'LinearBiome' ? activeBiomeEvaluation : undefined
             }
             plan={activeBiomePlan}
-            rewardPicker={rewardPicker}
             routeKey={route.routeKey}
           />
         ) : null}
@@ -258,17 +250,16 @@ function RouteWorkspace({
 }
 
 export function App({
-  candidateProjection,
   catalog,
   catalogSummary,
-  contextualPicker,
   editorNavigation,
   projectOperations,
-  rewardPicker,
+  structuredWorkspace,
 }: AppProps) {
   const activeRouteKey = useAppSelector((state) => state.editorSession.activeRouteKey);
   const project = useAppSelector(selectPresentProject);
   const evaluation = useAppSelector(selectProjectEvaluation);
+  const workspace = structuredWorkspace.project(project, evaluation);
   const dispatch = useAppDispatch();
   const feedback = projectFeedbackHierarchy(evaluation);
   const activeRoute = project.routes.find((route) => route.routeKey === activeRouteKey);
@@ -358,12 +349,10 @@ export function App({
         activeRouteNavigation !== undefined &&
         activeRouteFeedback !== undefined && (
           <RouteWorkspace
-            candidateProjection={candidateProjection}
             catalog={catalog}
-            contextualPicker={contextualPicker}
+            contextual={workspace.contextual}
             feedback={activeRouteFeedback}
             navigation={activeRouteNavigation}
-            rewardPicker={rewardPicker}
             route={activeRoute}
             routeEvaluation={activeRouteEvaluation}
           />
