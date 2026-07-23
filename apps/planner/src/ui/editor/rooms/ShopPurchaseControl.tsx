@@ -1,50 +1,35 @@
 import type { ShopPurchaseAddress } from '@run-planner/engine/authored-project';
-import { useRef, useState } from 'react';
 import { candidateSupport } from '../../../projections/candidateProjection';
-import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
+import {
+  requireWorkspaceInteraction,
+  workspaceInteractionKey,
+  type WorkspaceInteractionCatalog,
+} from '../../../projections/structuredWorkspace';
+import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 
 interface ShopPurchaseControlProps {
   readonly address: ShopPurchaseAddress;
   readonly checked: boolean;
-  readonly contextual: WorkspaceContextualResolver;
   readonly id: string;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly onChange: (purchased: boolean) => void;
 }
 
 export function ShopPurchaseControl({
   address,
   checked,
-  contextual,
   id,
+  interactions,
   onChange,
 }: ShopPurchaseControlProps) {
-  type Projection = {
-    readonly checked: boolean;
-    readonly contextual: WorkspaceContextualResolver;
-    readonly support: ReturnType<typeof candidateSupport>;
-  };
-  const projectionRef = useRef<Projection | undefined>(undefined);
-  const [projection, setProjection] = useState<Projection>();
-  const support =
-    projection?.contextual === contextual && projection.checked === checked
-      ? projection.support
-      : 'unavailable';
-  const activateProjection = () => {
-    if (
-      support !== 'unavailable' ||
-      (projectionRef.current?.contextual === contextual &&
-        projectionRef.current.checked === checked)
-    ) {
-      return;
-    }
-    const candidate = contextual
-      .resolveShopPurchases(address, [false, true])
-      .find((option) => option.value === checked);
-    const next = { checked, contextual, support: candidateSupport(candidate) };
-    projectionRef.current = next;
-    setProjection(next);
-  };
+  const interaction = requireWorkspaceInteraction(
+    interactions.shopPurchases,
+    workspaceInteractionKey(address),
+  );
+  const projection = useWorkspaceInteraction(interaction);
+  const candidate = projection.result?.find((option) => option.value === checked);
+  const support = candidateSupport(candidate);
   return (
     <label className="purchase-control" data-candidate-support={support} htmlFor={id}>
       <SemanticOwnerMarker address={address} />
@@ -52,8 +37,8 @@ export function ShopPurchaseControl({
         checked={checked}
         id={id}
         onChange={(event) => onChange(event.target.checked)}
-        onFocus={activateProjection}
-        onPointerDown={activateProjection}
+        onFocus={projection.activate}
+        onPointerDown={projection.activate}
         type="checkbox"
       />
       Purchased

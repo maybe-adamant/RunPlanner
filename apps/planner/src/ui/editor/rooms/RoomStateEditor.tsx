@@ -16,11 +16,15 @@ import {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import { presentCandidateLabel } from '../../../projections/candidateProjection';
-import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
+import {
+  requireWorkspaceInteraction,
+  workspaceInteractionKey,
+  type WorkspaceInteractionCatalog,
+} from '../../../projections/structuredWorkspace';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { useAppDispatch } from '../../../state/store';
 import { candidateSelectState } from '../../feedback/candidatePresentation';
-import { useLazyCandidateOptions } from '../../controls/useLazyCandidateOptions';
+import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 import { CountedRewardEditor } from '../rewards/RewardEditors';
 import { FieldsCageReward, ShopOfferEditor } from './RoomStateSections';
@@ -30,29 +34,30 @@ interface RoomStateEditorProps {
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
   readonly clockworkReward?: 'goal' | 'nonGoal';
-  readonly contextual: WorkspaceContextualResolver;
   readonly entryActive?: boolean;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly occurrence: RoomOccurrence;
 }
 
 function ShipEncounterCountControl({
-  contextual,
   id,
+  interactions,
   occurrence,
   onReplace,
   value,
 }: {
-  readonly contextual: WorkspaceContextualResolver;
   readonly id: string;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly occurrence: OccurrenceAddress;
   readonly onReplace: (value: 2 | 3) => void;
   readonly value: 2 | 3;
 }) {
-  const values = [2, 3] as const;
-  const candidates = useLazyCandidateOptions(contextual, `ship-encounters:${id}`, () =>
-    contextual.resolveShipEncounterCounts(occurrence, values),
+  const interaction = requireWorkspaceInteraction(
+    interactions.shipEncounterCounts,
+    workspaceInteractionKey(occurrence),
   );
-  const selected = candidates.options?.find((option) => option.value === value);
+  const candidates = useWorkspaceInteraction(interaction);
+  const selected = candidates.result?.find((option) => option.value === value);
   return (
     <label className="field-control" htmlFor={id}>
       <span>Encounters</span>
@@ -64,16 +69,11 @@ function ShipEncounterCountControl({
         onPointerDown={candidates.activate}
         value={String(value)}
       >
-        {values.map((candidateValue) => {
-          const option = candidates.options?.find(
-            (candidate) => candidate.value === candidateValue,
-          );
+        {interaction.choices.map((choice) => {
+          const option = candidates.result?.find((candidate) => candidate.value === choice.value);
           return (
-            <option key={candidateValue} value={candidateValue} {...candidateSelectState(option)}>
-              {presentCandidateLabel(
-                candidateValue === 2 ? 'Intro + 1 combat' : 'Intro + 2 combats',
-                option,
-              )}
+            <option key={choice.value} value={choice.value} {...candidateSelectState(option)}>
+              {presentCandidateLabel(choice.label, option)}
             </option>
           );
         })}
@@ -83,57 +83,58 @@ function ShipEncounterCountControl({
 }
 
 function RewardWheelSettings({
-  contextual,
   idPrefix,
+  interactions,
   onReplaceOfferCount,
   onReplacePicked,
   onReplaceStore,
   offerCount,
-  offerCounts,
   pickedOfferIndex,
   storeKey,
-  storeKeys,
   wheel,
 }: {
-  readonly contextual: WorkspaceContextualResolver;
   readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly offerCount: number;
-  readonly offerCounts: readonly number[];
   readonly onReplaceOfferCount: (value: number) => void;
   readonly onReplacePicked: (value: number) => void;
   readonly onReplaceStore: (value: string) => void;
   readonly pickedOfferIndex: number;
   readonly storeKey: string;
-  readonly storeKeys: readonly string[];
   readonly wheel: RewardWheelAddress;
 }) {
-  const pickedValues = Array.from({ length: offerCount }, (_, index) => index + 1);
-  const stores = useLazyCandidateOptions(contextual, `wheel-store:${idPrefix}`, () =>
-    contextual.resolveRewardWheelStores(wheel, storeKeys),
+  const storeInteraction = requireWorkspaceInteraction(
+    interactions.rewardWheelStores,
+    workspaceInteractionKey(wheel),
   );
-  const counts = useLazyCandidateOptions(contextual, `wheel-count:${idPrefix}`, () =>
-    contextual.resolveRewardWheelOfferCounts(wheel, offerCounts),
+  const countInteraction = requireWorkspaceInteraction(
+    interactions.rewardWheelOfferCounts,
+    workspaceInteractionKey(wheel),
   );
-  const picks = useLazyCandidateOptions(contextual, `wheel-pick:${idPrefix}`, () =>
-    contextual.resolveRewardWheelPicks(wheel, pickedValues),
+  const pickInteraction = requireWorkspaceInteraction(
+    interactions.rewardWheelPicks,
+    workspaceInteractionKey(wheel),
   );
+  const stores = useWorkspaceInteraction(storeInteraction);
+  const counts = useWorkspaceInteraction(countInteraction);
+  const picks = useWorkspaceInteraction(pickInteraction);
   return (
     <div className="reward-wheel-settings">
       <label className="field-control" htmlFor={`${idPrefix}-store`}>
         <span>Reward pool</span>
         <select
-          {...candidateSelectState(stores.options?.find((option) => option.value === storeKey))}
+          {...candidateSelectState(stores.result?.find((option) => option.value === storeKey))}
           id={`${idPrefix}-store`}
           onChange={(event) => onReplaceStore(event.target.value)}
           onFocus={stores.activate}
           onPointerDown={stores.activate}
           value={storeKey}
         >
-          {storeKeys.map((candidateValue) => {
-            const option = stores.options?.find((candidate) => candidate.value === candidateValue);
+          {storeInteraction.choices.map((choice) => {
+            const option = stores.result?.find((candidate) => candidate.value === choice.value);
             return (
-              <option key={candidateValue} value={candidateValue} {...candidateSelectState(option)}>
-                {presentCandidateLabel(candidateValue, option)}
+              <option key={choice.value} value={choice.value} {...candidateSelectState(option)}>
+                {presentCandidateLabel(choice.label, option)}
               </option>
             );
           })}
@@ -142,18 +143,18 @@ function RewardWheelSettings({
       <label className="field-control" htmlFor={`${idPrefix}-count`}>
         <span>Offers</span>
         <select
-          {...candidateSelectState(counts.options?.find((option) => option.value === offerCount))}
+          {...candidateSelectState(counts.result?.find((option) => option.value === offerCount))}
           id={`${idPrefix}-count`}
           onChange={(event) => onReplaceOfferCount(Number(event.target.value))}
           onFocus={counts.activate}
           onPointerDown={counts.activate}
           value={String(offerCount)}
         >
-          {offerCounts.map((candidateValue) => {
-            const option = counts.options?.find((candidate) => candidate.value === candidateValue);
+          {countInteraction.choices.map((choice) => {
+            const option = counts.result?.find((candidate) => candidate.value === choice.value);
             return (
-              <option key={candidateValue} value={candidateValue} {...candidateSelectState(option)}>
-                {presentCandidateLabel(String(candidateValue), option)}
+              <option key={choice.value} value={choice.value} {...candidateSelectState(option)}>
+                {presentCandidateLabel(choice.label, option)}
               </option>
             );
           })}
@@ -163,7 +164,7 @@ function RewardWheelSettings({
         <span>Picked offer</span>
         <select
           {...candidateSelectState(
-            picks.options?.find((option) => option.value === pickedOfferIndex),
+            picks.result?.find((option) => option.value === pickedOfferIndex),
           )}
           id={`${idPrefix}-pick`}
           onChange={(event) => onReplacePicked(Number(event.target.value))}
@@ -171,11 +172,11 @@ function RewardWheelSettings({
           onPointerDown={picks.activate}
           value={String(pickedOfferIndex)}
         >
-          {pickedValues.map((candidateValue) => {
-            const option = picks.options?.find((candidate) => candidate.value === candidateValue);
+          {pickInteraction.choices.map((choice) => {
+            const option = picks.result?.find((candidate) => candidate.value === choice.value);
             return (
-              <option key={candidateValue} value={candidateValue} {...candidateSelectState(option)}>
-                {presentCandidateLabel(`Offer ${candidateValue}`, option)}
+              <option key={choice.value} value={choice.value} {...candidateSelectState(option)}>
+                {presentCandidateLabel(choice.label, option)}
               </option>
             );
           })}
@@ -190,8 +191,8 @@ export function RoomStateEditor({
   biome,
   catalog,
   clockworkReward,
-  contextual,
   entryActive,
+  interactions,
   occurrence,
 }: RoomStateEditorProps) {
   const dispatch = useAppDispatch();
@@ -237,8 +238,8 @@ export function RoomStateEditor({
         <SemanticOwnerMarker address={rewardAddress} />
         <CountedRewardEditor
           candidateOwner={{ kind: 'incomingReward', address: rewardAddress }}
-          contextual={contextual}
           idPrefix={idPrefix}
+          interactions={interactions}
           offer={state.offer}
           onReplace={(value) =>
             dispatch(
@@ -285,8 +286,8 @@ export function RoomStateEditor({
             <FieldsCageReward
               active={active}
               address={address}
-              contextual={contextual}
               idPrefix={`${idPrefix}-${slotKey}`}
+              interactions={interactions}
               key={slotKey}
               label={`Cage ${index + 1}`}
               offer={offer}
@@ -322,8 +323,8 @@ export function RoomStateEditor({
     return (
       <div className="ship-combat-editor" aria-label="Ship combat encounters">
         <ShipEncounterCountControl
-          contextual={contextual}
           id={`${idPrefix}-encounter-count`}
+          interactions={interactions}
           occurrence={occurrenceAddress}
           onReplace={(encounterCount) =>
             dispatch(
@@ -365,13 +366,9 @@ export function RoomStateEditor({
                   <span className="neutral-status">{active ? 'Active' : 'Dormant'}</span>
                 </div>
                 <RewardWheelSettings
-                  contextual={contextual}
                   idPrefix={wheelIdPrefix}
+                  interactions={interactions}
                   offerCount={wheel.offerCount}
-                  offerCounts={Array.from(
-                    { length: descriptor.offerCount.max - descriptor.offerCount.min + 1 },
-                    (_, index) => descriptor.offerCount.min + index,
-                  )}
                   onReplaceOfferCount={(offerCount) =>
                     dispatch(
                       authoredProjectCommandDispatched({
@@ -401,7 +398,6 @@ export function RoomStateEditor({
                   }
                   pickedOfferIndex={wheel.pickedOfferIndex}
                   storeKey={wheel.storeKey}
-                  storeKeys={descriptor.reward.storeKeys}
                   wheel={wheelAddress}
                 />
                 <div className="reward-wheel-offers">
@@ -435,8 +431,8 @@ export function RoomStateEditor({
                         </div>
                         <CountedRewardEditor
                           candidateOwner={{ kind: 'rewardWheelOffer', address }}
-                          contextual={contextual}
                           idPrefix={`${idPrefix}-${descriptor.key}-${offerKey}`}
+                          interactions={interactions}
                           offer={offer}
                           onReplace={(value) =>
                             dispatch(
@@ -482,8 +478,8 @@ export function RoomStateEditor({
         return (
           <ShopOfferEditor
             address={offerAddress}
-            contextual={contextual}
             idPrefix={offerPrefix}
+            interactions={interactions}
             key={slot.key}
             label={slot.label}
             offer={offerState.offer}

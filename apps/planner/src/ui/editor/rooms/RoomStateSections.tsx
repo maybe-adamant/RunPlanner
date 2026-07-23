@@ -5,7 +5,7 @@ import type {
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
-import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
+import type { WorkspaceInteractionCatalog } from '../../../projections/structuredWorkspace';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 import { CountedRewardEditor, RewardValueEditor } from '../rewards/RewardEditors';
 import { ShopPurchaseControl } from './ShopPurchaseControl';
@@ -13,8 +13,8 @@ import { ShopPurchaseControl } from './ShopPurchaseControl';
 interface FieldsCageRewardProps {
   readonly active: boolean;
   readonly address: LocalRewardAddress;
-  readonly contextual: WorkspaceContextualResolver;
   readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
   readonly offer: ResolvedRewardOffer;
   readonly onReplace: (value: ResolvedRewardOffer) => void;
@@ -23,8 +23,8 @@ interface FieldsCageRewardProps {
 export function FieldsCageReward({
   active,
   address,
-  contextual,
   idPrefix,
+  interactions,
   label,
   offer,
   onReplace,
@@ -40,8 +40,8 @@ export function FieldsCageReward({
       </div>
       <CountedRewardEditor
         candidateOwner={{ kind: 'localReward', address }}
-        contextual={contextual}
         idPrefix={idPrefix}
+        interactions={interactions}
         offer={offer}
         onReplace={onReplace}
       />
@@ -51,8 +51,8 @@ export function FieldsCageReward({
 
 interface ShopOfferEditorProps {
   readonly address: ShopOfferAddress;
-  readonly contextual: WorkspaceContextualResolver;
   readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
   readonly offer: ResolvedRewardOffer;
   readonly onPurchase: (purchased: boolean) => void;
@@ -63,8 +63,8 @@ interface ShopOfferEditorProps {
 
 export function ShopOfferEditor({
   address,
-  contextual,
   idPrefix,
+  interactions,
   label,
   offer,
   onPurchase,
@@ -82,15 +82,15 @@ export function ShopOfferEditor({
         <ShopPurchaseControl
           address={purchaseAddress}
           checked={purchased}
-          contextual={contextual}
           id={`${idPrefix}-purchased`}
+          interactions={interactions}
           onChange={onPurchase}
         />
       </div>
       <RewardValueEditor
         candidateOwner={{ kind: 'shopOffer', address }}
-        contextual={contextual}
         idPrefix={idPrefix}
+        interactions={interactions}
         offer={offer}
         onReplace={onReplace}
       />

@@ -1779,3 +1779,26 @@ The full repository gate passes with 69 test files and 536 tests, followed by
 typecheck, lint, formatting, build, and diff checks. Slice 8 may now replace the
 broad contextual resolver methods with workspace-owned zero-argument
 interaction descriptors.
+
+Candidate-System Refactor Slice 8 is complete. The structured workspace now
+publishes one immutable, typed interaction catalog for start and target rooms,
+counted and explicit rewards, biome fields, batch stores, Fields outcomes,
+Ship encounter and reward-wheel settings, Hub membership and visits, side-room
+generation and entry order, and shop purchases. Every descriptor owns its
+semantic address, declaration-derived choices and labels, authored selection,
+and zero-argument lazy loader. The broad `WorkspaceContextualResolver` and its
+React-supplied address/domain methods have been removed.
+
+All candidate activation now crosses the shared `useWorkspaceInteraction`
+adapter. It caches by immutable descriptor identity, suppresses duplicate
+pointer/focus activation, exposes pending state, and rejects stale async
+completion after workspace replacement. Reward compound selection evaluates
+one complete producer domain and reuses it across reward-type, Boon-source, and
+Devotion-pair steps; React no longer requests another candidate domain for each
+intermediate seed. Room, reward, batch, wheel, Hub, side-room, and purchase
+controls no longer maintain independent lazy-candidate state machines.
+
+Focused projection and editor coverage passes for all candidate-bearing biome
+editors, and the complete planner application suite passes with 26 files and
+139 tests. Slice 9 may now enforce the import boundary, prove render purity and
+family-local activation, and close the refactor with final measurements.

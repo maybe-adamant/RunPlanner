@@ -1,23 +1,24 @@
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type {
   CountedRewardCandidateOwner,
   RewardCandidateOwner,
 } from '../../../projections/candidateProjection';
 import type { ContextualPickerModel } from '../../../projections/contextualPicker';
-import type { ProjectedRewardDomain } from '../../../projections/rewardDomainProjection';
 import type { RewardPickerStep } from '../../../projections/rewardPicker';
-import type {
-  WorkspaceContextualResolver,
-  WorkspaceRewardInteraction,
+import {
+  requireWorkspaceInteraction,
+  workspaceInteractionKey,
+  type WorkspaceInteractionCatalog,
 } from '../../../projections/structuredWorkspace';
 import { ContextualPicker } from '../../controls/ContextualPicker';
+import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 
 interface RewardValueEditorProps {
   readonly candidateOwner: RewardCandidateOwner;
-  readonly contextual: WorkspaceContextualResolver;
   readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly offer: ResolvedRewardOffer;
   readonly onReplace: (offer: ResolvedRewardOffer) => void;
 }
@@ -27,10 +28,7 @@ interface CountedRewardEditorProps extends Omit<RewardValueEditorProps, 'candida
 }
 
 interface RewardInteraction {
-  readonly authoredOfferKey: string;
-  readonly domain?: ProjectedRewardDomain;
-  readonly resolver: WorkspaceRewardInteraction;
-  readonly requestId: number;
+  readonly context: object;
   readonly seed: ResolvedRewardOffer;
   readonly step: RewardPickerStep;
 }
@@ -45,53 +43,30 @@ function offerKey(offer: ResolvedRewardOffer): string {
 
 export function RewardValueEditor({
   candidateOwner,
-  contextual,
   idPrefix,
+  interactions,
   offer,
   onReplace,
 }: RewardValueEditorProps) {
   const authoredOfferKey = offerKey(offer);
-  const resolver = contextual.resolveReward(candidateOwner.address);
-  const requestIdRef = useRef(0);
-  const [interaction, setInteraction] = useState<RewardInteraction>();
-  const [projectionError, setProjectionError] = useState<Error>();
-  useLayoutEffect(
-    () => () => {
-      requestIdRef.current += 1;
-    },
+  const resolver = requireWorkspaceInteraction(
+    interactions.rewards,
+    workspaceInteractionKey(candidateOwner.address),
+  );
+  const domain = useWorkspaceInteraction(resolver);
+  const context = useMemo(
+    () => Object.freeze({ authoredOfferKey, resolver }),
     [authoredOfferKey, resolver],
   );
-  if (projectionError !== undefined) {
-    throw projectionError;
-  }
-  const interactionMatchesContext =
-    interaction === undefined ||
-    (interaction.resolver === resolver && interaction.authoredOfferKey === authoredOfferKey);
-  if (!interactionMatchesContext) {
-    setInteraction(undefined);
-  }
+  const [interaction, setInteraction] = useState<RewardInteraction>();
+  const interactionMatchesContext = interaction === undefined || interaction.context === context;
   const active = interactionMatchesContext ? interaction : undefined;
 
-  const load = (seed: ResolvedRewardOffer, step: RewardPickerStep, requestId: number): void => {
-    void resolver.load(seed).then(
-      (domain) => {
-        setInteraction((current) =>
-          current?.requestId === requestId && requestIdRef.current === requestId
-            ? Object.freeze({ ...current, domain })
-            : current,
-        );
-      },
-      (error: unknown) => {
-        if (requestIdRef.current === requestId) {
-          setProjectionError(error instanceof Error ? error : new Error(String(error)));
-        }
-      },
-    );
+  const begin = (seed: ResolvedRewardOffer, step: RewardPickerStep): void => {
+    domain.activate();
     setInteraction(
       Object.freeze({
-        authoredOfferKey,
-        resolver,
-        requestId,
+        context,
         seed,
         step,
       }),
@@ -99,18 +74,15 @@ export function RewardValueEditor({
   };
 
   const startInteraction = (): void => {
-    const requestId = ++requestIdRef.current;
-    load(offer, 'type', requestId);
+    begin(offer, 'type');
   };
 
   const cancelInteraction = (): void => {
-    requestIdRef.current += 1;
     setInteraction(undefined);
   };
 
   const advance = (seed: ResolvedRewardOffer, step: RewardPickerStep): void => {
-    const requestId = ++requestIdRef.current;
-    load(seed, step, requestId);
+    begin(seed, step);
   };
 
   const commit = (value: ResolvedRewardOffer): void => {
@@ -143,9 +115,9 @@ export function RewardValueEditor({
   };
 
   const model =
-    active?.domain === undefined
+    active === undefined || domain.result === undefined
       ? emptyModel
-      : resolver.model(active.domain, active.step, active.seed);
+      : resolver.model(domain.result, active.step, active.seed);
   const summary = resolver.summary(active?.seed ?? offer);
 
   return (
@@ -156,7 +128,7 @@ export function RewardValueEditor({
         closeOnSelect={false}
         id={`${idPrefix}-reward`}
         label="Reward"
-        loading={active !== undefined && active.domain === undefined}
+        loading={active !== undefined && domain.result === undefined}
         model={model}
         onOpenChange={(open) => {
           if (open) {
@@ -176,16 +148,16 @@ export function RewardValueEditor({
 
 export function CountedRewardEditor({
   candidateOwner,
-  contextual,
   offer,
   idPrefix,
+  interactions,
   onReplace,
 }: CountedRewardEditorProps) {
   return (
     <RewardValueEditor
       candidateOwner={candidateOwner}
-      contextual={contextual}
       idPrefix={idPrefix}
+      interactions={interactions}
       offer={offer}
       onReplace={onReplace}
     />

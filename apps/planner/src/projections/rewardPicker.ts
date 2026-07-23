@@ -70,9 +70,131 @@ function optionLabel(catalog: Catalog, step: RewardPickerStep, key: string): str
   return declaration.label;
 }
 
+function aggregateEvaluation(
+  candidates: readonly ProjectedRewardDomain['offers'][number][],
+): ProjectedRewardDomain['offers'][number] {
+  const supported = candidates.filter(
+    (candidate) =>
+      candidate.evaluation.context === 'evaluated' && candidate.evaluation.support !== 'impossible',
+  );
+  const representative = supported[0] ?? candidates[0];
+  if (representative === undefined) {
+    throw new Error('Reward payload option has no complete offer');
+  }
+  if (
+    representative.evaluation.context === 'evaluated' &&
+    representative.evaluation.support === 'forced' &&
+    supported.some(
+      (candidate) =>
+        candidate.evaluation.context === 'evaluated' && candidate.evaluation.support === 'possible',
+    )
+  ) {
+    return Object.freeze({
+      value: representative.value,
+      evaluation: Object.freeze({ ...representative.evaluation, support: 'possible' }),
+    });
+  }
+  return representative;
+}
+
+function payloadOptions(
+  domain: ProjectedRewardDomain,
+  selected: ResolvedRewardOffer,
+  step: Exclude<RewardPickerStep, 'type'>,
+): {
+  readonly mode: AssessmentMode;
+  readonly options: readonly ProjectedRewardDomainOption[];
+} {
+  const candidates = domain.offers.filter(
+    (candidate) => candidate.value.rewardType === selected.rewardType,
+  );
+  if (step === 'source') {
+    if (selected.payload?.kind !== 'BoonSource') {
+      throw new Error('Reward source step requires a selected single-source reward');
+    }
+    return {
+      mode: 'exact',
+      options: Object.freeze(
+        candidates.flatMap((candidate): readonly ProjectedRewardDomainOption[] =>
+          candidate.value.payload?.kind !== 'BoonSource'
+            ? []
+            : [
+                Object.freeze({
+                  evaluation: candidate.evaluation,
+                  key: candidate.value.payload.source,
+                  offer: candidate.value,
+                  offerEvaluation: candidate.evaluation,
+                  supportingOffer: candidate.value,
+                  witnesses: Object.freeze([candidate.value]),
+                }),
+              ],
+        ),
+      ),
+    };
+  }
+  if (selected.payload?.kind !== 'DevotionPair') {
+    throw new Error(`${step} source step requires a selected Devotion pair`);
+  }
+  const selectedPair = selected.payload;
+  if (step === 'spurned') {
+    return {
+      mode: 'exact',
+      options: Object.freeze(
+        candidates.flatMap((candidate): readonly ProjectedRewardDomainOption[] =>
+          candidate.value.payload?.kind !== 'DevotionPair' ||
+          candidate.value.payload.chosenSource !== selectedPair.chosenSource
+            ? []
+            : [
+                Object.freeze({
+                  evaluation: candidate.evaluation,
+                  key: candidate.value.payload.spurnedSource,
+                  offer: candidate.value,
+                  offerEvaluation: candidate.evaluation,
+                  supportingOffer: candidate.value,
+                  witnesses: Object.freeze([candidate.value]),
+                }),
+              ],
+        ),
+      ),
+    };
+  }
+  const grouped = new Map<string, ProjectedRewardDomain['offers'][number][]>();
+  for (const candidate of candidates) {
+    if (candidate.value.payload?.kind !== 'DevotionPair') {
+      continue;
+    }
+    const group = grouped.get(candidate.value.payload.chosenSource) ?? [];
+    group.push(candidate);
+    grouped.set(candidate.value.payload.chosenSource, group);
+  }
+  return {
+    mode: 'aggregate',
+    options: Object.freeze(
+      [...grouped].map(([key, groupedCandidates]) => {
+        const representative = aggregateEvaluation(groupedCandidates);
+        const preferred =
+          groupedCandidates.find(
+            (candidate) =>
+              candidate.value.payload?.kind === 'DevotionPair' &&
+              candidate.value.payload.spurnedSource === selectedPair.spurnedSource,
+          ) ?? representative;
+        return Object.freeze({
+          evaluation: representative.evaluation,
+          key,
+          offer: preferred.value,
+          offerEvaluation: preferred.evaluation,
+          supportingOffer: representative.value,
+          witnesses: Object.freeze(groupedCandidates.map((candidate) => candidate.value)),
+        });
+      }),
+    ),
+  };
+}
+
 function stepOptions(
   domain: ProjectedRewardDomain,
   step: RewardPickerStep,
+  selected: ResolvedRewardOffer,
 ): {
   readonly mode: AssessmentMode;
   readonly options: readonly ProjectedRewardDomainOption[];
@@ -81,20 +203,11 @@ function stepOptions(
     case 'type':
       return { mode: 'aggregate', options: domain.types };
     case 'source':
-      if (domain.payload.kind !== 'oneOf') {
-        throw new Error('Reward source step requires a single-source payload domain');
-      }
-      return { mode: 'exact', options: domain.payload.sources };
+      return payloadOptions(domain, selected, step);
     case 'chosen':
-      if (domain.payload.kind !== 'distinctPair') {
-        throw new Error('Chosen-source step requires a paired payload domain');
-      }
-      return { mode: 'aggregate', options: domain.payload.chosenSources };
+      return payloadOptions(domain, selected, step);
     case 'spurned':
-      if (domain.payload.kind !== 'distinctPair') {
-        throw new Error('Spurned-source step requires a paired payload domain');
-      }
-      return { mode: 'exact', options: domain.payload.spurnedSources };
+      return payloadOptions(domain, selected, step);
   }
 }
 
@@ -198,7 +311,7 @@ export function createRewardPickerProjection(
       }
     },
     project(domain: ProjectedRewardDomain, step: RewardPickerStep, selected: ResolvedRewardOffer) {
-      const resolved = stepOptions(domain, step);
+      const resolved = stepOptions(domain, step, selected);
       const selectedValue = selectedKey(step, selected);
       const projected = candidates(resolved.options, resolved.mode, step, selected);
       return contextualPicker.project(

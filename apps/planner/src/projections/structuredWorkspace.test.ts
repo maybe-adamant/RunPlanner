@@ -31,6 +31,8 @@ import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
 import {
   createStructuredWorkspaceProjection,
+  requireWorkspaceInteraction,
+  workspaceInteractionKey,
   type WorkspaceBiome,
   type WorkspaceLinearBiome,
 } from './structuredWorkspace';
@@ -434,7 +436,11 @@ describe('structured workspace projection', () => {
     ) {
       throw new Error('F combat target has no contextual room owner');
     }
-    const roomModel = workspace.contextual.resolveRoom(target.contextualOwner.address).load();
+    const roomInteraction = requireWorkspaceInteraction(
+      workspace.interactions.rooms,
+      workspaceInteractionKey(target.contextualOwner.address),
+    );
+    const roomModel = roomInteraction.load();
     expect(roomModel.selected?.value.gameName).toBe('F_Combat03');
     expect(roomModel.sections.length).toBeGreaterThan(0);
 
@@ -442,8 +448,11 @@ describe('structured workspace projection', () => {
     if (reward === undefined) {
       throw new Error('F combat target has no incoming reward control');
     }
-    const interaction = workspace.contextual.resolveReward(reward.owner.address);
-    const domain = await interaction.load(interaction.selected);
+    const interaction = requireWorkspaceInteraction(
+      workspace.interactions.rewards,
+      workspaceInteractionKey(reward.owner.address),
+    );
+    const domain = await interaction.load();
     const rewardModel = interaction.model(domain, 'type', interaction.selected);
 
     expect(reward.owner.address.kind).toBe('incomingReward');
@@ -453,12 +462,14 @@ describe('structured workspace projection', () => {
     );
     expect(interaction.summary(interaction.selected)).toContain('Apollo');
     expect(rewardModel.selected?.value).toEqual(interaction.selected);
-    expect(workspace.contextual.resolveReward(reward.owner.address)).toBe(interaction);
+    expect(workspace.interactions.rewards.get(workspaceInteractionKey(reward.owner.address))).toBe(
+      interaction,
+    );
   });
 
-  it('defers target-room and counted-reward domains until their interactions load', async () => {
+  it('captures declared domains while deferring candidate queries until interaction', async () => {
     let roomDomainScans = 0;
-    let countedRewardTypeResolutions = 0;
+    let queryBatches = 0;
     const trackedCatalog: Catalog = {
       ...catalog,
       rooms: {
@@ -471,22 +482,16 @@ describe('structured workspace projection', () => {
     };
     const evaluateTrackedProject = (project: ReturnType<typeof createProjectDocument>) =>
       simulateProject(trackedCatalog, project);
-    const baseCandidates = createCandidateSessionFactory(trackedCatalog);
-    const trackedCandidates: CandidateSessionFactory = {
-      ...baseCandidates,
-      bind(project, evaluation) {
-        const session = baseCandidates.bind(project, evaluation);
-        return Object.freeze({
-          ...session,
-          countedRewardTypes: (
-            ...args: Parameters<typeof session.countedRewardTypes>
-          ): ReturnType<typeof session.countedRewardTypes> => {
-            countedRewardTypeResolutions += 1;
-            return session.countedRewardTypes(...args);
-          },
-        });
+    const trackedCandidates: CandidateSessionFactory = createCandidateSessionFactory(
+      trackedCatalog,
+      {
+        observeCandidateEvaluation(event) {
+          if (event.kind === 'queryBatch') {
+            queryBatches += 1;
+          }
+        },
       },
-    };
+    );
     const trackedContextualPicker = createContextualPickerProjection(
       createContextualOptionResolver(trackedCatalog),
     );
@@ -515,19 +520,26 @@ describe('structured workspace projection', () => {
       throw new Error('F combat target has no counted reward control');
     }
 
-    const roomInteraction = workspace.contextual.resolveRoom(target.contextualOwner.address);
-    const rewardInteraction = workspace.contextual.resolveReward(reward.owner.address);
-    expect(roomDomainScans).toBe(0);
-    expect(countedRewardTypeResolutions).toBe(0);
+    const roomInteraction = requireWorkspaceInteraction(
+      workspace.interactions.rooms,
+      workspaceInteractionKey(target.contextualOwner.address),
+    );
+    const rewardInteraction = requireWorkspaceInteraction(
+      workspace.interactions.rewards,
+      workspaceInteractionKey(reward.owner.address),
+    );
+    expect(roomDomainScans).toBeGreaterThan(0);
+    expect(queryBatches).toBe(0);
 
     roomInteraction.load();
     expect(roomDomainScans).toBeGreaterThan(0);
-    expect(countedRewardTypeResolutions).toBe(0);
+    expect(queryBatches).toBe(1);
 
-    await rewardInteraction.load(rewardInteraction.selected);
-    expect(countedRewardTypeResolutions).toBe(1);
-    await rewardInteraction.load(rewardInteraction.selected);
-    expect(countedRewardTypeResolutions).toBe(1);
+    await rewardInteraction.load();
+    expect(queryBatches).toBeGreaterThan(1);
+    const batchesAfterFirstLoad = queryBatches;
+    await rewardInteraction.load();
+    expect(queryBatches).toBe(batchesAfterFirstLoad);
   });
 
   it('discovers exact shop offer and purchase owners in a progressive prefix', () => {
@@ -588,7 +600,10 @@ describe('structured workspace projection', () => {
     if (reward === undefined) {
       throw new Error('O Trial has no fixed payload reward control');
     }
-    const interaction = originalWorkspace.contextual.resolveReward(reward.owner.address);
+    const interaction = requireWorkspaceInteraction(
+      originalWorkspace.interactions.rewards,
+      workspaceInteractionKey(reward.owner.address),
+    );
 
     expect(reward).toMatchObject({
       kind: 'explicitReward',
@@ -603,7 +618,7 @@ describe('structured workspace projection', () => {
         spurnedSource: 'HephaestusUpgrade',
       },
     });
-    const domain = await interaction.load(interaction.selected);
+    const domain = await interaction.load();
     const chosenModel = interaction.model(domain, 'chosen', interaction.selected);
     expect(chosenModel.selected?.value.payload).toMatchObject({
       kind: 'DevotionPair',
@@ -630,9 +645,10 @@ describe('structured workspace projection', () => {
     }
 
     expect(replacedTrial.room.gameName).toBe('O_Combat03');
-    const replacementModel = replacedWorkspace.contextual
-      .resolveRoom(replacedTrial.contextualOwner.address)
-      .load();
+    const replacementModel = requireWorkspaceInteraction(
+      replacedWorkspace.interactions.rooms,
+      workspaceInteractionKey(replacedTrial.contextualOwner.address),
+    ).load();
     expect(
       replacementModel.sections
         .flatMap((section) => section.items)

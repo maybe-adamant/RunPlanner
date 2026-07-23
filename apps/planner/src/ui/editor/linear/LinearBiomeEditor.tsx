@@ -10,7 +10,11 @@ import {
   createOccurrenceAddress,
 } from '@run-planner/engine/authored-project';
 import { presentCandidateLabel } from '../../../projections/candidateProjection';
-import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
+import {
+  requireWorkspaceInteraction,
+  workspaceInteractionKey,
+  type WorkspaceInteractionCatalog,
+} from '../../../projections/structuredWorkspace';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { presentBiomeStatus } from '../../../projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
@@ -23,13 +27,13 @@ import {
   StatusBadge,
 } from '../../feedback/EvaluationFeedback';
 import { RoomStateEditor } from '../rooms/RoomStateEditor';
-import { useLazyCandidateOptions } from '../../controls/useLazyCandidateOptions';
+import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 import { RoomSelector } from './RoomSelector';
 
 interface LinearBiomeEditorProps {
   readonly catalog: Catalog;
-  readonly contextual: WorkspaceContextualResolver;
   readonly evaluation: LinearBiomeProjectEvaluation | undefined;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly plan: LinearBiomePlan;
   readonly routeKey: string;
 }
@@ -63,24 +67,22 @@ function startDeclaration(catalog: Catalog, gameName: string): RoomDeclaration {
 }
 
 function BiomeFieldControl({
-  contextual,
   fieldAddress,
-  fieldValues,
   id,
+  interactions,
   onReplace,
-  value,
 }: {
-  readonly contextual: WorkspaceContextualResolver;
   readonly fieldAddress: BiomeFieldAddress;
-  readonly fieldValues: readonly number[];
   readonly id: string;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly onReplace: (value: number) => void;
-  readonly value: number;
 }) {
-  const candidates = useLazyCandidateOptions(contextual, `biome-field:${id}`, () =>
-    contextual.resolveBiomeFields(fieldAddress, fieldValues),
+  const interaction = requireWorkspaceInteraction(
+    interactions.biomeFields,
+    workspaceInteractionKey(fieldAddress),
   );
-  const selected = candidates.options?.find((option) => option.value === value);
+  const candidates = useWorkspaceInteraction(interaction);
+  const selected = candidates.result?.find((option) => option.value === interaction.selected);
   return (
     <label className="field-control biome-field" htmlFor={id}>
       <span className="field-label-with-marker">
@@ -93,17 +95,17 @@ function BiomeFieldControl({
         onChange={(event) => onReplace(Number(event.target.value))}
         onFocus={candidates.activate}
         onPointerDown={candidates.activate}
-        value={String(value)}
+        value={String(interaction.selected)}
       >
-        {fieldValues.map((fieldValue) => {
-          const option = candidates.options?.find((candidate) => candidate.value === fieldValue);
+        {interaction.choices.map((choice) => {
+          const option = candidates.result?.find((candidate) => candidate.value === choice.value);
           return (
             <option
-              key={String(fieldValue)}
-              value={String(fieldValue)}
+              key={String(choice.value)}
+              value={String(choice.value)}
               {...candidateSelectState(option)}
             >
-              {presentCandidateLabel(String(fieldValue), option)}
+              {presentCandidateLabel(choice.label, option)}
             </option>
           );
         })}
@@ -114,8 +116,8 @@ function BiomeFieldControl({
 
 export function LinearBiomeEditor({
   catalog,
-  contextual,
   evaluation,
+  interactions,
   plan,
   routeKey,
 }: LinearBiomeEditorProps) {
@@ -154,10 +156,6 @@ export function LinearBiomeEditor({
       throw new Error(`${plan.biomeKey} has no bounded maxNonGoalRewards field`);
     }
     const fieldAddress = createBiomeFieldAddress(biome, boundedField.key);
-    const fieldValues = Array.from(
-      { length: boundedField.max - boundedField.min + 1 },
-      (_, index) => boundedField.min + index,
-    );
     const fieldValue = plan.state.maxNonGoalRewards;
     if (typeof fieldValue !== 'number') {
       throw new Error(`${plan.biomeKey} has no numeric maxNonGoalRewards value`);
@@ -203,10 +201,9 @@ export function LinearBiomeEditor({
           </header>
 
           <BiomeFieldControl
-            contextual={contextual}
             fieldAddress={fieldAddress}
-            fieldValues={fieldValues}
             id={`${plan.biomeKey}-non-goal-cap`}
+            interactions={interactions}
             onReplace={(value) =>
               dispatch(
                 authoredProjectCommandDispatched({
@@ -216,7 +213,6 @@ export function LinearBiomeEditor({
                 }),
               )
             }
-            value={fieldValue}
           />
 
           <div className="fixed-entry-list" aria-label="Fixed biome entries" role="group">
@@ -281,8 +277,8 @@ export function LinearBiomeEditor({
             <LinearTopologyEditor
               biome={biome}
               catalog={catalog}
-              contextual={contextual}
               evaluation={evaluation}
+              interactions={interactions}
               plan={plan}
               topology={topology}
             />
@@ -325,8 +321,8 @@ export function LinearBiomeEditor({
             </div>
             <div className="start-room-form">
               <RoomSelector
-                contextual={contextual}
                 idPrefix={startRoomId}
+                interactions={interactions}
                 label={`${authoredStartKind === 'opening' ? 'Opening' : 'Starting'} room`}
                 onSelect={(gameName) => {
                   dispatch(
@@ -395,8 +391,8 @@ export function LinearBiomeEditor({
             <SemanticOwnerMarker address={startAddress} />
           </div>
           <RoomSelector
-            contextual={contextual}
             idPrefix={`${startRoomId}-authored`}
+            interactions={interactions}
             label="Room"
             onSelect={(gameName) => {
               dispatch(
@@ -413,8 +409,8 @@ export function LinearBiomeEditor({
           <RoomStateEditor
             biome={biome}
             catalog={catalog}
-            contextual={contextual}
             entryActive={true}
+            interactions={interactions}
             occurrence={start}
           />
         </article>
@@ -422,8 +418,8 @@ export function LinearBiomeEditor({
         <LinearTopologyEditor
           biome={biome}
           catalog={catalog}
-          contextual={contextual}
           evaluation={evaluation}
+          interactions={interactions}
           plan={plan}
           topology={topology}
         />

@@ -5,32 +5,34 @@ import type {
 import type { CanonicalBatchState } from '@run-planner/engine/simulation';
 
 import { presentCandidateLabel } from '../../../projections/candidateProjection';
-import type { WorkspaceContextualResolver } from '../../../projections/structuredWorkspace';
-import { useLazyCandidateOptions } from '../../controls/useLazyCandidateOptions';
+import {
+  requireWorkspaceInteraction,
+  workspaceInteractionKey,
+  type WorkspaceInteractionCatalog,
+} from '../../../projections/structuredWorkspace';
+import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 import { candidateSelectState } from '../../feedback/candidatePresentation';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 
 interface BatchRewardStoreControlProps {
   readonly address: BatchRewardStoreAddress;
-  readonly contextual: WorkspaceContextualResolver;
   readonly id: string;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly onReplace: (storeKey: string) => void;
-  readonly storeKeys: readonly string[];
-  readonly value: string;
 }
 
 export function BatchRewardStoreControl({
   address,
-  contextual,
   id,
+  interactions,
   onReplace,
-  storeKeys,
-  value,
 }: BatchRewardStoreControlProps) {
-  const candidates = useLazyCandidateOptions(contextual, `batch-store:${id}`, () =>
-    contextual.resolveBatchRewardStores(address, storeKeys),
+  const interaction = requireWorkspaceInteraction(
+    interactions.batchRewardStores,
+    workspaceInteractionKey(address),
   );
-  const selected = candidates.options?.find((option) => option.value === value);
+  const candidates = useWorkspaceInteraction(interaction);
+  const selected = candidates.result?.find((option) => option.value === interaction.selected);
   return (
     <label className="field-control batch-reward-store" htmlFor={id}>
       <span className="field-label-with-marker">
@@ -43,16 +45,13 @@ export function BatchRewardStoreControl({
         onChange={(event) => onReplace(event.target.value)}
         onFocus={candidates.activate}
         onPointerDown={candidates.activate}
-        value={value}
+        value={String(interaction.selected)}
       >
-        {storeKeys.map((storeKey) => {
-          const option = candidates.options?.find((candidate) => candidate.value === storeKey);
+        {interaction.choices.map((choice) => {
+          const option = candidates.result?.find((candidate) => candidate.value === choice.value);
           return (
-            <option key={storeKey} value={storeKey} {...candidateSelectState(option)}>
-              {presentCandidateLabel(
-                storeKey === 'RunProgress' ? 'Run Progress' : 'Meta Progress',
-                option,
-              )}
+            <option key={choice.value} value={choice.value} {...candidateSelectState(option)}>
+              {presentCandidateLabel(choice.label, option)}
             </option>
           );
         })}
@@ -63,33 +62,30 @@ export function BatchRewardStoreControl({
 
 interface FieldsBatchControlProps {
   readonly batchState: Extract<CanonicalBatchState, { readonly kind: 'fields' }>;
-  readonly contextual: WorkspaceContextualResolver;
   readonly continuation: ContinuationAddress;
   readonly id: string;
-  readonly minDoorCageRewards: number;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly onReplace: (outcome: 'min' | 'max') => void;
   readonly priorMaxOutcomes?: {
     readonly fieldsMaxDoorsRolled: number;
     readonly maxDoorCageCeiling: number;
   };
-  readonly value: 'min' | 'max';
 }
 
 export function FieldsBatchControl({
   batchState,
-  contextual,
   continuation,
   id,
-  minDoorCageRewards,
+  interactions,
   onReplace,
   priorMaxOutcomes,
-  value,
 }: FieldsBatchControlProps) {
-  const values = ['min', 'max'] as const;
-  const candidates = useLazyCandidateOptions(contextual, `fields-outcome:${id}`, () =>
-    contextual.resolveFieldsCageOutcomes(continuation, values),
+  const interaction = requireWorkspaceInteraction(
+    interactions.fieldsCageOutcomes,
+    workspaceInteractionKey(continuation),
   );
-  const selected = candidates.options?.find((option) => option.value === value);
+  const candidates = useWorkspaceInteraction(interaction);
+  const selected = candidates.result?.find((option) => option.value === interaction.selected);
   return (
     <div className="fields-batch-editor">
       <label className="field-control" htmlFor={id}>
@@ -101,20 +97,13 @@ export function FieldsBatchControl({
           onChange={(event) => onReplace(event.target.value as 'min' | 'max')}
           onFocus={candidates.activate}
           onPointerDown={candidates.activate}
-          value={value}
+          value={String(interaction.selected)}
         >
-          {values.map((candidateValue) => {
-            const option = candidates.options?.find(
-              (candidate) => candidate.value === candidateValue,
-            );
+          {interaction.choices.map((choice) => {
+            const option = candidates.result?.find((candidate) => candidate.value === choice.value);
             return (
-              <option key={candidateValue} value={candidateValue} {...candidateSelectState(option)}>
-                {presentCandidateLabel(
-                  `${candidateValue === 'min' ? 'Min' : 'Max'} (${
-                    candidateValue === 'min' ? minDoorCageRewards : batchState.batchCapacity
-                  })`,
-                  option,
-                )}
+              <option key={choice.value} value={choice.value} {...candidateSelectState(option)}>
+                {presentCandidateLabel(choice.label, option)}
               </option>
             );
           })}

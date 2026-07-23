@@ -23,7 +23,7 @@ import {
 import type { ProjectOperations } from '../../workspace/projectOperations';
 import type {
   StructuredWorkspaceProjectionService,
-  WorkspaceContextualResolver,
+  WorkspaceInteractionCatalog,
 } from '../../projections/structuredWorkspace';
 import {
   FindingCount,
@@ -114,16 +114,16 @@ function RouteOverview({
 
 function RouteWorkspace({
   catalog,
-  contextual,
   navigation,
   feedback,
+  interactions,
   route,
   routeEvaluation,
 }: {
   readonly catalog: Catalog;
-  readonly contextual: WorkspaceContextualResolver;
   readonly navigation: RouteEditorNavigation;
   readonly feedback: RouteFeedbackPresentation;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly route: AuthoredRoutePlan;
   readonly routeEvaluation: ProjectRouteEvaluation;
 }) {
@@ -226,20 +226,20 @@ function RouteWorkspace({
         ) : activeBiomePlan?.kind === 'HubBiome' ? (
           <HubBiomeEditor
             catalog={catalog}
-            contextual={contextual}
             evaluation={
               activeBiomeEvaluation?.kind === 'HubBiome' ? activeBiomeEvaluation : undefined
             }
+            interactions={interactions}
             plan={activeBiomePlan}
             routeKey={route.routeKey}
           />
         ) : activeBiomePlan?.kind === 'LinearBiome' ? (
           <LinearBiomeEditor
             catalog={catalog}
-            contextual={contextual}
             evaluation={
               activeBiomeEvaluation?.kind === 'LinearBiome' ? activeBiomeEvaluation : undefined
             }
+            interactions={interactions}
             plan={activeBiomePlan}
             routeKey={route.routeKey}
           />
@@ -350,8 +350,8 @@ export function App({
         activeRouteFeedback !== undefined && (
           <RouteWorkspace
             catalog={catalog}
-            contextual={workspace.contextual}
             feedback={activeRouteFeedback}
+            interactions={workspace.interactions}
             navigation={activeRouteNavigation}
             route={activeRoute}
             routeEvaluation={activeRouteEvaluation}

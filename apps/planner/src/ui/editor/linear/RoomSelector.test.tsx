@@ -64,16 +64,16 @@ describe('RoomSelector', () => {
         gameName: combat.gameName,
       }),
     );
-    const contextual = () => {
+    const interactions = () => {
       const state = application.store.getState().projectWorkspace;
       return application.structuredWorkspace.project(state.history.present, state.evaluation)
-        .contextual;
+        .interactions;
     };
     const view = render(
       <Provider store={application.store}>
         <RoomSelector
-          contextual={contextual()}
           idPrefix="selector"
+          interactions={interactions()}
           onSelect={() => undefined}
           owner={target}
         />
@@ -92,8 +92,8 @@ describe('RoomSelector', () => {
     view.rerender(
       <Provider store={application.store}>
         <RoomSelector
-          contextual={contextual()}
           idPrefix="selector"
+          interactions={interactions()}
           onSelect={() => undefined}
           owner={target}
         />
@@ -145,9 +145,9 @@ describe('RoomSelector', () => {
     render(
       <Provider store={application.store}>
         <RoomSelector
-          contextual={
+          interactions={
             application.structuredWorkspace.project(state.history.present, state.evaluation)
-              .contextual
+              .interactions
           }
           idPrefix="grouped-selector"
           onSelect={onSelect}
