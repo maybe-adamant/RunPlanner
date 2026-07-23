@@ -83,7 +83,7 @@ export function createdPeerGameNames(
 
 interface RewardFactsOptions {
   readonly catalog: Catalog;
-  readonly source: CanonicalLifecycleRoom;
+  readonly currentRoom: CanonicalLifecycleRoom | undefined;
   readonly sourceDeclaration: RoomDeclaration;
   readonly view: HistoryStateView;
   readonly history: RewardHistoryState;
@@ -96,7 +96,7 @@ interface RewardFactsOptions {
 
 export function createRewardFacts({
   catalog,
-  source,
+  currentRoom,
   sourceDeclaration,
   view,
   history,
@@ -131,7 +131,9 @@ export function createRewardFacts({
     }),
     currentRoomShopOptionNames,
     currentRoomRewardType:
-      'incomingReward' in source ? source.incomingReward?.offer.rewardType : undefined,
+      currentRoom !== undefined && 'incomingReward' in currentRoom
+        ? currentRoom.incomingReward?.offer.rewardType
+        : undefined,
     rewardLookups,
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze(

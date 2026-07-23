@@ -253,6 +253,27 @@ function selected(project = representativeProject()) {
 }
 
 describe('N Hub reward simulation', () => {
+  it('treats the opening reward as a biome entry without a current-room predecessor', () => {
+    let project = replaceIncoming(representativeProject(), 'opening', {
+      rewardType: 'SpellDrop',
+    });
+    project = replaceIncoming(project, 'combat09', {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+    });
+    const result = fixture(project).rewards;
+    const [candidate] = bindTestCandidateSession(catalog, project).evaluate([
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, fixedOccurrenceIds.opening),
+        value: { rewardType: 'SpellDrop' },
+      },
+    ]);
+
+    expect(result.validity).toBe('valid');
+    expect(candidate).toMatchObject({ context: 'evaluated', support: 'possible' });
+  });
+
   it('consumes the full physical Hub board while acquiring only six visited targets', () => {
     const { snapshot, rewards } = fixture();
     expect(rewards.validity).toBe('valid');
