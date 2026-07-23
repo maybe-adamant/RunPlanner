@@ -37,8 +37,17 @@ export function StatusBadge({ status }: { readonly status: StatusPresentation })
   );
 }
 
+export function FindingCount({ count, label }: { readonly count: number; readonly label: string }) {
+  return count === 0 ? null : (
+    <span aria-label={`${count} ${label}`} className="findings-count" title={`${count} ${label}`}>
+      {count}
+    </span>
+  );
+}
+
 export function SemanticOwnerMarker({ address }: { readonly address: SemanticAddress }) {
   const ownerKey = semanticAddressKey(address);
+  const elementId = semanticOwnerElementId(address);
   const localFindings = useContext(scopedFindings);
   const projectFindings = useAppSelector(selectProjectFindingsByOwner);
   const findings = (localFindings ?? projectFindings).get(ownerKey) ?? [];
@@ -52,6 +61,13 @@ export function SemanticOwnerMarker({ address }: { readonly address: SemanticAdd
     semanticAddressKey(selectedFinding.origin) === ownerKey &&
     findings.some((finding) => semanticFindingKey(finding) === selectedFinding.key);
   const marker = useRef<HTMLSpanElement>(null);
+  const firstFinding = findings[0];
+  const firstFindingCopy = firstFinding === undefined ? undefined : presentFinding(firstFinding);
+  const focusedDetail =
+    firstFindingCopy === undefined
+      ? undefined
+      : `${firstFindingCopy.title}: ${firstFindingCopy.description}`;
+  const focusedDetailId = `${elementId}-finding-detail`;
 
   useEffect(() => {
     if (!selectedAtOwner || marker.current === null) {
@@ -62,22 +78,31 @@ export function SemanticOwnerMarker({ address }: { readonly address: SemanticAdd
   }, [navigationRevision, selectedAtOwner, selectedKey]);
 
   return (
-    <span
-      aria-label={
-        findings.length === 0
-          ? undefined
-          : `${findings.length} ${findings.length === 1 ? 'finding' : 'findings'}`
-      }
-      className="semantic-owner-marker"
-      data-has-findings={findings.length > 0}
-      data-selected={selectedAtOwner}
-      data-semantic-owner={ownerKey}
-      id={semanticOwnerElementId(address)}
-      ref={marker}
-      tabIndex={-1}
-    >
-      {findings.length === 0 ? null : findings.length}
-    </span>
+    <>
+      <span
+        aria-describedby={focusedDetail === undefined ? undefined : focusedDetailId}
+        aria-label={
+          findings.length === 0
+            ? undefined
+            : `${findings.length} ${findings.length === 1 ? 'finding' : 'findings'}`
+        }
+        className="semantic-owner-marker"
+        data-has-findings={findings.length > 0}
+        data-selected={selectedAtOwner}
+        data-semantic-owner={ownerKey}
+        id={elementId}
+        ref={marker}
+        tabIndex={-1}
+        title={focusedDetail}
+      >
+        {findings.length === 0 ? null : findings.length}
+      </span>
+      {focusedDetail === undefined ? null : (
+        <span className="visually-hidden" id={focusedDetailId}>
+          {focusedDetail}
+        </span>
+      )}
+    </>
   );
 }
 

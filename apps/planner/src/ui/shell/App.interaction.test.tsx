@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { encodeProjectDocument } from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -140,6 +140,37 @@ describe('planner history interaction', () => {
     await user.keyboard(' ');
     expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Underworld).toBeNull();
     expect(route.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('keeps blocked and cross-route biome pages visible and editable', async () => {
+    const { user } = renderPlannerForInteraction();
+
+    await user.selectOptions(screen.getByLabelText('Configured biomes'), '4');
+    const oceanus = screen.getByRole('button', { name: 'Oceanus' });
+    expect(within(oceanus).getByText('Blocked')).toBeTruthy();
+    expect(
+      document
+        .getElementById(oceanus.getAttribute('aria-describedby') ?? '')
+        ?.getAttribute('aria-label'),
+    ).toBe('Blocked');
+
+    await user.click(oceanus);
+    const blockedBanner = screen.getByText(/Oceanus is blocked until Erebus is complete and valid/);
+    expect(blockedBanner.getAttribute('role')).toBeNull();
+    expect(blockedBanner.closest('.editor-panel')?.getAttribute('aria-live')).toBe('polite');
+    expect(screen.getByLabelText('Starting room')).toHaveProperty('disabled', false);
+
+    await user.click(screen.getByRole('button', { name: 'Surface' }));
+    await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
+    const ephyra = screen.getByRole('button', { name: 'City of Ephyra' });
+    expect(within(ephyra).getByText('Incomplete')).toBeTruthy();
+
+    await user.click(ephyra);
+    expect(screen.getByText(/City of Ephyra has no evaluated route prefix yet/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Initialize City of Ephyra' })).toHaveProperty(
+      'disabled',
+      false,
+    );
   });
 });
 

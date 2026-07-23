@@ -121,6 +121,8 @@ describe('App', () => {
     expect(state.projectWorkspace.history).toBe(historyBeforeNavigation);
     expect(markup).toContain('Start this biome');
     expect(markup).toContain('Choose a starting room before building its route.');
+    expect(markup).toContain('aria-label="1 finding"');
+    expect(markup).toContain('Start this biome: Choose a starting room before building its route.');
     expect(markup).toContain('Incomplete');
     expect(markup).toContain(semanticOwnerElementId(finding.origin));
     expect(markup).toContain('data-selected="true"');

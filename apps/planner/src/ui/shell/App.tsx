@@ -2,7 +2,11 @@ import { createRouteAddress, type AuthoredRoutePlan } from '@run-planner/engine/
 import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
 import { type ProjectRouteEvaluation } from '@run-planner/engine/simulation';
 
-import { presentProjectStatus, presentRouteStatus } from '../../projections/evaluationProjection';
+import {
+  presentBiomeFeedbackContext,
+  projectFeedbackHierarchy,
+  type RouteFeedbackPresentation,
+} from '../../projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../../state/projectWorkspaceSlice';
 import type { EditorNavigation, RouteEditorNavigation } from '../../projections/editorNavigation';
 import {
@@ -20,7 +24,12 @@ import type { ProjectOperations } from '../../workspace/projectOperations';
 import type { CandidateProjectionService } from '../../projections/candidateProjection';
 import type { ContextualPickerProjectionService } from '../../projections/contextualPicker';
 import type { RewardPickerProjectionService } from '../../projections/rewardPicker';
-import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from '../feedback/EvaluationFeedback';
+import {
+  FindingCount,
+  ProjectFindings,
+  SemanticOwnerMarker,
+  StatusBadge,
+} from '../feedback/EvaluationFeedback';
 import { LinearBiomeEditor } from '../editor/linear/LinearBiomeEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
 import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
@@ -39,13 +48,13 @@ interface AppProps {
 function RouteOverview({
   label,
   navigation,
+  feedback,
   route,
-  routeEvaluation,
 }: {
   readonly label: string;
   readonly navigation: RouteEditorNavigation;
+  readonly feedback: RouteFeedbackPresentation;
   readonly route: AuthoredRoutePlan;
-  readonly routeEvaluation: ProjectRouteEvaluation;
 }) {
   const dispatch = useAppDispatch();
   return (
@@ -57,7 +66,8 @@ function RouteOverview({
         </div>
         <div className="panel-heading-actions">
           <SemanticOwnerMarker address={createRouteAddress(route.routeKey)} />
-          <StatusBadge status={presentRouteStatus(routeEvaluation)} />
+          <StatusBadge status={feedback.status} />
+          <FindingCount count={feedback.findingCount} label={`${label} findings`} />
           <span className="neutral-status">{route.biomes.length} configured</span>
         </div>
       </header>
@@ -108,6 +118,7 @@ function RouteWorkspace({
   catalog,
   contextualPicker,
   navigation,
+  feedback,
   rewardPicker,
   route,
   routeEvaluation,
@@ -116,6 +127,7 @@ function RouteWorkspace({
   readonly catalog: Catalog;
   readonly contextualPicker: ContextualPickerProjectionService;
   readonly navigation: RouteEditorNavigation;
+  readonly feedback: RouteFeedbackPresentation;
   readonly rewardPicker: RewardPickerProjectionService;
   readonly route: AuthoredRoutePlan;
   readonly routeEvaluation: ProjectRouteEvaluation;
@@ -139,6 +151,15 @@ function RouteWorkspace({
     throw new Error(`${activeBiomeEvaluation.biomeKey} plan and evaluation kinds do not match`);
   }
   const displayedBiomeKey = activeBiomePlan?.biomeKey ?? null;
+  const activeBiomeFeedback =
+    displayedBiomeKey === null ? undefined : feedback.biomes.get(displayedBiomeKey);
+  if (displayedBiomeKey !== null && activeBiomeFeedback === undefined) {
+    throw new Error(`${route.routeKey} feedback omitted configured biome ${displayedBiomeKey}`);
+  }
+  const contextMessage =
+    activeBiomeFeedback === undefined
+      ? undefined
+      : presentBiomeFeedbackContext(catalog, activeBiomeFeedback);
 
   return (
     <div className="editor-workspace">
@@ -153,28 +174,59 @@ function RouteWorkspace({
         >
           Route
         </button>
-        {configuredPanels.map((panel) => (
-          <button
-            aria-current={panel.biomeKey === displayedBiomeKey ? 'page' : undefined}
-            className="panel-navigation-item"
-            data-active={panel.biomeKey === displayedBiomeKey}
-            key={panel.biomeKey}
-            onClick={() =>
-              dispatch(routePanelSelected({ routeKey: route.routeKey, biomeKey: panel.biomeKey }))
-            }
-            type="button"
-          >
-            {panel.label}
-          </button>
-        ))}
+        {configuredPanels.map((panel) => {
+          const biomeFeedback = feedback.biomes.get(panel.biomeKey);
+          if (biomeFeedback === undefined) {
+            throw new Error(
+              `${route.routeKey} feedback omitted configured biome ${panel.biomeKey}`,
+            );
+          }
+          const feedbackId = `${route.routeKey}-${panel.biomeKey}-navigation-feedback`;
+          return (
+            <button
+              aria-current={panel.biomeKey === displayedBiomeKey ? 'page' : undefined}
+              aria-describedby={feedbackId}
+              aria-label={panel.label}
+              className="panel-navigation-item"
+              data-active={panel.biomeKey === displayedBiomeKey}
+              data-feedback-context={biomeFeedback.context}
+              key={panel.biomeKey}
+              onClick={() =>
+                dispatch(routePanelSelected({ routeKey: route.routeKey, biomeKey: panel.biomeKey }))
+              }
+              type="button"
+            >
+              <span>{panel.label}</span>
+              <span
+                aria-label={`${biomeFeedback.status.label}${biomeFeedback.findingCount === 0 ? '' : `, ${biomeFeedback.findingCount} findings`}`}
+                className="navigation-feedback"
+                id={feedbackId}
+              >
+                <StatusBadge status={biomeFeedback.status} />
+                <FindingCount
+                  count={biomeFeedback.findingCount}
+                  label={`${panel.label} findings`}
+                />
+              </span>
+            </button>
+          );
+        })}
       </nav>
       <div className="editor-panel" aria-live="polite">
+        {contextMessage === undefined ? null : (
+          <p
+            className="feedback-context-banner"
+            data-feedback-context={activeBiomeFeedback?.context}
+          >
+            {contextMessage}
+          </p>
+        )}
         {displayedBiomeKey === null ? (
           <RouteOverview
             label={navigation.label}
             navigation={navigation}
+            feedback={feedback}
             route={route}
-            routeEvaluation={routeEvaluation}
           />
         ) : activeBiomePlan?.kind === 'HubBiome' ? (
           <HubBiomeEditor
@@ -218,18 +270,22 @@ export function App({
   const project = useAppSelector(selectPresentProject);
   const evaluation = useAppSelector(selectProjectEvaluation);
   const dispatch = useAppDispatch();
+  const feedback = projectFeedbackHierarchy(evaluation);
   const activeRoute = project.routes.find((route) => route.routeKey === activeRouteKey);
   const activeRouteEvaluation = evaluation.routes.find(
     (route) => route.routeKey === activeRouteKey,
   );
   const activeRouteNavigation =
     activeRouteKey === null ? undefined : editorNavigation.routes.byKey[activeRouteKey];
+  const activeRouteFeedback =
+    activeRouteKey === null ? undefined : feedback.routes.get(activeRouteKey);
 
   if (
     activeRouteKey !== null &&
     (activeRoute === undefined ||
       activeRouteEvaluation === undefined ||
-      activeRouteNavigation === undefined)
+      activeRouteNavigation === undefined ||
+      activeRouteFeedback === undefined)
   ) {
     throw new Error(`Editor session references unavailable route ${activeRouteKey}`);
   }
@@ -243,7 +299,8 @@ export function App({
         </div>
         <div className="header-actions">
           <span className="foundation-status">Project editor</span>
-          <StatusBadge status={presentProjectStatus(evaluation)} />
+          <StatusBadge status={feedback.status} />
+          <FindingCount count={feedback.findingCount} label="project findings" />
           <ProjectHistoryControls />
         </div>
       </header>
@@ -251,18 +308,38 @@ export function App({
       <ProjectFileControls operations={projectOperations} />
 
       <nav className="route-tabs" aria-label="Planner sections">
-        {editorNavigation.routes.values.map((route) => (
-          <button
-            aria-current={route.routeKey === activeRouteKey ? 'page' : undefined}
-            className="route-tab"
-            data-active={route.routeKey === activeRouteKey}
-            key={route.routeKey}
-            onClick={() => dispatch(routeSelected(route.routeKey))}
-            type="button"
-          >
-            {route.label}
-          </button>
-        ))}
+        {editorNavigation.routes.values.map((route) => {
+          const routeFeedback = feedback.routes.get(route.routeKey);
+          if (routeFeedback === undefined) {
+            throw new Error(`Feedback omitted route ${route.routeKey}`);
+          }
+          const feedbackId = `${route.routeKey}-route-feedback`;
+          return (
+            <button
+              aria-current={route.routeKey === activeRouteKey ? 'page' : undefined}
+              aria-describedby={feedbackId}
+              aria-label={route.label}
+              className="route-tab"
+              data-active={route.routeKey === activeRouteKey}
+              key={route.routeKey}
+              onClick={() => dispatch(routeSelected(route.routeKey))}
+              type="button"
+            >
+              <span>{route.label}</span>
+              <span
+                aria-label={`${routeFeedback.status.label}${routeFeedback.findingCount === 0 ? '' : `, ${routeFeedback.findingCount} findings`}`}
+                className="navigation-feedback"
+                id={feedbackId}
+              >
+                <StatusBadge status={routeFeedback.status} />
+                <FindingCount
+                  count={routeFeedback.findingCount}
+                  label={`${route.label} findings`}
+                />
+              </span>
+            </button>
+          );
+        })}
         <button
           aria-current={activeRouteKey === null ? 'page' : undefined}
           className="route-tab"
@@ -278,11 +355,13 @@ export function App({
 
       {activeRoute !== undefined &&
         activeRouteEvaluation !== undefined &&
-        activeRouteNavigation !== undefined && (
+        activeRouteNavigation !== undefined &&
+        activeRouteFeedback !== undefined && (
           <RouteWorkspace
             candidateProjection={candidateProjection}
             catalog={catalog}
             contextualPicker={contextualPicker}
+            feedback={activeRouteFeedback}
             navigation={activeRouteNavigation}
             rewardPicker={rewardPicker}
             route={activeRoute}

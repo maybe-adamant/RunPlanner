@@ -424,7 +424,13 @@ describe('golden Underworld product loop', () => {
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '2');
     await user.click(screen.getByRole('button', { name: 'Oceanus' }));
 
-    expect(screen.getByText('Blocked', { selector: '.status-badge' })).toBeTruthy();
+    const oceanusEditor = screen
+      .getByRole('heading', { name: 'Oceanus' })
+      .closest<HTMLElement>('.biome-editor');
+    if (oceanusEditor === null) {
+      throw new Error('Oceanus editor is missing');
+    }
+    expect(within(oceanusEditor).getByText('Blocked', { selector: '.status-badge' })).toBeTruthy();
     await selectRoom(user, application, screen.getByLabelText('Starting room'), 'G_Intro');
     await user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
     await user.click(within(exitRow(1, 1)).getByLabelText('Room'));
@@ -465,7 +471,13 @@ describe('golden Underworld product loop', () => {
 
     await user.click(screen.getByRole('button', { name: 'Tartarus' }));
 
-    expect(screen.getByText('Blocked', { selector: '.status-badge' })).toBeTruthy();
+    const tartarusEditor = screen
+      .getByRole('heading', { name: 'Tartarus' })
+      .closest<HTMLElement>('.biome-editor');
+    if (tartarusEditor === null) {
+      throw new Error('Tartarus editor is missing');
+    }
+    expect(within(tartarusEditor).getByText('Blocked', { selector: '.status-badge' })).toBeTruthy();
     expect(screen.getByLabelText('Maximum NonGoal rewards')).toHaveProperty('value', '3');
     expect(
       screen.getByLabelText('Maximum NonGoal rewards').getAttribute('data-candidate-support'),

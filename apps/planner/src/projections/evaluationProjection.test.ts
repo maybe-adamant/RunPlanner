@@ -11,6 +11,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   type FindingCode,
+  type ProjectBiomeEvaluation,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
   type SemanticFinding,
@@ -20,10 +21,12 @@ import { describe, expect, it } from 'vitest';
 import {
   findingDestinationLabel,
   indexFindingsByOwner,
+  presentBiomeFeedbackContext,
   presentBiomeStatus,
   presentFinding,
   presentProjectStatus,
   presentRouteStatus,
+  projectFeedbackHierarchy,
 } from './evaluationProjection';
 
 const allFindingCodes = [
@@ -116,6 +119,96 @@ describe('evaluation presentation', () => {
         validity: 'invalid',
       }),
     ).toEqual({ label: 'Complete · Invalid', tone: 'invalid' });
+  });
+
+  it('projects aggregate feedback and coverage context through the route hierarchy', () => {
+    const fFinding = finding('biomeTopologyMissing');
+    const fEvaluation = {
+      kind: 'LinearBiome',
+      biomeKey: 'F',
+      origin: biome,
+      authoring: 'incomplete',
+      frontier: biome,
+      coverage: { kind: 'none', reason: 'notEvaluated' },
+      findings: [fFinding],
+    } as const satisfies ProjectBiomeEvaluation;
+    const underworld = {
+      routeKey: 'Underworld',
+      status: 'incomplete',
+      configuredBiomeKeys: ['F', 'G'],
+      biomes: [fEvaluation],
+      processing: {
+        completeValidPrefix: [],
+        active: { kind: 'incomplete', biomeKey: 'F' },
+        blockedSuffix: ['G'],
+      },
+      findings: [fFinding],
+      summary: {
+        configuredBiomeCount: 2,
+        evaluatedBiomeCount: 1,
+        validatedBiomeCount: 0,
+        incompleteBiomeCount: 1,
+        invalidBiomeCount: 0,
+        blockedBiomeCount: 1,
+        eligibleForExecutionPlan: false,
+      },
+    } as const satisfies ProjectRouteEvaluation;
+    const surface = {
+      routeKey: 'Surface',
+      status: 'empty',
+      configuredBiomeKeys: [],
+      biomes: [],
+      processing: { completeValidPrefix: [], active: null, blockedSuffix: [] },
+      findings: [],
+      summary: {
+        configuredBiomeCount: 0,
+        evaluatedBiomeCount: 0,
+        validatedBiomeCount: 0,
+        incompleteBiomeCount: 0,
+        invalidBiomeCount: 0,
+        blockedBiomeCount: 0,
+        eligibleForExecutionPlan: false,
+      },
+    } as const satisfies ProjectRouteEvaluation;
+    const evaluation = {
+      status: 'incomplete',
+      projectId: 'feedback-project',
+      catalogVersion: catalog.version,
+      routes: [underworld, surface],
+      findings: [fFinding],
+      summary: underworld.summary,
+    } as const satisfies ProjectEvaluation;
+
+    const feedback = projectFeedbackHierarchy(evaluation);
+    const fFeedback = feedback.routes.get('Underworld')?.biomes.get('F');
+    const gFeedback = feedback.routes.get('Underworld')?.biomes.get('G');
+
+    expect(projectFeedbackHierarchy(evaluation)).toBe(feedback);
+    expect(feedback).toMatchObject({ findingCount: 1, status: { tone: 'incomplete' } });
+    expect(feedback.routes.get('Underworld')).toMatchObject({
+      findingCount: 1,
+      status: { tone: 'incomplete' },
+    });
+    expect(fFeedback).toMatchObject({
+      context: 'unassessed',
+      findingCount: 1,
+      status: { tone: 'incomplete' },
+    });
+    expect(gFeedback).toMatchObject({
+      blockedByBiomeKey: 'F',
+      context: 'blocked',
+      findingCount: 0,
+      status: { tone: 'blocked' },
+    });
+    if (fFeedback === undefined || gFeedback === undefined) {
+      throw new Error('feedback hierarchy omitted a configured biome');
+    }
+    expect(presentBiomeFeedbackContext(catalog, fFeedback)).toBe(
+      'Erebus has no evaluated route prefix yet. Its choices remain editable and are marked Not evaluated.',
+    );
+    expect(presentBiomeFeedbackContext(catalog, gFeedback)).toContain(
+      'blocked until Erebus is complete and valid',
+    );
   });
 
   it('uses declaration labels and structural roles without exposing occurrence identity', () => {
