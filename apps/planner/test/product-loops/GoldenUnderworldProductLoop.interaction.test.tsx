@@ -73,12 +73,26 @@ function exitRow(batchIndex: number, exitIndex: number): HTMLElement {
 
 async function replaceOffer(
   user: PlannerUser,
+  application: PlannerApplication,
   owner: HTMLElement,
   offer: OfferSpec,
 ): Promise<void> {
-  await user.selectOptions(within(owner).getByLabelText('Reward'), offer.rewardType);
+  const reward = application.catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  if (reward === undefined) {
+    throw new Error(`Reward ${offer.rewardType} is missing from the catalog`);
+  }
+  await user.click(within(owner).getByLabelText('Reward'));
+  await screen.findByText('Reward type');
+  const listbox = await screen.findByRole('listbox', undefined, { timeout: 10_000 });
+  await user.click(within(listbox).getByText(reward.label));
   if (offer.source !== undefined) {
-    await user.selectOptions(within(owner).getByLabelText('Source'), offer.source);
+    const source = application.catalog.rewards.rewardTypes.byKey[offer.source];
+    if (source === undefined) {
+      throw new Error(`Reward source ${offer.source} is missing from the catalog`);
+    }
+    await screen.findByText('God');
+    const sourceListbox = await screen.findByRole('listbox', undefined, { timeout: 10_000 });
+    await user.click(within(sourceListbox).getByText(source.label));
   }
 }
 
@@ -127,7 +141,7 @@ async function authorGoldenF(user: PlannerUser, application: PlannerApplication)
         target.gameName,
       );
       if (target.offer !== undefined) {
-        await replaceOffer(user, exitRow(batchIndex, exitIndex), target.offer);
+        await replaceOffer(user, application, exitRow(batchIndex, exitIndex), target.offer);
       }
     }
     await user.click(within(decision(batchIndex)).getByRole('radio', { name: 'Pick exit 1' }));
@@ -142,13 +156,13 @@ async function authorGoldenF(user: PlannerUser, application: PlannerApplication)
   if (shopRow === undefined || freeRewardRow === undefined) {
     throw new Error('Golden terminal offers are incomplete');
   }
-  await replaceOffer(user, freeRewardRow, { rewardType: 'StackUpgrade' });
+  await replaceOffer(user, application, freeRewardRow, { rewardType: 'StackUpgrade' });
   const offerTwoHeading = within(shopRow).getByRole('heading', { name: 'Offer 2' });
   const offerTwo = offerTwoHeading.closest<HTMLElement>('.shop-offer');
   if (offerTwo === null) {
     throw new Error('Golden Preboss Offer 2 is missing');
   }
-  await replaceOffer(user, offerTwo, { rewardType: 'RoomRewardHealDrop' });
+  await replaceOffer(user, application, offerTwo, { rewardType: 'RoomRewardHealDrop' });
 }
 
 function createPersistence(): {
@@ -656,7 +670,7 @@ describe('golden Underworld product loop', () => {
       'region',
       { name: 'Cage 1' },
     );
-    await view.user.selectOptions(within(firstCage).getByLabelText('Reward'), 'MaxManaDrop');
+    await replaceOffer(view.user, application, firstCage, { rewardType: 'WeaponUpgrade' });
     expect(currentProject(application)).not.toEqual(authored);
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toEqual(authored);

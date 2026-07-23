@@ -45,13 +45,6 @@ option[data-candidate-support='impossible'] {
   color: #b22626;
 }
 
-.candidate-explanation {
-  display: block;
-  margin-top: 4px;
-  color: #d9b0b0;
-  line-height: 1.25;
-}
-
 button:focus-visible {
   outline: 2px solid #e2b971;
   outline-offset: 3px;
@@ -616,6 +609,25 @@ select {
   box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
 }
 
+.contextual-picker-step-label,
+.contextual-picker-loading {
+  margin: 0;
+  padding: 7px 8px;
+  color: #aaa7af;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.contextual-picker-loading {
+  min-height: 52px;
+  color: #c4becb;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 .contextual-picker-popover [cmdk-root] {
   display: grid;
   gap: 5px;
@@ -737,6 +749,21 @@ select {
   color: #f0ebe3;
 }
 
+.contextual-picker-cancel {
+  width: 100%;
+  margin-top: 5px;
+  padding: 7px 8px;
+  border: 0;
+  border-top: 1px solid #353640;
+  color: #aaa7af;
+  background: transparent;
+  cursor: pointer;
+}
+
+.contextual-picker-cancel:hover {
+  color: #f0ebe3;
+}
+
 .primary-action {
   min-height: 36px;
   padding: 7px 12px;
@@ -815,8 +842,7 @@ select {
   gap: 5px;
 }
 
-.room-selector,
-.paired-payload {
+.room-selector {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -1378,7 +1404,6 @@ select {
   }
 
   .room-selector,
-  .paired-payload,
   .fields-batch-editor,
   .fields-batch-summary,
   .reward-wheel-settings,

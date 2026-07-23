@@ -55,6 +55,7 @@ describe('App', () => {
           contextualPicker={application.contextualPicker}
           editorNavigation={application.editorNavigation}
           projectOperations={application.projectOperations}
+          rewardPicker={application.rewardPicker}
         />
       </Provider>,
     );
@@ -109,6 +110,7 @@ describe('App', () => {
           contextualPicker={application.contextualPicker}
           editorNavigation={application.editorNavigation}
           projectOperations={application.projectOperations}
+          rewardPicker={application.rewardPicker}
         />
       </Provider>,
     );
@@ -138,6 +140,7 @@ describe('App', () => {
           contextualPicker={application.contextualPicker}
           editorNavigation={application.editorNavigation}
           projectOperations={application.projectOperations}
+          rewardPicker={application.rewardPicker}
         />
       </Provider>,
     );
@@ -155,6 +158,7 @@ describe('App', () => {
           contextualPicker={application.contextualPicker}
           editorNavigation={application.editorNavigation}
           projectOperations={application.projectOperations}
+          rewardPicker={application.rewardPicker}
         />
       </Provider>,
     );
@@ -182,6 +186,7 @@ describe('App', () => {
           contextualPicker={application.contextualPicker}
           editorNavigation={application.editorNavigation}
           projectOperations={application.projectOperations}
+          rewardPicker={application.rewardPicker}
         />
       </Provider>,
     );
@@ -248,6 +253,7 @@ describe('App', () => {
           contextualPicker={application.contextualPicker}
           editorNavigation={application.editorNavigation}
           projectOperations={application.projectOperations}
+          rewardPicker={application.rewardPicker}
         />
       </Provider>,
     );
@@ -394,6 +400,7 @@ describe('App', () => {
           contextualPicker={application.contextualPicker}
           editorNavigation={application.editorNavigation}
           projectOperations={application.projectOperations}
+          rewardPicker={application.rewardPicker}
         />
       </Provider>,
     );
@@ -455,6 +462,7 @@ describe('App', () => {
           contextualPicker={application.contextualPicker}
           editorNavigation={application.editorNavigation}
           projectOperations={application.projectOperations}
+          rewardPicker={application.rewardPicker}
         />
       </Provider>,
     );

@@ -27,6 +27,7 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
         contextualPicker={application.contextualPicker}
         editorNavigation={application.editorNavigation}
         projectOperations={application.projectOperations}
+        rewardPicker={application.rewardPicker}
       />
     </Provider>,
   );

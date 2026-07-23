@@ -21,6 +21,7 @@ import { type HubBiomeProjectEvaluation } from '@run-planner/engine/simulation';
 import { useMemo } from 'react';
 
 import { type CandidateProjectionService } from '../../../projections/candidateProjection';
+import type { RewardPickerProjectionService } from '../../../projections/rewardPicker';
 import { presentBiomeStatus } from '../../../projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
@@ -44,6 +45,7 @@ interface HubBiomeEditorProps {
   readonly catalog: Catalog;
   readonly evaluation: HubBiomeProjectEvaluation | undefined;
   readonly plan: HubBiomePlan;
+  readonly rewardPicker: RewardPickerProjectionService;
   readonly routeKey: string;
 }
 
@@ -52,12 +54,14 @@ function EphyraSideRooms({
   candidateProjection,
   catalog,
   occurrence,
+  rewardPicker,
   state,
 }: {
   readonly biome: ReturnType<typeof createBiomeAddress>;
   readonly candidateProjection: CandidateProjectionService;
   readonly catalog: Catalog;
   readonly occurrence: RoomOccurrence;
+  readonly rewardPicker: RewardPickerProjectionService;
   readonly state: EphyraCombatState;
 }) {
   const dispatch = useAppDispatch();
@@ -222,7 +226,6 @@ function EphyraSideRooms({
                   binding={sideRoom.incomingReward}
                   candidateOwner={{ kind: 'localReward', address: rewardAddress }}
                   candidateProjection={candidateProjection}
-                  catalog={catalog}
                   idPrefix={`side-${occurrence.occurrenceId}-${slot.slotKey}`}
                   offer={sideState.offer}
                   onReplace={(value) =>
@@ -235,6 +238,7 @@ function EphyraSideRooms({
                     )
                   }
                   project={project}
+                  rewardPicker={rewardPicker}
                 />
               </div>
             </article>
@@ -271,6 +275,7 @@ export function HubBiomeEditor({
   catalog,
   evaluation,
   plan,
+  rewardPicker,
   routeKey,
 }: HubBiomeEditorProps) {
   const dispatch = useAppDispatch();
@@ -427,6 +432,7 @@ export function HubBiomeEditor({
                   catalog={catalog}
                   entryActive={true}
                   occurrence={occurrence}
+                  rewardPicker={rewardPicker}
                 />
               </article>
             );
@@ -519,6 +525,7 @@ export function HubBiomeEditor({
                       catalog={catalog}
                       entryActive={isVisited}
                       occurrence={occurrence}
+                      rewardPicker={rewardPicker}
                     />
                   )}
                 </article>
@@ -669,6 +676,7 @@ export function HubBiomeEditor({
                   candidateProjection={candidateProjection}
                   catalog={catalog}
                   occurrence={occurrence}
+                  rewardPicker={rewardPicker}
                   state={occurrence.state}
                 />
               </article>
@@ -704,6 +712,7 @@ export function HubBiomeEditor({
                 catalog={catalog}
                 entryActive={true}
                 occurrence={occurrence}
+                rewardPicker={rewardPicker}
               />
             </article>
           );

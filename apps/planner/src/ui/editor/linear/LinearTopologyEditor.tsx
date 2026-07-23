@@ -25,6 +25,7 @@ import { projectClockworkTopology, projectLinearBatchState } from '@run-planner/
 
 import type { CandidateProjectionService } from '../../../projections/candidateProjection';
 import type { ContextualPickerProjectionService } from '../../../projections/contextualPicker';
+import type { RewardPickerProjectionService } from '../../../projections/rewardPicker';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
@@ -40,6 +41,7 @@ interface LinearTopologyEditorProps {
   readonly contextualPicker: ContextualPickerProjectionService;
   readonly evaluation: LinearBiomeProjectEvaluation | undefined;
   readonly plan: LinearBiomePlan;
+  readonly rewardPicker: RewardPickerProjectionService;
   readonly topology: LinearBiomeTopology;
 }
 
@@ -101,6 +103,7 @@ function OrdinaryTargetEditor({
   exitIndex,
   clockworkReward,
   projectedBatchState,
+  rewardPicker,
   target,
   topology,
 }: LinearTopologyEditorProps & {
@@ -225,6 +228,7 @@ function OrdinaryTargetEditor({
           {...(clockworkReward === undefined ? {} : { clockworkReward })}
           entryActive={continuation.pickedExitIndex === exitIndex}
           occurrence={room}
+          rewardPicker={rewardPicker}
         />
       </div>
     </div>
@@ -242,6 +246,7 @@ function BatchEditor({
   contextualPicker,
   evaluation,
   plan,
+  rewardPicker,
   topology,
 }: BatchEditorProps) {
   const dispatch = useAppDispatch();
@@ -388,6 +393,7 @@ function BatchEditor({
             key={exitIndex}
             plan={plan}
             projectedBatchState={projectedBatchState}
+            rewardPicker={rewardPicker}
             {...(() => {
               const reward = clockworkBatch?.targets.find(
                 (candidate) => candidate.exitIndex === exitIndex,
@@ -467,6 +473,7 @@ function TerminalEditor({
   canReplaceWithBatch,
   catalog,
   continuation,
+  rewardPicker,
   topology,
 }: TerminalEditorProps) {
   const dispatch = useAppDispatch();
@@ -591,6 +598,7 @@ function TerminalEditor({
                   catalog={catalog}
                   entryActive={continuation.pickedExitIndex === target.exitIndex}
                   occurrence={room}
+                  rewardPicker={rewardPicker}
                 />
               </div>
             </div>
@@ -748,6 +756,7 @@ export function LinearTopologyEditor({
   contextualPicker,
   evaluation,
   plan,
+  rewardPicker,
   topology,
 }: LinearTopologyEditorProps) {
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
@@ -810,6 +819,7 @@ export function LinearTopologyEditor({
             evaluation={evaluation}
             key={continuation.parentOccurrenceId ?? 'layout-entry'}
             plan={plan}
+            rewardPicker={rewardPicker}
             topology={topology}
           />
         ) : (
@@ -825,6 +835,7 @@ export function LinearTopologyEditor({
             evaluation={evaluation}
             key={continuation.parentOccurrenceId ?? 'layout-entry'}
             plan={plan}
+            rewardPicker={rewardPicker}
             topology={topology}
           />
         ),
@@ -840,6 +851,7 @@ export function LinearTopologyEditor({
           evaluation={evaluation}
           parentOccurrenceId={frontier}
           plan={plan}
+          rewardPicker={rewardPicker}
           topology={topology}
         />
       )}

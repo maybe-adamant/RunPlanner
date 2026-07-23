@@ -9,6 +9,9 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createCandidateProjectionService } from '../../../projections/candidateProjection';
+import { createContextualOptionResolver } from '../../../projections/contextualOptions';
+import { createContextualPickerProjection } from '../../../projections/contextualPicker';
+import { createRewardPickerProjection } from '../../../projections/rewardPicker';
 import {
   createPlannerStore,
   selectPresentProject,
@@ -33,8 +36,10 @@ afterEach(() => {
 
 function NEditorHarness({
   candidateProjection,
+  rewardPicker,
 }: {
   readonly candidateProjection: ReturnType<typeof createCandidateProjectionService>;
+  readonly rewardPicker: ReturnType<typeof createRewardPickerProjection>;
 }) {
   const project = useAppSelector(selectPresentProject);
   const evaluation = useAppSelector(selectProjectEvaluation)
@@ -50,6 +55,7 @@ function NEditorHarness({
       catalog={catalog}
       evaluation={evaluation}
       plan={plan}
+      rewardPicker={rewardPicker}
       routeKey={biome.routeKey}
     />
   );
@@ -63,10 +69,14 @@ function renderNEditor(project: ProjectDocument) {
     initialProject: project,
   });
   const candidateProjection = createCandidateProjectionService(catalog, evaluateProject);
+  const rewardPicker = createRewardPickerProjection(
+    catalog,
+    createContextualPickerProjection(createContextualOptionResolver(catalog)),
+  );
   const user = userEvent.setup();
   const view = render(
     <Provider store={store}>
-      <NEditorHarness candidateProjection={candidateProjection} />
+      <NEditorHarness candidateProjection={candidateProjection} rewardPicker={rewardPicker} />
     </Provider>,
   );
   return { store, user, ...view };
@@ -146,30 +156,35 @@ describe('N editor projection', () => {
       },
     });
 
-    const sideReward = within(thirdSide).getByLabelText('Reward') as HTMLSelectElement;
-    const replacementSideReward = Array.from(sideReward.options).find(
-      (option) => option.value !== sideReward.value,
-    )?.value;
-    if (replacementSideReward === undefined) {
-      throw new Error('side-room reward selector has no replacement value');
-    }
-    await user.selectOptions(sideReward, replacementSideReward);
+    await user.click(within(thirdSide).getByLabelText('Reward'));
+    await screen.findByText('Reward type');
+    await user.click(within(await screen.findByRole('listbox')).getByText('Fire Essence'));
     const afterSideReward = nPlan(store.getState().projectWorkspace.history.present).topology;
     const rewardedCombat05 = afterSideReward?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === occurrenceId('combat05'),
     );
     expect(rewardedCombat05?.state).toMatchObject({
       kind: 'ephyraCombat',
-      sideRooms: { sideDoor3: { offer: { rewardType: replacementSideReward } } },
+      sideRooms: { sideDoor3: { offer: { rewardType: 'FireBoost' } } },
     });
 
     const combat05Slot = screen.getByRole('article', { name: 'Combat 05 Hub slot' });
-    await user.selectOptions(within(combat05Slot).getByLabelText('Reward'), 'MaxHealthDropBig');
+    await user.click(within(combat05Slot).getByLabelText('Reward'));
+    await screen.findByText('Reward type');
+    await user.click(within(await screen.findByRole('listbox')).getByText('Boon'));
+    await screen.findByText('God');
+    await user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
     expect(
       nPlan(store.getState().projectWorkspace.history.present).topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === occurrenceId('combat05'),
       )?.state,
-    ).toMatchObject({ kind: 'ephyraCombat', offer: { rewardType: 'MaxHealthDropBig' } });
+    ).toMatchObject({
+      kind: 'ephyraCombat',
+      offer: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
 
     await user.selectOptions(screen.getByLabelText('Visit 1 room'), 'combat01');
     expect(nPlan(store.getState().projectWorkspace.history.present).topology?.visitOrder[0]).toBe(

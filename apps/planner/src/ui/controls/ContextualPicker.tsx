@@ -1,6 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type {
   ContextualPickerItem,
@@ -9,12 +9,19 @@ import type {
 } from '../../projections/contextualPicker';
 
 interface ContextualPickerProps<T> {
+  readonly cancelLabel?: string;
+  readonly choiceLabel?: string;
+  readonly closeOnSelect?: boolean;
   readonly disabled?: boolean;
   readonly id: string;
   readonly label: string;
+  readonly loading?: boolean;
   readonly model: ContextualPickerModel<T>;
+  readonly onOpenChange?: (open: boolean) => void;
   readonly onSelect: (value: T) => void;
+  readonly open?: boolean;
   readonly placeholder: string;
+  readonly triggerLabel?: string;
 }
 
 function PickerSection<T>({
@@ -56,47 +63,137 @@ function PickerSection<T>({
   );
 }
 
+function PickerContent<T>({
+  cancelLabel,
+  choicesLabel,
+  loading,
+  model,
+  onCancel,
+  onSelect,
+  stepLabel,
+}: {
+  readonly cancelLabel?: string;
+  readonly choicesLabel: string;
+  readonly loading: boolean;
+  readonly model: ContextualPickerModel<T>;
+  readonly onCancel: () => void;
+  readonly onSelect: (item: ContextualPickerItem<T>) => void;
+  readonly stepLabel?: string;
+}) {
+  const [query, setQuery] = useState('');
+  const [collapsibleOpen, setCollapsibleOpen] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  const collapsible = model.sections.find((section) => section.collapsible);
+  const ordinarySections = model.sections.filter((section) => !section.collapsible);
+
+  useEffect(() => {
+    if (!loading && stepLabel !== undefined) {
+      input.current?.focus();
+    }
+  }, [loading, stepLabel]);
+
+  const select = (item: ContextualPickerItem<T>): void => {
+    onSelect(item);
+    if (!item.disabled) {
+      setQuery('');
+    }
+  };
+
+  return (
+    <>
+      {stepLabel === undefined ? null : <p className="contextual-picker-step-label">{stepLabel}</p>}
+      {loading ? (
+        <p className="contextual-picker-loading" role="status">
+          Evaluating {choicesLabel.toLowerCase()} choices…
+        </p>
+      ) : (
+        <Command label={`${choicesLabel} choices`} shouldFilter={true}>
+          <Command.Input
+            aria-label={`Search ${choicesLabel.toLowerCase()} choices`}
+            onValueChange={setQuery}
+            placeholder={`Search ${choicesLabel.toLowerCase()}...`}
+            ref={input}
+            value={query}
+          />
+          <Command.List>
+            {(query !== '' || collapsible === undefined) && (
+              <Command.Empty>No matching choices.</Command.Empty>
+            )}
+            {ordinarySections.map((section) => (
+              <PickerSection key={section.key} onSelect={select} section={section} />
+            ))}
+            {collapsibleOpen && collapsible !== undefined && (
+              <PickerSection onSelect={select} section={collapsible} />
+            )}
+          </Command.List>
+          {collapsible !== undefined && (
+            <button
+              aria-expanded={collapsibleOpen}
+              className="contextual-picker-disclosure"
+              onClick={() => setCollapsibleOpen((value) => !value)}
+              type="button"
+            >
+              <span aria-hidden="true">{collapsibleOpen ? '▾' : '▸'}</span>
+              {collapsible.label} ({collapsible.items.length})
+            </button>
+          )}
+        </Command>
+      )}
+      {cancelLabel === undefined ? null : (
+        <button className="contextual-picker-cancel" onClick={onCancel} type="button">
+          {cancelLabel}
+        </button>
+      )}
+    </>
+  );
+}
+
 export function ContextualPicker<T>({
+  cancelLabel,
+  choiceLabel,
+  closeOnSelect = true,
   disabled = false,
   id,
   label,
+  loading = false,
   model,
+  onOpenChange,
   onSelect,
+  open: controlledOpen,
   placeholder,
+  triggerLabel,
 }: ContextualPickerProps<T>) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const [collapsibleOpen, setCollapsibleOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
   const selected = model.selected;
   const selectedExplanationId =
     selected?.explanation === undefined ? undefined : `${id}-selected-explanation`;
-  const collapsible = model.sections.find((section) => section.collapsible);
-  const ordinarySections = model.sections.filter((section) => !section.collapsible);
+  const choicesLabel = choiceLabel ?? label;
+
+  function updateOpen(nextOpen: boolean): void {
+    if (controlledOpen === undefined) {
+      setInternalOpen(nextOpen);
+    }
+    onOpenChange?.(nextOpen);
+  }
 
   function select(item: ContextualPickerItem<T>): void {
     if (item.disabled) {
       return;
     }
     onSelect(item.value);
-    setOpen(false);
-    setQuery('');
+    if (closeOnSelect) {
+      updateOpen(false);
+    }
   }
 
   return (
     <div className="field-control contextual-picker">
       <label htmlFor={id}>{label}</label>
-      <Popover.Root
-        open={open}
-        onOpenChange={(nextOpen) => {
-          setOpen(nextOpen);
-          if (!nextOpen) {
-            setQuery('');
-            setCollapsibleOpen(false);
-          }
-        }}
-      >
+      <Popover.Root open={open} onOpenChange={updateOpen}>
         <Popover.Trigger asChild>
           <button
+            aria-busy={loading || undefined}
             aria-describedby={selectedExplanationId}
             aria-expanded={open}
             aria-haspopup="listbox"
@@ -107,7 +204,7 @@ export function ContextualPicker<T>({
             id={id}
             type="button"
           >
-            <span>{disabled ? placeholder : (selected?.label ?? placeholder)}</span>
+            <span>{disabled ? placeholder : (triggerLabel ?? selected?.label ?? placeholder)}</span>
             <span className="contextual-picker-trigger-icon" aria-hidden="true">
               ▾
             </span>
@@ -120,36 +217,16 @@ export function ContextualPicker<T>({
             collisionPadding={12}
             sideOffset={6}
           >
-            <Command label={`${label} choices`} shouldFilter={true}>
-              <Command.Input
-                aria-label={`Search ${label.toLowerCase()} choices`}
-                onValueChange={setQuery}
-                placeholder={`Search ${label.toLowerCase()}...`}
-                value={query}
-              />
-              <Command.List>
-                {(query !== '' || collapsible === undefined) && (
-                  <Command.Empty>No matching choices.</Command.Empty>
-                )}
-                {ordinarySections.map((section) => (
-                  <PickerSection key={section.key} onSelect={select} section={section} />
-                ))}
-                {collapsibleOpen && collapsible !== undefined && (
-                  <PickerSection onSelect={select} section={collapsible} />
-                )}
-              </Command.List>
-              {collapsible !== undefined && (
-                <button
-                  aria-expanded={collapsibleOpen}
-                  className="contextual-picker-disclosure"
-                  onClick={() => setCollapsibleOpen((value) => !value)}
-                  type="button"
-                >
-                  <span aria-hidden="true">{collapsibleOpen ? '▾' : '▸'}</span>
-                  {collapsible.label} ({collapsible.items.length})
-                </button>
-              )}
-            </Command>
+            <PickerContent
+              {...(cancelLabel === undefined ? {} : { cancelLabel })}
+              choicesLabel={choicesLabel}
+              key={choiceLabel ?? 'default'}
+              loading={loading}
+              model={model}
+              onCancel={() => updateOpen(false)}
+              onSelect={select}
+              {...(choiceLabel === undefined ? {} : { stepLabel: choiceLabel })}
+            />
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>

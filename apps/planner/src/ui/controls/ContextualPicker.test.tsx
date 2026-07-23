@@ -2,6 +2,7 @@
 
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ContextualPickerModel } from '../../projections/contextualPicker';
@@ -141,5 +142,93 @@ describe('ContextualPicker', () => {
     expect(onSelect).toHaveBeenCalledOnce();
     expect(onSelect).toHaveBeenCalledWith('preboss');
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('supports a multi-step interaction that stays open until explicit cancellation', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(
+      <ContextualPicker
+        cancelLabel="Cancel"
+        choiceLabel="Reward type"
+        closeOnSelect={false}
+        id="reward-picker"
+        label="Reward"
+        model={model}
+        onSelect={onSelect}
+        placeholder="Select a reward"
+      />,
+    );
+
+    const trigger = screen.getByLabelText('Reward');
+    await user.click(trigger);
+    expect(screen.getByText('Reward type')).toBeTruthy();
+    await user.click(screen.getByText('Preboss'));
+
+    expect(onSelect).toHaveBeenCalledWith('preboss');
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('resets unavailable disclosure when a compound interaction advances', async () => {
+    function CompoundPicker() {
+      const [choiceLabel, setChoiceLabel] = useState('Reward type');
+      return (
+        <ContextualPicker
+          cancelLabel="Cancel"
+          choiceLabel={choiceLabel}
+          closeOnSelect={false}
+          id="compound-picker"
+          label="Reward"
+          model={model}
+          onSelect={() => setChoiceLabel('God')}
+          placeholder="Select a reward"
+        />
+      );
+    }
+
+    const user = userEvent.setup();
+    render(<CompoundPicker />);
+    await user.click(screen.getByLabelText('Reward'));
+    const disclosure = screen.getByRole('button', { name: 'Unavailable (1)' });
+    await user.click(disclosure);
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('Combat 20')).toBeTruthy();
+
+    await user.click(screen.getByText('Preboss'));
+
+    expect(screen.getByText('God')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Unavailable (1)' }).getAttribute('aria-expanded'),
+    ).toBe('false');
+    expect(screen.queryByText('Combat 20')).toBeNull();
+  });
+
+  it('clears transient filtering when a controlled caller closes the picker', async () => {
+    const user = userEvent.setup();
+    const picker = (open: boolean) => (
+      <ContextualPicker
+        id="controlled-picker"
+        label="Room"
+        model={model}
+        onSelect={() => undefined}
+        open={open}
+        placeholder="Select a room"
+      />
+    );
+    const view = render(picker(true));
+
+    const search = screen.getByRole('combobox', { name: 'Room choices' });
+    await user.type(search, 'Story 01');
+    expect((search as HTMLInputElement).value).toBe('Story 01');
+
+    view.rerender(picker(false));
+    view.rerender(picker(true));
+
+    expect((screen.getByRole('combobox', { name: 'Room choices' }) as HTMLInputElement).value).toBe(
+      '',
+    );
   });
 });

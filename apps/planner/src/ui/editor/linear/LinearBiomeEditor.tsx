@@ -14,6 +14,7 @@ import {
   type CandidateProjectionService,
 } from '../../../projections/candidateProjection';
 import type { ContextualPickerProjectionService } from '../../../projections/contextualPicker';
+import type { RewardPickerProjectionService } from '../../../projections/rewardPicker';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { presentBiomeStatus } from '../../../projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
@@ -34,6 +35,7 @@ interface LinearBiomeEditorProps {
   readonly contextualPicker: ContextualPickerProjectionService;
   readonly evaluation: LinearBiomeProjectEvaluation | undefined;
   readonly plan: LinearBiomePlan;
+  readonly rewardPicker: RewardPickerProjectionService;
   readonly routeKey: string;
 }
 
@@ -71,6 +73,7 @@ export function LinearBiomeEditor({
   contextualPicker,
   evaluation,
   plan,
+  rewardPicker,
   routeKey,
 }: LinearBiomeEditorProps) {
   const dispatch = useAppDispatch();
@@ -254,6 +257,7 @@ export function LinearBiomeEditor({
               contextualPicker={contextualPicker}
               evaluation={evaluation}
               plan={plan}
+              rewardPicker={rewardPicker}
               topology={topology}
             />
           )}
@@ -404,6 +408,7 @@ export function LinearBiomeEditor({
             catalog={catalog}
             entryActive={true}
             occurrence={start}
+            rewardPicker={rewardPicker}
           />
         </article>
 
@@ -414,6 +419,7 @@ export function LinearBiomeEditor({
           contextualPicker={contextualPicker}
           evaluation={evaluation}
           plan={plan}
+          rewardPicker={rewardPicker}
           topology={topology}
         />
       </section>
