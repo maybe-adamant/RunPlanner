@@ -4,10 +4,10 @@ import type {
   ShopOfferAddress,
   ShopPurchaseAddress,
 } from '@run-planner/engine/authored-project';
-import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
 import type { CandidateProjectionService } from '../../../projections/candidateProjection';
+import type { RewardPickerProjectionService } from '../../../projections/rewardPicker';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 import { CountedRewardEditor, RewardValueEditor } from '../rewards/RewardEditors';
 import { ShopPurchaseControl } from './ShopPurchaseControl';
@@ -27,16 +27,16 @@ export function FieldsCageReward({
   address,
   binding,
   candidateProjection,
-  catalog,
   idPrefix,
   label,
   offer,
   onReplace,
   project,
+  rewardPicker,
 }: FieldsCageRewardProps & {
   readonly candidateProjection: CandidateProjectionService;
-  readonly catalog: Catalog;
   readonly project: ProjectDocument;
+  readonly rewardPicker: RewardPickerProjectionService;
 }) {
   return (
     <section aria-label={label} className="local-reward-slot" data-active={active}>
@@ -51,11 +51,11 @@ export function FieldsCageReward({
         binding={binding}
         candidateOwner={{ kind: 'localReward', address }}
         candidateProjection={candidateProjection}
-        catalog={catalog}
         idPrefix={idPrefix}
         offer={offer}
         onReplace={onReplace}
         project={project}
+        rewardPicker={rewardPicker}
       />
     </section>
   );
@@ -76,7 +76,6 @@ interface ShopOfferEditorProps {
 export function ShopOfferEditor({
   address,
   candidateProjection,
-  catalog,
   idPrefix,
   label,
   offer,
@@ -85,11 +84,12 @@ export function ShopOfferEditor({
   project,
   purchaseAddress,
   purchased,
+  rewardPicker,
   rewardTypes,
 }: ShopOfferEditorProps & {
   readonly candidateProjection: CandidateProjectionService;
-  readonly catalog: Catalog;
   readonly project: ProjectDocument;
+  readonly rewardPicker: RewardPickerProjectionService;
 }) {
   return (
     <section className="shop-offer">
@@ -110,11 +110,11 @@ export function ShopOfferEditor({
       <RewardValueEditor
         candidateOwner={{ kind: 'shopOffer', address }}
         candidateProjection={candidateProjection}
-        catalog={catalog}
         idPrefix={idPrefix}
         offer={offer}
         onReplace={onReplace}
         project={project}
+        rewardPicker={rewardPicker}
         rewardTypes={rewardTypes}
       />
     </section>

@@ -1481,6 +1481,26 @@ between candidate simulations rather than blocking one browser interaction.
 Typed bag, sibling, source, pair, and payload explanations now reach the reward
 editor instead of collapsing to a generic unavailable suffix. Fixtures
 cover sequential F/G/P/Q offers, H cages, N board/side producers, O wheels,
-selected-invalid Boon sources, and complete Devotion-pair aggregation. Phase 7
-Commit 8 is next: replace the stacked selects with the compact compound reward
-picker without changing this domain authority.
+selected-invalid Boon sources, and complete Devotion-pair aggregation.
+
+Phase 7 Commit 8 is complete. Every editable reward producer now renders one
+compact closed-row summary and opens the shared contextual picker as one
+transient compound interaction. Payload-free rewards commit after the type
+choice, Boons advance through one God choice, and Trials advance through
+ordered chosen- then spurned-God choices. The first Trial God retains
+existential support from complete candidate pairs. Changing it preserves the
+authored second God as the next exact selection while the two remain distinct;
+choosing that second God as the new first God uses a supported provisional pair
+until the user makes the exact second selection.
+
+Only the finished complete `ResolvedRewardOffer` reaches the existing semantic
+replacement command. Loading, search, disclosure, and intermediate payload
+progress remain React-local; cancel, dismissal, stale async completion, and
+project replacement author nothing and create no undo entry. The same picker
+is composed by incoming rewards, Fields cages, O wheels, N side rooms, Hub
+rooms, shops, and terminal free rewards without erasing their candidate-owner
+addresses. Focused interaction fixtures cover compact labels, selected-invalid
+guidance, pending cancellation, immediate primitive commit, Boon completion,
+Trial first-source aggregation and second-source preservation, one final
+replacement, cancellation, and representative Linear and Hub product loops.
+Phase 7 Commit 9 is next: feedback hierarchy and blocked presentation.

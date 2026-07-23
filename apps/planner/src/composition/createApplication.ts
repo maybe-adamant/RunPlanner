@@ -6,6 +6,7 @@ import { type ProjectDocument } from '@run-planner/engine/authored-project';
 import { createCandidateProjectionService } from '../projections/candidateProjection';
 import { createContextualOptionResolver } from '../projections/contextualOptions';
 import { createContextualPickerProjection } from '../projections/contextualPicker';
+import { createRewardPickerProjection } from '../projections/rewardPicker';
 import {
   createAutosaveCoordinator,
   restoreStartupProject,
@@ -48,6 +49,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const candidateProjection = createCandidateProjectionService(catalog, evaluateProject);
   const contextualOptions = createContextualOptionResolver(catalog);
   const contextualPicker = createContextualPickerProjection(contextualOptions);
+  const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
   const store = createPlannerStore({
     catalog,
     evaluateProject,
@@ -80,6 +82,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     contextualPicker,
     editorNavigation,
     projectOperations,
+    rewardPicker,
     store,
     dispose(): void {
       autosaveCoordinator?.dispose();

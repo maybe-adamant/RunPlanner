@@ -151,35 +151,27 @@ function payloadDomain(
   }
   const values = sourceValues(catalog, domain.valueDomain);
   const selectedPair = selected.payload?.kind === 'DevotionPair' ? selected.payload : undefined;
-  const chosenSources = values
-    .filter(
-      (source) => source !== selectedPair?.spurnedSource || source === selectedPair?.chosenSource,
-    )
-    .map((source) => {
-      let witnesses: readonly ResolvedRewardOffer[] = selectedOffers.filter(
-        (candidate) =>
-          candidate.payload?.kind === 'DevotionPair' && candidate.payload.chosenSource === source,
-      );
-      if (source === selectedPair?.chosenSource) {
-        witnesses = appendUnique(witnesses, selected);
-      }
-      const preferred =
-        selectedPair === undefined
-          ? undefined
-          : {
-              rewardType: selected.rewardType,
-              payload: {
-                kind: 'DevotionPair' as const,
-                chosenSource: source,
-                spurnedSource: selectedPair.spurnedSource,
-              },
-            };
-      return option(
-        source,
-        witnesses,
-        source === selectedPair?.chosenSource ? selected : preferred,
-      );
-    });
+  const chosenSources = values.map((source) => {
+    let witnesses: readonly ResolvedRewardOffer[] = selectedOffers.filter(
+      (candidate) =>
+        candidate.payload?.kind === 'DevotionPair' && candidate.payload.chosenSource === source,
+    );
+    if (source === selectedPair?.chosenSource) {
+      witnesses = appendUnique(witnesses, selected);
+    }
+    const preferred =
+      selectedPair === undefined
+        ? undefined
+        : {
+            rewardType: selected.rewardType,
+            payload: {
+              kind: 'DevotionPair' as const,
+              chosenSource: source,
+              spurnedSource: selectedPair.spurnedSource,
+            },
+          };
+    return option(source, witnesses, source === selectedPair?.chosenSource ? selected : preferred);
+  });
   const spurnedSources = values
     .filter(
       (source) => source !== selectedPair?.chosenSource || source === selectedPair?.spurnedSource,

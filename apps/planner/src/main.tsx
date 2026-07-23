@@ -42,6 +42,7 @@ createRoot(rootElement).render(
         contextualPicker={application.contextualPicker}
         editorNavigation={application.editorNavigation}
         projectOperations={application.projectOperations}
+        rewardPicker={application.rewardPicker}
       />
     </Provider>
   </StrictMode>,

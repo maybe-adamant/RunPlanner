@@ -25,6 +25,7 @@ import {
 } from '../../../projections/candidateProjection';
 import { createContextualOptionResolver } from '../../../projections/contextualOptions';
 import { createContextualPickerProjection } from '../../../projections/contextualPicker';
+import { createRewardPickerProjection } from '../../../projections/rewardPicker';
 import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
@@ -162,6 +163,10 @@ function HEditorHarness({
       candidateProjection={candidateProjection}
       catalog={catalog}
       contextualPicker={createContextualPickerProjection(createContextualOptionResolver(catalog))}
+      rewardPicker={createRewardPickerProjection(
+        catalog,
+        createContextualPickerProjection(createContextualOptionResolver(catalog)),
+      )}
       evaluation={evaluation}
       plan={plan}
       routeKey={biome.routeKey}
@@ -222,7 +227,9 @@ describe('H editor projection', () => {
     expect(within(firstCageThree).getByText('Active')).toBeTruthy();
 
     const firstCage = within(cageGroups[0]!).getByRole('region', { name: 'Cage 1' });
-    await user.selectOptions(within(firstCage).getByLabelText('Reward'), 'MaxHealthDrop');
+    await user.click(within(firstCage).getByLabelText('Reward'));
+    await screen.findByText('Reward type');
+    await user.click(within(await screen.findByRole('listbox')).getByText('Max Health'));
 
     const plan = hPlan(store.getState().projectWorkspace.history.present);
     const firstBatch = plan.topology?.continuations[0];

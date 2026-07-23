@@ -93,6 +93,10 @@ describe('relational reward domain projection', () => {
     expect(
       prepared.payload.chosenSources.find((option) => option.key === 'ApolloUpgrade')?.witnesses,
     ).toHaveLength(8);
+    expect(prepared.payload.chosenSources).toHaveLength(9);
+    expect(
+      prepared.payload.chosenSources.find((option) => option.key === 'AresUpgrade')?.witnesses,
+    ).toHaveLength(8);
     expect(projected.types[0]).toMatchObject({ supportingOffer: supportedPair });
     expect(projected.types[0]?.evaluation).toMatchObject({ support: 'possible' });
     expect(

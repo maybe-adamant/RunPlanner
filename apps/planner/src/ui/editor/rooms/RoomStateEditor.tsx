@@ -15,6 +15,7 @@ import {
   presentCandidateLabel,
   type CandidateProjectionService,
 } from '../../../projections/candidateProjection';
+import type { RewardPickerProjectionService } from '../../../projections/rewardPicker';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { selectPresentProject, useAppDispatch, useAppSelector } from '../../../state/store';
 import { candidateSelectState } from '../../feedback/candidatePresentation';
@@ -30,6 +31,7 @@ interface RoomStateEditorProps {
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly entryActive?: boolean;
   readonly occurrence: RoomOccurrence;
+  readonly rewardPicker: RewardPickerProjectionService;
 }
 
 function countedBinding(
@@ -56,6 +58,7 @@ export function RoomStateEditor({
   clockworkReward,
   entryActive,
   occurrence,
+  rewardPicker,
 }: RoomStateEditorProps) {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectPresentProject);
@@ -103,7 +106,6 @@ export function RoomStateEditor({
           binding={countedBinding(room, state.kind)}
           candidateOwner={{ kind: 'incomingReward', address: rewardAddress }}
           candidateProjection={candidateProjection}
-          catalog={catalog}
           idPrefix={idPrefix}
           offer={state.offer}
           onReplace={(value) =>
@@ -116,6 +118,7 @@ export function RoomStateEditor({
             )
           }
           project={project}
+          rewardPicker={rewardPicker}
         />
       </div>
     );
@@ -154,7 +157,6 @@ export function RoomStateEditor({
               address={address}
               binding={cages.reward}
               candidateProjection={candidateProjection}
-              catalog={catalog}
               idPrefix={`${idPrefix}-${slotKey}`}
               key={slotKey}
               label={`Cage ${index + 1}`}
@@ -169,6 +171,7 @@ export function RoomStateEditor({
                 )
               }
               project={project}
+              rewardPicker={rewardPicker}
             />
           );
         })}
@@ -392,7 +395,6 @@ export function RoomStateEditor({
                           binding={descriptor.reward}
                           candidateOwner={{ kind: 'rewardWheelOffer', address }}
                           candidateProjection={candidateProjection}
-                          catalog={catalog}
                           idPrefix={`${idPrefix}-${descriptor.key}-${offerKey}`}
                           offer={offer}
                           onReplace={(value) =>
@@ -405,6 +407,7 @@ export function RoomStateEditor({
                             )
                           }
                           project={project}
+                          rewardPicker={rewardPicker}
                         />
                       </section>
                     );
@@ -441,7 +444,6 @@ export function RoomStateEditor({
           <ShopOfferEditor
             address={offerAddress}
             candidateProjection={candidateProjection}
-            catalog={catalog}
             idPrefix={offerPrefix}
             key={slot.key}
             label={slot.label}
@@ -465,6 +467,7 @@ export function RoomStateEditor({
               )
             }
             project={project}
+            rewardPicker={rewardPicker}
             purchaseAddress={purchaseAddress}
             purchased={offerState.purchased}
             rewardTypes={group.rewardTypes}

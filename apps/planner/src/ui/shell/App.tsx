@@ -19,6 +19,7 @@ import {
 import type { ProjectOperations } from '../../workspace/projectOperations';
 import type { CandidateProjectionService } from '../../projections/candidateProjection';
 import type { ContextualPickerProjectionService } from '../../projections/contextualPicker';
+import type { RewardPickerProjectionService } from '../../projections/rewardPicker';
 import { ProjectFindings, SemanticOwnerMarker, StatusBadge } from '../feedback/EvaluationFeedback';
 import { LinearBiomeEditor } from '../editor/linear/LinearBiomeEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -32,6 +33,7 @@ interface AppProps {
   readonly contextualPicker: ContextualPickerProjectionService;
   readonly editorNavigation: EditorNavigation;
   readonly projectOperations: ProjectOperations;
+  readonly rewardPicker: RewardPickerProjectionService;
 }
 
 function RouteOverview({
@@ -106,6 +108,7 @@ function RouteWorkspace({
   catalog,
   contextualPicker,
   navigation,
+  rewardPicker,
   route,
   routeEvaluation,
 }: {
@@ -113,6 +116,7 @@ function RouteWorkspace({
   readonly catalog: Catalog;
   readonly contextualPicker: ContextualPickerProjectionService;
   readonly navigation: RouteEditorNavigation;
+  readonly rewardPicker: RewardPickerProjectionService;
   readonly route: AuthoredRoutePlan;
   readonly routeEvaluation: ProjectRouteEvaluation;
 }) {
@@ -180,6 +184,7 @@ function RouteWorkspace({
               activeBiomeEvaluation?.kind === 'HubBiome' ? activeBiomeEvaluation : undefined
             }
             plan={activeBiomePlan}
+            rewardPicker={rewardPicker}
             routeKey={route.routeKey}
           />
         ) : activeBiomePlan?.kind === 'LinearBiome' ? (
@@ -191,6 +196,7 @@ function RouteWorkspace({
               activeBiomeEvaluation?.kind === 'LinearBiome' ? activeBiomeEvaluation : undefined
             }
             plan={activeBiomePlan}
+            rewardPicker={rewardPicker}
             routeKey={route.routeKey}
           />
         ) : null}
@@ -206,6 +212,7 @@ export function App({
   contextualPicker,
   editorNavigation,
   projectOperations,
+  rewardPicker,
 }: AppProps) {
   const activeRouteKey = useAppSelector((state) => state.editorSession.activeRouteKey);
   const project = useAppSelector(selectPresentProject);
@@ -277,6 +284,7 @@ export function App({
             catalog={catalog}
             contextualPicker={contextualPicker}
             navigation={activeRouteNavigation}
+            rewardPicker={rewardPicker}
             route={activeRoute}
             routeEvaluation={activeRouteEvaluation}
           />

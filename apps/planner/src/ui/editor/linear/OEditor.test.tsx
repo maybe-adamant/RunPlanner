@@ -21,6 +21,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createCandidateProjectionService } from '../../../projections/candidateProjection';
 import { createContextualOptionResolver } from '../../../projections/contextualOptions';
 import { createContextualPickerProjection } from '../../../projections/contextualPicker';
+import { createRewardPickerProjection } from '../../../projections/rewardPicker';
 import { createPlannerStore, selectPresentProject, useAppSelector } from '../../../state/store';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
@@ -128,6 +129,10 @@ function OEditorHarness({
       candidateProjection={candidateProjection}
       catalog={catalog}
       contextualPicker={createContextualPickerProjection(createContextualOptionResolver(catalog))}
+      rewardPicker={createRewardPickerProjection(
+        catalog,
+        createContextualPickerProjection(createContextualOptionResolver(catalog)),
+      )}
       evaluation={evaluation}
       plan={plan}
       routeKey={biome.routeKey}
