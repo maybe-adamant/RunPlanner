@@ -1611,3 +1611,28 @@ representative G authoring/undo/redo test records unique project rebuild
 identities separately from direct candidate work and completed in 25.22 seconds
 in isolation on 2026-07-23. This is a measurement baseline, not an optimization
 claim.
+
+Candidate-System Refactor Slice 2 is complete. Linear and Hub reward evaluation
+now capture an ephemeral typed producer-frontier index before every reached
+sequential offer, jointly unordered group, reward wheel, or shop inventory.
+Each frontier retains the selected simulation's reachable latent branches,
+exact offer contexts, peer set, counted bags, room facts, and its own entered
+acquisition horizon. Candidate evaluation substitutes one complete offer and
+calls the existing reward or shop authority directly; it does not apply a
+temporary project command or rebuild the addressed biome.
+
+The frontier path covers ordinary incoming rewards, H cage rewards, N's
+unordered side-room rewards, O wheel offers, and Linear/Hub WorldShop
+inventories. Exact selected-invalid producers remain repairable because their
+frontier is captured before the invalid selected offer collapses its branches.
+Authored producers after an earlier blocking reward failure, and dormant
+authored reward state replaced by a derived producer such as a Clockwork Goal,
+have no reachable selected-simulation frontier and are reported unavailable
+instead of receiving support inferred from an empty exact-finding filter.
+
+The dense Devotion fixture still assesses all 72 complete source pairs through
+one project/evaluation-bound session but now records zero Linear biome replays.
+Focused N shop and O wheel fixtures likewise record only their query batch and
+zero biome replays. The complete suite passes with 69 test files and 528 tests.
+The isolated candidate-projection file completed in 6.30 seconds wall time,
+with its ten tests spending 417 milliseconds in test bodies on 2026-07-23.

@@ -5,6 +5,7 @@ import type { ProjectDocument, RewardWheelState } from '../../authored-project/m
 import type { Catalog, RewardWheelOfferPoint } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
+import { rewardProducerFrontier } from '../rewards';
 import type {
   BatchRewardStoreCandidateQuery,
   IncomingRewardCandidateQuery,
@@ -32,6 +33,7 @@ import {
   locateIndexedBiome,
   locateIndexedOccurrence,
   locateIndexedLinearPlan,
+  producerFrontierUnavailable,
   unavailableCandidate,
   type CandidateContextUnavailable,
   type CandidateHubBiomeEvaluation,
@@ -216,27 +218,14 @@ export function evaluateBatchRewardStoreCandidate(
   });
 }
 
-function rewardCommand(
-  query: IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery,
-): ProjectCommand {
-  switch (query.kind) {
-    case 'incomingReward':
-      return { kind: 'ReplaceIncomingReward', reward: query.reward, value: query.value };
-    case 'localReward':
-      return { kind: 'ReplaceLocalReward', reward: query.reward, value: query.value };
-    case 'shopOffer':
-      return { kind: 'ReplaceShopOffer', offer: query.offer, value: query.value };
-  }
-}
-
 function rewardFindings(
-  evaluation: CandidateHubBiomeEvaluation | CandidateLinearBiomeEvaluation,
+  findings: readonly SemanticFinding[],
   query: IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery,
 ) {
   const address = query.kind === 'shopOffer' ? query.offer : query.reward;
   const exactKey = semanticAddressKey(address);
   return Object.freeze(
-    evaluation.rewards.findings.filter((finding) => {
+    findings.filter((finding) => {
       if (semanticAddressKey(finding.origin) === exactKey) {
         return true;
       }
@@ -297,34 +286,110 @@ function rewardOwnerCovered(
   );
 }
 
+function requireRewardCandidateOwner(
+  catalog: Catalog,
+  context: PreparedCandidateContext,
+  query: IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery,
+): void {
+  const address = query.kind === 'shopOffer' ? query.offer : query.reward;
+  const { occurrence } = locateIndexedOccurrence(context, query, address.occurrenceId);
+  switch (query.kind) {
+    case 'incomingReward': {
+      if (occurrence.state.kind === 'fixed') {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        if (
+          room?.incomingReward.kind !== 'fixed' ||
+          query.value.rewardType !== room.incomingReward.offer.rewardType
+        ) {
+          failCandidate(query, `${occurrence.gameName} has a fixed reward type`);
+        }
+        return;
+      }
+      if (
+        occurrence.state.kind !== 'counted' &&
+        occurrence.state.kind !== 'freeReward' &&
+        occurrence.state.kind !== 'ephyraCombat'
+      ) {
+        failCandidate(query, `${occurrence.gameName} has no replaceable counted reward`);
+      }
+      return;
+    }
+    case 'localReward': {
+      if (occurrence.state.kind === 'fieldsCombat') {
+        if (
+          query.reward.groupKey !== 'cages' ||
+          occurrence.state.cages[query.reward.slotKey] === undefined
+        ) {
+          failCandidate(
+            query,
+            `unknown local reward ${query.reward.groupKey}.${query.reward.slotKey}`,
+          );
+        }
+        return;
+      }
+      if (occurrence.state.kind === 'ephyraCombat') {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        const group = room?.localChildren.find(
+          (child) => child.kind === 'fixedRoomSlots' && child.key === query.reward.groupKey,
+        );
+        if (
+          group?.kind !== 'fixedRoomSlots' ||
+          !group.slots.some((slot) => slot.slotKey === query.reward.slotKey) ||
+          occurrence.state.sideRooms[query.reward.slotKey] === undefined
+        ) {
+          failCandidate(
+            query,
+            `unknown local reward ${query.reward.groupKey}.${query.reward.slotKey}`,
+          );
+        }
+        return;
+      }
+      return failCandidate(query, `${occurrence.gameName} has no replaceable local reward group`);
+    }
+    case 'shopOffer':
+      if (
+        occurrence.state.kind !== 'shop' ||
+        occurrence.state.shop?.offers[query.offer.offerKey] === undefined
+      ) {
+        failCandidate(query, `${occurrence.gameName} has no shop offer ${query.offer.offerKey}`);
+      }
+      return;
+  }
+}
+
 export function evaluateRewardCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as
     IncomingRewardCandidateQuery | LocalRewardCandidateQuery | ShopOfferCandidateQuery;
-  locateIndexedBiome(context, stableQuery);
+  requireRewardCandidateOwner(catalog, context, stableQuery);
   const baseline = locateCandidateBiome(context, stableQuery);
   if (isCandidateContextUnavailable(baseline)) {
     return unavailableCandidate(stableQuery, baseline);
   }
-  if (!rewardOwnerCovered(baseline, stableQuery)) {
-    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
+  const address = stableQuery.kind === 'shopOffer' ? stableQuery.offer : stableQuery.reward;
+  const frontier = rewardProducerFrontier(baseline.rewards, address);
+  if (frontier === undefined) {
+    if (!rewardOwnerCovered(baseline, stableQuery)) {
+      return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
+    }
+    return unavailableCandidate(stableQuery, producerFrontierUnavailable(stableQuery));
   }
-  const proposal = applyCandidateCommand(catalog, project, stableQuery, rewardCommand(stableQuery));
-  const biome = evaluateCandidateBiome(catalog, proposal, context, stableQuery);
-  if (isCandidateContextUnavailable(biome)) {
-    return unavailableCandidate(stableQuery, biome);
-  }
-  const findings = rewardFindings(biome, stableQuery);
+  const result = frontier.evaluateOffer(address, stableQuery.value);
+  const ownerFindings = rewardFindings(result.findings, stableQuery);
+  const findings =
+    !result.supported && ownerFindings.length === 0 && frontier.generationPolicy !== 'sequential'
+      ? result.findings
+      : ownerFindings;
   const evidence = Object.freeze({
     candidate: stableQuery.value,
     relevantFindingCodes: Object.freeze(findings.map((finding) => finding.code)),
     exclusions: rewardExclusions(findings),
   });
-  const support = findings.length === 0 ? ('possible' as const) : ('impossible' as const);
+  const support =
+    result.supported && findings.length === 0 ? ('possible' as const) : ('impossible' as const);
   switch (stableQuery.kind) {
     case 'incomingReward':
       return Object.freeze({
@@ -583,30 +648,41 @@ export function evaluateRewardWheelStoreCandidate(
 
 export function evaluateRewardWheelOfferCandidate(
   catalog: Catalog,
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: RewardWheelOfferCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RewardWheelOfferCandidateQuery;
   requireRewardWheel(catalog, context, stableQuery);
-  const evaluation = evaluateLinearMutation(catalog, project, context, stableQuery, {
-    kind: 'ReplaceRewardWheelOffer',
-    offer: stableQuery.offer,
-    value: stableQuery.value,
-  });
-  if (isCandidateContextUnavailable(evaluation)) {
-    return unavailableCandidate(stableQuery, evaluation);
+  const baseline = locateCandidateLinear(context, stableQuery);
+  if (isCandidateContextUnavailable(baseline)) {
+    return unavailableCandidate(stableQuery, baseline);
+  }
+  const frontier = rewardProducerFrontier(baseline.rewards, stableQuery.offer);
+  if (frontier === undefined) {
+    const ownerCovered = baseline.history.rooms.some(
+      (room) =>
+        room.origin.kind === 'occurrence' &&
+        room.origin.occurrenceId === stableQuery.offer.occurrenceId &&
+        room.offerPoints?.some(
+          (offerPoint) => offerPoint.offerPoint === stableQuery.offer.wheelKey,
+        ) === true,
+    );
+    if (!ownerCovered) {
+      return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, baseline));
+    }
+    return unavailableCandidate(stableQuery, producerFrontierUnavailable(stableQuery));
   }
   const exactKey = semanticAddressKey(stableQuery.offer);
-  const findings = Object.freeze(
-    simulationFindings(evaluation).filter(
-      (finding) => semanticAddressKey(finding.origin) === exactKey,
-    ),
+  const result = frontier.evaluateOffer(stableQuery.offer, stableQuery.value);
+  const ownerFindings = Object.freeze(
+    result.findings.filter((finding) => semanticAddressKey(finding.origin) === exactKey),
   );
+  const findings =
+    !result.supported && ownerFindings.length === 0 ? result.findings : ownerFindings;
   return Object.freeze({
     context: 'evaluated',
     query: stableQuery,
-    support: findings.length === 0 ? 'possible' : 'impossible',
+    support: result.supported && findings.length === 0 ? 'possible' : 'impossible',
     findings,
     evidence: Object.freeze({
       candidate: stableQuery.value,

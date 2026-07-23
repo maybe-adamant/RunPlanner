@@ -132,7 +132,7 @@ function evaluatePreparedProjectCandidates(
         case 'rewardWheelStore':
           return evaluateRewardWheelStoreCandidate(catalog, project, context, query);
         case 'rewardWheelOffer':
-          return evaluateRewardWheelOfferCandidate(catalog, project, context, query);
+          return evaluateRewardWheelOfferCandidate(catalog, context, query);
         case 'rewardWheelPicked':
           return evaluateRewardWheelPickedCandidate(catalog, project, context, query);
         case 'hubSlot':
@@ -142,7 +142,7 @@ function evaluatePreparedProjectCandidates(
         case 'incomingReward':
         case 'localReward':
         case 'shopOffer':
-          return evaluateRewardCandidate(catalog, project, context, query);
+          return evaluateRewardCandidate(catalog, context, query);
         case 'shopPurchase':
           return evaluateShopPurchaseCandidate(catalog, project, context, query);
         case 'sideRoomEntryOrder':

@@ -18,6 +18,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   composeNHistory,
+  createPreparedProjectCandidateSession,
   evaluateHubCompleteness,
   evaluateHubBiome,
   evaluateNRoomGeneration,
@@ -26,6 +27,7 @@ import {
   evaluateProjectCandidates,
   materializeHubBiome,
   simulateProject,
+  type CandidateEvaluationEvent,
   type CompleteHubCompletenessResult,
 } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
@@ -944,5 +946,41 @@ describe('N candidate evaluation', () => {
         enteredSlotKeys: ['sideDoor1', 'sideDoor1'],
       }),
     ).toThrow(/candidate proposal is malformed.*distinct slots/);
+    expect(() =>
+      evaluateProjectCandidate(catalog, storyProject(true), {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, occurrenceId('story')),
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+        },
+      }),
+    ).toThrow(/N_Story01 has a fixed reward type/);
+  });
+
+  it('evaluates one shop offer from its prepared joint-inventory frontier', () => {
+    const project = representativeProject();
+    const events: CandidateEvaluationEvent[] = [];
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      project,
+      simulateProject(catalog, project),
+      { observe: (event) => events.push(event) },
+    );
+
+    expect(
+      session.evaluate([
+        {
+          kind: 'shopOffer',
+          offer: createShopOfferAddress(biome, fixedOccurrenceIds.preboss, 'MajorNonBoon'),
+          value: { rewardType: 'WeaponUpgradeDrop' },
+        },
+      ])[0],
+    ).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      findings: [{ code: 'shopOfferUnavailable' }],
+    });
+    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 1 }]);
   });
 });
