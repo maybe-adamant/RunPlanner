@@ -240,6 +240,7 @@ button:disabled {
 
 .route-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin-top: 22px;
   padding-bottom: 1px;
@@ -338,6 +339,9 @@ button:disabled {
 }
 
 .route-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 14px;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -386,6 +390,10 @@ button:disabled {
 }
 
 .panel-navigation-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
   width: 100%;
   padding: 8px 10px;
   border: 0;
@@ -404,6 +412,40 @@ button:disabled {
 .panel-navigation-item[data-active='true'] {
   color: #f4efe7;
   background: rgb(174 152 202 / 14%);
+}
+
+.navigation-feedback {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.navigation-feedback .status-badge {
+  padding: 3px 6px;
+  font-size: 0.68rem;
+}
+
+.navigation-feedback .findings-count {
+  min-width: 19px;
+  height: 19px;
+  font-size: 0.68rem;
+}
+
+.feedback-context-banner {
+  padding: 9px 11px;
+  border: 1px solid rgb(132 130 143 / 35%);
+  border-radius: 8px;
+  margin: 0 0 14px;
+  color: #aaa7b3;
+  background: rgb(100 98 112 / 8%);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.feedback-context-banner[data-feedback-context='unassessed'] {
+  border-color: rgb(226 185 113 / 30%);
+  color: #d3bd94;
+  background: rgb(226 185 113 / 6%);
 }
 
 .editor-panel,
@@ -1374,6 +1416,7 @@ select {
 
   .panel-navigation {
     flex-direction: row;
+    flex-wrap: wrap;
     padding: 12px;
     border-right: 0;
     border-bottom: 1px solid #30313a;

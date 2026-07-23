@@ -96,12 +96,16 @@ describe('editor session navigation', () => {
     expect(selectedAgain.findingNavigationRevision).toBe(2);
   });
 
-  it('keeps the current location when selecting a project-root finding', () => {
-    const settings = reducer(undefined, settingsSelected());
+  it('focuses a project-root finding without discarding the current editor location', () => {
+    const biomePanel = reducer(
+      undefined,
+      routePanelSelected({ routeKey: 'Underworld', biomeKey: 'F' }),
+    );
     const selection = { key: 'project-finding-key', origin: createProjectAddress() } as const;
-    const selected = reducer(settings, findingSelected(selection));
+    const selected = reducer(biomePanel, findingSelected(selection));
 
-    expect(selected.activeRouteKey).toBeNull();
+    expect(selected.activeRouteKey).toBe('Underworld');
+    expect(selected.activeBiomeKeyByRoute.Underworld).toBe('F');
     expect(selected.selectedFinding).toBe(selection);
     expect(selected.findingNavigationRevision).toBe(1);
   });

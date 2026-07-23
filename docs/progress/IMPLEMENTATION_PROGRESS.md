@@ -1503,4 +1503,26 @@ addresses. Focused interaction fixtures cover compact labels, selected-invalid
 guidance, pending cancellation, immediate primitive commit, Boon completion,
 Trial first-source aggregation and second-source preservation, one final
 replacement, cancellation, and representative Linear and Hub product loops.
-Phase 7 Commit 9 is next: feedback hierarchy and blocked presentation.
+
+Phase 7 Commit 9 is complete. One cached application projection now carries
+project, route, and configured-biome status plus aggregate finding counts.
+Biome presentation derives complete, prefix, unassessed, and blocked context
+from canonical evaluation coverage and route processing regions; it does not
+manufacture local invalidity for an unevaluated downstream page. Route tabs,
+biome navigation, route settings, and the project header consume this hierarchy
+without changing authored state or simulation ownership.
+
+Blocked and unassessed biome pages remain visible and editable and explain that
+their authored values have not been evaluated. Exact findings remain indexed
+and navigated by semantic owner; selecting a project finding preserves the
+current editor location and focuses the always-visible project control, while
+route, biome, and leaf findings retain their exact destination.
+Compact owner markers expose their first actionable title and description in
+accessible text and a focused tooltip, so repair guidance does not depend on
+tone alone or repeat full inline errors. Existing contextual pickers continue
+to provide candidate guidance beside these post-command findings. Fixtures
+cover cached hierarchy projection, aggregate counts, unassessed versus blocked
+copy, exact project navigation, a blocked but editable Oceanus page, and an
+independently editable Surface page while Underworld remains incomplete.
+
+Phase 7 Commit 10 is next: structured workspace projection.

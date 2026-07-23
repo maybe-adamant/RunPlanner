@@ -19,6 +19,29 @@ export interface StatusPresentation {
   readonly tone: 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
 }
 
+export type BiomeFeedbackContext = 'blocked' | 'complete' | 'prefix' | 'unassessed';
+
+export interface BiomeFeedbackPresentation {
+  readonly biomeKey: string;
+  readonly blockedByBiomeKey?: string;
+  readonly context: BiomeFeedbackContext;
+  readonly findingCount: number;
+  readonly status: StatusPresentation;
+}
+
+export interface RouteFeedbackPresentation {
+  readonly biomes: ReadonlyMap<string, BiomeFeedbackPresentation>;
+  readonly findingCount: number;
+  readonly routeKey: string;
+  readonly status: StatusPresentation;
+}
+
+export interface ProjectFeedbackPresentation {
+  readonly findingCount: number;
+  readonly routes: ReadonlyMap<string, RouteFeedbackPresentation>;
+  readonly status: StatusPresentation;
+}
+
 export type BiomeStatusEvaluation =
   | { readonly authoring: 'incomplete' }
   | { readonly authoring: 'complete'; readonly validity: 'invalid' | 'valid' };
@@ -141,6 +164,7 @@ const blockedBiomeStatus = Object.freeze({
   label: 'Blocked',
   tone: 'blocked',
 } as const satisfies StatusPresentation);
+const projectFeedbackCache = new WeakMap<ProjectEvaluation, ProjectFeedbackPresentation>();
 
 export function indexFindingsByOwner(findings: readonly SemanticFinding[]): FindingIndex {
   const mutable = new Map<string, SemanticFinding[]>();
@@ -187,6 +211,95 @@ export function presentBiomeStatus(
     return incompleteBiomeStatus;
   }
   return evaluation.validity === 'valid' ? validBiomeStatus : invalidBiomeStatus;
+}
+
+function biomeFeedback(route: ProjectRouteEvaluation, biomeKey: string): BiomeFeedbackPresentation {
+  const evaluation = route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  if (evaluation === undefined) {
+    if (!route.processing.blockedSuffix.includes(biomeKey)) {
+      throw new Error(`${route.routeKey} biome ${biomeKey} has no evaluation or blocked region`);
+    }
+    return Object.freeze({
+      biomeKey,
+      ...(route.processing.active === null
+        ? {}
+        : { blockedByBiomeKey: route.processing.active.biomeKey }),
+      context: 'blocked',
+      findingCount: 0,
+      status: blockedBiomeStatus,
+    });
+  }
+  const context: BiomeFeedbackContext =
+    evaluation.coverage.kind === 'complete'
+      ? 'complete'
+      : evaluation.coverage.kind === 'prefix'
+        ? 'prefix'
+        : 'unassessed';
+  return Object.freeze({
+    biomeKey,
+    context,
+    findingCount: evaluation.findings.length,
+    status: presentBiomeStatus(evaluation),
+  });
+}
+
+export function projectFeedbackHierarchy(
+  evaluation: ProjectEvaluation,
+): ProjectFeedbackPresentation {
+  const existing = projectFeedbackCache.get(evaluation);
+  if (existing !== undefined) {
+    return existing;
+  }
+  const routes = new Map<string, RouteFeedbackPresentation>();
+  for (const route of evaluation.routes) {
+    const biomes = new Map(
+      route.configuredBiomeKeys.map(
+        (biomeKey) => [biomeKey, biomeFeedback(route, biomeKey)] as const,
+      ),
+    );
+    routes.set(
+      route.routeKey,
+      Object.freeze({
+        biomes,
+        findingCount: route.findings.length,
+        routeKey: route.routeKey,
+        status: presentRouteStatus(route),
+      }),
+    );
+  }
+  const projected = Object.freeze({
+    findingCount: evaluation.findings.length,
+    routes,
+    status: presentProjectStatus(evaluation),
+  });
+  projectFeedbackCache.set(evaluation, projected);
+  return projected;
+}
+
+export function presentBiomeFeedbackContext(
+  catalog: Catalog,
+  feedback: BiomeFeedbackPresentation,
+): string | undefined {
+  const biome = catalog.biomes.byKey[feedback.biomeKey];
+  if (biome === undefined) {
+    throw new Error(`Feedback references unknown biome ${feedback.biomeKey}`);
+  }
+  if (feedback.context === 'unassessed') {
+    return `${biome.label} has no evaluated route prefix yet. Its choices remain editable and are marked Not evaluated.`;
+  }
+  if (feedback.context !== 'blocked') {
+    return undefined;
+  }
+  const blocker =
+    feedback.blockedByBiomeKey === undefined
+      ? undefined
+      : catalog.biomes.byKey[feedback.blockedByBiomeKey];
+  if (feedback.blockedByBiomeKey !== undefined && blocker === undefined) {
+    throw new Error(`Feedback references unknown blocking biome ${feedback.blockedByBiomeKey}`);
+  }
+  return blocker === undefined
+    ? `${biome.label} is blocked by an earlier route biome. Its authored values remain editable but are not evaluated.`
+    : `${biome.label} is blocked until ${blocker.label} is complete and valid. Its authored values remain editable but are not evaluated.`;
 }
 
 export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddress): string {
