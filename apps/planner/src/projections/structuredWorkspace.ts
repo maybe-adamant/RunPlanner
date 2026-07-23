@@ -1706,8 +1706,10 @@ function requireRouteEvaluation(
 function createWorkspaceContextualResolver(
   catalog: Catalog,
   project: ProjectDocument,
+  evaluation: ProjectEvaluation,
   services: StructuredWorkspaceContextualServices,
 ): WorkspaceContextualResolver {
+  const candidates = services.candidateProjection.bind(project, evaluation);
   const roomCache = new WeakMap<
     WorkspaceRoomPickerControl,
     ContextualPickerModel<RoomDeclaration>
@@ -1724,8 +1726,8 @@ function createWorkspaceContextualResolver(
       );
       const projected =
         control.kind === 'startRoomPicker'
-          ? services.candidateProjection.startRooms(project, control.address, rooms)
-          : services.candidateProjection.roomTargets(project, control.address, rooms);
+          ? candidates.startRooms(control.address, rooms)
+          : candidates.roomTargets(control.address, rooms);
       const model = services.contextualPicker.project(
         projected,
         (option) => ({
@@ -1748,17 +1750,12 @@ function createWorkspaceContextualResolver(
       }
       const rewardTypes =
         control.kind === 'countedReward'
-          ? services.candidateProjection.countedRewardTypes(
-              project,
-              control.owner,
-              control.binding,
-              control.offer.rewardType,
-            )
+          ? candidates.countedRewardTypes(control.owner, control.binding, control.offer.rewardType)
           : control.rewardTypes;
       const interaction = Object.freeze({
         choiceLabel: services.rewardPicker.choiceLabel,
         load: (seed: ResolvedRewardOffer) =>
-          services.candidateProjection.rewardDomain(project, control.owner, rewardTypes, seed),
+          candidates.rewardDomain(control.owner, rewardTypes, seed),
         model: services.rewardPicker.project,
         rewardTypes,
         selected: control.offer,
@@ -1855,7 +1852,7 @@ export function createStructuredWorkspaceProjection(
       registerDestination(projectContext, projectAddress, 'routeRail');
       registerFindingDestinations(evaluation.findings, focusByOwner);
       const result = Object.freeze({
-        contextual: createWorkspaceContextualResolver(catalog, project, services),
+        contextual: createWorkspaceContextualResolver(catalog, project, evaluation, services),
         focusByOwner: new Map(focusByOwner),
         marker: Object.freeze({
           address: projectAddress,

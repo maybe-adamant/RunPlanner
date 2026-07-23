@@ -966,6 +966,12 @@ realization is the shop target.
 
 ## Candidate Evaluation
 
+`CANDIDATE_EVALUATION_MODEL.md` is the detailed authority for project-bound
+candidate sessions, typed pre-decision contexts, domain evaluation, replay
+horizons, caching, and refactor constraints. This section retains the
+simulation-level contract; `../progress/IMPLEMENTATION_PLAN.md` owns delivery
+order.
+
 Candidate domains are declaration-derived and stable. Declaration-impossible
 values may be absent. Context-invalid values remain present and receive
 semantic invalid results.
@@ -974,15 +980,15 @@ Candidate results report possible, forced, or impossible membership plus the
 same semantic findings used for the selected plan. They do not report a score
 or likelihood.
 
-For one candidate, simulation:
+For one candidate domain, simulation:
 
-1. validates the query against its authored semantic owner and declaration;
+1. validates the request against its authored semantic owner and declaration;
 2. derives the exact current pre-decision context through normal project
    simulation;
-3. projects the proposed value into the smallest affected semantic owner;
+3. prepares that context once for every requested alternative;
 4. invokes the same support evaluator and finding producer used for the
-   selected value;
-5. returns typed support, findings, and evidence without publishing or
+   selected value at the smallest affected semantic region;
+5. returns ordered typed support, findings, and evidence without publishing or
    persisting scratch state.
 
 The shared query set covers authored starts, ordinary room targets, batch
@@ -1028,23 +1034,21 @@ queried owner because required earlier structure or a supported pre-state is
 missing, that owner reports unavailable local context. Neither case invents
 history from defaults or unauthored futures.
 
-Ordered candidate queries for one authored snapshot may use one prepared
-candidate evaluator, which owns one shared base project simulation. The
-application shares its immutable-project `ProjectEvaluation` with that
-evaluator and keeps option arrays in a weak cache keyed by immutable project
-identity and semantic owner. The application-owned contextual resolver maps
-those stable arrays to forced, possible, impossible, or unassessed options,
-centralizes player-facing reason copy, and caches by candidate-array identity
-plus presentation semantics. A semantic edit therefore invalidates the
-projection once, while repeated renders consume the same structures. Reward
-and shop alternatives still replay their immutable semantic replacement
-because their support depends on bag, peer, lifecycle, and history effects.
-That replay evaluates the addressed biome through the common linear authority
-and reuses the already-evaluated upstream biome; unrelated later biomes are not
-candidate inputs. Closed reward and shop controls request their option
-projection on focus or pointer intent rather than eagerly rebuilding every
-hidden native-select option. React triggers and presents the application
-projection but never implements the replay rules.
+Ordered candidate domains for one authored snapshot use one prepared candidate
+session bound to the exact immutable project and its published
+`ProjectEvaluation`. The application keeps option arrays in a weak cache keyed
+by that identity pair, semantic owner, and domain. A semantic edit therefore
+invalidates the session once, while navigation and repeated renders consume the
+same structures.
+
+Room candidates reuse addressed generation views. Reward and shop alternatives
+reuse a typed producer frontier captured by selected reward simulation and
+evaluate the complete producer domain without applying one temporary project
+command or rebuilding the addressed biome per offer. Room-local and Hub
+candidates replay only their declared semantic region unless a genuinely broad
+field requires a scoped biome suffix. Unrelated later topology is never a
+candidate input. React triggers and presents the application projection but
+never implements these rules.
 
 A candidate contact does not require unrelated downstream topology
 to remain complete when the proposed value changes structural capacity. For

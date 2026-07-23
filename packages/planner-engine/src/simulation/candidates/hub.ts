@@ -21,6 +21,9 @@ import {
   isCandidateContextUnavailable,
   locateCandidateHub,
   locateHubBiomePlan,
+  locateIndexedHubPlan,
+  locateIndexedOccurrence,
+  observeCandidateBiomeReplay,
   unavailableCandidate,
   type CandidateHubBiomeEvaluation,
   type PreparedCandidateContext,
@@ -28,10 +31,10 @@ import {
 
 function requireHubCandidateLayout(
   catalog: Catalog,
-  project: ProjectDocument,
+  context: PreparedCandidateContext,
   query: ProjectCandidateQuery,
 ): { readonly layout: HubBiomeLayout; readonly plan: HubBiomePlan } {
-  const plan = locateHubBiomePlan(project, query);
+  const plan = locateIndexedHubPlan(context, query);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
   if (layout?.kind !== 'HubBiome' || plan.biomeKey !== 'N') {
     failCandidate(query, `${plan.biomeKey} has no supported Hub candidate domain`);
@@ -45,6 +48,7 @@ function requireHubCandidateLayout(
 function hubSlotProposal(
   catalog: Catalog,
   project: ProjectDocument,
+  context: PreparedCandidateContext,
   query: HubSlotCandidateQuery,
   plan: HubBiomePlan,
   layout: HubBiomeLayout,
@@ -72,6 +76,7 @@ function hubSlotProposal(
       ? { kind: 'OpenHubSlot', slot: query.slot, occurrenceId: query.occurrenceId }
       : { kind: 'CloseHubSlot', slot: query.slot },
   );
+  observeCandidateBiomeReplay(context, query, 'hubBiome');
   return evaluateHubBiome(catalog, query.slot.routeKey, locateHubBiomePlan(proposal, query));
 }
 
@@ -109,7 +114,7 @@ export function evaluateHubSlotCandidate(
   if (isCandidateContextUnavailable(baseline)) {
     return unavailableCandidate(stableQuery, baseline);
   }
-  const { layout, plan } = requireHubCandidateLayout(catalog, project, stableQuery);
+  const { layout, plan } = requireHubCandidateLayout(catalog, context, stableQuery);
   const slot = layout.hub.slots.find(
     (candidate) => candidate.slotKey === stableQuery.slot.hubSlotKey,
   );
@@ -132,6 +137,7 @@ export function evaluateHubSlotCandidate(
   const selectedEvaluation = hubSlotProposal(
     catalog,
     project,
+    context,
     stableQuery,
     plan,
     layout,
@@ -143,6 +149,7 @@ export function evaluateHubSlotCandidate(
   const oppositeEvaluation = hubSlotProposal(
     catalog,
     project,
+    context,
     stableQuery,
     plan,
     layout,
@@ -180,7 +187,7 @@ export function evaluateHubVisitCandidate(
   if (isCandidateContextUnavailable(baseline)) {
     return unavailableCandidate(stableQuery, baseline);
   }
-  const { layout, plan } = requireHubCandidateLayout(catalog, project, stableQuery);
+  const { layout, plan } = requireHubCandidateLayout(catalog, context, stableQuery);
   if (!layout.hub.slots.some((slot) => slot.slotKey === stableQuery.hubSlotKey)) {
     failCandidate(stableQuery, `unknown Hub slot ${stableQuery.hubSlotKey}`);
   }
@@ -224,6 +231,7 @@ export function evaluateHubVisitCandidate(
             visit: stableQuery.visit,
             hubSlotKey: stableQuery.hubSlotKey,
           });
+    observeCandidateBiomeReplay(context, stableQuery, 'hubBiome');
     const evaluation = evaluateHubBiome(
       catalog,
       stableQuery.visit.routeKey,
@@ -262,15 +270,13 @@ export function evaluateHubVisitCandidate(
 
 function requireSideRoomState(
   catalog: Catalog,
-  project: ProjectDocument,
+  context: PreparedCandidateContext,
   query: SideRoomEntryOrderCandidateQuery | SideRoomGenerationCandidateQuery,
 ) {
-  const { layout, plan } = requireHubCandidateLayout(catalog, project, query);
+  const { layout, plan } = requireHubCandidateLayout(catalog, context, query);
   const address = query.kind === 'sideRoomEntryOrder' ? query.group : query.sideRoom;
-  const occurrence = plan.topology!.occurrences.find(
-    (candidate) => candidate.occurrenceId === address.occurrenceId,
-  );
-  if (occurrence?.state.kind !== 'ephyraCombat') {
+  const occurrence = locateIndexedOccurrence(context, query, address.occurrenceId).occurrence;
+  if (occurrence.state.kind !== 'ephyraCombat') {
     failCandidate(query, 'semantic owner is not an Ephyra combat room');
   }
   const room = catalog.rooms.byKey[occurrence.gameName];
@@ -292,7 +298,7 @@ export function evaluateSideRoomGenerationCandidate(
   if (isCandidateContextUnavailable(baseline)) {
     return unavailableCandidate(stableQuery, baseline);
   }
-  const { state, group } = requireSideRoomState(catalog, project, stableQuery);
+  const { state, group } = requireSideRoomState(catalog, context, stableQuery);
   if (!group.slots.some((slot) => slot.slotKey === stableQuery.sideRoom.slotKey)) {
     failCandidate(stableQuery, `unknown side-room slot ${stableQuery.sideRoom.slotKey}`);
   }
@@ -319,6 +325,7 @@ export function evaluateSideRoomGenerationCandidate(
             sideRoom: stableQuery.sideRoom,
             generation: stableQuery.generation,
           });
+    observeCandidateBiomeReplay(context, stableQuery, 'hubBiome');
     const evaluation = evaluateHubBiome(
       catalog,
       stableQuery.sideRoom.routeKey,
@@ -369,7 +376,7 @@ export function evaluateSideRoomEntryOrderCandidate(
   if (isCandidateContextUnavailable(baseline)) {
     return unavailableCandidate(stableQuery, baseline);
   }
-  const { state, group } = requireSideRoomState(catalog, project, stableQuery);
+  const { state, group } = requireSideRoomState(catalog, context, stableQuery);
   const groupCovered = baseline.roomGeneration.sideRoomGenerations.some(
     (entry) =>
       entry.origin.occurrenceId === stableQuery.group.occurrenceId &&
@@ -388,6 +395,7 @@ export function evaluateSideRoomEntryOrderCandidate(
     group: stableQuery.group,
     enteredSlotKeys: stableQuery.enteredSlotKeys,
   });
+  observeCandidateBiomeReplay(context, stableQuery, 'hubBiome');
   const evaluation = evaluateHubBiome(
     catalog,
     stableQuery.group.routeKey,

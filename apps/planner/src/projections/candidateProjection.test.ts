@@ -9,7 +9,7 @@ import {
   createProjectDocument,
   createTargetAddress,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProject, type CandidateEvaluationEvent } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { createGoldenFGHIProject, targetOccurrenceId } from '../../test/fixtures/underworldProject';
@@ -82,8 +82,10 @@ describe('candidate application projection', () => {
     const service = createCandidateProjectionService(
       catalog,
       (candidate) => simulateProject(catalog, candidate),
-      async () => {
-        yieldCount += 1;
+      {
+        yieldToHost: async () => {
+          yieldCount += 1;
+        },
       },
     );
     const document = createGoldenFGHIProject(catalog);
@@ -106,6 +108,41 @@ describe('candidate application projection', () => {
     expect(yieldCount).toBeGreaterThan(1);
   });
 
+  it('measures the current dense Devotion domain replay baseline', async () => {
+    const events: CandidateEvaluationEvent[] = [];
+    const service = createCandidateProjectionService(
+      catalog,
+      (candidate) => simulateProject(catalog, candidate),
+      {
+        observeCandidateEvaluation: (event) => events.push(event),
+        yieldToHost: () => Promise.resolve(),
+      },
+    );
+    const document = createGoldenFGHIProject(catalog);
+    const occurrenceId = targetOccurrenceId('F', 2, 1);
+    const selected = {
+      rewardType: 'Devotion',
+      payload: {
+        kind: 'DevotionPair' as const,
+        chosenSource: 'ZeusUpgrade',
+        spurnedSource: 'HeraUpgrade',
+      },
+    };
+
+    await service.rewardDomain(
+      document,
+      {
+        kind: 'incomingReward',
+        address: createIncomingRewardAddress(biome, occurrenceId),
+      },
+      ['Devotion'],
+      selected,
+    );
+
+    expect(events.filter((event) => event.kind === 'queryBatch')).toHaveLength(72);
+    expect(events.filter((event) => event.kind === 'biomeReplay')).toHaveLength(72);
+  });
+
   it('caches stable option structures by immutable project and semantic owner', () => {
     let evaluationCount = 0;
     const service = createCandidateProjectionService(catalog, (project) => {
@@ -126,6 +163,31 @@ describe('candidate application projection', () => {
     expect(evaluationCount).toBe(1);
     expect(first.map((option) => option.value.gameName)).toEqual(layout.start.roomGameNames);
     expect(first.every((option) => option.evaluation.context === 'evaluated')).toBe(true);
+  });
+
+  it('binds projection work to the exact published project evaluation', () => {
+    let fallbackEvaluationCount = 0;
+    const service = createCandidateProjectionService(catalog, () => {
+      fallbackEvaluationCount += 1;
+      throw new Error('bound candidate projection must not rebuild project evaluation');
+    });
+    const document = project();
+    const evaluation = simulateProject(catalog, document);
+    const layout = catalog.biomeLayouts.byKey.F;
+    if (layout?.kind !== 'LinearBiome' || layout.start.kind !== 'authoredStart') {
+      throw new Error('F authored start domain is missing');
+    }
+    const rooms = layout.start.roomGameNames.map((gameName) => catalog.rooms.byKey[gameName]!);
+
+    const first = service.bind(document, evaluation);
+    const second = service.bind(document, evaluation);
+    const options = first.startRooms(biome, rooms);
+
+    expect(second).toBe(first);
+    expect(first.project).toBe(document);
+    expect(first.evaluation).toBe(evaluation);
+    expect(options.map((option) => option.value.gameName)).toEqual(layout.start.roomGameNames);
+    expect(fallbackEvaluationCount).toBe(0);
   });
 
   it('evaluates the addressed target in an incomplete but covered biome prefix', () => {

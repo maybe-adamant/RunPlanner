@@ -20,12 +20,14 @@ import type {
 import type {
   AuthoredFieldValue,
   OccurrenceId,
+  ProjectDocument,
   SideRoomGeneration,
 } from '../../authored-project/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { RoomGenerationExclusionEvidence, RoomGenerationExclusionReason } from '../generation';
 import type { FindingCode, SemanticFinding } from '../model';
 import type { BiomeEvaluationCheckpoint, BiomeEvaluationCoverage } from '../project';
+import type { ProjectEvaluation } from '../project';
 
 export type CandidateSupport = 'forced' | 'impossible' | 'possible';
 
@@ -485,4 +487,26 @@ export interface ProjectCandidateEvaluator {
   readonly evaluate: (
     queries: readonly ProjectCandidateQuery[],
   ) => readonly ProjectCandidateEvaluation[];
+}
+
+export interface ProjectCandidateSession extends ProjectCandidateEvaluator {
+  readonly project: ProjectDocument;
+  readonly evaluation: ProjectEvaluation;
+}
+
+export type CandidateEvaluationEvent =
+  | {
+      readonly kind: 'queryBatch';
+      readonly queryCount: number;
+    }
+  | {
+      readonly kind: 'biomeReplay';
+      readonly queryKind: ProjectCandidateQuery['kind'];
+      readonly routeKey: string;
+      readonly biomeKey: string;
+      readonly scope: 'hubBiome' | 'linearBiome';
+    };
+
+export interface ProjectCandidateSessionOptions {
+  readonly observe?: (event: CandidateEvaluationEvent) => void;
 }

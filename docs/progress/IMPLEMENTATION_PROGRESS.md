@@ -1586,5 +1586,28 @@ out at 30.288 seconds under the two-worker full suite. Its local 60-second
 timeout is temporary reliability headroom, not an accepted performance target.
 Candidate-refactor closure must rerun the same isolated test and the complete
 suite, record comparable durations, and demonstrate that interactive candidate
-evaluation no longer depends on repeated full-project simulation before Phase 7
-Commit 11 resumes.
+evaluation no longer depends on repeated full addressed-biome replay before
+Phase 7 Commit 11 resumes. `../design/CANDIDATE_EVALUATION_MODEL.md` records the
+project-bound session, domain-evaluation model, and replay horizons;
+`IMPLEMENTATION_PLAN.md` owns the concrete refactor slices.
+
+Candidate-System Refactor Slice 1 is complete. The engine now constructs one
+prepared candidate session for an exact immutable `ProjectDocument` and its
+matching published `ProjectEvaluation`. Session construction validates that
+identity pair and builds route, biome, occurrence, and target indexes keyed by
+stable semantic identity. The scalar evaluator remains as a compatibility
+surface over the session, so existing support, evidence, findings, and commands
+are unchanged.
+
+The structured-workspace resolver now binds its contextual room and reward work
+to the exact evaluation supplied by the application projection. Legacy editor
+callers retain a project-identity evaluation cache while migration continues;
+they do not become a second simulation authority. Instrumentation distinguishes
+new project evaluations, candidate query batches, and actual Linear or Hub
+biome replays. Direct start and room-target domains perform zero biome replays.
+The current 72-pair Devotion domain baseline records 72 scalar query batches and
+72 Linear biome replays, which is the explicit Slice 2 removal target. The
+representative G authoring/undo/redo test records unique project rebuild
+identities separately from direct candidate work and completed in 25.22 seconds
+in isolation on 2026-07-23. This is a measurement baseline, not an optimization
+claim.

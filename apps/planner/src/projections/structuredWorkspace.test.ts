@@ -36,9 +36,9 @@ import {
 
 const evaluateProject = (project: ReturnType<typeof createProjectDocument>) =>
   simulateProject(catalog, project);
-const candidateProjection = createCandidateProjectionService(catalog, evaluateProject, () =>
-  Promise.resolve(),
-);
+const candidateProjection = createCandidateProjectionService(catalog, evaluateProject, {
+  yieldToHost: () => Promise.resolve(),
+});
 const contextualPicker = createContextualPickerProjection(createContextualOptionResolver(catalog));
 const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
 const projection = createStructuredWorkspaceProjection(catalog, {

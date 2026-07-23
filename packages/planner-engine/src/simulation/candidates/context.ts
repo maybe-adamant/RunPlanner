@@ -1,10 +1,21 @@
-import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  createTargetAddress,
+  semanticAddressKey,
+  type SemanticAddress,
+} from '../../authored-project/addresses';
 import { applyProjectCommand, type ProjectCommand } from '../../authored-project/commands/dispatch';
 import type {
   AuthoredBiomePlan,
+  AuthoredRoutePlan,
   HubBiomePlan,
+  LinearContinuation,
   LinearBiomePlan,
+  LinearTargetReference,
+  OccurrenceId,
   ProjectDocument,
+  RoomOccurrence,
 } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
@@ -38,6 +49,7 @@ import type {
   ShopPurchaseCandidateQuery,
   SideRoomEntryOrderCandidateQuery,
   SideRoomGenerationCandidateQuery,
+  ProjectCandidateSessionOptions,
 } from './model';
 
 export type CandidateLinearBiomeEvaluation =
@@ -280,15 +292,71 @@ export function locateHubBiomePlan(
 }
 
 export function requireRoute(
-  routes: readonly ProjectRouteEvaluation[],
+  context: PreparedCandidateContext,
   query: ProjectCandidateQuery,
 ): ProjectRouteEvaluation {
   const address = queryAddress(query);
-  const route = routes.find((candidate) => candidate.routeKey === address.routeKey);
+  const route = context.index.routesByKey.get(address.routeKey)?.evaluation;
   if (route === undefined) {
     failCandidate(query, `simulation has no route ${address.routeKey}`);
   }
   return route;
+}
+
+export function locateIndexedBiome(
+  context: PreparedCandidateContext,
+  query: ProjectCandidateQuery,
+): IndexedCandidateBiome {
+  const address = queryAddress(query);
+  const biome = context.index.biomesByOwner.get(
+    semanticAddressKey(createBiomeAddress(address.routeKey, address.biomeKey)),
+  );
+  if (biome === undefined) {
+    failCandidate(query, `project has no configured biome ${address.biomeKey}`);
+  }
+  return biome;
+}
+
+export function locateIndexedLinearPlan(
+  context: PreparedCandidateContext,
+  query: ProjectCandidateQuery,
+): LinearBiomePlan {
+  const plan = locateIndexedBiome(context, query).plan;
+  if (plan.kind !== 'LinearBiome') {
+    failCandidate(
+      query,
+      `${queryAddress(query).biomeKey} does not use linear candidate evaluation`,
+    );
+  }
+  return plan;
+}
+
+export function locateIndexedHubPlan(
+  context: PreparedCandidateContext,
+  query: ProjectCandidateQuery,
+): HubBiomePlan {
+  const plan = locateIndexedBiome(context, query).plan;
+  if (plan.kind !== 'HubBiome') {
+    failCandidate(query, `${queryAddress(query).biomeKey} does not use Hub candidate evaluation`);
+  }
+  return plan;
+}
+
+export function locateIndexedOccurrence(
+  context: PreparedCandidateContext,
+  query: ProjectCandidateQuery,
+  occurrenceId: OccurrenceId,
+): IndexedCandidateOccurrence {
+  const address = queryAddress(query);
+  const occurrence = context.index.occurrencesByOwner.get(
+    semanticAddressKey(
+      createOccurrenceAddress(createBiomeAddress(address.routeKey, address.biomeKey), occurrenceId),
+    ),
+  );
+  if (occurrence === undefined) {
+    failCandidate(query, `project has no occurrence ${occurrenceId}`);
+  }
+  return occurrence;
 }
 
 function unavailableReason(
@@ -316,11 +384,12 @@ function unavailableReason(
 }
 
 function locateCompleteLinear(
-  route: ProjectRouteEvaluation,
+  context: PreparedCandidateContext,
   query: ProjectCandidateQuery,
 ): CandidateLinearBiomeEvaluation | CandidateContextUnavailable {
   const address = queryAddress(query);
-  const evaluation = route.biomes.find((candidate) => candidate.biomeKey === address.biomeKey);
+  const route = requireRoute(context, query);
+  const evaluation = locateIndexedBiome(context, query).evaluation;
   if (evaluation === undefined) {
     return unavailableReason(route, query);
   }
@@ -333,15 +402,149 @@ function locateCompleteLinear(
 }
 
 export interface PreparedCandidateContext {
+  readonly project: ProjectDocument;
   readonly projectEvaluation: ProjectEvaluation;
+  readonly index: PreparedCandidateIndex;
+  readonly observe?: ProjectCandidateSessionOptions['observe'];
+}
+
+export interface IndexedCandidateBiome {
+  readonly plan: AuthoredBiomePlan;
+  readonly evaluation?: LinearBiomeProjectEvaluation | HubBiomeProjectEvaluation;
+  readonly route: AuthoredRoutePlan;
+  readonly routeEvaluation: ProjectRouteEvaluation;
+}
+
+export interface IndexedCandidateOccurrence {
+  readonly biome: IndexedCandidateBiome;
+  readonly occurrence: RoomOccurrence;
+}
+
+export interface IndexedCandidateTarget {
+  readonly biome: IndexedCandidateBiome;
+  readonly continuation: LinearContinuation;
+  readonly occurrence: RoomOccurrence;
+  readonly target: LinearTargetReference;
+}
+
+export interface PreparedCandidateIndex {
+  readonly routesByKey: ReadonlyMap<
+    string,
+    {
+      readonly plan: AuthoredRoutePlan;
+      readonly evaluation: ProjectRouteEvaluation;
+    }
+  >;
+  readonly biomesByOwner: ReadonlyMap<string, IndexedCandidateBiome>;
+  readonly occurrencesByOwner: ReadonlyMap<string, IndexedCandidateOccurrence>;
+  readonly targetsByOwner: ReadonlyMap<string, IndexedCandidateTarget>;
+}
+
+export function prepareCandidateContext(
+  project: ProjectDocument,
+  projectEvaluation: ProjectEvaluation,
+  options: ProjectCandidateSessionOptions = {},
+): PreparedCandidateContext {
+  const routesByKey = new Map<
+    string,
+    {
+      readonly plan: AuthoredRoutePlan;
+      readonly evaluation: ProjectRouteEvaluation;
+    }
+  >();
+  const biomesByOwner = new Map<string, IndexedCandidateBiome>();
+  const occurrencesByOwner = new Map<string, IndexedCandidateOccurrence>();
+  const targetsByOwner = new Map<string, IndexedCandidateTarget>();
+
+  for (const route of project.routes) {
+    const routeEvaluation = projectEvaluation.routes.find(
+      (candidate) => candidate.routeKey === route.routeKey,
+    );
+    if (routeEvaluation === undefined) {
+      throw new Error(`candidate index has no evaluation for route ${route.routeKey}`);
+    }
+    routesByKey.set(route.routeKey, Object.freeze({ plan: route, evaluation: routeEvaluation }));
+    for (const plan of route.biomes) {
+      const biomeAddress = createBiomeAddress(route.routeKey, plan.biomeKey);
+      const evaluation = routeEvaluation.biomes.find(
+        (candidate) => candidate.biomeKey === plan.biomeKey,
+      );
+      const biome: IndexedCandidateBiome = Object.freeze({
+        plan,
+        route,
+        routeEvaluation,
+        ...(evaluation === undefined ? {} : { evaluation }),
+      });
+      biomesByOwner.set(semanticAddressKey(biomeAddress), biome);
+      if (plan.topology === null) {
+        continue;
+      }
+      const occurrencesById = new Map(
+        plan.topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
+      );
+      for (const occurrence of plan.topology.occurrences) {
+        occurrencesByOwner.set(
+          semanticAddressKey(createOccurrenceAddress(biomeAddress, occurrence.occurrenceId)),
+          Object.freeze({ biome, occurrence }),
+        );
+      }
+      if (plan.kind !== 'LinearBiome') {
+        continue;
+      }
+      for (const continuation of plan.topology.continuations) {
+        for (const target of continuation.targets) {
+          const occurrence = occurrencesById.get(target.occurrenceId);
+          if (occurrence === undefined) {
+            throw new Error(
+              `candidate index target ${target.occurrenceId} has no authored occurrence`,
+            );
+          }
+          targetsByOwner.set(
+            semanticAddressKey(
+              createTargetAddress(biomeAddress, continuation.parentOccurrenceId, target.exitIndex),
+            ),
+            Object.freeze({ biome, continuation, occurrence, target }),
+          );
+        }
+      }
+    }
+  }
+
+  return Object.freeze({
+    project,
+    projectEvaluation,
+    ...(options.observe === undefined ? {} : { observe: options.observe }),
+    index: Object.freeze({
+      routesByKey,
+      biomesByOwner,
+      occurrencesByOwner,
+      targetsByOwner,
+    }),
+  });
+}
+
+export function observeCandidateBiomeReplay(
+  context: PreparedCandidateContext,
+  query: ProjectCandidateQuery,
+  scope: 'hubBiome' | 'linearBiome',
+): void {
+  const address = queryAddress(query);
+  context.observe?.(
+    Object.freeze({
+      kind: 'biomeReplay',
+      queryKind: query.kind,
+      routeKey: address.routeKey,
+      biomeKey: address.biomeKey,
+      scope,
+    }),
+  );
 }
 
 export function locateCandidateLinear(
   context: PreparedCandidateContext,
   query: ProjectCandidateQuery,
 ): CandidateLinearBiomeEvaluation | CandidateContextUnavailable {
-  const route = requireRoute(context.projectEvaluation.routes, query);
-  return locateCompleteLinear(route, query);
+  return locateCompleteLinear(context, query);
 }
 
 export function locateCandidateHub(
@@ -349,10 +552,8 @@ export function locateCandidateHub(
   query: ProjectCandidateQuery,
 ): CandidateHubBiomeEvaluation | CandidateContextUnavailable {
   const address = queryAddress(query);
-  const route = requireRoute(context.projectEvaluation.routes, query);
-  const activeEvaluation = route.biomes.find(
-    (candidate) => candidate.biomeKey === address.biomeKey,
-  );
+  const route = requireRoute(context, query);
+  const activeEvaluation = locateIndexedBiome(context, query).evaluation;
   if (activeEvaluation !== undefined) {
     if (activeEvaluation.kind !== 'HubBiome') {
       failCandidate(query, `${address.biomeKey} does not have a Hub evaluation`);
@@ -381,11 +582,10 @@ export function applyCandidateCommand(
 type CandidateBiomeEvaluation = CandidateLinearBiomeEvaluation | CandidateHubBiomeEvaluation;
 
 export function locateCandidateBiome(
-  project: ProjectDocument,
   context: PreparedCandidateContext,
   query: ProjectCandidateQuery,
 ) {
-  const sourcePlan = locateBiomePlan(project, query);
+  const sourcePlan = locateIndexedBiome(context, query).plan;
   return sourcePlan.kind === 'LinearBiome'
     ? locateCandidateLinear(context, query)
     : locateCandidateHub(context, query);
@@ -393,7 +593,6 @@ export function locateCandidateBiome(
 
 export function evaluateCandidateBiome(
   catalog: Catalog,
-  project: ProjectDocument,
   proposal: ProjectDocument,
   context: PreparedCandidateContext,
   query:
@@ -414,9 +613,9 @@ export function evaluateCandidateBiome(
     | SideRoomGenerationCandidateQuery,
 ): CandidateBiomeEvaluation | CandidateContextUnavailable {
   const address = queryAddress(query);
-  const baselineRoute = requireRoute(context.projectEvaluation.routes, query);
-  const sourcePlan = locateBiomePlan(project, query);
-  const baselineBiome = locateCandidateBiome(project, context, query);
+  const baselineRoute = requireRoute(context, query);
+  const sourcePlan = locateIndexedBiome(context, query).plan;
+  const baselineBiome = locateCandidateBiome(context, query);
   if (isCandidateContextUnavailable(baselineBiome)) {
     return baselineBiome;
   }
@@ -434,6 +633,7 @@ export function evaluateCandidateBiome(
     failCandidate(query, 'candidate proposal changed biome layout kind');
   }
   if (plan.kind === 'HubBiome') {
+    observeCandidateBiomeReplay(context, query, 'hubBiome');
     const evaluation = evaluateHubBiome(catalog, route.routeKey, plan);
     return evaluation.authoring === 'complete' || 'materializedPrefix' in evaluation
       ? evaluation
@@ -445,6 +645,7 @@ export function evaluateCandidateBiome(
     failCandidate(query, 'candidate biome has an incomplete upstream evaluation');
   }
   const previousComplete = previous?.authoring === 'complete' ? previous : undefined;
+  observeCandidateBiomeReplay(context, query, 'linearBiome');
   const evaluation = evaluateLinearBiome(
     catalog,
     route.routeKey,

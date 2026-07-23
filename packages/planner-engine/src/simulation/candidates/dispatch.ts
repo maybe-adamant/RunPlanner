@@ -6,9 +6,12 @@ import type {
   ProjectCandidateEvaluation,
   ProjectCandidateEvaluator,
   ProjectCandidateQuery,
+  ProjectCandidateSession,
+  ProjectCandidateSessionOptions,
 } from './model';
 
 import type { PreparedCandidateContext } from './context';
+import { prepareCandidateContext } from './context';
 import {
   evaluateHubSlotCandidate,
   evaluateHubVisitCandidate,
@@ -55,10 +58,19 @@ export function createProjectCandidateEvaluator(
   catalog: Catalog,
   project: ProjectDocument,
 ): ProjectCandidateEvaluator {
-  return createPreparedProjectCandidateEvaluator(
+  return createProjectCandidateSession(catalog, project);
+}
+
+export function createProjectCandidateSession(
+  catalog: Catalog,
+  project: ProjectDocument,
+  options: ProjectCandidateSessionOptions = {},
+): ProjectCandidateSession {
+  return createPreparedProjectCandidateSession(
     catalog,
     project,
     simulateProject(catalog, project),
+    options,
   );
 }
 
@@ -67,11 +79,24 @@ export function createPreparedProjectCandidateEvaluator(
   project: ProjectDocument,
   projectEvaluation: ProjectEvaluation,
 ): ProjectCandidateEvaluator {
+  return createPreparedProjectCandidateSession(catalog, project, projectEvaluation);
+}
+
+export function createPreparedProjectCandidateSession(
+  catalog: Catalog,
+  project: ProjectDocument,
+  projectEvaluation: ProjectEvaluation,
+  options: ProjectCandidateSessionOptions = {},
+): ProjectCandidateSession {
   assertProjectEvaluationSource(project, projectEvaluation);
-  const context: PreparedCandidateContext = {
+  const context: PreparedCandidateContext = prepareCandidateContext(
+    project,
     projectEvaluation,
-  };
+    options,
+  );
   return Object.freeze({
+    project,
+    evaluation: projectEvaluation,
     evaluate: (queries: readonly ProjectCandidateQuery[]) =>
       evaluatePreparedProjectCandidates(catalog, project, context, queries),
   });
@@ -86,19 +111,20 @@ function evaluatePreparedProjectCandidates(
   if (queries.length === 0) {
     return Object.freeze([]);
   }
+  context.observe?.(Object.freeze({ kind: 'queryBatch', queryCount: queries.length }));
   return Object.freeze(
     queries.map((query): ProjectCandidateEvaluation => {
       switch (query.kind) {
         case 'biomeField':
           return evaluateBiomeFieldCandidate(catalog, project, context, query);
         case 'startRoom':
-          return evaluateStartRoomCandidate(catalog, project, query);
+          return evaluateStartRoomCandidate(catalog, context, query);
         case 'roomTarget':
-          return evaluateRoomTargetCandidate(catalog, project, context, query);
+          return evaluateRoomTargetCandidate(catalog, context, query);
         case 'batchRewardStore':
-          return evaluateBatchRewardStoreCandidate(catalog, project, context, query);
+          return evaluateBatchRewardStoreCandidate(catalog, context, query);
         case 'fieldsCageOutcome':
-          return evaluateFieldsCageOutcomeCandidate(catalog, project, context, query);
+          return evaluateFieldsCageOutcomeCandidate(catalog, context, query);
         case 'shipEncounterCount':
           return evaluateShipEncounterCountCandidate(catalog, project, context, query);
         case 'rewardWheelOfferCount':

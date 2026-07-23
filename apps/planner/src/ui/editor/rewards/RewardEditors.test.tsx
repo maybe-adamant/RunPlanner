@@ -64,6 +64,9 @@ function projected<T>(
 }
 
 const candidateProjection: CandidateProjectionService = {
+  bind: () => {
+    throw new Error('bound candidate projection is not used by this legacy editor fixture');
+  },
   prepareRewardDomain: (rewardTypes, selected) =>
     prepareRewardDomain(catalog, rewardTypes, selected),
   countedRewardTypes: (_project, _owner, _binding, selectedRewardType) => [selectedRewardType],

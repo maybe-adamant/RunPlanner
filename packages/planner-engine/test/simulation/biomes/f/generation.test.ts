@@ -21,12 +21,14 @@ import {
   CandidateEvaluationContractError,
   composeLinearHistory,
   createPreparedProjectCandidateEvaluator,
+  createPreparedProjectCandidateSession,
   evaluateLinearCompleteness,
   evaluateLinearRoomGeneration,
   evaluateProjectCandidate,
   evaluateProjectCandidates,
   materializeLinearBiome,
   simulateProject,
+  type CandidateEvaluationEvent,
   type CompleteLinearCompletenessResult,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -936,5 +938,69 @@ describe('project candidate evaluation', () => {
     expect(() =>
       createPreparedProjectCandidateEvaluator(catalog, editedProject, staleEvaluation),
     ).toThrow('prepared project evaluation does not belong to the authored project identity');
+  });
+
+  it('binds one exact candidate session and measures direct lookup versus biome replay', () => {
+    const project = possibilityProject();
+    const evaluation = simulateProject(catalog, project);
+    const events: CandidateEvaluationEvent[] = [];
+    const session = createPreparedProjectCandidateSession(catalog, project, evaluation, {
+      observe: (event) => events.push(event),
+    });
+
+    expect(session.project).toBe(project);
+    expect(session.evaluation).toBe(evaluation);
+    session.evaluate([
+      {
+        kind: 'startRoom',
+        owner: createOccurrenceAddress(biome, startId),
+        gameName: 'F_Opening02',
+      },
+      {
+        kind: 'roomTarget',
+        target: targetAddress(5, 1),
+        gameName: 'F_Combat20',
+      },
+    ]);
+    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 2 }]);
+
+    events.length = 0;
+    const rewardOccurrenceId = batchOccurrenceId(2, 1);
+    const occurrence = fPlan(project).topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === rewardOccurrenceId,
+    );
+    if (occurrence?.state.kind !== 'counted') {
+      throw new Error('candidate measurement fixture has no counted reward');
+    }
+    session.evaluate([
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, rewardOccurrenceId),
+        value: occurrence.state.offer,
+      },
+      {
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(biome, rewardOccurrenceId),
+        value: { rewardType: 'StackUpgrade' },
+      },
+    ]);
+
+    expect(events).toEqual([
+      { kind: 'queryBatch', queryCount: 2 },
+      {
+        kind: 'biomeReplay',
+        queryKind: 'incomingReward',
+        routeKey: 'Underworld',
+        biomeKey: 'F',
+        scope: 'linearBiome',
+      },
+      {
+        kind: 'biomeReplay',
+        queryKind: 'incomingReward',
+        routeKey: 'Underworld',
+        biomeKey: 'F',
+        scope: 'linearBiome',
+      },
+    ]);
   });
 });
