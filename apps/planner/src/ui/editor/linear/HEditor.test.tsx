@@ -30,6 +30,7 @@ import {
   createStructuredWorkspaceTestServices,
   requireLinearWorkspaceBiome,
 } from '../../../../test/fixtures/structuredWorkspace';
+import { ProjectHistoryControls } from '../../project/ProjectHistoryControls';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
 const biome = createBiomeAddress('Underworld', 'H');
@@ -147,14 +148,17 @@ function HEditorHarness({
   }
   const workspace = structuredWorkspace.project(project, projectEvaluation);
   return (
-    <LinearBiomeEditor
-      catalog={catalog}
-      interactions={workspace.interactions}
-      evaluation={evaluation?.kind === 'LinearBiome' ? evaluation : undefined}
-      plan={plan}
-      projection={requireLinearWorkspaceBiome(workspace, biome.biomeKey)}
-      routeKey={biome.routeKey}
-    />
+    <>
+      <ProjectHistoryControls />
+      <LinearBiomeEditor
+        catalog={catalog}
+        interactions={workspace.interactions}
+        evaluation={evaluation?.kind === 'LinearBiome' ? evaluation : undefined}
+        plan={plan}
+        projection={requireLinearWorkspaceBiome(workspace, biome.biomeKey)}
+        routeKey={biome.routeKey}
+      />
+    </>
   );
 }
 
@@ -176,6 +180,47 @@ function renderH(project: ProjectDocument) {
 }
 
 describe('H editor projection', () => {
+  it('keeps a new Fields roll unresolved until one undoable selection', async () => {
+    const start = createOccurrenceId('editor-h-unresolved-start');
+    let project = createProjectDocument(catalog, {
+      projectId: 'h-editor-unresolved',
+      name: 'H Editor Unresolved',
+      configuredBiomeCounts: { Underworld: 3 },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: start,
+      gameName: 'H_Intro',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, start),
+    });
+    const { store, user } = renderH(project);
+    const roll = screen.getByLabelText('Fields door roll') as HTMLSelectElement;
+    const decision = screen
+      .getByRole('heading', { name: 'Doors from Entrance' })
+      .closest<HTMLElement>('.decision-card');
+    if (decision === null) {
+      throw new Error('unresolved H decision card is missing');
+    }
+
+    expect(roll.value).toBe('');
+    expect(within(decision).getByLabelText('Room')).toHaveProperty('disabled', true);
+    await user.selectOptions(roll, 'max');
+    expect(
+      hPlan(store.getState().projectWorkspace.history.present).topology?.continuations[0],
+    ).toMatchObject({ batchState: { cageOutcome: 'max' } });
+    expect(store.getState().projectWorkspace.history.past).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(
+      hPlan(store.getState().projectWorkspace.history.present).topology?.continuations[0],
+    ).toMatchObject({ batchState: null });
+    expect((screen.getByLabelText('Fields door roll') as HTMLSelectElement).value).toBe('');
+  });
+
   it('edits Fields outcomes and bounded cage leaves through semantic commands', async () => {
     const { store, user } = renderH(hProject(true));
 

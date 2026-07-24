@@ -500,6 +500,13 @@ and a ShipCombat source derives it from the source occurrence's last active
 offer point. Persisting both the wheel store and an outgoing copy would create
 competing authorities.
 
+An ordinary non-ShipCombat source begins with an unresolved authored Run/Meta
+store. A ShipCombat source remains immediately concrete through its final
+active wheel and renders no redundant batch selector. The same source-policy
+resolver owns the direct terminal; under the current depth rules every valid
+sixth target is ShipCombat, while retained context-invalid non-ShipCombat
+replacements keep their authored-store shape without becoming evaluable.
+
 Finally, O demonstrates why declaration normalization must follow the game's
 actual inheritance semantics. Readable explicit TypeScript declarations should
 contain the flattened true predicates, not mechanically compose every parent

@@ -142,16 +142,19 @@ execution-ready route.
 
 The simulation-level vocabulary remains equivalent to:
 
-| State               | Meaning                                                             |
-| ------------------- | ------------------------------------------------------------------- |
-| `possible`          | At least one reachable game state supports the proposed value       |
-| `forced`            | The current support set requires this candidate or candidate family |
-| `impossible`        | No reachable state in the evaluated context supports the value      |
-| unavailable context | The required semantic pre-decision context was not reached          |
+| State                         | Meaning                                                               |
+| ----------------------------- | --------------------------------------------------------------------- |
+| `possible`                    | At least one reachable game state supports the proposed value         |
+| `forced`                      | The current support set requires this candidate or candidate family   |
+| `impossible`                  | No reachable state in the evaluated context supports the value        |
+| authored prerequisite missing | A required pool, Fields roll, or biome outcome must be selected first |
+| other unavailable context     | The semantic pre-decision context was not reached for another reason  |
 
-Unavailable context is not candidate invalidity. The editor must not color or
-filter a stable declaration domain as though it had been evaluated when the
-simulator could not reach that owner.
+Unavailable context is not candidate invalidity. A missing authored
+prerequisite names its exact semantic owner; other unavailable states retain
+their coverage or upstream evidence. The editor must not color or filter a
+stable declaration domain as though it had been evaluated when the simulator
+could not reach that owner.
 
 ### Selected-Value Invariant
 

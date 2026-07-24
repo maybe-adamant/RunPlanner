@@ -171,6 +171,11 @@ G targets a MetaProgress entered-room ratio of `0.35` and uses adjustment speed
 formula from `../design/REWARD_MODEL.md` within the generated-door lifecycle defined by
 `../design/GAME_GENERATION_RULES.md`.
 
+Every authored generated batch begins with an unresolved RunProgress-or-
+MetaProgress outcome. Candidate support is evaluated from the prepared
+pre-generation history, and only an explicit user selection makes the batch
+complete.
+
 `G_Combat04`, `G_Combat05`, `G_Combat07`, and `G_Combat08` exclude Devotion but
 still permit both RunProgress and MetaProgress. Other ordinary G combats use the
 unfiltered two-store domain. G minibosses force RunProgress and Boon. Fixed
