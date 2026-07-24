@@ -269,14 +269,13 @@ export function LinearBiomeEditor({
               <div className="frontier-buttons">
                 <button
                   className="primary-action"
-                  onClick={() =>
+                  onClick={() => {
+                    const continuation = createContinuationAddress(biome, null);
+                    dispatch(semanticOwnerFocused(continuation));
                     dispatch(
-                      authoredProjectCommandDispatched({
-                        kind: 'CreateBatch',
-                        continuation: createContinuationAddress(biome, null),
-                      }),
-                    )
-                  }
+                      authoredProjectCommandDispatched({ kind: 'CreateBatch', continuation }),
+                    );
+                  }}
                   type="button"
                 >
                   Add Next Decision
@@ -361,15 +360,7 @@ export function LinearBiomeEditor({
                       gameName,
                     }),
                   );
-                  const postCreateFocus = startOwner.postCreateFocusByGameName[gameName];
-                  if (postCreateFocus === undefined) {
-                    throw new Error(
-                      `${plan.biomeKey} has no post-create focus policy for ${gameName}`,
-                    );
-                  }
-                  if (postCreateFocus === 'createdOwner') {
-                    dispatch(semanticOwnerFocused(createOccurrenceAddress(biome, occurrenceId)));
-                  }
+                  dispatch(semanticOwnerFocused(createOccurrenceAddress(biome, occurrenceId)));
                 }}
                 owner={biome}
                 placeholder={

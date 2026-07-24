@@ -349,7 +349,7 @@ describe('Linear structured workspace', () => {
     expect(within(inspector).queryByRole('button', { name: 'Add Next Decision' })).toBeNull();
   });
 
-  it('advances an ordinary created start to its frontier', async () => {
+  it('retains an ordinary created start at its created occurrence', async () => {
     const application = createApplication();
     const project = createProjectDocument(application.catalog, {
       projectId: 'empty-g-workspace',
@@ -362,9 +362,102 @@ describe('Linear structured workspace', () => {
     await view.user.click(within(inspector).getByRole('button', { name: 'Entrance' }));
     await view.user.click(screen.getByRole('option', { name: /^Entrance/ }));
 
+    const gPlan = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const startOccurrenceId =
+      gPlan?.kind === 'LinearBiome' ? gPlan.topology?.startOccurrenceId : undefined;
+    if (startOccurrenceId === undefined || startOccurrenceId === null) {
+      throw new Error('G start occurrence was not created');
+    }
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), startOccurrenceId),
+    );
+    expect(within(inspector).getByRole('heading', { name: 'Entrance' })).toBeTruthy();
+    expect(within(inspector).queryByRole('button', { name: 'Add Next Decision' })).toBeNull();
+  });
+
+  it('keeps a batch created from the default frontier focused on its continuation workbench', async () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const startId = createOccurrenceId('focus-batch-start');
+    let project = createProjectDocument(catalog, {
+      projectId: 'focus-batch',
+      name: 'Focus batch',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    const view = renderBiome(project, 'Underworld', 'F');
+    const continuation = createContinuationAddress(biome, startId);
+
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
-    expect(within(inspector).getByRole('heading', { name: 'Active frontier' })).toBeTruthy();
-    expect(within(inspector).getByRole('button', { name: 'Add Next Decision' })).toBeTruthy();
+
+    await view.user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      continuation,
+    );
+    expect(screen.getByRole('heading', { name: 'Doors from Opening 01' })).toBeTruthy();
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(1);
+  });
+
+  it('keeps a terminal created from the default frontier focused on its continuation workbench', async () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const startId = createOccurrenceId('focus-terminal-start');
+    let project = createProjectDocument(catalog, {
+      projectId: 'focus-terminal',
+      name: 'Focus terminal',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    const view = renderBiome(project, 'Underworld', 'F');
+    const continuation = createContinuationAddress(biome, startId);
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
+
+    await view.user.click(screen.getByRole('button', { name: 'Go to Preboss' }));
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      continuation,
+    );
+    expect(screen.getByRole('heading', { name: 'Preboss from Opening 01' })).toBeTruthy();
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(1);
+  });
+
+  it('keeps focus-only navigation outside authored history and evaluation publication', () => {
+    const application = createApplication();
+    const biome = createBiomeAddress('Underworld', 'F');
+    const startId = createOccurrenceId('focus-only-start');
+    let project = createProjectDocument(catalog, {
+      projectId: 'focus-only',
+      name: 'Focus only',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const before = application.store.getState().projectWorkspace;
+
+    application.store.dispatch(semanticOwnerFocused(createContinuationAddress(biome, startId)));
+
+    const after = application.store.getState().projectWorkspace;
+    expect(after.history).toBe(before.history);
+    expect(after.evaluation).toBe(before.evaluation);
   });
 
   it('composes every Linear biome through the common rail and variant-owned terminal', () => {

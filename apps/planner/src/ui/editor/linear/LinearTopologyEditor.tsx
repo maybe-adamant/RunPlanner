@@ -24,6 +24,7 @@ import type {
   WorkspaceLinearDecision,
 } from '../../../projections/structuredWorkspace';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
+import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { useAppDispatch } from '../../../state/store';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
@@ -760,11 +761,12 @@ function FrontierEditor({
         <button
           className="primary-action"
           disabled={!canAddBatch}
-          onClick={() =>
+          onClick={() => {
+            dispatch(semanticOwnerFocused(address));
             dispatch(
               authoredProjectCommandDispatched({ kind: 'CreateBatch', continuation: address }),
-            )
-          }
+            );
+          }}
           type="button"
         >
           Add Next Decision
@@ -772,15 +774,16 @@ function FrontierEditor({
         {layout.terminal.kind !== 'generatedTarget' && (
           <button
             disabled={!canCreateTerminal}
-            onClick={() =>
+            onClick={() => {
+              dispatch(semanticOwnerFocused(address));
               dispatch(
                 authoredProjectCommandDispatched({
                   kind: 'CreateTerminalTransition',
                   continuation: address,
                   targetOccurrenceIds: terminalOccurrenceIds(parentRoom),
                 }),
-              )
-            }
+              );
+            }}
             type="button"
           >
             Go to Preboss
