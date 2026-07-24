@@ -100,7 +100,7 @@ function completeProject(nonGoalOffer?: IncomingRewardValue): ProjectDocument {
     combat01,
     [
       { occurrenceId: combat03, gameName: 'I_Combat03' },
-      { occurrenceId: occurrence('combat02'), gameName: 'I_Combat02' },
+      { occurrenceId: occurrence('story'), gameName: 'I_Story01' },
     ],
     1,
   );
@@ -163,6 +163,40 @@ function completeProject(nonGoalOffer?: IncomingRewardValue): ProjectDocument {
       });
 }
 
+function projectWithPickedStory(): ProjectDocument {
+  const combat01 = occurrence('picked-story-combat01');
+  const story = occurrence('picked-story');
+  const combat05 = occurrence('picked-story-combat05');
+  const combat06 = occurrence('picked-story-combat06');
+  const combat07 = occurrence('picked-story-combat07');
+  const combat08 = occurrence('picked-story-combat08');
+  let project = createProjectDocument(catalog, {
+    projectId: 'i-picked-story-fixture',
+    name: 'I Picked Story Fixture',
+    configuredBiomeCounts: { Underworld: 4 },
+  });
+  project = appendBatch(project, null, [{ occurrenceId: combat01, gameName: 'I_Combat01' }], 1);
+  project = appendBatch(
+    project,
+    combat01,
+    [
+      { occurrenceId: occurrence('picked-story-declined-goal'), gameName: 'I_Combat03' },
+      { occurrenceId: story, gameName: 'I_Story01' },
+    ],
+    2,
+  );
+  project = appendBatch(project, story, [{ occurrenceId: combat05, gameName: 'I_Combat05' }], 1);
+  project = appendBatch(project, combat05, [{ occurrenceId: combat06, gameName: 'I_Combat06' }], 1);
+  project = appendBatch(project, combat06, [{ occurrenceId: combat07, gameName: 'I_Combat07' }], 1);
+  project = appendBatch(project, combat07, [{ occurrenceId: combat08, gameName: 'I_Combat08' }], 1);
+  return appendBatch(
+    project,
+    combat08,
+    [{ occurrenceId: occurrence('picked-story-preboss'), gameName: 'I_PreBoss02' }],
+    1,
+  );
+}
+
 function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
   const result = evaluateLinearCompleteness(catalog, biome, plan(project));
   if (result.completion !== 'complete') {
@@ -208,12 +242,6 @@ describe('canonical I Clockwork materialization and history', () => {
 
     expect(snapshot.entryRooms).toMatchObject([
       { kind: 'fixedEntry', role: 'intro', gameName: 'I_Intro' },
-      {
-        kind: 'fixedEntry',
-        role: 'story',
-        gameName: 'I_Story01',
-        incomingReward: { offer: { rewardType: 'Story' } },
-      },
     ]);
     expect(snapshot.batches.map((batch) => batch.batchState)).toEqual([
       { kind: 'clockwork', goalsRemaining: 5, nonGoalRewardsAcquired: 0, maxNonGoalRewards: 3 },
@@ -238,7 +266,7 @@ describe('canonical I Clockwork materialization and history', () => {
       [{ picked: true, reward: 'goal', concrete: undefined }],
       [
         { picked: true, reward: 'goal', concrete: undefined },
-        { picked: false, reward: 'nonGoal', concrete: 'RoomMoneyTripleDrop' },
+        { picked: false, reward: undefined, concrete: 'Story' },
       ],
       [
         { picked: false, reward: 'goal', concrete: undefined },
@@ -322,14 +350,14 @@ describe('canonical I Clockwork materialization and history', () => {
         .map((event) => ({ gameName: event.gameName, source: event.source })),
     ).toEqual([
       { gameName: 'I_Intro', source: 'biomeEntry' },
-      { gameName: 'I_Story01', source: 'layoutEntry' },
+      { gameName: 'I_Combat01', source: 'generatedTarget' },
     ]);
     const firstGenerated = events.find(
       (event) => event.kind === 'roomCreated' && event.gameName === 'I_Combat01',
     );
     expect(firstGenerated).toMatchObject({
       source: 'generatedTarget',
-      parentOrigin: { kind: 'fixedEntryRoom', role: 'story' },
+      parentOrigin: { kind: 'fixedEntryRoom', role: 'intro' },
     });
     expect(events.filter((event) => event.kind === 'clockworkBatchStateRecorded')).toHaveLength(10);
     expect(events.filter((event) => event.kind === 'clockworkGoalAcquired')).toHaveLength(7);
@@ -361,10 +389,10 @@ describe('canonical I Clockwork materialization and history', () => {
       'roomExited',
     ]);
     expect(history.biomeCompletion.ledgers.counters).toMatchObject({
-      biomeDepthCache: 14,
+      biomeDepthCache: 13,
       biomeEncounterDepth: 10,
       routeEncounterDepth: 29,
-      roomHistoryOrdinal: 44,
+      roomHistoryOrdinal: 43,
       clockworkGoalsRemaining: 0,
       clockworkNonGoalRewardsAcquired: 3,
       clockworkMaxNonGoalRewards: 3,
@@ -373,7 +401,7 @@ describe('canonical I Clockwork materialization and history', () => {
       biomeDepthCache: 0,
       biomeEncounterDepth: 0,
       routeEncounterDepth: 29,
-      roomHistoryOrdinal: 44,
+      roomHistoryOrdinal: 43,
       clockworkGoalsRemaining: 0,
       clockworkNonGoalRewardsAcquired: 3,
     });
@@ -395,6 +423,53 @@ describe('canonical I Clockwork materialization and history', () => {
     expect(() => composeLinearHistory(catalog, malformed, carriedHHistory())).toThrowError(
       LinearHistoryFoldContractError,
     );
+  });
+
+  it('enters an authored Story without changing either Clockwork counter', () => {
+    const project = projectWithPickedStory();
+    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
+    const history = composeLinearHistory(catalog, snapshot, carriedHHistory());
+    const storyTarget = snapshot.batches[1]?.targets[1];
+
+    expect(storyTarget).toMatchObject({
+      picked: true,
+      room: {
+        gameName: 'I_Story01',
+        incomingReward: { offer: { rewardType: 'Story' } },
+      },
+    });
+    expect(storyTarget?.room.clockworkReward).toBeUndefined();
+    expect(snapshot.batches.map((batch) => batch.batchState)).toMatchObject([
+      { goalsRemaining: 5, nonGoalRewardsAcquired: 0 },
+      { goalsRemaining: 4, nonGoalRewardsAcquired: 0 },
+      { goalsRemaining: 4, nonGoalRewardsAcquired: 0 },
+      { goalsRemaining: 3, nonGoalRewardsAcquired: 0 },
+      { goalsRemaining: 2, nonGoalRewardsAcquired: 0 },
+      { goalsRemaining: 1, nonGoalRewardsAcquired: 0 },
+    ]);
+    expect(history.events.filter((event) => event.kind === 'clockworkGoalAcquired')).toHaveLength(
+      6,
+    );
+    expect(
+      history.events.filter((event) => event.kind === 'clockworkNonGoalRewardSpawned'),
+    ).toHaveLength(0);
+    expect(
+      history.events
+        .filter(
+          (event) =>
+            'origin' in event &&
+            JSON.stringify(event.origin) === JSON.stringify(storyTarget?.room.origin),
+        )
+        .filter(
+          (event) =>
+            event.kind === 'clockworkGoalAcquired' ||
+            event.kind === 'clockworkNonGoalRewardSpawned',
+        ),
+    ).toEqual([]);
+    expect(history.biomeCompletion.ledgers.counters).toMatchObject({
+      clockworkGoalsRemaining: 0,
+      clockworkNonGoalRewardsAcquired: 0,
+    });
   });
 
   it('records a Devotion NonGoal spawn before its before-combat acquisition', () => {

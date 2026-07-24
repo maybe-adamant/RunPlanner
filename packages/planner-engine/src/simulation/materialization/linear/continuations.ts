@@ -250,7 +250,7 @@ interface ClockworkProjectionState {
 export interface ClockworkTargetProjection {
   readonly exitIndex: number;
   readonly occurrenceId: OccurrenceId;
-  readonly reward: 'goal' | 'nonGoal';
+  readonly reward?: 'goal' | 'nonGoal';
 }
 
 export interface ClockworkBatchProjection {
@@ -270,9 +270,12 @@ function clockworkReward(
   state: ClockworkProjectionState,
   goalAlreadyOffered: boolean,
   terminalRoomGameName: string,
-): 'goal' | 'nonGoal' {
+): 'goal' | 'nonGoal' | undefined {
   if (room.gameName === terminalRoomGameName) {
     return 'goal';
+  }
+  if (room.kind === 'Story') {
+    return undefined;
   }
   if (room.kind !== 'Combat') {
     return 'nonGoal';
@@ -285,8 +288,11 @@ function clockworkReward(
 
 function advanceClockworkState(
   state: ClockworkProjectionState,
-  reward: 'goal' | 'nonGoal',
+  reward: 'goal' | 'nonGoal' | undefined,
 ): ClockworkProjectionState {
+  if (reward === undefined) {
+    return state;
+  }
   return reward === 'goal'
     ? Object.freeze({ ...state, goalsRemaining: Math.max(0, state.goalsRemaining - 1) })
     : Object.freeze({
@@ -341,7 +347,7 @@ function projectClockworkBatches(
           return Object.freeze({
             exitIndex: target.exitIndex,
             occurrenceId: target.occurrenceId,
-            reward,
+            ...(reward === undefined ? {} : { reward }),
           });
         }),
     );
@@ -443,12 +449,13 @@ export function materializeClockworkBiome(
         .map((target): CanonicalTarget => {
           const occurrence = requireOccurrence(occurrences, target.occurrenceId);
           const room = requireRoom(catalog, occurrence);
-          const reward = projectedBatch.targets.find(
+          const projection = projectedBatch.targets.find(
             (candidate) => candidate.exitIndex === target.exitIndex,
-          )?.reward;
-          if (reward === undefined) {
+          );
+          if (projection === undefined) {
             fail(`Clockwork batch ${batchIndex + 1} target ${target.exitIndex} has no projection`);
           }
+          const reward = projection.reward;
           const terminal = room.gameName === layout.terminal.roomGameName;
           return materializeTarget(
             catalog,

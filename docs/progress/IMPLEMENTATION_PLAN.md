@@ -2101,6 +2101,14 @@ Gate:
 - ordinary candidate interactions perform zero full addressed-biome replay;
 - Phase 7 Commit 11 may resume.
 
+### Tartarus Reconciliation Gate
+
+Before Phase 7 Commit 11 continues, complete the independently passing slices
+in [`I_BIOME_RECONCILIATION.md`](I_BIOME_RECONCILIATION.md). The reconciliation
+restores Story as a second-door generated occurrence, makes `I_Intro` the sole
+fixed entry, moves the bounded `3..6` limit into derived possibility state, and
+closes the resulting simulation, candidate, persistence, and editor seams.
+
 ### Commit 11: Linear Spine and Focused Inspector
 
 Deliver:

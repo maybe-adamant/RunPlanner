@@ -228,10 +228,11 @@ terminal companions are dead leaves and cannot own downstream topology.
 The authored start occurrence selects only among declared start alternatives.
 A fixed room after that start and before the editable decision frontier uses a
 derived layout occurrence when it owns no leaf, or a fixed authored room slot
-when its room state is editable. I uses the stateless form for progressed-save
-`I_Story01`; N uses fixed authored entry slots for its reward-bearing Opening
-and PreHub. Canonical materialization emits each room's real creation, offer,
-entry, counter, and history facts before the first editable batch.
+when its room state is editable. I has only fixed `I_Intro`; `I_Story01` is an
+authored target inside a later generated batch. N uses fixed authored entry
+slots for its reward-bearing Opening and PreHub. Canonical materialization
+emits each fixed room's real creation, offer, entry, counter, and history facts
+before the first editable batch.
 
 F/G forked preboss transitions create one terminal target occurrence per
 active predecessor exit. Those targets share the same terminal `gameName` but

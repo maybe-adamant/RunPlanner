@@ -456,25 +456,23 @@ specialization in the middle segment without creating a second history stack.
 The contract applies to function ownership; it does not require source files to
 mirror every conceptual segment.
 
-The reconciliation is behavior preserving. Existing F and I linear fixtures
-and the representative N fixture must retain deeply equal canonical facts,
-exact event order, counter state, transition resets, occurrence identity, and
-restore identity. In particular, PreHub remains the second fixed entry, one
-room occurrence is still created only once, and later restore appearances
-never replay creation or lifecycle work.
+The shared history segmentation preserves declared canonical facts, exact event
+order, counter state, transition resets, occurrence identity, and restore
+identity. In particular, PreHub remains N's second fixed entry, one room
+occurrence is still created only once, and later restore appearances never
+replay creation or lifecycle work.
 
 `entryRooms` begins with the selected declared start and then contains any
-layout-derived fixed entry rooms in game order. Most linear biomes currently
-contain only their start; I additionally materializes progressed-save
-`I_Story01` before its first authored Clockwork batch.
+layout-derived fixed entry rooms in game order. I contains only `I_Intro`;
+`I_Story01` materializes later as an ordinary authored target in a generated
+Clockwork batch.
 
 A layout-derived entry owns a stable `(routeKey, biomeKey, role)` semantic
 address rather than a fake Room Occurrence ID. Its incoming fixed producer and
 the layout-owned target that creates it use sibling role addresses. History
-therefore records Intro as `biomeEntry`, creates Story as `layoutEntry` at the
-Intro outgoing-generation checkpoint, and lets Story own the first ordinary
-target batch without leaking a rendered row or nullable pseudo-room into game
-history.
+records such rooms without leaking a rendered row or nullable pseudo-room into
+game history. I Story instead owns an ordinary occurrence address and follows
+the same generated-target lifecycle as other authored I offers.
 
 `terminalEntry` is a canonical role, not proof that authored persistence used
 the independent `terminal` continuation form. For I, materialization derives

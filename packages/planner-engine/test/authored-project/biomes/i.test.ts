@@ -138,7 +138,7 @@ describe('I authored topology', () => {
     ).toThrowError(ProjectCommandContractError);
   });
 
-  it('owns the first decision after fixed Intro and Story without a fake occurrence', () => {
+  it('owns the first decision after fixed Intro without a fake occurrence', () => {
     const combat = createOccurrenceId('i-first-combat');
     const project = appendBatch(
       createIProject(),
@@ -351,7 +351,7 @@ describe('I authored topology', () => {
     expect(iPlan(terminalProject).topology?.continuations).toHaveLength(3);
   });
 
-  it('rejects malformed biome and picked-shop state plus a thirteenth batch', () => {
+  it('rejects malformed biome and picked-shop state beyond the declared bounds', () => {
     const raw = JSON.parse(encodeProjectDocument(createIProject())) as {
       routes: Array<{
         routeKey: string;
@@ -416,7 +416,7 @@ describe('I authored topology', () => {
 
     let bounded = createIProject();
     let parentOccurrenceId: OccurrenceId | null = null;
-    for (let index = 1; index <= 12; index += 1) {
+    for (let index = 1; index <= 13; index += 1) {
       const occurrenceId = createOccurrenceId(`i-bound-${index}`);
       bounded = appendBatch(
         bounded,
@@ -465,11 +465,26 @@ describe('I authored topology', () => {
       occurrenceId: createOccurrenceId('i-target-bound-22'),
       gameName: 'I_Combat01',
     });
+    targetBounded = applyProjectCommand(targetBounded, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(iBiome, targetParent, 2),
+      occurrenceId: createOccurrenceId('i-target-bound-23'),
+      gameName: 'I_Combat01',
+    });
+    targetBounded = applyProjectCommand(targetBounded, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(iBiome, targetParent),
+      exitIndex: 1,
+    });
+    targetBounded = applyProjectCommand(targetBounded, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(iBiome, createOccurrenceId('i-target-bound-22')),
+    });
     expect(() =>
       applyProjectCommand(targetBounded, catalog, {
         kind: 'CreateTarget',
-        target: createTargetAddress(iBiome, targetParent, 2),
-        occurrenceId: createOccurrenceId('i-target-bound-23'),
+        target: createTargetAddress(iBiome, createOccurrenceId('i-target-bound-22'), 1),
+        occurrenceId: createOccurrenceId('i-target-bound-24'),
         gameName: 'I_Combat01',
       }),
     ).toThrowError(ProjectCommandContractError);

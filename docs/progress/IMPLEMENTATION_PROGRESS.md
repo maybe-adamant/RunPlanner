@@ -1861,3 +1861,19 @@ layout-owned biome fields, retained missing offers, and exact semantic focus.
 The full suite passes with 73 files and 551 tests, including the all-biome
 zero-candidate-render architecture fixtures; typecheck, lint, formatting,
 production build, and diff checks also pass.
+
+Tartarus Reconciliation Slice 1 is complete. `I_Intro` is now the sole fixed
+entry and directly owns the first one-door Clockwork batch. `I_Story01` is an
+authored, one-creation Story target constrained to a later physical door,
+participates in ordinary generated-target lifecycle/history, and changes
+neither Clockwork counter when picked. A declined Story remains a real creation
+and prevents a later offer. The authored bounds are now thirteen batches and
+23 targets, and generated Preboss behavior is unchanged.
+
+Focused catalog, authored-project, materialization/history, candidate, editor,
+and product fixtures cover the corrected topology, including exit-order,
+picked/declined Story, creation-cap, counter, and exact-bound cases. The full
+gate passes with 73 files and 554 tests, followed by typecheck, lint, formatting,
+production build, and diff checks. The authored numeric non-goal limit remains
+intentionally present until Tartarus Reconciliation Slice 2 performs that
+separate schema authority switch.

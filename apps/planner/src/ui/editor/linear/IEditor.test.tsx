@@ -68,7 +68,7 @@ function appendBatch(
   });
 }
 
-function iProject(stage: 'empty' | 'rewards' | 'preboss'): ProjectDocument {
+function iProject(stage: 'empty' | 'rewards' | 'story' | 'preboss'): ProjectDocument {
   let project = createProjectDocument(catalog, {
     projectId: `i-editor-${stage}`,
     name: 'I Editor',
@@ -86,11 +86,14 @@ function iProject(stage: 'empty' | 'rewards' | 'preboss'): ProjectDocument {
     combat01,
     [
       { gameName: 'I_Combat02', occurrenceId: combat02 },
-      { gameName: 'I_Combat03', occurrenceId: combat03 },
+      {
+        gameName: stage === 'story' ? 'I_Story01' : 'I_Combat03',
+        occurrenceId: combat03,
+      },
     ],
     2,
   );
-  if (stage === 'rewards') {
+  if (stage === 'rewards' || stage === 'story') {
     return project;
   }
   return appendBatch(
@@ -150,13 +153,13 @@ function renderI(project: ProjectDocument) {
 }
 
 describe('I editor projection', () => {
-  it('renders fixed entries and edits the bounded Clockwork setting with history', async () => {
+  it('renders the fixed entrance and edits the bounded Clockwork setting with history', async () => {
     const { store, user } = renderI(iProject('empty'));
 
     expect(screen.getByRole('heading', { name: 'Tartarus' })).toBeTruthy();
     const entries = screen.getByRole('group', { name: 'Fixed biome entries' });
     expect(within(entries).getByRole('heading', { name: 'Entrance' })).toBeTruthy();
-    expect(within(entries).getByRole('heading', { name: 'Hades' })).toBeTruthy();
+    expect(within(entries).queryByRole('heading', { name: 'Hades' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Go to Preboss' })).toBeNull();
 
     const cap = screen.getByLabelText('Maximum NonGoal rewards');
@@ -178,10 +181,10 @@ describe('I editor projection', () => {
       startOccurrenceId: null,
       continuations: [{ kind: 'batch', parentOccurrenceId: null }],
     });
-    expect(screen.getByRole('heading', { name: 'Doors from Hades' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Doors from Entrance' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Go to Preboss' })).toBeNull();
     const firstDecision = screen
-      .getByRole('heading', { name: 'Doors from Hades' })
+      .getByRole('heading', { name: 'Doors from Entrance' })
       .closest('.decision-card');
     if (firstDecision === null) {
       throw new Error('first Clockwork decision card is missing');
@@ -214,6 +217,26 @@ describe('I editor projection', () => {
       throw new Error('second Clockwork decision card is missing');
     }
     expect(within(secondDecision as HTMLElement).getAllByLabelText('Reward')).toHaveLength(1);
+  });
+
+  it('renders Hades as an authored Story target without a Clockwork reward editor', () => {
+    renderI(iProject('story'));
+
+    const heading = screen.getByRole('heading', { name: 'Hades' });
+    const exit = heading.closest('.exit-row');
+    if (exit === null) {
+      throw new Error('authored Story exit is missing');
+    }
+    expect(within(exit as HTMLElement).getByText('Story')).toBeTruthy();
+    expect(within(exit as HTMLElement).getByText('Fixed reward: Story')).toBeTruthy();
+    expect(within(exit as HTMLElement).queryByLabelText('Reward')).toBeNull();
+    expect(
+      (
+        within(exit as HTMLElement).getByRole('radio', {
+          name: 'Pick exit 2',
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
   });
 
   it('renders a generated preboss beside its peer and exposes only the picked WorldShop', async () => {

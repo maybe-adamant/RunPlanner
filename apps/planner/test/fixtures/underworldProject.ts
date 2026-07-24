@@ -432,8 +432,8 @@ export function createGoldenFGHIProject(catalog: Catalog): ProjectDocument {
   let parent: OccurrenceId | null = null;
   const batches = [
     { targets: ['I_Combat01'] },
-    { targets: ['I_Combat02', 'I_Combat03'] },
-    { targets: ['I_Combat05'] },
+    { targets: ['I_Combat03', 'I_Story01'] },
+    { targets: ['I_Combat05', 'I_Combat02'] },
     { targets: ['I_Combat06'] },
     { targets: ['I_Combat09'] },
   ] as const;
