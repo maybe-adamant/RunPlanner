@@ -24,10 +24,13 @@ import {
   type PreparedCandidateContext,
 } from './context';
 
-function targetExists(context: PreparedCandidateContext, query: RoomTargetCandidateQuery): boolean {
+function assertTargetSlotExists(
+  context: PreparedCandidateContext,
+  query: RoomTargetCandidateQuery,
+): void {
   const targetKey = semanticAddressKey(query.target);
   if (context.index.targetsByOwner.has(targetKey)) {
-    return true;
+    return;
   }
   const topology = locateIndexedLinearPlan(context, query).topology;
   if (topology === null) {
@@ -45,7 +48,6 @@ function targetExists(context: PreparedCandidateContext, query: RoomTargetCandid
   if (!context.index.targetSlotsByOwner.has(targetKey)) {
     failCandidate(query, `exit ${query.target.exitIndex} has no authored target`);
   }
-  return false;
 }
 
 function assertCandidateExists(catalog: Catalog, query: RoomTargetCandidateQuery): void {
@@ -91,14 +93,11 @@ export function evaluateRoomTargetCandidate(
   query: RoomTargetCandidateQuery,
 ): ProjectCandidateEvaluation {
   const stableQuery = immutableQuery(query) as RoomTargetCandidateQuery;
-  const authoredTargetExists = targetExists(context, stableQuery);
+  assertTargetSlotExists(context, stableQuery);
   assertCandidateExists(catalog, stableQuery);
   const biome = locateCandidateLinear(context, stableQuery);
   if (isCandidateContextUnavailable(biome)) {
     return unavailableCandidate(stableQuery, biome);
-  }
-  if (!authoredTargetExists) {
-    return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));
   }
   const candidateContext = context.index.roomTargetContextsByOwner.get(
     semanticAddressKey(stableQuery.target),

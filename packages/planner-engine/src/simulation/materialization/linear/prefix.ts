@@ -168,9 +168,7 @@ export function materializeLinearBiomePrefix(
     if (sourceDeclaration === undefined) {
       fail(`trusted prefix source lost room ${source.gameName}`);
     }
-    if (!hasEveryTarget(sourceDeclaration, continuation)) {
-      return prefixResult(biome, plan, entryRooms, batches);
-    }
+    const hasAllTargets = hasEveryTarget(sourceDeclaration, continuation);
 
     const clockworkProjection = projectedClockwork?.batches[batchIndex];
     const batchState =
@@ -186,6 +184,9 @@ export function materializeLinearBiomePrefix(
       layout.continuation.batchPolicy.kind === 'clockwork'
         ? ({ kind: 'none' } as const)
         : continuation.rewardStore;
+    const orderedAuthoredTargets = Object.freeze(
+      [...continuation.targets].sort((left, right) => left.exitIndex - right.exitIndex),
+    );
     const sharedStoreKey =
       authoredRewardStore === undefined
         ? undefined
@@ -194,11 +195,11 @@ export function materializeLinearBiomePrefix(
             occurrences,
             source,
             authoredRewardStore,
-            continuation.targets,
+            orderedAuthoredTargets,
           );
     const selectedShopIncomplete = pickedShopIsIncomplete(occurrences, continuation);
     const targets = Object.freeze(
-      continuation.targets.map((target): CanonicalTarget => {
+      orderedAuthoredTargets.map((target): CanonicalTarget => {
         const occurrence = requireOccurrence(occurrences, target.occurrenceId);
         const room = requireRoom(catalog, occurrence);
         const clockworkReward = clockworkProjection?.targets.find(
@@ -237,7 +238,7 @@ export function materializeLinearBiomePrefix(
         : canonicalRewardStore(biome, parentOccurrenceId, authoredRewardStore);
     const pickedExitIndex = continuation.pickedExitIndex;
     const frontierKind = continuation.kind === 'terminal' ? 'terminal' : 'batch';
-    if (pickedExitIndex === null || selectedShopIncomplete) {
+    if (!hasAllTargets || pickedExitIndex === null || selectedShopIncomplete) {
       return prefixResult(
         biome,
         plan,

@@ -601,15 +601,18 @@ export function materializeStandardLinearBiome(
 
     if (continuation.kind === 'batch') {
       const batchState = canonicalBatchState(catalog, layout, occurrences, continuation);
+      const orderedAuthoredTargets = Object.freeze(
+        [...continuation.targets].sort((left, right) => left.exitIndex - right.exitIndex),
+      );
       const sharedStoreKey = finalSharedRewardStoreKey(
         catalog,
         occurrences,
         parent,
         continuation.rewardStore,
-        continuation.targets,
+        orderedAuthoredTargets,
       );
       const targets = Object.freeze(
-        continuation.targets.map((target) =>
+        orderedAuthoredTargets.map((target) =>
           materializeTarget(
             catalog,
             biome,
@@ -650,6 +653,9 @@ export function materializeStandardLinearBiome(
     if (layout.terminal.kind === 'directTransition' && terminalRewardStore === undefined) {
       fail(`${layout.biomeKey} direct terminal has no reward store`);
     }
+    const orderedAuthoredTargets = Object.freeze(
+      [...continuation.targets].sort((left, right) => left.exitIndex - right.exitIndex),
+    );
     const terminalStoreKey =
       terminalRewardStore === undefined
         ? undefined
@@ -658,10 +664,10 @@ export function materializeStandardLinearBiome(
             occurrences,
             parent,
             terminalRewardStore,
-            continuation.targets,
+            orderedAuthoredTargets,
           );
     const targets = Object.freeze(
-      continuation.targets.map((target) =>
+      orderedAuthoredTargets.map((target) =>
         materializeTarget(
           catalog,
           biome,

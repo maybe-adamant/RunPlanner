@@ -6,8 +6,11 @@ import type {
 } from '../../catalog-schema';
 import {
   createBiomeAddress,
+  createTargetAddress,
   semanticAddressKey,
+  type ContinuationAddress,
   type SemanticAddress,
+  type TargetAddress,
 } from '../../authored-project/addresses';
 import type { ShipCombatState } from '../../authored-project/model';
 import { type RewardHistoryState, type RewardKernelFacts } from '../../reward-kernel';
@@ -534,13 +537,34 @@ export function evaluateLinearRewards(
       : undefined;
   const expectedStores = new Map<string, string | undefined>();
   const storeSupportEntries: LinearRewardStoreSupportEntry[] = [];
-  const targetHistory: LinearTargetRewardHistoryCheckpoint[] = [];
+  const targetHistoryByOrigin = new Map<string, LinearTargetRewardHistoryCheckpoint>();
+  const targetGenerationByParent = new Map<
+    string,
+    {
+      readonly origin: ContinuationAddress;
+      readonly exitIndexes: readonly number[];
+    }
+  >();
   const findings = new Map<string, SemanticFinding>();
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
   const shopPurchaseContexts = new Map<string, ShopPurchaseCandidateContext>();
   let peers: readonly OfferProcessingPeer[] = Object.freeze([]);
   let branches: readonly RewardBranchState[] = initializeRewardBranches(initialBranches);
+
+  function recordTargetSlotHistory(origin: TargetAddress, historySequence: number): void {
+    if (branches.length === 0) {
+      return;
+    }
+    targetHistoryByOrigin.set(
+      semanticAddressKey(origin),
+      Object.freeze({
+        origin,
+        historySequence,
+        histories: Object.freeze(branches.map((branch) => branch.history)),
+      }),
+    );
+  }
 
   for (const event of history.events) {
     if (branches.length === 0) {
@@ -563,15 +587,6 @@ export function evaluateLinearRewards(
         }
         const incoming = room.incomingReward;
         const localRewards = room.kind === 'authored' ? (room.localRewards ?? []) : [];
-        if (event.source === 'generatedTarget') {
-          targetHistory.push(
-            Object.freeze({
-              origin: event.targetOrigin,
-              historySequence: event.sequence - 1,
-              histories: Object.freeze(branches.map((branch) => branch.history)),
-            }),
-          );
-        }
         if (incoming === undefined && localRewards.length === 0) {
           branches = advanceRewardBranches(branches, event.sequence);
           break;
@@ -802,6 +817,27 @@ export function evaluateLinearRewards(
         }
         break;
       }
+      case 'targetGenerationCompleted': {
+        if (event.origin.kind === 'target') {
+          const generation = targetGenerationByParent.get(semanticAddressKey(event.parentOrigin));
+          const currentOffset = generation?.exitIndexes.indexOf(event.origin.exitIndex) ?? -1;
+          if (generation !== undefined && currentOffset + 1 === event.generationIndex) {
+            const nextExitIndex = generation.exitIndexes[currentOffset + 1];
+            if (nextExitIndex !== undefined) {
+              recordTargetSlotHistory(
+                createTargetAddress(
+                  createBiomeAddress(generation.origin.routeKey, generation.origin.biomeKey),
+                  generation.origin.parentOccurrenceId,
+                  nextExitIndex,
+                ),
+                event.sequence,
+              );
+            }
+          }
+        }
+        branches = advanceRewardBranches(branches, event.sequence);
+        break;
+      }
       case 'outgoingGenerationCheckpoint': {
         const source = rooms.get(semanticAddressKey(event.origin));
         const sourceViews = views.get(semanticAddressKey(event.origin));
@@ -837,6 +873,36 @@ export function evaluateLinearRewards(
           }
           throw new LinearRewardSimulationContractError(
             `${source.gameName} has no outgoing reward batch`,
+          );
+        }
+        const generationOrigin =
+          batch?.origin ??
+          (isTerminal && snapshot.kind === 'LinearBiome'
+            ? snapshot.terminalEntry.origin
+            : isFrontier
+              ? frontierGeneration.origin
+              : undefined);
+        if (generationOrigin === undefined) {
+          throw new LinearRewardSimulationContractError(
+            `${source.gameName} has no outgoing generation owner`,
+          );
+        }
+        const exitIndexes = Object.freeze(
+          declaration.exits.map((exit) => exit.index).sort((left, right) => left - right),
+        );
+        targetGenerationByParent.set(
+          semanticAddressKey(event.origin),
+          Object.freeze({ origin: generationOrigin, exitIndexes }),
+        );
+        const firstExitIndex = exitIndexes[0];
+        if (firstExitIndex !== undefined) {
+          recordTargetSlotHistory(
+            createTargetAddress(
+              createBiomeAddress(generationOrigin.routeKey, generationOrigin.biomeKey),
+              generationOrigin.parentOccurrenceId,
+              firstExitIndex,
+            ),
+            event.sequence,
           );
         }
         let sharedStore: string | undefined;
@@ -1278,7 +1344,7 @@ export function evaluateLinearRewards(
     biomeKey: snapshot.biomeKey,
     validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
     storeSupport: Object.freeze(storeSupportEntries),
-    targetHistory: Object.freeze(targetHistory),
+    targetHistory: Object.freeze([...targetHistoryByOrigin.values()]),
     branches: Object.freeze(branches.map(publicRewardBranch)),
     findings: immutableFindings,
   });

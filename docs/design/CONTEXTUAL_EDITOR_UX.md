@@ -209,6 +209,14 @@ unauthored physical exit receives no active selector; a previously authored
 target retained after capacity shrink remains visible as unavailable until an
 explicit repair or structural deletion removes it.
 
+Reachable blank exits follow physical generation order. The first blank exit
+whose predecessors are concrete owns a contextual picker immediately; it does
+not require an arbitrary placeholder room before support can be shown. Later
+blank exits remain visible but inactive with a short `Waiting for prior exit`
+status. Selecting the current exit advances the same progressive simulation
+frontier and activates the next picker. This mirrors one-by-one game door
+generation and avoids guessing over unknown same-batch peers.
+
 ### Structured Requirement Failures
 
 Production currently reports the coarse room reason

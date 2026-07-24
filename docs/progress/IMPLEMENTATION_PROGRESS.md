@@ -1895,3 +1895,18 @@ created F Opening or I Entrance therefore remains focused until its reward or
 roll is authored, while a plain start advances to the frontier. The complete
 gate passes with 73 files and 560 tests, followed by typecheck, lint, formatting,
 production build, and diff checks.
+
+Linear blank-slot candidate reconciliation is complete. A reachable physical
+exit now owns its room-candidate frontier before a Room Occurrence is authored.
+The first blank exit is evaluated from its parent's outgoing-generation state;
+each subsequent exit becomes evaluable only after the preceding physical offer
+is concrete, so same-batch creation, reward-history, cap, and force facts advance
+in game order without invented sibling rooms. Existing targets use the same
+frontier for replacement, while retained overflow targets preserve
+`physicalExitUnavailable`.
+
+The Linear editor exposes that contract directly: the current blank exit has an
+active contextual room picker and later blanks remain visible as `Waiting for
+prior exit`. Focused engine, candidate-projection, room-picker, workbench, and
+full product-loop fixtures cover partial generation and sequential activation.
+The complete suite passes with 73 files and 562 tests.

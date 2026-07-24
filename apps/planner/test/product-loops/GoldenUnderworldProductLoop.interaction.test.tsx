@@ -173,7 +173,7 @@ async function authorGoldenF(user: PlannerUser, application: PlannerApplication)
     await addNextDecision(user);
     if (batch.storeKey !== undefined) {
       await user.selectOptions(
-        within(decision(batchIndex)).getByLabelText('Reward pool'),
+        within(decision(batchIndex)).getByRole('combobox', { name: /^Reward pool/ }),
         batch.storeKey,
       );
     }

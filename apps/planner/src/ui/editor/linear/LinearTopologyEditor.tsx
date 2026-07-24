@@ -119,6 +119,7 @@ function focusedTargetExitIndex(
 
 function OrdinaryTargetEditor({
   available,
+  awaitingPriorExit,
   biome,
   catalog,
   interactions,
@@ -132,6 +133,7 @@ function OrdinaryTargetEditor({
   topology,
 }: Omit<LinearTopologyEditorProps, 'projectedDecisions'> & {
   readonly available: boolean;
+  readonly awaitingPriorExit: boolean;
   readonly canCreateTarget: boolean;
   readonly continuation: LinearBatchContinuation;
   readonly clockworkReward?: 'goal' | 'nonGoal';
@@ -154,12 +156,17 @@ function OrdinaryTargetEditor({
               <SemanticOwnerMarker
                 address={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
               />
-              <span className="neutral-status">Unspecified</span>
+              <span className="neutral-status">
+                {awaitingPriorExit ? 'Waiting for prior exit' : 'Unspecified'}
+              </span>
             </div>
           </div>
           <RoomSelector
             interactions={interactions}
             disabled={!canCreateTarget}
+            disabledPlaceholder={
+              awaitingPriorExit ? 'Choose prior exit first' : 'Room limit reached'
+            }
             idPrefix={idPrefix}
             onSelect={(gameName) =>
               dispatch(
@@ -381,30 +388,38 @@ function BatchEditor({
       </div>
 
       <div className="exit-list">
-        {exitIndexes.map((exitIndex) => (
-          <OrdinaryTargetEditor
-            available={available.has(exitIndex)}
-            biome={biome}
-            canCreateTarget={canCreateTarget}
-            catalog={catalog}
-            continuation={continuation}
-            interactions={interactions}
-            evaluation={evaluation}
-            exitIndex={exitIndex}
-            focused={focusedExitIndex === exitIndex}
-            key={exitIndex}
-            plan={plan}
-            projectedBatchState={projectedBatchState}
-            {...(() => {
-              const reward = projectedDecision.targets.find(
-                (candidate) => candidate.exitIndex === exitIndex,
-              )?.clockworkReward;
-              return reward === undefined ? {} : { clockworkReward: reward };
-            })()}
-            target={continuation.targets.find((target) => target.exitIndex === exitIndex)}
-            topology={topology}
-          />
-        ))}
+        {exitIndexes.map((exitIndex) => {
+          const awaitingPriorExit = availableExitIndexes
+            .filter((candidate) => candidate < exitIndex)
+            .some(
+              (candidate) => !continuation.targets.some((target) => target.exitIndex === candidate),
+            );
+          return (
+            <OrdinaryTargetEditor
+              available={available.has(exitIndex)}
+              awaitingPriorExit={awaitingPriorExit}
+              biome={biome}
+              canCreateTarget={canCreateTarget && !awaitingPriorExit}
+              catalog={catalog}
+              continuation={continuation}
+              interactions={interactions}
+              evaluation={evaluation}
+              exitIndex={exitIndex}
+              focused={focusedExitIndex === exitIndex}
+              key={exitIndex}
+              plan={plan}
+              projectedBatchState={projectedBatchState}
+              {...(() => {
+                const reward = projectedDecision.targets.find(
+                  (candidate) => candidate.exitIndex === exitIndex,
+                )?.clockworkReward;
+                return reward === undefined ? {} : { clockworkReward: reward };
+              })()}
+              target={continuation.targets.find((target) => target.exitIndex === exitIndex)}
+              topology={topology}
+            />
+          );
+        })}
       </div>
 
       <footer className="structural-actions">

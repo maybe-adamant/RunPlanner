@@ -160,7 +160,7 @@ pre-decision context.
 For a room-target domain, the session prepares:
 
 - source room and physical exit;
-- addressed target-generation history view;
+- addressed target-generation frontier;
 - room creation and appearance ledgers;
 - force and requirement facts;
 - the applicable staged or ordinary declaration pool;
@@ -169,6 +169,21 @@ For a room-target domain, the session prepares:
 Every candidate room is then evaluated against that same context. The engine
 does not rebuild target-generation maps or relocate the semantic owner for each
 game name.
+
+The frontier belongs to the reachable physical exit slot, not to an authored
+Room Occurrence. Exit 1 is therefore assessable as soon as the parent reaches
+outgoing generation, before a room is created there. Completing an earlier
+physical offer advances history, reward-bag, same-batch, cap, and force state
+and exposes the next slot's frontier. A later blank exit remains unassessed
+until every preceding physical exit is concrete; the engine does not invent
+hypothetical earlier siblings to assess it.
+
+An already-authored target uses the same slot frontier for replacement.
+Replacing an earlier target retains later authorship but may change its
+subsequent support, following the ordinary visible-invalid repair contract.
+Retained targets on exits no longer present after an upstream edit remain
+assessable through their concrete pre-generation history so
+`physicalExitUnavailable` is preserved.
 
 For a reward domain, the session prepares the producer frontier described
 below. Every complete offer is evaluated from the same frontier.

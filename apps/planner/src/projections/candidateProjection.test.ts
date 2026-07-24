@@ -6,6 +6,7 @@ import {
   createContinuationAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
+  createPickedAddress,
   createProjectDocument,
   createTargetAddress,
 } from '@run-planner/engine/authored-project';
@@ -217,7 +218,7 @@ describe('candidate application projection', () => {
     expect(events).toEqual([{ kind: 'queryBatch', queryCount: 22 }]);
   });
 
-  it('retains a blank physical-exit domain as unassessed until its target is authored', () => {
+  it('evaluates the first blank physical exit before its target is authored', () => {
     const startId = createOccurrenceId('candidate-blank-start');
     let document = applyProjectCommand(project(), catalog, {
       kind: 'CreateStart',
@@ -229,21 +230,114 @@ describe('candidate application projection', () => {
       kind: 'CreateBatch',
       continuation: createContinuationAddress(biome, startId),
     });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, startId),
+      storeKey: 'MetaProgress',
+    });
     const options = candidatesFor(document).roomTargets(
       createTargetAddress(biome, startId, 1),
       selectRoomsForCategory(catalog, 'F', 'Combat'),
     );
 
     expect(options).toHaveLength(22);
+    expect(options.every((option) => option.evaluation.context === 'evaluated')).toBe(true);
     expect(
-      options.every(
+      options.some(
         (option) =>
-          option.evaluation.context === 'unavailable' &&
-          option.evaluation.reason === 'coverageNotReached' &&
-          option.evaluation.evidence.kind === 'coverageNotReached' &&
-          option.evaluation.evidence.requiredCheckpoint === 'afterTargetGeneration',
+          option.evaluation.context === 'evaluated' && option.evaluation.support === 'possible',
       ),
     ).toBe(true);
+  });
+
+  it('advances blank-slot candidates in physical exit order', () => {
+    const startId = createOccurrenceId('candidate-ordered-start');
+    const parentId = createOccurrenceId('candidate-ordered-parent');
+    let document = applyProjectCommand(project(), catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, startId),
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, startId),
+      storeKey: 'MetaProgress',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, startId, 1),
+      occurrenceId: parentId,
+      gameName: 'F_Combat02',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(biome, startId),
+      exitIndex: 1,
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, parentId),
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, parentId),
+      storeKey: 'RunProgress',
+    });
+    const rooms = selectRoomsForCategory(catalog, 'F', 'Combat');
+    const beforeFirst = candidatesFor(document);
+    const firstOptions = beforeFirst.roomTargets(createTargetAddress(biome, parentId, 1), rooms);
+    const firstCombat03 = firstOptions.find((option) => option.value.gameName === 'F_Combat03');
+
+    expect(firstOptions.every((option) => option.evaluation.context === 'evaluated')).toBe(true);
+    expect(firstCombat03?.evaluation).toMatchObject({
+      context: 'evaluated',
+      evidence: { candidateCreationCount: 0 },
+    });
+    expect(
+      beforeFirst
+        .roomTargets(createTargetAddress(biome, parentId, 2), rooms)
+        .every(
+          (option) =>
+            option.evaluation.context === 'unavailable' &&
+            option.evaluation.reason === 'coverageNotReached',
+        ),
+    ).toBe(true);
+
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, parentId, 1),
+      occurrenceId: createOccurrenceId('candidate-ordered-first'),
+      gameName: 'F_Combat03',
+    });
+    const secondOptions = candidatesFor(document).roomTargets(
+      createTargetAddress(biome, parentId, 2),
+      rooms,
+    );
+    const secondCombat03 = secondOptions.find((option) => option.value.gameName === 'F_Combat03');
+
+    expect(secondOptions.every((option) => option.evaluation.context === 'evaluated')).toBe(true);
+    expect(secondCombat03?.evaluation).toMatchObject({
+      context: 'evaluated',
+      evidence: { candidateCreationCount: 1 },
+    });
+    const firstEvaluation = firstCombat03?.evaluation;
+    const secondEvaluation = secondCombat03?.evaluation;
+    if (
+      firstEvaluation?.context !== 'evaluated' ||
+      secondEvaluation?.context !== 'evaluated' ||
+      !('candidateCreationCount' in firstEvaluation.evidence) ||
+      !('candidateCreationCount' in secondEvaluation.evidence)
+    ) {
+      throw new Error('ordered target candidates were not evaluated');
+    }
+    expect(secondEvaluation.evidence.beforeSequence).toBeGreaterThan(
+      firstEvaluation.evidence.beforeSequence,
+    );
   });
 
   it('uses one common label decoration for context-impossible authored values', () => {

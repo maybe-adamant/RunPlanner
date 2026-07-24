@@ -2,9 +2,15 @@
 
 import { act, cleanup, screen, within } from '@testing-library/react';
 import {
+  applyProjectCommand,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
+  createContinuationAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
+  createPickedAddress,
   createProjectDocument,
+  createTargetAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -45,6 +51,84 @@ function projectedLinearBiome(
 }
 
 describe('Linear structured workspace', () => {
+  it('authors blank room slots in physical generation order', async () => {
+    const application = createApplication();
+    const biome = createBiomeAddress('Underworld', 'F');
+    const startId = createOccurrenceId('ordered-workspace-start');
+    const parentId = createOccurrenceId('ordered-workspace-parent');
+    let project = createProjectDocument(application.catalog, {
+      projectId: 'ordered-workspace',
+      name: 'Ordered Workspace',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, startId),
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, startId),
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, startId, 1),
+      occurrenceId: parentId,
+      gameName: 'F_Combat02',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(biome, startId),
+      exitIndex: 1,
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, parentId),
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, parentId),
+      storeKey: 'RunProgress',
+    });
+    const view = renderBiome(project, 'Underworld', 'F');
+    const structure = screen.getByRole('region', { name: 'Erebus structure' });
+    await view.user.click(within(structure).getByRole('button', { name: /Decision 2/ }));
+    const decision = screen
+      .getByRole('heading', { name: 'Doors from Combat 02' })
+      .closest('.decision-card');
+    if (decision === null) {
+      throw new Error('ordered decision workbench is missing');
+    }
+    const roomPickers = within(decision as HTMLElement).getAllByLabelText('Room');
+
+    expect(roomPickers).toHaveLength(2);
+    expect(roomPickers[0]).toHaveProperty('disabled', false);
+    expect(roomPickers[1]).toHaveProperty('disabled', true);
+    expect(roomPickers[1]?.textContent).toContain('Choose prior exit first');
+    expect(roomPickers[1]?.textContent).not.toContain('Topology');
+    expect(within(decision as HTMLElement).getByText('Waiting for prior exit')).toBeTruthy();
+
+    await view.user.click(roomPickers[0]!);
+    await view.user.click(screen.getByRole('option', { name: /^Combat 03/ }));
+
+    const updatedDecision = screen
+      .getByRole('heading', { name: 'Doors from Combat 02' })
+      .closest('.decision-card');
+    if (updatedDecision === null) {
+      throw new Error('updated ordered decision workbench is missing');
+    }
+    expect(within(updatedDecision as HTMLElement).getAllByLabelText('Room')[1]).toHaveProperty(
+      'disabled',
+      false,
+    );
+  });
+
   it('retains a newly created start when its inspector reveals an attached edit surface', async () => {
     const application = createApplication();
     const project = createProjectDocument(application.catalog, {

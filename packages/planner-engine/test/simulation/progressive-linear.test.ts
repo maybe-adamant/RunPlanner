@@ -157,7 +157,7 @@ describe('Linear progressive biome evaluation', () => {
     }
   });
 
-  it('stops before a jointly generated batch whose required target set is incomplete', () => {
+  it('covers the authored prefix of a jointly generated batch with a blank target slot', () => {
     const partial = incompleteAtGeneratedBatch(underworld, 'Underworld', 'G', 1);
     const missingExit = mapLinearPlan(partial, 'Underworld', 'G', (plan) => {
       if (plan.topology === null) {
@@ -204,10 +204,11 @@ describe('Linear progressive biome evaluation', () => {
     expect(evaluation.frontier).toMatchObject({ kind: 'target', exitIndex: 2 });
     expect(evaluation.coverage).toMatchObject({
       kind: 'prefix',
-      through: { checkpoint: 'beforeTargetGeneration' },
+      through: { checkpoint: 'afterTargetGeneration' },
     });
-    expect(evaluation.materializedPrefix.frontierGeneration).toBeUndefined();
-    expect(evaluation.history.rooms.at(-1)?.targetGenerations).toEqual([]);
+    expect(evaluation.materializedPrefix.frontierGeneration?.targets).toHaveLength(1);
+    expect(evaluation.materializedPrefix.frontierGeneration?.targets[0]?.exit.index).toBe(1);
+    expect(evaluation.history.rooms.at(-1)?.targetGenerations).toHaveLength(1);
   });
 
   it.each([
