@@ -14,12 +14,11 @@ Tartarus reconciliation, sequential blank-slot candidate evaluation, and the
 schema-8 authored-prerequisite correction are complete. All eight biomes
 participate in the production product loop.
 
-The [Linear focus progression reconciliation](LINEAR_FOCUS_PROGRESSION_RECONCILIATION.md)
-is complete. It retains the existing transient semantic focus action: creation
-keeps its authored workbench selected, completion reveals but does not select
-the next frontier, and one nearby navigation-only action selects that frontier.
-It closes F/G generated-decision parity without changing domain state or
-simulation.
+The Linear focus progression correction is complete. It retains the existing
+transient semantic focus action: creation keeps its authored workbench
+selected, completion reveals but does not select the next frontier, and one
+nearby navigation-only action selects that frontier. It closes F/G
+generated-decision parity without changing domain state or simulation.
 
 The next planned slice is
 [Phase 7 Commit 12](IMPLEMENTATION_PLAN.md#commit-12-hub-board-visit-timeline-and-focused-inspector),
