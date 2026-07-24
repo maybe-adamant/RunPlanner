@@ -552,16 +552,10 @@ button:disabled {
   letter-spacing: -0.02em;
 }
 
-.linear-outline-summary {
-  margin: 9px 0 14px;
-  color: #8f8c95;
-  font-size: 0.78rem;
-  line-height: 1.4;
-}
-
 .linear-spine {
   display: grid;
   gap: 7px;
+  margin-top: 14px;
 }
 
 .linear-spine-stop,
