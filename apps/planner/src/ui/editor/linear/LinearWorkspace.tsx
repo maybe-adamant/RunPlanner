@@ -304,30 +304,6 @@ function focusedLabel(
   return projection.label;
 }
 
-function OutlineSummary({ projection }: { readonly projection: WorkspaceLinearBiome }) {
-  const progression = projection.emptyOutline.progression;
-  let copy: string;
-  switch (progression.kind) {
-    case 'exact':
-      copy = `${progression.decisionCount} declared decisions`;
-      break;
-    case 'staged':
-      copy = `${progression.stageKeys.length} declared stages`;
-      break;
-    case 'variable':
-      copy = 'Route length varies';
-      break;
-    case 'hubVisits':
-      copy = `${progression.visitCount} visits`;
-      break;
-  }
-  return (
-    <p className="linear-outline-summary">
-      {copy}. Terminal role: {projection.emptyOutline.terminal.label}.
-    </p>
-  );
-}
-
 export function LinearWorkspace({
   catalog,
   evaluation,
@@ -388,8 +364,6 @@ export function LinearWorkspace({
           </div>
           <span className="neutral-status">{projectionSourceLabel(projection.source)}</span>
         </header>
-
-        <OutlineSummary projection={projection} />
 
         <div className="linear-spine">
           {layout.fields.length === 0 ? null : (
