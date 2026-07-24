@@ -22,12 +22,12 @@ interface RouteRenderCase {
 
 const cases: readonly RouteRenderCase[] = [
   {
-    biomes: ['Erebus', 'Oceanus', 'Fields of Mourning', 'Tartarus'],
+    biomes: ['Erebus', 'Oceanus', 'Fields', 'Tartarus'],
     project: (application) => createGoldenFGHIProject(application.catalog),
     route: 'Underworld',
   },
   {
-    biomes: ['City of Ephyra', 'Rift of Thessaly', 'Mount Olympus', 'Summit'],
+    biomes: ['Ephyra', 'Thessaly', 'Olympus', 'Summit'],
     project: () => createRepresentativeNOPQProject(),
     route: 'Surface',
   },

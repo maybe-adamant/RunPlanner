@@ -147,7 +147,7 @@ describe('planner history interaction', () => {
 
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '4');
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
-    expect(within(oceanus).getByText('Blocked')).toBeTruthy();
+    expect(within(oceanus).getByTitle('Blocked')).toBeTruthy();
     expect(
       document
         .getElementById(oceanus.getAttribute('aria-describedby') ?? '')
@@ -162,12 +162,12 @@ describe('planner history interaction', () => {
 
     await user.click(screen.getByRole('button', { name: 'Surface' }));
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
-    const ephyra = screen.getByRole('button', { name: 'City of Ephyra' });
-    expect(within(ephyra).getByText('Incomplete')).toBeTruthy();
+    const ephyra = screen.getByRole('button', { name: 'Ephyra' });
+    expect(within(ephyra).getByTitle('Incomplete')).toBeTruthy();
 
     await user.click(ephyra);
-    expect(screen.getByText(/City of Ephyra has no evaluated route prefix yet/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Initialize City of Ephyra' })).toHaveProperty(
+    expect(screen.getByText(/Ephyra has no evaluated route prefix yet/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Initialize Ephyra' })).toHaveProperty(
       'disabled',
       false,
     );

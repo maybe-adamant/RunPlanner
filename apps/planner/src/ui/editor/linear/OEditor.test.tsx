@@ -157,7 +157,7 @@ describe('O editor projection', () => {
   it('edits active and dormant ship wheel capacity through semantic commands', async () => {
     const { store, user } = renderO(oProject());
 
-    expect(screen.getByRole('heading', { name: 'Rift of Thessaly' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Thessaly' })).toBeTruthy();
     expect(screen.queryByLabelText('Type')).toBeNull();
     await user.click(screen.getAllByLabelText('Room')[0]!);
     expect((await screen.findAllByRole('option')).length).toBeGreaterThan(0);

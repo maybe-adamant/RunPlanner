@@ -126,7 +126,7 @@ describe('P candidates and editor projection', () => {
   it('edits ordinary leaves and projects the forked terminal without internal phase controls', async () => {
     const { store, user } = renderP();
 
-    expect(screen.getByRole('heading', { name: 'Mount Olympus' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Olympus' })).toBeTruthy();
     expect(screen.queryByText('Precombat')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Preboss from Combat 15' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Preboss Shop' })).toBeTruthy();

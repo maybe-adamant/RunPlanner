@@ -107,10 +107,6 @@ function createRetainedLinearProject() {
       exitIndex: 1,
     });
   }
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(f, third),
-  });
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceBatchRewardStore',
     rewardStore: createBatchRewardStoreAddress(f, start),
@@ -404,6 +400,36 @@ describe('structured workspace projection', () => {
     expect(projected.terminal.realization).toBe('projected');
   });
 
+  it('projects an authored frontier for a Linear biome blocked by an earlier prefix', () => {
+    const f = createBiomeAddress('Underworld', 'F');
+    const g = createBiomeAddress('Underworld', 'G');
+    const fStart = createOccurrenceId('structured-blocked-f-start');
+    const gStart = createOccurrenceId('structured-blocked-g-start');
+    let project = createProjectDocument(catalog, {
+      projectId: 'structured-blocked-frontier',
+      name: 'Structured Blocked Frontier',
+      configuredBiomeCounts: { Underworld: 2 },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: f,
+      occurrenceId: fStart,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: g,
+      occurrenceId: gStart,
+      gameName: 'G_Intro',
+    });
+
+    const workspace = projectWorkspace(project);
+    const projected = linear(biome(workspace, 'G'));
+
+    expect(projected.marker.assessment).toBe('blocked');
+    expect(projected.frontier?.address).toEqual(createContinuationAddress(g, gStart));
+  });
+
   it('keeps retained picked descendants unassessed and unentered', () => {
     const projected = linear(biome(projectWorkspace(createRetainedLinearProject()), 'F'));
     const retained = projected.decisions.find((decision) => decision.retainedOverflow);
@@ -412,6 +438,33 @@ describe('structured workspace projection', () => {
     expect(projected.source).toBe('progressive');
     expect(retained).toBeDefined();
     expect(picked).toMatchObject({ retained: true, room: { entered: false } });
+  });
+
+  it('routes a missing continuation finding to its picked parent room', () => {
+    const project = createRetainedLinearProject();
+    const evaluation = simulateProject(catalog, project);
+    const finding = evaluation.findings.find(
+      (candidate) => candidate.code === 'continuationMissing',
+    );
+    if (
+      finding === undefined ||
+      finding.origin.kind !== 'continuation' ||
+      finding.origin.parentOccurrenceId === null
+    ) {
+      throw new Error('incomplete F should report its missing continuation');
+    }
+
+    const workspace = projection.project(project, evaluation);
+    const destination = workspace.focusByOwner.get(semanticAddressKey(finding.origin));
+
+    expect(destination).toMatchObject({
+      focusAddress: createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'F'),
+        finding.origin.parentOccurrenceId,
+      ),
+      ownerAddress: finding.origin,
+      region: 'structure',
+    });
   });
 
   it('retains concrete reward payload labels in compact room summaries', () => {

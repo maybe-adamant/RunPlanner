@@ -78,8 +78,8 @@ describe('N editor projection', () => {
   it('initializes fixed leaves through the active Surface simulation', async () => {
     const { store, user } = renderNEditor(emptyProject());
 
-    expect(screen.getByRole('heading', { name: 'City of Ephyra' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Initialize City of Ephyra' }));
+    expect(screen.getByRole('heading', { name: 'Ephyra' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Initialize Ephyra' }));
 
     expect(screen.getByRole('heading', { name: 'Opening' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Pre-Hub' })).toBeTruthy();
@@ -103,7 +103,7 @@ describe('N editor projection', () => {
 
   it('opens the fixed Medea slot without exposing an editable reward selector', async () => {
     const { user } = renderNEditor(emptyProject());
-    await user.click(screen.getByRole('button', { name: 'Initialize City of Ephyra' }));
+    await user.click(screen.getByRole('button', { name: 'Initialize Ephyra' }));
     const storySlot = screen.getByRole('article', { name: 'Medea Hub slot' });
 
     expect(within(storySlot).getByText('Closed fixed slot.')).toBeTruthy();

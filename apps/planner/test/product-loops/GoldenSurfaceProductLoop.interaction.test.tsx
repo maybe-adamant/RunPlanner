@@ -140,6 +140,24 @@ function presentProject(application: PlannerApplication) {
   return application.store.getState().projectWorkspace.history.present;
 }
 
+async function collectLinearBiomeText(
+  user: ReturnType<typeof renderPlannerForInteraction>['user'],
+  structureName: string,
+): Promise<string> {
+  const structure = screen.getByRole('region', { name: structureName });
+  let text = structure.textContent ?? '';
+  const focusableNodes = [
+    ...structure.querySelectorAll<HTMLElement>(
+      '.linear-entry-node, .linear-decision-node, button.linear-terminal-node',
+    ),
+  ];
+  for (const node of focusableNodes) {
+    await user.click(node);
+    text += screen.getByRole('complementary', { name: 'Focused inspector' }).textContent ?? '';
+  }
+  return text;
+}
+
 describe('N/O/P/Q Surface product loop', () => {
   it('closes activation, profiles, recovery, findings, candidates, accessibility, and responsiveness', async () => {
     stubScrollIntoView();
@@ -156,15 +174,15 @@ describe('N/O/P/Q Surface product loop', () => {
 
     expect(application.editorNavigation.routes.byKey.Surface).toMatchObject({
       biomePanels: [
-        { biomeKey: 'N', label: 'City of Ephyra' },
-        { biomeKey: 'O', label: 'Rift of Thessaly' },
-        { biomeKey: 'P', label: 'Mount Olympus' },
+        { biomeKey: 'N', label: 'Ephyra' },
+        { biomeKey: 'O', label: 'Thessaly' },
+        { biomeKey: 'P', label: 'Olympus' },
         { biomeKey: 'Q', label: 'Summit' },
       ],
     });
 
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
-    await view.user.click(screen.getByRole('button', { name: 'City of Ephyra' }));
+    await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
 
     const evaluated = application.store.getState().projectWorkspace.evaluation;
     const candidates = createCandidateSessionFactory(application.catalog).bind(authored, evaluated);
@@ -190,25 +208,32 @@ describe('N/O/P/Q Surface product loop', () => {
         { biomeKey: 'Q', authoring: 'complete', validity: 'valid' },
       ],
     });
-    expect(screen.getByRole('heading', { name: 'City of Ephyra' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Ephyra' })).toBeTruthy();
     expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(26);
     expect(screen.getAllByLabelText(/^Visit \d room$/)).toHaveLength(6);
-    expect(
-      screen.getByRole('button', { name: 'City of Ephyra' }).getAttribute('aria-current'),
-    ).toBe('page');
+    expect(screen.getByRole('button', { name: 'Ephyra' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
     expect(document.body.textContent).not.toContain('N_Combat');
     expect(document.body.textContent).not.toContain('editor-n-');
     assertAccessibleControlSurface();
 
-    await view.user.click(screen.getByRole('button', { name: 'Rift of Thessaly' }));
-    expect(screen.getByRole('heading', { name: 'Rift of Thessaly' })).toBeTruthy();
-    expect(screen.getAllByLabelText('Ship combat encounters')).toHaveLength(4);
-    expect(screen.getByRole('heading', { name: 'Preboss from Combat 02' })).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Rift of Thessaly' }).getAttribute('aria-current'),
-    ).toBe('page');
-    expect(document.body.textContent).not.toContain('O_Combat');
-    expect(document.body.textContent).not.toContain('editor-o-');
+    await view.user.click(screen.getByRole('button', { name: 'Thessaly' }));
+    expect(screen.getByRole('heading', { name: 'Thessaly' })).toBeTruthy();
+    const oStructure = screen.getByRole('region', { name: 'Thessaly structure' });
+    let shipCombatEncounterCount = 0;
+    for (const node of oStructure.querySelectorAll<HTMLElement>('.linear-decision-node')) {
+      await view.user.click(node);
+      shipCombatEncounterCount += screen.queryAllByLabelText('Ship combat encounters').length;
+    }
+    expect(shipCombatEncounterCount).toBe(4);
+    const oText = await collectLinearBiomeText(view.user, 'Thessaly structure');
+    expect(oText).toContain('Preboss from Combat 02');
+    expect(screen.getByRole('button', { name: 'Thessaly' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+    expect(oText).not.toContain('O_Combat');
+    expect(oText).not.toContain('editor-o-');
     assertAccessibleControlSurface();
 
     const encounterCandidates = candidates.shipEncounterCounts(
@@ -220,15 +245,16 @@ describe('N/O/P/Q Surface product loop', () => {
       { context: 'evaluated', support: 'impossible' },
     ]);
 
-    await view.user.click(screen.getByRole('button', { name: 'Mount Olympus' }));
-    expect(screen.getByRole('heading', { name: 'Mount Olympus' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Preboss from Combat 15' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Free Reward' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Mount Olympus' }).getAttribute('aria-current')).toBe(
+    await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
+    expect(screen.getByRole('heading', { name: 'Olympus' })).toBeTruthy();
+    const pText = await collectLinearBiomeText(view.user, 'Olympus structure');
+    expect(pText).toContain('Preboss from Combat 15');
+    expect(pText).toContain('Free Reward');
+    expect(screen.getByRole('button', { name: 'Olympus' }).getAttribute('aria-current')).toBe(
       'page',
     );
-    expect(document.body.textContent).not.toContain('P_Combat');
-    expect(document.body.textContent).not.toContain('editor-p-');
+    expect(pText).not.toContain('P_Combat');
+    expect(pText).not.toContain('editor-p-');
     assertAccessibleControlSurface();
 
     expect(
@@ -243,13 +269,14 @@ describe('N/O/P/Q Surface product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Summit' }));
     expect(screen.getByRole('heading', { name: 'Summit' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Preboss from Tail' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Preboss Shop' })).toBeTruthy();
+    const qText = await collectLinearBiomeText(view.user, 'Summit structure');
+    expect(qText).toContain('Preboss from Tail');
+    expect(qText).toContain('Preboss Shop');
     expect(screen.getByRole('button', { name: 'Summit' }).getAttribute('aria-current')).toBe(
       'page',
     );
-    expect(document.body.textContent).not.toContain('Q_Combat');
-    expect(document.body.textContent).not.toContain('editor-q-');
+    expect(qText).not.toContain('Q_Combat');
+    expect(qText).not.toContain('editor-q-');
     assertAccessibleControlSurface();
 
     const qFoyer = application.catalog.rooms.byKey.Q_Combat10;
@@ -267,7 +294,7 @@ describe('N/O/P/Q Surface product loop', () => {
       { value: { gameName: 'Q_Combat01' }, evaluation: { support: 'impossible' } },
     ]);
 
-    await view.user.click(screen.getByRole('button', { name: 'City of Ephyra' }));
+    await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
 
     const candidateStarted = performance.now();
     const minibossCandidates = candidates.hubSlots(
@@ -297,9 +324,9 @@ describe('N/O/P/Q Surface product loop', () => {
       ),
     ).toEqual([
       ['0', 'None'],
-      ['1', 'City of Ephyra'],
-      ['2', 'Rift of Thessaly'],
-      ['3', 'Mount Olympus'],
+      ['1', 'Ephyra'],
+      ['2', 'Thessaly'],
+      ['3', 'Olympus'],
       ['4', 'Summit'],
     ]);
     await view.user.click(
@@ -307,9 +334,9 @@ describe('N/O/P/Q Surface product loop', () => {
     );
     expect(application.store.getState().editorSession.activeRouteKey).toBe('Surface');
     expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Surface).toBe('N');
-    expect(
-      screen.getByRole('button', { name: 'City of Ephyra' }).getAttribute('aria-current'),
-    ).toBe('page');
+    expect(screen.getByRole('button', { name: 'Ephyra' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(presentProject(application)).toEqual(authored);
 
@@ -359,7 +386,7 @@ describe('N/O/P/Q Surface product loop', () => {
         { status: 'incomplete', processing: { completeValidPrefix: [] } },
       ],
     });
-    expect(screen.getByRole('button', { name: 'City of Ephyra' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ephyra' })).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(application.store.getState().projectWorkspace.evaluation.status).toBe('empty');
     await view.user.click(screen.getByRole('button', { name: 'Load Profile' }));

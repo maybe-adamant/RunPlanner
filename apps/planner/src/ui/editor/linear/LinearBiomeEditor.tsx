@@ -8,6 +8,7 @@ import {
   createFixedEntryRewardAddress,
   createFixedEntryRoomAddress,
   createOccurrenceAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { presentCandidateLabel } from '../../../projections/candidateProjection';
 import {
@@ -32,7 +33,9 @@ import { RoomSelector } from './RoomSelector';
 
 interface LinearBiomeEditorProps {
   readonly catalog: Catalog;
+  readonly embedded?: boolean;
   readonly evaluation: LinearBiomeProjectEvaluation | undefined;
+  readonly focusedNodeKey?: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly plan: LinearBiomePlan;
   readonly routeKey: string;
@@ -116,7 +119,9 @@ function BiomeFieldControl({
 
 export function LinearBiomeEditor({
   catalog,
+  embedded = false,
   evaluation,
+  focusedNodeKey,
   interactions,
   plan,
   routeKey,
@@ -168,16 +173,19 @@ export function LinearBiomeEditor({
     if (fixedSourceRoom === undefined) {
       throw new Error(`${plan.biomeKey} has no fixed continuation source`);
     }
+    const biomeNodeKey = semanticAddressKey(biome);
     return (
       <SemanticFindingsScope findings={evaluation?.findings ?? []}>
-        <section className="biome-editor" aria-labelledby={titleId}>
+        <section className="biome-editor" {...(embedded ? {} : { 'aria-labelledby': titleId })}>
           <header className="panel-heading">
-            <div>
-              <p className="eyebrow">
-                {routeKey} · {plan.biomeKey}
-              </p>
-              <h2 id={titleId}>{biomeLabel}</h2>
-            </div>
+            {embedded ? null : (
+              <div>
+                <p className="eyebrow">
+                  {routeKey} · {plan.biomeKey}
+                </p>
+                <h2 id={titleId}>{biomeLabel}</h2>
+              </div>
+            )}
             <div className="panel-heading-actions">
               <SemanticOwnerMarker address={biome} />
               <StatusBadge status={presentBiomeStatus(evaluation)} />
@@ -200,26 +208,35 @@ export function LinearBiomeEditor({
             </div>
           </header>
 
-          <BiomeFieldControl
-            fieldAddress={fieldAddress}
-            id={`${plan.biomeKey}-non-goal-cap`}
-            interactions={interactions}
-            onReplace={(value) =>
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceBiomeField',
-                  field: fieldAddress,
-                  value,
-                }),
-              )
-            }
-          />
+          {(focusedNodeKey === undefined || focusedNodeKey === biomeNodeKey) && (
+            <BiomeFieldControl
+              fieldAddress={fieldAddress}
+              id={`${plan.biomeKey}-non-goal-cap`}
+              interactions={interactions}
+              onReplace={(value) =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceBiomeField',
+                    field: fieldAddress,
+                    value,
+                  }),
+                )
+              }
+            />
+          )}
 
           <div className="fixed-entry-list" aria-label="Fixed biome entries" role="group">
             {fixedEntries.map((entry) => {
               const room = catalog.rooms.byKey[entry.roomGameName];
               if (room === undefined) {
                 throw new Error(`${entry.roomGameName} fixed entry is missing`);
+              }
+              const entryAddress = createFixedEntryRoomAddress(biome, entry.role);
+              if (
+                focusedNodeKey !== undefined &&
+                focusedNodeKey !== semanticAddressKey(entryAddress)
+              ) {
+                return null;
               }
               return (
                 <article className="room-card" key={entry.role}>
@@ -229,7 +246,7 @@ export function LinearBiomeEditor({
                       <h3>{room.label}</h3>
                     </div>
                     <span className="room-kind">{room.kind}</span>
-                    <SemanticOwnerMarker address={createFixedEntryRoomAddress(biome, entry.role)} />
+                    <SemanticOwnerMarker address={entryAddress} />
                   </div>
                   {room.incomingReward.kind === 'fixed' && (
                     <div className="room-state-with-marker">
@@ -246,7 +263,9 @@ export function LinearBiomeEditor({
             })}
           </div>
 
-          {topology === null ? (
+          {topology === null &&
+          (focusedNodeKey === undefined ||
+            focusedNodeKey === semanticAddressKey(createContinuationAddress(biome, null))) ? (
             <section className="frontier-actions">
               <div>
                 <div className="owner-markers frontier-owner">
@@ -273,16 +292,17 @@ export function LinearBiomeEditor({
                 </button>
               </div>
             </section>
-          ) : (
+          ) : topology !== null ? (
             <LinearTopologyEditor
               biome={biome}
               catalog={catalog}
               evaluation={evaluation}
+              {...(focusedNodeKey === undefined ? {} : { focusedNodeKey })}
               interactions={interactions}
               plan={plan}
               topology={topology}
             />
-          )}
+          ) : null}
         </section>
       </SemanticFindingsScope>
     );
@@ -296,14 +316,16 @@ export function LinearBiomeEditor({
   if (topology === null) {
     return (
       <SemanticFindingsScope findings={evaluation?.findings ?? []}>
-        <section className="biome-editor" aria-labelledby={titleId}>
+        <section className="biome-editor" {...(embedded ? {} : { 'aria-labelledby': titleId })}>
           <header className="panel-heading">
-            <div>
-              <p className="eyebrow">
-                {routeKey} · {plan.biomeKey}
-              </p>
-              <h2 id={titleId}>{biomeLabel}</h2>
-            </div>
+            {embedded ? null : (
+              <div>
+                <p className="eyebrow">
+                  {routeKey} · {plan.biomeKey}
+                </p>
+                <h2 id={titleId}>{biomeLabel}</h2>
+              </div>
+            )}
             <div className="panel-heading-actions">
               <SemanticOwnerMarker address={biome} />
               <StatusBadge status={presentBiomeStatus(evaluation)} />
@@ -355,14 +377,16 @@ export function LinearBiomeEditor({
 
   return (
     <SemanticFindingsScope findings={evaluation?.findings ?? []}>
-      <section className="biome-editor" aria-labelledby={titleId}>
+      <section className="biome-editor" {...(embedded ? {} : { 'aria-labelledby': titleId })}>
         <header className="panel-heading">
-          <div>
-            <p className="eyebrow">
-              {routeKey} · {plan.biomeKey}
-            </p>
-            <h2 id={titleId}>{biomeLabel}</h2>
-          </div>
+          {embedded ? null : (
+            <div>
+              <p className="eyebrow">
+                {routeKey} · {plan.biomeKey}
+              </p>
+              <h2 id={titleId}>{biomeLabel}</h2>
+            </div>
+          )}
           <div className="panel-heading-actions">
             <SemanticOwnerMarker address={biome} />
             <StatusBadge status={presentBiomeStatus(evaluation)} />
@@ -381,44 +405,47 @@ export function LinearBiomeEditor({
           </div>
         </header>
 
-        <article className="room-card">
-          <div className="room-card-heading">
-            <div>
-              <p className="card-kicker">Starting room</p>
-              <h3>{startRoom.kind}</h3>
+        {(focusedNodeKey === undefined || focusedNodeKey === semanticAddressKey(startAddress)) && (
+          <article className="room-card">
+            <div className="room-card-heading">
+              <div>
+                <p className="card-kicker">Starting room</p>
+                <h3>{startRoom.kind}</h3>
+              </div>
+              <span className="room-kind">{startRoom.kind}</span>
+              <SemanticOwnerMarker address={startAddress} />
             </div>
-            <span className="room-kind">{startRoom.kind}</span>
-            <SemanticOwnerMarker address={startAddress} />
-          </div>
-          <RoomSelector
-            idPrefix={`${startRoomId}-authored`}
-            interactions={interactions}
-            label="Room"
-            onSelect={(gameName) => {
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceOccurrenceRoom',
-                  occurrence: startAddress,
-                  gameName,
-                }),
-              );
-            }}
-            owner={startAddress}
-            placeholder="Select a room"
-          />
-          <RoomStateEditor
-            biome={biome}
-            catalog={catalog}
-            entryActive={true}
-            interactions={interactions}
-            occurrence={start}
-          />
-        </article>
+            <RoomSelector
+              idPrefix={`${startRoomId}-authored`}
+              interactions={interactions}
+              label="Room"
+              onSelect={(gameName) => {
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceOccurrenceRoom',
+                    occurrence: startAddress,
+                    gameName,
+                  }),
+                );
+              }}
+              owner={startAddress}
+              placeholder="Select a room"
+            />
+            <RoomStateEditor
+              biome={biome}
+              catalog={catalog}
+              entryActive={true}
+              interactions={interactions}
+              occurrence={start}
+            />
+          </article>
+        )}
 
         <LinearTopologyEditor
           biome={biome}
           catalog={catalog}
           evaluation={evaluation}
+          {...(focusedNodeKey === undefined ? {} : { focusedNodeKey })}
           interactions={interactions}
           plan={plan}
           topology={topology}

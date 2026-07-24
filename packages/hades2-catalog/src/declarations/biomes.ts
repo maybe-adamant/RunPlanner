@@ -3,10 +3,10 @@ import type { BiomeDeclaration } from '@run-planner/engine/catalog-schema';
 export const biomes = [
   { key: 'F', label: 'Erebus' },
   { key: 'G', label: 'Oceanus' },
-  { key: 'H', label: 'Fields of Mourning' },
+  { key: 'H', label: 'Fields' },
   { key: 'I', label: 'Tartarus' },
-  { key: 'N', label: 'City of Ephyra' },
-  { key: 'O', label: 'Rift of Thessaly' },
-  { key: 'P', label: 'Mount Olympus' },
+  { key: 'N', label: 'Ephyra' },
+  { key: 'O', label: 'Thessaly' },
+  { key: 'P', label: 'Olympus' },
   { key: 'Q', label: 'Summit' },
 ] as const satisfies readonly BiomeDeclaration[];

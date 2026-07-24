@@ -1828,3 +1828,36 @@ seconds wall time. Typechecks, lint including the UI import restrictions,
 formatting, production build, and diff checks also pass. The candidate-system
 refactor is closed; Phase 7 Commit 11 may resume on the workspace-owned
 interaction boundary.
+
+Phase 7 Commit 11 is complete. The existing route-local biome navigation now
+forms the route rail around a structured Linear center and focused inspector
+for F/G/H/I/O/P/Q. The center consumes the application-owned workspace
+projection directly: authored starts and fixed entries lead into ordered
+decision stops, and each stop summarizes only its picked room plus a
+single-item reward when one exists. Selecting a decision opens one workbench
+with its batch controls above every physical exit card. Picked and unpicked
+rooms therefore remain equally editable without duplicating room editors in
+the structure index.
+
+Semantic focus is transient editor-session state. Structure activation stores
+only the projected semantic owner, while finding navigation uses the
+workspace's exact owner-to-inspector destination map. Room- and target-local
+findings select the owning decision, retain the exact semantic focus, and
+highlight the affected exit card. The inspector reuses the existing room,
+reward, lifecycle, batch, biome-field, terminal, and frontier controls. It
+introduces no authored row, panel, lane, or graph identity and requests no
+candidate work during rendering. Completion landmarks have read-only inspector
+detail, and missing physical targets remain focusable before an occurrence
+exists.
+
+The rail distinguishes authored, evaluated-prefix, and complete sources,
+shows exact fixed-count or staged outlines and honest variable-length copy,
+marks coverage frontiers and unassessed retained suffixes, and preserves each
+terminal policy: independent F/G/H/P forks, I's generated peer, and O/Q direct
+terminals. A blocked suffix derives its editing frontier from authored topology
+without pretending the simulation assessed it. Focused browser fixtures cover
+every Linear biome, terminal realization, multi-exit workbench inspection,
+layout-owned biome fields, retained missing offers, and exact semantic focus.
+The full suite passes with 73 files and 551 tests, including the all-biome
+zero-candidate-render architecture fixtures; typecheck, lint, formatting,
+production build, and diff checks also pass.

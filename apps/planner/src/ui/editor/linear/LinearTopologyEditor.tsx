@@ -20,6 +20,7 @@ import {
   createOccurrenceAddress,
   createPickedAddress,
   createTargetAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { projectClockworkTopology, projectLinearBatchState } from '@run-planner/engine/simulation';
 
@@ -36,6 +37,7 @@ interface LinearTopologyEditorProps {
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
   readonly evaluation: LinearBiomeProjectEvaluation | undefined;
+  readonly focusedNodeKey?: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly plan: LinearBiomePlan;
   readonly topology: LinearBiomeTopology;
@@ -88,6 +90,34 @@ function fieldsCageOutcome(value: string): 'min' | 'max' {
   return value;
 }
 
+function focusedTargetExitIndex(
+  biome: BiomeAddress,
+  topology: LinearBiomeTopology,
+  continuation: LinearBiomeTopology['continuations'][number],
+  focusedNodeKey: string | undefined,
+  exitIndexes: readonly number[],
+): number | undefined {
+  if (focusedNodeKey === undefined) {
+    return undefined;
+  }
+  for (const exitIndex of exitIndexes) {
+    if (
+      focusedNodeKey ===
+      semanticAddressKey(createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex))
+    ) {
+      return exitIndex;
+    }
+  }
+  for (const target of continuation.targets) {
+    if (
+      focusedNodeKey === semanticAddressKey(createOccurrenceAddress(biome, target.occurrenceId))
+    ) {
+      return target.exitIndex;
+    }
+  }
+  return undefined;
+}
+
 function OrdinaryTargetEditor({
   available,
   biome,
@@ -96,6 +126,7 @@ function OrdinaryTargetEditor({
   canCreateTarget,
   continuation,
   exitIndex,
+  focused,
   clockworkReward,
   projectedBatchState,
   target,
@@ -106,6 +137,7 @@ function OrdinaryTargetEditor({
   readonly continuation: LinearBatchContinuation;
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly exitIndex: number;
+  readonly focused: boolean;
   readonly projectedBatchState: CanonicalBatchState;
   readonly target: LinearTargetReference | undefined;
 }) {
@@ -114,7 +146,7 @@ function OrdinaryTargetEditor({
 
   if (target === undefined) {
     return (
-      <div className="exit-row" data-available={available}>
+      <div className="exit-row" data-available={available} data-focused={focused}>
         <div className="exit-marker" aria-hidden="true" />
         <div className="exit-content">
           <div className="exit-heading">
@@ -150,7 +182,12 @@ function OrdinaryTargetEditor({
   const room = occurrence(topology, target.occurrenceId);
   const roomDeclaration = declaration(catalog, room);
   return (
-    <div className="exit-row" data-available={available}>
+    <div
+      className="exit-row"
+      data-available={available}
+      data-focused={focused}
+      data-picked={continuation.pickedExitIndex === exitIndex}
+    >
       <label className="picked-control">
         <input
           checked={continuation.pickedExitIndex === exitIndex}
@@ -228,6 +265,7 @@ function BatchEditor({
   catalog,
   clockworkBatch,
   continuation,
+  focusedNodeKey,
   interactions,
   evaluation,
   plan,
@@ -286,6 +324,13 @@ function BatchEditor({
           (entry) => entry.origin.parentOccurrenceId === continuation.parentOccurrenceId,
         )
       : undefined;
+  const focusedExitIndex = focusedTargetExitIndex(
+    biome,
+    topology,
+    continuation,
+    focusedNodeKey,
+    exitIndexes,
+  );
   return (
     <section className="decision-card">
       <header className="decision-heading">
@@ -306,43 +351,45 @@ function BatchEditor({
         </div>
       </header>
 
-      {continuation.rewardStore.kind === 'authoredBaseStore' && (
-        <BatchRewardStoreControl
-          address={rewardStoreAddress}
-          interactions={interactions}
-          id={`batch-${continuation.parentOccurrenceId}-reward-store`}
-          onReplace={(storeKey) =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceBatchRewardStore',
-                rewardStore: rewardStoreAddress,
-                storeKey,
-              }),
-            )
-          }
-        />
-      )}
-
-      {projectedBatchState.kind === 'fields' &&
-        fieldsPolicy !== undefined &&
-        continuation.batchState !== null && (
-          <FieldsBatchControl
-            batchState={projectedBatchState}
+      <div className="batch-controls">
+        {continuation.rewardStore.kind === 'authoredBaseStore' && (
+          <BatchRewardStoreControl
+            address={rewardStoreAddress}
             interactions={interactions}
-            continuation={address}
-            id={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
-            onReplace={(cageOutcome) =>
+            id={`batch-${continuation.parentOccurrenceId}-reward-store`}
+            onReplace={(storeKey) =>
               dispatch(
                 authoredProjectCommandDispatched({
-                  kind: 'ReplaceFieldsCageOutcome',
-                  continuation: address,
-                  cageOutcome: fieldsCageOutcome(cageOutcome),
+                  kind: 'ReplaceBatchRewardStore',
+                  rewardStore: rewardStoreAddress,
+                  storeKey,
                 }),
               )
             }
-            {...(fieldsSupport === undefined ? {} : { priorMaxOutcomes: fieldsSupport })}
           />
         )}
+
+        {projectedBatchState.kind === 'fields' &&
+          fieldsPolicy !== undefined &&
+          continuation.batchState !== null && (
+            <FieldsBatchControl
+              batchState={projectedBatchState}
+              interactions={interactions}
+              continuation={address}
+              id={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
+              onReplace={(cageOutcome) =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceFieldsCageOutcome',
+                    continuation: address,
+                    cageOutcome: fieldsCageOutcome(cageOutcome),
+                  }),
+                )
+              }
+              {...(fieldsSupport === undefined ? {} : { priorMaxOutcomes: fieldsSupport })}
+            />
+          )}
+      </div>
 
       <div className="exit-list">
         {exitIndexes.map((exitIndex) => (
@@ -355,6 +402,7 @@ function BatchEditor({
             interactions={interactions}
             evaluation={evaluation}
             exitIndex={exitIndex}
+            focused={focusedExitIndex === exitIndex}
             key={exitIndex}
             plan={plan}
             projectedBatchState={projectedBatchState}
@@ -437,6 +485,7 @@ function TerminalEditor({
   catalog,
   interactions,
   continuation,
+  focusedNodeKey,
   topology,
 }: TerminalEditorProps) {
   const dispatch = useAppDispatch();
@@ -459,7 +508,13 @@ function TerminalEditor({
   const pickedAvailable =
     continuation.pickedExitIndex === null || available.has(continuation.pickedExitIndex);
   const address = createContinuationAddress(biome, continuation.parentOccurrenceId);
-
+  const focusedExitIndex = focusedTargetExitIndex(
+    biome,
+    topology,
+    continuation,
+    focusedNodeKey,
+    exitIndexes,
+  );
   return (
     <section className="decision-card terminal-card">
       <header className="decision-heading">
@@ -487,7 +542,12 @@ function TerminalEditor({
           );
           if (target === undefined) {
             return (
-              <div className="exit-row" data-available="true" key={exitIndex}>
+              <div
+                className="exit-row"
+                data-available="true"
+                data-focused={focusedExitIndex === exitIndex}
+                key={exitIndex}
+              >
                 <div className="exit-marker" aria-hidden="true" />
                 <div className="exit-content">
                   <div className="exit-heading">
@@ -516,7 +576,13 @@ function TerminalEditor({
           const room = occurrence(topology, target.occurrenceId);
           const isAvailable = available.has(target.exitIndex);
           return (
-            <div className="exit-row" data-available={isAvailable} key={target.exitIndex}>
+            <div
+              className="exit-row"
+              data-available={isAvailable}
+              data-focused={focusedExitIndex === target.exitIndex}
+              data-picked={continuation.pickedExitIndex === target.exitIndex}
+              key={target.exitIndex}
+            >
               <label className="picked-control">
                 <input
                   checked={continuation.pickedExitIndex === target.exitIndex}
@@ -711,9 +777,59 @@ function frontierOccurrenceId(
   return picked.occurrenceId;
 }
 
+function continuationOwnsNode(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  topology: LinearBiomeTopology,
+  continuation: LinearBiomeTopology['continuations'][number],
+  focusedNodeKey: string,
+): boolean {
+  const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
+  if (layout?.kind !== 'LinearBiome') {
+    throw new Error(`${biome.biomeKey} is not a linear biome`);
+  }
+  const parentRoom =
+    continuation.parentOccurrenceId === null
+      ? layout.start.kind === 'fixedEntry'
+        ? (() => {
+            const source = layout.entries.at(-1) ?? layout.start;
+            const room = catalog.rooms.byKey[source.roomGameName];
+            if (room === undefined) {
+              throw new Error(`${source.roomGameName} fixed entry is missing`);
+            }
+            return room;
+          })()
+        : undefined
+      : declaration(catalog, occurrence(topology, continuation.parentOccurrenceId));
+  const physicalTargetKeys =
+    parentRoom === undefined
+      ? []
+      : generatedExitIndexes(parentRoom).map((exitIndex) =>
+          semanticAddressKey(
+            createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex),
+          ),
+        );
+  const ownerKeys = [
+    semanticAddressKey(createContinuationAddress(biome, continuation.parentOccurrenceId)),
+    semanticAddressKey(createPickedAddress(biome, continuation.parentOccurrenceId)),
+    semanticAddressKey(createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId)),
+    ...physicalTargetKeys,
+    ...continuation.targets.flatMap((target) => [
+      semanticAddressKey(
+        createTargetAddress(biome, continuation.parentOccurrenceId, target.exitIndex),
+      ),
+      semanticAddressKey(
+        createOccurrenceAddress(biome, occurrence(topology, target.occurrenceId).occurrenceId),
+      ),
+    ]),
+  ];
+  return ownerKeys.includes(focusedNodeKey);
+}
+
 export function LinearTopologyEditor({
   biome,
   catalog,
+  focusedNodeKey,
   interactions,
   evaluation,
   plan,
@@ -757,8 +873,14 @@ export function LinearTopologyEditor({
       : Object.freeze([]);
   return (
     <div className="topology-editor">
-      {topology.continuations.map((continuation) =>
-        continuation.kind === 'batch' ? (
+      {topology.continuations.map((continuation) => {
+        if (
+          focusedNodeKey !== undefined &&
+          !continuationOwnsNode(catalog, biome, topology, continuation, focusedNodeKey)
+        ) {
+          return null;
+        }
+        return continuation.kind === 'batch' ? (
           <BatchEditor
             biome={biome}
             canCreateTarget={targetCount < layout.bounds.maxTargets}
@@ -768,6 +890,7 @@ export function LinearTopologyEditor({
             }
             catalog={catalog}
             interactions={interactions}
+            {...(focusedNodeKey === undefined ? {} : { focusedNodeKey })}
             {...(() => {
               const clockworkBatch = clockworkBatches.find(
                 (batch) => batch.parentOccurrenceId === continuation.parentOccurrenceId,
@@ -788,27 +911,30 @@ export function LinearTopologyEditor({
             }
             catalog={catalog}
             interactions={interactions}
+            {...(focusedNodeKey === undefined ? {} : { focusedNodeKey })}
             continuation={continuation}
             evaluation={evaluation}
             key={continuation.parentOccurrenceId ?? 'layout-entry'}
             plan={plan}
             topology={topology}
           />
-        ),
-      )}
-      {frontier !== undefined && (
-        <FrontierEditor
-          biome={biome}
-          canAddBatch={canAddBatch}
-          canCreateTerminal={canCreateTerminal && frontierTerminalTargetCount > 0}
-          catalog={catalog}
-          interactions={interactions}
-          evaluation={evaluation}
-          parentOccurrenceId={frontier}
-          plan={plan}
-          topology={topology}
-        />
-      )}
+        );
+      })}
+      {frontier !== undefined &&
+        (focusedNodeKey === undefined ||
+          focusedNodeKey === semanticAddressKey(createContinuationAddress(biome, frontier))) && (
+          <FrontierEditor
+            biome={biome}
+            canAddBatch={canAddBatch}
+            canCreateTerminal={canCreateTerminal && frontierTerminalTargetCount > 0}
+            catalog={catalog}
+            interactions={interactions}
+            evaluation={evaluation}
+            parentOccurrenceId={frontier}
+            plan={plan}
+            topology={topology}
+          />
+        )}
     </div>
   );
 }
