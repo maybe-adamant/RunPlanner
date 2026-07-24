@@ -1,5 +1,9 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { Catalog } from '../../catalog-schema';
+import {
+  fieldsCageOutcomeCandidateSupport,
+  type FieldsCageOutcomeCandidateSupport,
+} from '../generation';
 import type { FieldsCageOutcomeCandidateQuery, ProjectCandidateEvaluation } from './model';
 
 import {
@@ -8,6 +12,7 @@ import {
   immutableQuery,
   isCandidateContextUnavailable,
   locateCandidateLinear,
+  locateLinearContinuationCandidateFrontier,
   locateIndexedLinearPlan,
   unavailableCandidate,
   type PreparedCandidateContext,
@@ -41,7 +46,24 @@ export function evaluateFieldsCageOutcomeCandidate(
     return unavailableCandidate(stableQuery, biome);
   }
   const exactKey = semanticAddressKey(stableQuery.continuation);
-  const selected = context.index.fieldsCageOutcomesByOwner.get(exactKey);
+  let selected: FieldsCageOutcomeCandidateSupport | undefined =
+    context.index.fieldsCageOutcomesByOwner.get(exactKey);
+  if (selected === undefined && continuation.batchState === null) {
+    const frontier = locateLinearContinuationCandidateFrontier(
+      catalog,
+      context,
+      stableQuery,
+      continuation.parentOccurrenceId,
+    );
+    if (isCandidateContextUnavailable(frontier)) {
+      return unavailableCandidate(stableQuery, frontier);
+    }
+    selected = fieldsCageOutcomeCandidateSupport(
+      layout.continuation.batchPolicy,
+      stableQuery.continuation,
+      frontier.beforeGeneration,
+    );
+  }
   if (selected === undefined) {
     return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));
   }

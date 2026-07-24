@@ -9,7 +9,11 @@ import type {
 import type { Catalog, RewardWheelOfferPoint } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
-import { rewardProducerFrontier } from '../rewards';
+import {
+  linearRewardStoreCandidateSupport,
+  rewardProducerFrontier,
+  type RewardStoreCandidateSupport,
+} from '../rewards';
 import type {
   BatchRewardStoreCandidateQuery,
   IncomingRewardCandidateQuery,
@@ -32,6 +36,7 @@ import {
   isCandidateContextUnavailable,
   locateCandidateBiome,
   locateCandidateLinear,
+  locateLinearContinuationCandidateFrontier,
   locateIndexedOccurrence,
   locateIndexedLinearPlan,
   producerFrontierUnavailable,
@@ -165,9 +170,27 @@ export function evaluateBatchRewardStoreCandidate(
   if (isCandidateContextUnavailable(biome)) {
     return unavailableCandidate(stableQuery, biome);
   }
-  const selected = context.index.batchRewardStoresByOwner.get(
-    semanticAddressKey(stableQuery.rewardStore),
-  );
+  let selected: RewardStoreCandidateSupport | undefined =
+    context.index.batchRewardStoresByOwner.get(semanticAddressKey(stableQuery.rewardStore));
+  if (selected === undefined && continuation.rewardStore.baseRewardStoreKey === null) {
+    const frontier = locateLinearContinuationCandidateFrontier(
+      catalog,
+      context,
+      stableQuery,
+      continuation.parentOccurrenceId,
+    );
+    if (isCandidateContextUnavailable(frontier)) {
+      return unavailableCandidate(stableQuery, frontier);
+    }
+    selected = linearRewardStoreCandidateSupport(
+      layout,
+      stableQuery.rewardStore,
+      frontier.source,
+      frontier.sourceDeclaration,
+      frontier.beforeGeneration,
+      frontier.beforeGeneration.sequence,
+    );
+  }
   if (selected === undefined) {
     return unavailableCandidate(stableQuery, coverageNotReached(stableQuery, biome));
   }

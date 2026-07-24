@@ -1,6 +1,9 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createBatchRewardStoreAddress,
   createBiomeAddress,
+  createBiomeFieldAddress,
+  createContinuationAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceId,
@@ -116,6 +119,72 @@ describe('contextual option projection', () => {
       message: expect.stringContaining('Root-Stalker'),
     });
     expect(projected[3]?.explanation).toMatchObject({ kind: 'coverage' });
+  });
+
+  it('names an unresolved authored prerequisite without leaking its semantic address', () => {
+    const evaluations: readonly ProjectCandidateEvaluation[] = [
+      {
+        context: 'unavailable',
+        query: {
+          kind: 'roomTarget',
+          target,
+          gameName: 'F_Combat01',
+        },
+        reason: 'authoredPrerequisiteMissing',
+        evidence: {
+          kind: 'authoredPrerequisiteMissing',
+          prerequisite: {
+            kind: 'batchRewardStore',
+            owner: createBatchRewardStoreAddress(biome, parent),
+          },
+        },
+      },
+      {
+        context: 'unavailable',
+        query: {
+          kind: 'roomTarget',
+          target,
+          gameName: 'H_Combat01',
+        },
+        reason: 'authoredPrerequisiteMissing',
+        evidence: {
+          kind: 'authoredPrerequisiteMissing',
+          prerequisite: {
+            kind: 'batchState',
+            owner: createContinuationAddress(createBiomeAddress('Underworld', 'H'), parent),
+          },
+        },
+      },
+      {
+        context: 'unavailable',
+        query: {
+          kind: 'roomTarget',
+          target,
+          gameName: 'I_Combat01',
+        },
+        reason: 'authoredPrerequisiteMissing',
+        evidence: {
+          kind: 'authoredPrerequisiteMissing',
+          prerequisite: {
+            kind: 'biomeField',
+            owner: createBiomeFieldAddress(
+              createBiomeAddress('Underworld', 'I'),
+              'maxNonGoalRewards',
+            ),
+          },
+        },
+      },
+    ];
+    const options = createContextualOptionResolver(catalog).resolve(
+      evaluations.map((evaluation, index) => ({ value: index, evaluation })),
+      () => ({ label: 'Combat 01', selected: false }),
+    );
+
+    expect(options.map((option) => option.explanation?.message)).toEqual([
+      'Choose the required reward pool before evaluating this option.',
+      'Choose the required Fields door roll before evaluating this option.',
+      'Choose the required rolled non-goal limit before evaluating this option.',
+    ]);
   });
 
   it('caches the projection by stable candidate domain and presentation semantics', () => {

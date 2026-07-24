@@ -22,7 +22,12 @@ import type {
   ProjectDocument,
   RoomOccurrence,
 } from '../../authored-project/model';
-import type { Catalog, HubBiomeLayout, LocalChildDescriptor } from '../../catalog-schema';
+import type {
+  Catalog,
+  HubBiomeLayout,
+  LocalChildDescriptor,
+  RoomDeclaration,
+} from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import {
   linearRoomTargetCandidateContexts,
@@ -30,6 +35,8 @@ import {
   type FieldsCageOutcomeSupportEntry,
   type LinearRoomTargetCandidateContext,
 } from '../generation';
+import type { LinearHistoryStateView } from '../history';
+import type { CanonicalAuthoredRoom, CanonicalFixedEntryRoom } from '../materialization';
 import type {
   CompleteHubProjectEvaluation,
   CompleteLinearProjectEvaluation,
@@ -47,6 +54,7 @@ import {
   type ShopPurchaseCandidateContext,
 } from '../rewards';
 import type {
+  CandidateAuthoredPrerequisite,
   CandidateContextUnavailableReason,
   CandidateContextUnavailableEvidence,
   ProjectCandidateQuery,
@@ -127,15 +135,60 @@ function requiredCheckpoint(query: ProjectCandidateQuery) {
   }
 }
 
+function authoredPrerequisite(
+  evaluation: LinearBiomeProjectEvaluation | HubBiomeProjectEvaluation,
+): CandidateAuthoredPrerequisite | undefined {
+  for (const finding of evaluation.findings) {
+    switch (finding.code) {
+      case 'batchRewardStoreMissing':
+        if (finding.origin.kind === 'batchRewardStore') {
+          return Object.freeze({ kind: 'batchRewardStore', owner: finding.origin });
+        }
+        break;
+      case 'batchStateMissing':
+        if (finding.origin.kind === 'continuation') {
+          return Object.freeze({ kind: 'batchState', owner: finding.origin });
+        }
+        break;
+      case 'biomeFieldMissing':
+        if (finding.origin.kind === 'biomeField') {
+          return Object.freeze({ kind: 'biomeField', owner: finding.origin });
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  return undefined;
+}
+
 export function coverageNotReached(
   query: ProjectCandidateQuery,
   evaluation: LinearBiomeProjectEvaluation | HubBiomeProjectEvaluation,
 ): CandidateContextUnavailable {
+  const requiredOwner = queryAddress(query);
+  const prerequisite = authoredPrerequisite(evaluation);
+  const blockingOwner =
+    evaluation.coverage.kind === 'prefix' ? evaluation.coverage.blockedAt : undefined;
+  if (
+    prerequisite !== undefined &&
+    (blockingOwner === undefined ||
+      semanticAddressKey(blockingOwner) === semanticAddressKey(prerequisite.owner)) &&
+    semanticAddressKey(prerequisite.owner) !== semanticAddressKey(requiredOwner)
+  ) {
+    return Object.freeze({
+      reason: 'authoredPrerequisiteMissing',
+      evidence: Object.freeze({
+        kind: 'authoredPrerequisiteMissing',
+        prerequisite,
+      }),
+    });
+  }
   return Object.freeze({
     reason: 'coverageNotReached',
     evidence: Object.freeze({
       kind: 'coverageNotReached',
-      requiredOwner: queryAddress(query),
+      requiredOwner,
       requiredCheckpoint: requiredCheckpoint(query),
       coverage: evaluation.coverage,
     }),
@@ -793,6 +846,56 @@ export function locateCandidateLinear(
   query: ProjectCandidateQuery,
 ): CandidateLinearBiomeEvaluation | CandidateContextUnavailable {
   return locateCompleteLinear(context, query);
+}
+
+export interface LinearContinuationCandidateFrontier {
+  readonly beforeGeneration: LinearHistoryStateView;
+  readonly evaluation: CandidateLinearBiomeEvaluation;
+  readonly source: CanonicalAuthoredRoom | CanonicalFixedEntryRoom;
+  readonly sourceDeclaration: RoomDeclaration;
+}
+
+export function locateLinearContinuationCandidateFrontier(
+  catalog: Catalog,
+  context: PreparedCandidateContext,
+  query: ProjectCandidateQuery,
+  parentOccurrenceId: OccurrenceId | null,
+): LinearContinuationCandidateFrontier | CandidateContextUnavailable {
+  const evaluation = locateCandidateLinear(context, query);
+  if (isCandidateContextUnavailable(evaluation)) {
+    return evaluation;
+  }
+  const materialization =
+    evaluation.authoring === 'complete' ? evaluation.snapshot : evaluation.materializedPrefix;
+  const authoredRooms = [
+    ...materialization.entryRooms,
+    ...materialization.batches.flatMap((batch) => batch.targets.map((target) => target.room)),
+  ];
+  const source =
+    parentOccurrenceId === null
+      ? materialization.entryRooms.at(-1)
+      : authoredRooms.find(
+          (room) => room.kind === 'authored' && room.occurrenceId === parentOccurrenceId,
+        );
+  if (source === undefined || (source.kind !== 'authored' && source.kind !== 'fixedEntry')) {
+    return coverageNotReached(query, evaluation);
+  }
+  const sourceDeclaration = catalog.rooms.byKey[source.gameName];
+  if (sourceDeclaration === undefined) {
+    failCandidate(query, `catalog has no source room ${source.gameName}`);
+  }
+  const beforeGeneration = evaluation.history.rooms.find(
+    (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
+  )?.preOutgoing;
+  if (beforeGeneration === undefined) {
+    return coverageNotReached(query, evaluation);
+  }
+  return Object.freeze({
+    beforeGeneration,
+    evaluation,
+    source,
+    sourceDeclaration,
+  });
 }
 
 export function locateCandidateHub(

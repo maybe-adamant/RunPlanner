@@ -140,14 +140,17 @@ export interface LinearForcePressureLedgerEntry {
 
 export type FieldsCageOutcome = 'min' | 'max';
 
-export interface FieldsCageOutcomeSupportEntry {
+export interface FieldsCageOutcomeCandidateSupport {
   readonly origin: ContinuationAddress;
   readonly beforeSequence: number;
   readonly biomeDepthCache: number;
   readonly fieldsMaxDoorsRolled: number;
   readonly maxDoorCageCeiling: number;
-  readonly selectedOutcome: FieldsCageOutcome;
   readonly supportOutcomes: readonly FieldsCageOutcome[];
+}
+
+export interface FieldsCageOutcomeSupportEntry extends FieldsCageOutcomeCandidateSupport {
+  readonly selectedOutcome: FieldsCageOutcome;
   readonly selectedPossible: boolean;
 }
 

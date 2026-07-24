@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
@@ -13,6 +14,7 @@ import {
   qBiome,
   qOccurrenceIds,
 } from '../../../../../../apps/planner/test/fixtures/surfaceProject';
+import { bindTestCandidateSession } from '../../candidateSession';
 
 describe('Q simulation', () => {
   it('replays the scripted Summit sequence through exact stage and lifecycle authorities', () => {
@@ -77,6 +79,18 @@ describe('Q simulation', () => {
     expect(eye?.encounterPhases[0]?.countsEncounterDepth).toBe(false);
     expect(tail?.incomingReward?.resolvedStoreKey).toBe('TyphonBossRewards');
     expect(eye?.incomingReward?.resolvedStoreKey).toBe('TyphonBossRewards');
+  });
+
+  it('evaluates a target immediately under the fixed no-store policy', () => {
+    expect(
+      bindTestCandidateSession(catalog, createRepresentativeNOPQProject()).evaluate([
+        {
+          kind: 'roomTarget',
+          target: createTargetAddress(qBiome, qOccurrenceIds.intro, 1),
+          gameName: 'Q_Combat10',
+        },
+      ])[0],
+    ).toMatchObject({ context: 'evaluated', support: 'possible' });
   });
 
   it('allows repeated room identities on independently generated miniboss peers', () => {

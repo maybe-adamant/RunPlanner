@@ -238,6 +238,21 @@ export function explainCandidateEvaluation(
 ): CandidateExplanation | undefined {
   if (evaluation.context === 'unavailable') {
     switch (evaluation.evidence.kind) {
+      case 'authoredPrerequisiteMissing': {
+        const prerequisite = evaluation.evidence.prerequisite;
+        const label =
+          prerequisite.kind === 'batchRewardStore'
+            ? 'reward pool'
+            : prerequisite.kind === 'batchState'
+              ? 'Fields door roll'
+              : prerequisite.owner.fieldKey === 'maxNonGoalRewards'
+                ? 'rolled non-goal limit'
+                : 'biome outcome';
+        return {
+          kind: 'authoredPrerequisiteMissing',
+          message: `Choose the required ${label} before evaluating this option.`,
+        };
+      }
       case 'coverageNotReached':
         return {
           kind: 'coverage',
