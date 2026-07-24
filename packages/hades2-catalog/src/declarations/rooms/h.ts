@@ -12,7 +12,7 @@ export const hRooms = [
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterProfileKey: 'NoEncounter',
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
+    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
   },

@@ -56,7 +56,7 @@ describe('complete P catalog', () => {
       incomingReward: { kind: 'none' },
       enteredRewardStoreHistory: { kind: 'none' },
       encounterProfileKey: 'NoEncounter',
-      counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
+      counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1 },
       localChildren: [],
     });
@@ -96,7 +96,7 @@ describe('complete P catalog', () => {
         ],
       },
       fields: [],
-      bounds: { maxBatches: 9, maxTargets: 18 },
+      bounds: { maxBatches: 8, maxTargets: 16 },
     });
   });
 

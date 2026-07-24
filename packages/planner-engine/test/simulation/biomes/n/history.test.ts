@@ -292,7 +292,7 @@ describe('N Hub lifecycle composition and history', () => {
       'N_PostBoss01',
     ]);
     expect(history.biomeCompletion.ledgers.counters).toMatchObject({
-      biomeDepthCache: 24,
+      biomeDepthCache: 25,
       biomeEncounterDepth: 8,
       routeEncounterDepth: 8,
       roomHistoryOrdinal: 26,

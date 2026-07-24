@@ -131,11 +131,11 @@ pre-creation `biomeDepthCache`. The created target enters at the following
 depth. The layout must not shift those predicates to a UI row index or to the
 target's post-entry depth.
 
-The staged evaluator reconstructs that source depth from committed history
-plus the current predecessor's declared depth contribution. The generic
-lifecycle still commits that contribution after outgoing generation; this
-projection exists because Q's scripted room predicates are expressed against
-the current source-room depth rather than the prior committed prefix alone.
+The canonical target-generation view already contains the entered
+predecessor's current source depth. The staged evaluator reads that history
+value directly; it must not add the predecessor's declaration contribution a
+second time. `Q_Intro` therefore generates the foyer at source depth `1` and
+commits the cache to `2` before the picked foyer prepares.
 
 | Source `biomeDepthCache` | Candidate stage                          | Physical targets            |
 | ------------------------ | ---------------------------------------- | --------------------------- |

@@ -97,7 +97,7 @@ describe('complete Q catalog', () => {
       structuralTags: ['Outdoor'],
       incomingReward: { kind: 'none' },
       enteredRewardStoreHistory: { kind: 'none' },
-      counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
+      counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1 },
       eligibility: {
         kind: 'counterRange',

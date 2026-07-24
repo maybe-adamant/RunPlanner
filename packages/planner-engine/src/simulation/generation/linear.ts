@@ -825,29 +825,18 @@ function prepareTargetGameNameContext(
   view: LinearTargetGenerationView,
   enteredBiomeCount: number,
   rewardHistory: RewardHistoryState | undefined,
-  includeSourceDepth: boolean,
 ): LinearRoomTargetCandidateContext {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
     throw new LinearRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
-  const baseContext = projectLinearRoomGenerationRequirementContext(
+  const context = projectLinearRoomGenerationRequirementContext(
     source,
     sourceDeclaration,
     view.before,
     enteredBiomeCount,
     rewardHistory,
   );
-  const context = includeSourceDepth
-    ? Object.freeze({
-        ...baseContext,
-        counters: Object.freeze({
-          ...baseContext.counters,
-          biomeDepthCache:
-            baseContext.counters.biomeDepthCache + sourceDeclaration.counters.biomeDepthCache,
-        }),
-      })
-    : baseContext;
   const counts = roomGenerationCounts(view.before, source.origin);
   const candidates = pool.map((room) =>
     evaluateCandidate(catalog, source, sourceDeclaration, exit, counts, room, context),
@@ -947,7 +936,6 @@ function evaluateTargets(
   findings: SemanticFinding[],
   enteredBiomeCount: number,
   rewardHistories: ReadonlyMap<string, RewardHistoryState>,
-  includeSourceDepth: boolean,
 ): void {
   for (const target of targets) {
     const view = views.get(semanticAddressKey(target.origin));
@@ -966,7 +954,6 @@ function evaluateTargets(
       view,
       enteredBiomeCount,
       rewardHistories.get(semanticAddressKey(target.origin)),
-      includeSourceDepth,
     );
     candidateContexts.set(semanticAddressKey(target.origin), candidateContext);
     const result = candidateContext.evaluateGameName(target.room.gameName);
@@ -1063,7 +1050,6 @@ export function evaluateLinearRoomGeneration(
       findings,
       enteredBiomeCount,
       rewardHistories,
-      layout.continuation.progressionPolicy.kind === 'staged',
     );
   }
   const finalGeneration =
@@ -1123,7 +1109,6 @@ export function evaluateLinearRoomGeneration(
       findings,
       enteredBiomeCount,
       rewardHistories,
-      layout.continuation.progressionPolicy.kind === 'staged',
     );
   }
 

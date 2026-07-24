@@ -190,6 +190,12 @@ candidate made selectable by a depth-2 eligibility rule. The fixed entry chain
 therefore walks Opening and then PreHub without creating a generated decision
 between them.
 
+The Surface run begins with `biomeDepthCache = 0`. Committing
+`N_Opening01` advances it to `1`; committing `N_PreHub01` advances it to `2`
+before the derived hub prepares. Both fixed authored rooms therefore own a
+one-step depth contribution. Their different encounter-depth behavior does not
+change this room-history cache timeline.
+
 `N_Opening01` legally selects `OpeningEmpty` or `OpeningGeneratedN` in the raw
 game. `OpeningEmpty` is forced only before Apollo has been used or in a dream
 run. The canonical progressed-save baseline therefore selects

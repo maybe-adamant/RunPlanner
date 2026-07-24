@@ -138,6 +138,7 @@ describe('complete N catalog', () => {
       expect(catalog.encounterProfiles.byKey[profileKey]?.phases[0]?.countsEncounterDepth).toBe(
         countsEncounterDepth,
       );
+      expect(room.counters).toEqual({ biomeDepthCache: 1, roomHistoryOrdinal: 1 });
       const state = createDefaultRoomState(catalog, room, {
         role: 'ordinary',
         resolvedStoreKey: 'RunProgress',

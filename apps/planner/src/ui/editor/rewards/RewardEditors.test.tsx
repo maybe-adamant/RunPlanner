@@ -54,7 +54,7 @@ const blindBoxOwner: RewardCandidateOwner = {
   kind: 'shopOffer',
   address: createShopOfferAddress(
     createBiomeAddress('Underworld', 'G'),
-    targetOccurrenceId('G', 6, 1),
+    targetOccurrenceId('G', 5, 1),
     'Boon',
   ),
 };
