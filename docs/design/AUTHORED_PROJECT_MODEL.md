@@ -667,9 +667,7 @@ cage and O ShipCombat wheel members. Q's rewardless peers return canonical
 `none`; fixed, shop, terminal-free, and Ephyra families currently have an
 explicit replacement-default disposition. Preboss shops are topology-owned
 terminal roles and do not interact with ordinary midshops. N fixed Hub slots
-remain non-replaceable. The detailed compatibility matrix and delivery evidence
-are maintained in
-[`ROOM_REPLACEMENT_RETENTION_AUDIT.md`](../audits/ROOM_REPLACEMENT_RETENTION_AUDIT.md).
+remain non-replaceable.
 
 Undo restores the exact prior room name and state; redo restores the exact
 reconciled replacement. The app keeps no hidden state cache by prior game name.
