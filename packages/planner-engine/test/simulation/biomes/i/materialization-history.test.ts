@@ -91,11 +91,16 @@ function createIProject(projectId: string, name: string): ProjectDocument {
     name,
     configuredBiomeCounts: { Underworld: 4 },
   });
-  return applyProjectCommand(project, catalog, {
+  const started = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome,
     occurrenceId: occurrence(`${projectId}-intro`),
     gameName: 'I_Intro',
+  });
+  return applyProjectCommand(started, catalog, {
+    kind: 'ReplaceBiomeField',
+    field: createBiomeFieldAddress(biome, 'maxNonGoalRewards'),
+    value: 3,
   });
 }
 

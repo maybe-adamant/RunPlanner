@@ -502,7 +502,7 @@ authored model to express:
 2. fifteen concrete repeatable-offer combat declarations;
 3. three bounded cage reward slots on every H combat occurrence;
 4. immutable raw cage capacity per combat declaration;
-5. batch-owned semantic Min/Max state, with an explicit policy default,
+5. batch-owned semantic Min/Max state that starts unresolved and remains
    independent of visible cage count;
 6. history-derived `fieldsMaxDoorsRolled` support and ceiling behavior;
 7. non-counting passive phases plus one counting phase per active cage;
@@ -525,9 +525,10 @@ exits in one readable parity matrix.
 The current project codec and semantic commands can author H's
 fixed start, four ordinary batches, seven-target bound, Fields Min/Max state,
 complete dormant cage leaves, and forked terminal entry. Ordinary H batches
-own `{ kind: 'none' }` generated-store state and default to Min; the explicit
-Fields outcome command retains every target, cage value, and downstream
-continuation. Linear completeness accepts that closed authored form.
+own `{ kind: 'none' }` generated-store state and an unresolved Fields outcome;
+the explicit Fields outcome command retains every target, cage value, and
+downstream continuation. Linear completeness stops at that semantic owner
+until Min or Max is selected.
 
 Canonical materialization derives batch capacity in physical target order,
 records the number of cage-capable targets, and retains the selected per-door

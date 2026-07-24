@@ -258,24 +258,27 @@ export interface RoomDeclaration {
   readonly localChildren: readonly LocalChildDescriptor[];
 }
 
+export type AuthoredFieldInitialization<T> =
+  { readonly kind: 'required' } | { readonly kind: 'defaulted'; readonly value: T };
+
 export type AuthoredFieldDescriptor =
   | {
       readonly key: string;
       readonly kind: 'boolean';
-      readonly defaultValue: boolean;
+      readonly initialization: AuthoredFieldInitialization<boolean>;
     }
   | {
       readonly key: string;
       readonly kind: 'boundedInteger';
       readonly min: number;
       readonly max: number;
-      readonly defaultValue: number;
+      readonly initialization: AuthoredFieldInitialization<number>;
     }
   | {
       readonly key: string;
       readonly kind: 'enum';
       readonly values: readonly string[];
-      readonly defaultValue: string;
+      readonly initialization: AuthoredFieldInitialization<string>;
     };
 
 export type LocalChildDescriptor =
@@ -327,7 +330,6 @@ export type RewardStorePolicy =
   | {
       readonly kind: 'authoredBaseStore';
       readonly storeKeys: readonly string[];
-      readonly defaultStoreKey: string;
       readonly targetMetaRewardsRatio: number;
       readonly targetMetaRewardsAdjustSpeed: number;
     }

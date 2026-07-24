@@ -98,9 +98,6 @@ function normalizeRewardStorePolicy(
         fail(`${path}.storeKeys[${index}]`, `unknown reward store ${storeKey}`);
       }
     }
-    if (!storeKeys.includes(rawPolicy.defaultStoreKey)) {
-      fail(`${path}.defaultStoreKey`, 'must belong to the authored base store domain');
-    }
     if (
       !Number.isFinite(rawPolicy.targetMetaRewardsRatio) ||
       rawPolicy.targetMetaRewardsRatio < 0 ||
@@ -117,7 +114,6 @@ function normalizeRewardStorePolicy(
     return Object.freeze({
       kind: 'authoredBaseStore',
       storeKeys,
-      defaultStoreKey: rawPolicy.defaultStoreKey,
       targetMetaRewardsRatio: rawPolicy.targetMetaRewardsRatio,
       targetMetaRewardsAdjustSpeed: rawPolicy.targetMetaRewardsAdjustSpeed,
     });
@@ -247,9 +243,9 @@ function normalizeBatchPolicy(rawPolicy: GeneratedBatchPolicy, path: string): Ge
       fields[0].values.length !== 2 ||
       fields[0].values[0] !== 'min' ||
       fields[0].values[1] !== 'max' ||
-      fields[0].defaultValue !== 'min'
+      fields[0].initialization.kind !== 'required'
     ) {
-      fail(`${path}.fields`, 'fields policy requires cageOutcome enum [min, max] with default min');
+      fail(`${path}.fields`, 'fields policy requires authored cageOutcome enum [min, max]');
     }
     const minDoorCageRewards = requirePositiveInteger(
       rawPolicy.minDoorCageRewards,

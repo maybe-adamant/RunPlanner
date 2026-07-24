@@ -358,32 +358,6 @@ describe('F catalog migration slice', () => {
     );
   });
 
-  it('requires the batch default to belong to its authored store domain', () => {
-    const layout = declarations.biomeLayouts[0];
-    expect(() =>
-      createCatalog({
-        ...declarations,
-        biomeLayouts: [
-          {
-            ...layout,
-            continuation: {
-              ...layout.continuation,
-              rewardStorePolicy: {
-                ...layout.continuation.rewardStorePolicy,
-                defaultStoreKey: 'MissingStore',
-              },
-            },
-          },
-        ],
-      }),
-    ).toThrowError(
-      new CatalogContractError(
-        'biomeLayouts[0].continuation.rewardStorePolicy.defaultStoreKey',
-        'must belong to the authored base store domain',
-      ),
-    );
-  });
-
   it.each([
     ['targetMetaRewardsRatio', 1.1, 'must be a finite ratio from 0 through 1'],
     ['targetMetaRewardsAdjustSpeed', -1, 'must be a finite non-negative number'],

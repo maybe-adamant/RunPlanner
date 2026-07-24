@@ -10,12 +10,12 @@ It does not define simulation algorithms or React rendering.
 
 ## Cross-Biome Freeze Status
 
-The schema version 7 examples in this document describe the reconciled
+The schema version 8 examples in this document describe the reconciled
 F/G/P/Q/H/O/I/N model. Occurrence identity, downstream retention, possibility
 support, generated-store ownership, conditional-terminal batches, fixed
 authored layout slots, and persistent hub topology are settled. Production now
-reads schema version 7 for the implemented F/G/H/I and N/O/P/Q product surfaces
-and rejects earlier versions without compatibility scaffolding.
+reads schema version 8 for the implemented F/G/H/I and N/O/P/Q product surfaces
+and rejects schema 7 and earlier versions without compatibility scaffolding.
 
 ## Core Distinction
 
@@ -700,10 +700,11 @@ invariants before replacing the authored state:
 - continuation forms remain mutually exclusive where required;
 - unpicked dead leaves own no downstream continuation;
 - structural roles use compatible room declarations;
-- every batch reward-store form matches its layout policy and every authored
-  base store belongs to that policy's static store domain;
-- every batch-state form matches its layout-selected typed codec and contains
-  one complete value for each required semantic field;
+- every batch reward-store form matches its layout policy; an authored base
+  store is either explicitly unresolved or belongs to that policy's static
+  store domain;
+- every batch-state form matches its layout-selected typed codec; a required
+  authored batch field may be explicitly unresolved until selected;
 - configured biome plans remain the exact declaration-ordered contiguous route
   prefix;
 - semantic addresses remain unique.
@@ -719,7 +720,7 @@ representative top-level shape is:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 7;
+  schemaVersion: 8;
   projectId: string;
   name: string;
   catalogVersion: string;
@@ -734,7 +735,7 @@ interface AuthoredRoutePlan {
 interface LinearBiomePlan {
   kind: 'LinearBiome';
   biomeKey: string;
-  state: Readonly<Record<string, boolean | number | string>>;
+  state: Readonly<Record<string, boolean | number | string | null>>;
   topology: LinearBiomeTopology | null;
 }
 
@@ -793,7 +794,7 @@ type LinearContinuation =
       rewardStore:
         | {
             kind: 'authoredBaseStore';
-            baseRewardStoreKey: RewardStoreKey;
+            baseRewardStoreKey: RewardStoreKey | null;
           }
         | {
             kind: 'sourceOfferPoint';
@@ -811,7 +812,7 @@ type LinearContinuation =
       rewardStore?:
         | {
             kind: 'authoredBaseStore';
-            baseRewardStoreKey: RewardStoreKey;
+            baseRewardStoreKey: RewardStoreKey | null;
           }
         | {
             kind: 'sourceOfferPoint';
@@ -829,11 +830,14 @@ normalized batch policy and each target's resolved Room Declaration establish
 which roles are admitted. For I, a picked `I_PreBoss02` derives
 `completeBiome`; every picked ordinary target derives `continueBiome`.
 
-`LinearBiomePlan.state` contains exactly the declaration-owned biome fields,
-with complete defaults and no undeclared keys. Most linear biomes persist `{}`.
-I persists one bounded `maxNonGoalRewards` value from `3` through `6`, making
-the simulated run's random Clockwork outcome explicit. H's Min/Max choice
-remains a batch-owned value in `continuation.batchState`. A null
+`LinearBiomePlan.state` contains exactly the declaration-owned biome fields
+and no undeclared keys. A field declaration distinguishes a canonical
+`defaulted` value from a `required` authored outcome. Required fields persist
+as `null` until explicitly selected. Most linear biomes persist `{}`. I
+persists `maxNonGoalRewards` as `null` or one bounded value from `3` through
+`6`, making the simulated run's random Clockwork outcome explicit without
+inventing it. H's Min/Max choice similarly starts unresolved in
+`continuation.batchState`. A null
 `startOccurrenceId` and null first-continuation parent are reserved for a
 layout-derived fixed-entry sequence. They mean "continue after the final fixed
 entry," not an absent room or a positional UI row. I instead uses an authored
@@ -845,9 +849,9 @@ how to select that source's semantic offer point. O resolves the last active
 ShipCombat wheel from the occurrence's authored encounter-count state.
 Replacing the source room also reconciles the owned continuation's authority:
 ShipCombat selects `sourceOfferPoint`, while another admitted O room restores
-the layout's authored Run/Meta store policy. The command preserves an authored
-store value when it remains valid and never copies a wheel store into the
-continuation.
+the unresolved authored Run/Meta store policy. The command preserves an
+already-authored store value when that authority remains valid and never
+copies a wheel store into the continuation.
 
 The optional terminal `rewardStore` exists only for a direct terminal whose
 target is physically generated from the predecessor's doors. O therefore
@@ -856,6 +860,9 @@ it applies to an ordinary batch. Forked and generated-target terminals do not
 persist this field. The codec derives that distinction from the layout and
 rejects either a missing direct-terminal store or a store on another terminal
 form.
+
+Schema 8 is a clean authority boundary. The codec rejects schema 7 profiles;
+production contains no migration or compatibility interpretation.
 
 Both wheel records remain complete at maximum capacity. An inactive second
 combat or second offer emits no events but is never erased from authored state;

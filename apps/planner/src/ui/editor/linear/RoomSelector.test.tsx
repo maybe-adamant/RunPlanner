@@ -2,6 +2,7 @@
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createContinuationAddress,
   createOccurrenceId,
@@ -47,6 +48,13 @@ describe('RoomSelector', () => {
       authoredProjectCommandDispatched({
         kind: 'CreateBatch',
         continuation: createContinuationAddress(biome, startId),
+      }),
+    );
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(biome, startId),
+        storeKey: 'RunProgress',
       }),
     );
     const target = createTargetAddress(biome, startId, 1);
@@ -131,6 +139,13 @@ describe('RoomSelector', () => {
       authoredProjectCommandDispatched({
         kind: 'CreateBatch',
         continuation: createContinuationAddress(biome, startId),
+      }),
+    );
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(biome, startId),
+        storeKey: 'MetaProgress',
       }),
     );
     const target = createTargetAddress(biome, startId, 1);

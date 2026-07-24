@@ -3,9 +3,11 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createContinuationAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createPickedAddress,
   createProjectDocument,
   createTargetAddress,
@@ -61,6 +63,11 @@ function oProject(withTerminal = false): ProjectDocument {
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     continuation: createContinuationAddress(biome, introId),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, introId),
+    storeKey: 'RunProgress',
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
@@ -219,5 +226,36 @@ describe('O editor projection', () => {
     expect(screen.getByRole('heading', { name: 'Preboss Shop' })).toBeTruthy();
     expect(screen.getByText('Exit 1 entered')).toBeTruthy();
     expect(screen.getByLabelText('Enter terminal exit 1')).toHaveProperty('checked', true);
+  });
+
+  it('authors the direct-terminal pool after a non-ShipCombat source', async () => {
+    let project = applyProjectCommand(oProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, combatId),
+      gameName: 'O_Devotion01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTerminalTransition',
+      continuation: createContinuationAddress(biome, combatId),
+      targetOccurrenceIds: [createOccurrenceId('editor-o-authored-store-preboss')],
+    });
+    const { store, user } = renderO(project);
+    const rewardPool = screen
+      .getAllByLabelText('Reward pool')
+      .find((control) => control.id === 'terminal-editor-o-combat-reward-store') as
+      HTMLSelectElement | undefined;
+
+    expect(rewardPool?.value).toBe('');
+    if (rewardPool === undefined) {
+      throw new Error('expected the direct-terminal reward-pool control');
+    }
+    await user.selectOptions(rewardPool, 'MetaProgress');
+
+    expect(
+      oPlan(store.getState().projectWorkspace.history.present).topology?.continuations.at(-1),
+    ).toMatchObject({
+      kind: 'terminal',
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
+    });
   });
 });

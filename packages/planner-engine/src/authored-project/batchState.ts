@@ -2,13 +2,12 @@ import type { GeneratedBatchPolicy } from '../catalog-schema';
 import type { AuthoredBatchState } from './model';
 import { expectExactKeys, expectRecord, expectString, failProjectDocument } from './validation';
 
-export function createDefaultBatchState(policy: GeneratedBatchPolicy): AuthoredBatchState {
+export function createInitialBatchState(policy: GeneratedBatchPolicy): AuthoredBatchState {
   switch (policy.kind) {
     case 'standard':
     case 'clockwork':
-      return null;
     case 'fields':
-      return Object.freeze({ cageOutcome: 'min' });
+      return null;
   }
 }
 
@@ -24,6 +23,9 @@ export function decodeBatchState(
     return null;
   }
 
+  if (value === null) {
+    return null;
+  }
   const state = expectRecord(value, path);
   expectExactKeys(state, ['cageOutcome'], path);
   const cageOutcome = expectString(state.cageOutcome, `${path}.cageOutcome`);

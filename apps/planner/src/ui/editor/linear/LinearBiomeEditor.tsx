@@ -82,8 +82,8 @@ function ClockworkRollControl({
 }) {
   const dispatch = useAppDispatch();
   const value = plan.state.maxNonGoalRewards;
-  if (typeof value !== 'number') {
-    throw new Error(`${plan.biomeKey} has no numeric maxNonGoalRewards value`);
+  if (value !== null && typeof value !== 'number') {
+    throw new Error(`${plan.biomeKey} has invalid maxNonGoalRewards state`);
   }
   const field = createBiomeFieldAddress(biome, 'maxNonGoalRewards');
   return (
@@ -103,8 +103,11 @@ function ClockworkRollControl({
             }),
           )
         }
-        value={String(value)}
+        value={value === null ? '' : String(value)}
       >
+        <option disabled value="">
+          Select limit
+        </option>
         {Array.from(
           { length: descriptor.max - descriptor.min + 1 },
           (_, index) => descriptor.min + index,

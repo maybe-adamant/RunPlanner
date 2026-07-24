@@ -74,7 +74,6 @@ describe('complete P catalog', () => {
         rewardStorePolicy: {
           kind: 'authoredBaseStore',
           storeKeys: ['RunProgress', 'MetaProgress'],
-          defaultStoreKey: 'RunProgress',
           targetMetaRewardsRatio: 0.2,
           targetMetaRewardsAdjustSpeed: 10,
         },

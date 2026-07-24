@@ -321,7 +321,7 @@ describe('shared structural catalog vocabulary', () => {
                         key: 'cageOutcome',
                         kind: 'enum',
                         values: ['min', 'max'],
-                        defaultValue: 'min',
+                        initialization: { kind: 'required' },
                       },
                     ],
                   },
@@ -365,7 +365,7 @@ describe('shared structural catalog vocabulary', () => {
               key: 'cageOutcome',
               kind: 'enum',
               values: ['min', 'max'],
-              defaultValue: 'min',
+              initialization: { kind: 'required' },
             },
           ],
         },
@@ -1075,7 +1075,13 @@ describe('shared structural catalog vocabulary', () => {
                   localChildren: [
                     {
                       ...cages,
-                      fields: [{ key: 'entered', kind: 'boolean', defaultValue: false }],
+                      fields: [
+                        {
+                          key: 'entered',
+                          kind: 'boolean',
+                          initialization: { kind: 'defaulted', value: false },
+                        },
+                      ],
                     },
                   ],
                 }
@@ -1191,7 +1197,13 @@ describe('shared structural catalog vocabulary', () => {
                       ineligibleRewardTypes: [],
                       producerLifecycleKey: 'RoomReward',
                     },
-                    fields: [{ key: 'entered', kind: 'boolean', defaultValue: false }],
+                    fields: [
+                      {
+                        key: 'entered',
+                        kind: 'boolean',
+                        initialization: { kind: 'defaulted', value: false },
+                      },
+                    ],
                   },
                   {
                     key: 'sideRooms',
@@ -1205,7 +1217,13 @@ describe('shared structural catalog vocabulary', () => {
                       },
                     ],
                     rewardGeneration: 'jointUnordered',
-                    fields: [{ key: 'entered', kind: 'boolean', defaultValue: false }],
+                    fields: [
+                      {
+                        key: 'entered',
+                        kind: 'boolean',
+                        initialization: { kind: 'defaulted', value: false },
+                      },
+                    ],
                   },
                 ],
               }
@@ -1216,9 +1234,24 @@ describe('shared structural catalog vocabulary', () => {
           fields:
             index === 0
               ? [
-                  { key: 'enabled', kind: 'boolean', defaultValue: false },
-                  { key: 'count', kind: 'boundedInteger', min: 1, max: 3, defaultValue: 2 },
-                  { key: 'mode', kind: 'enum', values: ['A', 'B'], defaultValue: 'A' },
+                  {
+                    key: 'enabled',
+                    kind: 'boolean',
+                    initialization: { kind: 'defaulted', value: false },
+                  },
+                  {
+                    key: 'count',
+                    kind: 'boundedInteger',
+                    min: 1,
+                    max: 3,
+                    initialization: { kind: 'defaulted', value: 2 },
+                  },
+                  {
+                    key: 'mode',
+                    kind: 'enum',
+                    values: ['A', 'B'],
+                    initialization: { kind: 'defaulted', value: 'A' },
+                  },
                 ]
               : [],
           ...(layout.kind === 'LinearBiome'
@@ -1247,9 +1280,24 @@ describe('shared structural catalog vocabulary', () => {
 
     expect(catalog.biomeLayouts.byKey.F).toMatchObject({
       fields: [
-        { key: 'enabled', kind: 'boolean', defaultValue: false },
-        { key: 'count', kind: 'boundedInteger', min: 1, max: 3, defaultValue: 2 },
-        { key: 'mode', kind: 'enum', values: ['A', 'B'], defaultValue: 'A' },
+        {
+          key: 'enabled',
+          kind: 'boolean',
+          initialization: { kind: 'defaulted', value: false },
+        },
+        {
+          key: 'count',
+          kind: 'boundedInteger',
+          min: 1,
+          max: 3,
+          initialization: { kind: 'defaulted', value: 2 },
+        },
+        {
+          key: 'mode',
+          kind: 'enum',
+          values: ['A', 'B'],
+          initialization: { kind: 'defaulted', value: 'A' },
+        },
       ],
       continuation: {
         rewardStorePolicy: { kind: 'sourceOfferPoint', selector: 'lastActiveWheel' },
@@ -1269,7 +1317,13 @@ describe('shared structural catalog vocabulary', () => {
         rawCapacity: 3,
         maxActiveSlots: 3,
         reward: { kind: 'countedChoice', storeKeys: ['RunProgress'] },
-        fields: [{ key: 'entered', kind: 'boolean', defaultValue: false }],
+        fields: [
+          {
+            key: 'entered',
+            kind: 'boolean',
+            initialization: { kind: 'defaulted', value: false },
+          },
+        ],
       },
       {
         key: 'sideRooms',
@@ -1283,7 +1337,13 @@ describe('shared structural catalog vocabulary', () => {
           },
         ],
         rewardGeneration: 'jointUnordered',
-        fields: [{ key: 'entered', kind: 'boolean', defaultValue: false }],
+        fields: [
+          {
+            key: 'entered',
+            kind: 'boolean',
+            initialization: { kind: 'defaulted', value: false },
+          },
+        ],
       },
     ]);
   });

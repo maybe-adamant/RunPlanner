@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 7 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 8 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -61,7 +61,7 @@ export type AuthoredRoomState =
   | { readonly kind: 'freeReward'; readonly offer: ResolvedRewardOffer };
 
 export type BatchRewardStoreState =
-  | { readonly kind: 'authoredBaseStore'; readonly baseRewardStoreKey: string }
+  | { readonly kind: 'authoredBaseStore'; readonly baseRewardStoreKey: string | null }
   | { readonly kind: 'sourceOfferPoint' }
   | { readonly kind: 'none' };
 
@@ -73,7 +73,7 @@ export type AuthoredBatchState = FieldsCageBatchState | null;
 
 export type AuthoredFieldValue = boolean | number | string;
 
-export type AuthoredBiomeState = Readonly<Record<string, AuthoredFieldValue>>;
+export type AuthoredBiomeState = Readonly<Record<string, AuthoredFieldValue | null>>;
 
 export interface RoomOccurrence {
   readonly occurrenceId: OccurrenceId;

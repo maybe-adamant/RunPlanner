@@ -2,6 +2,7 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createBiomeFieldAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
   createHubSlotAddress,
@@ -146,13 +147,12 @@ function completeGoldenProject(batches: readonly BatchSpec[] = goldenBatches): P
       kind: 'CreateBatch',
       continuation: createContinuationAddress(biome, parentId),
     });
-    if (batchIndex === 1 || batchIndex === 5 || batchIndex === 9) {
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceBatchRewardStore',
-        rewardStore: createBatchRewardStoreAddress(biome, parentId),
-        storeKey: 'MetaProgress',
-      });
-    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, parentId),
+      storeKey:
+        batchIndex === 1 || batchIndex === 5 || batchIndex === 9 ? 'MetaProgress' : 'RunProgress',
+    });
     batch.targets.forEach((gameName, targetOffset) => {
       const exitIndex = targetOffset + 1;
       project = applyProjectCommand(project, catalog, {
@@ -302,13 +302,11 @@ function completeGoldenFGProject(options: GFixtureOptions = {}): ProjectDocument
       kind: 'CreateBatch',
       continuation: createContinuationAddress(gBiome, parentId),
     });
-    if (batchIndex === 2 || batchIndex === 4) {
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceBatchRewardStore',
-        rewardStore: createBatchRewardStoreAddress(gBiome, parentId),
-        storeKey: 'MetaProgress',
-      });
-    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(gBiome, parentId),
+      storeKey: batchIndex === 2 || batchIndex === 4 ? 'MetaProgress' : 'RunProgress',
+    });
     const peerRooms =
       batchIndex === 6 && options.pickedMiniboss === 'G_MiniBoss02'
         ? ['G_MiniBoss01']
@@ -466,13 +464,11 @@ function appendGoldenH(project: ProjectDocument): ProjectDocument {
       kind: 'CreateBatch',
       continuation: createContinuationAddress(hBiome, batch.parent),
     });
-    if (batch.outcome === 'max') {
-      next = applyProjectCommand(next, catalog, {
-        kind: 'ReplaceFieldsCageOutcome',
-        continuation: createContinuationAddress(hBiome, batch.parent),
-        cageOutcome: batch.outcome,
-      });
-    }
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      continuation: createContinuationAddress(hBiome, batch.parent),
+      cageOutcome: batch.outcome,
+    });
     for (const [targetOffset, target] of batch.targets.entries()) {
       next = applyProjectCommand(next, catalog, {
         kind: 'CreateTarget',
@@ -626,6 +622,11 @@ function selectedGoldenIProject(): ProjectDocument {
     biome: iBiome,
     occurrenceId: intro,
     gameName: 'I_Intro',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBiomeField',
+    field: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
+    value: 3,
   });
   let parent: OccurrenceId = intro;
   const batches = [
@@ -781,6 +782,11 @@ function shopTraceProject(): ProjectDocument {
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     continuation: createContinuationAddress(biome, shop),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, shop),
+    storeKey: 'RunProgress',
   });
   for (const [exitOffset, target] of [
     { occurrenceId: fifth, gameName: 'F_Combat04' },
@@ -1822,6 +1828,11 @@ describe('project simulation composition', () => {
       biome: iBiome,
       occurrenceId: intro,
       gameName: 'I_Intro',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBiomeField',
+      field: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
+      value: 3,
     });
     const combat01 = createOccurrenceId('story-candidate-combat01');
     project = applyProjectCommand(project, catalog, {

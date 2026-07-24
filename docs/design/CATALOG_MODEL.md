@@ -173,8 +173,9 @@ traversal-body policy:
 - continuation progression policy: eligibility-driven, fixed-count, or an
   ordered staged candidate-pool sequence;
 - generated-batch policy: standard, Fields cage, or Clockwork, with any
-  policy-owned authored fields declared beside that policy; the Fields policy
-  additionally owns its Min/Max capacities, Max ceiling, and possibility-only
+  policy-owned authored fields declared beside that policy and classified as
+  either `required` or genuinely `defaulted`; the Fields policy additionally
+  owns its Min/Max capacities, Max ceiling, and possibility-only
   optional/required Max depth sets;
 - terminal room and terminal exit policy, including whether the terminal is an
   independent transition or a declaration role admitted by a generated batch;
@@ -186,14 +187,14 @@ traversal-body policy:
 - biome-global authored field descriptors;
 - reward-store selection policy: an authored generated-store policy with the
   normalized game-language `targetMetaRewardsRatio` and
-  `targetMetaRewardsAdjustSpeed`, possible base stores, and one authoring
+  `targetMetaRewardsAdjustSpeed` and possible base stores but no authoring
   default; a source-offer-point policy selecting an already-authored semantic
   store through a closed selector such as `lastActiveWheel`; or an explicit
   no-base-store policy when no generated base outcome is observable, including
   reward-free Q and declaration-overridden I batches.
 - optional source-encounter-profile overrides for the generated-store policy;
   O uses this structural mapping so ShipCombat sources resolve their final
-  active wheel while non-ShipCombat sources retain the authored default;
+  active wheel while non-ShipCombat sources require an authored store;
 
 They do not copy room-local facts such as intrinsic exits, eligibility, caps,
 or incoming reward bindings.
@@ -437,6 +438,9 @@ first remaining option.
 Defaults follow semantic ownership. Option ordering is not a default. A
 producer binding describes the reward domain that a room can accept; it does
 not make the room leaf the authority for the generated batch's active store.
+Likewise, a declaration may provide a default only for a canonical fact.
+Random batch or biome outcomes use `required` initialization and begin
+unresolved.
 
 The exact producer vocabulary, F/G bindings, shop distinction, and
 offer/acquisition contract are defined in `REWARD_MODEL.md`. This document owns

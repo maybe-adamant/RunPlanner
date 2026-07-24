@@ -171,12 +171,10 @@ async function authorGoldenF(user: PlannerUser, application: PlannerApplication)
   for (const [batchOffset, batch] of goldenBatches.entries()) {
     const batchIndex = batchOffset + 1;
     await addNextDecision(user);
-    if (batch.storeKey !== undefined) {
-      await user.selectOptions(
-        within(decision(batchIndex)).getByRole('combobox', { name: /^Reward pool/ }),
-        batch.storeKey,
-      );
-    }
+    await user.selectOptions(
+      within(decision(batchIndex)).getByRole('combobox', { name: /^Reward pool/ }),
+      batch.storeKey ?? 'RunProgress',
+    );
     for (const [targetOffset, target] of batch.targets.entries()) {
       const exitIndex = targetOffset + 1;
       await selectRoom(
@@ -476,6 +474,7 @@ describe('golden Underworld product loop', () => {
     expect(within(oceanusEditor).getByText('Blocked', { selector: '.status-badge' })).toBeTruthy();
     await selectRoom(user, application, screen.getByLabelText('Entrance'), 'G_Intro');
     await addNextDecision(user);
+    await user.selectOptions(screen.getByLabelText('Reward pool'), 'RunProgress');
     await user.click(within(exitRow(1, 1)).getByLabelText('Room'));
     const roomOption = screen
       .getAllByRole('option')

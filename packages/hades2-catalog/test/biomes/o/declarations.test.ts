@@ -78,7 +78,6 @@ describe('complete O catalog', () => {
         rewardStorePolicy: {
           kind: 'authoredBaseStore',
           storeKeys: ['RunProgress', 'MetaProgress'],
-          defaultStoreKey: 'RunProgress',
           targetMetaRewardsRatio: 0.3,
           targetMetaRewardsAdjustSpeed: 10,
         },

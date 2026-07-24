@@ -1,5 +1,6 @@
 import type {
   AuthoredFieldDescriptor,
+  AuthoredFieldInitialization,
   LocalChildDescriptor,
 } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding } from '@run-planner/engine/reward-kernel';
@@ -13,6 +14,27 @@ import {
   requirePositiveInteger,
 } from './common';
 import { fail } from './errors';
+
+function normalizeInitialization<T>(
+  value: unknown,
+  path: string,
+  normalizeValue: (value: unknown, path: string) => T,
+): AuthoredFieldInitialization<T> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    fail(path, 'must be an authored-field initialization');
+  }
+  const initialization = value as { readonly kind?: unknown; readonly value?: unknown };
+  if (initialization.kind === 'required') {
+    return Object.freeze({ kind: 'required' });
+  }
+  if (initialization.kind === 'defaulted') {
+    return Object.freeze({
+      kind: 'defaulted',
+      value: normalizeValue(initialization.value, `${path}.value`),
+    });
+  }
+  fail(`${path}.kind`, `unknown initialization ${String(initialization.kind)}`);
+}
 
 export function normalizeAuthoredFields(
   rawFields: readonly AuthoredFieldDescriptor[],
@@ -28,10 +50,17 @@ export function normalizeAuthoredFields(
       const key = keys[index] as string;
       const receivedKind: unknown = (field as { readonly kind?: unknown }).kind;
       if (field.kind === 'boolean') {
-        if (typeof field.defaultValue !== 'boolean') {
-          fail(`${fieldPath}.defaultValue`, 'must be boolean');
-        }
-        return Object.freeze({ key, kind: 'boolean', defaultValue: field.defaultValue });
+        const initialization = normalizeInitialization(
+          field.initialization,
+          `${fieldPath}.initialization`,
+          (value, path) => {
+            if (typeof value !== 'boolean') {
+              fail(path, 'must be boolean');
+            }
+            return value;
+          },
+        );
+        return Object.freeze({ key, kind: 'boolean', initialization });
       }
       if (field.kind === 'boundedInteger') {
         const min = requireNonNegativeInteger(field.min, `${fieldPath}.min`);
@@ -39,25 +68,33 @@ export function normalizeAuthoredFields(
         if (max < min) {
           fail(`${fieldPath}.max`, 'must be greater than or equal to min');
         }
-        const defaultValue = requireNonNegativeInteger(
-          field.defaultValue,
-          `${fieldPath}.defaultValue`,
+        const initialization = normalizeInitialization(
+          field.initialization,
+          `${fieldPath}.initialization`,
+          (value, path) => requireNonNegativeInteger(value as number, path),
         );
-        if (defaultValue < min || defaultValue > max) {
-          fail(`${fieldPath}.defaultValue`, 'must be inside the declared bounds');
+        if (
+          initialization.kind === 'defaulted' &&
+          (initialization.value < min || initialization.value > max)
+        ) {
+          fail(`${fieldPath}.initialization.value`, 'must be inside the declared bounds');
         }
-        return Object.freeze({ key, kind: 'boundedInteger', min, max, defaultValue });
+        return Object.freeze({ key, kind: 'boundedInteger', min, max, initialization });
       }
       if (field.kind === 'enum') {
         const values = freezeUniqueStrings(field.values, `${fieldPath}.values`);
         if (values.length === 0) {
           fail(`${fieldPath}.values`, 'must not be empty');
         }
-        const defaultValue = requireNonEmpty(field.defaultValue, `${fieldPath}.defaultValue`);
-        if (!values.includes(defaultValue)) {
-          fail(`${fieldPath}.defaultValue`, 'must belong to values');
+        const initialization = normalizeInitialization(
+          field.initialization,
+          `${fieldPath}.initialization`,
+          (value, path) => requireNonEmpty(value as string, path),
+        );
+        if (initialization.kind === 'defaulted' && !values.includes(initialization.value)) {
+          fail(`${fieldPath}.initialization.value`, 'must belong to values');
         }
-        return Object.freeze({ key, kind: 'enum', values, defaultValue });
+        return Object.freeze({ key, kind: 'enum', values, initialization });
       }
       fail(`${fieldPath}.kind`, `unknown authored field kind ${String(receivedKind)}`);
     }),

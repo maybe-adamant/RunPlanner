@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createBiomeFieldAddress,
   createContinuationAddress,
   createOccurrenceId,
   createOccurrenceAddress,
@@ -94,6 +95,11 @@ function iProject(stage: 'empty' | 'rewards' | 'story' | 'preboss'): ProjectDocu
     occurrenceId: createOccurrenceId('editor-i-intro'),
     gameName: 'I_Intro',
   });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBiomeField',
+    field: createBiomeFieldAddress(biome, 'maxNonGoalRewards'),
+    value: 3,
+  });
   const combat01 = createOccurrenceId('editor-i-combat01');
   const combat02 = createOccurrenceId('editor-i-combat02');
   const combat03 = createOccurrenceId('editor-i-combat03');
@@ -182,7 +188,8 @@ describe('I editor projection', () => {
     await user.click(screen.getByRole('button', { name: 'Entrance' }));
     await user.click(screen.getByRole('option', { name: /^Entrance/ }));
     expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
-    expect((screen.getByLabelText('Rolled non-goal limit') as HTMLSelectElement).value).toBe('3');
+    expect((screen.getByLabelText('Rolled non-goal limit') as HTMLSelectElement).value).toBe('');
+    await user.selectOptions(screen.getByLabelText('Rolled non-goal limit'), '3');
     expect(iPlan(store.getState().projectWorkspace.history.present).state).toEqual({
       maxNonGoalRewards: 3,
     });

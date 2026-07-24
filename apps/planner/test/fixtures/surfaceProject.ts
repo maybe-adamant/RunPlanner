@@ -228,11 +228,19 @@ function appendORoom(
   parentOccurrenceId: OccurrenceId,
   occurrenceId: OccurrenceId,
   gameName: string,
+  storeKey?: 'RunProgress' | 'MetaProgress',
 ): ProjectDocument {
   let next = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     continuation: createContinuationAddress(oBiome, parentOccurrenceId),
   });
+  if (storeKey !== undefined) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(oBiome, parentOccurrenceId),
+      storeKey,
+    });
+  }
   next = applyProjectCommand(next, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(oBiome, parentOccurrenceId, 1),
@@ -307,15 +315,15 @@ export function createRepresentativeNOProject(): ProjectDocument {
     occurrenceId: oOccurrenceIds.intro,
     gameName: 'O_Intro',
   });
-  for (const [parentOccurrenceId, occurrenceId, gameName] of [
-    [oOccurrenceIds.intro, oOccurrenceIds.combat04, 'O_Combat04'],
-    [oOccurrenceIds.combat04, oOccurrenceIds.combat07, 'O_Combat07'],
-    [oOccurrenceIds.combat07, oOccurrenceIds.combat01, 'O_Combat01'],
-    [oOccurrenceIds.combat01, oOccurrenceIds.devotion, 'O_Devotion01'],
-    [oOccurrenceIds.devotion, oOccurrenceIds.story, 'O_Story01'],
-    [oOccurrenceIds.story, oOccurrenceIds.combat02, 'O_Combat02'],
+  for (const [parentOccurrenceId, occurrenceId, gameName, storeKey] of [
+    [oOccurrenceIds.intro, oOccurrenceIds.combat04, 'O_Combat04', 'RunProgress'],
+    [oOccurrenceIds.combat04, oOccurrenceIds.combat07, 'O_Combat07', undefined],
+    [oOccurrenceIds.combat07, oOccurrenceIds.combat01, 'O_Combat01', undefined],
+    [oOccurrenceIds.combat01, oOccurrenceIds.devotion, 'O_Devotion01', undefined],
+    [oOccurrenceIds.devotion, oOccurrenceIds.story, 'O_Story01', 'MetaProgress'],
+    [oOccurrenceIds.story, oOccurrenceIds.combat02, 'O_Combat02', 'MetaProgress'],
   ] as const) {
-    project = appendORoom(project, parentOccurrenceId, occurrenceId, gameName);
+    project = appendORoom(project, parentOccurrenceId, occurrenceId, gameName, storeKey);
   }
   for (const [occurrenceId, rewardType] of [
     [oOccurrenceIds.combat04, 'MaxHealthDrop'],

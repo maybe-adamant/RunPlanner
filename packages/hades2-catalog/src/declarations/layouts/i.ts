@@ -41,7 +41,7 @@ export const iBiomeLayout = {
       kind: 'boundedInteger',
       min: 3,
       max: 6,
-      defaultValue: 3,
+      initialization: { kind: 'required' },
     },
   ],
   bounds: { maxBatches: 13, maxTargets: 23 },

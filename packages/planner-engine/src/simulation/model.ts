@@ -5,6 +5,9 @@ export type FindingSeverity = 'error' | 'warning';
 export type SimulationPhase = 'completeness' | 'rewardGeneration' | 'roomGeneration';
 
 export type CompletenessFindingCode =
+  | 'batchRewardStoreMissing'
+  | 'batchStateMissing'
+  | 'biomeFieldMissing'
   | 'biomeTopologyMissing'
   | 'continuationMissing'
   | 'hubOpenSetIncomplete'

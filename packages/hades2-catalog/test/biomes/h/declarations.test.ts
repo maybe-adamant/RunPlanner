@@ -5,7 +5,7 @@ import type {
 } from '@run-planner/engine/reward-kernel';
 import type { LinearBiomeLayout } from '@run-planner/engine/catalog-schema';
 import {
-  createDefaultBatchState,
+  createInitialBatchState,
   createDefaultRoomState,
   decodeBatchState,
   decodeRoomState,
@@ -65,7 +65,7 @@ describe('complete H catalog', () => {
               key: 'cageOutcome',
               kind: 'enum',
               values: ['min', 'max'],
-              defaultValue: 'min',
+              initialization: { kind: 'required' },
             },
           ],
         },
@@ -90,9 +90,8 @@ describe('complete H catalog', () => {
       fields: [],
       bounds: { maxBatches: 4, maxTargets: 7 },
     });
-    expect(createDefaultBatchState(layout.continuation.batchPolicy)).toEqual({
-      cageOutcome: 'min',
-    });
+    expect(createInitialBatchState(layout.continuation.batchPolicy)).toBeNull();
+    expect(decodeBatchState(null, layout.continuation.batchPolicy, '$.batchState')).toBeNull();
     expect(
       decodeBatchState({ cageOutcome: 'max' }, layout.continuation.batchPolicy, '$.batchState'),
     ).toEqual({ cageOutcome: 'max' });

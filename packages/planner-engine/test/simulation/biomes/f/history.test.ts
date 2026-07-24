@@ -76,6 +76,11 @@ function historyProject(): ProjectDocument {
     continuation: createContinuationAddress(biome, firstCombatId),
   });
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, firstCombatId),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(biome, firstCombatId, 1),
     occurrenceId: secondCombatId,

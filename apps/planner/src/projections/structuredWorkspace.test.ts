@@ -96,6 +96,11 @@ function createRetainedLinearProject() {
       continuation: createContinuationAddress(f, parent),
     });
     project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(f, parent),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
       kind: 'CreateTarget',
       target: createTargetAddress(f, parent, 1),
       occurrenceId,
@@ -368,6 +373,11 @@ describe('structured workspace projection', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
       continuation: createContinuationAddress(f, start),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(f, start),
+      storeKey: 'MetaProgress',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateTarget',
@@ -734,6 +744,11 @@ describe('structured workspace projection', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
       continuation: createContinuationAddress(f, start),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(f, start),
+      storeKey: 'MetaProgress',
     });
     const evaluation = simulateProject(catalog, project);
     const workspace = projection.project(project, evaluation);

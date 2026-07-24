@@ -197,6 +197,11 @@ describe('candidate application projection', () => {
       continuation: createContinuationAddress(biome, startId),
     });
     document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, startId),
+      storeKey: 'MetaProgress',
+    });
+    document = applyProjectCommand(document, catalog, {
       kind: 'CreateTarget',
       target: createTargetAddress(biome, startId, 1),
       occurrenceId: createOccurrenceId('candidate-projection-target'),
@@ -385,6 +390,11 @@ describe('candidate application projection', () => {
     document = applyProjectCommand(document, catalog, {
       kind: 'CreateBatch',
       continuation: createContinuationAddress(biome, startId),
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, startId),
+      storeKey: 'RunProgress',
     });
     document = applyProjectCommand(document, catalog, {
       kind: 'CreateTarget',

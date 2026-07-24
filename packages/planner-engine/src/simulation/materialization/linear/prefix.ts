@@ -26,6 +26,7 @@ import type {
 } from '../model';
 import {
   canonicalBatchState,
+  canonicalBiomeState,
   canonicalRewardStore,
   finalSharedRewardStoreKey,
   materializeTarget,
@@ -96,7 +97,7 @@ function prefixResult(
     entryRooms: Object.freeze([...entryRooms]),
     batches: Object.freeze([...batches]),
     ...(frontierGeneration === undefined ? {} : { frontierGeneration }),
-    biomeState: Object.freeze({ ...plan.state }),
+    biomeState: canonicalBiomeState(plan.biomeKey, plan.state),
   });
 }
 
@@ -117,6 +118,9 @@ export function materializeLinearBiomePrefix(
   plan: LinearBiomePlan,
 ): MaterializedLinearBiomePrefix | null {
   const layout = requireLinearMaterializationLayout(catalog, biome);
+  if (Object.values(plan.state).some((value) => value === null)) {
+    return null;
+  }
   const projectedClockwork =
     layout.continuation.batchPolicy.kind === 'clockwork'
       ? projectClockworkTopology(catalog, biome, plan)
@@ -169,6 +173,19 @@ export function materializeLinearBiomePrefix(
       fail(`trusted prefix source lost room ${source.gameName}`);
     }
     const hasAllTargets = hasEveryTarget(sourceDeclaration, continuation);
+    if (
+      continuation.rewardStore?.kind === 'authoredBaseStore' &&
+      continuation.rewardStore.baseRewardStoreKey === null
+    ) {
+      return prefixResult(biome, plan, entryRooms, batches);
+    }
+    if (
+      continuation.kind === 'batch' &&
+      layout.continuation.batchPolicy.kind === 'fields' &&
+      continuation.batchState === null
+    ) {
+      return prefixResult(biome, plan, entryRooms, batches);
+    }
 
     const clockworkProjection = projectedClockwork?.batches[batchIndex];
     const batchState =
