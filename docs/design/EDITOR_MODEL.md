@@ -295,9 +295,7 @@ defaults. Preboss shops remain topology-owned terminal roles, independent of
 ordinary midshops.
 
 The declaration-bounded compatibility rule belongs to
-`AUTHORED_PROJECT_MODEL.md`; the complete state-family matrix and delivery
-record are in
-[`ROOM_REPLACEMENT_RETENTION_AUDIT.md`](../audits/ROOM_REPLACEMENT_RETENTION_AUDIT.md).
+`AUTHORED_PROJECT_MODEL.md`.
 
 Reward composition remains bottom-up:
 
