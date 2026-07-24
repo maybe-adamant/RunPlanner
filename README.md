@@ -129,7 +129,9 @@ copied elsewhere.
 - Evidence and disposition:
   [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
   [Ephyra side-room findings](docs/audits/N_SIDE_ROOM_FINDINGS.md),
-  [cross-biome UX audit](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md), and
+  [cross-biome UX audit](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md),
+  [room-replacement retention audit](docs/audits/ROOM_REPLACEMENT_RETENTION_AUDIT.md),
+  and
   [migration provenance](docs/progress/MIGRATION_PROVENANCE.md).
 - Delivery:
   [implementation plan](docs/progress/IMPLEMENTATION_PLAN.md) for forward

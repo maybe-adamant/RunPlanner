@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createContinuationAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
   createProjectDocument,
@@ -26,6 +27,7 @@ import {
   selectProjectEvaluation,
   useAppSelector,
 } from '../../../state/store';
+import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import {
   createStructuredWorkspaceTestServices,
   requireLinearWorkspaceBiome,
@@ -276,6 +278,38 @@ describe('H editor projection', () => {
       true,
     );
   }, 10_000);
+
+  it('keeps the visible Fields cage selection after a semantic room replacement', async () => {
+    const { store, user } = renderH(hProject(true));
+    const cageGroup = screen.getAllByLabelText('Fields cage rewards')[0]!;
+    const firstCage = within(cageGroup).getByRole('region', { name: 'Cage 1' });
+
+    await user.click(within(firstCage).getByLabelText('Reward'));
+    await screen.findByText('Reward type');
+    await user.click(within(await screen.findByRole('listbox')).getByText('Max Health'));
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(biome, createOccurrenceId('editor-h-combat02')),
+        gameName: 'H_Combat09',
+      }),
+    );
+
+    const combat = hPlan(
+      store.getState().projectWorkspace.history.present,
+    ).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === createOccurrenceId('editor-h-combat02'),
+    );
+    expect(combat).toMatchObject({
+      gameName: 'H_Combat09',
+      state: { kind: 'fieldsCombat', cages: { cage1: { rewardType: 'MaxHealthDrop' } } },
+    });
+    const retainedCage = within(screen.getAllByLabelText('Fields cage rewards')[0]!).getByRole(
+      'region',
+      { name: 'Cage 1' },
+    );
+    expect(within(retainedCage).getByLabelText('Reward').textContent).toContain('Max Health');
+  });
 
   it('uses fixed-count frontier gating at the terminal frontier', () => {
     renderH(hProject(false));

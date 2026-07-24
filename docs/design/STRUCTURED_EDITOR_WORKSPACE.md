@@ -262,6 +262,12 @@ The application owns picker grouping, ordering, and player-facing explanation
 policy. React owns accessible interaction, search, disclosure, and incomplete
 popover progress.
 
+After `ReplaceOccurrenceRoom`, the workspace projects the one reconciled
+authored snapshot. It does not retain or reset leaves by rendered position:
+compatible values remain at their stable semantic owners, newly introduced
+leaves show declaration defaults, and retained context-invalid values receive
+ordinary finding presentation.
+
 ## Destructive Actions and Repair
 
 Replace browser-native confirmation with accessible application dialogs.

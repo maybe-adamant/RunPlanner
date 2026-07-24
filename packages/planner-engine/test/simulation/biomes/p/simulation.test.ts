@@ -121,9 +121,8 @@ describe('P core loop', () => {
         },
       ])[0],
     ).toMatchObject({
-      context: 'unavailable',
-      reason: 'coverageNotReached',
-      evidence: { kind: 'coverageNotReached', requiredCheckpoint: 'afterTargetGeneration' },
+      context: 'evaluated',
+      evidence: { supportStoreKeys: ['RunProgress'] },
     });
   });
 });

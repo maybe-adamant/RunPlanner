@@ -176,8 +176,10 @@ Room kind is transient grouping and search vocabulary, not a required first
 selection. An authored target is one stable Room Occurrence whose current
 selection is a concrete `gameName`. Choosing a concrete replacement dispatches
 one atomic `ReplaceOccurrenceRoom` command and preserves its `occurrenceId`.
-Contextual support, grouping, zero/one-candidate behavior, and selected-invalid
-retention are defined in `CONTEXTUAL_EDITOR_UX.md`.
+The command retains declaration-bounded compatible room-local leaves; React
+does not decide which values survive or dispatch follow-up resets. Contextual
+support, grouping, zero/one-candidate behavior, and selected-invalid retention
+are defined in `CONTEXTUAL_EDITOR_UX.md`.
 
 Creating a previously absent target allocates an occurrence ID and installs
 the declaration's complete offer-time defaults in the same semantic command.
@@ -277,6 +279,25 @@ Room editors are selected by room template and receive:
 - immutable topology context only where the template genuinely requires it.
 
 They do not receive mutable biome topology.
+
+After a room replacement, both the compact summary and focused inspector render
+the same reconciled authored snapshot: compatible incoming and local values
+remain selected, new or structurally incompatible leaves show replacement
+defaults, and leaves no longer admitted by the declaration disappear. A
+retained value that is context-invalid displays ordinary finding and candidate
+guidance at its stable leaf address. The room selection remains one undoable
+command; the editor performs no secondary repair or confirmation step.
+
+Compatibility is limited to catalog-backed production leaf contracts. The
+current replacement surface covers counted rewards plus H cage and O wheel
+members; fixed, shop, terminal-free, and Ephyra values receive replacement
+defaults. Preboss shops remain topology-owned terminal roles, independent of
+ordinary midshops.
+
+The declaration-bounded compatibility rule belongs to
+`AUTHORED_PROJECT_MODEL.md`; the complete state-family matrix and delivery
+record are in
+[`ROOM_REPLACEMENT_RETENTION_AUDIT.md`](../audits/ROOM_REPLACEMENT_RETENTION_AUDIT.md).
 
 Reward composition remains bottom-up:
 

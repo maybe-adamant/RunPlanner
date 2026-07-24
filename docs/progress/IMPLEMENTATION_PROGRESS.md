@@ -22,8 +22,16 @@ Linear structure or arbitrary room replacement. Commit 13 then owns frontier,
 repair, dialog, accessibility, responsive-layout, and final presentation
 closure.
 
-The latest complete gate passed with 73 test files and 572 tests, followed by
-all package typechecks, lint, formatting, production build, and diff checks.
+The room-replacement retention audit is closed. Amendment 1 recorded the
+catalog-backed leaf-contract boundary; Amendment 2 removed speculative fixed,
+shop, and terminal-free mappings and added real-catalog F Miniboss coverage;
+and Amendment 3 closed selected-simulation, candidate-horizon, stable-finding,
+workspace, and React behavior. The selected-simulation fixture proves an
+already context-invalid counted reward remains authored after replacement; it
+does not claim the replacement itself created the invalidity. The obsolete
+shop-replacement UI fixture is gone. The latest complete gate passed with 73
+test files and 582 tests, followed by all package typechecks, lint, formatting,
+production build, and diff checks.
 
 ## Detailed Delivery Record
 

@@ -165,6 +165,11 @@ editor retains it, presents the exact reason, and permits an explicit
 replacement. Only an owning structural deletion may remove it without a
 replacement.
 
+Room replacement retains declaration-bounded compatible room-local leaves
+before this contextual policy evaluates their new simulation context. The
+picker does not decide leaf compatibility or reset retained values; that is the
+authored-model command contract.
+
 ### Ordinary and Diagnostic Presentation
 
 The ordinary picker emphasizes supported authoring:

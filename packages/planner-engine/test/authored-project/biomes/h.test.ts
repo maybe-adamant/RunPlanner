@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   createContinuationAddress,
   createLocalRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
   createProjectDocument,
@@ -263,6 +264,48 @@ describe('H authored topology', () => {
         value: { rewardType: 'MaxManaDrop' },
       }),
     ).toThrowError(ProjectCommandContractError);
+  });
+
+  it('retains compatible active and dormant cage rewards across Fields room replacement', () => {
+    const combat = createOccurrenceId('h-replacement-combat');
+    let project = startH(createHProject());
+    project = appendBatch(
+      project,
+      createOccurrenceId('h-start'),
+      [{ gameName: 'H_Combat09', occurrenceId: combat }],
+      1,
+      'min',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(hBiome, combat, 'cages', 'cage2'),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(hBiome, combat, 'cages', 'cage3'),
+      value: { rewardType: 'MaxManaDrop' },
+    });
+    const before = hPlan(project).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === combat,
+    );
+    if (before?.state.kind !== 'fieldsCombat') {
+      throw new Error('Fields replacement fixture has no cage state');
+    }
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(hBiome, combat),
+      gameName: 'H_Combat08',
+    });
+
+    expect(
+      hPlan(project).topology?.occurrences.find((occurrence) => occurrence.occurrenceId === combat)
+        ?.state,
+    ).toEqual(before.state);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
   });
 
   it('closes the exact four-batch and seven-target H authored topology', () => {
