@@ -126,15 +126,20 @@ The projection owns visual grouping, ordering, compact summaries, coverage
 markers, terminal-outline facts, and semantic focus destinations. React renders
 that projection and dispatches semantic commands.
 
-Start-room interactions also project a post-creation focus disposition for
-each declared start choice. A plain start advances to the newly available
-frontier through the ordinary default-focus fallback. When the selected room
-owns editable room state, or creating the start reveals an attached layout
-field that was unavailable before creation, the interaction retains focus on
-the created semantic owner so the inspector presents that surface before the
-user continues. This is derived from the selected declaration's default room
-state and projected inspector ownership, not a biome-key branch, and remains
-transient editor-session behavior.
+Linear creation establishes explicit transient semantic focus through the
+existing semantic-owner action. Every authored start selects its created Room
+Occurrence, and creating a batch or terminal from the visible frontier first
+selects that frontier's continuation workbench. Later edits retain that
+resolvable owner even when they reveal a new continuation frontier.
+
+The newly revealed frontier remains visible in the rail without stealing
+inspector focus. The workspace may attach that exact frontier marker only to
+its direct predecessor entry or decision; that selected workbench exposes
+`Move to Next Decision`. The nearby action and rail frontier dispatch the
+same semantic focus address. It is navigation only: it creates no authored
+edit, history entry, evaluation, or candidate work. There is no separate
+terminal-navigation action; the frontier retains its declaration-owned
+terminal controls.
 
 Incomplete-biome structure is an authored-topology projection enriched by
 progressive evaluation. It must not be described as canonical topology.

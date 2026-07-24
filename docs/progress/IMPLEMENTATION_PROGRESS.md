@@ -14,13 +14,20 @@ Tartarus reconciliation, sequential blank-slot candidate evaluation, and the
 schema-8 authored-prerequisite correction are complete. All eight biomes
 participate in the production product loop.
 
+The [Linear focus progression reconciliation](LINEAR_FOCUS_PROGRESSION_RECONCILIATION.md)
+is complete. It retains the existing transient semantic focus action: creation
+keeps its authored workbench selected, completion reveals but does not select
+the next frontier, and one nearby navigation-only action selects that frontier.
+It closes F/G generated-decision parity without changing domain state or
+simulation.
+
 The next planned slice is
-[Phase 7 Commit 12](IMPLEMENTATION_PLAN.md#commit-12-hub-board-visit-timeline-and-focused-inspector):
-project N through its fixed Hub board, ordered visit timeline, parent-local
-side-room state, and the shared focused-inspector language without imposing
-Linear structure or arbitrary room replacement. Commit 13 then owns frontier,
-repair, dialog, accessibility, responsive-layout, and final presentation
-closure.
+[Phase 7 Commit 12](IMPLEMENTATION_PLAN.md#commit-12-hub-board-visit-timeline-and-focused-inspector),
+which projects N through its fixed Hub board, ordered visit timeline,
+parent-local side-room state, and the shared focused-inspector language without
+imposing Linear structure or arbitrary room replacement. Commit 13 owns
+frontier, repair, dialog, accessibility, responsive-layout, and final
+presentation closure.
 
 Room-replacement retention is closed. The delivered policy uses the
 catalog-backed leaf-contract boundary, excludes speculative fixed, shop, and
@@ -1992,3 +1999,15 @@ closed; fixed Q state, sparse N topology, source-derived O stores, and
 room-local defaults retain their prior contracts. The complete suite passes
 with 73 files and 572 tests, followed by all three package typechecks, lint,
 formatting, production build, and diff checks.
+
+Linear focus progression reconciliation is complete. Every authored Linear
+start now retains its created occurrence, while batch and terminal creation
+retain their existing continuation workbench. A completed direct predecessor
+projects its current continuation frontier onto that workbench as one
+navigation-only `Move to Next Decision` action; it shares the structure
+frontier's semantic address and makes no authored, history, evaluation,
+autosave, or candidate change. Existing declaration-owned terminal actions
+remain on the frontier, with no terminal-navigation variant. Focused workspace
+and product-loop coverage exercise the nearby action and direct frontier path.
+The complete repository gate passes with 73 files and 588 tests, followed by
+typecheck, lint, formatting, production build, and diff checks.

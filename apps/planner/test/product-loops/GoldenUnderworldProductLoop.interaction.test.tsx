@@ -75,19 +75,25 @@ function exitRow(batchIndex: number, exitIndex: number): HTMLElement {
   return element;
 }
 
-async function addNextDecision(user: PlannerUser): Promise<void> {
+async function moveToCurrentFrontier(user: PlannerUser): Promise<void> {
+  const nearbyAction = screen.queryByRole('button', { name: 'Move to Next Decision' });
+  if (nearbyAction !== null) {
+    await user.click(nearbyAction);
+    return;
+  }
   const frontier = document.querySelector<HTMLElement>('.linear-frontier-node');
   if (frontier !== null) {
     await user.click(frontier);
   }
+}
+
+async function addNextDecision(user: PlannerUser): Promise<void> {
+  await moveToCurrentFrontier(user);
   await user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
 }
 
 async function goToPreboss(user: PlannerUser): Promise<void> {
-  const frontier = document.querySelector<HTMLElement>('.linear-frontier-node');
-  if (frontier !== null) {
-    await user.click(frontier);
-  }
+  await moveToCurrentFrontier(user);
   await user.click(screen.getByRole('button', { name: 'Go to Preboss' }));
 }
 

@@ -296,6 +296,8 @@ export interface WorkspaceLinearEntry {
   readonly contextualOwner?: WorkspaceContextualOwner;
   readonly key: string;
   readonly marker: WorkspaceMarker;
+  /** The current frontier immediately reachable from this authored entry. */
+  readonly nextFrontier?: WorkspaceMarker;
   readonly role: string;
   readonly room?: WorkspaceRoomSummary;
   readonly roomChoices?: readonly { readonly gameName: string; readonly label: string }[];
@@ -317,6 +319,8 @@ export interface WorkspaceLinearDecision {
   readonly findingCount: number;
   readonly kind: 'batch';
   readonly marker: WorkspaceMarker;
+  /** The current frontier immediately reachable from this decision's picked target. */
+  readonly nextFrontier?: WorkspaceMarker;
   readonly parentOccurrenceId: OccurrenceId | null;
   readonly pickedMarker: WorkspaceMarker;
   readonly pickedExitIndex: number | null;
@@ -1402,6 +1406,47 @@ function linearContinuationFindingCount(continuation: {
   );
 }
 
+function attachLinearNextFrontier(
+  entries: readonly WorkspaceLinearEntry[],
+  decisions: readonly WorkspaceLinearDecision[],
+  frontier: WorkspaceMarker | null,
+): {
+  readonly decisions: readonly WorkspaceLinearDecision[];
+  readonly entries: readonly WorkspaceLinearEntry[];
+} {
+  if (frontier?.address.kind !== 'continuation' || frontier.address.parentOccurrenceId === null) {
+    return Object.freeze({ decisions, entries });
+  }
+  const parentOccurrenceId = frontier.address.parentOccurrenceId;
+  const entryIndex = entries.findIndex((entry) => entry.room?.occurrenceId === parentOccurrenceId);
+  if (entryIndex !== -1) {
+    return Object.freeze({
+      decisions,
+      entries: Object.freeze(
+        entries.map((entry, index) =>
+          index === entryIndex ? Object.freeze({ ...entry, nextFrontier: frontier }) : entry,
+        ),
+      ),
+    });
+  }
+  const decisionIndex = decisions.findIndex((decision) =>
+    decision.targets.some(
+      (target) => target.picked && target.room.occurrenceId === parentOccurrenceId,
+    ),
+  );
+  if (decisionIndex === -1) {
+    return Object.freeze({ decisions, entries });
+  }
+  return Object.freeze({
+    decisions: Object.freeze(
+      decisions.map((decision, index) =>
+        index === decisionIndex ? Object.freeze({ ...decision, nextFrontier: frontier }) : decision,
+      ),
+    ),
+    entries,
+  });
+}
+
 function projectLinearBiome(
   catalog: Catalog,
   context: ProjectionContext,
@@ -1533,6 +1578,9 @@ function projectLinearBiome(
     context.evaluation,
     authoredLinearFrontier(biome, layout, topology),
   );
+  const entries = linearEntries(catalog, context, layout, topology);
+  const frontier = frontierAddress === null ? null : marker(context, frontierAddress);
+  const withNextFrontier = attachLinearNextFrontier(entries, decisions, frontier);
   const completion = completionLandmarks(catalog, context, plan.biomeKey, layout.completion.rooms);
   const outline = terminalOutline(catalog, layout.terminal);
   const terminalTargets =
@@ -1540,14 +1588,14 @@ function projectLinearBiome(
   return Object.freeze({
     biomeKey: plan.biomeKey,
     completion,
-    decisions,
+    decisions: withNextFrontier.decisions,
     emptyOutline: Object.freeze({
       completion,
       progression: progressionOutline(layout),
       terminal: outline,
     }),
-    entries: linearEntries(catalog, context, layout, topology),
-    frontier: frontierAddress === null ? null : marker(context, frontierAddress),
+    entries: withNextFrontier.entries,
+    frontier,
     kind: 'LinearBiome',
     label: catalog.biomes.byKey[plan.biomeKey]?.label ?? plan.biomeKey,
     marker: marker(context, biome),
