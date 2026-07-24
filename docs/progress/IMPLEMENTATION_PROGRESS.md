@@ -3,9 +3,29 @@
 ## Purpose
 
 This file records factual delivery status against `IMPLEMENTATION_PLAN.md`. It
-is mutable project history, not a design authority.
+is mutable project history, not a design authority. The active frontier is
+maintained once below. Later sections are chronological delivery records and
+may describe intermediate capability states that subsequent entries supersede.
 
-## Current Frontier
+## Active Frontier
+
+Phase 7 is active. Commits 1 through 11, the candidate-system refactor,
+Tartarus reconciliation, sequential blank-slot candidate evaluation, and the
+schema-8 authored-prerequisite correction are complete. All eight biomes
+participate in the production product loop.
+
+The next planned slice is
+[Phase 7 Commit 12](IMPLEMENTATION_PLAN.md#commit-12-hub-board-visit-timeline-and-focused-inspector):
+project N through its fixed Hub board, ordered visit timeline, parent-local
+side-room state, and the shared focused-inspector language without imposing
+Linear structure or arbitrary room replacement. Commit 13 then owns frontier,
+repair, dialog, accessibility, responsive-layout, and final presentation
+closure.
+
+The latest complete gate passed with 73 test files and 572 tests, followed by
+all package typechecks, lint, formatting, production build, and diff checks.
+
+## Detailed Delivery Record
 
 Phases 0, 1, 2, 2.5, 2.6, and 2.7 are complete. Phases 0 through 2.5 were
 completed under the prior reward-store ownership model; Phase 2.6 added the
@@ -824,7 +844,7 @@ Q, H, O, I, and N are closed as biome-rule/design audits and now have dormant
 declaration coverage. No later biome is promoted to an active product
 capability.
 
-## Completed
+## Early Phase Checkpoints
 
 ### Phase 0: Repository and Tooling Foundation
 
@@ -1183,7 +1203,7 @@ generation pressure. Phase 2.7 applied the shared store and picked-entry shop
 contracts to F/G. Phase 2.8 has now imported every later-biome declaration
 slice while keeping those structures dormant behind product capabilities.
 
-## Next
+## Phase 2.8 Delivery Record
 
 ### Phase 2.8: Cross-Biome Declaration Closure
 
@@ -1376,7 +1396,7 @@ Completed:
     - the remaining simplifications, deferrals, and exclusions are reconciled
       in `MIGRATION_PROVENANCE.md` without adding placeholder production state.
 
-Pending:
+## Phase 3-7 Delivery Record
 
 Phases 0 through 6 are complete. F/G/H/I and N/O/P/Q all participate in the
 production catalog, authored model, simulator, validator, candidates, editor,
@@ -1929,13 +1949,14 @@ slices. Room-local leaf defaults and their replace-only lifecycle are
 unchanged. The complete suite passes with 73 files and 564 tests, followed by
 typecheck, lint, formatting, production build, and diff checks.
 
-Batch Authoring Defaults Phase 2 closes the progressive candidate prerequisite
-boundary. Missing authored reward pools, Fields door rolls, and the Clockwork
-biome roll now produce typed `authoredPrerequisiteMissing` evidence for
-dependent options, while the prerequisite selectors themselves remain
-assessable from the already-prepared prefix history. Reward-pool and Fields
-support share the pure evaluators used by selected simulation; they do not
-replay a full biome or fabricate a placeholder value.
+Batch Authoring Defaults Slices 2 and 3 close completeness, progressive
+evaluation, and candidate prerequisites. Missing authored reward pools, Fields
+door rolls, and the Clockwork biome roll now produce typed
+`authoredPrerequisiteMissing` evidence for dependent options, while the
+prerequisite selectors themselves remain assessable from the already-prepared
+prefix history. Reward-pool and Fields support share the pure evaluators used
+by selected simulation; they do not replay a full biome or fabricate a
+placeholder value.
 
 Fixed Q no-store decisions and O ShipCombat source-derived decisions remain
 immediately evaluable. O's valid direct-terminal path is source-derived under
@@ -1958,7 +1979,7 @@ Focused product tests prove that the first selection is one semantic command
 and one undo entry, that undo restores the unresolved prerequisite, and that
 redo restores the authored value. The authored-project, editor,
 contextual-UX, and affected biome documents now describe the schema-8
-unresolved lifecycle consistently. The batch-authoring-defaults audit is
+unresolved lifecycle consistently. The batch-authoring-defaults correction is
 closed; fixed Q state, sparse N topology, source-derived O stores, and
 room-local defaults retain their prior contracts. The complete suite passes
 with 73 files and 572 tests, followed by all three package typechecks, lint,

@@ -97,60 +97,45 @@ React Flow is not a foundation dependency. If introduced, it may render a
 projection of semantic authored topology but will never own topology or node
 identity.
 
-## Documentation Reading Order
+## Documentation
 
-The documents below are one coherent design set. A rule belongs in one
-authority and should be referenced rather than copied elsewhere.
+Read by authority and task; the full set is not a prerequisite for every
+change. Rules should live in one owning document and be referenced rather than
+copied elsewhere.
 
-1. [`docs/design/ARCHITECTURE.md`](docs/design/ARCHITECTURE.md) — product
-   boundaries, dependencies, lifecycle, and technology responsibilities.
-2. [`docs/design/CATALOG_MODEL.md`](docs/design/CATALOG_MODEL.md) — declaration
-   families, provenance, normalization, and supported game-rule scope.
-3. [`docs/design/REWARD_MODEL.md`](docs/design/REWARD_MODEL.md) — rewards,
-   stores, bags, shops, offer resolution, and acquisition semantics.
-4. [`docs/audits/REWARD_GAME_DATA_AUDIT.md`](docs/audits/REWARD_GAME_DATA_AUDIT.md)
-   — reward evidence and exact, simplified, deferred, or excluded disposition.
-5. [`docs/design/GAME_GENERATION_RULES.md`](docs/design/GAME_GENERATION_RULES.md)
-   — shared picker, door, cap, force, and generated-decision rules.
-6. [`docs/design/ROOM_LIFECYCLE_MODEL.md`](docs/design/ROOM_LIFECYCLE_MODEL.md) —
-   ordered room lifecycle, history fragments, effects, and counter timing.
-7. [`docs/biomes/F_GAME_RULES.md`](docs/biomes/F_GAME_RULES.md) — Erebus.
-8. [`docs/biomes/G_GAME_RULES.md`](docs/biomes/G_GAME_RULES.md) — Oceanus.
-9. [`docs/biomes/P_GAME_RULES.md`](docs/biomes/P_GAME_RULES.md) — Mount Olympus.
-10. [`docs/biomes/Q_GAME_RULES.md`](docs/biomes/Q_GAME_RULES.md) — Summit.
-11. [`docs/biomes/H_GAME_RULES.md`](docs/biomes/H_GAME_RULES.md) — Fields of
-    Mourning.
-12. [`docs/biomes/O_GAME_RULES.md`](docs/biomes/O_GAME_RULES.md) — Rift of
-    Thessaly.
-13. [`docs/biomes/I_GAME_RULES.md`](docs/biomes/I_GAME_RULES.md) — Tartarus.
-14. [`docs/biomes/N_GAME_RULES.md`](docs/biomes/N_GAME_RULES.md) — City of
-    Ephyra.
-15. [`docs/audits/N_SIDE_ROOM_FINDINGS.md`](docs/audits/N_SIDE_ROOM_FINDINGS.md)
-    — runtime evidence for Ephyra side-room availability.
-16. [`docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md)
-    — all-biome contextual-selection, frontier, repair, and feedback inventory.
-17. [`docs/design/AUTHORED_PROJECT_MODEL.md`](docs/design/AUTHORED_PROJECT_MODEL.md)
-    — persistence, topology ownership, identity, and semantic commands.
-18. [`docs/design/SIMULATION_AND_VALIDATION.md`](docs/design/SIMULATION_AND_VALIDATION.md)
-    — materialization, history, validation, feedback, and simulation.
-19. [`docs/design/CANDIDATE_EVALUATION_MODEL.md`](docs/design/CANDIDATE_EVALUATION_MODEL.md)
-    — project-bound candidate sessions, decision contexts, replay horizons,
-    and the candidate-system refactor.
-20. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) — editor
-    projection, navigation, persistence UX, and interaction ownership.
-21. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md)
-    — contextual room/reward selection and compact picker behavior.
-22. [`docs/design/STRUCTURED_EDITOR_WORKSPACE.md`](docs/design/STRUCTURED_EDITOR_WORKSPACE.md)
-    — route rail, layout-specific biome structure, focused inspector, coverage,
-    and repair presentation.
-23. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
-    — future execution artifact and runtime conformance loop.
-24. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md)
-    — forward delivery sequence and acceptance gates.
-25. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md)
-    — inherited evidence disposition and port verification.
-26. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
-    — completed delivery history; not design authority.
+- Product boundaries: [architecture](docs/design/ARCHITECTURE.md) and the
+  future [game integration boundary](docs/design/GAME_INTEGRATION_BOUNDARY.md).
+- Domain model:
+  [catalog](docs/design/CATALOG_MODEL.md),
+  [authored project](docs/design/AUTHORED_PROJECT_MODEL.md),
+  [rewards](docs/design/REWARD_MODEL.md),
+  [game generation](docs/design/GAME_GENERATION_RULES.md),
+  [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md), and
+  [simulation and validation](docs/design/SIMULATION_AND_VALIDATION.md).
+- Biome rules:
+  [F](docs/biomes/F_GAME_RULES.md),
+  [G](docs/biomes/G_GAME_RULES.md),
+  [H](docs/biomes/H_GAME_RULES.md),
+  [I](docs/biomes/I_GAME_RULES.md),
+  [N](docs/biomes/N_GAME_RULES.md),
+  [O](docs/biomes/O_GAME_RULES.md),
+  [P](docs/biomes/P_GAME_RULES.md), and
+  [Q](docs/biomes/Q_GAME_RULES.md).
+- Editor model:
+  [candidate evaluation](docs/design/CANDIDATE_EVALUATION_MODEL.md),
+  [editor ownership](docs/design/EDITOR_MODEL.md),
+  [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md), and the
+  [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md).
+- Evidence and disposition:
+  [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
+  [Ephyra side-room findings](docs/audits/N_SIDE_ROOM_FINDINGS.md),
+  [cross-biome UX audit](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md), and
+  [migration provenance](docs/progress/MIGRATION_PROVENANCE.md).
+- Delivery:
+  [implementation plan](docs/progress/IMPLEMENTATION_PLAN.md) for forward
+  acceptance gates and
+  [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
+  active frontier and chronological delivery record.
 
 ## Source Evidence
 
@@ -168,10 +153,9 @@ lifecycle machinery is not an API contract.
 ## Development
 
 The repository uses the Linux-native Node installation selected by `.nvmrc`.
-From WSL:
+From the repository root in WSL:
 
 ```bash
-cd /home/ayyatma/wsl-projects/modding/modpacks/RunPlanner
 source "$HOME/.nvm/nvm.sh"
 nvm use
 npm install

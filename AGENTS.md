@@ -10,8 +10,8 @@ must not shape the current UI or simulation around ImGui or ModpackLib.
 Read `README.md` and the relevant authority documents under `docs/` before
 changing architecture or domain behavior. Stable cross-cutting design lives in
 `docs/design/`, biome rules live in `docs/biomes/`, source evidence lives in
-`docs/audits/`, and delivery history lives in `docs/progress/`. The complete
-reading order is maintained in `README.md`.
+`docs/audits/`, and delivery history lives in `docs/progress/`. The
+task-oriented documentation map is maintained in `README.md`.
 
 The prior implementation at
 `../run-director-modpack/Submodules/adamantRunDirector-Run_Planner/` is evidence,
