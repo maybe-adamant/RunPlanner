@@ -3,7 +3,6 @@ import {
   createBiomeAddress,
   createCompletionRoomAddress,
   createContinuationAddress,
-  createDefaultRoomState,
   createFixedEntryRoomAddress,
   createHubOpenSetAddress,
   createHubRoomAddress,
@@ -152,13 +151,11 @@ export interface WorkspaceExplicitRewardControl extends WorkspaceRewardControlBa
 }
 
 export type WorkspaceRewardControl = WorkspaceCountedRewardControl | WorkspaceExplicitRewardControl;
-export type WorkspacePostCreateFocus = 'createdOwner' | 'frontier';
 
 export type WorkspaceContextualOwner =
   | {
       readonly kind: 'startRoom';
       readonly address: BiomeAddress | OccurrenceAddress;
-      readonly postCreateFocusByGameName: Readonly<Record<string, WorkspacePostCreateFocus>>;
       readonly roomPicker: WorkspaceRoomPickerControl;
     }
   | { readonly kind: 'linearDecision'; readonly address: ContinuationAddress }
@@ -1279,23 +1276,11 @@ function linearEntries(
       kind: 'startRoomPicker' as const,
       ...(occurrence === undefined ? {} : { selectedGameName: occurrence.gameName }),
     });
-    const postCreateFocusPolicies: Record<string, WorkspacePostCreateFocus> = {};
-    for (const gameName of layout.start.roomGameNames) {
-      const state = createDefaultRoomState(catalog, requireRoom(catalog, gameName), {
-        entryActive: true,
-        role: 'ordinary',
-      });
-      const hasEditableRoomState = state.kind !== 'none' && state.kind !== 'fixed';
-      postCreateFocusPolicies[gameName] =
-        layout.fields.length > 0 || hasEditableRoomState ? 'createdOwner' : 'frontier';
-    }
-    const postCreateFocusByGameName = Object.freeze(postCreateFocusPolicies);
     entries.push(
       Object.freeze({
         contextualOwner: Object.freeze({
           kind: 'startRoom' as const,
           address,
-          postCreateFocusByGameName,
           roomPicker,
         }),
         key: 'start',
