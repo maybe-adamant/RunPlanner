@@ -22,6 +22,7 @@ import {
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceLinearDecision,
+  WorkspaceMarker,
 } from '../../../projections/structuredWorkspace';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
@@ -47,6 +48,7 @@ interface BatchEditorProps extends Omit<LinearTopologyEditorProps, 'projectedDec
   readonly canCreateTarget: boolean;
   readonly canReplaceWithTerminal: boolean;
   readonly continuation: LinearBatchContinuation;
+  readonly nextFrontier?: WorkspaceMarker;
   readonly projectedDecision: WorkspaceLinearDecision;
 }
 
@@ -278,6 +280,7 @@ function BatchEditor({
   focusedNodeKey,
   interactions,
   evaluation,
+  nextFrontier,
   plan,
   projectedDecision,
   topology,
@@ -436,6 +439,15 @@ function BatchEditor({
       </div>
 
       <footer className="structural-actions">
+        {nextFrontier !== undefined && (
+          <button
+            className="navigation-action"
+            onClick={() => dispatch(semanticOwnerFocused(nextFrontier.address))}
+            type="button"
+          >
+            Move to Next Decision
+          </button>
+        )}
         {unavailableTargets.length > 0 && (
           <button
             disabled={!pickedAvailable}
@@ -940,6 +952,9 @@ export function LinearTopologyEditor({
                 continuation={continuation}
                 evaluation={evaluation}
                 key={continuation.parentOccurrenceId ?? 'layout-entry'}
+                {...(projectedDecision.nextFrontier === undefined
+                  ? {}
+                  : { nextFrontier: projectedDecision.nextFrontier })}
                 plan={plan}
                 projectedDecision={projectedDecision}
                 topology={topology}

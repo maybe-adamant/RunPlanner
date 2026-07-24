@@ -246,6 +246,14 @@ The shared frontier presentation and variant-owned action sets are recorded in
 it does not reinterpret independent, generated, direct, or fixed terminal
 semantics.
 
+When a selected authored entry or decision directly precedes the current
+continuation frontier, its structural actions may also expose `Move to Next
+Decision`. This navigation-only action focuses the existing frontier address;
+it does not create or replace topology, enter history, or trigger evaluation.
+The frontier itself continues to own `Add Next Decision` and any
+declaration-owned `Go to Preboss` action. There is no separate `Move to
+Terminal Decision` path.
+
 ## Downstream Editing
 
 Upstream replacement retains downstream state whenever the semantic structure

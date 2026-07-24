@@ -411,8 +411,49 @@ describe('structured workspace projection', () => {
       kind: 'linearTarget',
       address: projectedTarget.marker.address,
     });
-    expect(projected.frontier?.address.kind).toBe('continuation');
+    if (projected.frontier === null) {
+      throw new Error('progressive F has no frontier');
+    }
+    expect(projected.frontier.address.kind).toBe('continuation');
+    expect(decision.nextFrontier).toBe(projected.frontier);
+    expect(projected.entries[0]?.nextFrontier).toBeUndefined();
     expect(projected.terminal.realization).toBe('projected');
+  });
+
+  it('attaches the first continuation frontier to its authored start workbench', () => {
+    const f = createBiomeAddress('Underworld', 'F');
+    const start = createOccurrenceId('structured-start-next-frontier');
+    let project = createProjectDocument(catalog, {
+      projectId: 'structured-start-next-frontier',
+      name: 'Structured start next frontier',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: f,
+      occurrenceId: start,
+      gameName: 'F_Opening01',
+    });
+
+    const projected = linear(biome(projectWorkspace(project), 'F'));
+    if (projected.frontier === null) {
+      throw new Error('started F has no continuation frontier');
+    }
+
+    expect(projected.entries[0]?.nextFrontier).toBe(projected.frontier);
+    expect(projected.decisions).toHaveLength(0);
+  });
+
+  it('does not project a next-frontier marker after a completed or generated-terminal closure', () => {
+    const workspace = projectWorkspace(createGoldenFGHIProject(catalog));
+    for (const biomeKey of ['F', 'I']) {
+      const projected = linear(biome(workspace, biomeKey));
+      expect(projected.frontier).toBeNull();
+      expect(projected.entries.every((entry) => entry.nextFrontier === undefined)).toBe(true);
+      expect(projected.decisions.every((decision) => decision.nextFrontier === undefined)).toBe(
+        true,
+      );
+    }
   });
 
   it('projects an authored frontier for a Linear biome blocked by an earlier prefix', () => {

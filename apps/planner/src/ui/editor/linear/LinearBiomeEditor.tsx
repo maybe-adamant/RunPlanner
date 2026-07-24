@@ -384,6 +384,13 @@ export function LinearBiomeEditor({
   }
   const startRoom = startDeclaration(catalog, start.gameName);
   const startAddress = createOccurrenceAddress(biome, start.occurrenceId);
+  const startEntry = projection.entries.find(
+    (entry) => entry.room?.occurrenceId === start.occurrenceId,
+  );
+  if (startEntry === undefined) {
+    throw new Error(`${biomeLabel} start occurrence has no workspace entry`);
+  }
+  const nextFrontier = startEntry.nextFrontier;
 
   return (
     <SemanticFindingsScope findings={evaluation?.findings ?? []}>
@@ -454,6 +461,17 @@ export function LinearBiomeEditor({
                 descriptor={clockworkRollDescriptor}
                 plan={plan}
               />
+            )}
+            {nextFrontier !== undefined && (
+              <footer className="structural-actions">
+                <button
+                  className="navigation-action"
+                  onClick={() => dispatch(semanticOwnerFocused(nextFrontier.address))}
+                  type="button"
+                >
+                  Move to Next Decision
+                </button>
+              </footer>
             )}
           </article>
         )}

@@ -2135,6 +2135,42 @@ Gate:
   source, or finding state;
 - no persisted panel, row, lane, or graph identity is introduced.
 
+### Linear Focus Progression Reconciliation Gate
+
+Before Commit 12, close the transient Linear focus inconsistency recorded in
+[`LINEAR_EDITOR_FOCUS_PROGRESSION_AUDIT.md`](../audits/LINEAR_EDITOR_FOCUS_PROGRESSION_AUDIT.md).
+Execute the staged delivery in
+[`LINEAR_FOCUS_PROGRESSION_RECONCILIATION.md`](LINEAR_FOCUS_PROGRESSION_RECONCILIATION.md).
+
+Deliver:
+
+- retain `semanticOwnerFocused` as the single transient focus action;
+- focus every created authored start occurrence and preserve the originating
+  continuation workbench when creating a batch or terminal;
+- retain that explicit workbench while later edits publish a new frontier;
+- project the current continuation frontier marker only onto its direct
+  predecessor entry or decision;
+- offer one navigation-only `Move to Next Decision` action beside that
+  predecessor's structural actions, sharing the structure frontier's exact
+  semantic address;
+- retain the frontier's own `Add Next Decision` and declaration-owned terminal
+  actions without adding a `Move to Terminal Decision` path;
+- cover nearby navigation, accidental completion, focus-only identity, and the
+  product-loop path; and
+- reconcile the structured-workspace, editor, audit, and progress authorities.
+
+Gate:
+
+- every authored Linear start retains its created occurrence;
+- a completed direct predecessor remains selected while its next frontier is
+  visible but unselected;
+- the nearby action and structure frontier focus the same semantic destination;
+- nearby navigation changes no authored state, history, evaluation, candidate
+  result, profile payload, or autosave value;
+- no new selection subsystem, biome/game-name branch, or terminal-navigation
+  path is introduced; and
+- the complete repository gate passes.
+
 ### Commit 12: Hub Board, Visit Timeline, and Focused Inspector
 
 Deliver:

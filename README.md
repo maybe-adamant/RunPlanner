@@ -129,11 +129,15 @@ copied elsewhere.
 - Evidence and disposition:
   [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
   [Ephyra side-room findings](docs/audits/N_SIDE_ROOM_FINDINGS.md),
-  [cross-biome UX audit](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md), and
+  [cross-biome UX audit](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md),
+  [Linear focus progression audit](docs/audits/LINEAR_EDITOR_FOCUS_PROGRESSION_AUDIT.md),
+  and
   [migration provenance](docs/progress/MIGRATION_PROVENANCE.md).
 - Delivery:
   [implementation plan](docs/progress/IMPLEMENTATION_PLAN.md) for forward
   acceptance gates and
+  [Linear focus progression reconciliation](docs/progress/LINEAR_FOCUS_PROGRESSION_RECONCILIATION.md)
+  for the active editor-navigation task, and
   [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
   active frontier and chronological delivery record.
 

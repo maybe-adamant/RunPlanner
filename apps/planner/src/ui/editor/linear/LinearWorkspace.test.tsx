@@ -18,7 +18,10 @@ import {
 } from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createApplication } from '../../../composition/createApplication';
+import {
+  createApplication,
+  type ApplicationEvaluationEvent,
+} from '../../../composition/createApplication';
 import type { WorkspaceLinearBiome } from '../../../projections/structuredWorkspace';
 import { routePanelSelected, semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import {
@@ -69,6 +72,39 @@ function authoredLinearBiome(
     throw new Error(`${biomeKey} has no authored Linear biome`);
   }
   return biome;
+}
+
+function createFDecisionProject(projectId: string) {
+  const biome = createBiomeAddress('Underworld', 'F');
+  const startId = createOccurrenceId(`${projectId}-start`);
+  const targetId = createOccurrenceId(`${projectId}-target`);
+  let project = createProjectDocument(catalog, {
+    projectId,
+    name: projectId,
+    configuredBiomeCounts: { Underworld: 1 },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome,
+    occurrenceId: startId,
+    gameName: 'F_Opening01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    continuation: createContinuationAddress(biome, startId),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, startId),
+    storeKey: 'MetaProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, startId, 1),
+    occurrenceId: targetId,
+    gameName: 'F_Combat02',
+  });
+  return { biome, project, startId, targetId };
 }
 
 describe('Linear structured workspace', () => {
@@ -347,6 +383,7 @@ describe('Linear structured workspace', () => {
     expect(within(inspector).getByRole('heading', { name: 'Opening 01' })).toBeTruthy();
     expect(within(inspector).getByLabelText('Reward')).toBeTruthy();
     expect(within(inspector).queryByRole('button', { name: 'Add Next Decision' })).toBeNull();
+    expect(within(inspector).getByRole('button', { name: 'Move to Next Decision' })).toBeTruthy();
   });
 
   it('retains an ordinary created start at its created occurrence', async () => {
@@ -377,6 +414,79 @@ describe('Linear structured workspace', () => {
     );
     expect(within(inspector).getByRole('heading', { name: 'Entrance' })).toBeTruthy();
     expect(within(inspector).queryByRole('button', { name: 'Add Next Decision' })).toBeNull();
+    expect(within(inspector).getByRole('button', { name: 'Move to Next Decision' })).toBeTruthy();
+  });
+
+  it('keeps a completed decision selected until its nearby navigation action is activated', async () => {
+    const evaluationWork: ApplicationEvaluationEvent[] = [];
+    let autosaveSchedules = 0;
+    const application = createApplication({
+      autosaveRecovery: {
+        clear: () => {},
+        read: () => null,
+        write: () => {},
+      },
+      autosaveScheduler: {
+        schedule: () => {
+          autosaveSchedules += 1;
+          return () => {};
+        },
+      },
+      observeEvaluationWork: (event) => evaluationWork.push(event),
+    });
+    const { biome, project, startId, targetId } = createFDecisionProject('next-frontier-workbench');
+    application.store.dispatch(authoredProjectReplaced(project));
+    application.store.dispatch(routePanelSelected({ routeKey: 'Underworld', biomeKey: 'F' }));
+    const view = renderPlannerForInteraction({ application });
+    const structure = screen.getByRole('region', { name: 'Erebus structure' });
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const decision = within(structure).getByRole('button', { name: /Decision 1/ });
+
+    await view.user.click(decision);
+    expect(within(inspector).queryByRole('button', { name: 'Move to Next Decision' })).toBeNull();
+
+    await view.user.click(within(inspector).getByRole('radio', { name: 'Pick exit 1' }));
+
+    const nextFrontier = createContinuationAddress(biome, targetId);
+    expect(within(inspector).getByRole('heading', { name: 'Decision 1' })).toBeTruthy();
+    expect(within(inspector).getByRole('button', { name: 'Move to Next Decision' })).toBeTruthy();
+    expect(within(structure).getByRole('button', { name: /Continue authoring here/ })).toBeTruthy();
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createContinuationAddress(biome, startId),
+    );
+
+    await view.user.click(within(structure).getByRole('button', { name: /Opening 01/ }));
+    expect(within(inspector).getByRole('heading', { name: 'Opening 01' })).toBeTruthy();
+    expect(within(inspector).queryByRole('button', { name: 'Move to Next Decision' })).toBeNull();
+
+    await view.user.click(within(structure).getByRole('button', { name: /Decision 1/ }));
+    expect(within(inspector).getByRole('button', { name: 'Move to Next Decision' })).toBeTruthy();
+
+    const beforeNavigation = view.application.store.getState().projectWorkspace;
+    evaluationWork.length = 0;
+    autosaveSchedules = 0;
+    const nextButton = within(inspector).getByRole('button', { name: 'Move to Next Decision' });
+    nextButton.focus();
+    await view.user.keyboard('{Enter}');
+
+    const afterNearbyNavigation = view.application.store.getState().projectWorkspace;
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      nextFrontier,
+    );
+    expect(afterNearbyNavigation.history).toBe(beforeNavigation.history);
+    expect(afterNearbyNavigation.evaluation).toBe(beforeNavigation.evaluation);
+    expect(autosaveSchedules).toBe(0);
+    expect(evaluationWork).toEqual([]);
+    expect(within(inspector).getByRole('heading', { name: 'Active frontier' })).toBeTruthy();
+
+    await view.user.click(decision);
+    await view.user.click(
+      within(structure).getByRole('button', { name: /Continue authoring here/ }),
+    );
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      nextFrontier,
+    );
   });
 
   it('keeps a batch created from the default frontier focused on its continuation workbench', async () => {
