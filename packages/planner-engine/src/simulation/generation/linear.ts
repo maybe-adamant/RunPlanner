@@ -11,7 +11,12 @@ import {
   type RequirementEvaluationContext,
 } from '../../requirements/evaluator';
 import type { RequirementExpression } from '../../requirements/model';
-import { semanticAddressKey } from '../../authored-project/addresses';
+import {
+  createBiomeAddress,
+  createTargetAddress,
+  semanticAddressKey,
+  type ContinuationAddress,
+} from '../../authored-project/addresses';
 import type { RewardHistoryState } from '../../reward-kernel';
 import type {
   LinearSimulationHistory,
@@ -822,7 +827,7 @@ function prepareTargetGameNameContext(
   source: CanonicalGenerationSource,
   targetOrigin: CanonicalTarget['origin'],
   exit: CanonicalPhysicalExit,
-  view: LinearTargetGenerationView,
+  before: LinearHistoryStateView,
   enteredBiomeCount: number,
   rewardHistory: RewardHistoryState | undefined,
 ): LinearRoomTargetCandidateContext {
@@ -833,11 +838,11 @@ function prepareTargetGameNameContext(
   const context = projectLinearRoomGenerationRequirementContext(
     source,
     sourceDeclaration,
-    view.before,
+    before,
     enteredBiomeCount,
     rewardHistory,
   );
-  const counts = roomGenerationCounts(view.before, source.origin);
+  const counts = roomGenerationCounts(before, source.origin);
   const candidates = pool.map((room) =>
     evaluateCandidate(catalog, source, sourceDeclaration, exit, counts, room, context),
   );
@@ -855,7 +860,7 @@ function prepareTargetGameNameContext(
   const requiredRoomGameNames = Object.freeze(required.map((candidate) => candidate.room.gameName));
   const sharedPressure = Object.freeze({
     targetOrigin,
-    beforeSequence: view.before.sequence,
+    beforeSequence: before.sequence,
     sourceGameName: source.gameName,
     exitIndex: targetOrigin.exitIndex,
     biomeDepthCache: context.counters.biomeDepthCache,
@@ -924,10 +929,12 @@ function requireSource(
   return room;
 }
 
-function evaluateTargets(
+function evaluateTargetSlots(
   catalog: Catalog,
   pool: readonly RoomDeclaration[],
   source: CanonicalGenerationSource,
+  sourceBeforeGeneration: LinearHistoryStateView,
+  generationOrigin: ContinuationAddress,
   targets: readonly CanonicalTarget[],
   views: ReadonlyMap<string, LinearTargetGenerationView>,
   candidateContexts: Map<string, LinearRoomTargetCandidateContext>,
@@ -937,8 +944,16 @@ function evaluateTargets(
   enteredBiomeCount: number,
   rewardHistories: ReadonlyMap<string, RewardHistoryState>,
 ): void {
-  for (const target of targets) {
-    const view = views.get(semanticAddressKey(target.origin));
+  const sourceDeclaration = catalog.rooms.byKey[source.gameName];
+  if (sourceDeclaration === undefined) {
+    throw new LinearRoomGenerationContractError(`unknown source room ${source.gameName}`);
+  }
+  const biome = createBiomeAddress(generationOrigin.routeKey, generationOrigin.biomeKey);
+  const exits = [...sourceDeclaration.exits].sort((left, right) => left.index - right.index);
+  const evaluateConcreteTarget = (target: CanonicalTarget): LinearHistoryStateView => {
+    const targetKey = semanticAddressKey(target.origin);
+    const rewardHistory = rewardHistories.get(targetKey);
+    const view = views.get(targetKey);
     if (view === undefined) {
       throw new LinearRoomGenerationContractError(
         `target ${semanticAddressKey(target.origin)} has no history generation view`,
@@ -951,11 +966,11 @@ function evaluateTargets(
       source,
       target.origin,
       target.exit,
-      view,
+      view.before,
       enteredBiomeCount,
-      rewardHistories.get(semanticAddressKey(target.origin)),
+      rewardHistory,
     );
-    candidateContexts.set(semanticAddressKey(target.origin), candidateContext);
+    candidateContexts.set(targetKey, candidateContext);
     const result = candidateContext.evaluateGameName(target.room.gameName);
     pressure.push(result.pressure);
     findings.push(...result.findings);
@@ -970,7 +985,7 @@ function evaluateTargets(
         target.room,
         view.before,
         enteredBiomeCount,
-        rewardHistories.get(semanticAddressKey(target.origin)),
+        rewardHistory,
       );
       if (encounterCount !== undefined) {
         encounterCounts.push(encounterCount);
@@ -984,6 +999,42 @@ function evaluateTargets(
           );
         }
       }
+    }
+    return view.after;
+  };
+  let before = sourceBeforeGeneration;
+  for (const exit of exits) {
+    const target = targets.find((candidate) => candidate.exit.index === exit.index);
+    const targetOrigin =
+      target?.origin ?? createTargetAddress(biome, generationOrigin.parentOccurrenceId, exit.index);
+    const rewardHistory = rewardHistories.get(semanticAddressKey(targetOrigin));
+    if (target === undefined) {
+      candidateContexts.set(
+        semanticAddressKey(targetOrigin),
+        prepareTargetGameNameContext(
+          catalog,
+          pool,
+          source,
+          targetOrigin,
+          Object.freeze({
+            kind: 'available' as const,
+            index: exit.index,
+            type: exit.type,
+            compatibilityPolicyKey: exit.compatibilityPolicyKey,
+          }),
+          before,
+          enteredBiomeCount,
+          rewardHistory,
+        ),
+      );
+      return;
+    }
+    before = evaluateConcreteTarget(target);
+  }
+  const availableExitIndexes = new Set(exits.map((exit) => exit.index));
+  for (const target of targets) {
+    if (!availableExitIndexes.has(target.exit.index)) {
+      evaluateConcreteTarget(target);
     }
   }
 }
@@ -1017,16 +1068,20 @@ export function evaluateLinearRoomGeneration(
 
   for (const [batchIndex, batch] of snapshot.batches.entries()) {
     const source = requireSource(rooms, batch.parent.origin);
+    const sourceBeforeGeneration = history.rooms.find(
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
+    )?.preOutgoing;
+    if (sourceBeforeGeneration === undefined) {
+      throw new LinearRoomGenerationContractError(
+        `source ${semanticAddressKey(source.origin)} has no pre-generation view`,
+      );
+    }
     if (layout.continuation.batchPolicy.kind === 'fields') {
-      const sourceView = history.rooms.find(
-        (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
-      )?.preOutgoing;
-      if (sourceView === undefined) {
-        throw new LinearRoomGenerationContractError(
-          `Fields source ${semanticAddressKey(source.origin)} has no pre-generation view`,
-        );
-      }
-      const support = evaluateFieldsCageOutcome(layout.continuation.batchPolicy, batch, sourceView);
+      const support = evaluateFieldsCageOutcome(
+        layout.continuation.batchPolicy,
+        batch,
+        sourceBeforeGeneration,
+      );
       fieldsCageOutcomes.push(support);
       if (!support.selectedPossible) {
         findings.push(
@@ -1038,10 +1093,12 @@ export function evaluateLinearRoomGeneration(
         );
       }
     }
-    evaluateTargets(
+    evaluateTargetSlots(
       catalog,
       stagedCandidatePool(catalog, layout, batchIndex),
       source,
+      sourceBeforeGeneration,
+      batch.origin,
       batch.targets,
       views,
       candidateContexts,
@@ -1065,26 +1122,27 @@ export function evaluateLinearRoomGeneration(
       snapshot.kind === 'LinearBiome'
         ? snapshot.terminalEntry.predecessor.origin
         : snapshot.frontierGeneration!.parent.origin;
+    const source = requireSource(rooms, sourceOrigin);
+    const sourceBeforeGeneration = history.rooms.find(
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(sourceOrigin),
+    )?.preOutgoing;
+    if (sourceBeforeGeneration === undefined) {
+      throw new LinearRoomGenerationContractError(
+        `source ${semanticAddressKey(sourceOrigin)} has no pre-generation view`,
+      );
+    }
     if (
       layout.continuation.batchPolicy.kind === 'fields' &&
       snapshot.kind === 'LinearBiomePrefix' &&
       snapshot.frontierGeneration?.batchState?.kind === 'fields'
     ) {
-      const sourceView = history.rooms.find(
-        (room) => semanticAddressKey(room.origin) === semanticAddressKey(sourceOrigin),
-      )?.preOutgoing;
-      if (sourceView === undefined) {
-        throw new LinearRoomGenerationContractError(
-          `Fields source ${semanticAddressKey(sourceOrigin)} has no pre-generation view`,
-        );
-      }
       const support = evaluateFieldsCageOutcome(
         layout.continuation.batchPolicy,
         {
           origin: snapshot.frontierGeneration.origin,
           batchState: snapshot.frontierGeneration.batchState,
         },
-        sourceView,
+        sourceBeforeGeneration,
       );
       fieldsCageOutcomes.push(support);
       if (!support.selectedPossible) {
@@ -1097,10 +1155,12 @@ export function evaluateLinearRoomGeneration(
         );
       }
     }
-    evaluateTargets(
+    evaluateTargetSlots(
       catalog,
       finalPool,
-      requireSource(rooms, sourceOrigin),
+      source,
+      sourceBeforeGeneration,
+      finalGeneration.origin,
       finalGeneration.targets,
       views,
       candidateContexts,

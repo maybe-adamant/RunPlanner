@@ -12,6 +12,7 @@ import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction'
 
 interface RoomSelectorProps {
   readonly disabled?: boolean;
+  readonly disabledPlaceholder?: string;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label?: string;
@@ -26,6 +27,7 @@ const emptyModel: ContextualPickerModel<RoomDeclaration> = Object.freeze({
 
 export function RoomSelector({
   disabled = false,
+  disabledPlaceholder = 'Room limit reached',
   idPrefix,
   interactions,
   label = 'Room',
@@ -52,7 +54,7 @@ export function RoomSelector({
         }
       }}
       onSelect={(room) => onSelect(room.gameName)}
-      placeholder={disabled ? 'Topology target limit reached' : placeholder}
+      placeholder={disabled ? disabledPlaceholder : placeholder}
       {...(interaction.selected === undefined ? {} : { triggerLabel: interaction.selected.label })}
     />
   );

@@ -104,7 +104,7 @@ describe('RoomSelector', () => {
     expect(screen.getByLabelText('Room').textContent).toContain(shop.label);
   });
 
-  it('shows every room category in one searchable picker and selects a concrete room', async () => {
+  it('evaluates a blank target and selects an available concrete room', async () => {
     const user = userEvent.setup();
     const evaluationWork: ApplicationEvaluationEvent[] = [];
     const application = createApplication({
@@ -135,8 +135,7 @@ describe('RoomSelector', () => {
     );
     const target = createTargetAddress(biome, startId, 1);
     const combat = catalog.rooms.byKey.F_Combat01;
-    const shop = catalog.rooms.byKey.F_Shop01;
-    if (combat === undefined || shop === undefined) {
+    if (combat === undefined) {
       throw new Error('F selector declarations are missing');
     }
     const onSelect = vi.fn();
@@ -161,14 +160,16 @@ describe('RoomSelector', () => {
     expect(evaluationWork.some((event) => event.kind === 'queryBatch')).toBe(true);
 
     const listbox = screen.getByRole('listbox');
-    expect(within(listbox).getByText('Combat · Not evaluated')).toBeTruthy();
-    expect(within(listbox).getByText('Miniboss · Not evaluated')).toBeTruthy();
-    expect(within(listbox).getByText('Story · Not evaluated')).toBeTruthy();
-    expect(within(listbox).getByText('Fountain · Not evaluated')).toBeTruthy();
-    expect(within(listbox).getByText('Shop · Not evaluated')).toBeTruthy();
+    expect(within(listbox).getByText('Combat')).toBeTruthy();
+    expect(
+      within(listbox)
+        .getByText(combat.label)
+        .closest('[role="option"]')
+        ?.getAttribute('data-candidate-state'),
+    ).toBe('possible');
 
-    await user.click(within(listbox).getByText(shop.label));
+    await user.click(within(listbox).getByText(combat.label));
     expect(onSelect).toHaveBeenCalledOnce();
-    expect(onSelect).toHaveBeenCalledWith(shop.gameName);
+    expect(onSelect).toHaveBeenCalledWith(combat.gameName);
   });
 });

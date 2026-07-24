@@ -710,11 +710,14 @@ export function prepareCandidateContext(
             ),
           );
           for (const exit of parentRoom.exits) {
-            targetSlotsByOwner.add(
-              semanticAddressKey(
-                createTargetAddress(biomeAddress, continuation.parentOccurrenceId, exit.index),
-              ),
+            const targetKey = semanticAddressKey(
+              createTargetAddress(biomeAddress, continuation.parentOccurrenceId, exit.index),
             );
+            targetSlotsByOwner.add(targetKey);
+            const candidateContext = candidateContexts?.get(targetKey);
+            if (candidateContext !== undefined) {
+              roomTargetContextsByOwner.set(targetKey, candidateContext);
+            }
           }
         }
         for (const target of continuation.targets) {
