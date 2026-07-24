@@ -1,5 +1,4 @@
 import type { Catalog, LinearBiomeLayout } from '../../catalog-schema';
-import { replaceBiomeStateField } from '../biomeState';
 import type { LinearBiomePlan, ProjectDocument } from '../model';
 import { createDefaultRoomState } from '../roomState';
 import {
@@ -34,16 +33,6 @@ export function applyLinearRoomStateCommand(
   command: LinearRoomStateProjectCommand,
 ): ProjectDocument {
   switch (command.kind) {
-    case 'ReplaceBiomeField': {
-      const state = replaceBiomeStateField(
-        plan.state,
-        layout,
-        command.field.fieldKey,
-        command.value,
-        `commands.ReplaceBiomeField.${command.field.fieldKey}`,
-      );
-      return state === plan.state ? document : withBiome(document, located, { ...plan, state });
-    }
     case 'ReplaceOccurrenceRoom': {
       const occurrence = requireOccurrence(plan, command.occurrence.occurrenceId, command);
       if (occurrence.gameName === command.gameName) {

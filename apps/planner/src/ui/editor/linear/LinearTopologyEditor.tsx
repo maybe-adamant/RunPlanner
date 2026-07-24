@@ -869,7 +869,7 @@ export function LinearTopologyEditor({
     frontierRoom === undefined ? 0 : generatedExitIndexes(frontierRoom).length;
   const clockworkBatches =
     layout.continuation.batchPolicy.kind === 'clockwork'
-      ? projectClockworkTopology(catalog, biome, plan)
+      ? projectClockworkTopology(catalog, biome, plan).batches
       : Object.freeze([]);
   return (
     <div className="topology-editor">

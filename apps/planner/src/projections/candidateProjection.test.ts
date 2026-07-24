@@ -140,7 +140,6 @@ describe('candidate application projection', () => {
     );
 
     expect(events.filter((event) => event.kind === 'queryBatch')).toHaveLength(72);
-    expect(events.filter((event) => event.kind === 'biomeReplay')).toHaveLength(0);
   });
 
   it('caches stable option structures by immutable project and semantic owner', () => {

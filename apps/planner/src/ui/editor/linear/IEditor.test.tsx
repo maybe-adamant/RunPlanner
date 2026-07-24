@@ -153,7 +153,7 @@ function renderI(project: ProjectDocument) {
 }
 
 describe('I editor projection', () => {
-  it('renders the fixed entrance and edits the bounded Clockwork setting with history', async () => {
+  it('renders the fixed entrance and starts authoring without a biome setting', async () => {
     const { store, user } = renderI(iProject('empty'));
 
     expect(screen.getByRole('heading', { name: 'Tartarus' })).toBeTruthy();
@@ -162,19 +162,8 @@ describe('I editor projection', () => {
     expect(within(entries).queryByRole('heading', { name: 'Hades' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Go to Preboss' })).toBeNull();
 
-    const cap = screen.getByLabelText('Maximum NonGoal rewards');
-    await user.selectOptions(cap, '5');
-    expect(iPlan(store.getState().projectWorkspace.history.present).state).toMatchObject({
-      maxNonGoalRewards: 5,
-    });
-    await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(iPlan(store.getState().projectWorkspace.history.present).state).toMatchObject({
-      maxNonGoalRewards: 3,
-    });
-    await user.click(screen.getByRole('button', { name: 'Redo' }));
-    expect(iPlan(store.getState().projectWorkspace.history.present).state).toMatchObject({
-      maxNonGoalRewards: 5,
-    });
+    expect(screen.queryByLabelText('Maximum NonGoal rewards')).toBeNull();
+    expect(iPlan(store.getState().projectWorkspace.history.present).state).toEqual({});
 
     await user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
     expect(iPlan(store.getState().projectWorkspace.history.present).topology).toMatchObject({

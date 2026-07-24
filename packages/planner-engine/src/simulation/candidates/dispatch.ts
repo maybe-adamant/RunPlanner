@@ -17,7 +17,7 @@ import {
   evaluateSideRoomEntryOrderCandidate,
   evaluateSideRoomGenerationCandidate,
 } from './hub';
-import { evaluateBiomeFieldCandidate, evaluateFieldsCageOutcomeCandidate } from './layout-fields';
+import { evaluateFieldsCageOutcomeCandidate } from './layout-fields';
 import {
   evaluateBatchRewardStoreCandidate,
   evaluateRewardCandidate,
@@ -64,8 +64,6 @@ function evaluatePreparedProjectCandidates(
   return Object.freeze(
     queries.map((query): ProjectCandidateEvaluation => {
       switch (query.kind) {
-        case 'biomeField':
-          return evaluateBiomeFieldCandidate(catalog, project, context, query);
         case 'startRoom':
           return evaluateStartRoomCandidate(catalog, context, query);
         case 'roomTarget':

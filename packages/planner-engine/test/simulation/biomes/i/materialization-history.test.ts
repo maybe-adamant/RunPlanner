@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
   createProjectDocument,
@@ -15,9 +16,12 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   composeLinearHistory,
+  composeLinearHistoryPrefix,
+  evaluateLinearRoomGeneration,
   evaluateLinearCompleteness,
   LinearHistoryFoldContractError,
   materializeLinearBiome,
+  materializeLinearBiomePrefix,
   type CanonicalLinearHistory,
   type CompleteLinearCompletenessResult,
   type LinearHistoryLedgers,
@@ -197,6 +201,36 @@ function projectWithPickedStory(): ProjectDocument {
   );
 }
 
+function projectWithExhaustedLimitDomain(): ProjectDocument {
+  const combat15 = occurrence('combat08');
+  const combat18 = occurrence('exhausted-combat18');
+  let project = applyProjectCommand(completeProject(), catalog, {
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence: createOccurrenceAddress(biome, combat15),
+    gameName: 'I_Combat15',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, combat15, 2),
+    occurrenceId: combat18,
+    gameName: 'I_Combat18',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetPicked',
+    picked: createPickedAddress(biome, combat15),
+    exitIndex: 2,
+  });
+  return appendBatch(
+    project,
+    combat18,
+    [
+      { occurrenceId: occurrence('exhausted-preboss'), gameName: 'I_PreBoss02' },
+      { occurrenceId: occurrence('exhausted-combat21'), gameName: 'I_Combat21' },
+    ],
+    2,
+  );
+}
+
 function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
   const result = evaluateLinearCompleteness(catalog, biome, plan(project));
   if (result.completion !== 'complete') {
@@ -243,17 +277,34 @@ describe('canonical I Clockwork materialization and history', () => {
     expect(snapshot.entryRooms).toMatchObject([
       { kind: 'fixedEntry', role: 'intro', gameName: 'I_Intro' },
     ]);
-    expect(snapshot.batches.map((batch) => batch.batchState)).toEqual([
-      { kind: 'clockwork', goalsRemaining: 5, nonGoalRewardsAcquired: 0, maxNonGoalRewards: 3 },
-      { kind: 'clockwork', goalsRemaining: 4, nonGoalRewardsAcquired: 0, maxNonGoalRewards: 3 },
-      { kind: 'clockwork', goalsRemaining: 3, nonGoalRewardsAcquired: 0, maxNonGoalRewards: 3 },
-      { kind: 'clockwork', goalsRemaining: 3, nonGoalRewardsAcquired: 1, maxNonGoalRewards: 3 },
-      { kind: 'clockwork', goalsRemaining: 2, nonGoalRewardsAcquired: 1, maxNonGoalRewards: 3 },
-      { kind: 'clockwork', goalsRemaining: 2, nonGoalRewardsAcquired: 2, maxNonGoalRewards: 3 },
-      { kind: 'clockwork', goalsRemaining: 1, nonGoalRewardsAcquired: 2, maxNonGoalRewards: 3 },
-      { kind: 'clockwork', goalsRemaining: 1, nonGoalRewardsAcquired: 3, maxNonGoalRewards: 3 },
-      { kind: 'clockwork', goalsRemaining: 0, nonGoalRewardsAcquired: 3, maxNonGoalRewards: 3 },
+    expect(
+      snapshot.batches.map((batch) => {
+        if (batch.batchState.kind !== 'clockwork') {
+          throw new Error('fixture lost Clockwork batch state');
+        }
+        return [
+          batch.batchState.goalsRemaining,
+          batch.batchState.nonGoalRewardsAcquired,
+          batch.batchState.maxNonGoalRewards,
+          batch.batchState.compatibleNonGoalRewardLimits,
+        ];
+      }),
+    ).toEqual([
+      [5, 0, 5, [3, 4, 5, 6]],
+      [4, 0, 5, [3, 4, 5, 6]],
+      [3, 0, 5, [3, 4, 5, 6]],
+      [3, 1, 5, [3, 4, 5, 6]],
+      [2, 1, 5, [3, 4, 5, 6]],
+      [2, 2, 5, [3, 4, 5, 6]],
+      [1, 2, 5, [4, 5, 6]],
+      [1, 3, 5, [4, 5, 6]],
+      [0, 3, 5, [5, 6]],
     ]);
+    expect(snapshot.clockworkOutcome).toEqual({
+      compatibleNonGoalRewardLimits: [5, 6],
+      witnessMaxNonGoalRewards: 5,
+    });
+    expect(materializeLinearBiome(catalog, biome, complete(project))).toEqual(snapshot);
     expect(
       snapshot.batches.map((batch) =>
         batch.targets.map((target) => ({
@@ -285,15 +336,16 @@ describe('canonical I Clockwork materialization and history', () => {
       [{ picked: true, reward: 'goal', concrete: undefined }],
       [
         { picked: false, reward: 'goal', concrete: 'Shop' },
-        { picked: true, reward: 'goal', concrete: undefined },
+        { picked: true, reward: 'nonGoal', concrete: 'RoomMoneyTripleDrop' },
       ],
     ]);
     expect(snapshot.terminalEntry).toMatchObject({
       batchState: {
         kind: 'clockwork',
         goalsRemaining: 0,
-        nonGoalRewardsAcquired: 3,
-        maxNonGoalRewards: 3,
+        nonGoalRewardsAcquired: 4,
+        maxNonGoalRewards: 5,
+        compatibleNonGoalRewardLimits: [5, 6],
       },
       rewardStore: { kind: 'none' },
       pickedExitIndex: 1,
@@ -322,7 +374,7 @@ describe('canonical I Clockwork materialization and history', () => {
       'I_Boss01',
       'I_PostBoss01',
     ]);
-    expect(snapshot.biomeState).toEqual({ maxNonGoalRewards: 3 });
+    expect(snapshot.biomeState).toEqual({});
     expect(encodeProjectDocument(project)).toBe(encodedBefore);
   });
 
@@ -340,7 +392,7 @@ describe('canonical I Clockwork materialization and history', () => {
         roomHistoryOrdinal: 30,
         clockworkGoalsRemaining: 5,
         clockworkNonGoalRewardsAcquired: 0,
-        clockworkMaxNonGoalRewards: 3,
+        clockworkMaxNonGoalRewards: 5,
       },
     });
     expect(
@@ -360,9 +412,9 @@ describe('canonical I Clockwork materialization and history', () => {
       parentOrigin: { kind: 'fixedEntryRoom', role: 'intro' },
     });
     expect(events.filter((event) => event.kind === 'clockworkBatchStateRecorded')).toHaveLength(10);
-    expect(events.filter((event) => event.kind === 'clockworkGoalAcquired')).toHaveLength(7);
+    expect(events.filter((event) => event.kind === 'clockworkGoalAcquired')).toHaveLength(6);
     expect(events.filter((event) => event.kind === 'clockworkNonGoalRewardSpawned')).toHaveLength(
-      3,
+      4,
     );
 
     const pickedNonGoal = snapshot.batches[2]?.targets[1]?.room.origin;
@@ -394,8 +446,8 @@ describe('canonical I Clockwork materialization and history', () => {
       routeEncounterDepth: 29,
       roomHistoryOrdinal: 43,
       clockworkGoalsRemaining: 0,
-      clockworkNonGoalRewardsAcquired: 3,
-      clockworkMaxNonGoalRewards: 3,
+      clockworkNonGoalRewardsAcquired: 4,
+      clockworkMaxNonGoalRewards: 5,
     });
     expect(history.afterTransition.ledgers.counters).toMatchObject({
       biomeDepthCache: 0,
@@ -403,7 +455,7 @@ describe('canonical I Clockwork materialization and history', () => {
       routeEncounterDepth: 29,
       roomHistoryOrdinal: 43,
       clockworkGoalsRemaining: 0,
-      clockworkNonGoalRewardsAcquired: 3,
+      clockworkNonGoalRewardsAcquired: 4,
     });
 
     const firstBatch = snapshot.batches[0];
@@ -469,6 +521,49 @@ describe('canonical I Clockwork materialization and history', () => {
     expect(history.biomeCompletion.ledgers.counters).toMatchObject({
       clockworkGoalsRemaining: 0,
       clockworkNonGoalRewardsAcquired: 0,
+    });
+  });
+
+  it('rejects a two-exit room when no latent non-goal limit remains compatible', () => {
+    const project = projectWithExhaustedLimitDomain();
+    const snapshot = materializeLinearBiomePrefix(catalog, biome, plan(project));
+    if (snapshot === null) {
+      throw new Error('exhausted Clockwork fixture did not materialize a prefix');
+    }
+    expect(snapshot.clockworkOutcome).toEqual({
+      compatibleNonGoalRewardLimits: [],
+      witnessMaxNonGoalRewards: 6,
+    });
+
+    const history = composeLinearHistoryPrefix(catalog, snapshot, carriedHHistory());
+    const generation = evaluateLinearRoomGeneration(catalog, snapshot, history, 4);
+    const target = createTargetAddress(biome, occurrence('exhausted-combat18'), 2);
+    expect(generation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'targetRoomUnavailable',
+        origin: target,
+      }),
+    );
+    expect(
+      generation.forcePressure.find(
+        (entry) => JSON.stringify(entry.targetOrigin) === JSON.stringify(target),
+      ),
+    ).toMatchObject({
+      selectedGameName: 'I_Combat21',
+      selectedPossible: false,
+      selectedExclusions: [
+        {
+          kind: 'eligibilityRequirement',
+          evaluation: {
+            kind: 'clockworkNonGoalCapacity',
+            satisfied: false,
+            acquired: 5,
+            maximum: 6,
+            compatibleMaximums: [6],
+            reserve: 1,
+          },
+        },
+      ],
     });
   });
 

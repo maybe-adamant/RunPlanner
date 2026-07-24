@@ -62,18 +62,3 @@ export function decodeBiomeState(
     ),
   );
 }
-
-export function replaceBiomeStateField(
-  state: AuthoredBiomeState,
-  layout: LinearBiomeLayout,
-  fieldKey: string,
-  value: AuthoredFieldValue,
-  path: string,
-): AuthoredBiomeState {
-  const descriptor = layout.fields.find((candidate) => candidate.key === fieldKey);
-  if (descriptor === undefined) {
-    failProjectDocument(path, `unknown biome field ${fieldKey}`);
-  }
-  const decoded = decodeFieldValue(value, descriptor, path);
-  return state[fieldKey] === decoded ? state : Object.freeze({ ...state, [fieldKey]: decoded });
-}

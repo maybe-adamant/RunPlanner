@@ -318,12 +318,22 @@ function normalizeBatchPolicy(rawPolicy: GeneratedBatchPolicy, path: string): Ge
     fail(`${path}.fields`, `${rawPolicy.kind} policy does not own authored batch fields`);
   }
   if (rawPolicy.kind === 'clockwork') {
+    const rawLimit = rawPolicy.nonGoalRewardLimit;
+    if (typeof rawLimit !== 'object' || rawLimit === null) {
+      fail(`${path}.nonGoalRewardLimit`, 'must be an object');
+    }
+    const min = requirePositiveInteger(rawLimit.min, `${path}.nonGoalRewardLimit.min`);
+    const max = requirePositiveInteger(rawLimit.max, `${path}.nonGoalRewardLimit.max`);
+    if (min > max) {
+      fail(`${path}.nonGoalRewardLimit.min`, 'must not exceed max');
+    }
     return Object.freeze({
       kind: rawPolicy.kind,
       initialGoalCount: requirePositiveInteger(
         rawPolicy.initialGoalCount,
         `${path}.initialGoalCount`,
       ),
+      nonGoalRewardLimit: Object.freeze({ min, max }),
       fields,
     });
   }

@@ -280,7 +280,12 @@ describe('shared structural catalog vocabulary', () => {
           roomGameName: 'G_PreBoss01',
           closesBiomeWhenPicked: true,
         },
-        { kind: 'clockwork', initialGoalCount: 5, fields: [] },
+        {
+          kind: 'clockwork',
+          initialGoalCount: 5,
+          nonGoalRewardLimit: { min: 3, max: 6 },
+          fields: [],
+        },
       ),
     );
     expect(conditional.biomeLayouts.byKey.G).toMatchObject({
@@ -699,7 +704,12 @@ describe('shared structural catalog vocabulary', () => {
                 ...layout,
                 continuation: {
                   ...linearLayout('F').continuation,
-                  batchPolicy: { kind: 'clockwork', initialGoalCount: 5, fields: [] },
+                  batchPolicy: {
+                    kind: 'clockwork',
+                    initialGoalCount: 5,
+                    nonGoalRewardLimit: { min: 3, max: 6 },
+                    fields: [],
+                  },
                 },
                 terminal: {
                   kind: 'generatedTarget',
@@ -868,7 +878,12 @@ describe('shared structural catalog vocabulary', () => {
             ...declarations.biomeLayouts[0],
             continuation: {
               ...declarations.biomeLayouts[0].continuation,
-              batchPolicy: { kind: 'clockwork', initialGoalCount: 5, fields: [] },
+              batchPolicy: {
+                kind: 'clockwork',
+                initialGoalCount: 5,
+                nonGoalRewardLimit: { min: 3, max: 6 },
+                fields: [],
+              },
             },
             terminal: {
               kind: 'generatedTarget',

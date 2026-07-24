@@ -92,7 +92,12 @@ describe('complete I catalog', () => {
       entries: [],
       continuation: {
         progressionPolicy: { kind: 'eligibilityDriven' },
-        batchPolicy: { kind: 'clockwork', initialGoalCount: 5, fields: [] },
+        batchPolicy: {
+          kind: 'clockwork',
+          initialGoalCount: 5,
+          nonGoalRewardLimit: { min: 3, max: 6 },
+          fields: [],
+        },
         rewardStorePolicy: { kind: 'none' },
         rewardStoreOverrides: [],
       },
@@ -111,15 +116,7 @@ describe('complete I catalog', () => {
           { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
         ],
       },
-      fields: [
-        {
-          key: 'maxNonGoalRewards',
-          kind: 'boundedInteger',
-          min: 3,
-          max: 6,
-          defaultValue: 3,
-        },
-      ],
+      fields: [],
       bounds: { maxBatches: 13, maxTargets: 23 },
     });
     expect(createDefaultBatchState(layout.continuation.batchPolicy)).toBeNull();
@@ -170,6 +167,40 @@ describe('complete I catalog', () => {
         baselineEncounterKey: 'Story_Hades_01',
       },
     ]);
+  });
+
+  it('rejects an inverted latent non-goal limit domain at catalog contact', () => {
+    const layoutIndex = declarations.biomeLayouts.findIndex((layout) => layout.biomeKey === 'I');
+    const layout = declarations.biomeLayouts[layoutIndex];
+    if (layout?.kind !== 'LinearBiome') {
+      throw new Error('raw I layout fixture is missing');
+    }
+    expect(() =>
+      createCatalog(
+        raw({
+          ...declarations,
+          biomeLayouts: declarations.biomeLayouts.map((candidate, index) =>
+            index === layoutIndex
+              ? {
+                  ...layout,
+                  continuation: {
+                    ...layout.continuation,
+                    batchPolicy: {
+                      ...layout.continuation.batchPolicy,
+                      nonGoalRewardLimit: { min: 7, max: 6 },
+                    },
+                  },
+                }
+              : candidate,
+          ),
+        }),
+      ),
+    ).toThrowError(
+      new CatalogContractError(
+        `biomeLayouts[${layoutIndex}].continuation.batchPolicy.nonGoalRewardLimit.min`,
+        'must not exceed max',
+      ),
+    );
   });
 
   it('declares all 24 combat maps with exact exits and one default NonGoal value', () => {

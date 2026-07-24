@@ -180,15 +180,13 @@ describe('Linear structured workspace', () => {
     ).toContain(unpicked.room.label);
   });
 
-  it('keeps layout-owned biome fields reachable from the structure rail', async () => {
+  it('does not expose latent Clockwork outcomes as authored biome settings', () => {
     const seed = createApplication();
     const project = createGoldenFGHIProject(seed.catalog);
-    const { user } = renderBiome(project, 'Underworld', 'I');
+    renderBiome(project, 'Underworld', 'I');
     const structure = screen.getByRole('region', { name: 'Tartarus structure' });
 
-    await user.click(within(structure).getByRole('button', { name: /Biome settings/ }));
-
-    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
-    expect(within(inspector).getByLabelText('Maximum NonGoal rewards')).toBeTruthy();
+    expect(within(structure).queryByRole('button', { name: /Biome settings/ })).toBeNull();
+    expect(screen.queryByLabelText('Maximum NonGoal rewards')).toBeNull();
   });
 });

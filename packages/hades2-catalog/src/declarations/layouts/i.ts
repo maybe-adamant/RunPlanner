@@ -8,7 +8,12 @@ export const iBiomeLayout = {
   entries: [],
   continuation: {
     progressionPolicy: { kind: 'eligibilityDriven' },
-    batchPolicy: { kind: 'clockwork', initialGoalCount: 5, fields: [] },
+    batchPolicy: {
+      kind: 'clockwork',
+      initialGoalCount: 5,
+      nonGoalRewardLimit: { min: 3, max: 6 },
+      fields: [],
+    },
     rewardStorePolicy: { kind: 'none' },
     rewardStoreOverrides: [],
   },
@@ -27,14 +32,6 @@ export const iBiomeLayout = {
       { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
     ],
   },
-  fields: [
-    {
-      key: 'maxNonGoalRewards',
-      kind: 'boundedInteger',
-      min: 3,
-      max: 6,
-      defaultValue: 3,
-    },
-  ],
+  fields: [],
   bounds: { maxBatches: 13, maxTargets: 23 },
 } as const satisfies RawBiomeLayoutDeclaration;

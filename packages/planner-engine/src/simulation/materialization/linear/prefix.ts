@@ -31,6 +31,7 @@ import {
   materializeTarget,
   projectClockworkTopology,
   roomReference,
+  type ClockworkTopologyProjection,
 } from './continuations';
 import { fail } from './contract';
 import { requireLinearMaterializationLayout } from './dispatch';
@@ -87,6 +88,7 @@ function prefixResult(
   plan: LinearBiomePlan,
   entryRooms: readonly (CanonicalAuthoredRoom | CanonicalFixedEntryRoom)[],
   batches: readonly CanonicalBatch[],
+  clockworkProjection?: ClockworkTopologyProjection,
   frontierGeneration?: MaterializedLinearFrontierGeneration,
 ): MaterializedLinearBiomePrefix {
   return Object.freeze({
@@ -97,6 +99,14 @@ function prefixResult(
     batches: Object.freeze([...batches]),
     ...(frontierGeneration === undefined ? {} : { frontierGeneration }),
     biomeState: Object.freeze({ ...plan.state }),
+    ...(clockworkProjection === undefined
+      ? {}
+      : {
+          clockworkOutcome: Object.freeze({
+            compatibleNonGoalRewardLimits: clockworkProjection.compatibleNonGoalRewardLimits,
+            witnessMaxNonGoalRewards: clockworkProjection.witnessMaxNonGoalRewards,
+          }),
+        }),
   });
 }
 
@@ -117,20 +127,26 @@ export function materializeLinearBiomePrefix(
   plan: LinearBiomePlan,
 ): MaterializedLinearBiomePrefix | null {
   const layout = requireLinearMaterializationLayout(catalog, biome);
+  const projectedClockwork =
+    layout.continuation.batchPolicy.kind === 'clockwork'
+      ? projectClockworkTopology(catalog, biome, plan)
+      : undefined;
   const topology = plan.topology;
   if (topology === null) {
     return layout.start.kind === 'fixedEntry'
-      ? prefixResult(biome, plan, materializeFixedEntries(catalog, biome, layout), [])
+      ? prefixResult(
+          biome,
+          plan,
+          materializeFixedEntries(catalog, biome, layout),
+          [],
+          projectedClockwork,
+        )
       : null;
   }
   const occurrences = occurrenceMap(topology);
   const continuations = new Map(
     topology.continuations.map((continuation) => [continuation.parentOccurrenceId, continuation]),
   );
-  const projectedClockwork =
-    layout.continuation.batchPolicy.kind === 'clockwork'
-      ? projectClockworkTopology(catalog, biome, plan)
-      : Object.freeze([]);
   let source: CanonicalAuthoredRoom | CanonicalFixedEntryRoom;
   let entryRooms: readonly (CanonicalAuthoredRoom | CanonicalFixedEntryRoom)[];
   if (layout.start.kind === 'fixedEntry') {
@@ -162,17 +178,17 @@ export function materializeLinearBiomePrefix(
     const parentOccurrenceId = source.kind === 'fixedEntry' ? null : source.occurrenceId;
     const continuation = continuations.get(parentOccurrenceId);
     if (continuation === undefined) {
-      return prefixResult(biome, plan, entryRooms, batches);
+      return prefixResult(biome, plan, entryRooms, batches, projectedClockwork);
     }
     const sourceDeclaration = catalog.rooms.byKey[source.gameName];
     if (sourceDeclaration === undefined) {
       fail(`trusted prefix source lost room ${source.gameName}`);
     }
     if (!hasEveryTarget(sourceDeclaration, continuation)) {
-      return prefixResult(biome, plan, entryRooms, batches);
+      return prefixResult(biome, plan, entryRooms, batches, projectedClockwork);
     }
 
-    const clockworkProjection = projectedClockwork[batchIndex];
+    const clockworkProjection = projectedClockwork?.batches[batchIndex];
     const batchState =
       layout.continuation.batchPolicy.kind === 'clockwork'
         ? clockworkProjection?.batchState
@@ -243,6 +259,7 @@ export function materializeLinearBiomePrefix(
         plan,
         entryRooms,
         batches,
+        projectedClockwork,
         Object.freeze({
           kind: frontierKind,
           origin: createContinuationAddress(biome, parentOccurrenceId),

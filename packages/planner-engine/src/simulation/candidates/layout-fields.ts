@@ -1,16 +1,9 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
-import type { ProjectDocument } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
-import type {
-  BiomeFieldCandidateQuery,
-  FieldsCageOutcomeCandidateQuery,
-  ProjectCandidateEvaluation,
-} from './model';
+import type { FieldsCageOutcomeCandidateQuery, ProjectCandidateEvaluation } from './model';
 
 import {
-  applyCandidateCommand,
   coverageNotReached,
-  evaluateCandidateBiome,
   failCandidate,
   immutableQuery,
   isCandidateContextUnavailable,
@@ -19,36 +12,6 @@ import {
   unavailableCandidate,
   type PreparedCandidateContext,
 } from './context';
-
-export function evaluateBiomeFieldCandidate(
-  catalog: Catalog,
-  project: ProjectDocument,
-  context: PreparedCandidateContext,
-  query: BiomeFieldCandidateQuery,
-): ProjectCandidateEvaluation {
-  const stableQuery = immutableQuery(query) as BiomeFieldCandidateQuery;
-  locateIndexedLinearPlan(context, stableQuery);
-  const proposal = applyCandidateCommand(catalog, project, stableQuery, {
-    kind: 'ReplaceBiomeField',
-    field: stableQuery.field,
-    value: stableQuery.value,
-  });
-  const biome = evaluateCandidateBiome(catalog, proposal, context, stableQuery);
-  if (isCandidateContextUnavailable(biome)) {
-    return unavailableCandidate(stableQuery, biome);
-  }
-  const findings = Object.freeze([...biome.roomGeneration.findings, ...biome.rewards.findings]);
-  return Object.freeze({
-    context: 'evaluated',
-    query: stableQuery,
-    support: findings.length === 0 ? 'possible' : 'impossible',
-    findings,
-    evidence: Object.freeze({
-      candidateValue: stableQuery.value,
-      relevantFindingCodes: Object.freeze(findings.map((finding) => finding.code)),
-    }),
-  });
-}
 
 export function evaluateFieldsCageOutcomeCandidate(
   catalog: Catalog,
