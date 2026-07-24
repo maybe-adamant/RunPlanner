@@ -12,6 +12,7 @@ export {
 export {
   CandidateEvaluationContractError,
   createPreparedProjectCandidateSession,
+  type CandidateAuthoredPrerequisite,
   type CandidateContextUnavailableReason,
   type CandidateContextUnavailableEvidence,
   type CandidateSupport,

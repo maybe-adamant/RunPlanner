@@ -1,5 +1,6 @@
 export {
   evaluateLinearRoomGeneration,
+  fieldsCageOutcomeCandidateSupport,
   linearRoomTargetCandidateContexts,
   LinearRoomGenerationContractError,
   supportedFieldsCageOutcomes,
@@ -13,6 +14,7 @@ export {
 export type {
   EncounterCountSupportEntry,
   FieldsCageOutcome,
+  FieldsCageOutcomeCandidateSupport,
   FieldsCageOutcomeSupportEntry,
   HubOpenSlotConstraintSupportEntry,
   HubRoomGenerationValidation,

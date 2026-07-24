@@ -1,7 +1,13 @@
-import type {
-  LinearBiomePlan,
-  LinearContinuation,
-  ProjectDocument,
+import {
+  createBiomeAddress,
+  createBiomeFieldAddress,
+  createContinuationAddress,
+  createOccurrenceAddress,
+  createTargetAddress,
+  type LinearBatchContinuation,
+  type LinearBiomePlan,
+  type LinearContinuation,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
@@ -12,6 +18,7 @@ import {
   targetOccurrenceId,
 } from '../../../../apps/planner/test/fixtures/underworldProject';
 import { createRepresentativeNOPQProject } from '../../../../apps/planner/test/fixtures/surfaceProject';
+import { bindTestCandidateSession } from './candidateSession';
 
 function incompleteAtGeneratedBatch(
   project: ProjectDocument,
@@ -132,6 +139,136 @@ function mapLinearPlan(
 describe('Linear progressive biome evaluation', () => {
   const underworld = createGoldenFGHIProject(catalog);
   const surface = createRepresentativeNOPQProject();
+
+  it('evaluates the required Fields outcome and types dependent target blocking', () => {
+    const unresolved = mapLinearPlan(underworld, 'Underworld', 'H', (plan) => {
+      if (plan.topology === null) {
+        throw new Error('H has no topology');
+      }
+      const first = plan.topology.continuations[0];
+      if (first?.kind !== 'batch') {
+        throw new Error('H first continuation is not a batch');
+      }
+      return Object.freeze({
+        ...plan,
+        topology: Object.freeze({
+          ...plan.topology,
+          continuations: Object.freeze([
+            Object.freeze({ ...first, batchState: null }),
+            ...plan.topology.continuations.slice(1),
+          ]),
+        }),
+      });
+    });
+    const hPlan = unresolved.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find(
+        (plan): plan is LinearBiomePlan => plan.kind === 'LinearBiome' && plan.biomeKey === 'H',
+      );
+    const first = hPlan?.topology?.continuations[0] as LinearBatchContinuation | undefined;
+    const target = first?.targets[0];
+    if (
+      hPlan?.topology === null ||
+      hPlan === undefined ||
+      first === undefined ||
+      target === undefined
+    ) {
+      throw new Error('H unresolved fixture has no first target');
+    }
+    const biome = createBiomeAddress('Underworld', 'H');
+    const continuation = createContinuationAddress(biome, first.parentOccurrenceId);
+    const session = bindTestCandidateSession(catalog, unresolved);
+
+    expect(
+      session.evaluate([
+        { kind: 'fieldsCageOutcome', continuation, cageOutcome: 'min' },
+        { kind: 'fieldsCageOutcome', continuation, cageOutcome: 'max' },
+      ]),
+    ).toMatchObject([
+      { context: 'evaluated', support: 'possible' },
+      { context: 'evaluated', support: 'possible' },
+    ]);
+    expect(
+      session.evaluate([
+        {
+          kind: 'roomTarget',
+          target: createTargetAddress(biome, first.parentOccurrenceId, target.exitIndex),
+          gameName: hPlan.topology.occurrences.find(
+            (occurrence) => occurrence.occurrenceId === target.occurrenceId,
+          )!.gameName,
+        },
+      ])[0],
+    ).toMatchObject({
+      context: 'unavailable',
+      reason: 'authoredPrerequisiteMissing',
+      evidence: {
+        prerequisite: { kind: 'batchState', owner: continuation },
+      },
+    });
+  });
+
+  it('blocks Clockwork target context on the biome roll without blocking the Entrance', () => {
+    const unresolved = mapLinearPlan(underworld, 'Underworld', 'I', (plan) =>
+      Object.freeze({
+        ...plan,
+        state: Object.freeze({ ...plan.state, maxNonGoalRewards: null }),
+      }),
+    );
+    const iPlan = unresolved.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find(
+        (plan): plan is LinearBiomePlan => plan.kind === 'LinearBiome' && plan.biomeKey === 'I',
+      );
+    const first = iPlan?.topology?.continuations[0];
+    const target = first?.targets[0];
+    const startId = iPlan?.topology?.startOccurrenceId;
+    if (
+      iPlan?.topology === null ||
+      iPlan === undefined ||
+      first?.kind !== 'batch' ||
+      target === undefined ||
+      startId === null ||
+      startId === undefined
+    ) {
+      throw new Error('I unresolved fixture has no first decision');
+    }
+    const biome = createBiomeAddress('Underworld', 'I');
+    const targetRoom = iPlan.topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === target.occurrenceId,
+    );
+    if (targetRoom === undefined) {
+      throw new Error('I unresolved fixture lost its first target room');
+    }
+    const session = bindTestCandidateSession(catalog, unresolved);
+
+    expect(
+      session.evaluate([
+        {
+          kind: 'startRoom',
+          owner: createOccurrenceAddress(biome, startId),
+          gameName: 'I_Intro',
+        },
+      ])[0],
+    ).toMatchObject({ context: 'evaluated', support: 'forced' });
+    expect(
+      session.evaluate([
+        {
+          kind: 'roomTarget',
+          target: createTargetAddress(biome, first.parentOccurrenceId, target.exitIndex),
+          gameName: targetRoom.gameName,
+        },
+      ])[0],
+    ).toMatchObject({
+      context: 'unavailable',
+      reason: 'authoredPrerequisiteMissing',
+      evidence: {
+        prerequisite: {
+          kind: 'biomeField',
+          owner: createBiomeFieldAddress(biome, 'maxNonGoalRewards'),
+        },
+      },
+    });
+  });
 
   it.each([
     ['F', 1],

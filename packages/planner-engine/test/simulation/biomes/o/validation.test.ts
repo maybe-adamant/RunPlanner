@@ -488,6 +488,11 @@ describe('selected O validation', () => {
         occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
         encounterCount: 3,
       },
+      {
+        kind: 'roomTarget',
+        target: createTargetAddress(oBiome, oIds.combat04, 1),
+        gameName: 'O_Combat07',
+      },
       { kind: 'rewardWheelOfferCount', wheel, offerCount: 2 },
       { kind: 'rewardWheelStore', wheel, storeKey: 'MetaProgress' },
       {
@@ -508,25 +513,26 @@ describe('selected O validation', () => {
       'evaluated',
       'evaluated',
       'evaluated',
+      'evaluated',
     ]);
     expect(
       evaluations.map((evaluation) =>
         evaluation.context === 'evaluated' ? evaluation.support : 'unavailable',
       ),
-    ).toEqual(['forced', 'impossible', 'possible', 'impossible', 'possible', 'forced']);
+    ).toEqual(['forced', 'impossible', 'possible', 'possible', 'impossible', 'possible', 'forced']);
     expect(evaluations[1]).toMatchObject({
       context: 'evaluated',
       findings: [{ code: 'encounterCountUnavailable' }],
       evidence: { supportEncounterCounts: [2] },
     });
-    expect(evaluations[3]).toMatchObject({
+    expect(evaluations[4]).toMatchObject({
       context: 'evaluated',
       findings: expect.arrayContaining([
         expect.objectContaining({ code: 'rewardBagEntryUnavailable' }),
       ]),
       evidence: { supportedStoreKeys: ['RunProgress', 'MetaProgress'] },
     });
-    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 6 }]);
+    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 7 }]);
     const invalid = applyProjectCommand(document, catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: createOccurrenceAddress(oBiome, oIds.combat04),
@@ -648,6 +654,54 @@ describe('selected O validation', () => {
       context: 'evaluated',
       support: localFindings.length === 0 ? 'possible' : 'impossible',
       findings: localFindings,
+    });
+  });
+
+  it('uses one source-policy resolver for ordinary and direct-terminal continuations', () => {
+    const ordinary = applyProjectCommand(validProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(oBiome, oIds.combat01),
+      gameName: 'O_Reprieve01',
+    });
+    const ordinaryStore = createBatchRewardStoreAddress(oBiome, oIds.combat01);
+    expect(
+      bindTestCandidateSession(catalog, ordinary).evaluate([
+        { kind: 'batchRewardStore', rewardStore: ordinaryStore, storeKey: 'RunProgress' },
+        { kind: 'batchRewardStore', rewardStore: ordinaryStore, storeKey: 'MetaProgress' },
+      ]),
+    ).toEqual([
+      expect.objectContaining({ context: 'evaluated' }),
+      expect.objectContaining({ context: 'evaluated' }),
+    ]);
+    expect(
+      oPlan(ordinary).topology?.continuations.find(
+        (continuation) => continuation.parentOccurrenceId === oIds.combat01,
+      )?.rewardStore,
+    ).toEqual({ kind: 'authoredBaseStore', baseRewardStoreKey: null });
+
+    expect(
+      oPlan(validProject()).topology?.continuations.find(
+        (continuation) => continuation.parentOccurrenceId === oIds.combat02,
+      )?.rewardStore,
+    ).toEqual({ kind: 'sourceOfferPoint' });
+
+    const unreachableDirectOverride = applyProjectCommand(validProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(oBiome, oIds.combat02),
+      gameName: 'O_Reprieve01',
+    });
+    expect(
+      bindTestCandidateSession(catalog, unreachableDirectOverride).evaluate([
+        {
+          kind: 'batchRewardStore',
+          rewardStore: createBatchRewardStoreAddress(oBiome, oIds.combat02),
+          storeKey: 'RunProgress',
+        },
+      ])[0],
+    ).toMatchObject({
+      context: 'unavailable',
+      reason: 'coverageNotReached',
+      evidence: { kind: 'coverageNotReached' },
     });
   });
 });

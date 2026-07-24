@@ -1,4 +1,8 @@
-export { evaluateLinearRewards, LinearRewardSimulationContractError } from './linear';
+export {
+  evaluateLinearRewards,
+  linearRewardStoreCandidateSupport,
+  LinearRewardSimulationContractError,
+} from './linear';
 export { evaluateHubRewards, evaluateNRewards, HubRewardSimulationContractError } from './hub';
 export {
   rewardProducerFrontier,
@@ -21,5 +25,6 @@ export type {
   RewardBranch,
   RewardEvent,
   RewardSimulation,
+  RewardStoreCandidateSupport,
   RewardStoreSupportEntry,
 } from './model';

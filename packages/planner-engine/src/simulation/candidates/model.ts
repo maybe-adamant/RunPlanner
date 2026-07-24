@@ -1,6 +1,7 @@
 import type {
   BatchRewardStoreAddress,
   BiomeAddress,
+  BiomeFieldAddress,
   ContinuationAddress,
   HubSlotAddress,
   HubVisitAddress,
@@ -30,9 +31,31 @@ import type { ProjectEvaluation } from '../project';
 export type CandidateSupport = 'forced' | 'impossible' | 'possible';
 
 export type CandidateContextUnavailableReason =
-  'coverageNotReached' | 'producerFrontierUnavailable' | 'upstreamIncomplete' | 'upstreamInvalid';
+  | 'authoredPrerequisiteMissing'
+  | 'coverageNotReached'
+  | 'producerFrontierUnavailable'
+  | 'upstreamIncomplete'
+  | 'upstreamInvalid';
+
+export type CandidateAuthoredPrerequisite =
+  | {
+      readonly kind: 'batchRewardStore';
+      readonly owner: BatchRewardStoreAddress;
+    }
+  | {
+      readonly kind: 'batchState';
+      readonly owner: ContinuationAddress;
+    }
+  | {
+      readonly kind: 'biomeField';
+      readonly owner: BiomeFieldAddress;
+    };
 
 export type CandidateContextUnavailableEvidence =
+  | {
+      readonly kind: 'authoredPrerequisiteMissing';
+      readonly prerequisite: CandidateAuthoredPrerequisite;
+    }
   | {
       readonly kind: 'coverageNotReached';
       readonly requiredOwner: SemanticAddress;

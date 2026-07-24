@@ -1928,3 +1928,21 @@ candidate-prerequisite and interaction coverage remain in the following audit
 slices. Room-local leaf defaults and their replace-only lifecycle are
 unchanged. The complete suite passes with 73 files and 564 tests, followed by
 typecheck, lint, formatting, production build, and diff checks.
+
+Batch Authoring Defaults Phase 2 closes the progressive candidate prerequisite
+boundary. Missing authored reward pools, Fields door rolls, and the Clockwork
+biome roll now produce typed `authoredPrerequisiteMissing` evidence for
+dependent options, while the prerequisite selectors themselves remain
+assessable from the already-prepared prefix history. Reward-pool and Fields
+support share the pure evaluators used by selected simulation; they do not
+replay a full biome or fabricate a placeholder value.
+
+Fixed Q no-store decisions and O ShipCombat source-derived decisions remain
+immediately evaluable. O's valid direct-terminal path is source-derived under
+the current depth rules, while a retained context-invalid non-ShipCombat
+terminal source reports the earlier coverage block instead of leaking a later
+missing-store prerequisite. Player-facing candidate copy names the exact
+reward-pool, Fields, or Clockwork prerequisite without exposing semantic
+address internals. The complete suite passes with 73 files and 570 tests,
+followed by all three package typechecks, lint, formatting, production build,
+and diff checks.

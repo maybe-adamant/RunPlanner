@@ -246,6 +246,24 @@ function incompleteFProject(): ProjectDocument {
   });
 }
 
+function unresolvedFirstFProject(): ProjectDocument {
+  let project = createProjectDocument(catalog, {
+    projectId: 'candidate-unresolved',
+    name: 'Candidate Unresolved',
+    configuredBiomeCounts: { Underworld: 1 },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome,
+    occurrenceId: startId,
+    gameName: 'F_Opening01',
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    continuation: createContinuationAddress(biome, startId),
+  });
+}
+
 describe('F room possibility and generation validation', () => {
   it('accepts positive-support rooms, peer repeats, and a later repeat of an unentered room', () => {
     const result = evaluate();
@@ -451,6 +469,37 @@ describe('F room possibility and generation validation', () => {
 });
 
 describe('project candidate evaluation', () => {
+  it('evaluates the required store before target generation and types dependent blocking', () => {
+    const project = unresolvedFirstFProject();
+    const session = bindTestCandidateSession(catalog, project);
+    const store = createBatchRewardStoreAddress(biome, startId);
+    const stores = session.evaluate([
+      { kind: 'batchRewardStore', rewardStore: store, storeKey: 'RunProgress' },
+      { kind: 'batchRewardStore', rewardStore: store, storeKey: 'MetaProgress' },
+    ]);
+
+    expect(stores).toMatchObject([
+      { context: 'evaluated', support: 'impossible' },
+      { context: 'evaluated', support: 'forced' },
+    ]);
+    expect(
+      session.evaluate([
+        {
+          kind: 'roomTarget',
+          target: targetAddress(1, 1),
+          gameName: 'F_Combat02',
+        },
+      ])[0],
+    ).toMatchObject({
+      context: 'unavailable',
+      reason: 'authoredPrerequisiteMissing',
+      evidence: {
+        kind: 'authoredPrerequisiteMissing',
+        prerequisite: { kind: 'batchRewardStore', owner: store },
+      },
+    });
+  });
+
   it('projects authored F starts and base reward stores through semantic owners', () => {
     const project = possibilityProject();
     const candidates = bindTestCandidateSession(catalog, project);

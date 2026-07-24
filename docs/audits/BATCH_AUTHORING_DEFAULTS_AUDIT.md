@@ -180,11 +180,19 @@ a WorldShop. When the predecessor is not ShipCombat, the transition therefore
 needs an explicit RunProgress/MetaProgress outcome. When the predecessor is
 ShipCombat, the value is derived.
 
-Production currently creates the former as RunProgress while the workspace and
-terminal editor index only ordinary `batch` continuations. That makes the
-preboss store a hidden authored default. The correction is to give applicable
-terminal transitions the same required store interaction as ordinary batches,
-not to invent a terminal-only default.
+Under the current O declaration set, every valid sixth target is ShipCombat:
+non-ShipCombat candidates end by biome depth 5. The valid direct-terminal path
+is therefore source-derived today. The generic transition resolver still
+retains the authored-store variant for structurally representable,
+context-invalid room replacements; candidate evaluation must report the
+earlier invalid frontier rather than pretending that such a replacement makes
+the authored store reachable.
+
+Before schema 8, production created the former as RunProgress while the
+workspace and terminal editor indexed only ordinary `batch` continuations.
+That made the preboss store a hidden authored default. The corrected model
+gives applicable terminal transitions the same required store interaction as
+ordinary batches rather than inventing a terminal-only default.
 
 ### Q
 

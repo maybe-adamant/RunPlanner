@@ -34,15 +34,18 @@ export type RewardEvent =
       readonly purchaseOrder: readonly string[];
     });
 
-export interface RewardStoreSupportEntry {
+export interface RewardStoreCandidateSupport {
   readonly origin: BatchRewardStoreAddress;
   readonly historySequence: number;
-  readonly authoredStoreKey: string;
   readonly enteredStoreCount: number;
   readonly enteredMetaStoreCount: number;
   readonly currentMetaRatio: number | null;
   readonly metaSelectionValue: number;
   readonly supportStoreKeys: readonly string[];
+}
+
+export interface RewardStoreSupportEntry extends RewardStoreCandidateSupport {
+  readonly authoredStoreKey: string;
   readonly selectedPossible: boolean;
 }
 

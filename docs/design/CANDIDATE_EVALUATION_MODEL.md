@@ -91,8 +91,17 @@ The existing route distinctions remain exact:
 
 - `upstreamIncomplete`: an earlier route biome is incomplete;
 - `upstreamInvalid`: an earlier complete biome is invalid;
+- `authoredPrerequisiteMissing`: the active biome reached the decision source,
+  but a required authored reward pool, Fields door roll, or biome outcome must
+  be selected before this dependent option can be assessed;
 - `coverageNotReached`: the active biome has not reached this local owner and
   checkpoint.
+
+The prerequisite selector itself remains assessable. It consumes the already
+prepared prefix state before the missing outcome and never simulates a
+placeholder selection. A blocking room or reward finding earlier than that
+authored prerequisite retains ordinary `coverageNotReached`; a later missing
+field must not conceal the actual invalid frontier.
 
 The application may avoid requesting an unassessed control, but the engine
 remains the contact boundary and must independently enforce coverage.
@@ -151,6 +160,14 @@ declaration domains:
 
 They should remain direct lookups. Session indexes remove repeated array scans
 without changing their semantics.
+
+When a required batch value is unresolved, selected simulation cannot publish a
+support entry for that value. The candidate session therefore invokes the same
+pure support function at the source room's already-materialized
+`preOutgoing` history view. This applies to authored reward pools and Fields
+Min/Max outcomes. It does not replay the biome or create one scratch project per
+option. Fixed `none` and derived `sourceOfferPoint` policies need no authored
+prerequisite and remain immediately evaluable.
 
 ### Prepared Decision Evaluation
 

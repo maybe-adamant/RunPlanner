@@ -8,6 +8,7 @@ import {
   createBiomeAddress,
   createTargetAddress,
   semanticAddressKey,
+  type BatchRewardStoreAddress,
   type ContinuationAddress,
   type SemanticAddress,
   type TargetAddress,
@@ -36,6 +37,7 @@ import type { SemanticFinding } from '../model';
 import type {
   LinearRewardBranch,
   LinearRewardSimulation,
+  RewardStoreCandidateSupport,
   LinearRewardStoreSupportEntry,
   LinearTargetRewardHistoryCheckpoint,
 } from './model';
@@ -179,18 +181,18 @@ function enteredStoreKey(
   }
 }
 
-function storeSupport(
+export function linearRewardStoreCandidateSupport(
   layout: LinearBiomeLayout,
-  batch: Pick<CanonicalBatch, 'rewardStore'>,
-  source: CanonicalAuthoredRoom,
+  origin: BatchRewardStoreAddress,
+  source: CanonicalAuthoredRoom | CanonicalFixedEntryRoom,
   sourceDeclaration: RoomDeclaration,
   view: LinearHistoryStateView,
   historySequence: number,
-): LinearRewardStoreSupportEntry {
+): RewardStoreCandidateSupport {
   const policy = layout.continuation.rewardStorePolicy;
-  if (policy.kind !== 'authoredBaseStore' || batch.rewardStore.kind !== 'authoredBaseStore') {
+  if (policy.kind !== 'authoredBaseStore') {
     throw new LinearRewardSimulationContractError(
-      'linear batch lost its authored base-store contract',
+      'linear continuation lost its authored base-store contract',
     );
   }
   const priorStores = view.ledgers.enteredRewardStores
@@ -213,15 +215,41 @@ function storeSupport(
         : [...policy.storeKeys],
   );
   return Object.freeze({
-    origin: batch.rewardStore.origin,
+    origin,
     historySequence,
-    authoredStoreKey: batch.rewardStore.baseRewardStoreKey,
     enteredStoreCount: stores.length,
     enteredMetaStoreCount: metaCount,
     currentMetaRatio: ratio,
     metaSelectionValue,
     supportStoreKeys,
-    selectedPossible: supportStoreKeys.includes(batch.rewardStore.baseRewardStoreKey),
+  });
+}
+
+function storeSupport(
+  layout: LinearBiomeLayout,
+  batch: Pick<CanonicalBatch, 'rewardStore'>,
+  source: CanonicalAuthoredRoom,
+  sourceDeclaration: RoomDeclaration,
+  view: LinearHistoryStateView,
+  historySequence: number,
+): LinearRewardStoreSupportEntry {
+  if (batch.rewardStore.kind !== 'authoredBaseStore') {
+    throw new LinearRewardSimulationContractError(
+      'linear batch lost its authored base-store contract',
+    );
+  }
+  const support = linearRewardStoreCandidateSupport(
+    layout,
+    batch.rewardStore.origin,
+    source,
+    sourceDeclaration,
+    view,
+    historySequence,
+  );
+  return Object.freeze({
+    ...support,
+    authoredStoreKey: batch.rewardStore.baseRewardStoreKey,
+    selectedPossible: support.supportStoreKeys.includes(batch.rewardStore.baseRewardStoreKey),
   });
 }
 

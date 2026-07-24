@@ -1012,11 +1012,16 @@ there is no production candidate-only biome simulator. A candidate is
 assessable when the complete evaluation or progressive prefix has reached its
 semantic owner and required checkpoint. Otherwise it reports addressed
 `coverageNotReached` evidence containing the owner, checkpoint, and current
-coverage. Room candidates reuse the biome's addressed generation views. H
-Min/Max candidates reuse the addressed pre-outcome support ledger
-because the proposed value cannot change its own prior context. Cage and
-terminal alternatives apply one immutable semantic replacement and replay H
-through the common linear reward authority with the already-evaluated G seed.
+coverage. When coverage stops specifically because a required authored reward
+pool, Fields door roll, or biome field is unresolved, dependent candidates
+instead report `authoredPrerequisiteMissing` with that exact semantic owner.
+The prerequisite control itself remains evaluable from the already-prepared
+prefix. Room candidates reuse the biome's addressed generation views. H
+Min/Max candidates use the same pure support evaluator as selected simulation
+at the source room's `preOutgoing` history view because the proposed value
+cannot change its own prior context. Cage and terminal alternatives apply one
+immutable semantic replacement and replay H through the common linear reward
+authority with the already-evaluated G seed.
 
 N candidate preparation locates the selected Hub product in normal Surface
 route evaluation. Slot membership reuses open-count and

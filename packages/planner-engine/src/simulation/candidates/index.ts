@@ -1,6 +1,7 @@
 export { createPreparedProjectCandidateSession } from './dispatch';
 export { CandidateEvaluationContractError } from './context';
 export {
+  type CandidateAuthoredPrerequisite,
   type CandidateContextUnavailableReason,
   type CandidateContextUnavailableEvidence,
   type CandidateSupport,

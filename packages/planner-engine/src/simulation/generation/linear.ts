@@ -37,6 +37,7 @@ import type { LinearTargetRewardHistoryCheckpoint } from '../rewards';
 import type {
   EncounterCountSupportEntry,
   FieldsCageOutcome,
+  FieldsCageOutcomeCandidateSupport,
   FieldsCageOutcomeSupportEntry,
   LinearForcePressureLedgerEntry,
   LinearRoomGenerationValidation,
@@ -731,14 +732,11 @@ export function supportedFieldsCageOutcomes(
     : Object.freeze(['min']);
 }
 
-function evaluateFieldsCageOutcome(
+export function fieldsCageOutcomeCandidateSupport(
   batchPolicy: Extract<GeneratedBatchPolicy, { readonly kind: 'fields' }>,
-  batch: Pick<CanonicalBatch, 'batchState' | 'origin'>,
+  origin: ContinuationAddress,
   view: LinearHistoryStateView,
-): FieldsCageOutcomeSupportEntry {
-  if (batch.batchState.kind !== 'fields') {
-    throw new LinearRoomGenerationContractError('Fields layout lost its canonical batch state');
-  }
+): FieldsCageOutcomeCandidateSupport {
   const fieldsMaxDoorsRolled = view.ledgers.counters.fieldsMaxDoorsRolled;
   if (fieldsMaxDoorsRolled === undefined) {
     throw new LinearRoomGenerationContractError('Fields history lost its Max outcome counter');
@@ -749,14 +747,28 @@ function evaluateFieldsCageOutcome(
     fieldsMaxDoorsRolled,
   );
   return Object.freeze({
-    origin: batch.origin,
+    origin,
     beforeSequence: view.sequence,
     biomeDepthCache: view.ledgers.counters.biomeDepthCache,
     fieldsMaxDoorsRolled,
     maxDoorCageCeiling: batchPolicy.maxDoorCageCeiling,
-    selectedOutcome: batch.batchState.cageOutcome,
     supportOutcomes,
-    selectedPossible: supportOutcomes.includes(batch.batchState.cageOutcome),
+  });
+}
+
+function evaluateFieldsCageOutcome(
+  batchPolicy: Extract<GeneratedBatchPolicy, { readonly kind: 'fields' }>,
+  batch: Pick<CanonicalBatch, 'batchState' | 'origin'>,
+  view: LinearHistoryStateView,
+): FieldsCageOutcomeSupportEntry {
+  if (batch.batchState.kind !== 'fields') {
+    throw new LinearRoomGenerationContractError('Fields layout lost its canonical batch state');
+  }
+  const support = fieldsCageOutcomeCandidateSupport(batchPolicy, batch.origin, view);
+  return Object.freeze({
+    ...support,
+    selectedOutcome: batch.batchState.cageOutcome,
+    selectedPossible: support.supportOutcomes.includes(batch.batchState.cageOutcome),
   });
 }
 
