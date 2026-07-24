@@ -5,7 +5,7 @@ export const iBiomeLayout = {
   kind: 'LinearBiome',
   initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
   start: { kind: 'fixedEntry', role: 'intro', roomGameName: 'I_Intro' },
-  entries: [{ kind: 'fixedEntry', role: 'story', roomGameName: 'I_Story01' }],
+  entries: [],
   continuation: {
     progressionPolicy: { kind: 'eligibilityDriven' },
     batchPolicy: { kind: 'clockwork', initialGoalCount: 5, fields: [] },
@@ -36,5 +36,5 @@ export const iBiomeLayout = {
       defaultValue: 3,
     },
   ],
-  bounds: { maxBatches: 12, maxTargets: 22 },
+  bounds: { maxBatches: 13, maxTargets: 23 },
 } as const satisfies RawBiomeLayoutDeclaration;

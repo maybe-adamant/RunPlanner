@@ -438,7 +438,7 @@ describe('Linear progressive biome evaluation', () => {
     );
   });
 
-  it('evaluates a fixed I entry even before authored topology exists', () => {
+  it('evaluates the fixed I entrance even before authored topology exists', () => {
     const noI = mapLinearPlan(underworld, 'Underworld', 'I', (plan) =>
       Object.freeze({ ...plan, topology: null }),
     );
@@ -458,7 +458,6 @@ describe('Linear progressive biome evaluation', () => {
     }
     expect(evaluation.materializedPrefix.entryRooms.map((room) => room.gameName)).toEqual([
       'I_Intro',
-      'I_Story01',
     ]);
     expect(evaluation.history.rooms.at(-1)?.preOutgoing).toBeDefined();
     expect(evaluation.history.rooms.at(-1)?.outgoingGeneration).toBeUndefined();

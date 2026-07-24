@@ -624,8 +624,8 @@ function selectedGoldenIProject(): ProjectDocument {
   let parent: OccurrenceId | null = null;
   const batches = [
     { targets: ['I_Combat01'], pickedExitIndex: 1 },
-    { targets: ['I_Combat02', 'I_Combat03'], pickedExitIndex: 1 },
-    { targets: ['I_Combat05'], pickedExitIndex: 1 },
+    { targets: ['I_Combat03', 'I_Story01'], pickedExitIndex: 1 },
+    { targets: ['I_Combat05', 'I_Combat02'], pickedExitIndex: 1 },
     { targets: ['I_Combat06'], pickedExitIndex: 1 },
     { targets: ['I_Combat09'], pickedExitIndex: 1 },
   ] as const;
@@ -1700,7 +1700,7 @@ describe('project simulation composition', () => {
         (event) =>
           event.kind === 'rewardOffered' &&
           event.origin.kind === 'incomingReward' &&
-          event.origin.occurrenceId === createOccurrenceId('golden-i-peer-2-2'),
+          event.origin.occurrenceId === createOccurrenceId('golden-i-peer-3-2'),
       ),
     ).toBe(true);
 
@@ -1709,6 +1709,7 @@ describe('project simulation composition', () => {
       field,
       earlyPreboss,
       terminalPeer,
+      repeatedStory,
       repeatedPreboss,
       dormantGoalReward,
       activeNonGoalReward,
@@ -1733,6 +1734,11 @@ describe('project simulation composition', () => {
       {
         kind: 'roomTarget',
         target: createTargetAddress(iBiome, terminalParent, 2),
+        gameName: 'I_Story01',
+      },
+      {
+        kind: 'roomTarget',
+        target: createTargetAddress(iBiome, terminalParent, 2),
         gameName: 'I_PreBoss02',
       },
       {
@@ -1742,7 +1748,7 @@ describe('project simulation composition', () => {
       },
       {
         kind: 'incomingReward',
-        reward: createIncomingRewardAddress(iBiome, createOccurrenceId('golden-i-peer-2-2')),
+        reward: createIncomingRewardAddress(iBiome, createOccurrenceId('golden-i-peer-3-2')),
         value: { rewardType: 'StackUpgradeTriple' },
       },
       {
@@ -1775,6 +1781,14 @@ describe('project simulation composition', () => {
       support: 'impossible',
       evidence: { exclusionReasons: ['forcedPool'] },
     });
+    expect(repeatedStory).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: {
+        exclusionReasons: ['maxCreationsThisRun'],
+        exclusions: [{ kind: 'maxCreationsThisRun', actual: 1, maximum: 1 }],
+      },
+    });
     expect(repeatedPreboss).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
@@ -1794,6 +1808,72 @@ describe('project simulation composition', () => {
     });
     expect(shopOffer).toMatchObject({ context: 'evaluated', support: 'possible', findings: [] });
     expect(purchase).toMatchObject({ context: 'evaluated', support: 'possible', findings: [] });
+  });
+
+  it('offers I Story only after an earlier target in the same generated batch', () => {
+    let project = applyProjectCommand(selectedGoldenHProject(), catalog, {
+      kind: 'ConfigureRoutePrefix',
+      route: createRouteAddress('Underworld'),
+      configuredBiomeCount: 4,
+    });
+    const combat01 = createOccurrenceId('story-candidate-combat01');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(iBiome, null),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(iBiome, null, 1),
+      occurrenceId: combat01,
+      gameName: 'I_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(iBiome, null),
+      exitIndex: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(iBiome, combat01),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(iBiome, combat01, 1),
+      occurrenceId: createOccurrenceId('story-candidate-first-peer'),
+      gameName: 'I_Combat03',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(iBiome, combat01, 2),
+      occurrenceId: createOccurrenceId('story-candidate-second-peer'),
+      gameName: 'I_Combat04',
+    });
+
+    const [firstExit, secondExit] = bindTestCandidateSession(catalog, project).evaluate([
+      {
+        kind: 'roomTarget',
+        target: createTargetAddress(iBiome, null, 1),
+        gameName: 'I_Story01',
+      },
+      {
+        kind: 'roomTarget',
+        target: createTargetAddress(iBiome, combat01, 2),
+        gameName: 'I_Story01',
+      },
+    ]);
+
+    expect(firstExit).toMatchObject({
+      context: 'evaluated',
+      support: 'impossible',
+      evidence: {
+        exclusionReasons: expect.arrayContaining(['eligibilityRequirement']),
+      },
+    });
+    expect(secondExit).toMatchObject({
+      context: 'evaluated',
+      support: 'possible',
+      findings: [],
+    });
   });
 
   it('keeps I candidates behind the validated prefix', () => {

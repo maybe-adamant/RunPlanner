@@ -89,7 +89,7 @@ describe('complete I catalog', () => {
       kind: 'LinearBiome',
       initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
       start: { kind: 'fixedEntry', role: 'intro', roomGameName: 'I_Intro' },
-      entries: [{ kind: 'fixedEntry', role: 'story', roomGameName: 'I_Story01' }],
+      entries: [],
       continuation: {
         progressionPolicy: { kind: 'eligibilityDriven' },
         batchPolicy: { kind: 'clockwork', initialGoalCount: 5, fields: [] },
@@ -120,12 +120,12 @@ describe('complete I catalog', () => {
           defaultValue: 3,
         },
       ],
-      bounds: { maxBatches: 12, maxTargets: 22 },
+      bounds: { maxBatches: 13, maxTargets: 23 },
     });
     expect(createDefaultBatchState(layout.continuation.batchPolicy)).toBeNull();
   });
 
-  it('keeps Intro and Hades as stateless derived fixed entries with exact history facts', () => {
+  it('keeps Intro fixed while making Hades an authored second-door Story', () => {
     expect(requireRoom('I_Intro')).toMatchObject({
       kind: 'Intro',
       mode: { kind: 'derived', classification: 'fixedEntry' },
@@ -137,13 +137,31 @@ describe('complete I catalog', () => {
     expect(requireRoom('I_Story01')).toMatchObject({
       label: 'Hades',
       kind: 'Story',
-      mode: { kind: 'derived', classification: 'fixedEntry' },
+      mode: { kind: 'authored', templateKey: 'Story' },
       exits: [{ index: 1, type: 'TartarusExitDoor' }],
       incomingReward: { kind: 'fixed', offer: { rewardType: 'Story' } },
       encounterProfileKey: 'I_Story01',
       counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
+      force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 2, deadline: 4 },
     });
+    expect(
+      createDefaultRoomState(catalog, requireRoom('I_Story01'), {
+        role: 'ordinary',
+        entryActive: false,
+      }),
+    ).toEqual({ kind: 'fixed' });
+    const storyEligibility = requireEligibility('I_Story01');
+    expect(evaluateRequirement(storyEligibility, context())).toBe(false);
+    expect(
+      evaluateRequirement(storyEligibility, context({ currentBatchRoomGameNames: ['I_Combat01'] })),
+    ).toBe(true);
+    expect(
+      evaluateRequirement(
+        storyEligibility,
+        context({ currentBatchRoomGameNames: ['I_Combat01', 'I_Reprieve01'] }),
+      ),
+    ).toBe(false);
     expect(catalog.encounterProfiles.byKey.I_Story01?.phases).toEqual([
       {
         key: 'I_Story01',

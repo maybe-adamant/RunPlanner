@@ -58,7 +58,7 @@ const expectedClosureMatrix = [
     label: 'Tartarus',
     layoutKind: 'LinearBiome',
     roomCount: 32,
-    authoredRoomCount: 28,
+    authoredRoomCount: 29,
     progressionKind: 'eligibilityDriven',
     batchKind: 'clockwork',
     rewardStoreKind: 'none',

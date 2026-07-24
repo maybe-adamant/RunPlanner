@@ -20,7 +20,7 @@ export const iRooms = [
     label: 'Hades',
     biomeKey: 'I',
     kind: 'Story',
-    mode: { kind: 'derived', classification: 'fixedEntry' },
+    mode: { kind: 'authored', templateKey: 'Story' },
     structuralTags: [],
     exits: [{ index: 1, type: 'TartarusExitDoor' }],
     incomingReward: { kind: 'fixed', rewardType: 'Story', producerLifecycleKey: 'RoomReward' },
@@ -28,6 +28,18 @@ export const iRooms = [
     encounterProfileKey: 'I_Story01',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
+    eligibility: {
+      kind: 'all',
+      requirements: [
+        { kind: 'currentBatchTargetCount', range: { min: 1 } },
+        {
+          kind: 'currentBatchRoomCount',
+          roomGameNames: ['I_Story01', 'I_Reprieve01', 'I_MiniBoss01', 'I_MiniBoss02'],
+          range: { max: 0 },
+        },
+      ],
+    },
+    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 2, deadline: 4 },
   },
   {
     gameName: 'I_Combat01',

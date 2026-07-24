@@ -49,10 +49,10 @@ map data on 2026-07-18. Primary sources are:
 
 The previous Lua declarations and revamp audits are interpreted evidence only.
 This audit confirms their Clockwork acquisition model and occurrence-based
-direction, while correcting three inherited assumptions:
+direction, while correcting inherited assumptions:
 
-- the progressed-save baseline that selects `I_PreBoss02` also forces
-  `I_Story01` from the one-exit intro;
+- `I_Intro` is the sole fixed entry; `I_Story01` is an authored second-door
+  candidate rather than a fixed room after Intro;
 - `I_Shop01` and `I_MiniBoss03` are truly picker-ineligible because their
   concrete declarations set `DebugOnly = true`;
 - a post-goal two-exit decision is one real generated batch containing the
@@ -69,7 +69,7 @@ recovery product loop.
 
 | Feature                      | Verified game behavior                                                                                       | Disposition and planner projection                                                   | Implementation status | Reconsider when                                              |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | --------------------- | ------------------------------------------------------------ |
-| Linear entered spine         | Fixed intro and progressed-save Story lead into a bounded Clockwork loop                                     | **Exact:** `LinearBiome` with `ClockworkDoorBatch` continuations                     | implemented           | --                                                           |
+| Linear entered spine         | Fixed Intro leads directly into a bounded Clockwork loop; Story may be offered on a later second door        | **Exact:** `LinearBiome` with `ClockworkDoorBatch` continuations                     | implemented           | --                                                           |
 | Room-set weights             | Several combat maps and Reprieve have extra room-set entries                                                 | **Simplified:** preserve support and forced pools, never likelihood                  | implemented           | Probability analysis or seeded replay becomes a product goal |
 | Clockwork globals            | Intro initializes five remaining goals and randomly chooses a non-goal cap from three through six            | **Exact:** declaration-owned initial five plus one authored possibility-selected cap | implemented           | --                                                           |
 | Goal offer and acquisition   | The first combat offer in a batch is Goal; entering it decrements remaining goals                            | **Exact:** goal is an acquisition-driven structural producer                         | implemented           | --                                                           |
@@ -108,8 +108,7 @@ random probability.
 The supported I projection assumes:
 
 - an ordinary non-dream Underworld run arriving from `H_PostBoss01`;
-- a progressed save with `ReachedTrueEnding` and prior neutral Chronos
-  completion, making `I_PreBoss02` and the repeat-run Story behavior canonical;
+- a progressed save with `ReachedTrueEnding`, selecting `I_PreBoss02`;
 - the Reprieve world upgrade and the progressed `I_Combat24` map available;
 - the neutral boss-difficulty setting selecting `BossChronos01`;
 - no persistent Nemesis encounter replacement;
@@ -123,51 +122,51 @@ Persistent conditions explain this baseline. They are not production
 
 ## Layout and Authored Bounds
 
-The progressed-save entry is fixed:
+The fixed entry and generated loop are:
 
 ```text
 I_Intro
-  -> I_Story01
   -> Clockwork decisions
+       -> optional generated I_Story01 offer on door 2
   -> picked I_PreBoss02
   -> I_Boss01
   -> I_PostBoss01
   -> Underworld route complete
 ```
 
-`I_Story01` is selected through the normal picker, but it is forced from the
-one-exit `I_Intro` when neutral Chronos has previously been completed and Story
-has not yet been entered this run. The canonical projection therefore places
-it in the layout's derived fixed-entry sequence. Materialization still emits
-its real creation, Story offer, entry, and history facts; persistence does not
-store a choice whose support set is a permanent singleton under this baseline.
+`I_Intro` has one physical exit, so the first Clockwork batch has one target.
+`I_Story01` requires a prior I target in the same generated batch and therefore
+cannot occupy that first door. It participates as an authored second-door
+target in a later qualifying batch. Its save-dependent extra force condition
+is omitted under the shared no-save-profile baseline, while its structural
+depth force pressure remains declared.
 
-I begins at `biomeDepthCache = 1`. `I_Intro` generates the fixed Story offer
-from source depth `1` and commits to depth `2`. `I_Story01` then generates the
-first Clockwork decision from source depth `2` and commits to depth `3` before
-the picked Clockwork target prepares. Both fixed entries therefore contribute
-one room-history depth step even though Intro has no encounter and Story's
-encounter is non-counting.
+I begins at `biomeDepthCache = 1`. `I_Intro` generates the first Clockwork
+decision from source depth `1` and commits to depth `2` before the picked target
+prepares. Story contributes a room-history and biome-depth step only when it is
+picked and entered; an unpicked Story contributes creation and offer history
+without entering the spine.
 
-After Story, a complete route acquires exactly five Clockwork Goals and between
-zero and the authored maximum number of non-goal rewards before entering the
-preboss. Choosing a non-goal peer delays a Goal; choosing Goals immediately can
-make the preboss eligible before the non-goal capacity is exhausted.
+A complete route acquires exactly five Clockwork Goals and between zero and the
+authored maximum number of non-goal rewards before entering the preboss.
+Choosing a non-goal peer delays a Goal; choosing Story changes neither
+Clockwork counter; choosing Goals immediately can make the preboss eligible
+before the non-goal capacity is exhausted.
 
 The longest supported spine uses all five Goals and all six possible non-goal
-acquisitions before entering the preboss. The fixed Story is derived entry
-rather than authored topology, so the authored bound after that entry is
-twelve continuation batches:
+acquisitions, an optionally entered Story, and the preboss. The authored bound
+is thirteen continuation batches:
 
 ```text
-11 Clockwork acquisitions + 1 entered preboss = 12
+5 Goal acquisitions + 6 non-goal acquisitions + 1 Story + 1 preboss = 13
 ```
 
 Physical-exit and capacity restrictions reduce the exact authored maximum to
-22 target occurrences. The first target after one-exit Story is singular. The
-final count-advancing target must also be a one-exit room because two-exit
-target maps become ineligible at the reserved-capacity boundary; the following
-preboss batch therefore has one target.
+23 target occurrences. The first batch after one-exit Intro is singular, as is
+the batch after a picked one-exit Story. The final count-advancing target must
+also be a one-exit room because two-exit target maps become ineligible at the
+reserved-capacity boundary; the following preboss batch therefore has one
+target.
 
 ## Physical Exits
 
@@ -279,7 +278,7 @@ Concrete room filters then apply:
 | ordinary combat | derived Goal or Tartarus non-goal with Boon excluded        |
 | Reprieve        | Tartarus non-goal with Devotion excluded                    |
 | miniboss        | Tartarus Boon only                                          |
-| Story           | fixed Story                                                 |
+| Story           | fixed incoming Story reward                                 |
 | preboss         | structural Goal marker plus local `I_WorldShop` after entry |
 
 Devotion retains its normal two-exit, prior-source, and room-spacing
@@ -311,19 +310,25 @@ product.
 
 ## Special Rooms
 
-### Fixed Story
+### Authored Story
 
 `I_Story01`:
 
-- is the canonical first generated target after `I_Intro`;
+- can be created only after another I target has already filled the current
+  batch, so it occupies a later physical door;
 - has one physical exit;
 - has `MaxCreationsThisRun = 1`;
-- owns fixed Story and a non-counting encounter;
-- does not increment the non-goal reward counter.
+- owns a fixed incoming Story reward and a non-counting encounter;
+- does not decrement Goals or increment the non-goal reward counter;
+- conflicts in the same batch with Reprieve and both supported minibosses;
+- carries structural depth `2..4` force pressure.
 
-Its alternate ordinary two-exit eligibility and depth `2..4` force pressure
-remain game evidence, but the fixed progressed-save entry consumes its one
-creation before the Clockwork loop begins.
+A created but unpicked Story occurrence consumes the run-wide creation cap and
+cannot be offered again. If picked, Story enters through the ordinary generated
+room lifecycle and its one physical exit makes the next batch singular. The
+save-dependent additional `AlwaysForceRequirements` predicate remains
+documented evidence rather than a production requirement because save-profile
+progression is not an authored input.
 
 ### Reprieve
 
@@ -467,8 +472,7 @@ production `unsupported` predicates or dormant validation codes.
 
 The I implementation delivers:
 
-1. the derived fixed `I_Intro -> I_Story01` entry sequence with real canonical
-   creation, offer, and entry facts;
+1. derived fixed `I_Intro` followed directly by the first Clockwork batch;
 2. fixed five Goals and authored `maxNonGoalRewards` in `{3,4,5,6}`;
 3. all 24 supported combat declarations with exact physical exits;
 4. the two-exit Clockwork capacity predicate and `I_Combat24` BDC ceiling;
@@ -478,7 +482,8 @@ The I implementation delivers:
    discriminant;
 7. entered-producer-driven Goal and non-goal counters with their exact spawn
    timing;
-8. Reprieve and both supported miniboss declarations with peer-order rules;
+8. authored Story, Reprieve, and both supported miniboss declarations with
+   peer-order rules;
 9. explicit exclusion of concrete debug-only Shop and miniboss 03;
 10. one `ClockworkDoorBatch` policy that admits terminal and ordinary peers;
 11. repeated `I_PreBoss02` occurrences with picked-target continuation effect;
@@ -490,9 +495,10 @@ The I implementation delivers:
 The declaration import, authored topology, canonical/history projection,
 selected validation, candidates, and editor projection are active through the
 production application boundary. Schema version 4 introduced the persisted
-`maxNonGoalRewards`, final-fixed-entry batch ownership, repeated generated
-preboss targets, and picked-preboss WorldShop completeness contract; schema
-version 5 retains those semantics beside N Hub authorship.
+`maxNonGoalRewards`, repeated generated preboss targets, and picked-preboss
+WorldShop completeness contract; schema version 5 retains those semantics
+beside N Hub authorship. Story's correction from fixed entry to authored target
+does not change the persisted schema shape.
 Materialization and the editor share one offer-time Goal/NonGoal projection;
 history advances only entered producers. Production navigation, profiles,
 recovery, and the complete F/G/H/I product loop are covered by the final
@@ -502,7 +508,10 @@ activation fixture.
 
 I's focused and product-loop fixtures prove:
 
-- the forced `I_Intro -> I_Story01` progressed-save entry;
+- `I_Intro` as the sole fixed entry and first Clockwork source;
+- Story rejected on exit 1 and supported on an eligible second exit;
+- picked Story changing neither Clockwork counter;
+- unpicked Story consuming its run-wide creation cap;
 - one- and two-exit combat batches before Goal completion;
 - Goal decrement only for the picked and entered Goal occurrence;
 - non-goal offer bag consumption for unpicked peers without counter increment;
@@ -517,7 +526,7 @@ I's focused and product-loop fixtures prove:
 - terminal `I_WorldShop` completeness and materialization only on the entered
   occurrence;
 - derived neutral boss/postboss history and route completion;
-- exact twelve-batch and 22-target authored bounds.
+- exact thirteen-batch and 23-target authored bounds.
 
 ## Audit Closure
 
@@ -528,7 +537,7 @@ model agree that:
   potential concrete non-goal leaf remains stable;
 - Goal and non-goal progress follows entered-producer timing;
 - Tartarus uses a fixed store context rather than generated Run/Meta choice;
-- the progressed Story is part of the canonical entered spine;
+- Story is a real generated target that enters the spine only when picked;
 - repeated preboss offers use ordinary occurrence identity;
 - a mixed preboss/ordinary batch is one domain decision whose picked target
   determines continuation;
