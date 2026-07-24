@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createOccurrenceAddress,
   createDefaultRoomState,
   decodeRoomState,
   ProjectDocumentContractError,
@@ -8,6 +11,11 @@ import {
 import { createCatalog } from '@run-planner/hades2-catalog';
 import { declarations, type RawCatalogInput } from '@run-planner/hades2-catalog/test-support';
 import { catalog } from '@run-planner/hades2-catalog';
+
+import {
+  createFReplacementProject,
+  fReplacementOccurrenceIds,
+} from './fixtures/fReplacementProject';
 
 function room(gameName: string) {
   const declaration = catalog.rooms.byKey[gameName];
@@ -82,6 +90,49 @@ describe('F/G authored room state v2', () => {
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     });
+  });
+
+  it('retains admitted offers across real F Combat and Miniboss replacements', () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const combatId = fReplacementOccurrenceIds.combat;
+    const minibossId = fReplacementOccurrenceIds.miniboss;
+    let project = createFReplacementProject();
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, combatId),
+      gameName: 'F_Combat06',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, minibossId),
+      gameName: 'F_MiniBoss03',
+    });
+    const topology = project.routes[0]?.biomes[0];
+    if (topology?.kind !== 'LinearBiome') {
+      throw new Error('minimal F replacement fixture is missing its Linear topology');
+    }
+
+    expect(topology.topology?.occurrences).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          occurrenceId: combatId,
+          gameName: 'F_Combat06',
+          state: { kind: 'counted', offer: { rewardType: 'GiftDrop' } },
+        }),
+        expect.objectContaining({
+          occurrenceId: minibossId,
+          gameName: 'F_MiniBoss03',
+          state: {
+            kind: 'counted',
+            offer: {
+              rewardType: 'Boon',
+              payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+            },
+          },
+        }),
+      ]),
+    );
   });
 
   it('decodes complete offers and rejects filtered rewards or invalid payloads', () => {

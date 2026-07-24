@@ -365,9 +365,10 @@ decision must not silently choose the first eligible room.
 Creating a room occurrence installs the selected declaration's complete
 deterministic offer-time defaults. If the occurrence is picked in the same
 command, the command also installs any required entry-time defaults. Replacing
-its `gameName` preserves `occurrenceId`, atomically replaces its room state
-with the defaults required by its current lifecycle role, and never passes
-through an empty active value.
+its `gameName` preserves `occurrenceId`, atomically reconciles its room state
+against the replacement declaration, and never passes through an empty active
+value. The replacement defaults are the base state; compatible existing leaves
+are an explicit overlay rather than an implicit cache.
 
 Leaf edits within the selected declaration then remain concrete replacement
 operations.
@@ -409,9 +410,9 @@ does not keep a global dormant state record for every Room Declaration.
 - Initializing a layout with fixed authored room slots creates those required
   occurrences with the defaults required by their fixed lifecycle role; their
   `gameName` cannot be replaced independently of the layout.
-- Replacing the selected game room preserves the occurrence ID and installs
-  the replacement declaration's complete offer-time defaults plus any
-  entry-time defaults required when that occurrence is currently picked.
+- Replacing the selected game room preserves the occurrence ID and reconciles
+  its old state into the replacement declaration's complete offer-time and,
+  when required, entry-time defaults.
 - Picking an occurrence atomically installs complete entry-time defaults when
   they are absent. Picking another target may retain the old occurrence's
   entry-time state dormantly, but materialization ignores that state.
@@ -634,9 +635,44 @@ replacement before it becomes authored state.
 
 Replacing the game room selected by a start or target preserves that
 occurrence's ID, so downstream topology remains attached without changing its
-semantic parent. The replacement occurrence receives the new declaration's
-complete offer-time defaults plus entry-time defaults when it is currently
-picked. Unpicked peer occurrences remain untouched.
+semantic parent. Unpicked peer occurrences remain untouched.
+
+### Room-Local Replacement Retention
+
+`ReplaceOccurrenceRoom` is one atomic semantic command. It constructs the
+replacement declaration's complete defaults, overlays only old leaves that the
+replacement declaration can structurally represent, reconciles the source
+continuation policy where applicable, validates the unpublished proposal, and
+then publishes one authored snapshot. It does not delete and recreate the Room
+Occurrence.
+
+Structural compatibility is production-bounded and declaration-bounded: a
+retained leaf must belong to a catalog-backed replacement surface, keep the
+same semantic leaf kind and addressable child keys, and fit the replacement
+declaration's closed value contract. That contract contains only
+declaration-level child keys, admitted reward and payload domains, declared
+store domains, and authored bounds and picked-value validity. It excludes
+defaults, current resolved-store or bag state, room eligibility, force, caps,
+and every other simulation-context fact.
+
+A compatible leaf remains authored even when its current store, bag, sibling,
+source, requirement, force, or cap context makes it impossible. Those are
+simulation findings, not command-time permission to repair intent. Leaves the
+replacement declaration cannot represent—and every state family without a
+distinct production replacement pair—receive complete declaration-owned
+defaults instead.
+
+The current production surface retains counted incoming offers and H Fields
+cage and O ShipCombat wheel members. Q's rewardless peers return canonical
+`none`; fixed, shop, terminal-free, and Ephyra families currently have an
+explicit replacement-default disposition. Preboss shops are topology-owned
+terminal roles and do not interact with ordinary midshops. N fixed Hub slots
+remain non-replaceable. The detailed compatibility matrix and delivery evidence
+are maintained in
+[`ROOM_REPLACEMENT_RETENTION_AUDIT.md`](../audits/ROOM_REPLACEMENT_RETENTION_AUDIT.md).
+
+Undo restores the exact prior room name and state; redo restores the exact
+reconciled replacement. The app keeps no hidden state cache by prior game name.
 
 Choosing a different picked exit changes the selected parent occurrence. That
 command installs any missing entry-time defaults on the new picked occurrence

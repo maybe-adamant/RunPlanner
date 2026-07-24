@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 
+import { catalog } from '@run-planner/hades2-catalog';
 import { act, cleanup, screen, within } from '@testing-library/react';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createContinuationAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createPickedAddress,
@@ -19,7 +21,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createApplication } from '../../../composition/createApplication';
 import type { WorkspaceLinearBiome } from '../../../projections/structuredWorkspace';
 import { routePanelSelected, semanticOwnerFocused } from '../../../state/editorSessionSlice';
-import { authoredProjectReplaced } from '../../../state/projectWorkspaceSlice';
+import {
+  authoredProjectRedoRequested,
+  authoredProjectReplaced,
+  authoredProjectUndoRequested,
+} from '../../../state/projectWorkspaceSlice';
 import { renderPlannerForInteraction } from '../../../../test/fixtures/renderPlanner';
 import { createRepresentativeNOPQProject } from '../../../../test/fixtures/surfaceProject';
 import { createGoldenFGHIProject } from '../../../../test/fixtures/underworldProject';
@@ -66,6 +72,84 @@ function authoredLinearBiome(
 }
 
 describe('Linear structured workspace', () => {
+  it('replaces Combat 02 through the editor without resetting its reward, then restores both snapshots through history', async () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const startId = createOccurrenceId('retained-editor-start');
+    const combatId = createOccurrenceId('retained-editor-combat');
+    const reward = createIncomingRewardAddress(biome, combatId);
+    let project = createProjectDocument(catalog, {
+      projectId: 'retained-editor',
+      name: 'Retained Editor',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, startId),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, startId),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, startId, 1),
+      occurrenceId: combatId,
+      gameName: 'F_Combat02',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    const view = renderBiome(project, 'Underworld', 'F');
+    const structure = screen.getByRole('region', { name: 'Erebus structure' });
+    await view.user.click(within(structure).getByRole('button', { name: /Decision 1/ }));
+    const decision = screen
+      .getByRole('heading', { name: 'Doors from Opening 01' })
+      .closest<HTMLElement>('.decision-card');
+    if (decision === null) {
+      throw new Error('retained F decision is missing');
+    }
+
+    await view.user.click(within(decision).getByLabelText('Room'));
+    await view.user.click(await screen.findByRole('option', { name: /^Combat 06/ }));
+
+    const retained = authoredLinearBiome(view.application, 'F').topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === combatId,
+    );
+    expect(retained).toMatchObject({
+      gameName: 'F_Combat06',
+      state: { kind: 'counted', offer: { rewardType: 'MaxHealthDrop' } },
+    });
+    expect(within(decision).getByLabelText('Reward').textContent).toContain('Max Health');
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(1);
+
+    view.application.store.dispatch(authoredProjectUndoRequested());
+    expect(authoredLinearBiome(view.application, 'F').topology?.occurrences).toContainEqual(
+      expect.objectContaining({
+        occurrenceId: combatId,
+        gameName: 'F_Combat02',
+        state: { kind: 'counted', offer: { rewardType: 'MaxHealthDrop' } },
+      }),
+    );
+
+    view.application.store.dispatch(authoredProjectRedoRequested());
+    expect(authoredLinearBiome(view.application, 'F').topology?.occurrences).toContainEqual(
+      expect.objectContaining({
+        occurrenceId: combatId,
+        gameName: 'F_Combat06',
+        state: { kind: 'counted', offer: { rewardType: 'MaxHealthDrop' } },
+      }),
+    );
+  });
+
   it('authors a required reward pool as one undoable semantic choice', async () => {
     const application = createApplication();
     const biome = createBiomeAddress('Underworld', 'F');

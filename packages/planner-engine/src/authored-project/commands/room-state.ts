@@ -1,7 +1,7 @@
 import type { Catalog, LinearBiomeLayout } from '../../catalog-schema';
 import { replaceBiomeStateField } from '../biomeState';
 import type { LinearBiomePlan, ProjectDocument } from '../model';
-import { createDefaultRoomState } from '../roomState';
+import { createDefaultRoomState, reconcileReplacementRoomState } from '../roomState';
 import {
   stagedBatchIndex,
   stagedProgressionStages,
@@ -78,17 +78,24 @@ export function applyLinearRoomStateCommand(
         );
       }
       const role = occurrenceRole(plan, catalog, layout, occurrence.occurrenceId, command, room);
+      const replacementDefaultState = createDefaultRoomState(
+        catalog,
+        room,
+        roomStateContext(
+          role,
+          resolvedStoreForOccurrence(plan, catalog, layout, occurrence.occurrenceId, room),
+          isOccurrenceEntered(plan, occurrence.occurrenceId),
+        ),
+      );
       const replacement = {
         occurrenceId: occurrence.occurrenceId,
         gameName: room.gameName,
-        state: createDefaultRoomState(
+        state: reconcileReplacementRoomState(
           catalog,
+          requireRoom(catalog, occurrence.gameName, layout.biomeKey, command),
+          occurrence.state,
           room,
-          roomStateContext(
-            role,
-            resolvedStoreForOccurrence(plan, catalog, layout, occurrence.occurrenceId, room),
-            isOccurrenceEntered(plan, occurrence.occurrenceId),
-          ),
+          replacementDefaultState,
         ),
       };
       const withReplacement = replaceOccurrence(plan, replacement, command);

@@ -25,7 +25,7 @@ import { RoomSelector } from './RoomSelector';
 afterEach(cleanup);
 
 describe('RoomSelector', () => {
-  it('renders one concrete-room control and follows external room replacement', () => {
+  it('renders one concrete-room control and follows external combat replacement', () => {
     const application = createApplication();
     const biome = createBiomeAddress('Underworld', 'F');
     const startId = createOccurrenceId('selector-start');
@@ -59,8 +59,8 @@ describe('RoomSelector', () => {
     );
     const target = createTargetAddress(biome, startId, 1);
     const combat = catalog.rooms.byKey.F_Combat01;
-    const shop = catalog.rooms.byKey.F_Shop01;
-    if (combat === undefined || shop === undefined) {
+    const replacement = catalog.rooms.byKey.F_Combat06;
+    if (combat === undefined || replacement === undefined) {
       throw new Error('F selector declarations are missing');
     }
     const targetOccurrenceId = createOccurrenceId('selector-target');
@@ -94,7 +94,7 @@ describe('RoomSelector', () => {
       authoredProjectCommandDispatched({
         kind: 'ReplaceOccurrenceRoom',
         occurrence: createOccurrenceAddress(biome, targetOccurrenceId),
-        gameName: shop.gameName,
+        gameName: replacement.gameName,
       }),
     );
     view.rerender(
@@ -109,7 +109,7 @@ describe('RoomSelector', () => {
     );
 
     expect(screen.queryByLabelText('Type')).toBeNull();
-    expect(screen.getByLabelText('Room').textContent).toContain(shop.label);
+    expect(screen.getByLabelText('Room').textContent).toContain(replacement.label);
   });
 
   it('evaluates a blank target and selects an available concrete room', async () => {

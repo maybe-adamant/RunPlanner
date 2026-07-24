@@ -137,6 +137,15 @@ const countedReward = {
   producerLifecycleKey: 'RoomReward',
 } as const satisfies CountedRewardBinding;
 
+const healthOnlyCountedReward = {
+  ...countedReward,
+  allowedRewardTypes: ['MaxHealthDrop'],
+  defaultOffersByStore: {
+    RunProgress: { rewardType: 'MaxHealthDrop' },
+    MetaProgress: { rewardType: 'MaxHealthDrop' },
+  },
+} as const satisfies CountedRewardBinding;
+
 const shopProfile = {
   key: 'WorldShop',
   groups: collection(
@@ -232,6 +241,29 @@ function countedRoom(
   };
 }
 
+function shopRoom(gameName: string): RoomDeclaration {
+  return {
+    gameName,
+    label: gameName,
+    biomeKey: 'F',
+    kind: 'Shop',
+    mode: { kind: 'authored', templateKey: 'Shop' },
+    structuralTags: [],
+    exits: exits(1),
+    incomingReward: {
+      kind: 'shop',
+      offer: { rewardType: 'Shop' },
+      shopProfileKey: 'WorldShop',
+      producerLifecycleKey: 'RoomReward',
+    },
+    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+    encounterProfileKey: 'Shop',
+    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+    caps: { maxAppearancesThisBiome: 1 },
+    localChildren: [],
+  };
+}
+
 const rooms: readonly RoomDeclaration[] = [
   countedRoom('F_Opening01', 'Opening', 'FixedOpening', 2),
   countedRoom('F_Opening02', 'Opening', 'FixedOpening', 2),
@@ -249,25 +281,10 @@ const rooms: readonly RoomDeclaration[] = [
     forcedRewardStoreKey: 'RunProgress',
   },
   {
-    gameName: 'F_Shop01',
-    label: 'Midshop',
-    biomeKey: 'F',
-    kind: 'Shop',
-    mode: { kind: 'authored', templateKey: 'Shop' },
-    structuralTags: [],
-    exits: exits(1),
-    incomingReward: {
-      kind: 'shop',
-      offer: { rewardType: 'Shop' },
-      shopProfileKey: 'WorldShop',
-      producerLifecycleKey: 'RoomReward',
-    },
-    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-    encounterProfileKey: 'Shop',
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
-    caps: { maxAppearancesThisBiome: 1 },
-    localChildren: [],
+    ...countedRoom('F_HealthOnly', 'Combat', 'StandardCombat', 1),
+    incomingReward: healthOnlyCountedReward,
   },
+  shopRoom('F_Shop01'),
   {
     gameName: 'F_PreBoss01',
     label: 'Preboss',
@@ -771,7 +788,7 @@ describe('ordinary project commands', () => {
     expect(linearPlan(roundTripped).topology?.continuations[0]?.pickedExitIndex).toBe(2);
   });
 
-  it('re-anchors downstream topology and retains overflow after room replacement', () => {
+  it('retains compatible incoming reward intent while re-anchoring downstream topology', () => {
     const first = createOccurrenceId('first');
     const second = createOccurrenceId('second');
     const downstreamOne = createOccurrenceId('downstream-one');
@@ -807,7 +824,7 @@ describe('ordinary project commands', () => {
       gameName: 'F_CombatOneExit',
       state: {
         kind: 'counted',
-        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+        offer: { rewardType: 'MaxHealthDrop' },
       },
     });
     expect(
@@ -870,6 +887,42 @@ describe('ordinary project commands', () => {
         'exit 2 is unavailable from F_CombatOneExit',
       ),
     );
+  });
+
+  it('defaults declaration-incompatible counted leaves but retains context-invalid compatible leaves', () => {
+    const target = createOccurrenceId('replacement-target');
+    let project = createBatch(startedProject());
+    project = createTarget(project, startId, 1, target, 'F_CombatTwoExit');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, target),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+
+    const incompatible = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, target),
+      gameName: 'F_HealthOnly',
+    });
+    expect(
+      linearPlan(incompatible).topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === target,
+      )?.state,
+    ).toEqual({ kind: 'counted', offer: { rewardType: 'MaxHealthDrop' } });
+
+    const contextInvalid = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, target),
+      gameName: 'F_ForcedMeta',
+    });
+    expect(
+      linearPlan(contextInvalid).topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === target,
+      )?.state,
+    ).toEqual({
+      kind: 'counted',
+      offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
   });
 
   it('replaces counted rewards and shop purchase state through leaf addresses', () => {

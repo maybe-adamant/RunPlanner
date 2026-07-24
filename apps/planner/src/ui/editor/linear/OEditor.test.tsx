@@ -27,6 +27,7 @@ import {
   selectProjectEvaluation,
   useAppSelector,
 } from '../../../state/store';
+import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import {
   createStructuredWorkspaceTestServices,
   requireLinearWorkspaceBiome,
@@ -202,6 +203,49 @@ describe('O editor projection', () => {
       false,
     );
     expect(screen.getByRole('button', { name: 'Go to Preboss' })).toHaveProperty('disabled', true);
+  });
+
+  it('keeps visible ship-wheel intent after a semantic room replacement', async () => {
+    const { store, user } = renderO(oProject());
+    const ship = screen.getByLabelText('Ship combat encounters');
+    const firstWheel = within(ship).getAllByRole('region', { name: /Reward wheel/ })[0]!;
+
+    await user.selectOptions(within(ship).getByLabelText('Encounters'), '3');
+    await user.selectOptions(within(firstWheel).getByLabelText('Offers'), '2');
+    await user.selectOptions(within(firstWheel).getByLabelText('Picked offer'), '2');
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(biome, combatId),
+        gameName: 'O_Combat03',
+      }),
+    );
+
+    const combat = oPlan(
+      store.getState().projectWorkspace.history.present,
+    ).topology?.occurrences.find((occurrence) => occurrence.occurrenceId === combatId);
+    expect(combat).toMatchObject({
+      gameName: 'O_Combat03',
+      state: {
+        kind: 'shipCombat',
+        encounterCount: 3,
+        wheels: { wheel1: { offerCount: 2, pickedOfferIndex: 2 } },
+      },
+    });
+    const retainedShip = screen.getByLabelText('Ship combat encounters');
+    const retainedFirstWheel = within(retainedShip).getAllByRole('region', {
+      name: /Reward wheel/,
+    })[0]!;
+    expect(within(retainedShip).getByLabelText('Encounters')).toHaveProperty('value', '3');
+    expect(within(retainedFirstWheel).getByLabelText('Offers')).toHaveProperty('value', '2');
+    expect(within(retainedFirstWheel).getByLabelText('Picked offer')).toHaveProperty('value', '2');
+    expect(
+      within(retainedShip)
+        .getAllByRole('region', {
+          name: /Reward wheel/,
+        })[1]
+        ?.getAttribute('data-active'),
+    ).toBe('true');
   });
 
   it('uses the six-batch fixed-count frontier at the direct terminal', () => {

@@ -11,15 +11,18 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createTargetAddress,
+  createDefaultRoomState,
   decodeProjectDocument,
   encodeProjectDocument,
   ProjectCommandContractError,
   ProjectDocumentContractError,
+  reconcileReplacementRoomState,
   semanticAddressKey,
   type LinearBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { evaluateLinearCompleteness } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -232,6 +235,177 @@ describe('O authored topology', () => {
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );
+  });
+
+  it('retains declaration-compatible ShipCombat wheel intent across room replacement', () => {
+    const combat = createOccurrenceId('o-replacement-combat');
+    let project = appendRoom(
+      startO(createOProject()),
+      createOccurrenceId('o-intro'),
+      combat,
+      'O_Combat03',
+      'RunProgress',
+    );
+    const wheel2 = createRewardWheelAddress(oBiome, combat, 'wheel2');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, combat),
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel: wheel2,
+      offerCount: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: wheel2,
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, combat, 'wheel2', 'offer2'),
+      value: { rewardType: 'MetaCurrencyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelPicked',
+      wheel: wheel2,
+      pickedOfferIndex: 2,
+    });
+    const before = occurrence(project, combat).state;
+    if (before.kind !== 'shipCombat') {
+      throw new Error('ShipCombat replacement fixture has no wheel state');
+    }
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(oBiome, combat),
+      gameName: 'O_Combat04',
+    });
+
+    expect(occurrence(project, combat).state).toEqual(before);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+  });
+
+  it('defaults ShipCombat leaves whose replacement descriptor keys, domains, or bounds change', () => {
+    const previousRoom = catalog.rooms.byKey.O_Combat03;
+    const replacementRoom = catalog.rooms.byKey.O_Combat04;
+    const profile = catalog.encounterProfiles.byKey.ShipCombat;
+    const wheel2 = profile?.phases.find((phase) => phase.offerPoint?.key === 'wheel2')?.offerPoint;
+    if (
+      previousRoom === undefined ||
+      replacementRoom === undefined ||
+      profile === undefined ||
+      wheel2 === undefined
+    ) {
+      throw new Error('expected ShipCombat replacement descriptors');
+    }
+    const previousDefault = createDefaultRoomState(catalog, previousRoom, {
+      role: 'ordinary',
+      entryActive: true,
+    });
+    if (previousDefault.kind !== 'shipCombat') {
+      throw new Error('expected ShipCombat default state');
+    }
+    const previousWheel2 = previousDefault.wheels.wheel2;
+    if (previousWheel2 === undefined) {
+      throw new Error('expected second reward wheel');
+    }
+    const previousState = {
+      ...previousDefault,
+      encounterCount: 3 as const,
+      wheels: {
+        ...previousDefault.wheels,
+        wheel2: {
+          ...previousWheel2,
+          storeKey: 'MetaProgress',
+          offerCount: 2,
+          offers: { ...previousWheel2.offers, offer2: { rewardType: 'MetaCurrencyDrop' } },
+          pickedOfferIndex: 2,
+        },
+      },
+    };
+    const narrowedWheel2 = {
+      ...wheel2,
+      reward: { ...wheel2.reward, allowedRewardTypes: ['MaxHealthDrop'] },
+      offerCount: { ...wheel2.offerCount, max: 1, defaultValue: 1 },
+    };
+    const narrowedProfile = {
+      ...profile,
+      phases: profile.phases.map((phase) =>
+        phase.offerPoint?.key === 'wheel2' ? { ...phase, offerPoint: narrowedWheel2 } : phase,
+      ),
+    };
+    const narrowedCatalog = {
+      ...catalog,
+      encounterProfiles: {
+        values: catalog.encounterProfiles.values.map((candidate) =>
+          candidate.key === narrowedProfile.key ? narrowedProfile : candidate,
+        ),
+        byKey: { ...catalog.encounterProfiles.byKey, [narrowedProfile.key]: narrowedProfile },
+      },
+    } as Catalog;
+    const narrowedDefault = createDefaultRoomState(narrowedCatalog, replacementRoom, {
+      role: 'ordinary',
+      entryActive: true,
+    });
+    if (narrowedDefault.kind !== 'shipCombat') {
+      throw new Error('expected narrowed ShipCombat default state');
+    }
+    const narrowed = reconcileReplacementRoomState(
+      narrowedCatalog,
+      previousRoom,
+      previousState,
+      replacementRoom,
+      narrowedDefault,
+    );
+    if (narrowed.kind !== 'shipCombat') {
+      throw new Error('expected narrowed ShipCombat state');
+    }
+    expect(narrowed.wheels.wheel2).toEqual({
+      ...narrowedDefault.wheels.wheel2,
+      storeKey: 'MetaProgress',
+    });
+
+    const removedOfferWheel2 = { ...wheel2, offerKeys: ['offer1'] };
+    const removedOfferProfile = {
+      ...profile,
+      phases: profile.phases.map((phase) =>
+        phase.offerPoint?.key === 'wheel2' ? { ...phase, offerPoint: removedOfferWheel2 } : phase,
+      ),
+    };
+    const removedOfferCatalog = {
+      ...catalog,
+      encounterProfiles: {
+        values: catalog.encounterProfiles.values.map((candidate) =>
+          candidate.key === removedOfferProfile.key ? removedOfferProfile : candidate,
+        ),
+        byKey: {
+          ...catalog.encounterProfiles.byKey,
+          [removedOfferProfile.key]: removedOfferProfile,
+        },
+      },
+    } as Catalog;
+    const removedOfferDefault = createDefaultRoomState(removedOfferCatalog, replacementRoom, {
+      role: 'ordinary',
+      entryActive: true,
+    });
+    if (removedOfferDefault.kind !== 'shipCombat') {
+      throw new Error('expected changed-key ShipCombat default state');
+    }
+    const removedOffer = reconcileReplacementRoomState(
+      removedOfferCatalog,
+      previousRoom,
+      previousState,
+      replacementRoom,
+      removedOfferDefault,
+    );
+    if (removedOffer.kind !== 'shipCombat') {
+      throw new Error('expected changed-key ShipCombat state');
+    }
+    expect(Object.keys(removedOffer.wheels.wheel2?.offers ?? {})).toEqual(['offer1']);
   });
 
   it('rejects wheel edits outside the declaration contract', () => {

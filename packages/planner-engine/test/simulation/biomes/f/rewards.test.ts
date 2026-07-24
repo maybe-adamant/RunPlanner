@@ -21,6 +21,7 @@ import {
   evaluateLinearCompleteness,
   evaluateLinearRewards,
   materializeLinearBiome,
+  simulateProject,
   type CompleteLinearCompletenessResult,
 } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
@@ -761,5 +762,56 @@ describe('F reward-history simulation', () => {
     expect(() => evaluateLinearRewards(catalog, snapshot, baseline.history, 1)).toThrowError(
       /in the snapshot but .* in history/,
     );
+  });
+
+  it('keeps an already context-invalid downstream offer authored after room replacement', () => {
+    const start = createOccurrenceId('retained-invalid-start');
+    const replacedCombat = createOccurrenceId('retained-invalid-replaced-combat');
+    const retainedCombat = createOccurrenceId('retained-invalid-retained-combat');
+    const target = createTargetAddress(biome, replacedCombat, 1);
+    const reward = createIncomingRewardAddress(biome, retainedCombat);
+    let project = applyProjectCommand(emptyProject('retained-invalid-replacement'), catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: start,
+      gameName: 'F_Opening01',
+    });
+    project = addBatch(project, start, 'MetaProgress', [
+      { id: replacedCombat, gameName: 'F_Combat02', offer: { rewardType: 'MetaCurrencyDrop' } },
+    ]);
+    project = addBatch(project, replacedCombat, 'RunProgress', [
+      { id: retainedCombat, gameName: 'F_Combat03', offer: { rewardType: 'GiftDrop' } },
+    ]);
+
+    expect(simulateProject(catalog, project).findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: reward }),
+    );
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, retainedCombat),
+      gameName: 'F_Combat06',
+    });
+
+    expect(
+      fPlan(project).topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === retainedCombat,
+      ),
+    ).toMatchObject({
+      gameName: 'F_Combat06',
+      state: { kind: 'counted', offer: { rewardType: 'GiftDrop' } },
+    });
+    expect(simulateProject(catalog, project).findings).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardBagEntryUnavailable',
+        origin: reward,
+        evidence: expect.objectContaining({ rewardType: 'GiftDrop', storeKey: 'RunProgress' }),
+      }),
+    );
+    expect(
+      bindTestCandidateSession(catalog, project).evaluate([
+        { kind: 'roomTarget', target, gameName: 'F_Combat03' },
+      ])[0],
+    ).toMatchObject({ context: 'evaluated', support: 'possible' });
   });
 });

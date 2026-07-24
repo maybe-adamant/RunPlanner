@@ -5,6 +5,7 @@ import {
   createBiomeAddress,
   createContinuationAddress,
   createHubVisitAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   createPickedAddress,
@@ -482,6 +483,102 @@ describe('structured workspace projection', () => {
       ),
       ownerAddress: finding.origin,
       region: 'structure',
+    });
+  });
+
+  it('routes a retained context-invalid reward finding to its exact leaf owner', () => {
+    const f = createBiomeAddress('Underworld', 'F');
+    const start = createOccurrenceId('retained-finding-start');
+    const replaced = createOccurrenceId('retained-finding-replaced');
+    const retained = createOccurrenceId('retained-finding-reward');
+    const reward = createIncomingRewardAddress(f, retained);
+    let project = createProjectDocument(catalog, {
+      projectId: 'retained-finding',
+      name: 'Retained finding',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: f,
+      occurrenceId: start,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(f, start),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(f, start),
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(f, start, 1),
+      occurrenceId: replaced,
+      gameName: 'F_Combat02',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(f, start),
+      exitIndex: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(f, replaced),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(f, replaced),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(f, replaced, 1),
+      occurrenceId: retained,
+      gameName: 'F_Combat03',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'GiftDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetPicked',
+      picked: createPickedAddress(f, replaced),
+      exitIndex: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(f, retained),
+      gameName: 'F_Combat06',
+    });
+
+    expect(
+      project.routes[0]?.biomes[0]?.kind === 'LinearBiome'
+        ? project.routes[0].biomes[0].topology?.occurrences.find(
+            (occurrence) => occurrence.occurrenceId === retained,
+          )
+        : undefined,
+    ).toMatchObject({
+      gameName: 'F_Combat06',
+      state: { kind: 'counted', offer: { rewardType: 'GiftDrop' } },
+    });
+
+    const evaluation = simulateProject(catalog, project);
+    const finding = evaluation.findings.find(
+      (candidate) =>
+        candidate.code === 'rewardBagEntryUnavailable' &&
+        semanticAddressKey(candidate.origin) === semanticAddressKey(reward),
+    );
+    if (finding === undefined) {
+      throw new Error('retained invalid reward finding is missing');
+    }
+    const workspace = projection.project(project, evaluation);
+
+    expect(workspace.focusByOwner.get(semanticAddressKey(finding.origin))).toMatchObject({
+      ownerAddress: reward,
+      focusAddress: reward,
     });
   });
 
