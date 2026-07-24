@@ -250,6 +250,10 @@ The globally frozen generated-batch reward authority is compatible with P:
 - each occurrence leaf owns only its complete resolved reward offer;
 - internal encounter phases do not own separate incoming rewards.
 
+The batch-owned store starts unresolved. Its declaration-owned
+RunProgress/MetaProgress domain is evaluated from accumulated Surface history,
+but neither option becomes authored until the user selects it.
+
 Base P excludes `Devotion` from ordinary counted rewards. Supported bindings
 are:
 

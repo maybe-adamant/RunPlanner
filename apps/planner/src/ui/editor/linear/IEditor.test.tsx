@@ -193,6 +193,15 @@ describe('I editor projection', () => {
     expect(iPlan(store.getState().projectWorkspace.history.present).state).toEqual({
       maxNonGoalRewards: 3,
     });
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(iPlan(store.getState().projectWorkspace.history.present).state).toEqual({
+      maxNonGoalRewards: null,
+    });
+    expect((screen.getByLabelText('Rolled non-goal limit') as HTMLSelectElement).value).toBe('');
+    await user.click(screen.getByRole('button', { name: 'Redo' }));
+    expect(iPlan(store.getState().projectWorkspace.history.present).state).toEqual({
+      maxNonGoalRewards: 3,
+    });
 
     await user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
     const intro = iPlan(store.getState().projectWorkspace.history.present).topology

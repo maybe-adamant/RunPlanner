@@ -169,6 +169,8 @@ physical exits, compatibility, requirements, distinct caps, mutual exclusion,
 and exact forced-pool support and emits addressed semantic findings. Reward
 simulation and its addressed legality findings are live through the common
 project evaluator and editor candidate projection.
-Generated batches own the authored base store, Room Declarations own forced
-overrides, and counted leaves persist only their complete resolved offer under
-the current project schema.
+Generated batches own one required authored base store that starts unresolved,
+Room Declarations own forced overrides, and counted leaves persist only their
+complete resolved offer under the current project schema. The editor evaluates
+the RunProgress/MetaProgress support set before the user selects that store and
+does not create target rooms from a placeholder.

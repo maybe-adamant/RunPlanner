@@ -1946,3 +1946,20 @@ reward-pool, Fields, or Clockwork prerequisite without exposing semantic
 address internals. The complete suite passes with 73 files and 570 tests,
 followed by all three package typechecks, lint, formatting, production build,
 and diff checks.
+
+Batch Authoring Defaults Slices 4 and 5 close the workspace, editor, and
+reconciliation boundary. Unresolved batch and biome interactions are indexed
+before they own a selected value and render explicit Reward pool, Fields door
+roll, and Clockwork-cap placeholders. Dependent room controls remain present
+but inactive until the required outcome is selected. O direct terminals expose
+the same authored-pool interaction when their source policy requires it.
+
+Focused product tests prove that the first selection is one semantic command
+and one undo entry, that undo restores the unresolved prerequisite, and that
+redo restores the authored value. The authored-project, editor,
+contextual-UX, and affected biome documents now describe the schema-8
+unresolved lifecycle consistently. The batch-authoring-defaults audit is
+closed; fixed Q state, sparse N topology, source-derived O stores, and
+room-local defaults retain their prior contracts. The complete suite passes
+with 73 files and 572 tests, followed by all three package typechecks, lint,
+formatting, production build, and diff checks.

@@ -377,10 +377,11 @@ Defaults compose recursively from their semantic owners:
 - a reward type owns its complete resolved-offer payload default;
 - a reward bag owns its default reward type;
 - a biome layout's store policy owns whether a new batch authors a base store,
-  derives one from its source, or has none; an authored form also owns its
-  store default;
-- a biome layout's batch policy owns the complete explicit default for any
-  required typed batch state;
+  derives one from its source, or has none; an authored form owns its bounded
+  domain and starts unresolved;
+- a biome layout's batch policy owns the shape, bounded domain, and
+  initialization policy for typed batch state; a required outcome starts
+  unresolved;
 - a counted binding owns a complete reward default for each store context it
   can receive;
 - a shop slot owns a default resolved offer, installed when its room becomes

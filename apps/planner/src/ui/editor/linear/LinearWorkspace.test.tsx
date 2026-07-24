@@ -11,6 +11,7 @@ import {
   createPickedAddress,
   createProjectDocument,
   createTargetAddress,
+  type LinearBiomePlan,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -50,7 +51,81 @@ function projectedLinearBiome(
   return biome;
 }
 
+function authoredLinearBiome(
+  application: ReturnType<typeof createApplication>,
+  biomeKey: string,
+): LinearBiomePlan {
+  const biome = application.store
+    .getState()
+    .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
+    .find((candidate) => candidate.biomeKey === biomeKey);
+  if (biome?.kind !== 'LinearBiome') {
+    throw new Error(`${biomeKey} has no authored Linear biome`);
+  }
+  return biome;
+}
+
 describe('Linear structured workspace', () => {
+  it('authors a required reward pool as one undoable semantic choice', async () => {
+    const application = createApplication();
+    const biome = createBiomeAddress('Underworld', 'F');
+    const startId = createOccurrenceId('unresolved-store-start');
+    let project = createProjectDocument(application.catalog, {
+      projectId: 'unresolved-store-workspace',
+      name: 'Unresolved Store Workspace',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, startId),
+    });
+    const view = renderBiome(project, 'Underworld', 'F');
+    const decision = projectedLinearBiome(view.application, 'F').decisions[0];
+    if (decision === undefined) {
+      throw new Error('unresolved F batch is missing from the workspace');
+    }
+    act(() => {
+      view.application.store.dispatch(semanticOwnerFocused(decision.rewardStoreMarker.address));
+    });
+    const rewardPool = screen.getByRole('combobox', {
+      name: /^Reward pool/,
+    }) as HTMLSelectElement;
+    const room = screen.getByLabelText('Room');
+    expect(rewardPool.value).toBe('');
+    expect(room).toHaveProperty('disabled', true);
+    expect(room.textContent).toContain('Choose reward pool first');
+
+    await view.user.selectOptions(rewardPool, 'MetaProgress');
+    expect(authoredLinearBiome(view.application, 'F').topology?.continuations[0]).toMatchObject({
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
+    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(1);
+    expect(screen.getByLabelText('Room')).toHaveProperty('disabled', false);
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(authoredLinearBiome(view.application, 'F').topology?.continuations[0]).toMatchObject({
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: null },
+    });
+    expect(
+      (
+        screen.getByRole('combobox', {
+          name: /^Reward pool/,
+        }) as HTMLSelectElement
+      ).value,
+    ).toBe('');
+
+    await view.user.click(screen.getByRole('button', { name: 'Redo' }));
+    expect(authoredLinearBiome(view.application, 'F').topology?.continuations[0]).toMatchObject({
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
+    });
+  });
+
   it('authors blank room slots in physical generation order', async () => {
     const application = createApplication();
     const biome = createBiomeAddress('Underworld', 'F');

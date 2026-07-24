@@ -24,10 +24,10 @@ repair, or silently delete them merely to keep the view visually legal.
 
 The batch-level projection follows the locked all-biome project contract.
 F/G/P author an ordinary batch Reward Pool, H authors its Fields outcome, I
-authors Clockwork-local state without a base store, O may derive its outgoing
-store from a source wheel, and Q owns no ordinary base store. N projects its
-fixed Hub board rather than a Linear batch. All variants use the same semantic
-command and finding ownership rules.
+authors one biome-wide Clockwork limit without a base store, O may derive its
+outgoing store from a source wheel, and Q owns no ordinary base store. N
+projects its fixed Hub board rather than a Linear batch. All variants use the
+same semantic command and finding ownership rules.
 
 ## Application Shell
 
@@ -306,13 +306,15 @@ that source to be possible until purchase.
 
 Every ordinary generated decision projects its store according to policy. An
 `authoredBaseStore` batch renders one batch-owned `Reward Pool` selector for
-its `baseRewardStoreKey`. A `sourceOfferPoint` batch renders that store only at
-its owning room-local offer point; the outgoing batch may show derived
-provenance but exposes no second editor. A `none` batch renders no placeholder
-store field. Each target room then renders only its resolved-offer editor. A
-declaration-forced target may display the derived pool as read-only context,
-but it does not gain another persisted store selector. This keeps batch,
-declaration, and leaf ownership visible in the UI.
+its `baseRewardStoreKey`. A new authored selector displays an explicit
+unresolved placeholder and keeps dependent room controls inactive until one
+semantic replacement command selects the pool. A `sourceOfferPoint` batch
+renders that store only at its owning room-local offer point; the outgoing
+batch may show derived provenance but exposes no second editor. A `none` batch
+renders no placeholder store field. Each target room then renders only its
+resolved-offer editor. A declaration-forced target may display the derived pool
+as read-only context, but it does not gain another persisted store selector.
+This keeps batch, declaration, and leaf ownership visible in the UI.
 
 Replacing the batch reward pool retains every target reward. Candidate and
 selected-plan validation mark a retained reward invalid when its newly resolved
@@ -324,13 +326,14 @@ An H ordinary batch has no Reward Pool selector because its observable rewards
 use declaration-owned RunProgress bindings. It instead renders one batch-owned
 Fields door-roll selector with Min and Max semantic values. The view shows the
 derived per-door cage count and current two-Max ceiling as read-only context,
-but persists neither. A special-only batch keeps the selector visible because
-a Max result still affects later rolls, while explanatory copy makes clear that
-the current targets do not consume the Fields multi-cage count. Each combat
-occurrence renders its three
-room-owned cage values; the batch projection marks only the derived active
-prefix as participating and leaves a dormant third value retained. A
-non-combat target renders no cage editor, and deferred
+but persists neither. A new decision displays `Select roll` until one explicit
+selection replaces the unresolved state. A special-only batch keeps the
+selector visible because a Max result still affects later rolls, while
+explanatory copy makes clear that the current targets do not consume the Fields
+multi-cage count. Each combat occurrence renders its three room-owned cage
+values; the batch projection marks only the derived active prefix as
+participating and leaves a dormant third value retained. A non-combat target
+renders no cage editor, and deferred
 `FieldsOptionalRewards` render no controls.
 
 An O ShipCombat occurrence renders one encounter-count selector and both

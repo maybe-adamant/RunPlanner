@@ -59,8 +59,9 @@ maxNonGoalRewards: 3 | 4 | 5 | 6
 
 This is intentionally more explicit than the game UI. It avoids hidden
 compatibility inference and makes each saved project describe one concrete
-possible run. The declaration owns the range and default. Materialization,
-history, requirements, validation, and candidates consume the authored value
+possible run. The declaration owns the range but no member as a default.
+Authorship remains unresolved until one explicit selection. Materialization,
+history, requirements, validation, and candidates consume the selected value
 without selecting a second witness.
 
 The field is not a contextual candidate query. Every declared value is a
