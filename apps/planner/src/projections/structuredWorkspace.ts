@@ -313,6 +313,7 @@ export interface WorkspaceLinearTarget {
 
 export interface WorkspaceLinearDecision {
   readonly contextualOwner: WorkspaceContextualOwner;
+  readonly findingCount: number;
   readonly kind: 'batch';
   readonly marker: WorkspaceMarker;
   readonly parentOccurrenceId: OccurrenceId | null;
@@ -325,6 +326,7 @@ export interface WorkspaceLinearDecision {
 
 interface ProjectedLinearTerminalDecision {
   readonly contextualOwner: WorkspaceContextualOwner;
+  readonly findingCount: number;
   readonly kind: 'terminal';
   readonly marker: WorkspaceMarker;
   readonly parentOccurrenceId: OccurrenceId | null;
@@ -338,6 +340,7 @@ interface ProjectedLinearTerminalDecision {
 type ProjectedLinearContinuation = WorkspaceLinearDecision | ProjectedLinearTerminalDecision;
 
 export interface WorkspaceLinearTerminal {
+  readonly findingCount: number;
   readonly marker: WorkspaceMarker;
   readonly outline: WorkspaceTerminalOutline;
   readonly realization: 'generatedPeer' | 'independent' | 'projected';
@@ -982,10 +985,45 @@ function biomeStatus(evaluation: ProjectBiomeEvaluation | undefined): WorkspaceS
   return evaluation.validity;
 }
 
+function authoredLinearFrontier(
+  biome: BiomeAddress,
+  layout: LinearBiomeLayout,
+  topology: LinearBiomeTopology | null,
+): ContinuationAddress | null {
+  if (topology === null) {
+    return null;
+  }
+  if (topology.continuations.length === 0) {
+    return createContinuationAddress(biome, topology.startOccurrenceId);
+  }
+  const last = topology.continuations.at(-1);
+  if (last?.kind !== 'batch' || last.pickedExitIndex === null) {
+    return null;
+  }
+  const picked = last.targets.find((target) => target.exitIndex === last.pickedExitIndex);
+  if (picked === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${layout.biomeKey} continuation lost picked exit ${last.pickedExitIndex}`,
+    );
+  }
+  const pickedRoom = occurrenceById(topology, picked.occurrenceId);
+  if (
+    layout.terminal.kind === 'generatedTarget' &&
+    pickedRoom.gameName === layout.terminal.roomGameName
+  ) {
+    return null;
+  }
+  return createContinuationAddress(biome, picked.occurrenceId);
+}
+
 function evaluationFrontier(
   evaluation: ProjectBiomeEvaluation | undefined,
+  authoredFrontier: ContinuationAddress | null,
 ): SemanticAddress | null {
-  return evaluation?.authoring === 'incomplete' ? evaluation.frontier : null;
+  if (evaluation === undefined) {
+    return authoredFrontier;
+  }
+  return evaluation.authoring === 'incomplete' ? evaluation.frontier : null;
 }
 
 function assessedEvaluationKeys(
@@ -1320,6 +1358,45 @@ function linearTarget(
   });
 }
 
+function roomFindingMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
+  return [
+    room.marker,
+    ...room.rewardControls.flatMap((control) => [
+      control.marker,
+      ...(control.kind === 'countedReward' && control.parentMarker !== undefined
+        ? [control.parentMarker]
+        : []),
+      ...(control.kind === 'explicitReward' && control.purchaseMarker !== undefined
+        ? [control.purchaseMarker]
+        : []),
+    ]),
+  ];
+}
+
+function linearContinuationFindingCount(continuation: {
+  readonly marker: WorkspaceMarker;
+  readonly pickedMarker: WorkspaceMarker;
+  readonly rewardStoreMarker?: WorkspaceMarker;
+  readonly targets: readonly WorkspaceLinearTarget[];
+}): number {
+  const markers = [
+    continuation.marker,
+    continuation.pickedMarker,
+    ...(continuation.rewardStoreMarker === undefined ? [] : [continuation.rewardStoreMarker]),
+    ...continuation.targets.flatMap((target) => [
+      target.marker,
+      ...roomFindingMarkers(target.room),
+    ]),
+  ];
+  const unique = new Map(
+    markers.map((projectedMarker) => [projectedMarker.focusKey, projectedMarker]),
+  );
+  return [...unique.values()].reduce(
+    (count, projectedMarker) => count + projectedMarker.findingCount,
+    0,
+  );
+}
+
 function projectLinearBiome(
   catalog: Catalog,
   context: ProjectionContext,
@@ -1342,6 +1419,19 @@ function projectLinearBiome(
               'inspector',
               address,
             );
+            const targets = Object.freeze(
+              continuation.targets.map((target) =>
+                linearTarget(
+                  catalog,
+                  context,
+                  topology,
+                  continuation.kind,
+                  continuation.parentOccurrenceId,
+                  continuation.pickedExitIndex,
+                  target,
+                ),
+              ),
+            );
             const common = {
               contextualOwner: Object.freeze({ kind: 'linearDecision' as const, address }),
               marker: projectedMarker,
@@ -1351,45 +1441,42 @@ function projectLinearBiome(
               retainedOverflow:
                 context.evaluation?.coverage.kind === 'prefix' &&
                 projectedMarker.assessment === 'unassessed',
-              targets: Object.freeze(
-                continuation.targets.map((target) =>
-                  linearTarget(
-                    catalog,
-                    context,
-                    topology,
-                    continuation.kind,
-                    continuation.parentOccurrenceId,
-                    continuation.pickedExitIndex,
-                    target,
-                  ),
-                ),
-              ),
+              targets,
             };
             if (continuation.kind === 'batch') {
+              const rewardStoreMarker = marker(
+                context,
+                createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId),
+                'inspector',
+                address,
+              );
               return Object.freeze({
                 ...common,
+                findingCount: linearContinuationFindingCount({
+                  ...common,
+                  rewardStoreMarker,
+                }),
                 kind: continuation.kind,
-                rewardStoreMarker: marker(
-                  context,
-                  createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId),
-                  'inspector',
-                  address,
-                ),
+                rewardStoreMarker,
               });
             }
+            const rewardStoreMarker =
+              continuation.rewardStore === undefined
+                ? undefined
+                : marker(
+                    context,
+                    createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId),
+                    'inspector',
+                    address,
+                  );
             return Object.freeze({
               ...common,
+              findingCount: linearContinuationFindingCount({
+                ...common,
+                ...(rewardStoreMarker === undefined ? {} : { rewardStoreMarker }),
+              }),
               kind: continuation.kind,
-              ...(continuation.rewardStore === undefined
-                ? {}
-                : {
-                    rewardStoreMarker: marker(
-                      context,
-                      createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId),
-                      'inspector',
-                      address,
-                    ),
-                  }),
+              ...(rewardStoreMarker === undefined ? {} : { rewardStoreMarker }),
             });
           }),
         );
@@ -1413,7 +1500,10 @@ function projectLinearBiome(
   const pickedGeneratedTerminal = generatedTerminalDecision?.targets.find(
     (target) => target.picked && target.room.gameName === layout.terminal.roomGameName,
   );
-  const frontierAddress = evaluationFrontier(context.evaluation);
+  const frontierAddress = evaluationFrontier(
+    context.evaluation,
+    authoredLinearFrontier(biome, layout, topology),
+  );
   const completion = completionLandmarks(catalog, context, plan.biomeKey, layout.completion.rooms);
   const outline = terminalOutline(catalog, layout.terminal);
   const terminalTargets =
@@ -1435,6 +1525,7 @@ function projectLinearBiome(
     source,
     status: biomeStatus(context.evaluation),
     terminal: Object.freeze({
+      findingCount: terminalDecision?.findingCount ?? generatedTerminalDecision?.findingCount ?? 0,
       marker:
         terminalDecision?.marker ??
         pickedGeneratedTerminal?.marker ??
@@ -1702,6 +1793,10 @@ function closestFocusAddress(origin: SemanticAddress): SemanticAddress {
   const biome =
     'biomeKey' in origin ? createBiomeAddress(origin.routeKey, origin.biomeKey) : undefined;
   switch (origin.kind) {
+    case 'continuation':
+      return origin.parentOccurrenceId === null
+        ? biome!
+        : createOccurrenceAddress(biome!, origin.parentOccurrenceId);
     case 'incomingReward':
     case 'localReward':
     case 'localChild':

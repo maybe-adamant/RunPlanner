@@ -15,6 +15,7 @@ export interface RoutePanelSelection {
 export interface EditorSessionState {
   readonly activeRouteKey: string | null;
   readonly activeBiomeKeyByRoute: Readonly<Record<string, string | null>>;
+  readonly focusedSemanticOwner: SemanticAddress | null;
   readonly selectedFinding: FindingSelection | null;
   readonly findingNavigationRevision: number;
 }
@@ -22,6 +23,7 @@ export interface EditorSessionState {
 const emptyState: EditorSessionState = {
   activeRouteKey: null,
   activeBiomeKeyByRoute: {},
+  focusedSemanticOwner: null,
   selectedFinding: null,
   findingNavigationRevision: 0,
 };
@@ -40,16 +42,24 @@ const editorSessionSlice = createSlice({
   reducers: {
     routeSelected(state, action: PayloadAction<string>) {
       state.activeRouteKey = action.payload;
+      state.focusedSemanticOwner = null;
     },
     settingsSelected(state) {
       state.activeRouteKey = null;
+      state.focusedSemanticOwner = null;
     },
     routePanelSelected(state, action: PayloadAction<RoutePanelSelection>) {
       state.activeRouteKey = action.payload.routeKey;
       state.activeBiomeKeyByRoute[action.payload.routeKey] = action.payload.biomeKey;
+      state.focusedSemanticOwner = null;
+    },
+    semanticOwnerFocused(state, action: PayloadAction<SemanticAddress>) {
+      state.focusedSemanticOwner = action.payload;
+      state.selectedFinding = null;
     },
     findingSelected(state, action: PayloadAction<FindingSelection>) {
       state.selectedFinding = action.payload;
+      state.focusedSemanticOwner = action.payload.origin;
       state.findingNavigationRevision += 1;
       const route = routeKey(action.payload.origin);
       if (route === null) {
@@ -61,8 +71,13 @@ const editorSessionSlice = createSlice({
   },
 });
 
-export const { findingSelected, routePanelSelected, routeSelected, settingsSelected } =
-  editorSessionSlice.actions;
+export const {
+  findingSelected,
+  routePanelSelected,
+  routeSelected,
+  semanticOwnerFocused,
+  settingsSelected,
+} = editorSessionSlice.actions;
 
 function requireRoute(catalog: Catalog, routeKeyValue: string): void {
   if (catalog.routes.byKey[routeKeyValue] === undefined) {

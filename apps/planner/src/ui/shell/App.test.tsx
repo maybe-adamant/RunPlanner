@@ -22,6 +22,7 @@ import {
   findingSelected,
   routePanelSelected,
   routeSelected,
+  semanticOwnerFocused,
   settingsSelected,
 } from '../../state/editorSessionSlice';
 import { semanticFindingKey } from '../../projections/evaluationProjection';
@@ -68,18 +69,18 @@ describe('App', () => {
     expect(markup).not.toContain('Choose an opening room');
     expect(markup).toContain('Project editor');
     expect(markup).toContain('Empty project');
-    expect(markup).toContain('Project findings');
+    expect(markup).toContain('Findings');
     expect(markup).toContain('Configure a biome to begin simulation.');
     expect(application.editorNavigation.routes.byKey.Underworld?.biomePanels).toEqual([
       { biomeKey: 'F', label: 'Erebus' },
       { biomeKey: 'G', label: 'Oceanus' },
-      { biomeKey: 'H', label: 'Fields of Mourning' },
+      { biomeKey: 'H', label: 'Fields' },
       { biomeKey: 'I', label: 'Tartarus' },
     ]);
     expect(application.editorNavigation.routes.byKey.Surface?.biomePanels).toEqual([
-      { biomeKey: 'N', label: 'City of Ephyra' },
-      { biomeKey: 'O', label: 'Rift of Thessaly' },
-      { biomeKey: 'P', label: 'Mount Olympus' },
+      { biomeKey: 'N', label: 'Ephyra' },
+      { biomeKey: 'O', label: 'Thessaly' },
+      { biomeKey: 'P', label: 'Olympus' },
       { biomeKey: 'Q', label: 'Summit' },
     ]);
   });
@@ -183,9 +184,10 @@ describe('App', () => {
       </Provider>,
     );
 
-    expect(markup).toContain('Starting room');
+    expect(markup).toContain('Biome structure');
     expect(markup).toContain('Opening 01');
     expect(markup).toContain('Active frontier');
+    expect(markup).toContain('Focused inspector');
   });
 
   it('projects ordinary decisions, terminal offers, shop state, and retained overflow', () => {
@@ -236,7 +238,7 @@ describe('App', () => {
       gameName: 'F_Combat01',
     });
 
-    const markup = renderToStaticMarkup(
+    const terminalMarkup = renderToStaticMarkup(
       <Provider store={application.store}>
         <App
           catalog={application.catalog}
@@ -248,30 +250,62 @@ describe('App', () => {
       </Provider>,
     );
 
-    expect(markup).toContain('Doors from Opening 01');
-    expect(markup).toContain('Combat 01');
-    expect(markup).toContain('Preboss Shop');
-    expect(markup).toContain('Free Reward');
-    expect(markup).toContain('Offer 1');
-    expect(markup).toContain('Purchased');
-    expect(markup).toContain('Unavailable');
-    expect(markup).toContain('Remove Unavailable Exits');
-    expect(markup).toContain(semanticOwnerElementId(createOccurrenceAddress(biome, startId)));
-    expect(markup).toContain(semanticOwnerElementId(createContinuationAddress(biome, startId)));
-    expect(markup).toContain(semanticOwnerElementId(createTargetAddress(biome, startId, 1)));
-    expect(markup).toContain(semanticOwnerElementId(createPickedAddress(biome, startId)));
-    expect(markup).toContain(semanticOwnerElementId(createBatchRewardStoreAddress(biome, startId)));
-    expect(markup).toContain(semanticOwnerElementId(createOccurrenceAddress(biome, combatId)));
-    expect(markup).toContain(semanticOwnerElementId(createIncomingRewardAddress(biome, combatId)));
-    expect(markup).toContain(semanticOwnerElementId(createContinuationAddress(biome, combatId)));
-    expect(markup).toContain(semanticOwnerElementId(createTargetAddress(biome, combatId, 1)));
-    expect(markup).toContain(
+    expect(terminalMarkup).toContain('Biome structure');
+    expect(terminalMarkup).toContain('Decision 1');
+    expect(terminalMarkup).toContain('Combat 01');
+    expect(terminalMarkup).toContain('Boon · Apollo');
+    expect(terminalMarkup).toContain('Preboss Shop');
+    expect(terminalMarkup).toContain('Free Reward');
+    expect(terminalMarkup).toContain('Offer 1');
+    expect(terminalMarkup).toContain('Purchased');
+    expect(terminalMarkup).toContain('Unavailable');
+    expect(terminalMarkup).toContain('Remove Unavailable Exits');
+    expect(terminalMarkup).toContain(
+      semanticOwnerElementId(createContinuationAddress(biome, combatId)),
+    );
+    expect(terminalMarkup).toContain(
+      semanticOwnerElementId(createTargetAddress(biome, combatId, 1)),
+    );
+    expect(terminalMarkup).toContain(
       semanticOwnerElementId(createShopOfferAddress(biome, terminalShopId, 'MajorNonBoon')),
     );
-    expect(markup).toContain(
+    expect(terminalMarkup).toContain(
       semanticOwnerElementId(createShopPurchaseAddress(biome, terminalShopId, 'MajorNonBoon')),
     );
-    expect(markup).not.toContain(semanticAddressKey(createOccurrenceAddress(biome, combatId)));
+
+    application.store.dispatch(semanticOwnerFocused(createContinuationAddress(biome, startId)));
+    const decisionMarkup = renderToStaticMarkup(
+      <Provider store={application.store}>
+        <App
+          catalog={application.catalog}
+          catalogSummary={application.catalogSummary}
+          editorNavigation={application.editorNavigation}
+          projectOperations={application.projectOperations}
+          structuredWorkspace={application.structuredWorkspace}
+        />
+      </Provider>,
+    );
+
+    expect(decisionMarkup).toContain('Doors from Opening 01');
+    expect(decisionMarkup).toContain(
+      semanticOwnerElementId(createContinuationAddress(biome, startId)),
+    );
+    expect(decisionMarkup).toContain(
+      semanticOwnerElementId(createTargetAddress(biome, startId, 1)),
+    );
+    expect(decisionMarkup).toContain(semanticOwnerElementId(createPickedAddress(biome, startId)));
+    expect(decisionMarkup).toContain(
+      semanticOwnerElementId(createBatchRewardStoreAddress(biome, startId)),
+    );
+    expect(decisionMarkup).toContain(
+      semanticOwnerElementId(createOccurrenceAddress(biome, combatId)),
+    );
+    expect(decisionMarkup).toContain(
+      semanticOwnerElementId(createIncomingRewardAddress(biome, combatId)),
+    );
+    expect(decisionMarkup).not.toContain(
+      semanticAddressKey(createOccurrenceAddress(biome, combatId)),
+    );
   });
 
   it('renders and navigates to a required terminal offer omitted by persisted topology', () => {
@@ -394,6 +428,7 @@ describe('App', () => {
     );
 
     expect(markup).toContain('Missing offer');
+    expect(markup).toContain('Terminal decision');
     expect(markup).toContain('Complete the missing offer for this physical exit.');
     expect(markup).toContain(semanticOwnerElementId(createTargetAddress(biome, combatId, 2)));
     expect(markup).toContain('data-selected="true"');

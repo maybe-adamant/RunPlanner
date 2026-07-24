@@ -176,7 +176,7 @@ describe('H editor projection', () => {
   it('edits Fields outcomes and bounded cage leaves through semantic commands', async () => {
     const { store, user } = renderH(hProject(true));
 
-    expect(screen.getByRole('heading', { name: 'Fields of Mourning' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Fields' })).toBeTruthy();
     expect(screen.queryByLabelText('Type')).toBeNull();
     await user.click(screen.getAllByLabelText('Room')[0]!);
     expect((await screen.findAllByRole('option')).length).toBeGreaterThan(0);

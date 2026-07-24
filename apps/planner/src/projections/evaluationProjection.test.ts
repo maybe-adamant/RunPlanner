@@ -220,6 +220,6 @@ describe('evaluation presentation', () => {
     expect(findingDestinationLabel(catalog, room)).toBe('Erebus · Room');
     expect(
       findingDestinationLabel(catalog, createHubRoomAddress(createBiomeAddress('Surface', 'N'))),
-    ).toBe('City of Ephyra · Hub');
+    ).toBe('Ephyra · Hub');
   });
 });

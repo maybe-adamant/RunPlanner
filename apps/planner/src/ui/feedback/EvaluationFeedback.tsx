@@ -37,6 +37,34 @@ export function StatusBadge({ status }: { readonly status: StatusPresentation })
   );
 }
 
+function navigationStatusSymbol(tone: StatusPresentation['tone']): string {
+  switch (tone) {
+    case 'valid':
+      return '✓';
+    case 'incomplete':
+      return '…';
+    case 'invalid':
+      return '!';
+    case 'blocked':
+      return '–';
+    case 'empty':
+      return '○';
+  }
+}
+
+export function NavigationStatusMarker({ status }: { readonly status: StatusPresentation }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="navigation-status-marker"
+      data-tone={status.tone}
+      title={status.label}
+    >
+      {navigationStatusSymbol(status.tone)}
+    </span>
+  );
+}
+
 export function FindingCount({ count, label }: { readonly count: number; readonly label: string }) {
   return count === 0 ? null : (
     <span aria-label={`${count} ${label}`} className="findings-count" title={`${count} ${label}`}>
@@ -120,10 +148,7 @@ export function ProjectFindings({
   return (
     <section className="project-findings" aria-labelledby="project-findings-title">
       <header className="project-findings-heading">
-        <div>
-          <p className="eyebrow">Simulation</p>
-          <h2 id="project-findings-title">Project findings</h2>
-        </div>
+        <h2 id="project-findings-title">Findings</h2>
         <span className="findings-count">{evaluation.findings.length}</span>
       </header>
       {evaluation.findings.length === 0 ? (

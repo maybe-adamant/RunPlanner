@@ -55,10 +55,14 @@ function lastElement(selector: string): HTMLElement {
 }
 
 function decision(batchIndex: number): HTMLElement {
-  const element = document.querySelectorAll<HTMLElement>('.decision-card:not(.terminal-card)')[
-    batchIndex - 1
-  ];
-  if (element === undefined) {
+  const structureDecision =
+    document.querySelectorAll<HTMLElement>('.linear-decision-node')[batchIndex - 1];
+  if (structureDecision === undefined) {
+    throw new Error(`Decision ${batchIndex} structure row is missing`);
+  }
+  fireEvent.click(structureDecision);
+  const element = document.querySelector<HTMLElement>('.decision-card:not(.terminal-card)');
+  if (element === null) {
     throw new Error(`Decision ${batchIndex} is missing`);
   }
   return element;
@@ -70,6 +74,47 @@ function exitRow(batchIndex: number, exitIndex: number): HTMLElement {
     throw new Error(`Decision ${batchIndex} exit ${exitIndex} is missing`);
   }
   return element;
+}
+
+async function addNextDecision(user: PlannerUser): Promise<void> {
+  const frontier = document.querySelector<HTMLElement>('.linear-frontier-node');
+  if (frontier !== null) {
+    await user.click(frontier);
+  }
+  await user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
+}
+
+async function goToPreboss(user: PlannerUser): Promise<void> {
+  const frontier = document.querySelector<HTMLElement>('.linear-frontier-node');
+  if (frontier !== null) {
+    await user.click(frontier);
+  }
+  await user.click(screen.getByRole('button', { name: 'Go to Preboss' }));
+}
+
+async function collectLinearBiomeText(user: PlannerUser, structureName: string): Promise<string> {
+  const structure = screen.getByRole('region', { name: structureName });
+  let text = structure.textContent ?? '';
+  const focusableNodes = [
+    ...structure.querySelectorAll<HTMLElement>(
+      '.linear-entry-node, .linear-decision-node, button.linear-terminal-node',
+    ),
+  ];
+  for (const node of focusableNodes) {
+    await user.click(node);
+    text += screen.getByRole('complementary', { name: 'Focused inspector' }).textContent ?? '';
+  }
+  return text;
+}
+
+async function focusBiomeSettings(user: PlannerUser, structureName: string): Promise<void> {
+  const settings = screen
+    .getByRole('region', { name: structureName })
+    .querySelector<HTMLElement>('.linear-entry-node');
+  if (settings === null) {
+    throw new Error(`${structureName} has no biome settings node`);
+  }
+  await user.click(settings);
 }
 
 async function replaceOffer(
@@ -126,7 +171,7 @@ async function authorGoldenF(user: PlannerUser, application: PlannerApplication)
 
   for (const [batchOffset, batch] of goldenBatches.entries()) {
     const batchIndex = batchOffset + 1;
-    await user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
+    await addNextDecision(user);
     if (batch.storeKey !== undefined) {
       await user.selectOptions(
         within(decision(batchIndex)).getByLabelText('Reward pool'),
@@ -148,7 +193,7 @@ async function authorGoldenF(user: PlannerUser, application: PlannerApplication)
     await user.click(within(decision(batchIndex)).getByRole('radio', { name: 'Pick exit 1' }));
   }
 
-  await user.click(screen.getByRole('button', { name: 'Go to Preboss' }));
+  await goToPreboss(user);
   const terminal = lastElement('.terminal-card');
   await user.click(within(terminal).getByRole('radio', { name: 'Enter terminal exit 1' }));
   const terminalRows = terminal.querySelectorAll<HTMLElement>('.exit-row');
@@ -298,7 +343,7 @@ describe('golden Underworld product loop', () => {
       validatedBiomeCount: 1,
       eligibleForExecutionPlan: true,
     });
-    const text = document.body.textContent ?? '';
+    const text = await collectLinearBiomeText(user, 'Erebus structure');
     const underworld = authored.routes.find((route) => route.routeKey === 'Underworld');
     const fPlan = underworld?.biomes.find((biome) => biome.biomeKey === 'F');
     if (fPlan?.topology === null || fPlan?.topology === undefined) {
@@ -366,7 +411,7 @@ describe('golden Underworld product loop', () => {
     expect(document.activeElement?.id).toBe(semanticOwnerElementId(finding.origin));
     expect(scrollIntoView).toHaveBeenCalledOnce();
     await selectRoom(user, application, screen.getByLabelText('Opening room'), 'F_Opening01');
-    expect(screen.getByRole('heading', { name: 'Opening' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /StartOpening 01/ })).toBeTruthy();
   });
 
   it('keeps an early invalid terminal editable and navigates to its exact target owner', async () => {
@@ -411,7 +456,7 @@ describe('golden Underworld product loop', () => {
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toBe(beforeShrink);
     await user.click(screen.getByRole('button', { name: 'Erebus' }));
-    expect(screen.getByRole('heading', { name: 'Opening' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /StartOpening 02/ })).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Redo' }));
     expect(currentEvaluation(application).status).toBe('empty');
@@ -425,15 +470,13 @@ describe('golden Underworld product loop', () => {
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '2');
     await user.click(screen.getByRole('button', { name: 'Oceanus' }));
 
-    const oceanusEditor = screen
-      .getByRole('heading', { name: 'Oceanus' })
-      .closest<HTMLElement>('.biome-editor');
+    const oceanusEditor = document.querySelector<HTMLElement>('.linear-inspector .biome-editor');
     if (oceanusEditor === null) {
       throw new Error('Oceanus editor is missing');
     }
     expect(within(oceanusEditor).getByText('Blocked', { selector: '.status-badge' })).toBeTruthy();
     await selectRoom(user, application, screen.getByLabelText('Starting room'), 'G_Intro');
-    await user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
+    await addNextDecision(user);
     await user.click(within(exitRow(1, 1)).getByLabelText('Room'));
     const roomOption = screen
       .getAllByRole('option')
@@ -471,10 +514,9 @@ describe('golden Underworld product loop', () => {
     const { user } = renderPlannerForInteraction({ application });
 
     await user.click(screen.getByRole('button', { name: 'Tartarus' }));
+    await focusBiomeSettings(user, 'Tartarus structure');
 
-    const tartarusEditor = screen
-      .getByRole('heading', { name: 'Tartarus' })
-      .closest<HTMLElement>('.biome-editor');
+    const tartarusEditor = document.querySelector<HTMLElement>('.linear-inspector .biome-editor');
     if (tartarusEditor === null) {
       throw new Error('Tartarus editor is missing');
     }
@@ -529,13 +571,13 @@ describe('golden Underworld product loop', () => {
     expect(entrance?.getAttribute('data-candidate-state')).toBe('forced');
     await user.click(entrance!);
     const started = currentProject(application);
-    expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /StartEntrance/ })).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(screen.getByLabelText('Starting room')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Redo' }));
     expect(currentProject(application)).toBe(started);
-    expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /StartEntrance/ })).toBeTruthy();
 
     const projectEvaluations = evaluationWork.filter((event) => event.kind === 'projectEvaluation');
     expect(projectEvaluations.length).toBeGreaterThan(0);
@@ -638,7 +680,33 @@ describe('golden Underworld product loop', () => {
     if (gPlan?.kind !== 'LinearBiome' || gPlan.topology === null) {
       throw new Error('Golden G topology is missing from its authored project');
     }
-    const text = document.body.textContent ?? '';
+    let text = document.body.textContent ?? '';
+    const gDecisions = gPlan.topology.continuations.filter(
+      (continuation) => continuation.kind === 'batch',
+    );
+    const structureDecisions = screen
+      .getByRole('region', { name: 'Oceanus structure' })
+      .querySelectorAll<HTMLElement>('.linear-decision-node');
+    expect(structureDecisions).toHaveLength(gDecisions.length);
+    for (const [index, continuation] of gDecisions.entries()) {
+      await view.user.click(structureDecisions[index]!);
+      const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+      const inspectorText = inspector.textContent ?? '';
+      text += inspectorText;
+      for (const target of continuation.targets) {
+        const occurrence = gPlan.topology.occurrences.find(
+          (candidate) => candidate.occurrenceId === target.occurrenceId,
+        );
+        const room =
+          occurrence === undefined
+            ? undefined
+            : application.catalog.rooms.byKey[occurrence.gameName];
+        if (room === undefined) {
+          throw new Error(`Golden G target ${target.occurrenceId} is missing`);
+        }
+        expect(inspectorText).toContain(room.label);
+      }
+    }
     for (const occurrence of gPlan.topology.occurrences) {
       const room = application.catalog.rooms.byKey[occurrence.gameName];
       if (room === undefined) {
@@ -670,8 +738,8 @@ describe('golden Underworld product loop', () => {
     if (hPlan?.kind !== 'LinearBiome' || hPlan.topology === null) {
       throw new Error('Golden H topology is missing from its authored project');
     }
-    await view.user.click(screen.getByRole('button', { name: 'Fields of Mourning' }));
-    const hText = document.body.textContent ?? '';
+    await view.user.click(screen.getByRole('button', { name: 'Fields' }));
+    const hText = await collectLinearBiomeText(view.user, 'Fields structure');
     for (const occurrence of hPlan.topology.occurrences) {
       const room = application.catalog.rooms.byKey[occurrence.gameName];
       if (room === undefined) {
@@ -681,37 +749,46 @@ describe('golden Underworld product loop', () => {
       expect(hText).not.toContain(occurrence.gameName);
       expect(hText).not.toContain(occurrence.occurrenceId);
     }
-    const fieldsOutcomes = screen.getAllByLabelText('Fields door roll');
-    expect(fieldsOutcomes).toHaveLength(4);
-    for (const control of fieldsOutcomes) {
-      fireEvent.focus(control);
+    const hStructure = screen.getByRole('region', { name: 'Fields structure' });
+    const hDecisionNodes = [...hStructure.querySelectorAll<HTMLElement>('.linear-decision-node')];
+    let fieldsOutcomeCount = 0;
+    let cageRewardCount = 0;
+    for (const node of hDecisionNodes) {
+      await view.user.click(node);
+      const controls = screen.queryAllByLabelText('Fields door roll');
+      fieldsOutcomeCount += controls.length;
+      cageRewardCount += screen.queryAllByLabelText('Fields cage rewards').length;
+      for (const control of controls) {
+        fireEvent.focus(control);
+        expect(control.getAttribute('data-candidate-support')).not.toBe('unavailable');
+      }
     }
-    expect(
-      fieldsOutcomes.every(
-        (control) => control.getAttribute('data-candidate-support') !== 'unavailable',
-      ),
-    ).toBe(true);
-    expect(screen.getAllByLabelText('Fields cage rewards')).toHaveLength(5);
+    expect(fieldsOutcomeCount).toBe(4);
+    expect(cageRewardCount).toBe(5);
     assertAccessibleControlSurface();
 
+    await view.user.click(hDecisionNodes[0]!);
     const firstCage = within(screen.getAllByLabelText('Fields cage rewards')[0]!).getByRole(
       'region',
-      { name: 'Cage 1' },
+      {
+        name: 'Cage 1',
+      },
     );
     await replaceOffer(view.user, application, firstCage, { rewardType: 'WeaponUpgrade' });
     expect(currentProject(application)).not.toEqual(authored);
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toEqual(authored);
 
-    await view.user.selectOptions(screen.getAllByLabelText('Fields door roll')[3]!, 'max');
+    await view.user.click(hDecisionNodes[3]!);
+    await view.user.selectOptions(screen.getByLabelText('Fields door roll'), 'max');
     expect(currentEvaluation(application).status).toBe('invalid');
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     await view.user.click(
       screen.getByRole('button', { name: /Fields door roll cannot occur here/ }),
     );
-    expect(
-      screen.getByRole('button', { name: 'Fields of Mourning' }).getAttribute('aria-current'),
-    ).toBe('page');
+    expect(screen.getByRole('button', { name: 'Fields' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toEqual(authored);
 
@@ -720,7 +797,7 @@ describe('golden Underworld product loop', () => {
       throw new Error('Golden I topology is missing from its authored project');
     }
     await view.user.click(screen.getByRole('button', { name: 'Tartarus' }));
-    const iText = document.body.textContent ?? '';
+    const iText = await collectLinearBiomeText(view.user, 'Tartarus structure');
     for (const occurrence of iPlan.topology.occurrences) {
       const room = application.catalog.rooms.byKey[occurrence.gameName];
       if (room === undefined) {
@@ -730,12 +807,20 @@ describe('golden Underworld product loop', () => {
       expect(iText).not.toContain(occurrence.gameName);
       expect(iText).not.toContain(occurrence.occurrenceId);
     }
+    await focusBiomeSettings(view.user, 'Tartarus structure');
     expect(screen.getByLabelText('Maximum NonGoal rewards')).toHaveProperty('value', '3');
     fireEvent.focus(screen.getByLabelText('Maximum NonGoal rewards'));
     expect(
       screen.getByLabelText('Maximum NonGoal rewards').getAttribute('data-candidate-support'),
     ).not.toBe('unavailable');
-    expect(screen.getAllByText('Clockwork Goal')).toHaveLength(5);
+    const iStructure = screen.getByRole('region', { name: 'Tartarus structure' });
+    const iDecisionNodes = [...iStructure.querySelectorAll<HTMLElement>('.linear-decision-node')];
+    let clockworkGoalCount = 0;
+    for (const node of iDecisionNodes) {
+      await view.user.click(node);
+      clockworkGoalCount += screen.queryAllByText('Clockwork Goal').length;
+    }
+    expect(clockworkGoalCount).toBe(5);
     expect(screen.getByText('Offer 1')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Go to Preboss' })).toBeNull();
     assertAccessibleControlSurface();

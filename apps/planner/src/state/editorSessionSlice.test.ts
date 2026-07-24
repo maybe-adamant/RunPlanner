@@ -12,6 +12,7 @@ import {
   findingSelected,
   routePanelSelected,
   routeSelected,
+  semanticOwnerFocused,
   settingsSelected,
 } from './editorSessionSlice';
 
@@ -49,6 +50,7 @@ describe('editor session navigation', () => {
     expect(reducer(undefined, { type: 'test/initialize' })).toEqual({
       activeRouteKey: 'Underworld',
       activeBiomeKeyByRoute: { Underworld: null, Surface: null },
+      focusedSemanticOwner: null,
       selectedFinding: null,
       findingNavigationRevision: 0,
     });
@@ -80,6 +82,7 @@ describe('editor session navigation', () => {
 
     expect(selectedBiome.activeRouteKey).toBe('Surface');
     expect(selectedBiome.activeBiomeKeyByRoute.Surface).toBe('O');
+    expect(selectedBiome.focusedSemanticOwner).toEqual(biomeSelection.origin);
     expect(selectedRoute.activeRouteKey).toBe('Underworld');
     expect(selectedRoute.activeBiomeKeyByRoute.Underworld).toBeNull();
   });
@@ -107,7 +110,22 @@ describe('editor session navigation', () => {
     expect(selected.activeRouteKey).toBe('Underworld');
     expect(selected.activeBiomeKeyByRoute.Underworld).toBe('F');
     expect(selected.selectedFinding).toBe(selection);
+    expect(selected.focusedSemanticOwner).toEqual(selection.origin);
     expect(selected.findingNavigationRevision).toBe(1);
+  });
+
+  it('keeps semantic focus in transient session state and clears it on panel navigation', () => {
+    const owner = createBiomeAddress('Underworld', 'F');
+    const finding = reducer(undefined, findingSelected({ key: 'selected-finding', origin: owner }));
+    const focused = reducer(finding, semanticOwnerFocused(owner));
+    const navigated = reducer(
+      focused,
+      routePanelSelected({ routeKey: 'Underworld', biomeKey: 'F' }),
+    );
+
+    expect(focused.focusedSemanticOwner).toEqual(owner);
+    expect(focused.selectedFinding).toBeNull();
+    expect(navigated.focusedSemanticOwner).toBeNull();
   });
 
   it('rejects session addresses outside the declared route structure', () => {
