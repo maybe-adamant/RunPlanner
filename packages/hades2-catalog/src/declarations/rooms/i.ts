@@ -6,7 +6,7 @@ export const iRooms = [
     label: 'Entrance',
     biomeKey: 'I',
     kind: 'Intro',
-    mode: { kind: 'derived', classification: 'fixedEntry' },
+    mode: { kind: 'authored', templateKey: 'FixedIntro' },
     structuralTags: [],
     exits: [{ index: 1, type: 'TartarusExitDoor' }],
     incomingReward: { kind: 'none' },
@@ -14,6 +14,7 @@ export const iRooms = [
     encounterProfileKey: 'NoEncounter',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
+    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
   },
   {
     gameName: 'I_Story01',

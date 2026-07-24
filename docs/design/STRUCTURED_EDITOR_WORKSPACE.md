@@ -126,6 +126,16 @@ The projection owns visual grouping, ordering, compact summaries, coverage
 markers, terminal-outline facts, and semantic focus destinations. React renders
 that projection and dispatches semantic commands.
 
+Start-room interactions also project a post-creation focus disposition for
+each declared start choice. A plain start advances to the newly available
+frontier through the ordinary default-focus fallback. When the selected room
+owns editable room state, or creating the start reveals an attached layout
+field that was unavailable before creation, the interaction retains focus on
+the created semantic owner so the inspector presents that surface before the
+user continues. This is derived from the selected declaration's default room
+state and projected inspector ownership, not a biome-key branch, and remains
+transient editor-session behavior.
+
 Incomplete-biome structure is an authored-topology projection enriched by
 progressive evaluation. It must not be described as canonical topology.
 

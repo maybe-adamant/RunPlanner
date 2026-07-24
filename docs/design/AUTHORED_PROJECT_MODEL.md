@@ -10,11 +10,11 @@ It does not define simulation algorithms or React rendering.
 
 ## Cross-Biome Freeze Status
 
-The schema version 6 examples in this document describe the reconciled
+The schema version 7 examples in this document describe the reconciled
 F/G/P/Q/H/O/I/N model. Occurrence identity, downstream retention, possibility
 support, generated-store ownership, conditional-terminal batches, fixed
 authored layout slots, and persistent hub topology are settled. Production now
-reads schema version 6 for the implemented F/G/H/I and N/O/P/Q product surfaces
+reads schema version 7 for the implemented F/G/H/I and N/O/P/Q product surfaces
 and rejects earlier versions without compatibility scaffolding.
 
 ## Core Distinction
@@ -228,11 +228,11 @@ terminal companions are dead leaves and cannot own downstream topology.
 The authored start occurrence selects only among declared start alternatives.
 A fixed room after that start and before the editable decision frontier uses a
 derived layout occurrence when it owns no leaf, or a fixed authored room slot
-when its room state is editable. I has only fixed `I_Intro`; `I_Story01` is an
-authored target inside a later generated batch. N uses fixed authored entry
-slots for its reward-bearing Opening and PreHub. Canonical materialization
-emits each fixed room's real creation, offer, entry, counter, and history facts
-before the first editable batch.
+when its room state is editable. I uses an authored single-choice `I_Intro`
+start; `I_Story01` is an authored target inside a later generated batch. N uses
+fixed authored entry slots for its reward-bearing Opening and PreHub.
+Canonical materialization emits each start and fixed room's real creation,
+offer, entry, counter, and history facts before the first editable batch.
 
 F/G forked preboss transitions create one terminal target occurrence per
 active predecessor exit. Those targets share the same terminal `gameName` but
@@ -719,7 +719,7 @@ representative top-level shape is:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 6;
+  schemaVersion: 7;
   projectId: string;
   name: string;
   catalogVersion: string;
@@ -830,15 +830,14 @@ which roles are admitted. For I, a picked `I_PreBoss02` derives
 `completeBiome`; every picked ordinary target derives `continueBiome`.
 
 `LinearBiomePlan.state` contains exactly the declaration-owned biome fields,
-with complete defaults and no undeclared keys. No current biome owns an
-authored biome-level field, so every linear biome persists `{}`. H's Min/Max
-choice remains a batch-owned value in `continuation.batchState`; I's
-non-goal limit is a latent declaration-owned simulation outcome and never
-enters authored state. A null
+with complete defaults and no undeclared keys. Most linear biomes persist `{}`.
+I persists one bounded `maxNonGoalRewards` value from `3` through `6`, making
+the simulated run's random Clockwork outcome explicit. H's Min/Max choice
+remains a batch-owned value in `continuation.batchState`. A null
 `startOccurrenceId` and null first-continuation parent are reserved for a
 layout-derived fixed-entry sequence. They mean "continue after the final fixed
-entry," not an absent room or a positional UI row. Authored-start layouts still
-require a concrete occurrence ID.
+entry," not an absent room or a positional UI row. I instead uses an authored
+single-choice Entrance with a concrete occurrence ID.
 
 `sourceOfferPoint` carries no second address or store value. The continuation's
 parent occurrence is already its source, and the normalized layout policy owns

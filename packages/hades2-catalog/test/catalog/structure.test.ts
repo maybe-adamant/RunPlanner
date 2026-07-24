@@ -283,7 +283,6 @@ describe('shared structural catalog vocabulary', () => {
         {
           kind: 'clockwork',
           initialGoalCount: 5,
-          nonGoalRewardLimit: { min: 3, max: 6 },
           fields: [],
         },
       ),
@@ -707,7 +706,6 @@ describe('shared structural catalog vocabulary', () => {
                   batchPolicy: {
                     kind: 'clockwork',
                     initialGoalCount: 5,
-                    nonGoalRewardLimit: { min: 3, max: 6 },
                     fields: [],
                   },
                 },
@@ -881,7 +879,6 @@ describe('shared structural catalog vocabulary', () => {
               batchPolicy: {
                 kind: 'clockwork',
                 initialGoalCount: 5,
-                nonGoalRewardLimit: { min: 3, max: 6 },
                 fields: [],
               },
             },

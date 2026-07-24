@@ -51,8 +51,8 @@ The previous Lua declarations and revamp audits are interpreted evidence only.
 This audit confirms their Clockwork acquisition model and occurrence-based
 direction, while correcting inherited assumptions:
 
-- `I_Intro` is the sole fixed entry; `I_Story01` is an authored second-door
-  candidate rather than a fixed room after Intro;
+- `I_Intro` is the sole authored Entrance choice; `I_Story01` is an authored
+  second-door candidate rather than a fixed room after Intro;
 - `I_Shop01` and `I_MiniBoss03` are truly picker-ineligible because their
   concrete declarations set `DebugOnly = true`;
 - a post-goal two-exit decision is one real generated batch containing the
@@ -122,7 +122,7 @@ Persistent conditions explain this baseline. They are not production
 
 ## Layout and Authored Bounds
 
-The fixed entry and generated loop are:
+The authored Entrance and generated loop are:
 
 ```text
 I_Intro
@@ -472,8 +472,9 @@ production `unsupported` predicates or dormant validation codes.
 
 The I implementation delivers:
 
-1. derived fixed `I_Intro` followed directly by the first Clockwork batch;
-2. fixed five Goals and a declaration-owned latent non-goal limit domain
+1. authored single-choice `I_Intro` followed directly by the first Clockwork
+   batch;
+2. fixed five Goals and one explicitly authored simulated non-goal limit from
    `{3,4,5,6}`;
 3. all 24 supported combat declarations with exact physical exits;
 4. the two-exit Clockwork capacity predicate and `I_Combat24` BDC ceiling;
@@ -495,29 +496,29 @@ The I implementation delivers:
 
 The declaration import, authored topology, canonical/history projection,
 selected validation, candidates, and editor projection are active through the
-production application boundary. Schema version 6 removes the old authored
-non-goal-limit authority. The Clockwork policy owns the inclusive `3..6`
-domain; progressive simulation narrows compatible values from selected
-topology, and complete materialization selects a deterministic witness without
-persisting that outcome. Repeated generated preboss targets and picked-preboss
-WorldShop completeness remain authored topology semantics. Materialization and
-the editor share one offer-time Goal/NonGoal projection; history advances only
-entered producers. Production navigation, profiles, recovery, and the complete
-F/G/H/I product loop are covered by the final activation fixture.
+production application boundary. Schema version 7 persists the selected
+`maxNonGoalRewards` value as an explicit simulation input. The declaration
+owns its inclusive `3..6` domain and default; materialization, history,
+requirements, validation, and candidates consume that single authored value.
+Repeated generated preboss targets and picked-preboss WorldShop completeness
+remain authored topology semantics. Materialization and the editor share one
+offer-time Goal/NonGoal projection; history advances only entered producers.
+Production navigation, profiles, recovery, and the complete F/G/H/I product
+loop are covered by the final activation fixture.
 
 ## Required Fixtures
 
 I's focused and product-loop fixtures prove:
 
-- `I_Intro` as the sole fixed entry and first Clockwork source;
+- authored `I_Intro` as the sole Entrance and first Clockwork source;
 - Story rejected on exit 1 and supported on an eligible second exit;
 - picked Story changing neither Clockwork counter;
 - unpicked Story consuming its run-wide creation cap;
 - one- and two-exit combat batches before Goal completion;
 - Goal decrement only for the picked and entered Goal occurrence;
 - non-goal offer bag consumption for unpicked peers without counter increment;
-- compatible non-goal limits narrowing from the declaration-owned `3..6`
-  domain without authored input;
+- each authored non-goal limit from `3` through `6` driving the same Clockwork
+  capacity rules;
 - two-exit target ineligibility at the reserved-capacity boundary;
 - Reprieve and miniboss peer-order, force, reward, and counter effects;
 - preboss ineligibility before five Goal acquisitions;

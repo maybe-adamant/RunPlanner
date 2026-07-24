@@ -42,6 +42,7 @@ function applyUnchecked(
       case 'ReplaceShopOffer':
       case 'SetShopPurchase':
         return applyHubCommand(document, catalog, located, plan, layout, command);
+      case 'ReplaceBiomeField':
       case 'CreateStart':
       case 'CreateBatch':
       case 'ReplaceBatchRewardStore':
@@ -90,6 +91,7 @@ function applyUnchecked(
     case 'ReplaceWithBatch':
     case 'ClearTopology':
       return applyLinearTopologyCommand(document, catalog, located, plan, layout, command);
+    case 'ReplaceBiomeField':
     case 'ReplaceOccurrenceRoom':
       return applyLinearRoomStateCommand(document, catalog, located, plan, layout, command);
     case 'ReplaceBatchRewardStore':

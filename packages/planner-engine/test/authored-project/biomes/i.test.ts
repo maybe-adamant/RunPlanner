@@ -1,6 +1,7 @@
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createBiomeFieldAddress,
   createContinuationAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -24,10 +25,16 @@ import { catalog } from '@run-planner/hades2-catalog';
 const iBiome = createBiomeAddress('Underworld', 'I');
 
 function createIProject(): ProjectDocument {
-  return createProjectDocument(catalog, {
+  const project = createProjectDocument(catalog, {
     projectId: 'i-authored-fixture',
     name: 'I Authored Fixture',
     configuredBiomeCounts: { Underworld: 4 },
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: iBiome,
+    occurrenceId: createOccurrenceId('i-intro'),
+    gameName: 'I_Intro',
   });
 }
 
@@ -52,21 +59,23 @@ function appendBatch(
   targets: readonly BatchTargetFixture[],
   pickedExitIndex: number,
 ): ProjectDocument {
+  const resolvedParentOccurrenceId =
+    parentOccurrenceId ?? iPlan(project).topology?.startOccurrenceId ?? null;
   let nextProject = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
-    continuation: createContinuationAddress(iBiome, parentOccurrenceId),
+    continuation: createContinuationAddress(iBiome, resolvedParentOccurrenceId),
   });
   for (const [index, target] of targets.entries()) {
     nextProject = applyProjectCommand(nextProject, catalog, {
       kind: 'CreateTarget',
-      target: createTargetAddress(iBiome, parentOccurrenceId, index + 1),
+      target: createTargetAddress(iBiome, resolvedParentOccurrenceId, index + 1),
       occurrenceId: target.occurrenceId,
       gameName: target.gameName,
     });
   }
   return applyProjectCommand(nextProject, catalog, {
     kind: 'SetPicked',
-    picked: createPickedAddress(iBiome, parentOccurrenceId),
+    picked: createPickedAddress(iBiome, resolvedParentOccurrenceId),
     exitIndex: pickedExitIndex,
   });
 }
@@ -104,23 +113,32 @@ function completeIProject(): ProjectDocument {
 }
 
 describe('I authored topology', () => {
-  it('round-trips schema v6 without authored Clockwork limit state', () => {
+  it('round-trips schema v7 with one authored Clockwork roll outcome', () => {
     const project = createIProject();
-    expect(PROJECT_DOCUMENT_SCHEMA_VERSION).toBe(6);
-    expect(iPlan(project)).toMatchObject({ state: {}, topology: null });
-    expect(encodeProjectDocument(project)).not.toContain('maxNonGoalRewards');
+    expect(PROJECT_DOCUMENT_SCHEMA_VERSION).toBe(7);
+    expect(iPlan(project)).toMatchObject({
+      state: { maxNonGoalRewards: 3 },
+      topology: { startOccurrenceId: 'i-intro' },
+    });
+    expect(encodeProjectDocument(project)).toContain('maxNonGoalRewards');
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );
 
     const legacy = JSON.parse(encodeProjectDocument(project)) as { schemaVersion: number };
-    legacy.schemaVersion = 5;
+    legacy.schemaVersion = 6;
     expect(() => decodeProjectDocument(legacy, catalog)).toThrowError(
-      /schemaVersion: expected 6, received 5/,
+      /schemaVersion: expected 7, received 6/,
     );
+    const replaced = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBiomeField',
+      field: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
+      value: 6,
+    });
+    expect(iPlan(replaced).state).toEqual({ maxNonGoalRewards: 6 });
   });
 
-  it('owns the first decision after fixed Intro without a fake occurrence', () => {
+  it('owns Entrance as an authored start and anchors the first decision to it', () => {
     const combat = createOccurrenceId('i-first-combat');
     const project = appendBatch(
       createIProject(),
@@ -131,11 +149,11 @@ describe('I authored topology', () => {
     const topology = iPlan(project).topology;
 
     expect(topology).toMatchObject({
-      startOccurrenceId: null,
+      startOccurrenceId: 'i-intro',
       continuations: [
         {
           kind: 'batch',
-          parentOccurrenceId: null,
+          parentOccurrenceId: 'i-intro',
           rewardStore: { kind: 'none' },
           batchState: null,
           targets: [{ exitIndex: 1, occurrenceId: combat }],
@@ -143,13 +161,16 @@ describe('I authored topology', () => {
         },
       ],
     });
-    expect(topology?.occurrences.map((occurrence) => occurrence.gameName)).toEqual(['I_Combat02']);
+    expect(topology?.occurrences.map((occurrence) => occurrence.gameName)).toEqual([
+      'I_Intro',
+      'I_Combat02',
+    ]);
 
     const removed = applyProjectCommand(project, catalog, {
       kind: 'RemoveBatch',
-      continuation: createContinuationAddress(iBiome, null),
+      continuation: createContinuationAddress(iBiome, createOccurrenceId('i-intro')),
     });
-    expect(iPlan(removed).topology).toBeNull();
+    expect(iPlan(removed).topology?.continuations).toEqual([]);
 
     expect(() =>
       applyProjectCommand(createIProject(), catalog, {

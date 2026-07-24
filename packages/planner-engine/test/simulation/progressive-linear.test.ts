@@ -438,7 +438,7 @@ describe('Linear progressive biome evaluation', () => {
     );
   });
 
-  it('evaluates the fixed I entrance even before authored topology exists', () => {
+  it('waits for the authored I entrance before evaluating a prefix', () => {
     const noI = mapLinearPlan(underworld, 'Underworld', 'I', (plan) =>
       Object.freeze({ ...plan, topology: null }),
     );
@@ -449,18 +449,8 @@ describe('Linear progressive biome evaluation', () => {
     if (evaluation.kind !== 'LinearBiome' || evaluation.authoring !== 'incomplete') {
       throw new Error('I did not produce an incomplete Linear evaluation');
     }
-    expect(evaluation.coverage).toMatchObject({
-      kind: 'prefix',
-      through: { checkpoint: 'beforeTargetGeneration' },
-    });
-    if (!('materializedPrefix' in evaluation)) {
-      throw new Error('I fixed entry was not materialized');
-    }
-    expect(evaluation.materializedPrefix.entryRooms.map((room) => room.gameName)).toEqual([
-      'I_Intro',
-    ]);
-    expect(evaluation.history.rooms.at(-1)?.preOutgoing).toBeDefined();
-    expect(evaluation.history.rooms.at(-1)?.outgoingGeneration).toBeUndefined();
+    expect(evaluation.coverage).toEqual({ kind: 'none', reason: 'notEvaluated' });
+    expect('materializedPrefix' in evaluation).toBe(false);
   });
 
   it('strengthens the same fully authored Linear biomes to canonical complete evaluations', () => {

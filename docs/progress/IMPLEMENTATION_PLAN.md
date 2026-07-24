@@ -481,7 +481,7 @@ Gate:
 
 Deliver:
 
-- I's fixed entry sequence, ordinary combat/special rooms, canonical
+- I's authored Intro, generated Story peers, ordinary combat/special rooms, canonical
   `I_PreBoss02`, WorldShop, boss, and completion declarations;
 - Clockwork batch state and derived Goal/NonGoal incoming realization with one
   complete dormant NonGoal offer value;
@@ -1371,8 +1371,9 @@ I should close through five slices:
 1. Clockwork authorship:
    - persist the declaration-owned `maxNonGoalRewards` bounded value at the
      biome owner and expose one typed semantic replacement command;
-   - admit `clockwork` batches, the fixed Intro/Story entries, and generated
-     `I_PreBoss02` target occurrences without adding a second terminal action;
+   - admit `clockwork` batches, the authored single-choice Intro, generated
+     Story peers, and generated `I_PreBoss02` target occurrences without adding
+     a second terminal action;
    - require complete WorldShop state only when a generated preboss target is
      picked, while retaining repeated preboss occurrences as distinct authored
      identities;
@@ -1380,7 +1381,7 @@ I should close through five slices:
      authority fixtures without activating I capabilities;
 2. Clockwork materialization and history:
    - derive Goal versus NonGoal from the exact pre-generation Clockwork state;
-   - materialize the fixed entries, ordinary batches, repeated conditional
+   - materialize the authored Entrance, ordinary batches, repeated conditional
      preboss targets, picked-terminal closure, boss, and postboss tail;
    - apply Goal acquisition, non-goal reward acquisition,
      `BiomeRewardsSpawned`, encounter-depth, and completion timing at their
@@ -2106,7 +2107,7 @@ Gate:
 Before Phase 7 Commit 11 continues, complete the independently passing slices
 in [`I_BIOME_RECONCILIATION.md`](I_BIOME_RECONCILIATION.md). The reconciliation
 restores Story as a second-door generated occurrence, makes `I_Intro` the sole
-fixed entry, moves the bounded `3..6` limit into derived possibility state, and
+authored Entrance, persists one explicit bounded `3..6` simulated roll, and
 closes the resulting simulation, candidate, persistence, and editor seams.
 
 ### Commit 11: Linear Spine and Focused Inspector

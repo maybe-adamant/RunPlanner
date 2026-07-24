@@ -25,7 +25,10 @@ import {
   selectProjectEvaluation,
   useAppSelector,
 } from '../../../state/store';
-import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
+import {
+  createStructuredWorkspaceTestServices,
+  requireLinearWorkspaceBiome,
+} from '../../../../test/fixtures/structuredWorkspace';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 
 const biome = createBiomeAddress('Surface', 'O');
@@ -125,12 +128,14 @@ function OEditorHarness({
   if (evaluation !== undefined && evaluation.kind !== 'LinearBiome') {
     throw new Error('O editor fixture received a non-Linear evaluation');
   }
+  const workspace = structuredWorkspace.project(project, projectEvaluation);
   return (
     <LinearBiomeEditor
       catalog={catalog}
-      interactions={structuredWorkspace.project(project, projectEvaluation).interactions}
+      interactions={workspace.interactions}
       evaluation={evaluation?.kind === 'LinearBiome' ? evaluation : undefined}
       plan={plan}
+      projection={requireLinearWorkspaceBiome(workspace, biome.biomeKey)}
       routeKey={biome.routeKey}
     />
   );

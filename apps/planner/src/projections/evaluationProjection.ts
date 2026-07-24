@@ -321,6 +321,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
   switch (origin.kind) {
     case 'biome':
       return biomeLabel;
+    case 'biomeField':
+      return `${biomeLabel} · Simulated outcome`;
     case 'fixedEntryRoom':
     case 'fixedEntryReward':
     case 'fixedEntryTarget':

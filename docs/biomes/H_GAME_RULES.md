@@ -441,8 +441,8 @@ the ratio ledger. It owns no authored reward leaf, bag depletion, or modeled
 acquisition.
 
 `H_PostBoss01` uses the empty non-counting encounter, records no modeled reward
-or store contribution, and links to the fixed `I_Intro` entry. Optional well
-and sell-shop behavior in the postboss map remains deferred.
+or store contribution, and links to the authored `I_Intro` Entrance. Optional
+well and sell-shop behavior in the postboss map remains deferred.
 
 ## Counter and History Projection
 
