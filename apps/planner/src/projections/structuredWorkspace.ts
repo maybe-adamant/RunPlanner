@@ -315,7 +315,7 @@ export interface WorkspaceLinearTarget {
 }
 
 export interface WorkspaceLinearDecision {
-  readonly batchState: CanonicalBatchState;
+  readonly batchState: CanonicalBatchState | null;
   readonly contextualOwner: WorkspaceContextualOwner;
   readonly findingCount: number;
   readonly kind: 'batch';
@@ -1427,7 +1427,9 @@ function projectLinearBiome(
   const topology = plan.topology;
   const source = projectionSource(context.evaluation);
   const clockworkBatches =
-    topology !== null && layout.continuation.batchPolicy.kind === 'clockwork'
+    topology !== null &&
+    layout.continuation.batchPolicy.kind === 'clockwork' &&
+    !Object.values(plan.state).some((value) => value === null)
       ? projectClockworkTopology(catalog, biome, plan).batches
       : Object.freeze([]);
   const projectedContinuations: readonly ProjectedLinearContinuation[] =
@@ -1474,14 +1476,14 @@ function projectLinearBiome(
               targets,
             };
             if (continuation.kind === 'batch') {
-              let batchState: CanonicalBatchState;
+              let batchState: CanonicalBatchState | null;
               if (layout.continuation.batchPolicy.kind === 'clockwork') {
-                if (clockworkBatch === undefined) {
-                  throw new StructuredWorkspaceProjectionContractError(
-                    `${layout.biomeKey} batch ${continuation.parentOccurrenceId} has no Clockwork projection`,
-                  );
-                }
-                batchState = clockworkBatch.batchState;
+                batchState = clockworkBatch?.batchState ?? null;
+              } else if (
+                layout.continuation.batchPolicy.kind === 'fields' &&
+                continuation.batchState === null
+              ) {
+                batchState = null;
               } else {
                 batchState = projectLinearBatchState(catalog, biome, topology, continuation);
               }
@@ -2327,12 +2329,9 @@ function createWorkspaceInteractionCatalog(
           indexRoomState(biome, occurrence, requireRoom(catalog, occurrence.gameName));
         }
         for (const continuation of plan.topology.continuations) {
-          if (continuation.kind !== 'batch') {
-            continue;
-          }
           const address = createContinuationAddress(biome, continuation.parentOccurrenceId);
           if (
-            continuation.rewardStore.kind === 'authoredBaseStore' &&
+            continuation.rewardStore?.kind === 'authoredBaseStore' &&
             layout.continuation.rewardStorePolicy.kind === 'authoredBaseStore'
           ) {
             const rewardAddress = createBatchRewardStoreAddress(
@@ -2345,17 +2344,17 @@ function createWorkspaceInteractionCatalog(
               candidateInteraction(
                 rewardAddress,
                 storeKeys.map((value) => Object.freeze({ label: storeLabel(value), value })),
-                continuation.rewardStore.baseRewardStoreKey,
+                continuation.rewardStore.baseRewardStoreKey ?? undefined,
                 () => candidates.batchRewardStores(rewardAddress, storeKeys),
               ),
             );
           }
-          if (
-            layout.continuation.batchPolicy.kind === 'fields' &&
-            continuation.batchState !== null
-          ) {
-            const projected = projectLinearBatchState(catalog, biome, plan.topology, continuation);
-            if (projected.kind !== 'fields') {
+          if (continuation.kind === 'batch' && layout.continuation.batchPolicy.kind === 'fields') {
+            const projected =
+              continuation.batchState === null
+                ? undefined
+                : projectLinearBatchState(catalog, biome, plan.topology, continuation);
+            if (projected !== undefined && projected.kind !== 'fields') {
               throw new StructuredWorkspaceProjectionContractError(
                 `${plan.biomeKey} Fields interaction has no projected batch`,
               );
@@ -2371,11 +2370,13 @@ function createWorkspaceInteractionCatalog(
                     value: 'min' as const,
                   }),
                   Object.freeze({
-                    label: `Max (${projected.batchCapacity})`,
+                    label: `Max (${
+                      projected?.batchCapacity ?? layout.continuation.batchPolicy.maxDoorCageRewards
+                    })`,
                     value: 'max' as const,
                   }),
                 ]),
-                continuation.batchState.cageOutcome,
+                continuation.batchState?.cageOutcome,
                 () => candidates.fieldsCageOutcomes(address, values),
               ),
             );

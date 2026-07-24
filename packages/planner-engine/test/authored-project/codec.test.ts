@@ -60,7 +60,6 @@ function linearLayout(biomeKey: string, terminalRoom: string): BiomeLayout {
       rewardStorePolicy: {
         kind: 'authoredBaseStore',
         storeKeys: ['RunProgress'],
-        defaultStoreKey: 'RunProgress',
         targetMetaRewardsRatio: 0.315,
         targetMetaRewardsAdjustSpeed: 10,
       },
@@ -215,7 +214,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 1'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 1'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -227,7 +226,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 2'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 2'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -239,7 +238,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 3'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 3'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -251,7 +250,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 4'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 4'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -263,7 +262,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 5'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 5'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -275,7 +274,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 6'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 6'));
     expect(() =>
       decodeProjectDocument(
         {

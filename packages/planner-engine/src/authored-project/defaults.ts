@@ -1,5 +1,5 @@
 import type { Catalog } from '../catalog-schema';
-import { createDefaultBiomeState } from './biomeState';
+import { createInitialBiomeState } from './biomeState';
 import { decodeProjectDocument } from './codec';
 import { PROJECT_DOCUMENT_SCHEMA_VERSION, type ProjectDocument } from './model';
 import { ProjectDocumentContractError } from './validation';
@@ -54,7 +54,7 @@ export function createProjectDocument(
           ? {
               kind: 'LinearBiome' as const,
               biomeKey,
-              state: createDefaultBiomeState(layout),
+              state: createInitialBiomeState(layout),
               topology: null,
             }
           : { kind: 'HubBiome' as const, biomeKey, topology: null };

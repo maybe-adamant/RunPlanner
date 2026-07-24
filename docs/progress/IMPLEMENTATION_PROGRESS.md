@@ -1910,3 +1910,21 @@ active contextual room picker and later blanks remain visible as `Waiting for
 prior exit`. Focused engine, candidate-projection, room-picker, workbench, and
 full product-loop fixtures cover partial generation and sequential activation.
 The complete suite passes with 73 files and 562 tests.
+
+Batch Authoring Defaults Slice 1 is complete. Project schema 8 now represents
+required authored biome and generated-batch values explicitly as unresolved:
+I's Clockwork limit, H's Fields Min/Max outcome, and F/G/O/P authored generated
+reward stores no longer acquire a domain member from declaration order.
+Catalog declarations distinguish `required` initialization from genuine
+`defaulted` facts, and generated authored-store policies no longer expose
+`defaultStoreKey`. The codec strictly rejects schema 7 without migration.
+
+The persisted shape is usable throughout the existing application while
+unresolved: completeness stops at the missing semantic owner, prefix
+materialization does not consume a placeholder, and the editor exposes the
+required controls before room creation, including O's direct-terminal store.
+These are boundary accommodations for the schema authority change; the richer
+candidate-prerequisite and interaction coverage remain in the following audit
+slices. Room-local leaf defaults and their replace-only lifecycle are
+unchanged. The complete suite passes with 73 files and 564 tests, followed by
+typecheck, lint, formatting, production build, and diff checks.

@@ -223,6 +223,7 @@ function countedRoom(
     structuralTags: [],
     exits: exits(exitCount),
     incomingReward: countedReward,
+    ...(kind === 'Opening' ? { forcedRewardStoreKey: 'RunProgress' } : {}),
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterProfileKey: kind,
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
@@ -326,7 +327,6 @@ const layout = {
     rewardStorePolicy: {
       kind: 'authoredBaseStore',
       storeKeys: ['RunProgress', 'MetaProgress'],
-      defaultStoreKey: 'RunProgress',
       targetMetaRewardsRatio: 0.315,
       targetMetaRewardsAdjustSpeed: 10,
     },
@@ -401,9 +401,14 @@ function startedProject(): ProjectDocument {
 }
 
 function createBatch(document: ProjectDocument, parentOccurrenceId = startId): ProjectDocument {
-  return applyProjectCommand(document, catalog, {
+  const created = applyProjectCommand(document, catalog, {
     kind: 'CreateBatch',
     continuation: createContinuationAddress(biome, parentOccurrenceId),
+  });
+  return applyProjectCommand(created, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, parentOccurrenceId),
+    storeKey: 'RunProgress',
   });
 }
 
@@ -1161,7 +1166,7 @@ describe('terminal and destructive project commands', () => {
     expect(topology?.continuations.at(-1)).toEqual({
       kind: 'batch',
       parentOccurrenceId: parentId,
-      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: null },
       batchState: null,
       targets: [],
       pickedExitIndex: null,

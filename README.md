@@ -129,27 +129,30 @@ authority and should be referenced rather than copied elsewhere.
     — runtime evidence for Ephyra side-room availability.
 16. [`docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md)
     — all-biome contextual-selection, frontier, repair, and feedback inventory.
-17. [`docs/design/AUTHORED_PROJECT_MODEL.md`](docs/design/AUTHORED_PROJECT_MODEL.md)
+17. [`docs/audits/BATCH_AUTHORING_DEFAULTS_AUDIT.md`](docs/audits/BATCH_AUTHORING_DEFAULTS_AUDIT.md)
+    — cross-biome batch defaults, required authored outcomes, fixed and
+    derived policy, and unresolved-state implementation guidance.
+18. [`docs/design/AUTHORED_PROJECT_MODEL.md`](docs/design/AUTHORED_PROJECT_MODEL.md)
     — persistence, topology ownership, identity, and semantic commands.
-18. [`docs/design/SIMULATION_AND_VALIDATION.md`](docs/design/SIMULATION_AND_VALIDATION.md)
+19. [`docs/design/SIMULATION_AND_VALIDATION.md`](docs/design/SIMULATION_AND_VALIDATION.md)
     — materialization, history, validation, feedback, and simulation.
-19. [`docs/design/CANDIDATE_EVALUATION_MODEL.md`](docs/design/CANDIDATE_EVALUATION_MODEL.md)
+20. [`docs/design/CANDIDATE_EVALUATION_MODEL.md`](docs/design/CANDIDATE_EVALUATION_MODEL.md)
     — project-bound candidate sessions, decision contexts, replay horizons,
     and the candidate-system refactor.
-20. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) — editor
+21. [`docs/design/EDITOR_MODEL.md`](docs/design/EDITOR_MODEL.md) — editor
     projection, navigation, persistence UX, and interaction ownership.
-21. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md)
+22. [`docs/design/CONTEXTUAL_EDITOR_UX.md`](docs/design/CONTEXTUAL_EDITOR_UX.md)
     — contextual room/reward selection and compact picker behavior.
-22. [`docs/design/STRUCTURED_EDITOR_WORKSPACE.md`](docs/design/STRUCTURED_EDITOR_WORKSPACE.md)
+23. [`docs/design/STRUCTURED_EDITOR_WORKSPACE.md`](docs/design/STRUCTURED_EDITOR_WORKSPACE.md)
     — route rail, layout-specific biome structure, focused inspector, coverage,
     and repair presentation.
-23. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
+24. [`docs/design/GAME_INTEGRATION_BOUNDARY.md`](docs/design/GAME_INTEGRATION_BOUNDARY.md)
     — future execution artifact and runtime conformance loop.
-24. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md)
+25. [`docs/progress/IMPLEMENTATION_PLAN.md`](docs/progress/IMPLEMENTATION_PLAN.md)
     — forward delivery sequence and acceptance gates.
-25. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md)
+26. [`docs/progress/MIGRATION_PROVENANCE.md`](docs/progress/MIGRATION_PROVENANCE.md)
     — inherited evidence disposition and port verification.
-26. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
+27. [`docs/progress/IMPLEMENTATION_PROGRESS.md`](docs/progress/IMPLEMENTATION_PROGRESS.md)
     — completed delivery history; not design authority.
 
 ## Source Evidence

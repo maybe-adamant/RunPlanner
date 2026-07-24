@@ -212,6 +212,11 @@ describe('App', () => {
       continuation: createContinuationAddress(biome, startId),
     });
     dispatchCommand({
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, startId),
+      storeKey: 'RunProgress',
+    });
+    dispatchCommand({
       kind: 'CreateTarget',
       target: createTargetAddress(biome, startId, 1),
       occurrenceId: combatId,
@@ -327,6 +332,11 @@ describe('App', () => {
     dispatchCommand({
       kind: 'CreateBatch',
       continuation: createContinuationAddress(biome, startId),
+    });
+    dispatchCommand({
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, startId),
+      storeKey: 'RunProgress',
     });
     dispatchCommand({
       kind: 'CreateTarget',
@@ -453,6 +463,11 @@ describe('App', () => {
       dispatchCommand({
         kind: 'CreateBatch',
         continuation: createContinuationAddress(biome, parentId),
+      });
+      dispatchCommand({
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(biome, parentId),
+        storeKey: 'RunProgress',
       });
       const exitCount = batchIndex === 0 ? 1 : 2;
       let pickedId = parentId;

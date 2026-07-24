@@ -59,10 +59,16 @@ function appendBatch(
   parentOccurrenceId: OccurrenceId,
   targets: readonly BatchTargetFixture[],
   pickedExitIndex: number,
+  cageOutcome: 'min' | 'max' = 'min',
 ): ProjectDocument {
   let nextProject = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     continuation: createContinuationAddress(hBiome, parentOccurrenceId),
+  });
+  nextProject = applyProjectCommand(nextProject, catalog, {
+    kind: 'ReplaceFieldsCageOutcome',
+    continuation: createContinuationAddress(hBiome, parentOccurrenceId),
+    cageOutcome,
   });
   for (const [index, target] of targets.entries()) {
     nextProject = applyProjectCommand(nextProject, catalog, {
@@ -103,12 +109,8 @@ function completeHProject(): ProjectDocument {
       { gameName: 'H_Combat04', occurrenceId: combat04 },
     ],
     1,
+    'max',
   );
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceFieldsCageOutcome',
-    continuation: createContinuationAddress(hBiome, combat02),
-    cageOutcome: 'max',
-  });
   project = appendBatch(
     project,
     combat03,
@@ -143,7 +145,7 @@ function completeHProject(): ProjectDocument {
 }
 
 describe('H authored topology', () => {
-  it('creates no-store Fields batches with complete cage defaults and semantic replacement', () => {
+  it('creates unresolved no-store Fields batches and supports semantic replacement', () => {
     let project = startH(createHProject());
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
@@ -154,9 +156,23 @@ describe('H authored topology', () => {
     expect(initialBatch).toMatchObject({
       kind: 'batch',
       rewardStore: { kind: 'none' },
-      batchState: { cageOutcome: 'min' },
+      batchState: null,
+    });
+    expect(evaluateLinearCompleteness(catalog, hBiome, hPlan(project))).toMatchObject({
+      completion: 'incomplete',
+      findings: [
+        {
+          code: 'batchStateMissing',
+          origin: createContinuationAddress(hBiome, createOccurrenceId('h-start')),
+        },
+      ],
     });
 
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      continuation: createContinuationAddress(hBiome, createOccurrenceId('h-start')),
+      cageOutcome: 'max',
+    });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateTarget',
       target: createTargetAddress(hBiome, createOccurrenceId('h-start'), 1),
@@ -175,11 +191,6 @@ describe('H authored topology', () => {
       },
     });
 
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceFieldsCageOutcome',
-      continuation: createContinuationAddress(hBiome, createOccurrenceId('h-start')),
-      cageOutcome: 'max',
-    });
     const topology = hPlan(project).topology;
     expect(topology?.continuations[0]).toMatchObject({
       batchState: { cageOutcome: 'max' },
@@ -210,6 +221,11 @@ describe('H authored topology', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
       continuation: createContinuationAddress(hBiome, createOccurrenceId('h-start')),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      continuation: createContinuationAddress(hBiome, createOccurrenceId('h-start')),
+      cageOutcome: 'min',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateTarget',
@@ -303,7 +319,7 @@ describe('H authored topology', () => {
     firstBatch.rewardStore = { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' };
     expect(() => decodeProjectDocument(raw, catalog)).toThrowError(ProjectDocumentContractError);
     firstBatch.rewardStore = { kind: 'none' };
-    firstBatch.batchState = null;
+    firstBatch.batchState = { cageOutcome: 'visibleThree' };
     expect(() => decodeProjectDocument(raw, catalog)).toThrowError(ProjectDocumentContractError);
 
     const terminalParent = createOccurrenceId('h-b4-combat05');

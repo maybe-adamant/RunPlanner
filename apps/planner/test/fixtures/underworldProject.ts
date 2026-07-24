@@ -2,6 +2,7 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createBiomeFieldAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
@@ -167,13 +168,11 @@ function appendGoldenBatches(
       kind: 'CreateBatch',
       continuation: createContinuationAddress(biome, parentId),
     });
-    if (batch.storeKey !== undefined) {
-      nextProject = applyProjectCommand(nextProject, catalog, {
-        kind: 'ReplaceBatchRewardStore',
-        rewardStore: createBatchRewardStoreAddress(biome, parentId),
-        storeKey: batch.storeKey,
-      });
-    }
+    nextProject = applyProjectCommand(nextProject, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, parentId),
+      storeKey: batch.storeKey ?? 'RunProgress',
+    });
     for (const [targetOffset, target] of batch.targets.entries()) {
       const exitIndex = targetOffset + 1;
       const occurrenceId = targetOccurrenceId(biomeKey, batchIndex, exitIndex);
@@ -356,13 +355,11 @@ function createGoldenFGHProject(catalog: Catalog): ProjectDocument {
       kind: 'CreateBatch',
       continuation: createContinuationAddress(biome, batch.parent),
     });
-    if (batch.cageOutcome === 'max') {
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceFieldsCageOutcome',
-        continuation: createContinuationAddress(biome, batch.parent),
-        cageOutcome: batch.cageOutcome,
-      });
-    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      continuation: createContinuationAddress(biome, batch.parent),
+      cageOutcome: batch.cageOutcome,
+    });
     for (const [targetOffset, target] of batch.targets.entries()) {
       project = applyProjectCommand(project, catalog, {
         kind: 'CreateTarget',
@@ -435,6 +432,11 @@ export function createGoldenFGHIProject(catalog: Catalog): ProjectDocument {
     biome,
     occurrenceId: intro,
     gameName: 'I_Intro',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBiomeField',
+    field: createBiomeFieldAddress(biome, 'maxNonGoalRewards'),
+    value: 3,
   });
   let parent: OccurrenceId = intro;
   const batches = [

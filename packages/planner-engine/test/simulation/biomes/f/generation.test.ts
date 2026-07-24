@@ -95,6 +95,11 @@ function possibilityProject(batches: readonly BatchSpec[] = baselineBatches): Pr
       kind: 'CreateBatch',
       continuation: createContinuationAddress(biome, parentId),
     });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, parentId),
+      storeKey: 'RunProgress',
+    });
     batch.targets.forEach((gameName, targetOffset) => {
       const exitIndex = targetOffset + 1;
       project = applyProjectCommand(project, catalog, {
@@ -199,6 +204,11 @@ function withGTarget(project: ProjectDocument): ProjectDocument {
     kind: 'CreateBatch',
     continuation: createContinuationAddress(gBiome, gStartId),
   });
+  result = applyProjectCommand(result, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(gBiome, gStartId),
+    storeKey: 'RunProgress',
+  });
   return applyProjectCommand(result, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(gBiome, gStartId, 1),
@@ -222,6 +232,11 @@ function incompleteFProject(): ProjectDocument {
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     continuation: createContinuationAddress(biome, startId),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, startId),
+    storeKey: 'RunProgress',
   });
   return applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',

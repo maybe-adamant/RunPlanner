@@ -12,7 +12,13 @@ function decodeFieldValue(
   value: unknown,
   descriptor: AuthoredFieldDescriptor,
   path: string,
-): AuthoredFieldValue {
+): AuthoredFieldValue | null {
+  if (value === null) {
+    if (descriptor.initialization.kind !== 'required') {
+      failProjectDocument(path, 'must use its declared default');
+    }
+    return null;
+  }
   switch (descriptor.kind) {
     case 'boolean':
       return expectBoolean(value, path);
@@ -34,10 +40,13 @@ function decodeFieldValue(
   }
 }
 
-export function createDefaultBiomeState(layout: LinearBiomeLayout): AuthoredBiomeState {
+export function createInitialBiomeState(layout: LinearBiomeLayout): AuthoredBiomeState {
   return Object.freeze(
     Object.fromEntries(
-      layout.fields.map((descriptor) => [descriptor.key, descriptor.defaultValue]),
+      layout.fields.map((descriptor) => [
+        descriptor.key,
+        descriptor.initialization.kind === 'required' ? null : descriptor.initialization.value,
+      ]),
     ),
   );
 }

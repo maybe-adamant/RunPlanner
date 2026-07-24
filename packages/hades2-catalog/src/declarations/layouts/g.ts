@@ -16,7 +16,6 @@ export const gBiomeLayout = {
     rewardStorePolicy: {
       kind: 'authoredBaseStore',
       storeKeys: ['RunProgress', 'MetaProgress'],
-      defaultStoreKey: 'RunProgress',
       targetMetaRewardsRatio: 0.35,
       targetMetaRewardsAdjustSpeed: 10,
     },

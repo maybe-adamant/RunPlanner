@@ -5,6 +5,8 @@ import type {
   RoomDeclaration,
 } from '../catalog-schema';
 import {
+  createBatchRewardStoreAddress,
+  createBiomeFieldAddress,
   createContinuationAddress,
   createHubOpenSetAddress,
   createHubVisitAddress,
@@ -207,6 +209,18 @@ export function evaluateLinearCompleteness(
   const occurrences = occurrenceById(topology);
   const continuations = continuationByParent(topology);
   const findings: SemanticFinding[] = [];
+  for (const descriptor of layout.fields) {
+    if (descriptor.initialization.kind === 'required' && plan.state[descriptor.key] === null) {
+      const origin = createBiomeFieldAddress(biome, descriptor.key);
+      return Object.freeze({
+        completion: 'incomplete',
+        frontier: origin,
+        findings: Object.freeze([
+          finding('biomeFieldMissing', origin, { fieldKey: descriptor.key }),
+        ]),
+      });
+    }
+  }
   let currentOwner: OccurrenceId | null | undefined = topology.startOccurrenceId;
 
   while (currentOwner !== undefined) {
@@ -223,6 +237,30 @@ export function evaluateLinearCompleteness(
     if (continuation === undefined) {
       findings.push(
         finding('continuationMissing', createContinuationAddress(biome, currentOwner), {
+          parentGameName: room.gameName,
+        }),
+      );
+      break;
+    }
+    if (
+      continuation.rewardStore?.kind === 'authoredBaseStore' &&
+      continuation.rewardStore.baseRewardStoreKey === null
+    ) {
+      findings.push(
+        finding('batchRewardStoreMissing', createBatchRewardStoreAddress(biome, currentOwner), {
+          parentGameName: room.gameName,
+        }),
+      );
+      break;
+    }
+    if (
+      continuation.kind === 'batch' &&
+      layout.continuation.batchPolicy.kind === 'fields' &&
+      continuation.batchState === null
+    ) {
+      findings.push(
+        finding('batchStateMissing', createContinuationAddress(biome, currentOwner), {
+          batchPolicy: 'fields',
           parentGameName: room.gameName,
         }),
       );

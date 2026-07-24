@@ -68,6 +68,9 @@ function decodeBatchRewardStore(
     return Object.freeze({ kind: 'sourceOfferPoint' });
   }
   expectExactKeys(rewardStore, ['kind', 'baseRewardStoreKey'], path);
+  if (rewardStore.baseRewardStoreKey === null) {
+    return Object.freeze({ kind: 'authoredBaseStore', baseRewardStoreKey: null });
+  }
   const baseRewardStoreKey = expectString(
     rewardStore.baseRewardStoreKey,
     `${path}.baseRewardStoreKey`,

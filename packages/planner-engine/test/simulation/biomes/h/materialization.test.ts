@@ -49,13 +49,11 @@ function appendBatch(
     kind: 'CreateBatch',
     continuation: createContinuationAddress(biome, parentOccurrenceId),
   });
-  if (cageOutcome === 'max') {
-    next = applyProjectCommand(next, catalog, {
-      kind: 'ReplaceFieldsCageOutcome',
-      continuation: createContinuationAddress(biome, parentOccurrenceId),
-      cageOutcome,
-    });
-  }
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceFieldsCageOutcome',
+    continuation: createContinuationAddress(biome, parentOccurrenceId),
+    cageOutcome,
+  });
   for (const [index, target] of targets.entries()) {
     next = applyProjectCommand(next, catalog, {
       kind: 'CreateTarget',

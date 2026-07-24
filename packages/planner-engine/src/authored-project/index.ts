@@ -73,7 +73,7 @@ export {
 } from './commands/dispatch';
 export { decodeLinearBiomeTopology } from './linearTopology';
 export { decodeHubBiomeTopology } from './hubTopology';
-export { createDefaultBatchState, decodeBatchState } from './batchState';
+export { createInitialBatchState, decodeBatchState } from './batchState';
 export { resolvedStoreForOccurrence as resolveLinearOccurrenceRewardStore } from './commands/topology-linear';
 export {
   applyProjectHistoryCommand,
@@ -116,7 +116,7 @@ export {
   type ShopOfferState,
   type ShopState,
 } from './model';
-export { createDefaultBiomeState, decodeBiomeState } from './biomeState';
+export { createInitialBiomeState, decodeBiomeState } from './biomeState';
 export {
   createDefaultRoomState,
   decodeRoomState,

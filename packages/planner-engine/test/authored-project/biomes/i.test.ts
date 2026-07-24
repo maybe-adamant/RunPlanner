@@ -86,12 +86,12 @@ function completeIProject(): ProjectDocument {
   const combat03 = createOccurrenceId('i-b2-combat03');
   const enteredPreboss = createOccurrenceId('i-b3-preboss');
 
-  let project = appendBatch(
-    createIProject(),
-    null,
-    [{ gameName: 'I_Combat01', occurrenceId: combat01 }],
-    1,
-  );
+  let project = applyProjectCommand(createIProject(), catalog, {
+    kind: 'ReplaceBiomeField',
+    field: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
+    value: 3,
+  });
+  project = appendBatch(project, null, [{ gameName: 'I_Combat01', occurrenceId: combat01 }], 1);
   project = appendBatch(
     project,
     combat01,
@@ -113,12 +113,22 @@ function completeIProject(): ProjectDocument {
 }
 
 describe('I authored topology', () => {
-  it('round-trips schema v7 with one authored Clockwork roll outcome', () => {
+  it('round-trips schema v8 with an unresolved Clockwork roll outcome', () => {
     const project = createIProject();
-    expect(PROJECT_DOCUMENT_SCHEMA_VERSION).toBe(7);
+    expect(PROJECT_DOCUMENT_SCHEMA_VERSION).toBe(8);
     expect(iPlan(project)).toMatchObject({
-      state: { maxNonGoalRewards: 3 },
+      state: { maxNonGoalRewards: null },
       topology: { startOccurrenceId: 'i-intro' },
+    });
+    expect(evaluateLinearCompleteness(catalog, iBiome, iPlan(project))).toMatchObject({
+      completion: 'incomplete',
+      frontier: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
+      findings: [
+        {
+          code: 'biomeFieldMissing',
+          origin: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
+        },
+      ],
     });
     expect(encodeProjectDocument(project)).toContain('maxNonGoalRewards');
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
@@ -126,9 +136,9 @@ describe('I authored topology', () => {
     );
 
     const legacy = JSON.parse(encodeProjectDocument(project)) as { schemaVersion: number };
-    legacy.schemaVersion = 6;
+    legacy.schemaVersion = 7;
     expect(() => decodeProjectDocument(legacy, catalog)).toThrowError(
-      /schemaVersion: expected 7, received 6/,
+      /schemaVersion: expected 8, received 7/,
     );
     const replaced = applyProjectCommand(project, catalog, {
       kind: 'ReplaceBiomeField',

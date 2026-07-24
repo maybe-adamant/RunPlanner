@@ -26,7 +26,7 @@ export const hBiomeLayout = {
           key: 'cageOutcome',
           kind: 'enum',
           values: ['min', 'max'],
-          defaultValue: 'min',
+          initialization: { kind: 'required' },
         },
       ],
     },

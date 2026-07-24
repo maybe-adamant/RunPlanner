@@ -156,12 +156,10 @@ export function evaluateBatchRewardStoreCandidate(
     failCandidate(stableQuery, `${stableQuery.storeKey} is outside the authored store domain`);
   }
   const continuation = plan.topology?.continuations.find(
-    (candidate) =>
-      candidate.kind === 'batch' &&
-      candidate.parentOccurrenceId === stableQuery.rewardStore.parentOccurrenceId,
+    (candidate) => candidate.parentOccurrenceId === stableQuery.rewardStore.parentOccurrenceId,
   );
-  if (continuation?.kind !== 'batch' || continuation.rewardStore.kind !== 'authoredBaseStore') {
-    failCandidate(stableQuery, 'semantic owner has no authored batch reward store');
+  if (continuation?.rewardStore?.kind !== 'authoredBaseStore') {
+    failCandidate(stableQuery, 'semantic owner has no authored generated reward store');
   }
   const biome = locateCandidateLinear(context, stableQuery);
   if (isCandidateContextUnavailable(biome)) {

@@ -1,5 +1,6 @@
 import {
   applyProjectCommand,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createContinuationAddress,
   createHubSlotAddress,
@@ -148,6 +149,16 @@ function appendRoom(
     kind: 'CreateBatch',
     continuation: createContinuationAddress(oBiome, parentOccurrenceId),
   });
+  const rewardStore = oPlan(next).topology?.continuations.find(
+    (continuation) => continuation.parentOccurrenceId === parentOccurrenceId,
+  )?.rewardStore;
+  if (rewardStore?.kind === 'authoredBaseStore') {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(oBiome, parentOccurrenceId),
+      storeKey: 'RunProgress',
+    });
+  }
   next = applyProjectCommand(next, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(oBiome, parentOccurrenceId, 1),
@@ -211,6 +222,11 @@ function completeO(document: ProjectDocument): ProjectDocument {
     kind: 'CreateTerminalTransition',
     continuation: createContinuationAddress(oBiome, devotion),
     targetOccurrenceIds: [createOccurrenceId('o-history-preboss')],
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(oBiome, devotion),
+    storeKey: 'RunProgress',
   });
   return applyProjectCommand(next, catalog, {
     kind: 'ReplaceShopOffer',

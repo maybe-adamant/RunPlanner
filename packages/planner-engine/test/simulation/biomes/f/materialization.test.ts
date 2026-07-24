@@ -92,6 +92,11 @@ function representativeProject(terminalPickedExitIndex: 1 | 2): ProjectDocument 
     continuation: createContinuationAddress(biome, firstCombatId),
   });
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, firstCombatId),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(biome, firstCombatId, 1),
     occurrenceId: repeatedCombatId,
@@ -140,6 +145,11 @@ function oneExitTerminalProject(): ProjectDocument {
     continuation: createContinuationAddress(biome, startId),
   });
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, startId),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(biome, startId, 1),
     occurrenceId: firstCombatId,
@@ -172,6 +182,11 @@ function singleTargetProject(gameName: string): ProjectDocument {
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     continuation: createContinuationAddress(biome, startId),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, startId),
+    storeKey: 'RunProgress',
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',

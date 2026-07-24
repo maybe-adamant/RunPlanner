@@ -496,10 +496,11 @@ The I implementation delivers:
 
 The declaration import, authored topology, canonical/history projection,
 selected validation, candidates, and editor projection are active through the
-production application boundary. Schema version 7 persists the selected
-`maxNonGoalRewards` value as an explicit simulation input. The declaration
-owns its inclusive `3..6` domain and default; materialization, history,
-requirements, validation, and candidates consume that single authored value.
+production application boundary. Schema version 8 persists
+`maxNonGoalRewards` as unresolved until the user selects one explicit
+simulation input. The declaration owns its inclusive `3..6` domain but no
+member as a default; completeness stops at the biome-field owner before
+materialization, history, requirements, validation, or candidates consume it.
 Repeated generated preboss targets and picked-preboss WorldShop completeness
 remain authored topology semantics. Materialization and the editor share one
 offer-time Goal/NonGoal projection; history advances only entered producers.

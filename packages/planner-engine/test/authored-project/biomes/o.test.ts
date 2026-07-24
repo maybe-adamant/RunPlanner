@@ -1,5 +1,6 @@
 import {
   applyProjectCommand,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
@@ -19,6 +20,7 @@ import {
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import { evaluateLinearCompleteness } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -57,11 +59,19 @@ function appendRoom(
   parentOccurrenceId: OccurrenceId,
   occurrenceId: OccurrenceId,
   gameName: string,
+  storeKey?: string,
 ): ProjectDocument {
   let next = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     continuation: createContinuationAddress(oBiome, parentOccurrenceId),
   });
+  if (storeKey !== undefined) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(oBiome, parentOccurrenceId),
+      storeKey,
+    });
+  }
   next = applyProjectCommand(next, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(oBiome, parentOccurrenceId, 1),
@@ -94,6 +104,7 @@ describe('O authored topology', () => {
       createOccurrenceId('o-intro'),
       combat,
       'O_Combat01',
+      'RunProgress',
     );
 
     expect(oPlan(project).topology?.continuations[0]).toMatchObject({
@@ -110,7 +121,7 @@ describe('O authored topology', () => {
       continuation: createContinuationAddress(oBiome, reprieve),
     });
     expect(oPlan(project).topology?.continuations[2]).toMatchObject({
-      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: null },
     });
 
     project = applyProjectCommand(project, catalog, {
@@ -128,7 +139,7 @@ describe('O authored topology', () => {
       gameName: 'O_Reprieve01',
     });
     expect(oPlan(project).topology?.continuations[2]).toMatchObject({
-      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: null },
     });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
@@ -142,6 +153,7 @@ describe('O authored topology', () => {
       createOccurrenceId('o-intro'),
       combat,
       'O_Combat03',
+      'RunProgress',
     );
     const wheel2 = createRewardWheelAddress(oBiome, combat, 'wheel2');
 
@@ -229,6 +241,7 @@ describe('O authored topology', () => {
       createOccurrenceId('o-intro'),
       combat,
       'O_Combat04',
+      'RunProgress',
     );
 
     for (const command of [
@@ -269,6 +282,7 @@ describe('O authored topology', () => {
       createOccurrenceId('o-intro'),
       devotion,
       'O_Devotion01',
+      'RunProgress',
     );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
@@ -312,6 +326,7 @@ describe('O authored topology', () => {
         parent,
         roomId,
         `O_Combat${String(index + 1).padStart(2, '0')}`,
+        index === 0 ? 'RunProgress' : undefined,
       );
       parent = roomId;
     }
@@ -347,6 +362,45 @@ describe('O authored topology', () => {
     );
   });
 
+  it('requires an authored direct-terminal pool after a non-ShipCombat source', () => {
+    const devotion = createOccurrenceId('o-terminal-devotion');
+    let project = appendRoom(
+      startO(createOProject()),
+      createOccurrenceId('o-intro'),
+      devotion,
+      'O_Devotion01',
+      'RunProgress',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTerminalTransition',
+      continuation: createContinuationAddress(oBiome, devotion),
+      targetOccurrenceIds: [createOccurrenceId('o-terminal-preboss')],
+    });
+
+    expect(oPlan(project).topology?.continuations.at(-1)).toMatchObject({
+      kind: 'terminal',
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: null },
+    });
+    expect(evaluateLinearCompleteness(catalog, oBiome, oPlan(project))).toMatchObject({
+      completion: 'incomplete',
+      findings: [
+        {
+          code: 'batchRewardStoreMissing',
+          origin: createBatchRewardStoreAddress(oBiome, devotion),
+        },
+      ],
+    });
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(oBiome, devotion),
+      storeKey: 'MetaProgress',
+    });
+    expect(oPlan(project).topology?.continuations.at(-1)).toMatchObject({
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
+    });
+  });
+
   it('rejects malformed source authority and keys wheel addresses canonically', () => {
     const combat = createOccurrenceId('o-codec-combat');
     const project = appendRoom(
@@ -354,6 +408,7 @@ describe('O authored topology', () => {
       createOccurrenceId('o-intro'),
       combat,
       'O_Combat05',
+      'RunProgress',
     );
     const withBatch = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',

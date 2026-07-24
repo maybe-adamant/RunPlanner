@@ -85,13 +85,11 @@ function addBatch(
     kind: 'CreateBatch',
     continuation: createContinuationAddress(biome, parentId),
   });
-  if (storeKey !== 'RunProgress') {
-    next = applyProjectCommand(next, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(biome, parentId),
-      storeKey,
-    });
-  }
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, parentId),
+    storeKey,
+  });
   for (const [offset, target] of targets.entries()) {
     next = applyProjectCommand(next, catalog, {
       kind: 'CreateTarget',

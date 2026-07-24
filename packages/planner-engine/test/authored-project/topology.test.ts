@@ -137,7 +137,7 @@ describe('F/G linear project topology', () => {
     expect(topology.occurrences.at(-1)?.state.kind).toBe('freeReward');
 
     const encoded = encodeProjectDocument(project);
-    expect(encoded).toContain('"schemaVersion": 7');
+    expect(encoded).toContain('"schemaVersion": 8');
     expect(encoded).not.toContain('"storeKey"');
     expect(parseProjectDocument(encoded, catalog)).toEqual(project);
     expect(encodeProjectDocument(parseProjectDocument(encoded, catalog))).toBe(encoded);

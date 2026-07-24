@@ -1,5 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import { createDefaultBiomeState } from '../biomeState';
+import { createInitialBiomeState } from '../biomeState';
 import type { ProjectDocument } from '../model';
 
 import { failCommand } from './contract';
@@ -50,7 +50,7 @@ function configureRoutePrefix(
         ? {
             kind: 'LinearBiome' as const,
             biomeKey,
-            state: createDefaultBiomeState(layout),
+            state: createInitialBiomeState(layout),
             topology: null,
           }
         : { kind: 'HubBiome' as const, biomeKey, topology: null };

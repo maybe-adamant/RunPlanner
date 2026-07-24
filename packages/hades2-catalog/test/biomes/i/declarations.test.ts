@@ -5,7 +5,7 @@ import type {
   RequirementExpression,
 } from '@run-planner/engine/requirements';
 import {
-  createDefaultBatchState,
+  createInitialBatchState,
   createDefaultRoomState,
 } from '@run-planner/engine/authored-project';
 import { evaluateRequirement } from '@run-planner/engine/requirements';
@@ -121,12 +121,12 @@ describe('complete I catalog', () => {
           kind: 'boundedInteger',
           min: 3,
           max: 6,
-          defaultValue: 3,
+          initialization: { kind: 'required' },
         },
       ],
       bounds: { maxBatches: 13, maxTargets: 23 },
     });
-    expect(createDefaultBatchState(layout.continuation.batchPolicy)).toBeNull();
+    expect(createInitialBatchState(layout.continuation.batchPolicy)).toBeNull();
   });
 
   it('authors Entrance while making Hades a second-door Story', () => {

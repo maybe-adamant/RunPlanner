@@ -124,6 +124,7 @@ function OrdinaryTargetEditor({
   catalog,
   interactions,
   canCreateTarget,
+  prerequisiteLabel,
   continuation,
   exitIndex,
   focused,
@@ -135,6 +136,7 @@ function OrdinaryTargetEditor({
   readonly available: boolean;
   readonly awaitingPriorExit: boolean;
   readonly canCreateTarget: boolean;
+  readonly prerequisiteLabel?: string;
   readonly continuation: LinearBatchContinuation;
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly exitIndex: number;
@@ -165,7 +167,9 @@ function OrdinaryTargetEditor({
             interactions={interactions}
             disabled={!canCreateTarget}
             disabledPlaceholder={
-              awaitingPriorExit ? 'Choose prior exit first' : 'Room limit reached'
+              awaitingPriorExit
+                ? 'Choose prior exit first'
+                : (prerequisiteLabel ?? 'Room limit reached')
             }
             idPrefix={idPrefix}
             onSelect={(gameName) =>
@@ -249,7 +253,7 @@ function OrdinaryTargetEditor({
           owner={createTargetAddress(biome, continuation.parentOccurrenceId, exitIndex)}
         />
         <RoomStateEditor
-          {...(room.state.kind === 'fieldsCombat' && projectedBatchState.kind === 'fields'
+          {...(room.state.kind === 'fieldsCombat' && projectedBatchState?.kind === 'fields'
             ? { activeCageCount: projectedBatchState.doorCageRewardCount }
             : {})}
           biome={biome}
@@ -314,6 +318,13 @@ function BatchEditor({
     continuation.pickedExitIndex === null || available.has(continuation.pickedExitIndex);
   const address = createContinuationAddress(biome, continuation.parentOccurrenceId);
   const rewardStoreAddress = createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId);
+  const prerequisiteLabel =
+    continuation.rewardStore.kind === 'authoredBaseStore' &&
+    continuation.rewardStore.baseRewardStoreKey === null
+      ? 'Choose reward pool first'
+      : fieldsPolicy !== undefined && continuation.batchState === null
+        ? 'Choose Fields door roll first'
+        : undefined;
   const fieldsSupport =
     evaluation?.authoring === 'complete'
       ? evaluation.roomGeneration.fieldsCageOutcomes.find(
@@ -365,26 +376,24 @@ function BatchEditor({
           />
         )}
 
-        {projectedBatchState.kind === 'fields' &&
-          fieldsPolicy !== undefined &&
-          continuation.batchState !== null && (
-            <FieldsBatchControl
-              batchState={projectedBatchState}
-              interactions={interactions}
-              continuation={address}
-              id={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
-              onReplace={(cageOutcome) =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'ReplaceFieldsCageOutcome',
-                    continuation: address,
-                    cageOutcome: fieldsCageOutcome(cageOutcome),
-                  }),
-                )
-              }
-              {...(fieldsSupport === undefined ? {} : { priorMaxOutcomes: fieldsSupport })}
-            />
-          )}
+        {fieldsPolicy !== undefined && (
+          <FieldsBatchControl
+            batchState={projectedBatchState?.kind === 'fields' ? projectedBatchState : null}
+            interactions={interactions}
+            continuation={address}
+            id={`batch-${continuation.parentOccurrenceId}-cage-outcome`}
+            onReplace={(cageOutcome) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceFieldsCageOutcome',
+                  continuation: address,
+                  cageOutcome: fieldsCageOutcome(cageOutcome),
+                }),
+              )
+            }
+            {...(fieldsSupport === undefined ? {} : { priorMaxOutcomes: fieldsSupport })}
+          />
+        )}
       </div>
 
       <div className="exit-list">
@@ -399,7 +408,9 @@ function BatchEditor({
               available={available.has(exitIndex)}
               awaitingPriorExit={awaitingPriorExit}
               biome={biome}
-              canCreateTarget={canCreateTarget && !awaitingPriorExit}
+              canCreateTarget={
+                canCreateTarget && !awaitingPriorExit && prerequisiteLabel === undefined
+              }
               catalog={catalog}
               continuation={continuation}
               interactions={interactions}
@@ -409,6 +420,7 @@ function BatchEditor({
               key={exitIndex}
               plan={plan}
               projectedBatchState={projectedBatchState}
+              {...(prerequisiteLabel === undefined ? {} : { prerequisiteLabel })}
               {...(() => {
                 const reward = projectedDecision.targets.find(
                   (candidate) => candidate.exitIndex === exitIndex,
@@ -512,6 +524,7 @@ function TerminalEditor({
   const pickedAvailable =
     continuation.pickedExitIndex === null || available.has(continuation.pickedExitIndex);
   const address = createContinuationAddress(biome, continuation.parentOccurrenceId);
+  const rewardStoreAddress = createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId);
   const focusedExitIndex = focusedTargetExitIndex(
     biome,
     topology,
@@ -538,6 +551,25 @@ function TerminalEditor({
           </span>
         </div>
       </header>
+
+      {continuation.rewardStore?.kind === 'authoredBaseStore' && (
+        <div className="batch-controls">
+          <BatchRewardStoreControl
+            address={rewardStoreAddress}
+            interactions={interactions}
+            id={`terminal-${continuation.parentOccurrenceId}-reward-store`}
+            onReplace={(storeKey) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceBatchRewardStore',
+                  rewardStore: rewardStoreAddress,
+                  storeKey,
+                }),
+              )
+            }
+          />
+        </div>
+      )}
 
       <div className="exit-list">
         {exitIndexes.map((exitIndex) => {

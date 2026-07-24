@@ -227,6 +227,16 @@ function appendRoom(
     kind: 'CreateBatch',
     continuation: createContinuationAddress(oBiome, parentOccurrenceId),
   });
+  const rewardStore = oPlan(next).topology?.continuations.find(
+    (continuation) => continuation.parentOccurrenceId === parentOccurrenceId,
+  )?.rewardStore;
+  if (rewardStore?.kind === 'authoredBaseStore') {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(oBiome, parentOccurrenceId),
+      storeKey: 'RunProgress',
+    });
+  }
   next = applyProjectCommand(next, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(oBiome, parentOccurrenceId, 1),

@@ -45,8 +45,11 @@ export function BatchRewardStoreControl({
         onChange={(event) => onReplace(event.target.value)}
         onFocus={candidates.activate}
         onPointerDown={candidates.activate}
-        value={String(interaction.selected)}
+        value={interaction.selected ?? ''}
       >
+        <option disabled value="">
+          Select pool
+        </option>
         {interaction.choices.map((choice) => {
           const option = candidates.result?.find((candidate) => candidate.value === choice.value);
           return (
@@ -61,7 +64,7 @@ export function BatchRewardStoreControl({
 }
 
 interface FieldsBatchControlProps {
-  readonly batchState: Extract<CanonicalBatchState, { readonly kind: 'fields' }>;
+  readonly batchState: Extract<CanonicalBatchState, { readonly kind: 'fields' }> | null;
   readonly continuation: ContinuationAddress;
   readonly id: string;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -97,8 +100,11 @@ export function FieldsBatchControl({
           onChange={(event) => onReplace(event.target.value as 'min' | 'max')}
           onFocus={candidates.activate}
           onPointerDown={candidates.activate}
-          value={String(interaction.selected)}
+          value={interaction.selected ?? ''}
         >
+          <option disabled value="">
+            Select roll
+          </option>
           {interaction.choices.map((choice) => {
             const option = candidates.result?.find((candidate) => candidate.value === choice.value);
             return (
@@ -109,21 +115,23 @@ export function FieldsBatchControl({
           })}
         </select>
       </label>
-      <dl className="fields-batch-summary">
-        <div>
-          <dt>Cages per combat room</dt>
-          <dd>{batchState.doorCageRewardCount}</dd>
-        </div>
-        <div>
-          <dt>Prior Max outcomes</dt>
-          <dd>
-            {priorMaxOutcomes === undefined
-              ? 'Unavailable'
-              : `${priorMaxOutcomes.fieldsMaxDoorsRolled} / ${priorMaxOutcomes.maxDoorCageCeiling}`}
-          </dd>
-        </div>
-      </dl>
-      {batchState.cageTargetCount === 0 && (
+      {batchState !== null && (
+        <dl className="fields-batch-summary">
+          <div>
+            <dt>Cages per combat room</dt>
+            <dd>{batchState.doorCageRewardCount}</dd>
+          </div>
+          <div>
+            <dt>Prior Max outcomes</dt>
+            <dd>
+              {priorMaxOutcomes === undefined
+                ? 'Unavailable'
+                : `${priorMaxOutcomes.fieldsMaxDoorsRolled} / ${priorMaxOutcomes.maxDoorCageCeiling}`}
+            </dd>
+          </div>
+        </dl>
+      )}
+      {batchState?.cageTargetCount === 0 && (
         <p className="fields-batch-note">
           No offered room uses the Fields multi-cage count; Max still affects later Fields rolls.
         </p>

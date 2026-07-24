@@ -23,6 +23,7 @@ import type {
   CanonicalBatch,
   CanonicalBatchRewardStore,
   CanonicalBatchState,
+  CanonicalBiomeState,
   CanonicalFixedEntryRoom,
   CanonicalLinearBiome,
   CanonicalPhysicalExit,
@@ -65,16 +66,36 @@ export function canonicalRewardStore(
 ): CanonicalBatchRewardStore {
   const origin = createBatchRewardStoreAddress(biome, parentOccurrenceId);
   switch (state.kind) {
-    case 'authoredBaseStore':
+    case 'authoredBaseStore': {
+      if (state.baseRewardStoreKey === null) {
+        fail(`${layoutOwner(biome, parentOccurrenceId)} has no authored base reward store`);
+      }
       return Object.freeze({
         origin,
         kind: state.kind,
         baseRewardStoreKey: state.baseRewardStoreKey,
       });
+    }
     case 'sourceOfferPoint':
     case 'none':
       return Object.freeze({ origin, kind: state.kind });
   }
+}
+
+function layoutOwner(biome: BiomeAddress, parentOccurrenceId: OccurrenceId | null): string {
+  return `${biome.biomeKey} continuation ${parentOccurrenceId ?? 'entry'}`;
+}
+
+export function canonicalBiomeState(
+  biomeKey: string,
+  state: AuthoredBiomeState,
+): CanonicalBiomeState {
+  const entries = Object.entries(state);
+  const unresolved = entries.find(([, value]) => value === null);
+  if (unresolved !== undefined) {
+    fail(`${biomeKey} has no authored ${unresolved[0]}`);
+  }
+  return Object.freeze(Object.fromEntries(entries) as Record<string, boolean | number | string>);
 }
 
 function requireOccurrence(
@@ -105,6 +126,9 @@ export function finalSharedRewardStoreKey(
 ): string | undefined {
   let storeKey: string | undefined;
   if (rewardStore.kind === 'authoredBaseStore') {
+    if (rewardStore.baseRewardStoreKey === null) {
+      fail(`${source.gameName} has no authored base reward store`);
+    }
     storeKey = rewardStore.baseRewardStoreKey;
   } else if (rewardStore.kind === 'sourceOfferPoint') {
     const wheel = source.kind === 'authored' ? source.rewardWheels?.at(-1) : undefined;
@@ -553,7 +577,7 @@ export function materializeClockworkBiome(
       lifecycleProducerPolicy: 'encounterCompatible',
       fail,
     }),
-    biomeState: Object.freeze({ ...completeness.biomeState }),
+    biomeState: canonicalBiomeState(layout.biomeKey, completeness.biomeState),
   });
 }
 
@@ -732,6 +756,6 @@ export function materializeStandardLinearBiome(
       lifecycleProducerPolicy: 'encounterCompatible',
       fail,
     }),
-    biomeState: Object.freeze({ ...completeness.biomeState }),
+    biomeState: canonicalBiomeState(layout.biomeKey, completeness.biomeState),
   });
 }

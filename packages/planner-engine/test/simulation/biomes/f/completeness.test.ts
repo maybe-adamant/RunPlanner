@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyProjectCommand,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createContinuationAddress,
   createOccurrenceAddress,
@@ -56,9 +57,14 @@ function startedProject(): ProjectDocument {
 }
 
 function withOpeningBatch(project = startedProject()): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
+  const created = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     continuation: createContinuationAddress(biome, startId),
+  });
+  return applyProjectCommand(created, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, startId),
+    storeKey: 'RunProgress',
   });
 }
 
@@ -126,6 +132,24 @@ describe('F completeness', () => {
     });
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result.findings[0])).toBe(true);
+  });
+
+  it('stops at an unresolved generated reward pool before target completeness', () => {
+    const project = applyProjectCommand(startedProject(), catalog, {
+      kind: 'CreateBatch',
+      continuation: createContinuationAddress(biome, startId),
+    });
+
+    expect(evaluate(project)).toMatchObject({
+      completion: 'incomplete',
+      frontier: createBatchRewardStoreAddress(biome, startId),
+      findings: [
+        {
+          code: 'batchRewardStoreMissing',
+          origin: createBatchRewardStoreAddress(biome, startId),
+        },
+      ],
+    });
   });
 
   it('keeps a missing continuation distinct from an illegal continuation', () => {

@@ -1,5 +1,5 @@
 import type { Catalog, LinearBiomeLayout, RoomDeclaration } from '../../catalog-schema';
-import { createDefaultBatchState } from '../batchState';
+import { createInitialBatchState } from '../batchState';
 import type {
   AuthoredBatchState,
   BatchRewardStoreState,
@@ -47,7 +47,7 @@ function sourceRewardStorePolicy(layout: LinearBiomeLayout, sourceRoom: RoomDecl
   );
 }
 
-function defaultBatchRewardStore(
+function initialBatchRewardStore(
   layout: LinearBiomeLayout,
   sourceRoom: RoomDeclaration,
 ): BatchRewardStoreState {
@@ -56,7 +56,7 @@ function defaultBatchRewardStore(
     case 'authoredBaseStore':
       return Object.freeze({
         kind: 'authoredBaseStore',
-        baseRewardStoreKey: policy.defaultStoreKey,
+        baseRewardStoreKey: null,
       });
     case 'none':
       return Object.freeze({ kind: 'none' });
@@ -65,7 +65,7 @@ function defaultBatchRewardStore(
   }
 }
 
-function defaultBatchState(layout: LinearBiomeLayout): AuthoredBatchState {
+function initialBatchState(layout: LinearBiomeLayout): AuthoredBatchState {
   if (
     layout.continuation.batchPolicy.kind !== 'standard' &&
     layout.continuation.batchPolicy.kind !== 'fields' &&
@@ -73,14 +73,14 @@ function defaultBatchState(layout: LinearBiomeLayout): AuthoredBatchState {
   ) {
     throw new Error(`${layout.biomeKey} does not use a supported authored batch policy`);
   }
-  return createDefaultBatchState(layout.continuation.batchPolicy);
+  return createInitialBatchState(layout.continuation.batchPolicy);
 }
 
-function defaultSharedStore(layout: LinearBiomeLayout): string | undefined {
+function fixedSharedStore(layout: LinearBiomeLayout): string | undefined {
   const policy = layout.continuation.rewardStorePolicy;
   switch (policy.kind) {
     case 'authoredBaseStore':
-      return policy.defaultStoreKey;
+      return undefined;
     case 'none':
       return undefined;
     case 'sourceOfferPoint':
@@ -126,8 +126,9 @@ function finalBatchSharedStore(
     }
     return wheel.storeKey;
   }
-  let storeKey =
-    continuation.rewardStore.kind === 'authoredBaseStore'
+  let storeKey: string | undefined =
+    continuation.rewardStore.kind === 'authoredBaseStore' &&
+    continuation.rewardStore.baseRewardStoreKey !== null
       ? continuation.rewardStore.baseRewardStoreKey
       : undefined;
   const targetsInPhysicalOrder = [...continuation.targets].sort(
@@ -178,7 +179,7 @@ export function resolvedStoreForOccurrence(
 ): string | undefined {
   const topology = plan.topology;
   if (topology === null) {
-    return defaultSharedStore(layout);
+    return fixedSharedStore(layout);
   }
   const occurrence = topology.occurrences.find(
     (candidate) => candidate.occurrenceId === occurrenceId,
@@ -187,10 +188,10 @@ export function resolvedStoreForOccurrence(
     replacementRoom ??
     (occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName]);
   if (room === undefined) {
-    return defaultSharedStore(layout);
+    return fixedSharedStore(layout);
   }
   if (topology.startOccurrenceId === occurrenceId) {
-    return resolvedStoreForRoom(room, defaultSharedStore(layout));
+    return resolvedStoreForRoom(room, fixedSharedStore(layout));
   }
   const owner = topology.continuations.find((continuation) =>
     continuation.targets.some((target) => target.occurrenceId === occurrenceId),
@@ -207,7 +208,7 @@ export function resolvedStoreForOccurrence(
       ),
     );
   }
-  return resolvedStoreForRoom(room, defaultSharedStore(layout));
+  return resolvedStoreForRoom(room, fixedSharedStore(layout));
 }
 
 function installEntryState(
@@ -319,9 +320,10 @@ export function reconcileOwnedContinuationRewardStore(
   const replacementRewardStore =
     policy.kind === 'authoredBaseStore' &&
     currentRewardStore.kind === 'authoredBaseStore' &&
-    policy.storeKeys.includes(currentRewardStore.baseRewardStoreKey)
+    (currentRewardStore.baseRewardStoreKey === null ||
+      policy.storeKeys.includes(currentRewardStore.baseRewardStoreKey))
       ? currentRewardStore
-      : defaultBatchRewardStore(layout, replacementRoom);
+      : initialBatchRewardStore(layout, replacementRoom);
   if (replacementRewardStore === currentRewardStore) {
     return plan;
   }
@@ -502,7 +504,7 @@ function createTerminalPlan(
         terminalRoom,
         roomStateContext(
           role,
-          resolvedStoreForRoom(terminalRoom, defaultSharedStore(layout)),
+          resolvedStoreForRoom(terminalRoom, fixedSharedStore(layout)),
           layout.terminal.kind === 'directTransition',
         ),
       ),
@@ -527,7 +529,7 @@ function createTerminalPlan(
           kind: 'terminal',
           parentOccurrenceId,
           ...(layout.terminal.kind === 'directTransition'
-            ? { rewardStore: defaultBatchRewardStore(layout, parentRoom) }
+            ? { rewardStore: initialBatchRewardStore(layout, parentRoom) }
             : {}),
           targets,
           pickedExitIndex: layout.terminal.kind === 'directTransition' ? 1 : null,
@@ -607,11 +609,7 @@ export function applyLinearTopologyCommand(
         state: createDefaultRoomState(
           catalog,
           room,
-          roomStateContext(
-            'ordinary',
-            resolvedStoreForRoom(room, defaultSharedStore(layout)),
-            true,
-          ),
+          roomStateContext('ordinary', resolvedStoreForRoom(room, fixedSharedStore(layout)), true),
         ),
       };
       return withBiome(document, located, {
@@ -658,8 +656,8 @@ export function applyLinearTopologyCommand(
             {
               kind: 'batch',
               parentOccurrenceId,
-              rewardStore: defaultBatchRewardStore(layout, sourceRoom),
-              batchState: defaultBatchState(layout),
+              rewardStore: initialBatchRewardStore(layout, sourceRoom),
+              batchState: initialBatchState(layout),
               targets: [],
               pickedExitIndex: null,
             },
@@ -693,6 +691,15 @@ export function applyLinearTopologyCommand(
       );
       if (continuation?.kind !== 'batch') {
         failCommand(command, 'target parent does not own an ordinary batch');
+      }
+      if (
+        continuation.rewardStore.kind === 'authoredBaseStore' &&
+        continuation.rewardStore.baseRewardStoreKey === null
+      ) {
+        failCommand(command, 'select the batch reward store before authoring targets');
+      }
+      if (layout.continuation.batchPolicy.kind === 'fields' && continuation.batchState === null) {
+        failCommand(command, 'select the Fields cage outcome before authoring targets');
       }
       if (continuation.targets.some((target) => target.exitIndex === command.target.exitIndex)) {
         failCommand(command, `exit ${command.target.exitIndex} already has a target`);
@@ -984,8 +991,8 @@ export function applyLinearTopologyCommand(
             {
               kind: 'batch',
               parentOccurrenceId: command.continuation.parentOccurrenceId,
-              rewardStore: defaultBatchRewardStore(layout, sourceRoom),
-              batchState: defaultBatchState(layout),
+              rewardStore: initialBatchRewardStore(layout, sourceRoom),
+              batchState: initialBatchState(layout),
               targets: [],
               pickedExitIndex: null,
             },

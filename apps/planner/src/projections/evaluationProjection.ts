@@ -47,6 +47,18 @@ export type BiomeStatusEvaluation =
   | { readonly authoring: 'complete'; readonly validity: 'invalid' | 'valid' };
 
 const findingCopy = {
+  batchRewardStoreMissing: {
+    title: 'Choose a reward pool',
+    description: 'Select the generated reward pool before choosing rooms for this decision.',
+  },
+  batchStateMissing: {
+    title: 'Choose the batch outcome',
+    description: 'Select the generated batch outcome before choosing rooms for this decision.',
+  },
+  biomeFieldMissing: {
+    title: 'Choose the biome outcome',
+    description: 'Select the required biome-wide outcome before building its decisions.',
+  },
   fieldsCageOutcomeUnavailable: {
     title: 'Fields door roll cannot occur here',
     description: 'The selected Min or Max outcome is unavailable at this point in the Fields.',
