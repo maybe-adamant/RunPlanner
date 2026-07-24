@@ -93,10 +93,12 @@ P_Intro
 ```
 
 The fixed start is `P_Intro`. The terminal room is `P_PreBoss01`, forced at
-exact `biomeDepthCache` 9. The authored storage bound is nine continuation
-batches and eighteen ordinary targets. Terminal target occurrences are owned
-by the terminal transition rather than counted as ordinary continuation
-targets.
+exact `biomeDepthCache` 9. `P_Intro` generates the first ordinary decision at
+source depth `1` and commits the cache to `2` before its picked target prepares.
+Eight selected ordinary rooms then reach the terminal source depth `9`. The
+authored storage bound is eight ordinary continuation batches and sixteen
+ordinary targets. Terminal target occurrences are owned by the terminal
+transition rather than counted as ordinary continuation targets.
 
 The standard generated batch contract remains valid: one target occurrence per
 active physical exit, one picked target, and downstream continuation owned only

@@ -228,9 +228,8 @@ function completeGoldenProject(batches: readonly BatchSpec[] = goldenBatches): P
 const gPickedRooms = [
   'G_Combat01',
   'G_Combat02',
-  'G_Combat03',
+  'G_Story01',
   'G_Combat10',
-  'G_Combat11',
   'G_Shop01',
   'G_MiniBoss01',
   'G_Combat12',
@@ -244,34 +243,27 @@ interface GFixtureOptions {
 const gPeerRooms: Readonly<Record<number, readonly string[]>> = {
   2: ['G_Combat02'],
   3: ['G_Combat03', 'G_Combat03'],
-  4: ['G_Combat11', 'G_Combat12'],
   5: ['G_Combat12'],
-  6: ['G_Combat12'],
-  7: ['G_MiniBoss02'],
-  8: ['G_Combat13'],
+  6: ['G_MiniBoss02'],
+  7: ['G_Combat13'],
 };
 
 const gMetaOffers: Readonly<Record<number, readonly (ResolvedRewardOffer | undefined)[]>> = {
   2: [{ rewardType: 'MetaCurrencyBigDrop' }, { rewardType: 'MetaCardPointsCommonBigDrop' }],
-  5: [{ rewardType: 'MetaCurrencyBigDrop' }, { rewardType: 'MetaCardPointsCommonBigDrop' }],
+  4: [{ rewardType: 'MetaCardPointsCommonBigDrop' }],
 };
 
 const gRunOffers: Readonly<Record<number, readonly (ResolvedRewardOffer | undefined)[]>> = {
   1: [{ rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } }],
-  3: [
-    { rewardType: 'MaxHealthDrop' },
-    { rewardType: 'MaxManaDrop' },
-    { rewardType: 'RoomMoneyDrop' },
-  ],
-  4: [{ rewardType: 'SpellDrop' }, { rewardType: 'MaxHealthDrop' }, { rewardType: 'MaxManaDrop' }],
-  6: [undefined, { rewardType: 'StackUpgrade' }],
-  7: [
+  3: [undefined, { rewardType: 'MaxManaDrop' }, { rewardType: 'RoomMoneyDrop' }],
+  5: [undefined, { rewardType: 'StackUpgrade' }],
+  6: [
     { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
     { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
   ],
-  8: [
+  7: [
     { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
-    { rewardType: 'TalentDrop' },
+    { rewardType: 'RoomMoneyDrop' },
   ],
 };
 
@@ -311,7 +303,7 @@ function completeGoldenFGProject(options: GFixtureOptions = {}): ProjectDocument
       kind: 'CreateBatch',
       continuation: createContinuationAddress(gBiome, parentId),
     });
-    if (batchIndex === 2 || batchIndex === 5) {
+    if (batchIndex === 2 || batchIndex === 4) {
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceBatchRewardStore',
         rewardStore: createBatchRewardStoreAddress(gBiome, parentId),
@@ -319,9 +311,9 @@ function completeGoldenFGProject(options: GFixtureOptions = {}): ProjectDocument
       });
     }
     const peerRooms =
-      batchIndex === 7 && options.pickedMiniboss === 'G_MiniBoss02'
+      batchIndex === 6 && options.pickedMiniboss === 'G_MiniBoss02'
         ? ['G_MiniBoss01']
-        : batchIndex === 8 && options.pickedMiniboss === 'G_MiniBoss02'
+        : batchIndex === 7 && options.pickedMiniboss === 'G_MiniBoss02'
           ? []
           : (gPeerRooms[batchIndex] ?? []);
     const targetNames = [pickedGameName, ...peerRooms];
@@ -451,7 +443,7 @@ function appendGoldenH(project: ProjectDocument): ProjectDocument {
         { occurrenceId: combat09, gameName: 'H_Combat09' },
         { occurrenceId: combat03, gameName: 'H_Combat03' },
       ],
-      outcome: 'max' as const,
+      outcome: 'min' as const,
     },
     {
       parent: combat09,
@@ -467,7 +459,7 @@ function appendGoldenH(project: ProjectDocument): ProjectDocument {
         { occurrenceId: combat05, gameName: 'H_Combat05' },
         { occurrenceId: combat04, gameName: 'H_Combat04' },
       ],
-      outcome: 'min' as const,
+      outcome: 'max' as const,
     },
   ];
   for (const batch of batches) {
@@ -549,18 +541,18 @@ function appendGoldenH(project: ProjectDocument): ProjectDocument {
   }
   const offersByOccurrence: Readonly<Record<string, readonly ResolvedRewardOffer[]>> = {
     'golden-h-combat02': [
-      { rewardType: 'RoomMoneyDrop' },
-      { rewardType: 'WeaponUpgrade' },
+      { rewardType: 'MaxHealthDrop' },
+      { rewardType: 'MaxManaDrop' },
       { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
     ],
     'golden-h-combat09': [
       { rewardType: 'HermesUpgrade' },
-      { rewardType: 'TalentDrop' },
+      { rewardType: 'WeaponUpgrade' },
       { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
     ],
     'golden-h-combat03': [
-      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
-      { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      { rewardType: 'MaxHealthDrop' },
+      { rewardType: 'SpellDrop' },
       { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
     ],
     'golden-h-combat05': [
@@ -1211,14 +1203,14 @@ describe('project simulation composition', () => {
         })),
     ).toEqual([
       { cageOutcome: 'min', batchCapacity: 3, cageTargetCount: 1, doorCageRewardCount: 2 },
-      { cageOutcome: 'max', batchCapacity: 2, cageTargetCount: 2, doorCageRewardCount: 2 },
+      { cageOutcome: 'min', batchCapacity: 2, cageTargetCount: 2, doorCageRewardCount: 2 },
       { cageOutcome: 'max', batchCapacity: 3, cageTargetCount: 0, doorCageRewardCount: 3 },
-      { cageOutcome: 'min', batchCapacity: 3, cageTargetCount: 2, doorCageRewardCount: 2 },
+      { cageOutcome: 'max', batchCapacity: 3, cageTargetCount: 2, doorCageRewardCount: 3 },
     ]);
     expect(history.biomeCompletion.ledgers.counters.fieldsMaxDoorsRolled).toBe(2);
     expect(foldLinearHistoryEvents(history.events, g.history.afterTransition)).toEqual(history);
     expect(history.afterTransition.ledgers.counters.routeEncounterDepth).toBe(
-      g.history.afterTransition.ledgers.counters.routeEncounterDepth + 6,
+      g.history.afterTransition.ledgers.counters.routeEncounterDepth + 7,
     );
     expect(
       history.ledgers.encounterStarts
@@ -1253,8 +1245,10 @@ describe('project simulation composition', () => {
       '["localReward","Underworld","H","golden-h-combat03","cages","cage2"]',
       '["localReward","Underworld","H","golden-h-combat05","cages","cage1"]',
       '["localReward","Underworld","H","golden-h-combat05","cages","cage2"]',
+      '["localReward","Underworld","H","golden-h-combat05","cages","cage3"]',
       '["localReward","Underworld","H","golden-h-combat04","cages","cage1"]',
       '["localReward","Underworld","H","golden-h-combat04","cages","cage2"]',
+      '["localReward","Underworld","H","golden-h-combat04","cages","cage3"]',
     ]);
     expect(localAcquisitions.map((event) => semanticAddressKey(event.origin))).toEqual([
       '["localReward","Underworld","H","golden-h-combat02","cages","cage1"]',
@@ -1263,6 +1257,7 @@ describe('project simulation composition', () => {
       '["localReward","Underworld","H","golden-h-combat09","cages","cage2"]',
       '["localReward","Underworld","H","golden-h-combat05","cages","cage1"]',
       '["localReward","Underworld","H","golden-h-combat05","cages","cage2"]',
+      '["localReward","Underworld","H","golden-h-combat05","cages","cage3"]',
     ]);
     for (const acquisition of localAcquisitions) {
       if (acquisition.origin.kind !== 'localReward') {
@@ -1306,22 +1301,22 @@ describe('project simulation composition', () => {
         supportOutcomes: ['min', 'max'],
       },
       {
-        biomeDepthCache: 1,
+        biomeDepthCache: 2,
+        fieldsMaxDoorsRolled: 0,
+        selectedOutcome: 'min',
+        supportOutcomes: ['min', 'max'],
+      },
+      {
+        biomeDepthCache: 3,
         fieldsMaxDoorsRolled: 0,
         selectedOutcome: 'max',
         supportOutcomes: ['min', 'max'],
       },
       {
-        biomeDepthCache: 2,
+        biomeDepthCache: 4,
         fieldsMaxDoorsRolled: 1,
         selectedOutcome: 'max',
-        supportOutcomes: ['min', 'max'],
-      },
-      {
-        biomeDepthCache: 3,
-        fieldsMaxDoorsRolled: 2,
-        selectedOutcome: 'min',
-        supportOutcomes: ['min'],
+        supportOutcomes: ['max'],
       },
     ]);
 
@@ -1332,22 +1327,22 @@ describe('project simulation composition', () => {
     );
     expect(bridge).toMatchObject({
       selectedGameName: 'H_MiniBoss01',
-      biomeDepthCache: 2,
+      biomeDepthCache: 3,
       selectedPossible: true,
-      optionalForcedRoomGameNames: ['H_MiniBoss01', 'H_MiniBoss02'],
-      requiredForcedRoomGameNames: ['H_Bridge01'],
+      optionalForcedRoomGameNames: [],
+      requiredForcedRoomGameNames: ['H_MiniBoss01', 'H_MiniBoss02', 'H_Bridge01'],
       supportRoomGameNames: ['H_MiniBoss01', 'H_MiniBoss02', 'H_Bridge01'],
     });
     expect(result.generation.forcePressure.slice(-2)).toEqual([
       expect.objectContaining({
         selectedGameName: 'H_PreBoss01',
-        biomeDepthCache: 4,
+        biomeDepthCache: 5,
         selectedPossible: true,
         requiredForcedRoomGameNames: ['H_PreBoss01'],
       }),
       expect.objectContaining({
         selectedGameName: 'H_PreBoss01',
-        biomeDepthCache: 4,
+        biomeDepthCache: 5,
         selectedPossible: true,
         requiredForcedRoomGameNames: ['H_PreBoss01'],
       }),
@@ -1359,12 +1354,12 @@ describe('project simulation composition', () => {
     let ceilingProject = selectedGoldenHProject();
     ceilingProject = applyProjectCommand(ceilingProject, catalog, {
       kind: 'ReplaceFieldsCageOutcome',
-      continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
+      continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-combat02')),
       cageOutcome: 'max',
     });
     const ceiling = evaluateH(ceilingProject).generation;
     expect(ceiling.fieldsCageOutcomes[3]).toMatchObject({
-      biomeDepthCache: 3,
+      biomeDepthCache: 4,
       fieldsMaxDoorsRolled: 2,
       selectedOutcome: 'max',
       supportOutcomes: ['min'],
@@ -1434,7 +1429,7 @@ describe('project simulation composition', () => {
     );
     expect(exclusion).toMatchObject({
       selectedGameName: 'H_MiniBoss02',
-      biomeDepthCache: 3,
+      biomeDepthCache: 4,
       selectedPossible: false,
       selectedExclusionReasons: ['eligibilityRequirement'],
     });
@@ -1476,6 +1471,11 @@ describe('project simulation composition', () => {
       },
       {
         kind: 'roomTarget',
+        target: createTargetAddress(hBiome, createOccurrenceId('golden-h-combat02'), 1),
+        gameName: 'H_MiniBoss01',
+      },
+      {
+        kind: 'roomTarget',
         target: createTargetAddress(hBiome, createOccurrenceId('golden-h-combat09'), 1),
         gameName: 'H_MiniBoss01',
       },
@@ -1487,7 +1487,7 @@ describe('project simulation composition', () => {
       {
         kind: 'fieldsCageOutcome',
         continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
-        cageOutcome: 'min',
+        cageOutcome: 'max',
       },
       {
         kind: 'localReward',
@@ -1497,7 +1497,7 @@ describe('project simulation composition', () => {
           'cages',
           'cage1',
         ),
-        value: { rewardType: 'RoomMoneyDrop' },
+        value: { rewardType: 'MaxHealthDrop' },
       },
       {
         kind: 'localReward',
@@ -1551,6 +1551,7 @@ describe('project simulation composition', () => {
       ),
     ).toEqual([
       'impossible',
+      'possible',
       'forced',
       'possible',
       'forced',
@@ -1561,11 +1562,11 @@ describe('project simulation composition', () => {
       'possible',
       'possible',
     ]);
-    expect(evaluations[5]).toMatchObject({
+    expect(evaluations[6]).toMatchObject({
       context: 'evaluated',
       findings: [{ code: 'rewardBagEntryUnavailable' }],
     });
-    expect(evaluations[7]).toMatchObject({
+    expect(evaluations[8]).toMatchObject({
       context: 'evaluated',
       findings: [{ code: 'rewardBagEntryUnavailable' }],
     });
@@ -1581,20 +1582,15 @@ describe('project simulation composition', () => {
     });
   }, 15_000);
 
-  it('preserves an invalid Fields selection and evaluates covered incomplete H context', () => {
-    let invalid = selectedGoldenHProject();
-    invalid = applyProjectCommand(invalid, catalog, {
-      kind: 'ReplaceFieldsCageOutcome',
-      continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
-      cageOutcome: 'max',
-    });
-    const invalidBefore = encodeProjectDocument(invalid);
+  it('evaluates forced Fields outcomes and covered incomplete H context', () => {
+    const project = selectedGoldenHProject();
+    const before = encodeProjectDocument(project);
     expect(
-      bindTestCandidateSession(catalog, invalid).evaluate([
+      bindTestCandidateSession(catalog, project).evaluate([
         {
           kind: 'fieldsCageOutcome',
           continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
-          cageOutcome: 'max',
+          cageOutcome: 'min',
         },
       ])[0],
     ).toMatchObject({
@@ -1602,12 +1598,12 @@ describe('project simulation composition', () => {
       support: 'impossible',
       findings: [{ code: 'fieldsCageOutcomeUnavailable' }],
       evidence: {
-        candidateOutcome: 'max',
-        fieldsMaxDoorsRolled: 2,
-        supportOutcomes: ['min'],
+        candidateOutcome: 'min',
+        fieldsMaxDoorsRolled: 1,
+        supportOutcomes: ['max'],
       },
     });
-    expect(encodeProjectDocument(invalid)).toBe(invalidBefore);
+    expect(encodeProjectDocument(project)).toBe(before);
 
     const incomplete = applyProjectCommand(selectedGoldenHProject(), catalog, {
       kind: 'RemoveBatch',
@@ -1626,7 +1622,7 @@ describe('project simulation composition', () => {
           value: { rewardType: 'MaxHealthDrop' },
         },
       ])[0],
-    ).toMatchObject({ context: 'evaluated', support: 'impossible' });
+    ).toMatchObject({ context: 'evaluated', support: 'possible' });
   });
 
   it('evaluates a covered shop purchase from its room-local lifecycle context', () => {
@@ -1819,7 +1815,7 @@ describe('project simulation composition', () => {
 
     const invalid = applyProjectCommand(project, catalog, {
       kind: 'ReplaceFieldsCageOutcome',
-      continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
+      continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-combat02')),
       cageOutcome: 'max',
     });
     expect(
@@ -1852,7 +1848,7 @@ describe('project simulation composition', () => {
       throw new Error('Crawler G route unexpectedly incomplete');
     }
     expect(g.validity).toBe('valid');
-    const crawlerOrigin = createOccurrenceAddress(gBiome, gOccurrenceId(7, 1));
+    const crawlerOrigin = createOccurrenceAddress(gBiome, gOccurrenceId(6, 1));
     const crawler = g.history.rooms.find(
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(crawlerOrigin),
     );
@@ -1874,7 +1870,7 @@ describe('project simulation composition', () => {
       const candidate = candidates.evaluate([
         {
           kind: 'roomTarget',
-          target: createTargetAddress(gBiome, gOccurrenceId(7, 1), 1),
+          target: createTargetAddress(gBiome, gOccurrenceId(6, 1), 1),
           gameName,
         },
       ])[0]!;

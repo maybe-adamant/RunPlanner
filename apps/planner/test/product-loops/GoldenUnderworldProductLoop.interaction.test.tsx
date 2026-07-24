@@ -779,7 +779,7 @@ describe('golden Underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toEqual(authored);
 
-    await view.user.click(hDecisionNodes[3]!);
+    await view.user.click(hDecisionNodes[1]!);
     await view.user.selectOptions(screen.getByLabelText('Fields door roll'), 'max');
     expect(currentEvaluation(application).status).toBe('invalid');
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));

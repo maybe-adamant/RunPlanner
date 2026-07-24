@@ -109,6 +109,9 @@ describe('complete H catalog', () => {
       ),
     );
     expect(layout.fields.find((field) => field.key === 'fieldsMaxDoorsRolled')).toBeUndefined();
+    expect(catalog.rooms.byKey.H_Intro).toMatchObject({
+      counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+    });
   });
 
   it('preserves every combat map, raw capacity, local cage default, and depth restriction', () => {

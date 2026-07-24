@@ -44,7 +44,7 @@ describe('complete G catalog', () => {
       mode: { kind: 'authored', templateKey: 'FixedIntro' },
       incomingReward: { kind: 'none' },
       encounterProfileKey: 'NoEncounter',
-      counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
+      counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
       caps: { maxAppearancesThisBiome: 1 },
       force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
     });
@@ -88,7 +88,7 @@ describe('complete G catalog', () => {
         ],
       },
       fields: [],
-      bounds: { maxBatches: 8, maxTargets: 21 },
+      bounds: { maxBatches: 7, maxTargets: 21 },
     });
   });
 

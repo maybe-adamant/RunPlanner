@@ -105,24 +105,14 @@ const goldenGBatches: readonly BatchSpec[] = [
   },
   {
     targets: [
-      { gameName: 'G_Combat03', offer: { rewardType: 'MaxHealthDrop' } },
+      { gameName: 'G_Story01' },
       { gameName: 'G_Combat03', offer: { rewardType: 'MaxManaDrop' } },
       { gameName: 'G_Combat03', offer: { rewardType: 'RoomMoneyDrop' } },
     ],
   },
   {
-    targets: [
-      { gameName: 'G_Combat10', offer: { rewardType: 'SpellDrop' } },
-      { gameName: 'G_Combat11', offer: { rewardType: 'MaxHealthDrop' } },
-      { gameName: 'G_Combat12', offer: { rewardType: 'MaxManaDrop' } },
-    ],
-  },
-  {
     storeKey: 'MetaProgress',
-    targets: [
-      { gameName: 'G_Combat11', offer: { rewardType: 'MetaCurrencyBigDrop' } },
-      { gameName: 'G_Combat12', offer: { rewardType: 'MetaCardPointsCommonBigDrop' } },
-    ],
+    targets: [{ gameName: 'G_Combat10', offer: { rewardType: 'MetaCardPointsCommonBigDrop' } }],
   },
   {
     targets: [
@@ -139,7 +129,7 @@ const goldenGBatches: readonly BatchSpec[] = [
   {
     targets: [
       { gameName: 'G_Combat12', offer: { rewardType: 'Boon', source: 'HestiaUpgrade' } },
-      { gameName: 'G_Combat13', offer: { rewardType: 'TalentDrop' } },
+      { gameName: 'G_Combat13', offer: { rewardType: 'RoomMoneyDrop' } },
     ],
   },
 ];
@@ -342,7 +332,7 @@ function createGoldenFGHProject(catalog: Catalog): ProjectDocument {
         { occurrenceId: combat09, gameName: 'H_Combat09' },
         { occurrenceId: combat03, gameName: 'H_Combat03' },
       ],
-      cageOutcome: 'max' as const,
+      cageOutcome: 'min' as const,
     },
     {
       parent: combat09,
@@ -358,7 +348,7 @@ function createGoldenFGHProject(catalog: Catalog): ProjectDocument {
         { occurrenceId: combat05, gameName: 'H_Combat05' },
         { occurrenceId: combat04, gameName: 'H_Combat04' },
       ],
-      cageOutcome: 'min' as const,
+      cageOutcome: 'max' as const,
     },
   ];
   for (const batch of batches) {
@@ -390,18 +380,18 @@ function createGoldenFGHProject(catalog: Catalog): ProjectDocument {
 
   const cageOffers: Readonly<Record<string, readonly OfferSpec[]>> = {
     [combat02]: [
-      { rewardType: 'RoomMoneyDrop' },
-      { rewardType: 'WeaponUpgrade' },
+      { rewardType: 'MaxHealthDrop' },
+      { rewardType: 'MaxManaDrop' },
       { rewardType: 'Boon', source: 'HestiaUpgrade' },
     ],
     [combat09]: [
       { rewardType: 'HermesUpgrade' },
-      { rewardType: 'TalentDrop' },
+      { rewardType: 'WeaponUpgrade' },
       { rewardType: 'Boon', source: 'HestiaUpgrade' },
     ],
     [combat03]: [
-      { rewardType: 'Boon', source: 'ApolloUpgrade' },
-      { rewardType: 'Boon', source: 'ZeusUpgrade' },
+      { rewardType: 'MaxHealthDrop' },
+      { rewardType: 'SpellDrop' },
       { rewardType: 'Boon', source: 'DemeterUpgrade' },
     ],
     [combat05]: [

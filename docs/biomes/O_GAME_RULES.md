@@ -136,10 +136,11 @@ single-target batches and six ordinary target occurrences. The separately
 bounded terminal transition then contributes the picked preboss occurrence.
 
 `O_Intro` advances `biomeDepthCache` once when it commits. Its outgoing target
-is generated from source BDC 0, the first ordinary room begins from BDC 1, and
-each later ordinary source advances the cache once. This is why the sixth
-ordinary room exposes the direct-preboss decision at source BDC 7; treating
-the intro as a zero-delta room shifts every O depth window by one.
+is generated from source BDC 1, and the first ordinary room prepares after the
+intro commits the cache to BDC 2. Each later ordinary source advances the cache
+once. This is why the sixth ordinary room exposes the direct-preboss decision
+at source BDC 7; treating the intro as a zero-delta room shifts every O depth
+window by one.
 
 The preboss map's own fixed boss exit and the boss's fixed postboss exit belong
 to the layout's derived completion sequence, not authored continuation state.

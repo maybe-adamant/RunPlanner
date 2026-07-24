@@ -62,9 +62,17 @@ The layout declares G's entry baseline as `biomeDepthCache = 1` and
 `biomeEncounterDepth = 1`. Route-wide encounter depth and room-history ordinal
 continue from validated F after F's biome-local transition resets.
 
-The intro's reward-free empty profile, 0-to-1 force window, and current-run
-counter behavior are exact catalog facts. The legacy exact-depth predicate is
-rejected because it did not match the game.
+`G_Intro` generates the first ordinary decision at source
+`biomeDepthCache = 1`, then advances the cache to `2` when it commits. Seven
+selected ordinary rooms advance the entered spine through source depth `8`,
+where `G_PreBoss01` is forced. The intro's reward-free empty profile, 0-to-1
+force window, and one-step room-history contribution are exact catalog facts.
+The legacy exact-depth intro predicate is rejected because it did not match
+the game.
+
+The authored bound is seven ordinary continuation batches and twenty-one
+ordinary target occurrences. Terminal occurrences are governed separately by
+the forked preboss policy.
 
 ## Physical Exits
 

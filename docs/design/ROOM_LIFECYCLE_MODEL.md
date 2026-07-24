@@ -500,6 +500,15 @@ Consequently:
 - the picked target does not contribute its own depth-cache increment until it
   later commits.
 
+Layout initial counters describe the state before the fixed start commits;
+they are not a replacement for that room's declaration-owned contribution.
+F and N begin new routes at `biomeDepthCache = 0`. Later biomes begin at
+`biomeDepthCache = 1` after the prior biome transition. In both cases, a
+supported Opening or Intro with a one-step room-history contribution generates
+its outgoing target from the initial source depth and advances the cache once
+at commit. Candidate evaluation consumes the recorded source view directly and
+must not add that contribution speculatively.
+
 The semantic `enterRoom` event may record that an occurrence was entered, while
 game-shaped room-history caches remain commit-time effects. Consumers must name
 the exact ledger they require rather than treating "appearance" and "committed

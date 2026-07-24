@@ -324,8 +324,8 @@ describe('Linear progressive biome evaluation', () => {
   });
 
   it('covers a selected shop offer but does not enter it before its required shop state exists', () => {
-    const partial = incompleteAtGeneratedBatch(underworld, 'Underworld', 'G', 5);
-    const shopOccurrenceId = targetOccurrenceId('G', 6, 1);
+    const partial = incompleteAtGeneratedBatch(underworld, 'Underworld', 'G', 4);
+    const shopOccurrenceId = targetOccurrenceId('G', 5, 1);
     const missingShopState = mapLinearPlan(partial, 'Underworld', 'G', (plan) => {
       if (plan.topology === null) {
         throw new Error('G has no topology');
@@ -336,7 +336,7 @@ describe('Linear progressive biome evaluation', () => {
           ...plan.topology,
           continuations: Object.freeze(
             plan.topology.continuations.map((continuation, index) =>
-              index === 5 ? Object.freeze({ ...continuation, pickedExitIndex: 1 }) : continuation,
+              index === 4 ? Object.freeze({ ...continuation, pickedExitIndex: 1 }) : continuation,
             ),
           ),
           occurrences: Object.freeze(
@@ -366,8 +366,8 @@ describe('Linear progressive biome evaluation', () => {
   });
 
   it('retains an unsupported entered-shop finding and blocks before later generations', () => {
-    const partial = incompleteAtGeneratedBatch(underworld, 'Underworld', 'G', 7);
-    const shopOccurrenceId = targetOccurrenceId('G', 6, 1);
+    const partial = incompleteAtGeneratedBatch(underworld, 'Underworld', 'G', 6);
+    const shopOccurrenceId = targetOccurrenceId('G', 5, 1);
     const invalidShop = mapLinearPlan(partial, 'Underworld', 'G', (plan) => {
       if (plan.topology === null) {
         throw new Error('G has no topology');
@@ -431,7 +431,7 @@ describe('Linear progressive biome evaluation', () => {
       through: { checkpoint: 'beforeTargetGeneration' },
       blockedAt: { kind: 'shopOffer', occurrenceId: shopOccurrenceId },
     });
-    expect(evaluation.materializedPrefix.batches).toHaveLength(6);
+    expect(evaluation.materializedPrefix.batches).toHaveLength(5);
     expect(evaluation.materializedPrefix.frontierGeneration).toBeUndefined();
     expect(evaluation.rewards.findings).toContainEqual(
       expect.objectContaining({ code: 'rewardPayloadInvalid' }),

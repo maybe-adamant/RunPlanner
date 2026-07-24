@@ -132,7 +132,7 @@ describe('complete I catalog', () => {
       exits: [{ index: 1, type: 'TartarusExitDoor' }],
       incomingReward: { kind: 'none' },
       encounterProfileKey: 'NoEncounter',
-      counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
+      counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     });
     expect(requireRoom('I_Story01')).toMatchObject({
       label: 'Hades',

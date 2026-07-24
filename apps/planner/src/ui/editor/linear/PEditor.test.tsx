@@ -128,7 +128,7 @@ describe('P candidates and editor projection', () => {
 
     expect(screen.getByRole('heading', { name: 'Olympus' })).toBeTruthy();
     expect(screen.queryByText('Precombat')).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Preboss from Combat 15' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Preboss from Combat 12' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Preboss Shop' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Free Reward' })).toBeTruthy();
     expect(screen.queryByLabelText('Type')).toBeNull();
@@ -140,7 +140,7 @@ describe('P candidates and editor projection', () => {
 
     expect(
       pPlan(store.getState().projectWorkspace.history.present).topology?.continuations.find(
-        (continuation) => continuation.parentOccurrenceId === pOccurrenceId('P_Combat15', 9, 1),
+        (continuation) => continuation.parentOccurrenceId === pOccurrenceId('P_Combat12', 8, 1),
       ),
     ).toMatchObject({ kind: 'terminal', pickedExitIndex: 2 });
   }, 30_000);

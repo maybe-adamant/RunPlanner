@@ -38,5 +38,5 @@ export const pBiomeLayout = {
     ],
   },
   fields: [],
-  bounds: { maxBatches: 9, maxTargets: 18 },
+  bounds: { maxBatches: 8, maxTargets: 16 },
 } as const satisfies RawBiomeLayoutDeclaration;

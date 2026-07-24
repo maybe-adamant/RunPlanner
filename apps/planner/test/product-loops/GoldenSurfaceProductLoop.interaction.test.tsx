@@ -248,7 +248,7 @@ describe('N/O/P/Q Surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
     expect(screen.getByRole('heading', { name: 'Olympus' })).toBeTruthy();
     const pText = await collectLinearBiomeText(view.user, 'Olympus structure');
-    expect(pText).toContain('Preboss from Combat 15');
+    expect(pText).toContain('Preboss from Combat 12');
     expect(pText).toContain('Free Reward');
     expect(screen.getByRole('button', { name: 'Olympus' }).getAttribute('aria-current')).toBe(
       'page',

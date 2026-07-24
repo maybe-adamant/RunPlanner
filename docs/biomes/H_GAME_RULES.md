@@ -138,6 +138,13 @@ and optionally the bridge. H does not have a fixed room-kind stage sequence.
 Eligibility and forced pools derive the possible target set from current
 history at each generated batch.
 
+H begins at `biomeDepthCache = 1`. `H_Intro` generates Decision 1 from that
+source depth, then advances the cache once when it commits. Decisions 2 through
+4 therefore generate at source depths 2 through 4, and the terminal preboss
+generation occurs at source depth 5. Treating the intro as a zero-delta room
+shifts every Fields depth window by one and incorrectly excludes minibosses
+from Decision 2.
+
 The authored topology contains five continuations after `H_Intro`: four
 ordinary generated batches followed by one terminal transition. The normalized
 layout bound is four ordinary batches and seven ordinary target occurrences;
@@ -272,7 +279,7 @@ Once `fieldsMaxDoorsRolled = 2`, only Min remains possible at every depth. A
 successful or ceiling-forced Max increments the counter even when capacity
 clamps the visible result to two or the ordinary batch has no combat target.
 
-Source depth four is the terminal generation point in canonical H after four
+Source depth five is the terminal generation point in canonical H after four
 ordinary entered rooms, and its unobservable terminal roll is omitted as
 described above. The declaration retains the verified depth-five and later
 game table as possibility data rather than encoding a canonical-path or UI
@@ -441,7 +448,8 @@ and sell-shop behavior in the postboss map remains deferred.
 
 Canonical H history preserves:
 
-- one non-counting fixed `H_Intro` appearance;
+- one encounter-non-counting fixed `H_Intro` appearance that advances
+  `biomeDepthCache` once on commit;
 - one creation event per physical target occurrence, including repeated combat
   identities and unpicked peers;
 - one semantic Fields door-roll outcome per ordinary generated batch;

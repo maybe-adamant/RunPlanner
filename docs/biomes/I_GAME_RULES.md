@@ -142,6 +142,13 @@ it in the layout's derived fixed-entry sequence. Materialization still emits
 its real creation, Story offer, entry, and history facts; persistence does not
 store a choice whose support set is a permanent singleton under this baseline.
 
+I begins at `biomeDepthCache = 1`. `I_Intro` generates the fixed Story offer
+from source depth `1` and commits to depth `2`. `I_Story01` then generates the
+first Clockwork decision from source depth `2` and commits to depth `3` before
+the picked Clockwork target prepares. Both fixed entries therefore contribute
+one room-history depth step even though Intro has no encounter and Story's
+encounter is non-counting.
+
 After Story, a complete route acquires exactly five Clockwork Goals and between
 zero and the authored maximum number of non-goal rewards before entering the
 preboss. Choosing a non-goal peer delays a Goal; choosing Goals immediately can

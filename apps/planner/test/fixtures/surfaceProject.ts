@@ -380,8 +380,7 @@ export function createRepresentativeNOPProject(): ProjectDocument {
     { targets: ['P_MiniBoss01', 'P_Combat09'], storeKey: 'RunProgress' },
     { targets: ['P_Combat10', 'P_Combat13'], storeKey: 'RunProgress' },
     { targets: ['P_Story01', 'P_Reprieve01'], storeKey: 'RunProgress' },
-    { targets: ['P_Combat12', 'P_Shop01'], storeKey: 'RunProgress' },
-    { targets: ['P_Combat15', 'P_Combat14'], storeKey: 'RunProgress' },
+    { targets: ['P_Combat12', 'P_Combat14'], storeKey: 'RunProgress' },
   ] as const;
   let parentOccurrenceId = pOccurrenceIds.intro;
   for (const [batchOffset, batch] of batches.entries()) {
@@ -426,8 +425,7 @@ export function createRepresentativeNOPProject(): ProjectDocument {
     [6, 2, 'P_Combat13', { rewardType: 'MaxHealthDrop' }],
     [7, 2, 'P_Reprieve01', { rewardType: 'MaxManaDrop' }],
     [8, 1, 'P_Combat12', { rewardType: 'StackUpgrade' }],
-    [9, 1, 'P_Combat15', { rewardType: 'RoomMoneyDrop' }],
-    [9, 2, 'P_Combat14', { rewardType: 'MaxManaDrop' }],
+    [8, 2, 'P_Combat14', { rewardType: 'MaxManaDrop' }],
   ] as const;
   for (const [batchIndex, exitIndex, gameName, value] of offers) {
     project = applyProjectCommand(project, catalog, {
