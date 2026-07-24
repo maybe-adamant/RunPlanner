@@ -652,7 +652,6 @@ button:disabled {
   align-items: start;
 }
 
-.linear-decision-heading,
 .linear-node-meta {
   display: flex;
   align-items: center;
@@ -660,12 +659,21 @@ button:disabled {
   gap: 7px;
 }
 
-.linear-exit-count,
+.linear-node-status,
 .linear-picked-reward,
 .linear-retained-label,
 .linear-node-meta {
   color: #8f8c95;
   font-size: 0.7rem;
+}
+
+.linear-node-status {
+  overflow: hidden;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .linear-picked-reward {

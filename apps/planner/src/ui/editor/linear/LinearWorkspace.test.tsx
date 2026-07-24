@@ -130,7 +130,12 @@ describe('Linear structured workspace', () => {
       throw new Error('multi-offer F decision has no compact structure row');
     }
 
-    expect(decisionButton.textContent).toContain(`Decision ${decisionIndex + 1}`);
+    expect(within(structure).getByRole('button', { name: /Start — Assessed/ })).toBeTruthy();
+    expect(
+      within(structure).getByRole('button', { name: /Terminal decision — Assessed/ }),
+    ).toBeTruthy();
+    expect(decisionButton.textContent).toContain(`Decision ${decisionIndex + 1} — Assessed`);
+    expect(decisionButton.textContent).not.toContain('offers');
     expect(decisionButton.textContent).toContain(picked.room.label);
     expect(
       within(structure)
