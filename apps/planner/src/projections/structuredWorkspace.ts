@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   createCompletionRoomAddress,
   createContinuationAddress,
+  createDefaultRoomState,
   createFixedEntryRoomAddress,
   createHubOpenSetAddress,
   createHubRoomAddress,
@@ -52,6 +53,7 @@ import type {
 } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type {
+  CanonicalBatchState,
   ProjectBiomeEvaluation,
   ProjectEvaluation,
   ProjectRouteEvaluation,
@@ -60,6 +62,7 @@ import type {
 } from '@run-planner/engine/simulation';
 import {
   assertProjectEvaluationSource,
+  projectClockworkTopology,
   projectLinearBatchState,
 } from '@run-planner/engine/simulation';
 
@@ -149,11 +152,13 @@ export interface WorkspaceExplicitRewardControl extends WorkspaceRewardControlBa
 }
 
 export type WorkspaceRewardControl = WorkspaceCountedRewardControl | WorkspaceExplicitRewardControl;
+export type WorkspacePostCreateFocus = 'createdOwner' | 'frontier';
 
 export type WorkspaceContextualOwner =
   | {
       readonly kind: 'startRoom';
       readonly address: BiomeAddress | OccurrenceAddress;
+      readonly postCreateFocusByGameName: Readonly<Record<string, WorkspacePostCreateFocus>>;
       readonly roomPicker: WorkspaceRoomPickerControl;
     }
   | { readonly kind: 'linearDecision'; readonly address: ContinuationAddress }
@@ -300,6 +305,7 @@ export interface WorkspaceLinearEntry {
 }
 
 export interface WorkspaceLinearTarget {
+  readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly contextualOwner: WorkspaceContextualOwner;
   readonly exitIndex: number;
   readonly marker: WorkspaceMarker;
@@ -309,6 +315,7 @@ export interface WorkspaceLinearTarget {
 }
 
 export interface WorkspaceLinearDecision {
+  readonly batchState: CanonicalBatchState;
   readonly contextualOwner: WorkspaceContextualOwner;
   readonly findingCount: number;
   readonly kind: 'batch';
@@ -986,7 +993,7 @@ function authoredLinearFrontier(
   topology: LinearBiomeTopology | null,
 ): ContinuationAddress | null {
   if (topology === null) {
-    return null;
+    return layout.start.kind === 'fixedEntry' ? createContinuationAddress(biome, null) : null;
   }
   if (topology.continuations.length === 0) {
     return createContinuationAddress(biome, topology.startOccurrenceId);
@@ -1272,9 +1279,25 @@ function linearEntries(
       kind: 'startRoomPicker' as const,
       ...(occurrence === undefined ? {} : { selectedGameName: occurrence.gameName }),
     });
+    const postCreateFocusPolicies: Record<string, WorkspacePostCreateFocus> = {};
+    for (const gameName of layout.start.roomGameNames) {
+      const state = createDefaultRoomState(catalog, requireRoom(catalog, gameName), {
+        entryActive: true,
+        role: 'ordinary',
+      });
+      const hasEditableRoomState = state.kind !== 'none' && state.kind !== 'fixed';
+      postCreateFocusPolicies[gameName] =
+        layout.fields.length > 0 || hasEditableRoomState ? 'createdOwner' : 'frontier';
+    }
+    const postCreateFocusByGameName = Object.freeze(postCreateFocusPolicies);
     entries.push(
       Object.freeze({
-        contextualOwner: Object.freeze({ kind: 'startRoom' as const, address, roomPicker }),
+        contextualOwner: Object.freeze({
+          kind: 'startRoom' as const,
+          address,
+          postCreateFocusByGameName,
+          roomPicker,
+        }),
         key: 'start',
         marker: marker(context, address),
         role: 'start',
@@ -1324,6 +1347,7 @@ function linearTarget(
   parentOccurrenceId: OccurrenceId | null,
   pickedExitIndex: number | null,
   target: LinearBiomeTopology['continuations'][number]['targets'][number],
+  clockworkReward?: 'goal' | 'nonGoal',
 ): WorkspaceLinearTarget {
   const biome = createBiomeAddress(context.routeKey, context.biomeKey);
   const address = createTargetAddress(biome, parentOccurrenceId, target.exitIndex);
@@ -1331,6 +1355,7 @@ function linearTarget(
   const projectedMarker = marker(context, address);
   const occurrence = occurrenceById(topology, target.occurrenceId);
   return Object.freeze({
+    ...(clockworkReward === undefined ? {} : { clockworkReward }),
     contextualOwner:
       continuationKind === 'batch'
         ? Object.freeze({
@@ -1401,6 +1426,10 @@ function projectLinearBiome(
   const biome = createBiomeAddress(context.routeKey, plan.biomeKey);
   const topology = plan.topology;
   const source = projectionSource(context.evaluation);
+  const clockworkBatches =
+    topology !== null && layout.continuation.batchPolicy.kind === 'clockwork'
+      ? projectClockworkTopology(catalog, biome, plan).batches
+      : Object.freeze([]);
   const projectedContinuations: readonly ProjectedLinearContinuation[] =
     topology === null
       ? Object.freeze([])
@@ -1408,6 +1437,9 @@ function projectLinearBiome(
           topology.continuations.map((continuation) => {
             const address = createContinuationAddress(biome, continuation.parentOccurrenceId);
             const projectedMarker = marker(context, address);
+            const clockworkBatch = clockworkBatches.find(
+              (batch) => batch.parentOccurrenceId === continuation.parentOccurrenceId,
+            );
             const pickedMarker = marker(
               context,
               createPickedAddress(biome, continuation.parentOccurrenceId),
@@ -1424,6 +1456,9 @@ function projectLinearBiome(
                   continuation.parentOccurrenceId,
                   continuation.pickedExitIndex,
                   target,
+                  clockworkBatch?.targets.find(
+                    (candidate) => candidate.exitIndex === target.exitIndex,
+                  )?.reward,
                 ),
               ),
             );
@@ -1439,6 +1474,17 @@ function projectLinearBiome(
               targets,
             };
             if (continuation.kind === 'batch') {
+              let batchState: CanonicalBatchState;
+              if (layout.continuation.batchPolicy.kind === 'clockwork') {
+                if (clockworkBatch === undefined) {
+                  throw new StructuredWorkspaceProjectionContractError(
+                    `${layout.biomeKey} batch ${continuation.parentOccurrenceId} has no Clockwork projection`,
+                  );
+                }
+                batchState = clockworkBatch.batchState;
+              } else {
+                batchState = projectLinearBatchState(catalog, biome, topology, continuation);
+              }
               const rewardStoreMarker = marker(
                 context,
                 createBatchRewardStoreAddress(biome, continuation.parentOccurrenceId),
@@ -1447,6 +1493,7 @@ function projectLinearBiome(
               );
               return Object.freeze({
                 ...common,
+                batchState,
                 findingCount: linearContinuationFindingCount({
                   ...common,
                   rewardStoreMarker,

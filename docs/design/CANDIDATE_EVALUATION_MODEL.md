@@ -294,10 +294,10 @@ React may render declaration-owned choices and the currently authored value,
 but it does not walk topology to discover candidate owners, rebuild candidate
 grouping, choose a replay horizon, or construct candidate queries. Room and
 reward interactions follow the same contract as batch stores, Fields outcomes,
-O wheels, Hub controls, side rooms, and shop purchases. I's latent non-goal
-limit is not a candidate interaction: selected and progressive simulation
-derive its compatible domain, and room-target candidates consume that domain
-from their prepared generation context.
+O wheels, Hub controls, side rooms, and shop purchases. I's bounded non-goal
+limit is a direct declaration-owned authored field rather than a contextual
+candidate interaction. Room-target candidates consume its selected value from
+their prepared generation context.
 
 There is no separate candidate-evaluation harness for tests. Engine candidate
 tests bind the production session factory to a real project/evaluation pair.

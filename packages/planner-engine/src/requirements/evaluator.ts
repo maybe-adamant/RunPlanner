@@ -12,7 +12,6 @@ export interface ClockworkRequirementFacts {
   readonly remainingGoals: number;
   readonly maxNonGoalRewards: number;
   readonly nonGoalRewardsAcquired: number;
-  readonly compatibleNonGoalRewardLimits?: readonly number[];
 }
 
 export interface RequirementEvaluationContext {
@@ -124,9 +123,7 @@ export const requirementEvaluatorRegistry = Object.freeze({
     isInRange(requireClockwork(context).remainingGoals, requirement.range),
   clockworkNonGoalCapacity: (requirement, context) => {
     const clockwork = requireClockwork(context);
-    return (clockwork.compatibleNonGoalRewardLimits ?? [clockwork.maxNonGoalRewards]).some(
-      (maximum) => clockwork.nonGoalRewardsAcquired < maximum - requirement.reserve,
-    );
+    return clockwork.nonGoalRewardsAcquired < clockwork.maxNonGoalRewards - requirement.reserve;
   },
   flagEquals: (requirement, context) => context.flags[requirement.flag] === requirement.value,
 } satisfies RequirementEvaluatorRegistry);

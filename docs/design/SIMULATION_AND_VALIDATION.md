@@ -463,9 +463,9 @@ occurrence is still created only once, and later restore appearances never
 replay creation or lifecycle work.
 
 `entryRooms` begins with the selected declared start and then contains any
-layout-derived fixed entry rooms in game order. I contains only `I_Intro`;
-`I_Story01` materializes later as an ordinary authored target in a generated
-Clockwork batch.
+layout-derived fixed entry rooms in game order. I contributes its authored
+single-choice `I_Intro` start; `I_Story01` materializes later as an ordinary
+authored target in a generated Clockwork batch.
 
 A layout-derived entry owns a stable `(routeKey, biomeKey, role)` semantic
 address rather than a fake Room Occurrence ID. Its incoming fixed producer and
@@ -535,11 +535,10 @@ A canonical batch records:
 - semantic addresses for each fact.
 
 A Clockwork batch additionally records the exact pre-generation
-`goalsRemaining`, `nonGoalRewardsAcquired`, and compatible latent non-goal
-limit domain. Materialization deterministically selects the smallest remaining
-limit as its history witness; if no limit remains, it uses the declaration
-maximum only to preserve a complete invalid trace while selected generation
-emits the addressed incompatibility. Each target then owns a derived Goal or
+`goalsRemaining`, `nonGoalRewardsAcquired`, and authored
+`maxNonGoalRewards`. The value is one explicit simulation input selected from
+the declaration-owned `3..6` range; materialization does not infer or replace
+it with a compatibility witness. Each target then owns a derived Goal or
 NonGoal fact. Goal suppresses the dormant concrete Tartarus leaf; NonGoal
 activates it. When the picked target is the generated preboss, that final
 generated batch becomes `terminalEntry` while preserving its batch-state and

@@ -201,44 +201,34 @@ describe('requirement evaluator registry', () => {
     expect(
       evaluateRequirement({ kind: 'clockworkGoalsRemaining', range: { max: 0 } }, context),
     ).toBe(true);
-    expect(evaluateRequirement({ kind: 'clockworkNonGoalCapacity', reserve: 1 }, context)).toBe(
-      true,
-    );
-    expect(
-      evaluateRequirement(
-        { kind: 'clockworkNonGoalCapacity', reserve: 1 },
-        {
-          ...context,
-          clockwork: { ...context.clockwork, nonGoalRewardsAcquired: 3 },
-        },
-      ),
-    ).toBe(false);
-    expect(
-      evaluateRequirement(
-        { kind: 'clockworkNonGoalCapacity', reserve: 1 },
-        {
-          ...context,
-          clockwork: {
-            ...context.clockwork,
-            compatibleNonGoalRewardLimits: [4, 5],
-            nonGoalRewardsAcquired: 3,
+    for (const maxNonGoalRewards of [3, 4, 5, 6]) {
+      expect(
+        evaluateRequirement(
+          { kind: 'clockworkNonGoalCapacity', reserve: 1 },
+          {
+            ...context,
+            clockwork: {
+              ...context.clockwork,
+              maxNonGoalRewards,
+              nonGoalRewardsAcquired: maxNonGoalRewards - 2,
+            },
           },
-        },
-      ),
-    ).toBe(true);
-    expect(
-      evaluateRequirement(
-        { kind: 'clockworkNonGoalCapacity', reserve: 1 },
-        {
-          ...context,
-          clockwork: {
-            ...context.clockwork,
-            compatibleNonGoalRewardLimits: [],
-            maxNonGoalRewards: 6,
+        ),
+      ).toBe(true);
+      expect(
+        evaluateRequirement(
+          { kind: 'clockworkNonGoalCapacity', reserve: 1 },
+          {
+            ...context,
+            clockwork: {
+              ...context.clockwork,
+              maxNonGoalRewards,
+              nonGoalRewardsAcquired: maxNonGoalRewards - 1,
+            },
           },
-        },
-      ),
-    ).toBe(false);
+        ),
+      ).toBe(false);
+    }
     expect(() =>
       evaluateRequirement(
         { kind: 'clockworkGoalsRemaining', range: { max: 0 } },

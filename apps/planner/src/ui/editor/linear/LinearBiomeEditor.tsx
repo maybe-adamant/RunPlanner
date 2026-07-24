@@ -1,18 +1,27 @@
 import type { LinearBiomeProjectEvaluation } from '@run-planner/engine/simulation';
-import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import type {
+  AuthoredFieldDescriptor,
+  Catalog,
+  RoomDeclaration,
+} from '@run-planner/engine/catalog-schema';
 import type { LinearBiomePlan } from '@run-planner/engine/authored-project';
 import {
   createBiomeAddress,
+  createBiomeFieldAddress,
   createContinuationAddress,
   createFixedEntryRewardAddress,
   createFixedEntryRoomAddress,
   createOccurrenceAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { type WorkspaceInteractionCatalog } from '../../../projections/structuredWorkspace';
+import {
+  type WorkspaceInteractionCatalog,
+  type WorkspaceLinearBiome,
+} from '../../../projections/structuredWorkspace';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { presentBiomeStatus } from '../../../projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
+import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import { useAppDispatch } from '../../../state/store';
 import { LinearTopologyEditor } from './LinearTopologyEditor';
 import {
@@ -30,6 +39,7 @@ interface LinearBiomeEditorProps {
   readonly focusedNodeKey?: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly plan: LinearBiomePlan;
+  readonly projection: WorkspaceLinearBiome;
   readonly routeKey: string;
 }
 
@@ -61,6 +71,53 @@ function startDeclaration(catalog: Catalog, gameName: string): RoomDeclaration {
   return room;
 }
 
+function ClockworkRollControl({
+  biome,
+  descriptor,
+  plan,
+}: {
+  readonly biome: ReturnType<typeof createBiomeAddress>;
+  readonly descriptor: Extract<AuthoredFieldDescriptor, { readonly kind: 'boundedInteger' }>;
+  readonly plan: LinearBiomePlan;
+}) {
+  const dispatch = useAppDispatch();
+  const value = plan.state.maxNonGoalRewards;
+  if (typeof value !== 'number') {
+    throw new Error(`${plan.biomeKey} has no numeric maxNonGoalRewards value`);
+  }
+  const field = createBiomeFieldAddress(biome, 'maxNonGoalRewards');
+  return (
+    <label className="field-control biome-field" htmlFor={`${plan.biomeKey}-clockwork-roll`}>
+      <span className="field-label-with-marker">
+        Rolled non-goal limit
+        <SemanticOwnerMarker address={field} />
+      </span>
+      <select
+        id={`${plan.biomeKey}-clockwork-roll`}
+        onChange={(event) =>
+          dispatch(
+            authoredProjectCommandDispatched({
+              kind: 'ReplaceBiomeField',
+              field,
+              value: Number(event.target.value),
+            }),
+          )
+        }
+        value={String(value)}
+      >
+        {Array.from(
+          { length: descriptor.max - descriptor.min + 1 },
+          (_, index) => descriptor.min + index,
+        ).map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export function LinearBiomeEditor({
   catalog,
   embedded = false,
@@ -68,6 +125,7 @@ export function LinearBiomeEditor({
   focusedNodeKey,
   interactions,
   plan,
+  projection,
   routeKey,
 }: LinearBiomeEditorProps) {
   const dispatch = useAppDispatch();
@@ -78,6 +136,9 @@ export function LinearBiomeEditor({
   if (evaluation !== undefined && evaluation.biomeKey !== plan.biomeKey) {
     throw new Error(`${plan.biomeKey} editor received ${evaluation.biomeKey} evaluation`);
   }
+  if (projection.biomeKey !== plan.biomeKey) {
+    throw new Error(`${plan.biomeKey} editor received ${projection.biomeKey} workspace`);
+  }
   const biomeLabel = biomeDeclaration.label;
   const titleId = `${plan.biomeKey.toLowerCase()}-biome-title`;
   const startRoomId = `${plan.biomeKey.toLowerCase()}-starting-room`;
@@ -87,6 +148,18 @@ export function LinearBiomeEditor({
   if (layout?.kind !== 'LinearBiome') {
     throw new Error(`${plan.biomeKey} is not a linear biome`);
   }
+  const clockworkRollDescriptor =
+    layout.continuation.batchPolicy.kind === 'clockwork'
+      ? (() => {
+          const descriptor = layout.fields.find(
+            (candidate) => candidate.key === 'maxNonGoalRewards',
+          );
+          if (descriptor?.kind !== 'boundedInteger') {
+            throw new Error(`${plan.biomeKey} has no bounded maxNonGoalRewards declaration`);
+          }
+          return descriptor;
+        })()
+      : undefined;
 
   if (layout.start.kind === 'fixedEntry') {
     const fixedEntries = [
@@ -188,7 +261,7 @@ export function LinearBiomeEditor({
                   <SemanticOwnerMarker address={createContinuationAddress(biome, null)} />
                 </div>
                 <h3>Continue from {fixedSourceRoom.label}</h3>
-                <p>The first Clockwork decision follows the fixed biome entries.</p>
+                <p>The first generated decision follows the fixed biome entry.</p>
               </div>
               <div className="frontier-buttons">
                 <button
@@ -215,6 +288,7 @@ export function LinearBiomeEditor({
               {...(focusedNodeKey === undefined ? {} : { focusedNodeKey })}
               interactions={interactions}
               plan={plan}
+              projectedDecisions={projection.decisions}
               topology={topology}
             />
           ) : null}
@@ -226,9 +300,17 @@ export function LinearBiomeEditor({
   const options = startRooms(catalog, plan.biomeKey);
   const authoredStartKind = options.every((room) => room.kind === 'Opening')
     ? 'opening'
-    : 'starting';
+    : options.every((room) => room.kind === 'Intro')
+      ? 'entrance'
+      : 'starting';
 
   if (topology === null) {
+    const startOwner = projection.entries.find(
+      (entry) => entry.contextualOwner?.kind === 'startRoom',
+    )?.contextualOwner;
+    if (startOwner?.kind !== 'startRoom') {
+      throw new Error(`${plan.biomeKey} has no projected start-room interaction`);
+    }
     return (
       <SemanticFindingsScope findings={evaluation?.findings ?? []}>
         <section className="biome-editor" {...(embedded ? {} : { 'aria-labelledby': titleId })}>
@@ -250,7 +332,8 @@ export function LinearBiomeEditor({
           <div className="empty-topology">
             <div>
               <h3>
-                Choose {authoredStartKind === 'opening' ? 'an' : 'a'} {authoredStartKind} room
+                Choose{' '}
+                {authoredStartKind === 'starting' ? 'a starting room' : `an ${authoredStartKind}`}
               </h3>
               <p>
                 {biomeLabel} is configured for this project, but no authored topology exists yet.
@@ -260,19 +343,37 @@ export function LinearBiomeEditor({
               <RoomSelector
                 idPrefix={startRoomId}
                 interactions={interactions}
-                label={`${authoredStartKind === 'opening' ? 'Opening' : 'Starting'} room`}
+                label={
+                  authoredStartKind === 'starting'
+                    ? 'Starting room'
+                    : authoredStartKind[0]!.toUpperCase() + authoredStartKind.slice(1)
+                }
                 onSelect={(gameName) => {
+                  const occurrenceId = allocateOccurrenceId();
                   dispatch(
                     authoredProjectCommandDispatched({
                       kind: 'CreateStart',
                       biome,
-                      occurrenceId: allocateOccurrenceId(),
+                      occurrenceId,
                       gameName,
                     }),
                   );
+                  const postCreateFocus = startOwner.postCreateFocusByGameName[gameName];
+                  if (postCreateFocus === undefined) {
+                    throw new Error(
+                      `${plan.biomeKey} has no post-create focus policy for ${gameName}`,
+                    );
+                  }
+                  if (postCreateFocus === 'createdOwner') {
+                    dispatch(semanticOwnerFocused(createOccurrenceAddress(biome, occurrenceId)));
+                  }
                 }}
                 owner={biome}
-                placeholder={`Select ${authoredStartKind === 'opening' ? 'an opening' : 'a room'}`}
+                placeholder={
+                  authoredStartKind === 'starting'
+                    ? 'Select a room'
+                    : `Select an ${authoredStartKind}`
+                }
               />
             </div>
           </div>
@@ -353,6 +454,13 @@ export function LinearBiomeEditor({
               interactions={interactions}
               occurrence={start}
             />
+            {clockworkRollDescriptor !== undefined && (
+              <ClockworkRollControl
+                biome={biome}
+                descriptor={clockworkRollDescriptor}
+                plan={plan}
+              />
+            )}
           </article>
         )}
 
@@ -363,6 +471,7 @@ export function LinearBiomeEditor({
           {...(focusedNodeKey === undefined ? {} : { focusedNodeKey })}
           interactions={interactions}
           plan={plan}
+          projectedDecisions={projection.decisions}
           topology={topology}
         />
       </section>

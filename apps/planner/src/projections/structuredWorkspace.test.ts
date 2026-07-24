@@ -184,9 +184,17 @@ describe('structured workspace projection', () => {
     for (const biomeKey of ['F', 'G', 'H', 'I', 'O', 'P', 'Q']) {
       const workspace = ['F', 'G', 'H', 'I'].includes(biomeKey) ? underworld : surface;
       const projected = linear(biome(workspace, biomeKey));
+      const startOwner = projected.entries.find(
+        (entry) => entry.contextualOwner?.kind === 'startRoom',
+      )?.contextualOwner;
       expect(projected.source).toBe('canonical');
       expect(projected.decisions.length).toBeGreaterThan(0);
       expect(projected.completion.length).toBeGreaterThan(0);
+      if (startOwner?.kind === 'startRoom') {
+        expect(Object.values(startOwner.postCreateFocusByGameName)).toEqual(
+          expect.arrayContaining(['F', 'I'].includes(biomeKey) ? ['createdOwner'] : ['frontier']),
+        );
+      }
       for (const decision of projected.decisions) {
         expect(workspace.focusByOwner.has(decision.marker.focusKey)).toBe(true);
         for (const target of decision.targets) {

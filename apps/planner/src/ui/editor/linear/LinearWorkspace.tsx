@@ -207,6 +207,9 @@ function singleRewardSummary(
   catalog: Catalog,
   target: WorkspaceLinearDecision['targets'][number] | undefined,
 ): string | undefined {
+  if (target?.clockworkReward === 'goal' && target.room.kind === 'Combat') {
+    return 'Clockwork Goal';
+  }
   if (target?.room.rewardSummary === undefined) {
     return undefined;
   }
@@ -315,21 +318,16 @@ export function LinearWorkspace({
 }: LinearWorkspaceProps) {
   const requestedDestination = useDestinationForFocus(workspace, projection, routeKey);
   const fallback = defaultMarker(projection);
-  const layout = catalog.biomeLayouts.byKey[projection.biomeKey];
-  if (layout?.kind !== 'LinearBiome') {
-    throw new Error(`${projection.biomeKey} has no Linear layout`);
-  }
   const requestedNodeKey = requestedDestination?.nodeKey;
   const requestedAddress = requestedDestination?.focusAddress;
   const requestedIsFocusable =
     requestedNodeKey !== undefined &&
     requestedAddress !== undefined &&
-    ((layout.fields.length > 0 && requestedNodeKey === projection.marker.focusKey) ||
-      projection.entries.some(
-        (entry) =>
-          entry.marker.focusKey === requestedNodeKey ||
-          entry.room?.marker.focusKey === requestedNodeKey,
-      ) ||
+    (projection.entries.some(
+      (entry) =>
+        entry.marker.focusKey === requestedNodeKey ||
+        entry.room?.marker.focusKey === requestedNodeKey,
+    ) ||
       focusedDecision(projection, requestedNodeKey, requestedAddress) !== undefined ||
       terminalOwnsFocus(projection, requestedNodeKey, requestedAddress) ||
       projection.frontier?.focusKey === requestedNodeKey ||
@@ -366,19 +364,6 @@ export function LinearWorkspace({
         </header>
 
         <div className="linear-spine">
-          {layout.fields.length === 0 ? null : (
-            <div className="linear-spine-stop">
-              <FocusButton
-                className="linear-entry-node"
-                marker={projection.marker}
-                selected={focusedNodeKey === projection.marker.focusKey}
-              >
-                <CompactNodeHeading label="Biome" marker={projection.marker} />
-                <strong>Biome settings</strong>
-              </FocusButton>
-            </div>
-          )}
-
           {projection.entries.map((entry) => {
             const marker = entry.room?.marker ?? entry.marker;
             return (
@@ -482,6 +467,7 @@ export function LinearWorkspace({
             focusedNodeKey={focusedNodeKey}
             interactions={interactions}
             plan={plan}
+            projection={projection}
             routeKey={routeKey}
           />
         ) : (

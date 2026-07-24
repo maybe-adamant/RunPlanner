@@ -158,7 +158,7 @@ describe('planner history interaction', () => {
     const blockedBanner = screen.getByText(/Oceanus is blocked until Erebus is complete and valid/);
     expect(blockedBanner.getAttribute('role')).toBeNull();
     expect(blockedBanner.closest('.editor-panel')?.getAttribute('aria-live')).toBe('polite');
-    expect(screen.getByLabelText('Starting room')).toHaveProperty('disabled', false);
+    expect(screen.getByLabelText('Entrance')).toHaveProperty('disabled', false);
 
     await user.click(screen.getByRole('button', { name: 'Surface' }));
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');

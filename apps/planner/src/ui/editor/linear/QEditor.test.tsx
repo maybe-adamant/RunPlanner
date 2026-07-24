@@ -21,7 +21,10 @@ import {
   selectProjectEvaluation,
   useAppSelector,
 } from '../../../state/store';
-import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
+import {
+  createStructuredWorkspaceTestServices,
+  requireLinearWorkspaceBiome,
+} from '../../../../test/fixtures/structuredWorkspace';
 import {
   createRepresentativeNOPQProject,
   qBiome,
@@ -54,12 +57,14 @@ function QEditorHarness({
   if (evaluation?.kind !== 'LinearBiome') {
     throw new Error('Q editor fixture has no linear evaluation');
   }
+  const workspace = structuredWorkspace.project(project, projectEvaluation);
   return (
     <LinearBiomeEditor
       catalog={catalog}
-      interactions={structuredWorkspace.project(project, projectEvaluation).interactions}
+      interactions={workspace.interactions}
       evaluation={evaluation}
       plan={qPlan(project)}
+      projection={requireLinearWorkspaceBiome(workspace, qBiome.biomeKey)}
       routeKey={qBiome.routeKey}
     />
   );

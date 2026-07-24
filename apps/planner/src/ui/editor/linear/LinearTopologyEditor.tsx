@@ -8,11 +8,7 @@ import type {
   OccurrenceId,
   RoomOccurrence,
 } from '@run-planner/engine/authored-project';
-import type {
-  LinearBiomeProjectEvaluation,
-  CanonicalBatchState,
-  ClockworkBatchProjection,
-} from '@run-planner/engine/simulation';
+import type { LinearBiomeProjectEvaluation } from '@run-planner/engine/simulation';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
   createBatchRewardStoreAddress,
@@ -22,9 +18,11 @@ import {
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { projectClockworkTopology, projectLinearBatchState } from '@run-planner/engine/simulation';
 
-import type { WorkspaceInteractionCatalog } from '../../../projections/structuredWorkspace';
+import type {
+  WorkspaceInteractionCatalog,
+  WorkspaceLinearDecision,
+} from '../../../projections/structuredWorkspace';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { useAppDispatch } from '../../../state/store';
@@ -40,17 +38,18 @@ interface LinearTopologyEditorProps {
   readonly focusedNodeKey?: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly plan: LinearBiomePlan;
+  readonly projectedDecisions: readonly WorkspaceLinearDecision[];
   readonly topology: LinearBiomeTopology;
 }
 
-interface BatchEditorProps extends LinearTopologyEditorProps {
+interface BatchEditorProps extends Omit<LinearTopologyEditorProps, 'projectedDecisions'> {
   readonly canCreateTarget: boolean;
   readonly canReplaceWithTerminal: boolean;
-  readonly clockworkBatch?: ClockworkBatchProjection;
   readonly continuation: LinearBatchContinuation;
+  readonly projectedDecision: WorkspaceLinearDecision;
 }
 
-interface TerminalEditorProps extends LinearTopologyEditorProps {
+interface TerminalEditorProps extends Omit<LinearTopologyEditorProps, 'projectedDecisions'> {
   readonly canReplaceWithBatch: boolean;
   readonly continuation: LinearTerminalContinuation;
 }
@@ -131,14 +130,14 @@ function OrdinaryTargetEditor({
   projectedBatchState,
   target,
   topology,
-}: LinearTopologyEditorProps & {
+}: Omit<LinearTopologyEditorProps, 'projectedDecisions'> & {
   readonly available: boolean;
   readonly canCreateTarget: boolean;
   readonly continuation: LinearBatchContinuation;
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly exitIndex: number;
   readonly focused: boolean;
-  readonly projectedBatchState: CanonicalBatchState;
+  readonly projectedBatchState: WorkspaceLinearDecision['batchState'];
   readonly target: LinearTargetReference | undefined;
 }) {
   const dispatch = useAppDispatch();
@@ -263,12 +262,12 @@ function BatchEditor({
   canCreateTarget,
   canReplaceWithTerminal,
   catalog,
-  clockworkBatch,
   continuation,
   focusedNodeKey,
   interactions,
   evaluation,
   plan,
+  projectedDecision,
   topology,
 }: BatchEditorProps) {
   const dispatch = useAppDispatch();
@@ -293,17 +292,7 @@ function BatchEditor({
           return room;
         })()
       : declaration(catalog, occurrence(topology, continuation.parentOccurrenceId));
-  const projectedBatchState =
-    layout.continuation.batchPolicy.kind === 'clockwork'
-      ? (() => {
-          if (clockworkBatch === undefined) {
-            throw new Error(
-              `${layout.biomeKey} batch ${continuation.parentOccurrenceId} has no Clockwork projection`,
-            );
-          }
-          return clockworkBatch.batchState;
-        })()
-      : projectLinearBatchState(catalog, biome, topology, continuation);
+  const projectedBatchState = projectedDecision.batchState;
   const fieldsPolicy =
     layout.continuation.batchPolicy.kind === 'fields' ? layout.continuation.batchPolicy : undefined;
   const availableExitIndexes = generatedExitIndexes(parentRoom);
@@ -407,9 +396,9 @@ function BatchEditor({
             plan={plan}
             projectedBatchState={projectedBatchState}
             {...(() => {
-              const reward = clockworkBatch?.targets.find(
+              const reward = projectedDecision.targets.find(
                 (candidate) => candidate.exitIndex === exitIndex,
-              )?.reward;
+              )?.clockworkReward;
               return reward === undefined ? {} : { clockworkReward: reward };
             })()}
             target={continuation.targets.find((target) => target.exitIndex === exitIndex)}
@@ -697,7 +686,7 @@ function FrontierEditor({
   catalog,
   parentOccurrenceId,
   topology,
-}: LinearTopologyEditorProps & {
+}: Omit<LinearTopologyEditorProps, 'projectedDecisions'> & {
   readonly canAddBatch: boolean;
   readonly canCreateTerminal: boolean;
   readonly parentOccurrenceId: OccurrenceId;
@@ -833,6 +822,7 @@ export function LinearTopologyEditor({
   interactions,
   evaluation,
   plan,
+  projectedDecisions,
   topology,
 }: LinearTopologyEditorProps) {
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
@@ -867,10 +857,6 @@ export function LinearTopologyEditor({
     frontier === undefined ? undefined : declaration(catalog, occurrence(topology, frontier));
   const frontierTerminalTargetCount =
     frontierRoom === undefined ? 0 : generatedExitIndexes(frontierRoom).length;
-  const clockworkBatches =
-    layout.continuation.batchPolicy.kind === 'clockwork'
-      ? projectClockworkTopology(catalog, biome, plan).batches
-      : Object.freeze([]);
   return (
     <div className="topology-editor">
       {topology.continuations.map((continuation) => {
@@ -881,28 +867,35 @@ export function LinearTopologyEditor({
           return null;
         }
         return continuation.kind === 'batch' ? (
-          <BatchEditor
-            biome={biome}
-            canCreateTarget={targetCount < layout.bounds.maxTargets}
-            canReplaceWithTerminal={
-              constrainedContinuationCount === undefined &&
-              layout.terminal.kind !== 'generatedTarget'
-            }
-            catalog={catalog}
-            interactions={interactions}
-            {...(focusedNodeKey === undefined ? {} : { focusedNodeKey })}
-            {...(() => {
-              const clockworkBatch = clockworkBatches.find(
-                (batch) => batch.parentOccurrenceId === continuation.parentOccurrenceId,
+          (() => {
+            const projectedDecision = projectedDecisions.find(
+              (decision) => decision.parentOccurrenceId === continuation.parentOccurrenceId,
+            );
+            if (projectedDecision === undefined) {
+              throw new Error(
+                `${biome.biomeKey} batch ${continuation.parentOccurrenceId} has no workspace projection`,
               );
-              return clockworkBatch === undefined ? {} : { clockworkBatch };
-            })()}
-            continuation={continuation}
-            evaluation={evaluation}
-            key={continuation.parentOccurrenceId ?? 'layout-entry'}
-            plan={plan}
-            topology={topology}
-          />
+            }
+            return (
+              <BatchEditor
+                biome={biome}
+                canCreateTarget={targetCount < layout.bounds.maxTargets}
+                canReplaceWithTerminal={
+                  constrainedContinuationCount === undefined &&
+                  layout.terminal.kind !== 'generatedTarget'
+                }
+                catalog={catalog}
+                interactions={interactions}
+                {...(focusedNodeKey === undefined ? {} : { focusedNodeKey })}
+                continuation={continuation}
+                evaluation={evaluation}
+                key={continuation.parentOccurrenceId ?? 'layout-entry'}
+                plan={plan}
+                projectedDecision={projectedDecision}
+                topology={topology}
+              />
+            );
+          })()
         ) : (
           <TerminalEditor
             biome={biome}

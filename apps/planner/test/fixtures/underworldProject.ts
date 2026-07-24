@@ -429,7 +429,14 @@ export function createGoldenFGHIProject(catalog: Catalog): ProjectDocument {
     route: createRouteAddress('Underworld'),
     configuredBiomeCount: 4,
   });
-  let parent: OccurrenceId | null = null;
+  const intro = createOccurrenceId('phase-6-i-intro');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome,
+    occurrenceId: intro,
+    gameName: 'I_Intro',
+  });
+  let parent: OccurrenceId = intro;
   const batches = [
     { targets: ['I_Combat01'] },
     { targets: ['I_Combat03', 'I_Story01'] },

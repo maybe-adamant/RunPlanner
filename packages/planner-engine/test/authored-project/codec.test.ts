@@ -215,7 +215,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 6, received 1'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 1'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -227,7 +227,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 6, received 2'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 2'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -239,7 +239,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 6, received 3'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 3'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -251,7 +251,7 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 6, received 4'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 4'));
     expect(() =>
       decodeProjectDocument(
         {
@@ -263,7 +263,19 @@ describe('project document codec', () => {
         },
         catalog,
       ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 6, received 5'));
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 5'));
+    expect(() =>
+      decodeProjectDocument(
+        {
+          ...(rawDocument([
+            { routeKey: 'Underworld', biomes: [] },
+            { routeKey: 'Surface', biomes: [] },
+          ]) as Record<string, unknown>),
+          schemaVersion: 6,
+        },
+        catalog,
+      ),
+    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 7, received 6'));
     expect(() =>
       decodeProjectDocument(
         {

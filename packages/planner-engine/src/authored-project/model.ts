@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 6 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 7 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 

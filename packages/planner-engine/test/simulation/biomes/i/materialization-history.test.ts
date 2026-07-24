@@ -1,6 +1,7 @@
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createBiomeFieldAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
@@ -59,27 +60,43 @@ function appendBatch(
   targets: readonly BatchTargetFixture[],
   pickedExitIndex: number,
 ): ProjectDocument {
+  const resolvedParentOccurrenceId =
+    parentOccurrenceId ?? plan(project).topology?.startOccurrenceId ?? null;
   let next = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, parentOccurrenceId),
+    continuation: createContinuationAddress(biome, resolvedParentOccurrenceId),
   });
   for (const [index, target] of targets.entries()) {
     next = applyProjectCommand(next, catalog, {
       kind: 'CreateTarget',
-      target: createTargetAddress(biome, parentOccurrenceId, index + 1),
+      target: createTargetAddress(biome, resolvedParentOccurrenceId, index + 1),
       occurrenceId: target.occurrenceId,
       gameName: target.gameName,
     });
   }
   return applyProjectCommand(next, catalog, {
     kind: 'SetPicked',
-    picked: createPickedAddress(biome, parentOccurrenceId),
+    picked: createPickedAddress(biome, resolvedParentOccurrenceId),
     exitIndex: pickedExitIndex,
   });
 }
 
 function occurrence(key: string): OccurrenceId {
   return createOccurrenceId(`i-materialized-${key}`);
+}
+
+function createIProject(projectId: string, name: string): ProjectDocument {
+  const project = createProjectDocument(catalog, {
+    projectId,
+    name,
+    configuredBiomeCounts: { Underworld: 4 },
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome,
+    occurrenceId: occurrence(`${projectId}-intro`),
+    gameName: 'I_Intro',
+  });
 }
 
 function completeProject(nonGoalOffer?: IncomingRewardValue): ProjectDocument {
@@ -93,10 +110,11 @@ function completeProject(nonGoalOffer?: IncomingRewardValue): ProjectDocument {
   const enteredCombat12 = occurrence('entered-combat12');
   const combat07 = occurrence('combat07');
   const combat08 = occurrence('combat08');
-  let project = createProjectDocument(catalog, {
-    projectId: 'i-materialized-fixture',
-    name: 'I Materialized Fixture',
-    configuredBiomeCounts: { Underworld: 4 },
+  let project = createIProject('i-materialized-fixture', 'I Materialized Fixture');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBiomeField',
+    field: createBiomeFieldAddress(biome, 'maxNonGoalRewards'),
+    value: 5,
   });
   project = appendBatch(project, null, [{ occurrenceId: combat01, gameName: 'I_Combat01' }], 1);
   project = appendBatch(
@@ -174,11 +192,7 @@ function projectWithPickedStory(): ProjectDocument {
   const combat06 = occurrence('picked-story-combat06');
   const combat07 = occurrence('picked-story-combat07');
   const combat08 = occurrence('picked-story-combat08');
-  let project = createProjectDocument(catalog, {
-    projectId: 'i-picked-story-fixture',
-    name: 'I Picked Story Fixture',
-    configuredBiomeCounts: { Underworld: 4 },
-  });
+  let project = createIProject('i-picked-story-fixture', 'I Picked Story Fixture');
   project = appendBatch(project, null, [{ occurrenceId: combat01, gameName: 'I_Combat01' }], 1);
   project = appendBatch(
     project,
@@ -275,7 +289,7 @@ describe('canonical I Clockwork materialization and history', () => {
     const snapshot = materializeLinearBiome(catalog, biome, complete(project));
 
     expect(snapshot.entryRooms).toMatchObject([
-      { kind: 'fixedEntry', role: 'intro', gameName: 'I_Intro' },
+      { kind: 'authored', gameName: 'I_Intro', entered: true },
     ]);
     expect(
       snapshot.batches.map((batch) => {
@@ -286,24 +300,19 @@ describe('canonical I Clockwork materialization and history', () => {
           batch.batchState.goalsRemaining,
           batch.batchState.nonGoalRewardsAcquired,
           batch.batchState.maxNonGoalRewards,
-          batch.batchState.compatibleNonGoalRewardLimits,
         ];
       }),
     ).toEqual([
-      [5, 0, 5, [3, 4, 5, 6]],
-      [4, 0, 5, [3, 4, 5, 6]],
-      [3, 0, 5, [3, 4, 5, 6]],
-      [3, 1, 5, [3, 4, 5, 6]],
-      [2, 1, 5, [3, 4, 5, 6]],
-      [2, 2, 5, [3, 4, 5, 6]],
-      [1, 2, 5, [4, 5, 6]],
-      [1, 3, 5, [4, 5, 6]],
-      [0, 3, 5, [5, 6]],
+      [5, 0, 5],
+      [4, 0, 5],
+      [3, 0, 5],
+      [3, 1, 5],
+      [2, 1, 5],
+      [2, 2, 5],
+      [1, 2, 5],
+      [1, 3, 5],
+      [0, 3, 5],
     ]);
-    expect(snapshot.clockworkOutcome).toEqual({
-      compatibleNonGoalRewardLimits: [5, 6],
-      witnessMaxNonGoalRewards: 5,
-    });
     expect(materializeLinearBiome(catalog, biome, complete(project))).toEqual(snapshot);
     expect(
       snapshot.batches.map((batch) =>
@@ -345,7 +354,6 @@ describe('canonical I Clockwork materialization and history', () => {
         goalsRemaining: 0,
         nonGoalRewardsAcquired: 4,
         maxNonGoalRewards: 5,
-        compatibleNonGoalRewardLimits: [5, 6],
       },
       rewardStore: { kind: 'none' },
       pickedExitIndex: 1,
@@ -374,7 +382,7 @@ describe('canonical I Clockwork materialization and history', () => {
       'I_Boss01',
       'I_PostBoss01',
     ]);
-    expect(snapshot.biomeState).toEqual({});
+    expect(snapshot.biomeState).toEqual({ maxNonGoalRewards: 5 });
     expect(encodeProjectDocument(project)).toBe(encodedBefore);
   });
 
@@ -409,7 +417,7 @@ describe('canonical I Clockwork materialization and history', () => {
     );
     expect(firstGenerated).toMatchObject({
       source: 'generatedTarget',
-      parentOrigin: { kind: 'fixedEntryRoom', role: 'intro' },
+      parentOrigin: { kind: 'occurrence' },
     });
     expect(events.filter((event) => event.kind === 'clockworkBatchStateRecorded')).toHaveLength(10);
     expect(events.filter((event) => event.kind === 'clockworkGoalAcquired')).toHaveLength(6);
@@ -524,17 +532,12 @@ describe('canonical I Clockwork materialization and history', () => {
     });
   });
 
-  it('rejects a two-exit room when no latent non-goal limit remains compatible', () => {
+  it('rejects a two-exit room after the authored non-goal limit is exhausted', () => {
     const project = projectWithExhaustedLimitDomain();
     const snapshot = materializeLinearBiomePrefix(catalog, biome, plan(project));
     if (snapshot === null) {
       throw new Error('exhausted Clockwork fixture did not materialize a prefix');
     }
-    expect(snapshot.clockworkOutcome).toEqual({
-      compatibleNonGoalRewardLimits: [],
-      witnessMaxNonGoalRewards: 6,
-    });
-
     const history = composeLinearHistoryPrefix(catalog, snapshot, carriedHHistory());
     const generation = evaluateLinearRoomGeneration(catalog, snapshot, history, 4);
     const target = createTargetAddress(biome, occurrence('exhausted-combat18'), 2);
@@ -558,8 +561,7 @@ describe('canonical I Clockwork materialization and history', () => {
             kind: 'clockworkNonGoalCapacity',
             satisfied: false,
             acquired: 5,
-            maximum: 6,
-            compatibleMaximums: [6],
+            maximum: 5,
             reserve: 1,
           },
         },

@@ -66,6 +66,8 @@ describe('candidate application boundary', () => {
       'createPreparedProjectCandidateSession',
       'createRewardPickerProjection',
       'createStructuredWorkspaceProjection',
+      'projectClockworkTopology',
+      'projectLinearBatchState',
       'simulateProject',
     ];
 

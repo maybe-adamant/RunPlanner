@@ -2,6 +2,7 @@ import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type {
   BatchRewardStoreAddress,
   BiomeAddress,
+  BiomeFieldAddress,
   ContinuationAddress,
   HubSlotAddress,
   HubVisitAddress,
@@ -18,7 +19,7 @@ import type {
   ShopPurchaseAddress,
   TargetAddress,
 } from '../addresses';
-import type { OccurrenceId } from '../model';
+import type { AuthoredFieldValue, OccurrenceId } from '../model';
 
 export type ProjectCommand =
   | { readonly kind: 'RenameProject'; readonly name: string }
@@ -26,6 +27,11 @@ export type ProjectCommand =
       readonly kind: 'ConfigureRoutePrefix';
       readonly route: RouteAddress;
       readonly configuredBiomeCount: number;
+    }
+  | {
+      readonly kind: 'ReplaceBiomeField';
+      readonly field: BiomeFieldAddress;
+      readonly value: AuthoredFieldValue;
     }
   | {
       readonly kind: 'CreateStart';
@@ -216,7 +222,7 @@ export type LinearTopologyProjectCommand = Extract<
 >;
 export type LinearRoomStateProjectCommand = Extract<
   ProjectCommand,
-  { readonly kind: 'ReplaceOccurrenceRoom' }
+  { readonly kind: 'ReplaceBiomeField' | 'ReplaceOccurrenceRoom' }
 >;
 export type LinearRewardProjectCommand = Extract<
   ProjectCommand,

@@ -77,6 +77,8 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
       return command.sideRoom;
     case 'ReplaceSideRoomEntryOrder':
       return command.group;
+    case 'ReplaceBiomeField':
+      return command.field;
     case 'ReplaceShipEncounterCount':
       return command.occurrence;
     case 'ReplaceRewardWheelOfferCount':

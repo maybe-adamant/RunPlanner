@@ -620,7 +620,14 @@ function selectedGoldenIProject(): ProjectDocument {
     route: createRouteAddress('Underworld'),
     configuredBiomeCount: 4,
   });
-  let parent: OccurrenceId | null = null;
+  const intro = createOccurrenceId('golden-i-intro');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: iBiome,
+    occurrenceId: intro,
+    gameName: 'I_Intro',
+  });
+  let parent: OccurrenceId = intro;
   const batches = [
     { targets: ['I_Combat01'], pickedExitIndex: 1 },
     { targets: ['I_Combat03', 'I_Story01'], pickedExitIndex: 1 },
@@ -1675,6 +1682,7 @@ describe('project simulation composition', () => {
 
   it('validates a complete Clockwork spine and exposes I candidates without activating the app', () => {
     const project = selectedGoldenIProject();
+    const intro = createOccurrenceId('golden-i-intro');
     const route = simulateProject(catalog, project).routes[0]!;
     const evaluation = route.biomes[3];
 
@@ -1716,7 +1724,7 @@ describe('project simulation composition', () => {
     ] = bindTestCandidateSession(catalog, project).evaluate([
       {
         kind: 'roomTarget',
-        target: createTargetAddress(iBiome, null, 1),
+        target: createTargetAddress(iBiome, intro, 1),
         gameName: 'I_PreBoss02',
       },
       {
@@ -1808,20 +1816,27 @@ describe('project simulation composition', () => {
       route: createRouteAddress('Underworld'),
       configuredBiomeCount: 4,
     });
+    const intro = createOccurrenceId('story-candidate-intro');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: iBiome,
+      occurrenceId: intro,
+      gameName: 'I_Intro',
+    });
     const combat01 = createOccurrenceId('story-candidate-combat01');
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
-      continuation: createContinuationAddress(iBiome, null),
+      continuation: createContinuationAddress(iBiome, intro),
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateTarget',
-      target: createTargetAddress(iBiome, null, 1),
+      target: createTargetAddress(iBiome, intro, 1),
       occurrenceId: combat01,
       gameName: 'I_Combat01',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'SetPicked',
-      picked: createPickedAddress(iBiome, null),
+      picked: createPickedAddress(iBiome, intro),
       exitIndex: 1,
     });
     project = applyProjectCommand(project, catalog, {
@@ -1844,7 +1859,7 @@ describe('project simulation composition', () => {
     const [firstExit, secondExit] = bindTestCandidateSession(catalog, project).evaluate([
       {
         kind: 'roomTarget',
-        target: createTargetAddress(iBiome, null, 1),
+        target: createTargetAddress(iBiome, intro, 1),
         gameName: 'I_Story01',
       },
       {
@@ -1870,7 +1885,7 @@ describe('project simulation composition', () => {
 
   it('keeps I candidates behind the validated prefix', () => {
     const project = selectedGoldenIProject();
-    const target = createTargetAddress(iBiome, null, 1);
+    const target = createTargetAddress(iBiome, createOccurrenceId('golden-i-intro'), 1);
     const incomplete = applyProjectCommand(project, catalog, {
       kind: 'RemoveBatch',
       continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),

@@ -374,9 +374,10 @@ ends at H, so I remains non-editable and absent from product capabilities.
 Phase 6 I Slice 4 is complete. A pure core Clockwork topology projection now
 derives incomplete-plan batch state and per-target Goal/NonGoal roles through
 the same authority consumed by canonical materialization. The dormant linear
-editor renders I's fixed Intro/Story entries, bounded `maxNonGoalRewards`
-setting, layout-entry decisions, derived Goal markers, retained editable
-NonGoal leaves, generated preboss peers, and picked-only WorldShop state. I
+editor renders I's authored Intro and generated Story peers, bounded
+`maxNonGoalRewards` setting, Entrance-parented decisions, derived Goal markers,
+retained editable NonGoal leaves, generated preboss peers, and picked-only
+WorldShop state. I
 uses `Add Next Decision` as its sole frontier action, closes visually when the
 picked target is preboss, and inherits semantic findings, candidate decoration,
 destructive repair, and project undo/redo from the common editor contracts.
@@ -789,13 +790,13 @@ source-derived outgoing store, three combat eligibility families, special-room
 BED asymmetry, and direct shop-only preboss. It corrects the legacy assumption
 that early O combat requirements compose with the inherited recent-room rule.
 
-`../biomes/I_GAME_RULES.md` records the fixed progressed-save Story entry, five
-acquisition-driven Clockwork Goals, authored three-through-six non-goal cap,
-fixed Tartarus target-store override, exact two-exit reserve, and supported
-special peers. It replaces the old terminal-plus-companion workaround with one
-conditional-terminal `ClockworkDoorBatch`: picking `I_PreBoss02` completes the
-biome, while picking its ordinary peer continues and permits a later preboss
-occurrence.
+`../biomes/I_GAME_RULES.md` records the authored single-choice Intro, generated
+second-door Story, five acquisition-driven Clockwork Goals, authored
+three-through-six non-goal cap, fixed Tartarus target-store override, exact
+two-exit reserve, and supported special peers. It replaces the old
+terminal-plus-companion workaround with one conditional-terminal
+`ClockworkDoorBatch`: picking `I_PreBoss02` completes the biome, while picking
+its ordinary peer continues and permits a later preboss occurrence.
 
 `../biomes/N_GAME_RULES.md` records fixed authored Opening, PreHub, and preboss leaves;
 one nine-or-ten-target persistent hub offer board over catalog-fixed slots; six
@@ -1315,10 +1316,11 @@ Completed:
    - capability isolation keeps O non-authorable, non-simulatable, and
      non-editable.
 8. dormant I declaration import:
-   - all 32 supported progressed-save rooms normalize: derived Intro/Story,
+   - all 32 supported progressed-save rooms normalize: authored Intro/Story,
      24 Clockwork combat maps, Reprieve, two minibosses, canonical shop-only
      preboss, and the neutral Chronos/postboss tail;
-   - the layout owns fixed Intro/Story entry, twelve bounded Clockwork batches,
+   - the layout owns authored Intro and generated Story roles, bounded
+     Clockwork batches,
      no generated base store, authored `maxNonGoalRewards` in `3..6`, and one
      generated preboss target whose picked occurrence alone closes the biome;
    - every combat occurrence owns one complete dormant-capable Tartarus
@@ -1396,8 +1398,8 @@ frontiers, selected shops remain generated but unentered until their entry
 state exists, and an unsupported generation or entered-room lifecycle clamps
 context before later authored batches without deleting that authorship.
 Cross-variant fixtures cover eligibility-driven F/G/P, Fields H, Clockwork I,
-ship-wheel O, staged Q, fixed I entry, invalid-prefix blocking, and complete
-canonical strengthening.
+ship-wheel O, staged Q, authored I Entrance, invalid-prefix blocking, and
+complete canonical strengthening.
 
 Phase 7 Commit 3 is complete. Incomplete N evaluation now materializes fixed
 Opening/PreHub entry, treats the 9/10-slot open board as one atomic generation
@@ -1862,8 +1864,8 @@ The full suite passes with 73 files and 551 tests, including the all-biome
 zero-candidate-render architecture fixtures; typecheck, lint, formatting,
 production build, and diff checks also pass.
 
-Tartarus Reconciliation Slice 1 is complete. `I_Intro` is now the sole fixed
-entry and directly owns the first one-door Clockwork batch. `I_Story01` is an
+Tartarus Reconciliation Slice 1 is complete. `I_Intro` is now the sole
+Entrance and directly owns the first one-door Clockwork batch. `I_Story01` is an
 authored, one-creation Story target constrained to a later physical door,
 participates in ordinary generated-target lifecycle/history, and changes
 neither Clockwork counter when picked. A declined Story remains a real creation
@@ -1874,6 +1876,22 @@ Focused catalog, authored-project, materialization/history, candidate, editor,
 and product fixtures cover the corrected topology, including exit-order,
 picked/declined Story, creation-cap, counter, and exact-bound cases. The full
 gate passes with 73 files and 554 tests, followed by typecheck, lint, formatting,
-production build, and diff checks. The authored numeric non-goal limit remains
-intentionally present until Tartarus Reconciliation Slice 2 performs that
-separate schema authority switch.
+production build, and diff checks.
+
+Tartarus Reconciliation Slice 2 now keeps that numeric outcome intentionally
+and makes its authority explicit. Schema version 7 persists one declaration-
+bounded `maxNonGoalRewards` value from `3` through `6`; the authored
+single-choice `I_Intro` Entrance owns the first continuation and exposes the
+selector in its inspector. The superseded compatible-limit and deterministic-
+witness path has been removed. Materialization, history, requirements,
+validation, and candidates now consume the same authored value, while
+Clockwork Goal summaries suppress dormant ordinary reward presentation.
+
+Tartarus Reconciliation Slices 3 and 4 are complete. The structured workspace
+projects Clockwork batch state and Goal/NonGoal roles once for the editor, keeps
+generated Story and Preboss peers on their exact target owners, and derives
+post-creation focus from the selected start's editable surfaces. A newly
+created F Opening or I Entrance therefore remains focused until its reward or
+roll is authored, while a plain start advances to the frontier. The complete
+gate passes with 73 files and 560 tests, followed by typecheck, lint, formatting,
+production build, and diff checks.

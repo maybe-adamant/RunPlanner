@@ -7,7 +7,24 @@ import {
 import { createContextualOptionResolver } from '../../src/projections/contextualOptions';
 import { createContextualPickerProjection } from '../../src/projections/contextualPicker';
 import { createRewardPickerProjection } from '../../src/projections/rewardPicker';
-import { createStructuredWorkspaceProjection } from '../../src/projections/structuredWorkspace';
+import {
+  createStructuredWorkspaceProjection,
+  type StructuredWorkspaceProjection,
+  type WorkspaceLinearBiome,
+} from '../../src/projections/structuredWorkspace';
+
+export function requireLinearWorkspaceBiome(
+  workspace: StructuredWorkspaceProjection,
+  biomeKey: string,
+): WorkspaceLinearBiome {
+  const biome = workspace.routes
+    .flatMap((route) => route.biomes)
+    .find((candidate) => candidate.biomeKey === biomeKey);
+  if (biome?.kind !== 'LinearBiome') {
+    throw new Error(`${biomeKey} has no Linear workspace projection`);
+  }
+  return biome;
+}
 
 export function createStructuredWorkspaceTestServices(
   options: CandidateSessionFactoryOptions = {},

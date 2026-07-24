@@ -79,7 +79,7 @@ function context(
 }
 
 describe('complete I catalog', () => {
-  it('normalizes the fixed entry, Clockwork loop, generated terminal, and completion tail', () => {
+  it('normalizes the authored entrance, Clockwork loop, generated terminal, and completion tail', () => {
     const rooms = catalog.rooms.values.filter((room) => room.biomeKey === 'I');
     const layout = requireILayout();
 
@@ -88,14 +88,13 @@ describe('complete I catalog', () => {
       biomeKey: 'I',
       kind: 'LinearBiome',
       initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
-      start: { kind: 'fixedEntry', role: 'intro', roomGameName: 'I_Intro' },
+      start: { kind: 'authoredStart', mode: 'fixed', roomGameNames: ['I_Intro'] },
       entries: [],
       continuation: {
         progressionPolicy: { kind: 'eligibilityDriven' },
         batchPolicy: {
           kind: 'clockwork',
           initialGoalCount: 5,
-          nonGoalRewardLimit: { min: 3, max: 6 },
           fields: [],
         },
         rewardStorePolicy: { kind: 'none' },
@@ -116,20 +115,29 @@ describe('complete I catalog', () => {
           { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
         ],
       },
-      fields: [],
+      fields: [
+        {
+          key: 'maxNonGoalRewards',
+          kind: 'boundedInteger',
+          min: 3,
+          max: 6,
+          defaultValue: 3,
+        },
+      ],
       bounds: { maxBatches: 13, maxTargets: 23 },
     });
     expect(createDefaultBatchState(layout.continuation.batchPolicy)).toBeNull();
   });
 
-  it('keeps Intro fixed while making Hades an authored second-door Story', () => {
+  it('authors Entrance while making Hades a second-door Story', () => {
     expect(requireRoom('I_Intro')).toMatchObject({
       kind: 'Intro',
-      mode: { kind: 'derived', classification: 'fixedEntry' },
+      mode: { kind: 'authored', templateKey: 'FixedIntro' },
       exits: [{ index: 1, type: 'TartarusExitDoor' }],
       incomingReward: { kind: 'none' },
       encounterProfileKey: 'NoEncounter',
       counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+      force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
     });
     expect(requireRoom('I_Story01')).toMatchObject({
       label: 'Hades',
@@ -167,40 +175,6 @@ describe('complete I catalog', () => {
         baselineEncounterKey: 'Story_Hades_01',
       },
     ]);
-  });
-
-  it('rejects an inverted latent non-goal limit domain at catalog contact', () => {
-    const layoutIndex = declarations.biomeLayouts.findIndex((layout) => layout.biomeKey === 'I');
-    const layout = declarations.biomeLayouts[layoutIndex];
-    if (layout?.kind !== 'LinearBiome') {
-      throw new Error('raw I layout fixture is missing');
-    }
-    expect(() =>
-      createCatalog(
-        raw({
-          ...declarations,
-          biomeLayouts: declarations.biomeLayouts.map((candidate, index) =>
-            index === layoutIndex
-              ? {
-                  ...layout,
-                  continuation: {
-                    ...layout.continuation,
-                    batchPolicy: {
-                      ...layout.continuation.batchPolicy,
-                      nonGoalRewardLimit: { min: 7, max: 6 },
-                    },
-                  },
-                }
-              : candidate,
-          ),
-        }),
-      ),
-    ).toThrowError(
-      new CatalogContractError(
-        `biomeLayouts[${layoutIndex}].continuation.batchPolicy.nonGoalRewardLimit.min`,
-        'must not exceed max',
-      ),
-    );
   });
 
   it('declares all 24 combat maps with exact exits and one default NonGoal value', () => {

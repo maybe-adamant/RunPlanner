@@ -6,6 +6,7 @@ import {
   createBiomeAddress,
   createContinuationAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createPickedAddress,
   createProjectDocument,
   createTargetAddress,
@@ -19,14 +20,22 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { StructuredWorkspaceProjectionService } from '../../../projections/structuredWorkspace';
+import {
+  requireWorkspaceInteraction,
+  workspaceInteractionKey,
+  type StructuredWorkspaceProjectionService,
+} from '../../../projections/structuredWorkspace';
 import {
   createPlannerStore,
   selectPresentProject,
   selectProjectEvaluation,
   useAppSelector,
 } from '../../../state/store';
-import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
+import {
+  createStructuredWorkspaceTestServices,
+  requireLinearWorkspaceBiome,
+} from '../../../../test/fixtures/structuredWorkspace';
+import { createGoldenFGHIProject } from '../../../../test/fixtures/underworldProject';
 import { LinearBiomeEditor } from './LinearBiomeEditor';
 import { ProjectHistoryControls } from '../../project/ProjectHistoryControls';
 
@@ -49,21 +58,23 @@ function appendBatch(
   targets: readonly { readonly gameName: string; readonly occurrenceId: OccurrenceId }[],
   pickedExitIndex: number,
 ): ProjectDocument {
+  const resolvedParentOccurrenceId =
+    parentOccurrenceId ?? iPlan(project).topology?.startOccurrenceId ?? null;
   let next = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, parentOccurrenceId),
+    continuation: createContinuationAddress(biome, resolvedParentOccurrenceId),
   });
   for (const [index, target] of targets.entries()) {
     next = applyProjectCommand(next, catalog, {
       kind: 'CreateTarget',
-      target: createTargetAddress(biome, parentOccurrenceId, index + 1),
+      target: createTargetAddress(biome, resolvedParentOccurrenceId, index + 1),
       occurrenceId: target.occurrenceId,
       gameName: target.gameName,
     });
   }
   return applyProjectCommand(next, catalog, {
     kind: 'SetPicked',
-    picked: createPickedAddress(biome, parentOccurrenceId),
+    picked: createPickedAddress(biome, resolvedParentOccurrenceId),
     exitIndex: pickedExitIndex,
   });
 }
@@ -77,6 +88,12 @@ function iProject(stage: 'empty' | 'rewards' | 'story' | 'preboss'): ProjectDocu
   if (stage === 'empty') {
     return project;
   }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome,
+    occurrenceId: createOccurrenceId('editor-i-intro'),
+    gameName: 'I_Intro',
+  });
   const combat01 = createOccurrenceId('editor-i-combat01');
   const combat02 = createOccurrenceId('editor-i-combat02');
   const combat03 = createOccurrenceId('editor-i-combat03');
@@ -121,14 +138,16 @@ function IEditorHarness({
   if (evaluation !== undefined && evaluation.kind !== 'LinearBiome') {
     throw new Error('I editor fixture received a non-Linear evaluation');
   }
+  const workspace = structuredWorkspace.project(project, projectEvaluation);
   return (
     <>
       <ProjectHistoryControls />
       <LinearBiomeEditor
         catalog={catalog}
-        interactions={structuredWorkspace.project(project, projectEvaluation).interactions}
+        interactions={workspace.interactions}
         evaluation={evaluation?.kind === 'LinearBiome' ? evaluation : undefined}
         plan={plan}
+        projection={requireLinearWorkspaceBiome(workspace, biome.biomeKey)}
         routeKey={biome.routeKey}
       />
     </>
@@ -149,26 +168,31 @@ function renderI(project: ProjectDocument) {
       <IEditorHarness structuredWorkspace={structuredWorkspace} />
     </Provider>,
   );
-  return { store, user, ...view };
+  return { store, structuredWorkspace, user, ...view };
 }
 
 describe('I editor projection', () => {
-  it('renders the fixed entrance and starts authoring without a biome setting', async () => {
+  it('authors Entrance, exposes its rolled limit, and anchors the first decision to it', async () => {
     const { store, user } = renderI(iProject('empty'));
 
     expect(screen.getByRole('heading', { name: 'Tartarus' })).toBeTruthy();
-    const entries = screen.getByRole('group', { name: 'Fixed biome entries' });
-    expect(within(entries).getByRole('heading', { name: 'Entrance' })).toBeTruthy();
-    expect(within(entries).queryByRole('heading', { name: 'Hades' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Go to Preboss' })).toBeNull();
+    expect(screen.queryByLabelText('Rolled non-goal limit')).toBeNull();
 
-    expect(screen.queryByLabelText('Maximum NonGoal rewards')).toBeNull();
-    expect(iPlan(store.getState().projectWorkspace.history.present).state).toEqual({});
+    await user.click(screen.getByRole('button', { name: 'Entrance' }));
+    await user.click(screen.getByRole('option', { name: /^Entrance/ }));
+    expect(screen.getByRole('heading', { name: 'Intro' })).toBeTruthy();
+    expect((screen.getByLabelText('Rolled non-goal limit') as HTMLSelectElement).value).toBe('3');
+    expect(iPlan(store.getState().projectWorkspace.history.present).state).toEqual({
+      maxNonGoalRewards: 3,
+    });
 
     await user.click(screen.getByRole('button', { name: 'Add Next Decision' }));
+    const intro = iPlan(store.getState().projectWorkspace.history.present).topology
+      ?.startOccurrenceId;
     expect(iPlan(store.getState().projectWorkspace.history.present).topology).toMatchObject({
-      startOccurrenceId: null,
-      continuations: [{ kind: 'batch', parentOccurrenceId: null }],
+      startOccurrenceId: intro,
+      continuations: [{ kind: 'batch', parentOccurrenceId: intro }],
     });
     expect(screen.getByRole('heading', { name: 'Doors from Entrance' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Go to Preboss' })).toBeNull();
@@ -206,6 +230,32 @@ describe('I editor projection', () => {
       throw new Error('second Clockwork decision card is missing');
     }
     expect(within(secondDecision as HTMLElement).getAllByLabelText('Reward')).toHaveLength(1);
+  });
+
+  it('supports Story only on the contextual second door', () => {
+    const storyOccurrenceId = createOccurrenceId('phase-6-i-peer-2-2');
+    const project = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, storyOccurrenceId),
+      gameName: 'I_Combat04',
+    });
+    const { store, structuredWorkspace } = renderI(project);
+    const state = store.getState().projectWorkspace;
+    const workspace = structuredWorkspace.project(state.history.present, state.evaluation);
+    const parentOccurrenceId = createOccurrenceId('phase-6-i-goal-1');
+    const storyState = (exitIndex: number) => {
+      const interaction = requireWorkspaceInteraction(
+        workspace.interactions.rooms,
+        workspaceInteractionKey(createTargetAddress(biome, parentOccurrenceId, exitIndex)),
+      );
+      return interaction
+        .load()
+        .sections.flatMap((section) => section.items)
+        .find((item) => item.value.gameName === 'I_Story01')?.state;
+    };
+
+    expect(storyState(1)).toBe('impossible');
+    expect(['possible', 'forced']).toContain(storyState(2));
   });
 
   it('renders Hades as an authored Story target without a Clockwork reward editor', () => {

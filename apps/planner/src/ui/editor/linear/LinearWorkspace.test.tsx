@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, screen, within } from '@testing-library/react';
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  createProjectDocument,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '../../../composition/createApplication';
@@ -40,6 +45,85 @@ function projectedLinearBiome(
 }
 
 describe('Linear structured workspace', () => {
+  it('retains a newly created start when its inspector reveals an attached edit surface', async () => {
+    const application = createApplication();
+    const project = createProjectDocument(application.catalog, {
+      projectId: 'empty-i-workspace',
+      name: 'Empty I Workspace',
+      configuredBiomeCounts: { Underworld: 4 },
+    });
+    const view = renderBiome(project, 'Underworld', 'I');
+    const structure = screen.getByRole('region', { name: 'Tartarus structure' });
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+
+    expect(within(structure).getByRole('button', { name: /Choose starting room/ })).toBeTruthy();
+    expect(within(structure).queryByRole('button', { name: /Biome settings/ })).toBeNull();
+    expect(within(structure).queryByRole('button', { name: /Hades/ })).toBeNull();
+    expect(within(inspector).getByRole('heading', { name: 'Choose an entrance' })).toBeTruthy();
+    expect(within(inspector).getByRole('button', { name: 'Entrance' })).toBeTruthy();
+    expect(view.container.querySelectorAll('.linear-entry-node')).toHaveLength(1);
+
+    await view.user.click(within(inspector).getByRole('button', { name: 'Entrance' }));
+    await view.user.click(screen.getByRole('option', { name: /^Entrance/ }));
+
+    const iPlan = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'I');
+    const startOccurrenceId =
+      iPlan?.kind === 'LinearBiome' ? iPlan.topology?.startOccurrenceId : null;
+    if (startOccurrenceId === null || startOccurrenceId === undefined) {
+      throw new Error('I start occurrence was not created');
+    }
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createOccurrenceAddress(createBiomeAddress('Underworld', 'I'), startOccurrenceId),
+    );
+    expect(within(inspector).getByRole('heading', { name: 'Entrance' })).toBeTruthy();
+    expect(within(inspector).getByLabelText('Rolled non-goal limit')).toBeTruthy();
+    expect(within(inspector).queryByRole('button', { name: 'Add Next Decision' })).toBeNull();
+  });
+
+  it('retains a newly created start when its room owns an editable reward', async () => {
+    const application = createApplication();
+    const project = createProjectDocument(application.catalog, {
+      projectId: 'empty-f-workspace',
+      name: 'Empty F Workspace',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    const view = renderBiome(project, 'Underworld', 'F');
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+
+    await view.user.click(within(inspector).getByRole('button', { name: 'Opening' }));
+    await view.user.click(screen.getByRole('option', { name: /^Opening 01/ }));
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toMatchObject({
+      biomeKey: 'F',
+      kind: 'occurrence',
+      routeKey: 'Underworld',
+    });
+    expect(within(inspector).getByRole('heading', { name: 'Opening 01' })).toBeTruthy();
+    expect(within(inspector).getByLabelText('Reward')).toBeTruthy();
+    expect(within(inspector).queryByRole('button', { name: 'Add Next Decision' })).toBeNull();
+  });
+
+  it('advances an ordinary created start to its frontier', async () => {
+    const application = createApplication();
+    const project = createProjectDocument(application.catalog, {
+      projectId: 'empty-g-workspace',
+      name: 'Empty G Workspace',
+      configuredBiomeCounts: { Underworld: 2 },
+    });
+    const view = renderBiome(project, 'Underworld', 'G');
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+
+    await view.user.click(within(inspector).getByRole('button', { name: 'Entrance' }));
+    await view.user.click(screen.getByRole('option', { name: /^Entrance/ }));
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
+    expect(within(inspector).getByRole('heading', { name: 'Active frontier' })).toBeTruthy();
+    expect(within(inspector).getByRole('button', { name: 'Add Next Decision' })).toBeTruthy();
+  });
+
   it('composes every Linear biome through the common rail and variant-owned terminal', () => {
     const underworld = createGoldenFGHIProject(createApplication().catalog);
     const surface = createRepresentativeNOPQProject();
@@ -180,13 +264,51 @@ describe('Linear structured workspace', () => {
     ).toContain(unpicked.room.label);
   });
 
-  it('does not expose latent Clockwork outcomes as authored biome settings', () => {
+  it('keeps the explicit Clockwork outcome attached to Entrance instead of a settings node', () => {
     const seed = createApplication();
     const project = createGoldenFGHIProject(seed.catalog);
-    renderBiome(project, 'Underworld', 'I');
+    const { application } = renderBiome(project, 'Underworld', 'I');
+    const projection = projectedLinearBiome(application, 'I');
+    act(() => {
+      application.store.dispatch(semanticOwnerFocused(projection.entries[0]!.marker.address));
+    });
     const structure = screen.getByRole('region', { name: 'Tartarus structure' });
 
     expect(within(structure).queryByRole('button', { name: /Biome settings/ })).toBeNull();
-    expect(screen.queryByLabelText('Maximum NonGoal rewards')).toBeNull();
+    expect((screen.getByLabelText('Rolled non-goal limit') as HTMLSelectElement).value).toBe('3');
+  });
+
+  it('keeps an unpicked Story offer inspectable in its decision workbench', () => {
+    const seed = createApplication();
+    const project = createGoldenFGHIProject(seed.catalog);
+    const { application } = renderBiome(project, 'Underworld', 'I');
+    const projection = projectedLinearBiome(application, 'I');
+    const decisionIndex = projection.decisions.findIndex((decision) =>
+      decision.targets.some((target) => target.room.gameName === 'I_Story01'),
+    );
+    const decision = projection.decisions[decisionIndex];
+    const story = decision?.targets.find((target) => target.room.gameName === 'I_Story01');
+    if (decision === undefined || story === undefined) {
+      throw new Error('golden I has no Story offer');
+    }
+
+    expect(story.picked).toBe(false);
+    act(() => {
+      application.store.dispatch(semanticOwnerFocused(story.room.marker.address));
+    });
+
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    expect(
+      within(inspector).getByRole('heading', {
+        level: 2,
+        name: `Decision ${decisionIndex + 1}`,
+      }),
+    ).toBeTruthy();
+    const storyCard = within(inspector)
+      .getByRole('heading', { name: 'Hades' })
+      .closest('.exit-row');
+    expect(storyCard).not.toBeNull();
+    expect(storyCard?.getAttribute('data-focused')).toBe('true');
+    expect(within(storyCard as HTMLElement).getByText('Fixed reward: Story')).toBeTruthy();
   });
 });

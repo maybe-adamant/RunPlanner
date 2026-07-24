@@ -31,7 +31,6 @@ import {
   materializeTarget,
   projectClockworkTopology,
   roomReference,
-  type ClockworkTopologyProjection,
 } from './continuations';
 import { fail } from './contract';
 import { requireLinearMaterializationLayout } from './dispatch';
@@ -88,7 +87,6 @@ function prefixResult(
   plan: LinearBiomePlan,
   entryRooms: readonly (CanonicalAuthoredRoom | CanonicalFixedEntryRoom)[],
   batches: readonly CanonicalBatch[],
-  clockworkProjection?: ClockworkTopologyProjection,
   frontierGeneration?: MaterializedLinearFrontierGeneration,
 ): MaterializedLinearBiomePrefix {
   return Object.freeze({
@@ -99,14 +97,6 @@ function prefixResult(
     batches: Object.freeze([...batches]),
     ...(frontierGeneration === undefined ? {} : { frontierGeneration }),
     biomeState: Object.freeze({ ...plan.state }),
-    ...(clockworkProjection === undefined
-      ? {}
-      : {
-          clockworkOutcome: Object.freeze({
-            compatibleNonGoalRewardLimits: clockworkProjection.compatibleNonGoalRewardLimits,
-            witnessMaxNonGoalRewards: clockworkProjection.witnessMaxNonGoalRewards,
-          }),
-        }),
   });
 }
 
@@ -134,13 +124,7 @@ export function materializeLinearBiomePrefix(
   const topology = plan.topology;
   if (topology === null) {
     return layout.start.kind === 'fixedEntry'
-      ? prefixResult(
-          biome,
-          plan,
-          materializeFixedEntries(catalog, biome, layout),
-          [],
-          projectedClockwork,
-        )
+      ? prefixResult(biome, plan, materializeFixedEntries(catalog, biome, layout), [])
       : null;
   }
   const occurrences = occurrenceMap(topology);
@@ -178,14 +162,14 @@ export function materializeLinearBiomePrefix(
     const parentOccurrenceId = source.kind === 'fixedEntry' ? null : source.occurrenceId;
     const continuation = continuations.get(parentOccurrenceId);
     if (continuation === undefined) {
-      return prefixResult(biome, plan, entryRooms, batches, projectedClockwork);
+      return prefixResult(biome, plan, entryRooms, batches);
     }
     const sourceDeclaration = catalog.rooms.byKey[source.gameName];
     if (sourceDeclaration === undefined) {
       fail(`trusted prefix source lost room ${source.gameName}`);
     }
     if (!hasEveryTarget(sourceDeclaration, continuation)) {
-      return prefixResult(biome, plan, entryRooms, batches, projectedClockwork);
+      return prefixResult(biome, plan, entryRooms, batches);
     }
 
     const clockworkProjection = projectedClockwork?.batches[batchIndex];
@@ -259,7 +243,6 @@ export function materializeLinearBiomePrefix(
         plan,
         entryRooms,
         batches,
-        projectedClockwork,
         Object.freeze({
           kind: frontierKind,
           origin: createContinuationAddress(biome, parentOccurrenceId),
