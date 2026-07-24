@@ -411,7 +411,7 @@ describe('golden Underworld product loop', () => {
     expect(document.activeElement?.id).toBe(semanticOwnerElementId(finding.origin));
     expect(scrollIntoView).toHaveBeenCalledOnce();
     await selectRoom(user, application, screen.getByLabelText('Opening room'), 'F_Opening01');
-    expect(screen.getByRole('button', { name: /StartOpening 01/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Start — Assessed.*Opening 01/ })).toBeTruthy();
   });
 
   it('keeps an early invalid terminal editable and navigates to its exact target owner', async () => {
@@ -456,7 +456,7 @@ describe('golden Underworld product loop', () => {
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(currentProject(application)).toBe(beforeShrink);
     await user.click(screen.getByRole('button', { name: 'Erebus' }));
-    expect(screen.getByRole('button', { name: /StartOpening 02/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Start — Assessed.*Opening 02/ })).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Redo' }));
     expect(currentEvaluation(application).status).toBe('empty');
@@ -571,13 +571,13 @@ describe('golden Underworld product loop', () => {
     expect(entrance?.getAttribute('data-candidate-state')).toBe('forced');
     await user.click(entrance!);
     const started = currentProject(application);
-    expect(screen.getByRole('button', { name: /StartEntrance/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Start — Assessed.*Entrance/ })).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(screen.getByLabelText('Starting room')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Redo' }));
     expect(currentProject(application)).toBe(started);
-    expect(screen.getByRole('button', { name: /StartEntrance/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Start — Assessed.*Entrance/ })).toBeTruthy();
 
     const projectEvaluations = evaluationWork.filter((event) => event.kind === 'projectEvaluation');
     expect(projectEvaluations.length).toBeGreaterThan(0);

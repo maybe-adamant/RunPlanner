@@ -87,6 +87,36 @@ function MarkerSummary({
   );
 }
 
+function compactStatusLabel(marker: WorkspaceMarker, findingCount = marker.findingCount): string {
+  if (findingCount > 0) {
+    return `Findings · ${findingCount}`;
+  }
+  switch (marker.assessment) {
+    case 'assessed':
+      return 'Assessed';
+    case 'blocked':
+      return 'Blocked';
+    case 'unassessed':
+      return 'Unassessed';
+  }
+}
+
+function CompactNodeHeading({
+  findingCount,
+  label,
+  marker,
+}: {
+  readonly findingCount?: number;
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+}) {
+  return (
+    <span className="linear-node-status">
+      {label} — {compactStatusLabel(marker, findingCount)}
+    </span>
+  );
+}
+
 function defaultMarker(projection: WorkspaceLinearBiome): WorkspaceMarker {
   if (projection.frontier !== null) {
     return projection.frontier;
@@ -212,18 +242,16 @@ function DecisionSummary({
       marker={decision.marker}
       selected={selected}
     >
-      <span className="linear-decision-heading">
-        <span className="card-kicker">Decision {index + 1}</span>
-        <span className="linear-exit-count">
-          {decision.targets.length} {decision.targets.length === 1 ? 'offer' : 'offers'}
-        </span>
-      </span>
+      <CompactNodeHeading
+        findingCount={decision.findingCount}
+        label={`Decision ${index + 1}`}
+        marker={decision.marker}
+      />
       <strong>{picked?.room.label ?? 'Choose a continuation'}</strong>
       {reward === undefined ? null : <span className="linear-picked-reward">{reward}</span>}
       {decision.retainedOverflow ? (
         <span className="linear-retained-label">Retained downstream</span>
       ) : null}
-      <MarkerSummary findingCount={decision.findingCount} marker={decision.marker} />
     </FocusButton>
   );
 }
@@ -371,9 +399,8 @@ export function LinearWorkspace({
                 marker={projection.marker}
                 selected={focusedNodeKey === projection.marker.focusKey}
               >
-                <span className="card-kicker">Biome</span>
+                <CompactNodeHeading label="Biome" marker={projection.marker} />
                 <strong>Biome settings</strong>
-                <MarkerSummary marker={projection.marker} />
               </FocusButton>
             </div>
           )}
@@ -387,9 +414,8 @@ export function LinearWorkspace({
                   marker={marker}
                   selected={focusedNodeKey === marker.focusKey}
                 >
-                  <span className="card-kicker">{roleLabel(entry.role)}</span>
+                  <CompactNodeHeading label={roleLabel(entry.role)} marker={marker} />
                   <strong>{entry.room?.label ?? 'Choose starting room'}</strong>
-                  <MarkerSummary marker={marker} />
                 </FocusButton>
               </div>
             );
@@ -417,9 +443,8 @@ export function LinearWorkspace({
                 marker={projection.frontier}
                 selected={focusedNodeKey === projection.frontier.focusKey}
               >
-                <span className="card-kicker">Coverage frontier</span>
+                <CompactNodeHeading label="Coverage frontier" marker={projection.frontier} />
                 <strong>Continue authoring here</strong>
-                <MarkerSummary marker={projection.frontier} />
               </FocusButton>
             </div>
           )}
@@ -435,29 +460,24 @@ export function LinearWorkspace({
                 marker={projection.terminal.marker}
                 selected={terminalSelected}
               >
-                <span className="card-kicker">Terminal decision</span>
+                <CompactNodeHeading
+                  findingCount={projection.terminal.findingCount}
+                  label="Terminal decision"
+                  marker={projection.terminal.marker}
+                />
                 <strong>{pickedTerminal?.room.label ?? projection.terminal.outline.label}</strong>
                 {terminalReward === undefined ? null : (
                   <span className="linear-picked-reward">{terminalReward}</span>
                 )}
-                <MarkerSummary
-                  findingCount={projection.terminal.findingCount}
-                  marker={projection.terminal.marker}
-                />
               </FocusButton>
             ) : (
               <div className="linear-terminal-node linear-readonly-node">
-                <span className="card-kicker">
+                <span className="linear-node-status">
                   {projection.terminal.realization === 'projected'
-                    ? 'Terminal outline'
-                    : 'Generated terminal peer'}
+                    ? 'Terminal outline — Not authored'
+                    : 'Generated terminal peer — Derived'}
                 </span>
                 <strong>{projection.terminal.outline.label}</strong>
-                <span className="linear-node-meta">
-                  {projection.terminal.realization === 'projected'
-                    ? 'Not authored yet'
-                    : 'Shown in its generated decision'}
-                </span>
               </div>
             )}
           </section>
@@ -466,9 +486,8 @@ export function LinearWorkspace({
             <div className="linear-completion-landmarks" aria-label="Completion landmarks">
               {projection.completion.map((landmark) => (
                 <div className="linear-completion-node" key={landmark.marker.focusKey}>
-                  <span className="card-kicker">{roleLabel(landmark.role)}</span>
+                  <CompactNodeHeading label={roleLabel(landmark.role)} marker={landmark.marker} />
                   <strong>{landmark.label}</strong>
-                  <MarkerSummary marker={landmark.marker} />
                 </div>
               ))}
             </div>
