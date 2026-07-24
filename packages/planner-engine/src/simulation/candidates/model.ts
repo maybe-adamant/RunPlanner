@@ -1,7 +1,6 @@
 import type {
   BatchRewardStoreAddress,
   BiomeAddress,
-  BiomeFieldAddress,
   ContinuationAddress,
   HubSlotAddress,
   HubVisitAddress,
@@ -18,7 +17,6 @@ import type {
   TargetAddress,
 } from '../../authored-project/addresses';
 import type {
-  AuthoredFieldValue,
   OccurrenceId,
   ProjectDocument,
   SideRoomGeneration,
@@ -66,12 +64,6 @@ export interface BatchRewardStoreCandidateQuery {
   readonly kind: 'batchRewardStore';
   readonly rewardStore: BatchRewardStoreAddress;
   readonly storeKey: string;
-}
-
-export interface BiomeFieldCandidateQuery {
-  readonly kind: 'biomeField';
-  readonly field: BiomeFieldAddress;
-  readonly value: AuthoredFieldValue;
 }
 
 export interface IncomingRewardCandidateQuery {
@@ -161,7 +153,6 @@ export interface ShopPurchaseCandidateQuery {
 
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
-  | BiomeFieldCandidateQuery
   | FieldsCageOutcomeCandidateQuery
   | HubSlotCandidateQuery
   | HubVisitCandidateQuery
@@ -325,11 +316,6 @@ export interface ShopPurchaseCandidateEvidence {
   readonly relevantFindingCodes: readonly FindingCode[];
 }
 
-export interface BiomeFieldCandidateEvidence {
-  readonly candidateValue: AuthoredFieldValue;
-  readonly relevantFindingCodes: readonly FindingCode[];
-}
-
 export interface EvaluatedStartRoomCandidate {
   readonly context: 'evaluated';
   readonly query: StartRoomCandidateQuery;
@@ -344,14 +330,6 @@ export interface EvaluatedBatchRewardStoreCandidate {
   readonly support: CandidateSupport;
   readonly findings: readonly SemanticFinding[];
   readonly evidence: BatchRewardStoreCandidateEvidence;
-}
-
-export interface EvaluatedBiomeFieldCandidate {
-  readonly context: 'evaluated';
-  readonly query: BiomeFieldCandidateQuery;
-  readonly support: CandidateSupport;
-  readonly findings: readonly SemanticFinding[];
-  readonly evidence: BiomeFieldCandidateEvidence;
 }
 
 export interface EvaluatedIncomingRewardCandidate {
@@ -468,7 +446,6 @@ export interface EvaluatedShopPurchaseCandidate {
 
 export type ProjectCandidateEvaluation =
   | EvaluatedBatchRewardStoreCandidate
-  | EvaluatedBiomeFieldCandidate
   | EvaluatedFieldsCageOutcomeCandidate
   | EvaluatedHubSlotCandidate
   | EvaluatedHubVisitCandidate
@@ -502,13 +479,6 @@ export type CandidateEvaluationEvent =
   | {
       readonly kind: 'queryBatch';
       readonly queryCount: number;
-    }
-  | {
-      readonly kind: 'biomeReplay';
-      readonly queryKind: ProjectCandidateQuery['kind'];
-      readonly routeKey: string;
-      readonly biomeKey: string;
-      readonly scope: 'hubBiome' | 'linearBiome';
     }
   | {
       readonly kind: 'regionReplay';

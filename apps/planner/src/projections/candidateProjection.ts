@@ -9,10 +9,8 @@ import {
 import {
   resolveLinearOccurrenceRewardStore,
   semanticAddressKey,
-  type AuthoredFieldValue,
   type BatchRewardStoreAddress,
   type BiomeAddress,
-  type BiomeFieldAddress,
   type ContinuationAddress,
   type HubSlotAddress,
   type HubVisitAddress,
@@ -82,10 +80,6 @@ export interface CandidateProjectionSession {
     target: TargetAddress,
     rooms: readonly RoomDeclaration[],
   ) => readonly CandidateOptionProjection<RoomDeclaration>[];
-  readonly biomeFields: (
-    field: BiomeFieldAddress,
-    values: readonly AuthoredFieldValue[],
-  ) => readonly CandidateOptionProjection<AuthoredFieldValue>[];
   readonly batchRewardStores: (
     rewardStore: BatchRewardStoreAddress,
     storeKeys: readonly string[],
@@ -151,10 +145,6 @@ function offerKey(value: ResolvedRewardOffer): string {
 
 function domainKey(values: readonly string[]): string {
   return JSON.stringify(values);
-}
-
-function fieldValueKey(value: AuthoredFieldValue): string {
-  return JSON.stringify(value);
 }
 
 function rewardQueries(
@@ -543,17 +533,6 @@ export function createCandidateSessionFactory(
         startRoomsFor(project, evaluation, owner, rooms),
       roomTargets: (target: TargetAddress, rooms: readonly RoomDeclaration[]) =>
         roomTargetsFor(project, evaluation, target, rooms),
-      biomeFields: (field: BiomeFieldAddress, values: readonly AuthoredFieldValue[]) =>
-        projectOptions(
-          cache,
-          project,
-          evaluation,
-          `biome-field:${semanticAddressKey(field)}:${domainKey(values.map(fieldValueKey))}`,
-          values,
-          values.map((value) => ({ kind: 'biomeField', field, value })),
-          catalog,
-          options,
-        ),
       batchRewardStores: (rewardStore: BatchRewardStoreAddress, storeKeys: readonly string[]) =>
         projectOptions(
           cache,

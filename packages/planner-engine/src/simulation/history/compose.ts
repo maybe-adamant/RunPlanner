@@ -304,7 +304,7 @@ export function composeLinearHistoryPrefix(
       `${snapshot.biomeKey} prefix history requires a canonical entry room`,
     );
   }
-  const clockworkMaxNonGoalRewards = snapshot.biomeState.maxNonGoalRewards;
+  const clockworkMaxNonGoalRewards = snapshot.clockworkOutcome?.witnessMaxNonGoalRewards;
   if (
     layout.continuation.batchPolicy.kind === 'clockwork' &&
     (typeof clockworkMaxNonGoalRewards !== 'number' ||
@@ -397,7 +397,7 @@ export function composeLinearHistory(
       `${snapshot.biomeKey} history requires a canonical entry room`,
     );
   }
-  const clockworkMaxNonGoalRewards = snapshot.biomeState.maxNonGoalRewards;
+  const clockworkMaxNonGoalRewards = snapshot.clockworkOutcome?.witnessMaxNonGoalRewards;
   if (
     layout.continuation.batchPolicy.kind === 'clockwork' &&
     (typeof clockworkMaxNonGoalRewards !== 'number' ||

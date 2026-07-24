@@ -158,6 +158,7 @@ function projectLinearRoomGenerationRequirementContext(
   view: LinearHistoryStateView,
   enteredBiomeCount: number,
   rewardHistory?: RewardHistoryState,
+  compatibleClockworkLimits?: readonly number[],
 ): RequirementEvaluationContext {
   const roomsEntered = countByGameName(view.ledgers.roomAppearances);
   const shopOptions =
@@ -199,6 +200,9 @@ function projectLinearRoomGenerationRequirementContext(
           remainingGoals: goalsRemaining!,
           nonGoalRewardsAcquired: nonGoalRewardsAcquired!,
           maxNonGoalRewards: maxNonGoalRewards!,
+          ...(compatibleClockworkLimits === undefined
+            ? {}
+            : { compatibleNonGoalRewardLimits: compatibleClockworkLimits }),
         }
       : undefined,
     flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
@@ -365,6 +369,9 @@ function requirementEvidence(
         satisfied,
         acquired: context.clockwork.nonGoalRewardsAcquired,
         maximum: context.clockwork.maxNonGoalRewards,
+        compatibleMaximums:
+          context.clockwork.compatibleNonGoalRewardLimits ??
+          Object.freeze([context.clockwork.maxNonGoalRewards]),
         reserve: requirement.reserve,
       });
     default:
@@ -825,6 +832,7 @@ function prepareTargetGameNameContext(
   view: LinearTargetGenerationView,
   enteredBiomeCount: number,
   rewardHistory: RewardHistoryState | undefined,
+  compatibleClockworkLimits: readonly number[] | undefined,
 ): LinearRoomTargetCandidateContext {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
@@ -836,6 +844,7 @@ function prepareTargetGameNameContext(
     view.before,
     enteredBiomeCount,
     rewardHistory,
+    compatibleClockworkLimits,
   );
   const counts = roomGenerationCounts(view.before, source.origin);
   const candidates = pool.map((room) =>
@@ -936,6 +945,7 @@ function evaluateTargets(
   findings: SemanticFinding[],
   enteredBiomeCount: number,
   rewardHistories: ReadonlyMap<string, RewardHistoryState>,
+  compatibleClockworkLimits: readonly number[] | undefined,
 ): void {
   for (const target of targets) {
     const view = views.get(semanticAddressKey(target.origin));
@@ -954,6 +964,7 @@ function evaluateTargets(
       view,
       enteredBiomeCount,
       rewardHistories.get(semanticAddressKey(target.origin)),
+      compatibleClockworkLimits,
     );
     candidateContexts.set(semanticAddressKey(target.origin), candidateContext);
     const result = candidateContext.evaluateGameName(target.room.gameName);
@@ -1050,6 +1061,9 @@ export function evaluateLinearRoomGeneration(
       findings,
       enteredBiomeCount,
       rewardHistories,
+      batch.batchState.kind === 'clockwork'
+        ? batch.batchState.compatibleNonGoalRewardLimits
+        : undefined,
     );
   }
   const finalGeneration =
@@ -1109,6 +1123,9 @@ export function evaluateLinearRoomGeneration(
       findings,
       enteredBiomeCount,
       rewardHistories,
+      finalGeneration.batchState?.kind === 'clockwork'
+        ? finalGeneration.batchState.compatibleNonGoalRewardLimits
+        : undefined,
     );
   }
 

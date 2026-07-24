@@ -204,6 +204,7 @@ export type CanonicalBatchState =
       readonly goalsRemaining: number;
       readonly nonGoalRewardsAcquired: number;
       readonly maxNonGoalRewards: number;
+      readonly compatibleNonGoalRewardLimits: readonly number[];
     }
   | {
       readonly kind: 'fields';
@@ -246,6 +247,11 @@ export interface MaterializedLinearFrontierGeneration {
 
 export type CanonicalBiomeState = Readonly<Record<string, boolean | number | string>>;
 
+export interface CanonicalClockworkOutcome {
+  readonly compatibleNonGoalRewardLimits: readonly number[];
+  readonly witnessMaxNonGoalRewards: number;
+}
+
 export interface CanonicalLinearBiome {
   readonly kind: 'LinearBiome';
   readonly routeKey: string;
@@ -255,6 +261,7 @@ export interface CanonicalLinearBiome {
   readonly terminalEntry: CanonicalTerminalEntry;
   readonly completionRooms: readonly CanonicalCompletionRoom[];
   readonly biomeState: CanonicalBiomeState;
+  readonly clockworkOutcome?: CanonicalClockworkOutcome;
 }
 
 export interface MaterializedLinearBiomePrefix {
@@ -265,6 +272,7 @@ export interface MaterializedLinearBiomePrefix {
   readonly batches: readonly CanonicalBatch[];
   readonly frontierGeneration?: MaterializedLinearFrontierGeneration;
   readonly biomeState: CanonicalBiomeState;
+  readonly clockworkOutcome?: CanonicalClockworkOutcome;
 }
 
 export type LinearSimulationMaterialization = CanonicalLinearBiome | MaterializedLinearBiomePrefix;

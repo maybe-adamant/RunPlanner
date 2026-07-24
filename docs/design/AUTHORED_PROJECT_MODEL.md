@@ -10,11 +10,11 @@ It does not define simulation algorithms or React rendering.
 
 ## Cross-Biome Freeze Status
 
-The schema version 5 examples in this document describe the reconciled
+The schema version 6 examples in this document describe the reconciled
 F/G/P/Q/H/O/I/N model. Occurrence identity, downstream retention, possibility
 support, generated-store ownership, conditional-terminal batches, fixed
 authored layout slots, and persistent hub topology are settled. Production now
-reads schema version 5 for the implemented F/G/H/I and N/O/P/Q product surfaces
+reads schema version 6 for the implemented F/G/H/I and N/O/P/Q product surfaces
 and rejects earlier versions without compatibility scaffolding.
 
 ## Core Distinction
@@ -719,7 +719,7 @@ representative top-level shape is:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 5;
+  schemaVersion: 6;
   projectId: string;
   name: string;
   catalogVersion: string;
@@ -830,8 +830,11 @@ which roles are admitted. For I, a picked `I_PreBoss02` derives
 `completeBiome`; every picked ordinary target derives `continueBiome`.
 
 `LinearBiomePlan.state` contains exactly the declaration-owned biome fields,
-with complete defaults and no undeclared keys. I currently uses it for
-`maxNonGoalRewards`; biomes with no authored fields persist `{}`. A null
+with complete defaults and no undeclared keys. No current biome owns an
+authored biome-level field, so every linear biome persists `{}`. H's Min/Max
+choice remains a batch-owned value in `continuation.batchState`; I's
+non-goal limit is a latent declaration-owned simulation outcome and never
+enters authored state. A null
 `startOccurrenceId` and null first-continuation parent are reserved for a
 layout-derived fixed-entry sequence. They mean "continue after the final fixed
 entry," not an absent room or a positional UI row. Authored-start layouts still

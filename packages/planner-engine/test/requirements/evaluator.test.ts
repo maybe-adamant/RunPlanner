@@ -213,6 +213,32 @@ describe('requirement evaluator registry', () => {
         },
       ),
     ).toBe(false);
+    expect(
+      evaluateRequirement(
+        { kind: 'clockworkNonGoalCapacity', reserve: 1 },
+        {
+          ...context,
+          clockwork: {
+            ...context.clockwork,
+            compatibleNonGoalRewardLimits: [4, 5],
+            nonGoalRewardsAcquired: 3,
+          },
+        },
+      ),
+    ).toBe(true);
+    expect(
+      evaluateRequirement(
+        { kind: 'clockworkNonGoalCapacity', reserve: 1 },
+        {
+          ...context,
+          clockwork: {
+            ...context.clockwork,
+            compatibleNonGoalRewardLimits: [],
+            maxNonGoalRewards: 6,
+          },
+        },
+      ),
+    ).toBe(false);
     expect(() =>
       evaluateRequirement(
         { kind: 'clockworkGoalsRemaining', range: { max: 0 } },

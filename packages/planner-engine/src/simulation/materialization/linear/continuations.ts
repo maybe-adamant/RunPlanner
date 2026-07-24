@@ -20,6 +20,7 @@ import type {
   LinearBiomeLayout,
   RoomDeclaration,
 } from '../../../catalog-schema';
+import type { NumericRange, RequirementExpression } from '../../../requirements/model';
 import type { CompleteLinearCompletenessResult } from '../../completeness';
 import { materializeCompletionRooms } from '../completion';
 import type {
@@ -259,10 +260,21 @@ export interface ClockworkBatchProjection {
   readonly targets: readonly ClockworkTargetProjection[];
 }
 
+export interface ClockworkTopologyProjection {
+  readonly batches: readonly ClockworkBatchProjection[];
+  readonly compatibleNonGoalRewardLimits: readonly number[];
+  readonly witnessMaxNonGoalRewards: number;
+}
+
 function clockworkBatchState(
   state: ClockworkProjectionState,
+  compatibleNonGoalRewardLimits: readonly number[],
 ): Extract<CanonicalBatchState, { readonly kind: 'clockwork' }> {
-  return Object.freeze({ kind: 'clockwork', ...state });
+  return Object.freeze({
+    kind: 'clockwork',
+    ...state,
+    compatibleNonGoalRewardLimits: Object.freeze([...compatibleNonGoalRewardLimits]),
+  });
 }
 
 function clockworkReward(
@@ -327,7 +339,7 @@ function projectClockworkBatches(
     if (continuation.kind !== 'batch') {
       fail(`${layout.biomeKey} Clockwork topology contains an independent terminal transition`);
     }
-    const batchState = clockworkBatchState(state);
+    const batchState = clockworkBatchState(state, [maxNonGoalRewards]);
     let goalAlreadyOffered = false;
     const targets = Object.freeze(
       [...continuation.targets]
@@ -366,11 +378,155 @@ function projectClockworkBatches(
   return Object.freeze(batches);
 }
 
+type ClockworkRequirementSupport = 'satisfied' | 'unsatisfied' | 'unknown';
+
+function valueInRange(value: number, range: NumericRange): boolean {
+  return (
+    (range.min === undefined || value >= range.min) &&
+    (range.max === undefined || value <= range.max)
+  );
+}
+
+function clockworkRequirementSupport(
+  requirement: RequirementExpression,
+  state: ClockworkProjectionState,
+): ClockworkRequirementSupport {
+  switch (requirement.kind) {
+    case 'all': {
+      const children = requirement.requirements.map((child) =>
+        clockworkRequirementSupport(child, state),
+      );
+      return children.includes('unsatisfied')
+        ? 'unsatisfied'
+        : children.includes('unknown')
+          ? 'unknown'
+          : 'satisfied';
+    }
+    case 'any': {
+      const children = requirement.requirements.map((child) =>
+        clockworkRequirementSupport(child, state),
+      );
+      return children.includes('satisfied')
+        ? 'satisfied'
+        : children.includes('unknown')
+          ? 'unknown'
+          : 'unsatisfied';
+    }
+    case 'not': {
+      const child = clockworkRequirementSupport(requirement.requirement, state);
+      return child === 'unknown' ? 'unknown' : child === 'satisfied' ? 'unsatisfied' : 'satisfied';
+    }
+    case 'clockworkGoalsRemaining':
+      return valueInRange(state.goalsRemaining, requirement.range) ? 'satisfied' : 'unsatisfied';
+    case 'clockworkNonGoalCapacity':
+      return state.nonGoalRewardsAcquired < state.maxNonGoalRewards - requirement.reserve
+        ? 'satisfied'
+        : 'unsatisfied';
+    default:
+      return 'unknown';
+  }
+}
+
+function declaredClockworkLimits(layout: LinearBiomeLayout): readonly number[] {
+  const policy = layout.continuation.batchPolicy;
+  if (policy.kind !== 'clockwork') {
+    fail(`${layout.biomeKey} has no Clockwork limit domain`);
+  }
+  return Object.freeze(
+    Array.from(
+      { length: policy.nonGoalRewardLimit.max - policy.nonGoalRewardLimit.min + 1 },
+      (_, index) => policy.nonGoalRewardLimit.min + index,
+    ),
+  );
+}
+
+function projectClockworkOutcome(
+  catalog: Catalog,
+  layout: LinearBiomeLayout,
+  topology: LinearBiomeTopology,
+): ClockworkTopologyProjection {
+  const declaredLimits = declaredClockworkLimits(layout);
+  const projections = new Map(
+    declaredLimits.map((limit) => [
+      limit,
+      projectClockworkBatches(catalog, layout, topology, limit),
+    ]),
+  );
+  const occurrences = new Map(
+    topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
+  );
+  let compatibleLimits = declaredLimits;
+  const compatibleBeforeBatch: number[][] = [];
+  for (const batchIndex of topology.continuations.keys()) {
+    compatibleBeforeBatch.push([...compatibleLimits]);
+    compatibleLimits = Object.freeze(
+      compatibleLimits.filter((limit) => {
+        const batch = projections.get(limit)?.[batchIndex];
+        if (batch === undefined) {
+          fail(`Clockwork limit ${limit} lost batch ${batchIndex + 1}`);
+        }
+        const firstTarget = batch.targets.find((target) => target.exitIndex === 1);
+        if (
+          batch.batchState.goalsRemaining === 0 &&
+          (firstTarget === undefined ||
+            requireRoom(catalog, requireOccurrence(occurrences, firstTarget.occurrenceId))
+              .gameName !== layout.terminal.roomGameName)
+        ) {
+          return false;
+        }
+        return batch.targets.every((target) => {
+          const occurrence = requireOccurrence(occurrences, target.occurrenceId);
+          const room = requireRoom(catalog, occurrence);
+          return (
+            room.eligibility === undefined ||
+            clockworkRequirementSupport(room.eligibility, batch.batchState) !== 'unsatisfied'
+          );
+        });
+      }),
+    );
+  }
+  const witnessMaxNonGoalRewards = compatibleLimits[0] ?? declaredLimits.at(-1);
+  if (witnessMaxNonGoalRewards === undefined) {
+    fail(`${layout.biomeKey} has an empty declared Clockwork limit domain`);
+  }
+  const witnessBatches = projections.get(witnessMaxNonGoalRewards);
+  if (witnessBatches === undefined) {
+    fail(`${layout.biomeKey} lost its Clockwork witness projection`);
+  }
+  const batches = Object.freeze(
+    witnessBatches.map((batch, batchIndex) => {
+      const supportedLimits = compatibleBeforeBatch[batchIndex] ?? [];
+      const states = supportedLimits.map(
+        (limit) => projections.get(limit)?.[batchIndex]?.batchState,
+      );
+      if (
+        states.some(
+          (state) =>
+            state === undefined ||
+            state.goalsRemaining !== batch.batchState.goalsRemaining ||
+            state.nonGoalRewardsAcquired !== batch.batchState.nonGoalRewardsAcquired,
+        )
+      ) {
+        fail(`${layout.biomeKey} Clockwork outcomes diverge before batch ${batchIndex + 1}`);
+      }
+      return Object.freeze({
+        ...batch,
+        batchState: clockworkBatchState(batch.batchState, supportedLimits),
+      });
+    }),
+  );
+  return Object.freeze({
+    batches,
+    compatibleNonGoalRewardLimits: Object.freeze([...compatibleLimits]),
+    witnessMaxNonGoalRewards,
+  });
+}
+
 export function projectClockworkTopology(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: LinearBiomePlan,
-): readonly ClockworkBatchProjection[] {
+): ClockworkTopologyProjection {
   if (plan.biomeKey !== biome.biomeKey) {
     fail(`${biome.biomeKey} projection received ${plan.biomeKey} plan`);
   }
@@ -382,13 +538,16 @@ export function projectClockworkTopology(
   if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
     fail(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
   }
-  const maxNonGoalRewards = plan.state.maxNonGoalRewards;
-  if (typeof maxNonGoalRewards !== 'number' || !Number.isInteger(maxNonGoalRewards)) {
-    fail(`${layout.biomeKey} has no projectable maxNonGoalRewards`);
-  }
   return plan.topology === null
-    ? Object.freeze([])
-    : projectClockworkBatches(catalog, layout, plan.topology, maxNonGoalRewards);
+    ? Object.freeze({
+        batches: Object.freeze([]),
+        compatibleNonGoalRewardLimits: declaredClockworkLimits(layout),
+        witnessMaxNonGoalRewards:
+          layout.continuation.batchPolicy.kind === 'clockwork'
+            ? layout.continuation.batchPolicy.nonGoalRewardLimit.min
+            : fail(`${layout.biomeKey} has no Clockwork batch policy`),
+      })
+    : projectClockworkOutcome(catalog, layout, plan.topology);
 }
 
 export function materializeClockworkBiome(
@@ -403,10 +562,6 @@ export function materializeClockworkBiome(
     layout.continuation.batchPolicy.kind !== 'clockwork'
   ) {
     fail(`${layout.biomeKey} is not a Clockwork linear biome`);
-  }
-  const maxNonGoalRewards = completeness.biomeState.maxNonGoalRewards;
-  if (typeof maxNonGoalRewards !== 'number' || !Number.isInteger(maxNonGoalRewards)) {
-    fail(`${layout.biomeKey} has no materializable maxNonGoalRewards`);
   }
   const entryDescriptors = [layout.start, ...layout.entries] as readonly FixedEntryDescriptor[];
   const entryRooms = Object.freeze(
@@ -423,7 +578,8 @@ export function materializeClockworkBiome(
   );
   const batches: CanonicalBatch[] = [];
   let terminalEntry: CanonicalTerminalEntry | undefined;
-  const projectedBatches = projectClockworkBatches(catalog, layout, topology, maxNonGoalRewards);
+  const projection = projectClockworkOutcome(catalog, layout, topology);
+  const projectedBatches = projection.batches;
 
   for (const [batchIndex, continuation] of topology.continuations.entries()) {
     if (continuation.kind !== 'batch') {
@@ -535,6 +691,10 @@ export function materializeClockworkBiome(
       fail,
     }),
     biomeState: Object.freeze({ ...completeness.biomeState }),
+    clockworkOutcome: Object.freeze({
+      compatibleNonGoalRewardLimits: projection.compatibleNonGoalRewardLimits,
+      witnessMaxNonGoalRewards: projection.witnessMaxNonGoalRewards,
+    }),
   });
 }
 

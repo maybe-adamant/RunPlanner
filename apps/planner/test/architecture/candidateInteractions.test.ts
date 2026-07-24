@@ -16,7 +16,6 @@ type LoadableInteraction = {
 
 const families: readonly InteractionFamily[] = [
   'batchRewardStores',
-  'biomeFields',
   'fieldsCageOutcomes',
   'hubSlots',
   'hubVisits',
@@ -73,9 +72,7 @@ describe('workspace candidate interaction families', () => {
       const queryBatches = events.filter((event) => event.kind === 'queryBatch');
       expect(queryBatches.length, `${family} did not evaluate its domain`).toBeGreaterThan(0);
       expect(queryBatches.every((event) => event.queryCount > 0)).toBe(true);
-      for (const replay of events.filter(
-        (event) => event.kind === 'biomeReplay' || event.kind === 'regionReplay',
-      )) {
+      for (const replay of events.filter((event) => event.kind === 'regionReplay')) {
         expect(replay.routeKey, `${family} replayed another route`).toBe(
           interaction.owner.routeKey,
         );

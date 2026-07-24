@@ -972,7 +972,7 @@ describe('project candidate evaluation', () => {
     ).toThrow('prepared project evaluation does not belong to the authored project identity');
   });
 
-  it('binds one exact candidate session and measures direct lookup versus biome replay', () => {
+  it('binds one exact candidate session across direct room and reward lookups', () => {
     const project = possibilityProject();
     const evaluation = simulateProject(catalog, project);
     const events: CandidateEvaluationEvent[] = [];

@@ -1,26 +1,19 @@
 import type { LinearBiomeProjectEvaluation } from '@run-planner/engine/simulation';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import type { BiomeFieldAddress, LinearBiomePlan } from '@run-planner/engine/authored-project';
+import type { LinearBiomePlan } from '@run-planner/engine/authored-project';
 import {
   createBiomeAddress,
-  createBiomeFieldAddress,
   createContinuationAddress,
   createFixedEntryRewardAddress,
   createFixedEntryRoomAddress,
   createOccurrenceAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { presentCandidateLabel } from '../../../projections/candidateProjection';
-import {
-  requireWorkspaceInteraction,
-  workspaceInteractionKey,
-  type WorkspaceInteractionCatalog,
-} from '../../../projections/structuredWorkspace';
+import { type WorkspaceInteractionCatalog } from '../../../projections/structuredWorkspace';
 import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
 import { presentBiomeStatus } from '../../../projections/evaluationProjection';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { useAppDispatch } from '../../../state/store';
-import { candidateSelectState } from '../../feedback/candidatePresentation';
 import { LinearTopologyEditor } from './LinearTopologyEditor';
 import {
   SemanticFindingsScope,
@@ -28,7 +21,6 @@ import {
   StatusBadge,
 } from '../../feedback/EvaluationFeedback';
 import { RoomStateEditor } from '../rooms/RoomStateEditor';
-import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 import { RoomSelector } from './RoomSelector';
 
 interface LinearBiomeEditorProps {
@@ -69,54 +61,6 @@ function startDeclaration(catalog: Catalog, gameName: string): RoomDeclaration {
   return room;
 }
 
-function BiomeFieldControl({
-  fieldAddress,
-  id,
-  interactions,
-  onReplace,
-}: {
-  readonly fieldAddress: BiomeFieldAddress;
-  readonly id: string;
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly onReplace: (value: number) => void;
-}) {
-  const interaction = requireWorkspaceInteraction(
-    interactions.biomeFields,
-    workspaceInteractionKey(fieldAddress),
-  );
-  const candidates = useWorkspaceInteraction(interaction);
-  const selected = candidates.result?.find((option) => option.value === interaction.selected);
-  return (
-    <label className="field-control biome-field" htmlFor={id}>
-      <span className="field-label-with-marker">
-        Maximum NonGoal rewards
-        <SemanticOwnerMarker address={fieldAddress} />
-      </span>
-      <select
-        {...candidateSelectState(selected)}
-        id={id}
-        onChange={(event) => onReplace(Number(event.target.value))}
-        onFocus={candidates.activate}
-        onPointerDown={candidates.activate}
-        value={String(interaction.selected)}
-      >
-        {interaction.choices.map((choice) => {
-          const option = candidates.result?.find((candidate) => candidate.value === choice.value);
-          return (
-            <option
-              key={String(choice.value)}
-              value={String(choice.value)}
-              {...candidateSelectState(option)}
-            >
-              {presentCandidateLabel(choice.label, option)}
-            </option>
-          );
-        })}
-      </select>
-    </label>
-  );
-}
-
 export function LinearBiomeEditor({
   catalog,
   embedded = false,
@@ -154,17 +98,6 @@ export function LinearBiomeEditor({
         return entry;
       }),
     ];
-    const boundedField = layout.fields.find(
-      (field) => field.key === 'maxNonGoalRewards' && field.kind === 'boundedInteger',
-    );
-    if (boundedField?.kind !== 'boundedInteger') {
-      throw new Error(`${plan.biomeKey} has no bounded maxNonGoalRewards field`);
-    }
-    const fieldAddress = createBiomeFieldAddress(biome, boundedField.key);
-    const fieldValue = plan.state.maxNonGoalRewards;
-    if (typeof fieldValue !== 'number') {
-      throw new Error(`${plan.biomeKey} has no numeric maxNonGoalRewards value`);
-    }
     const fixedSourceDescriptor = fixedEntries.at(-1);
     const fixedSourceRoom =
       fixedSourceDescriptor === undefined
@@ -173,7 +106,6 @@ export function LinearBiomeEditor({
     if (fixedSourceRoom === undefined) {
       throw new Error(`${plan.biomeKey} has no fixed continuation source`);
     }
-    const biomeNodeKey = semanticAddressKey(biome);
     return (
       <SemanticFindingsScope findings={evaluation?.findings ?? []}>
         <section className="biome-editor" {...(embedded ? {} : { 'aria-labelledby': titleId })}>
@@ -207,23 +139,6 @@ export function LinearBiomeEditor({
               )}
             </div>
           </header>
-
-          {(focusedNodeKey === undefined || focusedNodeKey === biomeNodeKey) && (
-            <BiomeFieldControl
-              fieldAddress={fieldAddress}
-              id={`${plan.biomeKey}-non-goal-cap`}
-              interactions={interactions}
-              onReplace={(value) =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'ReplaceBiomeField',
-                    field: fieldAddress,
-                    value,
-                  }),
-                )
-              }
-            />
-          )}
 
           <div className="fixed-entry-list" aria-label="Fixed biome entries" role="group">
             {fixedEntries.map((entry) => {

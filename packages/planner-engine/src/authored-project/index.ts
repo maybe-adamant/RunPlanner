@@ -11,7 +11,6 @@ export {
 } from './defaults';
 export {
   createBiomeAddress,
-  createBiomeFieldAddress,
   createBatchRewardStoreAddress,
   createContinuationAddress,
   createCompletionRoomAddress,
@@ -39,7 +38,6 @@ export {
   SemanticAddressContractError,
   semanticAddressKey,
   type BiomeAddress,
-  type BiomeFieldAddress,
   type BatchRewardStoreAddress,
   type ContinuationAddress,
   type CompletionRoomAddress,
@@ -88,7 +86,6 @@ export {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type AuthoredBiomePlan,
   type AuthoredBiomeState,
-  type AuthoredFieldValue,
   type AuthoredRoomState,
   type AuthoredRoutePlan,
   type AuthoredBatchState,

@@ -85,6 +85,7 @@ export type RequirementEvaluationEvidence =
       readonly satisfied: boolean;
       readonly acquired: number;
       readonly maximum: number;
+      readonly compatibleMaximums: readonly number[];
       readonly reserve: number;
     };
 

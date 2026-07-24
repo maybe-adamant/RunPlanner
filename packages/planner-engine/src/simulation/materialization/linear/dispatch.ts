@@ -38,13 +38,7 @@ export function requireLinearMaterializationLayout(
         layout.continuation.batchPolicy.kind === 'standard') ||
       (layout.terminal.kind === 'generatedTarget' &&
         layout.continuation.batchPolicy.kind === 'clockwork'));
-  const supportedFields =
-    layout?.kind === 'LinearBiome' &&
-    (layout.continuation.batchPolicy.kind === 'clockwork'
-      ? layout.fields.length === 1 &&
-        layout.fields[0]?.key === 'maxNonGoalRewards' &&
-        layout.fields[0].kind === 'boundedInteger'
-      : layout.fields.length === 0);
+  const supportedFields = layout?.kind === 'LinearBiome' && layout.fields.length === 0;
   if (
     layout?.kind !== 'LinearBiome' ||
     !supportedEntry ||

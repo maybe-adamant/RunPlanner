@@ -1,7 +1,6 @@
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createBiomeFieldAddress,
   createContinuationAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -10,6 +9,7 @@ import {
   createTargetAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
   ProjectCommandContractError,
   ProjectDocumentContractError,
   type LinearBiomePlan,
@@ -104,38 +104,20 @@ function completeIProject(): ProjectDocument {
 }
 
 describe('I authored topology', () => {
-  it('persists the declaration-owned non-goal cap at the biome owner', () => {
-    const original = createIProject();
-    expect(iPlan(original)).toMatchObject({
-      state: { maxNonGoalRewards: 3 },
-      topology: null,
-    });
-
-    const project = applyProjectCommand(original, catalog, {
-      kind: 'ReplaceBiomeField',
-      field: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
-      value: 6,
-    });
-    expect(iPlan(project).state).toEqual({ maxNonGoalRewards: 6 });
-    expect(iPlan(original).state).toEqual({ maxNonGoalRewards: 3 });
+  it('round-trips schema v6 without authored Clockwork limit state', () => {
+    const project = createIProject();
+    expect(PROJECT_DOCUMENT_SCHEMA_VERSION).toBe(6);
+    expect(iPlan(project)).toMatchObject({ state: {}, topology: null });
+    expect(encodeProjectDocument(project)).not.toContain('maxNonGoalRewards');
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );
 
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'ReplaceBiomeField',
-        field: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
-        value: 7,
-      }),
-    ).toThrowError(ProjectCommandContractError);
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'ReplaceBiomeField',
-        field: createBiomeFieldAddress(iBiome, 'unknownField'),
-        value: 3,
-      }),
-    ).toThrowError(ProjectCommandContractError);
+    const legacy = JSON.parse(encodeProjectDocument(project)) as { schemaVersion: number };
+    legacy.schemaVersion = 5;
+    expect(() => decodeProjectDocument(legacy, catalog)).toThrowError(
+      /schemaVersion: expected 6, received 5/,
+    );
   });
 
   it('owns the first decision after fixed Intro without a fake occurrence', () => {
@@ -366,18 +348,6 @@ describe('I authored topology', () => {
     }
     i.state.maxNonGoalRewards = 7;
     expect(() => decodeProjectDocument(raw, catalog)).toThrowError(ProjectDocumentContractError);
-
-    const missingField = JSON.parse(encodeProjectDocument(createIProject())) as typeof raw;
-    const missingI = missingField.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'I');
-    if (missingI === undefined) {
-      throw new Error('encoded I plan is missing');
-    }
-    delete missingI.state.maxNonGoalRewards;
-    expect(() => decodeProjectDocument(missingField, catalog)).toThrowError(
-      ProjectDocumentContractError,
-    );
 
     const extraField = JSON.parse(encodeProjectDocument(createIProject())) as typeof raw;
     const extraI = extraField.routes

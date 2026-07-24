@@ -40,7 +40,6 @@ import type {
   ProjectEvaluation,
   ProjectRouteEvaluation,
 } from '../project';
-import { evaluateHubBiome, evaluateLinearBiome } from '../project';
 import {
   roomLifecycleCandidateContexts,
   type LinearRewardStoreSupportEntry,
@@ -48,7 +47,6 @@ import {
   type ShopPurchaseCandidateContext,
 } from '../rewards';
 import type {
-  BiomeFieldCandidateQuery,
   CandidateContextUnavailableReason,
   CandidateContextUnavailableEvidence,
   ProjectCandidateQuery,
@@ -69,8 +67,6 @@ type CandidateAddress = Exclude<SemanticAddress, { readonly kind: 'project' | 'r
 
 export function queryAddress(query: ProjectCandidateQuery): CandidateAddress {
   switch (query.kind) {
-    case 'biomeField':
-      return query.field;
     case 'startRoom':
       return query.owner;
     case 'roomTarget':
@@ -109,7 +105,6 @@ export function queryAddress(query: ProjectCandidateQuery): CandidateAddress {
 function requiredCheckpoint(query: ProjectCandidateQuery) {
   switch (query.kind) {
     case 'startRoom':
-    case 'biomeField':
       return 'beforeTargetGeneration' as const;
     case 'shopOffer':
     case 'shopPurchase':
@@ -205,8 +200,6 @@ function immutableOffer(value: ResolvedRewardOffer): ResolvedRewardOffer {
 
 export function immutableQuery(query: ProjectCandidateQuery): ProjectCandidateQuery {
   switch (query.kind) {
-    case 'biomeField':
-      return Object.freeze({ ...query, field: Object.freeze({ ...query.field }) });
     case 'startRoom':
       return Object.freeze({ ...query, owner: Object.freeze({ ...query.owner }) });
     case 'roomTarget':
@@ -775,23 +768,6 @@ export function prepareCandidateContext(
   });
 }
 
-export function observeCandidateBiomeReplay(
-  context: PreparedCandidateContext,
-  query: ProjectCandidateQuery,
-  scope: 'hubBiome' | 'linearBiome',
-): void {
-  const address = queryAddress(query);
-  context.observe?.(
-    Object.freeze({
-      kind: 'biomeReplay',
-      queryKind: query.kind,
-      routeKey: address.routeKey,
-      biomeKey: address.biomeKey,
-      scope,
-    }),
-  );
-}
-
 export function observeCandidateRegionReplay(
   context: PreparedCandidateContext,
   query: ProjectCandidateQuery,
@@ -848,8 +824,6 @@ export function applyCandidateCommand(
   }
 }
 
-type CandidateBiomeEvaluation = CandidateLinearBiomeEvaluation | CandidateHubBiomeEvaluation;
-
 export function locateCandidateBiome(
   context: PreparedCandidateContext,
   query: ProjectCandidateQuery,
@@ -858,56 +832,4 @@ export function locateCandidateBiome(
   return sourcePlan.kind === 'LinearBiome'
     ? locateCandidateLinear(context, query)
     : locateCandidateHub(context, query);
-}
-
-export function evaluateCandidateBiome(
-  catalog: Catalog,
-  proposal: ProjectDocument,
-  context: PreparedCandidateContext,
-  query: BiomeFieldCandidateQuery,
-): CandidateBiomeEvaluation | CandidateContextUnavailable {
-  const address = queryAddress(query);
-  const baselineRoute = requireRoute(context, query);
-  const sourcePlan = locateIndexedBiome(context, query).plan;
-  const baselineBiome = locateCandidateBiome(context, query);
-  if (isCandidateContextUnavailable(baselineBiome)) {
-    return baselineBiome;
-  }
-
-  const route = proposal.routes.find((candidate) => candidate.routeKey === address.routeKey);
-  if (route === undefined) {
-    failCandidate(query, `candidate proposal has no route ${address.routeKey}`);
-  }
-  const biomeIndex = route.biomes.findIndex((candidate) => candidate.biomeKey === address.biomeKey);
-  const plan = route.biomes[biomeIndex];
-  if (biomeIndex < 0 || plan === undefined) {
-    failCandidate(query, `candidate proposal has no configured biome ${address.biomeKey}`);
-  }
-  if (plan.kind !== sourcePlan.kind) {
-    failCandidate(query, 'candidate proposal changed biome layout kind');
-  }
-  if (plan.kind === 'HubBiome') {
-    observeCandidateBiomeReplay(context, query, 'hubBiome');
-    const evaluation = evaluateHubBiome(catalog, route.routeKey, plan);
-    return evaluation.authoring === 'complete' || 'materializedPrefix' in evaluation
-      ? evaluation
-      : coverageNotReached(query, evaluation);
-  }
-
-  const previous = biomeIndex === 0 ? undefined : baselineRoute.biomes[biomeIndex - 1];
-  if (previous?.authoring === 'incomplete') {
-    failCandidate(query, 'candidate biome has an incomplete upstream evaluation');
-  }
-  const previousComplete = previous?.authoring === 'complete' ? previous : undefined;
-  observeCandidateBiomeReplay(context, query, 'linearBiome');
-  const evaluation = evaluateLinearBiome(
-    catalog,
-    route.routeKey,
-    plan,
-    biomeIndex + 1,
-    previousComplete,
-  );
-  return evaluation.authoring === 'complete' || 'materializedPrefix' in evaluation
-    ? evaluation
-    : coverageNotReached(query, evaluation);
 }

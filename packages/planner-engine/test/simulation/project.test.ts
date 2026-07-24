@@ -2,7 +2,6 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
-  createBiomeFieldAddress,
   createContinuationAddress,
   createIncomingRewardAddress,
   createHubSlotAddress,
@@ -1706,7 +1705,6 @@ describe('project simulation composition', () => {
 
     const terminalParent = createOccurrenceId('golden-i-goal-5');
     const [
-      field,
       earlyPreboss,
       terminalPeer,
       repeatedStory,
@@ -1716,11 +1714,6 @@ describe('project simulation composition', () => {
       shopOffer,
       purchase,
     ] = bindTestCandidateSession(catalog, project).evaluate([
-      {
-        kind: 'biomeField',
-        field: createBiomeFieldAddress(iBiome, 'maxNonGoalRewards'),
-        value: 6,
-      },
       {
         kind: 'roomTarget',
         target: createTargetAddress(iBiome, null, 1),
@@ -1767,7 +1760,6 @@ describe('project simulation composition', () => {
       },
     ]);
 
-    expect(field).toMatchObject({ context: 'evaluated', support: 'possible', findings: [] });
     expect(earlyPreboss).toMatchObject({
       context: 'evaluated',
       support: 'impossible',
@@ -1878,7 +1870,7 @@ describe('project simulation composition', () => {
 
   it('keeps I candidates behind the validated prefix', () => {
     const project = selectedGoldenIProject();
-    const field = createBiomeFieldAddress(iBiome, 'maxNonGoalRewards');
+    const target = createTargetAddress(iBiome, null, 1);
     const incomplete = applyProjectCommand(project, catalog, {
       kind: 'RemoveBatch',
       continuation: createContinuationAddress(hBiome, createOccurrenceId('golden-h-bridge')),
@@ -1886,9 +1878,9 @@ describe('project simulation composition', () => {
     expect(
       bindTestCandidateSession(catalog, incomplete).evaluate([
         {
-          kind: 'biomeField',
-          field,
-          value: 4,
+          kind: 'roomTarget',
+          target,
+          gameName: 'I_Combat02',
         },
       ])[0],
     ).toMatchObject({ context: 'unavailable', reason: 'upstreamIncomplete' });
@@ -1901,21 +1893,12 @@ describe('project simulation composition', () => {
     expect(
       bindTestCandidateSession(catalog, invalid).evaluate([
         {
-          kind: 'biomeField',
-          field,
-          value: 4,
+          kind: 'roomTarget',
+          target,
+          gameName: 'I_Combat02',
         },
       ])[0],
     ).toMatchObject({ context: 'unavailable', reason: 'upstreamInvalid' });
-    expect(() =>
-      bindTestCandidateSession(catalog, project).evaluate([
-        {
-          kind: 'biomeField',
-          field,
-          value: 2,
-        },
-      ]),
-    ).toThrow(/candidate proposal is malformed.*must be between 3 and 6/);
   });
 
   it('preserves biome encounter depth when the picked G miniboss is Crawler', () => {

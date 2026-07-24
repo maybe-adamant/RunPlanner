@@ -4,7 +4,6 @@ import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createBiomeFieldAddress,
   createContinuationAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -521,10 +520,7 @@ describe('golden Underworld product loop', () => {
       throw new Error('Tartarus editor is missing');
     }
     expect(within(tartarusEditor).getByText('Blocked', { selector: '.status-badge' })).toBeTruthy();
-    expect(screen.getByLabelText('Maximum NonGoal rewards')).toHaveProperty('value', '3');
-    expect(
-      screen.getByLabelText('Maximum NonGoal rewards').getAttribute('data-candidate-support'),
-    ).toBe('unavailable');
+    expect(screen.queryByLabelText('Maximum NonGoal rewards')).toBeNull();
     expect(currentEvaluation(application).routes[0]?.processing).toEqual({
       completeValidPrefix: ['F', 'G'],
       active: { kind: 'incomplete', biomeKey: 'H' },
@@ -585,7 +581,6 @@ describe('golden Underworld product loop', () => {
       projectEvaluations.length,
     );
     expect(evaluationWork.some((event) => event.kind === 'queryBatch')).toBe(true);
-    expect(evaluationWork.filter((event) => event.kind === 'biomeReplay')).toEqual([]);
   }, 30_000);
 
   it('renders and edits the maximum-width G preboss fork through the shared editor', async () => {
@@ -808,11 +803,7 @@ describe('golden Underworld product loop', () => {
       expect(iText).not.toContain(occurrence.occurrenceId);
     }
     await focusBiomeSettings(view.user, 'Tartarus structure');
-    expect(screen.getByLabelText('Maximum NonGoal rewards')).toHaveProperty('value', '3');
-    fireEvent.focus(screen.getByLabelText('Maximum NonGoal rewards'));
-    expect(
-      screen.getByLabelText('Maximum NonGoal rewards').getAttribute('data-candidate-support'),
-    ).not.toBe('unavailable');
+    expect(screen.queryByLabelText('Maximum NonGoal rewards')).toBeNull();
     const iStructure = screen.getByRole('region', { name: 'Tartarus structure' });
     const iDecisionNodes = [...iStructure.querySelectorAll<HTMLElement>('.linear-decision-node')];
     let clockworkGoalCount = 0;
@@ -878,16 +869,6 @@ describe('golden Underworld product loop', () => {
     expect(
       projectedHOutcomes.every((candidate) => candidate.evaluation.context === 'evaluated'),
     ).toBe(true);
-    const iCandidateStarted = performance.now();
-    const projectedIFields = candidates.biomeFields(
-      createBiomeFieldAddress(createBiomeAddress('Underworld', 'I'), 'maxNonGoalRewards'),
-      [3, 4, 5, 6],
-    );
-    const iCandidateDurationMs = performance.now() - iCandidateStarted;
-    expect(projectedIFields).toHaveLength(4);
-    expect(
-      projectedIFields.every((candidate) => candidate.evaluation.context === 'evaluated'),
-    ).toBe(true);
     const firstGContinuation = gPlan.topology.continuations[0];
     if (firstGContinuation?.kind !== 'batch') {
       throw new Error('Golden G first decision is missing');
@@ -936,10 +917,6 @@ describe('golden Underworld product loop', () => {
     expect(
       hCandidateDurationMs,
       `cold H candidate projection took ${hCandidateDurationMs.toFixed(1)} ms`,
-    ).toBeLessThan(750);
-    expect(
-      iCandidateDurationMs,
-      `cold I candidate projection took ${iCandidateDurationMs.toFixed(1)} ms`,
     ).toBeLessThan(750);
     expect(
       representativeEditDurationMs,

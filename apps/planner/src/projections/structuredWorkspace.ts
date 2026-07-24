@@ -1,7 +1,6 @@
 import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
-  createBiomeFieldAddress,
   createCompletionRoomAddress,
   createContinuationAddress,
   createFixedEntryRoomAddress,
@@ -25,7 +24,6 @@ import {
   createTargetAddress,
   semanticAddressKey,
   type AuthoredBiomePlan,
-  type AuthoredFieldValue,
   type AuthoredRoomState,
   type HubBiomePlan,
   type HubBiomeTopology,
@@ -225,7 +223,6 @@ export interface WorkspaceCandidateInteraction<T> {
 
 export interface WorkspaceInteractionCatalog {
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
-  readonly biomeFields: ReadonlyMap<string, WorkspaceCandidateInteraction<AuthoredFieldValue>>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceCandidateInteraction<boolean>>;
   readonly hubVisits: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
@@ -614,8 +611,6 @@ function isSemanticAddress(value: unknown): value is SemanticAddress {
     case 'hubOpenSet':
     case 'hubRoom':
       return biomeOwned();
-    case 'biomeField':
-      return biomeOwned() && stringField('fieldKey');
     case 'occurrence':
     case 'incomingReward':
       return occurrenceOwned();
@@ -1818,8 +1813,6 @@ function closestFocusAddress(origin: SemanticAddress): SemanticAddress {
       return createHubOpenSetAddress(biome!);
     case 'hubVisit':
       return createHubOpenSetAddress(biome!);
-    case 'biomeField':
-      return biome!;
     default:
       return origin;
   }
@@ -1876,19 +1869,6 @@ function candidateInteraction<T>(
     owner,
     ...(selected === undefined ? {} : { selected }),
   });
-}
-
-function fieldChoices(field: LinearBiomeLayout['fields'][number]): readonly AuthoredFieldValue[] {
-  switch (field.kind) {
-    case 'boolean':
-      return Object.freeze([false, true]);
-    case 'boundedInteger':
-      return Object.freeze(
-        Array.from({ length: field.max - field.min + 1 }, (_, index) => field.min + index),
-      );
-    case 'enum':
-      return field.values;
-  }
 }
 
 function storeLabel(storeKey: string): string {
@@ -2105,7 +2085,6 @@ function createWorkspaceInteractionCatalog(
   }
 
   const batchRewardStores = new Map<string, WorkspaceCandidateInteraction<string>>();
-  const biomeFields = new Map<string, WorkspaceCandidateInteraction<AuthoredFieldValue>>();
   const fieldsCageOutcomes = new Map<string, WorkspaceCandidateInteraction<'min' | 'max'>>();
   const hubSlots = new Map<string, WorkspaceCandidateInteraction<boolean>>();
   const hubVisits = new Map<string, WorkspaceCandidateInteraction<string>>();
@@ -2294,25 +2273,6 @@ function createWorkspaceInteractionCatalog(
       }
       const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
       if (plan.kind === 'LinearBiome' && layout.kind === 'LinearBiome') {
-        for (const field of layout.fields) {
-          const address = createBiomeFieldAddress(biome, field.key);
-          const values = fieldChoices(field);
-          biomeFields.set(
-            semanticAddressKey(address),
-            candidateInteraction(
-              address,
-              values.map((value) =>
-                Object.freeze({
-                  label:
-                    typeof value === 'boolean' ? (value ? 'Enabled' : 'Disabled') : String(value),
-                  value,
-                }),
-              ),
-              plan.state[field.key],
-              () => candidates.biomeFields(address, values),
-            ),
-          );
-        }
         if (plan.topology === null) {
           continue;
         }
@@ -2444,7 +2404,6 @@ function createWorkspaceInteractionCatalog(
 
   return Object.freeze({
     batchRewardStores,
-    biomeFields,
     fieldsCageOutcomes,
     hubSlots,
     hubVisits,

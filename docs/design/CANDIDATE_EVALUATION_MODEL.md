@@ -40,7 +40,7 @@ Production now prepares one semantic context per contacted owner:
 - O lifecycle controls use occurrence-local contexts;
 - N controls use joint-board, ordered-visit, or parent-local regions;
 - shops use joint inventory or ordered purchase contexts;
-- only explicitly broad biome fields retain a full addressed-biome fallback.
+- batch-level controls consume their typed selected-simulation contexts.
 
 The structured workspace owns every declaration-derived interaction domain.
 React activates one zero-argument loader through a shared adapter and cannot
@@ -181,13 +181,12 @@ Some changes alter more than one local support calculation:
 - a shop offer participates in one joint inventory;
 - a shop purchase participates in ordered purchase application;
 - N membership, visits, and side-room state alter joint-board, visit, or
-  parent-local regions;
-- some biome fields genuinely change a broad biome suffix.
+  parent-local regions.
 
 These candidates replay the smallest declared semantic region that contains
-their effect. A full addressed-biome replay may remain temporarily for small,
-genuinely broad domains, but it is not the default implementation for every
-candidate value.
+their effect. No current candidate family owns a full addressed-biome replay.
+A future genuinely broad interaction would need to introduce that authority
+explicitly rather than inheriting a generic fallback.
 
 ## Reward Producer Frontiers
 
@@ -294,8 +293,11 @@ control must not evaluate its candidate domain.
 React may render declaration-owned choices and the currently authored value,
 but it does not walk topology to discover candidate owners, rebuild candidate
 grouping, choose a replay horizon, or construct candidate queries. Room and
-reward interactions follow the same contract as biome fields, batch stores,
-Fields outcomes, O wheels, Hub controls, side rooms, and shop purchases.
+reward interactions follow the same contract as batch stores, Fields outcomes,
+O wheels, Hub controls, side rooms, and shop purchases. I's latent non-goal
+limit is not a candidate interaction: selected and progressive simulation
+derive its compatible domain, and room-target candidates consume that domain
+from their prepared generation context.
 
 There is no separate candidate-evaluation harness for tests. Engine candidate
 tests bind the production session factory to a real project/evaluation pair.

@@ -535,11 +535,15 @@ A canonical batch records:
 - semantic addresses for each fact.
 
 A Clockwork batch additionally records the exact pre-generation
-`goalsRemaining`, `nonGoalRewardsAcquired`, and authored
-`maxNonGoalRewards` view. Each target then owns a derived Goal or NonGoal fact.
-Goal suppresses the dormant concrete Tartarus leaf; NonGoal activates it. When
-the picked target is the generated preboss, that final generated batch becomes
-`terminalEntry` while preserving its batch-state and no-store provenance.
+`goalsRemaining`, `nonGoalRewardsAcquired`, and compatible latent non-goal
+limit domain. Materialization deterministically selects the smallest remaining
+limit as its history witness; if no limit remains, it uses the declaration
+maximum only to preserve a complete invalid trace while selected generation
+emits the addressed incompatibility. Each target then owns a derived Goal or
+NonGoal fact. Goal suppresses the dormant concrete Tartarus leaf; NonGoal
+activates it. When the picked target is the generated preboss, that final
+generated batch becomes `terminalEntry` while preserving its batch-state and
+no-store provenance.
 
 For Fields batches, canonical `batchState` is a typed projection of the
 authored Min/Max outcome plus the declaration- and physical-target-derived

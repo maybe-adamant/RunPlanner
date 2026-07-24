@@ -206,7 +206,7 @@ The Clockwork batch policy owns:
 
 ```text
 initialGoalCount = 5
-nonGoalLimit = inclusive integer domain 3..6
+nonGoalRewardLimit = inclusive integer domain 3..6
 ```
 
 The domain is a possible game outcome, not probability metadata. Simulation
