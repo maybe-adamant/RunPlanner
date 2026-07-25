@@ -4,7 +4,7 @@
 
 This document is the concrete game-rule authority for Oceanus (`G`). Shared
 picker, physical-door, cap, force, offer/acquisition, generated-store, standard
-linear, and forked-preboss semantics are defined by
+linear, and takeover-Preboss semantics are defined by
 `../design/GAME_GENERATION_RULES.md`.
 
 Exact room-local exits, requirements, caps, labels, encounter-profile keys,
@@ -47,7 +47,7 @@ coverage is defined by `../progress/MIGRATION_PROVENANCE.md`.
 | Reward-store selection                 | G targets MetaProgress ratio `0.35` with adjustment speed `10`                                                            | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | implemented           | Probability analysis or exact RNG replay is introduced        |
 | Incoming rewards and shops             | Combat, miniboss, Story, Fountain, Midshop, and Preboss producers retain concrete filters and overrides                   | **Exact:** occurrence incoming-reward state plus declaration-owned overrides                           | implemented           | --                                                            |
 | Miniboss variants                      | All three variants are production rooms; Crawler is non-counting                                                          | **Exact:** separate concrete room and encounter profiles                                               | implemented           | --                                                            |
-| Forked preboss                         | Every predecessor exit creates `G_PreBoss01`; first is Shop and up to two additional exits are free rewards               | **Exact:** one to three terminal occurrences of the same declaration                                   | implemented           | --                                                            |
+| Takeover Preboss                       | `G_PreBoss01` takes over every physical predecessor exit; exit 1 is Shop and later exits are free rewards when present    | **Exact:** one declaration-owned takeover batch with one occurrence per physical exit                  | implemented           | --                                                            |
 | Narcissus benefit choice               | Entering `G_Story01` presents three NPC benefits whose concrete effects can include run and meta resources or traits      | **Deferred:** retain the fixed Story offer but do not author or consume the internal benefit choice    | documented boundary   | Concrete NPC gifts and trait state are modeled                |
 | Fixed boss and postboss tail           | `G_PreBoss01` leads through one mutually exclusive Scylla variant and then `G_PostBoss01`                                 | **Exact:** layout-derived `G_Boss01` then `G_PostBoss01` under the neutral difficulty baseline         | implemented           | User-selected difficulty becomes a project input              |
 | Narcissus and special-room progression | Dialogue, bounty, lifetime, prior-run force, and world-upgrade gates alter availability                                   | **Excluded:** progressed-save baseline retains current-run rules only                                  | documented boundary   | Save-profile state becomes a project input                    |
@@ -71,8 +71,8 @@ The legacy exact-depth intro predicate is rejected because it did not match
 the game.
 
 The authored bound is seven ordinary continuation batches and twenty-one
-ordinary target occurrences. Terminal occurrences are governed separately by
-the forked preboss policy.
+ordinary target occurrences. The takeover Preboss batch is separate from those
+ordinary progression bounds.
 
 ## Physical Exits
 
@@ -81,7 +81,7 @@ the forked preboss policy.
 - `G_Reprieve01` and `G_Shop01` have two exits;
 - G miniboss rooms expose one or two exits according to their declarations.
 
-The terminal predecessor may expose three exits, so G supports up to two free
+The Preboss predecessor may expose three exits, so G supports up to two free
 preboss rewards. Exit indexes and physical generation order are semantic and
 must not become primary/secondary presentation labels.
 
@@ -143,7 +143,7 @@ layouts can represent leaving and returning to a biome spine.
 - one Story room produces fixed `Story`;
 - one Reprieve uses `Fountain`;
 - one Midshop uses `Shop` and `WorldShop`;
-- one terminal room uses the forked preboss policy.
+- one Preboss declaration uses the takeover normal-door policy.
 
 Ordinary G combat rooms have `MaxAppearancesThisBiome = 1` and no
 `MaxCreationsThisRun`, so an unentered combat can be offered again later when
@@ -182,9 +182,10 @@ unfiltered two-store domain. G minibosses force RunProgress and Boon. Fixed
 Story and Shop producers retain resolved store provenance for future entered-
 room ratio history.
 
-## Terminal Preboss
+## Takeover Preboss
 
-`G_PreBoss01` uses the shared shop-then-fill policy:
+`G_PreBoss01` atomically takes over the predecessor's normal doors in physical
+order:
 
 ```text
 exit 1 -> G_PreBoss01 with Shop
@@ -194,7 +195,8 @@ exit 3 -> G_PreBoss01 with another free RunProgress reward, when present
 
 Free rewards exclude `Devotion` and `RoomMoneyDrop`. G's maximum free-reward
 capacity is two. Each target is a distinct occurrence of the same concrete room
-declaration.
+declaration. The selected Preboss occurrence closes editable traversal and
+enters the layout-derived boss/postboss completion tail.
 
 ## Fixed Boss and Postboss Tail
 

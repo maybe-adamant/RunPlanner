@@ -331,7 +331,7 @@ describe('canonical H Fields materialization', () => {
       continuation: 'entersTerminal',
       room: {
         gameName: 'H_PreBoss01',
-        lifecycleProfileKey: 'TerminalWorldShopRoom',
+        lifecycleProfileKey: 'PrebossShopRoom',
         entryState: { kind: 'shop', profileKey: 'WorldShop' },
       },
     });
@@ -340,7 +340,7 @@ describe('canonical H Fields materialization', () => {
       continuation: 'deadLeaf',
       room: {
         gameName: 'H_PreBoss01',
-        lifecycleProfileKey: 'TerminalRewardRoom',
+        lifecycleProfileKey: 'PrebossFreeRewardRoom',
       },
     });
     expect(snapshot.completionRooms.map((room) => room.gameName)).toEqual([

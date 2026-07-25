@@ -3,16 +3,17 @@ import type {
   BiomeLayout,
   CatalogCollection,
   CompletionDescriptor,
-  EntryDescriptor,
-  GeneratedBatchPolicy,
-  HubBiomeLayout,
-  LinearBiomeLayout,
-  LinearProgressionPolicy,
-  LinearStartDescriptor,
+  ExitCompatibilityPolicy,
+  GeneratedProgressionDescriptor,
+  GeneratedProgressionPolicy,
+  HubDecisionDescriptor,
+  LinkedNormalExitDescriptor,
+  NormalDoorBatchPolicy,
+  ProgressionDescriptor,
   RewardStorePolicy,
   RoomDeclaration,
   SourceRewardStorePolicyOverride,
-  TerminalPolicy,
+  StartDescriptor,
 } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RewardStoreDeclaration } from '@run-planner/engine/reward-kernel';
@@ -21,8 +22,8 @@ import type { RawBiomeLayoutDeclaration } from '../declarations';
 import {
   createCollection,
   freezeUniqueStrings,
-  requireNonNegativeInteger,
   requireNonEmpty,
+  requireNonNegativeInteger,
   requirePositiveInteger,
 } from './common';
 import { normalizeAuthoredFields } from './descriptors';
@@ -43,43 +44,6 @@ function requireRoom(
     fail(path, `${gameName} must belong to ${biomeKey}`);
   }
   return room;
-}
-
-function normalizeEntries(
-  rawEntries: readonly EntryDescriptor[],
-  biomeKey: string,
-  rooms: CatalogCollection<RoomDeclaration>,
-  path: string,
-): readonly EntryDescriptor[] {
-  freezeUniqueStrings(
-    rawEntries.map((entry) =>
-      entry.kind === 'fixedEntry' ? `role:${entry.role}` : `slot:${entry.slotKey}`,
-    ),
-    `${path}.identities`,
-  );
-  return Object.freeze(
-    rawEntries.map((entry, index): EntryDescriptor => {
-      const entryPath = `${path}[${index}]`;
-      const receivedKind: unknown = (entry as { readonly kind?: unknown }).kind;
-      if (entry.kind === 'fixedEntry') {
-        const role = requireNonEmpty(entry.role, `${entryPath}.role`);
-        const room = requireRoom(entry.roomGameName, biomeKey, rooms, `${entryPath}.roomGameName`);
-        if (room.mode.kind !== 'derived' || room.mode.classification !== 'fixedEntry') {
-          fail(`${entryPath}.roomGameName`, `${room.gameName} must be a derived fixed-entry room`);
-        }
-        return Object.freeze({ kind: 'fixedEntry', role, roomGameName: room.gameName });
-      }
-      if (entry.kind === 'fixedAuthoredSlot') {
-        const slotKey = requireNonEmpty(entry.slotKey, `${entryPath}.slotKey`);
-        const room = requireRoom(entry.roomGameName, biomeKey, rooms, `${entryPath}.roomGameName`);
-        if (room.mode.kind !== 'authored') {
-          fail(`${entryPath}.roomGameName`, `${room.gameName} must be an authored room`);
-        }
-        return Object.freeze({ kind: 'fixedAuthoredSlot', slotKey, roomGameName: room.gameName });
-      }
-      fail(`${entryPath}.kind`, `unknown entry descriptor ${String(receivedKind)}`);
-    }),
-  );
 }
 
 function normalizeRewardStorePolicy(
@@ -122,10 +86,7 @@ function normalizeRewardStorePolicy(
     if (rawPolicy.selector !== 'lastActiveWheel') {
       fail(`${path}.selector`, `unknown source offer-point selector ${String(rawPolicy.selector)}`);
     }
-    return Object.freeze({
-      kind: 'sourceOfferPoint',
-      selector: rawPolicy.selector,
-    });
+    return Object.freeze({ kind: 'sourceOfferPoint', selector: 'lastActiveWheel' });
   }
   if (rawPolicy.kind === 'none') {
     return Object.freeze({ kind: 'none' });
@@ -148,11 +109,12 @@ function normalizeRewardStoreOverrides(
     rawOverrides.map((override, index) => {
       const overridePath = `${path}[${index}]`;
       const sourceEncounterProfileKey = profileKeys[index] as string;
-      const hasSource = rooms.values.some(
-        (room) =>
-          room.biomeKey === biomeKey && room.encounterProfileKey === sourceEncounterProfileKey,
-      );
-      if (!hasSource) {
+      if (
+        !rooms.values.some(
+          (room) =>
+            room.biomeKey === biomeKey && room.encounterProfileKey === sourceEncounterProfileKey,
+        )
+      ) {
         fail(
           `${overridePath}.sourceEncounterProfileKey`,
           `${sourceEncounterProfileKey} is not used by a room in ${biomeKey}`,
@@ -167,11 +129,11 @@ function normalizeRewardStoreOverrides(
 }
 
 function normalizeProgressionPolicy(
-  rawPolicy: LinearProgressionPolicy,
+  rawPolicy: GeneratedProgressionPolicy,
   biomeKey: string,
   rooms: CatalogCollection<RoomDeclaration>,
   path: string,
-): LinearProgressionPolicy {
+): GeneratedProgressionPolicy {
   const receivedKind: unknown = (rawPolicy as { readonly kind?: unknown }).kind;
   if (rawPolicy.kind === 'eligibilityDriven') {
     return Object.freeze({ kind: 'eligibilityDriven' });
@@ -193,129 +155,71 @@ function normalizeProgressionPolicy(
     if (stageKeys.length === 0) {
       fail(`${path}.stages`, 'must not be empty');
     }
-    const stages = rawPolicy.stages.map((stage, stageIndex) => {
-      const stagePath = `${path}.stages[${stageIndex}]`;
-      const roomGameNames = freezeUniqueStrings(stage.roomGameNames, `${stagePath}.roomGameNames`);
-      if (roomGameNames.length === 0) {
-        fail(`${stagePath}.roomGameNames`, 'must not be empty');
-      }
-      roomGameNames.forEach((gameName, roomIndex) => {
-        const room = requireRoom(
-          gameName,
-          biomeKey,
-          rooms,
-          `${stagePath}.roomGameNames[${roomIndex}]`,
-        );
-        if (
-          room.mode.kind !== 'authored' ||
-          room.kind === 'Intro' ||
-          room.kind === 'Opening' ||
-          room.kind === 'Preboss'
-        ) {
-          fail(
-            `${stagePath}.roomGameNames[${roomIndex}]`,
-            `${gameName} must be an authored continuation room`,
+    return Object.freeze({
+      kind: 'staged',
+      stages: Object.freeze(
+        rawPolicy.stages.map((stage, stageIndex) => {
+          const stagePath = `${path}.stages[${stageIndex}]`;
+          const roomGameNames = freezeUniqueStrings(
+            stage.roomGameNames,
+            `${stagePath}.roomGameNames`,
           );
-        }
-      });
-      return Object.freeze({ key: stageKeys[stageIndex] as string, roomGameNames });
+          if (roomGameNames.length === 0) {
+            fail(`${stagePath}.roomGameNames`, 'must not be empty');
+          }
+          roomGameNames.forEach((gameName, roomIndex) => {
+            const room = requireRoom(
+              gameName,
+              biomeKey,
+              rooms,
+              `${stagePath}.roomGameNames[${roomIndex}]`,
+            );
+            if (
+              room.mode.kind !== 'authored' ||
+              room.kind === 'Intro' ||
+              room.kind === 'Opening' ||
+              room.kind === 'PreHub' ||
+              room.kind === 'Preboss'
+            ) {
+              fail(
+                `${stagePath}.roomGameNames[${roomIndex}]`,
+                `${gameName} must be an authored normal-door room`,
+              );
+            }
+          });
+          return Object.freeze({ key: stageKeys[stageIndex] as string, roomGameNames });
+        }),
+      ),
     });
-    return Object.freeze({ kind: 'staged', stages: Object.freeze(stages) });
   }
   fail(`${path}.kind`, `unknown progression policy ${String(receivedKind)}`);
 }
 
-function normalizeBatchPolicy(rawPolicy: GeneratedBatchPolicy, path: string): GeneratedBatchPolicy {
+function normalizeBatchPolicy(
+  rawPolicy: NormalDoorBatchPolicy,
+  path: string,
+): NormalDoorBatchPolicy {
   const receivedKind: unknown = (rawPolicy as { readonly kind?: unknown }).kind;
   if (
     rawPolicy.kind !== 'standard' &&
     rawPolicy.kind !== 'fields' &&
     rawPolicy.kind !== 'clockwork'
   ) {
-    fail(`${path}.kind`, `unknown generated-batch policy ${String(receivedKind)}`);
+    fail(`${path}.kind`, `unknown normal-door batch policy ${String(receivedKind)}`);
   }
   const fields = normalizeAuthoredFields(rawPolicy.fields, `${path}.fields`);
-  if (rawPolicy.kind === 'fields') {
-    if (
-      fields.length !== 1 ||
-      fields[0]?.key !== 'cageOutcome' ||
-      fields[0].kind !== 'enum' ||
-      fields[0].values.length !== 2 ||
-      fields[0].values[0] !== 'min' ||
-      fields[0].values[1] !== 'max' ||
-      fields[0].initialization.kind !== 'required'
-    ) {
-      fail(`${path}.fields`, 'fields policy requires authored cageOutcome enum [min, max]');
+  if (rawPolicy.kind === 'standard') {
+    if (fields.length !== 0) {
+      fail(`${path}.fields`, 'standard policy does not own authored batch fields');
     }
-    const minDoorCageRewards = requirePositiveInteger(
-      rawPolicy.minDoorCageRewards,
-      `${path}.minDoorCageRewards`,
-    );
-    const maxDoorCageRewards = requirePositiveInteger(
-      rawPolicy.maxDoorCageRewards,
-      `${path}.maxDoorCageRewards`,
-    );
-    if (minDoorCageRewards > maxDoorCageRewards) {
-      fail(`${path}.minDoorCageRewards`, 'must not exceed maxDoorCageRewards');
-    }
-    const maxDoorCageCeiling = requirePositiveInteger(
-      rawPolicy.maxDoorCageCeiling,
-      `${path}.maxDoorCageCeiling`,
-    );
-    const rawMaxOutcomeSupport: unknown = (rawPolicy as { readonly maxOutcomeSupport?: unknown })
-      .maxOutcomeSupport;
-    if (
-      typeof rawMaxOutcomeSupport !== 'object' ||
-      rawMaxOutcomeSupport === null ||
-      Array.isArray(rawMaxOutcomeSupport)
-    ) {
-      fail(`${path}.maxOutcomeSupport`, 'is required');
-    }
-    const maxOutcomeSupport = rawMaxOutcomeSupport as Record<string, unknown>;
-    if (!Array.isArray(maxOutcomeSupport.optionalBiomeDepths)) {
-      fail(`${path}.maxOutcomeSupport.optionalBiomeDepths`, 'must be an array');
-    }
-    if (!Array.isArray(maxOutcomeSupport.requiredBiomeDepths)) {
-      fail(`${path}.maxOutcomeSupport.requiredBiomeDepths`, 'must be an array');
-    }
-    const optionalBiomeDepths = maxOutcomeSupport.optionalBiomeDepths.map((depth, index) =>
-      requirePositiveInteger(
-        depth as number,
-        `${path}.maxOutcomeSupport.optionalBiomeDepths[${index}]`,
-      ),
-    );
-    const requiredBiomeDepths = maxOutcomeSupport.requiredBiomeDepths.map((depth, index) =>
-      requirePositiveInteger(
-        depth as number,
-        `${path}.maxOutcomeSupport.requiredBiomeDepths[${index}]`,
-      ),
-    );
-    if (new Set(optionalBiomeDepths).size !== optionalBiomeDepths.length) {
-      fail(`${path}.maxOutcomeSupport.optionalBiomeDepths`, 'must not contain duplicates');
-    }
-    if (new Set(requiredBiomeDepths).size !== requiredBiomeDepths.length) {
-      fail(`${path}.maxOutcomeSupport.requiredBiomeDepths`, 'must not contain duplicates');
-    }
-    if (optionalBiomeDepths.some((depth) => requiredBiomeDepths.includes(depth))) {
-      fail(`${path}.maxOutcomeSupport`, 'optional and required depths must be disjoint');
-    }
-    return Object.freeze({
-      kind: rawPolicy.kind,
-      fields,
-      minDoorCageRewards,
-      maxDoorCageRewards,
-      maxDoorCageCeiling,
-      maxOutcomeSupport: Object.freeze({
-        optionalBiomeDepths: Object.freeze(optionalBiomeDepths),
-        requiredBiomeDepths: Object.freeze(requiredBiomeDepths),
-      }),
-    });
-  } else if (fields.length !== 0) {
-    fail(`${path}.fields`, `${rawPolicy.kind} policy does not own authored batch fields`);
+    return Object.freeze({ kind: 'standard', fields });
   }
   if (rawPolicy.kind === 'clockwork') {
+    if (fields.length !== 0) {
+      fail(`${path}.fields`, 'clockwork policy does not own authored batch fields');
+    }
     return Object.freeze({
-      kind: rawPolicy.kind,
+      kind: 'clockwork',
       initialGoalCount: requirePositiveInteger(
         rawPolicy.initialGoalCount,
         `${path}.initialGoalCount`,
@@ -323,120 +227,109 @@ function normalizeBatchPolicy(rawPolicy: GeneratedBatchPolicy, path: string): Ge
       fields,
     });
   }
-  return Object.freeze({ kind: rawPolicy.kind, fields });
-}
-
-function normalizeLinearStart(
-  rawStart: LinearStartDescriptor,
-  biomeKey: string,
-  rooms: CatalogCollection<RoomDeclaration>,
-  path: string,
-): LinearStartDescriptor {
-  const receivedKind: unknown = (rawStart as { readonly kind?: unknown }).kind;
-  if (rawStart.kind === 'fixedEntry') {
-    const role = requireNonEmpty(rawStart.role, `${path}.role`);
-    const room = requireRoom(rawStart.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
-    if (room.mode.kind !== 'derived' || room.mode.classification !== 'fixedEntry') {
-      fail(`${path}.roomGameName`, `${room.gameName} must be a derived fixed-entry room`);
-    }
-    return Object.freeze({ kind: 'fixedEntry', role, roomGameName: room.gameName });
+  if (
+    fields.length !== 1 ||
+    fields[0]?.key !== 'cageOutcome' ||
+    fields[0].kind !== 'enum' ||
+    fields[0].values.length !== 2 ||
+    fields[0].values[0] !== 'min' ||
+    fields[0].values[1] !== 'max' ||
+    fields[0].initialization.kind !== 'required'
+  ) {
+    fail(`${path}.fields`, 'fields policy requires authored cageOutcome enum [min, max]');
   }
-  if (rawStart.kind !== 'authoredStart') {
-    fail(`${path}.kind`, `unknown linear start descriptor ${String(receivedKind)}`);
+  const minDoorCageRewards = requirePositiveInteger(
+    rawPolicy.minDoorCageRewards,
+    `${path}.minDoorCageRewards`,
+  );
+  const maxDoorCageRewards = requirePositiveInteger(
+    rawPolicy.maxDoorCageRewards,
+    `${path}.maxDoorCageRewards`,
+  );
+  if (minDoorCageRewards > maxDoorCageRewards) {
+    fail(`${path}.minDoorCageRewards`, 'must not exceed maxDoorCageRewards');
   }
-  const roomGameNames = freezeUniqueStrings(rawStart.roomGameNames, `${path}.roomGameNames`);
-  if (roomGameNames.length === 0) {
-    fail(`${path}.roomGameNames`, 'must not be empty');
+  const maxDoorCageCeiling = requirePositiveInteger(
+    rawPolicy.maxDoorCageCeiling,
+    `${path}.maxDoorCageCeiling`,
+  );
+  const optionalBiomeDepths = rawPolicy.maxOutcomeSupport.optionalBiomeDepths.map((depth, index) =>
+    requirePositiveInteger(depth, `${path}.maxOutcomeSupport.optionalBiomeDepths[${index}]`),
+  );
+  const requiredBiomeDepths = rawPolicy.maxOutcomeSupport.requiredBiomeDepths.map((depth, index) =>
+    requirePositiveInteger(depth, `${path}.maxOutcomeSupport.requiredBiomeDepths[${index}]`),
+  );
+  if (
+    new Set(optionalBiomeDepths).size !== optionalBiomeDepths.length ||
+    new Set(requiredBiomeDepths).size !== requiredBiomeDepths.length ||
+    optionalBiomeDepths.some((depth) => requiredBiomeDepths.includes(depth))
+  ) {
+    fail(`${path}.maxOutcomeSupport`, 'must contain disjoint, unique depth sets');
   }
-  if (rawStart.mode === 'fixed' && roomGameNames.length !== 1) {
-    fail(`${path}.roomGameNames`, 'fixed start must reference exactly one room');
-  }
-  if (rawStart.mode !== 'fixed' && rawStart.mode !== 'oneOf') {
-    fail(`${path}.mode`, `unknown authored start mode ${String(rawStart.mode)}`);
-  }
-  roomGameNames.forEach((gameName, roomIndex) => {
-    const room = requireRoom(gameName, biomeKey, rooms, `${path}.roomGameNames[${roomIndex}]`);
-    const requiredKind = rawStart.mode === 'fixed' ? 'Intro' : 'Opening';
-    if (room.kind !== requiredKind || room.mode.kind !== 'authored') {
-      fail(
-        `${path}.roomGameNames[${roomIndex}]`,
-        `${gameName} must be an authored ${requiredKind}`,
-      );
-    }
+  return Object.freeze({
+    kind: 'fields',
+    fields,
+    minDoorCageRewards,
+    maxDoorCageRewards,
+    maxDoorCageCeiling,
+    maxOutcomeSupport: Object.freeze({
+      optionalBiomeDepths: Object.freeze(optionalBiomeDepths),
+      requiredBiomeDepths: Object.freeze(requiredBiomeDepths),
+    }),
   });
-  return Object.freeze({ kind: 'authoredStart', mode: rawStart.mode, roomGameNames });
 }
 
-function normalizeTerminal(
-  rawTerminal: TerminalPolicy,
+function normalizeStart(
+  rawStart: RawBiomeLayoutDeclaration['start'],
   biomeKey: string,
   rooms: CatalogCollection<RoomDeclaration>,
   path: string,
-): TerminalPolicy {
-  const receivedKind: unknown = (rawTerminal as { readonly kind?: unknown }).kind;
-  if (rawTerminal.kind === 'forkedTransition') {
-    const room = requireRoom(rawTerminal.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
-    if (
-      room.kind !== 'Preboss' ||
-      room.mode.kind !== 'authored' ||
-      room.mode.templateKey !== 'ForkedPreboss'
-    ) {
-      fail(`${path}.roomGameName`, `${room.gameName} must be an authored forked Preboss`);
+): StartDescriptor {
+  if (rawStart.kind === 'authoredChoice') {
+    const roomGameNames = freezeUniqueStrings(rawStart.roomGameNames, `${path}.roomGameNames`);
+    if (roomGameNames.length === 0) {
+      fail(`${path}.roomGameNames`, 'must not be empty');
     }
-    if (rawTerminal.exitPolicy.kind !== 'allExitsTerminal') {
-      fail(
-        `${path}.exitPolicy.kind`,
-        `unknown terminal exit policy ${String(rawTerminal.exitPolicy.kind)}`,
-      );
-    }
+    roomGameNames.forEach((gameName, index) => {
+      const room = requireRoom(gameName, biomeKey, rooms, `${path}.roomGameNames[${index}]`);
+      if (room.mode.kind !== 'authored' || room.kind !== 'Opening') {
+        fail(`${path}.roomGameNames[${index}]`, `${gameName} must be an authored Opening`);
+      }
+    });
     return Object.freeze({
-      kind: 'forkedTransition',
-      roomGameName: room.gameName,
-      exitPolicy: Object.freeze({ kind: 'allExitsTerminal' }),
+      kind: 'authoredChoice',
+      roomGameNames: roomGameNames as readonly [string, ...string[]],
     });
   }
-  if (rawTerminal.kind === 'directTransition') {
-    const room = requireRoom(rawTerminal.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
-    if (
-      room.kind !== 'Preboss' ||
-      room.mode.kind !== 'authored' ||
-      room.mode.templateKey !== 'ShopPreboss'
-    ) {
-      fail(`${path}.roomGameName`, `${room.gameName} must be an authored direct Preboss`);
-    }
-    return Object.freeze({ kind: 'directTransition', roomGameName: room.gameName });
+  if (rawStart.kind !== 'fixedAuthored') {
+    fail(
+      `${path}.kind`,
+      `unknown start descriptor ${String((rawStart as { kind?: unknown }).kind)}`,
+    );
   }
-  if (rawTerminal.kind === 'fixedAuthoredSlot') {
-    const slotKey = requireNonEmpty(rawTerminal.slotKey, `${path}.slotKey`);
-    const room = requireRoom(rawTerminal.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
-    if (
-      room.kind !== 'Preboss' ||
-      room.mode.kind !== 'authored' ||
-      room.mode.templateKey !== 'ShopPreboss'
-    ) {
-      fail(`${path}.roomGameName`, `${room.gameName} must be an authored shop Preboss`);
-    }
-    return Object.freeze({ kind: 'fixedAuthoredSlot', slotKey, roomGameName: room.gameName });
+  const room = requireRoom(rawStart.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
+  if (room.mode.kind !== 'authored' || (room.kind !== 'Intro' && room.kind !== 'Opening')) {
+    fail(`${path}.roomGameName`, `${room.gameName} must be an authored Intro or Opening`);
   }
-  if (rawTerminal.kind === 'generatedTarget') {
-    const room = requireRoom(rawTerminal.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
-    if (
-      room.kind !== 'Preboss' ||
-      room.mode.kind !== 'authored' ||
-      room.mode.templateKey !== 'ShopPreboss'
-    ) {
-      fail(`${path}.roomGameName`, `${room.gameName} must be an authored shop Preboss`);
-    }
-    if (rawTerminal.closesBiomeWhenPicked !== true) {
-      fail(`${path}.closesBiomeWhenPicked`, 'must be true');
-    }
-    return Object.freeze({
-      kind: 'generatedTarget',
-      roomGameName: room.gameName,
-      closesBiomeWhenPicked: true,
-    });
+  return Object.freeze({ kind: 'fixedAuthored', roomGameName: room.gameName });
+}
+
+function normalizeLinkedExit(
+  rawExit: LinkedNormalExitDescriptor,
+  biomeKey: string,
+  rooms: CatalogCollection<RoomDeclaration>,
+  expectedKind: 'PreHub' | 'Preboss',
+  path: string,
+): LinkedNormalExitDescriptor {
+  if (rawExit.kind !== 'linked') {
+    fail(`${path}.kind`, `unknown linked normal exit ${String(rawExit.kind)}`);
   }
-  fail(`${path}.kind`, `unknown terminal policy ${String(receivedKind)}`);
+  const exitKey = requireNonEmpty(rawExit.exitKey, `${path}.exitKey`);
+  const room = requireRoom(rawExit.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
+  if (room.mode.kind !== 'authored' || room.kind !== expectedKind) {
+    fail(`${path}.roomGameName`, `${room.gameName} must be an authored ${expectedKind}`);
+  }
+  return Object.freeze({ kind: 'linked', exitKey, roomGameName: room.gameName });
 }
 
 function normalizeCompletion(
@@ -445,20 +338,24 @@ function normalizeCompletion(
   rooms: CatalogCollection<RoomDeclaration>,
   path: string,
 ): CompletionDescriptor {
-  if (rawCompletion.rooms.length === 0) {
-    fail(`${path}.rooms`, 'must not be empty');
+  if (rawCompletion.rooms.length === 0 || rawCompletion.rooms.length > 2) {
+    fail(`${path}.rooms`, 'must contain boss and optional postboss only');
   }
   const roles = freezeUniqueStrings(
     rawCompletion.rooms.map((room) => room.role),
     `${path}.rooms.roles`,
   );
   const completionRooms = rawCompletion.rooms.map((entry, index) => {
-    const entryPath = `${path}.rooms[${index}]`;
     const expectedRole = index === 0 ? 'boss' : 'postboss';
-    if (entry.role !== expectedRole || index > 1) {
-      fail(`${entryPath}.role`, `completion role ${expectedRole} is required at index ${index}`);
+    if (entry.role !== expectedRole) {
+      fail(`${path}.rooms[${index}].role`, `completion role ${expectedRole} is required`);
     }
-    const room = requireRoom(entry.roomGameName, biomeKey, rooms, `${entryPath}.roomGameName`);
+    const room = requireRoom(
+      entry.roomGameName,
+      biomeKey,
+      rooms,
+      `${path}.rooms[${index}].roomGameName`,
+    );
     const expectedKind = entry.role === 'boss' ? 'Boss' : 'PostBoss';
     if (
       room.kind !== expectedKind ||
@@ -466,7 +363,7 @@ function normalizeCompletion(
       room.mode.classification !== 'completion'
     ) {
       fail(
-        `${entryPath}.roomGameName`,
+        `${path}.rooms[${index}].roomGameName`,
         `${room.gameName} must be a derived ${expectedKind} completion room`,
       );
     }
@@ -475,21 +372,15 @@ function normalizeCompletion(
       roomGameName: room.gameName,
     });
   });
-  const expectedTransitionAxes = ['biomeDepthCache', 'biomeEncounterDepth'] as const;
-  if (rawCompletion.transitionEffects.length !== expectedTransitionAxes.length) {
-    fail(`${path}.transitionEffects`, `requires resets for ${expectedTransitionAxes.join(', ')}`);
+  const expectedAxes = ['biomeDepthCache', 'biomeEncounterDepth'] as const;
+  if (rawCompletion.transitionEffects.length !== expectedAxes.length) {
+    fail(`${path}.transitionEffects`, `requires resets for ${expectedAxes.join(', ')}`);
   }
   const transitionEffects = rawCompletion.transitionEffects.map((effect, index) => {
-    const effectPath = `${path}.transitionEffects[${index}]`;
-    const receivedKind: unknown = (effect as { readonly kind?: unknown }).kind;
-    if (effect.kind !== 'resetCounter') {
-      fail(`${effectPath}.kind`, `unknown biome transition effect ${String(receivedKind)}`);
+    if (effect.kind !== 'resetCounter' || effect.axis !== expectedAxes[index]) {
+      fail(`${path}.transitionEffects[${index}]`, `must reset ${expectedAxes[index]}`);
     }
-    const expectedAxis = expectedTransitionAxes[index];
-    if (effect.axis !== expectedAxis) {
-      fail(`${effectPath}.axis`, `expected ${expectedAxis}`);
-    }
-    return Object.freeze({ kind: effect.kind, axis: effect.axis });
+    return Object.freeze({ kind: 'resetCounter' as const, axis: effect.axis });
   });
   return Object.freeze({
     rooms: Object.freeze(completionRooms),
@@ -497,27 +388,24 @@ function normalizeCompletion(
   });
 }
 
-function normalizeLinearLayout(
-  layout: Extract<RawBiomeLayoutDeclaration, { readonly kind: 'LinearBiome' }>,
-  layoutIndex: number,
+function normalizeGeneratedProgression(
+  raw: Extract<RawBiomeLayoutDeclaration['progression'], { readonly kind: 'generated' }>,
+  biomeKey: string,
   rooms: CatalogCollection<RoomDeclaration>,
   rewardStores: CatalogCollection<RewardStoreDeclaration>,
-): LinearBiomeLayout {
-  const path = `biomeLayouts[${layoutIndex}]`;
+  path: string,
+): GeneratedProgressionDescriptor {
   const progressionPolicy = normalizeProgressionPolicy(
-    layout.continuation.progressionPolicy,
-    layout.biomeKey,
+    raw.progressionPolicy,
+    biomeKey,
     rooms,
-    `${path}.continuation.progressionPolicy`,
+    `${path}.progressionPolicy`,
   );
-  const batchPolicy = normalizeBatchPolicy(
-    layout.continuation.batchPolicy,
-    `${path}.continuation.batchPolicy`,
-  );
+  const batchPolicy = normalizeBatchPolicy(raw.batchPolicy, `${path}.batchPolicy`);
   if (batchPolicy.kind === 'fields') {
     for (const room of rooms.values) {
       if (
-        room.biomeKey !== layout.biomeKey ||
+        room.biomeKey !== biomeKey ||
         room.mode.kind !== 'authored' ||
         room.mode.templateKey !== 'FieldsCombat'
       ) {
@@ -530,24 +418,14 @@ function normalizeLinearLayout(
         cages.maxActiveSlots > batchPolicy.maxDoorCageRewards
       ) {
         fail(
-          `${path}.continuation.batchPolicy`,
+          `${path}.batchPolicy`,
           `${room.gameName} cage capacity must be within ${batchPolicy.minDoorCageRewards}..${batchPolicy.maxDoorCageRewards}`,
         );
       }
     }
   }
-  const terminal = normalizeTerminal(layout.terminal, layout.biomeKey, rooms, `${path}.terminal`);
-  if (terminal.kind === 'fixedAuthoredSlot') {
-    fail(`${path}.terminal.kind`, 'fixed authored terminals require HubBiome');
-  }
-  if (terminal.kind === 'generatedTarget' && batchPolicy.kind !== 'clockwork') {
-    fail(`${path}.terminal.kind`, 'generated terminal targets require clockwork batches');
-  }
-  if (batchPolicy.kind === 'clockwork' && terminal.kind !== 'generatedTarget') {
-    fail(`${path}.continuation.batchPolicy.kind`, 'clockwork batches require a generated terminal');
-  }
-  const maxBatches = requirePositiveInteger(layout.bounds.maxBatches, `${path}.bounds.maxBatches`);
-  const maxTargets = requirePositiveInteger(layout.bounds.maxTargets, `${path}.bounds.maxTargets`);
+  const maxBatches = requirePositiveInteger(raw.bounds.maxBatches, `${path}.bounds.maxBatches`);
+  const maxTargets = requirePositiveInteger(raw.bounds.maxTargets, `${path}.bounds.maxTargets`);
   const requiredBatchCount =
     progressionPolicy.kind === 'fixedCount'
       ? progressionPolicy.continuationCount
@@ -555,89 +433,70 @@ function normalizeLinearLayout(
         ? progressionPolicy.stages.length
         : undefined;
   if (requiredBatchCount !== undefined && requiredBatchCount > maxBatches) {
-    fail(`${path}.bounds.maxBatches`, 'must cover every declared continuation');
+    fail(`${path}.bounds.maxBatches`, 'must cover every declared normal-door batch');
   }
   return Object.freeze({
-    biomeKey: layout.biomeKey,
-    kind: 'LinearBiome',
-    initialCounters: Object.freeze({
-      biomeDepthCache: requireNonNegativeInteger(
-        layout.initialCounters.biomeDepthCache,
-        `${path}.initialCounters.biomeDepthCache`,
-      ),
-      biomeEncounterDepth: requireNonNegativeInteger(
-        layout.initialCounters.biomeEncounterDepth,
-        `${path}.initialCounters.biomeEncounterDepth`,
-      ),
-    }),
-    start: normalizeLinearStart(layout.start, layout.biomeKey, rooms, `${path}.start`),
-    entries: normalizeEntries(layout.entries ?? [], layout.biomeKey, rooms, `${path}.entries`),
-    continuation: Object.freeze({
-      progressionPolicy,
-      batchPolicy,
-      rewardStorePolicy: normalizeRewardStorePolicy(
-        layout.continuation.rewardStorePolicy,
-        rewardStores,
-        `${path}.continuation.rewardStorePolicy`,
-      ),
-      rewardStoreOverrides: normalizeRewardStoreOverrides(
-        layout.continuation.rewardStoreOverrides ?? [],
-        layout.biomeKey,
-        rooms,
-        rewardStores,
-        `${path}.continuation.rewardStoreOverrides`,
-      ),
-    }),
-    terminal,
-    completion: normalizeCompletion(
-      layout.completion,
-      layout.biomeKey,
-      rooms,
-      `${path}.completion`,
+    kind: 'generated',
+    progressionPolicy,
+    batchPolicy,
+    rewardStorePolicy: normalizeRewardStorePolicy(
+      raw.rewardStorePolicy,
+      rewardStores,
+      `${path}.rewardStorePolicy`,
     ),
-    fields: normalizeAuthoredFields(layout.fields ?? [], `${path}.fields`),
+    rewardStoreOverrides: normalizeRewardStoreOverrides(
+      raw.rewardStoreOverrides ?? [],
+      biomeKey,
+      rooms,
+      rewardStores,
+      `${path}.rewardStoreOverrides`,
+    ),
     bounds: Object.freeze({ maxBatches, maxTargets }),
   });
 }
 
-function normalizeHubLayout(
-  layout: Extract<RawBiomeLayoutDeclaration, { readonly kind: 'HubBiome' }>,
-  layoutIndex: number,
+function normalizeHubDecision(
+  raw: Extract<RawBiomeLayoutDeclaration['progression'], { readonly kind: 'hub' }>,
+  biomeKey: string,
   rooms: CatalogCollection<RoomDeclaration>,
   rewardStores: CatalogCollection<RewardStoreDeclaration>,
-): HubBiomeLayout {
-  const path = `biomeLayouts[${layoutIndex}]`;
-  const entries = normalizeEntries(layout.entries, layout.biomeKey, rooms, `${path}.entries`);
-  const hubRoom = requireRoom(
-    layout.hub.roomGameName,
-    layout.biomeKey,
+  path: string,
+): HubDecisionDescriptor {
+  const linkedExit = normalizeLinkedExit(
+    raw.linkedExit,
+    biomeKey,
     rooms,
-    `${path}.hub.roomGameName`,
+    'PreHub',
+    `${path}.linkedExit`,
   );
+  if (linkedExit.exitKey !== 'prehub') {
+    fail(`${path}.linkedExit.exitKey`, 'must be prehub');
+  }
+  const hubRoom = requireRoom(raw.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
   if (
     hubRoom.kind !== 'Hub' ||
     hubRoom.mode.kind !== 'derived' ||
     hubRoom.mode.classification !== 'hub'
   ) {
-    fail(`${path}.hub.roomGameName`, `${hubRoom.gameName} must be a derived Hub room`);
+    fail(`${path}.roomGameName`, `${hubRoom.gameName} must be a derived Hub room`);
   }
   const restoreRoom = requireRoom(
-    layout.hub.restoreRoomGameName,
-    layout.biomeKey,
+    raw.restoreRoomGameName,
+    biomeKey,
     rooms,
-    `${path}.hub.restoreRoomGameName`,
+    `${path}.restoreRoomGameName`,
   );
   if (restoreRoom.gameName !== hubRoom.gameName) {
-    fail(`${path}.hub.restoreRoomGameName`, 'must reference the persistent hub room');
+    fail(`${path}.restoreRoomGameName`, 'must reference the persistent hub room');
   }
   const slotKeys = freezeUniqueStrings(
-    layout.hub.slots.map((slot) => slot.slotKey),
-    `${path}.hub.slots.slotKeys`,
+    raw.slots.map((slot) => slot.slotKey),
+    `${path}.slots.slotKeys`,
   );
   const physicalDoorIds = new Set<number>();
-  const slots = layout.hub.slots.map((slot, index) => {
-    const slotPath = `${path}.hub.slots[${index}]`;
-    const room = requireRoom(slot.roomGameName, layout.biomeKey, rooms, `${slotPath}.roomGameName`);
+  const slots = raw.slots.map((slot, index) => {
+    const slotPath = `${path}.slots[${index}]`;
+    const room = requireRoom(slot.roomGameName, biomeKey, rooms, `${slotPath}.roomGameName`);
     if (room.mode.kind !== 'authored') {
       fail(`${slotPath}.roomGameName`, `${room.gameName} must be authored`);
     }
@@ -656,47 +515,37 @@ function normalizeHubLayout(
     });
   });
   if (slots.length === 0) {
-    fail(`${path}.hub.slots`, 'must not be empty');
+    fail(`${path}.slots`, 'must not be empty');
   }
-  const min = requirePositiveInteger(layout.hub.openCount.min, `${path}.hub.openCount.min`);
-  const max = requirePositiveInteger(layout.hub.openCount.max, `${path}.hub.openCount.max`);
+  const min = requirePositiveInteger(raw.openCount.min, `${path}.openCount.min`);
+  const max = requirePositiveInteger(raw.openCount.max, `${path}.openCount.max`);
   if (max < min || max > slots.length) {
-    fail(`${path}.hub.openCount.max`, 'must be between min and the declared slot count');
+    fail(`${path}.openCount.max`, 'must be between min and the declared slot count');
   }
-  const requiredVisits = requirePositiveInteger(
-    layout.hub.requiredVisits,
-    `${path}.hub.requiredVisits`,
-  );
+  const requiredVisits = requirePositiveInteger(raw.requiredVisits, `${path}.requiredVisits`);
   if (requiredVisits > min) {
-    fail(`${path}.hub.requiredVisits`, 'must not exceed the minimum open slot count');
+    fail(`${path}.requiredVisits`, 'must not exceed the minimum open slot count');
   }
   if (
-    layout.hub.targetCompletion.kind !== 'requiredRoomObject' ||
-    layout.hub.targetCompletion.objectKey !== 'SoulPylon'
+    raw.targetCompletion.kind !== 'requiredRoomObject' ||
+    raw.targetCompletion.objectKey !== 'SoulPylon'
   ) {
     fail(
-      `${path}.hub.targetCompletion`,
+      `${path}.targetCompletion`,
       'must name one supported required room object completion policy',
     );
   }
-  const targetCompletion = Object.freeze({
-    kind: 'requiredRoomObject' as const,
-    objectKey: 'SoulPylon' as const,
-  });
   for (const [slotIndex, slot] of slots.entries()) {
     const room = rooms.byKey[slot.roomGameName] as RoomDeclaration;
-    if (
-      room.requiredObjects?.length !== 1 ||
-      room.requiredObjects[0]?.key !== targetCompletion.objectKey
-    ) {
+    if (room.requiredObjects?.length !== 1 || room.requiredObjects[0]?.key !== 'SoulPylon') {
       fail(
-        `${path}.hub.slots[${slotIndex}].roomGameName`,
-        `${room.gameName} must require one ${targetCompletion.objectKey}`,
+        `${path}.slots[${slotIndex}].roomGameName`,
+        `${room.gameName} must require one SoulPylon`,
       );
     }
   }
-  const openSlotConstraints = layout.hub.openSlotConstraints.map((constraint, index) => {
-    const constraintPath = `${path}.hub.openSlotConstraints[${index}]`;
+  const openSlotConstraints = raw.openSlotConstraints.map((constraint, index) => {
+    const constraintPath = `${path}.openSlotConstraints[${index}]`;
     if (constraint.kind !== 'maxOpenFromSlots') {
       fail(`${constraintPath}.kind`, `unknown open-slot constraint ${String(constraint.kind)}`);
     }
@@ -722,104 +571,192 @@ function normalizeHubLayout(
       max: constraintMax,
     });
   });
-  if (layout.hub.rewardLookup.source !== 'allOpenTargetOffers') {
+  if (raw.rewardLookup.source !== 'allOpenTargetOffers') {
     fail(
-      `${path}.hub.rewardLookup.source`,
-      `unknown reward lookup source ${String(layout.hub.rewardLookup.source)}`,
+      `${path}.rewardLookup.source`,
+      `unknown reward lookup source ${String(raw.rewardLookup.source)}`,
     );
   }
-  const rewardLookup = Object.freeze({
-    key: requireNonEmpty(layout.hub.rewardLookup.key, `${path}.hub.rewardLookup.key`),
-    source: 'allOpenTargetOffers' as const,
-  });
-  const generation = layout.hub.sideRoomGeneration;
-  if (generation.kind !== 'visitPressure') {
-    fail(
-      `${path}.hub.sideRoomGeneration.kind`,
-      `unknown side-room generation policy ${String(generation.kind)}`,
-    );
-  }
+  const generation = raw.sideRoomGeneration;
   if (
+    generation.kind !== 'visitPressure' ||
     generation.remainingSlots !== 'optional' ||
     generation.forcedOrder !== 'availabilityRankPrefix'
   ) {
-    fail(`${path}.hub.sideRoomGeneration`, 'must preserve optional remainder and ranked prefix');
+    fail(`${path}.sideRoomGeneration`, 'must preserve optional remainder and ranked prefix');
   }
-  const sideRoomGeneration = Object.freeze({
-    kind: 'visitPressure' as const,
-    generatedCountKey: requireNonEmpty(
-      generation.generatedCountKey,
-      `${path}.hub.sideRoomGeneration.generatedCountKey`,
+  const minimumPerVisit = Object.freeze({
+    numerator: requirePositiveInteger(
+      generation.minimumPerVisit.numerator,
+      `${path}.sideRoomGeneration.minimumPerVisit.numerator`,
     ),
-    minimumPerVisit: Object.freeze({
-      numerator: requirePositiveInteger(
-        generation.minimumPerVisit.numerator,
-        `${path}.hub.sideRoomGeneration.minimumPerVisit.numerator`,
-      ),
-      denominator: requirePositiveInteger(
-        generation.minimumPerVisit.denominator,
-        `${path}.hub.sideRoomGeneration.minimumPerVisit.denominator`,
-      ),
-    }),
-    remainingSlots: 'optional' as const,
-    forcedOrder: 'availabilityRankPrefix' as const,
+    denominator: requirePositiveInteger(
+      generation.minimumPerVisit.denominator,
+      `${path}.sideRoomGeneration.minimumPerVisit.denominator`,
+    ),
   });
-  if (
-    sideRoomGeneration.minimumPerVisit.numerator > sideRoomGeneration.minimumPerVisit.denominator
-  ) {
-    fail(`${path}.hub.sideRoomGeneration.minimumPerVisit`, 'numerator must not exceed denominator');
+  if (minimumPerVisit.numerator > minimumPerVisit.denominator) {
+    fail(`${path}.sideRoomGeneration.minimumPerVisit`, 'numerator must not exceed denominator');
   }
-  const terminal = normalizeTerminal(layout.terminal, layout.biomeKey, rooms, `${path}.terminal`);
-  if (terminal.kind !== 'fixedAuthoredSlot') {
-    fail(`${path}.terminal.kind`, 'HubBiome requires a fixed authored terminal slot');
-  }
-  if (
-    entries.some(
-      (entry) => entry.kind === 'fixedAuthoredSlot' && entry.slotKey === terminal.slotKey,
-    )
-  ) {
-    fail(`${path}.terminal.slotKey`, `duplicates fixed authored slot ${terminal.slotKey}`);
+  const completedExit = normalizeLinkedExit(
+    raw.completedExit,
+    biomeKey,
+    rooms,
+    'Preboss',
+    `${path}.completedExit`,
+  );
+  if (completedExit.exitKey !== 'preboss') {
+    fail(`${path}.completedExit.exitKey`, 'must be preboss');
   }
   return Object.freeze({
-    biomeKey: layout.biomeKey,
-    kind: 'HubBiome',
-    initialCounters: Object.freeze({
-      biomeDepthCache: requireNonNegativeInteger(
-        layout.initialCounters.biomeDepthCache,
-        `${path}.initialCounters.biomeDepthCache`,
-      ),
-      biomeEncounterDepth: requireNonNegativeInteger(
-        layout.initialCounters.biomeEncounterDepth,
-        `${path}.initialCounters.biomeEncounterDepth`,
-      ),
-    }),
-    entries,
-    hub: Object.freeze({
-      roomGameName: hubRoom.gameName,
-      slots: Object.freeze(slots),
-      openCount: Object.freeze({ min, max }),
-      openSlotConstraints: Object.freeze(openSlotConstraints),
-      requiredVisits,
-      targetCompletion,
-      restoreRoomGameName: restoreRoom.gameName,
-      rewardStorePolicy: normalizeRewardStorePolicy(
-        layout.hub.rewardStorePolicy,
-        rewardStores,
-        `${path}.hub.rewardStorePolicy`,
-      ),
-      rewardLookup,
-      sideRoomGeneration,
-      fields: normalizeAuthoredFields(layout.hub.fields ?? [], `${path}.hub.fields`),
-    }),
-    terminal,
-    completion: normalizeCompletion(
-      layout.completion,
-      layout.biomeKey,
-      rooms,
-      `${path}.completion`,
+    kind: 'hub',
+    hubKey: requireNonEmpty(raw.hubKey, `${path}.hubKey`),
+    linkedExit,
+    roomGameName: hubRoom.gameName,
+    slots: Object.freeze(slots),
+    openCount: Object.freeze({ min, max }),
+    openSlotConstraints: Object.freeze(openSlotConstraints),
+    requiredVisits,
+    targetCompletion: Object.freeze({ kind: 'requiredRoomObject', objectKey: 'SoulPylon' }),
+    restoreRoomGameName: restoreRoom.gameName,
+    rewardStorePolicy: normalizeRewardStorePolicy(
+      raw.rewardStorePolicy,
+      rewardStores,
+      `${path}.rewardStorePolicy`,
     ),
-    fields: normalizeAuthoredFields(layout.fields ?? [], `${path}.fields`),
+    rewardLookup: Object.freeze({
+      key: requireNonEmpty(raw.rewardLookup.key, `${path}.rewardLookup.key`),
+      source: 'allOpenTargetOffers',
+    }),
+    sideRoomGeneration: Object.freeze({
+      kind: 'visitPressure',
+      generatedCountKey: requireNonEmpty(
+        generation.generatedCountKey,
+        `${path}.sideRoomGeneration.generatedCountKey`,
+      ),
+      minimumPerVisit,
+      remainingSlots: 'optional',
+      forcedOrder: 'availabilityRankPrefix',
+    }),
+    fields: normalizeAuthoredFields(raw.fields ?? [], `${path}.fields`),
+    completedExit,
   });
+}
+
+function compatibleWithExit(
+  source: RoomDeclaration,
+  target: RoomDeclaration,
+  policy: ExitCompatibilityPolicy,
+): boolean {
+  if (policy.kind === 'unconstrained') return true;
+  if (policy.kind === 'targetHasTag') return target.structuralTags.includes(policy.targetTag);
+  return (
+    !source.structuralTags.includes(policy.sourceTag) ||
+    target.structuralTags.includes(policy.targetTag)
+  );
+}
+
+function knownTakeoverSourceWidths(
+  layout: BiomeLayout,
+  rooms: CatalogCollection<RoomDeclaration>,
+  preboss: RoomDeclaration,
+): readonly number[] | undefined {
+  if (
+    layout.progression.kind === 'hub' &&
+    layout.progression.completedExit.roomGameName === preboss.gameName
+  ) {
+    return [1];
+  }
+  if (layout.progression.kind !== 'generated') return undefined;
+  const policy = layout.progression.progressionPolicy;
+  if (policy.kind !== 'staged') {
+    return rooms.values
+      .filter(
+        (room) =>
+          room.biomeKey === preboss.biomeKey &&
+          room.mode.kind === 'authored' &&
+          room.kind !== 'Preboss' &&
+          room.exits.length > 0,
+      )
+      .map((room) => room.exits.length);
+  }
+  const finalStage = policy.stages.at(-1);
+  if (finalStage === undefined) return undefined;
+  return finalStage.roomGameNames.map((gameName) => rooms.byKey[gameName]?.exits.length ?? 0);
+}
+
+/**
+ * Preboss policy is declaration-owned, but its asserted batch shape must be
+ * possible at the layout's supported normal-door frontier. This deliberately
+ * checks only static facts: door width, per-source creation caps, and physical
+ * exit compatibility. Dynamic eligibility and force pressure remain simulator
+ * inputs rather than compiler guesses.
+ */
+export function validatePrebossBatchPolicies(
+  layouts: CatalogCollection<BiomeLayout>,
+  rooms: CatalogCollection<RoomDeclaration>,
+  exitPolicies: CatalogCollection<ExitCompatibilityPolicy>,
+): void {
+  for (const preboss of rooms.values) {
+    if (preboss.prebossBatchPolicy?.kind !== 'takeOverNormalDoors') continue;
+    const layout = layouts.byKey[preboss.biomeKey];
+    if (layout === undefined) continue;
+    const path = `prebossBatchPolicy.${preboss.gameName}`;
+    const sources = rooms.values.filter(
+      (room) =>
+        room.biomeKey === preboss.biomeKey &&
+        room.mode.kind === 'authored' &&
+        room.kind !== 'Preboss' &&
+        room.exits.length > 0,
+    );
+    const maximumNormalExitWidth = Math.max(0, ...sources.map((source) => source.exits.length));
+    if (
+      preboss.caps.maxCreationsPerRoom !== undefined &&
+      preboss.caps.maxCreationsPerRoom < maximumNormalExitWidth
+    ) {
+      fail(
+        `${path}.caps.maxCreationsPerRoom`,
+        `cannot fill a supported ${maximumNormalExitWidth}-door normal batch`,
+      );
+    }
+    if (
+      preboss.caps.maxCreationsThisRun !== undefined &&
+      preboss.caps.maxCreationsThisRun < maximumNormalExitWidth
+    ) {
+      fail(
+        `${path}.caps.maxCreationsThisRun`,
+        `cannot fill a supported ${maximumNormalExitWidth}-door normal batch`,
+      );
+    }
+    for (const source of sources) {
+      for (const exit of source.exits) {
+        const policy = exitPolicies.byKey[exit.compatibilityPolicyKey];
+        if (policy === undefined || compatibleWithExit(source, preboss, policy)) continue;
+        fail(
+          `${path}.compatibility`,
+          `${preboss.gameName} is incompatible with ${source.gameName} exit ${exit.index}`,
+        );
+      }
+    }
+    const widths = knownTakeoverSourceWidths(layout, rooms, preboss);
+    if (widths === undefined) continue;
+    const maximumSupportedWidth = Math.max(...widths);
+    if (preboss.prebossBatchPolicy.remainingOffers.kind === 'none' && maximumSupportedWidth > 1) {
+      fail(
+        `${path}.remainingOffers`,
+        'none is only valid when every supported normal-door source is width one',
+      );
+    }
+    if (
+      preboss.prebossBatchPolicy.remainingOffers.kind === 'counted' &&
+      maximumSupportedWidth === 1
+    ) {
+      fail(
+        `${path}.remainingOffers`,
+        'counted remaining offers are unreachable when every supported source is width one',
+      );
+    }
+  }
 }
 
 export function normalizeBiomeLayouts(
@@ -834,16 +771,50 @@ export function normalizeBiomeLayouts(
     if (biomes.byKey[layout.biomeKey] === undefined) {
       fail(`${path}.biomeKey`, `unknown biome ${layout.biomeKey}`);
     }
-    const receivedKind: unknown = (layout as { readonly kind?: unknown }).kind;
-    if (layout.kind === 'LinearBiome') {
-      return normalizeLinearLayout(layout, layoutIndex, rooms, rewardStores);
-    }
-    if (layout.kind === 'HubBiome') {
-      return normalizeHubLayout(layout, layoutIndex, rooms, rewardStores);
-    }
-    fail(`${path}.kind`, `unknown biome layout ${String(receivedKind)}`);
+    const progression: ProgressionDescriptor =
+      layout.progression.kind === 'generated'
+        ? normalizeGeneratedProgression(
+            layout.progression,
+            layout.biomeKey,
+            rooms,
+            rewardStores,
+            `${path}.progression`,
+          )
+        : layout.progression.kind === 'hub'
+          ? normalizeHubDecision(
+              layout.progression,
+              layout.biomeKey,
+              rooms,
+              rewardStores,
+              `${path}.progression`,
+            )
+          : fail(
+              `${path}.progression.kind`,
+              `unknown progression ${String((layout.progression as { kind?: unknown }).kind)}`,
+            );
+    return Object.freeze({
+      biomeKey: layout.biomeKey,
+      initialCounters: Object.freeze({
+        biomeDepthCache: requireNonNegativeInteger(
+          layout.initialCounters.biomeDepthCache,
+          `${path}.initialCounters.biomeDepthCache`,
+        ),
+        biomeEncounterDepth: requireNonNegativeInteger(
+          layout.initialCounters.biomeEncounterDepth,
+          `${path}.initialCounters.biomeEncounterDepth`,
+        ),
+      }),
+      start: normalizeStart(layout.start, layout.biomeKey, rooms, `${path}.start`),
+      progression,
+      completion: normalizeCompletion(
+        layout.completion,
+        layout.biomeKey,
+        rooms,
+        `${path}.completion`,
+      ),
+      fields: normalizeAuthoredFields(layout.fields ?? [], `${path}.fields`),
+    });
   });
-
   return createCollection(layouts, 'biomeLayouts', (layout) => layout.biomeKey, 'biomeKey');
 }
 
@@ -859,30 +830,20 @@ export function validateDerivedRoomOwnership(
     }
     owners.set(gameName, owner);
   };
-
   for (const layout of layouts.values) {
     const path = `biomeLayouts.${layout.biomeKey}`;
-    if (layout.kind === 'LinearBiome' && layout.start.kind === 'fixedEntry') {
-      register(layout.start.roomGameName, `${path}.start`);
+    if (layout.progression.kind === 'hub') {
+      register(layout.progression.roomGameName, `${path}.progression`);
     }
-    for (const [index, entry] of layout.entries.entries()) {
-      if (entry.kind === 'fixedEntry') {
-        register(entry.roomGameName, `${path}.entries[${index}]`);
-      }
-    }
-    if (layout.kind === 'HubBiome') {
-      register(layout.hub.roomGameName, `${path}.hub`);
-    }
-    for (const [index, completion] of layout.completion.rooms.entries()) {
-      register(completion.roomGameName, `${path}.completion.rooms[${index}]`);
-    }
+    layout.completion.rooms.forEach((completion, index) =>
+      register(completion.roomGameName, `${path}.completion.rooms[${index}]`),
+    );
   }
-
-  for (const [index, room] of rooms.values.entries()) {
+  rooms.values.forEach((room, index) => {
     if (room.mode.kind === 'derived' && !owners.has(room.gameName)) {
       fail(`rooms[${index}].mode`, `${room.gameName} has no layout owner`);
     }
-  }
+  });
 }
 
 function visitRewardLookupRequirements(
@@ -891,13 +852,9 @@ function visitRewardLookupRequirements(
 ): void {
   if (requirement.kind === 'all' || requirement.kind === 'any') {
     requirement.requirements.forEach((child) => visitRewardLookupRequirements(child, visit));
-    return;
-  }
-  if (requirement.kind === 'not') {
+  } else if (requirement.kind === 'not') {
     visitRewardLookupRequirements(requirement.requirement, visit);
-    return;
-  }
-  if (requirement.kind === 'rewardLookupExcludes') {
+  } else if (requirement.kind === 'rewardLookupExcludes') {
     visit(requirement.lookupKey);
   }
 }
@@ -906,19 +863,22 @@ export function validateRewardLookupOwnership(
   rooms: CatalogCollection<RoomDeclaration>,
   layouts: CatalogCollection<BiomeLayout>,
 ): void {
-  for (const [roomIndex, room] of rooms.values.entries()) {
+  rooms.values.forEach((room, roomIndex) => {
     if (
       room.incomingReward.kind !== 'shop' ||
       room.incomingReward.additionalOptionRequirements === undefined
     ) {
-      continue;
+      return;
     }
     const layout = layouts.byKey[room.biomeKey];
     for (const [optionKey, requirement] of Object.entries(
       room.incomingReward.additionalOptionRequirements,
     )) {
       visitRewardLookupRequirements(requirement, (lookupKey) => {
-        if (layout?.kind !== 'HubBiome' || layout.hub.rewardLookup.key !== lookupKey) {
+        if (
+          layout?.progression.kind !== 'hub' ||
+          layout.progression.rewardLookup.key !== lookupKey
+        ) {
           fail(
             `rooms[${roomIndex}].incomingReward.additionalOptionRequirements.${optionKey}.lookupKey`,
             `${lookupKey} is not produced by ${room.biomeKey}`,
@@ -926,5 +886,5 @@ export function validateRewardLookupOwnership(
         }
       });
     }
-  }
+  });
 }

@@ -2,15 +2,10 @@ import type { RawBiomeLayoutDeclaration } from '../types';
 
 export const hBiomeLayout = {
   biomeKey: 'H',
-  kind: 'LinearBiome',
   initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
-  start: {
-    kind: 'authoredStart',
-    mode: 'fixed',
-    roomGameNames: ['H_Intro'],
-  },
-  entries: [],
-  continuation: {
+  start: { kind: 'fixedAuthored', roomGameName: 'H_Intro' },
+  progression: {
+    kind: 'generated',
     progressionPolicy: { kind: 'fixedCount', continuationCount: 4 },
     batchPolicy: {
       kind: 'fields',
@@ -32,11 +27,7 @@ export const hBiomeLayout = {
     },
     rewardStorePolicy: { kind: 'none' },
     rewardStoreOverrides: [],
-  },
-  terminal: {
-    kind: 'forkedTransition',
-    roomGameName: 'H_PreBoss01',
-    exitPolicy: { kind: 'allExitsTerminal' },
+    bounds: { maxBatches: 4, maxTargets: 7 },
   },
   completion: {
     rooms: [
@@ -49,5 +40,4 @@ export const hBiomeLayout = {
     ],
   },
   fields: [],
-  bounds: { maxBatches: 4, maxTargets: 7 },
 } as const satisfies RawBiomeLayoutDeclaration;

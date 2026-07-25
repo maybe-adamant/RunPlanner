@@ -295,7 +295,7 @@ describe('canonical N Hub materialization', () => {
     expect(snapshot.terminalEntry).toMatchObject({
       occurrenceId: fixedOccurrenceIds.preboss,
       gameName: 'N_PreBoss01',
-      lifecycleProfileKey: 'TerminalWorldShopRoom',
+      lifecycleProfileKey: 'PrebossShopRoom',
       entered: true,
       entryState: { kind: 'shop', profileKey: 'WorldShop' },
     });

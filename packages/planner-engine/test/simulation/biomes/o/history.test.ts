@@ -296,7 +296,7 @@ describe('O canonical materialization and lifecycle', () => {
           continuation: 'entersTerminal',
           room: {
             gameName: 'O_PreBoss01',
-            lifecycleProfileKey: 'TerminalWorldShopRoom',
+            lifecycleProfileKey: 'PrebossShopRoom',
             entryState: { kind: 'shop' },
           },
         },

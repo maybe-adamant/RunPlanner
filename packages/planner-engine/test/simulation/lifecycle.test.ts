@@ -268,7 +268,7 @@ describe('single-room lifecycle execution', () => {
     const terminalReward = executeRoomLifecycle(
       catalog,
       input({
-        lifecycleProfileKey: 'TerminalRewardRoom',
+        lifecycleProfileKey: 'PrebossFreeRewardRoom',
         encounterProfileKey: 'Shop',
       }),
     );
@@ -300,7 +300,7 @@ describe('single-room lifecycle execution', () => {
 
   it('omits outgoing generation from terminal profiles and remains deterministic', () => {
     const executionInput = input({
-      lifecycleProfileKey: 'TerminalWorldShopRoom',
+      lifecycleProfileKey: 'PrebossShopRoom',
       encounterProfileKey: 'Shop',
       producer: { lifecycleProfileKey: 'RoomReward', offer: { rewardType: 'Shop' } },
     });

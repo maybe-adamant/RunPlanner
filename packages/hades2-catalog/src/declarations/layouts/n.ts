@@ -2,13 +2,12 @@ import type { RawBiomeLayoutDeclaration } from '../types';
 
 export const nBiomeLayout = {
   biomeKey: 'N',
-  kind: 'HubBiome',
   initialCounters: { biomeDepthCache: 0, biomeEncounterDepth: 1 },
-  entries: [
-    { kind: 'fixedAuthoredSlot', slotKey: 'opening', roomGameName: 'N_Opening01' },
-    { kind: 'fixedAuthoredSlot', slotKey: 'preHub', roomGameName: 'N_PreHub01' },
-  ],
-  hub: {
+  start: { kind: 'fixedAuthored', roomGameName: 'N_Opening01' },
+  progression: {
+    kind: 'hub',
+    hubKey: 'hub',
+    linkedExit: { kind: 'linked', exitKey: 'prehub', roomGameName: 'N_PreHub01' },
     roomGameName: 'N_Hub',
     slots: [
       { slotKey: 'combat01', roomGameName: 'N_Combat01', physicalDoorId: 617113 },
@@ -55,11 +54,7 @@ export const nBiomeLayout = {
       forcedOrder: 'availabilityRankPrefix',
     },
     fields: [],
-  },
-  terminal: {
-    kind: 'fixedAuthoredSlot',
-    slotKey: 'preboss',
-    roomGameName: 'N_PreBoss01',
+    completedExit: { kind: 'linked', exitKey: 'preboss', roomGameName: 'N_PreBoss01' },
   },
   completion: {
     rooms: [

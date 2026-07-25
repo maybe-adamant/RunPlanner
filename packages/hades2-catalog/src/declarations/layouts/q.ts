@@ -2,15 +2,10 @@ import type { RawBiomeLayoutDeclaration } from '../types';
 
 export const qBiomeLayout = {
   biomeKey: 'Q',
-  kind: 'LinearBiome',
   initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
-  start: {
-    kind: 'authoredStart',
-    mode: 'fixed',
-    roomGameNames: ['Q_Intro'],
-  },
-  entries: [],
-  continuation: {
+  start: { kind: 'fixedAuthored', roomGameName: 'Q_Intro' },
+  progression: {
+    kind: 'generated',
     progressionPolicy: {
       kind: 'staged',
       stages: [
@@ -43,8 +38,8 @@ export const qBiomeLayout = {
     batchPolicy: { kind: 'standard', fields: [] },
     rewardStorePolicy: { kind: 'none' },
     rewardStoreOverrides: [],
+    bounds: { maxBatches: 6, maxTargets: 8 },
   },
-  terminal: { kind: 'directTransition', roomGameName: 'Q_PreBoss01' },
   completion: {
     rooms: [{ role: 'boss', roomGameName: 'Q_Boss01' }],
     transitionEffects: [
@@ -53,5 +48,4 @@ export const qBiomeLayout = {
     ],
   },
   fields: [],
-  bounds: { maxBatches: 6, maxTargets: 8 },
 } as const satisfies RawBiomeLayoutDeclaration;

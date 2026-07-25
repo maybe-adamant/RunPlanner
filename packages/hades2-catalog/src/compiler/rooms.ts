@@ -2,7 +2,7 @@ import type {
   CatalogCollection,
   EncounterProfile,
   ExitTypeDeclaration,
-  ForkedPrebossEntryPolicy,
+  PrebossBatchPolicy,
   RoomCaps,
   RoomDeclaration,
   RoomExit,
@@ -21,7 +21,7 @@ import type {
   RewardStoreDeclaration,
 } from '@run-planner/engine/reward-kernel';
 
-import type { RawForkedPrebossEntryPolicy, RawRoomDeclaration } from '../declarations';
+import type { RawPrebossBatchPolicy, RawRoomDeclaration } from '../declarations';
 import {
   createCollection,
   freezeUniqueStrings,
@@ -90,12 +90,11 @@ const roomTemplateKinds = {
   FixedOpening: 'Opening',
   FixedPreHub: 'PreHub',
   FieldsCombat: 'Combat',
-  ForkedPreboss: 'Preboss',
   Fountain: 'Reprieve',
   Miniboss: 'Miniboss',
   RewardlessCombat: 'Combat',
   Shop: 'Shop',
-  ShopPreboss: 'Preboss',
+  Preboss: 'Preboss',
   ShipCombat: 'Combat',
   StandardCombat: 'Combat',
   Story: 'Story',
@@ -110,12 +109,11 @@ const roomTemplateRewardKinds = {
   FixedOpening: 'countedChoice',
   FixedPreHub: 'countedChoice',
   FieldsCombat: 'none',
-  ForkedPreboss: 'shop',
   Fountain: 'countedChoice',
   Miniboss: 'countedChoice',
   RewardlessCombat: 'none',
   Shop: 'shop',
-  ShopPreboss: 'shop',
+  Preboss: 'shop',
   ShipCombat: 'none',
   StandardCombat: 'countedChoice',
   Story: 'fixed',
@@ -125,18 +123,14 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
   const receivedModeKind: unknown = (room.mode as { readonly kind?: unknown } | undefined)?.kind;
   if (room.mode?.kind === 'derived') {
     const classification = room.mode.classification;
-    if (
-      classification !== 'completion' &&
-      classification !== 'fixedEntry' &&
-      classification !== 'hub'
-    ) {
+    if (classification !== 'completion' && classification !== 'hub') {
       fail(
         `${path}.mode.classification`,
         `unknown derived classification ${String(classification)}`,
       );
     }
-    if (room.entryOfferPolicy !== undefined) {
-      fail(`${path}.entryOfferPolicy`, 'is only valid for authored ForkedPreboss rooms');
+    if (room.prebossBatchPolicy !== undefined) {
+      fail(`${path}.prebossBatchPolicy`, 'is only valid for authored Preboss rooms');
     }
     return Object.freeze({ kind: 'derived', classification });
   }
@@ -158,11 +152,11 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
       `${templateKey} requires reward producer ${expectedRewardKind}`,
     );
   }
-  if (templateKey === 'ForkedPreboss' && room.entryOfferPolicy === undefined) {
-    fail(`${path}.entryOfferPolicy`, 'is required by ForkedPreboss');
+  if (templateKey === 'Preboss' && room.prebossBatchPolicy === undefined) {
+    fail(`${path}.prebossBatchPolicy`, 'is required by Preboss');
   }
-  if (templateKey !== 'ForkedPreboss' && room.entryOfferPolicy !== undefined) {
-    fail(`${path}.entryOfferPolicy`, 'is only valid for ForkedPreboss');
+  if (templateKey !== 'Preboss' && room.prebossBatchPolicy !== undefined) {
+    fail(`${path}.prebossBatchPolicy`, 'is only valid for Preboss');
   }
   return Object.freeze({ kind: 'authored', templateKey });
 }
@@ -182,22 +176,45 @@ function normalizeStructuralTags(
   return tags as readonly RoomStructuralTag[];
 }
 
-function normalizeEntryOfferPolicy(
-  raw: RawForkedPrebossEntryPolicy,
+function normalizePrebossBatchPolicy(
+  raw: RawPrebossBatchPolicy,
   rewards: RewardKernelCatalog,
   path: string,
-): ForkedPrebossEntryPolicy {
-  if (raw.kind !== 'shopThenFillRemainingExits') {
-    fail(`${path}.kind`, `unknown entry offer policy ${String(raw.kind)}`);
+): PrebossBatchPolicy {
+  if (raw.kind === 'retainNormalPeers') {
+    return Object.freeze({ kind: 'retainNormalPeers' });
   }
-  const freeReward = normalizeRewardBinding(raw.freeReward, rewards, `${path}.freeReward`);
-  if (freeReward.kind !== 'countedChoice') {
-    fail(`${path}.freeReward.kind`, 'must be countedChoice');
+  if (raw.kind !== 'takeOverNormalDoors') {
+    fail(
+      `${path}.kind`,
+      `unknown Preboss batch policy ${String((raw as { kind?: unknown }).kind)}`,
+    );
+  }
+  if (raw.remainingOffers.kind === 'none') {
+    return Object.freeze({
+      kind: 'takeOverNormalDoors',
+      remainingOffers: Object.freeze({ kind: 'none' }),
+    });
+  }
+  if (raw.remainingOffers.kind !== 'counted') {
+    fail(
+      `${path}.remainingOffers.kind`,
+      `unknown remaining Preboss offer policy ${String(
+        (raw.remainingOffers as { kind?: unknown }).kind,
+      )}`,
+    );
+  }
+  const reward = normalizeRewardBinding(
+    raw.remainingOffers.reward,
+    rewards,
+    `${path}.remainingOffers.reward`,
+  );
+  if (reward.kind !== 'countedChoice') {
+    fail(`${path}.remainingOffers.reward.kind`, 'must be countedChoice');
   }
   return Object.freeze({
-    kind: raw.kind,
-    freeReward,
-    maxFreeRewards: requirePositiveInteger(raw.maxFreeRewards, `${path}.maxFreeRewards`),
+    kind: 'takeOverNormalDoors',
+    remainingOffers: Object.freeze({ kind: 'counted', reward }),
   });
 }
 
@@ -334,10 +351,14 @@ export function normalizeRooms(
       rewards,
       `${path}.incomingReward`,
     );
-    const entryOfferPolicy =
-      room.entryOfferPolicy === undefined
+    const prebossBatchPolicy =
+      room.prebossBatchPolicy === undefined
         ? undefined
-        : normalizeEntryOfferPolicy(room.entryOfferPolicy, rewards, `${path}.entryOfferPolicy`);
+        : normalizePrebossBatchPolicy(
+            room.prebossBatchPolicy,
+            rewards,
+            `${path}.prebossBatchPolicy`,
+          );
     const requiredObjectKeys = new Set<string>();
     const requiredObjects = room.requiredObjects?.map((object, objectIndex) => {
       const objectPath = `${path}.requiredObjects[${objectIndex}]`;
@@ -393,9 +414,14 @@ export function normalizeRooms(
       ) {
         fail(`${path}.${field}`, `${storeKey} is not accepted by the incoming producer`);
       }
-      if (storeKey !== undefined && !entryOfferPolicy?.freeReward.storeKeys.includes(storeKey)) {
-        if (entryOfferPolicy !== undefined) {
-          fail(`${path}.${field}`, `${storeKey} is not accepted by the free-reward producer`);
+      const remainingReward =
+        prebossBatchPolicy?.kind === 'takeOverNormalDoors' &&
+        prebossBatchPolicy.remainingOffers.kind === 'counted'
+          ? prebossBatchPolicy.remainingOffers.reward
+          : undefined;
+      if (storeKey !== undefined && !remainingReward?.storeKeys.includes(storeKey)) {
+        if (remainingReward !== undefined) {
+          fail(`${path}.${field}`, `${storeKey} is not accepted by the remaining-offer producer`);
         }
       }
     }
@@ -409,7 +435,7 @@ export function normalizeRooms(
       structuralTags: normalizeStructuralTags(room.structuralTags, `${path}.structuralTags`),
       exits: Object.freeze(exits),
       incomingReward,
-      ...(entryOfferPolicy === undefined ? {} : { entryOfferPolicy }),
+      ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),
       encounterProfileKey: room.encounterProfileKey,
       ...(forcedRewardStoreKey === undefined ? {} : { forcedRewardStoreKey }),
       ...(individualRewardStoreKey === undefined ? {} : { individualRewardStoreKey }),
@@ -450,6 +476,17 @@ export function normalizeRooms(
 
   const collection = createCollection(rooms, 'rooms', (room) => room.gameName, 'gameName');
   collection.values.forEach((room, roomIndex) => {
+    if (room.mode.kind === 'authored' && room.mode.templateKey === 'Preboss') {
+      const path = `rooms[${roomIndex}]`;
+      if (room.prebossBatchPolicy?.kind === 'retainNormalPeers') {
+        if (room.caps.maxCreationsPerRoom !== 1) {
+          fail(
+            `${path}.caps.maxCreationsPerRoom`,
+            'retainNormalPeers requires maxCreationsPerRoom: 1',
+          );
+        }
+      }
+    }
     if (room.mode.kind === 'authored' && room.mode.templateKey === 'FieldsCombat') {
       const path = `rooms[${roomIndex}]`;
       if (room.individualRewardStoreKey === undefined) {

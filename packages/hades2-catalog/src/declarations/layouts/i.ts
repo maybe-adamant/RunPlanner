@@ -2,15 +2,10 @@ import type { RawBiomeLayoutDeclaration } from '../types';
 
 export const iBiomeLayout = {
   biomeKey: 'I',
-  kind: 'LinearBiome',
   initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
-  start: {
-    kind: 'authoredStart',
-    mode: 'fixed',
-    roomGameNames: ['I_Intro'],
-  },
-  entries: [],
-  continuation: {
+  start: { kind: 'fixedAuthored', roomGameName: 'I_Intro' },
+  progression: {
+    kind: 'generated',
     progressionPolicy: { kind: 'eligibilityDriven' },
     batchPolicy: {
       kind: 'clockwork',
@@ -19,11 +14,7 @@ export const iBiomeLayout = {
     },
     rewardStorePolicy: { kind: 'none' },
     rewardStoreOverrides: [],
-  },
-  terminal: {
-    kind: 'generatedTarget',
-    roomGameName: 'I_PreBoss02',
-    closesBiomeWhenPicked: true,
+    bounds: { maxBatches: 13, maxTargets: 23 },
   },
   completion: {
     rooms: [
@@ -44,5 +35,4 @@ export const iBiomeLayout = {
       initialization: { kind: 'required' },
     },
   ],
-  bounds: { maxBatches: 13, maxTargets: 23 },
 } as const satisfies RawBiomeLayoutDeclaration;

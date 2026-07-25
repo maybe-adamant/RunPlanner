@@ -772,7 +772,7 @@ export const gRooms = [
     label: 'Preboss',
     biomeKey: 'G',
     kind: 'Preboss',
-    mode: { kind: 'authored', templateKey: 'ForkedPreboss' },
+    mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: {
@@ -781,16 +781,18 @@ export const gRooms = [
       shopProfileKey: 'WorldShop',
       producerLifecycleKey: 'RoomReward',
     },
-    entryOfferPolicy: {
-      kind: 'shopThenFillRemainingExits',
-      freeReward: {
-        kind: 'countedChoice',
-        storeKeys: ['RunProgress'],
-        eligibleRewardTypes: [],
-        ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop'],
-        producerLifecycleKey: 'RoomReward',
+    prebossBatchPolicy: {
+      kind: 'takeOverNormalDoors',
+      remainingOffers: {
+        kind: 'counted',
+        reward: {
+          kind: 'countedChoice',
+          storeKeys: ['RunProgress'],
+          eligibleRewardTypes: [],
+          ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop'],
+          producerLifecycleKey: 'RoomReward',
+        },
       },
-      maxFreeRewards: 2,
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },

@@ -245,7 +245,7 @@ export function materializeHubAuthoredRoom(
     if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) {
       fail(`${room.gameName} fixed terminal has no complete shop state`);
     }
-    lifecycleProfileKey = 'TerminalWorldShopRoom';
+    lifecycleProfileKey = 'PrebossShopRoom';
     incomingReward = shopIncomingReward(biome, occurrence, room);
     entryState = shopEntryState(catalog, biome, occurrence, room, occurrence.state.shop);
   } else {
