@@ -46,14 +46,11 @@ function configureRoutePrefix(
       if (layout === undefined) {
         failCommand(command, `${biomeKey} has no authored plan initializer`);
       }
-      return layout.kind === 'LinearBiome'
-        ? {
-            kind: 'LinearBiome' as const,
-            biomeKey,
-            state: createInitialBiomeState(layout),
-            topology: null,
-          }
-        : { kind: 'HubBiome' as const, biomeKey, topology: null };
+      return {
+        biomeKey,
+        state: createInitialBiomeState(layout),
+        topology: null,
+      };
     });
   const replacement = { ...route, biomes: [...retainedBiomes, ...addedBiomes] };
   return {

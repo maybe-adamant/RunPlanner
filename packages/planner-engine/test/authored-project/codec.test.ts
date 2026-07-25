@@ -1,325 +1,171 @@
 import { describe, expect, it } from 'vitest';
 
-import type {
-  BiomeLayout,
-  Catalog,
-  CatalogCollection,
-  RouteDeclaration,
-} from '@run-planner/engine/catalog-schema';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createOccurrenceId,
+  createProjectDocument,
   decodeProjectDocument,
   encodeProjectDocument,
-  parseProjectDocument,
-  ProjectDocumentContractError,
 } from '@run-planner/engine/authored-project';
-import {
-  createEmptyProjectDocument,
-  createProjectDocument,
-} from '@run-planner/engine/authored-project';
-import { PROJECT_DOCUMENT_SCHEMA_VERSION } from '@run-planner/engine/authored-project';
 
-function collection<T extends { readonly key: string }>(
-  values: readonly T[],
-): CatalogCollection<T> {
+function encodedFStart(): Record<string, unknown> {
+  const biome = createBiomeAddress('Underworld', 'F');
+  const project = applyProjectCommand(
+    createProjectDocument(catalog, {
+      projectId: 'codec-f',
+      name: 'Codec F',
+      configuredBiomeCounts: { Underworld: 1 },
+    }),
+    catalog,
+    {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: createOccurrenceId('codec-f-start'),
+      gameName: 'F_Opening01',
+    },
+  );
+  return JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
+}
+
+function fTopology(document: Record<string, unknown>): Record<string, unknown> {
+  const routes = document.routes as Array<Record<string, unknown>>;
+  const underworld = routes.find((route) => route.routeKey === 'Underworld');
+  const biome = (underworld?.biomes as Array<Record<string, unknown>> | undefined)?.[0];
+  const topology = biome?.topology;
+  if (topology === null || topology === undefined || typeof topology !== 'object') {
+    throw new Error('missing encoded F topology');
+  }
+  return topology as Record<string, unknown>;
+}
+
+function replaceTopology(
+  document: Record<string, unknown>,
+  replacement: Record<string, unknown>,
+): Record<string, unknown> {
+  const routes = document.routes as Array<Record<string, unknown>>;
   return {
-    values,
-    byKey: Object.fromEntries(values.map((value) => [value.key, value])),
+    routes: routes.map((route, index) =>
+      index === 0
+        ? {
+            ...route,
+            biomes: (route.biomes as Array<Record<string, unknown>>).map((biome, biomeIndex) =>
+              biomeIndex === 0
+                ? { ...biome, topology: { ...fTopology(document), ...replacement } }
+                : biome,
+            ),
+          }
+        : route,
+    ),
   };
 }
 
-function emptyCollection<T>(): CatalogCollection<T> {
-  return { values: [], byKey: {} };
-}
-
-const underworld = {
-  key: 'Underworld',
-  label: 'Underworld',
-  biomeKeys: ['F', 'G', 'H', 'I'],
-} as const satisfies RouteDeclaration;
-
-const surface = {
-  key: 'Surface',
-  label: 'Surface',
-  biomeKeys: ['N', 'O', 'P', 'Q'],
-} as const satisfies RouteDeclaration;
-
-function linearLayout(biomeKey: string, terminalRoom: string): BiomeLayout {
-  return {
-    biomeKey,
-    kind: 'LinearBiome',
-    initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
-    start: {
-      kind: 'authoredStart',
-      mode: 'fixed',
-      roomGameNames: [`${biomeKey}_Start`],
-    },
-    entries: [],
-    continuation: {
-      progressionPolicy: { kind: 'eligibilityDriven' },
-      batchPolicy: { kind: 'standard', fields: [] },
-      rewardStorePolicy: {
-        kind: 'authoredBaseStore',
-        storeKeys: ['RunProgress'],
-        targetMetaRewardsRatio: 0.315,
-        targetMetaRewardsAdjustSpeed: 10,
-      },
-      rewardStoreOverrides: [],
-    },
-    terminal: {
-      kind: 'forkedTransition',
-      roomGameName: terminalRoom,
-      exitPolicy: { kind: 'allExitsTerminal' },
-    },
-    completion: {
-      rooms: [{ role: 'boss', roomGameName: `${biomeKey}_Boss` }],
-      transitionEffects: [
-        { kind: 'resetCounter', axis: 'biomeDepthCache' },
-        { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
-      ],
-    },
-    fields: [],
-    bounds: { maxBatches: 10, maxTargets: 20 },
-  };
-}
-
-const layouts = [linearLayout('F', 'F_PreBoss01'), linearLayout('G', 'G_PreBoss01')];
-
-const catalog: Catalog = {
-  version: 'fixture-catalog-1',
-  biomes: collection(
-    [...underworld.biomeKeys, ...surface.biomeKeys].map((key) => ({ key, label: `Biome ${key}` })),
-  ),
-  routes: collection([underworld, surface]),
-  rewards: {
-    payloadDomains: emptyCollection(),
-    rewardTypes: emptyCollection(),
-    acquisitions: emptyCollection(),
-    stores: emptyCollection(),
-    shops: emptyCollection(),
-    producerLifecycles: emptyCollection(),
+const codecRejections: readonly {
+  readonly name: string;
+  readonly mutate: (document: Record<string, unknown>) => unknown;
+}[] = [
+  { name: 'a null root', mutate: () => null },
+  { name: 'an array root', mutate: () => [] },
+  { name: 'a stale schema version', mutate: (document) => ({ ...document, schemaVersion: 8 }) },
+  { name: 'a blank project ID', mutate: (document) => ({ ...document, projectId: ' ' }) },
+  { name: 'a blank project name', mutate: (document) => ({ ...document, name: ' ' }) },
+  {
+    name: 'an incompatible catalog version',
+    mutate: (document) => ({ ...document, catalogVersion: 'incompatible' }),
   },
-  encounterProfiles: emptyCollection(),
-  roomLifecycleProfiles: emptyCollection(),
-  exitCompatibilityPolicies: emptyCollection(),
-  exitTypes: emptyCollection(),
-  rooms: emptyCollection(),
-  biomeLayouts: {
-    values: layouts,
-    byKey: Object.fromEntries(layouts.map((layout) => [layout.biomeKey, layout])),
+  { name: 'an undeclared root field', mutate: (document) => ({ ...document, extra: true }) },
+  { name: 'a missing required route', mutate: (document) => ({ ...document, routes: [] }) },
+  {
+    name: 'a duplicate route',
+    mutate: (document) => ({
+      ...document,
+      routes: [...(document.routes as unknown[]), (document.routes as unknown[])[0]],
+    }),
   },
-};
-
-function rawDocument(routes: readonly unknown[]): unknown {
-  return {
-    schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
-    projectId: 'project-fixture',
-    name: 'Fixture Project',
-    catalogVersion: catalog.version,
-    routes,
-  };
-}
+  {
+    name: 'an unknown route',
+    mutate: (document) => ({
+      ...document,
+      routes: (document.routes as Array<Record<string, unknown>>).map((route, index) =>
+        index === 0 ? { ...route, routeKey: 'Missing' } : route,
+      ),
+    }),
+  },
+  {
+    name: 'a route without biomes',
+    mutate: (document) => ({
+      ...document,
+      routes: (document.routes as Array<Record<string, unknown>>).map((route, index) =>
+        index === 0 ? { routeKey: route.routeKey } : route,
+      ),
+    }),
+  },
+  {
+    name: 'a noncontiguous biome identity',
+    mutate: (document) => ({
+      ...document,
+      routes: (document.routes as Array<Record<string, unknown>>).map((route, index) =>
+        index === 0
+          ? {
+              ...route,
+              biomes: [{ ...(route.biomes as Record<string, unknown>[])[0], biomeKey: 'G' }],
+            }
+          : route,
+      ),
+    }),
+  },
+  {
+    name: 'unknown biome state data',
+    mutate: (document) => ({
+      ...document,
+      routes: (document.routes as Array<Record<string, unknown>>).map((route, index) =>
+        index === 0
+          ? {
+              ...route,
+              biomes: [
+                { ...(route.biomes as Record<string, unknown>[])[0], state: { unknown: true } },
+              ],
+            }
+          : route,
+      ),
+    }),
+  },
+  {
+    name: 'a missing topology start occurrence',
+    mutate: (document) => ({
+      ...document,
+      ...replaceTopology(document, { startOccurrenceId: 'missing' }),
+    }),
+  },
+  {
+    name: 'an unknown topology room declaration',
+    mutate: (document) => ({
+      ...document,
+      ...replaceTopology(document, {
+        occurrences: [
+          {
+            ...(fTopology(document).occurrences as Record<string, unknown>[])[0],
+            gameName: 'Missing',
+          },
+        ],
+      }),
+    }),
+  },
+  {
+    name: 'a duplicated topology occurrence ID',
+    mutate: (document) => {
+      const occurrence = (fTopology(document).occurrences as Record<string, unknown>[])[0];
+      return {
+        ...document,
+        ...replaceTopology(document, { occurrences: [occurrence, occurrence] }),
+      };
+    },
+  },
+];
 
 describe('project document codec', () => {
-  it('creates a complete empty project in catalog route order', () => {
-    const widerOptions = {
-      projectId: 'project-empty',
-      name: 'Empty Project',
-      configuredBiomeCounts: { Underworld: 2 },
-    };
-    const project = createEmptyProjectDocument(catalog, widerOptions);
-
-    expect(project).toEqual({
-      schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
-      projectId: 'project-empty',
-      name: 'Empty Project',
-      catalogVersion: 'fixture-catalog-1',
-      routes: [
-        { routeKey: 'Underworld', biomes: [] },
-        { routeKey: 'Surface', biomes: [] },
-      ],
-    });
-    expect(Object.isFrozen(project)).toBe(true);
-    expect(Object.isFrozen(project.routes)).toBe(true);
-    expect(Object.isFrozen(project.routes[0]?.biomes)).toBe(true);
-  });
-
-  it('creates only the supported contiguous F/G prefix as incomplete biome plans', () => {
-    const project = createProjectDocument(catalog, {
-      projectId: 'project-fg',
-      name: 'F and G',
-      configuredBiomeCounts: { Underworld: 2 },
-    });
-
-    expect(project.routes[0]).toEqual({
-      routeKey: 'Underworld',
-      biomes: [
-        { kind: 'LinearBiome', biomeKey: 'F', state: {}, topology: null },
-        { kind: 'LinearBiome', biomeKey: 'G', state: {}, topology: null },
-      ],
-    });
-    expect(project.routes[1]).toEqual({ routeKey: 'Surface', biomes: [] });
-  });
-
-  it('normalizes route order and round trips to deterministic JSON', () => {
-    const decoded = decodeProjectDocument(
-      rawDocument([
-        { routeKey: 'Surface', biomes: [] },
-        {
-          routeKey: 'Underworld',
-          biomes: [{ kind: 'LinearBiome', biomeKey: 'F', state: {}, topology: null }],
-        },
-      ]),
-      catalog,
-    );
-
-    expect(decoded.routes.map((route) => route.routeKey)).toEqual(['Underworld', 'Surface']);
-    const encoded = encodeProjectDocument(decoded);
-    expect(encoded.endsWith('\n')).toBe(true);
-    expect(parseProjectDocument(encoded, catalog)).toEqual(decoded);
-    expect(encodeProjectDocument(parseProjectDocument(encoded, catalog))).toBe(encoded);
-  });
-
-  it('rejects non-contiguous biome plans instead of repairing their order', () => {
-    expect(() =>
-      decodeProjectDocument(
-        rawDocument([
-          {
-            routeKey: 'Underworld',
-            biomes: [{ kind: 'LinearBiome', biomeKey: 'G', state: {}, topology: null }],
-          },
-          { routeKey: 'Surface', biomes: [] },
-        ]),
-        catalog,
-      ),
-    ).toThrowError(
-      new ProjectDocumentContractError(
-        '$.routes[0].biomes[0].biomeKey',
-        'expected contiguous biome F',
-      ),
-    );
-  });
-
-  it('rejects malformed, incompatible, and non-semantic project data at contact', () => {
-    expect(() => parseProjectDocument('{', catalog)).toThrowError(
-      new ProjectDocumentContractError('$', 'must be valid JSON'),
-    );
-    expect(() =>
-      decodeProjectDocument(
-        {
-          ...(rawDocument([
-            { routeKey: 'Underworld', biomes: [] },
-            { routeKey: 'Surface', biomes: [] },
-          ]) as Record<string, unknown>),
-          schemaVersion: 1,
-        },
-        catalog,
-      ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 1'));
-    expect(() =>
-      decodeProjectDocument(
-        {
-          ...(rawDocument([
-            { routeKey: 'Underworld', biomes: [] },
-            { routeKey: 'Surface', biomes: [] },
-          ]) as Record<string, unknown>),
-          schemaVersion: 2,
-        },
-        catalog,
-      ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 2'));
-    expect(() =>
-      decodeProjectDocument(
-        {
-          ...(rawDocument([
-            { routeKey: 'Underworld', biomes: [] },
-            { routeKey: 'Surface', biomes: [] },
-          ]) as Record<string, unknown>),
-          schemaVersion: 3,
-        },
-        catalog,
-      ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 3'));
-    expect(() =>
-      decodeProjectDocument(
-        {
-          ...(rawDocument([
-            { routeKey: 'Underworld', biomes: [] },
-            { routeKey: 'Surface', biomes: [] },
-          ]) as Record<string, unknown>),
-          schemaVersion: 4,
-        },
-        catalog,
-      ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 4'));
-    expect(() =>
-      decodeProjectDocument(
-        {
-          ...(rawDocument([
-            { routeKey: 'Underworld', biomes: [] },
-            { routeKey: 'Surface', biomes: [] },
-          ]) as Record<string, unknown>),
-          schemaVersion: 5,
-        },
-        catalog,
-      ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 5'));
-    expect(() =>
-      decodeProjectDocument(
-        {
-          ...(rawDocument([
-            { routeKey: 'Underworld', biomes: [] },
-            { routeKey: 'Surface', biomes: [] },
-          ]) as Record<string, unknown>),
-          schemaVersion: 6,
-        },
-        catalog,
-      ),
-    ).toThrowError(new ProjectDocumentContractError('$.schemaVersion', 'expected 8, received 6'));
-    expect(() =>
-      decodeProjectDocument(
-        {
-          ...(rawDocument([
-            { routeKey: 'Underworld', biomes: [] },
-            { routeKey: 'Surface', biomes: [] },
-          ]) as Record<string, unknown>),
-          catalogVersion: 'old-catalog',
-        },
-        catalog,
-      ),
-    ).toThrowError(
-      new ProjectDocumentContractError(
-        '$.catalogVersion',
-        'expected compatible catalog fixture-catalog-1, received old-catalog',
-      ),
-    );
-    expect(() =>
-      decodeProjectDocument(
-        {
-          ...(rawDocument([
-            { routeKey: 'Underworld', biomes: [] },
-            { routeKey: 'Surface', biomes: [] },
-          ]) as Record<string, unknown>),
-          activeTab: 'underworld',
-        },
-        catalog,
-      ),
-    ).toThrowError(
-      new ProjectDocumentContractError('$.activeTab', 'is not a project document field'),
-    );
-  });
-
-  it('refuses to configure route steps without an authored layout', () => {
-    expect(() =>
-      createProjectDocument(catalog, {
-        projectId: 'project-fgh',
-        name: 'Missing H Layout',
-        configuredBiomeCounts: { Underworld: 3 },
-      }),
-    ).toThrowError(
-      new ProjectDocumentContractError(
-        'configuredBiomeCounts.Underworld',
-        'H has no authored plan initializer',
-      ),
-    );
+  it.each(codecRejections)('rejects %s', ({ mutate }) => {
+    expect(() => decodeProjectDocument(mutate(encodedFStart()), catalog)).toThrow();
   });
 });

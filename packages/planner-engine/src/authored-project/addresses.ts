@@ -8,70 +8,58 @@ interface BiomeOwnedAddress {
 export interface ProjectAddress {
   readonly kind: 'project';
 }
-
 export interface RouteAddress {
   readonly kind: 'route';
   readonly routeKey: string;
 }
-
 export interface BiomeAddress extends BiomeOwnedAddress {
   readonly kind: 'biome';
 }
-
 export interface BiomeFieldAddress extends BiomeOwnedAddress {
   readonly kind: 'biomeField';
   readonly fieldKey: string;
 }
-
 export interface OccurrenceAddress extends BiomeOwnedAddress {
   readonly kind: 'occurrence';
   readonly occurrenceId: OccurrenceId;
 }
-
+export interface IncomingRewardAddress extends BiomeOwnedAddress {
+  readonly kind: 'incomingReward';
+  readonly occurrenceId: OccurrenceId;
+}
 export interface CompletionRoomAddress extends BiomeOwnedAddress {
   readonly kind: 'completionRoom';
   readonly role: 'boss' | 'postboss';
 }
 
-export interface FixedEntryRoomAddress extends BiomeOwnedAddress {
-  readonly kind: 'fixedEntryRoom';
-  readonly role: string;
+export type ExitDecisionSourceAddress =
+  | { readonly kind: 'occurrence'; readonly occurrenceId: OccurrenceId }
+  | { readonly kind: 'hubDecision'; readonly decisionKey: string };
+
+export interface ExitDecisionAddress extends BiomeOwnedAddress {
+  readonly kind: 'exitDecision';
+  readonly source: ExitDecisionSourceAddress;
 }
 
-export interface FixedEntryRewardAddress extends BiomeOwnedAddress {
-  readonly kind: 'fixedEntryReward';
-  readonly role: string;
-}
-
-export interface FixedEntryTargetAddress extends BiomeOwnedAddress {
-  readonly kind: 'fixedEntryTarget';
-  readonly role: string;
-}
-
-export interface ContinuationAddress extends BiomeOwnedAddress {
-  readonly kind: 'continuation';
-  readonly parentOccurrenceId: OccurrenceId | null;
+export interface ExitSelectionAddress extends BiomeOwnedAddress {
+  readonly kind: 'exitSelection';
+  readonly source: ExitDecisionSourceAddress;
 }
 
 export interface BatchRewardStoreAddress extends BiomeOwnedAddress {
   readonly kind: 'batchRewardStore';
-  readonly parentOccurrenceId: OccurrenceId | null;
+  readonly source: ExitDecisionSourceAddress;
 }
 
 export interface TargetAddress extends BiomeOwnedAddress {
   readonly kind: 'target';
-  readonly parentOccurrenceId: OccurrenceId | null;
-  readonly exitIndex: number;
+  readonly source: ExitDecisionSourceAddress;
+  readonly exitKey: string;
 }
 
-export interface PickedAddress extends BiomeOwnedAddress {
-  readonly kind: 'picked';
-  readonly parentOccurrenceId: OccurrenceId | null;
-}
-
-export interface IncomingRewardAddress extends BiomeOwnedAddress {
-  readonly kind: 'incomingReward';
-  readonly occurrenceId: OccurrenceId;
+export interface HubDecisionAddress extends BiomeOwnedAddress {
+  readonly kind: 'hubDecision';
+  readonly hubKey: string;
 }
 
 export interface LocalRewardAddress extends BiomeOwnedAddress {
@@ -80,57 +68,51 @@ export interface LocalRewardAddress extends BiomeOwnedAddress {
   readonly groupKey: string;
   readonly slotKey: string;
 }
-
 export interface LocalChildAddress extends BiomeOwnedAddress {
   readonly kind: 'localChild';
   readonly occurrenceId: OccurrenceId;
   readonly groupKey: string;
   readonly slotKey: string;
 }
-
 export interface LocalChildGroupAddress extends BiomeOwnedAddress {
   readonly kind: 'localChildGroup';
   readonly occurrenceId: OccurrenceId;
   readonly groupKey: string;
 }
-
 export interface RewardWheelAddress extends BiomeOwnedAddress {
   readonly kind: 'rewardWheel';
   readonly occurrenceId: OccurrenceId;
   readonly wheelKey: string;
 }
-
 export interface RewardWheelOfferAddress extends BiomeOwnedAddress {
   readonly kind: 'rewardWheelOffer';
   readonly occurrenceId: OccurrenceId;
   readonly wheelKey: string;
   readonly offerKey: string;
 }
-
 export interface HubSlotAddress extends BiomeOwnedAddress {
   readonly kind: 'hubSlot';
+  readonly hubKey: string;
   readonly hubSlotKey: string;
 }
-
 export interface HubOpenSetAddress extends BiomeOwnedAddress {
   readonly kind: 'hubOpenSet';
+  readonly hubKey: string;
 }
-
 export interface HubRoomAddress extends BiomeOwnedAddress {
   readonly kind: 'hubRoom';
+  readonly hubKey: string;
 }
-
 export interface HubVisitAddress extends BiomeOwnedAddress {
   readonly kind: 'hubVisit';
+  readonly hubKey: string;
   readonly visitIndex: number;
 }
-
 export interface ShopPurchaseAddress extends BiomeOwnedAddress {
   readonly kind: 'shopPurchase';
   readonly occurrenceId: OccurrenceId;
   readonly offerKey: string;
 }
-
 export interface ShopOfferAddress extends BiomeOwnedAddress {
   readonly kind: 'shopOffer';
   readonly occurrenceId: OccurrenceId;
@@ -142,70 +124,71 @@ export type SemanticAddress =
   | RouteAddress
   | BiomeAddress
   | BiomeFieldAddress
-  | BatchRewardStoreAddress
-  | CompletionRoomAddress
-  | ContinuationAddress
-  | FixedEntryRewardAddress
-  | FixedEntryRoomAddress
-  | FixedEntryTargetAddress
+  | OccurrenceAddress
   | IncomingRewardAddress
+  | CompletionRoomAddress
+  | ExitDecisionAddress
+  | ExitSelectionAddress
+  | BatchRewardStoreAddress
+  | TargetAddress
+  | HubDecisionAddress
+  | LocalRewardAddress
+  | LocalChildAddress
+  | LocalChildGroupAddress
+  | RewardWheelAddress
+  | RewardWheelOfferAddress
   | HubSlotAddress
   | HubOpenSetAddress
   | HubRoomAddress
   | HubVisitAddress
-  | LocalChildAddress
-  | LocalChildGroupAddress
-  | LocalRewardAddress
-  | OccurrenceAddress
-  | PickedAddress
-  | RewardWheelAddress
-  | RewardWheelOfferAddress
-  | ShopOfferAddress
   | ShopPurchaseAddress
-  | TargetAddress;
+  | ShopOfferAddress;
 
 export class SemanticAddressContractError extends Error {
-  readonly field: string;
-  readonly detail: string;
-
-  constructor(field: string, detail: string) {
+  constructor(
+    readonly field: string,
+    readonly detail: string,
+  ) {
     super(`${field}: ${detail}`);
     this.name = 'SemanticAddressContractError';
-    this.field = field;
-    this.detail = detail;
   }
 }
 
 function nonBlank(value: string, field: string): string {
-  if (value.trim().length === 0) {
-    throw new SemanticAddressContractError(field, 'must not be blank');
-  }
+  if (value.trim().length === 0) throw new SemanticAddressContractError(field, 'must not be blank');
   return value;
 }
-
 function positiveInteger(value: number, field: string): number {
-  if (!Number.isInteger(value) || value <= 0) {
+  if (!Number.isInteger(value) || value <= 0)
     throw new SemanticAddressContractError(field, 'must be a positive integer');
-  }
   return value;
 }
-
-function biomeOwner(address: BiomeAddress): BiomeOwnedAddress {
-  return { routeKey: address.routeKey, biomeKey: address.biomeKey };
+function owner(biome: BiomeAddress): BiomeOwnedAddress {
+  return { routeKey: biome.routeKey, biomeKey: biome.biomeKey };
+}
+function source(value: ExitDecisionSourceAddress): ExitDecisionSourceAddress {
+  if (value.kind === 'occurrence')
+    return Object.freeze({ kind: 'occurrence', occurrenceId: value.occurrenceId });
+  if (value.kind === 'hubDecision')
+    return Object.freeze({
+      kind: 'hubDecision',
+      decisionKey: nonBlank(value.decisionKey, 'decisionKey'),
+    });
+  throw new SemanticAddressContractError(
+    'source.kind',
+    `unknown exit decision source ${String((value as { kind?: unknown }).kind)}`,
+  );
 }
 
 export function createOccurrenceId(value: string): OccurrenceId {
   return nonBlank(value, 'occurrenceId') as OccurrenceId;
 }
-
 export function createProjectAddress(): ProjectAddress {
   return Object.freeze({ kind: 'project' });
 }
-
 export function createRouteAddress(routeKey: string): RouteAddress {
   return Object.freeze({ kind: 'route', routeKey: nonBlank(routeKey, 'routeKey') });
 }
-
 export function createBiomeAddress(routeKey: string, biomeKey: string): BiomeAddress {
   return Object.freeze({
     kind: 'biome',
@@ -213,106 +196,72 @@ export function createBiomeAddress(routeKey: string, biomeKey: string): BiomeAdd
     biomeKey: nonBlank(biomeKey, 'biomeKey'),
   });
 }
-
 export function createBiomeFieldAddress(biome: BiomeAddress, fieldKey: string): BiomeFieldAddress {
   return Object.freeze({
     kind: 'biomeField',
-    ...biomeOwner(biome),
+    ...owner(biome),
     fieldKey: nonBlank(fieldKey, 'fieldKey'),
   });
 }
-
 export function createOccurrenceAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
 ): OccurrenceAddress {
-  return Object.freeze({ kind: 'occurrence', ...biomeOwner(biome), occurrenceId });
+  return Object.freeze({ kind: 'occurrence', ...owner(biome), occurrenceId });
 }
-
 export function createCompletionRoomAddress(
   biome: BiomeAddress,
   role: CompletionRoomAddress['role'],
 ): CompletionRoomAddress {
-  if (role !== 'boss' && role !== 'postboss') {
-    throw new SemanticAddressContractError('role', `unknown completion role ${String(role)}`);
-  }
-  return Object.freeze({ kind: 'completionRoom', ...biomeOwner(biome), role });
+  return Object.freeze({ kind: 'completionRoom', ...owner(biome), role });
 }
-
-export function createFixedEntryRoomAddress(
+export function createExitDecisionAddress(
   biome: BiomeAddress,
-  role: string,
-): FixedEntryRoomAddress {
-  return Object.freeze({
-    kind: 'fixedEntryRoom',
-    ...biomeOwner(biome),
-    role: nonBlank(role, 'role'),
-  });
+  decisionSource: ExitDecisionSourceAddress,
+): ExitDecisionAddress {
+  return Object.freeze({ kind: 'exitDecision', ...owner(biome), source: source(decisionSource) });
 }
-
-export function createFixedEntryRewardAddress(
+export function createExitSelectionAddress(
   biome: BiomeAddress,
-  role: string,
-): FixedEntryRewardAddress {
-  return Object.freeze({
-    kind: 'fixedEntryReward',
-    ...biomeOwner(biome),
-    role: nonBlank(role, 'role'),
-  });
+  decisionSource: ExitDecisionSourceAddress,
+): ExitSelectionAddress {
+  return Object.freeze({ kind: 'exitSelection', ...owner(biome), source: source(decisionSource) });
 }
-
-export function createFixedEntryTargetAddress(
-  biome: BiomeAddress,
-  role: string,
-): FixedEntryTargetAddress {
-  return Object.freeze({
-    kind: 'fixedEntryTarget',
-    ...biomeOwner(biome),
-    role: nonBlank(role, 'role'),
-  });
-}
-
-export function createContinuationAddress(
-  biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId | null,
-): ContinuationAddress {
-  return Object.freeze({ kind: 'continuation', ...biomeOwner(biome), parentOccurrenceId });
-}
-
 export function createBatchRewardStoreAddress(
   biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId | null,
+  decisionSource: ExitDecisionSourceAddress,
 ): BatchRewardStoreAddress {
-  return Object.freeze({ kind: 'batchRewardStore', ...biomeOwner(biome), parentOccurrenceId });
+  return Object.freeze({
+    kind: 'batchRewardStore',
+    ...owner(biome),
+    source: source(decisionSource),
+  });
 }
-
 export function createTargetAddress(
   biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId | null,
-  exitIndex: number,
+  decisionSource: ExitDecisionSourceAddress,
+  exitKey: string,
 ): TargetAddress {
   return Object.freeze({
     kind: 'target',
-    ...biomeOwner(biome),
-    parentOccurrenceId,
-    exitIndex: positiveInteger(exitIndex, 'exitIndex'),
+    ...owner(biome),
+    source: source(decisionSource),
+    exitKey: nonBlank(exitKey, 'exitKey'),
   });
 }
-
-export function createPickedAddress(
-  biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId | null,
-): PickedAddress {
-  return Object.freeze({ kind: 'picked', ...biomeOwner(biome), parentOccurrenceId });
+export function createHubDecisionAddress(biome: BiomeAddress, hubKey: string): HubDecisionAddress {
+  return Object.freeze({
+    kind: 'hubDecision',
+    ...owner(biome),
+    hubKey: nonBlank(hubKey, 'hubKey'),
+  });
 }
-
 export function createIncomingRewardAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
 ): IncomingRewardAddress {
-  return Object.freeze({ kind: 'incomingReward', ...biomeOwner(biome), occurrenceId });
+  return Object.freeze({ kind: 'incomingReward', ...owner(biome), occurrenceId });
 }
-
 export function createLocalRewardAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -321,13 +270,12 @@ export function createLocalRewardAddress(
 ): LocalRewardAddress {
   return Object.freeze({
     kind: 'localReward',
-    ...biomeOwner(biome),
+    ...owner(biome),
     occurrenceId,
     groupKey: nonBlank(groupKey, 'groupKey'),
     slotKey: nonBlank(slotKey, 'slotKey'),
   });
 }
-
 export function createLocalChildAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -336,13 +284,12 @@ export function createLocalChildAddress(
 ): LocalChildAddress {
   return Object.freeze({
     kind: 'localChild',
-    ...biomeOwner(biome),
+    ...owner(biome),
     occurrenceId,
     groupKey: nonBlank(groupKey, 'groupKey'),
     slotKey: nonBlank(slotKey, 'slotKey'),
   });
 }
-
 export function createLocalChildGroupAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -350,12 +297,11 @@ export function createLocalChildGroupAddress(
 ): LocalChildGroupAddress {
   return Object.freeze({
     kind: 'localChildGroup',
-    ...biomeOwner(biome),
+    ...owner(biome),
     occurrenceId,
     groupKey: nonBlank(groupKey, 'groupKey'),
   });
 }
-
 export function createRewardWheelAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -363,12 +309,11 @@ export function createRewardWheelAddress(
 ): RewardWheelAddress {
   return Object.freeze({
     kind: 'rewardWheel',
-    ...biomeOwner(biome),
+    ...owner(biome),
     occurrenceId,
     wheelKey: nonBlank(wheelKey, 'wheelKey'),
   });
 }
-
 export function createRewardWheelOfferAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -377,37 +322,42 @@ export function createRewardWheelOfferAddress(
 ): RewardWheelOfferAddress {
   return Object.freeze({
     kind: 'rewardWheelOffer',
-    ...biomeOwner(biome),
+    ...owner(biome),
     occurrenceId,
     wheelKey: nonBlank(wheelKey, 'wheelKey'),
     offerKey: nonBlank(offerKey, 'offerKey'),
   });
 }
-
-export function createHubSlotAddress(biome: BiomeAddress, hubSlotKey: string): HubSlotAddress {
+export function createHubSlotAddress(
+  biome: BiomeAddress,
+  hubKey: string,
+  hubSlotKey: string,
+): HubSlotAddress {
   return Object.freeze({
     kind: 'hubSlot',
-    ...biomeOwner(biome),
+    ...owner(biome),
+    hubKey: nonBlank(hubKey, 'hubKey'),
     hubSlotKey: nonBlank(hubSlotKey, 'hubSlotKey'),
   });
 }
-
-export function createHubOpenSetAddress(biome: BiomeAddress): HubOpenSetAddress {
-  return Object.freeze({ kind: 'hubOpenSet', ...biomeOwner(biome) });
+export function createHubOpenSetAddress(biome: BiomeAddress, hubKey: string): HubOpenSetAddress {
+  return Object.freeze({ kind: 'hubOpenSet', ...owner(biome), hubKey: nonBlank(hubKey, 'hubKey') });
 }
-
-export function createHubRoomAddress(biome: BiomeAddress): HubRoomAddress {
-  return Object.freeze({ kind: 'hubRoom', ...biomeOwner(biome) });
+export function createHubRoomAddress(biome: BiomeAddress, hubKey: string): HubRoomAddress {
+  return Object.freeze({ kind: 'hubRoom', ...owner(biome), hubKey: nonBlank(hubKey, 'hubKey') });
 }
-
-export function createHubVisitAddress(biome: BiomeAddress, visitIndex: number): HubVisitAddress {
+export function createHubVisitAddress(
+  biome: BiomeAddress,
+  hubKey: string,
+  visitIndex: number,
+): HubVisitAddress {
   return Object.freeze({
     kind: 'hubVisit',
-    ...biomeOwner(biome),
+    ...owner(biome),
+    hubKey: nonBlank(hubKey, 'hubKey'),
     visitIndex: positiveInteger(visitIndex, 'visitIndex'),
   });
 }
-
 export function createShopPurchaseAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -415,12 +365,11 @@ export function createShopPurchaseAddress(
 ): ShopPurchaseAddress {
   return Object.freeze({
     kind: 'shopPurchase',
-    ...biomeOwner(biome),
+    ...owner(biome),
     occurrenceId,
     offerKey: nonBlank(offerKey, 'offerKey'),
   });
 }
-
 export function createShopOfferAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -428,103 +377,58 @@ export function createShopOfferAddress(
 ): ShopOfferAddress {
   return Object.freeze({
     kind: 'shopOffer',
-    ...biomeOwner(biome),
+    ...owner(biome),
     occurrenceId,
     offerKey: nonBlank(offerKey, 'offerKey'),
   });
 }
 
 export function semanticAddressKey(address: SemanticAddress): string {
+  const base = [
+    address.kind,
+    'routeKey' in address ? address.routeKey : undefined,
+    'biomeKey' in address ? address.biomeKey : undefined,
+  ];
   switch (address.kind) {
     case 'project':
       return JSON.stringify([address.kind]);
     case 'route':
       return JSON.stringify([address.kind, address.routeKey]);
     case 'biome':
-      return JSON.stringify([address.kind, address.routeKey, address.biomeKey]);
+      return JSON.stringify(base);
     case 'biomeField':
-      return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.fieldKey]);
+      return JSON.stringify([...base, address.fieldKey]);
     case 'occurrence':
     case 'incomingReward':
-      return JSON.stringify([
-        address.kind,
-        address.routeKey,
-        address.biomeKey,
-        address.occurrenceId,
-      ]);
-    case 'localReward':
-    case 'localChild':
-      return JSON.stringify([
-        address.kind,
-        address.routeKey,
-        address.biomeKey,
-        address.occurrenceId,
-        address.groupKey,
-        address.slotKey,
-      ]);
-    case 'localChildGroup':
-      return JSON.stringify([
-        address.kind,
-        address.routeKey,
-        address.biomeKey,
-        address.occurrenceId,
-        address.groupKey,
-      ]);
-    case 'rewardWheel':
-      return JSON.stringify([
-        address.kind,
-        address.routeKey,
-        address.biomeKey,
-        address.occurrenceId,
-        address.wheelKey,
-      ]);
-    case 'rewardWheelOffer':
-      return JSON.stringify([
-        address.kind,
-        address.routeKey,
-        address.biomeKey,
-        address.occurrenceId,
-        address.wheelKey,
-        address.offerKey,
-      ]);
+      return JSON.stringify([...base, address.occurrenceId]);
+    case 'completionRoom':
+      return JSON.stringify([...base, address.role]);
+    case 'exitDecision':
+    case 'exitSelection':
+    case 'batchRewardStore':
+      return JSON.stringify([...base, address.source]);
+    case 'target':
+      return JSON.stringify([...base, address.source, address.exitKey]);
+    case 'hubDecision':
+      return JSON.stringify([...base, address.hubKey]);
     case 'hubSlot':
-      return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.hubSlotKey]);
+      return JSON.stringify([...base, address.hubKey, address.hubSlotKey]);
     case 'hubOpenSet':
     case 'hubRoom':
-      return JSON.stringify([address.kind, address.routeKey, address.biomeKey]);
+      return JSON.stringify([...base, address.hubKey]);
     case 'hubVisit':
-      return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.visitIndex]);
-    case 'completionRoom':
-      return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.role]);
-    case 'fixedEntryRoom':
-    case 'fixedEntryReward':
-    case 'fixedEntryTarget':
-      return JSON.stringify([address.kind, address.routeKey, address.biomeKey, address.role]);
-    case 'continuation':
-    case 'batchRewardStore':
-    case 'picked':
-      return JSON.stringify([
-        address.kind,
-        address.routeKey,
-        address.biomeKey,
-        address.parentOccurrenceId,
-      ]);
-    case 'target':
-      return JSON.stringify([
-        address.kind,
-        address.routeKey,
-        address.biomeKey,
-        address.parentOccurrenceId,
-        address.exitIndex,
-      ]);
+      return JSON.stringify([...base, address.hubKey, address.visitIndex]);
+    case 'localReward':
+    case 'localChild':
+      return JSON.stringify([...base, address.occurrenceId, address.groupKey, address.slotKey]);
+    case 'localChildGroup':
+      return JSON.stringify([...base, address.occurrenceId, address.groupKey]);
+    case 'rewardWheel':
+      return JSON.stringify([...base, address.occurrenceId, address.wheelKey]);
+    case 'rewardWheelOffer':
+      return JSON.stringify([...base, address.occurrenceId, address.wheelKey, address.offerKey]);
     case 'shopOffer':
     case 'shopPurchase':
-      return JSON.stringify([
-        address.kind,
-        address.routeKey,
-        address.biomeKey,
-        address.occurrenceId,
-        address.offerKey,
-      ]);
+      return JSON.stringify([...base, address.occurrenceId, address.offerKey]);
   }
 }

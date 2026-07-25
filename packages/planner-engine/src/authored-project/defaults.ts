@@ -50,14 +50,11 @@ export function createProjectDocument(
             `${biomeKey} has no authored plan initializer`,
           );
         }
-        return layout.kind === 'LinearBiome'
-          ? {
-              kind: 'LinearBiome' as const,
-              biomeKey,
-              state: createInitialBiomeState(layout),
-              topology: null,
-            }
-          : { kind: 'HubBiome' as const, biomeKey, topology: null };
+        return {
+          biomeKey,
+          state: createInitialBiomeState(layout),
+          topology: null,
+        };
       }),
     };
   });

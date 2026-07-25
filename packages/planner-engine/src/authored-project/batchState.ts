@@ -1,8 +1,8 @@
-import type { GeneratedBatchPolicy } from '../catalog-schema';
+import type { NormalDoorBatchPolicy } from '../catalog-schema';
 import type { AuthoredBatchState } from './model';
 import { expectExactKeys, expectRecord, expectString, failProjectDocument } from './validation';
 
-export function createInitialBatchState(policy: GeneratedBatchPolicy): AuthoredBatchState {
+export function createInitialBatchState(policy: NormalDoorBatchPolicy): AuthoredBatchState {
   switch (policy.kind) {
     case 'standard':
     case 'clockwork':
@@ -13,7 +13,7 @@ export function createInitialBatchState(policy: GeneratedBatchPolicy): AuthoredB
 
 export function decodeBatchState(
   value: unknown,
-  policy: GeneratedBatchPolicy,
+  policy: NormalDoorBatchPolicy,
   path: string,
 ): AuthoredBatchState {
   if (policy.kind !== 'fields') {

@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 8 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 9 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -81,46 +81,38 @@ export interface RoomOccurrence {
   readonly state: AuthoredRoomState;
 }
 
-export interface LinearTargetReference {
-  readonly exitIndex: number;
+export interface ExitTargetReference {
+  readonly exitKey: string;
   readonly occurrenceId: OccurrenceId;
 }
 
-export interface LinearBatchContinuation {
+export type ExitDecisionSource =
+  | { readonly kind: 'occurrence'; readonly occurrenceId: OccurrenceId }
+  | { readonly kind: 'hubDecision'; readonly decisionKey: string };
+
+export type ExitSelection =
+  | { readonly kind: 'derived' }
+  | { readonly kind: 'unresolved' }
+  | { readonly kind: 'normal'; readonly exitKey: string };
+
+export interface LinkedNormalExit {
+  readonly kind: 'linked';
+  readonly exitKey: string;
+  readonly occurrenceId: OccurrenceId;
+}
+
+export interface NormalDoorBatch {
   readonly kind: 'batch';
-  readonly parentOccurrenceId: OccurrenceId | null;
   readonly rewardStore: BatchRewardStoreState;
   readonly batchState: AuthoredBatchState;
-  readonly targets: readonly LinearTargetReference[];
-  readonly pickedExitIndex: number | null;
+  readonly targets: readonly ExitTargetReference[];
 }
 
-export interface LinearTerminalContinuation {
-  readonly kind: 'terminal';
-  readonly parentOccurrenceId: OccurrenceId | null;
-  readonly rewardStore?: BatchRewardStoreState;
-  readonly targets: readonly LinearTargetReference[];
-  readonly pickedExitIndex: number | null;
-}
-
-export type LinearContinuation = LinearBatchContinuation | LinearTerminalContinuation;
-
-export interface LinearBiomeTopology {
-  readonly startOccurrenceId: OccurrenceId | null;
-  readonly occurrences: readonly RoomOccurrence[];
-  readonly continuations: readonly LinearContinuation[];
-}
-
-export interface LinearBiomePlan {
-  readonly kind: 'LinearBiome';
-  readonly biomeKey: string;
-  readonly state: AuthoredBiomeState;
-  readonly topology: LinearBiomeTopology | null;
-}
-
-export interface FixedAuthoredRoomReference {
-  readonly fixedSlotKey: string;
-  readonly occurrenceId: OccurrenceId;
+export interface ExitDecision {
+  readonly kind: 'exit';
+  readonly source: ExitDecisionSource;
+  readonly normal: LinkedNormalExit | NormalDoorBatch;
+  readonly selection: ExitSelection;
 }
 
 export interface HubTargetReference {
@@ -128,20 +120,26 @@ export interface HubTargetReference {
   readonly occurrenceId: OccurrenceId;
 }
 
-export interface HubBiomeTopology {
-  readonly occurrences: readonly RoomOccurrence[];
-  readonly fixedRooms: readonly FixedAuthoredRoomReference[];
+export interface HubDecision {
+  readonly kind: 'hub';
+  readonly hubKey: string;
   readonly openTargets: readonly HubTargetReference[];
   readonly visitOrder: readonly string[];
 }
 
-export interface HubBiomePlan {
-  readonly kind: 'HubBiome';
-  readonly biomeKey: string;
-  readonly topology: HubBiomeTopology | null;
+export type NextRoomDecision = ExitDecision | HubDecision;
+
+export interface BiomeTopology {
+  readonly startOccurrenceId: OccurrenceId;
+  readonly occurrences: readonly RoomOccurrence[];
+  readonly decisions: readonly NextRoomDecision[];
 }
 
-export type AuthoredBiomePlan = HubBiomePlan | LinearBiomePlan;
+export interface AuthoredBiomePlan {
+  readonly biomeKey: string;
+  readonly state: AuthoredBiomeState;
+  readonly topology: BiomeTopology | null;
+}
 
 export interface AuthoredRoutePlan {
   readonly routeKey: string;
