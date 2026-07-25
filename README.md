@@ -135,7 +135,9 @@ copied elsewhere.
   [implementation plan](docs/progress/IMPLEMENTATION_PLAN.md) for forward
   acceptance gates and
   [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
-  active frontier and chronological delivery record.
+  active frontier and chronological delivery record. The active Phase 7
+  reconciliation is the
+  [unified biome decisions and workspace tracker](docs/progress/HUB_WORKSPACE_RECONCILIATION.md).
 
 ## Source Evidence
 
