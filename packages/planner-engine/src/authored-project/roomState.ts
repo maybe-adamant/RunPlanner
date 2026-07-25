@@ -29,7 +29,7 @@ import {
   failProjectDocument,
 } from './validation';
 
-export type RoomOccurrenceRole = 'ordinary' | 'terminalFreeReward' | 'terminalShop';
+export type RoomOccurrenceRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
 
 export interface RoomStateContext {
   readonly role: RoomOccurrenceRole;
@@ -41,20 +41,7 @@ function requireOrdinaryRole(role: RoomOccurrenceRole, room: RoomDeclaration, pa
   if (role !== 'ordinary') {
     failProjectDocument(
       path,
-      `${authoredTemplateKey(room, path)} cannot use terminal role ${role}`,
-    );
-  }
-}
-
-function requireShopPrebossRole(
-  role: RoomOccurrenceRole,
-  room: RoomDeclaration,
-  path: string,
-): void {
-  if (role === 'terminalFreeReward') {
-    failProjectDocument(
-      path,
-      `${authoredTemplateKey(room, path)} cannot use terminal free-reward role`,
+      `${authoredTemplateKey(room, path)} cannot use preboss offer role ${role}`,
     );
   }
 }
@@ -96,6 +83,18 @@ function defaultCountedOffer(
     failProjectDocument(path, `${storeKey} is not available from this room`);
   }
   return offer;
+}
+
+/**
+ * A declaration-owned store narrows the set of defaults an occurrence may
+ * use.  A normal batch store is only the fallback for declarations that do
+ * not impose either a forced or individual store.
+ */
+function defaultCountedStoreKey(
+  room: RoomDeclaration,
+  batchStoreKey: string | undefined,
+): string | undefined {
+  return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? batchStoreKey;
 }
 
 function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: string): ShopState {
@@ -221,7 +220,7 @@ function defaultEphyraCombatState(
     kind: 'ephyraCombat',
     offer: defaultCountedOffer(
       requireCountedBinding(room, path),
-      resolvedStoreKey ?? room.forcedRewardStoreKey,
+      defaultCountedStoreKey(room, resolvedStoreKey),
       `${path}.offer`,
     ),
     sideRooms: Object.freeze(sideRooms),
@@ -262,7 +261,7 @@ export function createDefaultRoomState(
         kind: 'counted',
         offer: defaultCountedOffer(
           requireCountedBinding(room, path),
-          context.resolvedStoreKey ?? room.forcedRewardStoreKey ?? room.individualRewardStoreKey,
+          defaultCountedStoreKey(room, context.resolvedStoreKey),
           path,
         ),
       });
@@ -290,19 +289,11 @@ export function createDefaultRoomState(
           ? { shop: defaultShopState(catalog, requireShopBinding(room, path), path) }
           : {}),
       });
-    case 'ShopPreboss':
-      requireShopPrebossRole(role, room, path);
-      return Object.freeze({
-        kind: 'shop',
-        ...(entryActive
-          ? { shop: defaultShopState(catalog, requireShopBinding(room, path), path) }
-          : {}),
-      });
-    case 'ForkedPreboss':
+    case 'Preboss':
       if (role === 'ordinary') {
-        failProjectDocument(path, 'ForkedPreboss requires a derived terminal role');
+        failProjectDocument(path, 'Preboss requires a declaration-derived offer role');
       }
-      if (role === 'terminalShop') {
+      if (role === 'prebossShop') {
         return Object.freeze({
           kind: 'shop',
           ...(entryActive
@@ -310,14 +301,17 @@ export function createDefaultRoomState(
             : {}),
         });
       }
-      if (room.entryOfferPolicy === undefined) {
-        failProjectDocument(path, 'ForkedPreboss requires an entry offer policy');
+      if (
+        room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors' ||
+        room.prebossBatchPolicy.remainingOffers.kind !== 'counted'
+      ) {
+        failProjectDocument(path, 'Preboss has no counted remaining-offer policy');
       }
       return Object.freeze({
         kind: 'freeReward',
         offer: defaultCountedOffer(
-          room.entryOfferPolicy.freeReward,
-          context.resolvedStoreKey,
+          room.prebossBatchPolicy.remainingOffers.reward,
+          defaultCountedStoreKey(room, context.resolvedStoreKey),
           path,
         ),
       });
@@ -897,27 +891,27 @@ export function decodeRoomState(
     case 'Shop':
       requireOrdinaryRole(role, room, path);
       return decodeShopRoomState(state, catalog, room, entryActive, path);
-    case 'ShopPreboss':
-      requireShopPrebossRole(role, room, path);
-      return decodeShopRoomState(state, catalog, room, entryActive, path);
-    case 'ForkedPreboss':
+    case 'Preboss':
       if (role === 'ordinary') {
-        failProjectDocument(path, 'ForkedPreboss requires a derived terminal role');
+        failProjectDocument(path, 'Preboss requires a declaration-derived offer role');
       }
-      if (role === 'terminalShop') {
+      if (role === 'prebossShop') {
         return decodeShopRoomState(state, catalog, room, entryActive, path);
       }
       expectedKind(state.kind, 'freeReward', path);
       expectExactKeys(state, ['kind', 'offer'], path);
-      if (room.entryOfferPolicy === undefined) {
-        failProjectDocument(path, 'ForkedPreboss requires an entry offer policy');
+      if (
+        room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors' ||
+        room.prebossBatchPolicy.remainingOffers.kind !== 'counted'
+      ) {
+        failProjectDocument(path, 'Preboss has no counted remaining-offer policy');
       }
       return Object.freeze({
         kind: 'freeReward',
         offer: decodeCountedOffer(
           state.offer,
           catalog,
-          room.entryOfferPolicy.freeReward,
+          room.prebossBatchPolicy.remainingOffers.reward,
           `${path}.offer`,
         ),
       });

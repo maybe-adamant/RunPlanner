@@ -3,7 +3,9 @@ import type {
   BatchRewardStoreAddress,
   BiomeAddress,
   BiomeFieldAddress,
-  ContinuationAddress,
+  ExitDecisionAddress,
+  ExitSelectionAddress,
+  HubDecisionAddress,
   HubSlotAddress,
   HubVisitAddress,
   IncomingRewardAddress,
@@ -11,7 +13,6 @@ import type {
   LocalChildGroupAddress,
   LocalRewardAddress,
   OccurrenceAddress,
-  PickedAddress,
   RewardWheelAddress,
   RewardWheelOfferAddress,
   RouteAddress,
@@ -19,7 +20,7 @@ import type {
   ShopPurchaseAddress,
   TargetAddress,
 } from '../addresses';
-import type { AuthoredFieldValue, OccurrenceId } from '../model';
+import type { AuthoredFieldValue, ExitSelection, OccurrenceId } from '../model';
 
 export type ProjectCommand =
   | { readonly kind: 'RenameProject'; readonly name: string }
@@ -37,13 +38,40 @@ export type ProjectCommand =
       readonly kind: 'CreateStart';
       readonly biome: BiomeAddress;
       readonly occurrenceId: OccurrenceId;
+      readonly gameName?: string;
+    }
+  | {
+      readonly kind: 'CreateLinkedExit';
+      readonly decision: ExitDecisionAddress;
+      readonly occurrenceId: OccurrenceId;
+    }
+  | { readonly kind: 'CreateBatch'; readonly decision: ExitDecisionAddress }
+  | {
+      readonly kind: 'CreateTarget';
+      readonly target: TargetAddress;
+      readonly occurrenceId: OccurrenceId;
       readonly gameName: string;
     }
   | {
-      readonly kind: 'CreateHubTopology';
-      readonly biome: BiomeAddress;
-      readonly fixedOccurrenceIds: Readonly<Record<string, OccurrenceId>>;
+      readonly kind: 'CreateTakeoverBatch';
+      readonly decision: ExitDecisionAddress;
+      readonly gameName: string;
+      readonly targetOccurrenceIds: Readonly<Record<string, OccurrenceId>>;
     }
+  | {
+      readonly kind: 'ReplaceWithTakeoverBatch';
+      readonly decision: ExitDecisionAddress;
+      readonly gameName: string;
+      readonly targetOccurrenceIds: Readonly<Record<string, OccurrenceId>>;
+    }
+  | {
+      readonly kind: 'ReconcileTakeoverBatch';
+      readonly decision: ExitDecisionAddress;
+      readonly gameName: string;
+      readonly targetOccurrenceIds: Readonly<Record<string, OccurrenceId>>;
+    }
+  | { readonly kind: 'ReconcileBatchExitCapacity'; readonly decision: ExitDecisionAddress }
+  | { readonly kind: 'CreateHubDecision'; readonly hub: HubDecisionAddress }
   | {
       readonly kind: 'OpenHubSlot';
       readonly slot: HubSlotAddress;
@@ -71,7 +99,12 @@ export type ProjectCommand =
       readonly group: LocalChildGroupAddress;
       readonly enteredSlotKeys: readonly string[];
     }
-  | { readonly kind: 'CreateBatch'; readonly continuation: ContinuationAddress }
+  | {
+      readonly kind: 'SetExitSelection';
+      readonly selection: ExitSelectionAddress;
+      readonly value: ExitSelection;
+    }
+  | { readonly kind: 'RemoveExitDecision'; readonly decision: ExitDecisionAddress }
   | {
       readonly kind: 'ReplaceBatchRewardStore';
       readonly rewardStore: BatchRewardStoreAddress;
@@ -79,13 +112,28 @@ export type ProjectCommand =
     }
   | {
       readonly kind: 'ReplaceFieldsCageOutcome';
-      readonly continuation: ContinuationAddress;
+      readonly decision: ExitDecisionAddress;
       readonly cageOutcome: 'min' | 'max';
+    }
+  | {
+      readonly kind: 'ReplaceOccurrenceRoom';
+      readonly occurrence: OccurrenceAddress;
+      readonly gameName: string;
     }
   | {
       readonly kind: 'ReplaceShipEncounterCount';
       readonly occurrence: OccurrenceAddress;
       readonly encounterCount: 2 | 3;
+    }
+  | {
+      readonly kind: 'ReplaceIncomingReward';
+      readonly reward: IncomingRewardAddress;
+      readonly value: ResolvedRewardOffer;
+    }
+  | {
+      readonly kind: 'ReplaceLocalReward';
+      readonly reward: LocalRewardAddress;
+      readonly value: ResolvedRewardOffer;
     }
   | {
       readonly kind: 'ReplaceRewardWheelOfferCount';
@@ -108,59 +156,6 @@ export type ProjectCommand =
       readonly pickedOfferIndex: number;
     }
   | {
-      readonly kind: 'CreateTerminalTransition';
-      readonly continuation: ContinuationAddress;
-      readonly targetOccurrenceIds: readonly OccurrenceId[];
-    }
-  | {
-      readonly kind: 'CreateTarget';
-      readonly target: TargetAddress;
-      readonly occurrenceId: OccurrenceId;
-      readonly gameName: string;
-    }
-  | {
-      readonly kind: 'SetPicked';
-      readonly picked: PickedAddress;
-      readonly exitIndex: number;
-    }
-  | {
-      readonly kind: 'SetTerminalPicked';
-      readonly picked: PickedAddress;
-      readonly exitIndex: number;
-    }
-  | { readonly kind: 'ReconcileExitCapacity'; readonly continuation: ContinuationAddress }
-  | {
-      readonly kind: 'ReconcileTerminalExitCapacity';
-      readonly continuation: ContinuationAddress;
-    }
-  | { readonly kind: 'RemoveBatch'; readonly continuation: ContinuationAddress }
-  | {
-      readonly kind: 'RemoveTerminalTransition';
-      readonly continuation: ContinuationAddress;
-    }
-  | {
-      readonly kind: 'ReplaceWithTerminalTransition';
-      readonly continuation: ContinuationAddress;
-      readonly targetOccurrenceIds: readonly OccurrenceId[];
-    }
-  | { readonly kind: 'ReplaceWithBatch'; readonly continuation: ContinuationAddress }
-  | { readonly kind: 'ClearTopology'; readonly biome: BiomeAddress }
-  | {
-      readonly kind: 'ReplaceOccurrenceRoom';
-      readonly occurrence: OccurrenceAddress;
-      readonly gameName: string;
-    }
-  | {
-      readonly kind: 'ReplaceIncomingReward';
-      readonly reward: IncomingRewardAddress;
-      readonly value: ResolvedRewardOffer;
-    }
-  | {
-      readonly kind: 'ReplaceLocalReward';
-      readonly reward: LocalRewardAddress;
-      readonly value: ResolvedRewardOffer;
-    }
-  | {
       readonly kind: 'ReplaceShopOffer';
       readonly offer: ShopOfferAddress;
       readonly value: ResolvedRewardOffer;
@@ -169,76 +164,11 @@ export type ProjectCommand =
       readonly kind: 'SetShopPurchase';
       readonly purchase: ShopPurchaseAddress;
       readonly purchased: boolean;
-    };
+    }
+  | { readonly kind: 'ClearTopology'; readonly biome: BiomeAddress };
 
 export type ProjectMetadataCommand = Extract<
   ProjectCommand,
   { readonly kind: 'RenameProject' | 'ConfigureRoutePrefix' }
->;
-export type HubOnlyProjectCommand = Extract<
-  ProjectCommand,
-  {
-    readonly kind:
-      | 'CreateHubTopology'
-      | 'OpenHubSlot'
-      | 'CloseHubSlot'
-      | 'AppendHubVisit'
-      | 'ReplaceHubVisit'
-      | 'RemoveHubVisitsFrom'
-      | 'ReplaceSideRoomGeneration'
-      | 'ReplaceSideRoomEntryOrder';
-  }
->;
-export type HubProjectCommand = Extract<
-  ProjectCommand,
-  {
-    readonly kind:
-      | HubOnlyProjectCommand['kind']
-      | 'ClearTopology'
-      | 'ReplaceIncomingReward'
-      | 'ReplaceLocalReward'
-      | 'ReplaceShopOffer'
-      | 'SetShopPurchase';
-  }
->;
-export type LinearTopologyProjectCommand = Extract<
-  ProjectCommand,
-  {
-    readonly kind:
-      | 'CreateStart'
-      | 'CreateBatch'
-      | 'CreateTerminalTransition'
-      | 'CreateTarget'
-      | 'SetPicked'
-      | 'SetTerminalPicked'
-      | 'ReconcileExitCapacity'
-      | 'ReconcileTerminalExitCapacity'
-      | 'RemoveBatch'
-      | 'RemoveTerminalTransition'
-      | 'ReplaceWithTerminalTransition'
-      | 'ReplaceWithBatch'
-      | 'ClearTopology';
-  }
->;
-export type LinearRoomStateProjectCommand = Extract<
-  ProjectCommand,
-  { readonly kind: 'ReplaceBiomeField' | 'ReplaceOccurrenceRoom' }
->;
-export type LinearRewardProjectCommand = Extract<
-  ProjectCommand,
-  {
-    readonly kind:
-      | 'ReplaceBatchRewardStore'
-      | 'ReplaceFieldsCageOutcome'
-      | 'ReplaceShipEncounterCount'
-      | 'ReplaceRewardWheelOfferCount'
-      | 'ReplaceRewardWheelStore'
-      | 'ReplaceRewardWheelPicked'
-      | 'ReplaceRewardWheelOffer'
-      | 'ReplaceIncomingReward'
-      | 'ReplaceLocalReward'
-      | 'ReplaceShopOffer'
-      | 'SetShopPurchase';
-  }
 >;
 export type BiomeProjectCommand = Exclude<ProjectCommand, ProjectMetadataCommand>;

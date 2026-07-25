@@ -1,4 +1,4 @@
-import type { AuthoredFieldDescriptor, LinearBiomeLayout } from '../catalog-schema';
+import type { AuthoredFieldDescriptor, BiomeLayout } from '../catalog-schema';
 import type { AuthoredBiomeState, AuthoredFieldValue } from './model';
 import {
   expectBoolean,
@@ -40,7 +40,7 @@ function decodeFieldValue(
   }
 }
 
-export function createInitialBiomeState(layout: LinearBiomeLayout): AuthoredBiomeState {
+export function createInitialBiomeState(layout: BiomeLayout): AuthoredBiomeState {
   return Object.freeze(
     Object.fromEntries(
       layout.fields.map((descriptor) => [
@@ -53,7 +53,7 @@ export function createInitialBiomeState(layout: LinearBiomeLayout): AuthoredBiom
 
 export function decodeBiomeState(
   value: unknown,
-  layout: LinearBiomeLayout,
+  layout: BiomeLayout,
   path: string,
 ): AuthoredBiomeState {
   const state = expectRecord(value, path);
@@ -74,7 +74,7 @@ export function decodeBiomeState(
 
 export function replaceBiomeStateField(
   state: AuthoredBiomeState,
-  layout: LinearBiomeLayout,
+  layout: BiomeLayout,
   fieldKey: string,
   value: AuthoredFieldValue,
   path: string,

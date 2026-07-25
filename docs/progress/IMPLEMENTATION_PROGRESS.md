@@ -33,6 +33,19 @@ fallout without adding compatibility adapters. The tracker supersedes the
 former presentation-only Commit 12 and Commit 13 wording in
 `IMPLEMENTATION_PLAN.md`.
 
+Commit 1 is in progress locally. The catalog and authored-project boundary now
+uses catalog `0.15.0-unified-biome-decisions` and schema 9 only: one biome
+envelope, common exit/Hub decisions, declaration-derived Preboss batches, and
+progressive N Opening -> PreHub -> Hub -> Preboss authoring. After the Commit
+1 review repairs, the catalog gate passes with 4 files and 93 tests, and the
+authored-project gate passes with 2 files and 84 tests. Catalog typecheck,
+lint, formatting, and diff checks pass. The planner-engine workspace
+typecheck is expected to fail only in downstream simulation, application
+fixtures, and old product tests that still consume removed schema-8 Linear/Hub,
+terminal, continuation/picked-address, and rendered-index target contracts;
+that dependency fallout belongs to Commit 2 and Commit 3 and is not bridged
+with compatibility exports.
+
 Room-replacement retention is closed. The delivered policy uses the
 catalog-backed leaf-contract boundary, excludes speculative fixed, shop, and
 terminal-free mappings, and includes real-catalog F Miniboss coverage.
@@ -40,8 +53,8 @@ Selected-simulation, candidate-horizon, stable-finding, workspace, and React
 fixtures cover the production behavior. The selected-simulation fixture proves
 an already context-invalid counted reward remains authored after replacement;
 it does not claim the replacement itself created the invalidity. The obsolete
-shop-replacement UI fixture is gone. The latest complete gate passed with 73
-test files and 582 tests, followed by all package typechecks, lint, formatting,
+shop-replacement UI fixture is gone. The pre-refactor complete gate passed with
+73 test files and 582 tests, followed by all package typechecks, lint, formatting,
 production build, and diff checks.
 
 ## Detailed Delivery Record
