@@ -2,7 +2,7 @@ import type { RawRoomLifecycleProfileDeclaration } from '../types';
 
 export const terminalRoomLifecycleProfiles = [
   {
-    key: 'TerminalRewardRoom',
+    key: 'PrebossFreeRewardRoom',
     encounterProfileKeys: ['Shop'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [
@@ -41,7 +41,7 @@ export const terminalRoomLifecycleProfiles = [
     ],
   },
   {
-    key: 'TerminalWorldShopRoom',
+    key: 'PrebossShopRoom',
     encounterProfileKeys: ['Shop'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
     operations: [

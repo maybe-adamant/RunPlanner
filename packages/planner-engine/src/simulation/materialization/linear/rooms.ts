@@ -403,7 +403,7 @@ function materializeShopEntry(
 
 function materializeShopRoom(
   context: AuthoredRoomMaterializationContext,
-  lifecycleProfileKey: 'TerminalWorldShopRoom' | 'WorldShopRoom' = 'WorldShopRoom',
+  lifecycleProfileKey: 'PrebossShopRoom' | 'WorldShopRoom' = 'WorldShopRoom',
 ): MaterializedRoomLeaf {
   const state = requireStateKind(context, 'shop');
   const binding = context.room.incomingReward;
@@ -435,7 +435,7 @@ function materializeShopPreboss(context: AuthoredRoomMaterializationContext): Ma
     fail(`${context.room.gameName} requires its terminal shop role`);
   }
   return Object.freeze({
-    ...materializeShopRoom(context, 'TerminalWorldShopRoom'),
+    ...materializeShopRoom(context, 'PrebossShopRoom'),
     ...(context.clockworkReward === undefined ? {} : { clockworkReward: 'goal' as const }),
   });
 }
@@ -447,7 +447,7 @@ function materializeForkedPreboss(
     fail(`${context.room.gameName} forked preboss has no terminal role`);
   }
   if (context.role === 'terminalShop') {
-    return materializeShopRoom(context, 'TerminalWorldShopRoom');
+    return materializeShopRoom(context, 'PrebossShopRoom');
   }
   const state = requireStateKind(context, 'freeReward');
   const binding = context.room.entryOfferPolicy?.freeReward;
@@ -455,7 +455,7 @@ function materializeForkedPreboss(
     fail(`${context.room.gameName} has no free-reward policy`);
   }
   return Object.freeze({
-    lifecycleProfileKey: 'TerminalRewardRoom',
+    lifecycleProfileKey: 'PrebossFreeRewardRoom',
     incomingReward: resolvedIncomingReward(
       context,
       'freeReward',

@@ -160,17 +160,16 @@ export type RoomTemplateKey =
   | 'FixedPreHub'
   | 'FieldsCombat'
   | 'ClockworkCombat'
-  | 'ForkedPreboss'
   | 'Fountain'
   | 'Miniboss'
+  | 'Preboss'
   | 'RewardlessCombat'
   | 'Shop'
-  | 'ShopPreboss'
   | 'ShipCombat'
   | 'StandardCombat'
   | 'Story';
 
-export type DerivedRoomClassification = 'completion' | 'fixedEntry' | 'hub';
+export type DerivedRoomClassification = 'completion' | 'hub';
 
 export type RoomMode =
   | { readonly kind: 'authored'; readonly templateKey: RoomTemplateKey }
@@ -230,11 +229,15 @@ export type RoomForce =
   | { readonly kind: 'requirement'; readonly requirement: RequirementExpression }
   | { readonly kind: 'always' };
 
-export interface ForkedPrebossEntryPolicy {
-  readonly kind: 'shopThenFillRemainingExits';
-  readonly freeReward: CountedRewardBinding;
-  readonly maxFreeRewards: number;
-}
+export type RemainingPrebossOfferPolicy =
+  { readonly kind: 'none' } | { readonly kind: 'counted'; readonly reward: CountedRewardBinding };
+
+export type PrebossBatchPolicy =
+  | {
+      readonly kind: 'takeOverNormalDoors';
+      readonly remainingOffers: RemainingPrebossOfferPolicy;
+    }
+  | { readonly kind: 'retainNormalPeers' };
 
 export interface RoomDeclaration {
   readonly gameName: string;
@@ -245,7 +248,7 @@ export interface RoomDeclaration {
   readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RoomExit[];
   readonly incomingReward: RewardProducerBinding;
-  readonly entryOfferPolicy?: ForkedPrebossEntryPolicy;
+  readonly prebossBatchPolicy?: PrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;
   readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
@@ -304,27 +307,12 @@ export type LocalChildDescriptor =
       readonly fields: readonly AuthoredFieldDescriptor[];
     };
 
-export type FixedEntryDescriptor = {
-  readonly kind: 'fixedEntry';
-  readonly role: string;
-  readonly roomGameName: string;
-};
-
-export type FixedAuthoredSlotDescriptor = {
-  readonly kind: 'fixedAuthoredSlot';
-  readonly slotKey: string;
-  readonly roomGameName: string;
-};
-
-export type EntryDescriptor = FixedEntryDescriptor | FixedAuthoredSlotDescriptor;
-
-export type LinearStartDescriptor =
+export type StartDescriptor =
   | {
-      readonly kind: 'authoredStart';
-      readonly mode: 'fixed' | 'oneOf';
-      readonly roomGameNames: readonly string[];
+      readonly kind: 'authoredChoice';
+      readonly roomGameNames: readonly [string, ...string[]];
     }
-  | FixedEntryDescriptor;
+  | { readonly kind: 'fixedAuthored'; readonly roomGameName: string };
 
 export type RewardStorePolicy =
   | {
@@ -351,7 +339,7 @@ export interface StagedCandidatePoolDescriptor {
   readonly roomGameNames: readonly string[];
 }
 
-export type LinearProgressionPolicy =
+export type GeneratedProgressionPolicy =
   | { readonly kind: 'eligibilityDriven' }
   | { readonly kind: 'fixedCount'; readonly continuationCount: number }
   | {
@@ -359,7 +347,7 @@ export type LinearProgressionPolicy =
       readonly stages: readonly StagedCandidatePoolDescriptor[];
     };
 
-export type GeneratedBatchPolicy =
+export type NormalDoorBatchPolicy =
   | {
       readonly kind: 'standard';
       readonly fields: readonly AuthoredFieldDescriptor[];
@@ -381,26 +369,23 @@ export type GeneratedBatchPolicy =
       readonly fields: readonly AuthoredFieldDescriptor[];
     };
 
-export type TerminalPolicy =
-  | {
-      readonly kind: 'forkedTransition';
-      readonly roomGameName: string;
-      readonly exitPolicy: { readonly kind: 'allExitsTerminal' };
-    }
-  | {
-      readonly kind: 'directTransition';
-      readonly roomGameName: string;
-    }
-  | {
-      readonly kind: 'fixedAuthoredSlot';
-      readonly slotKey: string;
-      readonly roomGameName: string;
-    }
-  | {
-      readonly kind: 'generatedTarget';
-      readonly roomGameName: string;
-      readonly closesBiomeWhenPicked: true;
-    };
+export interface LinkedNormalExitDescriptor {
+  readonly kind: 'linked';
+  readonly exitKey: string;
+  readonly roomGameName: string;
+}
+
+export interface GeneratedProgressionDescriptor {
+  readonly kind: 'generated';
+  readonly progressionPolicy: GeneratedProgressionPolicy;
+  readonly batchPolicy: NormalDoorBatchPolicy;
+  readonly rewardStorePolicy: RewardStorePolicy;
+  readonly rewardStoreOverrides: readonly SourceRewardStorePolicyOverride[];
+  readonly bounds: {
+    readonly maxBatches: number;
+    readonly maxTargets: number;
+  };
+}
 
 export interface CompletionRoomDescriptor {
   readonly role: 'boss' | 'postboss';
@@ -417,30 +402,6 @@ export interface BiomeTransitionCounterReset {
 export interface CompletionDescriptor {
   readonly rooms: readonly CompletionRoomDescriptor[];
   readonly transitionEffects: readonly BiomeTransitionCounterReset[];
-}
-
-export interface LinearBiomeLayout {
-  readonly biomeKey: string;
-  readonly kind: 'LinearBiome';
-  readonly initialCounters: {
-    readonly biomeDepthCache: number;
-    readonly biomeEncounterDepth: number;
-  };
-  readonly start: LinearStartDescriptor;
-  readonly entries: readonly EntryDescriptor[];
-  readonly continuation: {
-    readonly progressionPolicy: LinearProgressionPolicy;
-    readonly batchPolicy: GeneratedBatchPolicy;
-    readonly rewardStorePolicy: RewardStorePolicy;
-    readonly rewardStoreOverrides: readonly SourceRewardStorePolicyOverride[];
-  };
-  readonly terminal: TerminalPolicy;
-  readonly completion: CompletionDescriptor;
-  readonly fields: readonly AuthoredFieldDescriptor[];
-  readonly bounds: {
-    readonly maxBatches: number;
-    readonly maxTargets: number;
-  };
 }
 
 export interface HubSlotDescriptor {
@@ -476,33 +437,37 @@ export interface HubSideRoomGenerationPolicy {
   readonly forcedOrder: 'availabilityRankPrefix';
 }
 
-export interface HubBiomeLayout {
+export interface HubDecisionDescriptor {
+  readonly kind: 'hub';
+  readonly hubKey: string;
+  readonly linkedExit: LinkedNormalExitDescriptor;
+  readonly roomGameName: string;
+  readonly slots: readonly HubSlotDescriptor[];
+  readonly openCount: { readonly min: number; readonly max: number };
+  readonly openSlotConstraints: readonly HubOpenSlotConstraint[];
+  readonly requiredVisits: number;
+  readonly targetCompletion: HubTargetCompletionDescriptor;
+  readonly restoreRoomGameName: string;
+  readonly rewardStorePolicy: RewardStorePolicy;
+  readonly rewardLookup: HubRewardLookupDescriptor;
+  readonly sideRoomGeneration: HubSideRoomGenerationPolicy;
+  readonly fields: readonly AuthoredFieldDescriptor[];
+  readonly completedExit: LinkedNormalExitDescriptor;
+}
+
+export type ProgressionDescriptor = GeneratedProgressionDescriptor | HubDecisionDescriptor;
+
+export interface BiomeLayout {
   readonly biomeKey: string;
-  readonly kind: 'HubBiome';
   readonly initialCounters: {
     readonly biomeDepthCache: number;
     readonly biomeEncounterDepth: number;
   };
-  readonly entries: readonly EntryDescriptor[];
-  readonly hub: {
-    readonly roomGameName: string;
-    readonly slots: readonly HubSlotDescriptor[];
-    readonly openCount: { readonly min: number; readonly max: number };
-    readonly openSlotConstraints: readonly HubOpenSlotConstraint[];
-    readonly requiredVisits: number;
-    readonly targetCompletion: HubTargetCompletionDescriptor;
-    readonly restoreRoomGameName: string;
-    readonly rewardStorePolicy: RewardStorePolicy;
-    readonly rewardLookup: HubRewardLookupDescriptor;
-    readonly sideRoomGeneration: HubSideRoomGenerationPolicy;
-    readonly fields: readonly AuthoredFieldDescriptor[];
-  };
-  readonly terminal: TerminalPolicy;
+  readonly start: StartDescriptor;
+  readonly progression: ProgressionDescriptor;
   readonly completion: CompletionDescriptor;
   readonly fields: readonly AuthoredFieldDescriptor[];
 }
-
-export type BiomeLayout = HubBiomeLayout | LinearBiomeLayout;
 
 export interface Catalog {
   readonly version: string;

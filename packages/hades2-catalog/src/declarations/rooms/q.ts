@@ -442,7 +442,7 @@ export const qRooms = [
     label: 'Preboss',
     biomeKey: 'Q',
     kind: 'Preboss',
-    mode: { kind: 'authored', templateKey: 'ShopPreboss' },
+    mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
     exits: [{ index: 1, type: 'FortressMainDoor' }],
     incomingReward: {
@@ -451,6 +451,7 @@ export const qRooms = [
       shopProfileKey: 'Q_WorldShop',
       producerLifecycleKey: 'RoomReward',
     },
+    prebossBatchPolicy: { kind: 'takeOverNormalDoors', remainingOffers: { kind: 'none' } },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterProfileKey: 'Shop',
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },

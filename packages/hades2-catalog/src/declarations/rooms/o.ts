@@ -530,7 +530,7 @@ export const oRooms = [
     label: 'Preboss',
     biomeKey: 'O',
     kind: 'Preboss',
-    mode: { kind: 'authored', templateKey: 'ShopPreboss' },
+    mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
     exits: [{ index: 1, type: 'ShipsExitDoor' }],
     incomingReward: {
@@ -539,6 +539,7 @@ export const oRooms = [
       shopProfileKey: 'WorldShop',
       producerLifecycleKey: 'RoomReward',
     },
+    prebossBatchPolicy: { kind: 'takeOverNormalDoors', remainingOffers: { kind: 'none' } },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterProfileKey: 'Shop',
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },

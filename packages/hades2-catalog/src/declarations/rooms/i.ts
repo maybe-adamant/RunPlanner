@@ -724,7 +724,7 @@ export const iRooms = [
     label: 'Preboss',
     biomeKey: 'I',
     kind: 'Preboss',
-    mode: { kind: 'authored', templateKey: 'ShopPreboss' },
+    mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
     exits: [{ index: 1, type: 'TartarusExitDoor' }],
     incomingReward: {
@@ -733,6 +733,7 @@ export const iRooms = [
       shopProfileKey: 'I_WorldShop',
       producerLifecycleKey: 'RoomReward',
     },
+    prebossBatchPolicy: { kind: 'retainNormalPeers' },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterProfileKey: 'Shop',
     counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },

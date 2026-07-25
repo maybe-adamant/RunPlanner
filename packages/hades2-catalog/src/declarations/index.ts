@@ -27,7 +27,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.14.0-f-rewards',
+  version: '0.15.0-unified-biome-decisions',
   biomes,
   routes,
   rewardKernel: rewardKernelDeclarations,
@@ -44,12 +44,11 @@ export type {
   RawCountedRewardBinding,
   RawEncounterProfileDeclaration,
   RawFixedRewardBinding,
-  RawForkedPrebossEntryPolicy,
   RawBiomeLayoutDeclaration,
-  RawHubBiomeLayoutDeclaration,
-  RawLinearBiomeLayoutDeclaration,
   RawLocalChildDescriptor,
   RawNoneRewardBinding,
+  RawPrebossBatchPolicy,
+  RawProgressionDeclaration,
   RawRewardProducerBinding,
   RawRoomDeclaration,
   RawRoomLifecycleProfileDeclaration,

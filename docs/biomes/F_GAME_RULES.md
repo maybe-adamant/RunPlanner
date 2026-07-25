@@ -4,7 +4,7 @@
 
 This document is the concrete game-rule authority for Erebus (`F`). Shared
 picker, physical-door, cap, force, offer/acquisition, generated-store, standard
-linear, and forked-preboss semantics are defined by
+linear, and takeover-Preboss semantics are defined by
 `../design/GAME_GENERATION_RULES.md`.
 
 Exact room-local exits, requirements, caps, labels, encounter-profile keys,
@@ -42,7 +42,7 @@ coverage is defined by `../progress/MIGRATION_PROVENANCE.md`.
 | Room eligibility and force                   | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | implemented           | --                                                         |
 | Reward-store selection                       | F targets MetaProgress ratio `0.315` with adjustment speed `10`                                                           | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | implemented           | Probability analysis or exact RNG replay is introduced     |
 | Incoming rewards and shops                   | Openings, `F_Combat01`, minibosses, and preboss force RunProgress; other producers retain concrete filters and shops      | **Exact:** occurrence reward state plus declaration-owned overrides                                    | implemented           | --                                                         |
-| Forked preboss                               | Every predecessor exit creates `F_PreBoss01`; first is Shop and at most one additional exit is a free reward              | **Exact:** one or two terminal occurrences of the same declaration                                     | implemented           | --                                                         |
+| Takeover Preboss                             | `F_PreBoss01` takes over every physical predecessor exit; exit 1 is Shop and a later exit, when present, is a free reward | **Exact:** one declaration-owned takeover batch with one occurrence per physical exit                  | implemented           | --                                                         |
 | Fixed boss and postboss tail                 | `F_PreBoss01` leads through one mutually exclusive Hecate variant and then `F_PostBoss01`                                 | **Exact:** layout-derived `F_Boss01` then `F_PostBoss01` under the neutral difficulty baseline         | implemented           | User-selected difficulty becomes a project input           |
 | Story, Fountain, and other progression gates | Dialogue, world upgrades, and persistent progression alter availability                                                   | **Excluded:** progressed-save baseline retains current-run rules only                                  | documented boundary   | Save-profile state becomes a project input                 |
 
@@ -86,7 +86,7 @@ Every opening forces RunProgress and excludes `Devotion`, `RoomMoneyDrop`,
 - `F_Story01`, `F_Reprieve01`, and `F_Shop01` have two exits;
 - `F_MiniBoss01..03` have one exit.
 
-Exit indexes and physical order are semantic. The terminal predecessor can
+Exit indexes and physical order are semantic. The Preboss predecessor can
 therefore expose at most one free preboss reward.
 
 ## Room Families and Caps
@@ -97,7 +97,7 @@ therefore expose at most one free preboss reward.
 - one Story room produces fixed `Story`;
 - one Reprieve uses `Fountain`;
 - one Midshop uses `Shop` and `WorldShop`;
-- one terminal room uses the forked preboss policy.
+- one Preboss declaration uses the takeover normal-door policy.
 
 Ordinary F combat rooms have `MaxAppearancesThisBiome = 1` and no
 `MaxCreationsThisRun`, so an unentered combat can be offered again later when
@@ -129,9 +129,10 @@ rooms use the RunProgress/MetaProgress domain. F minibosses force RunProgress
 and Boon. Fixed Story and Shop producers retain resolved store provenance for
 future entered-room ratio history.
 
-## Terminal Preboss
+## Takeover Preboss
 
-`F_PreBoss01` uses the shared shop-then-fill policy:
+`F_PreBoss01` atomically takes over the predecessor's normal doors in physical
+order:
 
 ```text
 exit 1 -> F_PreBoss01 with Shop
@@ -141,6 +142,8 @@ exit 2 -> F_PreBoss01 with free RunProgress reward, when present
 The free reward excludes `Devotion` and `RoomMoneyDrop`. Because no supported F
 predecessor has more than two exits, F's maximum free-reward capacity is one.
 Each target is a distinct occurrence of the same concrete room declaration.
+The selected Preboss occurrence closes editable traversal and enters the
+layout-derived boss/postboss completion tail.
 
 ## Fixed Boss and Postboss Tail
 

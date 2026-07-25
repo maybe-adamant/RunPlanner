@@ -10,6 +10,31 @@ It owns declaration families, provenance, normalization policy, requirement
 scope, labels, defaults, and catalog versioning. It does not own concrete
 authored choices or lifecycle simulation algorithms.
 
+## Schema 9 Unified Biome Decisions
+
+Schema 9 is the current catalog authority. It replaces the former whole-layout
+`LinearBiome`/`HubBiome` split with one `BiomeLayout` envelope:
+
+- `start` is either `authoredChoice` or declaration-fixed `fixedAuthored`;
+- `progression` is either ordinary `generated` normal-door batches or the N
+  `hub` decision; and
+- `completion` remains one declaration-owned derived tail.
+
+There is no top-level terminal policy. A normal-door batch may contain a
+Preboss Room Declaration. Selecting that occurrence begins the declaration
+owned completion tail; offering it does not.
+
+`ForkedPreboss`, `ShopPreboss`, and `entryOfferPolicy` are retired. Every
+Preboss uses the authored `Preboss` template plus `prebossBatchPolicy`.
+Takeover policies make the first normal exit a Shop occurrence and, when
+declared, later exits counted-free occurrences. I retains normal peers;
+F/G/H/O/P/Q take over their normal doors; N's completed Hub emits the same
+width-one normal-door batch. N is a fixed authored `N_Opening01`, its linked
+normal exit `prehub` reaches `N_PreHub01`, and its Hub decision key is `hub`.
+
+`0.15.0-unified-biome-decisions` is the first catalog version using this
+contract. The active declaration language below uses this one envelope.
+
 ## Catalog Principle
 
 The catalog describes possible supported game facts. The authored project
@@ -138,7 +163,7 @@ The catalog contains at least:
 - reward producer bindings and filters;
 - shop profiles;
 - requirement expressions;
-- batch and terminal policy descriptors;
+- generated-batch, Preboss-batch, and Hub decision descriptors;
 - player-facing labels beside stable game identifiers.
 
 Implementations for materializers, evaluators, and projectors live in code
@@ -161,40 +186,26 @@ route. The current route model rejects the same biome twice within one route;
 if that product case becomes real, a separate route-placement identity will be
 added without changing global biome identity.
 
-Biome layout declarations own one immutable biome envelope and its selected
-traversal-body policy:
+Biome layout declarations own one immutable common envelope:
 
-- layout kind: initially `LinearBiome` or `HubBiome`;
 - exact biome-local counter baselines at biome entry; route-wide counters are
   carried by route simulation rather than restated by each layout;
-- start alternatives and ordered fixed entry slots, including whether each
-  fixed slot is stateless-derived or owns authored room state;
-- default continuation policy and structural overrides;
-- continuation progression policy: eligibility-driven, fixed-count, or an
-  ordered staged candidate-pool sequence;
-- generated-batch policy: standard, Fields cage, or Clockwork, with any
-  policy-owned authored fields declared beside that policy and classified as
-  either `required` or genuinely `defaulted`; the Fields policy additionally
-  owns its Min/Max capacities, Max ceiling, and possibility-only
-  optional/required Max depth sets;
-- terminal room and terminal exit policy, including whether the terminal is an
-  independent transition or a declaration role admitted by a generated batch;
-- ordered fixed-completion rooms with stable semantic roles;
-- persistent hub structure where applicable: fixed physical slot identities,
-  availability bounds, visit-count rules, restore behavior, and terminal
-  trigger;
-- declaration-proven topology bounds;
-- biome-global authored field descriptors;
-- reward-store selection policy: an authored generated-store policy with the
-  normalized game-language `targetMetaRewardsRatio` and
-  `targetMetaRewardsAdjustSpeed` and possible base stores but no authoring
-  default; a source-offer-point policy selecting an already-authored semantic
-  store through a closed selector such as `lastActiveWheel`; or an explicit
-  no-base-store policy when no generated base outcome is observable, including
-  reward-free Q and declaration-overridden I batches.
-- optional source-encounter-profile overrides for the generated-store policy;
-  O uses this structural mapping so ShipCombat sources resolve their final
-  active wheel while non-ShipCombat sources require an authored store;
+- an `authoredChoice` or one-identity `fixedAuthored` start;
+- either generated normal-door progression or an N Hub decision progression;
+- generated progression policy: eligibility-driven, fixed-count, or an ordered
+  staged candidate-pool sequence;
+- standard, Fields, or Clockwork generated-batch policy, including any
+  policy-owned authored fields and the Fields Min/Max support contract;
+- generated reward-store policy: authored base store, source offer point, or
+  explicit no-store, plus optional source-encounter-profile overrides; O maps
+  ShipCombat sources to their active wheel and otherwise requires an authored
+  store;
+- declaration-proven generated batch and target bounds;
+- persistent Hub structure where applicable: semantic Hub key, fixed physical
+  slots, open-set constraints, visit rules, restores, and its dedicated fixed
+  completed-Hub exit;
+- ordered derived completion rooms with stable Boss/Postboss roles; and
+- biome-global authored field descriptors.
 
 They do not copy room-local facts such as intrinsic exits, eligibility, caps,
 or incoming reward bindings.
@@ -207,15 +218,11 @@ Concrete structural extensions for F through Q should be added with their
 implementation slice and covered by focused fixtures. A biome is not declared
 supported merely because its letter appears in the route order.
 
-`LinearBiome` and `HubBiome` discriminate the traversal body rather than the
-whole lifecycle/history stack. N still uses the common ordered fixed entry,
-terminal, completion, counter, and route-transition contracts. Its Opening and
-PreHub are fixed entry slots; PreHub is not an ordinary generated candidate
-selected by a depth eligibility rule.
-
-For `HubBiome`, layout declarations own the fixed mapping from semantic hub
-slot to concrete Room Declaration. Authored state selects a supported open set
-and visit order; it does not replace the room assigned to a physical slot.
+N's layout owns the fixed mapping from semantic Hub slot to concrete Room
+Declaration. Authored state selects a supported open set and visit order; it
+does not replace the room assigned to a physical slot. N Opening and PreHub
+are real authored occurrences created by the fixed start and linked-exit
+contracts, not fixed-entry descriptors or ordinary generated candidates.
 Room-local side-slot descriptors remain facts of the concrete parent Room
 Declaration. N side slots own an availability rank because generation pressure
 forces a prefix of physical setup order. Their rewards resolve as one jointly
@@ -269,10 +276,10 @@ Declarations rather than simulator constants. They retain their real game
 names, encounters, modeled reward surface, counters, exits, and store-history
 policy, but have no authored leaf template or editor control. A biome layout
 references the rooms it actually uses through an ordered completion sequence
-after its editable terminal. The sequence need not contain a postboss room;
-Q's canonical repeat-run projection ends after its boss. The route declaration,
-not a completion room, remains the authority for biome order or route
-completion.
+after selection of a Preboss occurrence. The sequence need not contain a
+postboss room; Q's canonical repeat-run projection ends after its boss. The
+route declaration, not a completion room, remains the authority for biome
+order or route completion.
 
 The completion descriptor also owns an ordered closed transition-effect list.
 Every current biome explicitly resets `biomeDepthCache` followed by
@@ -341,7 +348,8 @@ multi-phase structures are observable to current consumers.
 projection emits no encounter phase. It is not the game's concrete `Empty`
 encounter and is not tied to an Intro room role. Preboss rooms reference the
 concrete `Shop` encounter; their shop or free-reward realization belongs to
-the terminal lifecycle rather than a synthetic Preboss encounter profile.
+the declaration-owned Preboss batch lifecycle rather than a synthetic Preboss
+encounter profile.
 
 Rooms reference profiles instead of copying phase sequences. This is required
 for O multi-encounter rooms and future persistent NPC replacement. A future NPC
@@ -599,8 +607,8 @@ The catalog contains the shared foundations and concrete declarations needed
 for both complete routes:
 
 - global F/G/H/I and N/O/P/Q Biome Declarations and route references;
-- `LinearBiome` and `HubBiome` layout metadata;
-- the room, encounter, reward, shop, local-slot, and terminal templates used by
+- unified biome-layout and N Hub-decision metadata;
+- the room, encounter, reward, shop, local-slot, and Preboss templates used by
   the supported biome projections;
 - required reward types, payloads, concrete acquisitions, stores, bags,
   bindings, and shops;

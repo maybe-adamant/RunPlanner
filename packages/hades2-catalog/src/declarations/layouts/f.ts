@@ -2,15 +2,13 @@ import type { RawBiomeLayoutDeclaration } from '../types';
 
 export const fBiomeLayout = {
   biomeKey: 'F',
-  kind: 'LinearBiome',
   initialCounters: { biomeDepthCache: 0, biomeEncounterDepth: 1 },
   start: {
-    kind: 'authoredStart',
-    mode: 'oneOf',
+    kind: 'authoredChoice',
     roomGameNames: ['F_Opening01', 'F_Opening02', 'F_Opening03'],
   },
-  entries: [],
-  continuation: {
+  progression: {
+    kind: 'generated',
     progressionPolicy: { kind: 'eligibilityDriven' },
     batchPolicy: { kind: 'standard', fields: [] },
     rewardStorePolicy: {
@@ -20,11 +18,7 @@ export const fBiomeLayout = {
       targetMetaRewardsAdjustSpeed: 10,
     },
     rewardStoreOverrides: [],
-  },
-  terminal: {
-    kind: 'forkedTransition',
-    roomGameName: 'F_PreBoss01',
-    exitPolicy: { kind: 'allExitsTerminal' },
+    bounds: { maxBatches: 10, maxTargets: 20 },
   },
   completion: {
     rooms: [
@@ -37,5 +31,4 @@ export const fBiomeLayout = {
     ],
   },
   fields: [],
-  bounds: { maxBatches: 10, maxTargets: 20 },
 } as const satisfies RawBiomeLayoutDeclaration;

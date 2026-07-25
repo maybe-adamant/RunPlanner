@@ -2,17 +2,11 @@ import type {
   AuthoredFieldDescriptor,
   CompletionDescriptor,
   EncounterPhaseKind,
-  EntryDescriptor,
   ExitCompatibilityPolicy,
   ExitTypeDeclaration,
-  GeneratedBatchPolicy,
-  HubOpenSlotConstraint,
-  HubRewardLookupDescriptor,
-  HubSideRoomGenerationPolicy,
-  HubSlotDescriptor,
-  HubTargetCompletionDescriptor,
-  LinearStartDescriptor,
-  LinearProgressionPolicy,
+  GeneratedProgressionPolicy,
+  HubDecisionDescriptor,
+  NormalDoorBatchPolicy,
   RewardStorePolicy,
   RoomForce,
   RoomCaps,
@@ -24,7 +18,6 @@ import type {
   RoomStructuralTag,
   RequiredRoomObjectDescriptor,
   SourceRewardStorePolicyOverride,
-  TerminalPolicy,
   BiomeDeclaration,
   RouteDeclaration,
 } from '@run-planner/engine/catalog-schema';
@@ -102,6 +95,15 @@ export interface RawShopRewardBinding {
 export type RawRewardProducerBinding =
   RawCountedRewardBinding | RawFixedRewardBinding | RawNoneRewardBinding | RawShopRewardBinding;
 
+export type RawPrebossBatchPolicy =
+  | {
+      readonly kind: 'takeOverNormalDoors';
+      readonly remainingOffers:
+        | { readonly kind: 'none' }
+        | { readonly kind: 'counted'; readonly reward: RawCountedRewardBinding };
+    }
+  | { readonly kind: 'retainNormalPeers' };
+
 export type RawLocalChildDescriptor =
   | {
       readonly key: string;
@@ -130,12 +132,6 @@ export interface RawRoomExitDeclaration {
   readonly type: string;
 }
 
-export interface RawForkedPrebossEntryPolicy {
-  readonly kind: 'shopThenFillRemainingExits';
-  readonly freeReward: RawCountedRewardBinding;
-  readonly maxFreeRewards: number;
-}
-
 export interface RawRoomDeclaration {
   readonly gameName: string;
   readonly label: string;
@@ -145,7 +141,7 @@ export interface RawRoomDeclaration {
   readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RawRoomExitDeclaration[];
   readonly incomingReward: RawRewardProducerBinding;
-  readonly entryOfferPolicy?: RawForkedPrebossEntryPolicy;
+  readonly prebossBatchPolicy?: RawPrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;
   readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
@@ -158,58 +154,41 @@ export interface RawRoomDeclaration {
   readonly localChildren?: readonly RawLocalChildDescriptor[];
 }
 
-export interface RawLinearBiomeLayoutDeclaration {
-  readonly biomeKey: string;
-  readonly kind: 'LinearBiome';
-  readonly initialCounters: {
-    readonly biomeDepthCache: number;
-    readonly biomeEncounterDepth: number;
-  };
-  readonly start: LinearStartDescriptor;
-  readonly entries?: readonly EntryDescriptor[];
-  readonly continuation: {
-    readonly progressionPolicy: LinearProgressionPolicy;
-    readonly batchPolicy: GeneratedBatchPolicy;
-    readonly rewardStorePolicy: RewardStorePolicy;
-    readonly rewardStoreOverrides?: readonly SourceRewardStorePolicyOverride[];
-  };
-  readonly terminal: TerminalPolicy;
-  readonly completion: CompletionDescriptor;
-  readonly fields?: readonly AuthoredFieldDescriptor[];
+export interface RawGeneratedProgressionDeclaration {
+  readonly kind: 'generated';
+  readonly progressionPolicy: GeneratedProgressionPolicy;
+  readonly batchPolicy: NormalDoorBatchPolicy;
+  readonly rewardStorePolicy: RewardStorePolicy;
+  readonly rewardStoreOverrides?: readonly SourceRewardStorePolicyOverride[];
   readonly bounds: {
     readonly maxBatches: number;
     readonly maxTargets: number;
   };
 }
 
-export interface RawHubBiomeLayoutDeclaration {
+export interface RawHubDecisionDeclaration extends Omit<HubDecisionDescriptor, 'fields'> {
+  readonly fields?: readonly AuthoredFieldDescriptor[];
+}
+
+export type RawProgressionDeclaration =
+  RawGeneratedProgressionDeclaration | RawHubDecisionDeclaration;
+
+export interface RawBiomeLayoutDeclaration {
   readonly biomeKey: string;
-  readonly kind: 'HubBiome';
   readonly initialCounters: {
     readonly biomeDepthCache: number;
     readonly biomeEncounterDepth: number;
   };
-  readonly entries: readonly EntryDescriptor[];
-  readonly hub: {
-    readonly roomGameName: string;
-    readonly slots: readonly HubSlotDescriptor[];
-    readonly openCount: { readonly min: number; readonly max: number };
-    readonly openSlotConstraints: readonly HubOpenSlotConstraint[];
-    readonly requiredVisits: number;
-    readonly targetCompletion: HubTargetCompletionDescriptor;
-    readonly restoreRoomGameName: string;
-    readonly rewardStorePolicy: RewardStorePolicy;
-    readonly rewardLookup: HubRewardLookupDescriptor;
-    readonly sideRoomGeneration: HubSideRoomGenerationPolicy;
-    readonly fields?: readonly AuthoredFieldDescriptor[];
-  };
-  readonly terminal: TerminalPolicy;
+  readonly start:
+    | {
+        readonly kind: 'authoredChoice';
+        readonly roomGameNames: readonly [string, ...string[]];
+      }
+    | { readonly kind: 'fixedAuthored'; readonly roomGameName: string };
+  readonly progression: RawProgressionDeclaration;
   readonly completion: CompletionDescriptor;
   readonly fields?: readonly AuthoredFieldDescriptor[];
 }
-
-export type RawBiomeLayoutDeclaration =
-  RawHubBiomeLayoutDeclaration | RawLinearBiomeLayoutDeclaration;
 
 export interface RawCatalogInput {
   readonly version: string;

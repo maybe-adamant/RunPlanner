@@ -303,7 +303,7 @@ describe('canonical F materialization', () => {
       room: {
         gameName: 'F_PreBoss01',
         entered: true,
-        lifecycleProfileKey: 'TerminalWorldShopRoom',
+        lifecycleProfileKey: 'PrebossShopRoom',
         incomingReward: { producerKind: 'shop', resolvedStoreKey: 'RunProgress' },
         entryState: { kind: 'shop', profileKey: 'WorldShop' },
       },
@@ -323,7 +323,7 @@ describe('canonical F materialization', () => {
       room: {
         gameName: 'F_PreBoss01',
         entered: false,
-        lifecycleProfileKey: 'TerminalRewardRoom',
+        lifecycleProfileKey: 'PrebossFreeRewardRoom',
         incomingReward: { producerKind: 'freeReward', resolvedStoreKey: 'RunProgress' },
       },
     });
@@ -377,7 +377,7 @@ describe('canonical F materialization', () => {
       continuation: 'entersTerminal',
       room: {
         entered: true,
-        lifecycleProfileKey: 'TerminalRewardRoom',
+        lifecycleProfileKey: 'PrebossFreeRewardRoom',
         incomingReward: { producerKind: 'freeReward' },
       },
     });
@@ -394,7 +394,7 @@ describe('canonical F materialization', () => {
     expect(snapshot.terminalEntry.targets[0]).toMatchObject({
       exit: { kind: 'available', index: 1 },
       picked: true,
-      room: { lifecycleProfileKey: 'TerminalWorldShopRoom' },
+      room: { lifecycleProfileKey: 'PrebossShopRoom' },
     });
   });
 

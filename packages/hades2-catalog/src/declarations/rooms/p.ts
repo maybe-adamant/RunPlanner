@@ -638,7 +638,7 @@ export const pRooms = [
     label: 'Preboss',
     biomeKey: 'P',
     kind: 'Preboss',
-    mode: { kind: 'authored', templateKey: 'ForkedPreboss' },
+    mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: ['Indoor', 'Outdoor'],
     exits: [{ index: 1, type: 'OlympusIndoorExitDoor' }],
     incomingReward: {
@@ -647,16 +647,18 @@ export const pRooms = [
       shopProfileKey: 'WorldShop',
       producerLifecycleKey: 'RoomReward',
     },
-    entryOfferPolicy: {
-      kind: 'shopThenFillRemainingExits',
-      freeReward: {
-        kind: 'countedChoice',
-        storeKeys: ['RunProgress'],
-        eligibleRewardTypes: [],
-        ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop'],
-        producerLifecycleKey: 'RoomReward',
+    prebossBatchPolicy: {
+      kind: 'takeOverNormalDoors',
+      remainingOffers: {
+        kind: 'counted',
+        reward: {
+          kind: 'countedChoice',
+          storeKeys: ['RunProgress'],
+          eligibleRewardTypes: [],
+          ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop'],
+          producerLifecycleKey: 'RoomReward',
+        },
       },
-      maxFreeRewards: 1,
     },
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },

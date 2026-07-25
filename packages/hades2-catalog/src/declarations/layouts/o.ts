@@ -2,15 +2,10 @@ import type { RawBiomeLayoutDeclaration } from '../types';
 
 export const oBiomeLayout = {
   biomeKey: 'O',
-  kind: 'LinearBiome',
   initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
-  start: {
-    kind: 'authoredStart',
-    mode: 'fixed',
-    roomGameNames: ['O_Intro'],
-  },
-  entries: [],
-  continuation: {
+  start: { kind: 'fixedAuthored', roomGameName: 'O_Intro' },
+  progression: {
+    kind: 'generated',
     progressionPolicy: { kind: 'fixedCount', continuationCount: 6 },
     batchPolicy: { kind: 'standard', fields: [] },
     rewardStorePolicy: {
@@ -25,8 +20,8 @@ export const oBiomeLayout = {
         policy: { kind: 'sourceOfferPoint', selector: 'lastActiveWheel' },
       },
     ],
+    bounds: { maxBatches: 6, maxTargets: 6 },
   },
-  terminal: { kind: 'directTransition', roomGameName: 'O_PreBoss01' },
   completion: {
     rooms: [
       { role: 'boss', roomGameName: 'O_Boss01' },
@@ -38,5 +33,4 @@ export const oBiomeLayout = {
     ],
   },
   fields: [],
-  bounds: { maxBatches: 6, maxTargets: 6 },
 } as const satisfies RawBiomeLayoutDeclaration;

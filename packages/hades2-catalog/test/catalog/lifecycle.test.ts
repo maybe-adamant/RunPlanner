@@ -21,8 +21,8 @@ describe('room lifecycle catalog', () => {
       'FieldsCombatRoom',
       'ShipCombatRoom',
       'WorldShopRoom',
-      'TerminalRewardRoom',
-      'TerminalWorldShopRoom',
+      'PrebossFreeRewardRoom',
+      'PrebossShopRoom',
       'BossRoom',
       'PostBossRoom',
     ]);

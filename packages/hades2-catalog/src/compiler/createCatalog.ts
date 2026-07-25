@@ -7,6 +7,7 @@ import { normalizeEncounterProfiles } from './encounters';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './exits';
 import {
   normalizeBiomeLayouts,
+  validatePrebossBatchPolicies,
   validateDerivedRoomOwnership,
   validateRewardLookupOwnership,
 } from './layouts';
@@ -41,6 +42,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitTypes,
   );
   const biomeLayouts = normalizeBiomeLayouts(input.biomeLayouts, biomes, rooms, rewards.stores);
+  validatePrebossBatchPolicies(biomeLayouts, rooms, exitCompatibilityPolicies);
   validateDerivedRoomOwnership(rooms, biomeLayouts);
   validateRewardLookupOwnership(rooms, biomeLayouts);
 
