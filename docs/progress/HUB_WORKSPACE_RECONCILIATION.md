@@ -1,52 +1,327 @@
-# Unified Biome Workspace and Hub-Node Reconciliation
+# Unified Biome Decisions, Preboss Batches, and Hub Workspace Reconciliation
 
 ## Status
 
-Planned. This is the execution plan for Phase 7 Commit 12 after the Linear
-focus-progression reconciliation closes.
+Planned. This tracker supersedes the presentation-only Phase 7 Commit 12 and
+Commit 13 plan. Phase 7 Commit 12 will be delivered through the five
+independently reviewable commits defined below. Commits 1 through 4 establish
+and close the unified biome refactor. Commit 5 is a follow-up presentation and
+accessibility pass that preserves those domain contracts while delivering the
+same final product acceptance.
 
-The stable presentation authority remains
-[`STRUCTURED_EDITOR_WORKSPACE.md`](../design/STRUCTURED_EDITOR_WORKSPACE.md).
-The concrete N domain behavior remains owned by
-[`N_GAME_RULES.md`](../biomes/N_GAME_RULES.md). This document changes
-presentation projection and composition only.
+The implementation must update its owning authorities as it lands:
+
+- [`ARCHITECTURE.md`](../design/ARCHITECTURE.md);
+- [`AUTHORED_PROJECT_MODEL.md`](../design/AUTHORED_PROJECT_MODEL.md);
+- [`CANDIDATE_EVALUATION_MODEL.md`](../design/CANDIDATE_EVALUATION_MODEL.md);
+- [`CATALOG_MODEL.md`](../design/CATALOG_MODEL.md);
+- [`CONTEXTUAL_EDITOR_UX.md`](../design/CONTEXTUAL_EDITOR_UX.md);
+- [`EDITOR_MODEL.md`](../design/EDITOR_MODEL.md);
+- [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md);
+- [`GAME_INTEGRATION_BOUNDARY.md`](../design/GAME_INTEGRATION_BOUNDARY.md);
+- [`REWARD_MODEL.md`](../design/REWARD_MODEL.md);
+- [`ROOM_LIFECYCLE_MODEL.md`](../design/ROOM_LIFECYCLE_MODEL.md);
+- [`SIMULATION_AND_VALIDATION.md`](../design/SIMULATION_AND_VALIDATION.md);
+- [`STRUCTURED_EDITOR_WORKSPACE.md`](../design/STRUCTURED_EDITOR_WORKSPACE.md);
+- the affected biome authorities under `docs/biomes/`;
+- [`REWARD_GAME_DATA_AUDIT.md`](../audits/REWARD_GAME_DATA_AUDIT.md);
+- [`CROSS_BIOME_EDITOR_UX_AUDIT.md`](../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md).
+
+This tracker freezes the intended boundary, source-backed corrections, delivery
+order, and acceptance gates. It does not replace those stable design and biome
+authorities.
+
+## Resolved Game-Source Evidence
+
+The plan was reconciled against the installed Hades II scripts on 2026-07-24.
+The implementation must preserve these distinctions rather than copying the
+game's control flow mechanically.
+
+Repository-root-relative evidence anchors:
+
+- `../../1GameData/Scripts/RoomLogic.lua`: `DoUnlockRoomExits`,
+  `HandleSecretSpawns`, `LockEphyraExits`, and Soul Pylon completion
+  handling;
+- `../../1GameData/Scripts/RunLogic.lua`: `ChooseNextRoomData`,
+  `IsRoomForced`, and `IsRoomEligible`;
+- `../../1GameData/Scripts/RoomDataF.lua`, `RoomDataG.lua`,
+  `RoomDataH.lua`, `RoomDataO.lua`, `RoomDataP.lua`, and `RoomDataQ.lua`:
+  takeover Preboss declarations, force facts, `ForcedFirstReward`, and room
+  exits;
+- `../../1GameData/Scripts/RoomDataI.lua`: `AlwaysForceOncePerRoom`,
+  `MaxCreationsPerRoom`, and inherited `I_PreBoss02` behavior;
+- `../../1GameData/Scripts/RoomDataN.lua` and
+  `../../1GameData/Scripts/ObstacleDataN.lua`: N Preboss Shop plus
+  `EphyraExitBossDoor`, six-pylon availability, and fixed target identity.
+
+### Normal-Door Generation
+
+`RoomLogic.DoUnlockRoomExits` walks the offered exits in deterministic order.
+For an exit that does not already own a room:
+
+1. a fixed `ForceRoomName` wins when declared;
+2. otherwise `RunLogic.ChooseNextRoomData` evaluates linked-room or room-set
+   candidates;
+3. `IsRoomEligible` applies requirements and creation or appearance caps;
+4. `IsRoomForced` determines the forced candidate set;
+5. one Room Occurrence is created for that exit.
+
+Eligibility, force pressure, and caps determine whether a room is a valid
+candidate. They are not the authored batch-shape effect described below.
+
+### Preboss Batch Shape
+
+F, G, H, O, P, and Q preboss declarations are forced at their supported
+preboss frontier and remain eligible for every applicable unresolved normal
+door. The game therefore creates the same preboss Room Declaration once per
+normal door. F, G, H, and P can expose multiple such doors; O and Q currently
+expose one.
+
+The game does not call a literal `takeOverNormalDoors` callback. The normalized
+planner contract expresses the observable batch invariant:
+
+> If a takeover preboss appears in a valid normal-door batch, every normal door
+> in that batch resolves to a distinct occurrence of that preboss declaration.
+
+This is an appearance-triggered batch-shape rule. Candidate eligibility and
+force pressure still determine whether the appearance itself is valid or
+required.
+
+Every takeover preboss uses `ForcedFirstReward = "Shop"`. Reward assignment
+records that first offer before processing later doors, so:
+
+```text
+first preboss occurrence       -> Shop
+remaining preboss occurrences  -> free generated rewards
+```
+
+Every offered occurrence and incoming offer identity exists before the player
+selects an exit. Counted free-reward leaves are complete and have already
+consumed their reward-store entries. A Shop occurrence already owns its Shop
+binding, but WorldShop inventory and purchases remain entry-time lifecycle
+state and materialize only for the selected occurrence. Unpicked occurrences
+remain real dead leaves.
+
+### I Is the Explicit Generated Exception
+
+I's supported preboss declares both:
+
+- `AlwaysForceOncePerRoom = true`;
+- `MaxCreationsPerRoom = 1`.
+
+The first property forces one preboss occurrence when eligible. The second
+makes the same declaration ineligible for later normal doors from that source.
+An I batch may therefore contain one preboss target and an ordinary peer. I
+does not use the takeover invariant.
+
+### Chaos Is a Separate Exit Producer
+
+`RoomLogic.HandleSecretSpawns` creates a Chaos room and assigns it to its Secret
+Door before unresolved normal doors receive rooms. Normal-door generation does
+not replace a door that already owns its Chaos room.
+
+A source may therefore expose:
+
+```text
+normal doors  -> takeover preboss occurrences
+Secret Door   -> Chaos occurrence
+```
+
+If Chaos is entered, the preboss occurrences remain unentered offers. Chaos
+pauses biome state and uses the previous room set for its outgoing generation,
+so a supported preboss may be offered again after the detour. This behavior is
+only an extension constraint in this task; Chaos production behavior remains
+deferred.
+
+### N Has a Specialized Handoff, Not Specialized Preboss State
+
+N Hub owns ordinary `EphyraExitDoor` objects and a separate
+`EphyraExitBossDoor`. After six completed pylons:
+
+- `LockEphyraExits` removes the ordinary Hub exits;
+- the dedicated boss exit satisfies its six-pylon availability requirement;
+- that exit fixes `ForceRoomName = "N_PreBoss01"`;
+- exactly one `N_PreBoss01` occurrence with Shop is offered.
+
+The six-pylon rule belongs to the Hub and its dedicated exit. It is not ordinary
+preboss candidate pressure. The planner therefore places the uniqueness in the
+Hub progression contract:
+
+```text
+completed Hub
+  -> closes ordinary Hub exits
+  -> exposes one declaration-fixed normal exit
+  -> produces a width-one N_PreBoss01 batch
+```
+
+Once produced, N Preboss uses the same occurrence, incoming-reward, selection,
+entry, completion, history, and workspace contracts as every other preboss.
+The batch has no free-reward peer because it has no remaining normal exit.
 
 ## Decision
 
-Every biome is rendered through one shared `BiomeWorkspace`. Biome differences
-enter that workspace through explicit projected node variants and focused
-workbenches, not through separate full-biome editors.
+The normalized catalog, authored project, simulator, structured projection, and
+React workspace use one biome language. A biome begins at an authored start
+Room Occurrence and advances through explicit next-room decisions until a
+selected room closes editable traversal and starts the declaration-derived
+completion tail.
 
-N does not receive a `HubWorkspace`, and `HubBiomeEditor` does not remain a
-production composition boundary. The atomic Hub board is the one specialized
-workspace node because it is the one genuinely different authoring region.
-Fixed rooms, resolved Room Occurrences, findings, focus, route landmarks, and
-completion presentation reuse the same workspace language as the other biomes.
+There is no top-level `LinearBiome` versus `HubBiome` product split and no
+separate terminal-decision family:
 
-This boundary ensures that workspace-wide fixes to navigation, focus, findings,
-room editing, accessibility, responsive layout, and completion presentation
-apply to N without a second implementation.
+```ts
+type NextRoomDecision = ExitDecision | HubDecision;
 
-The generalization is presentation-only:
+interface ExitDecision {
+  kind: 'exit';
+  source: ExitDecisionSource;
+  normal: LinkedNormalExit | NormalDoorBatch;
+  selection: ExitSelection;
+}
 
-- N remains an authored `HubBiome`;
-- Linear biomes remain authored `LinearBiome` topologies;
-- the simulator continues to evaluate each topology according to its domain
-  rules;
-- the shared workspace is a projection and React composition boundary, not a
-  new persisted topology.
+type ExitDecisionSource =
+  { kind: 'occurrence'; occurrenceId: OccurrenceId } | { kind: 'hubDecision'; decisionKey: string };
 
-## Objective
+type ExitSelection =
+  { kind: 'derived' } | { kind: 'unresolved' } | { kind: 'normal'; exitKey: string };
+```
 
-Replace the current `LinearWorkspace` versus `HubBiomeEditor` split with one
-explicit biome-workspace contract, then project N into that contract without
-representing its persistent Hub as Linear topology.
+The type names, discriminants, and ownership shown here are normative.
+Implementation may factor helper types, but it must not introduce an alternate
+decision family or move any of these owners:
 
-N's projected route is:
+- an `ExitDecision` owns the exits offered from one semantic source and the
+  eventual selection among them;
+- its `normal` member is either one declaration-linked normal exit or one
+  normal-door batch;
+- a `NormalDoorBatch` owns its declaration-required batch state, target
+  occurrences, incoming offers, and physical or semantic exit identities;
+- a `HubDecision` owns N's atomic board, open-set rewards, visit order, side
+  traversal, restore semantics, and completed-Hub handoff;
+- selecting a target whose Room Declaration role closes the biome ends editable
+  traversal;
+- Boss and Postboss remain declaration-derived completion rooms rather than
+  authored decisions.
+
+This is not a generic graph or a capability bag. Each decision retains complete
+game-domain invariants, commands, materialization, validation, and simulation.
+Shared orchestration dispatches explicitly by decision and normal-exit kind.
+
+### Normal Is Domain Vocabulary
+
+`normal` means the declaration-linked or room-set-generated door family whose
+room assignment participates in the ordinary next-room decision. It is not a
+fallback meaning "anything not currently modeled."
+
+A future Chaos gate is a separately produced special exit. Normal-door
+takeover never includes it. Schema 9 does not persist an empty special-exit
+array merely to reserve that future space.
+
+### Exit Selection Ownership
+
+Selection belongs to the `ExitDecision`, not to one producer inside it. Today:
+
+- a one-target linked exit with no competing exit uses `derived`;
+- a width-one batch with no competing exit uses `derived`;
+- a multi-target batch begins `unresolved` and persists `normal` with the
+  declaration-owned exit key after selection.
+
+The codec rejects `derived` unless the enclosing decision has exactly one
+selectable exit, rejects `unresolved` when selection is structurally derived,
+and rejects a `normal` key outside the decision's normal member.
+`SetExitSelection` changes only an unresolved or authored selection; it cannot
+override a derived selection.
+
+When special exits enter scope, the selection union can gain a special-exit
+member without moving ownership or changing normal-batch identity. Derivation
+depends on the total selectable exits in the enclosing decision, not the width
+of its normal member alone. A width-one preboss batch beside Chaos is therefore
+offered but remains unselected until the authored exit choice is made.
+
+### Preboss Is Not a Decision Variant
+
+Preboss is a Room Declaration role interpreted inside a normal-door batch.
+There is no:
+
+- `TerminalDecision`;
+- `directTransition` versus `forkedTransition` authored distinction;
+- singleton preboss state detached from physical target occurrences;
+- authored `entryMode`;
+- persisted `isTakeover` duplicate of declaration and target facts.
+
+The batch validator derives the applicable preboss policy from its target Room
+Declarations and progression context.
+
+For the supported catalog, Room kind `Preboss` is the declaration-owned
+completion trigger. Offering a Preboss does not start completion; selecting its
+occurrence does. Do not replace the removed terminal policy with a second
+persisted `closesBiomeWhenPicked`, `completeBiome`, or entry-mode flag.
+
+## Scope
+
+### In Scope
+
+- replace normalized whole-biome `LinearBiome` and `HubBiome` variants with one
+  biome envelope and explicit progression-policy variants;
+- replace linked/generated/terminal top-level decision variants with
+  `ExitDecision | HubDecision`;
+- define linked normal exits and normal-door batches as explicit normal-exit
+  contracts;
+- move exit selection to the combined exit-decision owner;
+- correct preboss modeling across F through Q;
+- replace the `ForkedPreboss`/`ShopPreboss` template split and terminal
+  shop/free occurrence roles with one Preboss template plus batch-order-derived
+  offer roles;
+- separate candidate validity from preboss appearance-triggered batch shape;
+- represent O and Q prebosses as width-one instances of the common batch;
+- retain I's mixed generated preboss behavior;
+- represent N Opening as the authored start occurrence;
+- represent Opening-to-PreHub as a linked normal exit;
+- remove the obsolete fixed-entry and fixed-authored-slot layout forms rather
+  than retaining them as dormant compatibility types;
+- represent N's persistent Hub as the one specialized Hub decision;
+- make completed N Hub produce a declaration-fixed width-one preboss batch;
+- preserve N's board, visits, side rooms, reward lookup, lifecycle, and
+  canonical history;
+- unify project evaluation and workspace projection around the common biome
+  envelope;
+- render every biome through one `BiomeWorkspace`;
+- remove `LinearWorkspace`, `LinearBiomeEditor`, `LinearTopologyEditor`, and
+  `HubBiomeEditor` as full-biome production surfaces.
+
+### Explicitly Deferred
+
+Natural Chaos is not implemented in this task. Do not add:
+
+- Chaos Room or reward declarations to the production catalog;
+- a persisted empty special-exit or detour collection;
+- `AddChaosGate`, remove-gate, or pick-detour commands;
+- Chaos candidate evaluation, reward simulation, history, validation, or UI;
+- generic `unsupported`, `unknown`, or placeholder detour values;
+- save/profile predicates controlling Chaos eligibility.
+
+The future contract is documented only to prevent today's ownership from
+blocking the later feature.
+
+### Out of Scope
+
+- arbitrary graphs or user-authored cycles;
+- probability simulation;
+- changing supported room eligibility, force pressure, or reward bags beyond
+  correcting their preboss interpretation;
+- changing Hub slot identity, board availability, reward lookup, visits, side
+  rooms, or restores;
+- representing repeated Hub appearances as new Room Occurrences;
+- implementing optional actions, NPC substitution, Anomaly, or other detours;
+- changing Boss or Postboss completion behavior.
+
+## User-Facing N Flow
+
+The supported no-detour route remains:
 
 ```text
 Opening
-Pre-Hub
+PreHub
 Hub
 Room 1
 Room 2
@@ -59,425 +334,1336 @@ Boss       derived landmark
 Postboss   derived landmark
 ```
 
-Opening, Pre-Hub, Preboss, resolved room occurrences, and completion landmarks
-use shared node presentation and workbenches. Hub alone uses a specialized
-board workbench. Room 1 through Room 6 resolve the occurrence selected at that
-visit position and expose its ordinary occurrence-owned side-room state.
+Opening, PreHub, resolved main-room occurrences, and Preboss use the same room
+workbenches as equivalent rooms elsewhere. The Hub board is the only
+Hub-specific workbench.
 
-## Workspace Contract
+A declaration-linked decision with only one possible exit does not require a
+room-selection control. The rail proceeds from Opening to PreHub without asking
+the user to select its fixed game identity.
 
-### Shared Envelope
+After six valid visits, the Hub workbench exposes the semantic action that
+creates its width-one preboss batch. The action is available because the Hub is
+complete, not because React recalculates pylon or room-candidate rules.
 
-The structured projection exposes one common biome-workspace envelope rather
-than requiring the React shell to choose a full editor from authored topology:
+The future addition of a Chaos gate at N Opening would make that existing exit
+decision selectable:
+
+```text
+Next room from Opening
+  PreHub  linked normal exit
+  Chaos   separately produced special exit
+```
+
+The Opening workbench would expose `Add Chaos Gate`; exit selection would
+remain owned by the next-room decision. The current task adds neither action nor
+state.
+
+## Catalog Contract
+
+### Common Biome Envelope
+
+The normalized catalog expresses one biome envelope:
 
 ```ts
-interface WorkspaceBiome {
-  biomeName: BiomeName
-  topologyKind: "linear" | "hub"
-  nodes: readonly WorkspaceNode[]
-  defaultFocus: WorkspaceFocusAddress
-  completion: WorkspaceCompletion
+interface BiomeLayout {
+  biomeKey: string;
+  initialCounters: InitialCounters;
+  start: StartDescriptor;
+  progression: ProgressionDescriptor;
+  completion: CompletionDescriptor;
+  fields: readonly AuthoredFieldDescriptor[];
 }
 ```
 
-The exact field names may follow existing project conventions. The required
-contract is:
+The start contract is:
 
-- React receives an ordered set of complete node variants;
-- authored topology kind remains explicit rather than inferred from nodes;
-- the workspace owns rail, focus, inspector, finding navigation, and common
-  layout exactly once;
-- node variants carry normalized presentation data and semantic addresses;
-- React does not reconstruct topology, eligibility, coverage, or evaluation;
-- persisted project state contains none of the workspace nodes or layout data.
+```ts
+type StartDescriptor =
+  | {
+      kind: 'authoredChoice';
+      roomGameNames: readonly [string, ...string[]];
+    }
+  | {
+      kind: 'fixedAuthored';
+      roomGameName: string;
+    };
+```
 
-### Explicit Node Variants
+F uses `authoredChoice`. G, H, I, O, P, and Q use a fixed authored `Intro`; N
+uses fixed authored `N_Opening01`. A fixed start still creates and persists a
+real Room Occurrence, but the command and UI cannot substitute another game
+name.
 
-Use an explicit discriminated union, not a capability bag, renderer registry,
-or structure filled with optional fields:
+There is no separate top-level `terminal` field. Progression declares which
+exit or Hub decision follows each semantic role, and target Room Declarations
+derive continuation or biome completion. In the supported catalog, a selected
+authored `Preboss` target starts the completion tail. This is Room-kind
+semantics, not a second layout flag.
+
+`ProgressionDescriptor` remains a discriminated, declaration-owned language.
+It must not contain callbacks, UI concepts, or biome-key dispatch. Variant
+fields stay inside the variant that owns them:
+
+- eligibility-driven, fixed-count, and staged generated progression;
+- standard, Fields, Clockwork, and Ship batch state;
+- reward-store policies and source overrides;
+- Hub open-count, board, visit, side-room, and handoff policies;
+- linked and declaration-fixed exit targets;
+- generated topology bounds.
+
+### Preboss Declaration Policy
+
+Every supported preboss declaration must state a complete normalized batch
+policy:
+
+```ts
+type RemainingPrebossOfferPolicy =
+  | { kind: 'none' }
+  | {
+      kind: 'counted';
+      reward: CountedIncomingRewardPolicy;
+    };
+
+type PrebossBatchPolicy =
+  | {
+      kind: 'takeOverNormalDoors';
+      remainingOffers: RemainingPrebossOfferPolicy;
+    }
+  | { kind: 'retainNormalPeers' };
+```
+
+For a takeover policy, the first declared normal exit uses the Room
+Declaration's ordinary Shop incoming-reward binding. `remainingOffers` states
+what later normal exits own without duplicating that first binding:
+
+- F/G/H/P use takeover with counted remaining offers;
+- O/Q use takeover with `remainingOffers.kind = 'none'` because every supported
+  preboss source is width one;
+- N uses takeover with `remainingOffers.kind = 'none'` over the width-one batch
+  emitted by completed Hub progression;
+- I uses `retainNormalPeers`.
+
+Catalog normalization and cross-layout validation reject:
+
+- a Preboss room with no batch policy;
+- non-Preboss rooms with a preboss policy;
+- a takeover Preboss whose ordinary incoming reward is not Shop;
+- a takeover Preboss whose static creation or appearance caps cannot cover the
+  maximum normal-exit width of a supported source;
+- a takeover Preboss that is statically incompatible with any normal exit type
+  at a supported source;
+- a `retainNormalPeers` declaration whose Room caps do not state
+  `maxCreationsPerRoom = 1`;
+- `remainingOffers.kind = 'none'` when a supported source can expose more than
+  one normal exit;
+- counted remaining offers when every supported source is width one and the
+  alternate binding would be unreachable;
+- a fixed progression target whose Room Declaration belongs to another biome.
+
+Authored-project validation separately rejects a takeover batch containing a
+non-preboss normal peer or targets that do not all reference the same
+declaration. The catalog compiler does not inspect authored occurrences, and
+the project validator does not redefine declaration policy.
+
+The migration replaces `entryOfferPolicy`,
+`ForkedPreboss`/`ShopPreboss`, and terminal shop/free roles. The normalized
+batch policy, declared exit order, and selected target derive each occurrence's
+Shop or counted-free offer role. No persisted occurrence-role flag duplicates
+those facts.
+
+### N Progression
+
+N progression declares:
+
+- fixed authored start `N_Opening01`;
+- linked normal exit key `prehub` to `N_PreHub01`;
+- persistent Hub decision key `hub`, reached from PreHub;
+- six valid visits as Hub completion;
+- one declaration-fixed outgoing exit key after Hub completion;
+- a width-one normal-door batch targeting `N_PreBoss01`;
+- Boss and Postboss completion roles.
+
+N's Hub handoff does not run ordinary preboss eligibility or force-candidate
+selection. Its fixed target identity comes from the Hub progression
+declaration. The resulting batch and occurrence use the common contracts.
+
+The migration removes `EntryDescriptor`, `FixedEntryDescriptor`,
+`FixedAuthoredSlotDescriptor`, the derived `fixedEntry` classification, and
+their fixed-entry semantic addresses. N Opening and PreHub are ordinary
+authored occurrences connected by the start and linked-exit contracts; N
+Preboss is owned by the completed-Hub batch.
+
+### Fixed Opening Start
+
+`fixedAuthored` accepts an authored Room Declaration of kind `Intro` or
+`Opening`. It rejects a mismatched biome, a derived room, any other Room kind,
+or more than one room identity. `N_Opening01` is the fixed `Opening` instance.
+
+The change must remain descriptor-driven; do not add a biome-key exception for
+N.
+
+### Catalog Version
+
+The production catalog version changes from `0.14.0-f-rewards` to:
+
+```text
+0.15.0-unified-biome-decisions
+```
+
+Profiles and persisted projects must match the new catalog version exactly.
+
+## Authored Project Contract
+
+### Common Plan and Topology
+
+Schema 9 uses one biome plan:
+
+```ts
+interface AuthoredBiomePlan {
+  biomeKey: string;
+  state: AuthoredBiomeState;
+  topology: BiomeTopology | null;
+}
+
+interface BiomeTopology {
+  startOccurrenceId: OccurrenceId;
+  occurrences: readonly RoomOccurrence[];
+  decisions: readonly NextRoomDecision[];
+}
+```
+
+`topology: null` is the only missing-start state. Once `CreateStart` creates a
+topology, `startOccurrenceId` is required and references its authored start
+occurrence. Every decision remains a complete discriminated structure. The
+common occurrence registry owns linked targets, batch targets, Hub open
+targets, and preboss targets.
+
+Common topology validation preserves the existing structural guarantees:
+
+- occurrence IDs are unique and every occurrence has exactly one structural
+  owner;
+- every decision has one valid semantic source and at most one decision exists
+  for that source;
+- target exit keys are declaration-owned, unique within their decision, and
+  reference occurrences in the same biome;
+- a selected target belongs to its decision, while one-target selection is
+  derived and a selectable multi-target decision may remain unresolved;
+- downstream decisions continue only from the selected spine or an explicitly
+  declared stable region such as N Hub;
+- unpicked targets remain real dead leaves and cannot own downstream
+  decisions;
+- decision cycles, detached decisions, duplicate Hub regions, and unreferenced
+  occurrences fail decoding;
+- declaration bounds for decisions, targets, Hub membership, and visits remain
+  enforced by their owning progression variants.
+
+The common envelope does not authorize arbitrary branches, multiple
+continuations from one source, or array position as reachability.
+
+### Exit Decision
+
+An exit decision records:
+
+- a stable semantic source;
+- one linked normal exit or normal-door batch;
+- the selection owner;
+- no rendered row, panel, lane, or position.
+
+`ExitDecisionSource` supports:
+
+- an authored source Room Occurrence;
+- the stable completed-Hub decision role.
+
+The Hub source form is required because N's outgoing preboss batch follows the
+Hub region rather than one restored Hub appearance.
+
+N's no-detour progression makes the stable Hub decision authorable only after
+the linked PreHub occurrence is selected and entered. The decision's
+`HubDecisionAddress` does not contain that predecessor ID; progression
+validation proves reachability. A future Chaos resumption can therefore reach
+the same address without creating a second board.
+
+### Linked Normal Exit
+
+The N Opening exit records:
+
+- the Opening occurrence as source;
+- a catalog-declared linked exit key;
+- the PreHub occurrence reference;
+- no arbitrary room name;
+- no generated batch policy or reward-store state.
+
+When it is the only exit, selection is derived. PreHub remains a real authored
+Room Occurrence because it owns incoming reward and lifecycle state.
+
+### Normal-Door Batch
+
+A normal-door batch preserves all variant-owned facts:
+
+- source;
+- declaration-owned physical or semantic exit keys;
+- batch reward-store state when exposed;
+- declaration-owned batch state;
+- target occurrence references;
+- decision-owned picked target when selection is not derived.
+
+The batch does not persist whether it is a preboss takeover. Validation derives
+that state from its targets and catalog policy.
+
+For a takeover preboss, one semantic command creates or replaces the complete
+batch atomically. Creation receives all required occurrence IDs and creates:
+
+- one target per normal exit;
+- the Shop realization at the first declared exit;
+- counted-free realizations at remaining exits when the declaration provides
+  them;
+- one unresolved selection for a multi-target batch;
+- a derived selection for a width-one batch only because schema 9
+  provides no competing special exit.
+
+Repair matches existing targets by stable exit key. It retains an occurrence ID
+and room-local state only when the Preboss declaration and the derived
+Shop-versus-free leaf contract are compatible under the existing
+declaration-owned replacement policy. The application allocates occurrence IDs
+only for newly required exit keys and passes them to the atomic repair command.
+The command removes unavailable targets explicitly. If exit order changes a
+surviving target from Shop to counted-free or vice versa, that target receives
+the complete default state for its new leaf contract rather than carrying
+incompatible state across the role change.
+
+The Shop-versus-free occurrence role is derived from the declaration policy and
+exit order during decoding, default construction, materialization, and reward
+processing. It is not persisted as `terminalShop`, `terminalFreeReward`, or an
+equivalent flag.
+
+Ordinary generated batches use their progression-owned reward-store and batch
+state. A takeover preboss batch uses its preboss offer policy and only the
+source reward-store provenance explicitly required by that progression. It
+does not inherit an unrelated Fields cage outcome or Clockwork batch field. I
+remains an ordinary Clockwork batch and therefore retains its ordinary batch
+state while admitting one Preboss target.
+
+I continues to create targets through the ordinary generated-target workflow.
+Selecting `I_PreBoss02` for one exit does not rewrite its normal peers.
+
+An individual target in a takeover batch is not arbitrarily replaceable. A
+repair or replacement dispatches the same whole-batch semantic command; only I
+retains ordinary per-target Preboss selection.
+
+### Hub Decision
+
+The current no-detour route reaches the N Hub decision from entered PreHub. The
+Hub decision is addressed by its stable semantic role rather than that
+predecessor, so a future detour can reach the same Hub region without changing
+board identity.
+
+The Hub decision owns:
+
+- the derived persistent `N_Hub` lifecycle role, which is not an authored Room
+  Occurrence;
+- the catalog-fixed physical board;
+- nine or ten open fixed slot references;
+- one occurrence and complete incoming reward for every open slot;
+- six distinct ordered visit references;
+- occurrence-owned side-room generation, rewards, and entered order;
+- parent and Hub restore semantics;
+- the six-visit completion predicate;
+- closure of ordinary Hub exits;
+- availability of one declaration-fixed outgoing preboss exit.
+
+It does not own N Preboss room-local state. Completing the Hub permits a
+separate width-one normal-door batch whose occurrence owns that state.
+
+### Structural Commands
+
+Commands remain semantic and variant-specific. The target command language
+must support:
+
+- `CreateStart`, which receives a selected game name only for
+  `authoredChoice` and derives the declaration-fixed game name for
+  `fixedAuthored`;
+- `CreateLinkedExit`, which atomically creates the declaration-fixed target
+  occurrence and its exit decision;
+- `CreateBatch` and `CreateTarget` for progressively authored ordinary
+  normal-door batches;
+- `CreateTakeoverBatch`, `ReplaceWithTakeoverBatch`, and
+  `ReconcileTakeoverBatch`, each atomic over the complete takeover shape;
+- `ReconcileBatchExitCapacity` for explicit ordinary-batch capacity repair;
+- `CreateHubDecision` and the existing Hub slot, visit, and side-room edits
+  migrated to `HubDecisionAddress`;
+- `SetExitSelection` as the one shared authored-selection command;
+- `RemoveExitDecision` and `ClearTopology` for explicit structural deletion;
+- occurrence-owned room-state edits.
+
+The migration removes the specialized production commands:
+
+- `CreateHubTopology`;
+- `CreateTerminalTransition`;
+- `SetPicked`;
+- `SetTerminalPicked`;
+- `ReconcileExitCapacity`;
+- `ReconcileTerminalExitCapacity`;
+- `RemoveBatch`;
+- `RemoveTerminalTransition`;
+- `ReplaceWithTerminalTransition`;
+- `ReplaceWithBatch`.
+
+These command names and semantic scopes are the target contract. Selecting a
+preboss on one target row and leaving ordinary peers behind is never an
+intermediate authored state.
+
+One command produces one undoable authored transition. Focus and navigation
+remain outside authored history.
+
+### Schema 9 Boundary
+
+Schema 9 is a clean authority boundary:
+
+- schema 8 documents are rejected;
+- no automatic v8-to-v9 migration invents decision or N progression state;
+- stale autosave/profile payloads remain preserved through the existing
+  blocked-recovery path;
+- schema 9 codecs, fixtures, profiles, recovery behavior, and test builders
+  update together;
+- no permanent `LinearBiomePlan`, `HubBiomePlan`, or dual-schema compatibility
+  type remains.
+
+Do not add cross-schema adapters to keep downstream layers compiling during the
+transition. A downstream layer may remain broken until its owning slice updates
+it, but the catalog and authored-project authorities established by the first
+slice must not expose both schema 8 and schema 9 production contracts.
+
+## Semantic Ownership and Addresses
+
+Introduce `ExitDecisionAddress`, `ExitSelectionAddress`, and
+`HubDecisionAddress`. Every address is based on a semantic source and
+declaration-owned exit key, never a rendered index.
+
+Remove `ContinuationAddress`, `PickedAddress`, `FixedEntryRoomAddress`,
+`FixedEntryRewardAddress`, and `FixedEntryTargetAddress`. Migrate
+`BatchRewardStoreAddress` and `TargetAddress` so they contain
+`ExitDecisionAddress` plus their declaration-owned subordinate key instead of
+`parentOccurrenceId` or rendered `exitIndex`.
+
+| Owner                              | Required semantic address                                              |
+| ---------------------------------- | ---------------------------------------------------------------------- |
+| biome start and room-local leaves  | `OccurrenceAddress`                                                    |
+| exit decision from a room          | `ExitDecisionAddress` with source occurrence identity                  |
+| exit decision from completed N Hub | `ExitDecisionAddress` with `HubDecisionAddress` source                 |
+| normal target                      | `TargetAddress` with decision identity plus declaration-owned exit key |
+| exit selection                     | `ExitSelectionAddress` for the enclosing exit decision                 |
+| Hub decision                       | `HubDecisionAddress` with the catalog Hub decision key                 |
+| Hub open set                       | `HubOpenSetAddress`                                                    |
+| Hub physical slot                  | `HubSlotAddress`                                                       |
+| Hub visit                          | `HubVisitAddress`                                                      |
+| side room and local reward         | `LocalChildAddress`, `LocalChildGroupAddress`, or `LocalRewardAddress` |
+| Boss/Postboss completion           | `CompletionRoomAddress`                                                |
+
+N uses catalog semantic key `prehub` for the Opening-to-PreHub linked exit,
+`hub` for its persistent Hub decision, and `preboss` for the dedicated outgoing
+position. None is addressed by rendered chronology such as "the node after
+visit six." Generated exit numbers remain valid declaration-owned physical
+keys.
+
+Changing a decision or source room clears or retains downstream state only
+through explicit structural commands. Room replacement keeps compatible
+occurrence-owned leaves according to the existing declaration-owned reward
+profile policy.
+
+## Simulation Contract
+
+### Common Evaluation Envelope
+
+The project simulator exposes one biome evaluation envelope:
+
+```ts
+interface BiomeEvaluationBase {
+  biomeKey: string;
+  origin: BiomeAddress;
+  authoring: 'incomplete' | 'complete';
+  coverage: BiomeEvaluationCoverage;
+  findings: readonly SemanticFinding[];
+}
+```
+
+The route evaluator no longer chooses `evaluateLinearBiome` versus
+`evaluateHubBiome`. It evaluates the common biome envelope and dispatches
+decisions through explicit typed functions.
+
+### Ordered Evaluation
+
+Simulation processes:
+
+```text
+start lifecycle
+  -> exit or Hub decision
+  -> selected target lifecycle
+  -> next decision
+  -> ...
+  -> selected declaration-completing Preboss target
+  -> completion lifecycle
+```
+
+Decision evaluators own:
+
+- linked normal exit: declaration-fixed target and incoming leaf;
+- normal-door batch: candidate validity, batch-shape validation, ordered offers,
+  and selected target;
+- Hub: atomic board, visits, side rooms, restores, and completed-Hub handoff.
+
+Shared orchestration owns initialization, counters, history folding, room
+lifecycle, completion walking, findings aggregation, and route-prefix handoff.
+
+The simulation migration also removes terminal-shaped derived vocabulary whose
+only purpose was the old topology split, including `CanonicalTerminalEntry`,
+`entersTerminal`, `layoutTerminal`, and the entry/body/terminal history
+adapter. A selected Preboss is the selected target of its normal-door batch;
+the common decision walk then starts the completion tail. Preboss Shop and
+counted-free occurrences retain distinct lifecycle behavior through
+declaration-derived offer roles, not terminal materializer branches.
+
+The common completion composer receives that entered Preboss occurrence as its
+predecessor. When a progression such as O carries resolved source reward-store
+provenance into completion, the selected normal-door batch supplies that
+provenance directly; it is not hidden in a replacement terminal wrapper. Boss
+and Postboss keep their existing completion-role addresses and lifecycle order.
+
+### Candidate Validity and Appearance Validation
+
+Simulation and candidate queries must keep these checks separate:
+
+```text
+pre-decision history and source
+  -> eligibility, force, caps, compatibility
+  -> valid or required room appearances
+
+authored normal targets
+  -> preboss appearance policy
+  -> valid or invalid complete batch shape
+
+exit selection
+  -> entered target continuation effect
+```
+
+The current candidate API evaluates room alternatives one physical target at a
+time. That remains correct for ordinary batches and I, but it is not the
+authoring boundary for a takeover preboss. The engine therefore adds one
+source-owned takeover-batch candidate domain:
+
+```ts
+interface TakeoverPrebossBatchCandidateQuery {
+  kind: 'takeoverPrebossBatch';
+  source: ExitDecisionAddress;
+  gameName: string;
+}
+```
+
+This is one query for one declaration at one semantic source, not one query per
+target. Its evaluation:
+
+- evaluates the Preboss declaration against the exact pre-decision history;
+- evaluates eligibility, force pressure, caps, and source compatibility across
+  the declaration-owned normal exits in game order;
+- decides appearance once for the batch, then validates the complete takeover
+  shape rather than treating later targets as independent authored picks;
+- returns one support result plus the complete declaration-owned normal-exit
+  key order and required target count;
+- does not allocate occurrence IDs, mutate authored state, or return UI
+  callbacks;
+- is unavailable at the same progressive frontier that blocks the source
+  decision.
+
+For generated sources in F/G/H/O/P/Q, support comes from ordinary
+room-generation evidence. N uses the same result and workspace-interaction
+shape, but its fixed Hub handoff is unavailable until the six-visit completion
+predicate and then required by declaration; it does not run ordinary Preboss
+eligibility or force selection.
+
+Ordinary per-target room candidate domains omit takeover Preboss declarations.
+I's `retainNormalPeers` Preboss remains in the per-target domain. The
+application binds the source-owned result to one workspace interaction; only
+the application interaction adapter allocates identities for exit keys that do
+not already retain compatible occurrences. The semantic command receives the
+complete retained/new mapping and applies the authored batch.
+
+Required fixtures prove:
+
+- an ineligible preboss target is rejected;
+- force pressure rejects a batch that omits its required preboss;
+- a source-owned takeover candidate reports one complete ordered batch and is
+  absent from ordinary per-target candidate domains;
+- one takeover-preboss appearance requires every normal target to use the same
+  declaration;
+- first and remaining offer roles follow declared exit order;
+- O and Q width-one batches derive Shop and selection;
+- I permits one preboss beside an ordinary peer;
+- N's batch is unavailable before Hub completion and fixed afterward;
+- selecting a preboss target, not merely offering it, starts completion.
+
+### Progressive Coverage
+
+Progressive evaluation stops at the exact semantic frontier:
+
+- missing start;
+- incomplete linked target leaf;
+- incomplete ordinary or preboss normal-door batch;
+- incomplete atomic Hub board or visit frontier;
+- missing completed-Hub outgoing batch;
+- invalid or blocked semantic owner.
+
+The Hub board remains one atomic generation region. It is never evaluated as a
+prefix of its rendered slots. Structurally representable later state remains
+visible while contextual evaluation is blocked by the first invalid upstream
+frontier.
+
+### History and Reward Parity
+
+The representation change must preserve observable supported behavior:
+
+- F/G/H/P retain their existing Shop-then-free preboss creation, offer,
+  selection, acquisition, and entry history;
+- an offered but unpicked Shop preboss owns no materialized WorldShop inventory
+  or purchase history;
+- O/Q retain one Shop preboss occurrence and existing reward-store provenance;
+- I retains mixed generated batches and repeatable declined preboss offers;
+- N retains one Preboss creation after six visits, its WorldShop lookup,
+  selected entry, and completion sequence;
+- all Hub board offers, including unvisited targets, remain in history and the
+  Hub reward lookup;
+- Boss/Postboss order and transition resets remain unchanged.
+
+N's authored topology becomes progressive rather than precreating Opening,
+PreHub, and Preboss in one `CreateHubTopology` command. That intentional
+authored-state change must not alter canonical lifecycle timing or reward
+history.
+
+## Deferred Chaos Extension Contract
+
+Schema 9 adds no Chaos behavior, but it fixes the ownership needed by the later
+feature.
+
+When Chaos enters scope:
+
+1. a supported room workbench exposes `Add Chaos Gate`;
+2. that command creates a real special exit and Chaos Room Occurrence;
+3. the existing exit decision combines its normal member and special exit for
+   one selection;
+4. normal-door takeover ignores the Chaos exit;
+5. an unpicked Chaos or preboss occurrence remains a real unentered offer;
+6. entering Chaos uses its declared resumption policy and may lead to another
+   preboss batch.
+
+N Opening is the concrete linked-normal example. A preboss-frontier source with
+normal doors is the concrete takeover example.
+
+For N, choosing the future Chaos exit leaves the offered PreHub occurrence
+unentered and resumes at the stable Hub decision according to the future
+detour policy. It does not retroactively select PreHub or create a second Hub
+board.
+
+Chaos does not become:
+
+- an ordinary generated peer;
+- a room-local encounter phase;
+- a Hub slot;
+- a boolean gate marker without its Room Occurrence and reward;
+- an empty placeholder collection in schema 9.
+
+## Structured Workspace Contract
+
+### Shared Workspace
+
+Every biome renders through one `BiomeWorkspace`. It owns:
+
+- the ordered route rail;
+- transient semantic focus;
+- default-focus progression;
+- findings and status markers;
+- finding-to-focus resolution;
+- the focused inspector shell;
+- keyboard and pointer interaction;
+- responsive rail and inspector layout.
+
+React consumes the structured projection. It does not inspect authored decision
+arrays to reconstruct topology or evaluate eligibility.
+
+### Workspace Nodes
+
+The projection uses an explicit discriminated union:
 
 ```ts
 type WorkspaceNode =
   | WorkspaceRoomNode
-  | WorkspaceLinearDecisionNode
-  | WorkspaceHubBoardNode
-  | WorkspaceTerminalNode
-  | WorkspaceCompletionNode
+  | WorkspaceBatchDecisionNode
+  | WorkspaceHubDecisionNode
+  | WorkspaceCompletionNode;
 ```
 
-`WorkspaceRoomNode` covers ordinary room presentation, including fixed rooms
-and a Hub visit position once it resolves to a Room Occurrence. It may represent
-an unresolved semantic room reference, such as an unauthored Hub visit, so the
-shared workbench can present a truthful empty state. Its semantic address states
-whether focus belongs to a fixed room, occurrence, or visit position.
+There is no `WorkspaceTerminalNode`. Preboss occurrences and their normal-door
+batch use the shared batch and room projections.
 
-`WorkspaceLinearDecisionNode` remains the explicit presentation of Linear
-choice and continuation semantics.
+A linked-only exit decision does not need a visible choice workbench. The
+projection advances to its target Room node. If a future special exit makes
+selection meaningful, the same `ExitDecision` can project a combined exit
+choice without moving room ownership.
 
-`WorkspaceHubBoardNode` is the sole Hub-specific structure node. It presents
-the joint board-selection and visit-order authority described below.
+At a takeover-capable frontier, the workspace projects one whole-batch Preboss
+action from engine candidate evidence. It never exposes the takeover Preboss
+through an ordinary single-target replacement control. Existing takeover
+targets remain individually inspectable for their occurrence-owned rewards and
+findings, while replacement and repair stay atomic. I continues to expose its
+Preboss through the ordinary target picker because its declaration retains
+normal peers.
 
-Terminal and completion nodes retain their existing semantic distinctions.
-They are not fabricated Room Occurrences.
+`WorkspaceInteractionCatalog` gains an explicit source-owned batch interaction
+descriptor alongside its existing per-control candidate interactions. The
+descriptor captures the semantic decision owner, lazily loads the one engine
+candidate domain, and exposes one confirmed action to the application
+interaction adapter. That adapter allocates the occurrence IDs required by the
+evidence and dispatches the atomic command. React does not infer exit count,
+order, Preboss identity, or support from room declarations or from the
+currently rendered targets.
 
-The union should be dispatched by an ordinary exhaustive switch. Do not add
-metaprogramming that conceals which game-domain node is being rendered.
+Use exhaustive switches, not renderer registries or optional capability bags.
 
-### Shared React Composition
+### Hub Decision Workbench
 
-`BiomeWorkspace` owns:
+The Hub workbench is the one specialized N surface. It owns:
 
-- the ordered route rail;
-- selection and transient semantic focus;
-- default-focus progression;
-- finding counts and status markers;
-- finding-to-focus resolution;
-- the focused inspector shell;
-- keyboard and pointer interaction;
-- responsive rail/inspector layout;
-- shared room and completion workbenches.
-
-Node-specific workbenches own only their distinct authoring surface. The
-workspace does not translate semantic commands into lower-level mutations.
-
-Removing a full Hub editor does not require removing Hub-named components.
-`HubBoardWorkbench` and Hub-specific candidate controls remain appropriate
-because their commands and facts are genuinely Hub-specific.
-
-## Preserved Domain Contracts
-
-- N remains a `HubBiome`; it does not acquire Linear continuations or batches.
-- The catalog-fixed physical board contains 26 possible slots, of which exactly
-  nine or ten are open.
-- The open board is generated as one atomic semantic region.
-- Every open main room owns a real incoming reward, including rooms that are
-  never visited.
-- Board membership and the ordered six-room visit plan remain separate authored
-  facts and separate semantic controls.
-- Main room declarations are fixed to Hub slots and cannot be replaced
-  arbitrarily.
-- Visit positions reference open Hub slots; they do not own or copy Room
-  Occurrences.
-- Side-room state remains owned by the selected main-room occurrence.
-- Reordering visits never moves, duplicates, resets, or copies side-room state.
-- Opening, Pre-Hub, and Preboss remain fixed authored Room Occurrences.
-- Boss and Postboss remain layout-derived read-only completion rooms.
-- Existing semantic commands, simulation, candidate evaluation, findings,
-  persistence, autosave, and undo/redo remain authoritative.
-
-## N Node Semantics
-
-### Fixed Rooms
-
-The fixed rail stops use shared room nodes with their existing semantic owners:
-
-```text
-Opening  -> FixedEntryRoomAddress(opening)
-Pre-Hub  -> FixedEntryRoomAddress(preHub)
-Preboss  -> FixedEntryRoomAddress(preboss)
-```
-
-They reuse the shared room workbench for room state, incoming reward, shop,
-assessment, and findings. N does not wrap or render a Linear editor to obtain
-that presentation.
-
-### Hub Board
-
-The Hub rail stop is a `WorkspaceHubBoardNode` addressed by
-`HubOpenSetAddress`.
-
-Its workbench owns:
-
-- initialization of the fixed Hub topology when the biome is empty;
-- selection of the nine or ten open catalog-fixed main-room slots;
-- every open main room's incoming reward;
-- the complete ordered six-room visit plan;
+- board initialization;
+- selection of nine or ten fixed physical slots;
+- every open main-room incoming reward;
+- the complete six-position visit order;
 - board and visit completeness summaries;
-- board-, slot-, reward-, and visit-owned findings.
+- the completed-Hub handoff action;
+- board-, slot-, reward-, visit-, and handoff-owned findings.
 
-The workbench presents all 26 physical slots in declaration-owned physical door
-order. Closed slots remain visible and compact. Open slots show their room,
-incoming reward summary, assessment, visit status, and findings. Selecting a
-slot does not expose arbitrary room replacement.
+All 26 physical slots appear in declaration-owned door order. Closed slots stay
+visible and compact. Open slots show room, reward summary, assessment, visit
+status, and findings. Main rooms cannot be replaced arbitrarily.
 
-The six visit selectors live in this workbench because the Hub board is the
-sole authoring authority for visit order. Room 1 through Room 6 consume that
-order; they do not provide a second ordering control.
+### Visit Room Workbenches
 
-The board may require a larger inspector surface than an ordinary node. It
-still uses compact slot summaries rather than mounting 26 complete room editors
-simultaneously.
+Room 1 through Room 6 are stable `HubVisitAddress` destinations. Each resolves
+its selected slot to the existing main-room occurrence and uses the shared
+occurrence workbench for:
 
-### Room 1 Through Room 6
-
-Each numbered stop begins from a stable visit-position owner:
-
-```text
-Room 1 -> HubVisitAddress(1)
-Room 2 -> HubVisitAddress(2)
-...
-Room 6 -> HubVisitAddress(6)
-```
-
-The projection resolves the selected slot to its existing Room Occurrence when
-one is authored. The node then uses the shared occurrence workbench to present:
-
-- the selected main room as read-only route context;
-- its parent-local side-room slots;
-- side-room generation state;
+- read-only main-room context;
+- side-room generation;
 - entered-side order;
-- side-room incoming rewards;
-- side-room findings and contextual candidate feedback;
-- derived parent restore and Hub return landmarks where useful.
+- side-room rewards;
+- local findings and candidate feedback;
+- useful restore landmarks.
 
-The compact rail label includes the resolved main room:
+Membership, main-room reward, and visit order remain in the Hub workbench.
+Side-room state remains occurrence-owned through visit reordering.
+
+### Preboss and Completion
+
+The completed-Hub action creates the common width-one batch. N Preboss uses the
+shared occurrence workbench. Boss and Postboss use shared read-only completion
+nodes and existing semantic completion addresses.
+
+### Retained Repair Projection
+
+Retained unavailable exits, detached downstream consequences, and incomplete
+takeover shape remain visible at their semantic decision owner. The workspace
+projects the exact repair scope and the owning structural command; React does
+not rediscover which occurrences or leaves will be removed.
+
+This projection and its semantic repair workflows are part of the unified
+refactor. They do not depend on replacing the browser confirmation surface.
+
+### Follow-Up Destructive Confirmation
+
+The follow-up polish commit changes no catalog, authored-project, simulation,
+candidate, or semantic-repair contract.
+
+Browser-native `globalThis.confirm` is removed from production. Destructive
+route shrink, topology clear, Hub membership removal, exit-capacity repair, and
+takeover repair use one accessible application dialog built on
+`@radix-ui/react-dialog`.
+Application-owned UI-session state stores the pending semantic intent and
+human-readable deletion scope. The dialog primitive owns focus trapping,
+keyboard dismissal, labelling, and focus return, but it does not determine
+domain deletion.
+
+Confirming dispatches exactly one semantic command and therefore creates one
+undoable authored transition. Cancelling or dismissing changes no authored
+state, evaluation, autosave, or undo history.
+
+## Current Code Anchors
+
+| Boundary              | Current authority                                                                                                          | Required transition                                                               |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Raw catalog layout    | `packages/hades2-catalog/src/declarations/types.ts` defines Linear and Hub layout variants                                 | one biome envelope with explicit progression variants                             |
+| Catalog normalization | `packages/hades2-catalog/src/compiler/layouts.ts` dispatches whole-layout and terminal kinds                               | shared envelope compiler, progression validation, and preboss batch policy        |
+| Normalized catalog    | `packages/planner-engine/src/catalog-schema/index.ts` defines `LinearBiomeLayout`, `HubBiomeLayout`, and terminal policies | one layout with no top-level terminal family                                      |
+| Preboss leaf policy   | room templates, `entryOfferPolicy`, and terminal occurrence roles split Shop from free rewards                             | one Preboss template; batch policy and exit order derive offer roles              |
+| Persisted project     | `packages/planner-engine/src/authored-project/model.ts` schema 8 defines Linear and Hub plans                              | schema 9 common plan, occurrence registry, and `ExitDecision \| HubDecision`      |
+| Topology commands     | `CreateBatch`, `CreateTerminalTransition`, and `CreateHubTopology` use separate paths                                      | common exit commands, atomic takeover batch command, and progressive Hub creation |
+| Semantic addresses    | `ContinuationAddress` assumes `parentOccurrenceId \| null`                                                                 | exit-decision sources support occurrences and stable Hub identity                 |
+| Simulation            | `simulation/project.ts` dispatches Linear or Hub evaluation                                                                | common biome evaluator with exit and Hub decision evaluators                      |
+| Candidate boundary    | room topology candidates are queried per physical target                                                                   | source-owned takeover-batch candidate domain plus ordinary per-target domains     |
+| Canonical history     | terminal entries, outcomes, sources, and adapters wrap the completion tail                                                 | selected Preboss target followed by common completion traversal                   |
+| Progressive products  | materialization, history, rewards, generation, and candidates have Linear/Hub roots                                        | shared orchestration with variant-owned algorithms                                |
+| Workspace projection  | `structuredWorkspace.ts` defines Linear/Hub products and per-control interactions                                          | one workspace envelope, explicit node union, and atomic batch interaction         |
+| React composition     | `App.tsx` chooses `LinearWorkspace` or `HubBiomeEditor`                                                                    | projection-driven `BiomeWorkspace`; Hub survives only as one workbench            |
+| Destructive UI        | shell and biome editors call `globalThis.confirm` directly                                                                 | application-owned pending intent and one accessible shared dialog                 |
+
+The destructive-UI transition belongs only to follow-up Commit 5. Commits 1
+through 4 own every other transition in this table.
+
+## Implementation Order
+
+The implementation follows dependency ownership rather than preserving a
+working application after every commit:
 
 ```text
-Room 1 — Combat 05
-Room 2 — Medea
-Room 3 — Unselected
+catalog and authored project
+  -> simulation and planner-engine products
+  -> application projection and React workspace
+  -> unified-contract closure
+  -> presentation and accessibility polish
 ```
 
-Main-room membership, main-room reward, and visit-order controls remain in the
-Hub board node. A numbered room contains no second copy of those controls.
+An intermediate commit may leave a temporarily non-working checkout when that
+produces cleaner ownership boundaries. Commits 1 and 2 may therefore leave
+known downstream TypeScript or product-test failures. This is not permission
+to leave the layer owned by the commit half-migrated, introduce dual schema
+contracts, or add compatibility adapters solely to keep later layers green.
 
-If the selected main room has no configurable side rooms, the shared workbench
-states that directly. If the visit position is unauthored, the node presents a
-truthful unresolved state and points to Hub without inventing an occurrence.
+Each temporary-breakage commit must:
 
-Changing the room selected at a visit position changes which occurrence that
-numbered node resolves. Side-room state remains attached to the original
-occurrence and appears wherever that occurrence is referenced.
+- pass its narrow owning test lanes and `git diff --check`;
+- remove superseded production contracts from the layers it owns;
+- name the expected downstream failures in its handoff or commit body;
+- distinguish expected dependency fallout from an owning-layer failure;
+- leave no runtime fallback that guesses old or new domain semantics.
 
-### Completion
-
-Preboss uses the shared room workbench and owns its existing shop state. Boss
-and Postboss follow it as read-only shared completion nodes using their existing
-semantic completion addresses.
-
-## Progressive Coverage
-
-The common workspace must preserve topology-specific coverage:
-
-- before Hub initialization, N's fixed outline and all route roles are visible,
-  but only the truthful initialization frontier is actionable;
-- while board membership or board rewards are incomplete, the Hub board is the
-  active workbench;
-- the board is assessed atomically and never presented as a slot-order prefix;
-- Room 1 through Room 6 follow sequential visit coverage;
-- authored later visits remain visible when an earlier visit is invalid, but
-  their contextual state remains unassessed;
-- Preboss and completion remain visible landmarks without claiming entry before
-  six valid visits;
-- an upstream-invalid Surface prefix leaves N editable but contextually blocked
-  without fabricated N-local findings.
-
-`BiomeWorkspace` renders projected coverage. It does not calculate these rules.
-
-## Finding Destinations
-
-Findings navigate by semantic ownership:
-
-- fixed Opening, Pre-Hub, and Preboss findings focus their room nodes;
-- open-set, membership, main-room, main-reward, and visit-order findings focus
-  the Hub board node;
-- visit-position findings focus the corresponding Room 1 through Room 6;
-- local-child and local-reward findings focus the node currently resolving
-  their parent occurrence;
-- completion findings focus the derived completion node;
-- if a side-room parent is no longer in the visit plan, its retained authored
-  state remains occurrence-owned and is reachable from its main-room slot in
-  the Hub board.
-
-Rendered board position, room label, rail position, and visit array offset are
-never finding identity.
+Commit 3 restores the connected application: repository-wide type checking,
+planner and product tests, and the production build become required again.
+Commit 4 runs the complete repository gate and closes the unified biome
+refactor. Commit 5 then replaces global confirmation, completes broader visual
+and accessibility polish, reruns the complete gate, and closes the tracker.
 
 ## Implementation Slices
 
-### Commit 1: Generalize the Biome Workspace
+### Commit 1: Establish the Unified Catalog and Authored Model
 
 Suggested subject:
 
 ```text
-refactor(editor): generalize biome workspace composition
+refactor(planner): define unified biome decisions and preboss batches
 ```
 
 Deliver:
 
-- introduce the common `WorkspaceBiome` envelope and explicit
-  `WorkspaceNode` union;
-- migrate the current Linear projection to the common envelope without changing
-  its topology semantics, focus addresses, or coverage results;
-- replace or rename `LinearWorkspace` with `BiomeWorkspace`;
-- move rail, focus, inspector selection, findings, default progression,
-  completion presentation, and responsive composition into that shared
-  component;
-- keep Linear decision rendering as an explicit node workbench;
-- make the application shell render a projected workspace rather than choose a
-  full editor from raw authored topology;
-- keep N on its current presentation temporarily until its complete projection
-  lands in Commit 2.
+- replace raw and normalized Linear/Hub whole-layout unions with one biome
+  envelope and explicit progression variants;
+- remove the top-level terminal policy;
+- replace `ForkedPreboss`, `ShopPreboss`, `entryOfferPolicy`, and terminal
+  occurrence roles with one authored Preboss template and complete
+  declaration-owned batch policies;
+- make takeover remaining offers explicitly counted or absent, and reject an
+  absent policy for any supported multi-normal-exit source;
+- derive completion from selection of a Preboss Room Declaration instead of a
+  duplicated terminal or `closesBiomeWhenPicked` flag;
+- normalize F/G/H/O/P/Q as takeover preboss batches;
+- retain I as a mixed generated batch;
+- declare N Opening, linked PreHub, Hub decision, completed-Hub handoff, and
+  fixed width-one preboss batch;
+- replace the old start modes with `authoredChoice | fixedAuthored`; make
+  `CreateStart` accept a selected game name only for `authoredChoice` and derive
+  the sole declared identity for `fixedAuthored`;
+- make `topology: null` the only missing-start state and require a non-null
+  `startOccurrenceId` in every `BiomeTopology`;
+- remove unused fixed-entry, fixed-authored-slot, and derived-fixed-entry
+  production descriptors;
+- replace catalog lifecycle profile keys and authored room-state role handling
+  whose only meaning is the removed terminal taxonomy with Preboss
+  Shop/free-offer language;
+- bump the catalog version to `0.15.0-unified-biome-decisions`;
+- replace `LinearBiomePlan | HubBiomePlan` with schema 9
+  `AuthoredBiomePlan`;
+- introduce `ExitDecision | HubDecision`, common occurrence ownership, common
+  selection ownership, and Hub-capable exit sources;
+- encode exit selection explicitly as `derived`, `unresolved`, or a selected
+  declaration-owned normal exit key, with structural validation of each state;
+- migrate existing ordinary generated continuations without weakening their
+  batch invariants;
+- preserve the existing declaration-owned compatible-leaf retention policy for
+  ordinary room replacement and stable-key takeover repair;
+- remove direct/forked/fixed terminal authored variants;
+- replace specialized terminal commands with common exit commands and an
+  atomic takeover-batch command;
+- remove terminal-form conversion commands rather than retaining unreachable
+  repair paths;
+- replace `CreateHubTopology` with progressive start, linked exit, Hub, and
+  completed-Hub batch commands;
+- update downstream clearing, capacity reconciliation, undo, and redo inside
+  the authored-project layer;
+- introduce `ExitDecisionAddress`, `ExitSelectionAddress`, and
+  `HubDecisionAddress`; remove the old continuation, picked, and fixed-entry
+  addresses; migrate target and batch-store addresses from parent occurrence
+  plus rendered exit index to decision identity plus declaration-owned exit
+  key;
+- make the project codec reject schema 8 without attempting migration;
+- remove all old-plan, old-layout, old-terminal, and dual-schema production
+  types from the catalog and authored-project layers;
+- update the catalog, authored-state, decision, and biome authority documents
+  owned by these contracts;
+- add no Chaos production state or behavior.
 
 Tests:
 
-- projection fixtures proving unchanged Linear node order and addresses;
-- exhaustive node dispatch;
-- Linear pointer, keyboard, finding-navigation, and default-focus regressions;
-- focus-only actions remaining outside authored history, evaluation, autosave,
-  and candidate work;
-- application-shell coverage proving workspace selection is projection-driven.
+- normalized catalog snapshots for F through Q;
+- compiler rejection for malformed progression and preboss policies;
+- compiler rejection for takeover caps or exit compatibility that cannot fill
+  every normal exit of a supported source;
+- compiler rejection for a width-one-only remaining-offer policy on any
+  multi-normal-exit source;
+- exact N start, linked exit, Hub handoff, width-one preboss, and completion
+  declarations;
+- fixed-start command coverage proving the declared identity is derived and
+  cannot be substituted;
+- codec rejection of a topology without a valid start occurrence, with
+  `topology: null` as the only missing-start representation;
+- schema 9 codec round trips for every decision and normal-exit variant;
+- exact semantic-address round trips for room-sourced and Hub-sourced exit
+  decisions, selections, batch stores, and targets;
+- explicit schema 8 and stale-catalog codec rejection;
+- malformed exit, batch, Hub, and selection rejection, including duplicate
+  sources, detached decisions, cycles, dead-leaf continuations, and
+  multiply-owned or unreferenced occurrences;
+- derived, unresolved, selected-normal, and invalid selection-state fixtures;
+- no persisted terminal shop/free role and no obsolete fixed-entry descriptor
+  or semantic-address round trip;
+- start, linked-exit, ordinary-batch, takeover-batch, and Hub structural command
+  undo/redo;
+- atomic takeover creation with no partial ordinary peers;
+- atomic takeover repair retains compatible stable-key occurrences, allocates
+  only new exits, and defaults targets whose derived Shop/free contract changes;
+- stable occurrence identity through reward edits and visit reordering.
 
 Gate:
 
-- every currently migrated Linear biome renders through `BiomeWorkspace`;
-- the shared renderer contains no Linear eligibility or topology calculation;
-- no Linear behavior or authored serialization changes;
-- `npm run test:planner` and all package typechecks pass.
+- the catalog and authored-project layer expose only the new authority;
+- every non-null topology has one valid authored start, and fixed starts cannot
+  substitute a different Room Declaration;
+- continuation, picked, fixed-entry, parent-occurrence batch-store, and
+  rendered-index target addresses are absent from production;
+- every decision variant fails loudly on incomplete structural contracts;
+- catalog and targeted authored-project tests pass;
+- `npm run typecheck --workspace @run-planner/hades2-catalog`,
+  `npm run test:catalog`,
+  `npx vitest run packages/planner-engine/test/authored-project`,
+  `npm run format:check` and `git diff --check` pass;
+- simulation, application type checking, and product tests may fail only
+  because they still consume removed schema 8 contracts, and those failures are
+  recorded for Commit 2 or Commit 3.
 
-### Commit 2: Project N Through the Shared Workspace
+### Commit 2: Migrate Simulation and Planner-Engine Products
 
 Suggested subject:
 
 ```text
-refactor(editor): model the hub as a workspace node
+refactor(planner): evaluate unified biome decisions
 ```
 
 Deliver:
 
-- project N's locked node order: Opening, Pre-Hub, Hub board, Room 1 through
-  Room 6, Preboss, Boss, and Postboss;
-- add `WorkspaceHubBoardNode` as the sole Hub-specific structure node;
-- reuse shared room nodes and workbenches for Opening, Pre-Hub, Preboss, and
-  resolved visit occurrences;
-- preserve truthful unresolved room nodes for unauthored visit positions;
-- move board membership, all open main-room rewards, and six-position visit
-  order into `HubBoardWorkbench`;
-- replace 26 complete room cards with compact fixed-slot summaries and focused
-  reward editing;
-- present visited-parent side-room generation, entered order, rewards, and
-  findings through the shared occurrence workbench;
-- preserve the empty-topology initialization command;
-- retain lazy candidate activation for membership, visits, rewards, side-room
-  generation, and entered-order proposals;
-- preserve all existing semantic commands and one-command undo behavior.
+- replace whole-biome evaluation dispatch with one common evaluator;
+- implement exit-decision and Hub-decision evaluators against schema 9;
+- keep candidate validity separate from preboss batch-shape validation;
+- preserve variant-owned completeness, progressive frontier, generation,
+  reward, history, candidate, and validation algorithms;
+- add a source-owned takeover-batch candidate domain and exclude takeover
+  Preboss declarations from ordinary per-target candidate domains;
+- migrate materialization, progressive evaluation, history, rewards,
+  generation, validation, candidates, lifecycle composition, route-prefix
+  composition, and public exports;
+- preserve truthful complete, incomplete, invalid, retained, and blocked
+  products;
+- make takeover shape declaration-derived and atomic while candidate
+  eligibility, force pressure, caps, and reroll history remain validity inputs;
+- derive takeover Shop/free materialization, lifecycle, and reward processing
+  from policy plus declared exit order;
+- ensure takeover batches do not acquire ordinary Fields or Clockwork batch
+  state, while I retains its ordinary Clockwork state;
+- preserve I's mixed batch, O/Q's width-one batches, and N's completed-Hub
+  width-one handoff;
+- remove old Linear/Hub evaluation envelopes and terminal-specific simulation
+  products;
+- remove `CanonicalTerminalEntry`, `entersTerminal`, `layoutTerminal`, and the
+  terminal adapter from history composition and public exports;
+- update simulation, lifecycle, reward, finding, and history authority
+  documents owned by these contracts;
+- add no application adapter and no Chaos production behavior.
 
 Tests:
 
+- complete, incomplete, invalid, retained, and blocked fixtures for all eight
+  biomes;
+- candidate validity versus appearance-shape fixtures;
+- source-owned takeover candidate support, ordered exit evidence, progressive
+  unavailability, and per-target exclusion;
+- F/G/H/P multi-target Shop/free reward parity;
+- unpicked Preboss Shop binding without WorldShop inventory or purchase history;
+- H takeover parity without a terminal-only cage outcome;
+- O/Q width-one batch parity;
+- I mixed and repeatedly declined preboss parity;
+- N Hub-completion gating and width-one Shop parity;
+- canonical lifecycle, reward, finding, and route-prefix parity from N into O;
+- semantic-frontier parity and exact findings at the migrated semantic owner
+  addresses.
+
+Gate:
+
+- the planner engine has one evaluation envelope over the schema 9 decision
+  model;
+- no simulation product or public engine export consumes the superseded
+  Linear/Hub or terminal contracts;
+- `npm run typecheck --workspace @run-planner/engine`,
+  `npm run test:engine`, `npm run format:check`, and `git diff --check` pass;
+- application type checking and planner/product tests may fail only because the
+  projection, Redux composition, or React UI still consumes removed engine
+  contracts, and those failures are recorded for Commit 3.
+
+### Commit 3: Rebuild the Application on One Biome Workspace
+
+Suggested subject:
+
+```text
+refactor(editor): render unified biome decisions
+```
+
+Deliver:
+
+- replace the current `WorkspaceHubBiome | WorkspaceLinearBiome` union behind
+  `WorkspaceBiome` with one common envelope and explicit workspace-node union
+  over schema 9 products;
+- replace `LinearWorkspace` with `BiomeWorkspace`;
+- remove `LinearBiomeEditor` and `LinearTopologyEditor` as full-biome
+  composition surfaces; move their reusable batch, room, and settings controls
+  under the shared decision/workbench language;
+- project linked normal exits, ordinary batches, takeover preboss batches,
+  mixed batches, Hub decisions, and completion without terminal variants;
+- make the application shell and Redux composition consume projected workspace
+  products rather than inspect authored topology;
+- preserve stale profile and autosave payloads through the existing blocked
+  recovery path when schema 8 or the old catalog version is rejected;
+- move rail, focus, inspector selection, findings, default progression,
+  completion presentation, keyboard/pointer interaction, and responsive
+  composition into the shared workspace;
+- add `WorkspaceHubDecisionNode` as the sole Hub-specific structure node;
+- reuse shared occurrence workbenches for N Opening, PreHub, visits, Preboss,
+  Boss, and Postboss;
+- preserve truthful empty, partial, invalid, retained, and blocked states;
+- keep Hub membership, open-room rewards, visit order, and completion summary
+  in `HubDecisionWorkbench`;
+- replace 26 complete cards with compact slot summaries and focused editing;
+- present visited-parent side-room state through shared occurrence workbenches;
+- preserve lazy candidate activation and one-command undo;
+- add one source-owned workspace batch-interaction descriptor and project
+  takeover creation and repair through it, never an ordinary per-target room
+  replacement; keep I's Preboss in its ordinary target picker;
+- project retained and unavailable decision state with exact repair scope;
+- remove `HubBiomeEditor`, the old full-biome Linear editor composition,
+  duplicate visited-parent composition, and all terminal-specific workspace
+  components;
+- update editor, workspace, interaction, and audit authority documents owned by
+  these contracts;
+- add no Chaos production state or behavior.
+
+Tests:
+
+- unchanged F through Q game-domain rail order, workbench behavior, and focus,
+  with exact assertions for the migrated semantic address shapes;
+- exact N route order and semantic activation;
 - empty, partial, complete, invalid, retained, and upstream-blocked N
   projections;
-- exact node order and semantic activation for every N route role;
-- opening and closing board slots;
-- editing the reward of an open unvisited room;
-- authoring and replacing visit order only through the Hub board;
-- each numbered room resolving its selected occurrence;
-- side-room state following its occurrence after visit reordering;
-- rooms without side children and unauthored visit positions;
-- shared fixed-room state and Preboss shop editing;
-- exact reward, side-room, finding, Boss, and Postboss focus;
+- board opening/closing and unvisited reward editing;
+- visit authoring only through the Hub workbench;
+- occurrence-owned side state through reordering;
+- linked Opening/PreHub presentation without a false room selector;
+- atomic F/G/H/O/P/Q/N takeover authoring and repair with no transient mixed
+  batch;
+- I Preboss remains an ordinary target choice beside supported peers;
+- Preboss Shop and completion focus;
+- exhaustive workspace-node dispatch;
+- pointer, keyboard, finding-navigation, and default-focus regressions;
+- retained ordinary and takeover repair through projected semantic scope rather
+  than React-owned topology inspection;
+- focus-only actions remain outside authored history, evaluation, autosave, and
+  candidate work;
+- schema 8 and stale-catalog profile/autosave payloads remain blocked and
+  preserved;
 - zero candidate queries during ordinary rendering.
 
 Gate:
 
-- N renders through the same `BiomeWorkspace` as Linear biomes;
-- Hub board is the only Hub-specific workbench and board-shaped node;
-- board membership and visit order have one visible authoring authority;
-- every open unvisited reward remains visible and editable;
-- numbered rooms reuse occurrence presentation without duplicating main-room
-  controls;
-- `npm run test:planner` and `npm run test:product` pass.
+- one catalog layout, authored biome plan, evaluation envelope, and workspace
+  projection are authoritative;
+- no production `LinearBiomePlan`, `HubBiomePlan`, `LinearBiomeLayout`,
+  `HubBiomeLayout`, `TerminalDecision`, or specialized terminal transition
+  remains;
+- schema 9 and the new catalog version are the only accepted authority;
+- every decision variant fails loudly on incomplete structural contracts;
+- Hub evaluation remains atomic and variant-owned;
+- no supported canonical lifecycle or reward fact changes unintentionally;
+- no Chaos production state exists;
+- all eight biomes render through the same `BiomeWorkspace`;
+- Hub is the only N-specific workbench and no full-biome Hub editor remains;
+- React contains no eligibility, topology repair, reward, or lifecycle rules;
+- no expected temporary compile or product-test failures remain;
+- `npm run typecheck`, `npm run test:planner`, `npm run test:contract`,
+  `npm run test:product`, `npm run lint`, `npm run format:check`,
+  `npm run build`, and `git diff --check` pass.
 
-### Commit 3: Retire the Separate Editors and Close the Contract
+### Commit 4: Close the Unified Contract
 
 Suggested subject:
 
 ```text
-test(editor): close the unified biome workspace
+test(planner): close unified biome decisions
 ```
 
 Deliver:
 
-- remove `HubBiomeEditor` after all N behavior is reachable through projected
-  nodes and focused workbenches;
-- remove the obsolete `LinearWorkspace` boundary if it was retained as a
-  temporary migration adapter;
-- remove duplicate Hub visited-parent detail and biome-level composition code;
-- add representative keyboard and pointer workflows across the Hub board and
-  Room 1 through Room 6;
-- close profile, autosave, undo, redo, progressive, retained, invalid, and
-  blocked-state regressions;
-- close responsive board, rail, and inspector styling;
-- update `STRUCTURED_EDITOR_WORKSPACE.md` so one biome workspace is design
-  authority rather than separate Linear and Hub workspace shells;
-- reconcile `EDITOR_MODEL.md`, `IMPLEMENTATION_PLAN.md`, and
-  `IMPLEMENTATION_PROGRESS.md`.
+- representative keyboard and pointer workflows across linked exits, ordinary
+  batches, takeover preboss batches, I mixed batches, Hub, and completion;
+- profile, recovery, autosave, undo, and redo regression coverage;
+- updated Underworld and Surface measurements for full rebuild, cold candidate
+  projection, representative edit publication, and cached undo; retain the
+  existing 750 ms rebuild/candidate/edit thresholds and 50 ms cached-undo
+  threshold;
+- architecture-boundary tests preventing React-owned topology or engine-owned
+  presentation state;
+- repair product workflows proving projected deletion scope and one semantic
+  command for Hub membership removal, ordinary retained-exit repair, and
+  takeover repair affected by the unified workspace;
+- final reconciliation of every owning design, biome, audit, implementation,
+  and README reference affected by the unified domain and workspace contracts;
+- explicit backlog wording for the future Chaos special-exit feature;
+- deletion of obsolete terminal, direct/forked, and full-biome Hub terminology
+  from production code and current authority statements;
+- record the unified biome refactor as closed, with Commit 5 as the sole
+  remaining follow-up before the tracker and active Phase 7 frontier advance;
+- resolution of every expected downstream failure recorded by Commits 1 and 2.
+
+Chronological progress and migration-provenance entries may retain the
+terminology that accurately described their delivered schema at that time.
+Do not rewrite history as though schema 9 had always existed. Add a clear
+supersession note and update current-summary tables or active-frontier text
+instead.
 
 Gate:
 
-- no production full-biome editor duplicates workspace composition;
-- workspace-wide behavior has one implementation used by N and Linear biomes;
-- the board remains one atomic evaluation region;
-- visit order remains separate from board membership;
-- no arbitrary main-room replacement or duplicate ordering authority exists;
-- focus-only actions produce no authored edit, evaluation, autosave, or
-  candidate work;
+- one biome and decision language is authoritative from catalog through UI;
+- decision-specific invariants remain explicit and fail loudly;
+- workspace-wide fixes have no separate N editor path;
+- documentation distinguishes candidate validity, appearance-triggered
+  takeover, selection, and Hub handoff;
+- the 750 ms rebuild/candidate/edit and 50 ms cached-undo thresholds pass
+  without relaxation;
+- no Chaos production behavior entered this task;
+- `npm run check` and `git diff --check` pass without timeout relaxation.
+
+Commit 4 does not require the global confirmation replacement or the broader
+visual-polish acceptance owned by Commit 5. Existing confirmation calls may
+remain at this boundary, but no new browser-confirmation path may be added.
+
+### Commit 5: Complete Workspace Polish and Accessible Confirmation
+
+Suggested subject:
+
+```text
+feat(editor): polish unified workspace interactions
+```
+
+This is a follow-up to the closed refactor, not another domain-model slice. It
+must consume the unified projection and semantic repair commands delivered by
+Commits 1 through 4 without changing their ownership.
+
+Deliver:
+
+- add `@radix-ui/react-dialog` at the planner application boundary and update
+  the package manifest and lockfile;
+- replace every production `globalThis.confirm` path with one accessible shared
+  destructive-action dialog;
+- keep the pending semantic intent and human-readable deletion scope in
+  application-owned UI-session state;
+- make confirmation dispatch exactly the projected semantic command, with no
+  React-owned topology or deletion inference;
+- complete visual hierarchy, density, spacing, and responsive polish for the
+  board, rail, batch, dialog, and inspector;
+- close keyboard, pointer, labelling, focus-trap, dismissal, and focus-return
+  behavior for the shared workspace and destructive dialog;
+- add confirmation product workflows for route shrink, topology clear, Hub
+  membership removal, ordinary exit-capacity repair, and takeover repair;
+- update the owning editor, contextual-UX, structured-workspace, audit,
+  progress, and README references for the delivered polish;
+- mark this tracker delivered and advance the one active progress frontier only
+  after the complete gate passes.
+
+Tests:
+
+- destructive-dialog labelling, focus trap, Escape, cancel, focus return, and
+  exact visible deletion scope;
+- confirmation dispatches one semantic command and creates one undoable
+  authored transition;
+- cancellation and dismissal change no authored state, evaluation, autosave,
+  candidate work, or undo history;
+- route shrink, topology clear, Hub membership removal, ordinary retained-exit
+  repair, and takeover repair use the shared dialog;
+- representative keyboard and pointer workflows remain correct after the
+  presentation changes;
+- responsive board, rail, batch, dialog, and inspector fixtures;
+- architecture-boundary coverage continues to reject React-owned topology,
+  repair, reward, or lifecycle rules.
+
+Gate:
+
+- no catalog, authored-project, simulation, candidate, or semantic-address
+  contract from Commit 4 changes;
+- production contains no `globalThis.confirm`;
+- every destructive path renders the projected deletion scope and dispatches
+  exactly one semantic command only after confirmation;
+- cancelling or dismissing the dialog has no authored or derived side effect;
+- the 750 ms rebuild/candidate/edit and 50 ms cached-undo thresholds continue
+  to pass without relaxation;
+- the final workspace satisfies the visual, responsive, keyboard, and
+  accessibility acceptance above;
+- no Chaos production behavior enters the follow-up;
 - `npm run check` and `git diff --check` pass without timeout relaxation.
 
 ## Expected File Scope
 
-Production:
+Catalog:
 
+- biome layout and room declarations;
+- Preboss template, batch-offer, and lifecycle-profile declarations;
+- raw declaration types;
+- catalog schema and layout compiler;
+- catalog version;
+- declaration and compiler tests.
+
+Planner engine:
+
+- authored-project model, topology validation, addresses, commands, codec,
+  initialization, and project fixtures;
+- completeness and candidates;
+- materialization, progressive evaluation, history, rewards, generation,
+  validation, project evaluation, and public exports;
+- affected engine fixtures.
+
+Planner application, unified refactor:
+
+- Redux composition, selectors, and semantic command dispatch;
+- profile and autosave recovery integration and fixtures;
+- candidate, contextual-picker, navigation, feedback, and reward projections
+  affected by the semantic owner changes;
+- source-owned batch candidate projection and workspace interaction
+  descriptors;
 - `apps/planner/src/projections/structuredWorkspace.ts`;
 - `apps/planner/src/ui/shell/App.tsx`;
-- shared workspace components under `apps/planner/src/ui/editor/`;
-- shared room and completion workbenches extracted from existing editors;
-- a focused Hub board workbench under
-  `apps/planner/src/ui/editor/hub/`;
-- `apps/planner/src/ui/editor/hub/HubCandidateControls.tsx`;
-- removal of
-  `apps/planner/src/ui/editor/hub/HubBiomeEditor.tsx`;
-- `apps/planner/src/ui/styles.css`.
+- shared workspace and room/batch workbench components;
+- one Hub decision workbench and Hub candidate controls;
+- removal of the full-biome exports from `HubBiomeEditor.tsx`,
+  `LinearBiomeEditor.tsx`, `LinearTopologyEditor.tsx`, and
+  `LinearWorkspace.tsx`; delete those files after moving any reusable leaf
+  controls into shared workbench modules;
+- refactor-owned shared styles and interaction tests.
 
-Tests:
+Planner application, follow-up polish:
 
-- `apps/planner/src/projections/structuredWorkspace.test.ts`;
-- shared workspace interaction tests;
-- focused Hub-board interaction tests;
-- affected Surface product-loop fixtures.
+- planner package manifest and lockfile with `@radix-ui/react-dialog`;
+- application-owned pending-dialog state and one accessible shared destructive
+  dialog;
+- presentation-only board, rail, batch, dialog, and inspector style changes;
+- destructive-action accessibility and product-interaction tests.
 
 Documentation:
 
-- `docs/design/STRUCTURED_EDITOR_WORKSPACE.md`;
-- `docs/design/EDITOR_MODEL.md`;
+- the owning design documents listed in Status;
+- `docs/biomes/F_GAME_RULES.md` through `Q_GAME_RULES.md` where preboss
+  terminology or behavior changes;
+- `docs/audits/REWARD_GAME_DATA_AUDIT.md`;
+- `docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`;
+- current-summary and supersession sections in
+  `docs/progress/MIGRATION_PROVENANCE.md`;
 - `docs/progress/IMPLEMENTATION_PLAN.md`;
-- `docs/progress/IMPLEMENTATION_PROGRESS.md`.
-
-Changing planner-engine, catalog declarations, N game rules, authored-project
-schema, Hub simulation, reward processing, or candidate evaluation is outside
-the expected scope and requires a newly documented reason.
+- `docs/progress/IMPLEMENTATION_PROGRESS.md`;
+- the README documentation map.
 
 ## Review Checklist
 
-- [ ] One `BiomeWorkspace` renders every migrated biome.
-- [ ] Authored `LinearBiome` and `HubBiome` topology kinds remain distinct.
-- [ ] React receives explicit projected nodes and does not infer topology.
-- [ ] The rail is Opening, Pre-Hub, Hub, Room 1 through Room 6, Preboss, and
-      derived completion.
-- [ ] Opening, Pre-Hub, Preboss, resolved occurrences, and completion reuse
-      shared presentation.
-- [ ] Hub board is the only Hub-specific structure workbench.
-- [ ] Hub board is the only board-membership, main-reward, and visit-order
+- [ ] One normalized biome envelope exists across catalog, authored project,
+      evaluation, projection, and workspace.
+- [ ] Whole-biome Linear/Hub production splits are removed.
+- [ ] No full-biome Linear or Hub React editor remains; only shared workspace
+      composition and decision-specific workbenches survive.
+- [ ] `NextRoomDecision` contains only exit and Hub decisions.
+- [ ] Exit selection belongs to the exit-decision envelope.
+- [ ] Normal exits are explicit domain vocabulary.
+- [ ] Linked exits and normal-door batches retain distinct invariants.
+- [ ] Candidate eligibility/force and appearance-triggered batch shape are
+      evaluated separately.
+- [ ] Takeover availability is one source-owned candidate domain; takeover
+      Preboss declarations do not appear in per-target pickers.
+- [ ] One Preboss template and declaration batch policy replace
+      `ForkedPreboss`, `ShopPreboss`, and `entryOfferPolicy`.
+- [ ] Preboss selection, not an authored completion flag, starts the completion
+      tail.
+- [ ] Takeover prebosses fill every normal door and never a special exit.
+- [ ] The first preboss occurrence is Shop and remaining occurrences are free
+      rewards.
+- [ ] O/Q/N explicitly declare no remaining offer and are proven width one.
+- [ ] Takeover Shop/free roles derive from exit order and are not persisted.
+- [ ] Takeover authoring and repair are atomic; individual target replacement
+      remains unavailable.
+- [ ] Stable-key takeover repair retains compatible occurrence leaves and
+      defaults a leaf when its derived Shop/free contract changes.
+- [ ] The workspace interaction descriptor carries engine evidence and React
+      does not derive takeover identity, count, order, or support.
+- [ ] Takeover batches do not acquire unrelated Fields or Clockwork state.
+- [ ] I retains one preboss occurrence beside valid ordinary peers.
+- [ ] O and Q use the common width-one preboss batch.
+- [ ] N Opening is an authored fixed `Opening`.
+- [ ] `topology: null` is the only missing-start representation; every
+      non-null topology owns one valid authored start occurrence.
+- [ ] Opening-to-PreHub is a linked normal exit.
+- [ ] Hub is the sole N-specific traversal decision and workbench.
+- [ ] N Hub completion produces a fixed width-one common preboss batch.
+- [ ] Hub membership, rewards, visits, side rooms, and handoff have one
       authority.
-- [ ] Room 1 through Room 6 show only their resolved occurrence's side-room
-      configuration.
-- [ ] Visit positions use `HubVisitAddress`.
-- [ ] Side-room state remains occurrence-owned through reordering.
-- [ ] The board remains one atomic coverage region.
-- [ ] Open unvisited rewards remain visible and editable.
-- [ ] Findings focus exact semantic owners.
+- [ ] The Hub board remains one atomic generation and coverage region.
+- [ ] Every open unvisited Hub reward remains real and editable.
+- [ ] Side-room state remains occurrence-owned through visit reordering.
+- [ ] Preboss occurrences use shared batch and room workbenches.
+- [ ] Boss and Postboss remain derived completion roles.
+- [ ] Commands and findings address stable semantic owners.
+- [ ] Continuation, picked, and fixed-entry addresses are removed; batch-store
+      and target addresses use decision identity and declaration-owned keys.
+- [ ] Retained invalid structure exposes projected repair scope and never
+      requires React to infer deletion ownership.
+- [ ] Commit 4 closes the unified biome refactor with a passing complete gate
+      before presentation and confirmation polish begins.
+- [ ] Commit 5 changes no catalog, authored-project, simulation, candidate,
+      address, or semantic-repair contract.
+- [ ] Browser-native confirmation is absent; one accessible application dialog
+      confirms exactly one undoable semantic command.
+- [ ] Schema 9 rejects schema 8 and uses the new catalog version.
+- [ ] Obsolete fixed-entry/fixed-slot, canonical-terminal, history-terminal,
+      and terminal-form repair APIs are absent from production.
 - [ ] No arbitrary room replacement or duplicate visit-order authority exists.
-- [ ] Workspace-wide fixes have no separate N implementation path.
+- [ ] No Chaos declaration, state, command, simulator, candidate, or UI behavior
+      is added.
+- [ ] The exit-decision envelope remains the documented future owner of Chaos
+      selection.
 - [ ] The complete repository gate passes.
 
-Do not mark Phase 7 Commit 12 complete until all three slices and the complete
+Do not mark Phase 7 Commit 12 complete until all five commits and the complete
 repository gate pass.

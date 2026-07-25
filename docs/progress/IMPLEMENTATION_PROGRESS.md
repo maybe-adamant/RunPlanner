@@ -20,13 +20,18 @@ selected, completion reveals but does not select the next frontier, and one
 nearby navigation-only action selects that frontier. It closes F/G
 generated-decision parity without changing domain state or simulation.
 
-The next planned slice is
-[Phase 7 Commit 12](IMPLEMENTATION_PLAN.md#commit-12-hub-board-visit-timeline-and-focused-inspector),
-which projects N through its fixed Hub board, ordered visit timeline,
-parent-local side-room state, and the shared focused-inspector language without
-imposing Linear structure or arbitrary room replacement. Commit 13 owns
-frontier, repair, dialog, accessibility, responsive-layout, and final
-presentation closure.
+The next planned work is
+[Phase 7 Commit 12](HUB_WORKSPACE_RECONCILIATION.md), organized as five
+independently reviewable ownership slices. It first establishes the unified
+catalog and schema 9 authored model, then migrates simulation, then restores the
+connected application on one biome workspace. The fourth slice closes that
+refactor with the complete gate; a fifth follow-up performs presentation polish
+and replaces browser confirmation without changing the closed domain contracts.
+The first two commits may intentionally leave downstream layers non-working;
+each must keep its owning layer coherent and record the expected dependency
+fallout without adding compatibility adapters. The tracker supersedes the
+former presentation-only Commit 12 and Commit 13 wording in
+`IMPLEMENTATION_PLAN.md`.
 
 Room-replacement retention is closed. The delivered policy uses the
 catalog-backed leaf-contract boundary, excludes speculative fixed, shop, and

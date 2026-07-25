@@ -2135,49 +2135,30 @@ Gate:
   source, or finding state;
 - no persisted panel, row, lane, or graph identity is introduced.
 
-### Commit 12: Hub Board, Visit Timeline, and Focused Inspector
+### Commit 12: Unified Biome Decisions and Workspace
 
-Deliver:
+The former presentation-only Commit 12 and Commit 13 plan is superseded by
+[`HUB_WORKSPACE_RECONCILIATION.md`](HUB_WORKSPACE_RECONCILIATION.md).
 
-- N in the same route-rail and inspector shell with an N-specific center region;
-- compact fixed-slot board cells with membership, incoming reward, assessment,
-  and finding summaries;
-- the separate ordered six-visit timeline and parent-local side-room focus;
-- fixed Opening/PreHub, Preboss, Hub return, parent restore, and completion
-  landmarks;
-- coverage and blocked presentation by semantic Hub region rather than rendered
-  board position;
-- keyboard and interaction fixtures for board membership, visit replacement,
-  side-room editing, reward focus, and finding navigation.
+Commit 12 will be delivered through five independently reviewable commits:
 
-Gate:
+1. establish the unified catalog and schema 9 authored decision model;
+2. migrate simulation and planner-engine products to that authority;
+3. rebuild the application projection and React editor as one biome workspace;
+4. close the unified domain/workspace contract, parity, architecture
+   boundaries, and owning documentation;
+5. follow with presentation polish and accessible destructive confirmation
+   without changing the closed domain contracts.
 
-- N retains fixed slot identity and separate membership versus visit-order
-  semantics;
-- the shared inspector does not introduce arbitrary room replacement or a
-  duplicate exit-count authority;
-- every open unvisited slot keeps its real reward leaf visible and editable.
-
-### Commit 13: Frontier, Dialog, Repair, and Presentation Closure
-
-Deliver:
-
-- one shared frontier presentation container with variant-owned actions;
-- concrete policies for F/G/P independent forks, H fixed-count fork, I
-  generated terminal peer, O/Q direct terminals, and N fixed Hub completion;
-- retained-overflow and terminal repair flows that require explicit commands;
-- accessible application dialogs replacing browser-native confirmation and
-  describing the exact visible deletion scope;
-- Radix Dialog integrated through explicit application-owned pending-dialog
-  state without placing destructive scope in the component primitive;
-- a dedicated retained-exit repair surface showing unavailable targets and the
-  continuation that must be re-anchored;
-- final keyboard, accessibility, visual hierarchy, spacing, responsive layout,
-  and measured interaction/rebuild performance closure;
-- complete F/G/H/I/N/O/P/Q browser interaction fixtures.
-
-Do not invent a universal frontier action. Shared labels or components require
-at least two consumers with identical semantics.
+The tracker owns the concrete contracts, deliverables, tests, and per-commit
+gates, including the explicitly accepted temporary downstream breakage after
+the first two ownership slices and the connected-application restoration gate
+in the third. The fourth commit is the explicit end of the unified biome
+refactor; the fifth preserves that authority while completing the final UI
+acceptance formerly carried by Commit 13. Specifically, the tracker replaces
+the old forked/direct/fixed-terminal presentation taxonomy with common exit
+decisions, normal-door batches, one specialized Hub decision, and
+declaration-derived biome completion.
 
 ### Phase Acceptance
 
@@ -2191,13 +2172,17 @@ at least two consumers with identical semantics.
   replacement or owning structural deletion;
 - every frontier family retains its declaration, command, and simulation
   semantics;
-- Linear biomes expose the picked continuation, generated leaves, coverage, and
-  terminals through a structured rail and focused inspector;
-- N exposes its Hub board and visit timeline through the same focus language
-  without acquiring Linear structure;
+- every biome exposes its selected decision spine, real unpicked leaves,
+  coverage, completion, and findings through one structured rail and focused
+  inspector;
+- linked exits, generated batches, takeover preboss batches, I's mixed batch,
+  and N's Hub retain their distinct domain invariants inside the common decision
+  and workspace envelopes;
+- N exposes its Hub board and visit timeline as the one specialized Hub
+  decision workbench rather than a separate full-biome editor;
 - empty and partial workspaces show only truthful declared or projected facts;
-- no room, reward, bag, force, terminal, completion, or blocking rule exists
-  only in React;
+- no room, reward, bag, force, preboss, completion, or blocking rule exists only
+  in React;
 - representative interaction fixtures cover all eight biomes;
 - the full repository test suite, production build, accessibility checks, and
   measured responsiveness pass.
