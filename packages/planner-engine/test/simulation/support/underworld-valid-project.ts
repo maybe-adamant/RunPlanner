@@ -1,0 +1,633 @@
+import { catalog } from '@run-planner/hades2-catalog';
+import {
+  applyProjectCommand,
+  createBatchRewardStoreAddress,
+  createBiomeAddress,
+  createBiomeFieldAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
+  createIncomingRewardAddress,
+  createLocalRewardAddress,
+  createOccurrenceId,
+  createProjectDocument,
+  createRouteAddress,
+  createShopOfferAddress,
+  createTargetAddress,
+  type BiomeAddress,
+  type OccurrenceId,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+
+export const goldenFBiome = createBiomeAddress('Underworld', 'F');
+export const goldenGBiome = createBiomeAddress('Underworld', 'G');
+export const goldenHBiome = createBiomeAddress('Underworld', 'H');
+export const goldenIBiome = createBiomeAddress('Underworld', 'I');
+export const goldenFStartId = createOccurrenceId('golden-f-start');
+export const goldenGStartId = createOccurrenceId('golden-g-intro');
+export const goldenHStartId = createOccurrenceId('golden-h-intro');
+export const goldenIStartId = createOccurrenceId('golden-i-intro');
+
+interface TargetSpec {
+  readonly gameName: string;
+  readonly offer?: ResolvedRewardOffer;
+}
+
+interface BatchSpec {
+  readonly storeKey: 'MetaProgress' | 'RunProgress';
+  readonly targets: readonly TargetSpec[];
+}
+
+export interface GoldenGProjectOptions {
+  readonly pickedMiniboss?: 'G_MiniBoss01' | 'G_MiniBoss02';
+  readonly terminalParent?: 'G_Combat12' | 'G_Combat14';
+}
+
+const fBatches: readonly BatchSpec[] = [
+  { storeKey: 'MetaProgress', targets: [{ gameName: 'F_Combat02' }] },
+  {
+    storeKey: 'RunProgress',
+    targets: [
+      { gameName: 'F_Combat03' },
+      { gameName: 'F_Combat03', offer: { rewardType: 'MaxHealthDrop' } },
+    ],
+  },
+  {
+    storeKey: 'RunProgress',
+    targets: [
+      { gameName: 'F_Combat04', offer: { rewardType: 'MaxHealthDrop' } },
+      { gameName: 'F_Combat04', offer: { rewardType: 'MaxManaDrop' } },
+    ],
+  },
+  {
+    storeKey: 'RunProgress',
+    targets: [
+      { gameName: 'F_Combat05', offer: { rewardType: 'StackUpgrade' } },
+      { gameName: 'F_Combat11', offer: { rewardType: 'RoomMoneyDrop' } },
+    ],
+  },
+  {
+    storeKey: 'MetaProgress',
+    targets: [
+      { gameName: 'F_Combat06', offer: { rewardType: 'MetaCardPointsCommonDrop' } },
+      { gameName: 'F_Combat06', offer: { rewardType: 'MetaCurrencyDrop' } },
+    ],
+  },
+  {
+    storeKey: 'RunProgress',
+    targets: [
+      { gameName: 'F_MiniBoss01' },
+      {
+        gameName: 'F_MiniBoss02',
+        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+      },
+    ],
+  },
+  {
+    storeKey: 'RunProgress',
+    targets: [{ gameName: 'F_Combat11', offer: { rewardType: 'MaxManaDrop' } }],
+  },
+  {
+    storeKey: 'RunProgress',
+    targets: [
+      { gameName: 'F_Combat12', offer: { rewardType: 'WeaponUpgrade' } },
+      { gameName: 'F_Combat12', offer: { rewardType: 'HermesUpgrade' } },
+    ],
+  },
+  {
+    storeKey: 'MetaProgress',
+    targets: [
+      { gameName: 'F_Combat14', offer: { rewardType: 'MetaCardPointsCommonDrop' } },
+      { gameName: 'F_Combat14', offer: { rewardType: 'MetaCurrencyDrop' } },
+    ],
+  },
+  {
+    storeKey: 'RunProgress',
+    targets: [
+      { gameName: 'F_Combat15', offer: { rewardType: 'RoomMoneyDrop' } },
+      { gameName: 'F_Combat15', offer: { rewardType: 'SpellDrop' } },
+    ],
+  },
+];
+
+function source(occurrenceId: OccurrenceId) {
+  return { kind: 'occurrence' as const, occurrenceId };
+}
+
+function applyBatch(
+  project: ProjectDocument,
+  biome: BiomeAddress,
+  sourceOccurrenceId: OccurrenceId,
+  occurrenceId: (exitIndex: number) => OccurrenceId,
+  batch: BatchSpec,
+): ProjectDocument {
+  const decision = createExitDecisionAddress(biome, source(sourceOccurrenceId));
+  let next = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, decision.source),
+    storeKey: batch.storeKey,
+  });
+  for (const [offset, target] of batch.targets.entries()) {
+    const exitIndex = offset + 1;
+    const id = occurrenceId(exitIndex);
+    next = applyProjectCommand(next, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, decision.source, `exit${exitIndex}`),
+      occurrenceId: id,
+      gameName: target.gameName,
+    });
+    if (target.offer !== undefined) {
+      next = applyProjectCommand(next, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(biome, id),
+        value: target.offer,
+      });
+    }
+  }
+  return batch.targets.length === 1
+    ? next
+    : applyProjectCommand(next, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(biome, decision.source),
+        value: { kind: 'normal', exitKey: 'exit1' },
+      });
+}
+
+export function goldenFOccurrenceId(batchIndex: number, exitIndex: number): OccurrenceId {
+  return createOccurrenceId(`golden-f-b${batchIndex}-e${exitIndex}`);
+}
+
+export function goldenGOccurrenceId(batchIndex: number, exitIndex: number): OccurrenceId {
+  return createOccurrenceId(`golden-g-b${batchIndex}-e${exitIndex}`);
+}
+
+/** Retained test-only identity helper for the F/G progressive fixture. */
+export function targetOccurrenceId(
+  biomeKey: 'F' | 'G',
+  batchIndex: number,
+  exitIndex: number,
+): OccurrenceId {
+  return biomeKey === 'F'
+    ? goldenFOccurrenceId(batchIndex, exitIndex)
+    : goldenGOccurrenceId(batchIndex, exitIndex);
+}
+
+function createCompleteFProject(): ProjectDocument {
+  let project = createProjectDocument(catalog, {
+    projectId: 'golden-fg',
+    name: 'Golden F/G route',
+    configuredBiomeCounts: { Underworld: 2 },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: goldenFBiome,
+    occurrenceId: goldenFStartId,
+    gameName: 'F_Opening01',
+  });
+  let parent = goldenFStartId;
+  for (const [offset, batch] of fBatches.entries()) {
+    const batchIndex = offset + 1;
+    project = applyBatch(
+      project,
+      goldenFBiome,
+      parent,
+      (exitIndex) => goldenFOccurrenceId(batchIndex, exitIndex),
+      batch,
+    );
+    parent = goldenFOccurrenceId(batchIndex, 1);
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTakeoverBatch',
+    decision: createExitDecisionAddress(goldenFBiome, source(parent)),
+    gameName: 'F_PreBoss01',
+    targetOccurrenceIds: {
+      exit1: createOccurrenceId('golden-f-preboss-shop'),
+      exit2: createOccurrenceId('golden-f-preboss-free'),
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-free')),
+    value: { rewardType: 'StackUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, source(parent)),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop'),
+      'MajorNonBoon',
+    ),
+    value: { rewardType: 'RoomRewardHealDrop' },
+  });
+}
+
+function gBatches(options: GoldenGProjectOptions): readonly BatchSpec[] {
+  const pickedMiniboss = options.pickedMiniboss ?? 'G_MiniBoss01';
+  const terminalParent = options.terminalParent ?? 'G_Combat12';
+  return [
+    {
+      storeKey: 'RunProgress',
+      targets: [
+        {
+          gameName: 'G_Combat01',
+          offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+        },
+      ],
+    },
+    {
+      storeKey: 'MetaProgress',
+      targets: [
+        { gameName: 'G_Combat02', offer: { rewardType: 'MetaCurrencyBigDrop' } },
+        { gameName: 'G_Combat02', offer: { rewardType: 'MetaCardPointsCommonBigDrop' } },
+      ],
+    },
+    {
+      storeKey: 'RunProgress',
+      targets: [
+        { gameName: 'G_Story01' },
+        { gameName: 'G_Combat03', offer: { rewardType: 'MaxManaDrop' } },
+        { gameName: 'G_Combat03', offer: { rewardType: 'RoomMoneyDrop' } },
+      ],
+    },
+    {
+      storeKey: 'MetaProgress',
+      targets: [{ gameName: 'G_Combat10', offer: { rewardType: 'MetaCardPointsCommonBigDrop' } }],
+    },
+    {
+      storeKey: 'RunProgress',
+      targets: [
+        { gameName: 'G_Shop01' },
+        { gameName: 'G_Combat12', offer: { rewardType: 'StackUpgrade' } },
+      ],
+    },
+    {
+      storeKey: 'RunProgress',
+      targets:
+        pickedMiniboss === 'G_MiniBoss02'
+          ? [
+              {
+                gameName: 'G_MiniBoss02',
+                offer: {
+                  rewardType: 'Boon',
+                  payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+                },
+              },
+              {
+                gameName: 'G_MiniBoss01',
+                offer: {
+                  rewardType: 'Boon',
+                  payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+                },
+              },
+            ]
+          : [
+              {
+                gameName: 'G_MiniBoss01',
+                offer: {
+                  rewardType: 'Boon',
+                  payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+                },
+              },
+              {
+                gameName: 'G_MiniBoss02',
+                offer: {
+                  rewardType: 'Boon',
+                  payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+                },
+              },
+            ],
+    },
+    {
+      storeKey: 'RunProgress',
+      targets:
+        pickedMiniboss === 'G_MiniBoss02'
+          ? [
+              {
+                gameName: terminalParent,
+                offer: {
+                  rewardType: 'Boon',
+                  payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+                },
+              },
+            ]
+          : [
+              {
+                gameName: terminalParent,
+                offer: {
+                  rewardType: 'Boon',
+                  payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+                },
+              },
+              { gameName: 'G_Combat13', offer: { rewardType: 'RoomMoneyDrop' } },
+            ],
+    },
+  ];
+}
+
+export function createCompleteFGProject(options: GoldenGProjectOptions = {}): ProjectDocument {
+  let project = createCompleteFProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: goldenGBiome,
+    occurrenceId: goldenGStartId,
+  });
+  let parent = goldenGStartId;
+  const batches = gBatches(options);
+  for (const [offset, batch] of batches.entries()) {
+    const batchIndex = offset + 1;
+    project = applyBatch(
+      project,
+      goldenGBiome,
+      parent,
+      (exitIndex) => goldenGOccurrenceId(batchIndex, exitIndex),
+      batch,
+    );
+    if (batch.targets[0]?.gameName === 'G_Shop01') {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopOffer',
+        offer: createShopOfferAddress(
+          goldenGBiome,
+          goldenGOccurrenceId(batchIndex, 1),
+          'MajorNonBoon',
+        ),
+        value: { rewardType: 'RoomRewardHealDrop' },
+      });
+    }
+    parent = goldenGOccurrenceId(batchIndex, 1);
+  }
+  const terminalRoom = catalog.rooms.byKey[batches.at(-1)?.targets[0]?.gameName ?? ''];
+  if (terminalRoom === undefined) throw new Error('Golden G fixture has no terminal source room');
+  const targetOccurrenceIds = Object.fromEntries(
+    terminalRoom.exits.map((exit) => [
+      `exit${exit.index}`,
+      createOccurrenceId(
+        exit.index === 1 ? 'golden-g-preboss-shop' : `golden-g-preboss-free-${exit.index}`,
+      ),
+    ]),
+  );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTakeoverBatch',
+    decision: createExitDecisionAddress(goldenGBiome, source(parent)),
+    gameName: 'G_PreBoss01',
+    targetOccurrenceIds,
+  });
+  for (const exit of terminalRoom.exits.filter((candidate) => candidate.index > 1)) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(
+        goldenGBiome,
+        createOccurrenceId(`golden-g-preboss-free-${exit.index}`),
+      ),
+      value: { rewardType: exit.index === 2 ? 'StackUpgrade' : 'HermesUpgrade' },
+    });
+  }
+  if (terminalRoom.exits.length > 1) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, source(parent)),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+  }
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(
+      goldenGBiome,
+      createOccurrenceId('golden-g-preboss-shop'),
+      'MajorNonBoon',
+    ),
+    value: { rewardType: 'RoomRewardHealDrop' },
+  });
+}
+
+interface UnstoredTargetSpec {
+  readonly occurrenceId: OccurrenceId;
+  readonly gameName: string;
+}
+
+function appendUnstoredBatch(
+  project: ProjectDocument,
+  biome: BiomeAddress,
+  sourceOccurrenceId: OccurrenceId,
+  targets: readonly UnstoredTargetSpec[],
+  options: { readonly fieldsCageOutcome?: 'min' | 'max'; readonly selectedExitKey?: string } = {},
+): ProjectDocument {
+  const decision = createExitDecisionAddress(biome, source(sourceOccurrenceId));
+  let next = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+  if (options.fieldsCageOutcome !== undefined) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision,
+      cageOutcome: options.fieldsCageOutcome,
+    });
+  }
+  for (const [offset, target] of targets.entries()) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, decision.source, `exit${offset + 1}`),
+      occurrenceId: target.occurrenceId,
+      gameName: target.gameName,
+    });
+  }
+  if (targets.length === 1) return next;
+  return applyProjectCommand(next, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(biome, decision.source),
+    value: { kind: 'normal', exitKey: options.selectedExitKey ?? 'exit1' },
+  });
+}
+
+function extendUnderworldPrefix(
+  project: ProjectDocument,
+  configuredBiomeCount: number,
+): ProjectDocument {
+  return applyProjectCommand(project, catalog, {
+    kind: 'ConfigureRoutePrefix',
+    route: createRouteAddress('Underworld'),
+    configuredBiomeCount,
+  });
+}
+
+function appendCompleteH(project: ProjectDocument): ProjectDocument {
+  let next = applyProjectCommand(extendUnderworldPrefix(project, 3), catalog, {
+    kind: 'CreateStart',
+    biome: goldenHBiome,
+    occurrenceId: goldenHStartId,
+  });
+  const combat02 = createOccurrenceId('golden-h-combat02');
+  const combat09 = createOccurrenceId('golden-h-combat09');
+  const miniBoss = createOccurrenceId('golden-h-miniboss01');
+  const bridge = createOccurrenceId('golden-h-bridge01');
+  const combat05 = createOccurrenceId('golden-h-combat05');
+  next = appendUnstoredBatch(
+    next,
+    goldenHBiome,
+    goldenHStartId,
+    [{ occurrenceId: combat02, gameName: 'H_Combat02' }],
+    { fieldsCageOutcome: 'min' },
+  );
+  next = appendUnstoredBatch(
+    next,
+    goldenHBiome,
+    combat02,
+    [
+      { occurrenceId: combat09, gameName: 'H_Combat09' },
+      { occurrenceId: createOccurrenceId('golden-h-combat03'), gameName: 'H_Combat03' },
+    ],
+    { fieldsCageOutcome: 'min' },
+  );
+  next = appendUnstoredBatch(
+    next,
+    goldenHBiome,
+    combat09,
+    [
+      { occurrenceId: miniBoss, gameName: 'H_MiniBoss01' },
+      { occurrenceId: bridge, gameName: 'H_Bridge01' },
+    ],
+    { fieldsCageOutcome: 'max' },
+  );
+  next = appendUnstoredBatch(
+    next,
+    goldenHBiome,
+    miniBoss,
+    [
+      { occurrenceId: combat05, gameName: 'H_Combat05' },
+      { occurrenceId: createOccurrenceId('golden-h-combat04'), gameName: 'H_Combat04' },
+    ],
+    { fieldsCageOutcome: 'max' },
+  );
+  const cageOffers: readonly (readonly [OccurrenceId, readonly ResolvedRewardOffer[]])[] = [
+    [
+      combat02,
+      [
+        { rewardType: 'MaxHealthDrop' },
+        { rewardType: 'MaxManaDrop' },
+        { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+      ],
+    ],
+    [
+      combat09,
+      [
+        { rewardType: 'HermesUpgrade' },
+        { rewardType: 'WeaponUpgrade' },
+        { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+      ],
+    ],
+    [
+      createOccurrenceId('golden-h-combat03'),
+      [
+        { rewardType: 'MaxHealthDrop' },
+        { rewardType: 'SpellDrop' },
+        { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+      ],
+    ],
+    [
+      combat05,
+      [
+        { rewardType: 'MaxHealthDrop' },
+        { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+        { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+      ],
+    ],
+    [
+      createOccurrenceId('golden-h-combat04'),
+      [
+        { rewardType: 'MaxManaDrop' },
+        { rewardType: 'RoomMoneyDrop' },
+        { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+      ],
+    ],
+  ];
+  for (const [occurrenceId, offers] of cageOffers) {
+    for (const [index, value] of offers.entries()) {
+      next = applyProjectCommand(next, catalog, {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(goldenHBiome, occurrenceId, 'cages', `cage${index + 1}`),
+        value,
+      });
+    }
+  }
+  const prebossDecision = createExitDecisionAddress(goldenHBiome, source(combat05));
+  next = applyProjectCommand(next, catalog, {
+    kind: 'CreateTakeoverBatch',
+    decision: prebossDecision,
+    gameName: 'H_PreBoss01',
+    targetOccurrenceIds: {
+      exit1: createOccurrenceId('golden-h-preboss-shop'),
+      exit2: createOccurrenceId('golden-h-preboss-free'),
+    },
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-free')),
+    value: { rewardType: 'StackUpgrade' },
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenHBiome, prebossDecision.source),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+  return applyProjectCommand(next, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(
+      goldenHBiome,
+      createOccurrenceId('golden-h-preboss-shop'),
+      'MajorNonBoon',
+    ),
+    value: { rewardType: 'RoomRewardHealDrop' },
+  });
+}
+
+function appendCompleteI(project: ProjectDocument): ProjectDocument {
+  let next = applyProjectCommand(extendUnderworldPrefix(project, 4), catalog, {
+    kind: 'CreateStart',
+    biome: goldenIBiome,
+    occurrenceId: goldenIStartId,
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceBiomeField',
+    field: createBiomeFieldAddress(goldenIBiome, 'maxNonGoalRewards'),
+    value: 3,
+  });
+  const combat01 = createOccurrenceId('golden-i-combat01');
+  const combat03 = createOccurrenceId('golden-i-combat03');
+  const combat05 = createOccurrenceId('golden-i-combat05');
+  const combat06 = createOccurrenceId('golden-i-combat06');
+  const combat09 = createOccurrenceId('golden-i-combat09');
+  next = appendUnstoredBatch(next, goldenIBiome, goldenIStartId, [
+    { occurrenceId: combat01, gameName: 'I_Combat01' },
+  ]);
+  next = appendUnstoredBatch(next, goldenIBiome, combat01, [
+    { occurrenceId: combat03, gameName: 'I_Combat03' },
+    { occurrenceId: createOccurrenceId('golden-i-story01'), gameName: 'I_Story01' },
+  ]);
+  next = appendUnstoredBatch(next, goldenIBiome, combat03, [
+    { occurrenceId: combat05, gameName: 'I_Combat05' },
+    { occurrenceId: createOccurrenceId('golden-i-combat02'), gameName: 'I_Combat02' },
+  ]);
+  next = appendUnstoredBatch(next, goldenIBiome, combat05, [
+    { occurrenceId: combat06, gameName: 'I_Combat06' },
+  ]);
+  next = appendUnstoredBatch(next, goldenIBiome, combat06, [
+    { occurrenceId: combat09, gameName: 'I_Combat09' },
+  ]);
+  return appendUnstoredBatch(next, goldenIBiome, combat09, [
+    { occurrenceId: createOccurrenceId('golden-i-preboss'), gameName: 'I_PreBoss02' },
+    { occurrenceId: createOccurrenceId('golden-i-miniboss01'), gameName: 'I_MiniBoss01' },
+  ]);
+}
+
+/** Complete F-through-H fixture used only by planner-engine tests. */
+export function createGoldenFGHProject(): ProjectDocument {
+  return appendCompleteH(createCompleteFGProject());
+}
+
+/** Complete Underworld fixture used only by planner-engine tests. */
+export function createGoldenFGHIProject(): ProjectDocument {
+  return appendCompleteI(createGoldenFGHProject());
+}

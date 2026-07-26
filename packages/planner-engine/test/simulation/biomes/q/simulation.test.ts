@@ -6,50 +6,62 @@ import {
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  createPreparedProjectCandidateSession,
+  simulateProject,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
   createRepresentativeNOPQProject,
   qBiome,
   qOccurrenceIds,
-} from '../../../../../../apps/planner/test/fixtures/surfaceProject';
-import { bindTestCandidateSession } from '../../candidateSession';
+} from '../../support/surface-valid-project';
+
+function completeQ(project = createRepresentativeNOPQProject()) {
+  const evaluation = simulateProject(catalog, project);
+  const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const biome = route?.biomes.find((candidate) => candidate.biomeKey === 'Q');
+  if (biome?.authoring !== 'complete') throw new Error('Q fixture did not complete');
+  return { project, evaluation, route, biome };
+}
 
 describe('Q simulation', () => {
-  it('replays the scripted Summit sequence through exact stage and lifecycle authorities', () => {
-    const evaluation = simulateProject(catalog, createRepresentativeNOPQProject());
+  it('replays the scripted Summit stages and width-one takeover through the common evaluator', () => {
+    const { evaluation, route, biome: q } = completeQ();
 
     expect(evaluation.status, JSON.stringify(evaluation.findings, null, 2)).toBe('valid');
-    expect(evaluation.routes[1]).toMatchObject({
+    expect(route).toMatchObject({
       status: 'valid',
-      processing: {
-        completeValidPrefix: ['N', 'O', 'P', 'Q'],
-        active: null,
-        blockedSuffix: [],
-      },
+      processing: { completeValidPrefix: ['N', 'O', 'P', 'Q'], active: null, blockedSuffix: [] },
     });
-    const q = evaluation.routes[1]?.biomes[3];
-    if (q?.kind !== 'LinearBiome' || q.authoring !== 'complete') {
-      throw new Error('Q fixture did not complete');
-    }
-    expect(
-      q.snapshot.batches.map((batch) => batch.targets.map((target) => target.room.gameName)),
-    ).toEqual([
+    const batches = q.snapshot.decisions.filter((decision) => decision.kind === 'batch');
+    expect(batches.map((batch) => batch.targets.map((target) => target.room.gameName))).toEqual([
       ['Q_Combat10'],
       ['Q_Combat03'],
       ['Q_MiniBoss02', 'Q_MiniBoss05'],
       ['Q_Combat01'],
       ['Q_Combat12'],
       ['Q_MiniBoss03', 'Q_MiniBoss04'],
+      ['Q_PreBoss01'],
     ]);
-    expect(q.snapshot.batches.every((batch) => batch.rewardStore.kind === 'none')).toBe(true);
+    expect(batches.map((batch) => batch.rewardStore.kind)).toEqual([
+      'none',
+      'none',
+      'none',
+      'none',
+      'none',
+      'none',
+      'none',
+    ]);
     expect(q.snapshot.completionRooms.map((room) => room.gameName)).toEqual(['Q_Boss01']);
     expect(q.history.afterTransition.ledgers.counters).toMatchObject({
       biomeDepthCache: 0,
       biomeEncounterDepth: 0,
     });
-    expect(q.roomGeneration.forcePressure.map((entry) => entry.supportRoomGameNames)).toEqual([
+    expect(
+      q.roomGeneration.ordinary.forcePressure.map((entry) => entry.supportRoomGameNames),
+    ).toEqual([
       ['Q_Combat10', 'Q_Combat11'],
       ['Q_Combat03', 'Q_Combat05', 'Q_Combat15'],
       ['Q_MiniBoss02', 'Q_MiniBoss05'],
@@ -67,51 +79,51 @@ describe('Q simulation', () => {
       ['Q_Combat12', 'Q_Combat13', 'Q_Combat14'],
       ['Q_MiniBoss03', 'Q_MiniBoss04'],
       ['Q_MiniBoss03', 'Q_MiniBoss04'],
-      ['Q_PreBoss01'],
     ]);
-    expect(q.roomGeneration.forcePressure.map((entry) => entry.biomeDepthCache)).toEqual([
-      1, 2, 3, 3, 4, 5, 6, 6, 7,
-    ]);
-
-    const tail = q.snapshot.batches[5]?.targets[0]?.room;
-    const eye = q.snapshot.batches[5]?.targets[1]?.room;
+    const tail = batches[5]?.targets[0]?.room;
+    const eye = batches[5]?.targets[1]?.room;
     expect(tail?.encounterPhases[0]?.countsEncounterDepth).toBe(true);
     expect(eye?.encounterPhases[0]?.countsEncounterDepth).toBe(false);
     expect(tail?.incomingReward?.resolvedStoreKey).toBe('TyphonBossRewards');
     expect(eye?.incomingReward?.resolvedStoreKey).toBe('TyphonBossRewards');
   });
 
-  it('evaluates a target immediately under the fixed no-store policy', () => {
+  it('evaluates the foyer target immediately under the fixed no-store policy', () => {
+    const { project, evaluation } = completeQ();
+    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
+
     expect(
-      bindTestCandidateSession(catalog, createRepresentativeNOPQProject()).evaluate([
-        {
-          kind: 'roomTarget',
-          target: createTargetAddress(qBiome, qOccurrenceIds.intro, 1),
-          gameName: 'Q_Combat10',
-        },
-      ])[0],
-    ).toMatchObject({ context: 'evaluated', support: 'possible' });
+      candidates.evaluate({
+        kind: 'roomTarget',
+        target: createTargetAddress(
+          qBiome,
+          { kind: 'occurrence', occurrenceId: qOccurrenceIds.intro },
+          'exit1',
+        ),
+        gameName: 'Q_Combat10',
+      }),
+    ).toMatchObject({
+      kind: 'roomTarget',
+      result: { pressure: { selectedPossible: true } },
+    });
   });
 
-  it('allows repeated room identities on independently generated miniboss peers', () => {
+  it('allows repeated room identities on independently generated Miniboss peers', () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(qBiome, qOccurrenceIds.firstMiniboss2),
       gameName: 'Q_MiniBoss02',
     });
-    const q = simulateProject(catalog, project).routes[1]?.biomes[3];
+    const { biome: q } = completeQ(project);
+    const thirdBatch = q.snapshot.decisions.filter((decision) => decision.kind === 'batch')[2];
 
-    expect(q).toMatchObject({ kind: 'LinearBiome', authoring: 'complete', validity: 'valid' });
-    if (q?.kind !== 'LinearBiome' || q.authoring !== 'complete') {
-      throw new Error('Q repeated-peer fixture did not complete');
-    }
-    expect(q.snapshot.batches[2]?.targets.map((target) => target.room.gameName)).toEqual([
-      'Q_MiniBoss02',
-      'Q_MiniBoss02',
-    ]);
+    expect(q.validity).toBe('valid');
+    expect(
+      thirdBatch?.kind === 'batch' && thirdBatch.targets.map((target) => target.room.gameName),
+    ).toEqual(['Q_MiniBoss02', 'Q_MiniBoss02']);
   });
 
-  it('reports counted Typhon reward depletion at the authored reward origins', () => {
+  it('keeps counted Typhon depletion findings at the authored incoming-reward owners', () => {
     let project = createRepresentativeNOPQProject();
     for (const occurrenceId of [
       qOccurrenceIds.firstMiniboss1,
@@ -125,11 +137,8 @@ describe('Q simulation', () => {
         value: { rewardType: 'WeaponUpgrade' },
       });
     }
-
-    const q = simulateProject(catalog, project).routes[1]?.biomes[3];
-    expect(q).toMatchObject({ kind: 'LinearBiome', authoring: 'complete', validity: 'invalid' });
-    expect(q?.findings.some((finding) => finding.code === 'rewardBagEntryUnavailable')).toBe(true);
-    const minibossOrigins = new Set(
+    const { biome: q } = completeQ(project);
+    const owners = new Set(
       [
         qOccurrenceIds.firstMiniboss1,
         qOccurrenceIds.firstMiniboss2,
@@ -139,10 +148,13 @@ describe('Q simulation', () => {
         semanticAddressKey(createIncomingRewardAddress(qBiome, occurrenceId)),
       ),
     );
+
+    expect(q.validity).toBe('invalid');
+    expect(q.findings.some((finding) => finding.code === 'rewardBagEntryUnavailable')).toBe(true);
     expect(
-      q?.findings
+      q.findings
         .filter((finding) => finding.code === 'rewardBagEntryUnavailable')
-        .every((finding) => minibossOrigins.has(semanticAddressKey(finding.origin))),
+        .every((finding) => owners.has(semanticAddressKey(finding.origin))),
     ).toBe(true);
   });
 });

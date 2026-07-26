@@ -1,17 +1,21 @@
 export {
-  evaluateLinearRoomGeneration,
+  evaluateBiomeRoomGeneration,
+  roomTargetCandidateContextAtFrontier,
+  evaluateTakeoverPrebossBatchCandidate,
+  evaluateTakeoverPrebossBatchCandidateAtFrontier,
   fieldsCageOutcomeCandidateSupport,
-  linearRoomTargetCandidateContexts,
-  LinearRoomGenerationContractError,
+  roomTargetCandidateContexts,
+  BiomeRoomGenerationContractError,
   supportedFieldsCageOutcomes,
-} from './linear';
+} from './biome';
 export {
   evaluateHubOpenSetConstraints,
-  evaluateHubRoomGeneration,
-  evaluateNRoomGeneration,
-  HubRoomGenerationContractError,
+  evaluateHubDecisionGeneration,
+  HubDecisionGenerationContractError,
 } from './hub';
 export type {
+  ForcePressureLedgerEntry,
+  GeneratedRoomGenerationValidation,
   EncounterCountSupportEntry,
   FieldsCageOutcome,
   FieldsCageOutcomeCandidateSupport,
@@ -19,10 +23,9 @@ export type {
   HubOpenSlotConstraintSupportEntry,
   HubRoomGenerationValidation,
   HubSideRoomGenerationSupportEntry,
-  LinearForcePressureLedgerEntry,
-  LinearRoomGenerationValidation,
-  LinearRoomTargetCandidateContext,
-  LinearRoomTargetCandidateValidation,
+  RoomTargetCandidateContext,
+  RoomTargetCandidateValidation,
+  TakeoverPrebossBatchCandidateSupport,
   RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
   RoomGenerationExclusionReason,

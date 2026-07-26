@@ -2,34 +2,31 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
-  createContinuationAddress,
   createIncomingRewardAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
   createOccurrenceId,
   createOccurrenceAddress,
-  createPickedAddress,
   createProjectDocument,
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
   semanticAddressKey,
-  type LinearBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  composeLinearHistory,
-  evaluateLinearCompleteness,
-  evaluateLinearRewards,
-  materializeLinearBiome,
+  composeBiomeHistory,
+  evaluateBiomeCompleteness,
+  evaluateBiomeRewards,
+  materializeBiome,
   simulateProject,
-  type CompleteLinearCompletenessResult,
+  type CompleteBiomeCompletenessResult,
 } from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-
-import { bindTestCandidateSession } from '../../candidateSession';
 
 const biome = createBiomeAddress('Underworld', 'F');
 
@@ -39,16 +36,16 @@ interface TargetSpec {
   readonly offer?: ResolvedRewardOffer;
 }
 
-function fPlan(project: ProjectDocument): LinearBiomePlan {
+function fPlan(project: ProjectDocument) {
   const plan = project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
-  if (plan?.kind !== 'LinearBiome' || plan.biomeKey !== 'F') {
+  if (plan?.biomeKey !== 'F') {
     throw new Error('missing F reward fixture plan');
   }
   return plan;
 }
 
-function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
-  const result = evaluateLinearCompleteness(catalog, biome, fPlan(project));
+function complete(project: ProjectDocument): CompleteBiomeCompletenessResult {
+  const result = evaluateBiomeCompleteness(catalog, biome, fPlan(project));
   if (result.completion !== 'complete') {
     throw new Error(`reward fixture is incomplete: ${result.findings[0]?.code}`);
   }
@@ -82,19 +79,23 @@ function addBatch(
   targets: readonly TargetSpec[],
   pickedExitIndex = 1,
 ): ProjectDocument {
+  const decision = createExitDecisionAddress(biome, {
+    kind: 'occurrence',
+    occurrenceId: parentId,
+  });
   let next = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, parentId),
+    decision,
   });
   next = applyProjectCommand(next, catalog, {
     kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, parentId),
+    rewardStore: createBatchRewardStoreAddress(biome, decision.source),
     storeKey,
   });
   for (const [offset, target] of targets.entries()) {
     next = applyProjectCommand(next, catalog, {
       kind: 'CreateTarget',
-      target: createTargetAddress(biome, parentId, offset + 1),
+      target: createTargetAddress(biome, decision.source, `exit${offset + 1}`),
       occurrenceId: target.id,
       gameName: target.gameName,
     });
@@ -102,36 +103,48 @@ function addBatch(
       next = replaceIncoming(next, target.id, target.offer);
     }
   }
-  return applyProjectCommand(next, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, parentId),
-    exitIndex: pickedExitIndex,
-  });
+  return targets.length > 1
+    ? applyProjectCommand(next, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(biome, decision.source),
+        value: { kind: 'normal', exitKey: `exit${pickedExitIndex}` },
+      })
+    : next;
 }
 
-function addTerminal(
+function addTakeover(
   project: ProjectDocument,
   parentId: OccurrenceId,
   targetIds: readonly OccurrenceId[],
   pickedExitIndex = 1,
 ): ProjectDocument {
+  const decision = createExitDecisionAddress(biome, {
+    kind: 'occurrence',
+    occurrenceId: parentId,
+  });
+  const targetOccurrenceIds = Object.fromEntries(
+    targetIds.map((occurrenceId, offset) => [`exit${offset + 1}`, occurrenceId]),
+  );
   let next = applyProjectCommand(project, catalog, {
-    kind: 'CreateTerminalTransition',
-    continuation: createContinuationAddress(biome, parentId),
-    targetOccurrenceIds: targetIds,
+    kind: 'CreateTakeoverBatch',
+    decision,
+    gameName: 'F_PreBoss01',
+    targetOccurrenceIds,
   });
-  next = applyProjectCommand(next, catalog, {
-    kind: 'SetTerminalPicked',
-    picked: createPickedAddress(biome, parentId),
-    exitIndex: pickedExitIndex,
-  });
+  if (targetIds.length > 1) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(biome, decision.source),
+      value: { kind: 'normal', exitKey: `exit${pickedExitIndex}` },
+    });
+  }
   return next;
 }
 
 function evaluate(project: ProjectDocument) {
-  const snapshot = materializeLinearBiome(catalog, biome, complete(project));
-  const history = composeLinearHistory(catalog, snapshot);
-  return { snapshot, history, rewards: evaluateLinearRewards(catalog, snapshot, history, 1) };
+  const snapshot = materializeBiome(catalog, biome, complete(project));
+  const history = composeBiomeHistory(catalog, snapshot);
+  return { snapshot, history, rewards: evaluateBiomeRewards(catalog, snapshot, history, 1) };
 }
 
 function firstBranch(result: ReturnType<typeof evaluate>['rewards']) {
@@ -168,9 +181,9 @@ function ratioBoundaryProject(): ProjectDocument {
       offer: { rewardType: 'MetaCardPointsCommonDrop' },
     },
   ]);
-  return addTerminal(project, mixed, [
-    createOccurrenceId('ratio-terminal-shop'),
-    createOccurrenceId('ratio-terminal-free'),
+  return addTakeover(project, mixed, [
+    createOccurrenceId('ratio-preboss-shop'),
+    createOccurrenceId('ratio-preboss-free'),
   ]);
 }
 
@@ -204,7 +217,7 @@ function refillProject(): ProjectDocument {
     ]);
     parent = id;
   });
-  return addTerminal(project, parent, [createOccurrenceId('refill-terminal-shop')]);
+  return addTakeover(project, parent, [createOccurrenceId('refill-preboss-shop')]);
 }
 
 function sameRoomAcquisitionProject(): ProjectDocument {
@@ -228,13 +241,13 @@ function sameRoomAcquisitionProject(): ProjectDocument {
     { id: stack, gameName: 'F_Combat04', offer: { rewardType: 'StackUpgrade' } },
     { id: createOccurrenceId('same-room-peer-2'), gameName: 'F_Story01' },
   ]);
-  project = addTerminal(
+  project = addTakeover(
     project,
     stack,
-    [createOccurrenceId('same-room-terminal-shop'), createOccurrenceId('same-room-terminal-free')],
+    [createOccurrenceId('same-room-preboss-shop'), createOccurrenceId('same-room-preboss-free')],
     2,
   );
-  return replaceIncoming(project, createOccurrenceId('same-room-terminal-free'), {
+  return replaceIncoming(project, createOccurrenceId('same-room-preboss-free'), {
     rewardType: 'MaxManaDrop',
   });
 }
@@ -297,11 +310,11 @@ function shopTimingProject(): ProjectDocument {
     },
     { id: peer, gameName: 'F_Story01' },
   ]);
-  project = addTerminal(project, fifth, [
-    createOccurrenceId('shop-trace-terminal-shop'),
-    createOccurrenceId('shop-trace-terminal-free'),
+  project = addTakeover(project, fifth, [
+    createOccurrenceId('shop-trace-preboss-shop'),
+    createOccurrenceId('shop-trace-preboss-free'),
   ]);
-  return replaceIncoming(project, createOccurrenceId('shop-trace-terminal-free'), {
+  return replaceIncoming(project, createOccurrenceId('shop-trace-preboss-free'), {
     rewardType: 'MaxHealthDrop',
   });
 }
@@ -323,8 +336,8 @@ function invalidShopOfferProject(): ProjectDocument {
     { id: source, gameName: 'F_Combat03' },
     { id: peer, gameName: 'F_Story01' },
   ]);
-  return addTerminal(project, source, [
-    createOccurrenceId('invalid-shop-terminal'),
+  return addTakeover(project, source, [
+    createOccurrenceId('invalid-shop-preboss'),
     createOccurrenceId('invalid-shop-free'),
   ]);
 }
@@ -385,11 +398,11 @@ function invalidBlindBoxPurchaseProject(): ProjectDocument {
     purchase: createShopPurchaseAddress(biome, shop, 'Boon'),
     purchased: true,
   });
-  project = addTerminal(project, shop, [
-    createOccurrenceId('blind-terminal-shop'),
-    createOccurrenceId('blind-terminal-free'),
+  project = addTakeover(project, shop, [
+    createOccurrenceId('blind-preboss-shop'),
+    createOccurrenceId('blind-preboss-free'),
   ]);
-  return replaceIncoming(project, createOccurrenceId('blind-terminal-free'), {
+  return replaceIncoming(project, createOccurrenceId('blind-preboss-free'), {
     rewardType: 'MaxHealthDrop',
   });
 }
@@ -454,11 +467,11 @@ function devotionProject(): ProjectDocument {
     },
     { id: createOccurrenceId('devotion-peer-5'), gameName: 'F_Story01' },
   ]);
-  project = addTerminal(project, devotion, [
-    createOccurrenceId('devotion-terminal-shop'),
-    createOccurrenceId('devotion-terminal-free'),
+  project = addTakeover(project, devotion, [
+    createOccurrenceId('devotion-preboss-shop'),
+    createOccurrenceId('devotion-preboss-free'),
   ]);
-  return replaceIncoming(project, createOccurrenceId('devotion-terminal-free'), {
+  return replaceIncoming(project, createOccurrenceId('devotion-preboss-free'), {
     rewardType: 'MaxManaDrop',
   });
 }
@@ -466,32 +479,17 @@ function devotionProject(): ProjectDocument {
 describe('F reward-history simulation', () => {
   it('treats the opening reward as a biome entry without a current-room predecessor', () => {
     const start = createOccurrenceId('ratio-start');
-    const downstream = createOccurrenceId('ratio-run');
     const project = replaceIncoming(ratioBoundaryProject(), start, { rewardType: 'SpellDrop' });
     const result = evaluate(project).rewards;
-    const [openingCandidate, downstreamCandidate] = bindTestCandidateSession(
-      catalog,
-      project,
-    ).evaluate([
-      {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, start),
-        value: { rewardType: 'SpellDrop' },
-      },
-      {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, downstream),
-        value: { rewardType: 'SpellDrop' },
-      },
-    ]);
 
     expect(result.validity).toBe('valid');
-    expect(openingCandidate).toMatchObject({ context: 'evaluated', support: 'possible' });
-    expect(downstreamCandidate).toMatchObject({
-      context: 'evaluated',
-      support: 'impossible',
-      findings: [{ code: 'rewardBagEntryUnavailable' }],
-    });
+    expect(firstBranch(result).events).toContainEqual(
+      expect.objectContaining({
+        kind: 'rewardOffered',
+        origin: createIncomingRewardAddress(biome, start),
+        offer: { rewardType: 'SpellDrop' },
+      }),
+    );
   });
 
   it('validates forced and possible authored base stores from current-room store history', () => {
@@ -528,15 +526,23 @@ describe('F reward-history simulation', () => {
       occurrence: createOccurrenceAddress(biome, createOccurrenceId('ratio-mixed-peer')),
       gameName: 'F_Combat01',
     });
+    const forcedBinding = catalog.rooms.byKey.F_Combat01?.incomingReward;
+    if (forcedBinding?.kind !== 'countedChoice') {
+      throw new Error('F_Combat01 must retain its counted reward binding');
+    }
+    const forcedOffer = forcedBinding.defaultOffersByStore.RunProgress;
+    if (forcedOffer === undefined) throw new Error('F_Combat01 must default from RunProgress');
+    project = replaceIncoming(project, createOccurrenceId('ratio-mixed-peer'), forcedOffer);
     project = replaceIncoming(project, createOccurrenceId('ratio-mixed'), {
       rewardType: 'MaxHealthDrop',
     });
 
     const result = evaluate(project);
-    const targets = result.snapshot.batches[2]!.targets;
+    const batch = result.snapshot.decisions[2];
+    if (batch?.kind !== 'batch') throw new Error('ratio fixture lost its third batch');
 
     expect(result.rewards.validity).toBe('valid');
-    expect(targets.map((target) => target.room.incomingReward?.resolvedStoreKey)).toEqual([
+    expect(batch.targets.map((target) => target.room.incomingReward?.resolvedStoreKey)).toEqual([
       'RunProgress',
       'RunProgress',
     ]);
@@ -544,7 +550,10 @@ describe('F reward-history simulation', () => {
 
   it('addresses an impossible authored base store without replacing the authored outcome', () => {
     let project = ratioBoundaryProject();
-    const firstStore = createBatchRewardStoreAddress(biome, createOccurrenceId('ratio-start'));
+    const firstStore = createBatchRewardStoreAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('ratio-start'),
+    });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceBatchRewardStore',
       rewardStore: firstStore,
@@ -668,7 +677,7 @@ describe('F reward-history simulation', () => {
     const bagResult = evaluate(bagProject).rewards;
 
     let sourceProject = shopTimingProject();
-    sourceProject = replaceIncoming(sourceProject, createOccurrenceId('shop-trace-terminal-free'), {
+    sourceProject = replaceIncoming(sourceProject, createOccurrenceId('shop-trace-preboss-free'), {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
     });
@@ -683,7 +692,7 @@ describe('F reward-history simulation', () => {
     expect(sourceResult.findings).toContainEqual(
       expect.objectContaining({
         code: 'rewardSourceUnavailable',
-        origin: createIncomingRewardAddress(biome, createOccurrenceId('shop-trace-terminal-free')),
+        origin: createIncomingRewardAddress(biome, createOccurrenceId('shop-trace-preboss-free')),
       }),
     );
   });
@@ -708,7 +717,7 @@ describe('F reward-history simulation', () => {
       expect.objectContaining({
         origin: createShopOfferAddress(
           biome,
-          createOccurrenceId('invalid-shop-terminal'),
+          createOccurrenceId('invalid-shop-preboss'),
           'MajorNonBoon',
         ),
       }),
@@ -757,9 +766,9 @@ describe('F reward-history simulation', () => {
       occurrence: createOccurrenceAddress(biome, createOccurrenceId('ratio-run-peer')),
       gameName: 'F_Combat06',
     });
-    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
+    const snapshot = materializeBiome(catalog, biome, complete(project));
 
-    expect(() => evaluateLinearRewards(catalog, snapshot, baseline.history, 1)).toThrowError(
+    expect(() => evaluateBiomeRewards(catalog, snapshot, baseline.history, 1)).toThrowError(
       /in the snapshot but .* in history/,
     );
   });
@@ -768,7 +777,6 @@ describe('F reward-history simulation', () => {
     const start = createOccurrenceId('retained-invalid-start');
     const replacedCombat = createOccurrenceId('retained-invalid-replaced-combat');
     const retainedCombat = createOccurrenceId('retained-invalid-retained-combat');
-    const target = createTargetAddress(biome, replacedCombat, 1);
     const reward = createIncomingRewardAddress(biome, retainedCombat);
     let project = applyProjectCommand(emptyProject('retained-invalid-replacement'), catalog, {
       kind: 'CreateStart',
@@ -781,6 +789,11 @@ describe('F reward-history simulation', () => {
     ]);
     project = addBatch(project, replacedCombat, 'RunProgress', [
       { id: retainedCombat, gameName: 'F_Combat03', offer: { rewardType: 'GiftDrop' } },
+      { id: createOccurrenceId('retained-invalid-peer'), gameName: 'F_Story01' },
+    ]);
+    project = addTakeover(project, retainedCombat, [
+      createOccurrenceId('retained-invalid-preboss-shop'),
+      createOccurrenceId('retained-invalid-preboss-free'),
     ]);
 
     expect(simulateProject(catalog, project).findings).toContainEqual(
@@ -808,10 +821,5 @@ describe('F reward-history simulation', () => {
         evidence: expect.objectContaining({ rewardType: 'GiftDrop', storeKey: 'RunProgress' }),
       }),
     );
-    expect(
-      bindTestCandidateSession(catalog, project).evaluate([
-        { kind: 'roomTarget', target, gameName: 'F_Combat03' },
-      ])[0],
-    ).toMatchObject({ context: 'evaluated', support: 'possible' });
   });
 });

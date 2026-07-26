@@ -174,7 +174,16 @@ describe('unified biome decisions catalog', () => {
         kind: 'hub',
         hubKey: 'hub',
         linkedExit: { kind: 'linked', exitKey: 'prehub', roomGameName: 'N_PreHub01' },
-        completedExit: { kind: 'linked', exitKey: 'preboss', roomGameName: 'N_PreBoss01' },
+        completedExit: {
+          kind: 'linked',
+          exitKey: 'preboss',
+          roomGameName: 'N_PreBoss01',
+          physicalExit: {
+            index: 1,
+            type: 'EphyraExitBossDoor',
+            compatibilityPolicyKey: 'Unconstrained',
+          },
+        },
       },
     });
   });

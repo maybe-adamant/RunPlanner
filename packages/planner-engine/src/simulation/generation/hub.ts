@@ -1,23 +1,22 @@
-import type { Catalog, HubBiomeLayout } from '../../catalog-schema';
+import type { Catalog, HubDecisionDescriptor } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createHubOpenSetAddress,
   createHubSlotAddress,
   semanticAddressKey,
-  type BiomeAddress,
 } from '../../authored-project/addresses';
 import type {
-  CanonicalHubHistory,
-  HubSimulationHistory,
+  CanonicalAuthoredRoom,
+  CanonicalBiome,
+  CanonicalHubDecision,
+  CanonicalHubVisit,
+  MaterializedBiomePrefix,
+} from '../materialization';
+import type {
+  BiomeHistoryPrefix,
+  CanonicalBiomeHistory,
   ProgressiveRoomHistoryViews,
 } from '../history';
-import type {
-  CanonicalHubBiome,
-  CanonicalHubBoard,
-  CanonicalHubVisit,
-  HubSimulationMaterialization,
-  MaterializedHubVisitFrontier,
-} from '../materialization';
 import type { FindingEvidence, SemanticFinding } from '../model';
 import type {
   HubOpenSlotConstraintSupportEntry,
@@ -26,15 +25,19 @@ import type {
   SideRoomGenerationOutcome,
 } from './model';
 
-export class HubRoomGenerationContractError extends Error {
+export class HubDecisionGenerationContractError extends Error {
   constructor(detail: string) {
     super(detail);
-    this.name = 'HubRoomGenerationContractError';
+    this.name = 'HubDecisionGenerationContractError';
   }
 }
 
+export type HubGenerationSnapshot =
+  CanonicalBiome | (MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom });
+export type HubGenerationHistory = CanonicalBiomeHistory | BiomeHistoryPrefix;
+
 function fail(detail: string): never {
-  throw new HubRoomGenerationContractError(detail);
+  throw new HubDecisionGenerationContractError(detail);
 }
 
 function finding(
@@ -51,97 +54,32 @@ function finding(
   });
 }
 
-function requireHubLayout(
+function requireHubDecision(
   catalog: Catalog,
-  snapshot: HubSimulationMaterialization,
-  history: HubSimulationHistory,
-): HubBiomeLayout {
-  const route = catalog.routes.byKey[snapshot.routeKey];
+  snapshot: HubGenerationSnapshot,
+): { readonly descriptor: HubDecisionDescriptor; readonly decision: CanonicalHubDecision } | null {
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
-  if (
-    snapshot.routeKey !== history.routeKey ||
-    snapshot.biomeKey !== history.biomeKey ||
-    route === undefined ||
-    route.biomeKeys[0] !== snapshot.biomeKey ||
-    layout?.kind !== 'HubBiome' ||
-    (snapshot.kind === 'HubBiome'
-      ? layout.hub.roomGameName !== snapshot.hubBoard.room.gameName
-      : snapshot.hubRoom !== undefined && layout.hub.roomGameName !== snapshot.hubRoom.gameName) ||
-    layout.terminal.kind !== 'fixedAuthoredSlot' ||
-    (snapshot.kind === 'HubBiome' &&
-      layout.terminal.roomGameName !== snapshot.terminalEntry.gameName)
-  ) {
-    fail(`catalog cannot validate canonical ${snapshot.biomeKey} Hub generation`);
-  }
-  return layout;
-}
-
-function roomViews(
-  history: HubSimulationHistory,
-): ReadonlyMap<string, ProgressiveRoomHistoryViews> {
-  return new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room]));
-}
-
-function assertFixedBoard(
-  layout: HubBiomeLayout,
-  snapshot: Pick<HubSimulationMaterialization, 'routeKey' | 'biomeKey'> & {
-    readonly hubBoard: CanonicalHubBoard;
-  },
-  history: HubSimulationHistory,
-): void {
-  if (
-    snapshot.hubBoard.targets.length < layout.hub.openCount.min ||
-    snapshot.hubBoard.targets.length > layout.hub.openCount.max
-  ) {
-    fail(`${snapshot.biomeKey} selected validation requires a complete Hub open set`);
-  }
-  const slots = new Map(layout.hub.slots.map((slot) => [slot.slotKey, slot]));
-  const openKeys = new Set(snapshot.hubBoard.targets.map((target) => target.hubSlotKey));
-  const expectedSlotKeys = layout.hub.slots
-    .filter((slot) => openKeys.has(slot.slotKey))
-    .map((slot) => slot.slotKey);
-  if (
-    expectedSlotKeys.some(
-      (slotKey, index) => snapshot.hubBoard.targets[index]?.hubSlotKey !== slotKey,
-    )
-  ) {
-    fail(`${snapshot.biomeKey} Hub board is not in normalized physical order`);
-  }
-  const creationEvents = history.ledgers.roomCreations.filter(
-    (event) => event.source === 'hubTarget',
+  if (layout === undefined) fail(`${snapshot.biomeKey} has no catalog layout`);
+  if (layout.progression.kind !== 'hub') return null;
+  const decision = snapshot.decisions.find(
+    (candidate): candidate is CanonicalHubDecision => candidate.kind === 'hub',
   );
-  if (creationEvents.length !== snapshot.hubBoard.targets.length) {
-    fail(`${snapshot.biomeKey} Hub history does not create the complete physical board once`);
+  if (decision === undefined) {
+    if (snapshot.kind === 'biome') fail(`${snapshot.biomeKey} selected spine has no Hub decision`);
+    return null;
   }
-  snapshot.hubBoard.targets.forEach((target, index) => {
-    const slot = slots.get(target.hubSlotKey);
-    const creation = creationEvents[index];
-    if (
-      slot === undefined ||
-      semanticAddressKey(target.origin) !==
-        semanticAddressKey(
-          createHubSlotAddress(
-            createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
-            slot.slotKey,
-          ),
-        ) ||
-      target.room.gameName !== slot.roomGameName ||
-      target.physicalDoorId !== slot.physicalDoorId ||
-      creation === undefined ||
-      semanticAddressKey(creation.targetOrigin) !== semanticAddressKey(target.origin) ||
-      semanticAddressKey(creation.origin) !== semanticAddressKey(target.room.origin) ||
-      creation.gameName !== target.room.gameName ||
-      creation.generationIndex !== index + 1 ||
-      creation.generationCount !== snapshot.hubBoard.targets.length
-    ) {
-      fail(`${target.hubSlotKey} does not match its fixed Hub slot and physical creation`);
-    }
-  });
+  if (
+    decision.origin.hubKey !== layout.progression.hubKey ||
+    decision.room.gameName !== layout.progression.roomGameName
+  ) {
+    fail(`${snapshot.biomeKey} Hub decision does not match its catalog declaration`);
+  }
+  return Object.freeze({ descriptor: layout.progression, decision });
 }
 
 export function evaluateHubOpenSetConstraints(
-  layout: HubBiomeLayout,
-  biome: BiomeAddress,
+  descriptor: HubDecisionDescriptor,
+  biome: ReturnType<typeof createBiomeAddress>,
   openSlotKeys: readonly string[],
 ): {
   readonly entries: readonly HubOpenSlotConstraintSupportEntry[];
@@ -150,11 +88,11 @@ export function evaluateHubOpenSetConstraints(
   const openKeys = new Set(openSlotKeys);
   const findings: SemanticFinding[] = [];
   const entries = Object.freeze(
-    layout.hub.openSlotConstraints.map((constraint, constraintIndex) => {
+    descriptor.openSlotConstraints.map((constraint, constraintIndex) => {
       const constrainedOpen = constraint.slotKeys.filter((slotKey) => openKeys.has(slotKey));
       const selectedPossible = constrainedOpen.length <= constraint.max;
       const entry: HubOpenSlotConstraintSupportEntry = Object.freeze({
-        origin: createHubOpenSetAddress(biome),
+        origin: createHubOpenSetAddress(biome, descriptor.hubKey),
         constraintIndex,
         constrainedSlotKeys: constraint.slotKeys,
         openSlotKeys: Object.freeze(constrainedOpen),
@@ -162,19 +100,19 @@ export function evaluateHubOpenSetConstraints(
         selectedPossible,
       });
       if (!selectedPossible) {
-        const constrainedOpenSet = new Set(constrainedOpen);
-        for (const hubSlotKey of openSlotKeys) {
-          if (!constrainedOpenSet.has(hubSlotKey)) {
-            continue;
-          }
+        for (const hubSlotKey of constrainedOpen) {
           findings.push(
-            finding('hubOpenSlotUnavailable', createHubSlotAddress(biome, hubSlotKey), {
-              constraintIndex,
-              constrainedSlotKeys: constraint.slotKeys,
-              openSlotKeys: entry.openSlotKeys,
-              maximumOpenCount: constraint.max,
-              actualOpenCount: constrainedOpen.length,
-            }),
+            finding(
+              'hubOpenSlotUnavailable',
+              createHubSlotAddress(biome, descriptor.hubKey, hubSlotKey),
+              {
+                constraintIndex,
+                constrainedSlotKeys: constraint.slotKeys,
+                openSlotKeys: entry.openSlotKeys,
+                maximumOpenCount: constraint.max,
+                actualOpenCount: constrainedOpen.length,
+              },
+            ),
           );
         }
       }
@@ -184,155 +122,52 @@ export function evaluateHubOpenSetConstraints(
   return Object.freeze({ entries, findings: Object.freeze(findings) });
 }
 
-function requiredGeneratedCount(layout: HubBiomeLayout, visitIndex: number): number {
-  const ratio = layout.hub.sideRoomGeneration.minimumPerVisit;
+function roomViews(
+  history: HubGenerationHistory,
+): ReadonlyMap<string, ProgressiveRoomHistoryViews> {
+  return new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room]));
+}
+
+function requiredGeneratedCount(descriptor: HubDecisionDescriptor, visitIndex: number): number {
+  const ratio = descriptor.sideRoomGeneration.minimumPerVisit;
   return Math.ceil((visitIndex * ratio.numerator) / ratio.denominator);
 }
 
-function assertVisitIdentity(
-  layout: HubBiomeLayout,
-  snapshot: Pick<HubSimulationMaterialization, 'biomeKey'> & {
-    readonly hubBoard: CanonicalHubBoard;
-    readonly visits: readonly CanonicalHubVisit[];
-  },
-  history: HubSimulationHistory,
-  complete: boolean,
-  frontierVisit?: MaterializedHubVisitFrontier,
+function assertBoardIdentity(
+  descriptor: HubDecisionDescriptor,
+  decision: CanonicalHubDecision,
+  requireMinimumOpenCount: boolean,
 ): void {
+  const openKeys = new Set(decision.board.targets.map((target) => target.hubSlotKey));
+  const expected = descriptor.slots
+    .filter((slot) => openKeys.has(slot.slotKey))
+    .map((slot) => slot.slotKey);
   if (
-    snapshot.visits.length > layout.hub.requiredVisits ||
-    (complete && snapshot.visits.length !== layout.hub.requiredVisits)
+    (requireMinimumOpenCount && decision.board.targets.length < descriptor.openCount.min) ||
+    decision.board.targets.length > descriptor.openCount.max ||
+    expected.some((slotKey, index) => decision.board.targets[index]?.hubSlotKey !== slotKey)
   ) {
-    fail(`${snapshot.biomeKey} selected validation requires ${layout.hub.requiredVisits} visits`);
-  }
-  const visitedSlots = new Set<string>();
-  const spawnKeys = new Set(
-    history.ledgers.requiredObjectSpawns.map((entry) => semanticAddressKey(entry.origin)),
-  );
-  const completionKeys = new Set(
-    history.ledgers.requiredObjectCompletions.map((entry) => semanticAddressKey(entry.origin)),
-  );
-  const hubRestores = history.ledgers.roomRestores.filter(
-    (restore) => restore.restoreKind === 'hub',
-  );
-  snapshot.visits.forEach((visit, index) => {
-    const roomKey = semanticAddressKey(visit.target.room.origin);
-    if (
-      visit.visitIndex !== index + 1 ||
-      visit.origin.visitIndex !== visit.visitIndex ||
-      visitedSlots.has(visit.target.hubSlotKey) ||
-      !snapshot.hubBoard.targets.includes(visit.target) ||
-      visit.target.room.requiredObjects?.length !== 1 ||
-      visit.target.room.requiredObjects[0]?.key !== layout.hub.targetCompletion.objectKey ||
-      !spawnKeys.has(roomKey) ||
-      !completionKeys.has(roomKey) ||
-      semanticAddressKey(visit.hubRestore.after) !== semanticAddressKey(visit.origin) ||
-      semanticAddressKey(visit.hubRestore.room.origin) !==
-        semanticAddressKey(snapshot.hubBoard.room.origin) ||
-      hubRestores[index] === undefined ||
-      semanticAddressKey(hubRestores[index].after) !== semanticAddressKey(visit.origin) ||
-      semanticAddressKey(hubRestores[index].origin) !==
-        semanticAddressKey(snapshot.hubBoard.room.origin)
-    ) {
-      fail(
-        `Hub visit ${visit.visitIndex} does not preserve its target, pylon, and restore contract`,
-      );
-    }
-    visitedSlots.add(visit.target.hubSlotKey);
-  });
-  if (
-    frontierVisit !== undefined &&
-    (frontierVisit.visitIndex !== snapshot.visits.length + 1 ||
-      visitedSlots.has(frontierVisit.target.hubSlotKey) ||
-      !snapshot.hubBoard.targets.includes(frontierVisit.target))
-  ) {
-    fail(`Hub frontier visit ${frontierVisit.visitIndex} is not the next distinct board target`);
-  }
-  const expectedVisitCount = snapshot.visits.length + (frontierVisit === undefined ? 0 : 1);
-  const finalCounters =
-    'biomeCompletion' in history
-      ? history.biomeCompletion.ledgers.counters
-      : history.current.ledgers.counters;
-  if (
-    history.ledgers.requiredObjectSpawns.length !== expectedVisitCount ||
-    history.ledgers.requiredObjectCompletions.length !== expectedVisitCount ||
-    spawnKeys.size !== expectedVisitCount ||
-    completionKeys.size !== expectedVisitCount ||
-    hubRestores.length !== snapshot.visits.length ||
-    finalCounters.soulPylonsSpawned !== expectedVisitCount ||
-    finalCounters.soulPylonsCompleted !== expectedVisitCount
-  ) {
-    fail(`${snapshot.biomeKey} history does not close exactly one pylon and Hub restore per visit`);
-  }
-  const expectedParentRestores = [
-    ...snapshot.visits.flatMap((visit) => visit.parentRestores),
-    ...(frontierVisit?.parentRestores ?? []),
-  ];
-  const actualParentRestores = history.ledgers.roomRestores.filter(
-    (restore) => restore.restoreKind === 'parent',
-  );
-  if (
-    expectedParentRestores.length !== actualParentRestores.length ||
-    expectedParentRestores.some((restore, index) => {
-      const actual = actualParentRestores[index];
-      return (
-        actual === undefined ||
-        semanticAddressKey(actual.origin) !== semanticAddressKey(restore.room.origin) ||
-        semanticAddressKey(actual.after) !== semanticAddressKey(restore.after)
-      );
-    })
-  ) {
-    fail(`${snapshot.biomeKey} history does not preserve ordered parent restores`);
+    fail(`${descriptor.hubKey} Hub board is not in declaration-owned physical order`);
   }
 }
 
-function assertLocalEntryOrder(visit: CanonicalHubVisit): void {
-  const entered = [...visit.localSlots]
-    .filter((slot) => slot.enteredOrdinal !== null)
-    .sort((left, right) => left.enteredOrdinal! - right.enteredOrdinal!);
-  if (
-    entered.length !== visit.enteredLocalRooms.length ||
-    visit.parentRestores.length !== entered.length
-  ) {
-    fail(`Hub visit ${visit.visitIndex} has inconsistent side entry and restore counts`);
-  }
-  entered.forEach((slot, index) => {
-    const projected = visit.enteredLocalRooms[index];
-    const restore = visit.parentRestores[index];
-    if (
-      slot.generation !== 'generated' ||
-      slot.enteredOrdinal !== index + 1 ||
-      projected !== slot ||
-      restore === undefined ||
-      semanticAddressKey(restore.after) !== semanticAddressKey(slot.origin) ||
-      semanticAddressKey(restore.room.origin) !== semanticAddressKey(visit.target.room.origin)
-    ) {
-      fail(`Hub visit ${visit.visitIndex} has invalid side-room entered ordinals or restores`);
-    }
-  });
-}
-
-function validateVisitSidePressure(
-  layout: HubBiomeLayout,
-  visit: Pick<CanonicalHubVisit, 'localSlots' | 'origin' | 'target' | 'visitIndex'>,
+function validateVisit(
+  descriptor: HubDecisionDescriptor,
+  visit: CanonicalHubVisit,
   views: ReadonlyMap<string, ProgressiveRoomHistoryViews>,
   findings: SemanticFinding[],
-  completeVisit = true,
 ): readonly HubSideRoomGenerationSupportEntry[] {
-  if (completeVisit) {
-    assertLocalEntryOrder(visit as CanonicalHubVisit);
-  }
   const view = views.get(semanticAddressKey(visit.target.room.origin));
-  const generatedBeforeVisit = view?.preOutgoing?.ledgers.counters.numSubRoomsSpawned;
-  if (generatedBeforeVisit === undefined) {
+  const generatedBefore = view?.preOutgoing?.ledgers.counters.numSubRoomsSpawned;
+  if (generatedBefore === undefined) {
     fail(`Hub visit ${visit.visitIndex} has no side-generation history context`);
   }
-  let generated = generatedBeforeVisit;
-  const required = requiredGeneratedCount(layout, visit.visitIndex);
-  const orderedSlots = [...visit.localSlots].sort(
+  const required = requiredGeneratedCount(descriptor, visit.visitIndex);
+  let generated = generatedBefore;
+  const ordered = [...visit.localSlots].sort(
     (left, right) => left.availabilityRank - right.availabilityRank,
   );
-  const entries = orderedSlots.map((slot, index): HubSideRoomGenerationSupportEntry => {
+  const entries = ordered.map((slot, index): HubSideRoomGenerationSupportEntry => {
     if (slot.availabilityRank !== index + 1) {
       fail(`Hub visit ${visit.visitIndex} has non-contiguous side availability ranks`);
     }
@@ -340,7 +175,7 @@ function validateVisitSidePressure(
       generated < required ? ['generated'] : ['generated', 'notGenerated'],
     );
     const selectedPossible = supportOutcomes.includes(slot.generation);
-    const entry = Object.freeze({
+    const entry: HubSideRoomGenerationSupportEntry = Object.freeze({
       origin: slot.origin,
       visitIndex: visit.visitIndex,
       availabilityRank: slot.availabilityRank,
@@ -362,54 +197,22 @@ function validateVisitSidePressure(
         }),
       );
     }
-    if (slot.generation === 'generated') {
-      generated += 1;
-    }
+    if (slot.generation === 'generated') generated += 1;
     return entry;
   });
-  const generatedAfterVisit = view?.outgoingGeneration?.ledgers.counters.numSubRoomsSpawned;
-  if (generatedAfterVisit !== generated) {
-    fail(`Hub visit ${visit.visitIndex} side-generation history does not match authored outcomes`);
+  if (view?.outgoingGeneration?.ledgers.counters.numSubRoomsSpawned !== generated) {
+    fail(`Hub visit ${visit.visitIndex} side-generation history diverges from authored state`);
   }
   return Object.freeze(entries);
 }
 
-function assertTerminalCompletion(
-  layout: HubBiomeLayout,
-  snapshot: CanonicalHubBiome,
-  history: CanonicalHubHistory,
-): void {
-  const expected = [
-    layout.terminal.roomGameName,
-    ...layout.completion.rooms.map((room) => room.roomGameName),
-  ];
-  const terminalAndCompletion = history.ledgers.roomCreations
-    .filter((event) => event.source === 'layoutTerminal' || event.source === 'layoutCompletion')
-    .map((event) => event.gameName);
-  if (
-    !snapshot.terminalEntry.entered ||
-    snapshot.completionRooms.length !== layout.completion.rooms.length ||
-    expected.length !== terminalAndCompletion.length ||
-    expected.some((gameName, index) => terminalAndCompletion[index] !== gameName) ||
-    !history.events.some(
-      (event) =>
-        event.kind === 'biomeCompleted' &&
-        semanticAddressKey(event.origin) ===
-          semanticAddressKey(createBiomeAddress(snapshot.routeKey, snapshot.biomeKey)),
-    )
-  ) {
-    fail(`${snapshot.biomeKey} history does not contain its fixed terminal completion`);
-  }
-}
-
-export function evaluateHubRoomGeneration(
+export function evaluateHubDecisionGeneration(
   catalog: Catalog,
-  snapshot: HubSimulationMaterialization,
-  history: HubSimulationHistory,
+  snapshot: HubGenerationSnapshot,
+  history: HubGenerationHistory,
 ): HubRoomGenerationValidation {
-  const layout = requireHubLayout(catalog, snapshot, history);
-  const board = snapshot.hubBoard;
-  if (board === undefined) {
+  const resolved = requireHubDecision(catalog, snapshot);
+  if (resolved === null) {
     return Object.freeze({
       biomeKey: snapshot.biomeKey,
       validity: 'valid',
@@ -418,50 +221,38 @@ export function evaluateHubRoomGeneration(
       findings: Object.freeze([]),
     });
   }
-  const withBoard = { ...snapshot, hubBoard: board };
-  assertFixedBoard(layout, withBoard, history);
-  const frontierVisit = snapshot.kind === 'HubBiomePrefix' ? snapshot.frontierVisit : undefined;
-  assertVisitIdentity(layout, withBoard, history, snapshot.kind === 'HubBiome', frontierVisit);
-  if (snapshot.kind === 'HubBiome') {
-    if (!('biomeCompletion' in history)) {
-      fail(`${snapshot.biomeKey} complete Hub snapshot requires complete history`);
-    }
-    assertTerminalCompletion(layout, snapshot, history);
+  const { descriptor, decision } = resolved;
+  assertBoardIdentity(descriptor, decision, snapshot.kind === 'biome');
+  if (snapshot.kind === 'biome' && decision.visits.length !== descriptor.requiredVisits) {
+    fail(`${descriptor.hubKey} requires exactly ${descriptor.requiredVisits} visits`);
   }
+  const visited = new Set<string>();
+  for (const [index, visit] of decision.visits.entries()) {
+    if (
+      visit.visitIndex !== index + 1 ||
+      visited.has(visit.target.hubSlotKey) ||
+      !decision.board.targets.includes(visit.target)
+    ) {
+      fail(`${descriptor.hubKey} visit ${index + 1} is not a distinct board target`);
+    }
+    visited.add(visit.target.hubSlotKey);
+  }
+  const biome = createBiomeAddress(snapshot.routeKey, snapshot.biomeKey);
   const openSet = evaluateHubOpenSetConstraints(
-    layout,
-    createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
-    board.targets.map((target) => target.hubSlotKey),
+    descriptor,
+    biome,
+    decision.board.targets.map((target) => target.hubSlotKey),
   );
   const findings: SemanticFinding[] = [...openSet.findings];
-  const openSlotConstraints = openSet.entries;
   const views = roomViews(history);
   const sideRoomGenerations = Object.freeze(
-    [
-      ...snapshot.visits.map((visit) => ({ visit, complete: true })),
-      ...(frontierVisit === undefined || frontierVisit.kind === 'targetLifecycle'
-        ? []
-        : [{ visit: frontierVisit, complete: false }]),
-    ].flatMap(({ visit, complete }) =>
-      validateVisitSidePressure(layout, visit, views, findings, complete),
-    ),
+    decision.visits.flatMap((visit) => validateVisit(descriptor, visit, views, findings)),
   );
   return Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
-    openSlotConstraints,
+    openSlotConstraints: openSet.entries,
     sideRoomGenerations,
     findings: Object.freeze(findings),
   });
-}
-
-export function evaluateNRoomGeneration(
-  catalog: Catalog,
-  snapshot: CanonicalHubBiome,
-  history: CanonicalHubHistory,
-): HubRoomGenerationValidation {
-  if (snapshot.biomeKey !== 'N' || history.biomeKey !== 'N') {
-    fail('N room generation requires biome N');
-  }
-  return evaluateHubRoomGeneration(catalog, snapshot, history);
 }

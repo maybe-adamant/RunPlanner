@@ -2,31 +2,31 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createBiomeFieldAddress,
-  createContinuationAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createPickedAddress,
   createProjectDocument,
   createTargetAddress,
   encodeProjectDocument,
-  type LinearBiomePlan,
+  type AuthoredBiomePlan,
   type OccurrenceId,
   type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  composeLinearHistory,
-  composeLinearHistoryPrefix,
-  evaluateLinearRoomGeneration,
-  evaluateLinearCompleteness,
-  LinearHistoryFoldContractError,
-  materializeLinearBiome,
-  materializeLinearBiomePrefix,
-  type CanonicalLinearHistory,
-  type CompleteLinearCompletenessResult,
-  type LinearHistoryLedgers,
-  type LinearHistoryStateView,
+  composeBiomeHistory,
+  composeBiomeHistoryPrefix,
+  evaluateBiomeCompleteness,
+  evaluateBiomeRoomGeneration,
+  HistoryFoldContractError,
+  materializeBiome,
+  materializeBiomePrefix,
+  type CanonicalBiomeHistory,
+  type CompleteBiomeCompletenessResult,
+  type HistoryLedgers,
+  type HistoryStateView,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -44,11 +44,11 @@ type IncomingRewardValue = Extract<
   { readonly kind: 'ReplaceIncomingReward' }
 >['value'];
 
-function plan(project: ProjectDocument): LinearBiomePlan {
+function plan(project: ProjectDocument): AuthoredBiomePlan {
   const result = project.routes
     .find((route) => route.routeKey === 'Underworld')
     ?.biomes.find((candidate) => candidate.biomeKey === 'I');
-  if (result?.kind !== 'LinearBiome') {
+  if (result === undefined) {
     throw new Error('fixture lost I plan');
   }
   return result;
@@ -62,23 +62,30 @@ function appendBatch(
 ): ProjectDocument {
   const resolvedParentOccurrenceId =
     parentOccurrenceId ?? plan(project).topology?.startOccurrenceId ?? null;
+  if (resolvedParentOccurrenceId === null) {
+    throw new Error('I fixture has no authored start');
+  }
+  const source = { kind: 'occurrence' as const, occurrenceId: resolvedParentOccurrenceId };
+  const decision = createExitDecisionAddress(biome, source);
   let next = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, resolvedParentOccurrenceId),
+    decision,
   });
   for (const [index, target] of targets.entries()) {
     next = applyProjectCommand(next, catalog, {
       kind: 'CreateTarget',
-      target: createTargetAddress(biome, resolvedParentOccurrenceId, index + 1),
+      target: createTargetAddress(biome, source, `exit${index + 1}`),
       occurrenceId: target.occurrenceId,
       gameName: target.gameName,
     });
   }
-  return applyProjectCommand(next, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, resolvedParentOccurrenceId),
-    exitIndex: pickedExitIndex,
-  });
+  return targets.length === 1
+    ? next
+    : applyProjectCommand(next, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(biome, source),
+        value: { kind: 'normal', exitKey: `exit${pickedExitIndex}` },
+      });
 }
 
 function occurrence(key: string): OccurrenceId {
@@ -95,7 +102,6 @@ function createIProject(projectId: string, name: string): ProjectDocument {
     kind: 'CreateStart',
     biome,
     occurrenceId: occurrence(`${projectId}-intro`),
-    gameName: 'I_Intro',
   });
   return applyProjectCommand(started, catalog, {
     kind: 'ReplaceBiomeField',
@@ -230,14 +236,14 @@ function projectWithExhaustedLimitDomain(): ProjectDocument {
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
-    target: createTargetAddress(biome, combat15, 2),
+    target: createTargetAddress(biome, { kind: 'occurrence', occurrenceId: combat15 }, 'exit2'),
     occurrenceId: combat18,
     gameName: 'I_Combat18',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, combat15),
-    exitIndex: 2,
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(biome, { kind: 'occurrence', occurrenceId: combat15 }),
+    value: { kind: 'normal', exitKey: 'exit2' },
   });
   return appendBatch(
     project,
@@ -250,16 +256,16 @@ function projectWithExhaustedLimitDomain(): ProjectDocument {
   );
 }
 
-function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
-  const result = evaluateLinearCompleteness(catalog, biome, plan(project));
+function complete(project: ProjectDocument): CompleteBiomeCompletenessResult {
+  const result = evaluateBiomeCompleteness(catalog, biome, plan(project));
   if (result.completion !== 'complete') {
     throw new Error(`fixture is incomplete: ${result.findings.map((finding) => finding.code)}`);
   }
   return result;
 }
 
-function carriedHHistory(): CanonicalLinearHistory {
-  const ledgers: LinearHistoryLedgers = Object.freeze({
+function carriedHHistory(): CanonicalBiomeHistory {
+  const ledgers: HistoryLedgers = Object.freeze({
     roomCreations: Object.freeze([]),
     roomAppearances: Object.freeze([]),
     encounterStarts: Object.freeze([]),
@@ -275,7 +281,7 @@ function carriedHHistory(): CanonicalLinearHistory {
       roomHistoryOrdinal: 30,
     }),
   });
-  const state: LinearHistoryStateView = Object.freeze({ sequence: 100, ledgers });
+  const state: HistoryStateView = Object.freeze({ sequence: 100, ledgers });
   return Object.freeze({
     routeKey: 'Underworld',
     biomeKey: 'H',
@@ -287,17 +293,29 @@ function carriedHHistory(): CanonicalLinearHistory {
   });
 }
 
+function batches(snapshot: ReturnType<typeof materializeBiome>) {
+  return snapshot.decisions.filter(
+    (
+      decision,
+    ): decision is Extract<(typeof snapshot.decisions)[number], { readonly kind: 'batch' }> =>
+      decision.kind === 'batch',
+  );
+}
+
 describe('canonical I Clockwork materialization and history', () => {
   it('derives physical Goal and NonGoal offers before each generated batch', () => {
     const project = completeProject();
     const encodedBefore = encodeProjectDocument(project);
-    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
+    const snapshot = materializeBiome(catalog, biome, complete(project));
+    const snapshotBatches = batches(snapshot);
 
-    expect(snapshot.entryRooms).toMatchObject([
-      { kind: 'authored', gameName: 'I_Intro', entered: true },
-    ]);
+    expect(snapshot.entryRoom).toMatchObject({
+      kind: 'authored',
+      gameName: 'I_Intro',
+      entered: true,
+    });
     expect(
-      snapshot.batches.map((batch) => {
+      snapshotBatches.slice(0, -1).map((batch) => {
         if (batch.batchState.kind !== 'clockwork') {
           throw new Error('fixture lost Clockwork batch state');
         }
@@ -318,9 +336,9 @@ describe('canonical I Clockwork materialization and history', () => {
       [1, 3, 5],
       [0, 3, 5],
     ]);
-    expect(materializeLinearBiome(catalog, biome, complete(project))).toEqual(snapshot);
+    expect(materializeBiome(catalog, biome, complete(project))).toEqual(snapshot);
     expect(
-      snapshot.batches.map((batch) =>
+      snapshotBatches.slice(0, -1).map((batch) =>
         batch.targets.map((target) => ({
           picked: target.picked,
           reward: target.room.clockworkReward,
@@ -353,7 +371,7 @@ describe('canonical I Clockwork materialization and history', () => {
         { picked: true, reward: 'nonGoal', concrete: 'RoomMoneyTripleDrop' },
       ],
     ]);
-    expect(snapshot.terminalEntry).toMatchObject({
+    expect(snapshotBatches.at(-1)).toMatchObject({
       batchState: {
         kind: 'clockwork',
         goalsRemaining: 0,
@@ -361,11 +379,11 @@ describe('canonical I Clockwork materialization and history', () => {
         maxNonGoalRewards: 5,
       },
       rewardStore: { kind: 'none' },
-      pickedExitIndex: 1,
+      selectedExitKey: 'exit1',
       targets: [
         {
           picked: true,
-          continuation: 'entersTerminal',
+          continuation: 'startsCompletion',
           room: {
             gameName: 'I_PreBoss02',
             clockworkReward: 'goal',
@@ -374,10 +392,9 @@ describe('canonical I Clockwork materialization and history', () => {
         },
       ],
     });
-    const prebosses = [
-      ...snapshot.batches.flatMap((batch) => batch.targets),
-      ...snapshot.terminalEntry.targets,
-    ].filter((target) => target.room.gameName === 'I_PreBoss02');
+    const prebosses = snapshotBatches
+      .flatMap((batch) => batch.targets)
+      .filter((target) => target.room.gameName === 'I_PreBoss02');
     expect(prebosses).toHaveLength(2);
     expect(prebosses.map((target) => target.room.entryState?.profileKey)).toEqual([
       undefined,
@@ -392,8 +409,9 @@ describe('canonical I Clockwork materialization and history', () => {
   });
 
   it('carries H route state and advances Clockwork counters only at picked producer points', () => {
-    const snapshot = materializeLinearBiome(catalog, biome, complete(completeProject()));
-    const history = composeLinearHistory(catalog, snapshot, carriedHHistory());
+    const snapshot = materializeBiome(catalog, biome, complete(completeProject()));
+    const snapshotBatches = batches(snapshot);
+    const history = composeBiomeHistory(catalog, snapshot, carriedHHistory().afterTransition);
     const events = history.events;
     const started = events.find((event) => event.kind === 'biomeStarted');
 
@@ -430,7 +448,7 @@ describe('canonical I Clockwork materialization and history', () => {
       4,
     );
 
-    const pickedNonGoal = snapshot.batches[2]?.targets[1]?.room.origin;
+    const pickedNonGoal = snapshotBatches[2]?.targets[1]?.room.origin;
     if (pickedNonGoal === undefined) {
       throw new Error('fixture lost picked NonGoal room');
     }
@@ -471,30 +489,31 @@ describe('canonical I Clockwork materialization and history', () => {
       clockworkNonGoalRewardsAcquired: 4,
     });
 
-    const firstBatch = snapshot.batches[0];
+    const firstBatch = snapshotBatches[0];
     if (firstBatch?.batchState.kind !== 'clockwork') {
       throw new Error('fixture lost first Clockwork batch');
     }
     const malformed = {
       ...snapshot,
-      batches: [
+      decisions: [
         {
           ...firstBatch,
           batchState: { ...firstBatch.batchState, goalsRemaining: 4 },
         },
-        ...snapshot.batches.slice(1),
+        ...snapshot.decisions.slice(1),
       ],
     };
-    expect(() => composeLinearHistory(catalog, malformed, carriedHHistory())).toThrowError(
-      LinearHistoryFoldContractError,
-    );
+    expect(() =>
+      composeBiomeHistory(catalog, malformed, carriedHHistory().afterTransition),
+    ).toThrowError(HistoryFoldContractError);
   });
 
   it('enters an authored Story without changing either Clockwork counter', () => {
     const project = projectWithPickedStory();
-    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
-    const history = composeLinearHistory(catalog, snapshot, carriedHHistory());
-    const storyTarget = snapshot.batches[1]?.targets[1];
+    const snapshot = materializeBiome(catalog, biome, complete(project));
+    const snapshotBatches = batches(snapshot);
+    const history = composeBiomeHistory(catalog, snapshot, carriedHHistory().afterTransition);
+    const storyTarget = snapshotBatches[1]?.targets[1];
 
     expect(storyTarget).toMatchObject({
       picked: true,
@@ -504,7 +523,7 @@ describe('canonical I Clockwork materialization and history', () => {
       },
     });
     expect(storyTarget?.room.clockworkReward).toBeUndefined();
-    expect(snapshot.batches.map((batch) => batch.batchState)).toMatchObject([
+    expect(snapshotBatches.slice(0, -1).map((batch) => batch.batchState)).toMatchObject([
       { goalsRemaining: 5, nonGoalRewardsAcquired: 0 },
       { goalsRemaining: 4, nonGoalRewardsAcquired: 0 },
       { goalsRemaining: 4, nonGoalRewardsAcquired: 0 },
@@ -539,13 +558,19 @@ describe('canonical I Clockwork materialization and history', () => {
 
   it('rejects a two-exit room after the authored non-goal limit is exhausted', () => {
     const project = projectWithExhaustedLimitDomain();
-    const snapshot = materializeLinearBiomePrefix(catalog, biome, plan(project));
-    if (snapshot === null) {
+    const snapshot = materializeBiomePrefix(catalog, biome, plan(project));
+    if (snapshot === null || snapshot.entryRoom === undefined) {
       throw new Error('exhausted Clockwork fixture did not materialize a prefix');
     }
-    const history = composeLinearHistoryPrefix(catalog, snapshot, carriedHHistory());
-    const generation = evaluateLinearRoomGeneration(catalog, snapshot, history, 4);
-    const target = createTargetAddress(biome, occurrence('exhausted-combat18'), 2);
+    const prefix = Object.freeze({ ...snapshot, entryRoom: snapshot.entryRoom });
+    const history = composeBiomeHistoryPrefix(catalog, prefix, carriedHHistory().afterTransition);
+    if (history === null) throw new Error('exhausted Clockwork fixture has no history');
+    const generation = evaluateBiomeRoomGeneration(catalog, prefix, history, 4);
+    const target = createTargetAddress(
+      biome,
+      { kind: 'occurrence', occurrenceId: occurrence('exhausted-combat18') },
+      'exit2',
+    );
     expect(generation.findings).toContainEqual(
       expect.objectContaining({
         code: 'targetRoomUnavailable',
@@ -583,9 +608,10 @@ describe('canonical I Clockwork materialization and history', () => {
         spurnedSource: 'ZeusUpgrade',
       },
     });
-    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
-    const history = composeLinearHistory(catalog, snapshot, carriedHHistory());
-    const devotionOrigin = snapshot.batches[2]?.targets[1]?.room.origin;
+    const snapshot = materializeBiome(catalog, biome, complete(project));
+    const snapshotBatches = batches(snapshot);
+    const history = composeBiomeHistory(catalog, snapshot, carriedHHistory().afterTransition);
+    const devotionOrigin = snapshotBatches[2]?.targets[1]?.room.origin;
     if (devotionOrigin === undefined) {
       throw new Error('fixture lost picked Devotion NonGoal room');
     }

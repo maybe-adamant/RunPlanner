@@ -1,62 +1,45 @@
-import type {
-  Catalog,
-  HubBiomeLayout,
-  LinearBiomeLayout,
-  RoomDeclaration,
-} from '../catalog-schema';
+import type { BiomeLayout, Catalog, RoomDeclaration } from '../catalog-schema';
 import {
   createBatchRewardStoreAddress,
   createBiomeFieldAddress,
-  createContinuationAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
+  createHubDecisionAddress,
   createHubOpenSetAddress,
   createHubVisitAddress,
   createOccurrenceAddress,
-  createPickedAddress,
   createTargetAddress,
   type BiomeAddress,
+  type ExitDecisionSourceAddress,
   type SemanticAddress,
 } from '../authored-project/addresses';
 import type {
   AuthoredBiomeState,
-  HubBiomePlan,
-  HubBiomeTopology,
-  LinearBiomePlan,
-  LinearBiomeTopology,
-  LinearContinuation,
+  BiomeTopology,
+  ExitDecision,
+  ExitDecisionSource,
+  ExitTargetReference,
+  HubDecision,
   OccurrenceId,
   RoomOccurrence,
 } from '../authored-project/model';
 import type { CompletenessFindingCode, FindingEvidence, SemanticFinding } from './model';
 
-export interface IncompleteLinearCompletenessResult {
+export interface IncompleteBiomeCompletenessResult {
   readonly completion: 'incomplete';
   readonly frontier: SemanticAddress;
   readonly findings: readonly SemanticFinding[];
 }
 
-export interface CompleteLinearCompletenessResult {
+export interface CompleteBiomeCompletenessResult {
   readonly completion: 'complete';
   readonly biomeState: AuthoredBiomeState;
-  readonly topology: LinearBiomeTopology;
+  readonly topology: BiomeTopology;
   readonly findings: readonly [];
 }
 
-export type LinearCompletenessResult =
-  CompleteLinearCompletenessResult | IncompleteLinearCompletenessResult;
-
-export interface IncompleteHubCompletenessResult {
-  readonly completion: 'incomplete';
-  readonly frontier: SemanticAddress;
-  readonly findings: readonly SemanticFinding[];
-}
-
-export interface CompleteHubCompletenessResult {
-  readonly completion: 'complete';
-  readonly topology: HubBiomeTopology;
-  readonly findings: readonly [];
-}
-
-export type HubCompletenessResult = CompleteHubCompletenessResult | IncompleteHubCompletenessResult;
+export type BiomeCompletenessResult =
+  CompleteBiomeCompletenessResult | IncompleteBiomeCompletenessResult;
 
 export class CompletenessContractError extends Error {
   constructor(detail: string) {
@@ -79,10 +62,10 @@ function finding(
   });
 }
 
-function requireLinearLayout(catalog: Catalog, biome: BiomeAddress, plan: LinearBiomePlan) {
-  if (plan.biomeKey !== biome.biomeKey) {
+function requireLayout(catalog: Catalog, biome: BiomeAddress, biomeKey: string): BiomeLayout {
+  if (biomeKey !== biome.biomeKey) {
     throw new CompletenessContractError(
-      `plan biome ${plan.biomeKey} does not match address biome ${biome.biomeKey}`,
+      `plan biome ${biomeKey} does not match address biome ${biome.biomeKey}`,
     );
   }
   const route = catalog.routes.byKey[biome.routeKey];
@@ -90,85 +73,107 @@ function requireLinearLayout(catalog: Catalog, biome: BiomeAddress, plan: Linear
     throw new CompletenessContractError(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
   }
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
-  if (layout?.kind !== 'LinearBiome') {
-    throw new CompletenessContractError(
-      `catalog does not provide a linear ${biome.biomeKey} layout`,
-    );
-  }
-  if (
-    (layout.continuation.batchPolicy.kind !== 'standard' &&
-      layout.continuation.batchPolicy.kind !== 'fields' &&
-      layout.continuation.batchPolicy.kind !== 'clockwork') ||
-    (layout.continuation.rewardStorePolicy.kind !== 'authoredBaseStore' &&
-      layout.continuation.rewardStorePolicy.kind !== 'none') ||
-    (layout.terminal.kind !== 'forkedTransition' &&
-      layout.terminal.kind !== 'generatedTarget' &&
-      layout.terminal.kind !== 'directTransition')
-  ) {
-    throw new CompletenessContractError(
-      `catalog ${biome.biomeKey} layout is not supported by linear completeness`,
-    );
+  if (layout === undefined) {
+    throw new CompletenessContractError(`catalog does not provide a ${biome.biomeKey} layout`);
   }
   return layout;
 }
 
-function occurrenceById(topology: LinearBiomeTopology): ReadonlyMap<OccurrenceId, RoomOccurrence> {
+function occurrenceMap(topology: BiomeTopology): ReadonlyMap<OccurrenceId, RoomOccurrence> {
   return new Map(topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]));
 }
 
-function continuationByParent(
-  topology: LinearBiomeTopology,
-): ReadonlyMap<OccurrenceId | null, LinearContinuation> {
+function sourceAddress(source: ExitDecisionSource): ExitDecisionSourceAddress {
+  return source.kind === 'occurrence'
+    ? Object.freeze({ kind: 'occurrence', occurrenceId: source.occurrenceId })
+    : Object.freeze({ kind: 'hubDecision', decisionKey: source.decisionKey });
+}
+
+function sourceKey(source: ExitDecisionSource): string {
+  return source.kind === 'occurrence'
+    ? `occurrence:${source.occurrenceId}`
+    : `hubDecision:${source.decisionKey}`;
+}
+
+function decisionsBySource(topology: BiomeTopology): ReadonlyMap<string, ExitDecision> {
   return new Map(
-    topology.continuations.map((continuation) => [continuation.parentOccurrenceId, continuation]),
+    topology.decisions
+      .filter((decision): decision is ExitDecision => decision.kind === 'exit')
+      .map((decision) => [sourceKey(decision.source), decision]),
+  );
+}
+
+function hubDecision(topology: BiomeTopology, hubKey: string): HubDecision | undefined {
+  return topology.decisions.find(
+    (decision): decision is HubDecision => decision.kind === 'hub' && decision.hubKey === hubKey,
   );
 }
 
 function sourceRoom(
   catalog: Catalog,
-  layout: LinearBiomeLayout,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
-  parentOccurrenceId: OccurrenceId | null,
+  occurrenceId: OccurrenceId,
 ): RoomDeclaration {
-  if (parentOccurrenceId !== null) {
-    const parent = occurrences.get(parentOccurrenceId);
-    const room = parent === undefined ? undefined : catalog.rooms.byKey[parent.gameName];
-    if (room === undefined) {
-      throw new CompletenessContractError(
-        `trusted topology lost continuation source ${parentOccurrenceId}`,
-      );
-    }
-    return room;
+  const occurrence = occurrences.get(occurrenceId);
+  if (occurrence === undefined) {
+    throw new CompletenessContractError(`trusted topology lost occurrence ${occurrenceId}`);
   }
-  if (layout.start.kind !== 'fixedEntry') {
-    throw new CompletenessContractError(`${layout.biomeKey} has no derived entry source`);
-  }
-  const source = layout.entries.at(-1) ?? layout.start;
-  const room = catalog.rooms.byKey[source.roomGameName];
+  const room = catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) {
-    throw new CompletenessContractError(`catalog lost fixed entry ${source.roomGameName}`);
+    throw new CompletenessContractError(`trusted topology lost room ${occurrence.gameName}`);
   }
   return room;
 }
 
-function requiredExitIndexes(room: RoomDeclaration): readonly number[] {
-  return room.exits.map((exit) => exit.index).sort((left, right) => left - right);
+function selectedExitKey(decision: ExitDecision): string | undefined {
+  if (decision.normal.kind === 'linked') return decision.normal.exitKey;
+  if (decision.selection.kind === 'derived') return decision.normal.targets[0]?.exitKey;
+  return decision.selection.kind === 'normal' ? decision.selection.exitKey : undefined;
 }
 
-function findRequiredTargets(
+function selectedTarget(
+  decision: ExitDecision,
+):
+  | ExitTargetReference
+  | { readonly exitKey: string; readonly occurrenceId: OccurrenceId }
+  | undefined {
+  if (decision.normal.kind === 'linked') return decision.normal;
+  const exitKey = selectedExitKey(decision);
+  return decision.normal.targets.find((target) => target.exitKey === exitKey);
+}
+
+function isTakeoverBatch(
+  decision: ExitDecision,
+  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  catalog: Catalog,
+): boolean {
+  if (decision.normal.kind !== 'batch') return false;
+  return decision.normal.targets.some((target) => {
+    const occurrence = occurrences.get(target.occurrenceId);
+    const room = occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName];
+    return room?.prebossBatchPolicy?.kind === 'takeOverNormalDoors';
+  });
+}
+
+function findMissingTargets(
   findings: SemanticFinding[],
   biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId | null,
+  decision: ExitDecision,
   room: RoomDeclaration,
-  continuation: LinearContinuation,
 ): void {
-  for (const exitIndex of requiredExitIndexes(room)) {
-    if (!continuation.targets.some((target) => target.exitIndex === exitIndex)) {
+  if (decision.normal.kind !== 'batch') return;
+  for (const exit of room.exits) {
+    const exitKey = `exit${exit.index}`;
+    if (!decision.normal.targets.some((target) => target.exitKey === exitKey)) {
       findings.push(
-        finding('targetMissing', createTargetAddress(biome, parentOccurrenceId, exitIndex), {
-          exitIndex,
-          parentGameName: room.gameName,
-        }),
+        finding(
+          'targetMissing',
+          createTargetAddress(biome, sourceAddress(decision.source), exitKey),
+          {
+            exitKey,
+            parentGameName: room.gameName,
+          },
+        ),
       );
     }
   }
@@ -188,27 +193,98 @@ function findPickedShopState(
   }
 }
 
-export function evaluateLinearCompleteness(
-  catalog: Catalog,
+function evaluateHubDecisionCompleteness(
   biome: BiomeAddress,
-  plan: LinearBiomePlan,
-): LinearCompletenessResult {
-  const layout: LinearBiomeLayout = requireLinearLayout(catalog, biome, plan);
-  const topology = plan.topology;
-  if (topology === null) {
-    const frontier = biome;
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+): IncompleteBiomeCompletenessResult | undefined {
+  if (layout.progression.kind !== 'hub') return undefined;
+  const decision = hubDecision(topology, layout.progression.hubKey);
+  const hub = createHubDecisionAddress(biome, layout.progression.hubKey);
+  if (decision === undefined) {
     return Object.freeze({
       completion: 'incomplete',
-      frontier,
+      frontier: hub,
       findings: Object.freeze([
-        finding('biomeTopologyMissing', frontier, { biomeKey: layout.biomeKey }),
+        finding('continuationMissing', hub, { hubKey: layout.progression.hubKey }),
+      ]),
+    });
+  }
+  if (
+    decision.openTargets.length < layout.progression.openCount.min ||
+    decision.openTargets.length > layout.progression.openCount.max
+  ) {
+    const origin = createHubOpenSetAddress(biome, layout.progression.hubKey);
+    return Object.freeze({
+      completion: 'incomplete',
+      frontier: origin,
+      findings: Object.freeze([
+        finding('hubOpenSetIncomplete', origin, {
+          actualCount: decision.openTargets.length,
+          minimumCount: layout.progression.openCount.min,
+          maximumCount: layout.progression.openCount.max,
+        }),
+      ]),
+    });
+  }
+  if (decision.visitOrder.length !== layout.progression.requiredVisits) {
+    const origin = createHubVisitAddress(
+      biome,
+      layout.progression.hubKey,
+      decision.visitOrder.length + 1,
+    );
+    return Object.freeze({
+      completion: 'incomplete',
+      frontier: origin,
+      findings: Object.freeze([
+        finding('hubVisitOrderIncomplete', origin, {
+          actualCount: decision.visitOrder.length,
+          requiredCount: layout.progression.requiredVisits,
+        }),
+      ]),
+    });
+  }
+  return undefined;
+}
+
+function incomplete(findings: readonly SemanticFinding[]): IncompleteBiomeCompletenessResult {
+  const first = findings[0];
+  if (first === undefined) throw new CompletenessContractError('incomplete result needs a finding');
+  return Object.freeze({
+    completion: 'incomplete',
+    frontier: first.origin,
+    findings: Object.freeze(findings),
+  });
+}
+
+/**
+ * Completeness follows the authored selected spine. A room declaration with
+ * kind Preboss ends editable traversal only when its target is selected; an
+ * offered preboss is still an ordinary dead leaf. Hub topology enters through
+ * the fixed linked PreHub target and then owns its board and completed-Hub
+ * exit by its stable decision key.
+ */
+export function evaluateBiomeCompleteness(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  plan: {
+    readonly biomeKey: string;
+    readonly state: AuthoredBiomeState;
+    readonly topology: BiomeTopology | null;
+  },
+): BiomeCompletenessResult {
+  const layout = requireLayout(catalog, biome, plan.biomeKey);
+  const topology = plan.topology;
+  if (topology === null) {
+    return Object.freeze({
+      completion: 'incomplete',
+      frontier: biome,
+      findings: Object.freeze([
+        finding('biomeTopologyMissing', biome, { biomeKey: layout.biomeKey }),
       ]),
     });
   }
 
-  const occurrences = occurrenceById(topology);
-  const continuations = continuationByParent(topology);
-  const findings: SemanticFinding[] = [];
   for (const descriptor of layout.fields) {
     if (descriptor.initialization.kind === 'required' && plan.state[descriptor.key] === null) {
       const origin = createBiomeFieldAddress(biome, descriptor.key);
@@ -221,175 +297,169 @@ export function evaluateLinearCompleteness(
       });
     }
   }
-  let currentOwner: OccurrenceId | null | undefined = topology.startOccurrenceId;
 
-  while (currentOwner !== undefined) {
-    const parent = currentOwner === null ? undefined : occurrences.get(currentOwner);
-    if (currentOwner !== null && parent === undefined) {
-      throw new CompletenessContractError(`trusted topology lost occurrence ${currentOwner}`);
+  const occurrences = occurrenceMap(topology);
+  const decisions = decisionsBySource(topology);
+  const findings: SemanticFinding[] = [];
+  const traversed = new Set<OccurrenceId>();
+  let current = topology.startOccurrenceId;
+
+  while (!traversed.has(current)) {
+    traversed.add(current);
+    const occurrence = occurrences.get(current);
+    if (occurrence === undefined) {
+      throw new CompletenessContractError(`trusted topology lost occurrence ${current}`);
     }
-    const room = sourceRoom(catalog, layout, occurrences, currentOwner);
-    if (parent !== undefined) {
-      findPickedShopState(findings, biome, parent);
+    const room = sourceRoom(catalog, occurrences, current);
+    findPickedShopState(findings, biome, occurrence);
+
+    const source: ExitDecisionSource = Object.freeze({ kind: 'occurrence', occurrenceId: current });
+    const decision = decisions.get(sourceKey(source));
+    if (decision === undefined) {
+      if (
+        layout.progression.kind === 'hub' &&
+        room.gameName === layout.progression.linkedExit.roomGameName
+      ) {
+        const hubIncomplete = evaluateHubDecisionCompleteness(biome, layout, topology);
+        if (hubIncomplete !== undefined) return hubIncomplete;
+        const hubSource: ExitDecisionSource = Object.freeze({
+          kind: 'hubDecision',
+          decisionKey: layout.progression.hubKey,
+        });
+        const handoff = decisions.get(sourceKey(hubSource));
+        if (handoff === undefined) {
+          const origin = createExitDecisionAddress(biome, sourceAddress(hubSource));
+          return incomplete([
+            finding('continuationMissing', origin, { hubKey: layout.progression.hubKey }),
+          ]);
+        }
+        if (handoff.normal.kind !== 'batch') {
+          throw new CompletenessContractError('completed Hub exit must be a normal-door batch');
+        }
+        const handoffFindings = evaluateBatchCompleteness(
+          catalog,
+          biome,
+          layout,
+          occurrences,
+          handoff,
+          undefined,
+        );
+        if (handoffFindings.length !== 0) return incomplete(handoffFindings);
+        const selected = selectedTarget(handoff);
+        if (selected === undefined) {
+          const origin = createExitSelectionAddress(biome, sourceAddress(handoff.source));
+          return incomplete([
+            finding('pickedTargetMissing', origin, { decisionKind: 'hubHandoff' }),
+          ]);
+        }
+        const preboss = occurrences.get(selected.occurrenceId);
+        if (preboss === undefined) {
+          throw new CompletenessContractError(`trusted Hub exit lost ${selected.occurrenceId}`);
+        }
+        findPickedShopState(findings, biome, preboss);
+        return findings.length === 0
+          ? Object.freeze({
+              completion: 'complete',
+              biomeState: plan.state,
+              topology,
+              findings: Object.freeze([]) as readonly [],
+            })
+          : incomplete(findings);
+      }
+      const origin = createExitDecisionAddress(biome, sourceAddress(source));
+      return incomplete([
+        ...findings,
+        finding('continuationMissing', origin, { parentGameName: room.gameName }),
+      ]);
     }
 
-    const continuation = continuations.get(currentOwner);
-    if (continuation === undefined) {
-      findings.push(
-        finding('continuationMissing', createContinuationAddress(biome, currentOwner), {
-          parentGameName: room.gameName,
-        }),
+    if (decision.normal.kind === 'batch') {
+      const batchFindings = evaluateBatchCompleteness(
+        catalog,
+        biome,
+        layout,
+        occurrences,
+        decision,
+        room,
       );
-      break;
-    }
-    if (
-      continuation.rewardStore?.kind === 'authoredBaseStore' &&
-      continuation.rewardStore.baseRewardStoreKey === null
-    ) {
-      findings.push(
-        finding('batchRewardStoreMissing', createBatchRewardStoreAddress(biome, currentOwner), {
-          parentGameName: room.gameName,
-        }),
-      );
-      break;
-    }
-    if (
-      continuation.kind === 'batch' &&
-      layout.continuation.batchPolicy.kind === 'fields' &&
-      continuation.batchState === null
-    ) {
-      findings.push(
-        finding('batchStateMissing', createContinuationAddress(biome, currentOwner), {
-          batchPolicy: 'fields',
-          parentGameName: room.gameName,
-        }),
-      );
-      break;
+      if (batchFindings.length !== 0) return incomplete([...findings, ...batchFindings]);
     }
 
-    findRequiredTargets(findings, biome, currentOwner, room, continuation);
-    if (continuation.pickedExitIndex === null) {
-      findings.push(
-        finding('pickedTargetMissing', createPickedAddress(biome, currentOwner), {
-          continuationKind: continuation.kind,
+    const selected = selectedTarget(decision);
+    if (selected === undefined) {
+      const origin = createExitSelectionAddress(biome, sourceAddress(decision.source));
+      return incomplete([
+        ...findings,
+        finding('pickedTargetMissing', origin, {
+          continuationKind: decision.normal.kind,
         }),
-      );
-      break;
+      ]);
     }
-
-    const pickedTarget = continuation.targets.find(
-      (target) => target.exitIndex === continuation.pickedExitIndex,
-    );
-    if (pickedTarget === undefined) {
+    const selectedOccurrence = occurrences.get(selected.occurrenceId);
+    if (selectedOccurrence === undefined) {
       throw new CompletenessContractError(
-        `trusted continuation lost picked exit ${continuation.pickedExitIndex}`,
+        `trusted decision lost occurrence ${selected.occurrenceId}`,
       );
     }
-    const pickedOccurrence = occurrences.get(pickedTarget.occurrenceId);
-    if (pickedOccurrence === undefined) {
+    findPickedShopState(findings, biome, selectedOccurrence);
+    const selectedRoom = catalog.rooms.byKey[selectedOccurrence.gameName];
+    if (selectedRoom === undefined) {
       throw new CompletenessContractError(
-        `trusted continuation lost occurrence ${pickedTarget.occurrenceId}`,
+        `trusted topology lost room ${selectedOccurrence.gameName}`,
       );
     }
-    if (continuation.kind === 'terminal') {
-      findPickedShopState(findings, biome, pickedOccurrence);
-      currentOwner = undefined;
-    } else if (
-      layout.terminal.kind === 'generatedTarget' &&
-      pickedOccurrence.gameName === layout.terminal.roomGameName
-    ) {
-      findPickedShopState(findings, biome, pickedOccurrence);
-      currentOwner = undefined;
-    } else {
-      currentOwner = pickedTarget.occurrenceId;
+    if (selectedRoom.kind === 'Preboss') {
+      return findings.length === 0
+        ? Object.freeze({
+            completion: 'complete',
+            biomeState: plan.state,
+            topology,
+            findings: Object.freeze([]) as readonly [],
+          })
+        : incomplete(findings);
     }
+    current = selectedOccurrence.occurrenceId;
   }
 
-  if (findings.length !== 0) {
-    return Object.freeze({
-      completion: 'incomplete',
-      frontier: findings[0]!.origin,
-      findings: Object.freeze(findings),
-    });
-  }
-  return Object.freeze({
-    completion: 'complete',
-    biomeState: plan.state,
-    topology,
-    findings: Object.freeze([]) as readonly [],
-  });
+  throw new CompletenessContractError('trusted topology selected spine contains a cycle');
 }
 
-function requireHubLayout(catalog: Catalog, biome: BiomeAddress, plan: HubBiomePlan) {
-  if (plan.biomeKey !== biome.biomeKey) {
-    throw new CompletenessContractError(
-      `plan biome ${plan.biomeKey} does not match address biome ${biome.biomeKey}`,
-    );
-  }
-  const route = catalog.routes.byKey[biome.routeKey];
-  if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
-    throw new CompletenessContractError(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
-  }
-  const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
-  if (layout?.kind !== 'HubBiome') {
-    throw new CompletenessContractError(`catalog does not provide a Hub ${biome.biomeKey} layout`);
-  }
-  return layout;
-}
-
-export function evaluateHubCompleteness(
+function evaluateBatchCompleteness(
   catalog: Catalog,
   biome: BiomeAddress,
-  plan: HubBiomePlan,
-): HubCompletenessResult {
-  const layout: HubBiomeLayout = requireHubLayout(catalog, biome, plan);
-  const topology = plan.topology;
-  if (topology === null) {
-    const frontier = biome;
-    return Object.freeze({
-      completion: 'incomplete',
-      frontier,
-      findings: Object.freeze([
-        finding('biomeTopologyMissing', frontier, { biomeKey: layout.biomeKey }),
-      ]),
-    });
-  }
-
+  layout: BiomeLayout,
+  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  decision: ExitDecision,
+  room: RoomDeclaration | undefined,
+): readonly SemanticFinding[] {
+  if (decision.normal.kind !== 'batch') return Object.freeze([]);
   const findings: SemanticFinding[] = [];
+  const source = sourceAddress(decision.source);
+  const takeover = isTakeoverBatch(decision, occurrences, catalog);
   if (
-    topology.openTargets.length < layout.hub.openCount.min ||
-    topology.openTargets.length > layout.hub.openCount.max
+    !takeover &&
+    decision.normal.rewardStore.kind === 'authoredBaseStore' &&
+    decision.normal.rewardStore.baseRewardStoreKey === null
   ) {
     findings.push(
-      finding('hubOpenSetIncomplete', createHubOpenSetAddress(biome), {
-        actualCount: topology.openTargets.length,
-        minimumCount: layout.hub.openCount.min,
-        maximumCount: layout.hub.openCount.max,
+      finding('batchRewardStoreMissing', createBatchRewardStoreAddress(biome, source), {
+        ...(room === undefined ? {} : { parentGameName: room.gameName }),
       }),
     );
   }
-  if (topology.visitOrder.length !== layout.hub.requiredVisits) {
+  if (
+    !takeover &&
+    layout.progression.kind === 'generated' &&
+    layout.progression.batchPolicy.kind === 'fields' &&
+    decision.normal.batchState === null
+  ) {
     findings.push(
-      finding(
-        'hubVisitOrderIncomplete',
-        createHubVisitAddress(biome, topology.visitOrder.length + 1),
-        {
-          actualCount: topology.visitOrder.length,
-          requiredCount: layout.hub.requiredVisits,
-        },
-      ),
+      finding('batchStateMissing', createExitDecisionAddress(biome, source), {
+        batchPolicy: 'fields',
+        ...(room === undefined ? {} : { parentGameName: room.gameName }),
+      }),
     );
   }
-  if (findings.length !== 0) {
-    return Object.freeze({
-      completion: 'incomplete',
-      frontier: findings[0]!.origin,
-      findings: Object.freeze(findings),
-    });
-  }
-  return Object.freeze({
-    completion: 'complete',
-    topology,
-    findings: Object.freeze([]) as readonly [],
-  });
+  if (room !== undefined) findMissingTargets(findings, biome, decision, room);
+  return Object.freeze(findings);
 }

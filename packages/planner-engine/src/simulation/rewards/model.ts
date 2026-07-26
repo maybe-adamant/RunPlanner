@@ -56,7 +56,7 @@ export interface RewardBranch {
   readonly processedThroughHistorySequence: number;
 }
 
-export interface LinearTargetRewardHistoryCheckpoint {
+export interface TargetRewardHistoryCheckpoint {
   readonly origin: TargetAddress;
   readonly historySequence: number;
   readonly histories: readonly RewardHistoryState[];
@@ -69,17 +69,10 @@ interface RewardSimulationBase {
   readonly findings: readonly SemanticFinding[];
 }
 
-export interface LinearRewardSimulation extends RewardSimulationBase {
+export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly storeSupport: readonly RewardStoreSupportEntry[];
-  readonly targetHistory: readonly LinearTargetRewardHistoryCheckpoint[];
-}
-
-export interface HubRewardSimulation extends RewardSimulationBase {
+  readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
   readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
 }
 
-export type RewardSimulation = HubRewardSimulation | LinearRewardSimulation;
-
-export type LinearRewardEvent = RewardEvent;
-export type LinearRewardStoreSupportEntry = RewardStoreSupportEntry;
-export type LinearRewardBranch = RewardBranch;
+export type RewardSimulation = BiomeRewardSimulation;

@@ -1,37 +1,37 @@
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createContinuationAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createPickedAddress,
   createProjectDocument,
   createTargetAddress,
   encodeProjectDocument,
   semanticAddressKey,
-  type LinearBiomePlan,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  evaluateLinearCompleteness,
-  materializeLinearBiome,
-  projectLinearBatchState,
-  type CompleteLinearCompletenessResult,
+  createPreparedProjectCandidateSession,
+  evaluateBiomeCompleteness,
+  materializeBiome,
+  simulateProject,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
+import { createGoldenFGHProject, goldenHStartId } from '../../support/underworld-valid-project';
+
 const biome = createBiomeAddress('Underworld', 'H');
 
-function plan(project: ProjectDocument): LinearBiomePlan {
+function plan(project: ProjectDocument) {
   const result = project.routes
     .find((route) => route.routeKey === 'Underworld')
     ?.biomes.find((candidate) => candidate.biomeKey === 'H');
-  if (result?.kind !== 'LinearBiome') {
-    throw new Error('fixture has no H plan');
-  }
+  if (result === undefined) throw new Error('fixture has no H plan');
   return result;
 }
 
@@ -45,28 +45,31 @@ function appendBatch(
   pickedExitIndex: number,
   cageOutcome: 'min' | 'max',
 ): ProjectDocument {
-  let next = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, parentOccurrenceId),
+  const decision = createExitDecisionAddress(biome, {
+    kind: 'occurrence',
+    occurrenceId: parentOccurrenceId,
   });
+  let next = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
   next = applyProjectCommand(next, catalog, {
     kind: 'ReplaceFieldsCageOutcome',
-    continuation: createContinuationAddress(biome, parentOccurrenceId),
+    decision,
     cageOutcome,
   });
   for (const [index, target] of targets.entries()) {
     next = applyProjectCommand(next, catalog, {
       kind: 'CreateTarget',
-      target: createTargetAddress(biome, parentOccurrenceId, index + 1),
+      target: createTargetAddress(biome, decision.source, `exit${index + 1}`),
       occurrenceId: target.occurrenceId,
       gameName: target.gameName,
     });
   }
-  return applyProjectCommand(next, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, parentOccurrenceId),
-    exitIndex: pickedExitIndex,
-  });
+  return targets.length > 1
+    ? applyProjectCommand(next, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(biome, decision.source),
+        value: { kind: 'normal', exitKey: `exit${pickedExitIndex}` },
+      })
+    : next;
 }
 
 function completeProject(
@@ -95,7 +98,6 @@ function completeProject(
     kind: 'CreateStart',
     biome,
     occurrenceId: start,
-    gameName: 'H_Intro',
   });
   project = appendBatch(
     project,
@@ -134,36 +136,119 @@ function completeProject(
     1,
     outcomes[3],
   );
+  const decision = createExitDecisionAddress(biome, {
+    kind: 'occurrence',
+    occurrenceId: combat05,
+  });
   project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTerminalTransition',
-    continuation: createContinuationAddress(biome, combat05),
-    targetOccurrenceIds: [
-      createOccurrenceId('h-materialized-terminal-shop'),
-      createOccurrenceId('h-materialized-terminal-free'),
-    ],
+    kind: 'CreateTakeoverBatch',
+    decision,
+    gameName: 'H_PreBoss01',
+    targetOccurrenceIds: {
+      exit1: createOccurrenceId('h-materialized-preboss-shop'),
+      exit2: createOccurrenceId('h-materialized-preboss-free'),
+    },
   });
   return applyProjectCommand(project, catalog, {
-    kind: 'SetTerminalPicked',
-    picked: createPickedAddress(biome, combat05),
-    exitIndex: 1,
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(biome, decision.source),
+    value: { kind: 'normal', exitKey: 'exit1' },
   });
 }
 
-function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
-  const result = evaluateLinearCompleteness(catalog, biome, plan(project));
-  if (result.completion !== 'complete') {
-    throw new Error(`fixture is incomplete: ${result.findings.map((finding) => finding.code)}`);
+function materialize(project: ProjectDocument) {
+  const completeness = evaluateBiomeCompleteness(catalog, biome, plan(project));
+  if (completeness.completion !== 'complete') {
+    throw new Error(
+      `fixture is incomplete: ${completeness.findings.map((finding) => finding.code)}`,
+    );
   }
-  return result;
+  return materializeBiome(catalog, biome, completeness);
 }
 
-describe('canonical H Fields materialization', () => {
+function ordinaryBatches(snapshot: ReturnType<typeof materialize>) {
+  return snapshot.decisions.filter(
+    (
+      decision,
+    ): decision is Extract<(typeof snapshot.decisions)[number], { readonly kind: 'batch' }> =>
+      decision.kind === 'batch' &&
+      !decision.targets.some((target) => target.room.gameName === 'H_PreBoss01'),
+  );
+}
+
+describe('H Fields materialization', () => {
+  it('keeps Fields Min/Max and cage-local rewards as engine-owned candidate domains', () => {
+    const project = createGoldenFGHProject();
+    const evaluation = simulateProject(catalog, project);
+    const start = goldenHStartId;
+    const combat = createOccurrenceId('golden-h-combat02');
+    const occurrence = plan(project).topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === combat,
+    );
+    if (occurrence?.state.kind !== 'fieldsCombat') {
+      throw new Error('H fixture must retain its first Fields combat state');
+    }
+    const reward = occurrence.state.cages.cage1;
+    if (reward === undefined) throw new Error('H fixture must retain cage1');
+    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate(
+      [
+        {
+          kind: 'fieldsCageOutcome',
+          decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start }),
+          cageOutcome: 'min',
+        },
+        {
+          kind: 'fieldsCageOutcome',
+          decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start }),
+          cageOutcome: 'max',
+        },
+        {
+          kind: 'localReward',
+          reward: createLocalRewardAddress(biome, combat, 'cages', 'cage1'),
+          value: reward,
+        },
+      ],
+    );
+
+    expect(candidates).toMatchObject([
+      { kind: 'fieldsCageOutcome', result: { cageOutcome: 'min', selectedPossible: true } },
+      { kind: 'fieldsCageOutcome', result: { cageOutcome: 'max' } },
+      { kind: 'localReward', result: { supported: true, findings: [] } },
+    ]);
+  });
+
+  it('does not assess a later Fields decision after an earlier cage reward is invalid', () => {
+    const firstCombat = createOccurrenceId('golden-h-combat02');
+    const laterCombat = createOccurrenceId('golden-h-combat09');
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(biome, firstCombat, 'cages', 'cage1'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+    });
+
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        project,
+        simulateProject(catalog, project),
+      ).evaluate({
+        kind: 'fieldsCageOutcome',
+        decision: createExitDecisionAddress(biome, {
+          kind: 'occurrence',
+          occurrenceId: laterCombat,
+        }),
+        cageOutcome: 'max',
+      }),
+    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+  });
+
   it('derives each Fields capacity and active local-reward prefix without mutating authorship', () => {
     const project = completeProject();
     const encodedBefore = encodeProjectDocument(project);
-    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
+    const snapshot = materialize(project);
+    const batches = ordinaryBatches(snapshot);
 
-    expect(snapshot.batches.map((batch) => batch.batchState)).toEqual([
+    expect(batches.map((batch) => batch.batchState)).toEqual([
       {
         kind: 'fields',
         cageOutcome: 'min',
@@ -193,24 +278,14 @@ describe('canonical H Fields materialization', () => {
         doorCageRewardCount: 2,
       },
     ]);
-    const topology = plan(project).topology;
-    if (topology === null) {
-      throw new Error('complete H fixture lost its topology');
-    }
-    expect(
-      topology.continuations
-        .filter((continuation) => continuation.kind === 'batch')
-        .map((continuation) => projectLinearBatchState(catalog, biome, topology, continuation)),
-    ).toEqual(snapshot.batches.map((batch) => batch.batchState));
 
-    const minCombat = snapshot.batches[0]?.targets[0]?.room;
+    const minCombat = batches[0]?.targets[0]?.room;
     expect(minCombat).toMatchObject({
       gameName: 'H_Combat02',
       lifecycleProfileKey: 'FieldsCombatRoom',
       encounterProfileKey: 'H_FieldsCombatCage2',
     });
     expect(minCombat?.localRewards?.map((reward) => reward.slotKey)).toEqual(['cage1', 'cage2']);
-
     expect(minCombat?.localRewards?.[1]).toMatchObject({
       groupKey: 'cages',
       encounterPhaseKey: 'Cage02',
@@ -220,13 +295,11 @@ describe('canonical H Fields materialization', () => {
       '["localReward","Underworld","H","h-materialized-combat02","cages","cage2"]',
     );
 
-    const noCombatBatch = snapshot.batches[2];
-    expect(noCombatBatch?.targets.every((target) => target.room.localRewards === undefined)).toBe(
+    expect(batches[2]?.targets.every((target) => target.room.localRewards === undefined)).toBe(
       true,
     );
-    const clampedTargets = snapshot.batches[1]?.targets;
-    expect(clampedTargets?.map((target) => target.room.localRewards?.length)).toEqual([2, 2]);
-    expect(clampedTargets?.map((target) => target.room.encounterProfileKey)).toEqual([
+    expect(batches[1]?.targets.map((target) => target.room.localRewards?.length)).toEqual([2, 2]);
+    expect(batches[1]?.targets.map((target) => target.room.encounterProfileKey)).toEqual([
       'H_FieldsCombatCage2',
       'H_FieldsCombatCage2',
     ]);
@@ -245,9 +318,8 @@ describe('canonical H Fields materialization', () => {
   });
 
   it('materializes a supported three-cage Max without changing dormant leaves', () => {
-    const project = completeProject(['min', 'min', 'min', 'max']);
-    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
-    const maxBatch = snapshot.batches[3];
+    const snapshot = materialize(completeProject(['min', 'min', 'min', 'max']));
+    const maxBatch = ordinaryBatches(snapshot)[3];
     const maxCombat = maxBatch?.targets[0]?.room;
 
     expect(maxBatch?.batchState).toEqual({
@@ -278,15 +350,7 @@ describe('canonical H Fields materialization', () => {
       occurrence: createOccurrenceAddress(biome, createOccurrenceId('h-materialized-bridge')),
       gameName: 'H_MiniBoss02',
     });
-    const specialTopology = plan(specialOnly).topology;
-    if (specialTopology === null) {
-      throw new Error('all-special Fields fixture lost its topology');
-    }
-    const specialBatch = specialTopology.continuations[2];
-    if (specialBatch?.kind !== 'batch') {
-      throw new Error('all-special Fields fixture lost its third batch');
-    }
-    expect(projectLinearBatchState(catalog, biome, specialTopology, specialBatch)).toEqual({
+    expect(ordinaryBatches(materialize(specialOnly))[2]?.batchState).toEqual({
       kind: 'fields',
       cageOutcome: 'max',
       batchCapacity: 3,
@@ -299,15 +363,7 @@ describe('canonical H Fields materialization', () => {
       occurrence: createOccurrenceAddress(biome, createOccurrenceId('h-materialized-bridge')),
       gameName: 'H_Combat05',
     });
-    const mixedTopology = plan(mixed).topology;
-    if (mixedTopology === null) {
-      throw new Error('mixed Fields fixture lost its topology');
-    }
-    const mixedBatch = mixedTopology.continuations[2];
-    if (mixedBatch?.kind !== 'batch') {
-      throw new Error('mixed Fields fixture lost its third batch');
-    }
-    expect(projectLinearBatchState(catalog, biome, mixedTopology, mixedBatch)).toEqual({
+    expect(ordinaryBatches(materialize(mixed))[2]?.batchState).toEqual({
       kind: 'fields',
       cageOutcome: 'max',
       batchCapacity: 3,
@@ -316,26 +372,27 @@ describe('canonical H Fields materialization', () => {
     });
   });
 
-  it('materializes the fixed entry, forked terminal, and H completion tail only once', () => {
-    const snapshot = materializeLinearBiome(catalog, biome, complete(completeProject()));
+  it('materializes the entry, selected Preboss batch, and H completion tail exactly once', () => {
+    const snapshot = materialize(completeProject());
+    const takeover = snapshot.decisions.at(-1);
+    if (takeover?.kind !== 'batch') throw new Error('H fixture lost its takeover batch');
 
-    expect(snapshot.entryRooms).toHaveLength(1);
-    expect(snapshot.entryRooms[0]).toMatchObject({
+    expect(snapshot.entryRoom).toMatchObject({
       gameName: 'H_Intro',
       lifecycleProfileKey: 'RewardlessRoom',
       entered: true,
     });
-    expect(snapshot.terminalEntry.targets).toHaveLength(2);
-    expect(snapshot.terminalEntry.targets[0]).toMatchObject({
+    expect(takeover.targets).toHaveLength(2);
+    expect(takeover.targets[0]).toMatchObject({
       picked: true,
-      continuation: 'entersTerminal',
+      continuation: 'startsCompletion',
       room: {
         gameName: 'H_PreBoss01',
         lifecycleProfileKey: 'PrebossShopRoom',
         entryState: { kind: 'shop', profileKey: 'WorldShop' },
       },
     });
-    expect(snapshot.terminalEntry.targets[1]).toMatchObject({
+    expect(takeover.targets[1]).toMatchObject({
       picked: false,
       continuation: 'deadLeaf',
       room: {
@@ -351,10 +408,8 @@ describe('canonical H Fields materialization', () => {
       'BossRoom',
       'PostBossRoom',
     ]);
-    expect(snapshot.completionRooms[0]).toMatchObject({
-      enteredRewardStoreKey: 'RunProgress',
-    });
-    expect(snapshot.batches).toHaveLength(4);
+    expect(snapshot.completionRooms[0]).toMatchObject({ enteredRewardStoreKey: 'RunProgress' });
+    expect(ordinaryBatches(snapshot)).toHaveLength(4);
     expect(snapshot).not.toHaveProperty('history');
     expect(snapshot).not.toHaveProperty('findings');
   });

@@ -451,13 +451,14 @@ a counter increment from an earlier phase cannot retroactively add another
 phase. The shared lifecycle model owns their ordered execution and state
 visibility.
 
-### Terminal and Persistent Structures
+### Preboss and Persistent Structures
 
-A terminal profile may omit ordinary outgoing generation and hand control to a
-layout-owned fixed completion sequence. A persistent hub may generate a stable
-board once and later emit restore fragments. Those are structural compositions
-of room-addressed fragments, not reasons to weaken the ordering
-contract or introduce UI-shaped rows into history.
+A selected Preboss completes its declaration-owned normal-door batch, enters
+through its normal room lifecycle, and then begins the layout-owned completion
+sequence. A persistent Hub may generate a stable board once and later emit
+restore fragments. Those are structural compositions of room-addressed
+fragments, not reasons to weaken the ordering contract or introduce UI-shaped
+rows into history.
 
 ## Counter and Cache Timing
 

@@ -2,7 +2,9 @@ import type {
   BiomeDeclaration,
   BiomeLayout,
   CatalogCollection,
+  CompletedHubExitDescriptor,
   CompletionDescriptor,
+  ExitTypeDeclaration,
   ExitCompatibilityPolicy,
   GeneratedProgressionDescriptor,
   GeneratedProgressionPolicy,
@@ -332,6 +334,33 @@ function normalizeLinkedExit(
   return Object.freeze({ kind: 'linked', exitKey, roomGameName: room.gameName });
 }
 
+function normalizeCompletedHubExit(
+  rawExit: Extract<
+    RawBiomeLayoutDeclaration['progression'],
+    { readonly kind: 'hub' }
+  >['completedExit'],
+  biomeKey: string,
+  rooms: CatalogCollection<RoomDeclaration>,
+  exitTypes: CatalogCollection<ExitTypeDeclaration>,
+  path: string,
+): CompletedHubExitDescriptor {
+  const linked = normalizeLinkedExit(rawExit, biomeKey, rooms, 'Preboss', path);
+  const index = requirePositiveInteger(rawExit.physicalExit.index, `${path}.physicalExit.index`);
+  const type = requireNonEmpty(rawExit.physicalExit.type, `${path}.physicalExit.type`);
+  const exitType = exitTypes.byKey[type];
+  if (exitType === undefined) {
+    fail(`${path}.physicalExit.type`, `unknown exit type ${type}`);
+  }
+  return Object.freeze({
+    ...linked,
+    physicalExit: Object.freeze({
+      index,
+      type: exitType.key,
+      compatibilityPolicyKey: exitType.compatibilityPolicyKey,
+    }),
+  });
+}
+
 function normalizeCompletion(
   rawCompletion: CompletionDescriptor,
   biomeKey: string,
@@ -460,6 +489,7 @@ function normalizeHubDecision(
   biomeKey: string,
   rooms: CatalogCollection<RoomDeclaration>,
   rewardStores: CatalogCollection<RewardStoreDeclaration>,
+  exitTypes: CatalogCollection<ExitTypeDeclaration>,
   path: string,
 ): HubDecisionDescriptor {
   const linkedExit = normalizeLinkedExit(
@@ -598,11 +628,11 @@ function normalizeHubDecision(
   if (minimumPerVisit.numerator > minimumPerVisit.denominator) {
     fail(`${path}.sideRoomGeneration.minimumPerVisit`, 'numerator must not exceed denominator');
   }
-  const completedExit = normalizeLinkedExit(
+  const completedExit = normalizeCompletedHubExit(
     raw.completedExit,
     biomeKey,
     rooms,
-    'Preboss',
+    exitTypes,
     `${path}.completedExit`,
   );
   if (completedExit.exitKey !== 'preboss') {
@@ -764,6 +794,7 @@ export function normalizeBiomeLayouts(
   biomes: CatalogCollection<BiomeDeclaration>,
   rooms: CatalogCollection<RoomDeclaration>,
   rewardStores: CatalogCollection<RewardStoreDeclaration>,
+  exitTypes: CatalogCollection<ExitTypeDeclaration>,
 ): CatalogCollection<BiomeLayout> {
   const layouts = rawLayouts.map((layout, layoutIndex): BiomeLayout => {
     const path = `biomeLayouts[${layoutIndex}]`;
@@ -786,6 +817,7 @@ export function normalizeBiomeLayouts(
               layout.biomeKey,
               rooms,
               rewardStores,
+              exitTypes,
               `${path}.progression`,
             )
           : fail(

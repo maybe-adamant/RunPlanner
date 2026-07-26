@@ -4,17 +4,12 @@ import type { RoomLifecycleExecutionInput } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,
   CanonicalCompletionRoom,
-  CanonicalFixedEntryRoom,
   CanonicalHubRoom,
   CanonicalLocalChildRoom,
 } from '../materialization';
 
 export type CanonicalLifecycleRoom =
-  | CanonicalAuthoredRoom
-  | CanonicalCompletionRoom
-  | CanonicalFixedEntryRoom
-  | CanonicalHubRoom
-  | CanonicalLocalChildRoom;
+  CanonicalAuthoredRoom | CanonicalCompletionRoom | CanonicalHubRoom | CanonicalLocalChildRoom;
 
 export class HistoryLifecycleInputContractError extends Error {
   constructor(detail: string) {

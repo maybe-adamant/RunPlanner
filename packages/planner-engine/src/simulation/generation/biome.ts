@@ -1,8 +1,8 @@
 import type {
+  BiomeLayout,
   Catalog,
   ExitCompatibilityPolicy,
-  GeneratedBatchPolicy,
-  LinearBiomeLayout,
+  NormalDoorBatchPolicy,
   RoomDeclaration,
   RoomForce,
 } from '../../catalog-schema';
@@ -15,52 +15,55 @@ import {
   createBiomeAddress,
   createTargetAddress,
   semanticAddressKey,
-  type ContinuationAddress,
+  type ExitDecisionAddress,
 } from '../../authored-project/addresses';
 import type { RewardHistoryState } from '../../reward-kernel';
 import type {
-  LinearSimulationHistory,
-  LinearHistoryStateView,
-  LinearTargetGenerationView,
+  BiomeHistoryPrefix,
+  CanonicalBiomeHistory,
+  HistoryStateView,
+  TargetGenerationView,
 } from '../history';
 import { projectRecentEncounterPhases } from '../history';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
-  CanonicalFixedEntryRoom,
-  LinearSimulationMaterialization,
+  CanonicalBiome,
+  CanonicalDecision,
   CanonicalPhysicalExit,
   CanonicalTarget,
+  MaterializedBiomePrefix,
 } from '../materialization';
-import type { LinearTargetRewardHistoryCheckpoint } from '../rewards';
+import type { TargetRewardHistoryCheckpoint } from '../rewards';
 import type {
   EncounterCountSupportEntry,
   FieldsCageOutcome,
   FieldsCageOutcomeCandidateSupport,
   FieldsCageOutcomeSupportEntry,
-  LinearForcePressureLedgerEntry,
-  LinearRoomGenerationValidation,
-  LinearRoomTargetCandidateContext,
-  LinearRoomTargetCandidateValidation,
+  ForcePressureLedgerEntry,
+  GeneratedRoomGenerationValidation,
+  RoomTargetCandidateContext,
+  RoomTargetCandidateValidation,
   RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
   RoomGenerationExclusionReason,
+  TakeoverPrebossBatchCandidateSupport,
 } from './model';
 import type { FindingEvidence, SemanticFinding } from '../model';
 
-export class LinearRoomGenerationContractError extends Error {
+export class BiomeRoomGenerationContractError extends Error {
   constructor(detail: string) {
     super(detail);
-    this.name = 'LinearRoomGenerationContractError';
+    this.name = 'BiomeRoomGenerationContractError';
   }
 }
 
 type ForceSupport = 'none' | 'optional' | 'required';
 
 const candidateContextsByValidation = new WeakMap<
-  LinearRoomGenerationValidation,
-  ReadonlyMap<string, LinearRoomTargetCandidateContext>
+  GeneratedRoomGenerationValidation,
+  ReadonlyMap<string, RoomTargetCandidateContext>
 >();
 
 interface CandidateEvaluation {
@@ -76,7 +79,32 @@ interface RoomGenerationCounts {
   readonly parentCreationsByGameName: Readonly<Record<string, number>>;
 }
 
-type CanonicalGenerationSource = CanonicalAuthoredRoom | CanonicalFixedEntryRoom;
+type CanonicalGenerationSource = CanonicalAuthoredRoom;
+
+/**
+ * Generation consumes the selected, materialized decision spine. A complete
+ * biome and an incomplete prefix carry the same facts for every decision that
+ * precedes the frontier; completion-only rooms are intentionally irrelevant.
+ */
+export type BiomeGenerationSnapshot =
+  CanonicalBiome | (MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom });
+export type BiomeGenerationHistory = CanonicalBiomeHistory | BiomeHistoryPrefix;
+
+/**
+ * A prefix may stop inside a normal-door batch after physical targets have
+ * already been generated. The partial batch is still a real generation
+ * owner: omitting it would validate and evaluate later controls as though
+ * those target facts never existed.
+ */
+function generationDecisions(snapshot: BiomeGenerationSnapshot): readonly CanonicalDecision[] {
+  const partialBatch =
+    snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
+      ? snapshot.frontier.partialBatch
+      : undefined;
+  return partialBatch === undefined
+    ? snapshot.decisions
+    : Object.freeze([...snapshot.decisions, partialBatch]);
+}
 
 function countByGameName(
   entries: readonly { readonly gameName: string }[],
@@ -88,26 +116,26 @@ function countByGameName(
   return counts;
 }
 
-function assertLinearGenerationRequirement(requirement: RequirementExpression): void {
+function assertGenerationRequirement(requirement: RequirementExpression): void {
   switch (requirement.kind) {
     case 'all':
     case 'any':
-      requirement.requirements.forEach(assertLinearGenerationRequirement);
+      requirement.requirements.forEach(assertGenerationRequirement);
       return;
     case 'not':
-      assertLinearGenerationRequirement(requirement.requirement);
+      assertGenerationRequirement(requirement.requirement);
       return;
     case 'counterRange':
       if (requirement.axis !== 'biomeDepthCache' && requirement.axis !== 'biomeEncounterDepth') {
-        throw new LinearRoomGenerationContractError(
-          `linear room generation cannot project counter ${requirement.axis}`,
+        throw new BiomeRoomGenerationContractError(
+          `room generation cannot project counter ${requirement.axis}`,
         );
       }
       return;
     case 'recordCount':
       if (requirement.record !== 'roomsEntered') {
-        throw new LinearRoomGenerationContractError(
-          `linear room generation cannot project record ${requirement.record}`,
+        throw new BiomeRoomGenerationContractError(
+          `room generation cannot project record ${requirement.record}`,
         );
       }
       return;
@@ -121,30 +149,30 @@ function assertLinearGenerationRequirement(requirement: RequirementExpression): 
     case 'minExits':
       return;
     default:
-      throw new LinearRoomGenerationContractError(
-        `linear room generation cannot evaluate ${requirement.kind}`,
+      throw new BiomeRoomGenerationContractError(
+        `room generation cannot evaluate ${requirement.kind}`,
       );
   }
 }
 
-function assertLinearGenerationForce(force: RoomForce): void {
+function assertGenerationForce(force: RoomForce): void {
   switch (force.kind) {
     case 'always':
       return;
     case 'requirement':
-      assertLinearGenerationRequirement(force.requirement);
+      assertGenerationRequirement(force.requirement);
       return;
     case 'depthWindow':
       if (force.axis !== 'biomeDepthCache' && force.axis !== 'biomeEncounterDepth') {
-        throw new LinearRoomGenerationContractError(
-          `linear room generation cannot project force counter ${force.axis}`,
+        throw new BiomeRoomGenerationContractError(
+          `room generation cannot project force counter ${force.axis}`,
         );
       }
   }
 }
 
 function priorPeerGameNames(
-  view: LinearHistoryStateView,
+  view: HistoryStateView,
   parentOrigin: RoomHistoryOrigin,
 ): readonly string[] {
   return Object.freeze(
@@ -158,10 +186,10 @@ function priorPeerGameNames(
   );
 }
 
-function projectLinearRoomGenerationRequirementContext(
+function projectRoomGenerationRequirementContext(
   source: CanonicalGenerationSource,
   sourceDeclaration: RoomDeclaration,
-  view: LinearHistoryStateView,
+  view: HistoryStateView,
   enteredBiomeCount: number,
   rewardHistory?: RewardHistoryState,
 ): RequirementEvaluationContext {
@@ -176,7 +204,7 @@ function projectLinearRoomGenerationRequirementContext(
   const clockworkValues = [goalsRemaining, nonGoalRewardsAcquired, maxNonGoalRewards];
   const hasClockwork = clockworkValues.every((value) => value !== undefined);
   if (!hasClockwork && clockworkValues.some((value) => value !== undefined)) {
-    throw new LinearRoomGenerationContractError('linear history has partial Clockwork facts');
+    throw new BiomeRoomGenerationContractError('history has partial Clockwork facts');
   }
   return Object.freeze({
     counters: Object.freeze({
@@ -240,7 +268,7 @@ function forceSupport(
     case 'always':
       return 'required';
     case 'requirement':
-      assertLinearGenerationRequirement(force.requirement);
+      assertGenerationRequirement(force.requirement);
       return evaluateRequirement(force.requirement, context) ? 'required' : 'none';
     case 'depthWindow': {
       const currentDepth = context.counters[force.axis];
@@ -350,7 +378,7 @@ function requirementEvidence(
       });
     case 'clockworkGoalsRemaining':
       if (context.clockwork === undefined) {
-        throw new LinearRoomGenerationContractError(
+        throw new BiomeRoomGenerationContractError(
           'Clockwork requirement evidence has no Clockwork facts',
         );
       }
@@ -362,7 +390,7 @@ function requirementEvidence(
       });
     case 'clockworkNonGoalCapacity':
       if (context.clockwork === undefined) {
-        throw new LinearRoomGenerationContractError(
+        throw new BiomeRoomGenerationContractError(
           'Clockwork requirement evidence has no Clockwork facts',
         );
       }
@@ -374,14 +402,14 @@ function requirementEvidence(
         reserve: requirement.reserve,
       });
     default:
-      throw new LinearRoomGenerationContractError(
-        `linear room generation cannot explain ${requirement.kind}`,
+      throw new BiomeRoomGenerationContractError(
+        `room generation cannot explain ${requirement.kind}`,
       );
   }
 }
 
 function roomGenerationCounts(
-  view: LinearHistoryStateView,
+  view: HistoryStateView,
   parentOrigin: RoomHistoryOrigin,
 ): RoomGenerationCounts {
   const parentKey = semanticAddressKey(parentOrigin);
@@ -412,7 +440,7 @@ function evaluateCandidate(
   const reasons: RoomGenerationExclusionReason[] = [];
   const exclusions: RoomGenerationExclusionEvidence[] = [];
   if (room.force !== undefined) {
-    assertLinearGenerationForce(room.force);
+    assertGenerationForce(room.force);
   }
   if (exit.kind === 'unavailable') {
     reasons.push('physicalExitUnavailable');
@@ -420,7 +448,7 @@ function evaluateCandidate(
   } else {
     const policy = catalog.exitCompatibilityPolicies.byKey[exit.compatibilityPolicyKey];
     if (policy === undefined) {
-      throw new LinearRoomGenerationContractError(
+      throw new BiomeRoomGenerationContractError(
         `unknown exit compatibility policy ${exit.compatibilityPolicyKey}`,
       );
     }
@@ -448,7 +476,7 @@ function evaluateCandidate(
     });
   }
   if (room.eligibility !== undefined) {
-    assertLinearGenerationRequirement(room.eligibility);
+    assertGenerationRequirement(room.eligibility);
     if (!evaluateRequirement(room.eligibility, context)) {
       reasons.push('eligibilityRequirement');
       exclusions.push({
@@ -498,15 +526,15 @@ function evaluateCandidate(
   });
 }
 
-function linearCandidatePool(catalog: Catalog, biomeKey: string): readonly RoomDeclaration[] {
+function generatedCandidatePool(catalog: Catalog, biomeKey: string): readonly RoomDeclaration[] {
   const layout = catalog.biomeLayouts.byKey[biomeKey];
-  if (layout?.kind !== 'LinearBiome') {
-    throw new LinearRoomGenerationContractError(
+  if (layout?.progression.kind !== 'generated') {
+    throw new BiomeRoomGenerationContractError(
       `catalog does not provide ${biomeKey} candidate structure`,
     );
   }
   const startNames = new Set(
-    layout.start.kind === 'authoredStart'
+    layout.start.kind === 'authoredChoice'
       ? layout.start.roomGameNames
       : [layout.start.roomGameName],
   );
@@ -515,6 +543,7 @@ function linearCandidatePool(catalog: Catalog, biomeKey: string): readonly RoomD
       (room) =>
         room.biomeKey === biomeKey &&
         room.mode.kind === 'authored' &&
+        room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors' &&
         !startNames.has(room.gameName),
     ),
   );
@@ -522,16 +551,21 @@ function linearCandidatePool(catalog: Catalog, biomeKey: string): readonly RoomD
 
 function stagedCandidatePool(
   catalog: Catalog,
-  layout: Extract<LinearBiomeLayout, { readonly kind: 'LinearBiome' }>,
+  layout: BiomeLayout,
   batchIndex: number,
 ): readonly RoomDeclaration[] {
-  const policy = layout.continuation.progressionPolicy;
+  if (layout.progression.kind !== 'generated') {
+    throw new BiomeRoomGenerationContractError(
+      `${layout.biomeKey} has no generated candidate policy`,
+    );
+  }
+  const policy = layout.progression.progressionPolicy;
   if (policy.kind !== 'staged') {
-    return linearCandidatePool(catalog, layout.biomeKey);
+    return generatedCandidatePool(catalog, layout.biomeKey);
   }
   const stage = policy.stages[batchIndex];
   if (stage === undefined) {
-    throw new LinearRoomGenerationContractError(
+    throw new BiomeRoomGenerationContractError(
       `${layout.biomeKey} has no candidate stage ${batchIndex + 1}`,
     );
   }
@@ -539,7 +573,7 @@ function stagedCandidatePool(
     stage.roomGameNames.map((gameName) => {
       const room = catalog.rooms.byKey[gameName];
       if (room === undefined) {
-        throw new LinearRoomGenerationContractError(
+        throw new BiomeRoomGenerationContractError(
           `${layout.biomeKey} stage ${stage.key} lost room ${gameName}`,
         );
       }
@@ -548,25 +582,9 @@ function stagedCandidatePool(
   );
 }
 
-function terminalCandidatePool(
-  catalog: Catalog,
-  layout: LinearBiomeLayout,
-): readonly RoomDeclaration[] {
-  if (layout.continuation.progressionPolicy.kind !== 'staged') {
-    return linearCandidatePool(catalog, layout.biomeKey);
-  }
-  const room = catalog.rooms.byKey[layout.terminal.roomGameName];
-  if (room === undefined) {
-    throw new LinearRoomGenerationContractError(
-      `${layout.biomeKey} lost terminal room ${layout.terminal.roomGameName}`,
-    );
-  }
-  return Object.freeze([room]);
-}
-
 function targetGenerationViews(
-  history: LinearSimulationHistory,
-): ReadonlyMap<string, LinearTargetGenerationView> {
+  history: BiomeGenerationHistory,
+): ReadonlyMap<string, TargetGenerationView> {
   const entries = history.rooms.flatMap((room) => room.targetGenerations);
   return new Map(entries.map((view) => [semanticAddressKey(view.targetOrigin), view]));
 }
@@ -580,7 +598,7 @@ function sameRecord(
 }
 
 function targetRewardHistories(
-  checkpoints: readonly LinearTargetRewardHistoryCheckpoint[] | undefined,
+  checkpoints: readonly TargetRewardHistoryCheckpoint[] | undefined,
 ): ReadonlyMap<string, RewardHistoryState> {
   const result = new Map<string, RewardHistoryState>();
   for (const checkpoint of checkpoints ?? []) {
@@ -596,7 +614,7 @@ function targetRewardHistories(
           !sameRecord(history.lootTypeHistory, first.lootTypeHistory),
       )
     ) {
-      throw new LinearRoomGenerationContractError(
+      throw new BiomeRoomGenerationContractError(
         `target ${semanticAddressKey(checkpoint.origin)} has divergent reward-history eligibility facts`,
       );
     }
@@ -606,16 +624,17 @@ function targetRewardHistories(
 }
 
 function generationRooms(
-  snapshot: LinearSimulationMaterialization,
+  snapshot: BiomeGenerationSnapshot,
 ): ReadonlyMap<string, CanonicalGenerationSource> {
-  const frontierTargets =
-    snapshot.kind === 'LinearBiome'
-      ? snapshot.terminalEntry.targets
-      : (snapshot.frontierGeneration?.targets ?? []);
   const rooms = [
-    ...snapshot.entryRooms,
-    ...snapshot.batches.flatMap((batch) => batch.targets.map((target) => target.room)),
-    ...frontierTargets.map((target) => target.room),
+    snapshot.entryRoom,
+    ...generationDecisions(snapshot).flatMap((decision) =>
+      decision.kind === 'batch'
+        ? decision.targets.map((target) => target.room)
+        : decision.kind === 'linkedExit'
+          ? [decision.target.room]
+          : [],
+    ),
   ];
   return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
 }
@@ -649,14 +668,14 @@ function encounterCountEvidence(entry: EncounterCountSupportEntry): FindingEvide
 function evaluateEncounterCount(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
-  view: LinearHistoryStateView,
+  view: HistoryStateView,
   enteredBiomeCount: number,
   rewardHistory: RewardHistoryState | undefined,
 ): EncounterCountSupportEntry | undefined {
   const declaration = catalog.rooms.byKey[room.gameName];
   const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
   if (declaration === undefined || profile === undefined) {
-    throw new LinearRoomGenerationContractError(`${room.gameName} lost its encounter declaration`);
+    throw new BiomeRoomGenerationContractError(`${room.gameName} lost its encounter declaration`);
   }
   const optionalIndexes = profile.phases.flatMap((phase, index) =>
     phase.presence === undefined ? [] : [index],
@@ -672,12 +691,12 @@ function evaluateEncounterCount(
     optional === undefined ||
     optionalIndex !== profile.phases.length - 1
   ) {
-    throw new LinearRoomGenerationContractError(
+    throw new BiomeRoomGenerationContractError(
       `${room.gameName} has unsupported optional encounter-phase structure`,
     );
   }
-  assertLinearGenerationRequirement(optional.requirement);
-  const context = projectLinearRoomGenerationRequirementContext(
+  assertGenerationRequirement(optional.requirement);
+  const context = projectRoomGenerationRequirementContext(
     room,
     declaration,
     view,
@@ -709,7 +728,7 @@ function fieldsCageOutcomeEvidence(entry: FieldsCageOutcomeSupportEntry): Findin
 }
 
 export function supportedFieldsCageOutcomes(
-  batchPolicy: Extract<GeneratedBatchPolicy, { readonly kind: 'fields' }>,
+  batchPolicy: Extract<NormalDoorBatchPolicy, { readonly kind: 'fields' }>,
   biomeDepthCache: number,
   fieldsMaxDoorsRolled: number,
 ): readonly FieldsCageOutcome[] {
@@ -719,7 +738,7 @@ export function supportedFieldsCageOutcomes(
     !Number.isInteger(fieldsMaxDoorsRolled) ||
     fieldsMaxDoorsRolled < 0
   ) {
-    throw new LinearRoomGenerationContractError('Fields outcome support has invalid counters');
+    throw new BiomeRoomGenerationContractError('Fields outcome support has invalid counters');
   }
   if (fieldsMaxDoorsRolled >= batchPolicy.maxDoorCageCeiling) {
     return Object.freeze(['min']);
@@ -733,13 +752,13 @@ export function supportedFieldsCageOutcomes(
 }
 
 export function fieldsCageOutcomeCandidateSupport(
-  batchPolicy: Extract<GeneratedBatchPolicy, { readonly kind: 'fields' }>,
-  origin: ContinuationAddress,
-  view: LinearHistoryStateView,
+  batchPolicy: Extract<NormalDoorBatchPolicy, { readonly kind: 'fields' }>,
+  origin: ExitDecisionAddress,
+  view: HistoryStateView,
 ): FieldsCageOutcomeCandidateSupport {
   const fieldsMaxDoorsRolled = view.ledgers.counters.fieldsMaxDoorsRolled;
   if (fieldsMaxDoorsRolled === undefined) {
-    throw new LinearRoomGenerationContractError('Fields history lost its Max outcome counter');
+    throw new BiomeRoomGenerationContractError('Fields history lost its Max outcome counter');
   }
   const supportOutcomes = supportedFieldsCageOutcomes(
     batchPolicy,
@@ -757,12 +776,12 @@ export function fieldsCageOutcomeCandidateSupport(
 }
 
 function evaluateFieldsCageOutcome(
-  batchPolicy: Extract<GeneratedBatchPolicy, { readonly kind: 'fields' }>,
+  batchPolicy: Extract<NormalDoorBatchPolicy, { readonly kind: 'fields' }>,
   batch: Pick<CanonicalBatch, 'batchState' | 'origin'>,
-  view: LinearHistoryStateView,
+  view: HistoryStateView,
 ): FieldsCageOutcomeSupportEntry {
   if (batch.batchState.kind !== 'fields') {
-    throw new LinearRoomGenerationContractError('Fields layout lost its canonical batch state');
+    throw new BiomeRoomGenerationContractError('Fields layout lost its canonical batch state');
   }
   const support = fieldsCageOutcomeCandidateSupport(batchPolicy, batch.origin, view);
   return Object.freeze({
@@ -772,7 +791,7 @@ function evaluateFieldsCageOutcome(
   });
 }
 
-function selectedEvidence(entry: LinearForcePressureLedgerEntry): FindingEvidence {
+function selectedEvidence(entry: ForcePressureLedgerEntry): FindingEvidence {
   return {
     sourceGameName: entry.sourceGameName,
     selectedGameName: entry.selectedGameName,
@@ -794,7 +813,7 @@ function selectedEvidence(entry: LinearForcePressureLedgerEntry): FindingEvidenc
 function assertTargetHistoryMatches(
   source: CanonicalGenerationSource,
   target: CanonicalTarget,
-  view: LinearTargetGenerationView,
+  view: TargetGenerationView,
 ): void {
   const targetKey = semanticAddressKey(target.origin);
   const sourceKey = semanticAddressKey(source.origin);
@@ -802,7 +821,7 @@ function assertTargetHistoryMatches(
     semanticAddressKey(view.targetOrigin) !== targetKey ||
     semanticAddressKey(view.roomOrigin) !== semanticAddressKey(target.room.origin)
   ) {
-    throw new LinearRoomGenerationContractError(
+    throw new BiomeRoomGenerationContractError(
       `target ${targetKey} does not match its history generation view`,
     );
   }
@@ -811,7 +830,7 @@ function assertTargetHistoryMatches(
     (appearance) => semanticAddressKey(appearance.origin) === sourceKey,
   );
   if (sourceAppearance?.gameName !== source.gameName) {
-    throw new LinearRoomGenerationContractError(
+    throw new BiomeRoomGenerationContractError(
       `source ${sourceKey} does not match its history appearance`,
     );
   }
@@ -827,7 +846,7 @@ function assertTargetHistoryMatches(
     semanticAddressKey(creation.origin) !== semanticAddressKey(target.room.origin) ||
     creation.gameName !== target.room.gameName
   ) {
-    throw new LinearRoomGenerationContractError(
+    throw new BiomeRoomGenerationContractError(
       `target ${targetKey} does not match its history creation`,
     );
   }
@@ -839,15 +858,15 @@ function prepareTargetGameNameContext(
   source: CanonicalGenerationSource,
   targetOrigin: CanonicalTarget['origin'],
   exit: CanonicalPhysicalExit,
-  before: LinearHistoryStateView,
+  before: HistoryStateView,
   enteredBiomeCount: number,
   rewardHistory: RewardHistoryState | undefined,
-): LinearRoomTargetCandidateContext {
+): RoomTargetCandidateContext {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
-    throw new LinearRoomGenerationContractError(`unknown source room ${source.gameName}`);
+    throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
-  const context = projectLinearRoomGenerationRequirementContext(
+  const context = projectRoomGenerationRequirementContext(
     source,
     sourceDeclaration,
     before,
@@ -874,7 +893,7 @@ function prepareTargetGameNameContext(
     targetOrigin,
     beforeSequence: before.sequence,
     sourceGameName: source.gameName,
-    exitIndex: targetOrigin.exitIndex,
+    exitIndex: exit.index,
     biomeDepthCache: context.counters.biomeDepthCache,
     biomeEncounterDepth: context.counters.biomeEncounterDepth,
     eligibleRoomGameNames: Object.freeze(eligible.map((candidate) => candidate.room.gameName)),
@@ -886,7 +905,7 @@ function prepareTargetGameNameContext(
   });
   return Object.freeze({
     targetOrigin,
-    evaluateGameName: (selectedGameName: string): LinearRoomTargetCandidateValidation => {
+    evaluateGameName: (selectedGameName: string): RoomTargetCandidateValidation => {
       const selected = candidatesByGameName.get(selectedGameName);
       const reasons = [
         ...(selected?.reasons ?? ['notCandidate']),
@@ -906,7 +925,7 @@ function prepareTargetGameNameContext(
         });
       }
       const selectedPossible = selected !== undefined && supportGameNames.has(selectedGameName);
-      const pressure: LinearForcePressureLedgerEntry = Object.freeze({
+      const pressure: ForcePressureLedgerEntry = Object.freeze({
         ...sharedPressure,
         selectedGameName,
         selectedCreationCount: counts.creationsByGameName[selectedGameName] ?? 0,
@@ -928,13 +947,47 @@ function prepareTargetGameNameContext(
   });
 }
 
+/**
+ * Builds the candidate domain at an uncommitted ordinary decision frontier.
+ * It uses the source's pre-generation history, not a speculative target, so
+ * callers can evaluate an empty or partially authored batch without changing
+ * its persisted topology.
+ */
+export function roomTargetCandidateContextAtFrontier(
+  catalog: Catalog,
+  biomeKey: string,
+  ordinaryBatchIndex: number,
+  source: CanonicalAuthoredRoom,
+  targetOrigin: CanonicalTarget['origin'],
+  exit: CanonicalPhysicalExit,
+  before: HistoryStateView,
+  enteredBiomeCount: number,
+): RoomTargetCandidateContext {
+  const layout = catalog.biomeLayouts.byKey[biomeKey];
+  if (layout?.progression.kind !== 'generated') {
+    throw new BiomeRoomGenerationContractError(
+      `${biomeKey} has no ordinary target candidate domain`,
+    );
+  }
+  return prepareTargetGameNameContext(
+    catalog,
+    stagedCandidatePool(catalog, layout, ordinaryBatchIndex),
+    source,
+    targetOrigin,
+    exit,
+    before,
+    enteredBiomeCount,
+    undefined,
+  );
+}
+
 function requireSource(
   rooms: ReadonlyMap<string, CanonicalGenerationSource>,
   origin: RoomHistoryOrigin,
 ): CanonicalGenerationSource {
   const room = rooms.get(semanticAddressKey(origin));
   if (room === undefined || !room.entered) {
-    throw new LinearRoomGenerationContractError(
+    throw new BiomeRoomGenerationContractError(
       `history source ${semanticAddressKey(origin)} is not an entered canonical room`,
     );
   }
@@ -945,12 +998,12 @@ function evaluateTargetSlots(
   catalog: Catalog,
   pool: readonly RoomDeclaration[],
   source: CanonicalGenerationSource,
-  sourceBeforeGeneration: LinearHistoryStateView,
-  generationOrigin: ContinuationAddress,
+  sourceBeforeGeneration: HistoryStateView,
+  generationOrigin: ExitDecisionAddress,
   targets: readonly CanonicalTarget[],
-  views: ReadonlyMap<string, LinearTargetGenerationView>,
-  candidateContexts: Map<string, LinearRoomTargetCandidateContext>,
-  pressure: LinearForcePressureLedgerEntry[],
+  views: ReadonlyMap<string, TargetGenerationView>,
+  candidateContexts: Map<string, RoomTargetCandidateContext>,
+  pressure: ForcePressureLedgerEntry[],
   encounterCounts: EncounterCountSupportEntry[],
   findings: SemanticFinding[],
   enteredBiomeCount: number,
@@ -958,16 +1011,16 @@ function evaluateTargetSlots(
 ): void {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
-    throw new LinearRoomGenerationContractError(`unknown source room ${source.gameName}`);
+    throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
   const biome = createBiomeAddress(generationOrigin.routeKey, generationOrigin.biomeKey);
   const exits = [...sourceDeclaration.exits].sort((left, right) => left.index - right.index);
-  const evaluateConcreteTarget = (target: CanonicalTarget): LinearHistoryStateView => {
+  const evaluateConcreteTarget = (target: CanonicalTarget): HistoryStateView => {
     const targetKey = semanticAddressKey(target.origin);
     const rewardHistory = rewardHistories.get(targetKey);
     const view = views.get(targetKey);
     if (view === undefined) {
-      throw new LinearRoomGenerationContractError(
+      throw new BiomeRoomGenerationContractError(
         `target ${semanticAddressKey(target.origin)} has no history generation view`,
       );
     }
@@ -1018,7 +1071,7 @@ function evaluateTargetSlots(
   for (const exit of exits) {
     const target = targets.find((candidate) => candidate.exit.index === exit.index);
     const targetOrigin =
-      target?.origin ?? createTargetAddress(biome, generationOrigin.parentOccurrenceId, exit.index);
+      target?.origin ?? createTargetAddress(biome, generationOrigin.source, `exit${exit.index}`);
     const rewardHistory = rewardHistories.get(semanticAddressKey(targetOrigin));
     if (target === undefined) {
       candidateContexts.set(
@@ -1030,6 +1083,7 @@ function evaluateTargetSlots(
           targetOrigin,
           Object.freeze({
             kind: 'available' as const,
+            exitKey: `exit${exit.index}`,
             index: exit.index,
             type: exit.type,
             compatibilityPolicyKey: exit.compatibilityPolicyKey,
@@ -1051,46 +1105,287 @@ function evaluateTargetSlots(
   }
 }
 
-export function evaluateLinearRoomGeneration(
+function takeoverCandidatePool(catalog: Catalog, biomeKey: string): readonly RoomDeclaration[] {
+  return Object.freeze(
+    catalog.rooms.values.filter(
+      (room) =>
+        room.biomeKey === biomeKey && room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
+    ),
+  );
+}
+
+function evaluateTakeoverAgainstSource(
   catalog: Catalog,
-  snapshot: LinearSimulationMaterialization,
-  history: LinearSimulationHistory,
+  source: ExitDecisionAddress,
+  owner: CanonicalAuthoredRoom,
+  ownerDeclaration: RoomDeclaration,
+  ownerHistory: HistoryStateView,
+  gameName: string,
   enteredBiomeCount: number,
-  rewardHistoryCheckpoints?: readonly LinearTargetRewardHistoryCheckpoint[],
-): LinearRoomGenerationValidation {
+): TakeoverPrebossBatchCandidateSupport {
+  const requiredExitKeys = Object.freeze(
+    [...ownerDeclaration.exits]
+      .sort((left, right) => left.index - right.index)
+      .map((exit) => `exit${exit.index}`),
+  );
+  const candidate = catalog.rooms.byKey[gameName];
+  if (candidate?.prebossBatchPolicy?.kind !== 'takeOverNormalDoors') {
+    return Object.freeze({
+      source,
+      gameName,
+      requiredExitKeys,
+      requiredTargetCount: requiredExitKeys.length,
+      pressure: Object.freeze([]),
+      selectedPossible: false,
+      findings: Object.freeze([]),
+    });
+  }
+  const pool = takeoverCandidatePool(catalog, source.biomeKey);
+  let pressure: readonly ForcePressureLedgerEntry[] = [];
+  const findings: SemanticFinding[] = [];
+  for (const exit of [...ownerDeclaration.exits].sort((left, right) => left.index - right.index)) {
+    const target = createTargetAddress(
+      createBiomeAddress(source.routeKey, source.biomeKey),
+      source.source,
+      `exit${exit.index}`,
+    );
+    const result = prepareTargetGameNameContext(
+      catalog,
+      pool,
+      owner,
+      target,
+      Object.freeze({
+        kind: 'available',
+        exitKey: `exit${exit.index}`,
+        index: exit.index,
+        type: exit.type,
+        compatibilityPolicyKey: exit.compatibilityPolicyKey,
+      }),
+      ownerHistory,
+      enteredBiomeCount,
+      undefined,
+    ).evaluateGameName(gameName);
+    pressure = [...pressure, result.pressure];
+    findings.push(...result.findings);
+  }
+  const existingCreations = ownerHistory.ledgers.roomCreations.filter(
+    (creation) => creation.gameName === gameName,
+  ).length;
+  const maximum = candidate.caps.maxCreationsThisRun;
+  const capPossible = maximum === undefined || existingCreations + pressure.length <= maximum;
+  if (!capPossible && maximum !== undefined) {
+    const firstCapFailure = Math.max(0, maximum - existingCreations);
+    pressure = Object.freeze(
+      pressure.map((entry, index) => {
+        if (index < firstCapFailure) return entry;
+        const actual = existingCreations + index;
+        const selectedExclusionReasons: RoomGenerationExclusionReason[] = [
+          ...entry.selectedExclusionReasons,
+          'maxCreationsThisRun',
+        ];
+        const selectedExclusions: RoomGenerationExclusionEvidence[] = [
+          ...entry.selectedExclusions,
+          { kind: 'maxCreationsThisRun', actual, maximum },
+        ];
+        return Object.freeze({
+          ...entry,
+          selectedPossible: false,
+          selectedExclusionReasons: Object.freeze(selectedExclusionReasons),
+          selectedExclusions: Object.freeze(selectedExclusions),
+        });
+      }),
+    );
+    const firstUnavailable = pressure[firstCapFailure];
+    if (firstUnavailable !== undefined) {
+      findings.push(
+        finding(
+          'targetRoomUnavailable',
+          firstUnavailable.targetOrigin,
+          selectedEvidence(firstUnavailable),
+        ),
+      );
+    }
+  }
+  return Object.freeze({
+    source,
+    gameName,
+    requiredExitKeys,
+    requiredTargetCount: requiredExitKeys.length,
+    pressure: Object.freeze(pressure),
+    selectedPossible: capPossible && pressure.every((entry) => entry.selectedPossible),
+    findings: Object.freeze(findings),
+  });
+}
+
+/** Evaluates the source-owned takeover domain before target occurrences exist. */
+export function evaluateTakeoverPrebossBatchCandidateAtFrontier(
+  catalog: Catalog,
+  source: ExitDecisionAddress,
+  owner: CanonicalAuthoredRoom,
+  ownerHistory: HistoryStateView,
+  gameName: string,
+  enteredBiomeCount: number,
+): TakeoverPrebossBatchCandidateSupport {
+  const ownerDeclaration = catalog.rooms.byKey[owner.gameName];
+  if (ownerDeclaration === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `${semanticAddressKey(source)} has no declared takeover source`,
+    );
+  }
+  return evaluateTakeoverAgainstSource(
+    catalog,
+    source,
+    owner,
+    ownerDeclaration,
+    ownerHistory,
+    gameName,
+    enteredBiomeCount,
+  );
+}
+
+export function evaluateTakeoverPrebossBatchCandidate(
+  catalog: Catalog,
+  snapshot: BiomeGenerationSnapshot,
+  history: BiomeGenerationHistory,
+  source: ExitDecisionAddress,
+  gameName: string,
+  enteredBiomeCount: number,
+): TakeoverPrebossBatchCandidateSupport {
+  const batch = generationDecisions(snapshot).find(
+    (decision): decision is CanonicalBatch =>
+      decision.kind === 'batch' &&
+      semanticAddressKey(decision.origin) === semanticAddressKey(source),
+  );
+  if (batch === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `${semanticAddressKey(source)} has no materialized normal-door batch`,
+    );
+  }
+  if (batch.parent.origin.kind === 'hubRoom') {
+    const requiredExitKeys = Object.freeze(batch.targets.map((target) => target.exit.exitKey));
+    return Object.freeze({
+      source,
+      gameName,
+      requiredExitKeys,
+      requiredTargetCount: requiredExitKeys.length,
+      pressure: Object.freeze([]),
+      selectedPossible: gameName === batch.targets[0]?.room.gameName,
+      findings: Object.freeze([]),
+    });
+  }
+  const rooms = generationRooms(snapshot);
+  const owner = requireSource(rooms, batch.parent.origin);
+  const ownerDeclaration = catalog.rooms.byKey[owner.gameName];
+  const ownerHistory = history.rooms.find(
+    (room) => semanticAddressKey(room.origin) === semanticAddressKey(owner.origin),
+  )?.preOutgoing;
+  if (ownerDeclaration === undefined || ownerHistory === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `${semanticAddressKey(source)} has no source generation history`,
+    );
+  }
+  return evaluateTakeoverAgainstSource(
+    catalog,
+    source,
+    owner,
+    ownerDeclaration,
+    ownerHistory,
+    gameName,
+    enteredBiomeCount,
+  );
+}
+
+export function evaluateBiomeRoomGeneration(
+  catalog: Catalog,
+  snapshot: BiomeGenerationSnapshot,
+  history: BiomeGenerationHistory,
+  enteredBiomeCount: number,
+  rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
+): GeneratedRoomGenerationValidation {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
-    throw new LinearRoomGenerationContractError(
-      'linear generation inputs do not share one biome owner',
+    throw new BiomeRoomGenerationContractError(
+      'biome generation inputs do not share one biome owner',
     );
   }
   const rooms = generationRooms(snapshot);
   const views = targetGenerationViews(history);
   const rewardHistories = targetRewardHistories(rewardHistoryCheckpoints);
-  const candidateContexts = new Map<string, LinearRoomTargetCandidateContext>();
-  const pressure: LinearForcePressureLedgerEntry[] = [];
+  const candidateContexts = new Map<string, RoomTargetCandidateContext>();
+  const pressure: ForcePressureLedgerEntry[] = [];
   const encounterCounts: EncounterCountSupportEntry[] = [];
   const fieldsCageOutcomes: FieldsCageOutcomeSupportEntry[] = [];
   const findings: SemanticFinding[] = [];
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
-  if (layout?.kind !== 'LinearBiome') {
-    throw new LinearRoomGenerationContractError(
-      `catalog does not provide ${snapshot.biomeKey} linear generation policy`,
+  if (layout === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `catalog does not provide ${snapshot.biomeKey} progression policy`,
     );
   }
+  if (layout.progression.kind === 'hub') {
+    return Object.freeze({
+      biomeKey: snapshot.biomeKey,
+      validity: 'valid',
+      forcePressure: Object.freeze([]),
+      encounterCounts: Object.freeze([]),
+      fieldsCageOutcomes: Object.freeze([]),
+      findings: Object.freeze([]),
+    });
+  }
 
-  for (const [batchIndex, batch] of snapshot.batches.entries()) {
+  let ordinaryBatchIndex = 0;
+  for (const batch of generationDecisions(snapshot).filter(
+    (decision): decision is CanonicalBatch =>
+      decision.kind === 'batch' && decision.parent.origin.kind === 'occurrence',
+  )) {
+    const takeover = batch.targets.some((target) => {
+      const room = catalog.rooms.byKey[target.room.gameName];
+      return room?.prebossBatchPolicy?.kind === 'takeOverNormalDoors';
+    });
+    if (takeover) {
+      if (batch.selectedExitKey === null) {
+        // Appearance creates the atomic takeover target set before a player
+        // chooses one door. Until that selection exists it is a physical
+        // frontier, not a selected room-generation assertion.
+        continue;
+      }
+      const gameName = batch.targets[0]?.room.gameName;
+      if (gameName === undefined) {
+        throw new BiomeRoomGenerationContractError(
+          `${semanticAddressKey(batch.origin)} takeover batch has no target`,
+        );
+      }
+      const support = evaluateTakeoverPrebossBatchCandidate(
+        catalog,
+        snapshot,
+        history,
+        batch.origin,
+        gameName,
+        enteredBiomeCount,
+      );
+      findings.push(...support.findings);
+      if (!support.selectedPossible) {
+        findings.push(
+          finding('targetRoomUnavailable', batch.origin, {
+            gameName,
+            requiredExitKeys: support.requiredExitKeys,
+            requiredTargetCount: support.requiredTargetCount,
+          }),
+        );
+      }
+      continue;
+    }
     const source = requireSource(rooms, batch.parent.origin);
     const sourceBeforeGeneration = history.rooms.find(
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
     )?.preOutgoing;
     if (sourceBeforeGeneration === undefined) {
-      throw new LinearRoomGenerationContractError(
+      throw new BiomeRoomGenerationContractError(
         `source ${semanticAddressKey(source.origin)} has no pre-generation view`,
       );
     }
-    if (layout.continuation.batchPolicy.kind === 'fields') {
+    if (layout.progression.batchPolicy.kind === 'fields') {
       const support = evaluateFieldsCageOutcome(
-        layout.continuation.batchPolicy,
+        layout.progression.batchPolicy,
         batch,
         sourceBeforeGeneration,
       );
@@ -1107,7 +1402,7 @@ export function evaluateLinearRoomGeneration(
     }
     evaluateTargetSlots(
       catalog,
-      stagedCandidatePool(catalog, layout, batchIndex),
+      stagedCandidatePool(catalog, layout, ordinaryBatchIndex),
       source,
       sourceBeforeGeneration,
       batch.origin,
@@ -1120,71 +1415,10 @@ export function evaluateLinearRoomGeneration(
       enteredBiomeCount,
       rewardHistories,
     );
-  }
-  const finalGeneration =
-    snapshot.kind === 'LinearBiome' ? snapshot.terminalEntry : snapshot.frontierGeneration;
-  if (finalGeneration !== undefined) {
-    const finalPool =
-      snapshot.kind === 'LinearBiome'
-        ? terminalCandidatePool(catalog, layout)
-        : snapshot.frontierGeneration!.kind === 'terminal'
-          ? terminalCandidatePool(catalog, layout)
-          : stagedCandidatePool(catalog, layout, snapshot.batches.length);
-    const sourceOrigin =
-      snapshot.kind === 'LinearBiome'
-        ? snapshot.terminalEntry.predecessor.origin
-        : snapshot.frontierGeneration!.parent.origin;
-    const source = requireSource(rooms, sourceOrigin);
-    const sourceBeforeGeneration = history.rooms.find(
-      (room) => semanticAddressKey(room.origin) === semanticAddressKey(sourceOrigin),
-    )?.preOutgoing;
-    if (sourceBeforeGeneration === undefined) {
-      throw new LinearRoomGenerationContractError(
-        `source ${semanticAddressKey(sourceOrigin)} has no pre-generation view`,
-      );
-    }
-    if (
-      layout.continuation.batchPolicy.kind === 'fields' &&
-      snapshot.kind === 'LinearBiomePrefix' &&
-      snapshot.frontierGeneration?.batchState?.kind === 'fields'
-    ) {
-      const support = evaluateFieldsCageOutcome(
-        layout.continuation.batchPolicy,
-        {
-          origin: snapshot.frontierGeneration.origin,
-          batchState: snapshot.frontierGeneration.batchState,
-        },
-        sourceBeforeGeneration,
-      );
-      fieldsCageOutcomes.push(support);
-      if (!support.selectedPossible) {
-        findings.push(
-          finding(
-            'fieldsCageOutcomeUnavailable',
-            support.origin,
-            fieldsCageOutcomeEvidence(support),
-          ),
-        );
-      }
-    }
-    evaluateTargetSlots(
-      catalog,
-      finalPool,
-      source,
-      sourceBeforeGeneration,
-      finalGeneration.origin,
-      finalGeneration.targets,
-      views,
-      candidateContexts,
-      pressure,
-      encounterCounts,
-      findings,
-      enteredBiomeCount,
-      rewardHistories,
-    );
+    ordinaryBatchIndex += 1;
   }
 
-  const validation: LinearRoomGenerationValidation = Object.freeze({
+  const validation: GeneratedRoomGenerationValidation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
     forcePressure: Object.freeze(pressure),
@@ -1196,12 +1430,12 @@ export function evaluateLinearRoomGeneration(
   return validation;
 }
 
-export function linearRoomTargetCandidateContexts(
-  validation: LinearRoomGenerationValidation,
-): ReadonlyMap<string, LinearRoomTargetCandidateContext> {
+export function roomTargetCandidateContexts(
+  validation: GeneratedRoomGenerationValidation,
+): ReadonlyMap<string, RoomTargetCandidateContext> {
   const contexts = candidateContextsByValidation.get(validation);
   if (contexts === undefined) {
-    throw new LinearRoomGenerationContractError(
+    throw new BiomeRoomGenerationContractError(
       `room generation for ${validation.biomeKey} has no prepared candidate contexts`,
     );
   }

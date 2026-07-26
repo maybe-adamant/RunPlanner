@@ -6,7 +6,6 @@ import type {
 } from '../../catalog-schema';
 import type {
   CompletionRoomAddress,
-  FixedEntryRoomAddress,
   HubRoomAddress,
   LocalChildAddress,
   OccurrenceAddress,
@@ -14,11 +13,7 @@ import type {
 import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../reward-kernel/model';
 
 export type RoomHistoryOrigin =
-  | CompletionRoomAddress
-  | FixedEntryRoomAddress
-  | HubRoomAddress
-  | LocalChildAddress
-  | OccurrenceAddress;
+  CompletionRoomAddress | HubRoomAddress | LocalChildAddress | OccurrenceAddress;
 
 interface RoomLifecycleEventBase {
   readonly sequence: number;

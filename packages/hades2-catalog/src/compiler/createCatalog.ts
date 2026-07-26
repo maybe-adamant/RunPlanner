@@ -41,7 +41,13 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     encounterProfiles,
     exitTypes,
   );
-  const biomeLayouts = normalizeBiomeLayouts(input.biomeLayouts, biomes, rooms, rewards.stores);
+  const biomeLayouts = normalizeBiomeLayouts(
+    input.biomeLayouts,
+    biomes,
+    rooms,
+    rewards.stores,
+    exitTypes,
+  );
   validatePrebossBatchPolicies(biomeLayouts, rooms, exitCompatibilityPolicies);
   validateDerivedRoomOwnership(rooms, biomeLayouts);
   validateRewardLookupOwnership(rooms, biomeLayouts);

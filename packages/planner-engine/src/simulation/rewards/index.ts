@@ -1,9 +1,8 @@
 export {
-  evaluateLinearRewards,
-  linearRewardStoreCandidateSupport,
-  LinearRewardSimulationContractError,
-} from './linear';
-export { evaluateHubRewards, evaluateNRewards, HubRewardSimulationContractError } from './hub';
+  evaluateBiomeRewards,
+  rewardStoreCandidateSupport,
+  BiomeRewardSimulationContractError,
+} from './biome';
 export {
   rewardProducerFrontier,
   roomLifecycleCandidateContexts,
@@ -16,15 +15,11 @@ export {
   type ShopPurchaseCandidateContext,
 } from './frontiers';
 export type {
-  LinearRewardBranch,
-  LinearRewardEvent,
-  LinearRewardSimulation,
-  LinearRewardStoreSupportEntry,
-  LinearTargetRewardHistoryCheckpoint,
-  HubRewardSimulation,
+  BiomeRewardSimulation,
   RewardBranch,
   RewardEvent,
   RewardSimulation,
   RewardStoreCandidateSupport,
   RewardStoreSupportEntry,
+  TargetRewardHistoryCheckpoint,
 } from './model';

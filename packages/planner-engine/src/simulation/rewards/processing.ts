@@ -25,15 +25,13 @@ import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type { HistoryEvent } from '../history';
 import type {
   CanonicalAuthoredRoom,
-  CanonicalFixedEntryRoom,
   CanonicalLocalChildRoom,
   CanonicalResolvedIncomingReward,
 } from '../materialization';
 import type { FindingEvidence, RewardGenerationFindingCode, SemanticFinding } from '../model';
 import type { RewardBranch, RewardEvent } from './model';
 
-export type CanonicalRewardRoom =
-  CanonicalAuthoredRoom | CanonicalFixedEntryRoom | CanonicalLocalChildRoom;
+export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
 
 interface PendingShopState {
   readonly profileKey: string;
@@ -244,7 +242,9 @@ export function countedBinding(
   incoming: CanonicalResolvedIncomingReward,
 ): CountedRewardBinding | undefined {
   if (incoming.producerKind === 'freeReward') {
-    return declaration.entryOfferPolicy?.freeReward;
+    const policy = declaration.prebossBatchPolicy;
+    const remaining = policy?.kind === 'takeOverNormalDoors' ? policy.remainingOffers : undefined;
+    return remaining?.kind === 'counted' ? remaining.reward : undefined;
   }
   return declaration.incomingReward.kind === 'countedChoice'
     ? declaration.incomingReward

@@ -15,11 +15,11 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-completeness, materialization, lifecycle, event-folded history,
-room-generation, reward-kernel, project-simulation, selected-plan validation,
-and candidate-result boundary across layout-specific canonical snapshots. The
-same application composition publishes those results to the editor, profiles,
-and recovery workflow for both complete routes.
+schema-9 decision-spine evaluator: completeness, materialization, lifecycle,
+event-folded history, room generation, reward simulation, selected-plan
+validation, and candidate support consume the same canonical biome product.
+The application publishes those derived results to the editor, profiles, and
+recovery workflow; it does not select a separate simulator by biome family.
 
 ## Core Contract
 
@@ -99,7 +99,7 @@ The normalized catalog contains immutable possible facts:
 - reward types, payload domains, source-support policies, concrete acquisition
   declarations, stores, bags, bindings, and shops;
 - normalized current-run requirements whose kinds have registered evaluators;
-- batch and terminal policies.
+- normal-door batch, Preboss, and completion policies.
 
 Catalog construction fails for:
 
@@ -120,7 +120,8 @@ research is tracked in audits and fixtures, not generic production
 
 Every configured biome topology crosses a structural contact boundary before
 semantic processing. Normalization checks bounded representation and produces
-a trusted layout-specific topology.
+one trusted topology of occurrence-owned exit decisions plus any
+declaration-owned Hub decision.
 
 Malformed topology is a contract error, not an incomplete plan. Examples:
 
@@ -129,8 +130,8 @@ Malformed topology is a contract error, not an incomplete plan. Examples:
 - dangling topology references to missing occurrences;
 - unreferenced persisted occurrences;
 - impossible structural indexes;
-- contradictory continuation forms;
-- downstream continuation owned by an unpicked target;
+- contradictory decision forms;
+- downstream decision owned by an unpicked target;
 - unknown layout or policy dispatch keys.
 
 Structurally representable but context-invalid choices remain normalized and
@@ -168,9 +169,9 @@ For the active biome:
    and counter authorities;
 4. publish addressed findings, pre-decision views, and candidate support for
    every covered owner;
-5. retain the incomplete frontier without inventing terminal or completion
+5. retain the incomplete frontier without inventing selected-Preboss or completion
    facts;
-6. when authorship reaches the declared terminal and completion sequence,
+6. when authorship reaches a selected Preboss and its declared completion sequence,
    strengthen the same result into a complete biome evaluation;
 7. admit a complete valid result to the route prefix, or stop before the next
    biome when the complete result is invalid.
@@ -218,7 +219,7 @@ prefix lifecycle operations, folded history state, generation views, reward
 witnesses, counters, and findings for the owners it actually covered.
 
 A complete biome is the maximal form of that same evaluation. It adds the
-terminal and completion sequence, canonical snapshot, final biome history,
+selected Preboss and completion sequence, canonical snapshot, final biome history,
 selected-plan validity, and the ability to seed the next biome when valid.
 
 If a covered selected value has no supporting pre-state, alternatives at that
@@ -259,25 +260,15 @@ They must label contextual state unassessed and must not simulate from defaults
 or hypothetical predecessor completions.
 
 The authoring/coverage axes and route processing regions are the production
-result shape. Complete biomes publish `coverage: complete`. Incomplete Linear
-biomes now publish a materialized prefix, partial lifecycle history, generation
-proof, reward witnesses, counters, and addressed findings whenever their entry
-can be reached. An unsupported generated choice clamps that prefix at its
-generation, while an unsupported entered-room lifecycle clamps it before the
-next generation point. Persisted downstream authorship remains untouched but
-receives no contextual claim. A Linear biome whose authored start cannot yet be
-materialized publishes `coverage: none`.
-
-Incomplete Hub biomes publish the same partial products through fixed entry,
-the jointly generated board, and complete visits in authored order. Board
-coverage is atomic under the `hubOpenSet` semantic owner: fewer than the
-required open slots stops before board generation, while a complete 9/10-slot
-set generates and evaluates every open offer together. Later visits extend
-coverage by `hubVisit` owner, including side generation, entered local rooms,
-parent restores, and the Hub restore. An unsupported board or visit state
-clamps derived coverage at that semantic region while retaining later authored
-visits. Neither layout publishes a canonical snapshot, completion event, or
-downstream seed while incomplete.
+result shape. Complete biomes publish `coverage: complete`. An incomplete
+biome publishes a materialized prefix, partial lifecycle history, generation
+proof, reward witnesses, counters, and addressed findings whenever its start
+and selected spine before the frontier are materializable. The frontier may be
+an ordinary exit decision, a Hub board, a Hub visit, or the Hub-owned Handoff
+decision. An unsupported selected fact clamps coverage at its semantic owner;
+persisted downstream authorship remains intact but receives no contextual
+claim. A biome whose start or required biome field cannot yet be materialized
+publishes `coverage: none`.
 
 ## Completeness
 
@@ -286,11 +277,11 @@ not ask whether those facts are legal.
 
 A complete biome requires:
 
-- structurally closed topology from declared entry to an independent terminal
-  transition or a policy-admitted picked terminal batch target;
+- structurally closed topology from declared entry through one selected
+  Preboss and its declared completion sequence;
 - all required target links and picked or visit-order choices;
-- all active terminal target links and their picked choice;
-- complete terminal companion links required by policy;
+- all active Preboss-batch target links and their picked choice;
+- complete companion links required by the selected Preboss policy;
 - one occurrence record with complete offer-time state for every referenced
   top-level room;
 - complete entry-time room-local state for every picked occurrence that owns
@@ -312,7 +303,7 @@ form own complete resolved offers, not duplicate store selections.
 Any additional state required by the normalized batch policy is equally part
 of completeness. An ordinary H batch requires one concrete semantic
 `cageOutcome`, even when it has no combat target or when Min and Max derive the
-same visible cage count. H terminal transitions deliberately own no cage
+same visible cage count. H takeover Preboss batches deliberately own no cage
 outcome under the observational simplification defined by `../biomes/H_GAME_RULES.md`.
 
 An I combat occurrence is complete when its potential concrete Tartarus reward
@@ -343,196 +334,139 @@ negative such as `purchased: false` is complete state.
 Canonical snapshots contain concrete simulated game facts and semantic return
 addresses. They are independent of persisted JSON layout and UI presentation.
 
-Representative linear shape:
+Every materialized biome uses one decision-spine product:
 
 ```ts
-interface CanonicalLinearBiome {
-  kind: 'LinearBiome';
-  biomeKey: BiomeKey;
-  entryRooms: CanonicalRoom[];
-  batches: CanonicalBatch[];
-  terminalEntry: CanonicalTerminalEntry;
+interface CanonicalBiome {
+  kind: 'biome';
+  routeKey: string;
+  biomeKey: string;
+  entryRoom: CanonicalAuthoredRoom;
+  decisions: CanonicalDecision[];
   completionRooms: CanonicalCompletionRoom[];
   biomeState: CanonicalBiomeState;
 }
 
-interface CanonicalHubBiome {
-  kind: 'HubBiome';
-  biomeKey: BiomeKey;
-  entryRooms: CanonicalAuthoredRoom[];
-  hubBoard: CanonicalHubBoard;
-  visits: CanonicalHubVisit[];
-  terminalEntry: CanonicalAuthoredRoom;
-  completionRooms: CanonicalCompletionRoom[];
-  biomeState: CanonicalBiomeState;
+type CanonicalDecision = CanonicalLinkedExit | CanonicalBatch | CanonicalHubDecision;
+
+interface CanonicalBatch {
+  kind: 'batch';
+  origin: ExitDecisionAddress;
+  source: ExitDecisionSourceAddress;
+  parent: CanonicalRoomReference | CanonicalHubRoomReference;
+  rewardStore: CanonicalBatchRewardStore;
+  batchState: CanonicalBatchState;
+  targets: CanonicalTarget[];
+  selectedExitKey: string;
+  selectedOrigin: ExitSelectionAddress;
 }
 
-interface CanonicalHubBoard {
-  origin: HubOpenSetAddress;
+interface CanonicalHubDecision {
+  kind: 'hub';
+  origin: HubDecisionAddress;
   room: CanonicalHubRoom;
-  targets: CanonicalHubTarget[];
-}
-
-interface CanonicalHubTarget {
-  origin: HubSlotAddress;
-  hubSlotKey: string;
-  physicalDoorId: number;
-  room: CanonicalAuthoredRoom;
-}
-
-interface CanonicalHubVisit {
-  origin: HubVisitAddress;
-  visitIndex: number;
-  target: CanonicalHubTarget;
-  localSlots: CanonicalLocalChildRoom[];
-  enteredLocalRooms: CanonicalLocalChildRoom[];
-  parentRestores: CanonicalRoomRestore[];
-  hubRestore: CanonicalRoomRestore;
+  board: CanonicalHubBoard;
+  visits: CanonicalHubVisit[];
 }
 ```
 
-Both canonical variants project the same biome envelope:
+`CanonicalLinkedExit` records a fixed authored target. `CanonicalBatch` owns
+one physical exit decision and every target created from it. Its targets are
+always ordered by the source room declaration's physical exit order, not by
+persisted insertion order or decision-array position. `CanonicalHubDecision`
+records the one N Hub room, its open board, and its selected visits.
 
 ```text
-entryRooms -> traversal body -> terminalEntry -> completionRooms
+entry room -> selected decision spine -> selected Preboss -> completion rooms
 ```
 
-For a linear biome, `batches` is the traversal body. For N, `hubBoard` plus
-`visits` is the traversal body. Each canonical materializer preserves that
-conceptual order within its own variant. History dispatches the middle segment
-by layout kind while entry walking, room lifecycle execution, terminal
-orchestration, completion walking, event folding, counters, and semantic
-feedback remain shared authorities.
+The selected Preboss is a `CanonicalTarget` within its declaration-owned
+normal-door batch. Its continuation is `startsCompletion`; every unpicked
+target is a `deadLeaf`, and a picked ordinary target is `continuesSpine`.
+There is no parallel completion-entry snapshot or adapter. Completion
+materialization starts from the selected Preboss and carries only the declared
+completion rooms and their entered reward-store provenance.
 
-### Shared Biome Envelope Composition
+The materializer walks the normalized selected spine rather than the stored
+decision array. It may dispatch on normalized declaration policy, but never on
+a biome key, concrete game name, semantic address, or rendered UI shape. This
+preserves schema-9's non-authoritative decision-array order and keeps shared
+history, generation, reward, candidate, and feedback consumers on the same
+product.
 
-The shared envelope is an internal orchestration contract, not a third
-authored or canonical data model. `LinearBiomePlan` and `HubBiomePlan` remain
-separate persistence languages, and `CanonicalLinearBiome` and
-`CanonicalHubBiome` remain separate materialized products. The common layer
-owns history orchestration across their equivalent semantic segments.
+### Prefix Snapshots
 
-Materialization remains variant-owned because its entry and terminal contracts
-are materially different. Linear materialization may begin from an authored
-start or derived fixed entry and may end through a forked or generated target.
-Hub materialization resolves fixed authored entry leaves and a fixed authored
-terminal around its board and visits. Each variant assembles its existing
-canonical snapshot directly; neither projects through a generic public body or
-snapshot shape.
+An incomplete but materializable biome has a prefix product:
 
-The one shared materialization primitive is completion-room construction. It
-accepts the declared completion roles plus optional terminal-derived
-reward-store provenance and retains the existing declaration, lifecycle, and
-entered-store validation. Further entry or terminal extraction requires
-another concrete consumer; the shared history envelope does not by itself
-justify a generic materialization adapter registry.
+```ts
+interface MaterializedBiomePrefix {
+  kind: 'biomePrefix';
+  routeKey: string;
+  biomeKey: string;
+  entryRoom?: CanonicalAuthoredRoom;
+  decisions: CanonicalDecision[];
+  frontier?: ExitDecisionFrontier | HubDecisionFrontier;
+  biomeState: CanonicalBiomeState;
+}
+```
 
-History composition consumes that canonical snapshot through this contract:
+An exit frontier retains its parent, every physically generated target, and a
+nullable selected exit. A Hub frontier names either the board or the first
+unresolved or blocked visit. A retained Hub decision keeps the physically
+reached board. A blocked Hub visit is a phase-aware frontier: a target-lifecycle
+failure stops before its outgoing checkpoint; a side-generation failure keeps
+the visit target's outgoing local creation but enters no local room; and a
+local-lifecycle failure keeps only the declaration-ranked entered-local prefix
+through its invalid owner, with restores only before that owner. A visit
+frontier never returns to the Hub. Thus a board-owned reward failure retains
+the board target creations and reward lookup as one atomic region without
+claiming any visit. The prefix uses the same canonical room, decision, history,
+reward, and generation types as a complete biome; it omits the selected Preboss
+and completion tail because they are not yet facts.
+Candidate queries may use an ordinary exit frontier to evaluate a target that
+has not yet been created, and a takeover source frontier to evaluate the entire
+Preboss batch.
 
-| Segment              | Input                                                         | Required output                                           |
-| -------------------- | ------------------------------------------------------------- | --------------------------------------------------------- |
-| fixed-entry composer | canonical entry rooms and the shared lifecycle/event writer   | last entered entry room                                   |
-| body adapter         | that entry room, the canonical body, and the same writer      | exact terminal predecessor after every ordered body event |
-| terminal adapter     | that predecessor, the canonical terminal, and the same writer | entered terminal room                                     |
-| completion composer  | terminal room, completion rooms, and the same writer          | completed ordered tail                                    |
+### Shared History and N Hub Semantics
 
-The history envelope alone initializes biome counters and optional route-prefix
-state, emits biome start/completion and declared transition resets, and invokes
-the topology-neutral history fold. A body adapter cannot initialize or finish
-a biome, apply transition resets, or select a different fold.
+History composition initializes biome counters, walks the entry room and
+selected decision spine, emits declared transition resets, walks completion
+rooms after the selected Preboss, and invokes the topology-neutral event fold.
+It preserves exact physical creation order, counter state, occurrence identity,
+and restore identity. No decision-specific branch may initialize or finish a
+biome, apply its transition resets, or use a separate fold.
 
-The linear body adapter owns generated decision batches, picked-target
-continuation, Fields/Clockwork body state, and realization of a generated
-terminal target. The Hub body adapter owns the persistent Hub room and board,
-open target membership, six visit references, parent-local side excursions,
-and parent/Hub restores. N Opening and PreHub belong to the fixed entry
-segment. N Preboss belongs to the fixed terminal strategy. Boss and Postboss
-belong to the shared completion segment.
+N has one explicit structural specialization inside that same sequence. Opening
+links to PreHub, then PreHub links to the Hub decision. The Hub decision owns
+the persistent Hub room, board, six visits, parent-local side excursions, and
+parent/Hub restores. Its board targets are generated in declaration-owned
+physical order. The selected Hub visits then occur in authored visit order.
+The Hub-owned Handoff batch is generated after the board targets in the Hub's
+same physical generation sequence; it is not a separate completion-entry step.
 
-History dispatch may use the normalized layout discriminant or direct typed
-composition. It must never branch on a biome key, concrete room game name,
-semantic address, or rendered UI shape. This keeps N's structural
-specialization in the middle segment without creating a second history stack.
-The contract applies to function ownership; it does not require source files to
-mirror every conceptual segment.
+Each `CanonicalHubVisit` references the board's existing target. A local slot
+retains its physical door ID, availability rank, generated/not-generated
+result, optional entered ordinal, and parent-local semantic address. Generated
+slots expose their incoming offer whether or not entered; not-generated slots
+expose none. Parent and Hub restores reference existing rooms and never create
+another occurrence or replay a lifecycle offer.
 
-The shared history segmentation preserves declared canonical facts, exact event
-order, counter state, transition resets, occurrence identity, and restore
-identity. In particular, PreHub remains N's second fixed entry, one room
-occurrence is still created only once, and later restore appearances never
-replay creation or lifecycle work.
-
-`entryRooms` begins with the selected declared start and then contains any
-layout-derived fixed entry rooms in game order. I contributes its authored
-single-choice `I_Intro` start; `I_Story01` materializes later as an ordinary
-authored target in a generated Clockwork batch.
-
-A layout-derived entry owns a stable `(routeKey, biomeKey, role)` semantic
-address rather than a fake Room Occurrence ID. Its incoming fixed producer and
-the layout-owned target that creates it use sibling role addresses. History
-records such rooms without leaking a rendered row or nullable pseudo-room into
-game history. I Story instead owns an ordinary occurrence address and follows
-the same generated-target lifecycle as other authored I offers.
-
-`terminalEntry` is a canonical role, not proof that authored persistence used
-the independent `terminal` continuation form. For I, materialization derives
-it from the picked terminal target of the final `ClockworkDoorBatch`;
-preceding unpicked preboss occurrences remain in their own batches as ordinary
-offer facts.
-
-N `hubBoard` records the fixed physical generation order and every open target
-offer exactly once. `visits` records the six player-selected target entries in
-visit order, each target's active side-room offers and side-entry order, the
-restored parent records, and the restored hub record. Open unvisited targets
-remain in `hubBoard` but never appear in `visits`.
-
-Each visit references the exact `CanonicalHubTarget` object already owned by
-the board. A local slot keeps its physical door ID, availability rank,
-generated/not-generated result, optional entered ordinal, and parent-local
-semantic address. `localSlots` retains declaration-fixed physical slot order;
-availability rank remains a separate axis for generation pressure. Generated
-slots expose their concrete incoming offer whether entered or not;
-not-generated slots expose no canonical offer. The `enteredLocalRooms` array
-reuses those local-slot objects in player entry order.
-Parent and Hub restore records reference the existing authored parent and one
-derived Hub room; they never create another Room Occurrence or replay an offer.
-The persistent Hub room and its open board have distinct `HubRoomAddress` and
-`HubOpenSetAddress` owners so later history, findings, and candidate indexes
-cannot collapse the room lifecycle into the board-generation surface.
-
-For N, `entryRooms` resolves the fixed authored Opening and PreHub references;
-their topology and game names come from the layout while their reward leaves
-come from persisted Room Occurrences. The stateless Hub entry is materialized
-as the structural owner of `hubBoard`, not as another authored occurrence. The
-fixed authored Preboss is the Hub snapshot's direct `terminalEntry`; it owns
-the complete WorldShop leaf, while Boss and Postboss remain derived completion
-rooms.
-
-PreHub is therefore not a Hub-only candidate rule. It is the second fixed entry
-in the common envelope, and its depth follows from walking the entry chain.
-After canonical expansion, N history is an ordinary ordered event stream:
-Opening, PreHub, repeated Hub/main/side/restore appearances, Preboss, Boss, and
-Postboss. Only the Hub body determines that middle ordering.
+PreHub is a fixed authored room in the same decision spine, rather than a
+Hub-only candidate rule. After canonical expansion, N history is an ordinary
+ordered event stream: Opening, PreHub, repeated Hub/main/side/restore
+appearances, selected Preboss, Boss, and Postboss. Only the Hub decision
+determines the board, visit, side-room, and Handoff ordering within that stream.
 
 A canonical batch records:
 
-- selected parent occurrence ID and concrete game room name;
-- physical generation order;
-- explicit batch reward-store policy and authored base store when applicable;
-- every target occurrence, including unpicked dead leaves and repeated game
-  room names;
-- offer-time room and reward facts for every target, but entry-time shop facts
+- its selected parent, physical exit order, source address, and selection;
+- its explicit reward-store policy and resolved store where applicable;
+- all targets, including unpicked dead leaves and repeated game names;
+- offer-time room and reward facts for every target, and entry-time shop facts
   only for the picked target;
-- exit index and picked state;
-- the picked target's derived continuation effect when policy admits a
-  terminal declaration;
-- any policy-derived incoming realization, including I Goal versus NonGoal;
-- complete resolved incoming offer, including actual store provenance, when
-  the target owns a producer;
-- concrete room-local fragment;
-- declaration-derived physical offer facts associated with the materialized
-  occurrences;
-- semantic addresses for each fact.
+- policy-derived incoming realization, including I Goal versus NonGoal;
+- complete resolved incoming provenance and active room-local fragments; and
+- stable semantic addresses for every fact.
 
 A Clockwork batch additionally records the exact pre-generation
 `goalsRemaining`, `nonGoalRewardsAcquired`, and authored
@@ -540,9 +474,8 @@ A Clockwork batch additionally records the exact pre-generation
 the declaration-owned `3..6` range; materialization does not infer or replace
 it with a compatibility witness. Each target then owns a derived Goal or
 NonGoal fact. Goal suppresses the dormant concrete Tartarus leaf; NonGoal
-activates it. When the picked target is the generated preboss, that final
-generated batch becomes `terminalEntry` while preserving its batch-state and
-no-store provenance.
+activates it. A selected generated Preboss remains the selected target of its
+batch while preserving that batch's state and no-store provenance.
 
 For Fields batches, canonical `batchState` is a typed projection of the
 authored Min/Max outcome plus the declaration- and physical-target-derived
@@ -593,7 +526,7 @@ remaining room-local operations
 room.commit
 room.exit
 
-editable terminal enters
+selected Preboss enters
 layout completion sequence begins
 each derived completion declaration enters and commits in order
 biome.complete
@@ -656,7 +589,7 @@ the full open board. A restore event appends history without creating another
 occurrence, offer, acquisition, or encounter-start event.
 
 The active N lifecycle/history and reward path implements this trace.
-Exact fixed-entry, Hub-board, main, side, restore, terminal, and completion
+Exact fixed-entry, Hub-board, main, side, restore, Preboss, and completion
 events fold through the shared history ledgers, including required Soul Pylons
 and generated-side-room counters. Reward replay consumes every open target in
 physical order, resolves each generated side group jointly, acquires only
@@ -787,7 +720,7 @@ There is no permissive candidate rule beside a stricter selected rule.
 
 Validation checks complete canonical facts in lifecycle order:
 
-- start, fixed-entry, terminal, and layout roles;
+- start, fixed-entry, selected-Preboss, and layout roles;
 - physical exits and target compatibility;
 - room eligibility at the correct generation point;
 - creation and appearance caps on separate ledgers;
@@ -803,7 +736,7 @@ Validation checks complete canonical facts in lifecycle order:
 Targets in one generated batch process in physical generation order. Each
 creation and offer updates scratch history before the next peer is validated.
 
-The linear room-generation contact projects only predicates present on
+The shared room-generation contact projects only predicates present on
 supported normalized declarations: boolean composition, biome depth-cache and
 encounter-depth ranges, entered-room and acquired-reward record counts, recent
 encounter phases, and predecessor exit counts. The shared requirement
@@ -931,8 +864,8 @@ resolution. A target forced or individual store still resolves from its Room
 Declaration and uses the same offer machinery. A target with no producer and
 no resolved store emits no reward offer and consumes no bag entry.
 
-Start and terminal offer points that do not own an authored batch store receive
-their store from their normalized fixed or terminal policy. They reuse the same
+Fixed-entry and Preboss offer points that do not own an authored batch store
+receive their store from normalized declaration policy. They reuse the same
 bag, offer, offer-projection, and acquisition machinery after that resolution.
 
 `allowDuplicates` is an entry-level store fact and defaults to false.
@@ -957,7 +890,7 @@ select one entry by declaration order. A later authored offer is valid if at
 least one reachable state supports it; the next state frontier contains every
 supporting result.
 
-For F/G forked preboss transitions, each physical terminal target is a
+For F/G takeover Preboss batches, each physical target is a
 distinct occurrence referencing the same preboss declaration. Every target
 emits creation and door-offer facts in physical order. Only the picked target
 emits appearance and reaches its incoming producer's acquisition lifecycle.
@@ -995,7 +928,7 @@ For one candidate domain, simulation:
 The shared query set covers authored starts, ordinary room targets, batch
 reward stores, incoming and free rewards, room-local rewards, WorldShop offers,
 purchase choices, and policy-owned Fields door-roll outcomes. Preboss uses those
-same incoming-reward and WorldShop addresses rather than a second terminal-only
+same incoming-reward and WorldShop addresses rather than a second specialized
 candidate vocabulary.
 
 N extends that shared vocabulary with four Hub-structural queries: fixed-slot
@@ -1019,20 +952,25 @@ The prerequisite control itself remains evaluable from the already-prepared
 prefix. Room candidates reuse the biome's addressed generation views. H
 Min/Max candidates use the same pure support evaluator as selected simulation
 at the source room's `preOutgoing` history view because the proposed value
-cannot change its own prior context. Cage and terminal alternatives apply one
-immutable semantic replacement and replay H through the common linear reward
+cannot change its own prior context. Cage and Preboss alternatives apply one
+immutable semantic replacement and replay H through the common reward
 authority with the already-evaluated G seed.
 
 N candidate preparation locates the selected Hub product in normal Surface
-route evaluation. Slot membership reuses open-count and
-declaration-owned constraint validation; visits replay the six-visit product;
-side generation replays global ranked-prefix pressure; entered order replays
-the exact acquisition trace. Reward and shop proposals use the same immutable
-replacement/replay path as linear biomes. N does not claim per-slot prefix
-coverage while its jointly generated board is incomplete. Once the board or a
-later visit-local region is covered, its candidates use the same addressed
-coverage contract as Linear biomes. Selected invalid values remain evaluated
-and retain exact findings.
+route evaluation. Slot membership reuses open-count and declaration-owned
+constraint validation; visits replay the six-visit product; side generation
+replays global ranked-prefix pressure; entered order replays the exact
+acquisition trace. Reward and shop proposals use the same immutable
+replacement/replay path as other decision-spine biomes. N does not claim
+per-slot prefix coverage while its jointly generated board is incomplete. An
+invalid board keeps its atomic physical board region assessable for repair, but
+withholds every visit and parent-local candidate beyond that owner. An invalid
+visit-local owner similarly withholds later local and visit candidates. The
+exact blocking board, side-generation, local-reward, or lifecycle owner keeps
+its pre-decision repair context even on an incomplete prefix; only later owners
+are withheld. Once a region is reached without an earlier block, its candidates
+use the same addressed coverage contract as other biome prefixes. Selected
+invalid values remain evaluated and retain exact findings.
 
 If a prior biome is not complete and valid, candidates in every later biome
 report unavailable upstream context. If the active biome has not yet covered a
@@ -1128,12 +1066,12 @@ interface ProjectEvaluation {
 Each route simulation records:
 
 - configured biome identity and the validated route prefix;
-- complete F/G/H/I/N/O/P/Q evaluations with layout-typed canonical snapshots, lifecycle events,
+- complete F/G/H/I/N/O/P/Q evaluations with decision-spine canonical snapshots, lifecycle events,
   ledgers, room-generation proof, reward witnesses, and findings;
-- Linear and Hub incomplete active-biome evaluation with covered-prefix
-  materialization, partial lifecycle history, counters, generation proof,
-  reward witnesses, and addressed findings; Hub board coverage remains one
-  all-or-nothing semantic generation region rather than a physical-slot prefix;
+- incomplete active-biome evaluation with covered-prefix materialization,
+  partial lifecycle history, counters, generation proof, reward witnesses, and
+  addressed findings; Hub board coverage remains one all-or-nothing semantic
+  generation region rather than a physical-slot prefix;
 - no canonical snapshot, final biome history, completion event, or downstream
   seed on an incomplete active biome;
 - validated-prefix identity and an exact route-end, incomplete, or invalid
@@ -1223,6 +1161,12 @@ Required categories include:
 - repeated game names across distinct occurrence IDs;
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
+- complete, incomplete-prefix, selected-invalid, retained, and upstream-blocked
+  schema-9 fixtures across F through Q;
+- declaration-order target creation and non-authoritative persisted decision
+  order;
+- ordinary target exclusion and source-owned candidate support for every
+  takeover Preboss batch;
 - picked and unpicked peer creation and reward depletion;
 - absent unpicked shop state, atomic picked-shop default installation, and
   dormant retention after re-pick;
@@ -1232,7 +1176,7 @@ Required categories include:
 - low-weight possible outcomes and forced-pool exclusion;
 - chance/ratio boundaries at zero, strict interior, and one;
 - generated-batch base-store support and two-pass target-store overrides;
-- terminal policies;
+- Preboss and completion policies;
 - optional encounter phases;
 - reward payload and bag-entry provenance;
 - downstream retention and explicit destructive commands;

@@ -593,7 +593,9 @@ describe('authored-project commands and topology', () => {
         decision.source.kind === 'occurrence' &&
         decision.source.occurrenceId === 'ordered-source',
     );
-    if (source?.normal.kind !== 'batch') throw new Error('missing ordered source batch');
+    if (source?.kind !== 'exit' || source.normal.kind !== 'batch') {
+      throw new Error('missing ordered source batch');
+    }
     expect(source.normal.targets.map((target) => target.exitKey)).toEqual(['exit1', 'exit2']);
 
     const reordered = encodedTopology(project, 'Underworld', 'F');
@@ -611,7 +613,9 @@ describe('authored-project commands and topology', () => {
         decision.source.kind === 'occurrence' &&
         decision.source.occurrenceId === 'ordered-source',
     );
-    if (decodedSource?.normal.kind !== 'batch') throw new Error('missing decoded ordered batch');
+    if (decodedSource?.kind !== 'exit' || decodedSource.normal.kind !== 'batch') {
+      throw new Error('missing decoded ordered batch');
+    }
     expect(decodedSource.normal.targets.map((target) => target.exitKey)).toEqual([
       'exit1',
       'exit2',
@@ -1030,20 +1034,17 @@ describe('authored-project commands and topology', () => {
       const topology = project.routes
         .flatMap((route) => route.biomes)
         .find((biome) => biome.biomeKey === _biomeKey)?.topology;
-      const ordinary = topology?.decisions.filter(
-        (decision) =>
-          decision.kind === 'exit' &&
-          decision.normal.kind === 'batch' &&
-          !decision.normal.targets.some((target) =>
-            topology.occurrences
-              .find((occurrence) => occurrence.occurrenceId === target.occurrenceId)
-              ?.gameName.endsWith('PreBoss01'),
-          ),
-      );
+      const ordinary = topology?.decisions.flatMap((decision) => {
+        if (decision.kind !== 'exit' || decision.normal.kind !== 'batch') return [];
+        const isTakeover = decision.normal.targets.some((target) =>
+          topology.occurrences
+            .find((occurrence) => occurrence.occurrenceId === target.occurrenceId)
+            ?.gameName.endsWith('PreBoss01'),
+        );
+        return isTakeover ? [] : [decision.normal];
+      });
       expect(ordinary).toHaveLength(ordinaryBatchCount);
-      expect(ordinary?.flatMap((decision) => decision.normal.targets)).toHaveLength(
-        ordinaryTargetCount,
-      );
+      expect(ordinary?.flatMap((batch) => batch.targets)).toHaveLength(ordinaryTargetCount);
     },
   );
 
@@ -1194,7 +1195,9 @@ describe('authored-project commands and topology', () => {
       (occurrence) => occurrence.occurrenceId === 'o-wheel-combat',
     );
     if (ship?.state.kind !== 'shipCombat') throw new Error('missing ShipCombat wheel state');
-    const [offerKey, offer] = Object.entries(ship.state.wheels.wheel1.offers)[0] ?? [];
+    const wheel1 = ship.state.wheels.wheel1;
+    if (wheel1 === undefined) throw new Error('missing first reward wheel');
+    const [offerKey, offer] = Object.entries(wheel1.offers)[0] ?? [];
     if (offerKey === undefined || offer === undefined) throw new Error('missing wheel offer');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRewardWheelOffer',

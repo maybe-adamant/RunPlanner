@@ -1,160 +1,69 @@
-import {
-  applyProjectCommand,
-  createBiomeAddress,
-  createBatchRewardStoreAddress,
-  createContinuationAddress,
-  createOccurrenceAddress,
-  createOccurrenceId,
-  createPickedAddress,
-  createProjectDocument,
-  createRouteAddress,
-  createIncomingRewardAddress,
-  createShopOfferAddress,
-  createShopPurchaseAddress,
-  createTargetAddress,
-  semanticAddressKey,
-  type LinearBiomePlan,
-  type ProjectDocument,
-  type RoomOccurrence,
-} from '@run-planner/engine/authored-project';
-import {
-  CandidateEvaluationContractError,
-  composeLinearHistory,
-  createPreparedProjectCandidateSession,
-  evaluateLinearCompleteness,
-  evaluateLinearRoomGeneration,
-  materializeLinearBiome,
-  simulateProject,
-  type CandidateEvaluationEvent,
-  type CompleteLinearCompletenessResult,
-} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import {
+  applyProjectCommand,
+  createExitDecisionAddress,
+  createOccurrenceAddress,
+  semanticAddressKey,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
+  composeBiomeHistory,
+  evaluateBiomeCompleteness,
+  evaluateBiomeRewards,
+  evaluateBiomeRoomGeneration,
+  evaluateTakeoverPrebossBatchCandidate,
+  materializeBiome,
+} from '@run-planner/engine/simulation';
 
-import { bindTestCandidateSession } from '../../candidateSession';
-const biome = createBiomeAddress('Underworld', 'F');
-const gBiome = createBiomeAddress('Underworld', 'G');
-const startId = createOccurrenceId('possibility-start');
+import {
+  createFGenerationProject,
+  fGenerationBaselineBatches,
+  fGenerationBiome,
+  fGenerationOccurrenceId,
+  fGenerationStartId,
+  fGenerationTargetAddress,
+  type FGenerationBatchSpec,
+} from '../../support/f-generation-project';
 
-interface BatchSpec {
-  readonly targets: readonly string[];
-  readonly pickedExitIndex: number;
-}
-
-const baselineBatches: readonly BatchSpec[] = [
-  { targets: ['F_Combat02'], pickedExitIndex: 1 },
-  { targets: ['F_Combat03', 'F_Combat03'], pickedExitIndex: 1 },
-  { targets: ['F_Combat04', 'F_Combat04'], pickedExitIndex: 1 },
-  { targets: ['F_Combat05', 'F_Combat11'], pickedExitIndex: 1 },
-  { targets: ['F_Combat06', 'F_Combat06'], pickedExitIndex: 1 },
-  { targets: ['F_MiniBoss01', 'F_MiniBoss02'], pickedExitIndex: 1 },
-  { targets: ['F_Combat11'], pickedExitIndex: 1 },
-  { targets: ['F_Combat12', 'F_Combat12'], pickedExitIndex: 1 },
-  { targets: ['F_Combat14', 'F_Combat14'], pickedExitIndex: 1 },
-  { targets: ['F_Combat15', 'F_Combat15'], pickedExitIndex: 1 },
-];
-
-function fPlan(project: ProjectDocument): LinearBiomePlan {
-  const plan = project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
-  if (plan?.kind !== 'LinearBiome' || plan.biomeKey !== 'F') {
-    throw new Error('missing F possibility fixture plan');
-  }
+function fPlan(project: ProjectDocument) {
+  const plan = project.routes
+    .find((route) => route.routeKey === 'Underworld')
+    ?.biomes.find((biome) => biome.biomeKey === 'F');
+  if (plan === undefined) throw new Error('missing F generation plan');
   return plan;
 }
 
-function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
-  const result = evaluateLinearCompleteness(catalog, biome, fPlan(project));
+function complete(project: ProjectDocument) {
+  const result = evaluateBiomeCompleteness(catalog, fGenerationBiome, fPlan(project));
   if (result.completion !== 'complete') {
-    throw new Error(`possibility fixture is incomplete: ${result.findings[0]?.code}`);
+    throw new Error(`F generation fixture is incomplete: ${result.findings[0]?.code}`);
   }
   return result;
 }
 
-function batchOccurrenceId(batchIndex: number, exitIndex: number) {
-  return createOccurrenceId(`possibility-b${batchIndex}-e${exitIndex}`);
-}
-
-function possibilityProject(batches: readonly BatchSpec[] = baselineBatches): ProjectDocument {
-  let project = createProjectDocument(catalog, {
-    projectId: 'f-possibility',
-    name: 'F Possibility',
-    configuredBiomeCounts: { Underworld: 1 },
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: startId,
-    gameName: 'F_Opening01',
-  });
-
-  let parentId = startId;
-  batches.forEach((batch, batchOffset) => {
-    const batchIndex = batchOffset + 1;
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateBatch',
-      continuation: createContinuationAddress(biome, parentId),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(biome, parentId),
-      storeKey: 'RunProgress',
-    });
-    batch.targets.forEach((gameName, targetOffset) => {
-      const exitIndex = targetOffset + 1;
-      project = applyProjectCommand(project, catalog, {
-        kind: 'CreateTarget',
-        target: createTargetAddress(biome, parentId, exitIndex),
-        occurrenceId: batchOccurrenceId(batchIndex, exitIndex),
-        gameName,
-      });
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetPicked',
-      picked: createPickedAddress(biome, parentId),
-      exitIndex: batch.pickedExitIndex,
-    });
-    parentId = batchOccurrenceId(batchIndex, batch.pickedExitIndex);
-  });
-
-  const parent = catalog.rooms.byKey[batches.at(-1)!.targets[batches.at(-1)!.pickedExitIndex - 1]!];
-  if (parent === undefined) {
-    throw new Error('terminal fixture parent is missing');
-  }
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTerminalTransition',
-    continuation: createContinuationAddress(biome, parentId),
-    targetOccurrenceIds: parent.exits.map((exit) =>
-      createOccurrenceId(`possibility-terminal-e${exit.index}`),
-    ),
-  });
-  return applyProjectCommand(project, catalog, {
-    kind: 'SetTerminalPicked',
-    picked: createPickedAddress(biome, parentId),
-    exitIndex: 1,
-  });
-}
-
-function evaluate(project: ProjectDocument = possibilityProject()) {
-  const snapshot = materializeLinearBiome(catalog, biome, complete(project));
-  const history = composeLinearHistory(catalog, snapshot);
+function evaluate(project = createFGenerationProject()) {
+  const snapshot = materializeBiome(catalog, fGenerationBiome, complete(project));
+  const history = composeBiomeHistory(catalog, snapshot);
+  const rewards = evaluateBiomeRewards(catalog, snapshot, history, 1);
   return {
     snapshot,
     history,
-    generation: evaluateLinearRoomGeneration(catalog, snapshot, history, 1),
+    rewards,
+    generation: evaluateBiomeRoomGeneration(catalog, snapshot, history, 1, rewards.targetHistory),
   };
 }
 
-function pressure(result: ReturnType<typeof evaluate>, batchIndex: number, exitIndex: number) {
-  const target = createTargetAddress(
-    biome,
-    batchIndex === 1
-      ? startId
-      : batchOccurrenceId(batchIndex - 1, baselineBatches[batchIndex - 2]!.pickedExitIndex),
-    exitIndex,
-  );
+function pressure(
+  result: ReturnType<typeof evaluate>,
+  batches: readonly FGenerationBatchSpec[],
+  batchIndex: number,
+  exitIndex: number,
+) {
+  const target = fGenerationTargetAddress(batches, batchIndex, exitIndex);
   const entry = result.generation.forcePressure.find(
-    (candidate) => JSON.stringify(candidate.targetOrigin) === JSON.stringify(target),
+    (candidate) => semanticAddressKey(candidate.targetOrigin) === semanticAddressKey(target),
   );
   if (entry === undefined) {
     throw new Error(`missing pressure entry for batch ${batchIndex} exit ${exitIndex}`);
@@ -162,116 +71,22 @@ function pressure(result: ReturnType<typeof evaluate>, batchIndex: number, exitI
   return entry;
 }
 
-function targetAddress(batchIndex: number, exitIndex: number) {
-  return createTargetAddress(
-    biome,
-    batchIndex === 1
-      ? startId
-      : batchOccurrenceId(batchIndex - 1, baselineBatches[batchIndex - 2]!.pickedExitIndex),
-    exitIndex,
-  );
-}
-
-function roomCandidate(
-  project: ProjectDocument,
-  batchIndex: number,
-  exitIndex: number,
-  gameName: string,
-) {
-  return bindTestCandidateSession(catalog, project).evaluate([
-    {
-      kind: 'roomTarget',
-      target: targetAddress(batchIndex, exitIndex),
-      gameName,
-    },
-  ])[0]!;
-}
-
-function withGTarget(project: ProjectDocument): ProjectDocument {
-  const gStartId = createOccurrenceId('candidate-g-start');
-  let result = applyProjectCommand(project, catalog, {
-    kind: 'ConfigureRoutePrefix',
-    route: createRouteAddress('Underworld'),
-    configuredBiomeCount: 2,
-  });
-  result = applyProjectCommand(result, catalog, {
-    kind: 'CreateStart',
-    biome: gBiome,
-    occurrenceId: gStartId,
-    gameName: 'G_Intro',
-  });
-  result = applyProjectCommand(result, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(gBiome, gStartId),
-  });
-  result = applyProjectCommand(result, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(gBiome, gStartId),
-    storeKey: 'RunProgress',
-  });
-  return applyProjectCommand(result, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(gBiome, gStartId, 1),
-    occurrenceId: createOccurrenceId('candidate-g-target'),
-    gameName: 'G_Combat01',
-  });
-}
-
-function incompleteFProject(): ProjectDocument {
-  let project = createProjectDocument(catalog, {
-    projectId: 'candidate-incomplete',
-    name: 'Candidate Incomplete',
-    configuredBiomeCounts: { Underworld: 1 },
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: startId,
-    gameName: 'F_Opening01',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, startId),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, startId),
-    storeKey: 'RunProgress',
-  });
-  return applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: targetAddress(1, 1),
-    occurrenceId: batchOccurrenceId(1, 1),
-    gameName: 'F_Combat02',
-  });
-}
-
-function unresolvedFirstFProject(): ProjectDocument {
-  let project = createProjectDocument(catalog, {
-    projectId: 'candidate-unresolved',
-    name: 'Candidate Unresolved',
-    configuredBiomeCounts: { Underworld: 1 },
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: startId,
-    gameName: 'F_Opening01',
-  });
-  return applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, startId),
-  });
-}
-
 describe('F room possibility and generation validation', () => {
+  it('authors the selected F spine and takeover as a complete direct-engine project', () => {
+    const result = evaluate();
+
+    expect(result.snapshot.decisions).toHaveLength(11);
+    expect(result.generation.validity).toBe('valid');
+    expect(result.generation.findings).toEqual([]);
+  });
+
   it('accepts positive-support rooms, peer repeats, and a later repeat of an unentered room', () => {
     const result = evaluate();
-    const optionalWindow = pressure(result, 5, 1);
-    const firstForced = pressure(result, 6, 1);
-    const secondForced = pressure(result, 6, 2);
-    const laterRepeat = pressure(result, 7, 1);
-    const repeatedPeer = pressure(result, 3, 2);
+    const optionalWindow = pressure(result, fGenerationBaselineBatches, 5, 1);
+    const firstForced = pressure(result, fGenerationBaselineBatches, 6, 1);
+    const secondForced = pressure(result, fGenerationBaselineBatches, 6, 2);
+    const laterRepeat = pressure(result, fGenerationBaselineBatches, 7, 1);
+    const repeatedPeer = pressure(result, fGenerationBaselineBatches, 3, 2);
 
     expect(result.generation.validity).toBe('valid');
     expect(result.generation.findings).toEqual([]);
@@ -314,20 +129,14 @@ describe('F room possibility and generation validation', () => {
   });
 
   it('evaluates entered-miniboss mutual exclusion from the later target history', () => {
-    const batches = baselineBatches.map((batch, index) => {
-      if (index === 5) {
-        return { targets: ['F_MiniBoss01', 'F_Combat20'], pickedExitIndex: 1 };
-      }
-      if (index === 6) {
-        return { targets: ['F_MiniBoss02'], pickedExitIndex: 1 };
-      }
-      if (index === 7) {
-        return { targets: [batch.targets[0]!], pickedExitIndex: 1 };
-      }
+    const batches = fGenerationBaselineBatches.map((batch, index): FGenerationBatchSpec => {
+      if (index === 5) return { targets: ['F_MiniBoss01', 'F_Combat20'], pickedExitIndex: 1 };
+      if (index === 6) return { targets: ['F_MiniBoss02'], pickedExitIndex: 1 };
+      if (index === 7) return { targets: [batch.targets[0]!], pickedExitIndex: 1 };
       return batch;
     });
-    const result = evaluate(possibilityProject(batches));
-    const excluded = pressure(result, 7, 1);
+    const result = evaluate(createFGenerationProject(batches));
+    const excluded = pressure(result, batches, 7, 1);
 
     expect(excluded).toMatchObject({
       selectedGameName: 'F_MiniBoss02',
@@ -336,24 +145,20 @@ describe('F room possibility and generation validation', () => {
       selectedExclusionReasons: ['eligibilityRequirement'],
     });
     expect(result.generation.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'targetRoomUnavailable',
-        origin: excluded.targetOrigin,
-      }),
+      expect.objectContaining({ code: 'targetRoomUnavailable', origin: excluded.targetOrigin }),
     );
   });
 
   it('rejects an ordinary room when the required forced pool is active', () => {
-    const batches = baselineBatches.map((batch, index) =>
+    const batches = fGenerationBaselineBatches.map((batch, index) =>
       index === 5 ? { targets: ['F_Combat20', 'F_MiniBoss01'], pickedExitIndex: 2 } : batch,
     );
-    const result = evaluate(possibilityProject(batches));
+    const result = evaluate(createFGenerationProject(batches));
+    const target = fGenerationTargetAddress(batches, 6, 1);
     const finding = result.generation.findings.find(
       (candidate) =>
         candidate.code === 'targetRoomUnavailable' &&
-        candidate.origin.kind === 'target' &&
-        candidate.origin.parentOccurrenceId === batchOccurrenceId(5, 1) &&
-        candidate.origin.exitIndex === 1,
+        semanticAddressKey(candidate.origin) === semanticAddressKey(target),
     );
 
     expect(result.generation.validity).toBe('invalid');
@@ -366,19 +171,13 @@ describe('F room possibility and generation validation', () => {
   });
 
   it('separates creation caps from entered appearance caps', () => {
-    const batches = baselineBatches.map((batch, index): BatchSpec => {
-      if (index === 4) {
-        return { targets: ['F_Combat06', 'F_Story01'], pickedExitIndex: 1 };
-      }
-      if (index === 7) {
-        return { targets: ['F_Combat12', 'F_Story01'], pickedExitIndex: 1 };
-      }
-      if (index === 8) {
-        return { targets: ['F_Combat14', 'F_Combat11'], pickedExitIndex: 1 };
-      }
+    const batches = fGenerationBaselineBatches.map((batch, index): FGenerationBatchSpec => {
+      if (index === 4) return { targets: ['F_Combat06', 'F_Story01'], pickedExitIndex: 1 };
+      if (index === 7) return { targets: ['F_Combat12', 'F_Story01'], pickedExitIndex: 1 };
+      if (index === 8) return { targets: ['F_Combat14', 'F_Combat11'], pickedExitIndex: 1 };
       return batch;
     });
-    const result = evaluate(possibilityProject(batches));
+    const result = evaluate(createFGenerationProject(batches));
     const unavailable = result.generation.findings.filter(
       (finding) => finding.code === 'targetRoomUnavailable',
     );
@@ -403,684 +202,98 @@ describe('F room possibility and generation validation', () => {
   });
 
   it('preserves retained overflow for semantic physical-exit validation', () => {
-    let project = possibilityProject();
-    project = applyProjectCommand(project, catalog, {
+    const project = applyProjectCommand(createFGenerationProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(biome, batchOccurrenceId(7, 1)),
+      occurrence: createOccurrenceAddress(fGenerationBiome, fGenerationOccurrenceId(7, 1)),
       gameName: 'F_Combat10',
     });
     const result = evaluate(project);
-    const overflow = result.snapshot.batches[7]!.targets[1]!;
+    const overflow = result.snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        semanticAddressKey(decision.origin) ===
+          semanticAddressKey(
+            createExitDecisionAddress(fGenerationBiome, {
+              kind: 'occurrence',
+              occurrenceId: fGenerationOccurrenceId(7, 1),
+            }),
+          ),
+    );
+    const target = fGenerationTargetAddress(fGenerationBaselineBatches, 8, 2);
     const finding = result.generation.findings.find(
       (candidate) =>
         candidate.code === 'targetRoomUnavailable' &&
-        candidate.origin.kind === 'target' &&
-        candidate.origin.exitIndex === 2 &&
-        candidate.origin.parentOccurrenceId === batchOccurrenceId(7, 1),
+        semanticAddressKey(candidate.origin) === semanticAddressKey(target),
     );
 
-    expect(overflow.exit).toEqual({ kind: 'unavailable', index: 2 });
+    if (overflow?.kind !== 'batch') throw new Error('missing retained overflow batch');
+    expect(overflow.targets[1]?.exit).toEqual({ kind: 'unavailable', exitKey: 'exit2', index: 2 });
     expect(finding?.evidence.exclusionReasons).toContain('physicalExitUnavailable');
   });
 
   it('rejects a snapshot whose source identity is newer than its supplied history', () => {
     const baseline = evaluate();
-    const project = applyProjectCommand(possibilityProject(), catalog, {
+    const project = applyProjectCommand(createFGenerationProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(biome, startId),
+      occurrence: createOccurrenceAddress(fGenerationBiome, fGenerationStartId),
       gameName: 'F_Opening02',
     });
-    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
+    const snapshot = materializeBiome(catalog, fGenerationBiome, complete(project));
 
-    expect(() => evaluateLinearRoomGeneration(catalog, snapshot, baseline.history, 1)).toThrowError(
-      /source .* does not match its history appearance/,
-    );
+    expect(() =>
+      evaluateBiomeRoomGeneration(
+        catalog,
+        snapshot,
+        baseline.history,
+        1,
+        baseline.rewards.targetHistory,
+      ),
+    ).toThrowError(/source .* does not match its history appearance/);
   });
 
   it('rejects a snapshot whose target identity is newer than its supplied history', () => {
     const baseline = evaluate();
-    const project = applyProjectCommand(possibilityProject(), catalog, {
+    const project = applyProjectCommand(createFGenerationProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(biome, batchOccurrenceId(2, 2)),
+      occurrence: createOccurrenceAddress(fGenerationBiome, fGenerationOccurrenceId(2, 2)),
       gameName: 'F_Combat04',
     });
-    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
+    const snapshot = materializeBiome(catalog, fGenerationBiome, complete(project));
 
-    expect(() => evaluateLinearRoomGeneration(catalog, snapshot, baseline.history, 1)).toThrowError(
-      /target .* does not match its history creation/,
-    );
+    expect(() =>
+      evaluateBiomeRoomGeneration(
+        catalog,
+        snapshot,
+        baseline.history,
+        1,
+        baseline.rewards.targetHistory,
+      ),
+    ).toThrowError(/target .* does not match its history creation/);
   });
 
-  it('reaches the terminal at the declared depth without treating force maximum as a ceiling', () => {
+  it('reaches the takeover Preboss at the declared depth without treating force maximum as a ceiling', () => {
     const result = evaluate();
-    const terminal = result.generation.forcePressure.slice(-2);
+    const takeover = evaluateTakeoverPrebossBatchCandidate(
+      catalog,
+      result.snapshot,
+      result.history,
+      createExitDecisionAddress(fGenerationBiome, {
+        kind: 'occurrence',
+        occurrenceId: fGenerationOccurrenceId(10, 1),
+      }),
+      'F_PreBoss01',
+      1,
+    );
 
-    expect(terminal.map((entry) => entry.beforeSequence)).toEqual(
+    expect(takeover.pressure.map((entry) => entry.beforeSequence)).toEqual(
       expect.arrayContaining([expect.any(Number)]),
     );
-    expect(terminal.every((entry) => entry.selectedGameName === 'F_PreBoss01')).toBe(true);
-    expect(terminal.every((entry) => entry.biomeDepthCache === 10)).toBe(true);
-    expect(terminal.every((entry) => entry.selectedPossible)).toBe(true);
+    expect(takeover.pressure).toHaveLength(2);
+    expect(takeover.pressure.every((entry) => entry.biomeDepthCache === 10)).toBe(true);
+    expect(takeover.pressure.every((entry) => entry.selectedPossible)).toBe(true);
     expect(
-      terminal.every((entry) => entry.requiredForcedRoomGameNames.includes('F_PreBoss01')),
+      takeover.pressure.every((entry) => entry.requiredForcedRoomGameNames.includes('F_PreBoss01')),
     ).toBe(true);
     expect(result.history.rooms.at(-4)?.preOutgoing?.ledgers.counters.biomeDepthCache).toBe(10);
-  });
-});
-
-describe('project candidate evaluation', () => {
-  it('evaluates the required store before target generation and types dependent blocking', () => {
-    const project = unresolvedFirstFProject();
-    const session = bindTestCandidateSession(catalog, project);
-    const store = createBatchRewardStoreAddress(biome, startId);
-    const stores = session.evaluate([
-      { kind: 'batchRewardStore', rewardStore: store, storeKey: 'RunProgress' },
-      { kind: 'batchRewardStore', rewardStore: store, storeKey: 'MetaProgress' },
-    ]);
-
-    expect(stores).toMatchObject([
-      { context: 'evaluated', support: 'impossible' },
-      { context: 'evaluated', support: 'forced' },
-    ]);
-    expect(
-      session.evaluate([
-        {
-          kind: 'roomTarget',
-          target: targetAddress(1, 1),
-          gameName: 'F_Combat02',
-        },
-      ])[0],
-    ).toMatchObject({
-      context: 'unavailable',
-      reason: 'authoredPrerequisiteMissing',
-      evidence: {
-        kind: 'authoredPrerequisiteMissing',
-        prerequisite: { kind: 'batchRewardStore', owner: store },
-      },
-    });
-  });
-
-  it('projects authored F starts and base reward stores through semantic owners', () => {
-    const project = possibilityProject();
-    const candidates = bindTestCandidateSession(catalog, project);
-    const opening = candidates.evaluate([
-      {
-        kind: 'startRoom',
-        owner: createOccurrenceAddress(biome, startId),
-        gameName: 'F_Opening02',
-      },
-    ])[0];
-    const unsupportedOpening = candidates.evaluate([
-      {
-        kind: 'startRoom',
-        owner: createOccurrenceAddress(biome, startId),
-        gameName: 'F_Combat01',
-      },
-    ])[0];
-    const store = createBatchRewardStoreAddress(biome, startId);
-    const stores = candidates.evaluate([
-      { kind: 'batchRewardStore', rewardStore: store, storeKey: 'RunProgress' },
-      { kind: 'batchRewardStore', rewardStore: store, storeKey: 'MetaProgress' },
-    ]);
-
-    expect(opening).toMatchObject({ context: 'evaluated', support: 'possible' });
-    expect(unsupportedOpening).toMatchObject({ context: 'evaluated', support: 'impossible' });
-    expect(stores).toHaveLength(2);
-    expect(
-      stores.filter(
-        (candidate) => candidate.context === 'evaluated' && candidate.support !== 'impossible',
-      ),
-    ).not.toHaveLength(0);
-    const impossibleStores = stores.filter(
-      (candidate) => candidate.context === 'evaluated' && candidate.support === 'impossible',
-    );
-    expect(impossibleStores.length).toBeGreaterThan(0);
-    expect(
-      impossibleStores.every(
-        (candidate) =>
-          candidate.context === 'evaluated' &&
-          'exclusions' in candidate.evidence &&
-          candidate.evidence.exclusions.some((exclusion) => exclusion.kind === 'store'),
-      ),
-    ).toBe(true);
-    const selectedStoreFindings = simulateProject(catalog, project).findings.filter(
-      (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(store),
-    );
-    const currentStore = stores[0];
-    expect(currentStore?.context).toBe('evaluated');
-    if (currentStore?.context === 'evaluated') {
-      expect(currentStore.findings).toEqual(selectedStoreFindings);
-    }
-    const authoredMeta = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: store,
-      storeKey: 'MetaProgress',
-    });
-    const authoredMetaFindings = simulateProject(catalog, authoredMeta).findings.filter(
-      (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(store),
-    );
-    const metaStore = stores[1];
-    expect(metaStore?.context).toBe('evaluated');
-    if (metaStore?.context === 'evaluated') {
-      expect(metaStore.findings).toEqual(authoredMetaFindings);
-    }
-  });
-
-  it('evaluates reached reward producers and leaves blocked downstream producers unavailable', () => {
-    let project = possibilityProject();
-    const shopId = batchOccurrenceId(5, 1);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(biome, shopId),
-      gameName: 'F_Shop01',
-    });
-    const plan = fPlan(project);
-    const room = plan.topology?.occurrences.find(
-      (candidate): candidate is RoomOccurrence => candidate.occurrenceId === shopId,
-    );
-    if (room?.state.kind !== 'shop' || room.state.shop === undefined) {
-      throw new Error('candidate shop fixture did not materialize inventory');
-    }
-    const firstOffer = Object.values(room.state.shop.offers)[0];
-    const firstOfferKey = Object.keys(room.state.shop.offers)[0];
-    if (firstOffer === undefined || firstOfferKey === undefined) {
-      throw new Error('candidate shop fixture has no first offer');
-    }
-    const incomingId = batchOccurrenceId(4, 1);
-    const incoming = plan.topology?.occurrences.find(
-      (candidate): candidate is RoomOccurrence => candidate.occurrenceId === incomingId,
-    );
-    if (incoming?.state.kind !== 'counted') {
-      throw new Error('candidate incoming fixture has no counted reward');
-    }
-    const offerAddress = createShopOfferAddress(biome, shopId, firstOfferKey);
-    const purchaseAddress = createShopPurchaseAddress(biome, shopId, firstOfferKey);
-    const candidates = bindTestCandidateSession(catalog, project);
-    const results = candidates.evaluate([
-      {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, incomingId),
-        value: incoming.state.offer,
-      },
-      { kind: 'shopOffer', offer: offerAddress, value: firstOffer.offer },
-      {
-        kind: 'shopPurchase',
-        purchase: purchaseAddress,
-        purchased: firstOffer.purchased,
-      },
-    ]);
-    expect(results[0]).toMatchObject({
-      context: 'unavailable',
-      reason: 'producerFrontierUnavailable',
-    });
-    expect(results[1]).toMatchObject({
-      context: 'unavailable',
-      reason: 'producerFrontierUnavailable',
-    });
-    expect(results[2]).toMatchObject({
-      context: 'unavailable',
-      reason: 'coverageNotReached',
-    });
-    const purchasedCandidate = candidates.evaluate([
-      {
-        kind: 'shopPurchase',
-        purchase: purchaseAddress,
-        purchased: true,
-      },
-    ])[0];
-    expect(purchasedCandidate).toMatchObject({
-      context: 'unavailable',
-      reason: 'coverageNotReached',
-    });
-
-    const earlyIncomingId = batchOccurrenceId(1, 1);
-    const alternateIncoming = candidates.evaluate([
-      {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, earlyIncomingId),
-        value: { rewardType: 'StackUpgrade' },
-      },
-    ])[0]!;
-    const authoredImpossibleIncoming = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(biome, earlyIncomingId),
-      value: { rewardType: 'StackUpgrade' },
-    });
-    expect(alternateIncoming.context).toBe('evaluated');
-    if (alternateIncoming.context === 'evaluated') {
-      for (const finding of alternateIncoming.findings) {
-        expect(simulateProject(catalog, authoredImpossibleIncoming).findings).toContainEqual(
-          finding,
-        );
-      }
-    }
-
-    const profile = catalog.rewards.shops.byKey[room.state.shop.profileKey];
-    const slot = profile?.slots.byKey[firstOfferKey];
-    const group =
-      profile === undefined || slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
-    const alternateRewardType = group?.rewardTypes.find(
-      (rewardType) => rewardType !== firstOffer.offer.rewardType,
-    );
-    const alternateDeclaration =
-      alternateRewardType === undefined
-        ? undefined
-        : catalog.rewards.rewardTypes.byKey[alternateRewardType];
-    if (alternateRewardType === undefined || alternateDeclaration === undefined) {
-      throw new Error('candidate shop fixture has no alternate first-slot offer');
-    }
-    const alternateShopOffer = {
-      rewardType: alternateRewardType,
-      ...(alternateDeclaration.defaultPayload === undefined
-        ? {}
-        : { payload: alternateDeclaration.defaultPayload }),
-    };
-    const alternateShop = candidates.evaluate([
-      {
-        kind: 'shopOffer',
-        offer: offerAddress,
-        value: alternateShopOffer,
-      },
-    ])[0];
-    expect(alternateShop).toMatchObject({
-      context: 'unavailable',
-      reason: 'producerFrontierUnavailable',
-    });
-  });
-
-  it('preserves typed Boon peer and Devotion pair exclusions', () => {
-    let project = possibilityProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(biome, batchOccurrenceId(2, 1)),
-      value: {
-        rewardType: 'Boon',
-        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
-      },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(biome, batchOccurrenceId(2, 2)),
-      value: {
-        rewardType: 'Boon',
-        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-      },
-    });
-
-    expect(
-      bindTestCandidateSession(catalog, project).evaluate([
-        {
-          kind: 'incomingReward',
-          reward: createIncomingRewardAddress(biome, batchOccurrenceId(2, 2)),
-          value: {
-            rewardType: 'Boon',
-            payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
-          },
-        },
-      ])[0],
-    ).toMatchObject({
-      context: 'evaluated',
-      support: 'impossible',
-      evidence: {
-        exclusions: [
-          {
-            kind: 'sibling',
-            priorOffers: [
-              {
-                origin: { kind: 'target', exitIndex: 1 },
-                offer: {
-                  rewardType: 'Boon',
-                  payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
-                },
-              },
-            ],
-          },
-          { kind: 'boonSource', source: 'ZeusUpgrade' },
-        ],
-      },
-    });
-
-    const devotionProject = possibilityProject();
-    expect(
-      bindTestCandidateSession(catalog, devotionProject).evaluate([
-        {
-          kind: 'incomingReward',
-          reward: createIncomingRewardAddress(biome, batchOccurrenceId(1, 1)),
-          value: {
-            rewardType: 'Devotion',
-            payload: {
-              kind: 'DevotionPair',
-              chosenSource: 'ApolloUpgrade',
-              spurnedSource: 'PoseidonUpgrade',
-            },
-          },
-        },
-      ])[0],
-    ).toMatchObject({
-      context: 'evaluated',
-      support: 'impossible',
-      evidence: {
-        exclusions: [
-          {
-            kind: 'devotionPair',
-            chosenSource: 'ApolloUpgrade',
-            spurnedSource: 'PoseidonUpgrade',
-          },
-        ],
-      },
-    });
-  });
-
-  it('reports possible, forced, and impossible room support without mutating the project', () => {
-    const project = possibilityProject();
-    const before = JSON.stringify(project);
-
-    const [possible, forced, impossible] = bindTestCandidateSession(catalog, project).evaluate([
-      { kind: 'roomTarget', target: targetAddress(5, 1), gameName: 'F_Combat20' },
-      { kind: 'roomTarget', target: targetAddress(6, 1), gameName: 'F_MiniBoss03' },
-      { kind: 'roomTarget', target: targetAddress(6, 1), gameName: 'F_Combat20' },
-    ]);
-
-    expect(possible).toMatchObject({
-      context: 'evaluated',
-      support: 'possible',
-      findings: [],
-    });
-    expect(forced).toMatchObject({
-      context: 'evaluated',
-      support: 'forced',
-      findings: [],
-    });
-    expect(impossible).toMatchObject({
-      context: 'evaluated',
-      support: 'impossible',
-      evidence: {
-        candidateGameName: 'F_Combat20',
-        exclusionReasons: ['forcedPool'],
-        exclusions: [
-          {
-            kind: 'forcedPool',
-            requiredRoomGameNames: expect.arrayContaining(['F_MiniBoss03']),
-          },
-        ],
-      },
-      findings: [
-        expect.objectContaining({
-          code: 'targetRoomUnavailable',
-          origin: targetAddress(6, 1),
-        }),
-      ],
-    });
-    expect(JSON.stringify(project)).toBe(before);
-  });
-
-  it('matches the selected-plan pressure and findings after applying the same replacement', () => {
-    const project = possibilityProject();
-    const cases = [
-      { batchIndex: 5, exitIndex: 1, gameName: 'F_Combat20', support: 'possible' },
-      { batchIndex: 6, exitIndex: 1, gameName: 'F_MiniBoss03', support: 'forced' },
-      { batchIndex: 6, exitIndex: 2, gameName: 'F_Combat20', support: 'impossible' },
-    ] as const;
-
-    for (const parityCase of cases) {
-      const target = targetAddress(parityCase.batchIndex, parityCase.exitIndex);
-      const candidate = roomCandidate(
-        project,
-        parityCase.batchIndex,
-        parityCase.exitIndex,
-        parityCase.gameName,
-      );
-      const selectedProject = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceOccurrenceRoom',
-        occurrence: createOccurrenceAddress(
-          biome,
-          batchOccurrenceId(parityCase.batchIndex, parityCase.exitIndex),
-        ),
-        gameName: parityCase.gameName,
-      });
-      const selectedEvaluation = simulateProject(catalog, selectedProject);
-      const selectedBiome = selectedEvaluation.routes
-        .find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((evaluation) => evaluation.biomeKey === 'F');
-      if (selectedBiome?.kind !== 'LinearBiome' || selectedBiome.authoring !== 'complete') {
-        throw new Error('selected candidate parity fixture did not produce complete F');
-      }
-      const targetKey = semanticAddressKey(target);
-      const selectedPressure = selectedBiome.roomGeneration.forcePressure.find(
-        (entry) => semanticAddressKey(entry.targetOrigin) === targetKey,
-      );
-      const selectedFindings = selectedBiome.roomGeneration.findings.filter(
-        (finding) => semanticAddressKey(finding.origin) === targetKey,
-      );
-
-      expect(candidate.context).toBe('evaluated');
-      if (candidate.context !== 'evaluated') {
-        throw new Error('candidate context unexpectedly unavailable');
-      }
-      expect(candidate.support).toBe(parityCase.support);
-      expect(candidate.evidence).toMatchObject({
-        candidateGameName: selectedPressure?.selectedGameName,
-        eligibleRoomGameNames: selectedPressure?.eligibleRoomGameNames,
-        requiredForcedRoomGameNames: selectedPressure?.requiredForcedRoomGameNames,
-        supportRoomGameNames: selectedPressure?.supportRoomGameNames,
-        exclusionReasons: selectedPressure?.selectedExclusionReasons,
-      });
-      expect(candidate.findings).toEqual(selectedFindings);
-    }
-  });
-
-  it('assesses room support before retained downstream exit repair', () => {
-    const project = possibilityProject();
-    const candidate = roomCandidate(project, 1, 1, 'F_Combat01');
-    const retained = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(biome, batchOccurrenceId(1, 1)),
-      gameName: 'F_Combat01',
-    });
-    const retainedBiome = simulateProject(catalog, retained).routes[0]?.biomes[0];
-
-    expect(candidate).toMatchObject({
-      context: 'evaluated',
-      support: 'possible',
-      findings: [],
-    });
-    expect(retainedBiome?.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'targetRoomUnavailable',
-        origin: createTargetAddress(biome, batchOccurrenceId(1, 1), 2),
-        evidence: expect.objectContaining({
-          exclusionReasons: ['physicalExitUnavailable'],
-        }),
-      }),
-    );
-  });
-
-  it('keeps an already-authored impossible room assessable', () => {
-    const batches = baselineBatches.map((batch, index) =>
-      index === 5 ? { targets: ['F_Combat20', 'F_MiniBoss01'], pickedExitIndex: 2 } : batch,
-    );
-    const candidate = roomCandidate(possibilityProject(batches), 6, 1, 'F_Combat20');
-
-    expect(candidate).toMatchObject({
-      context: 'evaluated',
-      support: 'impossible',
-      evidence: {
-        candidateGameName: 'F_Combat20',
-        exclusionReasons: ['forcedPool'],
-      },
-    });
-  });
-
-  it('explains early depth exclusions with counter and requirement evidence', () => {
-    expect(roomCandidate(possibilityProject(), 1, 1, 'F_MiniBoss01')).toMatchObject({
-      context: 'evaluated',
-      support: 'impossible',
-      evidence: {
-        exclusionReasons: ['forceMinimum', 'eligibilityRequirement'],
-        exclusions: [
-          {
-            kind: 'forceMinimum',
-            axis: 'biomeDepthCache',
-            actual: 0,
-            minimum: 4,
-          },
-          {
-            kind: 'eligibilityRequirement',
-            evaluation: {
-              kind: 'all',
-              satisfied: false,
-              children: expect.arrayContaining([
-                {
-                  kind: 'counterRange',
-                  axis: 'biomeDepthCache',
-                  actual: 0,
-                  expected: { min: 4 },
-                  satisfied: false,
-                },
-              ]),
-            },
-          },
-        ],
-      },
-    });
-  });
-
-  it('evaluates a target reached by an incomplete biome prefix', () => {
-    expect(roomCandidate(incompleteFProject(), 1, 1, 'F_Combat03')).toMatchObject({
-      context: 'evaluated',
-      support: 'possible',
-      evidence: {
-        candidateGameName: 'F_Combat03',
-        biomeDepthCache: 0,
-        biomeEncounterDepth: 2,
-      },
-    });
-  });
-
-  it('reports addressed coverage when an invalid prefix has not reached a later target', () => {
-    const batches = baselineBatches.map((batch, index) =>
-      index === 5 ? { targets: ['F_MiniBoss01', 'F_Combat20'], pickedExitIndex: 2 } : batch,
-    );
-    const laterTarget = createTargetAddress(biome, batchOccurrenceId(6, 2), 1);
-    const project = possibilityProject(batches);
-    expect(
-      bindTestCandidateSession(catalog, project).evaluate([
-        {
-          kind: 'roomTarget',
-          target: laterTarget,
-          gameName: 'F_Combat13',
-        },
-      ])[0],
-    ).toMatchObject({
-      context: 'unavailable',
-      reason: 'coverageNotReached',
-      evidence: {
-        kind: 'coverageNotReached',
-        requiredOwner: laterTarget,
-        requiredCheckpoint: 'afterTargetGeneration',
-        coverage: { kind: 'prefix' },
-      },
-    });
-  });
-
-  it('distinguishes unavailable upstream history contexts', () => {
-    const gTarget = createTargetAddress(gBiome, createOccurrenceId('candidate-g-start'), 1);
-    const query = { kind: 'roomTarget' as const, target: gTarget, gameName: 'G_Combat02' };
-    const invalidBatches = baselineBatches.map((batch, index) =>
-      index === 5 ? { targets: ['F_Combat20', 'F_MiniBoss01'], pickedExitIndex: 2 } : batch,
-    );
-
-    const incomplete = withGTarget(incompleteFProject());
-    expect(bindTestCandidateSession(catalog, incomplete).evaluate([query])[0]).toMatchObject({
-      context: 'unavailable',
-      query,
-      reason: 'upstreamIncomplete',
-      evidence: { kind: 'upstreamIncomplete', upstreamBiomeKey: 'F' },
-    });
-    const invalid = withGTarget(possibilityProject(invalidBatches));
-    expect(bindTestCandidateSession(catalog, invalid).evaluate([query])[0]).toMatchObject({
-      context: 'unavailable',
-      query,
-      reason: 'upstreamInvalid',
-      evidence: { kind: 'upstreamInvalid', upstreamBiomeKey: 'F' },
-    });
-  });
-
-  it('fails malformed candidate addresses at the candidate contact boundary', () => {
-    const project = possibilityProject();
-    const missingTarget = createTargetAddress(biome, startId, 2);
-
-    expect(() =>
-      bindTestCandidateSession(catalog, project).evaluate([
-        {
-          kind: 'roomTarget',
-          target: missingTarget,
-          gameName: 'F_Combat03',
-        },
-      ]),
-    ).toThrow(
-      new CandidateEvaluationContractError(
-        { kind: 'roomTarget', target: missingTarget, gameName: 'F_Combat03' },
-        'exit 2 has no authored target',
-      ),
-    );
-  });
-
-  it('rejects a prepared candidate evaluation from another immutable project identity', () => {
-    const project = possibilityProject();
-    const staleEvaluation = simulateProject(catalog, project);
-    const editedProject = Object.freeze({ ...project, name: 'Edited project' });
-
-    expect(() =>
-      createPreparedProjectCandidateSession(catalog, editedProject, staleEvaluation),
-    ).toThrow('prepared project evaluation does not belong to the authored project identity');
-  });
-
-  it('binds one exact candidate session across direct room and reward lookups', () => {
-    const project = possibilityProject();
-    const evaluation = simulateProject(catalog, project);
-    const events: CandidateEvaluationEvent[] = [];
-    const session = createPreparedProjectCandidateSession(catalog, project, evaluation, {
-      observe: (event) => events.push(event),
-    });
-
-    expect(session.project).toBe(project);
-    expect(session.evaluation).toBe(evaluation);
-    session.evaluate([
-      {
-        kind: 'startRoom',
-        owner: createOccurrenceAddress(biome, startId),
-        gameName: 'F_Opening02',
-      },
-      {
-        kind: 'roomTarget',
-        target: targetAddress(5, 1),
-        gameName: 'F_Combat20',
-      },
-    ]);
-    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 2 }]);
-
-    events.length = 0;
-    const rewardOccurrenceId = batchOccurrenceId(2, 1);
-    const occurrence = fPlan(project).topology?.occurrences.find(
-      (candidate) => candidate.occurrenceId === rewardOccurrenceId,
-    );
-    if (occurrence?.state.kind !== 'counted') {
-      throw new Error('candidate measurement fixture has no counted reward');
-    }
-    session.evaluate([
-      {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, rewardOccurrenceId),
-        value: occurrence.state.offer,
-      },
-      {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, rewardOccurrenceId),
-        value: { rewardType: 'StackUpgrade' },
-      },
-    ]);
-
-    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 2 }]);
   });
 });

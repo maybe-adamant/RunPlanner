@@ -1,6 +1,7 @@
 import type {
   AuthoredFieldDescriptor,
   CompletionDescriptor,
+  CompletedHubExitDescriptor,
   EncounterPhaseKind,
   ExitCompatibilityPolicy,
   ExitTypeDeclaration,
@@ -166,8 +167,22 @@ export interface RawGeneratedProgressionDeclaration {
   };
 }
 
-export interface RawHubDecisionDeclaration extends Omit<HubDecisionDescriptor, 'fields'> {
+export interface RawCompletedHubExitDeclaration extends Omit<
+  CompletedHubExitDescriptor,
+  'physicalExit'
+> {
+  readonly physicalExit: {
+    readonly index: number;
+    readonly type: string;
+  };
+}
+
+export interface RawHubDecisionDeclaration extends Omit<
+  HubDecisionDescriptor,
+  'fields' | 'completedExit'
+> {
   readonly fields?: readonly AuthoredFieldDescriptor[];
+  readonly completedExit: RawCompletedHubExitDeclaration;
 }
 
 export type RawProgressionDeclaration =

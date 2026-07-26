@@ -1,22 +1,10 @@
 export {
-  composeLinearHistory,
-  composeLinearHistoryPrefix,
-  LinearHistoryCompositionContractError,
+  composeBiomeHistory,
+  composeBiomeHistoryPrefix,
+  BiomeHistoryCompositionContractError,
 } from './compose';
-export {
-  composeHubHistory,
-  composeHubHistoryPrefix,
-  composeNHistory,
-  HubHistoryCompositionContractError,
-} from './hub';
 export { projectRecentEncounterPhases, type RecentEncounterPhaseFact } from './facts';
-export {
-  foldHistoryEvents,
-  foldHubHistoryEvents,
-  foldLinearHistoryEvents,
-  HistoryFoldContractError,
-  LinearHistoryFoldContractError,
-} from './fold';
+export { foldHistoryEvents, HistoryFoldContractError } from './fold';
 export type {
   BiomeCompletedHistoryEvent,
   BiomeCounterResetHistoryEvent,
@@ -25,8 +13,6 @@ export type {
   ClockworkGoalAcquiredHistoryEvent,
   ClockworkNonGoalRewardSpawnedHistoryEvent,
   CanonicalBiomeHistory,
-  CanonicalHubHistory,
-  CanonicalLinearHistory,
   EncounterHistoryEntry,
   EnteredRewardStoreHistoryEntry,
   EmptyOutgoingGenerationHistoryEvent,
@@ -35,20 +21,9 @@ export type {
   HistoryEvent,
   HistoryLedgers,
   HistoryStateView,
-  LinearHistoryCounters,
-  LinearHistoryEvent,
-  LinearHistoryLedgers,
-  LinearHistoryStateView,
-  LinearBiomeHistoryPrefix,
   BiomeHistoryPrefix,
-  HubBiomeHistoryPrefix,
-  HubSimulationHistory,
+  OfferPointView,
   ProgressiveRoomHistoryViews,
-  LinearProgressiveRoomHistoryViews,
-  LinearSimulationHistory,
-  LinearRoomHistoryViews,
-  LinearTargetGenerationView,
-  LinearOfferPointView,
   RequiredObjectHistoryEntry,
   RoomAppearanceHistoryEntry,
   RoomCreatedHistoryEvent,

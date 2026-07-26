@@ -571,7 +571,7 @@ requires no shop state because the room was not entered. Its inherited Goal
 marker is a structural countdown producer after the counter has already
 reached zero, not a reward leaf or a free-reward realization.
 `../biomes/I_GAME_RULES.md` owns the exact batch ordering and
-conditional-terminal lifecycle.
+selected-Preboss lifecycle.
 
 ### N Persistent Hub Composition
 
@@ -828,11 +828,11 @@ for outgoing door generation. Materialization resolves the batch base store
 from that addressed wheel and rejects a missing or inactive source. The batch
 does not author a duplicate value.
 
-O's direct preboss continuation is also a physical generated-door decision,
-so it carries the same reward-store authority as an ordinary O batch. A
-ShipCombat predecessor resolves it from the final active wheel; another O
-predecessor uses the authored Run/Meta base store. The entered preboss and
-completion tail retain that resolved store provenance.
+O's selected Preboss batch is also a physical generated-door decision, so it
+carries the same reward-store authority as an ordinary O batch. A ShipCombat
+predecessor resolves it from the final active wheel; another O predecessor
+uses the authored Run/Meta base store. The entered Preboss and completion tail
+retain that resolved store provenance.
 
 A reward-free generated batch such as Q's combat spine has no authored base
 store. Forced or individual target stores remain declaration-owned and still

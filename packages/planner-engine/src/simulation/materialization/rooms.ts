@@ -1,6 +1,4 @@
 import {
-  createFixedEntryRewardAddress,
-  createFixedEntryRoomAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -9,45 +7,46 @@ import {
   createShopOfferAddress,
   createShopPurchaseAddress,
   type BiomeAddress,
-} from '../../../authored-project/addresses';
-import type { AuthoredRoomState, RoomOccurrence, ShopState } from '../../../authored-project/model';
+} from '../../authored-project/addresses';
+import type { AuthoredRoomState, RoomOccurrence, ShopState } from '../../authored-project/model';
 import type {
   Catalog,
   EncounterPhase,
-  FixedEntryDescriptor,
   RoomDeclaration,
   RoomTemplateKey,
-} from '../../../catalog-schema';
+} from '../../catalog-schema';
 import type {
   CanonicalAuthoredRoom,
-  CanonicalFixedEntryRoom,
   CanonicalLocalReward,
   CanonicalResolvedIncomingReward,
   CanonicalRewardWheel,
   CanonicalShopEntryState,
-} from '../model';
+} from './model';
 
-import { fail } from './contract';
+function fail(detail: string): never {
+  throw new Error(detail);
+}
 
-type LinearAuthoredTemplateKey =
+type AuthoredTemplateKey =
   | 'ClockworkCombat'
   | 'Devotion'
+  | 'EphyraCombat'
   | 'FixedIntro'
   | 'FixedOpening'
+  | 'FixedPreHub'
   | 'FieldsCombat'
-  | 'ForkedPreboss'
   | 'Fountain'
   | 'Miniboss'
   | 'RewardlessCombat'
   | 'Shop'
-  | 'ShopPreboss'
+  | 'Preboss'
   | 'ShipCombat'
   | 'StandardCombat'
   | 'Story';
 
-export type AuthoredRoomRole = 'ordinary' | 'terminalFreeReward' | 'terminalShop';
+export type AuthoredRoomRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
 
-interface AuthoredRoomMaterializationContext {
+export interface AuthoredRoomMaterializationContext {
   readonly catalog: Catalog;
   readonly biome: BiomeAddress;
   readonly room: RoomDeclaration;
@@ -57,6 +56,7 @@ interface AuthoredRoomMaterializationContext {
   readonly batchStoreKey?: string;
   readonly activeCageCount?: number;
   readonly clockworkReward?: 'goal' | 'nonGoal';
+  readonly lifecycleProfileKey?: string;
 }
 
 interface MaterializedRoomLeaf {
@@ -122,7 +122,7 @@ function materializeCountedRoom(context: AuthoredRoomMaterializationContext): Ma
     fail(`${context.room.gameName} counted template has ${binding.kind} producer`);
   }
   return Object.freeze({
-    lifecycleProfileKey: 'StandardRewardRoom',
+    lifecycleProfileKey: context.lifecycleProfileKey ?? 'StandardRewardRoom',
     incomingReward: resolvedIncomingReward(
       context,
       'countedChoice',
@@ -151,6 +151,25 @@ function materializeClockworkCombat(
   });
 }
 
+function materializeEphyraCombat(
+  context: AuthoredRoomMaterializationContext,
+): MaterializedRoomLeaf {
+  const state = requireStateKind(context, 'ephyraCombat');
+  const binding = context.room.incomingReward;
+  if (binding.kind !== 'countedChoice') {
+    fail(`${context.room.gameName} Ephyra combat has ${binding.kind} producer`);
+  }
+  return Object.freeze({
+    lifecycleProfileKey: context.lifecycleProfileKey ?? 'EphyraMainRoom',
+    incomingReward: resolvedIncomingReward(
+      context,
+      'countedChoice',
+      binding.producerLifecycleKey,
+      state.offer,
+    ),
+  });
+}
+
 function materializeFixedRoom(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
   const state = requireStateKind(context, 'fixed');
   const binding = context.room.incomingReward;
@@ -159,7 +178,7 @@ function materializeFixedRoom(context: AuthoredRoomMaterializationContext): Mate
   }
   const payload = state.payload ?? binding.offer.payload;
   return Object.freeze({
-    lifecycleProfileKey: 'StandardRewardRoom',
+    lifecycleProfileKey: context.lifecycleProfileKey ?? 'StandardRewardRoom',
     incomingReward: resolvedIncomingReward(
       context,
       'fixed',
@@ -427,39 +446,24 @@ function materializeShopRoom(
   });
 }
 
-function materializeShopPreboss(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
-  if (
-    context.role !== 'terminalShop' ||
-    (context.clockworkReward !== undefined && context.clockworkReward !== 'goal')
-  ) {
-    fail(`${context.room.gameName} requires its terminal shop role`);
-  }
-  return Object.freeze({
-    ...materializeShopRoom(context, 'PrebossShopRoom'),
-    ...(context.clockworkReward === undefined ? {} : { clockworkReward: 'goal' as const }),
-  });
-}
-
-function materializeForkedPreboss(
-  context: AuthoredRoomMaterializationContext,
-): MaterializedRoomLeaf {
-  if (context.role === 'ordinary') {
-    fail(`${context.room.gameName} forked preboss has no terminal role`);
-  }
-  if (context.role === 'terminalShop') {
+function materializePreboss(context: AuthoredRoomMaterializationContext): MaterializedRoomLeaf {
+  if (context.role === 'prebossShop') {
     return materializeShopRoom(context, 'PrebossShopRoom');
   }
+  if (context.role !== 'prebossFreeReward') {
+    fail(`${context.room.gameName} has no declaration-derived Preboss role`);
+  }
   const state = requireStateKind(context, 'freeReward');
-  const binding = context.room.entryOfferPolicy?.freeReward;
-  if (binding === undefined) {
-    fail(`${context.room.gameName} has no free-reward policy`);
+  const policy = context.room.prebossBatchPolicy;
+  if (policy?.kind !== 'takeOverNormalDoors' || policy.remainingOffers.kind !== 'counted') {
+    fail(`${context.room.gameName} has no counted remaining-offer policy`);
   }
   return Object.freeze({
     lifecycleProfileKey: 'PrebossFreeRewardRoom',
     incomingReward: resolvedIncomingReward(
       context,
       'freeReward',
-      binding.producerLifecycleKey,
+      policy.remainingOffers.reward.producerLifecycleKey,
       state.offer,
     ),
   });
@@ -468,10 +472,11 @@ function materializeForkedPreboss(
 const authoredTemplateMaterializers = Object.freeze({
   ClockworkCombat: materializeClockworkCombat,
   Devotion: materializeDevotion,
+  EphyraCombat: materializeEphyraCombat,
   FixedIntro: materializeRewardlessRoom,
   FixedOpening: materializeCountedRoom,
+  FixedPreHub: materializeCountedRoom,
   FieldsCombat: materializeFieldsCombat,
-  ForkedPreboss: materializeForkedPreboss,
   Fountain: materializeCountedRoom,
   Miniboss: materializeCountedRoom,
   RewardlessCombat: (context) =>
@@ -480,11 +485,11 @@ const authoredTemplateMaterializers = Object.freeze({
       lifecycleProfileKey: 'RewardlessCombatRoom',
     }),
   Shop: materializeShopRoom,
-  ShopPreboss: materializeShopPreboss,
+  Preboss: materializePreboss,
   ShipCombat: materializeShipCombat,
   StandardCombat: materializeCountedRoom,
   Story: materializeFixedRoom,
-}) satisfies Readonly<Record<LinearAuthoredTemplateKey, AuthoredTemplateMaterializer>>;
+}) satisfies Readonly<Record<AuthoredTemplateKey, AuthoredTemplateMaterializer>>;
 
 function authoredMaterializer(
   templateKey: RoomTemplateKey,
@@ -496,7 +501,7 @@ function authoredMaterializer(
     >
   )[templateKey];
   if (materializer === undefined) {
-    fail(`${roomGameName} uses unsupported linear template ${templateKey}`);
+    fail(`${roomGameName} uses unsupported authored template ${templateKey}`);
   }
   return materializer;
 }
@@ -578,58 +583,5 @@ export function materializeAuthoredRoom(
     ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
-  });
-}
-
-export function materializeFixedEntryRoom(
-  catalog: Catalog,
-  biome: BiomeAddress,
-  descriptor: FixedEntryDescriptor,
-): CanonicalFixedEntryRoom {
-  const room = catalog.rooms.byKey[descriptor.roomGameName];
-  if (
-    room?.mode.kind !== 'derived' ||
-    room.mode.classification !== 'fixedEntry' ||
-    room.kind === 'Boss' ||
-    room.kind === 'PostBoss'
-  ) {
-    fail(`${descriptor.roomGameName} is not a fixed-entry room`);
-  }
-  let lifecycleProfileKey: string;
-  let incomingReward: CanonicalResolvedIncomingReward | undefined;
-  if (room.incomingReward.kind === 'none') {
-    lifecycleProfileKey = 'RewardlessRoom';
-  } else if (room.incomingReward.kind === 'fixed') {
-    lifecycleProfileKey = 'StandardRewardRoom';
-    incomingReward = Object.freeze({
-      origin: createFixedEntryRewardAddress(biome, descriptor.role),
-      kind: 'resolved',
-      producerKind: 'fixed',
-      producerLifecycleKey: room.incomingReward.producerLifecycleKey,
-      offer: room.incomingReward.offer,
-      ...(room.forcedRewardStoreKey === undefined
-        ? {}
-        : { resolvedStoreKey: room.forcedRewardStoreKey }),
-    });
-  } else {
-    fail(`${room.gameName} fixed entry has unsupported ${room.incomingReward.kind} producer`);
-  }
-  requireLifecycleSelection(
-    catalog,
-    room,
-    { lifecycleProfileKey, ...(incomingReward === undefined ? {} : { incomingReward }) },
-    room.encounterProfileKey,
-  );
-  return Object.freeze({
-    kind: 'fixedEntry',
-    origin: createFixedEntryRoomAddress(biome, descriptor.role),
-    role: descriptor.role,
-    gameName: room.gameName,
-    encounterProfileKey: room.encounterProfileKey,
-    encounterPhases: encounterPhases(catalog, room),
-    lifecycleProfileKey,
-    counterEffects: room.counters,
-    entered: true,
-    ...(incomingReward === undefined ? {} : { incomingReward }),
   });
 }
