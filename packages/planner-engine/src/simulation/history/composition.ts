@@ -42,7 +42,11 @@ export interface RoomLifecycleCompositionOptions {
   readonly stopAfterOutgoing?: boolean;
 }
 
-interface BiomeHistoryEnvelopeOptions<Entry, Predecessor, Terminal extends CanonicalLifecycleRoom> {
+interface BiomeHistoryEnvelopeOptions<
+  Entry,
+  Predecessor,
+  CompletionPredecessor extends CanonicalLifecycleRoom,
+> {
   readonly catalog: Catalog;
   readonly routeKey: string;
   readonly biomeKey: string;
@@ -52,7 +56,10 @@ interface BiomeHistoryEnvelopeOptions<Entry, Predecessor, Terminal extends Canon
   readonly transitionEffects: readonly BiomeTransitionCounterReset[];
   readonly composeEntry: (writer: HistorySegmentWriter) => Entry;
   readonly composeBody: (writer: HistorySegmentWriter, entry: Entry) => Predecessor;
-  readonly composeTerminal: (writer: HistorySegmentWriter, predecessor: Predecessor) => Terminal;
+  readonly composeCompletionPredecessor: (
+    writer: HistorySegmentWriter,
+    predecessor: Predecessor,
+  ) => CompletionPredecessor;
   readonly fail: (detail: string) => never;
 }
 
@@ -194,16 +201,16 @@ function appendCompletionTail(
   writer: HistorySegmentWriter,
   catalog: Catalog,
   biome: BiomeAddress,
-  terminal: CanonicalLifecycleRoom,
+  predecessor: CanonicalLifecycleRoom,
   completionRooms: readonly CanonicalCompletionRoom[],
   fail: (detail: string) => never,
 ): void {
   if (
-    terminal.origin.routeKey !== biome.routeKey ||
-    terminal.origin.biomeKey !== biome.biomeKey ||
-    !terminal.entered
+    predecessor.origin.routeKey !== biome.routeKey ||
+    predecessor.origin.biomeKey !== biome.biomeKey ||
+    !predecessor.entered
   ) {
-    fail('terminal composer did not return the entered terminal room for this biome');
+    fail('completion composer did not return the entered Preboss for this biome');
   }
   for (const completion of completionRooms) {
     appendStandaloneRoomCreated(writer, completion, 'layoutCompletion');
@@ -214,7 +221,7 @@ function appendCompletionTail(
 export function composeBiomeHistoryEnvelope<
   Entry,
   Predecessor,
-  Terminal extends CanonicalLifecycleRoom,
+  CompletionPredecessor extends CanonicalLifecycleRoom,
 >({
   catalog,
   routeKey,
@@ -225,9 +232,9 @@ export function composeBiomeHistoryEnvelope<
   transitionEffects,
   composeEntry,
   composeBody,
-  composeTerminal,
+  composeCompletionPredecessor,
   fail,
-}: BiomeHistoryEnvelopeOptions<Entry, Predecessor, Terminal>): CanonicalBiomeHistory {
+}: BiomeHistoryEnvelopeOptions<Entry, Predecessor, CompletionPredecessor>): CanonicalBiomeHistory {
   const biome = createBiomeAddress(routeKey, biomeKey);
   const builder: EventBuilder = { events: [], sequenceBase: seed?.sequence ?? 0 };
   const writer = segmentWriter(builder);
@@ -238,8 +245,8 @@ export function composeBiomeHistoryEnvelope<
   });
   const entry = composeEntry(writer);
   const predecessor = composeBody(writer, entry);
-  const terminal = composeTerminal(writer, predecessor);
-  appendCompletionTail(writer, catalog, biome, terminal, completionRooms, fail);
+  const completionPredecessor = composeCompletionPredecessor(writer, predecessor);
+  appendCompletionTail(writer, catalog, biome, completionPredecessor, completionRooms, fail);
   appendEnvelope(builder, { kind: 'biomeCompleted', origin: biome });
   for (const effect of transitionEffects) {
     appendEnvelope(builder, {

@@ -1,5 +1,5 @@
 import type {
-  ContinuationAddress,
+  ExitDecisionAddress,
   HubOpenSetAddress,
   LocalChildAddress,
   OccurrenceAddress,
@@ -118,7 +118,7 @@ export type RoomGenerationExclusionEvidence =
       readonly requiredRoomGameNames: readonly string[];
     };
 
-export interface LinearForcePressureLedgerEntry {
+export interface ForcePressureLedgerEntry {
   readonly targetOrigin: TargetAddress;
   readonly beforeSequence: number;
   readonly sourceGameName: string;
@@ -141,7 +141,7 @@ export interface LinearForcePressureLedgerEntry {
 export type FieldsCageOutcome = 'min' | 'max';
 
 export interface FieldsCageOutcomeCandidateSupport {
-  readonly origin: ContinuationAddress;
+  readonly origin: ExitDecisionAddress;
   readonly beforeSequence: number;
   readonly biomeDepthCache: number;
   readonly fieldsMaxDoorsRolled: number;
@@ -162,23 +162,33 @@ export interface EncounterCountSupportEntry {
   readonly selectedPossible: boolean;
 }
 
-export interface LinearRoomGenerationValidation {
+export interface GeneratedRoomGenerationValidation {
   readonly biomeKey: string;
   readonly validity: 'invalid' | 'valid';
-  readonly forcePressure: readonly LinearForcePressureLedgerEntry[];
+  readonly forcePressure: readonly ForcePressureLedgerEntry[];
   readonly encounterCounts: readonly EncounterCountSupportEntry[];
   readonly fieldsCageOutcomes: readonly FieldsCageOutcomeSupportEntry[];
   readonly findings: readonly SemanticFinding[];
 }
 
-export interface LinearRoomTargetCandidateValidation {
-  readonly pressure: LinearForcePressureLedgerEntry;
+export interface RoomTargetCandidateValidation {
+  readonly pressure: ForcePressureLedgerEntry;
   readonly findings: readonly SemanticFinding[];
 }
 
-export interface LinearRoomTargetCandidateContext {
+export interface RoomTargetCandidateContext {
   readonly targetOrigin: TargetAddress;
-  readonly evaluateGameName: (gameName: string) => LinearRoomTargetCandidateValidation;
+  readonly evaluateGameName: (gameName: string) => RoomTargetCandidateValidation;
+}
+
+export interface TakeoverPrebossBatchCandidateSupport {
+  readonly source: ExitDecisionAddress;
+  readonly gameName: string;
+  readonly requiredExitKeys: readonly string[];
+  readonly requiredTargetCount: number;
+  readonly pressure: readonly ForcePressureLedgerEntry[];
+  readonly selectedPossible: boolean;
+  readonly findings: readonly SemanticFinding[];
 }
 
 export interface HubOpenSlotConstraintSupportEntry {

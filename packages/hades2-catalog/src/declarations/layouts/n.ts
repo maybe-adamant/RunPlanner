@@ -54,7 +54,12 @@ export const nBiomeLayout = {
       forcedOrder: 'availabilityRankPrefix',
     },
     fields: [],
-    completedExit: { kind: 'linked', exitKey: 'preboss', roomGameName: 'N_PreBoss01' },
+    completedExit: {
+      kind: 'linked',
+      exitKey: 'preboss',
+      roomGameName: 'N_PreBoss01',
+      physicalExit: { index: 1, type: 'EphyraExitBossDoor' },
+    },
   },
   completion: {
     rooms: [

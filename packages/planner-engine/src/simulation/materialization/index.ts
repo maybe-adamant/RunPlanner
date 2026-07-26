@@ -1,11 +1,10 @@
-export { materializeLinearBiome } from './linear/dispatch';
-export { materializeLinearBiomePrefix } from './linear/prefix';
-export { LinearMaterializationContractError } from './linear/contract';
-export { projectClockworkTopology, projectLinearBatchState } from './linear/continuations';
-export type { ClockworkBatchProjection, ClockworkTargetProjection } from './linear/continuations';
-export { materializeShipCombatState, type MaterializedShipCombatState } from './linear/rooms';
-export { HubMaterializationContractError, materializeHubBiome } from './hub';
-export { materializeHubBiomePrefix } from './hub-prefix';
+export {
+  BiomeMaterializationContractError,
+  materializeBiome,
+  materializeBiomePrefix,
+} from './biome';
+export { HubMaterializationContractError, materializeHubDecision } from './hub';
+export { materializeShipCombatState, type MaterializedShipCombatState } from './rooms';
 export type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
@@ -13,21 +12,20 @@ export type {
   CanonicalBatchRewardStore,
   CanonicalBiomeState,
   CanonicalCompletionRoom,
-  CanonicalFixedEntryRoom,
-  CanonicalHubBiome,
-  HubSimulationMaterialization,
-  MaterializedHubBiomePrefix,
-  MaterializedHubEntryFrontier,
+  CanonicalBiome,
+  CanonicalDecision,
+  BiomeMaterialization,
+  MaterializedBiomePrefix,
+  MaterializedExitDecisionFrontier,
+  MaterializedHubDecisionFrontier,
   MaterializedHubVisitFrontier,
   CanonicalHubBoard,
+  CanonicalHubDecision,
   CanonicalHubRoom,
   CanonicalHubRoomReference,
   CanonicalHubTarget,
   CanonicalHubVisit,
-  CanonicalLinearBiome,
-  MaterializedLinearBiomePrefix,
-  MaterializedLinearFrontierGeneration,
-  LinearSimulationMaterialization,
+  CanonicalLinkedExit,
   CanonicalLocalChildRoom,
   CanonicalLocalReward,
   CanonicalRewardWheel,
@@ -41,5 +39,4 @@ export type {
   CanonicalShopOffer,
   CanonicalTarget,
   CanonicalTargetContinuation,
-  CanonicalTerminalEntry,
 } from './model';

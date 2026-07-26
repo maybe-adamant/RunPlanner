@@ -1,427 +1,137 @@
-import {
-  applyProjectCommand,
-  createBatchRewardStoreAddress,
-  createBiomeAddress,
-  createContinuationAddress,
-  createOccurrenceId,
-  createOccurrenceAddress,
-  createPickedAddress,
-  createProjectDocument,
-  createShopPurchaseAddress,
-  createTargetAddress,
-  semanticAddressKey,
-  type LinearBiomePlan,
-  type ProjectDocument,
-} from '@run-planner/engine/authored-project';
-import {
-  evaluateLinearCompleteness,
-  LinearMaterializationContractError,
-  materializeLinearBiome,
-  type CompleteLinearCompletenessResult,
-  type LinearCompletenessResult,
-} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import {
+  createTargetAddress,
+  semanticAddressKey,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
+  BiomeMaterializationContractError,
+  evaluateBiomeCompleteness,
+  materializeBiome,
+} from '@run-planner/engine/simulation';
 
-const biome = createBiomeAddress('Underworld', 'F');
-const startId = createOccurrenceId('f-start');
-const firstCombatId = createOccurrenceId('f-combat-first');
-const repeatedCombatId = createOccurrenceId('f-combat-repeated');
-const deadShopId = createOccurrenceId('f-shop-dead');
-const terminalShopId = createOccurrenceId('f-terminal-shop');
-const terminalFreeId = createOccurrenceId('f-terminal-free');
+import {
+  createCompleteFTakeoverProject,
+  createFProject,
+  fBiome,
+  fCombatId,
+  fDecision,
+} from '../../support/f-takeover-project';
 
-function fPlan(project: ProjectDocument): LinearBiomePlan {
-  const plan = project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
-  if (plan?.kind !== 'LinearBiome' || plan.biomeKey !== 'F') {
-    throw new Error('missing F fixture plan');
-  }
+function fPlan(project: ProjectDocument) {
+  const plan = project.routes
+    .find((route) => route.routeKey === 'Underworld')
+    ?.biomes.find((biome) => biome.biomeKey === 'F');
+  if (plan === undefined) throw new Error('missing F takeover plan');
   return plan;
 }
 
-function completeness(project: ProjectDocument): LinearCompletenessResult {
-  return evaluateLinearCompleteness(catalog, biome, fPlan(project));
-}
-
-function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
-  const result = completeness(project);
-  if (result.completion !== 'complete') {
-    throw new Error(`fixture is incomplete: ${result.findings.map((finding) => finding.code)}`);
+function materialize(project: ProjectDocument) {
+  const completeness = evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
+  if (completeness.completion !== 'complete') {
+    throw new Error(
+      `fixture is incomplete: ${completeness.findings.map((finding) => finding.code)}`,
+    );
   }
-  return result;
+  return materializeBiome(catalog, fBiome, completeness);
 }
 
-function emptyFProject(): ProjectDocument {
-  return createProjectDocument(catalog, {
-    projectId: 'f-materialization',
-    name: 'F Materialization',
-    configuredBiomeCounts: { Underworld: 1 },
-  });
-}
+describe('F takeover materialization', () => {
+  it('requires complete authored topology at the public materialization boundary', () => {
+    const incomplete = evaluateBiomeCompleteness(catalog, fBiome, fPlan(createFProject()));
 
-function representativeProject(terminalPickedExitIndex: 1 | 2): ProjectDocument {
-  let project = applyProjectCommand(emptyFProject(), catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: startId,
-    gameName: 'F_Opening01',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, startId),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, startId),
-    storeKey: 'MetaProgress',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(biome, startId, 1),
-    occurrenceId: firstCombatId,
-    gameName: 'F_Combat04',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, startId),
-    exitIndex: 1,
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, firstCombatId),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, firstCombatId),
-    storeKey: 'RunProgress',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(biome, firstCombatId, 1),
-    occurrenceId: repeatedCombatId,
-    gameName: 'F_Combat04',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(biome, firstCombatId, 2),
-    occurrenceId: deadShopId,
-    gameName: 'F_Shop01',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, firstCombatId),
-    exitIndex: 1,
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTerminalTransition',
-    continuation: createContinuationAddress(biome, repeatedCombatId),
-    targetOccurrenceIds: [terminalShopId, terminalFreeId],
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetTerminalPicked',
-    picked: createPickedAddress(biome, repeatedCombatId),
-    exitIndex: terminalPickedExitIndex,
-  });
-  if (terminalPickedExitIndex === 1) {
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetShopPurchase',
-      purchase: createShopPurchaseAddress(biome, terminalShopId, 'Boon'),
-      purchased: true,
-    });
-  }
-  return project;
-}
-
-function oneExitTerminalProject(): ProjectDocument {
-  let project = applyProjectCommand(emptyFProject(), catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: startId,
-    gameName: 'F_Opening01',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, startId),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, startId),
-    storeKey: 'RunProgress',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(biome, startId, 1),
-    occurrenceId: firstCombatId,
-    gameName: 'F_Combat01',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, startId),
-    exitIndex: 1,
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTerminalTransition',
-    continuation: createContinuationAddress(biome, firstCombatId),
-    targetOccurrenceIds: [terminalShopId],
-  });
-  return applyProjectCommand(project, catalog, {
-    kind: 'SetTerminalPicked',
-    picked: createPickedAddress(biome, firstCombatId),
-    exitIndex: 1,
-  });
-}
-
-function singleTargetProject(gameName: string): ProjectDocument {
-  let project = applyProjectCommand(emptyFProject(), catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: startId,
-    gameName: 'F_Opening01',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, startId),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, startId),
-    storeKey: 'RunProgress',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(biome, startId, 1),
-    occurrenceId: firstCombatId,
-    gameName,
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, startId),
-    exitIndex: 1,
-  });
-  const room = catalog.rooms.byKey[gameName];
-  if (room === undefined) {
-    throw new Error(`missing fixture room ${gameName}`);
-  }
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTerminalTransition',
-    continuation: createContinuationAddress(biome, firstCombatId),
-    targetOccurrenceIds: [terminalShopId, terminalFreeId].slice(0, room.exits.length),
-  });
-  return applyProjectCommand(project, catalog, {
-    kind: 'SetTerminalPicked',
-    picked: createPickedAddress(biome, firstCombatId),
-    exitIndex: 1,
-  });
-}
-
-describe('canonical F materialization', () => {
-  it('requires a complete biome result at the public materialization boundary', () => {
-    const incomplete = completeness(emptyFProject());
-
-    expect(() =>
-      materializeLinearBiome(
-        catalog,
-        biome,
-        incomplete as unknown as CompleteLinearCompletenessResult,
-      ),
-    ).toThrowError(
-      new LinearMaterializationContractError(
-        'linear materialization requires a complete biome result',
-      ),
+    expect(() => materializeBiome(catalog, fBiome, incomplete as never)).toThrowError(
+      new BiomeMaterializationContractError('biome materialization requires completeness'),
     );
   });
 
-  it('materializes addressed batches, repeated rooms, dormant peers, and a picked shop', () => {
-    const snapshot = materializeLinearBiome(catalog, biome, complete(representativeProject(1)));
+  it('materializes ordinary and takeover batches as one ordered decision spine', () => {
+    const snapshot = materialize(createCompleteFTakeoverProject());
 
     expect(snapshot).toMatchObject({
-      kind: 'LinearBiome',
+      kind: 'biome',
       routeKey: 'Underworld',
       biomeKey: 'F',
-      biomeState: {},
+      entryRoom: { occurrenceId: 'f-takeover-start', gameName: 'F_Opening01', entered: true },
     });
-    expect(snapshot.entryRooms).toHaveLength(1);
-    expect(snapshot.entryRooms[0]).toMatchObject({
-      gameName: 'F_Opening01',
-      lifecycleProfileKey: 'StandardRewardRoom',
-      entered: true,
-      incomingReward: { resolvedStoreKey: 'RunProgress' },
-    });
-
-    expect(snapshot.batches).toHaveLength(2);
-    expect(snapshot.batches[0]).toMatchObject({
-      parent: { occurrenceId: startId, gameName: 'F_Opening01' },
-      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
-      pickedExitIndex: 1,
-    });
-    expect(semanticAddressKey(snapshot.batches[0]!.rewardStore.origin)).toBe(
-      '["batchRewardStore","Underworld","F","f-start"]',
-    );
-    expect(snapshot.batches[0]!.targets[0]).toMatchObject({
-      exit: {
-        kind: 'available',
-        index: 1,
-        type: 'ErebusExitDoor',
-        compatibilityPolicyKey: 'Unconstrained',
+    expect(snapshot.decisions.map((decision) => decision.kind)).toEqual(['batch', 'batch']);
+    const [opening, takeover] = snapshot.decisions;
+    if (opening?.kind !== 'batch' || takeover?.kind !== 'batch') {
+      throw new Error('F fixture should contain two normal-door batches');
+    }
+    expect(opening.targets).toMatchObject([
+      {
+        exit: { exitKey: 'exit1', index: 1 },
+        picked: true,
+        continuation: 'continuesSpine',
+        room: { occurrenceId: fCombatId, gameName: 'F_Combat02' },
       },
-      picked: true,
-      continuation: 'continuesSpine',
-      room: {
-        occurrenceId: firstCombatId,
-        gameName: 'F_Combat04',
-        entered: true,
-        incomingReward: { resolvedStoreKey: 'MetaProgress' },
-      },
-    });
-
-    const repeated = snapshot.batches[1]!.targets[0]!;
-    const deadShop = snapshot.batches[1]!.targets[1]!;
-    expect(repeated.room.gameName).toBe('F_Combat04');
-    expect(repeated.room.occurrenceId).not.toBe(firstCombatId);
-    expect(semanticAddressKey(repeated.room.origin)).toBe(
-      '["occurrence","Underworld","F","f-combat-repeated"]',
-    );
-    expect(deadShop).toMatchObject({
-      picked: false,
-      continuation: 'deadLeaf',
-      room: {
-        gameName: 'F_Shop01',
-        entered: false,
-        lifecycleProfileKey: 'WorldShopRoom',
-        incomingReward: { producerKind: 'shop', resolvedStoreKey: 'RunProgress' },
-      },
-    });
-    expect(deadShop.room).not.toHaveProperty('entryState');
-
-    expect(snapshot.terminalEntry.targets).toHaveLength(2);
-    const terminalShop = snapshot.terminalEntry.targets[0]!;
-    const terminalFree = snapshot.terminalEntry.targets[1]!;
-    expect(terminalShop).toMatchObject({
-      picked: true,
-      continuation: 'entersTerminal',
-      room: {
-        gameName: 'F_PreBoss01',
-        entered: true,
-        lifecycleProfileKey: 'PrebossShopRoom',
-        incomingReward: { producerKind: 'shop', resolvedStoreKey: 'RunProgress' },
-        entryState: { kind: 'shop', profileKey: 'WorldShop' },
-      },
-    });
-    expect(terminalShop.room.entryState?.offers.map((offer) => offer.offerKey)).toEqual([
-      'Boon',
-      'MajorNonBoon',
-      'Minor',
     ]);
-    expect(terminalShop.room.entryState?.offers[0]).toMatchObject({ purchased: true });
-    expect(semanticAddressKey(terminalShop.room.entryState!.offers[0]!.purchaseOrigin)).toBe(
-      '["shopPurchase","Underworld","F","f-terminal-shop","Boon"]',
-    );
-    expect(terminalFree).toMatchObject({
-      picked: false,
-      continuation: 'deadLeaf',
-      room: {
-        gameName: 'F_PreBoss01',
-        entered: false,
-        lifecycleProfileKey: 'PrebossFreeRewardRoom',
-        incomingReward: { producerKind: 'freeReward', resolvedStoreKey: 'RunProgress' },
-      },
-    });
-
-    expect(snapshot.completionRooms.map((room) => room.gameName)).toEqual([
-      'F_Boss01',
-      'F_PostBoss01',
-    ]);
-    expect(snapshot.completionRooms.map((room) => semanticAddressKey(room.origin))).toEqual([
-      '["completionRoom","Underworld","F","boss"]',
-      '["completionRoom","Underworld","F","postboss"]',
-    ]);
-    expect(snapshot).not.toHaveProperty('validity');
-    expect(snapshot).not.toHaveProperty('candidates');
-    expect(Object.isFrozen(snapshot)).toBe(true);
-    expect(Object.isFrozen(snapshot.batches)).toBe(true);
-    expect(Object.isFrozen(snapshot.terminalEntry.targets)).toBe(true);
-  });
-
-  it('applies a later forced target store to earlier ordinary peers', () => {
-    let project = representativeProject(1);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(biome, firstCombatId),
-      storeKey: 'MetaProgress',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(biome, deadShopId),
-      gameName: 'F_Combat01',
-    });
-
-    const snapshot = materializeLinearBiome(catalog, biome, complete(project));
-    const targets = snapshot.batches[1]!.targets;
-
-    expect(targets.map((target) => target.room.incomingReward?.resolvedStoreKey)).toEqual([
-      'RunProgress',
-      'RunProgress',
+    expect(takeover.targets.map((target) => target.exit.exitKey)).toEqual(['exit1', 'exit2']);
+    expect(takeover.targets.map((target) => target.room.occurrenceId)).toEqual([
+      'f-takeover-preboss-shop',
+      'f-takeover-preboss-free',
     ]);
   });
 
-  it('materializes a picked free terminal without dormant shop entry state', () => {
-    const snapshot = materializeLinearBiome(catalog, biome, complete(representativeProject(2)));
-    const shop = snapshot.terminalEntry.targets[0]!.room;
-    const free = snapshot.terminalEntry.targets[1]!;
+  it('derives Shop/free roles and completion entry from the selected physical exit', () => {
+    const snapshot = materialize(createCompleteFTakeoverProject());
+    const takeover = snapshot.decisions.at(-1);
+    if (takeover?.kind !== 'batch') throw new Error('missing F takeover batch');
 
-    expect(shop.entered).toBe(false);
-    expect(shop).not.toHaveProperty('entryState');
-    expect(free).toMatchObject({
-      picked: true,
-      continuation: 'entersTerminal',
-      room: {
-        entered: true,
-        lifecycleProfileKey: 'PrebossFreeRewardRoom',
-        incomingReward: { producerKind: 'freeReward' },
-      },
+    expect(takeover).toMatchObject({
+      rewardStore: { kind: 'none' },
+      batchState: { kind: 'standard' },
+      selectedExitKey: 'exit1',
     });
+    expect(
+      takeover.targets.map((target) => [target.room.entryState?.kind, target.continuation]),
+    ).toEqual([
+      ['shop', 'startsCompletion'],
+      [undefined, 'deadLeaf'],
+    ]);
+    expect(snapshot.completionRooms.map((room) => room.role)).toEqual(['boss', 'postboss']);
   });
 
-  it('derives one terminal target from a one-exit predecessor', () => {
-    const snapshot = materializeLinearBiome(catalog, biome, complete(oneExitTerminalProject()));
+  it('keeps an unpicked Shop dormant when the free-reward peer starts completion', () => {
+    const snapshot = materialize(createCompleteFTakeoverProject('exit2'));
+    const takeover = snapshot.decisions.at(-1);
+    if (takeover?.kind !== 'batch') throw new Error('missing F takeover batch');
 
-    expect(snapshot.terminalEntry.predecessor).toMatchObject({
-      occurrenceId: firstCombatId,
-      gameName: 'F_Combat01',
-    });
-    expect(snapshot.terminalEntry.targets).toHaveLength(1);
-    expect(snapshot.terminalEntry.targets[0]).toMatchObject({
-      exit: { kind: 'available', index: 1 },
-      picked: true,
-      room: { lifecycleProfileKey: 'PrebossShopRoom' },
-    });
+    expect(
+      takeover.targets.map((target) => [
+        target.picked,
+        target.room.entryState,
+        target.continuation,
+      ]),
+    ).toEqual([
+      [false, undefined, 'deadLeaf'],
+      [true, undefined, 'startsCompletion'],
+    ]);
   });
 
-  it.each([
-    ['F_MiniBoss01', 'StandardRewardRoom', 'countedChoice'],
-    ['F_Story01', 'StandardRewardRoom', 'fixed'],
-    ['F_Reprieve01', 'StandardRewardRoom', 'countedChoice'],
-    ['F_Shop01', 'WorldShopRoom', 'shop'],
-  ] as const)(
-    'dispatches the %s template through its concrete F room materializer',
-    (gameName, lifecycleProfileKey, producerKind) => {
-      const snapshot = materializeLinearBiome(
-        catalog,
-        biome,
-        complete(singleTargetProject(gameName)),
-      );
-      const room = snapshot.batches[0]!.targets[0]!.room;
+  it('keeps target ownership semantic and independent of target insertion order', () => {
+    const snapshot = materialize(createCompleteFTakeoverProject());
+    const takeover = snapshot.decisions.at(-1);
+    if (takeover?.kind !== 'batch') throw new Error('missing F takeover batch');
 
-      expect(room).toMatchObject({
-        gameName,
-        entered: true,
-        lifecycleProfileKey,
-        incomingReward: { producerKind },
-      });
-      if (gameName === 'F_Shop01') {
-        expect(room.entryState).toMatchObject({ kind: 'shop', profileKey: 'WorldShop' });
-      }
-    },
-  );
+    expect(takeover.targets.map((target) => semanticAddressKey(target.origin))).toEqual([
+      semanticAddressKey(createTargetAddress(fBiome, fDecision(fCombatId).source, 'exit1')),
+      semanticAddressKey(createTargetAddress(fBiome, fDecision(fCombatId).source, 'exit2')),
+    ]);
+  });
+
+  it('is frozen and deterministic for equal F takeover inputs', () => {
+    const first = materialize(createCompleteFTakeoverProject());
+    const second = materialize(createCompleteFTakeoverProject());
+
+    expect(first).toEqual(second);
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(Object.isFrozen(first.decisions)).toBe(true);
+    expect(
+      Object.isFrozen(first.decisions[1]?.kind === 'batch' ? first.decisions[1].targets : []),
+    ).toBe(true);
+  });
 });

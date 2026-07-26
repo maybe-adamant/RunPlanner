@@ -1,482 +1,650 @@
 import type { Catalog } from '../../catalog-schema';
-import {
-  createBiomeAddress,
-  createFixedEntryTargetAddress,
-  semanticAddressKey,
-  type ContinuationAddress,
-} from '../../authored-project/addresses';
-import type { RoomHistoryOrigin } from '../lifecycle';
+import { semanticAddressKey } from '../../authored-project/addresses';
 import type {
   CanonicalAuthoredRoom,
-  CanonicalBatchState,
-  CanonicalFixedEntryRoom,
-  CanonicalLinearBiome,
-  MaterializedLinearBiomePrefix,
-  CanonicalRoom,
+  CanonicalBatch,
+  CanonicalBiome,
+  CanonicalHubDecision,
+  CanonicalHubRoom,
+  CanonicalHubTarget,
+  CanonicalHubVisit,
+  CanonicalLocalChildRoom,
+  CanonicalRoomRestore,
   CanonicalTarget,
+  MaterializedBiomePrefix,
+  MaterializedHubVisitFrontier,
 } from '../materialization';
+import type { RoomHistoryOrigin } from '../lifecycle';
 import {
   appendRoomLifecycle as appendCanonicalRoomLifecycle,
-  composeBiomeHistoryPrefix,
+  appendStandaloneRoomCreated,
   composeBiomeHistoryEnvelope,
-  composeFixedEntryChain,
+  composeBiomeHistoryPrefix as composePrefixHistoryEnvelope,
   type HistorySegmentWriter,
 } from './composition';
+import type { CanonicalLifecycleRoom } from './lifecycleInput';
 import type {
-  CanonicalLinearHistory,
-  LinearBiomeHistoryPrefix,
+  BiomeHistoryPrefix,
+  CanonicalBiomeHistory,
+  HistoryStateView,
   RoomCreatedHistoryEvent,
 } from './model';
 
-export class LinearHistoryCompositionContractError extends Error {
+export class BiomeHistoryCompositionContractError extends Error {
   constructor(detail: string) {
     super(detail);
-    this.name = 'LinearHistoryCompositionContractError';
+    this.name = 'BiomeHistoryCompositionContractError';
   }
 }
 
-function generatedTargetCreated(
-  writer: HistorySegmentWriter,
-  parentOrigin: RoomHistoryOrigin,
-  target: CanonicalTarget,
-  generationIndex: number,
-  generationCount: number,
-): void {
-  const event: Omit<
-    Extract<RoomCreatedHistoryEvent, { readonly source: 'generatedTarget' }>,
-    'sequence'
-  > = {
-    kind: 'roomCreated',
-    origin: target.room.origin,
-    gameName: target.room.gameName,
-    encounterProfileKey: target.room.encounterProfileKey,
-    source: 'generatedTarget',
-    picked: target.picked,
-    parentOrigin,
-    targetOrigin: target.origin,
-    generationIndex,
-    generationCount,
-  };
-  writer.append(event);
-  writer.append({
-    kind: 'targetGenerationCompleted',
-    origin: target.origin,
-    roomOrigin: target.room.origin,
-    parentOrigin,
-    generationIndex,
-    generationCount,
-  });
+function fail(detail: string): never {
+  throw new BiomeHistoryCompositionContractError(detail);
 }
 
-function layoutEntryCreated(
-  writer: HistorySegmentWriter,
-  parentOrigin: RoomHistoryOrigin,
-  room: CanonicalFixedEntryRoom,
+function requireParent(
+  current: CanonicalLifecycleRoom,
+  expected: RoomHistoryOrigin,
+  owner: string,
 ): void {
-  const biome = createBiomeAddress(parentOrigin.routeKey, parentOrigin.biomeKey);
-  const targetOrigin = createFixedEntryTargetAddress(biome, room.role);
-  writer.append({
-    kind: 'roomCreated',
-    origin: room.origin,
-    gameName: room.gameName,
-    encounterProfileKey: room.encounterProfileKey,
-    source: 'layoutEntry',
-    picked: true,
-    parentOrigin,
-    targetOrigin,
-    generationIndex: 1,
-    generationCount: 1,
-  });
-  writer.append({
-    kind: 'targetGenerationCompleted',
-    origin: targetOrigin,
-    roomOrigin: room.origin,
-    parentOrigin,
-    generationIndex: 1,
-    generationCount: 1,
-  });
+  if (semanticAddressKey(current.origin) !== semanticAddressKey(expected)) {
+    fail(`${owner} is detached from the selected decision spine`);
+  }
+}
+
+function selectedTarget(batch: CanonicalBatch): CanonicalTarget {
+  const target = batch.targets.find((candidate) => candidate.picked);
+  if (target === undefined) fail(`${semanticAddressKey(batch.origin)} has no selected target`);
+  return target;
+}
+
+function appendBatchState(
+  writer: HistorySegmentWriter,
+  batch: Pick<CanonicalBatch, 'batchState' | 'origin'>,
+): void {
+  if (batch.batchState.kind === 'fields') {
+    writer.append({
+      kind: 'fieldsBatchOutcomeRecorded',
+      origin: batch.origin,
+      cageOutcome: batch.batchState.cageOutcome,
+      batchCapacity: batch.batchState.batchCapacity,
+      cageTargetCount: batch.batchState.cageTargetCount,
+      doorCageRewardCount: batch.batchState.doorCageRewardCount,
+    });
+  }
+  if (batch.batchState.kind === 'clockwork') {
+    writer.append({
+      kind: 'clockworkBatchStateRecorded',
+      origin: batch.origin,
+      goalsRemaining: batch.batchState.goalsRemaining,
+      nonGoalRewardsAcquired: batch.batchState.nonGoalRewardsAcquired,
+      maxNonGoalRewards: batch.batchState.maxNonGoalRewards,
+    });
+  }
 }
 
 function appendGeneratedTargets(
   writer: HistorySegmentWriter,
   parentOrigin: RoomHistoryOrigin,
   targets: readonly CanonicalTarget[],
+  generation: { readonly startIndex?: number; readonly count?: number } = {},
 ): void {
-  targets.forEach((target, index) =>
-    generatedTargetCreated(writer, parentOrigin, target, index + 1, targets.length),
-  );
-}
-
-function appendBatchState(
-  writer: HistorySegmentWriter,
-  origin: ContinuationAddress,
-  batchState: CanonicalBatchState,
-): void {
-  if (batchState.kind !== 'fields') {
-    if (batchState.kind === 'clockwork') {
-      writer.append({
-        kind: 'clockworkBatchStateRecorded',
-        origin,
-        goalsRemaining: batchState.goalsRemaining,
-        nonGoalRewardsAcquired: batchState.nonGoalRewardsAcquired,
-        maxNonGoalRewards: batchState.maxNonGoalRewards,
-      });
-    }
-    return;
-  }
-  writer.append({
-    kind: 'fieldsBatchOutcomeRecorded',
-    origin,
-    cageOutcome: batchState.cageOutcome,
-    batchCapacity: batchState.batchCapacity,
-    cageTargetCount: batchState.cageTargetCount,
-    doorCageRewardCount: batchState.doorCageRewardCount,
+  const startIndex = generation.startIndex ?? 0;
+  const generationCount = generation.count ?? targets.length;
+  targets.forEach((target, index) => {
+    const event: Omit<
+      Extract<RoomCreatedHistoryEvent, { readonly source: 'generatedTarget' }>,
+      'sequence'
+    > = {
+      kind: 'roomCreated',
+      origin: target.room.origin,
+      gameName: target.room.gameName,
+      encounterProfileKey: target.room.encounterProfileKey,
+      source: 'generatedTarget',
+      picked: target.picked,
+      parentOrigin,
+      targetOrigin: target.origin,
+      generationIndex: startIndex + index + 1,
+      generationCount,
+    };
+    writer.append(event);
+    writer.append({
+      kind: 'targetGenerationCompleted',
+      origin: target.origin,
+      roomOrigin: target.room.origin,
+      parentOrigin,
+      generationIndex: startIndex + index + 1,
+      generationCount,
+    });
   });
 }
 
-function appendRoomLifecycle(
+function appendHubCreated(
+  writer: HistorySegmentWriter,
+  parent: CanonicalAuthoredRoom,
+  hub: CanonicalHubDecision,
+): void {
+  writer.append({
+    kind: 'roomCreated',
+    origin: hub.room.origin,
+    gameName: hub.room.gameName,
+    encounterProfileKey: hub.room.encounterProfileKey,
+    source: 'hubDecision',
+    picked: true,
+    parentOrigin: parent.origin,
+    targetOrigin: hub.origin,
+    generationIndex: 1,
+    generationCount: 1,
+  });
+  writer.append({
+    kind: 'targetGenerationCompleted',
+    origin: hub.origin,
+    roomOrigin: hub.room.origin,
+    parentOrigin: parent.origin,
+    generationIndex: 1,
+    generationCount: 1,
+  });
+}
+
+function appendHubTargets(
+  writer: HistorySegmentWriter,
+  hub: CanonicalHubRoom,
+  targets: readonly CanonicalHubTarget[],
+  generation: { readonly startIndex?: number; readonly count?: number } = {},
+): void {
+  const startIndex = generation.startIndex ?? 0;
+  const generationCount = generation.count ?? targets.length;
+  targets.forEach((target, index) => {
+    const event: Omit<
+      Extract<RoomCreatedHistoryEvent, { readonly source: 'hubTarget' }>,
+      'sequence'
+    > = {
+      kind: 'roomCreated',
+      origin: target.room.origin,
+      gameName: target.room.gameName,
+      encounterProfileKey: target.room.encounterProfileKey,
+      source: 'hubTarget',
+      picked: target.room.entered,
+      parentOrigin: hub.origin,
+      targetOrigin: target.origin,
+      generationIndex: startIndex + index + 1,
+      generationCount,
+    };
+    writer.append(event);
+    writer.append({
+      kind: 'targetGenerationCompleted',
+      origin: target.origin,
+      roomOrigin: target.room.origin,
+      parentOrigin: hub.origin,
+      generationIndex: startIndex + index + 1,
+      generationCount,
+    });
+  });
+}
+
+function appendLocalTargets(
+  writer: HistorySegmentWriter,
+  parent: CanonicalAuthoredRoom,
+  rooms: readonly CanonicalLocalChildRoom[],
+): void {
+  const generated = [...rooms]
+    .filter((room) => room.generation === 'generated')
+    .sort((left, right) => left.availabilityRank - right.availabilityRank);
+  if (generated.length === 0) {
+    writer.append({ kind: 'emptyOutgoingGenerationCompleted', origin: parent.origin });
+    return;
+  }
+  generated.forEach((room, index) => {
+    const event: Omit<
+      Extract<RoomCreatedHistoryEvent, { readonly source: 'localChild' }>,
+      'sequence'
+    > = {
+      kind: 'roomCreated',
+      origin: room.origin,
+      gameName: room.gameName,
+      encounterProfileKey: room.encounterProfileKey,
+      source: 'localChild',
+      picked: room.entered,
+      parentOrigin: parent.origin,
+      targetOrigin: room.origin,
+      generationIndex: index + 1,
+      generationCount: generated.length,
+    };
+    writer.append(event);
+    writer.append({
+      kind: 'targetGenerationCompleted',
+      origin: room.origin,
+      roomOrigin: room.origin,
+      parentOrigin: parent.origin,
+      generationIndex: index + 1,
+      generationCount: generated.length,
+    });
+  });
+}
+
+function appendRestore(
+  writer: HistorySegmentWriter,
+  restore: CanonicalRoomRestore,
+  room: CanonicalLifecycleRoom,
+  restoreKind: 'hub' | 'parent',
+): void {
+  if (semanticAddressKey(restore.room.origin) !== semanticAddressKey(room.origin)) {
+    fail(`${restoreKind} restore has the wrong canonical room`);
+  }
+  writer.append({
+    kind: 'roomRestored',
+    origin: room.origin,
+    after: restore.after,
+    restoreKind,
+    biomeDepthCacheDelta: room.counterEffects.biomeDepthCache,
+    roomHistoryOrdinalDelta: room.counterEffects.roomHistoryOrdinal,
+  });
+}
+
+function appendVisit(
   writer: HistorySegmentWriter,
   catalog: Catalog,
-  room: CanonicalRoom,
-  generatedTargets?: readonly CanonicalTarget[],
-  batchState?: CanonicalBatchState,
-  batchOrigin?: ContinuationAddress,
-  layoutEntry?: CanonicalFixedEntryRoom,
-  stopAfterOutgoing = false,
+  visit: CanonicalHubVisit,
+  hub: CanonicalHubRoom,
 ): void {
-  if (room.kind === 'authored' && !room.entered) {
-    throw new LinearHistoryCompositionContractError(
-      `unpicked occurrence ${semanticAddressKey(room.origin)} cannot execute a lifecycle`,
-    );
-  }
-  let clockworkNonGoalSpawnsBeforeCombat = false;
-  let injectedTargets = false;
-  let injectedClockworkReward = false;
-  appendCanonicalRoomLifecycle(writer, catalog, room, fail, {
-    stopAfterOutgoing,
-    prepare(events) {
-      clockworkNonGoalSpawnsBeforeCombat =
-        room.kind === 'authored' &&
-        room.clockworkReward === 'nonGoal' &&
-        events.some(
-          (event) =>
-            event.kind === 'producerRoleAdvanced' && event.lifecyclePoint === 'beforeCombat',
-        );
+  appendCanonicalRoomLifecycle(writer, catalog, visit.target.room, fail, {
+    outgoing(outgoingWriter) {
+      appendLocalTargets(outgoingWriter, visit.target.room, visit.localSlots);
     },
-    beforeEvent(targetWriter, event) {
+  });
+  for (const [index, local] of visit.enteredLocalRooms.entries()) {
+    if (!local.entered || local.generation !== 'generated') {
+      fail(`Hub visit ${visit.visitIndex} enters an unavailable side room`);
+    }
+    appendCanonicalRoomLifecycle(writer, catalog, local, fail);
+    const restore = visit.parentRestores[index];
+    if (restore === undefined) fail(`Hub visit ${visit.visitIndex} has no parent restore`);
+    appendRestore(writer, restore, visit.target.room, 'parent');
+  }
+  appendRestore(writer, visit.hubRestore, hub, 'hub');
+}
+
+/**
+ * A blocked visit is not a completed visit. Its frontier carries exactly the
+ * lifecycle phase reached before the invalid owner, so replay never invents a
+ * later local entry, parent restore, or return to the persistent Hub.
+ */
+function appendHubVisitFrontier(
+  writer: HistorySegmentWriter,
+  catalog: Catalog,
+  visit: MaterializedHubVisitFrontier,
+): void {
+  if (visit.phase === 'targetLifecycle') {
+    appendCanonicalRoomLifecycle(writer, catalog, visit.target.room, fail, {
+      stopAfterOutgoing: true,
+    });
+    return;
+  }
+  if (visit.phase === 'sideGeneration') {
+    appendCanonicalRoomLifecycle(writer, catalog, visit.target.room, fail, {
+      outgoing(outgoingWriter) {
+        appendLocalTargets(outgoingWriter, visit.target.room, visit.localSlots);
+      },
+      stopAfterOutgoing: true,
+    });
+    return;
+  }
+  appendCanonicalRoomLifecycle(writer, catalog, visit.target.room, fail, {
+    outgoing(outgoingWriter) {
+      appendLocalTargets(outgoingWriter, visit.target.room, visit.localSlots);
+    },
+  });
+  for (const [index, local] of visit.enteredLocalRooms.entries()) {
+    if (!local.entered || local.generation !== 'generated') {
+      fail(`Hub visit ${visit.origin.visitIndex} enters an unavailable frontier side room`);
+    }
+    appendCanonicalRoomLifecycle(writer, catalog, local, fail);
+    const restore = visit.parentRestores[index];
+    if (restore === undefined) {
+      if (index === visit.enteredLocalRooms.length - 1) return;
+      fail(`Hub visit ${visit.origin.visitIndex} loses a non-final parent restore`);
+    }
+    appendRestore(writer, restore, visit.target.room, 'parent');
+  }
+  if (visit.enteredLocalRooms.length === 0) {
+    fail(`Hub visit ${visit.origin.visitIndex} local lifecycle frontier has no stopping room`);
+  }
+}
+
+/**
+ * A Hub owns both its declaration-ordered board and its eventual Handoff
+ * batch. The board is generated when the Hub reaches its outgoing checkpoint;
+ * the Handoff target is appended after the chosen visits, but remains in that
+ * same physical generation sequence. This preserves the persistent Hub as
+ * the stable parent without inventing a second outgoing lifecycle.
+ */
+function appendHubDecision(
+  writer: HistorySegmentWriter,
+  catalog: Catalog,
+  preHub: CanonicalAuthoredRoom,
+  decision: CanonicalHubDecision,
+  handoff?: CanonicalBatch,
+): CanonicalLifecycleRoom {
+  appendCanonicalRoomLifecycle(writer, catalog, preHub, fail, {
+    outgoing(outgoingWriter) {
+      appendHubCreated(outgoingWriter, preHub, decision);
+    },
+  });
+  const generationCount = decision.board.targets.length + (handoff?.targets.length ?? 0);
+  appendCanonicalRoomLifecycle(writer, catalog, decision.room, fail, {
+    outgoing(outgoingWriter) {
+      appendHubTargets(outgoingWriter, decision.room, decision.board.targets, {
+        count: generationCount,
+      });
+    },
+  });
+  for (const visit of decision.visits) appendVisit(writer, catalog, visit, decision.room);
+  if (handoff === undefined) return decision.room;
+  appendBatchState(writer, handoff);
+  appendGeneratedTargets(writer, decision.room.origin, handoff.targets, {
+    startIndex: decision.board.targets.length,
+    count: generationCount,
+  });
+  return selectedTarget(handoff).room;
+}
+
+function appendRoomWithBatch(
+  writer: HistorySegmentWriter,
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  batch: CanonicalBatch,
+): void {
+  let emitted = false;
+  const emitClockworkReward = (eventWriter: HistorySegmentWriter): void => {
+    if (emitted) fail(`${room.gameName} has multiple Clockwork reward points`);
+    eventWriter.append(
+      room.clockworkReward === 'goal'
+        ? { kind: 'clockworkGoalAcquired', origin: room.origin }
+        : { kind: 'clockworkNonGoalRewardSpawned', origin: room.origin },
+    );
+    emitted = true;
+  };
+  appendCanonicalRoomLifecycle(writer, catalog, room, fail, {
+    outgoing(outgoingWriter) {
+      appendBatchState(outgoingWriter, batch);
+      appendGeneratedTargets(outgoingWriter, room.origin, batch.targets);
+    },
+    beforeEvent(beforeWriter, event) {
       if (
-        clockworkNonGoalSpawnsBeforeCombat &&
+        room.clockworkReward === 'nonGoal' &&
+        room.incomingReward?.offer.rewardType === 'Devotion' &&
         event.kind === 'producerRoleAdvanced' &&
         event.lifecyclePoint === 'beforeCombat'
       ) {
-        if (injectedClockworkReward) {
-          fail(`${room.gameName} reached more than one Clockwork producer point`);
-        }
-        targetWriter.append({ kind: 'clockworkNonGoalRewardSpawned', origin: room.origin });
-        injectedClockworkReward = true;
+        emitClockworkReward(beforeWriter);
       }
     },
-    afterEvent(targetWriter, event) {
+    afterEvent(afterWriter, event) {
+      if (room.clockworkReward === undefined) return;
       if (
-        room.kind === 'authored' &&
-        ((event.kind === 'roomEntered' && room.clockworkReward === 'goal') ||
-          (event.kind === 'encounterCompleted' &&
-            room.clockworkReward === 'nonGoal' &&
-            !clockworkNonGoalSpawnsBeforeCombat))
+        (room.clockworkReward === 'goal' && event.kind === 'roomEntered') ||
+        (room.clockworkReward === 'nonGoal' &&
+          room.incomingReward?.offer.rewardType !== 'Devotion' &&
+          event.kind === 'encounterCompleted')
       ) {
-        if (injectedClockworkReward) {
-          fail(`${room.gameName} reached more than one Clockwork producer point`);
-        }
-        targetWriter.append(
-          room.clockworkReward === 'goal'
-            ? { kind: 'clockworkGoalAcquired', origin: room.origin }
-            : { kind: 'clockworkNonGoalRewardSpawned', origin: room.origin },
-        );
-        injectedClockworkReward = true;
+        emitClockworkReward(afterWriter);
       }
     },
-    ...(generatedTargets === undefined && layoutEntry === undefined
-      ? {}
-      : {
-          outgoing(targetWriter: HistorySegmentWriter) {
-            if ((generatedTargets === undefined) === (layoutEntry === undefined)) {
-              fail(`${room.gameName} requires exactly one outgoing-generation projection`);
-            }
-            if (batchState !== undefined) {
-              if (batchOrigin === undefined) {
-                fail(`${room.gameName} has batch state without a continuation origin`);
-              }
-              appendBatchState(targetWriter, batchOrigin, batchState);
-            }
-            if (generatedTargets !== undefined) {
-              appendGeneratedTargets(targetWriter, room.origin, generatedTargets);
-            } else {
-              layoutEntryCreated(targetWriter, room.origin, layoutEntry!);
-            }
-            injectedTargets = true;
-          },
-        }),
   });
-  if (room.kind === 'authored' && room.clockworkReward !== undefined && !injectedClockworkReward) {
-    throw new LinearHistoryCompositionContractError(
-      `${room.gameName} has no Clockwork producer point`,
-    );
-  }
-  if ((generatedTargets !== undefined || layoutEntry !== undefined) && !injectedTargets) {
-    throw new LinearHistoryCompositionContractError(
-      `${room.gameName} has canonical targets but no outgoing-generation operation`,
-    );
+  if (room.clockworkReward !== undefined && !emitted) {
+    fail(`${room.gameName} has no Clockwork reward point`);
   }
 }
 
-function fail(detail: string): never {
-  throw new LinearHistoryCompositionContractError(detail);
-}
-
-function pickedRoom(targets: readonly CanonicalTarget[], owner: string): CanonicalAuthoredRoom {
-  const picked = targets.filter((target) => target.picked);
-  if (picked.length !== 1 || picked[0] === undefined) {
-    throw new LinearHistoryCompositionContractError(
-      `${owner} must contain exactly one picked target`,
-    );
-  }
-  return picked[0].room;
-}
-
-function requireParent(
-  source: CanonicalAuthoredRoom | CanonicalFixedEntryRoom,
-  parent: RoomHistoryOrigin,
-  owner: string,
+function appendEnteredPreboss(
+  writer: HistorySegmentWriter,
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
 ): void {
-  if (semanticAddressKey(source.origin) !== semanticAddressKey(parent)) {
-    throw new LinearHistoryCompositionContractError(
-      `${owner} parent ${semanticAddressKey(parent)} does not match ${semanticAddressKey(source.origin)}`,
+  let emitted = false;
+  const emitClockworkReward = (eventWriter: HistorySegmentWriter): void => {
+    if (emitted) fail(`${room.gameName} has multiple Clockwork reward points`);
+    eventWriter.append(
+      room.clockworkReward === 'goal'
+        ? { kind: 'clockworkGoalAcquired', origin: room.origin }
+        : { kind: 'clockworkNonGoalRewardSpawned', origin: room.origin },
     );
+    emitted = true;
+  };
+  appendCanonicalRoomLifecycle(writer, catalog, room, fail, {
+    beforeEvent(beforeWriter, event) {
+      if (
+        room.clockworkReward === 'nonGoal' &&
+        room.incomingReward?.offer.rewardType === 'Devotion' &&
+        event.kind === 'producerRoleAdvanced' &&
+        event.lifecyclePoint === 'beforeCombat'
+      ) {
+        emitClockworkReward(beforeWriter);
+      }
+    },
+    afterEvent(afterWriter, event) {
+      if (room.clockworkReward === undefined) return;
+      if (
+        (room.clockworkReward === 'goal' && event.kind === 'roomEntered') ||
+        (room.clockworkReward === 'nonGoal' &&
+          room.incomingReward?.offer.rewardType !== 'Devotion' &&
+          event.kind === 'encounterCompleted')
+      ) {
+        emitClockworkReward(afterWriter);
+      }
+    },
+  });
+  if (room.clockworkReward !== undefined && !emitted) {
+    fail(`${room.gameName} has no Clockwork reward point`);
   }
 }
 
-function requireLinearLayout(
+function initialCounters(
   catalog: Catalog,
-  snapshot: Pick<CanonicalLinearBiome, 'routeKey' | 'biomeKey'>,
-  previous?: CanonicalLinearHistory,
+  snapshot: Pick<CanonicalBiome, 'biomeKey' | 'biomeState'>,
+  seed: HistoryStateView | undefined,
 ) {
-  const route = catalog.routes.byKey[snapshot.routeKey];
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
-  if (
-    route === undefined ||
-    !route.biomeKeys.includes(snapshot.biomeKey) ||
-    layout?.kind !== 'LinearBiome'
-  ) {
-    throw new LinearHistoryCompositionContractError(
-      `catalog cannot place canonical ${snapshot.biomeKey} history`,
-    );
-  }
-  const biomeIndex = route.biomeKeys.indexOf(snapshot.biomeKey);
-  const expectedPreviousBiomeKey = route.biomeKeys[biomeIndex - 1];
-  if (expectedPreviousBiomeKey === undefined) {
-    if (previous !== undefined) {
-      throw new LinearHistoryCompositionContractError(
-        `${snapshot.biomeKey} is the first ${route.key} biome and cannot consume prior history`,
-      );
-    }
-  } else if (
-    previous === undefined ||
-    previous.routeKey !== snapshot.routeKey ||
-    previous.biomeKey !== expectedPreviousBiomeKey
-  ) {
-    throw new LinearHistoryCompositionContractError(
-      `${snapshot.biomeKey} requires validated ${expectedPreviousBiomeKey} history`,
-    );
-  }
-  return layout;
-}
-
-export function composeLinearHistoryPrefix(
-  catalog: Catalog,
-  snapshot: MaterializedLinearBiomePrefix,
-  previous?: CanonicalLinearHistory,
-): LinearBiomeHistoryPrefix {
-  const layout = requireLinearLayout(catalog, snapshot, previous);
-  const seed = previous?.afterTransition;
-  const entry = snapshot.entryRooms[0];
-  if (entry === undefined) {
-    throw new LinearHistoryCompositionContractError(
-      `${snapshot.biomeKey} prefix history requires a canonical entry room`,
-    );
-  }
-  const clockworkMaxNonGoalRewards = snapshot.biomeState.maxNonGoalRewards;
-  if (
-    layout.continuation.batchPolicy.kind === 'clockwork' &&
-    (typeof clockworkMaxNonGoalRewards !== 'number' ||
-      !Number.isInteger(clockworkMaxNonGoalRewards))
-  ) {
-    throw new LinearHistoryCompositionContractError(
-      `${snapshot.biomeKey} has no canonical maxNonGoalRewards`,
-    );
-  }
-  return composeBiomeHistoryPrefix({
-    routeKey: snapshot.routeKey,
-    biomeKey: snapshot.biomeKey,
-    initialCounters: {
-      biomeDepthCache: layout.initialCounters.biomeDepthCache,
-      biomeEncounterDepth: layout.initialCounters.biomeEncounterDepth,
-      routeEncounterDepth: seed?.ledgers.counters.routeEncounterDepth ?? 1,
-      roomHistoryOrdinal: seed?.ledgers.counters.roomHistoryOrdinal ?? 0,
-      ...(layout.continuation.batchPolicy.kind === 'fields' ? { fieldsMaxDoorsRolled: 0 } : {}),
-      ...(layout.continuation.batchPolicy.kind === 'clockwork'
-        ? {
-            clockworkGoalsRemaining: layout.continuation.batchPolicy.initialGoalCount,
-            clockworkNonGoalRewardsAcquired: 0,
-            clockworkMaxNonGoalRewards: clockworkMaxNonGoalRewards as number,
-          }
-        : {}),
-    },
-    ...(seed === undefined ? {} : { seed }),
-    compose(writer) {
-      let source = composeFixedEntryChain(
-        writer,
-        snapshot.entryRooms,
-        (targetWriter, entrySource, fixedEntry) => {
-          if (fixedEntry.kind !== 'fixedEntry') {
-            fail(`${snapshot.biomeKey} has an authored room after its entry`);
-          }
-          appendRoomLifecycle(
-            targetWriter,
-            catalog,
-            entrySource,
-            undefined,
-            undefined,
-            undefined,
-            fixedEntry,
-          );
-        },
-        fail,
-      );
-      for (const batch of snapshot.batches) {
-        requireParent(source, batch.parent.origin, 'prefix batch');
-        appendRoomLifecycle(writer, catalog, source, batch.targets, batch.batchState, batch.origin);
-        source = pickedRoom(batch.targets, semanticAddressKey(batch.origin));
-      }
-      const frontier = snapshot.frontierGeneration;
-      if (frontier === undefined) {
-        appendRoomLifecycle(
-          writer,
-          catalog,
-          source,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          true,
-        );
-        return;
-      }
-      requireParent(source, frontier.parent.origin, 'prefix frontier generation');
-      appendRoomLifecycle(
-        writer,
-        catalog,
-        source,
-        frontier.targets,
-        frontier.batchState,
-        frontier.origin,
-      );
-    },
+  if (layout === undefined) fail(`catalog lost ${snapshot.biomeKey} layout`);
+  const progression = layout.progression;
+  return Object.freeze({
+    biomeDepthCache: layout.initialCounters.biomeDepthCache,
+    biomeEncounterDepth: layout.initialCounters.biomeEncounterDepth,
+    routeEncounterDepth: seed?.ledgers.counters.routeEncounterDepth ?? 1,
+    roomHistoryOrdinal: seed?.ledgers.counters.roomHistoryOrdinal ?? 0,
+    ...(progression.kind === 'generated' && progression.batchPolicy.kind === 'fields'
+      ? { fieldsMaxDoorsRolled: 0 }
+      : {}),
+    ...(progression.kind === 'generated' && progression.batchPolicy.kind === 'clockwork'
+      ? {
+          clockworkGoalsRemaining: progression.batchPolicy.initialGoalCount,
+          clockworkNonGoalRewardsAcquired: 0,
+          clockworkMaxNonGoalRewards: snapshot.biomeState.maxNonGoalRewards as number,
+        }
+      : {}),
+    ...(progression.kind === 'hub'
+      ? { numSubRoomsSpawned: 0, soulPylonsSpawned: 0, soulPylonsCompleted: 0 }
+      : {}),
   });
 }
 
-export function composeLinearHistory(
+function appendCompletedDecision(
+  writer: HistorySegmentWriter,
   catalog: Catalog,
-  snapshot: CanonicalLinearBiome,
-  previous?: CanonicalLinearHistory,
-): CanonicalLinearHistory {
-  const layout = requireLinearLayout(catalog, snapshot, previous);
-  const seed = previous?.afterTransition;
-  const entry = snapshot.entryRooms[0];
-  if (entry === undefined) {
-    throw new LinearHistoryCompositionContractError(
-      `${snapshot.biomeKey} history requires a canonical entry room`,
-    );
+  decision: CanonicalBiome['decisions'][number],
+  current: CanonicalLifecycleRoom,
+): CanonicalLifecycleRoom {
+  if (decision.kind === 'linkedExit') {
+    requireParent(current, decision.source.origin, 'linked exit');
+    if (current.kind !== 'authored') fail('linked exit source must be authored');
+    appendCanonicalRoomLifecycle(writer, catalog, current, fail, {
+      outgoing(outgoingWriter) {
+        appendGeneratedTargets(outgoingWriter, current.origin, [decision.target]);
+      },
+    });
+    return decision.target.room;
   }
-  const clockworkMaxNonGoalRewards = snapshot.biomeState.maxNonGoalRewards;
-  if (
-    layout.continuation.batchPolicy.kind === 'clockwork' &&
-    (typeof clockworkMaxNonGoalRewards !== 'number' ||
-      !Number.isInteger(clockworkMaxNonGoalRewards))
-  ) {
-    throw new LinearHistoryCompositionContractError(
-      `${snapshot.biomeKey} has no canonical maxNonGoalRewards`,
-    );
+  if (decision.kind === 'hub') {
+    if (current.kind !== 'authored') fail('Hub decision must follow an authored PreHub room');
+    return appendHubDecision(writer, catalog, current, decision);
   }
-  const clockworkCounters =
-    layout.continuation.batchPolicy.kind === 'clockwork'
-      ? {
-          clockworkGoalsRemaining: layout.continuation.batchPolicy.initialGoalCount,
-          clockworkNonGoalRewardsAcquired: 0,
-          clockworkMaxNonGoalRewards: clockworkMaxNonGoalRewards as number,
-        }
-      : {};
+  if (decision.parent.origin.kind === 'hubRoom') {
+    if (current.kind !== 'hub') fail('completed-Hub batch must follow the Hub room');
+    appendBatchState(writer, decision);
+    appendGeneratedTargets(writer, current.origin, decision.targets);
+  } else {
+    requireParent(current, decision.parent.origin, 'normal-door batch');
+    if (current.kind !== 'authored') fail('normal-door batch source must be authored');
+    appendRoomWithBatch(writer, catalog, current, decision);
+  }
+  return selectedTarget(decision).room;
+}
+
+export function composeBiomeHistory(
+  catalog: Catalog,
+  snapshot: CanonicalBiome,
+  seed?: HistoryStateView,
+): CanonicalBiomeHistory {
+  let completionPredecessor: CanonicalAuthoredRoom | undefined;
   return composeBiomeHistoryEnvelope({
     catalog,
     routeKey: snapshot.routeKey,
     biomeKey: snapshot.biomeKey,
-    initialCounters: {
-      biomeDepthCache: layout.initialCounters.biomeDepthCache,
-      biomeEncounterDepth: layout.initialCounters.biomeEncounterDepth,
-      routeEncounterDepth: seed?.ledgers.counters.routeEncounterDepth ?? 1,
-      roomHistoryOrdinal: seed?.ledgers.counters.roomHistoryOrdinal ?? 0,
-      ...(layout.continuation.batchPolicy.kind === 'fields' ? { fieldsMaxDoorsRolled: 0 } : {}),
-      ...clockworkCounters,
-    },
+    initialCounters: initialCounters(catalog, snapshot, seed),
     ...(seed === undefined ? {} : { seed }),
     completionRooms: snapshot.completionRooms,
-    transitionEffects: layout.completion.transitionEffects,
+    transitionEffects:
+      catalog.biomeLayouts.byKey[snapshot.biomeKey]?.completion.transitionEffects ?? [],
     composeEntry(writer) {
-      return composeFixedEntryChain(
-        writer,
-        snapshot.entryRooms,
-        (targetWriter, source, fixedEntry) => {
-          if (fixedEntry.kind !== 'fixedEntry') {
-            fail(`${snapshot.biomeKey} has an authored room after its entry`);
+      appendStandaloneRoomCreated(writer, snapshot.entryRoom, 'biomeEntry');
+      return snapshot.entryRoom;
+    },
+    composeBody(writer, entry) {
+      let current: CanonicalLifecycleRoom = entry;
+      for (let decisionIndex = 0; decisionIndex < snapshot.decisions.length; decisionIndex += 1) {
+        const decision = snapshot.decisions[decisionIndex]!;
+        if (decision.kind === 'linkedExit') {
+          requireParent(current, decision.source.origin, 'linked exit');
+          if (current.kind !== 'authored') fail('linked exit source must be authored');
+          appendCanonicalRoomLifecycle(writer, catalog, current, fail, {
+            outgoing(outgoingWriter) {
+              appendGeneratedTargets(outgoingWriter, current.origin, [decision.target]);
+            },
+          });
+          current = decision.target.room;
+          continue;
+        }
+        if (decision.kind === 'hub') {
+          if (current.kind !== 'authored') fail('Hub decision must follow an authored PreHub room');
+          const candidateHandoff = snapshot.decisions[decisionIndex + 1];
+          const handoff =
+            candidateHandoff?.kind === 'batch' && candidateHandoff.parent.origin.kind === 'hubRoom'
+              ? candidateHandoff
+              : undefined;
+          current = appendHubDecision(writer, catalog, current, decision, handoff);
+          if (handoff !== undefined) decisionIndex += 1;
+          if (
+            handoff !== undefined &&
+            selectedTarget(handoff).continuation === 'startsCompletion'
+          ) {
+            if (current.kind !== 'authored')
+              fail('Hub Handoff selected a non-authored completion room');
+            completionPredecessor = current;
+            break;
           }
-          appendRoomLifecycle(
-            targetWriter,
-            catalog,
-            source,
-            undefined,
-            undefined,
-            undefined,
-            fixedEntry,
-          );
-        },
-        fail,
-      );
-    },
-    composeBody(writer, entrySource) {
-      let source = entrySource;
-      for (const batch of snapshot.batches) {
-        requireParent(source, batch.parent.origin, 'batch');
-        appendRoomLifecycle(writer, catalog, source, batch.targets, batch.batchState, batch.origin);
-        source = pickedRoom(batch.targets, semanticAddressKey(batch.origin));
+          continue;
+        }
+        if (decision.parent.origin.kind === 'hubRoom') {
+          if (current.kind !== 'hub') fail('completed-Hub batch must follow the Hub room');
+          appendBatchState(writer, decision);
+          appendGeneratedTargets(writer, current.origin, decision.targets);
+        } else {
+          requireParent(current, decision.parent.origin, 'normal-door batch');
+          if (current.kind !== 'authored') fail('normal-door batch source must be authored');
+          appendRoomWithBatch(writer, catalog, current, decision);
+        }
+        const target = selectedTarget(decision);
+        current = target.room;
+        if (target.continuation === 'startsCompletion') {
+          completionPredecessor = target.room;
+          break;
+        }
       }
-      return source;
+      if (completionPredecessor === undefined)
+        fail(`${snapshot.biomeKey} never selected a Preboss`);
+      return completionPredecessor;
     },
-    composeTerminal(writer, source) {
-      requireParent(source, snapshot.terminalEntry.predecessor.origin, 'terminal entry');
-      appendRoomLifecycle(
-        writer,
-        catalog,
-        source,
-        snapshot.terminalEntry.targets,
-        snapshot.terminalEntry.batchState,
-        snapshot.terminalEntry.origin,
-      );
-      const terminal = pickedRoom(
-        snapshot.terminalEntry.targets,
-        semanticAddressKey(snapshot.terminalEntry.origin),
-      );
-      appendRoomLifecycle(writer, catalog, terminal);
-      return terminal;
+    composeCompletionPredecessor(writer, predecessor) {
+      appendEnteredPreboss(writer, catalog, predecessor);
+      return predecessor;
     },
     fail,
+  });
+}
+
+export function composeBiomeHistoryPrefix(
+  catalog: Catalog,
+  snapshot: MaterializedBiomePrefix,
+  seed?: HistoryStateView,
+): BiomeHistoryPrefix | null {
+  const entry = snapshot.entryRoom;
+  if (entry === undefined) return null;
+  return composePrefixHistoryEnvelope({
+    routeKey: snapshot.routeKey,
+    biomeKey: snapshot.biomeKey,
+    initialCounters: initialCounters(catalog, snapshot, seed),
+    ...(seed === undefined ? {} : { seed }),
+    compose(writer) {
+      appendStandaloneRoomCreated(writer, entry, 'biomeEntry');
+      let current: CanonicalLifecycleRoom = entry;
+      for (let decisionIndex = 0; decisionIndex < snapshot.decisions.length; decisionIndex += 1) {
+        const decision = snapshot.decisions[decisionIndex]!;
+        if (decision.kind === 'hub') {
+          if (current.kind !== 'authored') fail('Hub decision must follow an authored PreHub room');
+          const candidateHandoff = snapshot.decisions[decisionIndex + 1];
+          const handoff =
+            candidateHandoff?.kind === 'batch' && candidateHandoff.parent.origin.kind === 'hubRoom'
+              ? candidateHandoff
+              : undefined;
+          current = appendHubDecision(writer, catalog, current, decision, handoff);
+          if (handoff !== undefined) decisionIndex += 1;
+          continue;
+        }
+        current = appendCompletedDecision(writer, catalog, decision, current);
+      }
+      const frontier = snapshot.frontier;
+      if (frontier?.kind === 'exitDecision') {
+        if (current.kind !== 'authored') {
+          fail('ordinary decision frontier does not follow an authored room');
+        }
+        if (frontier.targets.length === 0) {
+          appendCanonicalRoomLifecycle(writer, catalog, current, fail, { stopAfterOutgoing: true });
+        } else {
+          appendCanonicalRoomLifecycle(writer, catalog, current, fail, {
+            outgoing(outgoingWriter) {
+              if (frontier.batchState !== undefined) {
+                appendBatchState(outgoingWriter, {
+                  origin: frontier.origin,
+                  batchState: frontier.batchState,
+                });
+              }
+              appendGeneratedTargets(outgoingWriter, current.origin, frontier.targets);
+            },
+            stopAfterOutgoing: true,
+          });
+        }
+      } else if (snapshot.frontier?.kind === 'hubBoard') {
+        const retainedHub = snapshot.decisions.some((decision) => decision.kind === 'hub');
+        if (!retainedHub) {
+          if (current.kind !== 'authored')
+            fail('Hub board frontier does not follow the PreHub room');
+          appendCanonicalRoomLifecycle(writer, catalog, current, fail, { stopAfterOutgoing: true });
+        } else if (current.kind !== 'hub') {
+          fail('retained Hub board did not restore the Hub lifecycle');
+        }
+      } else if (snapshot.frontier?.kind === 'hubVisit' && 'phase' in snapshot.frontier) {
+        if (current.kind !== 'hub') fail('Hub visit frontier does not follow the persistent Hub');
+        appendHubVisitFrontier(writer, catalog, snapshot.frontier);
+      }
+    },
   });
 }

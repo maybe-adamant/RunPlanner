@@ -37,5 +37,6 @@ export const exitTypes = [
   { key: 'N_OpeningDoor', compatibilityPolicyKey: 'Unconstrained' },
   { key: 'EphyraExitDoor', compatibilityPolicyKey: 'Unconstrained' },
   { key: 'EphyraExitDoorReturn', compatibilityPolicyKey: 'Unconstrained' },
+  { key: 'EphyraExitBossDoor', compatibilityPolicyKey: 'Unconstrained' },
   { key: 'N_SubRoomDoor', compatibilityPolicyKey: 'Unconstrained' },
 ] as const satisfies readonly ExitTypeDeclaration[];

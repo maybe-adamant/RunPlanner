@@ -375,6 +375,14 @@ export interface LinkedNormalExitDescriptor {
   readonly roomGameName: string;
 }
 
+/**
+ * A completed Hub has no authored room declaration as its source, so its
+ * width-one exit carries the same normalized physical metadata as a room exit.
+ */
+export interface CompletedHubExitDescriptor extends LinkedNormalExitDescriptor {
+  readonly physicalExit: RoomExit;
+}
+
 export interface GeneratedProgressionDescriptor {
   readonly kind: 'generated';
   readonly progressionPolicy: GeneratedProgressionPolicy;
@@ -452,7 +460,7 @@ export interface HubDecisionDescriptor {
   readonly rewardLookup: HubRewardLookupDescriptor;
   readonly sideRoomGeneration: HubSideRoomGenerationPolicy;
   readonly fields: readonly AuthoredFieldDescriptor[];
-  readonly completedExit: LinkedNormalExitDescriptor;
+  readonly completedExit: CompletedHubExitDescriptor;
 }
 
 export type ProgressionDescriptor = GeneratedProgressionDescriptor | HubDecisionDescriptor;

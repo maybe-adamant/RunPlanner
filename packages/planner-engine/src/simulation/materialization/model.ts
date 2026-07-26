@@ -6,9 +6,10 @@ import type {
 import type {
   BatchRewardStoreAddress,
   CompletionRoomAddress,
-  ContinuationAddress,
-  FixedEntryRewardAddress,
-  FixedEntryRoomAddress,
+  ExitDecisionAddress,
+  ExitDecisionSourceAddress,
+  ExitSelectionAddress,
+  HubDecisionAddress,
   HubOpenSetAddress,
   HubRoomAddress,
   HubSlotAddress,
@@ -17,7 +18,6 @@ import type {
   LocalChildAddress,
   LocalRewardAddress,
   OccurrenceAddress,
-  PickedAddress,
   RewardWheelAddress,
   RewardWheelOfferAddress,
   ShopOfferAddress,
@@ -28,7 +28,7 @@ import type { OccurrenceId } from '../../authored-project/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 
 export interface CanonicalResolvedIncomingReward {
-  readonly origin: FixedEntryRewardAddress | IncomingRewardAddress | LocalRewardAddress;
+  readonly origin: IncomingRewardAddress | LocalRewardAddress;
   readonly kind: 'resolved';
   readonly producerKind: 'countedChoice' | 'fixed' | 'freeReward' | 'shop';
   readonly producerLifecycleKey: string;
@@ -108,19 +108,6 @@ export interface CanonicalCompletionRoom {
   readonly entered: true;
 }
 
-export interface CanonicalFixedEntryRoom {
-  readonly kind: 'fixedEntry';
-  readonly origin: FixedEntryRoomAddress;
-  readonly role: string;
-  readonly gameName: string;
-  readonly encounterProfileKey: string;
-  readonly encounterPhases: readonly EncounterPhase[];
-  readonly lifecycleProfileKey: string;
-  readonly counterEffects: RoomCounterEffects;
-  readonly entered: true;
-  readonly incomingReward?: CanonicalResolvedIncomingReward;
-}
-
 export interface CanonicalHubRoom {
   readonly kind: 'hub';
   readonly origin: HubRoomAddress;
@@ -151,34 +138,32 @@ export interface CanonicalLocalChildRoom {
   readonly incomingReward?: CanonicalResolvedIncomingReward;
 }
 
-export type CanonicalRoom =
-  CanonicalAuthoredRoom | CanonicalCompletionRoom | CanonicalFixedEntryRoom;
+export type CanonicalRoom = CanonicalAuthoredRoom | CanonicalCompletionRoom;
 
 export interface CanonicalRoomReference {
-  readonly origin: FixedEntryRoomAddress | OccurrenceAddress;
-  readonly occurrenceId?: OccurrenceId;
+  readonly origin: OccurrenceAddress;
+  readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
 }
 
 export interface CanonicalHubRoomReference {
-  readonly origin: HubRoomAddress | OccurrenceAddress;
-  readonly occurrenceId?: OccurrenceId;
+  readonly origin: HubRoomAddress;
   readonly gameName: string;
 }
+
+export type CanonicalDecisionParent = CanonicalRoomReference | CanonicalHubRoomReference;
 
 export type CanonicalPhysicalExit =
   | {
       readonly kind: 'available';
+      readonly exitKey: string;
       readonly index: number;
       readonly type: string;
       readonly compatibilityPolicyKey: string;
     }
-  | {
-      readonly kind: 'unavailable';
-      readonly index: number;
-    };
+  | { readonly kind: 'unavailable'; readonly exitKey: string; readonly index: number };
 
-export type CanonicalTargetContinuation = 'continuesSpine' | 'deadLeaf' | 'entersTerminal';
+export type CanonicalTargetContinuation = 'continuesSpine' | 'deadLeaf' | 'startsCompletion';
 
 export interface CanonicalTarget {
   readonly origin: TargetAddress;
@@ -213,61 +198,28 @@ export type CanonicalBatchState =
       readonly doorCageRewardCount: number;
     };
 
+export interface CanonicalLinkedExit {
+  readonly kind: 'linkedExit';
+  readonly origin: ExitDecisionAddress;
+  readonly source: CanonicalRoomReference;
+  readonly target: CanonicalTarget;
+}
+
 export interface CanonicalBatch {
-  readonly origin: ContinuationAddress;
-  readonly parent: CanonicalRoomReference;
+  readonly kind: 'batch';
+  readonly origin: ExitDecisionAddress;
+  readonly source: ExitDecisionSourceAddress;
+  readonly parent: CanonicalDecisionParent;
   readonly rewardStore: CanonicalBatchRewardStore;
   readonly batchState: CanonicalBatchState;
   readonly targets: readonly CanonicalTarget[];
-  readonly pickedExitIndex: number;
-  readonly pickedOrigin: PickedAddress;
+  /**
+   * A materialized prefix may have generated its physical doors before an
+   * authored selection exists. Complete batches always carry a concrete key.
+   */
+  readonly selectedExitKey: string | null;
+  readonly selectedOrigin: ExitSelectionAddress;
 }
-
-export interface CanonicalTerminalEntry {
-  readonly origin: ContinuationAddress;
-  readonly predecessor: CanonicalRoomReference;
-  readonly targets: readonly CanonicalTarget[];
-  readonly pickedExitIndex: number;
-  readonly pickedOrigin: PickedAddress;
-  readonly rewardStore?: CanonicalBatchRewardStore;
-  readonly batchState?: CanonicalBatchState;
-}
-
-export interface MaterializedLinearFrontierGeneration {
-  readonly kind: 'batch' | 'terminal';
-  readonly origin: ContinuationAddress;
-  readonly parent: CanonicalRoomReference;
-  readonly rewardStore?: CanonicalBatchRewardStore;
-  readonly batchState?: CanonicalBatchState;
-  readonly targets: readonly CanonicalTarget[];
-  readonly pickedExitIndex: number | null;
-  readonly pickedOrigin: PickedAddress;
-}
-
-export type CanonicalBiomeState = Readonly<Record<string, boolean | number | string>>;
-
-export interface CanonicalLinearBiome {
-  readonly kind: 'LinearBiome';
-  readonly routeKey: string;
-  readonly biomeKey: string;
-  readonly entryRooms: readonly (CanonicalAuthoredRoom | CanonicalFixedEntryRoom)[];
-  readonly batches: readonly CanonicalBatch[];
-  readonly terminalEntry: CanonicalTerminalEntry;
-  readonly completionRooms: readonly CanonicalCompletionRoom[];
-  readonly biomeState: CanonicalBiomeState;
-}
-
-export interface MaterializedLinearBiomePrefix {
-  readonly kind: 'LinearBiomePrefix';
-  readonly routeKey: string;
-  readonly biomeKey: string;
-  readonly entryRooms: readonly (CanonicalAuthoredRoom | CanonicalFixedEntryRoom)[];
-  readonly batches: readonly CanonicalBatch[];
-  readonly frontierGeneration?: MaterializedLinearFrontierGeneration;
-  readonly biomeState: CanonicalBiomeState;
-}
-
-export type LinearSimulationMaterialization = CanonicalLinearBiome | MaterializedLinearBiomePrefix;
 
 export interface CanonicalHubTarget {
   readonly origin: HubSlotAddress;
@@ -285,7 +237,7 @@ export interface CanonicalHubBoard {
 export interface CanonicalRoomRestore {
   readonly kind: 'restore';
   readonly after: HubVisitAddress | LocalChildAddress;
-  readonly room: CanonicalHubRoomReference;
+  readonly room: CanonicalHubRoomReference | CanonicalRoomReference;
 }
 
 export interface CanonicalHubVisit {
@@ -298,40 +250,77 @@ export interface CanonicalHubVisit {
   readonly hubRestore: CanonicalRoomRestore;
 }
 
-export type MaterializedHubVisitFrontier = Readonly<
-  Omit<CanonicalHubVisit, 'hubRestore'> & {
-    readonly kind: 'targetLifecycle' | 'sideGeneration' | 'localRoomLifecycle';
-  }
->;
-
-export interface MaterializedHubEntryFrontier {
-  readonly kind: 'lifecycle';
-  readonly entryIndex: number;
+export interface CanonicalHubDecision {
+  readonly kind: 'hub';
+  readonly origin: HubDecisionAddress;
+  readonly room: CanonicalHubRoom;
+  readonly board: CanonicalHubBoard;
+  readonly visits: readonly CanonicalHubVisit[];
 }
 
-export interface CanonicalHubBiome {
-  readonly kind: 'HubBiome';
+export type CanonicalDecision = CanonicalLinkedExit | CanonicalBatch | CanonicalHubDecision;
+
+export type CanonicalBiomeState = Readonly<Record<string, boolean | number | string>>;
+
+export interface CanonicalBiome {
+  readonly kind: 'biome';
   readonly routeKey: string;
   readonly biomeKey: string;
-  readonly entryRooms: readonly CanonicalAuthoredRoom[];
-  readonly hubBoard: CanonicalHubBoard;
-  readonly visits: readonly CanonicalHubVisit[];
-  readonly terminalEntry: CanonicalAuthoredRoom;
+  readonly entryRoom: CanonicalAuthoredRoom;
+  readonly decisions: readonly CanonicalDecision[];
   readonly completionRooms: readonly CanonicalCompletionRoom[];
   readonly biomeState: CanonicalBiomeState;
 }
 
-export interface MaterializedHubBiomePrefix {
-  readonly kind: 'HubBiomePrefix';
+export interface MaterializedExitDecisionFrontier {
+  readonly kind: 'exitDecision';
+  readonly origin: ExitDecisionAddress;
+  readonly parent: CanonicalDecisionParent;
+  /**
+   * A contiguous declaration-ordered prefix already generated before the
+   * first blank or invalid physical exit. These rooms exist but are not yet
+   * entered, so they remain on the decision frontier rather than the spine.
+   */
+  readonly targets: readonly CanonicalTarget[];
+  /**
+   * The partial normal batch that owns the generated target prefix. Keeping
+   * its reward-store contract lets history and reward replay treat physical
+   * targets as facts without pretending that the decision is complete.
+   */
+  readonly partialBatch?: CanonicalBatch;
+  readonly batchState?: CanonicalBatchState;
+  readonly selectedExitKey: string | null;
+  readonly selectedOrigin: ExitSelectionAddress;
+}
+
+/**
+ * A blocked Hub visit has reached one of three distinct lifecycle phases.
+ * The completed visit list never contains this frontier visit: history uses
+ * the phase to stop before any later local lifecycle, restore, or Hub return.
+ */
+export interface MaterializedHubVisitFrontier {
+  readonly kind: 'hubVisit';
+  readonly origin: HubVisitAddress;
+  readonly phase: 'targetLifecycle' | 'sideGeneration' | 'localRoomLifecycle';
+  readonly target: CanonicalHubTarget;
+  readonly localSlots: readonly CanonicalLocalChildRoom[];
+  readonly enteredLocalRooms: readonly CanonicalLocalChildRoom[];
+  readonly parentRestores: readonly CanonicalRoomRestore[];
+}
+
+export type MaterializedHubDecisionFrontier =
+  | { readonly kind: 'hubBoard'; readonly origin: HubDecisionAddress }
+  | { readonly kind: 'hubVisit'; readonly origin: HubVisitAddress }
+  | MaterializedHubVisitFrontier;
+
+export interface MaterializedBiomePrefix {
+  readonly kind: 'biomePrefix';
   readonly routeKey: string;
   readonly biomeKey: string;
-  readonly entryRooms: readonly CanonicalAuthoredRoom[];
-  readonly hubRoom?: CanonicalHubRoom;
-  readonly hubBoard?: CanonicalHubBoard;
-  readonly visits: readonly CanonicalHubVisit[];
-  readonly frontierEntry?: MaterializedHubEntryFrontier;
-  readonly frontierVisit?: MaterializedHubVisitFrontier;
+  readonly entryRoom?: CanonicalAuthoredRoom;
+  readonly decisions: readonly CanonicalDecision[];
+  readonly frontier?: MaterializedExitDecisionFrontier | MaterializedHubDecisionFrontier;
   readonly biomeState: CanonicalBiomeState;
 }
 
-export type HubSimulationMaterialization = CanonicalHubBiome | MaterializedHubBiomePrefix;
+export type BiomeMaterialization = CanonicalBiome | MaterializedBiomePrefix;

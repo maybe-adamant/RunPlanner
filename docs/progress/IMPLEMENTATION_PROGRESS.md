@@ -33,18 +33,48 @@ fallout without adding compatibility adapters. The tracker supersedes the
 former presentation-only Commit 12 and Commit 13 wording in
 `IMPLEMENTATION_PLAN.md`.
 
-Commit 1 is in progress locally. The catalog and authored-project boundary now
-uses catalog `0.15.0-unified-biome-decisions` and schema 9 only: one biome
-envelope, common exit/Hub decisions, declaration-derived Preboss batches, and
-progressive N Opening -> PreHub -> Hub -> Preboss authoring. After the Commit
-1 review repairs, the catalog gate passes with 4 files and 93 tests, and the
-authored-project gate passes with 2 files and 84 tests. Catalog typecheck,
-lint, formatting, and diff checks pass. The planner-engine workspace
-typecheck is expected to fail only in downstream simulation, application
-fixtures, and old product tests that still consume removed schema-8 Linear/Hub,
-terminal, continuation/picked-address, and rendered-index target contracts;
-that dependency fallout belongs to Commit 2 and Commit 3 and is not bridged
-with compatibility exports.
+Commit 1 is complete. The catalog and authored-project boundary uses catalog
+`0.15.0-unified-biome-decisions` and schema 9 only: one biome envelope, common
+exit/Hub decisions, declaration-derived Preboss batches, and progressive N
+Opening -> PreHub -> Hub -> Preboss authoring. After the Commit 1 review
+repairs, the catalog gate passed with 4 files and 93 tests, and the
+authored-project gate passed with 2 files and 84 tests.
+
+Commit 2 is implemented and ready for re-review; it is not yet locked. The common evaluator carries F/G/H/I and
+N/O/P/Q through unified decision snapshots, including N's physical Hub board
+and completed-Hub handoff, O/Q width-one takeover batches, P's Shop/free
+takeover, and the existing I Clockwork timing. The shared Surface and
+Underworld test support is derived from the former product-loop facts rather
+than importing application fixtures. The N Hub candidate product is restored at
+its semantic
+owners: physical board slots, ordered visits, parent-local side-room generation,
+and entry order return typed support plus exact findings without a UI-context
+wrapper. Its regression matrix now covers board reward lookup, non-acquiring
+fixed Story offers, Preboss shop validation, constrained/closed/referenced
+slots, visit replacement, local generation, and entry order; the reward product
+again publishes declaration-owned Hub lookup facts. Focused F-through-Q,
+candidate-session, unified-biome, Hub-prefix, and progressive coverage
+passes. The progressive matrix now exercises incomplete F/G/H/I/O/P/Q prefixes,
+Fields and Clockwork prerequisites, physical-exit incompleteness, invalid
+replacement clamping, valid-prefix isolation, complete canonical routes, and
+determinism. The project-composition matrix owns unconfigured,
+incomplete, valid, invalid, retained, and blocked route partitions; cross-biome
+history seeding from F through I and N through O; finding boundaries; and
+deterministic frozen products. Review repair restored all seven candidate
+families (local rewards, Fields outcomes, Ship encounter count, and the four
+reward-wheel controls), exact unavailable-context evidence, declaration-ordered
+partial physical-target replay through history and reward state, invalid-biome
+replay seeding, and N's available completed-Hub exit. Follow-up repair keeps a
+blocked N board as one retained physical/reward region, represents a blocked
+visit as target-lifecycle, side-generation, or local-lifecycle phase rather
+than replaying it as complete, validates retained ordinary frontier batches,
+and withholds every later ordinary, Hub-visit, or parent-local candidate beyond
+the first invalid owner. The exact blocked owner retains its pre-decision
+repair frontier even on an incomplete prefix. Prefix coverage now names its
+last retained physical target or Hub region. The planner-engine typecheck and
+full engine suite pass (29 files, 298 tests), as do engine linting, root
+Prettier, and `git diff --check`. Application fixtures and workspace projections still
+consuming schema-8 products remain Commit 3 work, without compatibility exports.
 
 Room-replacement retention is closed. The delivered policy uses the
 catalog-backed leaf-contract boundary, excludes speculative fixed, shop, and

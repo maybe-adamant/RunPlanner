@@ -1,252 +1,180 @@
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBiomeAddress,
+  createHubDecisionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalChildGroupAddress,
   createLocalRewardAddress,
+  createOccurrenceId,
+  createProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
   simulateProject,
 } from '@run-planner/engine/simulation';
-import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
-import { bindTestCandidateSession } from './candidateSession';
+import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
+
 import {
-  createEmptyNProject,
-  createRepresentativeNOProject,
   createRepresentativeNProject,
   nBiome,
-  nFixedOccurrenceIds,
   nOccurrenceId,
   nOpenSlotKeys,
-} from '../../../../apps/planner/test/fixtures/surfaceProject';
+} from './support/surface-valid-project';
 
-function removeVisitsFrom(project: ReturnType<typeof createRepresentativeNProject>, index: number) {
-  return applyProjectCommand(project, catalog, {
-    kind: 'RemoveHubVisitsFrom',
-    visit: createHubVisitAddress(nBiome, index),
+function openHub(slotCount: number, resolvedBoardRewards = false) {
+  const opening = createOccurrenceId('progressive-n-opening');
+  let project = createProjectDocument(catalog, {
+    projectId: `progressive-n-${slotCount}`,
+    name: 'Progressive N',
+    configuredBiomeCounts: { Surface: 1 },
   });
-}
-
-function incompleteOpenBoard() {
-  let project = applyProjectCommand(createEmptyNProject(), catalog, {
-    kind: 'CreateHubTopology',
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
     biome: nBiome,
-    fixedOccurrenceIds: nFixedOccurrenceIds,
+    occurrenceId: opening,
   });
-  for (const hubSlotKey of nOpenSlotKeys.slice(0, 8)) {
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateLinkedExit',
+    decision: {
+      kind: 'exitDecision',
+      routeKey: 'Surface',
+      biomeKey: 'N',
+      source: { kind: 'occurrence', occurrenceId: opening },
+    },
+    occurrenceId: createOccurrenceId('progressive-n-prehub'),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateHubDecision',
+    hub: createHubDecisionAddress(nBiome, 'hub'),
+  });
+  for (const slotKey of nOpenSlotKeys.slice(0, slotCount)) {
     project = applyProjectCommand(project, catalog, {
       kind: 'OpenHubSlot',
-      slot: createHubSlotAddress(nBiome, hubSlotKey),
-      occurrenceId: nOccurrenceId(hubSlotKey),
+      slot: createHubSlotAddress(nBiome, 'hub', slotKey),
+      occurrenceId: createOccurrenceId(`progressive-n-${slotKey}`),
     });
+  }
+  if (resolvedBoardRewards) {
+    for (const [slotKey, value] of Object.entries({
+      combat01: { rewardType: 'MaxHealthDropBig' },
+      combat02: { rewardType: 'MaxManaDropBig' },
+      combat03: { rewardType: 'WeaponUpgrade' },
+      combat05: { rewardType: 'HermesUpgrade' },
+      combat09: { rewardType: 'SpellDrop' },
+      combat10: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource' as const, source: 'AphroditeUpgrade' },
+      },
+      combat11: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource' as const, source: 'AresUpgrade' },
+      },
+      combat23: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+      },
+      miniBoss01: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource' as const, source: 'HephaestusUpgrade' },
+      },
+    })) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, createOccurrenceId(`progressive-n-${slotKey}`)),
+        value,
+      });
+    }
   }
   return project;
 }
 
-function incompleteEvaluation(project: ReturnType<typeof createRepresentativeNProject>) {
-  const route = simulateProject(catalog, project).routes.find(
-    (candidate) => candidate.routeKey === 'Surface',
-  );
-  const evaluation = route?.biomes.find((candidate) => candidate.biomeKey === 'N');
-  if (
-    evaluation?.kind !== 'HubBiome' ||
-    evaluation.authoring !== 'incomplete' ||
-    !('materializedPrefix' in evaluation)
-  ) {
-    throw new Error('N did not produce a progressively evaluated Hub prefix');
-  }
-  return { route, evaluation };
+function nEvaluation(project: ReturnType<typeof openHub>) {
+  const biome = simulateProject(catalog, project)
+    .routes.find((route) => route.routeKey === 'Surface')
+    ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+  if (biome === undefined) throw new Error('project lost N');
+  return biome;
+}
+
+function progressiveN(project: ReturnType<typeof openHub>) {
+  const plan = project.routes
+    .find((route) => route.routeKey === 'Surface')
+    ?.biomes.find((biome) => biome.biomeKey === 'N');
+  if (plan === undefined) throw new Error('project lost authored N');
+  const progressive = evaluateProgressiveBiome(catalog, nBiome, plan, 1);
+  if (progressive === null) throw new Error('N did not produce a progressive prefix');
+  return progressive;
 }
 
 describe('Hub progressive biome evaluation', () => {
-  it('covers fixed entry and stops before an incomplete joint Hub board', () => {
-    const project = incompleteOpenBoard();
-    const { evaluation } = incompleteEvaluation(project);
+  it('retains an unopened Hub as incomplete rather than manufacturing a board', () => {
+    const project = createProjectDocument(catalog, {
+      projectId: 'progressive-n-empty',
+      name: 'Progressive N empty',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    const biome = nEvaluation(project as ReturnType<typeof openHub>);
 
-    expect(evaluation.frontier).toEqual({
-      kind: 'hubOpenSet',
-      routeKey: 'Surface',
-      biomeKey: 'N',
+    expect(biome).toMatchObject({
+      authoring: 'incomplete',
+      coverage: { kind: 'none', reason: 'notEvaluated' },
+      origin: createBiomeAddress('Surface', 'N'),
     });
-    expect(evaluation.coverage).toEqual({
+  });
+
+  it('covers the generated Hub-board prefix before an insufficient joint board', () => {
+    const biome = nEvaluation(openHub(8));
+    if (biome.authoring !== 'incomplete' || !('materializedPrefix' in biome)) {
+      throw new Error('N did not retain an incomplete prefix');
+    }
+
+    expect(biome.coverage).toMatchObject({
       kind: 'prefix',
-      through: {
-        owner: evaluation.materializedPrefix.hubRoom!.origin,
-        checkpoint: 'beforeTargetGeneration',
-      },
+      through: { checkpoint: 'afterTargetGeneration' },
     });
-    expect(evaluation.materializedPrefix.entryRooms.map((room) => room.gameName)).toEqual([
-      'N_Opening01',
-      'N_PreHub01',
+    expect(biome.materializedPrefix.entryRoom?.gameName).toBe('N_Opening01');
+    expect(biome.materializedPrefix.decisions.map((decision) => decision.kind)).toEqual([
+      'linkedExit',
+      'hub',
     ]);
-    expect(evaluation.materializedPrefix.hubBoard).toBeUndefined();
-    expect(evaluation.history.ledgers.roomCreations).toHaveLength(3);
     expect(
-      evaluation.history.events.some(
+      biome.history.events.some(
         (event) => event.kind === 'roomCreated' && event.source === 'hubTarget',
       ),
-    ).toBe(false);
-    const ninthSlotKey = nOpenSlotKeys[8]!;
-    expect(
-      bindTestCandidateSession(catalog, project).evaluate([
-        {
-          kind: 'hubSlot',
-          slot: createHubSlotAddress(nBiome, ninthSlotKey),
-          open: true,
-          occurrenceId: nOccurrenceId(ninthSlotKey),
-        },
-      ])[0],
-    ).toMatchObject({
-      context: 'unavailable',
-      reason: 'coverageNotReached',
-      evidence: {
-        kind: 'coverageNotReached',
-        requiredOwner: createHubSlotAddress(nBiome, ninthSlotKey),
-        requiredCheckpoint: 'afterTargetGeneration',
-      },
-    });
+    ).toBe(true);
   });
 
-  it('publishes the complete open board as one semantic generation region', () => {
-    const { evaluation } = incompleteEvaluation(
-      removeVisitsFrom(createRepresentativeNProject(), 1),
-    );
+  it('publishes a complete open board as one prefix region before visits are authored', () => {
+    const biome = nEvaluation(openHub(9, true));
+    if (biome.authoring !== 'incomplete' || !('materializedPrefix' in biome)) {
+      throw new Error('N board did not produce a prefix');
+    }
+    const hub = biome.materializedPrefix.decisions.find((decision) => decision.kind === 'hub');
+    if (hub?.kind !== 'hub') throw new Error('N board lost Hub decision');
 
-    expect(evaluation.coverage).toEqual({
-      kind: 'prefix',
-      through: {
-        owner: evaluation.materializedPrefix.hubBoard?.origin,
-        checkpoint: 'afterTargetGeneration',
-      },
-    });
-    expect(evaluation.materializedPrefix.hubBoard?.targets).toHaveLength(9);
+    expect(hub.board.targets).toHaveLength(9);
+    expect(hub.board.targets.every((target) => !target.room.entered)).toBe(true);
     expect(
-      evaluation.materializedPrefix.hubBoard?.targets.every((target) => !target.room.entered),
-    ).toBe(true);
-    expect(
-      evaluation.history.ledgers.roomCreations.filter((event) => event.source === 'hubTarget'),
+      biome.history.ledgers.roomCreations.filter((event) => event.source === 'hubTarget'),
     ).toHaveLength(9);
-    expect(evaluation.rewards.rewardLookups.hubRewardLookup).toHaveLength(6);
-  });
-
-  it('extends board coverage through complete visits and parent-local side state', () => {
-    const { evaluation } = incompleteEvaluation(
-      removeVisitsFrom(createRepresentativeNProject(), 4),
-    );
-
-    expect(evaluation.materializedPrefix.visits).toHaveLength(3);
-    expect(evaluation.coverage).toEqual({
+    expect(biome.coverage).toMatchObject({
       kind: 'prefix',
       through: {
-        owner: createHubVisitAddress(nBiome, 3),
-        checkpoint: 'afterRoomLifecycle',
-      },
-    });
-    expect(evaluation.history.current.ledgers.counters).toMatchObject({
-      soulPylonsSpawned: 3,
-      soulPylonsCompleted: 3,
-      numSubRoomsSpawned: 5,
-    });
-    expect(evaluation.roomGeneration.sideRoomGenerations.length).toBeGreaterThan(0);
-    expect(evaluation.history.events.some((event) => event.kind === 'biomeCompleted')).toBe(false);
-  });
-
-  it('clamps an unsupported joint board before every retained visit', () => {
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
-      kind: 'OpenHubSlot',
-      slot: createHubSlotAddress(nBiome, 'miniBoss02'),
-      occurrenceId: nOccurrenceId('miniBoss02'),
-    });
-    project = removeVisitsFrom(project, 4);
-    const { evaluation } = incompleteEvaluation(project);
-
-    expect(evaluation.coverage).toMatchObject({
-      kind: 'prefix',
-      through: {
-        owner: evaluation.materializedPrefix.hubBoard?.origin,
+        owner: hub.board.targets.at(-1)?.origin,
         checkpoint: 'afterTargetGeneration',
       },
-      blockedAt: createHubSlotAddress(nBiome, 'miniBoss01'),
-    });
-    expect(evaluation.materializedPrefix.visits).toHaveLength(0);
-    expect(evaluation.materializedPrefix.frontierVisit).toBeUndefined();
-    expect(
-      evaluation.materializedPrefix.hubBoard?.targets.every((target) => !target.room.entered),
-    ).toBe(true);
-    expect(evaluation.roomGeneration.findings).toContainEqual(
-      expect.objectContaining({ code: 'hubOpenSlotUnavailable' }),
-    );
-    expect(project.routes.find((route) => route.routeKey === 'Surface')?.biomes[0]).toMatchObject({
-      topology: { visitOrder: expect.arrayContaining(['combat05', 'miniBoss01', 'combat02']) },
-    });
-    const candidates = bindTestCandidateSession(catalog, project);
-    expect(
-      candidates.evaluate([
-        {
-          kind: 'hubVisit',
-          visit: createHubVisitAddress(nBiome, 1),
-          hubSlotKey: 'combat05',
-        },
-      ])[0],
-    ).toMatchObject({
-      context: 'unavailable',
-      reason: 'coverageNotReached',
-      evidence: {
-        kind: 'coverageNotReached',
-        requiredOwner: createHubVisitAddress(nBiome, 1),
-      },
-    });
-    expect(
-      candidates.evaluate([
-        {
-          kind: 'hubSlot',
-          slot: createHubSlotAddress(nBiome, 'miniBoss02'),
-          open: true,
-          occurrenceId: nOccurrenceId('miniBoss02'),
-        },
-      ])[0],
-    ).toMatchObject({
-      context: 'evaluated',
-      support: 'impossible',
-      findings: [
-        {
-          code: 'hubOpenSlotUnavailable',
-          origin: createHubSlotAddress(nBiome, 'miniBoss02'),
-        },
-      ],
     });
   });
 
-  it('clamps an unsupported Hub reward at the same atomic board boundary', () => {
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
-      value: { rewardType: 'WeaponUpgrade' },
-    });
-    project = removeVisitsFrom(project, 4);
-    const { evaluation } = incompleteEvaluation(project);
-
-    expect(evaluation.coverage).toMatchObject({
-      kind: 'prefix',
-      through: {
-        owner: evaluation.materializedPrefix.hubBoard?.origin,
-        checkpoint: 'afterTargetGeneration',
-      },
-      blockedAt: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
-    });
-    expect(evaluation.materializedPrefix.visits).toHaveLength(0);
-    expect(evaluation.rewards.findings).toContainEqual(
-      expect.objectContaining({ code: 'rewardBagEntryUnavailable' }),
-    );
-  });
-
-  it('clamps unsupported side generation inside its visit and withholds later visits', () => {
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+  it('retains an explicit side-generation violation at the local child boundary', () => {
+    let project = createRepresentativeNProject();
+    project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceSideRoomEntryOrder',
       group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
       enteredSlotKeys: ['sideDoor2'],
@@ -261,184 +189,210 @@ describe('Hub progressive biome evaluation', () => {
       ),
       generation: 'notGenerated',
     });
-    project = removeVisitsFrom(project, 4);
-    const { evaluation } = incompleteEvaluation(project);
+    const biome = nEvaluation(project as ReturnType<typeof openHub>);
 
-    expect(evaluation.coverage).toMatchObject({
+    expect(biome).toMatchObject({ authoring: 'complete', validity: 'invalid' });
+    expect(biome.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'sideRoomGenerationUnavailable',
+        origin: createLocalChildAddress(
+          nBiome,
+          nOccurrenceId('combat05'),
+          'sideRooms',
+          'sideDoor1',
+        ),
+      }),
+    );
+  });
+
+  it('publishes the reached visit as coverage at a Hub local frontier', () => {
+    const project = applyProjectCommand(openHub(9, true), catalog, {
+      kind: 'AppendHubVisit',
+      visit: createHubVisitAddress(nBiome, 'hub', 1),
+      hubSlotKey: 'combat05',
+    });
+    const biome = nEvaluation(project);
+
+    expect(biome.coverage).toMatchObject({
       kind: 'prefix',
       through: {
-        owner: createHubVisitAddress(nBiome, 1),
+        owner: createHubVisitAddress(nBiome, 'hub', 1),
         checkpoint: 'afterTargetGeneration',
       },
-      blockedAt: createLocalChildAddress(
+    });
+    expect(biome.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'sideRoomGenerationUnavailable',
+        origin: createLocalChildAddress(
+          nBiome,
+          createOccurrenceId('progressive-n-combat05'),
+          'sideRooms',
+          'sideDoor1',
+        ),
+      }),
+    );
+  });
+
+  it('retains physical board targets and the active visit through their invalid regions', () => {
+    const boardProject = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const board = progressiveN(boardProject as ReturnType<typeof openHub>);
+    const retainedBoard = board.materializedPrefix.decisions.find(
+      (decision) => decision.kind === 'hub',
+    );
+    if (retainedBoard?.kind !== 'hub') throw new Error('invalid board lost its Hub decision');
+
+    expect(board.materializedPrefix.frontier).toMatchObject({ kind: 'hubBoard' });
+    expect(retainedBoard.board.targets).toHaveLength(9);
+    expect(retainedBoard.visits).toEqual([]);
+    expect(
+      board.history.events.filter(
+        (event) => event.kind === 'roomCreated' && event.source === 'hubTarget',
+      ),
+    ).toHaveLength(9);
+    expect(board.rewards.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardBagEntryUnavailable',
+        origin: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
+      }),
+    );
+
+    let sideProject = createRepresentativeNProject();
+    sideProject = applyProjectCommand(sideProject, catalog, {
+      kind: 'ReplaceSideRoomEntryOrder',
+      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      enteredSlotKeys: ['sideDoor2'],
+    });
+    sideProject = applyProjectCommand(sideProject, catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: createLocalChildAddress(
         nBiome,
         nOccurrenceId('combat05'),
         'sideRooms',
         'sideDoor1',
       ),
+      generation: 'notGenerated',
     });
-    expect(evaluation.materializedPrefix.visits).toHaveLength(0);
-    expect(evaluation.materializedPrefix.frontierVisit).toMatchObject({
-      kind: 'sideGeneration',
-      visitIndex: 1,
-    });
-    expect(evaluation.roomGeneration.findings).toContainEqual(
-      expect.objectContaining({ code: 'sideRoomGenerationUnavailable' }),
-    );
-    expect(evaluation.history.current.ledgers.counters).toMatchObject({
-      soulPylonsSpawned: 1,
-      soulPylonsCompleted: 1,
-    });
-  });
+    const side = progressiveN(sideProject as ReturnType<typeof openHub>);
+    const frontier = side.materializedPrefix.frontier;
 
-  it('uses the selected progressive frontier for an incomplete Hub candidate region', () => {
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      enteredSlotKeys: ['sideDoor2'],
+    expect(frontier).toMatchObject({
+      kind: 'hubVisit',
+      phase: 'sideGeneration',
+      target: { hubSlotKey: 'combat05' },
+      enteredLocalRooms: [],
+      parentRestores: [],
     });
-    project = removeVisitsFrom(project, 4);
-    const sideRoom = createLocalChildAddress(
-      nBiome,
-      nOccurrenceId('combat05'),
-      'sideRooms',
-      'sideDoor1',
-    );
-    const query = {
-      kind: 'sideRoomGeneration' as const,
-      sideRoom,
-      generation: 'notGenerated' as const,
-    };
-    const candidate = bindTestCandidateSession(catalog, project).evaluate([query])[0];
-    const proposal = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom,
-      generation: query.generation,
-    });
-    const { evaluation } = incompleteEvaluation(proposal);
-
-    expect(evaluation.materializedPrefix.frontierVisit).toMatchObject({
-      kind: 'sideGeneration',
-      visitIndex: 1,
-    });
-    expect(candidate).toMatchObject({
-      context: 'evaluated',
-      support: 'impossible',
-      findings: evaluation.roomGeneration.findings.filter(
-        (finding) => finding.code === 'sideRoomGenerationUnavailable',
+    expect(
+      side.history.rooms.find(
+        (room) =>
+          room.origin.kind === 'occurrence' &&
+          room.origin.occurrenceId === nOccurrenceId('combat05'),
+      )?.outgoingGeneration,
+    ).toBeDefined();
+    expect(
+      side.history.rooms.some(
+        (room) =>
+          room.origin.kind === 'localChild' &&
+          room.origin.occurrenceId === nOccurrenceId('combat05'),
       ),
-    });
+    ).toBe(false);
+    expect(side.history.events.some((event) => event.kind === 'roomRestored')).toBe(false);
   });
 
-  it('returns progressive candidate results for every open Hub visit alternative', () => {
-    const project = createRepresentativeNProject();
-    const session = createPreparedProjectCandidateSession(
-      catalog,
-      project,
-      simulateProject(catalog, project),
-    );
-    const candidates = session.evaluate(
-      nOpenSlotKeys.map((hubSlotKey) => ({
-        kind: 'hubVisit' as const,
-        visit: createHubVisitAddress(nBiome, 1),
-        hubSlotKey,
-      })),
-    );
-
-    expect(candidates).toHaveLength(nOpenSlotKeys.length);
-    expect(candidates.every((candidate) => candidate.context === 'evaluated')).toBe(true);
-  });
-
-  it('clamps an unsupported joint side reward at the parent generation region', () => {
+  it('stops a local reward-bag failure before local lifecycle and Hub restore', () => {
     let project = createRepresentativeNProject();
-    for (const sideSlotKey of ['sideDoor1', 'sideDoor2'] as const) {
+    for (const slotKey of ['sideDoor1', 'sideDoor2'] as const) {
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceLocalReward',
-        reward: createLocalRewardAddress(
-          nBiome,
-          nOccurrenceId('combat05'),
-          'sideRooms',
-          sideSlotKey,
-        ),
+        reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms', slotKey),
         value: { rewardType: 'AirBoost' },
       });
     }
-    project = removeVisitsFrom(project, 4);
-    const { evaluation } = incompleteEvaluation(project);
+    const progressive = progressiveN(project as ReturnType<typeof openHub>);
+    const frontier = progressive.materializedPrefix.frontier;
 
-    expect(evaluation.coverage).toMatchObject({
-      kind: 'prefix',
-      through: {
-        owner: createHubVisitAddress(nBiome, 1),
-        checkpoint: 'afterTargetGeneration',
-      },
-      blockedAt: createLocalRewardAddress(
-        nBiome,
-        nOccurrenceId('combat05'),
-        'sideRooms',
-        'sideDoor2',
+    expect(frontier).toMatchObject({
+      kind: 'hubVisit',
+      phase: 'sideGeneration',
+      target: { hubSlotKey: 'combat05' },
+      enteredLocalRooms: [],
+      parentRestores: [],
+    });
+    expect(progressive.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardBagEntryUnavailable',
+        origin: createLocalRewardAddress(
+          nBiome,
+          nOccurrenceId('combat05'),
+          'sideRooms',
+          'sideDoor2',
+        ),
+      }),
+    );
+    expect(
+      progressive.history.rooms.some(
+        (room) =>
+          room.origin.kind === 'localChild' &&
+          room.origin.occurrenceId === nOccurrenceId('combat05'),
       ),
-    });
-    expect(evaluation.materializedPrefix.frontierVisit).toMatchObject({
-      kind: 'sideGeneration',
-      visitIndex: 1,
-    });
-    expect(evaluation.rewards.findings).toContainEqual(
-      expect.objectContaining({ code: 'rewardBagEntryUnavailable' }),
-    );
+    ).toBe(false);
+    expect(progressive.history.events.some((event) => event.kind === 'roomRestored')).toBe(false);
   });
 
-  it('blocks O while preserving N prefix coverage and retained O authorship', () => {
-    const project = removeVisitsFrom(createRepresentativeNOProject(), 4);
-    const surface = simulateProject(catalog, project).routes.find(
-      (candidate) => candidate.routeKey === 'Surface',
-    );
+  it('keeps incomplete Hub selection explicit while still evaluating the board-completing slot', () => {
+    const project = openHub(8);
+    const evaluation = simulateProject(catalog, project);
+    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
 
-    expect(surface?.configuredBiomeKeys).toEqual(['N', 'O']);
-    expect(surface?.biomes).toHaveLength(1);
-    expect(surface?.processing).toEqual({
-      completeValidPrefix: [],
-      active: { kind: 'incomplete', biomeKey: 'N' },
-      blockedSuffix: ['O'],
+    expect(
+      candidates.evaluate({
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(nBiome, 'hub', nOpenSlotKeys[8]!),
+        open: true,
+        occurrenceId: createOccurrenceId('progressive-n-completing-slot'),
+      }),
+    ).toMatchObject({ kind: 'hubSlot', result: { selectedPossible: true } });
+
+    const empty = createProjectDocument(catalog, {
+      projectId: 'progressive-n-candidate-empty',
+      name: 'Progressive N candidate empty',
+      configuredBiomeCounts: { Surface: 1 },
     });
-    expect(project.routes.find((route) => route.routeKey === 'Surface')?.biomes).toHaveLength(2);
+    expect(
+      createPreparedProjectCandidateSession(catalog, empty).evaluate({
+        kind: 'hubSlot',
+        slot: createHubSlotAddress(nBiome, 'hub', 'combat01'),
+        open: true,
+        occurrenceId: createOccurrenceId('progressive-n-uncovered-slot'),
+      }),
+    ).toEqual({
+      kind: 'unavailable',
+      reason: 'coverageNotReached',
+      evidence: {
+        kind: 'coverageNotReached',
+        requiredOwner: createHubSlotAddress(nBiome, 'hub', 'combat01'),
+        requiredCheckpoint: 'afterTargetGeneration',
+        coverage: { kind: 'none', reason: 'notEvaluated' },
+      },
+    });
   });
 
-  it('strengthens complete N to the existing canonical result', () => {
-    const surface = simulateProject(catalog, createRepresentativeNProject()).routes.find(
-      (candidate) => candidate.routeKey === 'Surface',
-    );
-    const evaluation = surface?.biomes[0];
-
-    expect(evaluation).toMatchObject({
-      kind: 'HubBiome',
-      biomeKey: 'N',
-      authoring: 'complete',
-      coverage: { kind: 'complete' },
-      validity: 'valid',
+  it('preserves Hub visit commands as one-based semantic addresses', () => {
+    const project = applyProjectCommand(openHub(9), catalog, {
+      kind: 'AppendHubVisit',
+      visit: createHubVisitAddress(nBiome, 'hub', 1),
+      hubSlotKey: 'combat05',
     });
-    expect(evaluation !== undefined && 'materializedPrefix' in evaluation).toBe(false);
-  });
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
 
-  it('is deterministic, deeply frozen, and does not mutate partial authorship', () => {
-    const project = removeVisitsFrom(createRepresentativeNProject(), 4);
-    const before = JSON.stringify(project);
-    const first = simulateProject(catalog, project);
-    const second = simulateProject(catalog, project);
-    const evaluation = first.routes.find((route) => route.routeKey === 'Surface')?.biomes[0];
-
-    expect(second).toEqual(first);
-    expect(JSON.stringify(project)).toBe(before);
-    expect(Object.isFrozen(evaluation)).toBe(true);
-    if (
-      evaluation?.kind !== 'HubBiome' ||
-      evaluation.authoring !== 'incomplete' ||
-      !('materializedPrefix' in evaluation)
-    ) {
-      throw new Error('N did not produce a materialized prefix');
-    }
-    expect(Object.isFrozen(evaluation.materializedPrefix)).toBe(true);
-    expect(Object.isFrozen(evaluation.history.events)).toBe(true);
-    expect(Object.isFrozen(evaluation.rewards.branches)).toBe(true);
+    expect(plan?.topology?.decisions).toContainEqual(
+      expect.objectContaining({ kind: 'hub', visitOrder: ['combat05'] }),
+    );
   });
 });

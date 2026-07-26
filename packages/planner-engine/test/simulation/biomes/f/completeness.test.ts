@@ -1,245 +1,177 @@
 import { describe, expect, it } from 'vitest';
+
+import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createBatchRewardStoreAddress,
   createBiomeAddress,
-  createContinuationAddress,
+  createExitSelectionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createPickedAddress,
-  createProjectDocument,
   createTargetAddress,
   semanticAddressKey,
-  type LinearBiomePlan,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   CompletenessContractError,
-  evaluateLinearCompleteness,
-  type LinearCompletenessResult,
+  evaluateBiomeCompleteness,
 } from '@run-planner/engine/simulation';
 
-import { catalog } from '@run-planner/hades2-catalog';
+import {
+  createFCombatBatch,
+  createFCombatTarget,
+  createFOpeningBatch,
+  createFOpeningTarget,
+  createFProject,
+  createFStart,
+  fBiome,
+  fCombatId,
+  fDecision,
+  selectFCombatExit,
+} from '../../support/f-takeover-project';
 
-const biome = createBiomeAddress('Underworld', 'F');
-const startId = createOccurrenceId('f-start');
-const combatId = createOccurrenceId('f-combat');
-const terminalShopId = createOccurrenceId('f-terminal-shop');
-const terminalFreeId = createOccurrenceId('f-terminal-free');
-
-function fPlan(project: ProjectDocument): LinearBiomePlan {
-  const plan = project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
-  if (plan?.kind !== 'LinearBiome' || plan.biomeKey !== 'F') {
-    throw new Error('missing authored F plan');
-  }
+function fPlan(project: ProjectDocument) {
+  const plan = project.routes
+    .find((route) => route.routeKey === 'Underworld')
+    ?.biomes.find((biome) => biome.biomeKey === 'F');
+  if (plan === undefined) throw new Error('missing F takeover plan');
   return plan;
 }
 
-function evaluate(project: ProjectDocument): LinearCompletenessResult {
-  return evaluateLinearCompleteness(catalog, biome, fPlan(project));
+function evaluate(project: ProjectDocument) {
+  return evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
 }
 
-function unstartedProject(): ProjectDocument {
-  return createProjectDocument(catalog, {
-    projectId: 'f-completeness',
-    name: 'F Completeness',
-    configuredBiomeCounts: { Underworld: 1 },
-  });
+function findingKeys(project: ProjectDocument): readonly string[] {
+  return evaluate(project).findings.map(
+    (finding) => `${finding.code}:${semanticAddressKey(finding.origin)}`,
+  );
 }
 
-function startedProject(): ProjectDocument {
-  return applyProjectCommand(unstartedProject(), catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: startId,
-    gameName: 'F_Opening01',
-  });
-}
-
-function withOpeningBatch(project = startedProject()): ProjectDocument {
-  const created = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, startId),
-  });
-  return applyProjectCommand(created, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, startId),
-    storeKey: 'RunProgress',
-  });
-}
-
-function withCombatTarget(gameName = 'F_Combat04'): ProjectDocument {
-  return applyProjectCommand(withOpeningBatch(), catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(biome, startId, 1),
-    occurrenceId: combatId,
-    gameName,
-  });
-}
-
-function withSelectedCombat(gameName = 'F_Combat04'): ProjectDocument {
-  return applyProjectCommand(withCombatTarget(gameName), catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, startId),
-    exitIndex: 1,
-  });
-}
-
-function withTerminal(gameName = 'F_Combat04'): ProjectDocument {
-  const targetOccurrenceIds =
-    gameName === 'F_Combat01' ? [terminalShopId] : [terminalShopId, terminalFreeId];
-  return applyProjectCommand(withSelectedCombat(gameName), catalog, {
-    kind: 'CreateTerminalTransition',
-    continuation: createContinuationAddress(biome, combatId),
-    targetOccurrenceIds,
-  });
-}
-
-function completeFProject(gameName = 'F_Combat04'): ProjectDocument {
-  return applyProjectCommand(withTerminal(gameName), catalog, {
-    kind: 'SetTerminalPicked',
-    picked: createPickedAddress(biome, combatId),
-    exitIndex: 1,
-  });
-}
-
-describe('F completeness', () => {
+describe('F takeover completeness', () => {
   it('rejects evaluation outside the declared F route placement', () => {
     expect(() =>
-      evaluateLinearCompleteness(
-        catalog,
-        createBiomeAddress('Surface', 'F'),
-        fPlan(startedProject()),
-      ),
+      evaluateBiomeCompleteness(catalog, createBiomeAddress('Surface', 'F'), fPlan(createFStart())),
     ).toThrowError(new CompletenessContractError('Surface does not place biome F'));
   });
 
-  it('reports an unstarted biome without producing complete topology', () => {
-    const result = evaluate(unstartedProject());
+  it('reports an unstarted biome without inventing a start occurrence', () => {
+    const result = evaluate(createFProject());
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       completion: 'incomplete',
-      frontier: biome,
-      findings: [
-        {
-          code: 'biomeTopologyMissing',
-          severity: 'error',
-          phase: 'completeness',
-          origin: biome,
-          evidence: { biomeKey: 'F' },
-        },
-      ],
+      frontier: fBiome,
+      findings: [{ code: 'biomeTopologyMissing', origin: fBiome }],
     });
     expect(Object.isFrozen(result)).toBe(true);
-    expect(Object.isFrozen(result.findings[0])).toBe(true);
+    expect(Object.isFrozen(result.findings)).toBe(true);
   });
 
-  it('stops at an unresolved generated reward pool before target completeness', () => {
-    const project = applyProjectCommand(startedProject(), catalog, {
-      kind: 'CreateBatch',
-      continuation: createContinuationAddress(biome, startId),
-    });
-
-    expect(evaluate(project)).toMatchObject({
-      completion: 'incomplete',
-      frontier: createBatchRewardStoreAddress(biome, startId),
-      findings: [
-        {
-          code: 'batchRewardStoreMissing',
-          origin: createBatchRewardStoreAddress(biome, startId),
-        },
-      ],
-    });
-  });
-
-  it('keeps a missing continuation distinct from an illegal continuation', () => {
-    const result = evaluate(startedProject());
-
-    expect(result.completion).toBe('incomplete');
-    expect(result).toMatchObject({
-      frontier: createContinuationAddress(biome, startId),
-    });
-    expect(result.findings.map((finding) => finding.code)).toEqual(['continuationMissing']);
-    expect(result.findings.map((finding) => semanticAddressKey(finding.origin))).toEqual([
-      '["continuation","Underworld","F","f-start"]',
+  it('keeps a missing exit decision distinct from an unresolved batch', () => {
+    expect(findingKeys(createFStart())).toEqual([
+      `continuationMissing:${semanticAddressKey(fDecision())}`,
     ]);
   });
 
-  it('addresses every missing physical target and the independent picked choice', () => {
-    const result = evaluate(withOpeningBatch());
-
-    expect(result.completion).toBe('incomplete');
-    expect(result).toMatchObject({
-      frontier: createTargetAddress(biome, startId, 1),
-    });
-    expect(
-      result.findings.map((finding) => ({
-        code: finding.code,
-        origin: semanticAddressKey(finding.origin),
-      })),
-    ).toEqual([
-      {
-        code: 'targetMissing',
-        origin: '["target","Underworld","F","f-start",1]',
-      },
-      {
-        code: 'pickedTargetMissing',
-        origin: '["picked","Underworld","F","f-start"]',
-      },
-    ]);
-  });
-
-  it('stops an authored batch with concrete targets but no picked target', () => {
-    const result = evaluate(withCombatTarget());
-
-    expect(result.completion).toBe('incomplete');
-    expect(result.findings.map((finding) => finding.code)).toEqual(['pickedTargetMissing']);
-    expect(result.findings[0]?.evidence).toEqual({ continuationKind: 'batch' });
-  });
-
-  it('requires the terminal pick after all terminal companions exist', () => {
-    const result = evaluate(withTerminal());
-
-    expect(result.completion).toBe('incomplete');
-    expect(result.findings.map((finding) => finding.code)).toEqual(['pickedTargetMissing']);
-    expect(result.findings[0]?.evidence).toEqual({ continuationKind: 'terminal' });
-  });
-
-  it('detects a newly required terminal companion without deleting retained state', () => {
-    const oneExitComplete = completeFProject('F_Combat01');
-    const expandedParent = applyProjectCommand(oneExitComplete, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(biome, combatId),
-      gameName: 'F_Combat04',
-    });
-    const result = evaluate(expandedParent);
-
-    expect(result.completion).toBe('incomplete');
-    expect(
-      result.findings.map((finding) => ({
-        code: finding.code,
-        origin: semanticAddressKey(finding.origin),
-      })),
-    ).toEqual([
-      {
-        code: 'targetMissing',
-        origin: '["target","Underworld","F","f-combat",2]',
-      },
-    ]);
-  });
-
-  it('accepts a fully authored topology without making a validity claim', () => {
-    const project = completeFProject();
+  it('installs the declaration-owned batch store when target creation makes it active', () => {
+    const project = createFOpeningTarget(createFOpeningBatch(createFStart(), undefined));
     const result = evaluate(project);
 
-    expect(result).toEqual({
-      completion: 'complete',
-      biomeState: {},
-      topology: fPlan(project).topology,
-      findings: [],
+    expect(result).toMatchObject({
+      completion: 'incomplete',
+      frontier: fDecision(fCombatId),
+      findings: [{ code: 'continuationMissing', origin: fDecision(fCombatId) }],
     });
-    expect(result).not.toHaveProperty('validity');
-    expect(result).not.toHaveProperty('snapshot');
-    expect(Object.isFrozen(result)).toBe(true);
+    const openingSource = fDecision().source;
+    if (openingSource.kind !== 'occurrence') throw new Error('F opening must be occurrence-owned');
+    const batch = fPlan(project).topology?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === openingSource.occurrenceId,
+    );
+    expect(batch).toMatchObject({
+      kind: 'exit',
+      normal: { kind: 'batch', rewardStore: { baseRewardStoreKey: 'MetaProgress' } },
+    });
+  });
+
+  it('addresses the declaration-owned missing physical target', () => {
+    const project = createFOpeningBatch();
+
+    expect(findingKeys(project)).toEqual([
+      `targetMissing:${semanticAddressKey(createTargetAddress(fBiome, fDecision().source, 'exit1'))}`,
+    ]);
+  });
+
+  it('continues through the derived one-door opening and stops at the combat decision', () => {
+    const result = evaluate(createFOpeningTarget());
+
+    expect(result).toMatchObject({
+      completion: 'incomplete',
+      frontier: fDecision(fCombatId),
+      findings: [{ code: 'continuationMissing', origin: fDecision(fCombatId) }],
+    });
+  });
+
+  it('rejects partial takeover creation instead of persisting a mixed Preboss batch', () => {
+    expect(() =>
+      createFCombatTarget(createFCombatBatch(), 'exit1', 'f-takeover-preboss-shop', 'F_PreBoss01'),
+    ).toThrow(/atomic takeover batch command/);
+  });
+
+  it('keeps an unresolved physical selection separate from atomic target presence', () => {
+    let project = createFOpeningTarget();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTakeoverBatch',
+      decision: fDecision(fCombatId),
+      gameName: 'F_PreBoss01',
+      targetOccurrenceIds: {
+        exit1: createOccurrenceId('f-takeover-preboss-shop'),
+        exit2: createOccurrenceId('f-takeover-preboss-free'),
+      },
+    });
+
+    const selection = createExitSelectionAddress(fBiome, fDecision(fCombatId).source);
+    expect(findingKeys(project)).toEqual([`pickedTargetMissing:${semanticAddressKey(selection)}`]);
+  });
+
+  it('retains compatible authored targets when source replacement adds a physical exit', () => {
+    let project = createFOpeningTarget(undefined, 'F_Combat01');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTakeoverBatch',
+      decision: fDecision(fCombatId),
+      gameName: 'F_PreBoss01',
+      targetOccurrenceIds: { exit1: createOccurrenceId('f-takeover-preboss') },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(fBiome, fCombatId),
+      gameName: 'F_Combat02',
+    });
+
+    expect(findingKeys(project)).toEqual([
+      `targetMissing:${semanticAddressKey(
+        createTargetAddress(fBiome, fDecision(fCombatId).source, 'exit2'),
+      )}`,
+    ]);
+    expect(
+      fPlan(project).topology?.occurrences.map((occurrence) => occurrence.occurrenceId),
+    ).toContain('f-takeover-preboss');
+  });
+
+  it('accepts a closed selected spine without making a legality claim', () => {
+    let project = createFOpeningTarget();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTakeoverBatch',
+      decision: fDecision(fCombatId),
+      gameName: 'F_PreBoss01',
+      targetOccurrenceIds: {
+        exit1: createOccurrenceId('f-takeover-complete-shop'),
+        exit2: createOccurrenceId('f-takeover-complete-free'),
+      },
+    });
+    project = selectFCombatExit(project, 'exit1');
+
+    expect(evaluate(project)).toMatchObject({ completion: 'complete', findings: [] });
   });
 });

@@ -1,295 +1,102 @@
-import {
-  applyProjectCommand,
-  createBatchRewardStoreAddress,
-  createBiomeAddress,
-  createContinuationAddress,
-  createOccurrenceId,
-  createPickedAddress,
-  createProjectDocument,
-  createTargetAddress,
-  semanticAddressKey,
-  type LinearBiomePlan,
-  type ProjectDocument,
-} from '@run-planner/engine/authored-project';
-import {
-  composeLinearHistory,
-  evaluateLinearCompleteness,
-  foldLinearHistoryEvents,
-  materializeLinearBiome,
-  type CompleteLinearCompletenessResult,
-  type LinearRoomHistoryViews,
-} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import { type ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  composeBiomeHistory,
+  evaluateBiomeCompleteness,
+  materializeBiome,
+} from '@run-planner/engine/simulation';
 
-const biome = createBiomeAddress('Underworld', 'F');
-const startId = createOccurrenceId('history-start');
-const firstCombatId = createOccurrenceId('history-combat-first');
-const secondCombatId = createOccurrenceId('history-combat-second');
-const unpickedShopId = createOccurrenceId('history-shop-unpicked');
-const terminalShopId = createOccurrenceId('history-terminal-shop');
-const terminalFreeId = createOccurrenceId('history-terminal-free');
+import { createCompleteFTakeoverProject, fBiome } from '../../support/f-takeover-project';
 
-function fPlan(project: ProjectDocument): LinearBiomePlan {
-  const plan = project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
-  if (plan?.kind !== 'LinearBiome' || plan.biomeKey !== 'F') {
-    throw new Error('missing F history fixture plan');
-  }
+function fPlan(project: ProjectDocument) {
+  const plan = project.routes
+    .find((route) => route.routeKey === 'Underworld')
+    ?.biomes.find((biome) => biome.biomeKey === 'F');
+  if (plan === undefined) throw new Error('missing F takeover plan');
   return plan;
 }
 
-function historyProject(): ProjectDocument {
-  let project = createProjectDocument(catalog, {
-    projectId: 'f-history',
-    name: 'F History',
-    configuredBiomeCounts: { Underworld: 1 },
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: startId,
-    gameName: 'F_Opening01',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, startId),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, startId),
-    storeKey: 'MetaProgress',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(biome, startId, 1),
-    occurrenceId: firstCombatId,
-    gameName: 'F_Combat04',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, startId),
-    exitIndex: 1,
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(biome, firstCombatId),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, firstCombatId),
-    storeKey: 'RunProgress',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(biome, firstCombatId, 1),
-    occurrenceId: secondCombatId,
-    gameName: 'F_Combat11',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(biome, firstCombatId, 2),
-    occurrenceId: unpickedShopId,
-    gameName: 'F_Shop01',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(biome, firstCombatId),
-    exitIndex: 1,
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTerminalTransition',
-    continuation: createContinuationAddress(biome, secondCombatId),
-    targetOccurrenceIds: [terminalShopId, terminalFreeId],
-  });
-  return applyProjectCommand(project, catalog, {
-    kind: 'SetTerminalPicked',
-    picked: createPickedAddress(biome, secondCombatId),
-    exitIndex: 1,
-  });
+function history(project = createCompleteFTakeoverProject()) {
+  const completeness = evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
+  if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
+  return composeBiomeHistory(catalog, materializeBiome(catalog, fBiome, completeness));
 }
 
-function complete(project: ProjectDocument): CompleteLinearCompletenessResult {
-  const result = evaluateLinearCompleteness(catalog, biome, fPlan(project));
-  if (result.completion !== 'complete') {
-    throw new Error(`history fixture is incomplete: ${result.findings[0]?.code}`);
-  }
-  return result;
-}
-
-function history() {
-  const snapshot = materializeLinearBiome(catalog, biome, complete(historyProject()));
-  return composeLinearHistory(catalog, snapshot);
-}
-
-function roomViews(
-  rooms: readonly LinearRoomHistoryViews[],
-  occurrenceId: string,
-): LinearRoomHistoryViews {
-  const views = rooms.find(
-    (room) => room.origin.kind === 'occurrence' && room.origin.occurrenceId === occurrenceId,
-  );
-  if (views === undefined) {
-    throw new Error(`missing history views for ${occurrenceId}`);
-  }
-  return views;
-}
-
-describe('F lifecycle composition and history ledgers', () => {
-  it('inserts physical target creation at outgoing checkpoints without entering dead leaves', () => {
+describe('F takeover history', () => {
+  it('creates every physical target at its source outgoing checkpoint', () => {
     const result = history();
-    const firstCombat = roomViews(result.rooms, firstCombatId);
+    const created = result.events.filter((event) => event.kind === 'roomCreated');
 
     expect(
-      firstCombat.targetGenerations.map((view) => semanticAddressKey(view.targetOrigin)),
-    ).toEqual([
-      '["target","Underworld","F","history-combat-first",1]',
-      '["target","Underworld","F","history-combat-first",2]',
-    ]);
-    expect(
-      firstCombat.targetGenerations.map((view) => view.before.ledgers.roomCreations.length),
-    ).toEqual([2, 3]);
-    expect(
-      firstCombat.targetGenerations.map((view) => view.after.ledgers.roomCreations.length),
-    ).toEqual([3, 4]);
-    expect(firstCombat.targetGenerations[0]?.before.ledgers).toEqual(
-      firstCombat.preOutgoing?.ledgers,
-    );
-    expect(firstCombat.targetGenerations[1]?.before.ledgers).toEqual(
-      firstCombat.targetGenerations[0]?.after.ledgers,
-    );
-    expect(firstCombat.outgoingGeneration?.ledgers).toEqual(
-      firstCombat.targetGenerations[1]?.after.ledgers,
-    );
-
-    const createdNames = result.ledgers.roomCreations.map((entry) => entry.gameName);
-    const appearedNames = result.ledgers.roomAppearances.map((entry) => entry.gameName);
-    expect(createdNames).toContain('F_Shop01');
-    expect(appearedNames).not.toContain('F_Shop01');
-    expect(
-      result.events.filter(
-        (event) =>
-          'origin' in event &&
-          event.origin.kind === 'occurrence' &&
-          event.origin.occurrenceId === unpickedShopId,
+      created.map((event) =>
+        event.source === 'generatedTarget'
+          ? [
+              event.source,
+              event.gameName,
+              event.generationIndex,
+              event.generationCount,
+              event.picked,
+            ]
+          : [event.source, event.gameName],
       ),
     ).toEqual([
-      expect.objectContaining({ kind: 'roomCreated', source: 'generatedTarget', picked: false }),
+      ['biomeEntry', 'F_Opening01'],
+      ['generatedTarget', 'F_Combat02', 1, 1, true],
+      ['generatedTarget', 'F_PreBoss01', 1, 2, true],
+      ['generatedTarget', 'F_PreBoss01', 2, 2, false],
+      ['layoutCompletion', 'F_Boss01'],
+      ['layoutCompletion', 'F_PostBoss01'],
     ]);
   });
 
-  it('preserves encounter-start and commit-time counter visibility across rooms', () => {
+  it('enters only the selected Preboss while retaining the unpicked peer creation', () => {
     const result = history();
-    const start = roomViews(result.rooms, startId);
-    const firstCombat = roomViews(result.rooms, firstCombatId);
-    const secondCombat = roomViews(result.rooms, secondCombatId);
 
-    expect(result.events[0]).toEqual({
-      kind: 'biomeStarted',
-      sequence: 1,
-      origin: biome,
-      counters: {
-        biomeDepthCache: 0,
-        biomeEncounterDepth: 1,
-        routeEncounterDepth: 1,
-        roomHistoryOrdinal: 0,
-      },
-    });
-
-    expect(start.preparation.ledgers.counters).toEqual({
-      biomeDepthCache: 0,
-      biomeEncounterDepth: 1,
-      routeEncounterDepth: 1,
-      roomHistoryOrdinal: 0,
-    });
-    expect(start.preOutgoing?.ledgers.counters).toMatchObject({
-      biomeDepthCache: 0,
-      biomeEncounterDepth: 2,
-      routeEncounterDepth: 2,
-    });
-    expect(firstCombat.preparation.ledgers.counters).toMatchObject({
-      biomeDepthCache: 1,
-      biomeEncounterDepth: 2,
-      roomHistoryOrdinal: 1,
-    });
-    expect(firstCombat.preparation.ledgers).toEqual(start.exit.ledgers);
-    expect(firstCombat.preOutgoing?.ledgers.counters).toMatchObject({
-      biomeDepthCache: 1,
-      biomeEncounterDepth: 3,
-    });
-    expect(firstCombat.postCommit.ledgers.counters).toMatchObject({
-      biomeDepthCache: 2,
-      biomeEncounterDepth: 3,
-      roomHistoryOrdinal: 2,
-    });
-    expect(secondCombat.preparation.ledgers.counters).toEqual(
-      firstCombat.postCommit.ledgers.counters,
-    );
-    expect(secondCombat.preparation.ledgers).toEqual(firstCombat.exit.ledgers);
-  });
-
-  it('records entered stores only at commit and folds the full stream deterministically', () => {
-    const result = history();
-    const start = roomViews(result.rooms, startId);
-    const firstCombat = roomViews(result.rooms, firstCombatId);
-
-    expect(start.outgoingGeneration?.ledgers.enteredRewardStores).toEqual([]);
-    expect(start.postCommit.ledgers.enteredRewardStores.map((entry) => entry.storeKey)).toEqual([
-      'RunProgress',
-    ]);
-    expect(
-      firstCombat.preparation.ledgers.enteredRewardStores.map((entry) => entry.storeKey),
-    ).toEqual(['RunProgress']);
-    expect(
-      firstCombat.postCommit.ledgers.enteredRewardStores.map((entry) => entry.storeKey),
-    ).toEqual(['RunProgress', 'MetaProgress']);
-
-    expect(foldLinearHistoryEvents(result.events)).toEqual(result);
-    expect(
-      composeLinearHistory(
-        catalog,
-        materializeLinearBiome(catalog, biome, complete(historyProject())),
-      ),
-    ).toEqual(result);
-    expect(result.events.map((event) => event.sequence)).toEqual(
-      result.events.map((_, index) => index + 1),
-    );
-    expect(Object.isFrozen(result)).toBe(true);
-    expect(Object.isFrozen(result.events)).toBe(true);
-    expect(Object.isFrozen(result.events[0])).toBe(true);
-    expect(
-      result.events[0]?.kind === 'biomeStarted' && Object.isFrozen(result.events[0].counters),
-    ).toBe(true);
-    expect(Object.isFrozen(result.ledgers.roomCreations)).toBe(true);
-  });
-
-  it('walks terminal and completion rooms before applying declared biome resets', () => {
-    const result = history();
-    const appearedNames = result.ledgers.roomAppearances.map((entry) => entry.gameName);
-
-    expect(appearedNames.slice(-3)).toEqual(['F_PreBoss01', 'F_Boss01', 'F_PostBoss01']);
-    expect(result.ledgers.enteredRewardStores.map((entry) => entry.gameName).slice(-1)).toEqual([
+    expect(result.ledgers.roomAppearances.map((entry) => entry.gameName)).toEqual([
+      'F_Opening01',
+      'F_Combat02',
       'F_PreBoss01',
+      'F_Boss01',
+      'F_PostBoss01',
     ]);
-    expect(result.events.filter((event) => event.kind === 'roomCountersAdvanced')).toHaveLength(
-      result.ledgers.roomAppearances.length,
+    expect(
+      result.ledgers.roomAppearances.filter((entry) => entry.origin.kind === 'occurrence'),
+    ).toHaveLength(3);
+    expect(
+      result.ledgers.roomCreations.filter((event) => event.gameName === 'F_PreBoss01'),
+    ).toHaveLength(2);
+  });
+
+  it('walks selected Preboss and completion rooms before biome completion and resets', () => {
+    const result = history();
+    const completion = result.events.findIndex((event) => event.kind === 'biomeCompleted');
+    const postbossCommit = result.events.findIndex(
+      (event) =>
+        event.kind === 'roomCommitted' &&
+        event.origin.kind === 'completionRoom' &&
+        event.origin.role === 'postboss',
     );
-    expect(result.biomeCompletion.ledgers.counters).toEqual({
-      biomeDepthCache: 5,
-      biomeEncounterDepth: 4,
-      routeEncounterDepth: 4,
-      roomHistoryOrdinal: 6,
-    });
-    expect(result.afterTransition.ledgers.counters).toEqual({
-      biomeDepthCache: 0,
-      biomeEncounterDepth: 0,
-      routeEncounterDepth: 4,
-      roomHistoryOrdinal: 6,
-    });
-    expect(result.events.slice(-3)).toEqual([
-      expect.objectContaining({ kind: 'biomeCompleted' }),
-      expect.objectContaining({ kind: 'biomeCounterReset', axis: 'biomeDepthCache' }),
-      expect.objectContaining({ kind: 'biomeCounterReset', axis: 'biomeEncounterDepth' }),
-    ]);
+    const reset = result.events.findIndex((event) => event.kind === 'biomeCounterReset');
+
+    expect(postbossCommit).toBeGreaterThan(0);
+    expect(completion).toBeGreaterThan(postbossCommit);
+    expect(reset === -1 || reset > completion).toBe(true);
+  });
+
+  it('is deterministic and does not mutate the canonical snapshot', () => {
+    const project = createCompleteFTakeoverProject();
+    const completeness = evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
+    if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
+    const snapshot = materializeBiome(catalog, fBiome, completeness);
+    const before = JSON.parse(JSON.stringify(snapshot));
+    const first = composeBiomeHistory(catalog, snapshot);
+    const second = composeBiomeHistory(catalog, snapshot);
+
+    expect(first).toEqual(second);
+    expect(snapshot).toEqual(before);
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(Object.isFrozen(first.events)).toBe(true);
   });
 });

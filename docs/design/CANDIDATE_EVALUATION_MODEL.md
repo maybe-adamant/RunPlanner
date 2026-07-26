@@ -107,12 +107,25 @@ The application may avoid requesting an unassessed control, but the engine
 remains the contact boundary and must independently enforce coverage.
 
 The decision point immediately before a selected invalid value is covered. Its
-pre-decision state must remain available so the user can evaluate replacements.
-Owners after the first blocking invalid state remain unassessed unless the
-layout defines an atomic decision region that must be evaluated as one unit.
+pre-decision state must remain available so the user can evaluate replacements,
+whether the authored biome was otherwise complete or still an incomplete
+prefix. Owners after the first blocking invalid state remain unassessed unless
+the layout defines an atomic decision region that must be evaluated as one unit.
+This includes lifecycle-owned values such as a selected shop purchase: its
+room-lifecycle context remains available to evaluate the value that unchecks
+that exact purchase. A reward-wheel lifecycle control likewise owns the
+diagnostics of offers within that same wheel, but never a sibling wheel or
+another room's offers.
 
 N's open Hub board and any jointly unordered reward producer are such atomic
 regions. They do not acquire a false slot- or sibling-order coverage prefix.
+Their declaration-ordered physical creations and reward lookup still remain
+facts once the board reaches outgoing generation; a board-owned invalid value
+blocks every later visit and parent-local candidate rather than erasing that
+atomic region. A blocked visit is phase-aware: target-lifecycle failure stops
+before outgoing generation, side-generation failure retains only target
+outgoing creation, and local-lifecycle failure retains only the entered local
+prefix through its invalid owner. None of those frontiers returns to the Hub.
 
 ## Candidate Session
 
@@ -202,6 +215,30 @@ Retained targets on exits no longer present after an upstream edit remain
 assessable through their concrete pre-generation history so
 `physicalExitUnavailable` is preserved.
 
+### Takeover Preboss Batches
+
+A takeover Preboss is not an ordinary per-target room choice. Its declaration
+replaces the complete normal-door batch at one source: the same Preboss room is
+created for every declaration-owned physical exit, with Shop/free lifecycle
+roles derived from the policy and exit order. The candidate owner is therefore
+the source `ExitDecisionAddress`:
+
+```ts
+interface TakeoverPrebossBatchCandidateQuery {
+  kind: 'takeoverPrebossBatch';
+  source: ExitDecisionAddress;
+  gameName: string;
+}
+```
+
+The evaluator considers the whole declared exit set before any target
+occurrence is created. It returns ordered exit evidence, compatibility, force,
+creation and appearance caps, and the required target count as one atomic
+result. A Preboss declaration is excluded from the ordinary `roomTarget`
+domain for a takeover source; I remains an ordinary per-target choice because
+its Preboss policy does not take over normal doors. Candidate evaluation never
+creates a partial mixed batch to discover that result.
+
 For a reward domain, the session prepares the producer frontier described
 below. Every complete offer is evaluated from the same frontier.
 
@@ -272,6 +309,7 @@ Each candidate family has an explicit semantic horizon:
 | ----------------------------- | ---------------------------------------------------------- |
 | Start room                    | Declaration-owned start domain                             |
 | Room target                   | Target generation support                                  |
+| Takeover Preboss batch        | Source pre-generation support across all physical exits    |
 | Batch reward store            | Pre-generation store support                               |
 | Incoming or local reward      | Offer generation and its own entered acquisition lifecycle |
 | Sequential sibling reward     | Earlier sibling generation plus the addressed offer        |

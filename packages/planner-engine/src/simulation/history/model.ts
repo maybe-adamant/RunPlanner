@@ -1,8 +1,8 @@
 import type { BiomeTransitionCounterAxis, EncounterPhaseKind } from '../../catalog-schema';
 import type {
   BiomeAddress,
-  ContinuationAddress,
-  FixedEntryTargetAddress,
+  ExitDecisionAddress,
+  HubDecisionAddress,
   HubSlotAddress,
   HubVisitAddress,
   LocalChildAddress,
@@ -10,7 +10,7 @@ import type {
 } from '../../authored-project/addresses';
 import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
 
-interface LinearHistoryEventBase {
+interface HistoryEventBase {
   readonly sequence: number;
 }
 
@@ -18,47 +18,46 @@ export type RoomCreationSource =
   | 'biomeEntry'
   | 'generatedTarget'
   | 'hubTarget'
+  | 'hubDecision'
   | 'layoutCompletion'
-  | 'layoutEntry'
-  | 'layoutTerminal'
   | 'localChild';
 
-export interface BiomeStartedHistoryEvent extends LinearHistoryEventBase {
+export interface BiomeStartedHistoryEvent extends HistoryEventBase {
   readonly kind: 'biomeStarted';
   readonly origin: BiomeAddress;
-  readonly counters: LinearHistoryCounters;
+  readonly counters: HistoryCounters;
 }
 
-interface RoomCreatedHistoryEventBase extends LinearHistoryEventBase {
+interface RoomCreatedHistoryEventBase extends HistoryEventBase {
   readonly kind: 'roomCreated';
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
   readonly encounterProfileKey: string;
 }
 
-export interface FieldsBatchOutcomeHistoryEvent extends LinearHistoryEventBase {
+export interface FieldsBatchOutcomeHistoryEvent extends HistoryEventBase {
   readonly kind: 'fieldsBatchOutcomeRecorded';
-  readonly origin: ContinuationAddress;
+  readonly origin: ExitDecisionAddress;
   readonly cageOutcome: 'min' | 'max';
   readonly batchCapacity: number;
   readonly cageTargetCount: number;
   readonly doorCageRewardCount: number;
 }
 
-export interface ClockworkBatchStateHistoryEvent extends LinearHistoryEventBase {
+export interface ClockworkBatchStateHistoryEvent extends HistoryEventBase {
   readonly kind: 'clockworkBatchStateRecorded';
-  readonly origin: ContinuationAddress;
+  readonly origin: ExitDecisionAddress;
   readonly goalsRemaining: number;
   readonly nonGoalRewardsAcquired: number;
   readonly maxNonGoalRewards: number;
 }
 
-export interface ClockworkGoalAcquiredHistoryEvent extends LinearHistoryEventBase {
+export interface ClockworkGoalAcquiredHistoryEvent extends HistoryEventBase {
   readonly kind: 'clockworkGoalAcquired';
   readonly origin: RoomHistoryOrigin;
 }
 
-export interface ClockworkNonGoalRewardSpawnedHistoryEvent extends LinearHistoryEventBase {
+export interface ClockworkNonGoalRewardSpawnedHistoryEvent extends HistoryEventBase {
   readonly kind: 'clockworkNonGoalRewardSpawned';
   readonly origin: RoomHistoryOrigin;
 }
@@ -93,47 +92,41 @@ export type RoomCreatedHistoryEvent =
       readonly generationCount: number;
     })
   | (RoomCreatedHistoryEventBase & {
-      readonly source: 'layoutEntry';
+      readonly source: 'hubDecision';
       readonly picked: true;
       readonly parentOrigin: RoomHistoryOrigin;
-      readonly targetOrigin: FixedEntryTargetAddress;
+      readonly targetOrigin: HubDecisionAddress;
       readonly generationIndex: 1;
       readonly generationCount: 1;
-    })
-  | (RoomCreatedHistoryEventBase & {
-      readonly source: 'layoutTerminal';
-      readonly picked: true;
-      readonly parentOrigin: RoomHistoryOrigin;
-      readonly targetOrigin: FixedEntryTargetAddress;
     });
 
-export interface BiomeCompletedHistoryEvent extends LinearHistoryEventBase {
+export interface BiomeCompletedHistoryEvent extends HistoryEventBase {
   readonly kind: 'biomeCompleted';
   readonly origin: BiomeAddress;
 }
 
-export interface BiomeCounterResetHistoryEvent extends LinearHistoryEventBase {
+export interface BiomeCounterResetHistoryEvent extends HistoryEventBase {
   readonly kind: 'biomeCounterReset';
   readonly origin: BiomeAddress;
   readonly axis: BiomeTransitionCounterAxis;
   readonly value: 0;
 }
 
-export interface TargetGenerationCompletedHistoryEvent extends LinearHistoryEventBase {
+export interface TargetGenerationCompletedHistoryEvent extends HistoryEventBase {
   readonly kind: 'targetGenerationCompleted';
-  readonly origin: FixedEntryTargetAddress | HubSlotAddress | LocalChildAddress | TargetAddress;
+  readonly origin: HubDecisionAddress | HubSlotAddress | LocalChildAddress | TargetAddress;
   readonly roomOrigin: RoomHistoryOrigin;
   readonly parentOrigin: RoomHistoryOrigin;
   readonly generationIndex: number;
   readonly generationCount: number;
 }
 
-export interface EmptyOutgoingGenerationHistoryEvent extends LinearHistoryEventBase {
+export interface EmptyOutgoingGenerationHistoryEvent extends HistoryEventBase {
   readonly kind: 'emptyOutgoingGenerationCompleted';
   readonly origin: RoomHistoryOrigin;
 }
 
-export interface RoomRestoredHistoryEvent extends LinearHistoryEventBase {
+export interface RoomRestoredHistoryEvent extends HistoryEventBase {
   readonly kind: 'roomRestored';
   readonly origin: RoomHistoryOrigin;
   readonly after: HubVisitAddress | LocalChildAddress;
@@ -142,7 +135,7 @@ export interface RoomRestoredHistoryEvent extends LinearHistoryEventBase {
   readonly roomHistoryOrdinalDelta: number;
 }
 
-export type LinearHistoryEvent =
+export type HistoryEvent =
   | BiomeCompletedHistoryEvent
   | BiomeCounterResetHistoryEvent
   | BiomeStartedHistoryEvent
@@ -194,7 +187,7 @@ export interface RoomRestoreHistoryEntry {
   readonly restoreKind: 'hub' | 'parent';
 }
 
-export interface LinearHistoryCounters {
+export interface HistoryCounters {
   readonly biomeDepthCache: number;
   readonly biomeEncounterDepth: number;
   readonly routeEncounterDepth: number;
@@ -208,7 +201,7 @@ export interface LinearHistoryCounters {
   readonly soulPylonsCompleted?: number;
 }
 
-export interface LinearHistoryLedgers {
+export interface HistoryLedgers {
   readonly roomCreations: readonly RoomCreatedHistoryEvent[];
   readonly roomAppearances: readonly RoomAppearanceHistoryEntry[];
   readonly encounterStarts: readonly EncounterHistoryEntry[];
@@ -217,55 +210,45 @@ export interface LinearHistoryLedgers {
   readonly requiredObjectSpawns: readonly RequiredObjectHistoryEntry[];
   readonly requiredObjectCompletions: readonly RequiredObjectHistoryEntry[];
   readonly roomRestores: readonly RoomRestoreHistoryEntry[];
-  readonly counters: LinearHistoryCounters;
+  readonly counters: HistoryCounters;
 }
 
-export interface LinearHistoryStateView {
+export interface HistoryStateView {
   readonly sequence: number;
-  readonly ledgers: LinearHistoryLedgers;
+  readonly ledgers: HistoryLedgers;
 }
 
-export interface LinearTargetGenerationView {
-  readonly targetOrigin:
-    FixedEntryTargetAddress | HubSlotAddress | LocalChildAddress | TargetAddress;
+export interface TargetGenerationView {
+  readonly targetOrigin: HubDecisionAddress | HubSlotAddress | LocalChildAddress | TargetAddress;
   readonly roomOrigin: RoomHistoryOrigin;
-  readonly before: LinearHistoryStateView;
-  readonly after: LinearHistoryStateView;
+  readonly before: HistoryStateView;
+  readonly after: HistoryStateView;
 }
 
-export interface LinearOfferPointView {
+export interface OfferPointView {
   readonly offerPoint: string;
-  readonly before: LinearHistoryStateView;
-  readonly after: LinearHistoryStateView;
-  readonly acquisitionBefore?: LinearHistoryStateView;
-  readonly acquisitionAfter?: LinearHistoryStateView;
+  readonly before: HistoryStateView;
+  readonly after: HistoryStateView;
+  readonly acquisitionBefore?: HistoryStateView;
+  readonly acquisitionAfter?: HistoryStateView;
 }
 
 export interface ProgressiveRoomHistoryViews {
   readonly origin: RoomHistoryOrigin;
-  readonly preparation: LinearHistoryStateView;
-  readonly entry: LinearHistoryStateView;
-  readonly offerPoints?: readonly LinearOfferPointView[];
-  readonly preOutgoing?: LinearHistoryStateView;
-  readonly targetGenerations: readonly LinearTargetGenerationView[];
-  readonly outgoingGeneration?: LinearHistoryStateView;
-  readonly postCommit?: LinearHistoryStateView;
-  readonly exit?: LinearHistoryStateView;
+  readonly preparation: HistoryStateView;
+  readonly entry: HistoryStateView;
+  readonly offerPoints?: readonly OfferPointView[];
+  readonly preOutgoing?: HistoryStateView;
+  readonly targetGenerations: readonly TargetGenerationView[];
+  readonly outgoingGeneration?: HistoryStateView;
+  readonly postCommit?: HistoryStateView;
+  readonly exit?: HistoryStateView;
 }
 
-export type LinearProgressiveRoomHistoryViews = ProgressiveRoomHistoryViews;
-
-export interface LinearRoomHistoryViews extends ProgressiveRoomHistoryViews {
-  readonly postCommit: LinearHistoryStateView;
-  readonly exit: LinearHistoryStateView;
+export interface RoomHistoryViews extends ProgressiveRoomHistoryViews {
+  readonly postCommit: HistoryStateView;
+  readonly exit: HistoryStateView;
 }
-
-export type HistoryEvent = LinearHistoryEvent;
-export type HistoryCounters = LinearHistoryCounters;
-export type HistoryLedgers = LinearHistoryLedgers;
-export type HistoryStateView = LinearHistoryStateView;
-export type TargetGenerationView = LinearTargetGenerationView;
-export type RoomHistoryViews = LinearRoomHistoryViews;
 
 export interface CanonicalBiomeHistory {
   readonly routeKey: string;
@@ -285,12 +268,3 @@ export interface BiomeHistoryPrefix {
   readonly rooms: readonly ProgressiveRoomHistoryViews[];
   readonly current: HistoryStateView;
 }
-
-export type LinearBiomeHistoryPrefix = BiomeHistoryPrefix;
-export type HubBiomeHistoryPrefix = BiomeHistoryPrefix;
-
-export type LinearSimulationHistory = CanonicalLinearHistory | LinearBiomeHistoryPrefix;
-export type HubSimulationHistory = CanonicalHubHistory | HubBiomeHistoryPrefix;
-
-export type CanonicalLinearHistory = CanonicalBiomeHistory;
-export type CanonicalHubHistory = CanonicalBiomeHistory;
