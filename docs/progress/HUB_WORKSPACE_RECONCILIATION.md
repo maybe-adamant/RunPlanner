@@ -3,11 +3,11 @@
 ## Status
 
 Planned. This tracker supersedes the presentation-only Phase 7 Commit 12 and
-Commit 13 plan. Phase 7 Commit 12 will be delivered through the five
-independently reviewable commits defined below. Commits 1 through 4 establish
-and close the unified biome refactor. Commit 5 is a follow-up presentation and
-accessibility pass that preserves those domain contracts while delivering the
-same final product acceptance.
+Commit 13 plan. Phase 7 Commit 12 will be delivered through the seven
+independently reviewable commits defined below. Commits 1, 2, 3a, 3b, 3c, and 4
+establish and close the unified biome refactor. Commit 5 is a follow-up
+presentation and accessibility pass that preserves those domain contracts
+while delivering the same final product acceptance.
 
 The implementation must update its owning authorities as it lands:
 
@@ -1112,8 +1112,8 @@ state, evaluation, autosave, or undo history.
 | React composition     | `App.tsx` chooses `LinearWorkspace` or `HubBiomeEditor`                                                                    | projection-driven `BiomeWorkspace`; Hub survives only as one workbench            |
 | Destructive UI        | shell and biome editors call `globalThis.confirm` directly                                                                 | application-owned pending intent and one accessible shared dialog                 |
 
-The destructive-UI transition belongs only to follow-up Commit 5. Commits 1
-through 4 own every other transition in this table.
+The destructive-UI transition belongs only to follow-up Commit 5. Commits 1,
+2, 3a through 3c, and 4 own every other transition in this table.
 
 ## Implementation Order
 
@@ -1123,16 +1123,19 @@ working application after every commit:
 ```text
 catalog and authored project
   -> simulation and planner-engine products
-  -> application projection and React workspace
+  -> application projection and schema-9 fixtures
+  -> shared biome workspace
+  -> Hub integration and application cutover
   -> unified-contract closure
   -> presentation and accessibility polish
 ```
 
 An intermediate commit may leave a temporarily non-working checkout when that
-produces cleaner ownership boundaries. Commits 1 and 2 may therefore leave
-known downstream TypeScript or product-test failures. This is not permission
-to leave the layer owned by the commit half-migrated, introduce dual schema
-contracts, or add compatibility adapters solely to keep later layers green.
+produces cleaner ownership boundaries. Commits 1, 2, 3a, and 3b may therefore
+leave known downstream TypeScript or product-test failures. This is not
+permission to leave the layer owned by the commit half-migrated, introduce dual
+schema contracts, or add compatibility adapters solely to keep later layers
+green.
 
 Each temporary-breakage commit must:
 
@@ -1142,11 +1145,14 @@ Each temporary-breakage commit must:
 - distinguish expected dependency fallout from an owning-layer failure;
 - leave no runtime fallback that guesses old or new domain semantics.
 
-Commit 3 restores the connected application: repository-wide type checking,
-planner and product tests, and the production build become required again.
-Commit 4 runs the complete repository gate and closes the unified biome
-refactor. Commit 5 then replaces global confirmation, completes broader visual
-and accessibility polish, reruns the complete gate, and closes the tracker.
+Commit 3a removes schema 8 from application projections and fixtures. Commit 3b
+builds the shared workspace against that projection without retaining an
+adapter to the old editors. Commit 3c restores the connected application:
+repository-wide type checking, planner and product tests, and the production
+build become required again. Commit 4 runs the complete repository gate and
+closes the unified biome refactor. Commit 5 then replaces global confirmation,
+completes broader visual and accessibility polish, reruns the complete gate,
+and closes the tracker.
 
 ## Implementation Slices
 
@@ -1262,7 +1268,7 @@ Gate:
   `npm run format:check` and `git diff --check` pass;
 - simulation, application type checking, and product tests may fail only
   because they still consume removed schema 8 contracts, and those failures are
-  recorded for Commit 2 or Commit 3.
+  recorded for Commit 2 or Commit 3a.
 
 ### Commit 2: Migrate Simulation and Planner-Engine Products
 
@@ -1329,9 +1335,147 @@ Gate:
   `npm run test:engine`, `npm run format:check`, and `git diff --check` pass;
 - application type checking and planner/product tests may fail only because the
   projection, Redux composition, or React UI still consumes removed engine
-  contracts, and those failures are recorded for Commit 3.
+  contracts, and those failures are recorded for Commit 3a.
 
-### Commit 3: Rebuild the Application on One Biome Workspace
+### Commit 3a: Project One Unified Biome Workspace
+
+Suggested subject:
+
+```text
+refactor(editor): project unified biome workspace
+```
+
+Deliver:
+
+- replace the current `WorkspaceHubBiome | WorkspaceLinearBiome` union behind
+  `WorkspaceBiome` with one common envelope and an exhaustive workspace-node
+  union over schema 9 products;
+- project linked normal exits, ordinary batches, takeover Preboss batches,
+  mixed batches, Hub decisions, occurrence workbenches, and completion without
+  terminal variants;
+- add `WorkspaceHubDecisionNode` as the sole Hub-specific structure node;
+- add one source-owned batch-interaction descriptor for takeover creation and
+  repair; never expose a takeover Preboss as an ordinary per-target room
+  replacement, while I's Preboss remains in its ordinary target domain;
+- migrate evaluation, candidate, contextual-option, reward-domain, room-picker,
+  finding, focus, and repair-scope projections to the schema 9 semantic
+  addresses and candidate result union;
+- project truthful empty, partial, invalid, retained, unavailable, and
+  upstream-blocked states without reading beyond engine coverage;
+- make projected deletion and repair scope explicit so React never infers
+  topology ownership;
+- migrate the shared Surface and Underworld application fixtures to schema 9
+  commands, decisions, selections, and occurrence ownership;
+- migrate the workspace Redux boundary and focus-only action contract to the
+  new projected owners without putting focus in authored history, evaluation,
+  or autosave;
+- preserve schema 8 and stale-catalog profile or autosave payloads through the
+  existing blocked recovery path; do not migrate or discard them;
+- remove schema 8, Linear/Hub whole-biome, continuation, picked, terminal, and
+  old candidate-wrapper contracts from application projections and fixtures;
+- do not add a React compatibility adapter or Chaos production behavior.
+
+Tests:
+
+- exhaustive workspace-node projection and dispatch;
+- linked exits, ordinary batches, takeover batches, I mixed batches, Hub, and
+  completion in exact semantic order;
+- empty, partial, complete, invalid, retained, unavailable, and
+  upstream-blocked projections;
+- atomic F/G/H/O/P/Q/N takeover descriptors and I ordinary Preboss targeting;
+- exact projected repair scope for retained ordinary and takeover structure;
+- candidate unavailability evidence at the migrated semantic owner;
+- finding, focus, and default-progression projections;
+- focus-only Redux actions remain outside authored history, evaluation,
+  autosave, and candidate work;
+- schema 8 and stale-catalog profile/autosave payloads remain blocked and
+  preserved;
+- deterministic, frozen Surface and Underworld workspace fixtures.
+
+Gate:
+
+- application projections and fixtures consume only schema 9 and the current
+  planner-engine products;
+- `WorkspaceBiome` has one envelope and an exhaustive node union;
+- projection code contains no obsolete Linear/Hub whole-biome, continuation,
+  picked, or terminal contract;
+- no projection guesses topology repair, candidate support, reward state, or
+  lifecycle facts;
+- focused projection, Redux, fixture, and recovery tests pass;
+- remaining TypeScript or product-test failures are confined to the old React
+  composition that Commit 3b and Commit 3c replace and are recorded in the
+  handoff;
+- `npx vitest run apps/planner/src/projections
+apps/planner/src/state/projectWorkspaceSlice.test.ts
+apps/planner/src/persistence/autosaveRecovery.test.ts
+apps/planner/src/workspace/projectOperations.test.ts` passes;
+- `npm run lint`, `npm run format:check`, and `git diff --check` pass.
+
+### Commit 3b: Build the Shared Biome Workspace
+
+Suggested subject:
+
+```text
+refactor(editor): compose shared biome workspace
+```
+
+Deliver:
+
+- introduce `BiomeWorkspace` as the projection-driven composition surface and
+  an exhaustive renderer for every non-Hub workspace-node variant under
+  `apps/planner/src/ui/editor/biome/`;
+- move reusable room, reward, Shop, batch settings, target, occurrence,
+  Preboss, Boss, Postboss, finding, and completion controls out of
+  `LinearBiomeEditor` and `LinearTopologyEditor` into shared decision and
+  occurrence workbenches;
+- render fixed starts and linked Opening/PreHub decisions without a false room
+  selector;
+- render ordinary, staged, mixed, and takeover batches from their projected
+  interaction descriptors, including one-command takeover creation and repair;
+- preserve I's ordinary Preboss picker beside supported peers;
+- move rail order, focus, inspector selection, finding activation, default
+  progression, keyboard/pointer interaction, and responsive layout into the
+  shared workspace;
+- render retained and unavailable decisions from projected state and exact
+  repair scope without inspecting authored topology;
+- preserve lazy candidate activation and zero candidate queries during
+  ordinary rendering;
+- keep the new workspace independent of `App.tsx` cutover in this commit so the
+  old full-biome editors require no temporary adapter;
+- add no Hub-specific traversal logic, application cutover, or Chaos production
+  behavior.
+
+Tests:
+
+- unchanged F/G/H/I/O/P/Q rail order, workbench behavior, and focus with schema
+  9 semantic addresses;
+- linked start and PreHub presentation without a room selector;
+- ordinary, staged, mixed, takeover, Preboss Shop, and completion workbenches;
+- atomic takeover creation and repair with no transient mixed batch;
+- retained and unavailable decision presentation through projected repair
+  scope;
+- exhaustive non-Hub node rendering;
+- pointer, keyboard, finding-navigation, and default-focus behavior;
+- lazy candidate activation and zero candidate queries during ordinary render;
+- shared room-workbench composition for authored occurrences and derived
+  completion rooms without collapsing their domain identities.
+
+Gate:
+
+- the new shared workspace consumes only projected products and semantic
+  interactions;
+- no new React code owns eligibility, topology repair, reward bags, lifecycle,
+  or candidate rules;
+- every non-Hub workspace-node variant renders or fails loudly at the
+  exhaustive dispatch boundary;
+- focused shared-workspace and migrated F/G/H/I/O/P/Q UI tests pass;
+- remaining application failures are confined to Hub integration, composition
+  cutover, and obsolete editor tests owned by Commit 3c;
+- `npx vitest run apps/planner/src/ui/editor/biome
+apps/planner/src/ui/editor/rewards` passes;
+- `npm run lint`, `npm run format:check`, and `git diff --check` pass.
+
+### Commit 3c: Integrate Hub and Cut Over the Application
 
 Suggested subject:
 
@@ -1341,83 +1485,66 @@ refactor(editor): render unified biome decisions
 
 Deliver:
 
-- replace the current `WorkspaceHubBiome | WorkspaceLinearBiome` union behind
-  `WorkspaceBiome` with one common envelope and explicit workspace-node union
-  over schema 9 products;
-- replace `LinearWorkspace` with `BiomeWorkspace`;
-- remove `LinearBiomeEditor` and `LinearTopologyEditor` as full-biome
-  composition surfaces; move their reusable batch, room, and settings controls
-  under the shared decision/workbench language;
-- project linked normal exits, ordinary batches, takeover preboss batches,
-  mixed batches, Hub decisions, and completion without terminal variants;
-- make the application shell and Redux composition consume projected workspace
-  products rather than inspect authored topology;
-- preserve stale profile and autosave payloads through the existing blocked
-  recovery path when schema 8 or the old catalog version is rejected;
-- move rail, focus, inspector selection, findings, default progression,
-  completion presentation, keyboard/pointer interaction, and responsive
-  composition into the shared workspace;
-- add `WorkspaceHubDecisionNode` as the sole Hub-specific structure node;
-- reuse shared occurrence workbenches for N Opening, PreHub, visits, Preboss,
-  Boss, and Postboss;
-- preserve truthful empty, partial, invalid, retained, and blocked states;
-- keep Hub membership, open-room rewards, visit order, and completion summary
-  in `HubDecisionWorkbench`;
-- replace 26 complete cards with compact slot summaries and focused editing;
-- present visited-parent side-room state through shared occurrence workbenches;
-- preserve lazy candidate activation and one-command undo;
-- add one source-owned workspace batch-interaction descriptor and project
-  takeover creation and repair through it, never an ordinary per-target room
-  replacement; keep I's Preboss in its ordinary target picker;
-- project retained and unavailable decision state with exact repair scope;
-- remove `HubBiomeEditor`, the old full-biome Linear editor composition,
-  duplicate visited-parent composition, and all terminal-specific workspace
-  components;
+- implement `HubDecisionWorkbench` as the sole Hub-specific workbench inside
+  `BiomeWorkspace`;
+- keep Hub membership, compact open-slot summaries, unvisited open-room reward
+  editing, visit order, and completion summary inside that workbench;
+- replace the 26 complete room cards with compact slot summaries and focused
+  editing;
+- reuse shared room-workbench components for N Opening, PreHub, selected
+  visits, visited-parent side rooms, and Preboss occurrences plus the derived
+  Boss and Postboss completion rooms;
+- present occurrence-owned side-room state without duplicate visited-parent
+  composition and preserve it through visit reordering;
+- allow visit authoring only through the Hub workbench;
+- make the application shell and Redux composition consume projected
+  `WorkspaceBiome` products rather than inspect authored topology;
+- switch every configured biome to `BiomeWorkspace`;
+- preserve exact route, focus, finding navigation, responsive composition,
+  autosave, recovery, undo, and redo behavior at the composition root;
+- remove `HubBiomeEditor`, `LinearWorkspace`, `LinearBiomeEditor`,
+  `LinearTopologyEditor`, duplicate visited-parent composition, and all
+  terminal-specific workspace components and tests;
 - update editor, workspace, interaction, and audit authority documents owned by
-  these contracts;
+  the completed application cutover;
+- resolve every expected downstream compile and product-test failure recorded
+  by Commits 1, 2, 3a, and 3b;
 - add no Chaos production state or behavior.
 
 Tests:
 
-- unchanged F through Q game-domain rail order, workbench behavior, and focus,
-  with exact assertions for the migrated semantic address shapes;
 - exact N route order and semantic activation;
 - empty, partial, complete, invalid, retained, and upstream-blocked N
-  projections;
-- board opening/closing and unvisited reward editing;
-- visit authoring only through the Hub workbench;
-- occurrence-owned side state through reordering;
-- linked Opening/PreHub presentation without a false room selector;
-- atomic F/G/H/O/P/Q/N takeover authoring and repair with no transient mixed
-  batch;
-- I Preboss remains an ordinary target choice beside supported peers;
-- Preboss Shop and completion focus;
-- exhaustive workspace-node dispatch;
-- pointer, keyboard, finding-navigation, and default-focus regressions;
-- retained ordinary and takeover repair through projected semantic scope rather
-  than React-owned topology inspection;
+  workspaces;
+- board opening/closing, compact slot summaries, and unvisited reward editing;
+- visit creation, replacement, and removal only through the Hub workbench;
+- occurrence-owned side state and entered order through visit reordering;
+- N Opening/PreHub presentation without a false room selector;
+- N width-one takeover handoff, Preboss Shop, and completion focus;
+- all eight biomes render through the same workspace dispatcher;
+- application-shell, pointer, keyboard, finding-navigation, and default-focus
+  regressions;
 - focus-only actions remain outside authored history, evaluation, autosave, and
   candidate work;
-- schema 8 and stale-catalog profile/autosave payloads remain blocked and
-  preserved;
-- zero candidate queries during ordinary rendering.
+- profile, blocked recovery, autosave, undo, and redo integration;
+- zero candidate queries during ordinary rendering;
+- Surface and Underworld product-loop parity.
 
 Gate:
 
-- one catalog layout, authored biome plan, evaluation envelope, and workspace
-  projection are authoritative;
+- one catalog layout, authored biome plan, evaluation envelope, application
+  projection, and workspace envelope are authoritative;
 - no production `LinearBiomePlan`, `HubBiomePlan`, `LinearBiomeLayout`,
-  `HubBiomeLayout`, `TerminalDecision`, or specialized terminal transition
-  remains;
+  `HubBiomeLayout`, `TerminalDecision`, specialized terminal transition, or
+  full-biome Linear/Hub editor remains;
 - schema 9 and the new catalog version are the only accepted authority;
-- every decision variant fails loudly on incomplete structural contracts;
-- Hub evaluation remains atomic and variant-owned;
+- every workspace-node variant fails loudly on incomplete structural
+  contracts;
+- Hub evaluation remains atomic and Hub is the only N-specific workbench;
 - no supported canonical lifecycle or reward fact changes unintentionally;
-- no Chaos production state exists;
-- all eight biomes render through the same `BiomeWorkspace`;
-- Hub is the only N-specific workbench and no full-biome Hub editor remains;
 - React contains no eligibility, topology repair, reward, or lifecycle rules;
 - no expected temporary compile or product-test failures remain;
+- no Chaos production state exists;
 - `npm run typecheck`, `npm run test:planner`, `npm run test:contract`,
   `npm run test:product`, `npm run lint`, `npm run format:check`,
   `npm run build`, and `git diff --check` pass.
@@ -1451,7 +1578,8 @@ Deliver:
   from production code and current authority statements;
 - record the unified biome refactor as closed, with Commit 5 as the sole
   remaining follow-up before the tracker and active Phase 7 frontier advance;
-- resolution of every expected downstream failure recorded by Commits 1 and 2.
+- confirmation that no expected downstream failure recorded by Commits 1, 2,
+  3a, or 3b remains.
 
 Chronological progress and migration-provenance entries may retain the
 terminology that accurately described their delivered schema at that time.
@@ -1485,7 +1613,7 @@ feat(editor): polish unified workspace interactions
 
 This is a follow-up to the closed refactor, not another domain-model slice. It
 must consume the unified projection and semantic repair commands delivered by
-Commits 1 through 4 without changing their ownership.
+Commits 1, 2, 3a through 3c, and 4 without changing their ownership.
 
 Deliver:
 
