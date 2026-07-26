@@ -16,7 +16,7 @@ import type {
 } from '../model';
 import { createDefaultRoomState, type RoomOccurrenceRole } from '../roomState';
 import { replaceBiomeStateField } from '../biomeState';
-import { selectedOrdinaryBatchIndex } from '../topology';
+import { declaredPhysicalExitKeys, selectedOrdinaryBatchIndex } from '../topology';
 import {
   failCommand,
   requireOccurrence,
@@ -51,6 +51,11 @@ function exitKeysForSource(
   source: ExitDecisionSourceAddress,
   command: ProjectCommand,
 ): readonly string[] {
+  const topology = located.plan.topology;
+  if (topology !== null) {
+    const declared = declaredPhysicalExitKeys(catalog, located.layout, topology, source);
+    if (declared !== undefined) return declared;
+  }
   if (source.kind === 'hubDecision') {
     if (
       located.layout.progression.kind !== 'hub' ||

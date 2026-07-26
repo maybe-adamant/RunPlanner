@@ -68,7 +68,16 @@ export {
   type ProjectCommand,
   ProjectCommandContractError,
 } from './commands/dispatch';
-export { decodeBiomeTopology } from './topology';
+export {
+  declaredPhysicalExits,
+  declaredPhysicalExitKeys,
+  decodeBiomeTopology,
+  directShopOnlyPrebossForLayout,
+  directShopOnlyPrebossForSource,
+  fixedPrebossTransitionForSource,
+  type DeclaredPhysicalExit,
+  type FixedPrebossTransition,
+} from './topology';
 export { describeTopologyRemovalImpact } from './topologyImpact';
 export { createInitialBatchState, decodeBatchState } from './batchState';
 export {

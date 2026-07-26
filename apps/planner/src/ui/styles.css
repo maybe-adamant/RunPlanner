@@ -519,6 +519,210 @@ button:disabled {
   gap: 18px;
 }
 
+.biome-workspace {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.biome-structure-region,
+.biome-inspector {
+  height: 100%;
+  max-height: 100%;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.biome-structure-region {
+  padding-right: 18px;
+  border-right: 1px solid #30313a;
+}
+
+.biome-structure-heading,
+.biome-inspector-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.biome-structure-heading h2,
+.biome-inspector-heading h2 {
+  margin: 0;
+  color: #f3ede5;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.28rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.biome-rail {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.biome-rail-stop {
+  position: relative;
+  padding-left: 17px;
+}
+
+.biome-rail-stop::before {
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: 4px;
+  width: 2px;
+  background: #3f3d48;
+  content: '';
+}
+
+.biome-rail-stop::after {
+  position: absolute;
+  top: 18px;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #6d6878;
+  border-radius: 50%;
+  background: #1c1d23;
+  content: '';
+}
+
+.biome-rail-node {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid #393a44;
+  border-radius: 9px;
+  color: #d8d3cb;
+  background: rgb(13 14 18 / 35%);
+  text-align: left;
+  cursor: pointer;
+}
+
+.biome-rail-node:hover,
+.biome-rail-node[data-selected='true'] {
+  border-color: rgb(226 185 113 / 55%);
+  background: rgb(226 185 113 / 7%);
+}
+
+.biome-rail-node[data-assessment='unassessed'] {
+  border-style: dashed;
+  color: #aaa7af;
+}
+
+.biome-rail-node[data-assessment='blocked'] {
+  opacity: 0.66;
+}
+
+.biome-rail-node[data-findings='true'] {
+  border-color: rgb(218 115 115 / 55%);
+}
+
+.biome-frontier-stop .biome-rail-node {
+  border-style: dashed;
+  border-color: rgb(174 152 202 / 48%);
+  background: rgb(174 152 202 / 7%);
+}
+
+.biome-rail-kicker,
+.biome-rail-summary,
+.biome-rail-status,
+.biome-room-summary {
+  color: #8f8c95;
+  font-size: 0.7rem;
+}
+
+.biome-rail-kicker {
+  overflow: hidden;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.biome-rail-summary {
+  color: #c3a86f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biome-rail-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.biome-inspector {
+  padding-right: 14px;
+}
+
+.biome-inspector-heading {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #30313a;
+}
+
+.biome-inspector > .decision-card,
+.biome-inspector > .room-card,
+.biome-inspector > .frontier-actions,
+.biome-inspector > .biome-completion-workbench {
+  margin-top: 12px;
+}
+
+.biome-candidate-select select {
+  min-width: 0;
+}
+
+.takeover-action,
+.repair-scope {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid rgb(193 169 123 / 35%);
+  border-radius: 8px;
+  color: #cfc2a1;
+  background: rgb(193 169 123 / 7%);
+  font-size: 0.82rem;
+}
+
+.takeover-action h4,
+.repair-scope p {
+  margin: 0;
+}
+
+.exit-selection-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 12px 0;
+  padding: 8px 10px;
+  border: 1px solid #393a44;
+  border-radius: 8px;
+}
+
+.exit-selection-control legend {
+  padding: 0 4px;
+  color: #aaa7af;
+  font-size: 0.78rem;
+}
+
+.exit-selection-control label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #d8d3cb;
+  font-size: 0.8rem;
+}
+
 .linear-structure-region,
 .linear-inspector {
   height: 100%;
@@ -737,7 +941,8 @@ button:disabled {
   margin-top: 12px;
 }
 
-.linear-landmark-inspector {
+.linear-landmark-inspector,
+.biome-completion-workbench {
   margin-top: 12px;
   padding: 14px;
   border: 1px solid #393a44;
@@ -745,13 +950,15 @@ button:disabled {
   background: rgb(13 14 18 / 32%);
 }
 
-.linear-landmark-inspector h3 {
+.linear-landmark-inspector h3,
+.biome-completion-workbench h3 {
   margin: 0;
   color: #f2ede5;
   font-size: 1rem;
 }
 
-.linear-landmark-inspector p:not(.card-kicker) {
+.linear-landmark-inspector p:not(.card-kicker),
+.biome-completion-workbench p:not(.card-kicker) {
   color: #9f9ca5;
   font-size: 0.82rem;
   line-height: 1.45;
@@ -1802,6 +2009,10 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .biome-workspace {
+    grid-template-columns: 1fr;
+  }
+
   .linear-structure-region {
     height: auto;
     max-height: none;
@@ -1813,7 +2024,26 @@ select {
     scrollbar-gutter: auto;
   }
 
+  .biome-structure-region {
+    height: auto;
+    max-height: none;
+    padding-right: 0;
+    padding-bottom: 18px;
+    border-right: 0;
+    border-bottom: 1px solid #30313a;
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+
   .linear-inspector {
+    height: auto;
+    max-height: none;
+    padding-right: 0;
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .biome-inspector {
     height: auto;
     max-height: none;
     padding-right: 0;

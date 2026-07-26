@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it } from 'vitest';
+import { Provider } from 'react-redux';
 
 import {
   createApplication,
@@ -10,48 +11,80 @@ import {
   type PlannerApplication,
 } from '../../src/composition/createApplication';
 import { authoredProjectReplaced } from '../../src/state/projectWorkspaceSlice';
-import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import { useAppSelector } from '../../src/state/store';
+import { BiomeWorkspace } from '../../src/ui/editor/biome/BiomeWorkspace';
 import { createRepresentativeNOPQProject } from '../fixtures/surfaceProject';
 import { createGoldenFGHIProject } from '../fixtures/underworldProject';
 
-interface RouteRenderCase {
-  readonly biomes: readonly string[];
+interface WorkspaceRenderCase {
+  readonly biomeKey: string;
   readonly project: (application: PlannerApplication) => ProjectDocument;
-  readonly route: 'Surface' | 'Underworld';
+  readonly routeKey: 'Surface' | 'Underworld';
 }
 
-const cases: readonly RouteRenderCase[] = [
-  {
-    biomes: ['Erebus', 'Oceanus', 'Fields', 'Tartarus'],
-    project: (application) => createGoldenFGHIProject(application.catalog),
-    route: 'Underworld',
-  },
-  {
-    biomes: ['Ephyra', 'Thessaly', 'Olympus', 'Summit'],
+const cases: readonly WorkspaceRenderCase[] = [
+  ...(['F', 'G', 'H', 'I'] as const).map((biomeKey) => ({
+    biomeKey,
+    project: (application: PlannerApplication) => createGoldenFGHIProject(application.catalog),
+    routeKey: 'Underworld' as const,
+  })),
+  ...(['O', 'P', 'Q'] as const).map((biomeKey) => ({
+    biomeKey,
     project: () => createRepresentativeNOPQProject(),
-    route: 'Surface',
-  },
+    routeKey: 'Surface' as const,
+  })),
 ];
+
+function WorkspaceHarness({
+  application,
+  biomeKey,
+  routeKey,
+}: {
+  readonly application: PlannerApplication;
+  readonly biomeKey: string;
+  readonly routeKey: 'Surface' | 'Underworld';
+}) {
+  const state = useAppSelector((value) => value.projectWorkspace);
+  const workspace = application.structuredWorkspace.project(
+    state.history.present,
+    state.evaluation,
+  );
+  const biome = workspace.routes
+    .find((route) => route.routeKey === routeKey)
+    ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+  if (biome === undefined) throw new Error(`${routeKey}/${biomeKey} workspace biome is missing`);
+  return (
+    <BiomeWorkspace
+      biome={biome}
+      focusByOwner={workspace.focusByOwner}
+      interactions={workspace.interactions}
+    />
+  );
+}
 
 afterEach(cleanup);
 
 describe('candidate render purity', () => {
   for (const routeCase of cases) {
-    it(`renders every ${routeCase.route} biome without candidate work`, async () => {
+    it(`renders ${routeCase.routeKey}/${routeCase.biomeKey} without candidate work`, () => {
       const events: ApplicationEvaluationEvent[] = [];
       const application = createApplication({
         observeEvaluationWork: (event) => events.push(event),
       });
       application.store.dispatch(authoredProjectReplaced(routeCase.project(application)));
       events.length = 0;
-      const view = renderPlannerForInteraction({ application });
 
-      await view.user.click(screen.getByRole('button', { name: routeCase.route }));
-      for (const biome of routeCase.biomes) {
-        await view.user.click(screen.getByRole('button', { name: biome }));
-        expect(screen.getByRole('heading', { name: biome })).toBeTruthy();
-      }
+      render(
+        <Provider store={application.store}>
+          <WorkspaceHarness
+            application={application}
+            biomeKey={routeCase.biomeKey}
+            routeKey={routeCase.routeKey}
+          />
+        </Provider>,
+      );
 
+      expect(screen.getByRole('region', { name: /structure$/ })).toBeTruthy();
       expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
       expect(events.filter((event) => event.kind === 'projectEvaluation')).toEqual([]);
       application.dispose();

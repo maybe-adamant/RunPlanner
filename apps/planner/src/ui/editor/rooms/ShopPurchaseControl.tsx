@@ -6,6 +6,7 @@ import {
   type WorkspaceInteractionCatalog,
 } from '../../../projections/structuredWorkspace';
 import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
+import { candidateMayBeAuthored } from '../../feedback/candidatePresentation';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 
 interface ShopPurchaseControlProps {
@@ -29,14 +30,20 @@ export function ShopPurchaseControl({
   );
   const projection = useWorkspaceInteraction(interaction);
   const candidate = projection.result?.find((option) => option.value === checked);
+  const proposed = projection.result?.find((option) => option.value === !checked);
   const support = candidateSupport(candidate);
   return (
     <label className="purchase-control" data-candidate-support={support} htmlFor={id}>
       <SemanticOwnerMarker address={address} />
       <input
         checked={checked}
+        disabled={projection.result !== undefined && !candidateMayBeAuthored(proposed)}
         id={id}
-        onChange={(event) => onChange(event.target.checked)}
+        onChange={(event) => {
+          const next = projection.result?.find((option) => option.value === event.target.checked);
+          if (candidateMayBeAuthored(next)) onChange(event.target.checked);
+          else projection.activate();
+        }}
         onFocus={projection.activate}
         onPointerDown={projection.activate}
         type="checkbox"
