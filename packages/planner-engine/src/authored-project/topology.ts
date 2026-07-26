@@ -1,4 +1,4 @@
-import type { BiomeLayout, Catalog, RoomDeclaration } from '../catalog-schema';
+import type { BiomeLayout, Catalog, RoomDeclaration, RoomExit } from '../catalog-schema';
 import { decodeBatchState } from './batchState';
 import type {
   AuthoredBatchState,
@@ -127,6 +127,84 @@ function decodeSelection(
 
 function normalExitKeys(room: RoomDeclaration): readonly string[] {
   return room.exits.map((exit) => `exit${exit.index}`);
+}
+
+/**
+ * One declaration-owned physical exit resolved for an authored decision
+ * source.  The semantic kind keeps linked and completed-Hub endpoints from
+ * being flattened into ordinary batch doors by application projections.
+ */
+export interface DeclaredPhysicalExit {
+  readonly compatibilityPolicyKey: string;
+  readonly exitKey: string;
+  readonly index: number;
+  readonly kind: 'normal' | 'linked' | 'completedHub';
+  readonly type: string;
+}
+
+function physicalExit(
+  kind: DeclaredPhysicalExit['kind'],
+  exitKey: string,
+  exit: RoomExit,
+): DeclaredPhysicalExit {
+  return Object.freeze({
+    compatibilityPolicyKey: exit.compatibilityPolicyKey,
+    exitKey,
+    index: exit.index,
+    kind,
+    type: exit.type,
+  });
+}
+
+/**
+ * Resolves ordered, declaration-owned physical exits for one structural
+ * source. This is shared by commands and projections so neither needs to
+ * reconstruct linked or completed-Hub physical metadata from layout pieces.
+ */
+export function declaredPhysicalExits(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  source: ExitDecisionSource,
+): readonly DeclaredPhysicalExit[] | undefined {
+  if (source.kind === 'hubDecision') {
+    if (layout.progression.kind !== 'hub' || source.decisionKey !== layout.progression.hubKey) {
+      return undefined;
+    }
+    const completed = layout.progression.completedExit;
+    return Object.freeze([physicalExit('completedHub', completed.exitKey, completed.physicalExit)]);
+  }
+  const occurrence = topology.occurrences.find(
+    (candidate) => candidate.occurrenceId === source.occurrenceId,
+  );
+  const room = occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName];
+  if (room === undefined || room.biomeKey !== layout.biomeKey || room.mode.kind !== 'authored') {
+    return undefined;
+  }
+  if (layout.progression.kind === 'hub') {
+    if (source.occurrenceId !== topology.startOccurrenceId) return Object.freeze([]);
+    const sourceExit = room.exits[0];
+    if (room.exits.length !== 1 || sourceExit === undefined) return undefined;
+    return Object.freeze([
+      physicalExit('linked', layout.progression.linkedExit.exitKey, sourceExit),
+    ]);
+  }
+  return Object.freeze(room.exits.map((exit) => physicalExit('normal', `exit${exit.index}`, exit)));
+}
+
+/**
+ * Resolves the declaration-owned physical exits for one structural source.
+ * Command execution and application interaction adapters share this authority
+ * so a capacity repair never has to infer exit width from rendered targets.
+ */
+export function declaredPhysicalExitKeys(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  source: ExitDecisionSource,
+): readonly string[] | undefined {
+  const exits = declaredPhysicalExits(catalog, layout, topology, source);
+  return exits === undefined ? undefined : Object.freeze(exits.map((exit) => exit.exitKey));
 }
 
 /**
@@ -265,6 +343,11 @@ export function selectedOrdinaryBatchIndex(
   const traversedSources = new Set<OccurrenceId>();
   while (!traversedSources.has(currentOccurrenceId)) {
     traversedSources.add(currentOccurrenceId);
+    // A completion frontier has no decision yet, but it still has a stable
+    // ordinary-batch ordinal on the selected spine. Checking before lookup
+    // keeps staged target validation unchanged while allowing shared command
+    // and projection authorities to recognize the declared next stage.
+    if (currentOccurrenceId === sourceOccurrenceId) return batchIndex;
     const decision = topology.decisions.find(
       (candidate): candidate is ExitDecision =>
         candidate.kind === 'exit' &&
@@ -276,7 +359,6 @@ export function selectedOrdinaryBatchIndex(
       currentOccurrenceId = decision.normal.occurrenceId;
       continue;
     }
-    if (currentOccurrenceId === sourceOccurrenceId) return batchIndex;
     const selected = selectedExitKey(decision.selection, decision.normal.targets);
     const target = decision.normal.targets.find((candidate) => candidate.exitKey === selected);
     if (target === undefined) return undefined;
@@ -284,6 +366,92 @@ export function selectedOrdinaryBatchIndex(
     currentOccurrenceId = target.occurrenceId;
   }
   return undefined;
+}
+
+/**
+ * Returns the fixed Shop-only takeover that is required after a bounded
+ * generated spine reaches its final ordinary decision. This is derived from
+ * normalized progression and Preboss policy rather than a persisted terminal
+ * flag; Hub handoff and counted forked takeovers intentionally do not match.
+ */
+export function directShopOnlyPrebossForLayout(
+  catalog: Catalog,
+  layout: BiomeLayout,
+): RoomDeclaration | undefined {
+  if (layout.progression.kind !== 'generated') return undefined;
+  const policy = layout.progression.progressionPolicy;
+  if (policy.kind !== 'fixedCount' && policy.kind !== 'staged') return undefined;
+  const candidates = catalog.rooms.values.filter(
+    (room) =>
+      room.biomeKey === layout.biomeKey && room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
+  );
+  const [candidate] = candidates;
+  const candidatePolicy = candidate?.prebossBatchPolicy;
+  return candidates.length === 1 &&
+    candidatePolicy?.kind === 'takeOverNormalDoors' &&
+    candidatePolicy.remainingOffers.kind === 'none'
+    ? candidate
+    : undefined;
+}
+
+/**
+ * Returns the fixed Shop-only takeover that is required after a bounded
+ * generated spine reaches its final ordinary decision. This is derived from
+ * normalized progression and Preboss policy rather than a persisted terminal
+ * flag; Hub handoff and counted forked takeovers intentionally do not match.
+ */
+export function directShopOnlyPrebossForSource(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  source: ExitDecisionSource,
+): RoomDeclaration | undefined {
+  if (source.kind !== 'occurrence') return undefined;
+  const candidate = directShopOnlyPrebossForLayout(catalog, layout);
+  if (candidate === undefined || layout.progression.kind !== 'generated') return undefined;
+  const policy = layout.progression.progressionPolicy;
+  const finalOrdinaryBatchCount =
+    policy.kind === 'fixedCount'
+      ? policy.continuationCount
+      : policy.kind === 'staged'
+        ? policy.stages.length
+        : undefined;
+  return finalOrdinaryBatchCount !== undefined &&
+    selectedOrdinaryBatchIndex(topology, source.occurrenceId) === finalOrdinaryBatchCount
+    ? candidate
+    : undefined;
+}
+
+/**
+ * A fixed Preboss handoff is declared by its progression source, not inferred
+ * by the application from a room name or a candidate domain. Shop-only
+ * generated terminals still need contextual candidate validation; the
+ * completed Hub handoff has already established its six-visit prerequisite
+ * structurally and therefore creates its one fixed target directly.
+ */
+export type FixedPrebossTransition =
+  | { readonly kind: 'completedHubHandoff'; readonly room: RoomDeclaration }
+  | { readonly kind: 'shopOnlyTerminal'; readonly room: RoomDeclaration };
+
+export function fixedPrebossTransitionForSource(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  source: ExitDecisionSource,
+): FixedPrebossTransition | undefined {
+  if (source.kind === 'hubDecision') {
+    if (layout.progression.kind !== 'hub' || source.decisionKey !== layout.progression.hubKey) {
+      return undefined;
+    }
+    const room = catalog.rooms.byKey[layout.progression.completedExit.roomGameName];
+    return room === undefined
+      ? undefined
+      : Object.freeze({ kind: 'completedHubHandoff' as const, room });
+  }
+  const room = directShopOnlyPrebossForSource(catalog, layout, topology, source);
+  return room === undefined
+    ? undefined
+    : Object.freeze({ kind: 'shopOnlyTerminal' as const, room });
 }
 
 function validateSelectedDecisionCycles(

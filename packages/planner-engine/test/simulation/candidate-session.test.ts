@@ -9,6 +9,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createProjectDocument,
   createRouteAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
@@ -16,6 +17,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  CandidateEvaluationContractError,
   createPreparedProjectCandidateSession,
   simulateProject,
   type CandidateEvaluationEvent,
@@ -30,6 +32,7 @@ import {
   fDecision,
   fStartId,
 } from './support/f-takeover-project';
+import { createRepresentativeNProject, nBiome } from './support/surface-valid-project';
 
 const gBiome = createBiomeAddress('Underworld', 'G');
 const gStartId = createOccurrenceId('candidate-g-start');
@@ -281,6 +284,70 @@ describe('candidate session', () => {
     expect(() => session.evaluate({ kind: 'roomTarget', target, gameName: 'F_Combat03' })).toThrow(
       /has no declaration-owned physical exit/,
     );
+  });
+
+  it('rejects N’s ordinary exit while retaining its completed-Hub takeover domain', () => {
+    const openingId = createOccurrenceId('candidate-n-opening');
+    const project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'candidate-n-opening-domain',
+        name: 'N opening candidate domain',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      catalog,
+      { kind: 'CreateStart', biome: nBiome, occurrenceId: openingId },
+    );
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      project,
+      simulateProject(catalog, project),
+    );
+
+    expect(() =>
+      session.evaluate({
+        kind: 'takeoverPrebossBatch',
+        source: createExitDecisionAddress(nBiome, {
+          kind: 'occurrence',
+          occurrenceId: openingId,
+        }),
+        gameName: 'N_PreBoss01',
+      }),
+    ).toThrow(CandidateEvaluationContractError);
+    expect(() =>
+      session.evaluate({
+        kind: 'takeoverPrebossBatch',
+        source: createExitDecisionAddress(nBiome, {
+          kind: 'occurrence',
+          occurrenceId: openingId,
+        }),
+        gameName: 'N_PreBoss01',
+      }),
+    ).toThrow(/no declaration-owned takeover Preboss candidate domain/);
+
+    const withoutHandoff = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'hubDecision',
+        decisionKey: 'hub',
+      }),
+    });
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        withoutHandoff,
+        simulateProject(catalog, withoutHandoff),
+      ).evaluate({
+        kind: 'takeoverPrebossBatch',
+        source: createExitDecisionAddress(nBiome, {
+          kind: 'hubDecision',
+          decisionKey: 'hub',
+        }),
+        gameName: 'N_PreBoss01',
+      }),
+    ).toMatchObject({
+      kind: 'takeoverPrebossBatch',
+      result: { requiredExitKeys: ['preboss'], selectedPossible: true },
+    });
   });
 
   it('distinguishes an incomplete and invalid upstream biome from local coverage', () => {

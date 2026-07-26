@@ -1302,6 +1302,38 @@ function assertRoomTargetDomain(
   }
 }
 
+/**
+ * A takeover candidate belongs to the progression-owned source, not merely to
+ * any authored exit in the same biome. Generated layouts own occurrence
+ * sources; a Hub owns only its completed Hub decision. Keeping that boundary
+ * here prevents consumers from advertising a command the authored-project
+ * authority would reject.
+ */
+function assertTakeoverPrebossBatchDomain(
+  catalog: Catalog,
+  project: ProjectDocument,
+  query: TakeoverPrebossBatchCandidateQuery,
+): void {
+  const plan = planFor(project, query.source.routeKey, query.source.biomeKey);
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  if (layout === undefined) {
+    throw new CandidateEvaluationContractError(`${plan.biomeKey} has no catalog layout`);
+  }
+  if (layout.progression.kind === 'generated' && query.source.source.kind === 'occurrence') {
+    return;
+  }
+  if (
+    layout.progression.kind === 'hub' &&
+    query.source.source.kind === 'hubDecision' &&
+    query.source.source.decisionKey === layout.progression.hubKey
+  ) {
+    return;
+  }
+  throw new CandidateEvaluationContractError(
+    `${semanticAddressKey(query.source)} has no declaration-owned takeover Preboss candidate domain`,
+  );
+}
+
 function prefixBatchRewardStoreSupport(
   catalog: Catalog,
   project: ProjectDocument,
@@ -2540,6 +2572,7 @@ export function createPreparedProjectCandidateSession(
         result: context.evaluateGameName(query.gameName),
       });
     }
+    assertTakeoverPrebossBatchDomain(catalog, project, query);
     const candidate = candidateBiome(
       catalog,
       project,

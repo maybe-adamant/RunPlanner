@@ -19,8 +19,11 @@ import {
   createRewardWheelOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
+  declaredPhysicalExits,
   decodeProjectDocument,
+  directShopOnlyPrebossForSource,
   encodeProjectDocument,
+  fixedPrebossTransitionForSource,
   ProjectCommandContractError,
   ProjectDocumentContractError,
   redoProjectHistory,
@@ -453,6 +456,127 @@ function completeNProject() {
 }
 
 describe('authored-project commands and topology', () => {
+  it('resolves linked and completed-Hub physical exits from core declaration authority', () => {
+    const project = completeNProject();
+    const topology = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const layout = catalog.biomeLayouts.byKey.N;
+    if (topology === null || topology === undefined || layout === undefined) {
+      throw new Error('N topology and layout are required for physical-exit coverage');
+    }
+    expect(
+      declaredPhysicalExits(catalog, layout, topology, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('round-trip-n-opening'),
+      }),
+    ).toEqual([
+      {
+        kind: 'linked',
+        exitKey: 'prehub',
+        index: 1,
+        type: 'N_OpeningDoor',
+        compatibilityPolicyKey: 'Unconstrained',
+      },
+    ]);
+    expect(
+      declaredPhysicalExits(catalog, layout, topology, {
+        kind: 'hubDecision',
+        decisionKey: 'hub',
+      }),
+    ).toEqual([
+      {
+        kind: 'completedHub',
+        exitKey: 'preboss',
+        index: 1,
+        type: 'EphyraExitBossDoor',
+        compatibilityPolicyKey: 'Unconstrained',
+      },
+    ]);
+    expect(
+      fixedPrebossTransitionForSource(catalog, layout, topology, {
+        kind: 'hubDecision',
+        decisionKey: 'hub',
+      }),
+    ).toMatchObject({ kind: 'completedHubHandoff', room: { gameName: 'N_PreBoss01' } });
+  });
+
+  it('recognizes O and Q direct Shop-only Prebosses from their selected bounded spine', () => {
+    const oOwner = createExitDecisionAddress(oBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('complete-o-6'),
+    });
+    const oProject = applyProjectCommand(completeOProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: oOwner,
+    });
+    const oTopology = oProject.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O')?.topology;
+    const oLayout = catalog.biomeLayouts.byKey.O;
+    if (oTopology === null || oTopology === undefined || oLayout === undefined) {
+      throw new Error('O topology and layout are required for direct Preboss coverage');
+    }
+    expect(
+      directShopOnlyPrebossForSource(catalog, oLayout, oTopology, oOwner.source),
+    ).toMatchObject({
+      gameName: 'O_PreBoss01',
+    });
+    expect(
+      fixedPrebossTransitionForSource(catalog, oLayout, oTopology, oOwner.source),
+    ).toMatchObject({ kind: 'shopOnlyTerminal', room: { gameName: 'O_PreBoss01' } });
+    expect(
+      directShopOnlyPrebossForSource(catalog, oLayout, oTopology, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('complete-o-5'),
+      }),
+    ).toBeUndefined();
+
+    const qOwner = createExitDecisionAddress(qBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('complete-q-second-miniboss'),
+    });
+    const qWithoutPreboss = applyProjectCommand(completeQProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: qOwner,
+    });
+    const encoded = JSON.parse(encodeProjectDocument(qWithoutPreboss)) as {
+      routes: Array<{
+        routeKey: string;
+        biomes: Array<{ biomeKey: string; topology: { decisions: unknown[] } | null }>;
+      }>;
+    };
+    const encodedTopology = encoded.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'Q')?.topology;
+    if (encodedTopology === null || encodedTopology === undefined) {
+      throw new Error('Q topology is required for selected-spine coverage');
+    }
+    encodedTopology.decisions.reverse();
+    const qProject = decodeProjectDocument(encoded, catalog);
+    const qTopology = qProject.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'Q')?.topology;
+    const qLayout = catalog.biomeLayouts.byKey.Q;
+    if (qTopology === null || qTopology === undefined || qLayout === undefined) {
+      throw new Error('Q reordered topology and layout are required for direct Preboss coverage');
+    }
+    expect(
+      directShopOnlyPrebossForSource(catalog, qLayout, qTopology, qOwner.source),
+    ).toMatchObject({
+      gameName: 'Q_PreBoss01',
+    });
+    expect(
+      fixedPrebossTransitionForSource(catalog, qLayout, qTopology, qOwner.source),
+    ).toMatchObject({ kind: 'shopOnlyTerminal', room: { gameName: 'Q_PreBoss01' } });
+    expect(
+      directShopOnlyPrebossForSource(catalog, qLayout, qTopology, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('complete-q-second-fork'),
+      }),
+    ).toBeUndefined();
+  });
+
   it('keeps command-produced decision variants stable through codec round trips', () => {
     const variants = [
       ['unresolved authored-store normal batch', unresolvedFProject()],
