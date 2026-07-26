@@ -69,6 +69,7 @@ export {
   ProjectCommandContractError,
 } from './commands/dispatch';
 export { decodeBiomeTopology } from './topology';
+export { describeTopologyRemovalImpact } from './topologyImpact';
 export { createInitialBatchState, decodeBatchState } from './batchState';
 export {
   applyProjectHistoryCommand,

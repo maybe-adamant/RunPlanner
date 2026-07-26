@@ -1,17 +1,19 @@
 import {
   createPreparedProjectCandidateSession,
+  type CanonicalAuthoredRoom,
+  type CanonicalBiome,
+  type MaterializedBiomePrefix,
   type CandidateEvaluationEvent,
   type ProjectCandidateEvaluation,
-  type ProjectCandidateEvaluator,
   type ProjectCandidateQuery,
+  type ProjectCandidateSession,
   type ProjectEvaluation,
 } from '@run-planner/engine/simulation';
 import {
-  resolveLinearOccurrenceRewardStore,
   semanticAddressKey,
   type BatchRewardStoreAddress,
   type BiomeAddress,
-  type ContinuationAddress,
+  type ExitDecisionAddress,
   type HubSlotAddress,
   type HubVisitAddress,
   type IncomingRewardAddress,
@@ -85,9 +87,13 @@ export interface CandidateProjectionSession {
     storeKeys: readonly string[],
   ) => readonly CandidateOptionProjection<string>[];
   readonly fieldsCageOutcomes: (
-    continuation: ContinuationAddress,
+    decision: ExitDecisionAddress,
     outcomes: readonly ('min' | 'max')[],
   ) => readonly CandidateOptionProjection<'min' | 'max'>[];
+  readonly takeoverPrebossBatches: (
+    source: ExitDecisionAddress,
+    gameNames: readonly string[],
+  ) => readonly CandidateOptionProjection<string>[];
   readonly shipEncounterCounts: (
     occurrence: OccurrenceAddress,
     values: readonly (2 | 3)[],
@@ -223,7 +229,7 @@ function projectOptions<T>(
 }
 
 interface ProjectCandidateProjectionCache {
-  readonly evaluator: ProjectCandidateEvaluator;
+  readonly evaluator: ProjectCandidateSession;
   readonly options: Map<string, readonly CandidateOptionProjection<unknown>[]>;
 }
 
@@ -264,77 +270,128 @@ async function projectOptionsCooperatively<T>(
   return result;
 }
 
-function requireBiomePlan(project: ProjectDocument, owner: CountedRewardCandidateOwner) {
-  const address = owner.address;
-  const route = project.routes.find((candidate) => candidate.routeKey === address.routeKey);
-  const plan = route?.biomes.find((candidate) => candidate.biomeKey === address.biomeKey);
-  if (plan === undefined) {
-    throw new Error(`reward producer ${semanticAddressKey(address)} has no authored biome plan`);
+function authoredRooms(
+  snapshot: CanonicalBiome | MaterializedBiomePrefix,
+): readonly CanonicalAuthoredRoom[] {
+  const rooms: CanonicalAuthoredRoom[] = [];
+  if (snapshot.entryRoom !== undefined) rooms.push(snapshot.entryRoom);
+  for (const decision of snapshot.decisions) {
+    switch (decision.kind) {
+      case 'linkedExit':
+        rooms.push(decision.target.room);
+        break;
+      case 'batch':
+        rooms.push(...decision.targets.map((target) => target.room));
+        break;
+      case 'hub':
+        rooms.push(...decision.board.targets.map((target) => target.room));
+        break;
+    }
   }
-  return plan;
+  if (snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision') {
+    rooms.push(...(snapshot.frontier.partialBatch?.targets.map((target) => target.room) ?? []));
+  }
+  return rooms;
 }
 
-function requireOccurrence(project: ProjectDocument, owner: CountedRewardCandidateOwner) {
-  const plan = requireBiomePlan(project, owner);
-  const occurrence = plan.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === owner.address.occurrenceId,
-  );
-  if (occurrence === undefined) {
-    throw new Error(`reward producer ${semanticAddressKey(owner.address)} has no occurrence`);
-  }
-  return { occurrence, plan };
+function materializedBiome(
+  evaluation: ProjectEvaluation,
+  owner: CountedRewardCandidateOwner,
+): CanonicalBiome | MaterializedBiomePrefix | undefined {
+  const biome = evaluation.routes
+    .find((route) => route.routeKey === owner.address.routeKey)
+    ?.biomes.find((candidate) => candidate.biomeKey === owner.address.biomeKey);
+  if (biome === undefined) return undefined;
+  if (biome.authoring === 'complete') return biome.snapshot;
+  return 'materializedPrefix' in biome ? biome.materializedPrefix : undefined;
 }
 
 function resolvedCountedStoreKey(
   catalog: Catalog,
   project: ProjectDocument,
+  evaluation: ProjectEvaluation,
   owner: CountedRewardCandidateOwner,
   binding: CountedRewardBinding,
 ): string {
-  let storeKey: string | undefined;
-  switch (owner.kind) {
-    case 'incomingReward': {
-      const { occurrence, plan } = requireOccurrence(project, owner);
-      const room = catalog.rooms.byKey[occurrence.gameName];
-      if (room === undefined) {
-        throw new Error(`reward producer references unknown room ${occurrence.gameName}`);
-      }
-      if (plan.kind === 'LinearBiome') {
-        const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
-        if (layout?.kind !== 'LinearBiome') {
-          throw new Error(`${plan.biomeKey} has no Linear reward-store layout`);
-        }
-        storeKey = resolveLinearOccurrenceRewardStore(
-          plan,
-          catalog,
-          layout,
-          occurrence.occurrenceId,
-        );
-      } else {
-        storeKey = room.forcedRewardStoreKey ?? room.individualRewardStoreKey;
-      }
-      break;
+  const snapshot = materializedBiome(evaluation, owner);
+  const room =
+    snapshot === undefined
+      ? undefined
+      : authoredRooms(snapshot).find((candidate) => {
+          if (owner.kind === 'incomingReward') {
+            return (
+              semanticAddressKey(candidate.incomingReward?.origin ?? candidate.origin) ===
+              semanticAddressKey(owner.address)
+            );
+          }
+          if (owner.kind === 'localReward') {
+            return candidate.localRewards?.some(
+              (reward) => semanticAddressKey(reward.origin) === semanticAddressKey(owner.address),
+            );
+          }
+          return candidate.rewardWheels?.some((wheel) =>
+            wheel.offers.some(
+              (offer) => semanticAddressKey(offer.origin) === semanticAddressKey(owner.address),
+            ),
+          );
+        });
+  const materializedStoreKey =
+    owner.kind === 'incomingReward'
+      ? room?.incomingReward?.resolvedStoreKey
+      : owner.kind === 'localReward'
+        ? room?.localRewards?.find(
+            (reward) => semanticAddressKey(reward.origin) === semanticAddressKey(owner.address),
+          )?.resolvedStoreKey
+        : room?.rewardWheels?.find((wheel) =>
+            wheel.offers.some(
+              (offer) => semanticAddressKey(offer.origin) === semanticAddressKey(owner.address),
+            ),
+          )?.storeKey;
+  const plan = project.routes
+    .find((route) => route.routeKey === owner.address.routeKey)
+    ?.biomes.find((candidate) => candidate.biomeKey === owner.address.biomeKey);
+  const occurrence = plan?.topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === owner.address.occurrenceId,
+  );
+  const declaration =
+    occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName];
+  const authoredStoreKey = (() => {
+    if (owner.kind === 'rewardWheelOffer') {
+      return occurrence?.state.kind === 'shipCombat'
+        ? occurrence.state.wheels[owner.address.wheelKey]?.storeKey
+        : undefined;
     }
-    case 'localReward':
-      if (binding.storeKeys.length !== 1) {
-        throw new Error(
-          `local reward ${semanticAddressKey(owner.address)} has no exact declaration-owned store`,
-        );
+    if (owner.kind === 'localReward') {
+      const group = declaration?.localChildren.find(
+        (candidate) => candidate.key === owner.address.groupKey,
+      );
+      if (group?.kind === 'fixedRoomSlots') {
+        const slot = group.slots.find((candidate) => candidate.slotKey === owner.address.slotKey);
+        const sideRoom = slot === undefined ? undefined : catalog.rooms.byKey[slot.roomGameName];
+        return sideRoom?.forcedRewardStoreKey ?? sideRoom?.individualRewardStoreKey;
       }
-      storeKey = binding.storeKeys[0];
-      break;
-    case 'rewardWheelOffer': {
-      const { occurrence, plan } = requireOccurrence(project, owner);
-      if (plan.kind !== 'LinearBiome' || occurrence.state.kind !== 'shipCombat') {
-        throw new Error(`${semanticAddressKey(owner.address)} is not a ShipCombat reward wheel`);
-      }
-      storeKey = occurrence.state.wheels[owner.address.wheelKey]?.storeKey;
-      break;
+      return declaration?.individualRewardStoreKey;
     }
-  }
+    const creatingBatch = plan?.topology?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.normal.kind === 'batch' &&
+        decision.normal.targets.some(
+          (target) => target.occurrenceId === owner.address.occurrenceId,
+        ),
+    );
+    const batchStore =
+      creatingBatch?.kind === 'exit' && creatingBatch.normal.kind === 'batch'
+        ? creatingBatch.normal.rewardStore.kind === 'authoredBaseStore'
+          ? (creatingBatch.normal.rewardStore.baseRewardStoreKey ?? undefined)
+          : undefined
+        : undefined;
+    return declaration?.forcedRewardStoreKey ?? declaration?.individualRewardStoreKey ?? batchStore;
+  })();
+  const storeKey = materializedStoreKey ?? authoredStoreKey;
   if (storeKey === undefined || !binding.storeKeys.includes(storeKey)) {
     throw new Error(
-      `reward producer ${semanticAddressKey(owner.address)} resolved unsupported store ${String(storeKey)}`,
+      `reward producer ${semanticAddressKey(owner.address)} has no resolved declaration-owned store`,
     );
   }
   return storeKey;
@@ -347,21 +404,15 @@ function countedRewardTypeDomain(
   selectedRewardType: string,
 ): readonly string[] {
   const store = catalog.rewards.stores.byKey[storeKey];
-  if (store === undefined) {
-    throw new Error(`reward producer resolved unknown store ${storeKey}`);
-  }
-  const rewardTypes: string[] = [];
+  if (store === undefined) throw new Error(`reward producer resolved unknown store ${storeKey}`);
   const seen = new Set<string>();
-  for (const entry of store.entries) {
-    if (!binding.allowedRewardTypes.includes(entry.rewardType) || seen.has(entry.rewardType)) {
-      continue;
-    }
+  const rewardTypes = store.entries.flatMap((entry) => {
+    if (!binding.allowedRewardTypes.includes(entry.rewardType) || seen.has(entry.rewardType))
+      return [];
     seen.add(entry.rewardType);
-    rewardTypes.push(entry.rewardType);
-  }
-  if (!seen.has(selectedRewardType)) {
-    rewardTypes.push(selectedRewardType);
-  }
+    return [entry.rewardType];
+  });
+  if (!seen.has(selectedRewardType)) rewardTypes.push(selectedRewardType);
   if (rewardTypes.length === 0) {
     throw new Error(`reward producer store ${storeKey} has no selectable reward types`);
   }
@@ -407,6 +458,7 @@ export function createCandidateSessionFactory(
   };
   const countedRewardTypesFor = (
     project: ProjectDocument,
+    evaluation: ProjectEvaluation,
     owner: CountedRewardCandidateOwner,
     binding: CountedRewardBinding,
     selectedRewardType: string,
@@ -416,7 +468,7 @@ export function createCandidateSessionFactory(
       projectCache = new Map();
       rewardTypeDomainCache.set(project, projectCache);
     }
-    const storeKey = resolvedCountedStoreKey(catalog, project, owner, binding);
+    const storeKey = resolvedCountedStoreKey(catalog, project, evaluation, owner, binding);
     const key = `reward-types:${semanticAddressKey(owner.address)}:${storeKey}:${selectedRewardType}`;
     const existing = projectCache.get(key);
     if (existing !== undefined) {
@@ -523,7 +575,7 @@ export function createCandidateSessionFactory(
         owner: CountedRewardCandidateOwner,
         binding: CountedRewardBinding,
         selectedRewardType: string,
-      ) => countedRewardTypesFor(project, owner, binding, selectedRewardType),
+      ) => countedRewardTypesFor(project, evaluation, owner, binding, selectedRewardType),
       rewardDomain: (
         owner: RewardCandidateOwner,
         rewardTypes: readonly string[],
@@ -544,19 +596,16 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
-      fieldsCageOutcomes: (
-        continuation: ContinuationAddress,
-        outcomes: readonly ('min' | 'max')[],
-      ) =>
+      fieldsCageOutcomes: (decision: ExitDecisionAddress, outcomes: readonly ('min' | 'max')[]) =>
         projectOptions(
           cache,
           project,
           evaluation,
-          `fields:${semanticAddressKey(continuation)}:${domainKey(outcomes)}`,
+          `fields:${semanticAddressKey(decision)}:${domainKey(outcomes)}`,
           outcomes,
           outcomes.map((cageOutcome) => ({
             kind: 'fieldsCageOutcome',
-            continuation,
+            decision,
             cageOutcome,
           })),
           catalog,
@@ -676,6 +725,17 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
+      takeoverPrebossBatches: (source: ExitDecisionAddress, gameNames: readonly string[]) =>
+        projectOptions(
+          cache,
+          project,
+          evaluation,
+          `takeover:${semanticAddressKey(source)}:${domainKey(gameNames)}`,
+          gameNames,
+          gameNames.map((gameName) => ({ kind: 'takeoverPrebossBatch', source, gameName })),
+          catalog,
+          options,
+        ),
     });
     byEvaluation.set(evaluation, session);
     return session;
@@ -683,13 +743,74 @@ export function createCandidateSessionFactory(
   return Object.freeze({ bind });
 }
 
+export type CandidateSupport = 'forced' | 'impossible' | 'possible' | 'unavailable';
+
+function candidateSelectedPossible(evaluation: ProjectCandidateEvaluation): boolean {
+  switch (evaluation.kind) {
+    case 'unavailable':
+      return false;
+    case 'roomTarget':
+      return evaluation.result.pressure.selectedPossible;
+    case 'incomingReward':
+    case 'localReward':
+    case 'rewardWheelOffer':
+    case 'shopOffer':
+    case 'shopPurchase':
+      return evaluation.result.supported;
+    default:
+      return evaluation.result.selectedPossible;
+  }
+}
+
+function candidateForced(
+  evaluation: Exclude<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
+): boolean {
+  switch (evaluation.kind) {
+    case 'roomTarget':
+      return (
+        evaluation.result.pressure.selectedPossible &&
+        evaluation.result.pressure.requiredForcedRoomGameNames.includes(
+          evaluation.result.pressure.selectedGameName,
+        )
+      );
+    case 'startRoom':
+      return (
+        evaluation.result.selectedPossible && evaluation.result.supportedGameNames.length === 1
+      );
+    case 'batchRewardStore':
+      return evaluation.result.selectedPossible && evaluation.result.supportStoreKeys.length === 1;
+    case 'fieldsCageOutcome':
+      return evaluation.result.selectedPossible && evaluation.result.supportOutcomes.length === 1;
+    case 'shipEncounterCount':
+      return (
+        evaluation.result.selectedPossible && evaluation.result.supportEncounterCounts.length === 1
+      );
+    case 'rewardWheelStore':
+      return (
+        evaluation.result.selectedPossible && evaluation.result.supportedStoreKeys.length === 1
+      );
+    case 'hubSlot':
+    case 'hubVisit':
+    case 'rewardWheelOfferCount':
+    case 'rewardWheelPicked':
+    case 'sideRoomGeneration':
+    case 'sideRoomEntryOrder':
+    case 'incomingReward':
+    case 'localReward':
+    case 'rewardWheelOffer':
+    case 'shopOffer':
+    case 'shopPurchase':
+    case 'takeoverPrebossBatch':
+      return false;
+  }
+}
+
 export function candidateSupport(
   option: CandidateOptionProjection<unknown> | undefined,
-): 'forced' | 'impossible' | 'possible' | 'unavailable' {
-  if (option === undefined || option.evaluation.context === 'unavailable') {
-    return 'unavailable';
-  }
-  return option.evaluation.support;
+): CandidateSupport {
+  if (option === undefined || option.evaluation.kind === 'unavailable') return 'unavailable';
+  if (!candidateSelectedPossible(option.evaluation)) return 'impossible';
+  return candidateForced(option.evaluation) ? 'forced' : 'possible';
 }
 
 export function presentCandidateLabel(

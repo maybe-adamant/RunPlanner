@@ -21,10 +21,10 @@ export function roomSelectorCategories(
   catalog: Catalog,
   biomeKey: string,
 ): readonly RoomSelectorCategory[] {
-  const layout = catalog.biomeLayouts.byKey[biomeKey];
-  return layout?.kind === 'LinearBiome' && layout.terminal.kind === 'generatedTarget'
-    ? generatedTargetRoomCategories
-    : ordinaryRoomCategories;
+  const ordinaryPreboss = catalog.rooms.values.some(
+    (room) => room.biomeKey === biomeKey && room.prebossBatchPolicy?.kind === 'retainNormalPeers',
+  );
+  return ordinaryPreboss ? generatedTargetRoomCategories : ordinaryRoomCategories;
 }
 
 export function roomCategoryForKind(kind: RoomKind): RoomSelectorCategory | undefined {
@@ -70,31 +70,13 @@ export function selectRoomsForCategory(
 
 export function selectRoomsForTargetCategory(
   catalog: Catalog,
-  project: ProjectDocument,
+  _project: ProjectDocument,
   target: TargetAddress,
   category: RoomSelectorCategory,
 ): readonly RoomDeclaration[] {
-  const rooms = selectRoomsForCategory(catalog, target.biomeKey, category);
-  const layout = catalog.biomeLayouts.byKey[target.biomeKey];
-  if (layout?.kind !== 'LinearBiome' || layout.continuation.progressionPolicy.kind !== 'staged') {
-    return rooms;
-  }
-  const plan = project.routes
-    .find((route) => route.routeKey === target.routeKey)
-    ?.biomes.find((biome) => biome.biomeKey === target.biomeKey);
-  if (plan?.kind !== 'LinearBiome' || plan.topology === null) {
-    throw new Error(`${target.biomeKey} staged selector has no linear topology`);
-  }
-  const batches = plan.topology.continuations.filter(
-    (continuation) => continuation.kind === 'batch',
-  );
-  const batchIndex = batches.findIndex(
-    (continuation) => continuation.parentOccurrenceId === target.parentOccurrenceId,
-  );
-  const stage = layout.continuation.progressionPolicy.stages[batchIndex];
-  if (stage === undefined) {
-    throw new Error(`${target.biomeKey} staged selector has no candidate stage ${batchIndex + 1}`);
-  }
-  const stageRooms = new Set(stage.roomGameNames);
-  return rooms.filter((room) => stageRooms.has(room.gameName));
+  // A staged declaration's semantic ordinal belongs to the engine's selected
+  // spine, not to the persisted decision-array position.  The picker presents
+  // the declaration-owned category domain and lets the candidate session own
+  // stage, eligibility, cap, and physical-exit validation.
+  return selectRoomsForCategory(catalog, target.biomeKey, category);
 }

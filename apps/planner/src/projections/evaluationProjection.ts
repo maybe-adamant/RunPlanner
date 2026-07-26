@@ -69,7 +69,7 @@ const findingCopy = {
   },
   continuationMissing: {
     title: 'Continue this route',
-    description: 'Add another decision or finish the biome at Preboss.',
+    description: 'Add the next exit decision or select a declaration-owned Preboss batch.',
   },
   hubOpenSetIncomplete: {
     title: 'Complete the open Hub set',
@@ -335,18 +335,16 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return biomeLabel;
     case 'biomeField':
       return `${biomeLabel} · Simulated outcome`;
-    case 'fixedEntryRoom':
-    case 'fixedEntryReward':
-    case 'fixedEntryTarget':
-      return `${biomeLabel} · Fixed Entry`;
-    case 'continuation':
+    case 'exitDecision':
       return `${biomeLabel} · Decision`;
+    case 'exitSelection':
+      return `${biomeLabel} · Selected exit`;
     case 'batchRewardStore':
       return `${biomeLabel} · Reward pool`;
-    case 'target':
-      return `${biomeLabel} · Exit ${origin.exitIndex}`;
-    case 'picked':
-      return `${biomeLabel} · Entered exit`;
+    case 'target': {
+      const physicalIndex = /^exit(\d+)$/.exec(origin.exitKey)?.[1];
+      return `${biomeLabel} · Exit ${physicalIndex ?? origin.exitKey}`;
+    }
     case 'incomingReward':
       return `${biomeLabel} · Room reward`;
     case 'localReward':
@@ -361,6 +359,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Reward wheel offer`;
     case 'hubOpenSet':
       return `${biomeLabel} · Open Hub rooms`;
+    case 'hubDecision':
+      return `${biomeLabel} · Hub decision`;
     case 'hubRoom':
       return `${biomeLabel} · Hub`;
     case 'hubSlot':

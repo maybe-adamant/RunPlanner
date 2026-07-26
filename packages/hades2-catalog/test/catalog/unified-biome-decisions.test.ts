@@ -8,7 +8,7 @@ function input(): RawCatalogInput {
 }
 
 describe('unified biome decisions catalog', () => {
-  it('normalizes every supported biome through one envelope and schema 9 catalog version', () => {
+  it('normalizes every supported biome through unified catalog declarations', () => {
     const catalog = createCatalog(declarations);
     expect(catalog.version).toBe('0.15.0-unified-biome-decisions');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).toEqual([

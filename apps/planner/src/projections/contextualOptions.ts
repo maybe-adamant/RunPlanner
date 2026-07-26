@@ -1,14 +1,14 @@
 import type {
+  FindingEvidenceValue,
   ProjectCandidateEvaluation,
   RequirementEvaluationEvidence,
-  RewardCandidateExclusionEvidence,
   RoomGenerationExclusionEvidence,
+  SemanticFinding,
 } from '@run-planner/engine/simulation';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import type { CounterAxis } from '@run-planner/engine/requirements';
 
-import type { CandidateOptionProjection } from './candidateProjection';
+import { candidateSupport, type CandidateOptionProjection } from './candidateProjection';
 
 export type ContextualOptionState = 'forced' | 'possible' | 'impossible' | 'unassessed';
 
@@ -37,6 +37,13 @@ export interface ContextualOptionResolver {
     options: readonly CandidateOptionProjection<T>[],
     presentationFor: (option: CandidateOptionProjection<T>) => ContextualOptionPresentation,
   ) => readonly ContextualOption<T>[];
+}
+
+function biomeName(catalog: Catalog, biomeKey: string): string {
+  const biome = catalog.biomes.byKey[biomeKey];
+  if (biome === undefined)
+    throw new Error(`contextual option references unknown biome ${biomeKey}`);
+  return biome.label;
 }
 
 function counterLabel(axis: CounterAxis): string {
@@ -87,18 +94,8 @@ function requirementMessage(evidence: RequirementEvaluationEvidence): string {
 
 function roomName(catalog: Catalog, gameName: string): string {
   const room = catalog.rooms.byKey[gameName];
-  if (room === undefined) {
-    throw new Error(`contextual option references unknown room ${gameName}`);
-  }
+  if (room === undefined) throw new Error(`contextual option references unknown room ${gameName}`);
   return room.label;
-}
-
-function biomeName(catalog: Catalog, biomeKey: string): string {
-  const biome = catalog.biomes.byKey[biomeKey];
-  if (biome === undefined) {
-    throw new Error(`contextual option references unknown biome ${biomeKey}`);
-  }
-  return biome.label;
 }
 
 function roomExclusionExplanation(
@@ -147,40 +144,11 @@ function roomExclusionExplanation(
   }
 }
 
-function rewardExclusionExplanation(
-  catalog: Catalog,
-  exclusion: RewardCandidateExclusionEvidence,
-): CandidateExplanation {
-  switch (exclusion.kind) {
-    case 'store':
-      return {
-        kind: 'store',
-        message: 'This reward is outside the selected reward pool.',
-      };
-    case 'bag':
-      return {
-        kind: 'bag',
-        message: 'No reachable reward-pool state supports this reward.',
-      };
-    case 'sibling':
-      return {
-        kind: 'sibling',
-        message: `This reward conflicts with the offer on ${rewardPeerLabel(catalog, exclusion.priorOffers[0]?.origin)}.`,
-      };
-    case 'boonSource':
-      return { kind: 'boonSource', message: 'This God cannot be offered at this point.' };
-    case 'devotionPair':
-      return { kind: 'devotionPair', message: 'This Devotion pair is not supported here.' };
-    case 'payload':
-      return { kind: 'payload', message: 'This reward payload is not valid.' };
-    case 'shop':
-      return { kind: 'shop', message: 'This shop configuration is not supported.' };
-    case 'acquisition':
-      return {
-        kind: 'acquisition',
-        message: 'This reward cannot be acquired at this lifecycle point.',
-      };
-  }
+type EvidenceRecord = Readonly<Record<string, FindingEvidenceValue>>;
+
+function evidenceRecord(value: FindingEvidenceValue | undefined): EvidenceRecord | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  return value as EvidenceRecord;
 }
 
 function numberedLabel(value: string, prefix: string): string {
@@ -188,22 +156,30 @@ function numberedLabel(value: string, prefix: string): string {
   return suffix === undefined ? prefix : `${prefix} ${Number(suffix)}`;
 }
 
-function rewardPeerLabel(catalog: Catalog, origin: SemanticAddress | undefined): string {
-  if (origin === undefined) {
-    return 'another offer';
-  }
+function rewardPeerLabel(catalog: Catalog, value: FindingEvidenceValue | undefined): string {
+  const origin = evidenceRecord(value);
+  if (origin === undefined || typeof origin.kind !== 'string') return 'another offer';
   switch (origin.kind) {
     case 'target':
-      return `Exit ${origin.exitIndex}`;
+      return typeof origin.exitKey === 'string'
+        ? numberedLabel(origin.exitKey, 'Exit')
+        : 'another offer';
     case 'rewardWheelOffer':
-      return numberedLabel(origin.offerKey, 'Offer');
+      return typeof origin.offerKey === 'string'
+        ? numberedLabel(origin.offerKey, 'Offer')
+        : 'another offer';
     case 'localReward':
-      return numberedLabel(origin.slotKey, origin.groupKey === 'cages' ? 'Cage' : 'Side room');
+      return typeof origin.slotKey === 'string'
+        ? numberedLabel(origin.slotKey, origin.groupKey === 'cages' ? 'Cage' : 'Side room')
+        : 'another offer';
     case 'hubSlot': {
+      if (typeof origin.biomeKey !== 'string' || typeof origin.hubSlotKey !== 'string') {
+        return 'another Hub room';
+      }
       const layout = catalog.biomeLayouts.byKey[origin.biomeKey];
       const slot =
-        layout?.kind === 'HubBiome'
-          ? layout.hub.slots.find((candidate) => candidate.slotKey === origin.hubSlotKey)
+        layout?.progression.kind === 'hub'
+          ? layout.progression.slots.find((candidate) => candidate.slotKey === origin.hubSlotKey)
           : undefined;
       return slot === undefined ? 'another Hub room' : roomName(catalog, slot.roomGameName);
     }
@@ -212,23 +188,143 @@ function rewardPeerLabel(catalog: Catalog, origin: SemanticAddress | undefined):
   }
 }
 
-function isRoomExclusion(
-  exclusion: RoomGenerationExclusionEvidence | RewardCandidateExclusionEvidence,
-): exclusion is RoomGenerationExclusionEvidence {
-  switch (exclusion.kind) {
-    case 'notCandidate':
-    case 'physicalExitUnavailable':
-    case 'exitIncompatible':
-    case 'currentRoomRepeat':
-    case 'forceMinimum':
-    case 'eligibilityRequirement':
-    case 'maxCreationsThisRun':
-    case 'maxCreationsPerRoom':
-    case 'maxAppearancesThisBiome':
-    case 'forcedPool':
-      return true;
-    default:
-      return false;
+function siblingExplanation(
+  catalog: Catalog,
+  finding: SemanticFinding,
+): CandidateExplanation | undefined {
+  const peers = Array.isArray(finding.evidence.priorOffers) ? finding.evidence.priorOffers : [];
+  const firstPeer = evidenceRecord(peers[0]);
+  return firstPeer === undefined
+    ? undefined
+    : {
+        kind: 'sibling',
+        message: `This reward conflicts with the offer on ${rewardPeerLabel(catalog, firstPeer.origin)}.`,
+      };
+}
+
+function findingExplanation(catalog: Catalog, finding: SemanticFinding): CandidateExplanation {
+  const sibling = siblingExplanation(catalog, finding);
+  if (sibling !== undefined) return sibling;
+  switch (finding.code) {
+    case 'targetRoomSupportEmpty':
+      return { kind: 'room', message: 'No room is eligible for this exit at this point.' };
+    case 'targetRoomUnavailable':
+      return {
+        kind: 'room',
+        message: 'This room is outside the possible room set for this exit.',
+      };
+    case 'encounterCountUnavailable':
+      return {
+        kind: 'encounter',
+        message: 'This encounter count cannot occur when this room begins.',
+      };
+    case 'fieldsCageOutcomeUnavailable':
+      return { kind: 'fields', message: 'This Fields door outcome cannot occur at this point.' };
+    case 'hubOpenSlotUnavailable':
+      return { kind: 'hub', message: 'This Hub room conflicts with the selected open set.' };
+    case 'sideRoomGenerationUnavailable':
+      return {
+        kind: 'sideRoom',
+        message: 'This side-room outcome conflicts with Hub generation pressure.',
+      };
+    case 'baseRewardStoreUnavailable':
+      return { kind: 'store', message: 'This reward is outside the selected reward pool.' };
+    case 'rewardAcquisitionUnavailable':
+      return {
+        kind: 'acquisition',
+        message: 'This reward cannot be acquired at this lifecycle point.',
+      };
+    case 'rewardBagSupportEmpty':
+      return {
+        kind: 'bag',
+        message: 'No reachable reward-pool state supports this reward.',
+      };
+    case 'rewardBagEntryUnavailable':
+      return { kind: 'bag', message: 'This reward is unavailable from the selected reward pool.' };
+    case 'rewardPayloadInvalid':
+      return { kind: 'payload', message: 'This reward payload is not valid.' };
+    case 'rewardSourceUnavailable':
+      return typeof finding.evidence.chosenSource === 'string' &&
+        typeof finding.evidence.spurnedSource === 'string'
+        ? { kind: 'devotionPair', message: 'This Devotion pair is not supported here.' }
+        : { kind: 'boonSource', message: 'This God cannot be offered at this point.' };
+    case 'shopOfferUnavailable':
+      return { kind: 'shop', message: 'This shop configuration is not supported.' };
+    case 'shopPurchaseUnavailable':
+      return {
+        kind: 'shop',
+        message: 'This purchase cannot be completed with the current shop configuration.',
+      };
+    case 'batchRewardStoreMissing':
+    case 'batchStateMissing':
+    case 'biomeFieldMissing':
+    case 'biomeTopologyMissing':
+    case 'continuationMissing':
+    case 'hubOpenSetIncomplete':
+    case 'hubVisitOrderIncomplete':
+    case 'pickedShopStateMissing':
+    case 'pickedTargetMissing':
+    case 'targetMissing':
+      return {
+        kind: 'structure',
+        message: 'Complete the required authored structure before evaluating this option.',
+      };
+  }
+}
+
+function activeFinding(
+  evaluation: Exclude<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
+): SemanticFinding | undefined {
+  return 'findings' in evaluation.result ? evaluation.result.findings[0] : undefined;
+}
+
+function unavailableExplanation(
+  catalog: Catalog,
+  evaluation: Extract<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
+): CandidateExplanation {
+  switch (evaluation.evidence.kind) {
+    case 'authoredPrerequisiteMissing': {
+      const label =
+        evaluation.evidence.prerequisite.kind === 'batchRewardStore'
+          ? 'reward pool'
+          : evaluation.evidence.prerequisite.kind === 'fieldsCageOutcome'
+            ? 'Fields door roll'
+            : 'biome outcome';
+      return {
+        kind: evaluation.evidence.kind,
+        message: `Choose the required ${label} before evaluating this option.`,
+      };
+    }
+    case 'biomeIncomplete':
+      return {
+        kind: evaluation.evidence.kind,
+        message: 'Complete the required authored structure before evaluating this option.',
+      };
+    case 'coverageNotReached':
+      return {
+        kind: evaluation.evidence.kind,
+        message: 'This owner has not been reached by the current evaluated prefix.',
+      };
+    case 'producerFrontierUnavailable':
+      return {
+        kind: evaluation.evidence.kind,
+        message: 'The current simulation does not reach this reward producer.',
+      };
+    case 'targetNotReachable':
+      return {
+        kind: evaluation.evidence.kind,
+        message: 'This physical exit is not reachable in the current authored prefix.',
+      };
+    case 'upstreamIncomplete':
+      return {
+        kind: evaluation.evidence.kind,
+        message: `Complete ${biomeName(catalog, evaluation.evidence.upstreamBiomeKey)} before editing this biome contextually.`,
+      };
+    case 'upstreamInvalid':
+      return {
+        kind: evaluation.evidence.kind,
+        message: `Repair ${biomeName(catalog, evaluation.evidence.upstreamBiomeKey)} before editing this biome contextually.`,
+      };
   }
 }
 
@@ -236,70 +332,30 @@ export function explainCandidateEvaluation(
   catalog: Catalog,
   evaluation: ProjectCandidateEvaluation,
 ): CandidateExplanation | undefined {
-  if (evaluation.context === 'unavailable') {
-    switch (evaluation.evidence.kind) {
-      case 'authoredPrerequisiteMissing': {
-        const prerequisite = evaluation.evidence.prerequisite;
-        const label =
-          prerequisite.kind === 'batchRewardStore'
-            ? 'reward pool'
-            : prerequisite.kind === 'batchState'
-              ? 'Fields door roll'
-              : prerequisite.owner.fieldKey === 'maxNonGoalRewards'
-                ? 'rolled non-goal limit'
-                : 'biome outcome';
-        return {
-          kind: 'authoredPrerequisiteMissing',
-          message: `Choose the required ${label} before evaluating this option.`,
-        };
-      }
-      case 'coverageNotReached':
-        return {
-          kind: 'coverage',
-          message: 'This decision has not been reached by the current evaluated prefix.',
-        };
-      case 'producerFrontierUnavailable':
-        return {
-          kind: 'producerFrontierUnavailable',
-          message: 'The current simulation does not reach this reward producer.',
-        };
-      case 'upstreamIncomplete':
-        return {
-          kind: 'upstreamIncomplete',
-          message: `Complete ${biomeName(catalog, evaluation.evidence.upstreamBiomeKey)} before editing this biome contextually.`,
-        };
-      case 'upstreamInvalid':
-        return {
-          kind: 'upstreamInvalid',
-          message: `Repair ${biomeName(catalog, evaluation.evidence.upstreamBiomeKey)} before editing this biome contextually.`,
-        };
-    }
-  }
-  if (evaluation.support === 'forced') {
+  if (evaluation.kind === 'unavailable') return unavailableExplanation(catalog, evaluation);
+  const support = candidateSupport({ value: null, evaluation });
+  if (support === 'forced') {
     return {
       kind: 'forced',
       message: 'This option is part of the required choice set at this decision.',
     };
   }
-  if (evaluation.support !== 'impossible') {
-    return undefined;
+  if (support !== 'impossible') return undefined;
+  if (evaluation.kind === 'roomTarget') {
+    const exclusion = evaluation.result.pressure.selectedExclusions[0];
+    if (exclusion !== undefined) return roomExclusionExplanation(catalog, exclusion);
   }
-  if ('exclusions' in evaluation.evidence) {
-    const first = evaluation.evidence.exclusions[0];
-    if (first !== undefined) {
-      return isRoomExclusion(first)
-        ? roomExclusionExplanation(catalog, first)
-        : rewardExclusionExplanation(catalog, first);
-    }
-  }
+  const finding = activeFinding(evaluation);
+  if (finding !== undefined) return findingExplanation(catalog, finding);
   return {
-    kind: evaluation.findings[0]?.code ?? 'unsupported',
+    kind: 'unsupported',
     message: 'This option is not supported by the current route state.',
   };
 }
 
 function state(evaluation: ProjectCandidateEvaluation): ContextualOptionState {
-  return evaluation.context === 'unavailable' ? 'unassessed' : evaluation.support;
+  const support = candidateSupport({ value: null, evaluation });
+  return support === 'unavailable' ? 'unassessed' : support;
 }
 
 function presentationKey(values: readonly ContextualOptionPresentation[]): string {
@@ -324,22 +380,18 @@ export function createContextualOptionResolver(catalog: Catalog): ContextualOpti
       }
       const key = presentationKey(presentation);
       const existing = byPresentation.get(key);
-      if (existing !== undefined) {
-        return existing as readonly ContextualOption<T>[];
-      }
+      if (existing !== undefined) return existing as readonly ContextualOption<T>[];
       const projected = Object.freeze(
         options.map((option, index) => {
           const display = presentation[index]!;
-          const candidateExplanation = explainCandidateEvaluation(catalog, option.evaluation);
+          const explanation = explainCandidateEvaluation(catalog, option.evaluation);
           return Object.freeze({
             value: option.value,
             label: display.label,
             ...(display.category === undefined ? {} : { category: display.category }),
             state: state(option.evaluation),
             selected: display.selected,
-            ...(candidateExplanation === undefined
-              ? {}
-              : { explanation: Object.freeze(candidateExplanation) }),
+            ...(explanation === undefined ? {} : { explanation: Object.freeze(explanation) }),
           });
         }),
       );

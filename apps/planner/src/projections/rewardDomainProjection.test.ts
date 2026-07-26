@@ -1,9 +1,4 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import {
-  createBiomeAddress,
-  createIncomingRewardAddress,
-  createOccurrenceId,
-} from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { ProjectCandidateEvaluation } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -14,25 +9,13 @@ import {
   rewardDomainOffers,
 } from './rewardDomainProjection';
 
-const reward = createIncomingRewardAddress(
-  createBiomeAddress('Underworld', 'F'),
-  createOccurrenceId('reward-domain'),
-);
-
 function evaluation(
   offer: ResolvedRewardOffer,
   support: 'impossible' | 'possible',
 ): ProjectCandidateEvaluation {
   return {
-    context: 'evaluated',
-    query: { kind: 'incomingReward', reward, value: offer },
-    support,
-    findings: [],
-    evidence: {
-      candidate: offer,
-      relevantFindingCodes: [],
-      exclusions: support === 'possible' ? [] : [{ kind: 'devotionPair' }],
-    },
+    kind: 'incomingReward',
+    result: { supported: support === 'possible', findings: [] },
   };
 }
 
@@ -98,7 +81,10 @@ describe('relational reward domain projection', () => {
       prepared.payload.chosenSources.find((option) => option.key === 'AresUpgrade')?.witnesses,
     ).toHaveLength(8);
     expect(projected.types[0]).toMatchObject({ supportingOffer: supportedPair });
-    expect(projected.types[0]?.evaluation).toMatchObject({ support: 'possible' });
+    expect(projected.types[0]?.evaluation).toMatchObject({
+      kind: 'incomingReward',
+      result: { supported: true },
+    });
     expect(
       projected.payload.chosenSources.find((option) => option.key === 'ApolloUpgrade'),
     ).toMatchObject({
@@ -110,12 +96,15 @@ describe('relational reward domain projection', () => {
           spurnedSource: 'AresUpgrade',
         },
       },
-      offerEvaluation: { support: 'impossible' },
+      offerEvaluation: { kind: 'incomingReward', result: { supported: false } },
       supportingOffer: supportedPair,
-      evaluation: { support: 'possible' },
+      evaluation: { kind: 'incomingReward', result: { supported: true } },
     });
     expect(
       projected.payload.chosenSources.find((option) => option.key === 'AphroditeUpgrade'),
-    ).toMatchObject({ offer: selected, evaluation: { support: 'impossible' } });
+    ).toMatchObject({
+      offer: selected,
+      evaluation: { kind: 'incomingReward', result: { supported: false } },
+    });
   });
 });

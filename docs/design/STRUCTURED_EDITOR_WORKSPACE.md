@@ -290,6 +290,11 @@ Retained-overflow and terminal repairs remain explicit:
 Dialogs describe commands; they do not calculate deletion scope or repair the
 project themselves.
 
+The authored-project core calculates the pure removal impact once, and command
+execution consumes that same result. The application projection may translate
+its semantic sources into a presentation scope, but neither it nor React walks
+authored descendants to infer deletion.
+
 ## Component Foundation
 
 Use accessible primitives for popovers, dialogs, radio groups, disclosures, and

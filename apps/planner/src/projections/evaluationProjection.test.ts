@@ -75,7 +75,11 @@ describe('evaluation presentation', () => {
   });
 
   it('indexes every finding directly under its semantic owner', () => {
-    const target = createTargetAddress(biome, createOccurrenceId('parent'), 2);
+    const target = createTargetAddress(
+      biome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('parent') },
+      'exit2',
+    );
     const room = createOccurrenceAddress(biome, createOccurrenceId('room'));
     const targetFindings = [
       finding('targetRoomSupportEmpty', target),
@@ -124,7 +128,6 @@ describe('evaluation presentation', () => {
   it('projects aggregate feedback and coverage context through the route hierarchy', () => {
     const fFinding = finding('biomeTopologyMissing');
     const fEvaluation = {
-      kind: 'LinearBiome',
       biomeKey: 'F',
       origin: biome,
       authoring: 'incomplete',
@@ -212,14 +215,21 @@ describe('evaluation presentation', () => {
   });
 
   it('uses declaration labels and structural roles without exposing occurrence identity', () => {
-    const target = createTargetAddress(biome, createOccurrenceId('private-parent'), 2);
+    const target = createTargetAddress(
+      biome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('private-parent') },
+      'exit2',
+    );
     const room = createOccurrenceAddress(biome, createOccurrenceId('private-room'));
 
     expect(findingDestinationLabel(catalog, createProjectAddress())).toBe('Project');
     expect(findingDestinationLabel(catalog, target)).toBe('Erebus · Exit 2');
     expect(findingDestinationLabel(catalog, room)).toBe('Erebus · Room');
     expect(
-      findingDestinationLabel(catalog, createHubRoomAddress(createBiomeAddress('Surface', 'N'))),
+      findingDestinationLabel(
+        catalog,
+        createHubRoomAddress(createBiomeAddress('Surface', 'N'), 'hub'),
+      ),
     ).toBe('Ephyra · Hub');
   });
 });

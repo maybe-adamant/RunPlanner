@@ -12,6 +12,7 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createInitialProject } from '../composition/projectBootstrap';
+import { semanticOwnerFocused } from './editorSessionSlice';
 import {
   authoredProjectCommandDispatched,
   authoredProjectRedoRequested,
@@ -77,9 +78,7 @@ describe('project workspace application state', () => {
     const editedState = store.getState();
     const editedHistory = selectProjectHistory(editedState);
     const editedPlan = editedHistory.present.routes[0]?.biomes[0];
-    if (editedPlan?.kind !== 'LinearBiome') {
-      throw new Error('expected edited linear F plan');
-    }
+    if (editedPlan === undefined) throw new Error('expected edited F plan');
     expect(editedHistory.past).toEqual([original, configured]);
     expect(editedPlan.topology?.startOccurrenceId).toBe('f-start');
     expect(editedHistory.future).toEqual([]);
@@ -142,6 +141,18 @@ describe('project workspace application state', () => {
     expect(evaluateProject).toHaveBeenCalledTimes(3);
     expect(evaluateProject.mock.calls[2]?.[0]).toBe(replacement);
     expect(selectProjectEvaluation(state)).toBe(evaluateProject.mock.results[2]?.value);
+  });
+
+  it('keeps projected semantic focus outside authored history and evaluation work', () => {
+    const { evaluateProject, store } = createStore();
+    const before = store.getState().projectWorkspace;
+    const owner = createBiomeAddress('Underworld', 'F');
+
+    store.dispatch(semanticOwnerFocused(owner));
+
+    expect(store.getState().projectWorkspace).toBe(before);
+    expect(store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
+    expect(evaluateProject).toHaveBeenCalledTimes(1);
   });
 
   it('allows the complete authorable Underworld prefix', () => {
