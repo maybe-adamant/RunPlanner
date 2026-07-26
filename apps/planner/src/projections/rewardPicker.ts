@@ -1,7 +1,7 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
-import type { CandidateOptionProjection } from './candidateProjection';
+import { candidateSupport, type CandidateOptionProjection } from './candidateProjection';
 import type { ContextualPickerModel, ContextualPickerProjectionService } from './contextualPicker';
 import type { ProjectedRewardDomain, ProjectedRewardDomainOption } from './rewardDomainProjection';
 
@@ -73,26 +73,13 @@ function optionLabel(catalog: Catalog, step: RewardPickerStep, key: string): str
 function aggregateEvaluation(
   candidates: readonly ProjectedRewardDomain['offers'][number][],
 ): ProjectedRewardDomain['offers'][number] {
-  const supported = candidates.filter(
-    (candidate) =>
-      candidate.evaluation.context === 'evaluated' && candidate.evaluation.support !== 'impossible',
-  );
+  const supported = candidates.filter((candidate) => {
+    const support = candidateSupport(candidate);
+    return support === 'possible' || support === 'forced';
+  });
   const representative = supported[0] ?? candidates[0];
   if (representative === undefined) {
     throw new Error('Reward payload option has no complete offer');
-  }
-  if (
-    representative.evaluation.context === 'evaluated' &&
-    representative.evaluation.support === 'forced' &&
-    supported.some(
-      (candidate) =>
-        candidate.evaluation.context === 'evaluated' && candidate.evaluation.support === 'possible',
-    )
-  ) {
-    return Object.freeze({
-      value: representative.value,
-      evaluation: Object.freeze({ ...representative.evaluation, support: 'possible' }),
-    });
   }
   return representative;
 }

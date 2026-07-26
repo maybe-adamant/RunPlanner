@@ -209,7 +209,7 @@ describe('reward editor projections', () => {
     });
     const user = userEvent.setup();
     renderReward({
-      interactions: interactionsFor(project),
+      interactions: interactionsFor(project, { yieldToHost: () => Promise.resolve() }),
       offer: maxHealth,
       owner: { kind: 'incomingReward', address: secondReward },
     });

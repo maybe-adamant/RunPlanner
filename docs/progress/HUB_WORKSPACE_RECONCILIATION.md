@@ -2,7 +2,35 @@
 
 ## Status
 
-Planned. This tracker supersedes the presentation-only Phase 7 Commit 12 and
+Commit 3a is in progress. Its application projection, candidate/result,
+fixture, focus, and recovery boundary has moved to schema 9; its remaining
+review and commit are intentionally separate from the React composition work
+in Commit 3b and Commit 3c. The projection now carries declaration-owned reward
+domains, explicit start/ordinary/linked/Hub authoring actions, all Hub-slot and
+next-visit controls, coverage-aware retained topology, and exact takeover
+replacement impact. React therefore receives structural facts and command scope
+instead of reconstructing them from authored arrays or rendered targets.
+
+Blocked suffixes derive their structural frontier from engine completeness even
+when route simulation cannot yet reach them. The planner-engine authored-project
+core owns the pure removal impact used by both command execution and workspace
+projection; the application maps its sources to presentation addresses without
+traversing topology itself.
+
+The current focused projection, Redux, recovery, and workspace lane passes
+(10 files, 58 tests), as do the full planner-engine suite (30 files, 300
+tests) and planner-engine typecheck. The final Commit 3a review and commit
+remain intentionally separate from React composition work in Commit 3b and
+Commit 3c.
+
+The expected temporary application type failures are confined to the obsolete
+`apps/planner/src/ui/editor/`, `apps/planner/src/ui/shell/`, and product-loop
+React composition that still imports removed schema-8 contracts. The migrated
+application projections, state, persistence, workspace operations, architecture
+candidate-interaction test, and shared fixtures are TypeScript-clean. Commit 3a
+adds no compatibility adapter for those old editors.
+
+This tracker supersedes the presentation-only Phase 7 Commit 12 and
 Commit 13 plan. Phase 7 Commit 12 will be delivered through the seven
 independently reviewable commits defined below. Commits 1, 2, 3a, 3b, 3c, and 4
 establish and close the unified biome refactor. Commit 5 is a follow-up

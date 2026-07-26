@@ -10,19 +10,17 @@ import { createRewardPickerProjection } from '../../src/projections/rewardPicker
 import {
   createStructuredWorkspaceProjection,
   type StructuredWorkspaceProjection,
-  type WorkspaceLinearBiome,
+  type WorkspaceBiome,
 } from '../../src/projections/structuredWorkspace';
 
-export function requireLinearWorkspaceBiome(
+export function requireWorkspaceBiome(
   workspace: StructuredWorkspaceProjection,
   biomeKey: string,
-): WorkspaceLinearBiome {
+): WorkspaceBiome {
   const biome = workspace.routes
     .flatMap((route) => route.biomes)
     .find((candidate) => candidate.biomeKey === biomeKey);
-  if (biome?.kind !== 'LinearBiome') {
-    throw new Error(`${biomeKey} has no Linear workspace projection`);
-  }
+  if (biome === undefined) throw new Error(`${biomeKey} has no workspace projection`);
   return biome;
 }
 

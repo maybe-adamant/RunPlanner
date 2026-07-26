@@ -1,371 +1,262 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  createBatchRewardStoreAddress,
   createBiomeAddress,
-  createBiomeFieldAddress,
-  createContinuationAddress,
-  createIncomingRewardAddress,
-  createLocalRewardAddress,
+  createExitDecisionAddress,
   createOccurrenceId,
   createTargetAddress,
 } from '@run-planner/engine/authored-project';
-import type { ProjectCandidateEvaluation } from '@run-planner/engine/simulation';
+import type {
+  ProjectCandidateEvaluation,
+  RoomGenerationExclusionEvidence,
+  SemanticFinding,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import type { CandidateOptionProjection } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 
 const biome = createBiomeAddress('Underworld', 'F');
-const parent = createOccurrenceId('contextual-parent');
-const target = createTargetAddress(biome, parent, 1);
+const source = { kind: 'occurrence' as const, occurrenceId: createOccurrenceId('context-source') };
+const target = createTargetAddress(biome, source, 'exit1');
 
-function evaluated(support: 'forced' | 'possible', gameName: string): ProjectCandidateEvaluation {
+function start(
+  gameName: string,
+  supportedGameNames: readonly string[],
+): ProjectCandidateEvaluation {
   return {
-    context: 'evaluated',
-    query: { kind: 'startRoom', owner: biome, gameName },
-    support,
-    findings: [],
-    evidence: { candidateGameName: gameName, supportedGameNames: [gameName] },
+    kind: 'startRoom',
+    result: {
+      gameName,
+      supportedGameNames,
+      selectedPossible: supportedGameNames.includes(gameName),
+    },
   };
 }
 
-const impossible: ProjectCandidateEvaluation = {
-  context: 'evaluated',
-  query: { kind: 'roomTarget', target, gameName: 'F_Combat20' },
-  support: 'impossible',
-  findings: [],
-  evidence: {
-    beforeSequence: 12,
-    sourceGameName: 'F_Combat01',
-    candidateGameName: 'F_Combat20',
-    exitIndex: 1,
-    biomeDepthCache: 4,
-    biomeEncounterDepth: 5,
-    candidateCreationCount: 0,
-    candidateAppearanceCount: 0,
-    candidateParentCreationCount: 0,
-    eligibleRoomGameNames: [],
-    optionalForcedRoomGameNames: [],
-    requiredForcedRoomGameNames: ['F_MiniBoss01'],
-    supportRoomGameNames: ['F_MiniBoss01'],
-    exclusionReasons: ['forcedPool'],
-    exclusions: [{ kind: 'forcedPool', requiredRoomGameNames: ['F_MiniBoss01'] }],
-  },
-};
+function roomTarget(
+  exclusions: readonly RoomGenerationExclusionEvidence[],
+): ProjectCandidateEvaluation {
+  return {
+    kind: 'roomTarget',
+    result: {
+      pressure: {
+        targetOrigin: target,
+        beforeSequence: 0,
+        sourceGameName: 'F_Opening01',
+        selectedGameName: 'F_Combat01',
+        exitIndex: 1,
+        biomeDepthCache: 0,
+        biomeEncounterDepth: 0,
+        selectedCreationCount: 0,
+        selectedAppearanceCount: 0,
+        selectedParentCreationCount: 0,
+        eligibleRoomGameNames: [],
+        optionalForcedRoomGameNames: [],
+        requiredForcedRoomGameNames: [],
+        supportRoomGameNames: [],
+        selectedPossible: false,
+        selectedExclusionReasons: exclusions.map((exclusion) => exclusion.kind),
+        selectedExclusions: exclusions,
+      },
+      findings: [],
+    },
+  };
+}
 
-const forcedPool: ProjectCandidateEvaluation = {
-  ...impossible,
-  query: { kind: 'roomTarget', target, gameName: 'F_MiniBoss01' },
-  support: 'forced',
-  evidence: {
-    ...impossible.evidence,
-    candidateGameName: 'F_MiniBoss01',
-    requiredForcedRoomGameNames: ['F_MiniBoss01', 'F_MiniBoss02', 'F_MiniBoss03'],
-    supportRoomGameNames: ['F_MiniBoss01', 'F_MiniBoss02', 'F_MiniBoss03'],
-    exclusionReasons: [],
-    exclusions: [],
-  },
-};
-
-const unassessed: ProjectCandidateEvaluation = {
-  context: 'unavailable',
-  query: {
+function invalidReward(finding: SemanticFinding): ProjectCandidateEvaluation {
+  return {
     kind: 'incomingReward',
-    reward: createIncomingRewardAddress(biome, createOccurrenceId('future-room')),
-    value: { rewardType: 'Boon' },
-  },
-  reason: 'coverageNotReached',
-  evidence: {
-    kind: 'coverageNotReached',
-    requiredOwner: createIncomingRewardAddress(biome, createOccurrenceId('future-room')),
-    requiredCheckpoint: 'afterTargetGeneration',
-    coverage: { kind: 'prefix', through: { owner: target, checkpoint: 'afterTargetGeneration' } },
-  },
-};
+    result: { supported: false, findings: [finding] },
+  };
+}
 
 describe('contextual option projection', () => {
-  it('maps forced, possible, impossible, and unassessed evidence through one vocabulary', () => {
+  it('maps active engine results to forced, possible, and impossible without a wrapper contract', () => {
     const options: readonly CandidateOptionProjection<string>[] = Object.freeze([
-      { value: 'forced', evaluation: forcedPool },
-      { value: 'possible', evaluation: evaluated('possible', 'F_Opening02') },
-      { value: 'impossible', evaluation: impossible },
-      { value: 'unassessed', evaluation: unassessed },
+      { value: 'forced', evaluation: start('F_Opening01', ['F_Opening01']) },
+      { value: 'possible', evaluation: start('F_Opening02', ['F_Opening01', 'F_Opening02']) },
+      { value: 'impossible', evaluation: start('F_Combat01', ['F_Opening01']) },
     ]);
-    const presentation = [
-      { label: 'Opening 01', selected: false },
-      { label: 'Opening 02', category: 'Opening', selected: true },
-      { label: 'Combat 20', category: 'Combat', selected: false },
-      { label: 'Future reward', category: 'Reward', selected: false },
-    ] as const;
-    const resolver = createContextualOptionResolver(catalog);
-    const presentationByValue = new Map(
-      options.map((option, index) => [option.value, presentation[index]!] as const),
-    );
-    const projected = resolver.resolve(options, (option) => presentationByValue.get(option.value)!);
+    const resolved = createContextualOptionResolver(catalog).resolve(options, (option) => ({
+      label: option.value,
+      selected: option.value === 'impossible',
+    }));
 
-    expect(projected.map((option) => option.state)).toEqual([
-      'forced',
-      'possible',
-      'impossible',
-      'unassessed',
-    ]);
-    expect(projected[0]?.explanation).toEqual({
-      kind: 'forced',
-      message: 'This option is part of the required choice set at this decision.',
-    });
-    expect(projected[1]).toMatchObject({ category: 'Opening', selected: true });
-    expect(projected[2]?.explanation).toMatchObject({
-      kind: 'force',
-      message: expect.stringContaining('Root-Stalker'),
-    });
-    expect(projected[3]?.explanation).toMatchObject({ kind: 'coverage' });
+    expect(resolved.map((option) => option.state)).toEqual(['forced', 'possible', 'impossible']);
+    expect(resolved[0]?.explanation).toMatchObject({ kind: 'forced' });
+    expect(resolved[2]?.explanation).toMatchObject({ kind: 'unsupported' });
   });
 
-  it('names an unresolved authored prerequisite without leaking its semantic address', () => {
-    const evaluations: readonly ProjectCandidateEvaluation[] = [
+  it('retains exact unavailable prerequisite, coverage, producer, target, and upstream evidence', () => {
+    const evidence: readonly ProjectCandidateEvaluation[] = Object.freeze([
       {
-        context: 'unavailable',
-        query: {
-          kind: 'roomTarget',
-          target,
-          gameName: 'F_Combat01',
-        },
+        kind: 'unavailable',
         reason: 'authoredPrerequisiteMissing',
         evidence: {
           kind: 'authoredPrerequisiteMissing',
           prerequisite: {
             kind: 'batchRewardStore',
-            owner: createBatchRewardStoreAddress(biome, parent),
+            owner: createExitDecisionAddress(biome, source),
           },
         },
       },
       {
-        context: 'unavailable',
-        query: {
-          kind: 'roomTarget',
-          target,
-          gameName: 'H_Combat01',
-        },
-        reason: 'authoredPrerequisiteMissing',
+        kind: 'unavailable',
+        reason: 'coverageNotReached',
         evidence: {
-          kind: 'authoredPrerequisiteMissing',
-          prerequisite: {
-            kind: 'batchState',
-            owner: createContinuationAddress(createBiomeAddress('Underworld', 'H'), parent),
-          },
+          kind: 'coverageNotReached',
+          requiredOwner: target,
+          requiredCheckpoint: 'afterTargetGeneration',
+          coverage: { kind: 'none', reason: 'notEvaluated' },
         },
       },
       {
-        context: 'unavailable',
-        query: {
-          kind: 'roomTarget',
-          target,
-          gameName: 'I_Combat01',
-        },
-        reason: 'authoredPrerequisiteMissing',
-        evidence: {
-          kind: 'authoredPrerequisiteMissing',
-          prerequisite: {
-            kind: 'biomeField',
-            owner: createBiomeFieldAddress(
-              createBiomeAddress('Underworld', 'I'),
-              'maxNonGoalRewards',
-            ),
-          },
-        },
+        kind: 'unavailable',
+        reason: 'upstreamInvalid',
+        evidence: { kind: 'upstreamInvalid', upstreamBiomeKey: 'F' },
       },
-    ];
-    const options = createContextualOptionResolver(catalog).resolve(
-      evaluations.map((evaluation, index) => ({ value: index, evaluation })),
-      () => ({ label: 'Combat 01', selected: false }),
-    );
-
-    expect(options.map((option) => option.explanation?.message)).toEqual([
-      'Choose the required reward pool before evaluating this option.',
-      'Choose the required Fields door roll before evaluating this option.',
-      'Choose the required rolled non-goal limit before evaluating this option.',
     ]);
-  });
-
-  it('caches the projection by stable candidate domain and presentation semantics', () => {
-    const options: readonly CandidateOptionProjection<string>[] = Object.freeze([
-      { value: 'possible', evaluation: evaluated('possible', 'F_Opening01') },
-    ]);
-    const resolver = createContextualOptionResolver(catalog);
-    const first = resolver.resolve(options, () => ({ label: 'Opening', selected: true }));
-    const second = resolver.resolve(options, () => ({ label: 'Opening', selected: true }));
-    const changed = resolver.resolve(options, () => ({ label: 'Opening', selected: false }));
-
-    expect(second).toBe(first);
-    expect(changed).not.toBe(first);
-  });
-
-  it('keeps internal biome, history, profile, and store identifiers out of player copy', () => {
-    const recordRequirement: ProjectCandidateEvaluation = {
-      ...impossible,
-      evidence: {
-        ...impossible.evidence,
-        exclusionReasons: ['eligibilityRequirement'],
-        exclusions: [
-          {
-            kind: 'eligibilityRequirement',
-            evaluation: {
-              kind: 'recordCount',
-              satisfied: false,
-              record: 'roomsEntered',
-              keys: ['F_MiniBoss01'],
-              actual: 1,
-              expected: { max: 0 },
-            },
-          },
-        ],
-      },
-    };
-    const recentEncounterRequirement: ProjectCandidateEvaluation = {
-      ...impossible,
-      evidence: {
-        ...impossible.evidence,
-        exclusionReasons: ['eligibilityRequirement'],
-        exclusions: [
-          {
-            kind: 'eligibilityRequirement',
-            evaluation: {
-              kind: 'recentEncounterPhaseCount',
-              satisfied: false,
-              profileKey: 'SingleCountedCombat',
-              phaseKey: 'combat',
-              roomWindow: 2,
-              actual: 0,
-              expected: { min: 1 },
-            },
-          },
-        ],
-      },
-    };
-    const storeExcluded: ProjectCandidateEvaluation = {
-      context: 'evaluated',
-      query: {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, parent),
-        value: { rewardType: 'MetaCurrencyDrop' },
-      },
-      support: 'impossible',
-      findings: [],
-      evidence: {
-        candidate: { rewardType: 'MetaCurrencyDrop' },
-        relevantFindingCodes: ['baseRewardStoreUnavailable'],
-        exclusions: [{ kind: 'store', storeKey: 'RunProgress' }],
-      },
-    };
-    const upstreamIncomplete: ProjectCandidateEvaluation = {
-      context: 'unavailable',
-      query: unassessed.query,
-      reason: 'upstreamIncomplete',
-      evidence: { kind: 'upstreamIncomplete', upstreamBiomeKey: 'F' },
-    };
-    const options: readonly CandidateOptionProjection<string>[] = Object.freeze([
-      { value: 'record', evaluation: recordRequirement },
-      { value: 'profile', evaluation: recentEncounterRequirement },
-      { value: 'store', evaluation: storeExcluded },
-      { value: 'upstream', evaluation: upstreamIncomplete },
-    ]);
-    const projected = createContextualOptionResolver(catalog).resolve(options, (option) => ({
+    const options = evidence.map((evaluation, index) => ({ value: String(index), evaluation }));
+    const resolved = createContextualOptionResolver(catalog).resolve(options, (option) => ({
       label: option.value,
       selected: false,
     }));
 
-    expect(projected.map((option) => option.explanation?.message)).toEqual([
-      'The current matching history count is 1; this room requires a different count.',
-      'Recent encounter history does not satisfy this room.',
-      'This reward is outside the selected reward pool.',
-      'Complete Erebus before editing this biome contextually.',
+    expect(resolved.map((option) => option.state)).toEqual([
+      'unassessed',
+      'unassessed',
+      'unassessed',
     ]);
-    expect(JSON.stringify(projected.map((option) => option.explanation))).not.toMatch(
-      /roomsEntered|SingleCountedCombat|RunProgress|Complete F /,
-    );
+    expect(resolved.map((option) => option.explanation?.kind)).toEqual([
+      'authoredPrerequisiteMissing',
+      'coverageNotReached',
+      'upstreamInvalid',
+    ]);
   });
 
-  it('names the semantic sibling location without exposing occurrence identifiers', () => {
-    const reward = { rewardType: 'MaxHealthDrop' };
-    const siblingExcluded: ProjectCandidateEvaluation = {
-      context: 'evaluated',
-      query: {
-        kind: 'incomingReward',
-        reward: createIncomingRewardAddress(biome, parent),
-        value: reward,
+  it('presents typed room, requirement, sibling, bag, and store reasons without finding codes', () => {
+    const requirement = roomTarget([
+      {
+        kind: 'eligibilityRequirement',
+        evaluation: {
+          kind: 'counterRange',
+          satisfied: false,
+          axis: 'biomeDepthCache',
+          actual: 1,
+          expected: { min: 2 },
+        },
       },
-      support: 'impossible',
-      findings: [],
+    ]);
+    const sibling = invalidReward({
+      code: 'rewardBagEntryUnavailable',
+      severity: 'error',
+      phase: 'rewardGeneration',
+      origin: target,
       evidence: {
-        candidate: reward,
-        relevantFindingCodes: ['rewardBagEntryUnavailable'],
-        exclusions: [
+        priorOffers: [
           {
-            kind: 'sibling',
-            priorOffers: [{ origin: target, offer: reward }],
+            origin: {
+              kind: 'target',
+              routeKey: 'Underworld',
+              biomeKey: 'F',
+              source,
+              exitKey: 'exit1',
+            },
           },
         ],
       },
-    };
-    const [projected] = createContextualOptionResolver(catalog).resolve(
-      [{ value: reward, evaluation: siblingExcluded }],
-      () => ({ label: 'Max Health', selected: false }),
-    );
-
-    expect(projected?.explanation).toEqual({
-      kind: 'sibling',
-      message: 'This reward conflicts with the offer on Exit 1.',
     });
-    expect(projected?.explanation?.message).not.toContain(parent);
-
-    const unorderedSibling: ProjectCandidateEvaluation = {
-      ...siblingExcluded,
+    const bag = invalidReward({
+      code: 'rewardBagEntryUnavailable',
+      severity: 'error',
+      phase: 'rewardGeneration',
+      origin: target,
+      evidence: {},
+    });
+    const store = invalidReward({
+      code: 'baseRewardStoreUnavailable',
+      severity: 'error',
+      phase: 'rewardGeneration',
+      origin: target,
+      evidence: {},
+    });
+    const sourceSibling = invalidReward({
+      code: 'rewardSourceUnavailable',
+      severity: 'error',
+      phase: 'rewardGeneration',
+      origin: target,
       evidence: {
-        ...siblingExcluded.evidence,
-        exclusions: [
+        source: 'ApolloUpgrade',
+        priorOffers: [
           {
-            kind: 'sibling',
-            priorOffers: [
-              {
-                origin: createLocalRewardAddress(biome, parent, 'sideRooms', 'sideDoor1'),
-                offer: reward,
-              },
-            ],
+            origin: {
+              kind: 'target',
+              routeKey: 'Underworld',
+              biomeKey: 'F',
+              source,
+              exitKey: 'exit2',
+            },
           },
         ],
       },
-    };
-    const [unordered] = createContextualOptionResolver(catalog).resolve(
-      [{ value: reward, evaluation: unorderedSibling }],
-      () => ({ label: 'Max Health', selected: false }),
-    );
-    expect(unordered?.explanation?.message).toBe(
-      'This reward conflicts with the offer on Side room 1.',
-    );
-    expect(unordered?.explanation?.message).not.toContain('earlier');
-  });
+    });
+    const devotionPair = invalidReward({
+      code: 'rewardSourceUnavailable',
+      severity: 'error',
+      phase: 'rewardGeneration',
+      origin: target,
+      evidence: { chosenSource: 'ApolloUpgrade', spurnedSource: 'AresUpgrade' },
+    });
+    const boonSource = invalidReward({
+      code: 'rewardSourceUnavailable',
+      severity: 'error',
+      phase: 'rewardGeneration',
+      origin: target,
+      evidence: { source: 'ApolloUpgrade' },
+    });
+    const options = [
+      { value: 'requirement', evaluation: requirement },
+      { value: 'sibling', evaluation: sibling },
+      { value: 'bag', evaluation: bag },
+      { value: 'store', evaluation: store },
+      { value: 'sourceSibling', evaluation: sourceSibling },
+      { value: 'devotionPair', evaluation: devotionPair },
+      { value: 'boonSource', evaluation: boonSource },
+    ];
+    const resolved = createContextualOptionResolver(catalog).resolve(options, (option) => ({
+      label: option.value,
+      selected: false,
+    }));
 
-  it('derives each presentation from its candidate instead of a parallel array position', () => {
-    const options: readonly CandidateOptionProjection<string>[] = Object.freeze([
-      { value: 'first', evaluation: evaluated('possible', 'F_Opening01') },
-      { value: 'second', evaluation: evaluated('possible', 'F_Opening02') },
+    expect(resolved.map((option) => option.explanation?.kind)).toEqual([
+      'requirement',
+      'sibling',
+      'bag',
+      'store',
+      'sibling',
+      'devotionPair',
+      'boonSource',
     ]);
-    const resolver = createContextualOptionResolver(catalog);
-    const labels = new Map([
-      ['second', 'Second option'],
-      ['first', 'First option'],
-    ]);
-
-    expect(
-      resolver
-        .resolve(options, (option) => ({
-          label: labels.get(option.value)!,
-          selected: option.value === 'second',
-        }))
-        .map(({ value, label, selected }) => ({ value, label, selected })),
-    ).toEqual([
-      { value: 'first', label: 'First option', selected: false },
-      { value: 'second', label: 'Second option', selected: true },
-    ]);
+    expect(resolved[0]?.explanation?.message).toContain('Biome depth is 1');
+    expect(resolved[1]?.explanation?.message).toBe(
+      'This reward conflicts with the offer on Exit 1.',
+    );
+    expect(resolved[2]?.explanation?.message).toBe(
+      'This reward is unavailable from the selected reward pool.',
+    );
+    expect(resolved[3]?.explanation?.message).toBe(
+      'This reward is outside the selected reward pool.',
+    );
+    expect(resolved[4]?.explanation?.message).toBe(
+      'This reward conflicts with the offer on Exit 2.',
+    );
+    expect(resolved[5]?.explanation?.message).toBe('This Devotion pair is not supported here.');
+    expect(resolved[6]?.explanation?.message).toBe('This God cannot be offered at this point.');
+    expect(resolved.map((option) => option.explanation?.message).join(' ')).not.toContain(
+      'rewardBagEntryUnavailable',
+    );
+    expect(resolved.map((option) => option.explanation?.message).join(' ')).not.toContain(
+      'rewardSourceUnavailable',
+    );
   });
 });

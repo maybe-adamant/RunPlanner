@@ -1,6 +1,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
+  createExitDecisionAddress,
   createProjectDocument,
   encodeProjectDocument,
   semanticAddressKey,
@@ -144,5 +146,38 @@ describe('canonical N Hub materialization', () => {
       'N_Boss01',
       'N_PostBoss01',
     ]);
+  });
+
+  it('keeps a completed Hub composable at its Hub-owned handoff frontier', () => {
+    const withoutHandoff = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
+        kind: 'hubDecision',
+        decisionKey: 'hub',
+      }),
+    });
+    const biome = simulateProject(catalog, withoutHandoff)
+      .routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (biome?.authoring !== 'incomplete') throw new Error('N handoff fixture did not remain open');
+    if (biome.coverage.kind !== 'prefix') throw new Error('N handoff fixture lost prefix coverage');
+    if (!('history' in biome)) throw new Error('N handoff fixture did not compose history');
+
+    expect(biome).toMatchObject({
+      coverage: {
+        kind: 'prefix',
+        through: {
+          owner: createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
+            kind: 'hubDecision',
+            decisionKey: 'hub',
+          }),
+        },
+      },
+      frontier: createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
+        kind: 'hubDecision',
+        decisionKey: 'hub',
+      }),
+    });
+    expect(biome.history.events.some((event) => event.kind === 'roomCreated')).toBe(true);
   });
 });

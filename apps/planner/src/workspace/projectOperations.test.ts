@@ -191,4 +191,27 @@ describe('project profile operations', () => {
     });
     expect(application.store.getState()).toBe(state);
   });
+
+  it('rejects schema-8 and stale-catalog profiles without replacing the current workspace', async () => {
+    const profile = createProfileFixture();
+    const application = createApplication({ profileFile: profile.adapter });
+    configureF(application);
+    const state = application.store.getState();
+    const current = JSON.parse(encodeProjectDocument(selectPresentProject(state))) as Record<
+      string,
+      unknown
+    >;
+
+    for (const json of [
+      JSON.stringify({ ...current, schemaVersion: 8 }),
+      JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
+    ]) {
+      profile.setLoadJson(json);
+      await expect(application.projectOperations.loadProfile()).resolves.toMatchObject({
+        operation: 'loadProfile',
+        status: 'failure',
+      });
+      expect(application.store.getState()).toBe(state);
+    }
+  });
 });

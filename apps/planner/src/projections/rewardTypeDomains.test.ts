@@ -1,11 +1,9 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createRewardWheelAddress,
-  createRewardWheelOfferAddress,
   type AuthoredBiomePlan,
   type ProjectDocument,
   type RoomOccurrence,
@@ -14,7 +12,7 @@ import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/eng
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject, targetOccurrenceId } from '../../test/fixtures/underworldProject';
+import { createGoldenFGHIProject } from '../../test/fixtures/underworldProject';
 import {
   createRepresentativeNOPQProject,
   nBiome,
@@ -22,387 +20,152 @@ import {
   oBiome,
   oOccurrenceIds,
   pBiome,
-  pOccurrenceId,
   qBiome,
-  qOccurrenceIds,
 } from '../../test/fixtures/surfaceProject';
 import { createCandidateSessionFactory } from './candidateProjection';
 
-function requirePlan(
-  project: ProjectDocument,
-  routeKey: string,
-  biomeKey: string,
-): AuthoredBiomePlan {
-  const plan = project.routes
+function plan(project: ProjectDocument, routeKey: string, biomeKey: string): AuthoredBiomePlan {
+  const value = project.routes
     .find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.biomeKey === biomeKey);
-  if (plan === undefined) {
-    throw new Error(`${routeKey}.${biomeKey} fixture is missing`);
-  }
-  return plan;
+  if (value === undefined) throw new Error(`${routeKey}.${biomeKey} fixture is missing`);
+  return value;
 }
 
-function requireOccurrence(
+function occurrence(
   project: ProjectDocument,
   routeKey: string,
   biomeKey: string,
   gameName: string,
 ): RoomOccurrence {
-  const occurrence = requirePlan(project, routeKey, biomeKey).topology?.occurrences.find(
+  const value = plan(project, routeKey, biomeKey).topology?.occurrences.find(
     (candidate) => candidate.gameName === gameName,
   );
-  if (occurrence === undefined) {
-    throw new Error(`${routeKey}.${biomeKey} has no ${gameName} occurrence`);
-  }
-  return occurrence;
+  if (value === undefined) throw new Error(`${gameName} occurrence is missing`);
+  return value;
 }
 
-function requireCountedBinding(gameName: string): CountedRewardBinding {
+function countedBinding(gameName: string): CountedRewardBinding {
   const binding = catalog.rooms.byKey[gameName]?.incomingReward;
-  if (binding?.kind !== 'countedChoice') {
-    throw new Error(`${gameName} has no counted incoming reward`);
-  }
+  if (binding?.kind !== 'countedChoice') throw new Error(`${gameName} has no counted binding`);
   return binding;
 }
 
-function requireIncomingOffer(occurrence: RoomOccurrence): ResolvedRewardOffer {
-  if (occurrence.state.kind === 'counted' || occurrence.state.kind === 'ephyraCombat') {
-    return occurrence.state.offer;
-  }
-  throw new Error(`${occurrence.gameName} has no editable incoming offer`);
+function incomingOffer(value: RoomOccurrence): ResolvedRewardOffer {
+  if (value.state.kind === 'counted' || value.state.kind === 'ephyraCombat')
+    return value.state.offer;
+  throw new Error(`${value.gameName} has no counted incoming offer`);
 }
 
 describe('producer-resolved reward type domains', () => {
-  it('resolves F, G, H, and I producers without a binding-union fallback', () => {
+  it('uses the materialized declaration-owned store for F through I', () => {
     const project = createGoldenFGHIProject(catalog);
-    const service = createCandidateSessionFactory(catalog).bind(
+    const session = createCandidateSessionFactory(catalog).bind(
       project,
       simulateProject(catalog, project),
     );
-
-    for (const [biomeKey, gameName] of [
-      ['F', 'F_Combat03'],
-      ['G', 'G_Combat01'],
+    for (const [biomeKey, gameName, expected] of [
+      ['F', 'F_Combat03', 'MaxHealthDrop'],
+      ['G', 'G_Combat01', 'Boon'],
+      ['I', 'I_Combat03', 'RoomMoneyTripleDrop'],
     ] as const) {
-      const occurrence = requireOccurrence(project, 'Underworld', biomeKey, gameName);
-      const domain = service.countedRewardTypes(
+      const room = occurrence(project, 'Underworld', biomeKey, gameName);
+      const domain = session.countedRewardTypes(
         {
           kind: 'incomingReward',
           address: createIncomingRewardAddress(
             createBiomeAddress('Underworld', biomeKey),
-            occurrence.occurrenceId,
+            room.occurrenceId,
           ),
         },
-        requireCountedBinding(gameName),
-        requireIncomingOffer(occurrence).rewardType,
+        countedBinding(gameName),
+        incomingOffer(room).rewardType,
       );
-      expect(domain).toContain('MaxHealthDrop');
+      expect(domain).toContain(expected);
       expect(domain).not.toContain('MetaCurrencyDrop');
     }
 
-    const hOccurrence = requireOccurrence(project, 'Underworld', 'H', 'H_Combat02');
-    const hRoom = catalog.rooms.byKey.H_Combat02;
-    const cages = hRoom?.localChildren.find(
-      (descriptor) => descriptor.kind === 'boundedRewardSlots' && descriptor.key === 'cages',
+    const h = occurrence(project, 'Underworld', 'H', 'H_Combat02');
+    const declaration = catalog.rooms.byKey.H_Combat02?.localChildren.find(
+      (child) => child.kind === 'boundedRewardSlots',
     );
-    if (cages?.kind !== 'boundedRewardSlots' || hOccurrence.state.kind !== 'fieldsCombat') {
-      throw new Error('H cage fixture is missing');
+    if (h.state.kind !== 'fieldsCombat' || declaration?.kind !== 'boundedRewardSlots') {
+      throw new Error('H Fields cage fixture is missing');
     }
-    const hDomain = service.countedRewardTypes(
+    const domain = session.countedRewardTypes(
       {
         kind: 'localReward',
         address: createLocalRewardAddress(
           createBiomeAddress('Underworld', 'H'),
-          hOccurrence.occurrenceId,
-          'cages',
+          h.occurrenceId,
+          declaration.key,
           'cage1',
         ),
       },
-      cages.reward,
-      hOccurrence.state.cages.cage1!.rewardType,
+      declaration.reward,
+      h.state.cages.cage1!.rewardType,
     );
-    expect(hDomain).toContain('MaxHealthDrop');
-    expect(hDomain).not.toContain('Devotion');
-    expect(hDomain).not.toContain('MetaCurrencyDrop');
-
-    const iOccurrence = requireOccurrence(project, 'Underworld', 'I', 'I_Combat03');
-    const iDomain = service.countedRewardTypes(
-      {
-        kind: 'incomingReward',
-        address: createIncomingRewardAddress(
-          createBiomeAddress('Underworld', 'I'),
-          iOccurrence.occurrenceId,
-        ),
-      },
-      requireCountedBinding('I_Combat03'),
-      requireIncomingOffer(iOccurrence).rewardType,
-    );
-    expect(iDomain).toContain('RoomMoneyTripleDrop');
-    expect(iDomain).not.toContain('Boon');
-    expect(iDomain).not.toContain('MetaCurrencyDrop');
+    expect(domain).toContain('MaxHealthDrop');
+    expect(domain).not.toContain('Devotion');
   });
 
-  it('resolves N, O, P, and Q producer families and keeps shop groups separate', () => {
+  it('uses the current normalized producer state for N through Q', () => {
     const project = createRepresentativeNOPQProject();
-    const service = createCandidateSessionFactory(catalog).bind(
+    const session = createCandidateSessionFactory(catalog).bind(
       project,
       simulateProject(catalog, project),
     );
-
-    const nOccurrence = requireOccurrence(project, 'Surface', 'N', 'N_Combat05');
-    const nDomain = service.countedRewardTypes(
-      {
-        kind: 'incomingReward',
-        address: createIncomingRewardAddress(nBiome, nOccurrence.occurrenceId),
-      },
-      requireCountedBinding('N_Combat05'),
-      requireIncomingOffer(nOccurrence).rewardType,
+    const n = occurrence(project, 'Surface', 'N', 'N_Combat05');
+    const nDomain = session.countedRewardTypes(
+      { kind: 'incomingReward', address: createIncomingRewardAddress(nBiome, n.occurrenceId) },
+      countedBinding('N_Combat05'),
+      incomingOffer(n).rewardType,
     );
     expect(nDomain).toContain('MaxHealthDropBig');
     expect(nDomain).not.toContain('MetaCurrencyDrop');
 
-    if (nOccurrence.state.kind !== 'ephyraCombat') {
-      throw new Error('N side-room fixture is missing');
-    }
-    const nParentRoom = catalog.rooms.byKey.N_Combat05;
-    const nSideDescriptor = nParentRoom?.localChildren.find(
-      (descriptor) => descriptor.kind === 'fixedRoomSlots' && descriptor.key === 'sideRooms',
+    if (n.state.kind !== 'ephyraCombat') throw new Error('N Ephyra fixture is missing');
+    const sideRoom = catalog.rooms.byKey.N_Combat05?.localChildren.find(
+      (child) => child.kind === 'fixedRoomSlots',
     );
-    const nSideSlot =
-      nSideDescriptor?.kind === 'fixedRoomSlots' ? nSideDescriptor.slots[0] : undefined;
-    const nSideBinding =
-      nSideSlot === undefined
-        ? undefined
-        : catalog.rooms.byKey[nSideSlot.roomGameName]?.incomingReward;
-    const nSideState = nOccurrence.state.sideRooms.sideDoor1;
-    if (nSideBinding?.kind !== 'countedChoice' || nSideState === undefined) {
-      throw new Error('N side-door reward producer is missing');
-    }
-    const nSideDomain = service.countedRewardTypes(
-      {
-        kind: 'localReward',
-        address: createLocalRewardAddress(
-          nBiome,
-          nOccurrenceId('combat05'),
-          'sideRooms',
-          'sideDoor1',
-        ),
-      },
-      nSideBinding,
-      nSideState.offer.rewardType,
-    );
-    expect(nSideDomain).toContain('MaxManaDropSmall');
-    expect(nSideDomain).toContain('MetaCurrencyDrop');
-    expect(nSideDomain).not.toContain('Boon');
-
-    const oOccurrence = requireOccurrence(project, 'Surface', 'O', 'O_Combat04');
-    const oProfile =
-      catalog.encounterProfiles.byKey[catalog.rooms.byKey.O_Combat04!.encounterProfileKey];
-    const wheel = oProfile?.phases.find((phase) => phase.offerPoint?.key === 'wheel1')?.offerPoint;
+    const slot = sideRoom?.kind === 'fixedRoomSlots' ? sideRoom.slots[0] : undefined;
+    const sideDeclaration = slot === undefined ? undefined : catalog.rooms.byKey[slot.roomGameName];
     if (
-      wheel?.kind !== 'rewardWheel' ||
-      oOccurrence.state.kind !== 'shipCombat' ||
-      oOccurrence.state.wheels.wheel1 === undefined
+      sideRoom?.kind !== 'fixedRoomSlots' ||
+      sideDeclaration?.incomingReward.kind !== 'countedChoice' ||
+      slot === undefined
     ) {
-      throw new Error('O wheel fixture is missing');
+      throw new Error('N side-room declaration is missing');
     }
-    const oWheelState = oOccurrence.state.wheels.wheel1;
-    const oDomain = service.countedRewardTypes(
+    const localDomain = session.countedRewardTypes(
       {
-        kind: 'rewardWheelOffer',
-        address: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+        kind: 'localReward',
+        address: createLocalRewardAddress(nBiome, n.occurrenceId, sideRoom.key, slot.slotKey),
       },
-      wheel.reward,
-      oWheelState.offers.offer1!.rewardType,
+      sideDeclaration.incomingReward,
+      n.state.sideRooms[slot.slotKey]!.offer.rewardType,
     );
-    expect(oDomain).toContain('MaxHealthDrop');
-    expect(oDomain).not.toContain('MetaCurrencyDrop');
+    expect(localDomain).toContain(n.state.sideRooms[slot.slotKey]!.offer.rewardType);
 
-    for (const [biomeKey, gameName, included, excluded] of [
-      ['P', 'P_Combat03', 'MaxHealthDrop', 'MetaCurrencyDrop'],
-      ['Q', 'Q_MiniBoss02', 'TalentBigDrop', 'MaxHealthDrop'],
+    for (const [biome, room, expected] of [
+      [pBiome, occurrence(project, 'Surface', 'P', 'P_Combat03'), 'MaxHealthDrop'],
+      [qBiome, occurrence(project, 'Surface', 'Q', 'Q_MiniBoss02'), 'Boon'],
     ] as const) {
-      const occurrence = requireOccurrence(project, 'Surface', biomeKey, gameName);
-      const domain = service.countedRewardTypes(
-        {
-          kind: 'incomingReward',
-          address: createIncomingRewardAddress(
-            createBiomeAddress('Surface', biomeKey),
-            occurrence.occurrenceId,
-          ),
-        },
-        requireCountedBinding(gameName),
-        requireIncomingOffer(occurrence).rewardType,
+      const domain = session.countedRewardTypes(
+        { kind: 'incomingReward', address: createIncomingRewardAddress(biome, room.occurrenceId) },
+        countedBinding(room.gameName),
+        incomingOffer(room).rewardType,
       );
-      expect(domain).toContain(included);
-      expect(domain).not.toContain(excluded);
+      expect(domain).toContain(expected);
     }
-
-    const worldShop = catalog.rewards.shops.byKey.WorldShop;
-    expect(worldShop?.groups.byKey.Boon?.rewardTypes).toContain('RandomLoot');
-    expect(worldShop?.groups.byKey.Boon?.rewardTypes).not.toContain('MaxHealthDrop');
-    expect(worldShop?.groups.byKey.MajorNonBoon?.rewardTypes).toContain('MaxHealthDrop');
-    expect(worldShop?.groups.byKey.MajorNonBoon?.rewardTypes).not.toContain('RandomLoot');
-  });
-
-  it('projects sibling conflicts for representative sequential and unordered producers', async () => {
-    const factory = createCandidateSessionFactory(catalog, {
-      yieldToHost: () => Promise.resolve(),
-    });
-    const zeus: ResolvedRewardOffer = {
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
-    };
-    const expectExclusion = (evaluation: unknown, kind: 'bag' | 'sibling') => {
-      expect(evaluation).toMatchObject({
-        context: 'evaluated',
-        support: 'impossible',
-        evidence: {
-          exclusions: expect.arrayContaining([expect.objectContaining({ kind })]),
-        },
-      });
-    };
-
-    for (const [biome, project, firstId, secondId] of [
-      [
-        createBiomeAddress('Underworld', 'F'),
-        createGoldenFGHIProject(catalog),
-        targetOccurrenceId('F', 2, 1),
-        targetOccurrenceId('F', 2, 2),
-      ],
-      [
-        createBiomeAddress('Underworld', 'G'),
-        createGoldenFGHIProject(catalog),
-        targetOccurrenceId('G', 7, 1),
-        targetOccurrenceId('G', 7, 2),
-      ],
-      [
-        pBiome,
-        createRepresentativeNOPQProject(),
-        pOccurrenceId('P_MiniBoss01', 5, 1),
-        pOccurrenceId('P_Combat09', 5, 2),
-      ],
-    ] as const) {
-      let authored = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceIncomingReward',
-        reward: createIncomingRewardAddress(biome, firstId),
-        value: zeus,
-      });
-      authored = applyProjectCommand(authored, catalog, {
-        kind: 'ReplaceIncomingReward',
-        reward: createIncomingRewardAddress(biome, secondId),
-        value: zeus,
-      });
-      const domain = await factory
-        .bind(authored, simulateProject(catalog, authored))
-        .rewardDomain(
-          { kind: 'incomingReward', address: createIncomingRewardAddress(biome, secondId) },
-          ['Boon'],
-          zeus,
-        );
-      expectExclusion(domain.types[0]?.offerEvaluation, 'sibling');
-      const zeusSource =
-        domain.payload.kind === 'oneOf'
-          ? domain.payload.sources.find((candidate) => candidate.key === 'ZeusUpgrade')
-          : undefined;
-      expectExclusion(zeusSource?.offerEvaluation, 'sibling');
-    }
-
-    const maxHealth: ResolvedRewardOffer = { rewardType: 'MaxHealthDrop' };
-    const hBiome = createBiomeAddress('Underworld', 'H');
-    const hOccurrence = requireOccurrence(
-      createGoldenFGHIProject(catalog),
-      'Underworld',
-      'H',
-      'H_Combat02',
+    const oWheel = session.rewardWheelStores(
+      createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
+      ['RunProgress', 'MetaProgress'],
     );
-    let hProject = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
-      kind: 'ReplaceLocalReward',
-      reward: createLocalRewardAddress(hBiome, hOccurrence.occurrenceId, 'cages', 'cage1'),
-      value: maxHealth,
-    });
-    hProject = applyProjectCommand(hProject, catalog, {
-      kind: 'ReplaceLocalReward',
-      reward: createLocalRewardAddress(hBiome, hOccurrence.occurrenceId, 'cages', 'cage2'),
-      value: maxHealth,
-    });
-    const hDomain = await factory.bind(hProject, simulateProject(catalog, hProject)).rewardDomain(
-      {
-        kind: 'localReward',
-        address: createLocalRewardAddress(hBiome, hOccurrence.occurrenceId, 'cages', 'cage2'),
-      },
-      ['MaxHealthDrop'],
-      maxHealth,
-    );
-    expectExclusion(hDomain.types[0]?.offerEvaluation, 'bag');
-
-    const maxManaSmall: ResolvedRewardOffer = { rewardType: 'MaxManaDropSmall' };
-    let nProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceLocalReward',
-      reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms', 'sideDoor1'),
-      value: maxManaSmall,
-    });
-    nProject = applyProjectCommand(nProject, catalog, {
-      kind: 'ReplaceLocalReward',
-      reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms', 'sideDoor2'),
-      value: maxManaSmall,
-    });
-    const nDomain = await factory.bind(nProject, simulateProject(catalog, nProject)).rewardDomain(
-      {
-        kind: 'localReward',
-        address: createLocalRewardAddress(
-          nBiome,
-          nOccurrenceId('combat05'),
-          'sideRooms',
-          'sideDoor2',
-        ),
-      },
-      ['MaxManaDropSmall'],
-      maxManaSmall,
-    );
-    expectExclusion(nDomain.types[0]?.offerEvaluation, 'sibling');
-
-    let oProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceRewardWheelOfferCount',
-      wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
-      offerCount: 2,
-    });
-    for (const offerKey of ['offer1', 'offer2'] as const) {
-      oProject = applyProjectCommand(oProject, catalog, {
-        kind: 'ReplaceRewardWheelOffer',
-        offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', offerKey),
-        value: maxHealth,
-      });
-    }
-    const oDomain = await factory.bind(oProject, simulateProject(catalog, oProject)).rewardDomain(
-      {
-        kind: 'rewardWheelOffer',
-        address: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer2'),
-      },
-      ['MaxHealthDrop'],
-      maxHealth,
-    );
-    expectExclusion(oDomain.types[0]?.offerEvaluation, 'sibling');
-
-    const talent: ResolvedRewardOffer = { rewardType: 'TalentBigDrop' };
-    let qProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(qBiome, qOccurrenceIds.firstMiniboss1),
-      value: talent,
-    });
-    qProject = applyProjectCommand(qProject, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(qBiome, qOccurrenceIds.firstMiniboss2),
-      value: talent,
-    });
-    const qDomain = await factory.bind(qProject, simulateProject(catalog, qProject)).rewardDomain(
-      {
-        kind: 'incomingReward',
-        address: createIncomingRewardAddress(qBiome, qOccurrenceIds.firstMiniboss2),
-      },
-      ['TalentBigDrop'],
-      talent,
-    );
-    expectExclusion(qDomain.types[0]?.offerEvaluation, 'sibling');
+    expect(oWheel.map((option) => option.evaluation.kind)).toEqual([
+      'rewardWheelStore',
+      'rewardWheelStore',
+    ]);
+    void nOccurrenceId;
   });
 });

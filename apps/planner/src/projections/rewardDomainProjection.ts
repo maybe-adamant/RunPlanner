@@ -245,31 +245,26 @@ function selectCandidate(
     }
     return { offer, evaluation };
   });
-  const supported = candidates.filter(
-    (candidate) =>
-      candidate.evaluation.context === 'evaluated' && candidate.evaluation.support !== 'impossible',
-  );
+  const supported = candidates.filter((candidate) => {
+    switch (candidate.evaluation.kind) {
+      case 'incomingReward':
+      case 'localReward':
+      case 'rewardWheelOffer':
+      case 'shopOffer':
+        return candidate.evaluation.result.supported;
+      case 'unavailable':
+        return false;
+      default:
+        return false;
+    }
+  });
   if (supported.length === 0) {
     return (
       candidates.find((candidate) => offerKey(candidate.offer) === offerKey(option.offer)) ??
       candidates[0]!
     );
   }
-  const representative = supported[0]!;
-  if (
-    representative.evaluation.context === 'evaluated' &&
-    representative.evaluation.support === 'forced' &&
-    supported.some(
-      (candidate) =>
-        candidate.evaluation.context === 'evaluated' && candidate.evaluation.support === 'possible',
-    )
-  ) {
-    return Object.freeze({
-      ...representative,
-      evaluation: Object.freeze({ ...representative.evaluation, support: 'possible' }),
-    });
-  }
-  return representative;
+  return supported[0]!;
 }
 
 function projectOptions(

@@ -1,919 +1,695 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createBatchRewardStoreAddress,
   createBiomeAddress,
-  createContinuationAddress,
+  createExitDecisionAddress,
+  createHubDecisionAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
-  createOccurrenceId,
+  createLocalRewardAddress,
   createOccurrenceAddress,
-  createPickedAddress,
+  createOccurrenceId,
   createProjectDocument,
-  createTargetAddress,
+  createRewardWheelOfferAddress,
+  createShopOfferAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
+  createGoldenFGHIProject,
+  goldenFOccurrenceId,
+  goldenFStartId,
+} from '../../test/fixtures/underworldProject';
+import {
+  appendCompleteN,
   createRepresentativeNOPQProject,
-  createRepresentativeNOProject,
-  createRepresentativeNProject,
   nBiome,
+  nOccurrenceId,
+  nOccurrenceIds,
+  nVisitSlotKeys,
   oBiome,
   oOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
 } from '../../test/fixtures/surfaceProject';
-import { createGoldenFGHIProject, targetOccurrenceId } from '../../test/fixtures/underworldProject';
-import { createCandidateSessionFactory, type CandidateSessionFactory } from './candidateProjection';
+import { createCandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
 import {
   createStructuredWorkspaceProjection,
-  requireWorkspaceInteraction,
-  workspaceInteractionKey,
   type WorkspaceBiome,
-  type WorkspaceLinearBiome,
+  type WorkspaceNode,
 } from './structuredWorkspace';
 
-const candidateSessions = createCandidateSessionFactory(catalog, {
-  yieldToHost: () => Promise.resolve(),
-});
-const contextualPicker = createContextualPickerProjection(createContextualOptionResolver(catalog));
-const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
 const projection = createStructuredWorkspaceProjection(catalog, {
-  candidateSessions,
-  contextualPicker,
-  rewardPicker,
+  candidateSessions: createCandidateSessionFactory(catalog),
+  contextualPicker: createContextualPickerProjection(createContextualOptionResolver(catalog)),
+  rewardPicker: createRewardPickerProjection(
+    catalog,
+    createContextualPickerProjection(createContextualOptionResolver(catalog)),
+  ),
 });
 
-function biome(workspace: ReturnType<typeof projectWorkspace>, biomeKey: string): WorkspaceBiome {
-  const projected = workspace.routes
+function workspace(project: ReturnType<typeof createProjectDocument>) {
+  const evaluation = simulateProject(catalog, project);
+  return projection.project(project, evaluation);
+}
+
+function biome(projected: ReturnType<typeof workspace>, biomeKey: string): WorkspaceBiome {
+  const value = projected.routes
     .flatMap((route) => route.biomes)
     .find((candidate) => candidate.biomeKey === biomeKey);
-  if (projected === undefined) {
-    throw new Error(`workspace has no ${biomeKey} biome`);
-  }
-  return projected;
+  if (value === undefined) throw new Error(`workspace omitted ${biomeKey}`);
+  return value;
 }
 
-function projectWorkspace(project: ReturnType<typeof createProjectDocument>) {
-  return projection.project(project, simulateProject(catalog, project));
+function kinds(projected: WorkspaceBiome): readonly WorkspaceNode['kind'][] {
+  return projected.nodes.map((node) => node.kind);
 }
 
-function linear(projected: WorkspaceBiome): WorkspaceLinearBiome {
-  if (projected.kind !== 'LinearBiome') {
-    throw new Error(`${projected.biomeKey} is not Linear`);
-  }
-  return projected;
-}
+const workspaceNodeKinds: Readonly<Record<WorkspaceNode['kind'], true>> = Object.freeze({
+  completion: true,
+  hubDecision: true,
+  linkedExit: true,
+  mixedBatch: true,
+  occurrenceWorkbench: true,
+  ordinaryBatch: true,
+  takeoverBatch: true,
+});
 
-function createRetainedLinearProject() {
-  const f = createBiomeAddress('Underworld', 'F');
-  const start = createOccurrenceId('structured-retained-start');
-  const first = createOccurrenceId('structured-retained-first');
-  const second = createOccurrenceId('structured-retained-second');
-  const third = createOccurrenceId('structured-retained-third');
-  let project = createProjectDocument(catalog, {
-    projectId: 'structured-retained',
-    name: 'Structured Retained',
-    configuredBiomeCounts: { Underworld: 1 },
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome: f,
-    occurrenceId: start,
-    gameName: 'F_Opening01',
-  });
-  for (const [parent, occurrenceId, gameName] of [
-    [start, first, 'F_Combat02'],
-    [first, second, 'F_Combat03'],
-    [second, third, 'F_Combat04'],
-  ] as const) {
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateBatch',
-      continuation: createContinuationAddress(f, parent),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(f, parent),
-      storeKey: 'RunProgress',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(f, parent, 1),
-      occurrenceId,
-      gameName,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetPicked',
-      picked: createPickedAddress(f, parent),
-      exitIndex: 1,
-    });
-  }
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(f, start),
-    storeKey: 'MetaProgress',
-  });
-}
+describe('unified structured workspace projection', () => {
+  it('uses one workspace envelope and exhaustive unified node union across both routes', () => {
+    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const surface = workspace(createRepresentativeNOPQProject());
 
-function createRepeatedIPrebossProject() {
-  const i = createBiomeAddress('Underworld', 'I');
-  const firstParent = createOccurrenceId('phase-6-i-goal-5');
-  const laterParent = createOccurrenceId('phase-6-i-terminal-peer');
-  const laterPreboss = createOccurrenceId('structured-i-later-preboss');
-  let project = createGoldenFGHIProject(catalog);
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(i, firstParent),
-    exitIndex: 2,
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateBatch',
-    continuation: createContinuationAddress(i, laterParent),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(i, laterParent, 1),
-    occurrenceId: laterPreboss,
-    gameName: 'I_PreBoss02',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(i, laterParent, 2),
-    occurrenceId: createOccurrenceId('structured-i-later-peer'),
-    gameName: 'I_Combat10',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetPicked',
-    picked: createPickedAddress(i, laterParent),
-    exitIndex: 1,
-  });
-  return { laterPreboss, project };
-}
-
-describe('structured workspace projection', () => {
-  it('projects deterministic canonical Linear workspaces for all seven Linear biomes', () => {
-    const underworldProject = createGoldenFGHIProject(catalog);
-    const surfaceProject = createRepresentativeNOPQProject();
-    const underworld = projectWorkspace(underworldProject);
-    const surface = projectWorkspace(surfaceProject);
-
-    expect(
-      projection.project(underworldProject, simulateProject(catalog, underworldProject)),
-    ).not.toBe(underworld);
-    const underworldEvaluation = simulateProject(catalog, underworldProject);
-    expect(projection.project(underworldProject, underworldEvaluation)).toBe(
-      projection.project(underworldProject, underworldEvaluation),
-    );
-
-    for (const [workspace, biomeKeys] of [
-      [underworld, ['F', 'G', 'H', 'I']],
-      [surface, ['N', 'O', 'P', 'Q']],
-    ] as const) {
-      expect(workspace.routes.flatMap((route) => route.rail.map((item) => item.biomeKey))).toEqual(
-        biomeKeys,
-      );
-      for (const biomeKey of biomeKeys) {
-        const projected = biome(workspace, biomeKey);
-        expect(workspace.focusByOwner.get(projected.marker.focusKey)).toMatchObject({
-          biomeKey,
-          focusAddress: projected.marker.address,
-          region: 'structure',
-        });
-      }
+    for (const projected of [...underworld.routes, ...surface.routes].flatMap(
+      (route) => route.biomes,
+    )) {
+      expect('kind' in projected).toBe(false);
+      expect(Object.isFrozen(projected.nodes)).toBe(true);
+      expect(projected.nodes.every((node) => node.kind in workspaceNodeKinds)).toBe(true);
     }
 
-    for (const biomeKey of ['F', 'G', 'H', 'I', 'O', 'P', 'Q']) {
-      const workspace = ['F', 'G', 'H', 'I'].includes(biomeKey) ? underworld : surface;
-      const projected = linear(biome(workspace, biomeKey));
-      const startOwner = projected.entries.find(
-        (entry) => entry.contextualOwner?.kind === 'startRoom',
-      )?.contextualOwner;
-      expect(projected.source).toBe('canonical');
-      expect(projected.decisions.length).toBeGreaterThan(0);
-      expect(projected.completion.length).toBeGreaterThan(0);
-      expect(startOwner?.kind).toBe('startRoom');
-      for (const decision of projected.decisions) {
-        expect(workspace.focusByOwner.has(decision.marker.focusKey)).toBe(true);
-        for (const target of decision.targets) {
-          expect(workspace.focusByOwner.has(target.marker.focusKey)).toBe(true);
-          expect(workspace.focusByOwner.has(target.room.marker.focusKey)).toBe(true);
-        }
-      }
-    }
-
-    expect(linear(biome(underworld, 'F')).terminal.realization).toBe('independent');
-    expect(linear(biome(underworld, 'G')).terminal.realization).toBe('independent');
-    expect(linear(biome(underworld, 'H')).decisions).toHaveLength(4);
-    expect(linear(biome(underworld, 'H')).emptyOutline.progression).toEqual({
-      kind: 'exact',
-      decisionCount: 4,
-    });
-    expect(linear(biome(underworld, 'I')).terminal.realization).toBe('generatedPeer');
-    expect(linear(biome(surface, 'O')).emptyOutline.progression).toEqual({
-      kind: 'exact',
-      decisionCount: 6,
-    });
-    expect(linear(biome(surface, 'O')).decisions).toHaveLength(6);
-    expect(linear(biome(surface, 'P')).emptyOutline.progression).toEqual({ kind: 'variable' });
-    expect(linear(biome(surface, 'Q')).emptyOutline.progression).toEqual({
-      kind: 'staged',
-      stageKeys: [
-        'foyer',
-        'firstFork',
-        'firstMiniboss',
-        'ordinary',
-        'secondFork',
-        'secondMiniboss',
-      ],
-    });
-    expect(linear(biome(surface, 'Q')).decisions).toHaveLength(6);
-
-    for (const [workspace, biomeKeys] of [
-      [underworld, ['F', 'G', 'H']],
-      [surface, ['O', 'P', 'Q']],
-    ] as const) {
-      for (const biomeKey of biomeKeys) {
-        const terminal = linear(biome(workspace, biomeKey)).terminal;
-        expect(terminal.realization).toBe('independent');
-        expect(terminal.targets.length).toBeGreaterThan(0);
-        for (const target of terminal.targets) {
-          expect(target.contextualOwner).toMatchObject({
-            kind: 'linearTarget',
-            interaction: 'readOnly',
-          });
-        }
-      }
-    }
-    for (const target of linear(biome(underworld, 'I')).terminal.targets) {
-      expect(target.contextualOwner).toMatchObject({
-        kind: 'linearTarget',
-        interaction: 'replaceable',
-      });
-    }
+    expect(kinds(biome(underworld, 'F'))).toContain('takeoverBatch');
+    expect(kinds(biome(underworld, 'G'))).toContain('takeoverBatch');
+    expect(kinds(biome(underworld, 'H'))).toContain('takeoverBatch');
+    expect(kinds(biome(underworld, 'I'))).toContain('mixedBatch');
+    expect(kinds(biome(surface, 'N'))).toContain('hubDecision');
+    expect(kinds(biome(surface, 'O'))).toContain('takeoverBatch');
+    expect(kinds(biome(surface, 'P'))).toContain('takeoverBatch');
+    expect(kinds(biome(surface, 'Q'))).toContain('ordinaryBatch');
+    expect(kinds(biome(surface, 'Q'))).toContain('takeoverBatch');
   });
 
-  it('projects N as one joint board plus an ordered visit timeline', () => {
-    const workspace = projectWorkspace(createRepresentativeNOPQProject());
-    const projected = biome(workspace, 'N');
-    if (projected.kind !== 'HubBiome') {
-      throw new Error('N did not project as HubBiome');
-    }
+  it('keeps declaration and canonical decision order rather than array-position topology rules', () => {
+    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const surface = workspace(createRepresentativeNOPQProject());
+    const structuralKinds = (value: WorkspaceBiome) =>
+      value.nodes
+        .filter(
+          (node) =>
+            node.kind === 'linkedExit' ||
+            node.kind === 'ordinaryBatch' ||
+            node.kind === 'takeoverBatch' ||
+            node.kind === 'mixedBatch' ||
+            node.kind === 'hubDecision',
+        )
+        .map((node) => node.kind);
 
-    expect(projected.source).toBe('canonical');
-    expect(projected.board.generationRegion).toBe('joint');
-    expect(projected.board.slots).toHaveLength(26);
-    expect(projected.board.slots.filter((slot) => slot.open)).toHaveLength(9);
-    expect(projected.visits).toHaveLength(6);
-    expect(projected.visits.every((visit) => visit.authored)).toBe(true);
-    expect(projected.visits.map((visit) => visit.visitIndex)).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(projected.board.slots.find((slot) => slot.hubSlotKey === 'combat05')).toMatchObject({
-      sideRooms: [
-        { slotKey: 'sideDoor1', generation: 'generated', enteredOrdinal: 2 },
-        { slotKey: 'sideDoor2', generation: 'generated', enteredOrdinal: 1 },
-        { slotKey: 'sideDoor3', generation: 'generated', enteredOrdinal: null },
-      ],
-    });
-    const sideRoom = projected.board.slots.find((slot) => slot.hubSlotKey === 'combat05')
-      ?.sideRooms[0];
-    expect(sideRoom).toBeDefined();
-    expect(workspace.focusByOwner.get(sideRoom!.marker.focusKey)).toMatchObject({
-      focusAddress: sideRoom!.marker.address,
-      region: 'structure',
-    });
-    expect(projected.terminal.role).toBe('preboss');
-    expect(projected.emptyOutline.progression).toEqual({ kind: 'hubVisits', visitCount: 6 });
-    expect(workspace.focusByOwner.get(projected.board.marker.focusKey)).toMatchObject({
-      focusAddress: projected.board.marker.address,
-      region: 'structure',
-    });
-  });
-
-  it('projects every partial N visit position and keeps its fixed preboss unentered', () => {
-    let project = createRepresentativeNProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveHubVisitsFrom',
-      visit: createHubVisitAddress(nBiome, 3),
-    });
-    const workspace = projectWorkspace(project);
-    const projected = biome(workspace, 'N');
-    if (projected.kind !== 'HubBiome') {
-      throw new Error('N did not project as HubBiome');
-    }
-
-    expect(projected.source).toBe('progressive');
-    expect(projected.board.slots.filter((slot) => slot.open)).not.toHaveLength(0);
-    expect(projected.board.slots.filter((slot) => !slot.open)).not.toHaveLength(0);
-    expect(projected.board.slots.every((slot) => slot.marker.assessment === 'assessed')).toBe(true);
-    expect(projected.visits).toHaveLength(6);
-    expect(projected.visits.map((visit) => visit.authored)).toEqual([
-      true,
-      true,
-      false,
-      false,
-      false,
-      false,
+    expect(structuralKinds(biome(underworld, 'F'))).toEqual([
+      'ordinaryBatch',
+      'ordinaryBatch',
+      'ordinaryBatch',
+      'ordinaryBatch',
+      'ordinaryBatch',
+      'ordinaryBatch',
+      'ordinaryBatch',
+      'ordinaryBatch',
+      'ordinaryBatch',
+      'ordinaryBatch',
+      'takeoverBatch',
     ]);
-    expect(projected.visits[2]).toMatchObject({
-      authored: false,
-      contextualOwner: { kind: 'hubVisit', address: createHubVisitAddress(nBiome, 3) },
-      visitIndex: 3,
-    });
-    expect(projected.terminal.room).toMatchObject({ entered: false });
+    expect(structuralKinds(biome(surface, 'N'))).toEqual([
+      'linkedExit',
+      'hubDecision',
+      'takeoverBatch',
+    ]);
   });
 
-  it('keeps empty and blocked biomes authored rather than claiming canonical structure', () => {
-    const project = createProjectDocument(catalog, {
-      projectId: 'structured-empty',
-      name: 'Structured Empty',
-      configuredBiomeCounts: { Surface: 4, Underworld: 4 },
-    });
-    const workspace = projectWorkspace(project);
-
-    for (const projected of workspace.routes.flatMap((route) => route.biomes)) {
-      expect(projected.source).toBe('authored');
-      expect(projected.emptyOutline.completion.length).toBeGreaterThan(0);
-    }
-    expect(linear(biome(workspace, 'F')).emptyOutline.progression).toEqual({ kind: 'variable' });
-    expect(linear(biome(workspace, 'H')).emptyOutline.progression).toEqual({
-      kind: 'exact',
-      decisionCount: 4,
-    });
-    expect(biome(workspace, 'G').marker.assessment).toBe('blocked');
-    const n = biome(workspace, 'N');
-    expect(n.kind).toBe('HubBiome');
-    if (n.kind === 'HubBiome') {
-      expect(n.board.generationRegion).toBe('joint');
-      expect(n.board.slots.every((slot) => slot.marker.assessment === 'unassessed')).toBe(true);
-    }
-  });
-
-  it('uses progressive coverage for an incomplete Linear prefix without publishing canonical state', () => {
-    const f = createBiomeAddress('Underworld', 'F');
-    const start = createOccurrenceId('structured-prefix-start');
-    const target = createOccurrenceId('structured-prefix-target');
-    let project = createProjectDocument(catalog, {
-      projectId: 'structured-prefix',
-      name: 'Structured Prefix',
-      configuredBiomeCounts: { Underworld: 1 },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome: f,
-      occurrenceId: start,
-      gameName: 'F_Opening01',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateBatch',
-      continuation: createContinuationAddress(f, start),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(f, start),
-      storeKey: 'MetaProgress',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(f, start, 1),
-      occurrenceId: target,
-      gameName: 'F_Combat02',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetPicked',
-      picked: createPickedAddress(f, start),
-      exitIndex: 1,
-    });
-
-    const workspace = projectWorkspace(project);
-    const projected = linear(biome(workspace, 'F'));
-    const decision = projected.decisions[0];
-    const projectedTarget = decision?.targets[0];
-    if (decision === undefined || projectedTarget === undefined) {
-      throw new Error('progressive F decision was not projected');
-    }
-
-    expect(projected.source).toBe('progressive');
-    expect(projected.decisions).toHaveLength(1);
-    expect(decision.marker.assessment).toBe('assessed');
-    expect(decision.pickedMarker.assessment).toBe('assessed');
-    expect(workspace.focusByOwner.get(decision.pickedMarker.focusKey)?.nodeKey).toBe(
-      decision.marker.focusKey,
+  it('keeps physical target order and selection separate from retained target workbenches', () => {
+    const projected = biome(workspace(createGoldenFGHIProject(catalog)), 'F');
+    const takeover = projected.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'takeoverBatch' }> =>
+        node.kind === 'takeoverBatch',
     );
-    expect(decision.contextualOwner).toMatchObject({
-      kind: 'linearDecision',
-      address: decision.marker.address,
-    });
-    expect(projectedTarget.contextualOwner).toMatchObject({
-      kind: 'linearTarget',
-      address: projectedTarget.marker.address,
-    });
-    if (projected.frontier === null) {
-      throw new Error('progressive F has no frontier');
-    }
-    expect(projected.frontier.address.kind).toBe('continuation');
-    expect(decision.nextFrontier).toBe(projected.frontier);
-    expect(projected.entries[0]?.nextFrontier).toBeUndefined();
-    expect(projected.terminal.realization).toBe('projected');
+    if (takeover === undefined) throw new Error('F takeover was not projected');
+
+    expect(takeover.targets.map((target) => target.index)).toEqual(
+      [...takeover.targets].map((target) => target.index).sort((left, right) => left - right),
+    );
+    expect(takeover.targets.some((target) => !target.selected && !target.retained)).toBe(true);
+    expect(takeover.targetInteraction).toBe('readOnly');
+    expect(
+      projected.nodes.filter(
+        (node) =>
+          node.kind === 'occurrenceWorkbench' &&
+          takeover.targets.some((target) => target.room.occurrenceId === node.room.occurrenceId),
+      ),
+    ).toHaveLength(takeover.targets.length);
   });
 
-  it('attaches the first continuation frontier to its authored start workbench', () => {
-    const f = createBiomeAddress('Underworld', 'F');
-    const start = createOccurrenceId('structured-start-next-frontier');
-    let project = createProjectDocument(catalog, {
-      projectId: 'structured-start-next-frontier',
-      name: 'Structured start next frontier',
+  it('projects one declaration-owned Hub node with all physical slots and stable visit owners', () => {
+    const projected = biome(workspace(createRepresentativeNOPQProject()), 'N');
+    const hub = projected.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    if (hub === undefined) throw new Error('N Hub decision was not projected');
+
+    expect(hub.slots).toHaveLength(
+      catalog.biomeLayouts.byKey.N!.progression.kind === 'hub'
+        ? catalog.biomeLayouts.byKey.N!.progression.slots.length
+        : 0,
+    );
+    expect(hub.slots.map((slot) => slot.physicalDoorId)).toEqual(
+      catalog.biomeLayouts.byKey.N!.progression.kind === 'hub'
+        ? catalog.biomeLayouts.byKey.N!.progression.slots.map((slot) => slot.physicalDoorId)
+        : [],
+    );
+    expect(hub.visits.map((visit) => visit.marker.address.kind)).toEqual(
+      hub.visits.map(() => 'hubVisit'),
+    );
+  });
+
+  it('projects the completed-Hub handoff as one source-owned takeover action before N Preboss exists', () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'n-handoff',
+        name: 'N handoff',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    const projected = workspace(project);
+    const owner = createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' });
+    expect(projected.interactions.takeoverBatches.get(semanticAddressKey(owner))).toMatchObject({
+      action: 'create',
+      owner,
+    });
+  });
+
+  it('exposes start, ordinary, linked, and Hub creation frontiers without React reconstructing topology', () => {
+    const fBiome = createBiomeAddress('Underworld', 'F');
+    const initialF = createProjectDocument(catalog, {
+      projectId: 'f-authoring-frontier',
+      name: 'F authoring frontier',
       configuredBiomeCounts: { Underworld: 1 },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome: f,
-      occurrenceId: start,
-      gameName: 'F_Opening01',
+    const empty = workspace(initialF);
+    const emptyF = biome(empty, 'F');
+    expect(emptyF.frontier).toMatchObject({ kind: 'start', owner: fBiome });
+    if (emptyF.frontier?.kind !== 'start') throw new Error('F start frontier is missing');
+    expect(empty.interactions.starts.get(emptyF.frontier.interactionKey)).toMatchObject({
+      owner: fBiome,
     });
 
-    const projected = linear(biome(projectWorkspace(project), 'F'));
-    if (projected.frontier === null) {
-      throw new Error('started F has no continuation frontier');
-    }
-
-    expect(projected.entries[0]?.nextFrontier).toBe(projected.frontier);
-    expect(projected.decisions).toHaveLength(0);
-  });
-
-  it('does not project a next-frontier marker after a completed or generated-terminal closure', () => {
-    const workspace = projectWorkspace(createGoldenFGHIProject(catalog));
-    for (const biomeKey of ['F', 'I']) {
-      const projected = linear(biome(workspace, biomeKey));
-      expect(projected.frontier).toBeNull();
-      expect(projected.entries.every((entry) => entry.nextFrontier === undefined)).toBe(true);
-      expect(projected.decisions.every((decision) => decision.nextFrontier === undefined)).toBe(
-        true,
-      );
-    }
-  });
-
-  it('projects an authored frontier for a Linear biome blocked by an earlier prefix', () => {
-    const f = createBiomeAddress('Underworld', 'F');
-    const g = createBiomeAddress('Underworld', 'G');
-    const fStart = createOccurrenceId('structured-blocked-f-start');
-    const gStart = createOccurrenceId('structured-blocked-g-start');
-    let project = createProjectDocument(catalog, {
-      projectId: 'structured-blocked-frontier',
-      name: 'Structured Blocked Frontier',
-      configuredBiomeCounts: { Underworld: 2 },
-    });
-    project = applyProjectCommand(project, catalog, {
+    const fStart = createOccurrenceId('f-authoring-start');
+    const startedF = applyProjectCommand(initialF, catalog, {
       kind: 'CreateStart',
-      biome: f,
+      biome: fBiome,
       occurrenceId: fStart,
       gameName: 'F_Opening01',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome: g,
-      occurrenceId: gStart,
-      gameName: 'G_Intro',
+    const batchOwner = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: fStart,
     });
-
-    const workspace = projectWorkspace(project);
-    const projected = linear(biome(workspace, 'G'));
-
-    expect(projected.marker.assessment).toBe('blocked');
-    expect(projected.frontier?.address).toEqual(createContinuationAddress(g, gStart));
-  });
-
-  it('keeps retained picked descendants unassessed and unentered', () => {
-    const projected = linear(biome(projectWorkspace(createRetainedLinearProject()), 'F'));
-    const retained = projected.decisions.find((decision) => decision.retainedOverflow);
-    const picked = retained?.targets.find((target) => target.picked);
-
-    expect(projected.source).toBe('progressive');
-    expect(retained).toBeDefined();
-    expect(picked).toMatchObject({ retained: true, room: { entered: false } });
-  });
-
-  it('routes a missing continuation finding to its picked parent room', () => {
-    const project = createRetainedLinearProject();
-    const evaluation = simulateProject(catalog, project);
-    const finding = evaluation.findings.find(
-      (candidate) => candidate.code === 'continuationMissing',
-    );
-    if (
-      finding === undefined ||
-      finding.origin.kind !== 'continuation' ||
-      finding.origin.parentOccurrenceId === null
-    ) {
-      throw new Error('incomplete F should report its missing continuation');
-    }
-
-    const workspace = projection.project(project, evaluation);
-    const destination = workspace.focusByOwner.get(semanticAddressKey(finding.origin));
-
-    expect(destination).toMatchObject({
-      focusAddress: createOccurrenceAddress(
-        createBiomeAddress('Underworld', 'F'),
-        finding.origin.parentOccurrenceId,
-      ),
-      ownerAddress: finding.origin,
-      region: 'structure',
-    });
-  });
-
-  it('routes a retained context-invalid reward finding to its exact leaf owner', () => {
-    const f = createBiomeAddress('Underworld', 'F');
-    const start = createOccurrenceId('retained-finding-start');
-    const replaced = createOccurrenceId('retained-finding-replaced');
-    const retained = createOccurrenceId('retained-finding-reward');
-    const reward = createIncomingRewardAddress(f, retained);
-    let project = createProjectDocument(catalog, {
-      projectId: 'retained-finding',
-      name: 'Retained finding',
-      configuredBiomeCounts: { Underworld: 1 },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome: f,
-      occurrenceId: start,
-      gameName: 'F_Opening01',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateBatch',
-      continuation: createContinuationAddress(f, start),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(f, start),
-      storeKey: 'MetaProgress',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(f, start, 1),
-      occurrenceId: replaced,
-      gameName: 'F_Combat02',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetPicked',
-      picked: createPickedAddress(f, start),
-      exitIndex: 1,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateBatch',
-      continuation: createContinuationAddress(f, replaced),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(f, replaced),
-      storeKey: 'RunProgress',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(f, replaced, 1),
-      occurrenceId: retained,
-      gameName: 'F_Combat03',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward,
-      value: { rewardType: 'GiftDrop' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetPicked',
-      picked: createPickedAddress(f, replaced),
-      exitIndex: 1,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(f, retained),
-      gameName: 'F_Combat06',
-    });
-
     expect(
-      project.routes[0]?.biomes[0]?.kind === 'LinearBiome'
-        ? project.routes[0].biomes[0].topology?.occurrences.find(
-            (occurrence) => occurrence.occurrenceId === retained,
-          )
-        : undefined,
+      workspace(startedF).interactions.structural.get(semanticAddressKey(batchOwner)),
     ).toMatchObject({
-      gameName: 'F_Combat06',
-      state: { kind: 'counted', offer: { rewardType: 'GiftDrop' } },
+      action: 'createBatch',
+      owner: batchOwner,
     });
 
-    const evaluation = simulateProject(catalog, project);
-    const finding = evaluation.findings.find(
-      (candidate) =>
-        candidate.code === 'rewardBagEntryUnavailable' &&
-        semanticAddressKey(candidate.origin) === semanticAddressKey(reward),
-    );
-    if (finding === undefined) {
-      throw new Error('retained invalid reward finding is missing');
-    }
-    const workspace = projection.project(project, evaluation);
-
-    expect(workspace.focusByOwner.get(semanticAddressKey(finding.origin))).toMatchObject({
-      ownerAddress: reward,
-      focusAddress: reward,
-    });
-  });
-
-  it('retains concrete reward payload labels in compact room summaries', () => {
-    const projected = linear(biome(projectWorkspace(createGoldenFGHIProject(catalog)), 'F'));
-    const boon = projected.decisions
-      .flatMap((decision) => decision.targets)
-      .find((target) => target.room.gameName === 'F_Combat03');
-
-    expect(boon?.room.rewardSummary).toContain('Apollo');
-  });
-
-  it('binds lazy room and nested reward interactions to the projected project', async () => {
-    const workspace = projectWorkspace(createGoldenFGHIProject(catalog));
-    const projected = linear(biome(workspace, 'F'));
-    const target = projected.decisions
-      .flatMap((decision) => decision.targets)
-      .find((candidate) => candidate.room.gameName === 'F_Combat03');
-    if (
-      target === undefined ||
-      target.contextualOwner.kind !== 'linearTarget' ||
-      target.contextualOwner.interaction !== 'replaceable'
-    ) {
-      throw new Error('F combat target has no contextual room owner');
-    }
-    const roomInteraction = requireWorkspaceInteraction(
-      workspace.interactions.rooms,
-      workspaceInteractionKey(target.contextualOwner.address),
-    );
-    const roomModel = roomInteraction.load();
-    expect(roomModel.selected?.value.gameName).toBe('F_Combat03');
-    expect(roomModel.sections.length).toBeGreaterThan(0);
-
-    const reward = target.room.rewardControls[0];
-    if (reward === undefined) {
-      throw new Error('F combat target has no incoming reward control');
-    }
-    const interaction = requireWorkspaceInteraction(
-      workspace.interactions.rewards,
-      workspaceInteractionKey(reward.owner.address),
-    );
-    const domain = await interaction.load();
-    const rewardModel = interaction.model(domain, 'type', interaction.selected);
-
-    expect(reward.owner.address.kind).toBe('incomingReward');
-    expect(reward.marker.assessment).toBe('assessed');
-    expect(workspace.focusByOwner.get(reward.marker.focusKey)?.nodeKey).toBe(
-      target.room.marker.focusKey,
-    );
-    expect(interaction.summary(interaction.selected)).toContain('Apollo');
-    expect(rewardModel.selected?.value).toEqual(interaction.selected);
-    expect(workspace.interactions.rewards.get(workspaceInteractionKey(reward.owner.address))).toBe(
-      interaction,
-    );
-  });
-
-  it('captures declared domains while deferring candidate queries until interaction', async () => {
-    let roomDomainScans = 0;
-    let queryBatches = 0;
-    const trackedCatalog: Catalog = {
-      ...catalog,
-      rooms: {
-        byKey: catalog.rooms.byKey,
-        get values() {
-          roomDomainScans += 1;
-          return catalog.rooms.values;
-        },
-      },
-    };
-    const evaluateTrackedProject = (project: ReturnType<typeof createProjectDocument>) =>
-      simulateProject(trackedCatalog, project);
-    const trackedCandidates: CandidateSessionFactory = createCandidateSessionFactory(
-      trackedCatalog,
-      {
-        observeCandidateEvaluation(event) {
-          if (event.kind === 'queryBatch') {
-            queryBatches += 1;
-          }
-        },
-      },
-    );
-    const trackedContextualPicker = createContextualPickerProjection(
-      createContextualOptionResolver(trackedCatalog),
-    );
-    const trackedProjection = createStructuredWorkspaceProjection(trackedCatalog, {
-      candidateSessions: trackedCandidates,
-      contextualPicker: trackedContextualPicker,
-      rewardPicker: createRewardPickerProjection(trackedCatalog, trackedContextualPicker),
-    });
-    const project = createGoldenFGHIProject(trackedCatalog);
-    const evaluation = evaluateTrackedProject(project);
-    roomDomainScans = 0;
-    const workspace = trackedProjection.project(project, evaluation);
-    const projected = linear(biome(workspace, 'F'));
-    const target = projected.decisions
-      .flatMap((decision) => decision.targets)
-      .find((candidate) => candidate.room.gameName === 'F_Combat03');
-    if (
-      target === undefined ||
-      target.contextualOwner.kind !== 'linearTarget' ||
-      target.contextualOwner.interaction !== 'replaceable'
-    ) {
-      throw new Error('F combat target has no contextual room owner');
-    }
-    const reward = target.room.rewardControls.find((control) => control.kind === 'countedReward');
-    if (reward === undefined) {
-      throw new Error('F combat target has no counted reward control');
-    }
-
-    const roomInteraction = requireWorkspaceInteraction(
-      workspace.interactions.rooms,
-      workspaceInteractionKey(target.contextualOwner.address),
-    );
-    const rewardInteraction = requireWorkspaceInteraction(
-      workspace.interactions.rewards,
-      workspaceInteractionKey(reward.owner.address),
-    );
-    expect(roomDomainScans).toBeGreaterThan(0);
-    expect(queryBatches).toBe(0);
-
-    roomInteraction.load();
-    expect(roomDomainScans).toBeGreaterThan(0);
-    expect(queryBatches).toBe(1);
-
-    await rewardInteraction.load();
-    expect(queryBatches).toBeGreaterThan(1);
-    const batchesAfterFirstLoad = queryBatches;
-    await rewardInteraction.load();
-    expect(queryBatches).toBe(batchesAfterFirstLoad);
-  });
-
-  it('discovers exact shop offer and purchase owners in a progressive prefix', () => {
-    const g = createBiomeAddress('Underworld', 'G');
-    let project = createGoldenFGHIProject(catalog);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveBatch',
-      continuation: createContinuationAddress(g, targetOccurrenceId('G', 6, 1)),
-    });
-    const workspace = projectWorkspace(project);
-    const projected = linear(biome(workspace, 'G'));
-    const shop = projected.decisions
-      .flatMap((decision) => decision.targets)
-      .find((target) => target.room.gameName === 'G_Shop01');
-    const offer = shop?.room.rewardControls[0];
-
-    expect(projected.source).toBe('progressive');
-    expect(offer?.owner.address.kind).toBe('shopOffer');
-    expect(offer?.marker.assessment).toBe('assessed');
-    expect(offer?.kind).toBe('explicitReward');
-    expect(offer?.kind === 'explicitReward' ? offer.purchaseMarker : undefined).toMatchObject({
-      address: { kind: 'shopPurchase' },
-      assessment: 'assessed',
-    });
-    expect(workspace.focusByOwner.get(offer!.marker.focusKey)?.nodeKey).toBe(
-      shop?.room.marker.focusKey,
-    );
-    const purchaseMarker = offer?.kind === 'explicitReward' ? offer.purchaseMarker : undefined;
-    expect(workspace.focusByOwner.get(purchaseMarker!.focusKey)?.nodeKey).toBe(
-      shop?.room.marker.focusKey,
-    );
-  });
-
-  it('focuses I terminal structure on the picked closing occurrence', () => {
-    const { laterPreboss, project } = createRepeatedIPrebossProject();
-    const projected = linear(biome(projectWorkspace(project), 'I'));
-    const i = createBiomeAddress('Underworld', 'I');
-
-    expect(projected.terminal.targets).toHaveLength(2);
-    expect(projected.terminal.targets.map((target) => target.room.gameName)).toEqual([
-      'I_PreBoss02',
-      'I_Combat10',
-    ]);
-    expect(projected.terminal.marker.address).toEqual(
-      createTargetAddress(i, createOccurrenceId('phase-6-i-terminal-peer'), 1),
-    );
-    expect(projected.terminal.targets.find((target) => target.picked)?.room.occurrenceId).toBe(
-      laterPreboss,
-    );
-  });
-
-  it('keeps O Trial selectable after replacement and exposes its fixed payload interaction', async () => {
-    const originalWorkspace = projectWorkspace(createRepresentativeNOProject());
-    const originalTrial = linear(biome(originalWorkspace, 'O'))
-      .decisions.flatMap((decision) => decision.targets)
-      .find((target) => target.room.occurrenceId === oOccurrenceIds.devotion);
-    const reward = originalTrial?.room.rewardControls[0];
-    if (reward === undefined) {
-      throw new Error('O Trial has no fixed payload reward control');
-    }
-    const interaction = requireWorkspaceInteraction(
-      originalWorkspace.interactions.rewards,
-      workspaceInteractionKey(reward.owner.address),
-    );
-
-    expect(reward).toMatchObject({
-      kind: 'explicitReward',
-      owner: { kind: 'incomingReward' },
-      rewardTypes: ['Devotion'],
-    });
-    expect(interaction.selected).toEqual({
-      rewardType: 'Devotion',
-      payload: {
-        kind: 'DevotionPair',
-        chosenSource: 'AresUpgrade',
-        spurnedSource: 'HephaestusUpgrade',
-      },
-    });
-    const domain = await interaction.load();
-    const chosenModel = interaction.model(domain, 'chosen', interaction.selected);
-    expect(chosenModel.selected?.value.payload).toMatchObject({
-      kind: 'DevotionPair',
-      chosenSource: 'AresUpgrade',
-    });
-    expect(originalWorkspace.focusByOwner.get(reward.marker.focusKey)?.nodeKey).toBe(
-      originalTrial?.room.marker.focusKey,
-    );
-
-    const replacedProject = applyProjectCommand(createRepresentativeNOProject(), catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
-      gameName: 'O_Combat03',
-    });
-    const replacedWorkspace = projectWorkspace(replacedProject);
-    const replacedTrial = linear(biome(replacedWorkspace, 'O'))
-      .decisions.flatMap((decision) => decision.targets)
-      .find((target) => target.room.occurrenceId === oOccurrenceIds.devotion);
-    if (
-      replacedTrial?.contextualOwner.kind !== 'linearTarget' ||
-      replacedTrial.contextualOwner.interaction !== 'replaceable'
-    ) {
-      throw new Error('replaced O Trial target has no room picker');
-    }
-
-    expect(replacedTrial.room.gameName).toBe('O_Combat03');
-    const replacementModel = requireWorkspaceInteraction(
-      replacedWorkspace.interactions.rooms,
-      workspaceInteractionKey(replacedTrial.contextualOwner.address),
-    ).load();
-    expect(
-      replacementModel.sections
-        .flatMap((section) => section.items)
-        .map((item) => item.value.gameName),
-    ).toContain('O_Devotion01');
-  });
-
-  it('resolves finding owners and structural owners to stable inspector destinations', () => {
-    const f = createBiomeAddress('Underworld', 'F');
-    const start = createOccurrenceId('structured-focus-start');
-    let project = createProjectDocument(catalog, {
-      projectId: 'structured-focus',
-      name: 'Structured Focus',
-      configuredBiomeCounts: { Underworld: 1 },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome: f,
-      occurrenceId: start,
-      gameName: 'F_Opening01',
-    });
-    project = applyProjectCommand(project, catalog, {
+    const batch = applyProjectCommand(startedF, catalog, {
       kind: 'CreateBatch',
-      continuation: createContinuationAddress(f, start),
+      decision: batchOwner,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(f, start),
-      storeKey: 'MetaProgress',
-    });
-    const evaluation = simulateProject(catalog, project);
-    const workspace = projection.project(project, evaluation);
-    const finding = evaluation.findings.find((candidate) => candidate.code === 'targetMissing');
-    if (finding === undefined) {
-      throw new Error('incomplete F decision has no target finding');
+    const batchWorkspace = workspace(batch);
+    const partialBatch = biome(batchWorkspace, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch',
+    );
+    if (partialBatch === undefined) throw new Error('empty F batch was not projected');
+    expect(partialBatch.missingTargets.map((target) => target.exitKey)).not.toHaveLength(0);
+    for (const target of partialBatch.missingTargets) {
+      expect(batchWorkspace.interactions.rooms.get(semanticAddressKey(target.owner))).toMatchObject(
+        {
+          owner: target.owner,
+        },
+      );
     }
-    const destination = workspace.focusByOwner.get(semanticAddressKey(finding.origin));
 
-    expect(destination).toMatchObject({
-      ownerAddress: finding.origin,
-      focusAddress: finding.origin,
-      region: 'structure',
+    const initialN = createProjectDocument(catalog, {
+      projectId: 'n-authoring-frontier',
+      name: 'N authoring frontier',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    const startedN = applyProjectCommand(initialN, catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    const linkedOwner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    expect(
+      workspace(startedN).interactions.structural.get(semanticAddressKey(linkedOwner)),
+    ).toMatchObject({
+      action: 'createLinkedExit',
+      owner: linkedOwner,
+      targetGameName: 'N_PreHub01',
+    });
+    const linked = applyProjectCommand(startedN, catalog, {
+      kind: 'CreateLinkedExit',
+      decision: linkedOwner,
+      occurrenceId: nOccurrenceIds.preHub,
+    });
+    const hubOwner = createHubDecisionAddress(nBiome, 'hub');
+    expect(
+      workspace(linked).interactions.structural.get(semanticAddressKey(hubOwner)),
+    ).toMatchObject({
+      action: 'createHubDecision',
+      owner: hubOwner,
     });
   });
 
-  it('rejects an evaluation prepared from a different authored-project identity', () => {
-    const project = createProjectDocument(catalog, {
-      projectId: 'structured-identity',
-      name: 'Structured Identity',
+  it('projects every Hub slot and the next visit frontier before it is authored', () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'n-next-visit',
+        name: 'N next visit',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false, visitSlotKeys: nVisitSlotKeys.slice(0, -1) },
+    );
+    const projected = workspace(project);
+    const descriptor = catalog.biomeLayouts.byKey.N?.progression;
+    if (descriptor?.kind !== 'hub') throw new Error('N Hub descriptor is missing');
+    expect(projected.interactions.hubSlots).toHaveLength(descriptor.slots.length);
+    const nextVisit = createHubVisitAddress(nBiome, descriptor.hubKey, descriptor.requiredVisits);
+    expect(projected.interactions.hubVisits.get(semanticAddressKey(nextVisit))).toMatchObject({
+      owner: nextVisit,
+    });
+  });
+
+  it('exposes all F-through-Q takeover batches only from their decision owners while I keeps its Preboss target replaceable', () => {
+    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const surface = workspace(createRepresentativeNOPQProject());
+    for (const [projected, biomeKey] of [
+      [underworld, 'F'],
+      [underworld, 'G'],
+      [underworld, 'H'],
+      [surface, 'N'],
+      [surface, 'O'],
+      [surface, 'P'],
+      [surface, 'Q'],
+    ] as const) {
+      const value = biome(projected, biomeKey);
+      const takeover = value.nodes.find(
+        (node): node is Extract<WorkspaceNode, { readonly kind: 'takeoverBatch' }> =>
+          node.kind === 'takeoverBatch',
+      );
+      if (takeover === undefined) throw new Error(`${biomeKey} takeover was not projected`);
+
+      expect(
+        projected.interactions.takeoverBatches.get(takeover.takeoverInteractionKey),
+      ).toMatchObject({ action: 'reconcile', owner: takeover.owner });
+      for (const target of takeover.targets) {
+        expect(projected.interactions.rooms.has(semanticAddressKey(target.marker.address))).toBe(
+          false,
+        );
+      }
+    }
+
+    const i = biome(underworld, 'I');
+    const mixed = i.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'mixedBatch' }> =>
+        node.kind === 'mixedBatch',
+    );
+    const preboss = mixed?.targets.find((target) => target.room.gameName === 'I_PreBoss02');
+    if (preboss === undefined) throw new Error('I mixed Preboss target was not projected');
+    expect(mixed?.targetInteraction).toBe('replaceable');
+    expect(underworld.interactions.rooms.has(semanticAddressKey(preboss.marker.address))).toBe(
+      true,
+    );
+
+    const incomplete = createProjectDocument(catalog, {
+      projectId: 'f-frontier',
+      name: 'F frontier',
       configuredBiomeCounts: { Underworld: 1 },
     });
-    const changed = applyProjectCommand(project, catalog, {
+    const started = applyProjectCommand(incomplete, catalog, {
       kind: 'CreateStart',
       biome: createBiomeAddress('Underworld', 'F'),
-      occurrenceId: createOccurrenceId('structured-identity-start'),
+      occurrenceId: createOccurrenceId('f-frontier-start'),
       gameName: 'F_Opening01',
     });
+    const frontier = workspace(started);
+    const owner = createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('f-frontier-start'),
+    });
+    expect(frontier.interactions.takeoverBatches.get(semanticAddressKey(owner))).toMatchObject({
+      action: 'create',
+      owner,
+    });
+  });
 
-    expect(() => projection.project(project, simulateProject(catalog, changed))).toThrow(
-      'prepared project evaluation does not belong to the authored project identity',
+  it('projects declaration-owned reward domains for side rooms, wheels, shops, and free Preboss rewards', () => {
+    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const surface = workspace(createRepresentativeNOPQProject());
+    const nCombat = catalog.rooms.byKey.N_Combat05;
+    const sideGroup = nCombat?.localChildren.find((child) => child.kind === 'fixedRoomSlots');
+    const firstSide = sideGroup?.kind === 'fixedRoomSlots' ? sideGroup.slots[0] : undefined;
+    if (sideGroup?.kind !== 'fixedRoomSlots' || firstSide === undefined) {
+      throw new Error('N side-room fixture is missing');
+    }
+    const side = surface.interactions.rewards.get(
+      semanticAddressKey(
+        createLocalRewardAddress(
+          nBiome,
+          nOccurrenceId('combat05'),
+          sideGroup.key,
+          firstSide.slotKey,
+        ),
+      ),
     );
+    const wheel = surface.interactions.rewards.get(
+      semanticAddressKey(
+        createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+      ),
+    );
+    const shop = surface.interactions.rewards.get(
+      semanticAddressKey(createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon')),
+    );
+    const freePreboss = underworld.interactions.rewards.get(
+      semanticAddressKey(
+        createIncomingRewardAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('golden-f-preboss-free'),
+        ),
+      ),
+    );
+
+    for (const interaction of [side, wheel, shop, freePreboss]) {
+      expect(interaction).toBeDefined();
+      expect(interaction!.authoredRewardTypes.length).toBeGreaterThan(1);
+    }
+    const shopProfile = catalog.rewards.shops.byKey.WorldShop;
+    const shopSlot = shopProfile?.slots.byKey.MajorNonBoon;
+    if (shopProfile === undefined || shopSlot === undefined)
+      throw new Error('N Shop fixture is missing');
+    expect(shop!.authoredRewardTypes).toEqual(
+      shopProfile.groups.byKey[shopSlot.groupKey]!.rewardTypes,
+    );
+  });
+
+  it('keeps fixed, Fields, ship-wheel, and Shop reward state in compact room summaries', () => {
+    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const surface = workspace(createRepresentativeNOPQProject());
+    const summary = (
+      projected: ReturnType<typeof workspace>,
+      biomeKey: string,
+      gameName: string,
+    ) => {
+      const node = biome(projected, biomeKey).nodes.find(
+        (
+          candidate,
+        ): candidate is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+          candidate.kind === 'occurrenceWorkbench' && candidate.room.gameName === gameName,
+      );
+      if (node === undefined) throw new Error(`${gameName} workbench is missing`);
+      return node.room.rewardSummary;
+    };
+
+    expect(summary(surface, 'P', 'P_Story01')).toBeDefined();
+    expect(summary(underworld, 'H', 'H_Combat02')).toMatch(/^Cages · /);
+    expect(summary(surface, 'O', 'O_Combat04')).toMatch(/^\d encounters · /);
+    expect(summary(surface, 'N', 'N_PreBoss01')).toMatch(/^\d offers · \d purchased$/);
+  });
+
+  it('projects the exact command-owned removal scope for retained ordinary and takeover batches', () => {
+    const narrowedF = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'F'),
+        goldenFOccurrenceId(1, 1),
+      ),
+      gameName: 'F_Combat01',
+    });
+    const f = biome(workspace(narrowedF), 'F');
+    const ordinary = f.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        node.owner.source.kind === 'occurrence' &&
+        node.owner.source.occurrenceId === goldenFOccurrenceId(1, 1),
+    );
+    if (ordinary === undefined) throw new Error('narrowed F batch was not projected');
+    expect(ordinary.targets.map((target) => [target.exitKey, target.physicalState])).toEqual([
+      ['exit1', 'available'],
+      ['exit2', 'unavailable'],
+    ]);
+    expect(ordinary.repairScope).toEqual({
+      command: 'ReconcileBatchExitCapacity',
+      owner: ordinary.owner,
+      removedDecisionOwners: [],
+      removedOccurrenceIds: [goldenFOccurrenceId(2, 2)],
+    });
+
+    const gPlan = createGoldenFGHIProject(catalog).routes[0]!.biomes.find(
+      (candidate) => candidate.biomeKey === 'G',
+    );
+    const takeoverDecision = gPlan?.topology?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.normal.kind === 'batch' &&
+        decision.normal.targets.every(
+          (target) =>
+            gPlan.topology?.occurrences.find(
+              (occurrence) => occurrence.occurrenceId === target.occurrenceId,
+            )?.gameName === 'G_PreBoss01',
+        ),
+    );
+    if (takeoverDecision?.kind !== 'exit' || takeoverDecision.source.kind !== 'occurrence') {
+      throw new Error('G takeover source is missing');
+    }
+    const narrowedG = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'G'),
+        takeoverDecision.source.occurrenceId,
+      ),
+      gameName: 'G_MiniBoss02',
+    });
+    const g = biome(workspace(narrowedG), 'G');
+    const takeover = g.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'takeoverBatch' }> =>
+        node.kind === 'takeoverBatch',
+    );
+    if (takeover === undefined) throw new Error('narrowed G takeover was not projected');
+    const unavailable = takeover.targets
+      .filter((target) => target.physicalState === 'unavailable')
+      .map((target) => target.room.occurrenceId);
+    expect(unavailable).not.toHaveLength(0);
+    expect(takeover.repairScope).toMatchObject({
+      command: 'ReconcileTakeoverBatch',
+      owner: takeover.owner,
+      removedOccurrenceIds: unavailable,
+    });
+  });
+
+  it('exposes the exact reset-and-descendant impact before replacing an ordinary batch with a takeover', () => {
+    const project = createGoldenFGHIProject(catalog);
+    const projected = workspace(project);
+    const owner = createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
+      kind: 'occurrence',
+      occurrenceId: goldenFStartId,
+    });
+    const interaction = projected.interactions.takeoverBatches.get(semanticAddressKey(owner));
+    expect(interaction).toMatchObject({ action: 'replace', owner });
+    expect(interaction?.impact).toMatchObject({
+      command: 'ReplaceWithTakeoverBatch',
+      owner,
+      replacedOccurrenceIds: [goldenFOccurrenceId(1, 1)],
+    });
+    expect(interaction?.impact?.removedDecisionOwners).toContainEqual(
+      createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
+        kind: 'occurrence',
+        occurrenceId: goldenFOccurrenceId(1, 1),
+      }),
+    );
+    expect(interaction?.impact?.removedOccurrenceIds).toContain(goldenFOccurrenceId(1, 1));
+    expect(interaction?.impact?.removedOccurrenceIds).toContain(goldenFOccurrenceId(2, 1));
+  });
+
+  it('preserves incomplete and upstream-blocked workspace states with an explicit start frontier', () => {
+    const initial = createProjectDocument(catalog, {
+      projectId: 'prefix',
+      name: 'Prefix',
+      configuredBiomeCounts: { Underworld: 2 },
+    });
+    const projected = workspace(initial);
+    const f = biome(projected, 'F');
+    const g = biome(projected, 'G');
+
+    expect(f.status).toBe('incomplete');
+    expect(g.status).toBe('blocked');
+    expect(f.nodes.map((node) => node.kind)).toEqual(['completion', 'completion']);
+    expect(g.nodes.map((node) => node.kind)).toEqual(['completion', 'completion']);
+    expect(f.frontier).toMatchObject({
+      kind: 'start',
+      owner: createBiomeAddress('Underworld', 'F'),
+    });
+    if (f.frontier?.kind !== 'start') throw new Error('F start frontier is missing');
+    expect(projected.interactions.starts.get(f.frontier.interactionKey)).toMatchObject({
+      owner: createBiomeAddress('Underworld', 'F'),
+    });
+
+    const gBiome = createBiomeAddress('Underworld', 'G');
+    const gStart = createOccurrenceId('blocked-g-start');
+    const startedG = applyProjectCommand(initial, catalog, {
+      kind: 'CreateStart',
+      biome: gBiome,
+      occurrenceId: gStart,
+    });
+    const blocked = workspace(startedG);
+    const blockedG = biome(blocked, 'G');
+    const decision = createExitDecisionAddress(gBiome, {
+      kind: 'occurrence',
+      occurrenceId: gStart,
+    });
+    expect(blockedG.status).toBe('blocked');
+    expect(blockedG.frontier).toMatchObject({ kind: 'exitDecision', owner: decision });
+    expect(blocked.interactions.structural.get(semanticAddressKey(decision))).toMatchObject({
+      action: 'createBatch',
+      owner: decision,
+    });
+  });
+
+  it('distinguishes a materialized partial prefix from complete invalid and retained structures', () => {
+    const partial = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'partial-f',
+        name: 'Partial F',
+        configuredBiomeCounts: { Underworld: 1 },
+      }),
+      catalog,
+      {
+        kind: 'CreateStart',
+        biome: createBiomeAddress('Underworld', 'F'),
+        occurrenceId: createOccurrenceId('partial-f-start'),
+        gameName: 'F_Opening01',
+      },
+    );
+    const partialF = biome(workspace(partial), 'F');
+    expect(partialF.status).toBe('incomplete');
+    expect(partialF.source).toBe('progressive');
+    expect(partialF.entry?.room.gameName).toBe('F_Opening01');
+    expect(partialF.frontier?.marker.address).toEqual(
+      createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('partial-f-start'),
+      }),
+    );
+
+    const invalidP = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat03', 1, 1)),
+      gameName: 'P_Combat02',
+    });
+    const p = biome(workspace(invalidP), 'P');
+    expect(p.status).toBe('invalid');
+    expect(p.source).toBe('canonical');
+    expect(
+      p.nodes.some(
+        (node) =>
+          (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') &&
+          node.targets.some((target) => target.marker.findingCount > 0),
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps later authored decisions visible as retained and unassessed after an incomplete prefix', () => {
+    const project = createGoldenFGHIProject(catalog);
+    const f = project.routes[0]!.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (f?.topology === null || f === undefined) throw new Error('golden F topology is missing');
+    const first = f.topology.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === goldenFStartId,
+    );
+    if (first?.kind !== 'exit') throw new Error('golden F opening decision is missing');
+    const incomplete = {
+      ...project,
+      routes: project.routes.map((route) =>
+        route.routeKey !== 'Underworld'
+          ? route
+          : {
+              ...route,
+              biomes: route.biomes.map((plan) =>
+                plan.biomeKey !== 'F' || plan.topology === null
+                  ? plan
+                  : {
+                      ...plan,
+                      topology: {
+                        ...plan.topology,
+                        decisions: plan.topology.decisions.map((decision) =>
+                          decision === first
+                            ? { ...decision, selection: { kind: 'unresolved' as const } }
+                            : decision,
+                        ),
+                      },
+                    },
+              ),
+            },
+      ),
+    };
+    const retained = biome(workspace(incomplete), 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        node.owner.source.kind === 'occurrence' &&
+        node.owner.source.occurrenceId === goldenFOccurrenceId(1, 1),
+    );
+    if (retained === undefined) throw new Error('retained F batch was not projected');
+    expect(retained.topologyState).toBe('retained');
+    expect(retained.marker.assessment).toBe('unassessed');
+    expect(retained.targets.every((target) => target.retained)).toBe(true);
+    expect(retained.targets.every((target) => target.marker.assessment === 'unassessed')).toBe(
+      true,
+    );
+  });
+
+  it('indexes exact finding owners and falls back only to the owning biome shell', () => {
+    const project = createProjectDocument(catalog, {
+      projectId: 'finding-owner',
+      name: 'Finding owner',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    const projected = workspace(project);
+    const finding = simulateProject(catalog, project).findings[0];
+    if (finding === undefined) throw new Error('expected a topology finding');
+
+    const destination = projected.focusByOwner.get(semanticAddressKey(finding.origin));
+    expect(destination).toMatchObject({
+      ownerAddress: finding.origin,
+      biomeKey: nBiome.biomeKey,
+      routeKey: nBiome.routeKey,
+    });
   });
 });

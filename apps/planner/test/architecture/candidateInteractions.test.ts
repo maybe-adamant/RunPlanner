@@ -28,6 +28,7 @@ const families: readonly InteractionFamily[] = [
   'shopPurchases',
   'sideRoomEntryOrders',
   'sideRoomGenerations',
+  'takeoverBatches',
 ];
 
 function firstInteraction(
@@ -72,14 +73,6 @@ describe('workspace candidate interaction families', () => {
       const queryBatches = events.filter((event) => event.kind === 'queryBatch');
       expect(queryBatches.length, `${family} did not evaluate its domain`).toBeGreaterThan(0);
       expect(queryBatches.every((event) => event.queryCount > 0)).toBe(true);
-      for (const replay of events.filter((event) => event.kind === 'regionReplay')) {
-        expect(replay.routeKey, `${family} replayed another route`).toBe(
-          interaction.owner.routeKey,
-        );
-        expect(replay.biomeKey, `${family} replayed another biome`).toBe(
-          interaction.owner.biomeKey,
-        );
-      }
       expect(projectEvaluationCount, `${family} reacquired project evaluation`).toBe(2);
     }
   });

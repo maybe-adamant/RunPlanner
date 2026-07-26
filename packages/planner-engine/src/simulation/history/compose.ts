@@ -613,6 +613,15 @@ export function composeBiomeHistoryPrefix(
       }
       const frontier = snapshot.frontier;
       if (frontier?.kind === 'exitDecision') {
+        if (current.kind === 'hub') {
+          if (frontier.targets.length > 0) {
+            fail('completed-Hub frontier targets must be materialized with the Hub handoff');
+          }
+          // appendHubDecision has already replayed the completed board and all
+          // visits. With no authored Handoff batch, the next decision is an
+          // available Hub-owned source frontier, not another room lifecycle.
+          return;
+        }
         if (current.kind !== 'authored') {
           fail('ordinary decision frontier does not follow an authored room');
         }

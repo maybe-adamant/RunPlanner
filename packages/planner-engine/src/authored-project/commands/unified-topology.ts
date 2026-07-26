@@ -1,5 +1,6 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import { createInitialBatchState } from '../batchState';
+import { describeTopologyRemovalImpact, topologyRemovalSourceKeys } from '../topologyImpact';
 import type { ExitDecisionSourceAddress } from '../addresses';
 import type {
   BatchRewardStoreState,
@@ -144,32 +145,9 @@ function removeDownstreamDecisions(
   topology: BiomeTopology,
   sourceOccurrenceIds: ReadonlySet<OccurrenceId>,
 ): BiomeTopology {
-  const removedOccurrences = new Set<OccurrenceId>();
-  const pendingSources = new Set(sourceOccurrenceIds);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const decision of topology.decisions) {
-      if (
-        decision.kind !== 'exit' ||
-        decision.source.kind !== 'occurrence' ||
-        !pendingSources.has(decision.source.occurrenceId)
-      ) {
-        continue;
-      }
-      const targets =
-        decision.normal.kind === 'linked'
-          ? [decision.normal.occurrenceId]
-          : decision.normal.targets.map((target) => target.occurrenceId);
-      for (const occurrenceId of targets) {
-        if (!removedOccurrences.has(occurrenceId)) {
-          removedOccurrences.add(occurrenceId);
-          pendingSources.add(occurrenceId);
-          changed = true;
-        }
-      }
-    }
-  }
+  const impact = describeTopologyRemovalImpact(topology, sourceOccurrenceIds);
+  const removedOccurrences = new Set(impact.removedOccurrenceIds);
+  const removedSources = topologyRemovalSourceKeys(impact.removedExitDecisionSources);
   return Object.freeze({
     ...topology,
     occurrences: Object.freeze(
@@ -179,8 +157,11 @@ function removeDownstreamDecisions(
       topology.decisions.filter(
         (decision) =>
           decision.kind !== 'exit' ||
-          decision.source.kind !== 'occurrence' ||
-          !pendingSources.has(decision.source.occurrenceId),
+          !removedSources.has(
+            decision.source.kind === 'occurrence'
+              ? `occurrence:${decision.source.occurrenceId}`
+              : `hubDecision:${decision.source.decisionKey}`,
+          ),
       ),
     ),
   });

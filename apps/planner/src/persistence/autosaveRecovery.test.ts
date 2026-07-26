@@ -6,7 +6,11 @@ import {
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
-import { type AutosaveRecoveryAdapter, type AutosaveScheduler } from './autosaveRecovery';
+import {
+  restoreStartupProject,
+  type AutosaveRecoveryAdapter,
+  type AutosaveScheduler,
+} from './autosaveRecovery';
 import { createApplication } from '../composition/createApplication';
 import { settingsSelected } from '../state/editorSessionSlice';
 import type { ProfileFileAdapter } from './profileFile';
@@ -147,6 +151,29 @@ describe('profile status', () => {
 });
 
 describe('autosave recovery lifecycle', () => {
+  it('blocks and preserves schema-8 and stale-catalog autosaves without migrating either payload', () => {
+    const fallback = createProjectDocument(catalog, {
+      projectId: 'fallback',
+      name: 'Fallback',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    const current = JSON.parse(encodeProjectDocument(fallback)) as Record<string, unknown>;
+    const legacy = createRecoveryFixture(
+      JSON.stringify({ ...current, schemaVersion: 8, catalogVersion: catalog.version }),
+    );
+    const stale = createRecoveryFixture(
+      JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
+    );
+
+    for (const recovery of [legacy, stale]) {
+      const startup = restoreStartupProject(fallback, catalog, recovery);
+      expect(startup.project).toBe(fallback);
+      expect(startup.profileSession.recoveryStatus).toBe('blocked');
+      expect(recovery.raw).not.toBeNull();
+      expect(recovery.clearCount).toBe(0);
+    }
+  });
+
   it('debounces only effective authored replacements and never changes the explicit baseline', () => {
     const recovery = createRecoveryFixture();
     const scheduler = createSchedulerFixture();
