@@ -193,7 +193,7 @@ function HubSlotCard({
       {!slot.open || slot.room?.rewardSummary === undefined ? null : (
         <p className="biome-room-summary">{slot.room.rewardSummary}</p>
       )}
-      {!slot.open || slot.visited || editableControl === undefined ? null : (
+      {!slot.open || editableControl === undefined ? null : (
         <div className="room-state-with-marker">
           <SemanticOwnerMarker address={editableControl.marker.address} />
           <RewardControlEditor
@@ -203,10 +203,7 @@ function HubSlotCard({
           />
         </div>
       )}
-      {!slot.open ||
-      slot.visited ||
-      rewardState?.kind !== 'fixed' ||
-      rewardState.control !== undefined ? null : (
+      {!slot.open || rewardState?.kind !== 'fixed' || rewardState.control !== undefined ? null : (
         <p className="fixed-room-state">Fixed reward: {rewardState.summary}</p>
       )}
     </article>

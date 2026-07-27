@@ -109,6 +109,10 @@ function currentProject(application: PlannerApplication) {
   return application.store.getState().projectWorkspace.history.present;
 }
 
+function hubRailButton(): HTMLElement {
+  return screen.getByRole('button', { name: /Persistent board.*Hub/ });
+}
+
 describe('surface product loop', () => {
   it('renders every Surface biome through the shared workspace and persists the complete route', async () => {
     const persistence = createPersistence();
@@ -124,7 +128,7 @@ describe('surface product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
-    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+    await view.user.click(hubRailButton());
 
     expect(application.store.getState().projectWorkspace.evaluation).toMatchObject({
       findings: [],
@@ -200,7 +204,7 @@ describe('surface product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
-    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+    await view.user.click(hubRailButton());
 
     vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
     const removeFinalVisit = screen.getByRole('button', { name: 'Remove visits from Visit 6' });
@@ -265,7 +269,7 @@ describe('surface product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
-    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+    await view.user.click(hubRailButton());
 
     const card = screen.getByRole('article', { name: 'Combat 03 Hub slot' });
     const checkbox = within(card).getByRole('checkbox', {
@@ -354,7 +358,7 @@ describe('surface product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
-    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+    await view.user.click(hubRailButton());
 
     const card = screen.getByRole('article', { name: 'Combat 04 Hub slot' });
     const checkbox = within(card).getByRole('checkbox', {
