@@ -34,9 +34,7 @@ textarea {
 
 select[data-candidate-support='impossible'],
 .purchase-control[data-candidate-support='impossible'],
-.hub-membership-control[data-candidate-support='impossible'],
-.ephyra-side-controls button[data-candidate-support='impossible'],
-.side-order-actions button[data-candidate-support='impossible'] {
+.hub-membership-control[data-candidate-support='impossible'] {
   border-color: #ee8f8f;
   color: #f2a0a0;
 }
@@ -45,7 +43,8 @@ option[data-candidate-support='impossible'] {
   color: #b22626;
 }
 
-button:focus-visible {
+button:focus-visible,
+select:focus-visible {
   outline: 2px solid #e2b971;
   outline-offset: 3px;
 }
@@ -1605,9 +1604,7 @@ select {
 }
 
 .hub-slot-heading,
-.hub-slot-meta,
-.ephyra-side-controls,
-.side-order-actions {
+.hub-slot-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1676,9 +1673,7 @@ select {
   min-width: 0;
 }
 
-.hub-visit-row > button,
-.ephyra-side-controls button,
-.side-order-actions button {
+.hub-visit-row > button {
   min-height: 32px;
   padding: 5px 8px;
   border: 1px solid #444550;
@@ -1699,35 +1694,82 @@ select {
   border-top: 1px solid #353640;
 }
 
-.ephyra-side-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.ephyra-side-grid-scroll {
+  overflow-x: auto;
 }
 
-.ephyra-side-card {
-  min-width: 0;
+.ephyra-side-grid {
+  width: 100%;
+  min-width: 590px;
+  border-collapse: separate;
+  border-spacing: 0 7px;
+}
+
+.ephyra-side-grid thead th {
+  padding: 0 10px 3px;
+  color: #aaa7af;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.ephyra-side-grid tbody th,
+.ephyra-side-grid tbody td {
   padding: 10px;
-  border: 1px solid #373842;
-  border-radius: 9px;
+  border-top: 1px solid #373842;
+  border-bottom: 1px solid #373842;
+  vertical-align: top;
   background: rgb(255 255 255 / 2%);
 }
 
-.ephyra-side-card[data-generated='false'] .room-state-with-marker {
+.ephyra-side-grid tbody th {
+  width: 46%;
+  border-left: 1px solid #373842;
+  border-radius: 9px 0 0 9px;
+  text-align: left;
+}
+
+.ephyra-side-grid tbody td:last-child {
+  border-right: 1px solid #373842;
+  border-radius: 0 9px 9px 0;
+}
+
+.ephyra-side-grid-row[data-generated='false'] .ephyra-side-reward {
   opacity: 0.62;
 }
 
-.ephyra-side-controls {
-  align-items: end;
+.ephyra-side-room-heading {
+  display: grid;
+  gap: 3px;
 }
 
-.ephyra-side-controls .field-control {
-  flex: 1;
+.ephyra-side-room-heading > .card-kicker {
+  margin: 0;
 }
 
-.side-order-actions {
-  justify-content: flex-end;
-  margin-top: 7px;
+.ephyra-side-reward {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(68 69 80 / 65%);
+}
+
+.ephyra-side-grid .biome-candidate-select > .field-label-with-marker,
+.ephyra-side-entry-order > .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ephyra-side-grid .field-control {
+  min-width: 120px;
 }
 
 .purchase-control {
@@ -1913,8 +1955,7 @@ select {
   .fields-batch-editor,
   .fields-batch-summary,
   .reward-wheel-settings,
-  .hub-slot-grid,
-  .ephyra-side-list {
+  .hub-slot-grid {
     grid-template-columns: 1fr;
   }
 

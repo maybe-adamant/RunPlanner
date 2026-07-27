@@ -366,11 +366,8 @@ export function workspaceInteractionKey(owner: SemanticAddress): string {
   return semanticAddressKey(owner);
 }
 
-export function workspaceSideRoomEntryOrderKey(
-  owner: LocalChildGroupAddress,
-  enteredSlotKeys: readonly string[],
-): string {
-  return `${semanticAddressKey(owner)}:order:${JSON.stringify(enteredSlotKeys)}`;
+export function workspaceSideRoomEntryOrderKey(owner: LocalChildAddress): string {
+  return `${semanticAddressKey(owner)}:entry-order`;
 }
 
 export function requireWorkspaceInteraction<T>(
@@ -460,11 +457,22 @@ export interface WorkspaceShopOfferDescriptor {
   readonly rewardControl: WorkspaceExplicitRewardControl;
 }
 
-/** One projected command-shaped side-room entry action for an Ephyra parent. */
-export interface WorkspaceEphyraSideRoomEntryAction {
-  readonly interactionKey: string;
-  readonly kind: 'enter' | 'remove' | 'moveEarlier' | 'moveLater';
+/** One complete, candidate-backed entry-order proposal for an Ephyra side room. */
+export interface WorkspaceEphyraSideRoomEntryOption {
+  readonly key: string;
+  readonly label: string;
+  readonly position: number | null;
   readonly proposedEnteredSlotKeys: readonly string[];
+}
+
+/**
+ * A row-owned entry-order control. Every option carries the complete semantic
+ * sequence to submit, so React never repairs, splices, or ranks side rooms.
+ */
+export interface WorkspaceEphyraSideRoomEntryOrderControl {
+  readonly interactionKey: string;
+  readonly options: readonly WorkspaceEphyraSideRoomEntryOption[];
+  readonly selectedKey: string;
 }
 
 /** A declaration-ordered Ephyra side room owned by its visited parent occurrence. */
@@ -472,7 +480,7 @@ export interface WorkspaceEphyraSideRoomDescriptor {
   readonly address: LocalChildAddress;
   readonly entered: boolean;
   readonly enteredOrdinal: number | null;
-  readonly entryActions: readonly WorkspaceEphyraSideRoomEntryAction[];
+  readonly entryOrder: WorkspaceEphyraSideRoomEntryOrderControl;
   readonly generation: SideRoomGeneration;
   readonly key: string;
   readonly label: string;
@@ -1482,43 +1490,56 @@ function requireProjectedRewardControl<TKind extends WorkspaceRewardControl['kin
   return control as Extract<WorkspaceRewardControl, { readonly kind: TKind }>;
 }
 
-function ephyraSideRoomEntryActions(
-  group: LocalChildGroupAddress,
+function ordinalLabel(position: number): string {
+  const remainder = position % 100;
+  if (remainder >= 11 && remainder <= 13) return `${position}th`;
+  switch (position % 10) {
+    case 1:
+      return `${position}st`;
+    case 2:
+      return `${position}nd`;
+    case 3:
+      return `${position}rd`;
+    default:
+      return `${position}th`;
+  }
+}
+
+function ephyraSideRoomEntryOrderControl(
+  address: LocalChildAddress,
   enteredSlotKeys: readonly string[],
   slotKey: string,
-): readonly WorkspaceEphyraSideRoomEntryAction[] {
+): WorkspaceEphyraSideRoomEntryOrderControl {
   const index = enteredSlotKeys.indexOf(slotKey);
-  const action = (
-    kind: WorkspaceEphyraSideRoomEntryAction['kind'],
-    proposedEnteredSlotKeys: readonly string[],
-  ): WorkspaceEphyraSideRoomEntryAction =>
+  const withoutSlot = Object.freeze(enteredSlotKeys.filter((candidate) => candidate !== slotKey));
+  const options: WorkspaceEphyraSideRoomEntryOption[] = [
     Object.freeze({
-      interactionKey: workspaceSideRoomEntryOrderKey(group, proposedEnteredSlotKeys),
-      kind,
-      proposedEnteredSlotKeys: Object.freeze([...proposedEnteredSlotKeys]),
-    });
-  if (index < 0) {
-    return Object.freeze([action('enter', [...enteredSlotKeys, slotKey])]);
-  }
-  const actions: WorkspaceEphyraSideRoomEntryAction[] = [
-    action(
-      'remove',
-      enteredSlotKeys.filter((candidate) => candidate !== slotKey),
-    ),
+      key: 'notEntered',
+      label: 'Not entered',
+      position: null,
+      proposedEnteredSlotKeys: withoutSlot,
+    }),
   ];
-  if (index > 0) {
-    const earlier = [...enteredSlotKeys];
-    earlier[index - 1] = earlier[index]!;
-    earlier[index] = enteredSlotKeys[index - 1]!;
-    actions.push(action('moveEarlier', earlier));
+  for (let insertionIndex = 0; insertionIndex <= withoutSlot.length; insertionIndex += 1) {
+    const position = insertionIndex + 1;
+    options.push(
+      Object.freeze({
+        key: `position:${position}`,
+        label: ordinalLabel(position),
+        position,
+        proposedEnteredSlotKeys: Object.freeze([
+          ...withoutSlot.slice(0, insertionIndex),
+          slotKey,
+          ...withoutSlot.slice(insertionIndex),
+        ]),
+      }),
+    );
   }
-  if (index < enteredSlotKeys.length - 1) {
-    const later = [...enteredSlotKeys];
-    later[index + 1] = later[index]!;
-    later[index] = enteredSlotKeys[index + 1]!;
-    actions.push(action('moveLater', later));
-  }
-  return Object.freeze(actions);
+  return Object.freeze({
+    interactionKey: workspaceSideRoomEntryOrderKey(address),
+    options: Object.freeze(options),
+    selectedKey: index < 0 ? 'notEntered' : `position:${index + 1}`,
+  });
 }
 
 function roomLocalForOccurrence(
@@ -1607,7 +1628,7 @@ function roomLocalForOccurrence(
           address,
           entered: side.enteredOrdinal !== null,
           enteredOrdinal: side.enteredOrdinal,
-          entryActions: ephyraSideRoomEntryActions(groupAddress, enteredSlotKeys, slot.slotKey),
+          entryOrder: ephyraSideRoomEntryOrderControl(address, enteredSlotKeys, slot.slotKey),
           generation: side.generation,
           key: slot.slotKey,
           label: sideRoom.label,
@@ -3003,28 +3024,6 @@ function storeLabel(storeKey: string): string {
       : storeKey;
 }
 
-function sideRoomOrderProposals(
-  enteredSlotKeys: readonly string[],
-  allSlotKeys: readonly string[],
-): readonly (readonly string[])[] {
-  const values = new Map<string, readonly string[]>();
-  const add = (value: readonly string[]) =>
-    values.set(JSON.stringify(value), Object.freeze([...value]));
-  add(enteredSlotKeys);
-  for (const slotKey of allSlotKeys) {
-    const index = enteredSlotKeys.indexOf(slotKey);
-    if (index < 0) add([...enteredSlotKeys, slotKey]);
-    else add(enteredSlotKeys.filter((entry) => entry !== slotKey));
-  }
-  for (let index = 1; index < enteredSlotKeys.length; index += 1) {
-    const swapped = [...enteredSlotKeys];
-    swapped[index - 1] = enteredSlotKeys[index]!;
-    swapped[index] = enteredSlotKeys[index - 1]!;
-    add(swapped);
-  }
-  return Object.freeze([...values.values()]);
-}
-
 function createInteractionCatalog(
   catalog: Catalog,
   project: ProjectDocument,
@@ -3714,20 +3713,30 @@ function createInteractionCatalog(
                   ),
               ),
             );
-          }
-          for (const proposal of sideRoomOrderProposals(
-            entered,
-            group.slots.map((slot) => slot.slotKey),
-          )) {
-            const key = workspaceSideRoomEntryOrderKey(groupAddress, proposal);
+            const entryOrder = ephyraSideRoomEntryOrderControl(address, entered, slot.slotKey);
+            const proposals = Object.freeze(
+              entryOrder.options.map((option) => option.proposedEnteredSlotKeys),
+            );
+            const selected = entryOrder.options.find(
+              (option) => option.key === entryOrder.selectedKey,
+            );
+            if (selected === undefined) {
+              throw new StructuredWorkspaceProjectionContractError(
+                `${semanticAddressKey(address)} has no selected side-room entry position`,
+              );
+            }
             sideRoomEntryOrders.set(
-              key,
+              entryOrder.interactionKey,
               candidateInteraction(
                 groupAddress,
-                Object.freeze([Object.freeze({ label: 'Apply', value: proposal })]),
-                proposal,
-                () => candidates.sideRoomEntryOrders(groupAddress, Object.freeze([proposal])),
-                key,
+                Object.freeze(
+                  entryOrder.options.map((option) =>
+                    Object.freeze({ label: option.label, value: option.proposedEnteredSlotKeys }),
+                  ),
+                ),
+                selected.proposedEnteredSlotKeys,
+                () => candidates.sideRoomEntryOrders(groupAddress, proposals),
+                entryOrder.interactionKey,
               ),
             );
           }
