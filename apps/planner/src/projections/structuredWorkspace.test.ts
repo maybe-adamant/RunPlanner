@@ -152,6 +152,51 @@ describe('unified structured workspace projection', () => {
     expect(kinds(biome(surface, 'Q'))).toContain('takeoverBatch');
   });
 
+  it('publishes generic topology removals with engine-owned destructive scope', () => {
+    const project = createRepresentativeNOPQProject();
+    const projected = workspace(project);
+    const nPlan = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (nPlan?.topology === null || nPlan?.topology === undefined) {
+      throw new Error('complete N fixture lost authored topology');
+    }
+    const clear = projected.interactions.topologyRemovals.get(semanticAddressKey(nBiome));
+    const linked = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    const removeLinked = projected.interactions.topologyRemovals.get(semanticAddressKey(linked));
+
+    expect(clear).toMatchObject({
+      action: 'clearTopology',
+      command: { kind: 'ClearTopology', biome: nBiome },
+      owner: nBiome,
+      impact: {
+        removedOccurrenceIds: nPlan.topology.occurrences.map((room) => room.occurrenceId),
+        removedDecisionOwners: expect.arrayContaining([
+          createExitDecisionAddress(nBiome, {
+            kind: 'hubDecision',
+            decisionKey: 'hub',
+          }),
+        ]),
+        removedHubDecisionKeys: ['hub'],
+      },
+    });
+    expect(removeLinked).toMatchObject({
+      action: 'removeExitDecision',
+      command: { kind: 'RemoveExitDecision', decision: linked },
+      owner: linked,
+      impact: {
+        removedHubDecisionKeys: ['hub'],
+        removedOccurrenceIds: expect.arrayContaining([
+          nOccurrenceIds.preHub,
+          nOccurrenceIds.preboss,
+        ]),
+      },
+    });
+  });
+
   it('keeps declaration and canonical decision order rather than array-position topology rules', () => {
     const underworld = workspace(createGoldenFGHIProject(catalog));
     const surface = workspace(createRepresentativeNOPQProject());
@@ -187,7 +232,7 @@ describe('unified structured workspace projection', () => {
     ]);
   });
 
-  it('freezes each non-Hub projected rail in game-domain order', () => {
+  it('freezes each ordinary-decision rail in game-domain order', () => {
     const underworld = workspace(createGoldenFGHIProject(catalog));
     const surface = workspace(createRepresentativeNOPQProject());
     const expected = {
@@ -450,6 +495,101 @@ describe('unified structured workspace projection', () => {
     expect(hub.visits.map((visit) => visit.marker.address.kind)).toEqual(
       hub.visits.map(() => 'hubVisit'),
     );
+    expect(hub.openSlotCount).toEqual({ current: 9, min: 9, max: 10 });
+    expect(hub.visits).toHaveLength(6);
+    expect(hub.visits.map((visit) => visit.authoring)).toEqual([
+      'authored',
+      'authored',
+      'authored',
+      'authored',
+      'authored',
+      'authored',
+    ]);
+    const combat02 = hub.slots.find((slot) => slot.hubSlotKey === 'combat02');
+    if (combat02?.room?.roomLocal.kind !== 'ephyra') {
+      throw new Error('N Combat 02 side-room workbench is missing');
+    }
+    expect(combat02).toMatchObject({
+      label: 'Combat 02',
+      roomKind: 'Combat',
+      visited: true,
+    });
+    expect(combat02.room.roomLocal.sideRooms).toMatchObject({
+      enteredSlotKeys: ['sideDoor1'],
+      slots: [
+        { key: 'sideDoor1', physicalDoorId: 558353, entered: true },
+        { key: 'sideDoor2', physicalDoorId: 558352, entered: false },
+      ],
+    });
+    expect(
+      projected.nodes.find(
+        (node) =>
+          node.kind === 'occurrenceWorkbench' &&
+          node.room.occurrenceId === combat02.room?.occurrenceId,
+      ),
+    ).toMatchObject({ railVisibility: 'inspectorOnly' });
+  });
+
+  it('keeps the complete Hub board outline visible before N has authored its fixed start', () => {
+    const project = createProjectDocument(catalog, {
+      projectId: 'n-hub-outline',
+      name: 'N Hub outline',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    const projected = biome(workspace(project), 'N');
+    const hub = projected.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    if (hub === undefined) throw new Error('N Hub outline was not projected');
+
+    expect(hub.slots).toHaveLength(26);
+    expect(hub.slots.every((slot) => !slot.open && !slot.canOpen && !slot.canClose)).toBe(true);
+    expect(hub.visits).toHaveLength(6);
+    expect(hub.visits.every((visit) => visit.authoring === 'locked')).toBe(true);
+  });
+
+  it('places N’s Hub outline after the authored entry frontier that reaches it', () => {
+    const biomeAddress = createBiomeAddress('Surface', 'N');
+    const empty = createProjectDocument(catalog, {
+      projectId: 'n-entry-before-hub-outline',
+      name: 'N entry before Hub outline',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    expect(railShape(biome(workspace(empty), 'N'))).toEqual([
+      'frontier:start',
+      'hubDecision',
+      'completion:boss:N_Boss01',
+      'completion:postboss:N_PostBoss01',
+    ]);
+
+    const withOpening = applyProjectCommand(empty, catalog, {
+      kind: 'CreateStart',
+      biome: biomeAddress,
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    expect(railShape(biome(workspace(withOpening), 'N'))).toEqual([
+      'room:N_Opening01',
+      'frontier:exitDecision',
+      'hubDecision',
+      'completion:boss:N_Boss01',
+      'completion:postboss:N_PostBoss01',
+    ]);
+
+    const withPreHub = applyProjectCommand(withOpening, catalog, {
+      kind: 'CreateLinkedExit',
+      decision: createExitDecisionAddress(biomeAddress, {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceIds.opening,
+      }),
+      occurrenceId: nOccurrenceIds.preHub,
+    });
+    expect(railShape(biome(workspace(withPreHub), 'N')).slice(0, 4)).toEqual([
+      'room:N_Opening01',
+      'linked:N_PreHub01',
+      'room:N_PreHub01',
+      'hubDecision',
+    ]);
   });
 
   it('projects the completed-Hub handoff as one source-owned takeover action before N Preboss exists', () => {
@@ -495,6 +635,73 @@ describe('unified structured workspace projection', () => {
         room: { entered: true, gameName: 'N_PreBoss01', roomLocal: { kind: 'shop' } },
       },
     ]);
+  });
+
+  it('keeps N’s invalid board and its locally blocked retained visit suffix visible', () => {
+    const invalidBoard = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const complete = biome(workspace(invalidBoard), 'N');
+    const completeHub = complete.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    if (completeHub === undefined) throw new Error('invalid N Hub board was not projected');
+
+    const invalidCombat = completeHub.slots.find((slot) => slot.hubSlotKey === 'combat10');
+    expect(complete.status).toBe('invalid');
+    expect(completeHub.slots).toHaveLength(26);
+    expect(completeHub.visits.map((visit) => visit.authoring)).toEqual([
+      'authored',
+      'authored',
+      'authored',
+      'authored',
+      'authored',
+      'authored',
+    ]);
+    expect(invalidCombat?.room?.rewardControls[0]?.marker.findingCount).toBe(1);
+
+    const retained = applyProjectCommand(invalidBoard, catalog, {
+      kind: 'RemoveHubVisitsFrom',
+      visit: createHubVisitAddress(nBiome, 'hub', 4),
+    });
+    const retainedWorkspace = workspace(retained);
+    const n = biome(retainedWorkspace, 'N');
+    const hub = n.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    if (hub === undefined) throw new Error('retained N Hub board was not projected');
+    const nextVisit = createHubVisitAddress(nBiome, 'hub', 4);
+
+    expect(n).toMatchObject({
+      frontier: { kind: 'hubVisit', owner: nextVisit },
+      source: 'progressive',
+      status: 'incomplete',
+    });
+    expect(hub.slots).toHaveLength(26);
+    expect(hub.openSlotCount).toEqual({ current: 9, min: 9, max: 10 });
+    expect(hub.visits.map((visit) => visit.authoring)).toEqual([
+      'authored',
+      'authored',
+      'authored',
+      'next',
+      'locked',
+      'locked',
+    ]);
+    expect(hub.visits.slice(0, 4).map((visit) => visit.marker.assessment)).toEqual([
+      'unassessed',
+      'unassessed',
+      'unassessed',
+      'assessed',
+    ]);
+    expect(
+      retainedWorkspace.interactions.hubVisits.get(semanticAddressKey(nextVisit)),
+    ).toMatchObject({
+      owner: nextVisit,
+    });
   });
 
   it('exposes start, ordinary, linked, and Hub creation frontiers without React reconstructing topology', () => {
@@ -880,8 +1087,8 @@ describe('unified structured workspace projection', () => {
       const interaction = projected.interactions.takeoverBatches.get(
         semanticAddressKey(frontier.owner),
       );
-      if (interaction?.presentation !== 'directTerminal') {
-        throw new Error(`${biomeAddress.biomeKey} direct terminal interaction is missing`);
+      if (interaction?.presentation !== 'directPreboss') {
+        throw new Error(`${biomeAddress.biomeKey} direct Preboss interaction is missing`);
       }
       expect(interaction.action).toBe('create');
       expect(interaction.label).toBe(catalog.rooms.byKey[gameName]!.label);
@@ -889,7 +1096,7 @@ describe('unified structured workspace projection', () => {
       expect(projected.interactions.structural.has(semanticAddressKey(frontier.owner))).toBe(false);
       const result = interaction.execute();
       if (result.kind !== 'command') {
-        throw new Error(`${biomeAddress.biomeKey} direct terminal is unexpectedly unavailable`);
+        throw new Error(`${biomeAddress.biomeKey} direct Preboss is unexpectedly unavailable`);
       }
       expect(result.command).toMatchObject({
         kind: 'CreateTakeoverBatch',
@@ -920,7 +1127,7 @@ describe('unified structured workspace projection', () => {
     );
   });
 
-  it('does not misclassify forked, mixed, linked, or Hub progression as a direct terminal', () => {
+  it('does not misclassify forked, mixed, linked, or Hub progression as a direct Preboss', () => {
     const underworld = workspace(createGoldenFGHIProject(catalog));
     const surface = workspace(createRepresentativeNOPQProject());
     const cases = [
@@ -936,9 +1143,9 @@ describe('unified structured workspace projection', () => {
       const interactions = [...projected.interactions.takeoverBatches.values()].filter(
         (interaction) => interaction.owner.biomeKey === biomeKey,
       );
-      expect(
-        interactions.some((interaction) => interaction.presentation === 'directTerminal'),
-      ).toBe(false);
+      expect(interactions.some((interaction) => interaction.presentation === 'directPreboss')).toBe(
+        false,
+      );
     }
   });
 
@@ -1489,7 +1696,7 @@ describe('unified structured workspace projection', () => {
     expect(interaction?.impact?.removedOccurrenceIds).toContain(goldenFOccurrenceId(2, 1));
   });
 
-  it('preserves incomplete and upstream-blocked workspace states with an explicit start frontier', () => {
+  it('preserves incomplete and route-prefix-blocked workspace states with an explicit start frontier', () => {
     const initial = createProjectDocument(catalog, {
       projectId: 'prefix',
       name: 'Prefix',
@@ -1531,6 +1738,26 @@ describe('unified structured workspace projection', () => {
       action: 'createBatch',
       owner: decision,
     });
+
+    const surfaceInitial = createProjectDocument(catalog, {
+      projectId: 'surface-prefix',
+      name: 'Surface prefix',
+      configuredBiomeCounts: { Surface: 4 },
+    });
+    const surface = workspace(surfaceInitial);
+    expect(biome(surface, 'N').status).toBe('incomplete');
+    for (const biomeKey of ['O', 'P', 'Q'] as const) {
+      const blockedSurfaceBiome = biome(surface, biomeKey);
+      const owner = createBiomeAddress('Surface', biomeKey);
+      expect(blockedSurfaceBiome.status).toBe('blocked');
+      expect(blockedSurfaceBiome.frontier).toMatchObject({ kind: 'start', owner });
+      if (blockedSurfaceBiome.frontier?.kind !== 'start') {
+        throw new Error(`${biomeKey} start frontier is missing`);
+      }
+      expect(
+        surface.interactions.starts.get(blockedSurfaceBiome.frontier.interactionKey),
+      ).toMatchObject({ owner });
+    }
   });
 
   it('distinguishes a materialized partial prefix from complete invalid and retained structures', () => {

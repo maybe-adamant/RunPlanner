@@ -13,10 +13,11 @@ validation, and semantic-command authorities.
 
 This document owns contextual selector behavior. `EDITOR_MODEL.md` remains the
 broader authority for editor ownership, topology projection, findings,
-persistence, and undo/redo. `STRUCTURED_EDITOR_WORKSPACE.md` owns the route rail,
-layout-specific biome structure, inspector, and final placement of these
-controls. `CANDIDATE_EVALUATION_MODEL.md` owns candidate-session preparation,
-domain evaluation, and replay scope below this presentation policy.
+persistence, and undo/redo. `STRUCTURED_EDITOR_WORKSPACE.md` owns the route
+rail, shared biome structure, ordinary and Hub workbenches, inspector, and
+final placement of these controls. `CANDIDATE_EVALUATION_MODEL.md` owns
+candidate-session preparation, domain evaluation, and replay scope below this
+presentation policy.
 
 ## Scope
 
@@ -37,9 +38,9 @@ a seventh UI feature or a second candidate simulator.
 The cross-biome frontier audit is now recorded in
 `../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`. Contextual selection lands before
 the final frontier and presentation closure because frontier guidance consumes
-the same progressive coverage and candidate evidence. The current
-`Add Next Decision`, layout-specific `Go to Preboss`, I conditional-terminal,
-N fixed-Hub, and O/Q direct-terminal behaviors do not collapse into one action.
+the same progressive coverage and candidate evidence. Ordinary-decision,
+takeover Preboss, I mixed-batch, completed-Hub, and direct Preboss behaviors do
+not collapse into one action.
 
 The broad visual treatment of route findings, enrichment color, graph views,
 and final application styling are also outside this first set. Existing
@@ -105,8 +106,8 @@ visibility from raw candidates.
 
 The central project evaluator derives the maximum truthful prefix of the
 active biome from the current authored project. The same result becomes the
-canonical biome evaluation when authorship reaches the terminal and completion
-sequence. Contextual selectors consume addressed pre-decision views from that
+canonical biome evaluation when authorship reaches the required Preboss
+selection and completion sequence. Contextual selectors consume addressed pre-decision views from that
 single result.
 
 Downstream incompleteness does not block an already-covered selector. An F
@@ -130,7 +131,7 @@ hypothetical future completion.
 
 Within the active biome, a selector is assessed when evaluation coverage has
 reached its exact semantic pre-decision point. Missing unrelated downstream
-decisions or terminal structure does not make that context unavailable. A
+decisions or Preboss-handoff structure does not make that context unavailable. A
 missing or unsupported upstream state still does.
 
 The UI may display an addressed coverage point as `evaluated through Decision
@@ -499,8 +500,8 @@ The common component must support:
 ## Recommended Delivery Order
 
 1. preserve the completed cross-biome audit and decision record;
-2. progressive biome evaluation and validated-route-prefix gating for Linear
-   and Hub coverage shapes;
+2. progressive biome evaluation and validated-route-prefix gating for ordinary
+   decision and Hub coverage shapes;
 3. candidate evidence and presentation-contract hardening;
 4. shared contextual option resolver and reason-copy fixtures;
 5. one application-projected contextual-picker model and its first grouped room
@@ -509,9 +510,10 @@ The common component must support:
 7. peer-, source-, Devotion-pair, and counted-bag-aware reward payload domains;
 8. compact compound reward picker;
 9. coverage-derived feedback and blocked presentation;
-10. layout-specific structured-workspace projection;
-11. Linear spine and focused-inspector presentation;
-12. Hub board, visit-timeline, and focused-inspector presentation;
+10. shared `WorkspaceBiome` structured-workspace projection;
+11. ordinary decision rail and focused-inspector presentation;
+12. `HubDecisionWorkbench`, board, visit timeline, and focused-inspector
+    presentation;
 13. frontier, dialogs, repair, accessibility, performance, and responsiveness
     closure across F/G/H/I/N/O/P/Q.
 

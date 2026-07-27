@@ -310,23 +310,23 @@ One route evaluation publishes explicit `completeValidPrefix`, `active`, and
 `blockedSuffix` processing regions. Only a complete and valid biome enters the
 prefix and seeds the next biome. Every biome result separately reports
 authoring state and evaluation coverage. Incomplete active biomes publish their
-semantic authoring frontier and no canonical snapshot. Linear biomes also
-publish one immutable materialized prefix with its partial history,
+semantic authoring frontier and no canonical snapshot. Biomes with generated
+progression publish one immutable materialized prefix with its partial history,
 room-generation proof, reward witnesses, counters, and findings. The prefix is
 folded by the same lifecycle, reward, and generation authorities as complete
-simulation and is clamped at the first unsupported state. Hub biomes publish
-the same class of partial products through their fixed entry, one atomic open
-board, and ordered visits with parent-local side state. Hub coverage never
+simulation and is clamped at the first unsupported state. The Hub progression
+publishes the same class of partial products through its fixed entry, one atomic
+open board, and ordered visits with parent-local side state. Hub coverage never
 claims a prefix of rendered board slots: the board is either not generated or
-materialized and evaluated in full. Neither layout introduces a second
-candidate-only evaluation path.
+materialized and evaluated in full. Neither progression variant introduces a
+second candidate-only evaluation path.
 
 Complete biome results strengthen that same progressive result with the
-terminal/completion sequence, canonical snapshot, final biome history,
-selected-plan validity, and downstream seed eligibility. Incomplete biome
-results cannot carry those complete-biome products. The UI must never combine
-prefix or final history from one authored snapshot with findings or candidate
-decoration from another.
+selected Preboss and derived completion sequence, canonical snapshot, final
+biome history, selected-plan validity, and downstream seed eligibility.
+Incomplete biome results cannot carry those complete-biome products. The UI
+must never combine prefix or final history from one authored snapshot with
+findings or candidate decoration from another.
 
 `empty` identifies a project with no configured biome prefix and no invented
 finding. Ordinary incomplete and invalid plans remain first-class editor states.

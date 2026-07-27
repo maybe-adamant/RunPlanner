@@ -501,6 +501,32 @@ describe('authored-project commands and topology', () => {
     ).toMatchObject({ kind: 'completedHubHandoff', room: { gameName: 'N_PreBoss01' } });
   });
 
+  it('removes the completed-Hub Preboss handoff when a visit truncates the Hub', () => {
+    const project = applyProjectCommand(completeNProject(), catalog, {
+      kind: 'RemoveHubVisitsFrom',
+      visit: createHubVisitAddress(nBiome, 'hub', 6),
+    });
+    const topology = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    if (topology === null || topology === undefined) throw new Error('N topology is required');
+
+    expect(
+      topology.decisions.some(
+        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+      ),
+    ).toBe(false);
+    expect(topology.occurrences.some((occurrence) => occurrence.gameName === 'N_PreBoss01')).toBe(
+      false,
+    );
+    expect(topology.decisions.find((decision) => decision.kind === 'hub')).toMatchObject({
+      visitOrder: ['combat01', 'combat02', 'combat03', 'combat04', 'combat05'],
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+  });
+
   it('recognizes O and Q direct Shop-only Prebosses from their selected bounded spine', () => {
     const oOwner = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
@@ -524,7 +550,7 @@ describe('authored-project commands and topology', () => {
     });
     expect(
       fixedPrebossTransitionForSource(catalog, oLayout, oTopology, oOwner.source),
-    ).toMatchObject({ kind: 'shopOnlyTerminal', room: { gameName: 'O_PreBoss01' } });
+    ).toMatchObject({ kind: 'shopOnlyDirectPreboss', room: { gameName: 'O_PreBoss01' } });
     expect(
       directShopOnlyPrebossForSource(catalog, oLayout, oTopology, {
         kind: 'occurrence',
@@ -568,7 +594,7 @@ describe('authored-project commands and topology', () => {
     });
     expect(
       fixedPrebossTransitionForSource(catalog, qLayout, qTopology, qOwner.source),
-    ).toMatchObject({ kind: 'shopOnlyTerminal', room: { gameName: 'Q_PreBoss01' } });
+    ).toMatchObject({ kind: 'shopOnlyDirectPreboss', room: { gameName: 'Q_PreBoss01' } });
     expect(
       directShopOnlyPrebossForSource(catalog, qLayout, qTopology, {
         kind: 'occurrence',
@@ -989,6 +1015,22 @@ describe('authored-project commands and topology', () => {
       occurrences: [{ occurrenceId: 'n-opening' }],
       decisions: [],
     });
+  });
+
+  it('clears every persisted N topology member through the shared clear impact', () => {
+    const project = applyProjectCommand(completeNProject(), catalog, {
+      kind: 'ClearTopology',
+      biome: nBiome,
+    });
+
+    expect(
+      project.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology,
+    ).toBeNull();
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
   });
 
   it('addresses selection by semantic decision source and rejects absent target choices', () => {

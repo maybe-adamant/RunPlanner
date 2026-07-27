@@ -1,6 +1,11 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import { createInitialBatchState } from '../batchState';
-import { describeTopologyRemovalImpact, topologyRemovalSourceKeys } from '../topologyImpact';
+import {
+  applyTopologyRemovalImpact,
+  describeClearTopologyImpact,
+  describeExitDecisionRemovalImpact,
+  describeTopologyRemovalImpact,
+} from '../topologyImpact';
 import type { ExitDecisionSourceAddress } from '../addresses';
 import type {
   BatchRewardStoreState,
@@ -150,26 +155,24 @@ function removeDownstreamDecisions(
   topology: BiomeTopology,
   sourceOccurrenceIds: ReadonlySet<OccurrenceId>,
 ): BiomeTopology {
-  const impact = describeTopologyRemovalImpact(topology, sourceOccurrenceIds);
-  const removedOccurrences = new Set(impact.removedOccurrenceIds);
-  const removedSources = topologyRemovalSourceKeys(impact.removedExitDecisionSources);
-  return Object.freeze({
-    ...topology,
-    occurrences: Object.freeze(
-      topology.occurrences.filter((occurrence) => !removedOccurrences.has(occurrence.occurrenceId)),
-    ),
-    decisions: Object.freeze(
-      topology.decisions.filter(
-        (decision) =>
-          decision.kind !== 'exit' ||
-          !removedSources.has(
-            decision.source.kind === 'occurrence'
-              ? `occurrence:${decision.source.occurrenceId}`
-              : `hubDecision:${decision.source.decisionKey}`,
-          ),
-      ),
-    ),
+  return applyTopologyRemovalImpact(
+    topology,
+    describeTopologyRemovalImpact(topology, sourceOccurrenceIds),
+  );
+}
+
+/**
+ * A completed Hub owns one fixed width-one Preboss handoff. Reducing the
+ * visit sequence below its declared completion requirement must remove that
+ * handoff and its target subtree in the same semantic edit; otherwise the
+ * persisted topology would retain an invalid Hub-source exit.
+ */
+function removeCompletedHubHandoff(topology: BiomeTopology, hubKey: string): BiomeTopology {
+  const impact = describeExitDecisionRemovalImpact(topology, {
+    kind: 'hubDecision',
+    decisionKey: hubKey,
   });
+  return impact === undefined ? topology : applyTopologyRemovalImpact(topology, impact);
 }
 
 function defaultOccurrence(
@@ -856,70 +859,27 @@ function removeExitDecision(
   command: Extract<ProjectCommand, { readonly kind: 'RemoveExitDecision' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  const root = findExitDecision(topology, command.decision.source);
-  if (root === undefined) return document;
-  const removedOccurrences = new Set<OccurrenceId>();
-  const removeDecision = (decision: ExitDecision): void => {
-    if (decision.normal.kind === 'linked') {
-      removedOccurrences.add(decision.normal.occurrenceId);
-    } else {
-      decision.normal.targets.forEach((target) => removedOccurrences.add(target.occurrenceId));
-    }
-  };
-  removeDecision(root);
-  const collectDescendants = () => {
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const decision of topology.decisions) {
-        if (
-          decision.kind === 'exit' &&
-          decision.source.kind === 'occurrence' &&
-          removedOccurrences.has(decision.source.occurrenceId)
-        ) {
-          const before = removedOccurrences.size;
-          removeDecision(decision);
-          changed ||= removedOccurrences.size !== before;
-        }
-      }
-    }
-  };
-  collectDescendants();
-  const removesHub =
-    root.normal.kind === 'linked' && topology.decisions.some((decision) => decision.kind === 'hub');
-  if (removesHub) {
-    const hub = topology.decisions.find(
-      (decision): decision is HubDecision => decision.kind === 'hub',
-    );
-    hub?.openTargets.forEach((target) => removedOccurrences.add(target.occurrenceId));
-    const completedExit = topology.decisions.find(
-      (decision): decision is ExitDecision =>
-        decision.kind === 'exit' && decision.source.kind === 'hubDecision',
-    );
-    if (completedExit !== undefined) removeDecision(completedExit);
-    collectDescendants();
-  }
-  const decisions = topology.decisions.filter((decision) => {
-    if (decision.kind === 'hub') return !removesHub;
-    if (sourceEquals(decision.source, command.decision.source)) return false;
-    if (removesHub && decision.source.kind === 'hubDecision') return false;
-    return (
-      decision.source.kind !== 'occurrence' || !removedOccurrences.has(decision.source.occurrenceId)
-    );
-  });
-  return updateTopology(
-    document,
-    located,
-    Object.freeze({
-      ...topology,
-      occurrences: Object.freeze(
-        topology.occurrences.filter(
-          (occurrence) => !removedOccurrences.has(occurrence.occurrenceId),
-        ),
-      ),
-      decisions: Object.freeze(decisions),
-    }),
+  const impact = describeExitDecisionRemovalImpact(
+    topology,
+    sourceFromAddress(command.decision.source),
   );
+  return impact === undefined
+    ? document
+    : updateTopology(document, located, applyTopologyRemovalImpact(topology, impact));
+}
+
+function clearTopology(
+  document: ProjectDocument,
+  located: LocatedBiome,
+  command: Extract<ProjectCommand, { readonly kind: 'ClearTopology' }>,
+): ProjectDocument {
+  const topology = located.plan.topology;
+  if (topology === null) return document;
+  const cleared = applyTopologyRemovalImpact(topology, describeClearTopologyImpact(topology));
+  if (cleared.occurrences.length !== 0 || cleared.decisions.length !== 0) {
+    failCommand(command, 'ClearTopology impact must remove every persisted topology member');
+  }
+  return withBiome(document, located, { ...located.plan, topology: null });
 }
 
 function reconcileBatchExitCapacity(
@@ -1138,10 +1098,17 @@ function updateHub(
   ) {
     failCommand(command, `Hub completion requires ${descriptor.openCount.min} open slots`);
   }
+  const withoutCompletedHandoff =
+    command.kind === 'RemoveHubVisitsFrom' && visits.length < descriptor.requiredVisits
+      ? removeCompletedHubHandoff(topology, descriptor.hubKey)
+      : topology;
   return updateTopology(
     document,
     located,
-    replaceDecision(topology, Object.freeze({ ...hub, visitOrder: Object.freeze(visits) })),
+    replaceDecision(
+      withoutCompletedHandoff,
+      Object.freeze({ ...hub, visitOrder: Object.freeze(visits) }),
+    ),
   );
 }
 
@@ -1192,9 +1159,7 @@ export function applyUnifiedTopologyCommand(
         ),
       });
     case 'ClearTopology':
-      return located.plan.topology === null
-        ? document
-        : withBiome(document, located, { ...located.plan, topology: null });
+      return clearTopology(document, located, command);
     default: {
       const stateResult = applyOccurrenceStateCommand(document, catalog, located, command);
       return (

@@ -158,19 +158,35 @@ describe('planner history interaction', () => {
     const blockedBanner = screen.getByText(/Oceanus is blocked until Erebus is complete and valid/);
     expect(blockedBanner.getAttribute('role')).toBeNull();
     expect(blockedBanner.closest('.editor-panel')?.getAttribute('aria-live')).toBe('polite');
-    expect(screen.getByLabelText('Entrance')).toHaveProperty('disabled', false);
+    expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
 
     await user.click(screen.getByRole('button', { name: 'Surface' }));
-    await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
+    await user.selectOptions(screen.getByLabelText('Configured biomes'), '4');
+    // Route composition blocks the complete suffix at the first incomplete
+    // biome. O/P/Q therefore retain their own structural frontiers while
+    // each names N/Ephyra as the shared upstream semantic blocker.
+    for (const [label, predecessor] of [
+      ['Thessaly', 'Ephyra'],
+      ['Olympus', 'Ephyra'],
+      ['Summit', 'Ephyra'],
+    ] as const) {
+      const blockedSurfaceBiome = screen.getByRole('button', { name: label });
+      expect(within(blockedSurfaceBiome).getByTitle('Blocked')).toBeTruthy();
+      await user.click(blockedSurfaceBiome);
+      expect(
+        screen.getByText(
+          new RegExp(`${label} is blocked until ${predecessor} is complete and valid`),
+        ),
+      ).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
+    }
+
     const ephyra = screen.getByRole('button', { name: 'Ephyra' });
     expect(within(ephyra).getByTitle('Incomplete')).toBeTruthy();
 
     await user.click(ephyra);
     expect(screen.getByText(/Ephyra has no evaluated route prefix yet/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Initialize Ephyra' })).toHaveProperty(
-      'disabled',
-      false,
-    );
+    expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
   });
 });
 

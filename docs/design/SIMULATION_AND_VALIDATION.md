@@ -1079,11 +1079,12 @@ Each route simulation records:
 - semantic findings in stable route and phase order;
 - whether the route is eligible for future execution-plan compilation.
 
-The core contains complete F, G, H, I, N, O, P, and Q simulation, with
-function dispatch selected by normalized layout kind. Every biome placed in a
-production route is authorable, simulatable, and editable. Application
-interaction fixtures and direct core conformance fixtures exercise the
-complete F/G/H/I and N/O/P/Q route prefixes.
+The core contains complete F, G, H, I, N, O, P, and Q simulation through one
+common biome evaluator. Its progression-specific work is selected by the
+normalized progression descriptor (`generated` or `hub`), not by a whole-biome
+layout family. Every biome placed in a production route is authorable,
+simulatable, and editable. Application interaction fixtures and direct core
+conformance fixtures exercise the complete F/G/H/I and N/O/P/Q route prefixes.
 An entirely unconfigured project has explicit `empty` status, no findings, and
 is not eligible for execution-plan compilation. Candidate evaluation consumes
 the same prepared context and legality authorities as selected-plan

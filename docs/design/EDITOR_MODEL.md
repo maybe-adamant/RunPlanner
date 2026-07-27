@@ -12,7 +12,7 @@ The editor is a projection and command surface:
 
 ```text
 authored project + simulation result
-  -> layout-specific presentation projection
+  -> WorkspaceBiome presentation projection
   -> React components
   -> semantic command
   -> replacement authored project
@@ -26,7 +26,7 @@ The batch-level projection follows the locked all-biome project contract.
 F/G/P author an ordinary batch Reward Pool, H authors its Fields outcome, I
 authors one biome-wide Clockwork limit without a base store, O may derive its
 outgoing store from a source wheel, and Q owns no ordinary base store. N
-projects its fixed Hub board rather than a Linear batch. All variants use the
+projects its fixed Hub board rather than an ordinary batch. All variants use the
 same semantic command and finding ownership rules.
 
 ## Application Shell
@@ -37,7 +37,7 @@ the ImGui prototype:
 - one horizontal tab per catalog route, followed by Settings;
 - route-local biome navigation;
 - a route settings panel;
-- one layout-specific biome structure workspace;
+- one shared biome structure workspace;
 - a route status and findings surface;
 - one focused semantic inspector.
 
@@ -54,84 +54,72 @@ catalog. A semantic finding selects its owning route and biome through the same
 generic session action; route- and project-owned findings select the route
 overview or retain the current top-level location respectively.
 
-## Layout Projectors
+## Workspace Projection
 
-Editor layout is selected by normalized biome layout kind:
+The application projects every configured biome into one `WorkspaceBiome`
+envelope. The envelope has an exhaustive node union for starts, linked exits,
+ordinary batches, takeover Preboss batches, mixed batches, the Hub decision,
+occurrence workbenches, and completion. React renders that projection through
+one `BiomeWorkspace`; it does not choose a whole-biome editor by layout type or
+read authored decision arrays to reconstruct topology.
 
-```ts
-interface BiomeEditorProjector<TTopology, TView> {
-  project(input: {
-    catalog: Catalog;
-    topology: TTopology;
-    occurrences: RoomOccurrenceIndex;
-    simulation: BiomeSimulationView;
-  }): TView;
-}
-```
+Ordinary decision nodes project:
 
-`LinearBiome` projects:
+- the start or fixed entry;
+- selected-spine decisions and physical exit targets in declaration-owned
+  order;
+- one selected continuation, unselected generated leaves, and retained
+  unavailable exits;
+- authoring frontiers and declaration-owned ordinary or Preboss batch actions;
+- referenced room-local workbenches;
+- findings, coverage, and candidate interactions attached by semantic address.
 
-- start room;
-- each selected-spine decision;
-- physical exit targets in order;
-- one picked continuation;
-- unpicked dead leaves;
-- unavailable retained exits;
-- active continuation frontier;
-- ordered terminal targets, picked realization, and companions;
-- referenced room-local editors;
-- findings and candidate state attached by semantic address.
+The one Hub decision node projects:
 
-`HubBiome` projects:
-
-- fixed authored entry-room leaves;
-- the nine-or-ten-member open set over catalog-fixed hub slots;
-- one complete target room and incoming reward per open slot;
-- the ordered six-slot pylon visit sequence;
+- fixed Opening and PreHub occurrence workbenches;
+- the 26 declaration-fixed Hub slots, of which nine or ten may be open;
+- one complete target room and incoming reward for every open slot;
+- the ordered six-visit pylon sequence;
 - generated/unavailable and entered-order state for side-room slots under
   visited combat targets;
-- derived parent restores and hub returns;
-- the fixed authored preboss shop and derived completion sequence;
+- derived parent restores and Hub returns;
+- the completed-Hub handoff to the fixed width-one Preboss Shop and derived
+  completion sequence;
 - findings and candidate state attached by semantic address.
 
-The N editor may visually arrange the hub as a map, board, list, or visit
-timeline. None of those projections may expose arbitrary room replacement for
-a fixed hub slot or persist a second door-count value. Open-set membership and
-visit order remain separate controls because every open unvisited slot still
-owns a real offered reward leaf.
+`HubDecisionWorkbench` is the sole N-specific renderer inside
+`BiomeWorkspace`. It may arrange the Hub as a board and visit timeline, but it
+may not expose arbitrary room replacement for a fixed slot or persist a second
+door-count value. Open-set membership and visit order remain separate controls
+because every open, unvisited slot owns a real offered reward leaf.
 
-The implemented active projection uses a fixed-slot list/board and a separate
-six-position visit list. Membership controls create or remove the one authored
-occurrence owned by a fixed slot; visited slots cannot be closed until their
-visit references are replaced or explicitly removed. Candidate work remains
-lazy on control intent so the 25-slot board does not replay every alternative
-during ordinary rendering. This projection is intentionally structural rather
-than polished. N is available from the production Surface navigation when the
-one-biome Surface prefix is configured.
+Membership controls create or remove the one authored occurrence owned by a
+fixed slot; visited slots cannot be closed until their visit references are
+replaced or explicitly removed. Candidate work remains lazy on control intent
+so rendering the 26-slot board does not replay every alternative.
 
 For each active side slot, generation and entry may project as simple toggles;
 an entered slot additionally owns a unique ordinal (`1` when it is the only
-entered sibling).
-Generated and entered totals are derived. The editor must allow every
-permutation, and it must not suggest that reordering entries changes already-
-generated sibling offers. Reordering preserves the final modeled parent-exit
-state while changing the exact history/execution trace.
+entered sibling). Generated and entered totals are derived. The editor must
+allow every permutation, and it must not suggest that reordering entries changes
+already-generated sibling offers. Reordering preserves the final modeled
+parent-exit state while changing the exact history/execution trace.
 
 Projectors consume normalized domain state and never infer topology from
 rendered components.
 
 ## Structured Workspace Presentation
 
-The primary editor presents a route rail, one layout-specific biome-structure
-region, and a focused semantic inspector. This is a structured projection over
-the existing Linear and Hub layout authorities, not a graph canvas or a second
-serialized UI tree.
+The primary editor presents a route rail, one shared biome-structure region, and
+a focused semantic inspector. This is a structured projection over the unified
+workspace envelope, not a graph canvas or a second serialized UI tree.
 
-For Linear biomes, the picked continuation forms the visual trunk and generated
-unpicked targets remain compact inspectable leaves. Visual emphasis does not
-change their game meaning: unpicked rewards still participate in sibling, bag,
-source, and possibility evaluation. For N, the center region remains the fixed
-Hub board plus ordered visit timeline rather than a false Linear spine.
+For ordinary decisions, the picked continuation forms the visual trunk and
+generated unpicked targets remain compact inspectable leaves. Visual emphasis
+does not change their game meaning: unpicked rewards still participate in
+sibling, bag, source, and possibility evaluation. For N, the center region
+remains the fixed Hub board plus ordered visit timeline rather than a false
+ordinary spine.
 
 The structure projection consumes authored topology plus progressive or
 canonical evaluation. An incomplete biome is never described as canonical. Its
@@ -140,19 +128,20 @@ remain visibly distinct.
 
 A configured empty biome may show a read-only declared outline around its live
 frontier. Fixed-count layouts may show exact remaining stages; variable layouts
-show only a truthfully projected terminal horizon or state that length varies.
+show only a truthfully projected completion horizon or state that length varies.
 The UI never derives an expected route length or interprets force rules locally.
 
-`STRUCTURED_EDITOR_WORKSPACE.md` owns the concrete route-rail, Linear, Hub,
-inspector, coverage, empty-outline, dialog, and repair presentation contracts.
+`STRUCTURED_EDITOR_WORKSPACE.md` owns the concrete route-rail,
+ordinary-decision, Hub, inspector, coverage, empty-outline, dialog, and repair
+presentation contracts.
 
 ## Rows Versus Domain Language
 
 Rows, cards, lanes, graph nodes, and columns are valid UI concepts. They do
 not enter authored state, canonical snapshots, history, or findings.
 
-The UI may produce a linear series of decision cards for F and a hub-oriented
-surface for N while both consume the same semantic ownership conventions.
+The UI may produce a decision-card series for F and a Hub-oriented surface for N
+while both consume the same semantic ownership conventions.
 
 Room components use the persisted domain `occurrenceId` as their React key.
 Structural components without a room occurrence use their stable semantic
@@ -197,23 +186,23 @@ with physical exit targets. Radio semantics are appropriate because exactly
 one target continues. A single-exit decision may select its newly specified
 target in the same semantic command group.
 
-F/G/H/P forked terminal sections use the same physical-exit language. They
-render one terminal occurrence per active predecessor exit, with the
-policy-derived Shop or Free Reward editor aligned to that exit. Selecting the
-entered terminal target is single-choice topology; the editor does not add a
-second preboss entry-mode selector. O/Q direct terminals own one automatically
-entered shop occurrence, while N owns a fixed authored terminal outside the
-Linear frontier.
+F/G/H/P takeover Preboss batches use the same normal-exit language. They
+create one Preboss occurrence per eligible physical exit, with the
+declaration-owned Shop or Free Reward role aligned to that exit. Selecting the
+entered Preboss target is ordinary exit-selection topology; the editor does not
+add a second entry-mode selector. O/Q use a declaration-fixed width-one Preboss
+batch, while N exposes its fixed width-one Preboss Shop only through the
+completed-Hub handoff in `HubDecisionWorkbench`.
 
 I keeps its post-goal preboss and ordinary peer in one decision card because
 they are one game batch. `Add Next Decision` is I's only frontier-advance
 action: before Goal completion it derives a Goal on the first exit, and after
 Goal completion it derives `I_PreBoss02` there. A second exit, when present,
 renders an ordinary room leaf. Both targets are directly pickable through the
-same single-choice interaction. Picking the preboss visually closes the biome,
-while picking the peer exposes its downstream decision. I never renders `Go to
-Preboss`; that action is reserved for layouts whose preboss is an independent
-terminal transition.
+same single-choice interaction. Picking the Preboss visually closes the biome,
+while picking the peer exposes its downstream decision. I never renders a
+separate Preboss action because its Preboss is a generated peer in the same
+ordinary decision.
 
 Shop editors follow the shared entry-materialization rule. An unpicked shop
 target renders as a dead leaf without requiring or exposing shop inventory.
@@ -232,27 +221,27 @@ reward remains dormant in authored state. When an upstream edit makes that
 same occurrence NonGoal, the editor exposes the retained reward value; it does
 not install a new default or ask the user to author Goal versus NonGoal.
 
-The active frontier offers layout-policy-admitted structural actions rather
+The active frontier offers declaration-admitted structural actions rather
 than a persistent `Next Step` field:
 
-- Add Next Decision;
-- Go to Preboss, only for layouts with an independent terminal transition;
-- replace terminal outcome with continuing rooms where the layout permits;
+- create the next ordinary decision where progression permits it;
+- create a candidate, takeover, or direct Preboss batch where its declaration
+  permits it;
+- create the fixed completed-Hub handoff only after the sixth authored visit;
 - remove from this decision;
 - clear biome through an explicit destructive action.
 
 The shared frontier presentation and variant-owned action sets are recorded in
 `../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`. React may share the container, but
-it does not reinterpret independent, generated, direct, or fixed terminal
+it does not reinterpret takeover, mixed, direct, or completed-Hub Preboss
 semantics.
 
 When a selected authored entry or decision directly precedes the current
 continuation frontier, its structural actions may also expose `Move to Next
 Decision`. This navigation-only action focuses the existing frontier address;
 it does not create or replace topology, enter history, or trigger evaluation.
-The frontier itself continues to own `Add Next Decision` and any
-declaration-owned `Go to Preboss` action. There is no separate `Move to
-Terminal Decision` path.
+The frontier itself continues to own its declaration-projected creation action.
+There is no separate completion-navigation path.
 
 ## Downstream Editing
 
@@ -265,8 +254,8 @@ is:
 
 1. show retained unavailable targets and the associated structural finding;
 2. require the user to choose an available picked exit;
-3. re-anchor an ordinary continuation through `SetPicked`, or select the
-   available terminal realization through `SetTerminalPicked`;
+3. re-anchor an ordinary continuation or Preboss realization through
+   `SetExitSelection`;
 4. enable an explicit Remove Unavailable Exits action;
 5. reconcile only after the user invokes it.
 
@@ -298,9 +287,8 @@ command; the editor performs no secondary repair or confirmation step.
 
 Compatibility is limited to catalog-backed production leaf contracts. The
 current replacement surface covers counted rewards plus H cage and O wheel
-members; fixed, shop, terminal-free, and Ephyra values receive replacement
-defaults. Preboss shops remain topology-owned terminal roles, independent of
-ordinary midshops.
+members; fixed, shop, and Ephyra values receive replacement defaults. Preboss
+Shops remain topology-owned roles, independent of ordinary midshops.
 
 The declaration-bounded compatibility rule belongs to
 `AUTHORED_PROJECT_MODEL.md`.
@@ -391,22 +379,22 @@ when the declaration provides `Ares`.
 The simulator returns semantic findings. The application indexes them by
 owner address and projects them into UI destinations:
 
-| Semantic owner              | Presentation                           |
-| --------------------------- | -------------------------------------- |
-| Biome                       | biome status and findings summary      |
-| Start                       | start selector marker                  |
-| Parent batch                | decision card and batch marker         |
-| Batch reward store          | decision Reward Pool selector          |
-| Batch policy state          | policy-specific batch selector         |
-| Parent plus exit index      | target selector or physical exit       |
-| Picked continuation         | single-choice surface                  |
-| Terminal predecessor        | terminal section                       |
-| Terminal target             | terminal exit and realization          |
-| Conditional terminal target | target row and biome-completion marker |
-| Room occurrence             | room editor                            |
-| Occurrence plus slot        | local reward/child editor              |
-| Reward wheel                | wheel count, store, and picked offer   |
-| Reward wheel offer          | ordered wheel reward editor            |
+| Semantic owner          | Presentation                           |
+| ----------------------- | -------------------------------------- |
+| Biome                   | biome status and findings summary      |
+| Start                   | start selector marker                  |
+| Parent batch            | decision card and batch marker         |
+| Batch reward store      | decision Reward Pool selector          |
+| Batch policy state      | policy-specific batch selector         |
+| Parent plus exit index  | target selector or physical exit       |
+| Picked continuation     | single-choice surface                  |
+| Preboss batch / handoff | batch, handoff, and realization        |
+| Preboss target          | physical exit and selection            |
+| Mixed Preboss target    | target row and biome-completion marker |
+| Room occurrence         | room editor                            |
+| Occurrence plus slot    | local reward/child editor              |
+| Reward wheel            | wheel count, store, and picked offer   |
+| Reward wheel offer      | ordered wheel reward editor            |
 
 Finding resolution is direct lookup. It never scans rows for a matching game
 room name.
@@ -420,8 +408,8 @@ validated. `CONTEXTUAL_EDITOR_UX.md` owns the detailed presentation policy;
 simulation continues to own support and exclusion reasons.
 
 The active biome consumes progressive evaluation coverage from
-`SIMULATION_AND_VALIDATION.md`. A missing downstream decision or terminal does
-not suppress findings and candidate support for an earlier covered owner. The
+`SIMULATION_AND_VALIDATION.md`. A missing downstream decision or Preboss batch
+does not suppress findings and candidate support for an earlier covered owner. The
 page renders that one atomic prefix result; it does not request or assemble a
 separate partial history.
 
@@ -513,9 +501,9 @@ blank fallback project booted successfully.
 
 ## Graph Policy
 
-Do not begin with a freeform graph canvas. Linear and hub layouts have stronger
-semantic structure than arbitrary nodes and edges, and a structured editor is
-easier to make readable and accessible.
+Do not begin with a freeform graph canvas. Ordinary decision topology and Hub
+topology have stronger semantic structure than arbitrary nodes and edges, and a
+structured editor is easier to make readable and accessible.
 
 The structured workspace in `STRUCTURED_EDITOR_WORKSPACE.md` is the primary
 authoring surface. A later graph remains an optional overview projection rather

@@ -6,6 +6,7 @@ import {
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
+  type WorkspaceEphyraSideRoomEntryAction,
   type WorkspaceRewardControl,
   type WorkspaceRoomSummary,
 } from '../../../projections/structuredWorkspace';
@@ -13,6 +14,8 @@ import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { useAppDispatch } from '../../../state/store';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
+import { candidateMayBeAuthored } from '../../feedback/candidatePresentation';
+import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 import { CountedRewardEditor, RewardValueEditor } from '../rewards/RewardEditors';
 import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
 import { CandidateSelect } from './CandidateSelect';
@@ -69,7 +72,7 @@ function replaceReward(
   }
 }
 
-function RewardControlEditor({
+export function RewardControlEditor({
   control,
   idPrefix,
   interactions,
@@ -96,6 +99,211 @@ function RewardControlEditor({
       offer={control.offer}
       onReplace={onReplace}
     />
+  );
+}
+
+function EphyraSideEntryAction({
+  action,
+  ariaLabel,
+  interactions,
+  label,
+  onApply,
+}: {
+  readonly action: WorkspaceEphyraSideRoomEntryAction;
+  readonly ariaLabel: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly label: string;
+  readonly onApply: () => void;
+}) {
+  const interaction = requireWorkspaceInteraction(
+    interactions.sideRoomEntryOrders,
+    action.interactionKey,
+  );
+  const candidates = useWorkspaceInteraction(interaction);
+  const option = candidates.result?.[0];
+  const canApply = candidateMayBeAuthored(option);
+  return (
+    <button
+      aria-busy={candidates.pending || undefined}
+      aria-label={
+        option !== undefined && !canApply ? `${ariaLabel} unavailable in this state` : ariaLabel
+      }
+      className={action.kind === 'remove' ? 'danger-action' : undefined}
+      data-candidate-support={
+        option === undefined
+          ? candidates.pending
+            ? 'loading'
+            : 'unavailable'
+          : canApply
+            ? 'possible'
+            : 'impossible'
+      }
+      disabled={option !== undefined && !canApply}
+      onClick={() => {
+        const options = candidates.result ?? candidates.activate();
+        const next = options?.[0];
+        if (candidateMayBeAuthored(next)) onApply();
+      }}
+      onFocus={candidates.activate}
+      onPointerDown={candidates.activate}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
+function EphyraWorkbench({
+  entered,
+  interactions,
+  room,
+}: {
+  readonly entered: boolean;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'ephyra' }>;
+}) {
+  const dispatch = useAppDispatch();
+  const group = room.sideRooms;
+  return (
+    <>
+      <div className="room-state-with-marker">
+        <SemanticOwnerMarker address={room.incomingReward.marker.address} />
+        <RewardControlEditor
+          control={room.incomingReward}
+          idPrefix={`ephyra-${room.incomingReward.marker.focusKey}`}
+          interactions={interactions}
+        />
+      </div>
+      {!entered ? null : (
+        <section className="ephyra-side-editor" aria-label="Ephyra side rooms">
+          <header className="local-reward-heading">
+            <div className="owner-markers">
+              <h4>Side rooms</h4>
+              <SemanticOwnerMarker address={group.address} />
+            </div>
+            <span className="neutral-status">
+              {group.enteredSlotKeys.length} entered · {group.slots.length} possible
+            </span>
+          </header>
+          <div className="ephyra-side-list">
+            {group.slots.map((side) => {
+              const generation = requireWorkspaceInteraction(
+                interactions.sideRoomGenerations,
+                workspaceInteractionKey(side.address),
+              );
+              const action = (kind: WorkspaceEphyraSideRoomEntryAction['kind']) =>
+                side.entryActions.find((candidate) => candidate.kind === kind);
+              const enterOrRemove = action(side.entered ? 'remove' : 'enter');
+              const earlier = action('moveEarlier');
+              const later = action('moveLater');
+              return (
+                <article
+                  aria-label={side.label}
+                  className="ephyra-side-card"
+                  data-generated={side.generation === 'generated'}
+                  key={side.key}
+                >
+                  <div className="local-reward-heading">
+                    <div>
+                      <p className="card-kicker">Door {side.physicalDoorId}</p>
+                      <div className="owner-markers">
+                        <h4>{side.label}</h4>
+                        <SemanticOwnerMarker address={side.address} />
+                      </div>
+                    </div>
+                    <span className="neutral-status">
+                      {side.entered ? `Entered ${side.enteredOrdinal}` : 'Not entered'}
+                    </span>
+                  </div>
+                  <div className="ephyra-side-controls">
+                    <CandidateSelect
+                      id={`side-${side.marker.focusKey}-generation`}
+                      interaction={generation}
+                      label={`${side.label} generation`}
+                      onReplace={(value) =>
+                        dispatch(
+                          authoredProjectCommandDispatched({
+                            kind: 'ReplaceSideRoomGeneration',
+                            sideRoom: side.address,
+                            generation: value,
+                          }),
+                        )
+                      }
+                    />
+                    {enterOrRemove === undefined ? null : (
+                      <EphyraSideEntryAction
+                        action={enterOrRemove}
+                        interactions={interactions}
+                        label={side.entered ? 'Remove From Entry Order' : 'Enter Last'}
+                        ariaLabel={`${side.entered ? 'Remove from entry order' : 'Enter last'}: ${side.label}`}
+                        onApply={() =>
+                          dispatch(
+                            authoredProjectCommandDispatched({
+                              kind: 'ReplaceSideRoomEntryOrder',
+                              group: group.address,
+                              enteredSlotKeys: enterOrRemove.proposedEnteredSlotKeys,
+                            }),
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+                  {!side.entered || (earlier === undefined && later === undefined) ? null : (
+                    <div className="side-order-actions">
+                      {earlier === undefined ? null : (
+                        <EphyraSideEntryAction
+                          action={earlier}
+                          interactions={interactions}
+                          label="Earlier"
+                          ariaLabel={`Move ${side.label} earlier`}
+                          onApply={() =>
+                            dispatch(
+                              authoredProjectCommandDispatched({
+                                kind: 'ReplaceSideRoomEntryOrder',
+                                group: group.address,
+                                enteredSlotKeys: earlier.proposedEnteredSlotKeys,
+                              }),
+                            )
+                          }
+                        />
+                      )}
+                      {later === undefined ? null : (
+                        <EphyraSideEntryAction
+                          action={later}
+                          interactions={interactions}
+                          label="Later"
+                          ariaLabel={`Move ${side.label} later`}
+                          onApply={() =>
+                            dispatch(
+                              authoredProjectCommandDispatched({
+                                kind: 'ReplaceSideRoomEntryOrder',
+                                group: group.address,
+                                enteredSlotKeys: later.proposedEnteredSlotKeys,
+                              }),
+                            )
+                          }
+                        />
+                      )}
+                    </div>
+                  )}
+                  <div
+                    className="room-state-with-marker"
+                    data-active={side.generation === 'generated'}
+                  >
+                    <SemanticOwnerMarker address={side.rewardControl.marker.address} />
+                    <RewardControlEditor
+                      control={side.rewardControl}
+                      idPrefix={`side-${side.marker.focusKey}`}
+                      interactions={interactions}
+                    />
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+    </>
   );
 }
 
@@ -389,6 +597,9 @@ export function OccurrenceWorkbench({
             </>
           )}
         </div>
+      ) : null}
+      {state.kind === 'ephyra' ? (
+        <EphyraWorkbench entered={room.entered} interactions={interactions} room={state} />
       ) : null}
       {state.kind === 'fields' ? (
         <FieldsWorkbench interactions={interactions} room={state} />

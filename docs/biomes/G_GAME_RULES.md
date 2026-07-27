@@ -3,8 +3,8 @@
 ## Purpose and Scope
 
 This document is the concrete game-rule authority for Oceanus (`G`). Shared
-picker, physical-door, cap, force, offer/acquisition, generated-store, standard
-linear, and takeover-Preboss semantics are defined by
+picker, physical-door, cap, force, offer/acquisition, generated-store,
+generated-decision, and takeover-Preboss semantics are defined by
 `../design/GAME_GENERATION_RULES.md`.
 
 Exact room-local exits, requirements, caps, labels, encounter-profile keys,
@@ -235,19 +235,20 @@ Their current-run room, counter, cap, force, and reward rules remain exact.
 
 ## Current Product Boundary
 
-G completeness, canonical linear materialization, lifecycle/history folding,
-room-generation legality, reward legality, finding composition, and validated
-F-to-G route continuation are live. The fixed rewardless intro uses the shared
-rewardless lifecycle; the canonical v1 history emits no locked-door encounter.
-The layout-derived boss/postboss tail is materialized, and `G_Boss01` records
-the RunProgress store resolved for its outgoing boss offer without inventing a
-boss reward.
+G completeness, canonical materialization of its unified generated-decision
+topology, lifecycle/history folding, room-generation legality, reward legality,
+finding composition, and validated F-to-G route continuation are live. The fixed
+rewardless intro uses the shared rewardless lifecycle; canonical history emits
+no locked-door encounter. The layout-derived boss/postboss tail is materialized,
+and `G_Boss01` records the RunProgress store resolved for its outgoing boss
+offer without inventing a boss reward.
 
-G editor and candidate presentation are live through the shared linear-biome
-editor. The complete Underworld route horizon includes F/G/H/I;
-upstream-invalid or incomplete F leaves configured G visible and editable but
+G editor and candidate presentation are live through the shared
+`WorkspaceBiome` projection and `BiomeWorkspace`. The complete Underworld route
+horizon includes F/G/H/I. An upstream-invalid or incomplete F leaves configured
+G visible and editable but
 context-unavailable, without inventing G-local findings. Direct core and
 application interaction fixtures cover complete, incomplete, and blocked G
 plans. G-specific fixtures also cover Crawler timing and post-entry miniboss
-mutual exclusion, plus the maximum three-exit preboss fork through simulation
-and shared-editor selection.
+mutual exclusion, plus the maximum three-exit takeover Preboss batch through
+simulation and shared-workspace selection.

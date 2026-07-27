@@ -2,33 +2,49 @@
 
 ## Status
 
-Commit 3a is in progress. Its application projection, candidate/result,
-fixture, focus, and recovery boundary has moved to schema 9; its remaining
-review and commit are intentionally separate from the React composition work
-in Commit 3b and Commit 3c. The projection now carries declaration-owned reward
-domains, explicit start/ordinary/linked/Hub authoring actions, all Hub-slot and
-next-visit controls, coverage-aware retained topology, and exact takeover
-replacement impact. React therefore receives structural facts and command scope
-instead of reconstructing them from authored arrays or rendered targets.
+Commit 3c is complete. It closed the application composition over the unified
+biome-decision contract: every configured biome now renders through
+`BiomeWorkspace`, while `HubDecisionWorkbench` remains the sole N-specific
+workbench inside that shared surface. Both consume `WorkspaceBiome` products
+and semantic interactions rather than authored topology, catalog layout
+branches, or simulation details.
 
-Blocked suffixes derive their structural frontier from engine completeness even
-when route simulation cannot yet reach them. The planner-engine authored-project
-core owns the pure removal impact used by both command execution and workspace
-projection; the application maps its sources to presentation addresses without
-traversing topology itself.
+Delivered Slice 3c behavior:
 
-The current focused projection, Redux, recovery, and workspace lane passes
-(10 files, 58 tests), as do the full planner-engine suite (30 files, 300
-tests) and planner-engine typecheck. The final Commit 3a review and commit
-remain intentionally separate from React composition work in Commit 3b and
-Commit 3c.
+- ordinary decisions, linked exits, takeover and mixed Preboss batches, Hub,
+  occurrence workbenches, and completion render through one exhaustive
+  workspace-node dispatcher;
+- N exposes 26 declaration-fixed slots, nine or ten open members, six authored
+  visits, occurrence-owned side rooms, and its fixed completed-Hub handoff
+  without a second full-biome editor;
+- N keeps its declaration-only Hub outline after the active Opening or PreHub
+  frontier, preserving the reachable `Opening -> PreHub -> Hub` rail order;
+- route-prefix-blocked suffixes retain structural frontiers from authored
+  completeness even when route simulation cannot yet assess contextual support;
+- N is the first Surface biome, so its coverage boundary is local progressive
+  owner coverage within the Hub; only O/P/Q can be route-prefix-blocked by an
+  earlier Surface biome;
+- the planner-engine core owns removal-impact calculation and topology repair;
+  application projection presents that owned scope without traversing authored
+  descendants;
+- React remains a projection and semantic-command consumer: it owns no
+  eligibility, reward, lifecycle, candidate, or topology-repair rules.
 
-The expected temporary application type failures are confined to the obsolete
-`apps/planner/src/ui/editor/`, `apps/planner/src/ui/shell/`, and product-loop
-React composition that still imports removed schema-8 contracts. The migrated
-application projections, state, persistence, workspace operations, architecture
-candidate-interaction test, and shared fixtures are TypeScript-clean. Commit 3a
-adds no compatibility adapter for those old editors.
+Final validation after the N rail-order repair:
+
+- workspace typechecks passed for planner-engine, catalog, and planner;
+- full Vitest passed: 57 files, 592 tests;
+- planner lane passed: 21 files, 175 tests; architecture contract lane passed:
+  3 files, 15 tests; product lane passed: 2 files, 7 tests;
+- planner-engine passed: 30 files, 308 tests; catalog passed: 4 files,
+  102 tests;
+- ESLint, Prettier, and `git diff --check` passed;
+- production Vite build passed. Its existing non-failing chunk-size warning
+  remains.
+
+Earlier delivery records remain chronological evidence; they are not a reason
+to retain obsolete whole-biome editor paths or revision-labelled behavior in
+current authority.
 
 This tracker supersedes the presentation-only Phase 7 Commit 12 and
 Commit 13 plan. Phase 7 Commit 12 will be delivered through the seven
@@ -968,8 +984,8 @@ history.
 
 ## Deferred Chaos Extension Contract
 
-Schema 9 adds no Chaos behavior, but it fixes the ownership needed by the later
-feature.
+The unified biome-decision contract adds no Chaos behavior, but it fixes the
+ownership needed by the later feature.
 
 When Chaos enters scope:
 
@@ -996,7 +1012,7 @@ Chaos does not become:
 - a room-local encounter phase;
 - a Hub slot;
 - a boolean gate marker without its Room Occurrence and reward;
-- an empty placeholder collection in schema 9.
+- an empty placeholder collection in persisted authored state.
 
 ## Structured Workspace Contract
 
@@ -1022,14 +1038,17 @@ The projection uses an explicit discriminated union:
 
 ```ts
 type WorkspaceNode =
-  | WorkspaceRoomNode
-  | WorkspaceBatchDecisionNode
+  | WorkspaceLinkedExitNode
+  | WorkspaceOrdinaryBatchNode
+  | WorkspaceTakeoverBatchNode
+  | WorkspaceMixedBatchNode
   | WorkspaceHubDecisionNode
+  | WorkspaceOccurrenceWorkbenchNode
   | WorkspaceCompletionNode;
 ```
 
-There is no `WorkspaceTerminalNode`. Preboss occurrences and their normal-door
-batch use the shared batch and room projections.
+There is no separate Preboss workspace node. Preboss occurrences and their
+normal-door batch use shared batch and occurrence-workbench projections.
 
 A linked-only exit decision does not need a visible choice workbench. The
 projection advances to its target Room node. If a future special exit makes
@@ -1121,7 +1140,12 @@ Confirming dispatches exactly one semantic command and therefore creates one
 undoable authored transition. Cancelling or dismissing changes no authored
 state, evaluation, autosave, or undo history.
 
-## Current Code Anchors
+## Pre-Reconciliation Code Anchors (Historical)
+
+This table records the code shape that motivated the reconciliation when this
+tracker opened. Its old names and revision terminology are preserved as
+chronological evidence; the current authority is the active status and the
+stable design documents above, not the left-hand column below.
 
 | Boundary              | Current authority                                                                                                          | Required transition                                                               |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -1530,9 +1554,8 @@ Deliver:
 - switch every configured biome to `BiomeWorkspace`;
 - preserve exact route, focus, finding navigation, responsive composition,
   autosave, recovery, undo, and redo behavior at the composition root;
-- remove `HubBiomeEditor`, `LinearWorkspace`, `LinearBiomeEditor`,
-  `LinearTopologyEditor`, duplicate visited-parent composition, and all
-  terminal-specific workspace components and tests;
+- remove obsolete full-biome ordinary and Hub editors, duplicate visited-parent
+  composition, and obsolete standalone Preboss workspace components and tests;
 - update editor, workspace, interaction, and audit authority documents owned by
   the completed application cutover;
 - resolve every expected downstream compile and product-test failure recorded
@@ -1542,8 +1565,8 @@ Deliver:
 Tests:
 
 - exact N route order and semantic activation;
-- empty, partial, complete, invalid, retained, and upstream-blocked N
-  workspaces;
+- empty, partial, complete, invalid, and retained N workspaces across its local
+  progressive owner boundary; route-prefix-blocked O/P/Q workspaces;
 - board opening/closing, compact slot summaries, and unvisited reward editing;
 - visit creation, replacement, and removal only through the Hub workbench;
 - occurrence-owned side state and entered order through visit reordering;
@@ -1562,10 +1585,10 @@ Gate:
 
 - one catalog layout, authored biome plan, evaluation envelope, application
   projection, and workspace envelope are authoritative;
-- no production `LinearBiomePlan`, `HubBiomePlan`, `LinearBiomeLayout`,
-  `HubBiomeLayout`, `TerminalDecision`, specialized terminal transition, or
-  full-biome Linear/Hub editor remains;
-- schema 9 and the new catalog version are the only accepted authority;
+- no obsolete whole-biome plan/layout split, specialized Preboss decision or
+  transition path, or full-biome ordinary/Hub editor remains;
+- the unified project-document contract and current catalog version are the
+  only accepted authority;
 - every workspace-node variant fails loudly on incomplete structural
   contracts;
 - Hub evaluation remains atomic and Hub is the only N-specific workbench;

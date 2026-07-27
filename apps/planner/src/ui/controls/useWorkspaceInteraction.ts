@@ -18,7 +18,13 @@ function isPromise<Result>(value: Result | Promise<Result>): value is Promise<Re
 export function useWorkspaceInteraction<Result>(
   interaction: WorkspaceLoadableInteraction<Result>,
 ): {
-  readonly activate: () => void;
+  /**
+   * Loads the interaction on demand.  Synchronous interactions return their
+   * result so a native pointer or keyboard action can both validate and apply
+   * its semantic command in one gesture; asynchronous interactions remain a
+   * deliberately non-destructive first activation.
+   */
+  readonly activate: () => Result | undefined;
   readonly pending: boolean;
   readonly result: Result | undefined;
 } {
@@ -35,7 +41,7 @@ export function useWorkspaceInteraction<Result>(
     throw current.error;
   }
 
-  const activate = (): void => {
+  const activate = (): Result | undefined => {
     const existing = stateRef.current;
     if (
       existing?.interaction === interaction &&
@@ -44,14 +50,14 @@ export function useWorkspaceInteraction<Result>(
       if (state !== existing) {
         setState(existing);
       }
-      return;
+      return existing.result;
     }
     const cached = cacheRef.current.get(interaction);
     if (cached !== undefined) {
       const next = Object.freeze({ interaction, pending: false, result: cached });
       stateRef.current = next;
       setState(next);
-      return;
+      return cached;
     }
     const requestId = ++requestIdRef.current;
     let loaded: Result | Promise<Result>;
@@ -65,14 +71,14 @@ export function useWorkspaceInteraction<Result>(
       });
       stateRef.current = next;
       setState(next);
-      return;
+      return undefined;
     }
     if (!isPromise(loaded)) {
       cacheRef.current.set(interaction, loaded);
       const next = Object.freeze({ interaction, pending: false, result: loaded });
       stateRef.current = next;
       setState(next);
-      return;
+      return loaded;
     }
     const pending = Object.freeze({ interaction, pending: true });
     stateRef.current = pending;
@@ -100,6 +106,7 @@ export function useWorkspaceInteraction<Result>(
         setState(next);
       },
     );
+    return undefined;
   };
 
   return {

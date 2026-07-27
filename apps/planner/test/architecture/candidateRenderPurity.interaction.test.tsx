@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from '@testing-library/react';
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  createHubDecisionAddress,
+  createOccurrenceAddress,
+  type ProjectDocument,
+  type SemanticAddress,
+} from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Provider } from 'react-redux';
 
@@ -11,13 +16,15 @@ import {
   type PlannerApplication,
 } from '../../src/composition/createApplication';
 import { authoredProjectReplaced } from '../../src/state/projectWorkspaceSlice';
+import { semanticOwnerFocused } from '../../src/state/editorSessionSlice';
 import { useAppSelector } from '../../src/state/store';
 import { BiomeWorkspace } from '../../src/ui/editor/biome/BiomeWorkspace';
-import { createRepresentativeNOPQProject } from '../fixtures/surfaceProject';
+import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '../fixtures/surfaceProject';
 import { createGoldenFGHIProject } from '../fixtures/underworldProject';
 
 interface WorkspaceRenderCase {
   readonly biomeKey: string;
+  readonly focus?: SemanticAddress;
   readonly project: (application: PlannerApplication) => ProjectDocument;
   readonly routeKey: 'Surface' | 'Underworld';
 }
@@ -33,6 +40,18 @@ const cases: readonly WorkspaceRenderCase[] = [
     project: () => createRepresentativeNOPQProject(),
     routeKey: 'Surface' as const,
   })),
+  {
+    biomeKey: 'N',
+    focus: createHubDecisionAddress(nBiome, 'hub'),
+    project: () => createRepresentativeNOPQProject(),
+    routeKey: 'Surface' as const,
+  },
+  {
+    biomeKey: 'N',
+    focus: createOccurrenceAddress(nBiome, nOccurrenceId('combat02')),
+    project: () => createRepresentativeNOPQProject(),
+    routeKey: 'Surface' as const,
+  },
 ];
 
 function WorkspaceHarness({
@@ -72,6 +91,9 @@ describe('candidate render purity', () => {
         observeEvaluationWork: (event) => events.push(event),
       });
       application.store.dispatch(authoredProjectReplaced(routeCase.project(application)));
+      if (routeCase.focus !== undefined) {
+        application.store.dispatch(semanticOwnerFocused(routeCase.focus));
+      }
       events.length = 0;
 
       render(

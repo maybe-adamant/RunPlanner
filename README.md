@@ -6,7 +6,7 @@ application for Run Director.
 The application owns:
 
 - route, biome, room, encounter, and reward declarations;
-- linear decision-tree and Ephyra Hub authoring;
+- unified biome-decision authoring, including Ephyra Hub;
 - deterministic game-language materialization and history;
 - possibility, force, eligibility, and reward-store evaluation;
 - semantic validation, findings, and contextual candidate feedback;
@@ -30,10 +30,10 @@ Surface:    N -> O -> P -> Q
 
 Each route participant has declarations, authored state, simulation,
 candidates, editor projection, profile persistence, recovery, and semantic
-finding navigation. The editor supports the shared linear layout, H's
-fixed-count Fields decisions, I's conditional terminal flow, O's ordered ship
-encounters and reward wheels, Q's staged progression, and N's persistent Hub,
-visit timeline, side rooms, and WorldShop.
+finding navigation. The editor uses one shared workspace for ordinary and Hub
+decisions, including H's fixed-count Fields decisions, I's generated Preboss
+peer, O's ordered ship encounters and reward wheels, Q's staged progression,
+and N's persistent Hub, visit timeline, side rooms, and WorldShop.
 
 The browser application is the active development host. Desktop packaging and
 the app/game execution boundary remain deliberate later steps.

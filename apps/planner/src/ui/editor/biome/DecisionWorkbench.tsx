@@ -26,8 +26,10 @@ import {
   type WorkspaceMixedBatchNode,
   type WorkspaceCandidateTakeoverBatchInteraction,
   type WorkspaceCompletedHubHandoffInteraction,
-  type WorkspaceDirectTerminalTakeoverInteraction,
+  type WorkspaceDirectPrebossTakeoverInteraction,
   type WorkspaceTakeoverRepairInteraction,
+  type WorkspaceTopologyRemovalInteraction,
+  type WorkspaceTopologyRemovalScope,
 } from '../../../projections/structuredWorkspace';
 import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
@@ -128,6 +130,63 @@ function ExactRepairScope({ scope }: { readonly scope: WorkspaceBatchRepairScope
         type="button"
       >
         Reconcile unavailable exits
+      </button>
+    </div>
+  );
+}
+
+function topologyRemovalScopeSummary(scope: WorkspaceTopologyRemovalScope): string {
+  const parts = [
+    scope.removedOccurrenceIds.length === 0
+      ? undefined
+      : `${scope.removedOccurrenceIds.length} ${
+          scope.removedOccurrenceIds.length === 1 ? 'room occurrence' : 'room occurrences'
+        }`,
+    scope.removedDecisionOwners.length === 0
+      ? undefined
+      : `${scope.removedDecisionOwners.length} ${
+          scope.removedDecisionOwners.length === 1 ? 'exit decision' : 'exit decisions'
+        }`,
+    scope.removedHubDecisionKeys.length === 0
+      ? undefined
+      : `${scope.removedHubDecisionKeys.length} ${
+          scope.removedHubDecisionKeys.length === 1 ? 'Hub board' : 'Hub boards'
+        }`,
+  ].filter((value): value is string => value !== undefined);
+  return parts.length === 0 ? 'no authored topology' : parts.join(' and ');
+}
+
+/**
+ * The domain exposes both the semantic command and its exact removal impact.
+ * This renderer deliberately never follows descendants itself: it only makes
+ * the projected scope legible before dispatching that one command.
+ */
+export function TopologyRemovalAction({
+  interaction,
+  label,
+}: {
+  readonly interaction: WorkspaceTopologyRemovalInteraction;
+  readonly label: string;
+}) {
+  const dispatch = useAppDispatch();
+  const scope = topologyRemovalScopeSummary(interaction.impact);
+  const prompt =
+    interaction.action === 'clearTopology'
+      ? `Clear this biome's authored topology? This removes ${scope}.`
+      : `Remove this decision? This removes ${scope}.`;
+  return (
+    <div className="topology-removal-action" data-command={interaction.command.kind}>
+      <p className="repair-scope">This removes {scope}.</p>
+      <button
+        className="danger-action"
+        onClick={() => {
+          if (!globalThis.confirm(prompt)) return;
+          dispatch(semanticOwnerFocused(interaction.owner));
+          dispatch(authoredProjectCommandDispatched(interaction.command));
+        }}
+        type="button"
+      >
+        {label}
       </button>
     </div>
   );
@@ -421,10 +480,10 @@ function CandidateTakeoverAction({
   );
 }
 
-function DirectTerminalTakeoverAction({
+function DirectPrebossTakeoverAction({
   interaction,
 }: {
-  readonly interaction: WorkspaceDirectTerminalTakeoverInteraction;
+  readonly interaction: WorkspaceDirectPrebossTakeoverInteraction;
 }) {
   const dispatch = useAppDispatch();
   const [message, setMessage] = useState<string | undefined>();
@@ -514,8 +573,8 @@ function TakeoverAction({
       // chooser prevents a selection made for one ordinary batch from being
       // carried to another batch when the focused inspector changes.
       return <CandidateTakeoverAction interaction={interaction} key={interaction.key} />;
-    case 'directTerminal':
-      return <DirectTerminalTakeoverAction interaction={interaction} />;
+    case 'directPreboss':
+      return <DirectPrebossTakeoverAction interaction={interaction} />;
     case 'completedHubHandoff':
       return <CompletedHubHandoffAction interaction={interaction} />;
     case 'repair':
@@ -619,6 +678,7 @@ export function BatchWorkbench({
     node.missingTargets.length === 0
       ? undefined
       : projectedTakeover;
+  const removal = interactions.topologyRemovals.get(workspaceInteractionKey(node.owner));
   return (
     <section
       className="decision-card biome-batch-workbench"
@@ -666,11 +726,21 @@ export function BatchWorkbench({
       </div>
       {node.repairScope === undefined ? null : <ExactRepairScope scope={node.repairScope} />}
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
+      {removal === undefined ? null : (
+        <TopologyRemovalAction interaction={removal} label="Remove decision" />
+      )}
     </section>
   );
 }
 
-export function LinkedExitWorkbench({ node }: { readonly node: WorkspaceLinkedExitNode }) {
+export function LinkedExitWorkbench({
+  interactions,
+  node,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly node: WorkspaceLinkedExitNode;
+}) {
+  const removal = interactions.topologyRemovals.get(workspaceInteractionKey(node.owner));
   return (
     <section className="decision-card linked-exit-workbench">
       <header className="decision-heading">
@@ -686,6 +756,9 @@ export function LinkedExitWorkbench({ node }: { readonly node: WorkspaceLinkedEx
       <p className="fixed-room-state">
         This declaration-owned exit is linked to its fixed room; there is no room selector.
       </p>
+      {removal === undefined ? null : (
+        <TopologyRemovalAction interaction={removal} label="Remove decision" />
+      )}
     </section>
   );
 }
@@ -711,6 +784,7 @@ function StartFrontier({
           <h3>Start with {start.fixedLabel}</h3>
           <p>This start room is declaration-fixed.</p>
         </div>
+        <SemanticOwnerMarker address={start.owner} />
         <button
           className="primary-action"
           onClick={() => {
@@ -736,6 +810,7 @@ function StartFrontier({
       <div>
         <p className="card-kicker">Active frontier</p>
         <h3>Choose starting room</h3>
+        <SemanticOwnerMarker address={start.owner} />
       </div>
       <ContextualPicker
         id={`${start.key}-start`}
@@ -837,8 +912,9 @@ export function AuthoringFrontier({
       return <ExitFrontier frontier={frontier} interactions={interactions} />;
     case 'hubDecision':
     case 'hubVisit':
+    case 'hubOpenSet':
       throw new BiomeWorkspaceContractError(
-        'Hub authoring belongs to the Hub workspace cutover, not the shared non-Hub workbench.',
+        'Hub structural frontiers must be rendered by HubDecisionWorkbench.',
       );
   }
 }

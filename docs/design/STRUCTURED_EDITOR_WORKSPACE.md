@@ -14,7 +14,7 @@ simulation, validation, semantic commands, or persistence.
 This document owns:
 
 - route, biome-structure, and inspector composition;
-- Linear and Hub workspace presentation;
+- shared ordinary-decision and Hub workspace presentation;
 - picked-path and unpicked-offer visual hierarchy;
 - progressive coverage and finding placement;
 - empty-biome outlines;
@@ -52,8 +52,8 @@ serialized topology.
   indexes.
 - Context-invalid authored values remain visible until explicitly replaced or
   removed by an owning structural command.
-- React implements no eligibility, force, reward-store, bag, sibling, terminal,
-  or route-gating rule.
+- React implements no eligibility, force, reward-store, bag, sibling,
+  Preboss-handoff, or route-gating rule.
 - One visible user intent dispatches one semantic command and creates one undo
   entry.
 - Focus, expansion, search, disclosure, viewport, and dialog state remain
@@ -95,8 +95,16 @@ editable when blocked, but its contextual state remains unassessed.
 
 ### Biome Structure
 
-The center region is selected by normalized layout kind. It does not attempt to
-make Linear and Hub biomes look structurally identical.
+Every configured biome renders through one `BiomeWorkspace` composition over a
+`WorkspaceBiome` projection. Its exhaustive workspace-node union presents
+ordinary decisions, linked exits, takeover and mixed Preboss batches,
+completion, and the Hub decision without React inspecting authored topology.
+`HubDecisionWorkbench` is the one N-specific workbench and is nested inside
+that shared workspace; it does not create a second full-biome editor.
+
+The center region does not attempt to make ordinary decision topology and the
+Hub board look structurally identical. It does give both the same route rail,
+semantic focus, finding navigation, coverage, and focused-inspector language.
 
 ### Focused Inspector
 
@@ -119,18 +127,19 @@ authored topology
   + room declarations
   + progressive or canonical biome evaluation
   + addressed findings and contextual options
-  -> layout-specific structured workspace view
+  -> WorkspaceBiome structured workspace view
 ```
 
 The projection owns visual grouping, ordering, compact summaries, coverage
-markers, terminal-outline facts, and semantic focus destinations. React renders
-that projection and dispatches semantic commands.
+markers, Preboss and completion-outline facts, and semantic focus destinations.
+React renders that projection and dispatches semantic commands.
 
-Linear creation establishes explicit transient semantic focus through the
-existing semantic-owner action. Every authored start selects its created Room
-Occurrence, and creating a batch or terminal from the visible frontier first
-selects that frontier's continuation workbench. Later edits retain that
-resolvable owner even when they reveal a new continuation frontier.
+Creation establishes explicit transient semantic focus through the existing
+semantic-owner action. Every authored start selects its created Room Occurrence,
+and creating an ordinary batch, a takeover Preboss batch, or a completed-Hub
+handoff from the visible frontier first selects that frontier's owning
+workbench. Later edits retain that resolvable owner even when they reveal a new
+authoring frontier.
 
 The newly revealed frontier remains visible in the rail without stealing
 inspector focus. The workspace may attach that exact frontier marker only to
@@ -138,22 +147,22 @@ its direct predecessor entry or decision; that selected workbench exposes
 `Move to Next Decision`. The nearby action and rail frontier dispatch the
 same semantic focus address. It is navigation only: it creates no authored
 edit, history entry, evaluation, or candidate work. There is no separate
-terminal-navigation action; the frontier retains its declaration-owned
-terminal controls.
+completion-navigation action; the frontier retains its declaration-owned
+ordinary, Preboss, or Hub controls.
 
 Incomplete-biome structure is an authored-topology projection enriched by
 progressive evaluation. It must not be described as canonical topology.
 
-## Linear Workspace
+## Ordinary Decision Workspace
 
-For F/G/H/I/O/P/Q, the center region presents a structured Linear rail:
+For F/G/H/I/O/P/Q, the center region presents a structured decision rail:
 
 - the authored start or fixed entries;
 - each picked continuation as the trunk;
 - each generated decision as one stop;
 - the active continuation frontier;
 - retained downstream structure after an invalid upstream edit;
-- layout-owned terminal structure;
+- layout-owned Preboss-batch and completion structure;
 - completion rooms as derived, read-only endpoints where applicable.
 
 The rail is not a freeform graph. Its visual position is derived from semantic
@@ -179,35 +188,41 @@ addresses. Visual weight does not change ownership.
 
 ### Variant-Owned Structure
 
-- F/G/P retain ordinary generated decisions and independent forked terminals.
-- H retains exactly four Fields decisions before its independent terminal.
+- F/G/P retain ordinary generated decisions and declaration-owned takeover
+  Preboss batches.
+- H retains exactly four Fields decisions before its takeover Preboss batch.
 - I retains one generated-decision frontier; its Preboss is a generated peer
   after Goal completion and closes the biome only when picked.
-- O retains six one-exit decisions and a direct terminal.
-- Q retains six declaration-owned stages and a direct terminal.
+- O retains six one-exit decisions and a direct width-one Preboss batch.
+- Q retains six declaration-owned stages and a direct width-one Preboss batch.
 
-The shared rail and inspector do not invent one universal frontier or terminal
-action.
+The shared rail and inspector do not invent one universal authoring frontier or
+Preboss action.
 
-## Hub Workspace
+## Hub Decision Workspace
 
 N uses the same route rail, inspector, semantic focus, finding, and coverage
-language, but its center is not a Linear spine. It projects:
+language, but its center is not an ordinary decision spine. The
+`HubDecisionWorkbench` projects:
 
 - fixed Opening and PreHub entries;
-- the persistent nine-or-ten-member open Hub board;
+- the persistent board over 26 declaration-fixed Hub slots, with nine or ten
+  open members;
 - one complete room and incoming reward for each open slot;
 - the ordered six-visit pylon timeline;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
-- the fixed Preboss shop and derived completion sequence.
+- the fixed completed-Hub handoff to the width-one Preboss Shop and its derived
+  completion sequence.
 
 The board remains a joint generation region. Rendered board order must not
 pretend to be a simulation prefix. Open-set membership and visit order remain
 separate semantic controls.
 
 Compact board cells may focus their room and reward state in the inspector, but
-N never acquires arbitrary room replacement merely to reuse the Linear picker.
+N never acquires arbitrary room replacement merely to reuse an ordinary room
+picker. Membership, visits, and the completed-Hub handoff remain Hub-owned
+semantic interactions.
 
 ## Progressive Coverage and Findings
 
@@ -235,18 +250,19 @@ not preallocated authored state.
 
 The outline follows these rules:
 
-- declared start, fixed entry, terminal, Boss, and PostBoss roles may appear as
+- declared start, fixed entry, Preboss, Boss, and PostBoss roles may appear as
   concrete read-only landmarks;
 - fixed-count layouts may show their exact remaining stage count;
-- variable-length layouts may show only a simulation-provided terminal horizon;
+- variable-length layouts may show only a simulation-provided completion
+  horizon;
 - when no truthful horizon exists, the UI says that the route length varies and
   does not invent an approximate count;
 - I presents its eventual completion role without pretending that an independent
   Preboss slot is currently authorable;
-- N presents an empty Hub board and visit structure, not a false Linear rail;
+- N presents an empty Hub board and visit structure, not a false ordinary rail;
 - only the current semantic frontier is interactive.
 
-Any terminal-horizon or remaining-structure summary must reach the application
+Any completion-horizon or remaining-structure summary must reach the application
 projection as a normalized layout fact or simulation result. Neither the
 application presentation layer nor React interprets force or timing declarations
 to calculate it.
@@ -256,7 +272,7 @@ to calculate it.
 The inspector and compact leaves compose the shared contextual controls from
 `CONTEXTUAL_EDITOR_UX.md`:
 
-- grouped room selection for replaceable Linear occurrences;
+- grouped room selection for replaceable ordinary occurrences;
 - required-first and unavailable disclosures;
 - selected-invalid retention;
 - producer-resolved reward domains;
@@ -279,10 +295,10 @@ Replace browser-native confirmation with accessible application dialogs.
 Destructive actions name their exact visible scope, such as the number of
 downstream decisions and occurrences removed.
 
-Retained-overflow and terminal repairs remain explicit:
+Retained-overflow and Preboss-handoff repairs remain explicit:
 
 1. show unavailable retained targets at their semantic owner;
-2. show which picked target or terminal realization is no longer available;
+2. show which picked target or Preboss realization is no longer available;
 3. let the user select a representable continuation;
 4. expose the owning reconciliation command;
 5. remove retained structure only after explicit confirmation.
@@ -311,10 +327,11 @@ or move presentation policy into generic wrappers.
 
 The structured workspace is complete when:
 
-- Linear biomes show the picked continuation, generated leaves, active frontier,
-  terminal structure, coverage, and findings without a long equal-weight card
-  stack;
-- N shows its board and visit timeline without acquiring Linear semantics;
+- ordinary-decision biomes show the picked continuation, generated leaves,
+  active frontier, Preboss structure, coverage, and findings without a long
+  equal-weight card stack;
+- N shows its board and visit timeline through `HubDecisionWorkbench` without
+  acquiring ordinary-decision semantics;
 - every compact leaf remains inspectable and preserves reward and finding state;
 - finding navigation focuses the exact semantic owner in the inspector;
 - empty and partial biomes show only truthful declared or projected structure;
@@ -323,5 +340,5 @@ The structured workspace is complete when:
 - destructive and repair interactions state scope and dispatch only existing
   semantic commands;
 - the layout remains keyboard operable, screen-reader legible, and responsive;
-- no authored schema, simulation rule, or topology identity is introduced for
+- no persisted authored contract, simulation rule, or topology identity is introduced for
   presentation convenience.

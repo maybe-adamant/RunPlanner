@@ -11,7 +11,10 @@ import {
 import { simulateProject, type CandidateEvaluationEvent } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import type { WorkspaceInteractionCatalog } from '../../src/projections/structuredWorkspace';
+import type {
+  WorkspaceHubSlotInteraction,
+  WorkspaceInteractionCatalog,
+} from '../../src/projections/structuredWorkspace';
 import { createStructuredWorkspaceTestServices } from '../fixtures/structuredWorkspace';
 import {
   appendCompleteN,
@@ -51,7 +54,7 @@ const families: readonly InteractionFamily[] = [
 function firstInteraction(
   family: InteractionFamily,
   workspaces: readonly WorkspaceInteractionCatalog[],
-): LoadableInteraction {
+): unknown {
   for (const interactions of workspaces) {
     const candidate = interactions[family].values().next().value as LoadableInteraction | undefined;
     if (candidate !== undefined) {
@@ -85,7 +88,12 @@ describe('workspace candidate interaction families', () => {
       events.length = 0;
       const interaction = firstInteraction(family, workspaces);
 
-      await interaction.load();
+      if (family === 'hubSlots') {
+        const hubSlot = interaction as WorkspaceHubSlotInteraction;
+        await hubSlot.bind(createOccurrenceId('candidate-interaction-hub-slot')).load();
+      } else {
+        await (interaction as LoadableInteraction).load();
+      }
 
       const queryBatches = events.filter((event) => event.kind === 'queryBatch');
       expect(queryBatches.length, `${family} did not evaluate its domain`).toBeGreaterThan(0);
@@ -147,8 +155,8 @@ describe('workspace candidate interaction families', () => {
         }),
       ),
     );
-    if (direct?.presentation !== 'directTerminal') {
-      throw new Error('O direct terminal capability is missing');
+    if (direct?.presentation !== 'directPreboss') {
+      throw new Error('O direct Preboss capability is missing');
     }
     expect(direct.action).toBe('create');
     expect('load' in direct).toBe(false);
