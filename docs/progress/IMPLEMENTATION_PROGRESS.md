@@ -6,6 +6,9 @@ This file records factual delivery status against `IMPLEMENTATION_PLAN.md`. It
 is mutable project history, not a design authority. The active frontier is
 maintained once below. Later sections are chronological delivery records and
 may describe intermediate capability states that subsequent entries supersede.
+Legacy layout, terminal, direct, forked, and whole-biome labels in those later
+records are historical evidence only; current contract vocabulary is maintained
+by the active tracker and owning design authorities.
 
 ## Active Frontier
 
@@ -20,18 +23,14 @@ selected, completion reveals but does not select the next frontier, and one
 nearby navigation-only action selects that frontier. It closes F/G
 generated-decision parity without changing domain state or simulation.
 
-The next planned work is
-[Phase 7 Commit 12](HUB_WORKSPACE_RECONCILIATION.md), organized as seven
-independently reviewable commits. Commits 1 and 2 establish the unified catalog,
-schema 9 authored model, and planner-engine evaluator. Commits 3a, 3b, and 3c
-then migrate the application projection, build the shared biome workspace, and
-cut the connected application over with Hub as its sole specialized workbench.
-Commit 4 closes that refactor with the complete gate; Commit 5 follows with
-presentation polish and accessible confirmation without changing the closed
-domain contracts. Commits 1, 2, 3a, and 3b may intentionally leave downstream
-layers non-working; each must keep its owning layer coherent and record the
-expected dependency fallout without adding compatibility adapters. The tracker
-supersedes the former presentation-only Commit 12 and Commit 13 wording in
+The unified biome refactor through [Phase 7 Commit 12, Slice 4](HUB_WORKSPACE_RECONCILIATION.md)
+is complete. Commits 1, 2, 3a, 3b, 3c, and 4 established the unified catalog
+and authored model, migrated the planner engine, projected the common workspace,
+built its shared React surface, closed its product/recovery/performance/architecture
+evidence, and passed the complete repository gate. The next active work is
+Commit 5, the follow-up presentation-polish and accessible-confirmation slice;
+it does not change the closed domain contracts. The tracker supersedes the
+former presentation-only Commit 12 and Commit 13 wording in
 `IMPLEMENTATION_PLAN.md`.
 
 Commit 1 is complete. The catalog and authored-project boundary uses catalog
@@ -74,10 +73,41 @@ frontier even on an incomplete prefix. Prefix coverage names its last retained
 physical target or Hub region. The planner-engine typecheck and full engine
 suite pass (29 files, 298 tests), as do root linting, Prettier, and
 `git diff --check`. Application fixtures and workspace projections still
-consuming schema-8 products remain Commit 3a through Commit 3c work, without
+consuming schema-8 products remained Commit 3a through Commit 3c work, without
 compatibility exports.
 
-Room-replacement retention is closed. The delivered policy uses the
+Commit 3a is complete. The application projects one `WorkspaceBiome` envelope
+with an exhaustive decision-node union, current semantic addresses, contextual
+candidate interactions, progressive coverage, structural authoring frontiers,
+retained state, and engine-owned deletion scope. It preserves blocked stale
+profile and autosave payloads through the recovery boundary rather than adding
+a schema compatibility adapter.
+
+Commit 3b is complete. The shared `BiomeWorkspace` and its decision,
+occurrence, reward, Shop, batch, finding, focus, and completion workbenches
+render every non-Hub workspace node from the projection. The React layer keeps
+candidate activation lazy and consumes projected repair scope and semantic
+commands without recreating topology, reward, lifecycle, or eligibility rules.
+
+Commit 3c is complete. `HubDecisionWorkbench` is the sole N-specific workbench
+inside that shared workspace, and the application shell now renders every
+configured biome through the same dispatcher. Hub membership, visits, local
+side state, completed handoff, focus, finding navigation, profile recovery,
+autosave, undo, and redo all cross the connected application boundary without a
+separate biome editor path.
+
+Slice 4 is complete. It added representative keyboard/pointer, profile,
+recovery, autosave, undo/redo, repair-command, performance, and architecture
+evidence; reconciled current authority terminology and the Chaos backlog; and
+made a ninth-to-eighth Hub-slot closure atomically remove the completed-Hub
+handoff while retaining the six authored visits as an incomplete board. It
+passed catalog, planner-engine, and planner TypeScript checks, 59 Vitest files
+with 605 tests, ESLint, Prettier, production build, and `git diff --check`.
+Commit 5 is the sole remaining follow-up before this tracker and the active
+Phase 7 frontier advance.
+
+For historical context, room-replacement retention closed before the unified
+refactor. The delivered policy uses the
 catalog-backed leaf-contract boundary, excludes speculative fixed, shop, and
 terminal-free mappings, and includes real-catalog F Miniboss coverage.
 Selected-simulation, candidate-horizon, stable-finding, workspace, and React

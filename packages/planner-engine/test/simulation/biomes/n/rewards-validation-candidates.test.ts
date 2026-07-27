@@ -615,6 +615,33 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
   });
 
+  it('keeps an unvisited ninth Hub slot closable while the completed handoff is removed', () => {
+    const { project, evaluation } = completeN();
+    const candidate = createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate({
+      kind: 'hubSlot',
+      slot: createHubSlotAddress(nBiome, 'hub', 'combat03'),
+      open: false,
+      occurrenceId: nOccurrenceId('combat03'),
+    });
+
+    expect(candidate).toMatchObject({
+      kind: 'hubSlot',
+      result: { selectedPossible: true, referencedVisitIndexes: [], findings: [] },
+    });
+
+    const closed = applyProjectCommand(project, catalog, {
+      kind: 'CloseHubSlot',
+      slot: createHubSlotAddress(nBiome, 'hub', 'combat03'),
+    });
+    const closedBiome = simulateProject(catalog, closed)
+      .routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    expect(closedBiome).toMatchObject({
+      authoring: 'incomplete',
+      findings: [expect.objectContaining({ code: 'hubOpenSetIncomplete' })],
+    });
+  });
+
   it('preserves the fixed opening and PreHub reward surfaces as normal authored occurrences', () => {
     const { biome } = completeN();
     const opening = biome.snapshot.entryRoom;

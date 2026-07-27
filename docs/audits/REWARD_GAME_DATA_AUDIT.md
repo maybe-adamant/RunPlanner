@@ -568,9 +568,9 @@ deferred.
 | F     | Run/Meta generated rewards, forced Run rewards, Story, takeover Preboss Shop/free roles      | Exact support; base-store probability simplified                                    |
 | G     | Same core producers as F plus linked boss store provenance                                   | Exact support; locked-door interaction deferred; base-store probability simplified  |
 | P     | Run/Meta rewards, takeover Preboss Shop/free roles, linked boss provenance                   | Exact NPC-free reward support; NPC gift internals deferred                          |
-| Q     | Reward-free spine, `TyphonBossRewards` minibosses, direct width-one Preboss Shop             | Exact supported reward topology; no invented Run/Meta base store                    |
+| Q     | Reward-free spine, `TyphonBossRewards` minibosses, declaration-fixed width-one Preboss Shop  | Exact supported reward topology; no invented Run/Meta base store                    |
 | H     | Declaration-owned RunProgress offers, ordered cages, takeover Preboss Shop/free roles        | No generated base-store value; exact cage support; `FieldsOptionalRewards` deferred |
-| O     | Ordered Run/Meta reward wheels, fixed Devotion, direct width-one Preboss Shop                | Exact wheel support and source-derived outgoing store; probability simplified       |
+| O     | Ordered Run/Meta reward wheels, fixed Devotion, declaration-fixed width-one Preboss Shop     | Exact wheel support and source-derived outgoing store; probability simplified       |
 | I     | Derived Goal/NonGoal, `TartarusRewards`, generated Preboss Shop                              | Exact structural support; Goal emits no ordinary concrete acquisition               |
 | N     | Persistent `HubRewards` board, RunProgress minibosses, side bags, completed-Hub Preboss Shop | Exact persistent offer support; NPC internals deferred                              |
 

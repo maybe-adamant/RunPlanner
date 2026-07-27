@@ -7,6 +7,7 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
+  createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
@@ -964,9 +965,40 @@ describe('unified structured workspace projection', () => {
     const descriptor = catalog.biomeLayouts.byKey.N?.progression;
     if (descriptor?.kind !== 'hub') throw new Error('N Hub descriptor is missing');
     expect(projected.interactions.hubSlots).toHaveLength(descriptor.slots.length);
+    const unvisitedSlot = createHubSlotAddress(nBiome, descriptor.hubKey, 'combat03');
+    expect(projected.interactions.hubSlots.get(semanticAddressKey(unvisitedSlot))).toMatchObject({
+      close: {
+        command: { kind: 'CloseHubSlot', slot: unvisitedSlot },
+        impact: { removedOccurrenceIds: [nOccurrenceId('combat03')] },
+      },
+    });
     const nextVisit = createHubVisitAddress(nBiome, descriptor.hubKey, descriptor.requiredVisits);
     expect(projected.interactions.hubVisits.get(semanticAddressKey(nextVisit))).toMatchObject({
       owner: nextVisit,
+    });
+  });
+
+  it('projects the completed-Hub handoff in the ninth-slot closure scope', () => {
+    const projected = workspace(
+      appendCompleteN(
+        createProjectDocument(catalog, {
+          projectId: 'n-completed-hub-close',
+          name: 'N completed Hub close',
+          configuredBiomeCounts: { Surface: 1 },
+        }),
+      ),
+    );
+    const slot = createHubSlotAddress(nBiome, 'hub', 'combat03');
+    expect(projected.interactions.hubSlots.get(semanticAddressKey(slot))).toMatchObject({
+      close: {
+        command: { kind: 'CloseHubSlot', slot },
+        impact: {
+          removedDecisionOwners: [
+            createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
+          ],
+          removedOccurrenceIds: [nOccurrenceId('combat03'), nOccurrenceIds.preboss],
+        },
+      },
     });
   });
 
@@ -1055,7 +1087,7 @@ describe('unified structured workspace projection', () => {
     });
     const interaction = projected.interactions.takeoverBatches.get(semanticAddressKey(owner));
     if (interaction?.presentation !== 'candidate') {
-      throw new Error('F forked takeover candidate interaction is missing');
+      throw new Error('F candidate takeover interaction is missing');
     }
     const candidates = interaction.load();
     expect(candidates).not.toHaveLength(0);
@@ -1063,7 +1095,7 @@ describe('unified structured workspace projection', () => {
     expect(candidates.every((candidate) => candidate.value.gameName.startsWith('F_'))).toBe(true);
   });
 
-  it('projects O and Q Shop-only Preboss actions only at their bounded final frontiers', () => {
+  it('projects O and Q fixed width-one Preboss takeovers only at their bounded final frontiers', () => {
     const complete = createRepresentativeNOPQProject();
     const cases = [
       [oBiome, oOccurrenceIds.combat02, 'O_PreBoss01'],
@@ -1082,13 +1114,13 @@ describe('unified structured workspace projection', () => {
       const current = biome(projected, biomeAddress.biomeKey);
       const frontier = current.frontier;
       if (frontier?.kind !== 'exitDecision') {
-        throw new Error(`${biomeAddress.biomeKey} direct frontier is missing`);
+        throw new Error(`${biomeAddress.biomeKey} fixed width-one frontier is missing`);
       }
       const interaction = projected.interactions.takeoverBatches.get(
         semanticAddressKey(frontier.owner),
       );
-      if (interaction?.presentation !== 'directPreboss') {
-        throw new Error(`${biomeAddress.biomeKey} direct Preboss interaction is missing`);
+      if (interaction?.presentation !== 'fixedWidthOneTakeover') {
+        throw new Error(`${biomeAddress.biomeKey} fixed width-one takeover interaction is missing`);
       }
       expect(interaction.action).toBe('create');
       expect(interaction.label).toBe(catalog.rooms.byKey[gameName]!.label);
@@ -1096,7 +1128,9 @@ describe('unified structured workspace projection', () => {
       expect(projected.interactions.structural.has(semanticAddressKey(frontier.owner))).toBe(false);
       const result = interaction.execute();
       if (result.kind !== 'command') {
-        throw new Error(`${biomeAddress.biomeKey} direct Preboss is unexpectedly unavailable`);
+        throw new Error(
+          `${biomeAddress.biomeKey} fixed width-one takeover is unexpectedly unavailable`,
+        );
       }
       expect(result.command).toMatchObject({
         kind: 'CreateTakeoverBatch',
@@ -1127,7 +1161,7 @@ describe('unified structured workspace projection', () => {
     );
   });
 
-  it('does not misclassify forked, mixed, linked, or Hub progression as a direct Preboss', () => {
+  it('does not misclassify candidate, mixed, linked, or Hub progression as a fixed width-one takeover', () => {
     const underworld = workspace(createGoldenFGHIProject(catalog));
     const surface = workspace(createRepresentativeNOPQProject());
     const cases = [
@@ -1143,9 +1177,9 @@ describe('unified structured workspace projection', () => {
       const interactions = [...projected.interactions.takeoverBatches.values()].filter(
         (interaction) => interaction.owner.biomeKey === biomeKey,
       );
-      expect(interactions.some((interaction) => interaction.presentation === 'directPreboss')).toBe(
-        false,
-      );
+      expect(
+        interactions.some((interaction) => interaction.presentation === 'fixedWidthOneTakeover'),
+      ).toBe(false);
     }
   });
 
@@ -1530,7 +1564,8 @@ describe('unified structured workspace projection', () => {
       ['exit2', 'unavailable'],
     ]);
     expect(ordinary.repairScope).toEqual({
-      command: 'ReconcileBatchExitCapacity',
+      command: { kind: 'ReconcileBatchExitCapacity', decision: ordinary.owner },
+      commandKind: 'ReconcileBatchExitCapacity',
       owner: ordinary.owner,
       removedDecisionOwners: [],
       removedOccurrenceIds: [goldenFOccurrenceId(2, 2)],
@@ -1572,7 +1607,7 @@ describe('unified structured workspace projection', () => {
       .map((target) => target.room.occurrenceId);
     expect(unavailable).not.toHaveLength(0);
     expect(takeover.repairScope).toMatchObject({
-      command: 'ReconcileTakeoverBatch',
+      commandKind: 'ReconcileTakeoverBatch',
       owner: takeover.owner,
       removedOccurrenceIds: unavailable,
     });
@@ -1606,7 +1641,8 @@ describe('unified structured workspace projection', () => {
     expect(rawOrdinary).toMatchObject({
       topologyState: 'retained',
       repairScope: {
-        command: 'ReconcileBatchExitCapacity',
+        command: { kind: 'ReconcileBatchExitCapacity', decision: fOwner },
+        commandKind: 'ReconcileBatchExitCapacity',
         owner: fOwner,
         removedOccurrenceIds: [goldenFOccurrenceId(2, 2)],
       },
@@ -1660,7 +1696,7 @@ describe('unified structured workspace projection', () => {
     expect(rawTakeover.topologyState).toBe('retained');
     expect(unavailable).not.toHaveLength(0);
     expect(rawTakeover.repairScope).toMatchObject({
-      command: 'ReconcileTakeoverBatch',
+      commandKind: 'ReconcileTakeoverBatch',
       owner: rawTakeover.owner,
       removedOccurrenceIds: unavailable,
     });

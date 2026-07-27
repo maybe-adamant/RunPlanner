@@ -10,6 +10,16 @@ It is an evidence and migration-status document, not production catalog data.
 No `unsupported`, `legacyStatus`, or provenance fields should be added to
 runtime declarations merely to mirror this ledger.
 
+## Unified Decision Supersession
+
+Rows below preserve the vocabulary that was accurate when each migration
+decision was recorded. In particular, legacy layout, terminal, direct, and
+forked labels remain evidence of the retired implementation rather than live
+contracts. Current catalog, authored-project, simulation, and workspace
+authority use one biome layout, exit and Hub decisions, normal-door batches,
+and declaration-derived completion. Do not reintroduce a historical name into
+production merely because it appears in this ledger.
+
 ## Status Vocabulary
 
 `ready`

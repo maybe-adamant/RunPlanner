@@ -369,12 +369,12 @@ export function selectedOrdinaryBatchIndex(
 }
 
 /**
- * Returns the fixed Shop-only takeover that is required after a bounded
- * generated spine reaches its final ordinary decision. This is derived from
- * normalized progression and Preboss policy rather than a persisted legacy
- * taxonomy flag; Hub handoff and counted forked takeovers intentionally do not match.
+ * Returns the fixed width-one takeover required after a bounded generated
+ * spine reaches its final ordinary decision. This is derived from normalized
+ * progression and Preboss policy; Hub handoff and counted takeovers
+ * intentionally do not match.
  */
-export function directShopOnlyPrebossForLayout(
+export function fixedWidthOneTakeoverForLayout(
   catalog: Catalog,
   layout: BiomeLayout,
 ): RoomDeclaration | undefined {
@@ -395,19 +395,19 @@ export function directShopOnlyPrebossForLayout(
 }
 
 /**
- * Returns the fixed Shop-only takeover that is required after a bounded
- * generated spine reaches its final ordinary decision. This is derived from
- * normalized progression and Preboss policy rather than a persisted terminal
- * flag; Hub handoff and counted forked takeovers intentionally do not match.
+ * Returns the fixed width-one takeover required at a particular source after
+ * a bounded generated spine reaches its final ordinary decision. This is
+ * derived from normalized progression and Preboss policy; Hub handoff and
+ * counted takeovers intentionally do not match.
  */
-export function directShopOnlyPrebossForSource(
+export function fixedWidthOneTakeoverForSource(
   catalog: Catalog,
   layout: BiomeLayout,
   topology: BiomeTopology,
   source: ExitDecisionSource,
 ): RoomDeclaration | undefined {
   if (source.kind !== 'occurrence') return undefined;
-  const candidate = directShopOnlyPrebossForLayout(catalog, layout);
+  const candidate = fixedWidthOneTakeoverForLayout(catalog, layout);
   if (candidate === undefined || layout.progression.kind !== 'generated') return undefined;
   const policy = layout.progression.progressionPolicy;
   const finalOrdinaryBatchCount =
@@ -423,22 +423,22 @@ export function directShopOnlyPrebossForSource(
 }
 
 /**
- * A fixed Preboss handoff is declared by its progression source, not inferred
- * by the application from a room name or a candidate domain. Shop-only
- * generated direct Preboss transition still needs contextual candidate validation; the
+ * A fixed width-one takeover is declared by its progression source, not
+ * inferred by the application from a room name or a candidate domain. The
+ * bounded-spine transition still needs contextual candidate validation; the
  * completed Hub handoff has already established its six-visit prerequisite
  * structurally and therefore creates its one fixed target directly.
  */
-export type FixedPrebossTransition =
+export type FixedWidthOneTakeoverTransition =
   | { readonly kind: 'completedHubHandoff'; readonly room: RoomDeclaration }
-  | { readonly kind: 'shopOnlyDirectPreboss'; readonly room: RoomDeclaration };
+  | { readonly kind: 'fixedWidthOneTakeover'; readonly room: RoomDeclaration };
 
-export function fixedPrebossTransitionForSource(
+export function fixedWidthOneTakeoverTransitionForSource(
   catalog: Catalog,
   layout: BiomeLayout,
   topology: BiomeTopology,
   source: ExitDecisionSource,
-): FixedPrebossTransition | undefined {
+): FixedWidthOneTakeoverTransition | undefined {
   if (source.kind === 'hubDecision') {
     if (layout.progression.kind !== 'hub' || source.decisionKey !== layout.progression.hubKey) {
       return undefined;
@@ -448,10 +448,10 @@ export function fixedPrebossTransitionForSource(
       ? undefined
       : Object.freeze({ kind: 'completedHubHandoff' as const, room });
   }
-  const room = directShopOnlyPrebossForSource(catalog, layout, topology, source);
+  const room = fixedWidthOneTakeoverForSource(catalog, layout, topology, source);
   return room === undefined
     ? undefined
-    : Object.freeze({ kind: 'shopOnlyDirectPreboss' as const, room });
+    : Object.freeze({ kind: 'fixedWidthOneTakeover' as const, room });
 }
 
 function validateSelectedDecisionCycles(
@@ -854,12 +854,6 @@ function decodeHubDecision(
   );
   if (visitOrder.length > hub.requiredVisits)
     failProjectDocument(`${raw.path}.visitOrder`, `exceeds ${hub.requiredVisits} Hub visits`);
-  if (visitOrder.length === hub.requiredVisits && openTargets.length < hub.openCount.min) {
-    failProjectDocument(
-      `${raw.path}.openTargets`,
-      `completed Hub requires at least ${hub.openCount.min} open slots`,
-    );
-  }
   const visited = new Set<string>();
   for (const [index, slotKey] of visitOrder.entries()) {
     if (!seenSlots.has(slotKey))

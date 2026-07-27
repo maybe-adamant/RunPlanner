@@ -136,18 +136,18 @@ describe('workspace candidate interaction families', () => {
     expect(typeof candidate.load).toBe('function');
     expect(typeof candidate.commandFor).toBe('function');
 
-    const directProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const fixedWidthOneProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: createExitDecisionAddress(oBiome, {
         kind: 'occurrence',
         occurrenceId: oOccurrenceIds.combat02,
       }),
     });
-    const directInteractions = services.structuredWorkspace.project(
-      directProject,
-      simulateProject(catalog, directProject),
+    const fixedWidthOneInteractions = services.structuredWorkspace.project(
+      fixedWidthOneProject,
+      simulateProject(catalog, fixedWidthOneProject),
     ).interactions;
-    const direct = directInteractions.takeoverBatches.get(
+    const fixedWidthOneTakeover = fixedWidthOneInteractions.takeoverBatches.get(
       semanticAddressKey(
         createExitDecisionAddress(oBiome, {
           kind: 'occurrence',
@@ -155,12 +155,12 @@ describe('workspace candidate interaction families', () => {
         }),
       ),
     );
-    if (direct?.presentation !== 'directPreboss') {
-      throw new Error('O direct Preboss capability is missing');
+    if (fixedWidthOneTakeover?.presentation !== 'fixedWidthOneTakeover') {
+      throw new Error('O fixed width-one takeover capability is missing');
     }
-    expect(direct.action).toBe('create');
-    expect('load' in direct).toBe(false);
-    expect(typeof direct.execute).toBe('function');
+    expect(fixedWidthOneTakeover.action).toBe('create');
+    expect('load' in fixedWidthOneTakeover).toBe(false);
+    expect(typeof fixedWidthOneTakeover.execute).toBe('function');
 
     const hubHandoffProject = appendCompleteN(
       createProjectDocument(catalog, {

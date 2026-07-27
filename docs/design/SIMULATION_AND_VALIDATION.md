@@ -1081,8 +1081,8 @@ Each route simulation records:
 
 The core contains complete F, G, H, I, N, O, P, and Q simulation through one
 common biome evaluator. Its progression-specific work is selected by the
-normalized progression descriptor (`generated` or `hub`), not by a whole-biome
-layout family. Every biome placed in a production route is authorable,
+normalized progression descriptor (`generated` or `hub`), not by a
+layout-family split. Every biome placed in a production route is authorable,
 simulatable, and editable. Application interaction fixtures and direct core
 conformance fixtures exercise the complete F/G/H/I and N/O/P/Q route prefixes.
 An entirely unconfigured project has explicit `empty` status, no findings, and

@@ -60,7 +60,7 @@ The application projects every configured biome into one `WorkspaceBiome`
 envelope. The envelope has an exhaustive node union for starts, linked exits,
 ordinary batches, takeover Preboss batches, mixed batches, the Hub decision,
 occurrence workbenches, and completion. React renders that projection through
-one `BiomeWorkspace`; it does not choose a whole-biome editor by layout type or
+one `BiomeWorkspace`; it does not choose a layout-specific editor by layout type or
 read authored decision arrays to reconstruct topology.
 
 Ordinary decision nodes project:
@@ -225,16 +225,16 @@ The active frontier offers declaration-admitted structural actions rather
 than a persistent `Next Step` field:
 
 - create the next ordinary decision where progression permits it;
-- create a candidate, takeover, or direct Preboss batch where its declaration
-  permits it;
+- create a candidate, takeover, or declaration-fixed width-one Preboss batch
+  where its declaration permits it;
 - create the fixed completed-Hub handoff only after the sixth authored visit;
 - remove from this decision;
 - clear biome through an explicit destructive action.
 
 The shared frontier presentation and variant-owned action sets are recorded in
 `../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`. React may share the container, but
-it does not reinterpret takeover, mixed, direct, or completed-Hub Preboss
-semantics.
+it does not reinterpret takeover, mixed, declaration-fixed width-one, or
+completed-Hub Preboss semantics.
 
 When a selected authored entry or decision directly precedes the current
 continuation frontier, its structural actions may also expose `Move to Next

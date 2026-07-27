@@ -113,7 +113,7 @@ function nodeOwnsAddress(node: WorkspaceNode, addressKey: string): boolean {
   }
 }
 
-function directNodeForAddress(
+function nodeForAddress(
   nodes: readonly WorkspaceNode[],
   addressKey: string,
 ): WorkspaceNode | undefined {
@@ -421,7 +421,7 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
   const explicitNode =
     explicitKey === undefined
       ? undefined
-      : (directNodeForAddress(biome.nodes, explicitKey) ?? completedHubHandoffNode);
+      : (nodeForAddress(biome.nodes, explicitKey) ?? completedHubHandoffNode);
   const explicitFrontier =
     explicitKey === undefined ||
     biome.frontier === null ||

@@ -12,25 +12,34 @@ authored choices or lifecycle simulation algorithms.
 
 ## Schema 9 Unified Biome Decisions
 
-Schema 9 is the current catalog authority. It replaces the former whole-layout
-`LinearBiome`/`HubBiome` split with one `BiomeLayout` envelope:
+Schema 9 is the current catalog authority. It uses one `BiomeLayout` envelope
+instead of a layout-specific split:
 
 - `start` is either `authoredChoice` or declaration-fixed `fixedAuthored`;
 - `progression` is either ordinary `generated` normal-door batches or the N
   `hub` decision; and
 - `completion` remains one declaration-owned derived tail.
 
-There is no top-level terminal policy. A normal-door batch may contain a
-Preboss Room Declaration. Selecting that occurrence begins the declaration
-owned completion tail; offering it does not.
+There is no top-level completion-decision policy. A normal-door batch may
+contain a Preboss Room Declaration. Selecting that occurrence begins the
+declaration-owned completion tail; offering it does not.
 
-`ForkedPreboss`, `ShopPreboss`, and `entryOfferPolicy` are retired. Every
-Preboss uses the authored `Preboss` template plus `prebossBatchPolicy`.
-Takeover policies make the first normal exit a Shop occurrence and, when
-declared, later exits counted-free occurrences. I retains normal peers;
-F/G/H/O/P/Q take over their normal doors; N's completed Hub emits the same
-width-one normal-door batch. N is a fixed authored `N_Opening01`, its linked
-normal exit `prehub` reaches `N_PreHub01`, and its Hub decision key is `hub`.
+Every Preboss uses the authored `Preboss` template plus
+`prebossBatchPolicy`. Takeover policies make the first normal exit a Shop
+occurrence and, when declared, later exits counted-free occurrences. I retains
+normal peers; F/G/H/O/P/Q take over their normal doors; N's completed Hub emits
+the same width-one normal-door batch. N is a fixed authored `N_Opening01`, its
+linked normal exit `prehub` reaches `N_PreHub01`, and its Hub decision key is
+`hub`.
+
+### Superseded vocabulary
+
+Historical migration evidence may use `LinearBiome`, `HubBiome`,
+`ForkedPreboss`, `ShopPreboss`, `entryOfferPolicy`, or terminal-policy names.
+Those names describe the pre-unified catalog only. Current declarations use
+the common layout, a `Preboss` template, and `prebossBatchPolicy`; the
+historical ledger remains in
+[`MIGRATION_PROVENANCE.md`](../progress/MIGRATION_PROVENANCE.md).
 
 `0.15.0-unified-biome-decisions` is the first catalog version using this
 contract. The active declaration language below uses this one envelope.

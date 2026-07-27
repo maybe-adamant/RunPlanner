@@ -38,6 +38,12 @@ and N's persistent Hub, visit timeline, side rooms, and WorldShop.
 The browser application is the active development host. Desktop packaging and
 the app/game execution boundary remain deliberate later steps.
 
+Natural Chaos is explicit future special-exit work, and Anomaly detours remain
+deferred. Neither has production declaration, authored state, command,
+simulation, candidate, or UI behavior today; a future Chaos slice must extend
+the exit-decision envelope without changing normal-door takeover or completion
+ownership.
+
 ## Architecture
 
 The repository is split by ownership:
@@ -135,9 +141,12 @@ copied elsewhere.
   [implementation plan](docs/progress/IMPLEMENTATION_PLAN.md) for forward
   acceptance gates and
   [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
-  active frontier and chronological delivery record. The active Phase 7
-  reconciliation is the
-  [unified biome decisions and workspace tracker](docs/progress/HUB_WORKSPACE_RECONCILIATION.md).
+  active frontier and chronological delivery record. Phase 7 Slice 4
+  reconciliation is complete; Commit 5 is the active presentation-polish and
+  accessible-confirmation follow-up. The
+  [unified biome decisions and workspace tracker](docs/progress/HUB_WORKSPACE_RECONCILIATION.md)
+  records that closure, the active follow-up, and the explicit future Chaos
+  backlog.
 
 ## Source Evidence
 

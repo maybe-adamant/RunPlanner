@@ -100,7 +100,7 @@ does not permit a single takeover target to be edited in isolation.
 
 A `retainNormalPeers` Preboss is different: it is an ordinary target beside
 ordinary peers. Its selected declaration starts completion; unselected peers
-remain normal topology leaves. Neither form introduces a separate terminal
+remain normal topology leaves. Neither form introduces a separate completion
 decision family.
 
 ## Reward stores and leaves

@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, within } from '@testing-library/react';
-import { createBiomeAddress, createOccurrenceId } from '@run-planner/engine/authored-project';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
+import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createExitDecisionAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+} from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '../../src/composition/createApplication';
@@ -9,7 +15,14 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '../../src/state/projectWorkspaceSlice';
-import { createGoldenFGHIProject } from '../fixtures/underworldProject';
+import { semanticOwnerFocused } from '../../src/state/editorSessionSlice';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+  goldenGBiome,
+} from '../fixtures/underworldProject';
+import { createRepresentativeNOPQProject } from '../fixtures/surfaceProject';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
 afterEach(() => {
@@ -99,5 +112,207 @@ describe('underworld product loop', () => {
     expect(application.store.getState().projectWorkspace.history.present).toBe(beforeShrink);
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     expect(screen.getByText('Opening 02')).toBeTruthy();
+  });
+
+  it('uses one projected semantic repair command for retained ordinary and takeover exits', async () => {
+    const ordinaryOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(1, 1),
+    });
+    const ordinaryApplication = createApplication();
+    const ordinaryProject = applyProjectCommand(
+      createGoldenFGHIProject(ordinaryApplication.catalog),
+      ordinaryApplication.catalog,
+      {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+        gameName: 'F_Combat01',
+      },
+    );
+    ordinaryApplication.store.dispatch(authoredProjectReplaced(ordinaryProject));
+    const ordinaryDispatch = vi.spyOn(ordinaryApplication.store, 'dispatch');
+    const ordinaryView = renderPlannerForInteraction({ application: ordinaryApplication });
+
+    await ordinaryView.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await ordinaryView.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    act(() => ordinaryApplication.store.dispatch(semanticOwnerFocused(ordinaryOwner)));
+    expect(screen.getByText('Repair removes 1 room occurrence.')).toBeTruthy();
+    expect(document.querySelector('[data-command="ReconcileBatchExitCapacity"]')).not.toBeNull();
+    const ordinaryHistoryBefore =
+      ordinaryApplication.store.getState().projectWorkspace.history.past.length;
+    ordinaryDispatch.mockClear();
+
+    await ordinaryView.user.click(
+      screen.getByRole('button', { name: 'Reconcile unavailable exits' }),
+    );
+
+    expect(ordinaryApplication.store.getState().projectWorkspace.history.past).toHaveLength(
+      ordinaryHistoryBefore + 1,
+    );
+    const ordinaryTopology = ordinaryApplication.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')?.topology;
+    expect(
+      ordinaryTopology?.occurrences.some(
+        (occurrence) => occurrence.occurrenceId === goldenFOccurrenceId(2, 1),
+      ),
+    ).toBe(true);
+    expect(
+      ordinaryTopology?.occurrences.some(
+        (occurrence) => occurrence.occurrenceId === goldenFOccurrenceId(2, 2),
+      ),
+    ).toBe(false);
+    expect(
+      ordinaryDispatch.mock.calls
+        .map(([action]) => action)
+        .filter(authoredProjectCommandDispatched.match)
+        .map((action) => action.payload),
+    ).toEqual([{ kind: 'ReconcileBatchExitCapacity', decision: ordinaryOwner }]);
+    ordinaryView.unmount();
+    ordinaryApplication.dispose();
+
+    const baseApplication = createApplication();
+    const complete = createGoldenFGHIProject(baseApplication.catalog);
+    const gPlan = complete.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    const takeover = gPlan?.topology?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.normal.kind === 'batch' &&
+        decision.normal.targets.every(
+          (target) =>
+            gPlan.topology?.occurrences.find(
+              (occurrence) => occurrence.occurrenceId === target.occurrenceId,
+            )?.gameName === 'G_PreBoss01',
+        ),
+    );
+    if (takeover?.kind !== 'exit' || takeover.source.kind !== 'occurrence') {
+      throw new Error('Golden G takeover source is missing');
+    }
+    const takeoverSource = takeover.source;
+    const takeoverProject = applyProjectCommand(complete, baseApplication.catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenGBiome, takeoverSource.occurrenceId),
+      gameName: 'G_MiniBoss02',
+    });
+    const takeoverApplication = createApplication();
+    takeoverApplication.store.dispatch(authoredProjectReplaced(takeoverProject));
+    const takeoverDispatch = vi.spyOn(takeoverApplication.store, 'dispatch');
+    const takeoverView = renderPlannerForInteraction({ application: takeoverApplication });
+    const takeoverOwner = createExitDecisionAddress(goldenGBiome, takeoverSource);
+
+    await takeoverView.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await takeoverView.user.click(screen.getByRole('button', { name: 'Oceanus' }));
+    act(() => takeoverApplication.store.dispatch(semanticOwnerFocused(takeoverOwner)));
+    expect(document.querySelector('[data-command="ReconcileTakeoverBatch"]')).not.toBeNull();
+    expect(
+      screen.getByText(
+        'Repair will reconcile 1 room occurrence through the projected takeover action.',
+      ),
+    ).toBeTruthy();
+    const takeoverHistoryBefore =
+      takeoverApplication.store.getState().projectWorkspace.history.past.length;
+    takeoverDispatch.mockClear();
+
+    await takeoverView.user.click(screen.getByRole('button', { name: 'Repair Preboss batch' }));
+
+    expect(takeoverApplication.store.getState().projectWorkspace.history.past).toHaveLength(
+      takeoverHistoryBefore + 1,
+    );
+    const takeoverTopology = takeoverApplication.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
+    expect(
+      takeoverTopology?.occurrences.some(
+        (occurrence) => occurrence.occurrenceId === takeoverSource.occurrenceId,
+      ),
+    ).toBe(true);
+    const takeoverCommands = takeoverDispatch.mock.calls
+      .map(([action]) => action)
+      .filter(authoredProjectCommandDispatched.match)
+      .map((action) => action.payload);
+    expect(takeoverCommands).toHaveLength(1);
+    const takeoverCommand = takeoverCommands[0];
+    if (takeoverCommand?.kind !== 'ReconcileTakeoverBatch') {
+      throw new Error('Takeover repair must dispatch ReconcileTakeoverBatch');
+    }
+    expect(takeoverCommand).toMatchObject({
+      decision: takeoverOwner,
+      gameName: 'G_PreBoss01',
+    });
+    expect(Object.keys(takeoverCommand.targetOccurrenceIds)).toEqual(['exit1']);
+    expect(Object.values(takeoverCommand.targetOccurrenceIds)).toHaveLength(1);
+    takeoverApplication.dispose();
+  });
+
+  it('keeps pointer and keyboard workflows available across linked, ordinary, takeover, mixed, Hub, and completion decisions', async () => {
+    const application = createApplication();
+    application.store.dispatch(
+      authoredProjectReplaced(createGoldenFGHIProject(application.catalog)),
+    );
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    const fStructure = screen.getByRole('region', { name: 'Erebus structure' });
+    const ordinary = fStructure.querySelector<HTMLButtonElement>(
+      '[data-kind="ordinaryBatch"] button',
+    );
+    if (ordinary === null) throw new Error('F ordinary batch rail node is missing');
+    act(() => ordinary.focus());
+    await view.user.keyboard('{Enter}');
+    expect(screen.getByText('Generated exits')).toBeTruthy();
+
+    await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
+    const gStructure = screen.getByRole('region', { name: 'Oceanus structure' });
+    const takeover = gStructure.querySelector<HTMLButtonElement>(
+      '[data-kind="takeoverBatch"] button',
+    );
+    if (takeover === null) throw new Error('G takeover rail node is missing');
+    await view.user.click(takeover);
+    expect(screen.getByText('Atomic Preboss batch')).toBeTruthy();
+
+    await view.user.click(screen.getByRole('button', { name: 'Tartarus' }));
+    const iStructure = screen.getByRole('region', { name: 'Tartarus structure' });
+    const mixed = iStructure.querySelector<HTMLButtonElement>('[data-kind="mixedBatch"] button');
+    if (mixed === null) throw new Error('I mixed batch rail node is missing');
+    await view.user.click(mixed);
+    expect(screen.getByText('Mixed normal batch')).toBeTruthy();
+
+    act(() =>
+      application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject())),
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
+    await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
+    const nStructure = screen.getByRole('region', { name: 'Ephyra structure' });
+    const linked = nStructure.querySelector<HTMLButtonElement>('[data-kind="linkedExit"] button');
+    if (linked === null) throw new Error('N linked exit rail node is missing');
+    await view.user.click(linked);
+    expect(
+      screen.getByText(/This declaration-owned exit is linked to its fixed room/),
+    ).toBeTruthy();
+
+    const hub = nStructure.querySelector<HTMLButtonElement>('[data-kind="hubDecision"] button');
+    if (hub === null) throw new Error('N Hub rail node is missing');
+    await view.user.click(hub);
+    const hubSlot = screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement;
+    act(() => hubSlot.focus());
+    await view.user.keyboard('[Space]');
+    await waitFor(() => expect(hubSlot.checked).toBe(true));
+
+    await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
+    const pStructure = screen.getByRole('region', { name: 'Olympus structure' });
+    const completion = Array.from(
+      pStructure.querySelectorAll<HTMLElement>('[data-kind="completion"]'),
+    ).at(-1);
+    const completionButton = completion?.querySelector<HTMLButtonElement>('button');
+    if (completionButton === null || completionButton === undefined) {
+      throw new Error('P completion rail node is missing');
+    }
+    await view.user.click(completionButton);
+    expect(screen.getByText(/derived from the biome layout/i)).toBeTruthy();
   });
 });
