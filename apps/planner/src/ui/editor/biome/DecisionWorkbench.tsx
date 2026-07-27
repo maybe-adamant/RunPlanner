@@ -26,10 +26,9 @@ import {
   type WorkspaceMixedBatchNode,
   type WorkspaceCandidateTakeoverBatchInteraction,
   type WorkspaceCompletedHubHandoffInteraction,
-  type WorkspaceDirectPrebossTakeoverInteraction,
+  type WorkspaceFixedWidthOneTakeoverInteraction,
   type WorkspaceTakeoverRepairInteraction,
   type WorkspaceTopologyRemovalInteraction,
-  type WorkspaceTopologyRemovalScope,
 } from '../../../projections/structuredWorkspace';
 import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
@@ -41,6 +40,7 @@ import { candidateMayBeAuthored, candidateSelectState } from '../../feedback/can
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 import { CandidateSelect } from './CandidateSelect';
 import { RoomSelector } from './RoomSelector';
+import { topologyRemovalScopeSummary } from './topologyRemovalPresentation';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
@@ -104,27 +104,22 @@ function scopeSummary(
 
 function ExactRepairScope({ scope }: { readonly scope: WorkspaceBatchRepairScope }) {
   const dispatch = useAppDispatch();
-  if (scope.command === 'ReconcileTakeoverBatch') {
+  if (scope.commandKind === 'ReconcileTakeoverBatch') {
     return (
-      <p className="repair-scope" data-command={scope.command}>
+      <p className="repair-scope" data-command={scope.commandKind}>
         Repair will reconcile {scopeSummary(scope)} through the projected takeover action.
       </p>
     );
   }
   return (
-    <div className="repair-scope" data-command={scope.command}>
+    <div className="repair-scope" data-command={scope.commandKind}>
       <p>Repair removes {scopeSummary(scope)}.</p>
       <button
         className="secondary-action"
         onClick={() =>
           (() => {
             dispatch(semanticOwnerFocused(scope.owner));
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReconcileBatchExitCapacity',
-                decision: scope.owner,
-              }),
-            );
+            dispatch(authoredProjectCommandDispatched(scope.command));
           })()
         }
         type="button"
@@ -133,27 +128,6 @@ function ExactRepairScope({ scope }: { readonly scope: WorkspaceBatchRepairScope
       </button>
     </div>
   );
-}
-
-function topologyRemovalScopeSummary(scope: WorkspaceTopologyRemovalScope): string {
-  const parts = [
-    scope.removedOccurrenceIds.length === 0
-      ? undefined
-      : `${scope.removedOccurrenceIds.length} ${
-          scope.removedOccurrenceIds.length === 1 ? 'room occurrence' : 'room occurrences'
-        }`,
-    scope.removedDecisionOwners.length === 0
-      ? undefined
-      : `${scope.removedDecisionOwners.length} ${
-          scope.removedDecisionOwners.length === 1 ? 'exit decision' : 'exit decisions'
-        }`,
-    scope.removedHubDecisionKeys.length === 0
-      ? undefined
-      : `${scope.removedHubDecisionKeys.length} ${
-          scope.removedHubDecisionKeys.length === 1 ? 'Hub board' : 'Hub boards'
-        }`,
-  ].filter((value): value is string => value !== undefined);
-  return parts.length === 0 ? 'no authored topology' : parts.join(' and ');
 }
 
 /**
@@ -480,10 +454,10 @@ function CandidateTakeoverAction({
   );
 }
 
-function DirectPrebossTakeoverAction({
+function FixedWidthOneTakeoverAction({
   interaction,
 }: {
-  readonly interaction: WorkspaceDirectPrebossTakeoverInteraction;
+  readonly interaction: WorkspaceFixedWidthOneTakeoverInteraction;
 }) {
   const dispatch = useAppDispatch();
   const [message, setMessage] = useState<string | undefined>();
@@ -573,8 +547,8 @@ function TakeoverAction({
       // chooser prevents a selection made for one ordinary batch from being
       // carried to another batch when the focused inspector changes.
       return <CandidateTakeoverAction interaction={interaction} key={interaction.key} />;
-    case 'directPreboss':
-      return <DirectPrebossTakeoverAction interaction={interaction} />;
+    case 'fixedWidthOneTakeover':
+      return <FixedWidthOneTakeoverAction interaction={interaction} />;
     case 'completedHubHandoff':
       return <CompletedHubHandoffAction interaction={interaction} />;
     case 'repair':

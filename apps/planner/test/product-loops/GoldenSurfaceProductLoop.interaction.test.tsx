@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createHubSlotAddress,
   createOccurrenceAddress,
   createProjectDocument,
   createTargetAddress,
@@ -22,11 +23,17 @@ import type {
   AutosaveScheduler,
 } from '../../src/persistence/autosaveRecovery';
 import type { ProfileFileAdapter } from '../../src/persistence/profileFile';
-import { authoredProjectReplaced } from '../../src/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+} from '../../src/state/projectWorkspaceSlice';
 import { selectProfileStatus } from '../../src/state/store';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
+  nBiome,
+  nOccurrenceId,
+  nOccurrenceIds,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -172,7 +179,7 @@ describe('surface product loop', () => {
     renderPlannerForInteraction({ application: recovered });
     expect(selectProfileStatus(recovered.store.getState())).toBe('Recovered');
     expect(currentProject(recovered)).toEqual(authored);
-  }, 45_000);
+  });
 
   it('records an N Hub visit edit as one undoable semantic command and autosaves both states', async () => {
     const recovery = createRecoveryPersistence();
@@ -226,6 +233,201 @@ describe('surface product loop', () => {
     expect(recovery.hasPendingAutosave()).toBe(true);
     recovery.flush();
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
+
+    await view.user.click(screen.getByRole('button', { name: 'Redo' }));
+
+    expect(currentProject(application)).toEqual(edited);
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    expect(recovery.hasPendingAutosave()).toBe(true);
+    recovery.flush();
+    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(edited));
+  });
+
+  it('closes a ninth unvisited Hub member and its completed handoff as one undoable autosaved command', async () => {
+    const recovery = createRecoveryPersistence();
+    const application = createApplication({
+      autosaveRecovery: recovery.adapter,
+      autosaveScheduler: recovery.scheduler,
+    });
+    const authored = appendCompleteN(
+      createProjectDocument(application.catalog, {
+        configuredBiomeCounts: { Surface: 1 },
+        name: 'Completed Hub membership repair surface',
+        projectId: 'surface-product-completed-hub-membership-repair',
+      }),
+    );
+    application.store.dispatch(authoredProjectReplaced(authored));
+    recovery.flush();
+    const dispatch = vi.spyOn(application.store, 'dispatch');
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
+    await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+
+    const card = screen.getByRole('article', { name: 'Combat 03 Hub slot' });
+    const checkbox = within(card).getByRole('checkbox', {
+      name: 'Combat 03 open',
+    }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    expect(
+      within(card).getByText('Closing this slot removes 2 room occurrences and 1 exit decision.'),
+    ).toBeTruthy();
+    expect(card.querySelector('[data-command="CloseHubSlot"]')).not.toBeNull();
+
+    const historyBeforeClose = application.store.getState().projectWorkspace.history.past.length;
+    dispatch.mockClear();
+    act(() => checkbox.focus());
+    await view.user.keyboard('[Space]');
+
+    await waitFor(() => expect(checkbox.checked).toBe(false));
+    const topology = currentProject(application)
+      .routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    const hub = topology?.decisions.find((decision) => decision.kind === 'hub');
+    if (topology === null || topology === undefined || hub?.kind !== 'hub') {
+      throw new Error('N Hub topology is missing after closing Combat 03');
+    }
+    expect(hub.openTargets).toHaveLength(8);
+    expect(hub.visitOrder).toHaveLength(6);
+    expect(
+      topology.decisions.some(
+        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+      ),
+    ).toBe(false);
+    expect(
+      topology.occurrences.some(
+        (occurrence) => occurrence.occurrenceId === nOccurrenceId('combat03'),
+      ),
+    ).toBe(false);
+    expect(
+      topology.occurrences.some((occurrence) => occurrence.occurrenceId === nOccurrenceIds.preboss),
+    ).toBe(false);
+    expect(application.store.getState().projectWorkspace.evaluation.findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'hubOpenSetIncomplete' })]),
+    );
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeClose + 1,
+    );
+    expect(
+      dispatch.mock.calls
+        .map(([action]) => action)
+        .filter(authoredProjectCommandDispatched.match)
+        .map((action) => action.payload),
+    ).toEqual([
+      {
+        kind: 'CloseHubSlot',
+        slot: createHubSlotAddress(nBiome, 'hub', 'combat03'),
+      },
+    ]);
+    expect(recovery.hasPendingAutosave()).toBe(true);
+    recovery.flush();
+    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(currentProject(application)));
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+
+    await waitFor(() => expect(currentProject(application)).toEqual(authored));
+    expect(recovery.hasPendingAutosave()).toBe(true);
+    recovery.flush();
+    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
+  });
+
+  it('closes an unvisited Hub member through its projected scope as one undoable autosaved command', async () => {
+    const recovery = createRecoveryPersistence();
+    const application = createApplication({
+      autosaveRecovery: recovery.adapter,
+      autosaveScheduler: recovery.scheduler,
+    });
+    const authored = appendCompleteN(
+      createProjectDocument(application.catalog, {
+        configuredBiomeCounts: { Surface: 1 },
+        name: 'Hub membership repair surface',
+        projectId: 'surface-product-hub-membership-repair',
+      }),
+    );
+    application.store.dispatch(authoredProjectReplaced(authored));
+    recovery.flush();
+    const dispatch = vi.spyOn(application.store, 'dispatch');
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
+    await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+
+    const card = screen.getByRole('article', { name: 'Combat 04 Hub slot' });
+    const checkbox = within(card).getByRole('checkbox', {
+      name: 'Combat 04 open',
+    }) as HTMLInputElement;
+    await view.user.pointer({ keys: '[MouseLeft]', target: checkbox });
+    await waitFor(() => expect(checkbox.checked).toBe(true));
+    expect(within(card).getByText('Closing this slot removes 1 room occurrence.')).toBeTruthy();
+    expect(card.querySelector('[data-command="CloseHubSlot"]')).not.toBeNull();
+    const hub = application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')
+      ?.topology?.decisions.find((decision) => decision.kind === 'hub');
+    const openedOccurrenceId =
+      hub?.kind === 'hub'
+        ? hub.openTargets.find((target) => target.hubSlotKey === 'combat04')?.occurrenceId
+        : undefined;
+    if (openedOccurrenceId === undefined) throw new Error('Combat 04 was not opened');
+    const retainedOccurrenceId =
+      hub?.kind === 'hub'
+        ? hub.openTargets.find((target) => target.hubSlotKey === 'combat05')?.occurrenceId
+        : undefined;
+    if (retainedOccurrenceId === undefined)
+      throw new Error('Combat 05 must remain an open Hub slot');
+
+    const historyBeforeClose = application.store.getState().projectWorkspace.history.past.length;
+    dispatch.mockClear();
+    act(() => checkbox.focus());
+    await view.user.keyboard('[Space]');
+
+    await waitFor(() => expect(checkbox.checked).toBe(false));
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeClose + 1,
+    );
+    const topologyAfterClose = application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    expect(
+      topologyAfterClose?.occurrences.some(
+        (occurrence) => occurrence.occurrenceId === openedOccurrenceId,
+      ),
+    ).toBe(false);
+    expect(
+      topologyAfterClose?.occurrences.some(
+        (occurrence) => occurrence.occurrenceId === retainedOccurrenceId,
+      ),
+    ).toBe(true);
+    expect(
+      topologyAfterClose?.decisions.some(
+        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+      ),
+    ).toBe(true);
+    expect(
+      topologyAfterClose?.occurrences.some(
+        (occurrence) => occurrence.occurrenceId === nOccurrenceIds.preboss,
+      ),
+    ).toBe(true);
+    expect(
+      dispatch.mock.calls
+        .map(([action]) => action)
+        .filter(authoredProjectCommandDispatched.match)
+        .map((action) => action.payload),
+    ).toEqual([
+      {
+        kind: 'CloseHubSlot',
+        slot: createHubSlotAddress(nBiome, 'hub', 'combat04'),
+      },
+    ]);
+    expect(recovery.hasPendingAutosave()).toBe(true);
+    recovery.flush();
+    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(currentProject(application)));
   });
 
   it('routes an actual Project Findings click to the exact shared-workspace target inspector', async () => {

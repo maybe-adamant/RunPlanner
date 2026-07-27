@@ -100,7 +100,7 @@ Every configured biome renders through one `BiomeWorkspace` composition over a
 ordinary decisions, linked exits, takeover and mixed Preboss batches,
 completion, and the Hub decision without React inspecting authored topology.
 `HubDecisionWorkbench` is the one N-specific workbench and is nested inside
-that shared workspace; it does not create a second full-biome editor.
+that shared workspace; it does not create a second editor surface.
 
 The center region does not attempt to make ordinary decision topology and the
 Hub board look structurally identical. It does give both the same route rail,
@@ -193,8 +193,10 @@ addresses. Visual weight does not change ownership.
 - H retains exactly four Fields decisions before its takeover Preboss batch.
 - I retains one generated-decision frontier; its Preboss is a generated peer
   after Goal completion and closes the biome only when picked.
-- O retains six one-exit decisions and a direct width-one Preboss batch.
-- Q retains six declaration-owned stages and a direct width-one Preboss batch.
+- O retains six one-exit decisions and a declaration-fixed width-one Preboss
+  batch.
+- Q retains six declaration-owned stages and a declaration-fixed width-one
+  Preboss batch.
 
 The shared rail and inspector do not invent one universal authoring frontier or
 Preboss action.
@@ -291,9 +293,10 @@ ordinary finding presentation.
 
 ## Destructive Actions and Repair
 
-Replace browser-native confirmation with accessible application dialogs.
-Destructive actions name their exact visible scope, such as the number of
-downstream decisions and occurrences removed.
+Commit 5 replaces browser-native confirmation with accessible application
+dialogs. Until then, destructive actions still name their exact visible scope,
+such as the number of downstream decisions and occurrences removed; Commit 4
+does not add another browser-confirmation path.
 
 Retained-overflow and Preboss-handoff repairs remain explicit:
 
@@ -310,6 +313,11 @@ The authored-project core calculates the pure removal impact once, and command
 execution consumes that same result. The application projection may translate
 its semantic sources into a presentation scope, but neither it nor React walks
 authored descendants to infer deletion.
+
+For a completed Hub, closing an unvisited slot that crosses the declared
+open-set minimum includes both the detached slot subtree and the Hub-owned
+completed-handoff subtree in that one projected scope. The resulting board
+remains visible as incomplete with its authored visits retained.
 
 ## Component Foundation
 

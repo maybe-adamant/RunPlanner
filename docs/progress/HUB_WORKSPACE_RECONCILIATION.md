@@ -2,8 +2,8 @@
 
 ## Status
 
-Commit 3c is complete. It closed the application composition over the unified
-biome-decision contract: every configured biome now renders through
+Commit 4 is complete. Commit 3c closed the application composition over the
+unified biome-decision contract: every configured biome now renders through
 `BiomeWorkspace`, while `HubDecisionWorkbench` remains the sole N-specific
 workbench inside that shared surface. Both consume `WorkspaceBiome` products
 and semantic interactions rather than authored topology, catalog layout
@@ -16,7 +16,7 @@ Delivered Slice 3c behavior:
   workspace-node dispatcher;
 - N exposes 26 declaration-fixed slots, nine or ten open members, six authored
   visits, occurrence-owned side rooms, and its fixed completed-Hub handoff
-  without a second full-biome editor;
+  without a second editor surface;
 - N keeps its declaration-only Hub outline after the active Opening or PreHub
   frontier, preserving the reachable `Opening -> PreHub -> Hub` rail order;
 - route-prefix-blocked suffixes retain structural frontiers from authored
@@ -30,7 +30,7 @@ Delivered Slice 3c behavior:
 - React remains a projection and semantic-command consumer: it owns no
   eligibility, reward, lifecycle, candidate, or topology-repair rules.
 
-Final validation after the N rail-order repair:
+Commit 3c validation after the N rail-order repair:
 
 - workspace typechecks passed for planner-engine, catalog, and planner;
 - full Vitest passed: 57 files, 592 tests;
@@ -42,8 +42,38 @@ Final validation after the N rail-order repair:
 - production Vite build passed. Its existing non-failing chunk-size warning
   remains.
 
+Commit 4 then closed the unified refactor with its representative workflow,
+recovery, repair, performance, architecture, terminology, and complete-gate
+evidence. Its final closure repair makes a ninth-to-eighth unvisited Hub-slot
+edit remove the completed-Hub handoff and its descendant subtree in the same
+engine-owned impact, while retaining the six authored visits on an incomplete
+board. Commit 5 is now the sole follow-up: presentation polish and accessible
+confirmation without changing the unified domain contracts.
+
+Final Commit 4 validation after the completed-Hub closure repair on 2026-07-26:
+
+- catalog, planner-engine, and planner TypeScript checks passed;
+- full Vitest passed: 59 files, 605 tests;
+- ESLint, Prettier, and `git diff --check` passed;
+- production Vite build passed. Its existing non-failing chunk-size warning
+  remains.
+
+### Current terminology
+
+The active contract uses one biome layout, normal-door batches, exit and Hub
+decisions, declaration-fixed width-one Preboss batches where applicable, and
+declaration-derived completion. References below to legacy layout families,
+terminal, direct, forked, or whole-biome editor terminology are retained only
+where they describe the prior migration plan or chronological evidence; they
+are not current production vocabulary.
+
+Natural Chaos remains an explicit future special-exit backlog. This refactor
+adds no Chaos declaration, authored state, command, simulation, candidate, or
+UI behavior; a later extension must use the exit-decision envelope described
+in [Deferred Chaos Extension Contract](#deferred-chaos-extension-contract).
+
 Earlier delivery records remain chronological evidence; they are not a reason
-to retain obsolete whole-biome editor paths or revision-labelled behavior in
+to retain obsolete dedicated editor paths or revision-labelled behavior in
 current authority.
 
 This tracker supersedes the presentation-only Phase 7 Commit 12 and
@@ -210,8 +240,7 @@ Room Occurrence and advances through explicit next-room decisions until a
 selected room closes editable traversal and starts the declaration-derived
 completion tail.
 
-There is no top-level `LinearBiome` versus `HubBiome` product split and no
-separate terminal-decision family:
+There is one topology product and no separate completion-decision family:
 
 ```ts
 type NextRoomDecision = ExitDecision | HubDecision;
@@ -287,8 +316,8 @@ offered but remains unselected until the authored exit choice is made.
 Preboss is a Room Declaration role interpreted inside a normal-door batch.
 There is no:
 
-- `TerminalDecision`;
-- `directTransition` versus `forkedTransition` authored distinction;
+- a completion-decision variant;
+- authored transition variants that encode takeover shape;
 - singleton preboss state detached from physical target occurrences;
 - authored `entryMode`;
 - persisted `isTakeover` duplicate of declaration and target facts.
@@ -298,31 +327,29 @@ Declarations and progression context.
 
 For the supported catalog, Room kind `Preboss` is the declaration-owned
 completion trigger. Offering a Preboss does not start completion; selecting its
-occurrence does. Do not replace the removed terminal policy with a second
-persisted `closesBiomeWhenPicked`, `completeBiome`, or entry-mode flag.
+occurrence does. Do not add a second persisted completion policy such as
+`closesBiomeWhenPicked`, `completeBiome`, or an entry-mode flag.
 
 ## Scope
 
 ### In Scope
 
-- replace normalized whole-biome `LinearBiome` and `HubBiome` variants with one
-  biome envelope and explicit progression-policy variants;
-- replace linked/generated/terminal top-level decision variants with
-  `ExitDecision | HubDecision`;
+- establish one normalized biome envelope with explicit progression-policy
+  variants;
+- establish `ExitDecision | HubDecision` as the complete top-level decision
+  vocabulary;
 - define linked normal exits and normal-door batches as explicit normal-exit
   contracts;
 - move exit selection to the combined exit-decision owner;
 - correct preboss modeling across F through Q;
-- replace the `ForkedPreboss`/`ShopPreboss` template split and terminal
-  shop/free occurrence roles with one Preboss template plus batch-order-derived
-  offer roles;
+- use one Preboss template plus batch-order-derived Shop/free offer roles;
 - separate candidate validity from preboss appearance-triggered batch shape;
 - represent O and Q prebosses as width-one instances of the common batch;
 - retain I's mixed generated preboss behavior;
 - represent N Opening as the authored start occurrence;
 - represent Opening-to-PreHub as a linked normal exit;
-- remove the obsolete fixed-entry and fixed-authored-slot layout forms rather
-  than retaining them as dormant compatibility types;
+- use declaration-fixed starts and Hub slots without dormant compatibility
+  forms;
 - represent N's persistent Hub as the one specialized Hub decision;
 - make completed N Hub produce a declaration-fixed width-one preboss batch;
 - preserve N's board, visits, side rooms, reward lookup, lifecycle, and
@@ -330,8 +357,8 @@ persisted `closesBiomeWhenPicked`, `completeBiome`, or entry-mode flag.
 - unify project evaluation and workspace projection around the common biome
   envelope;
 - render every biome through one `BiomeWorkspace`;
-- remove `LinearWorkspace`, `LinearBiomeEditor`, `LinearTopologyEditor`, and
-  `HubBiomeEditor` as full-biome production surfaces.
+- remove obsolete layout-specific editor exports after moving reusable leaf
+  controls into the shared workbench surface.
 
 ### Explicitly Deferred
 
@@ -439,7 +466,7 @@ uses fixed authored `N_Opening01`. A fixed start still creates and persists a
 real Room Occurrence, but the command and UI cannot substitute another game
 name.
 
-There is no separate top-level `terminal` field. Progression declares which
+There is no separate top-level completion-policy field. Progression declares which
 exit or Hub decision follows each semantic role, and target Room Declarations
 derive continuation or biome completion. In the supported catalog, a selected
 authored `Preboss` target starts the completion tail. This is Room-kind
@@ -510,11 +537,9 @@ non-preboss normal peer or targets that do not all reference the same
 declaration. The catalog compiler does not inspect authored occurrences, and
 the project validator does not redefine declaration policy.
 
-The migration replaces `entryOfferPolicy`,
-`ForkedPreboss`/`ShopPreboss`, and terminal shop/free roles. The normalized
-batch policy, declared exit order, and selected target derive each occurrence's
-Shop or counted-free offer role. No persisted occurrence-role flag duplicates
-those facts.
+The normalized batch policy, declared exit order, and selected target derive
+each occurrence's Shop or counted-free offer role. No persisted occurrence-role
+flag duplicates those facts.
 
 ### N Progression
 
@@ -534,7 +559,7 @@ declaration. The resulting batch and occurrence use the common contracts.
 
 The migration removes `EntryDescriptor`, `FixedEntryDescriptor`,
 `FixedAuthoredSlotDescriptor`, the derived `fixedEntry` classification, and
-their fixed-entry semantic addresses. N Opening and PreHub are ordinary
+their declaration-linked semantic addresses. N Opening and PreHub are ordinary
 authored occurrences connected by the start and linked-exit contracts; N
 Preboss is owned by the completed-Hub batch.
 
@@ -678,8 +703,8 @@ incompatible state across the role change.
 
 The Shop-versus-free occurrence role is derived from the declaration policy and
 exit order during decoding, default construction, materialization, and reward
-processing. It is not persisted as `terminalShop`, `terminalFreeReward`, or an
-equivalent flag.
+processing. It is not persisted as a legacy role-specific flag or an equivalent
+duplicate.
 
 Ordinary generated batches use their progression-owned reward-store and batch
 state. A takeover preboss batch uses its preboss offer policy and only the
@@ -770,8 +795,7 @@ Schema 9 is a clean authority boundary:
   blocked-recovery path;
 - schema 9 codecs, fixtures, profiles, recovery behavior, and test builders
   update together;
-- no permanent `LinearBiomePlan`, `HubBiomePlan`, or dual-schema compatibility
-  type remains.
+- no permanent parallel plan family or dual-schema compatibility type remains.
 
 Do not add cross-schema adapters to keep downstream layers compiling during the
 transition. A downstream layer may remain broken until its owning slice updates
@@ -831,9 +855,9 @@ interface BiomeEvaluationBase {
 }
 ```
 
-The route evaluator no longer chooses `evaluateLinearBiome` versus
-`evaluateHubBiome`. It evaluates the common biome envelope and dispatches
-decisions through explicit typed functions.
+The route evaluator evaluates the common biome envelope and dispatches
+decisions through explicit typed functions rather than choosing a
+layout-specific evaluator.
 
 ### Ordered Evaluation
 
@@ -859,18 +883,16 @@ Decision evaluators own:
 Shared orchestration owns initialization, counters, history folding, room
 lifecycle, completion walking, findings aggregation, and route-prefix handoff.
 
-The simulation migration also removes terminal-shaped derived vocabulary whose
-only purpose was the old topology split, including `CanonicalTerminalEntry`,
-`entersTerminal`, `layoutTerminal`, and the entry/body/terminal history
-adapter. A selected Preboss is the selected target of its normal-door batch;
-the common decision walk then starts the completion tail. Preboss Shop and
-counted-free occurrences retain distinct lifecycle behavior through
-declaration-derived offer roles, not terminal materializer branches.
+The simulation uses no completion-only derived vocabulary whose only purpose
+was an older topology split. A selected Preboss is the selected target of its
+normal-door batch; the common decision walk then starts the completion tail.
+Preboss Shop and counted-free occurrences retain distinct lifecycle behavior
+through declaration-derived offer roles, not specialized materializer branches.
 
 The common completion composer receives that entered Preboss occurrence as its
 predecessor. When a progression such as O carries resolved source reward-store
 provenance into completion, the selected normal-door batch supplies that
-provenance directly; it is not hidden in a replacement terminal wrapper. Boss
+provenance directly; it is not hidden in a replacement completion wrapper. Boss
 and Postboss keep their existing completion-role addresses and lifecycle order.
 
 ### Candidate Validity and Appearance Validation
@@ -1654,6 +1676,21 @@ Commit 4 does not require the global confirmation replacement or the broader
 visual-polish acceptance owned by Commit 5. Existing confirmation calls may
 remain at this boundary, but no new browser-confirmation path may be added.
 
+Delivered closure evidence:
+
+- Underworld and Surface performance gates measure full rebuild, cold candidate
+  projection, representative edit publication, and cached undo against the
+  750 ms / 50 ms limits without timeout relaxation;
+- product loops cover pointer and keyboard traversal across linked, ordinary,
+  takeover, mixed, Hub, and completion decisions; profile, valid recovery,
+  autosave, undo, and redo remain covered through the connected application;
+- Hub membership closure, ordinary retained-exit repair, and takeover repair
+  expose their projected scope and dispatch exactly one semantic command;
+- the architecture guard rejects React-owned topology-impact work and
+  engine-owned presentation models;
+- current authority uses one forward-looking decision and completion vocabulary
+  and records Chaos only as a future special-exit extension.
+
 ### Commit 5: Complete Workspace Polish and Accessible Confirmation
 
 Suggested subject:
@@ -1750,10 +1787,8 @@ Planner application, unified refactor:
 - `apps/planner/src/ui/shell/App.tsx`;
 - shared workspace and room/batch workbench components;
 - one Hub decision workbench and Hub candidate controls;
-- removal of the full-biome exports from `HubBiomeEditor.tsx`,
-  `LinearBiomeEditor.tsx`, `LinearTopologyEditor.tsx`, and
-  `LinearWorkspace.tsx`; delete those files after moving any reusable leaf
-  controls into shared workbench modules;
+- removal of obsolete layout-specific editor exports after moving any reusable
+  leaf controls into shared workbench modules;
 - refactor-owned shared styles and interaction tests.
 
 Planner application, follow-up polish:
@@ -1779,11 +1814,14 @@ Documentation:
 
 ## Review Checklist
 
+The completed markers below record the Commit 4 closure. Remaining unchecked
+items are Commit 5 final-product revalidation, not unfinished Slice 4 work.
+
 - [ ] One normalized biome envelope exists across catalog, authored project,
       evaluation, projection, and workspace.
-- [ ] Whole-biome Linear/Hub production splits are removed.
-- [ ] No full-biome Linear or Hub React editor remains; only shared workspace
-      composition and decision-specific workbenches survive.
+- [ ] Parallel layout-specific production splits are removed.
+- [ ] No layout-specific React editor remains; only shared workspace composition
+      and decision-specific workbenches survive.
 - [ ] `NextRoomDecision` contains only exit and Hub decisions.
 - [ ] Exit selection belongs to the exit-decision envelope.
 - [ ] Normal exits are explicit domain vocabulary.
@@ -1792,8 +1830,8 @@ Documentation:
       evaluated separately.
 - [ ] Takeover availability is one source-owned candidate domain; takeover
       Preboss declarations do not appear in per-target pickers.
-- [ ] One Preboss template and declaration batch policy replace
-      `ForkedPreboss`, `ShopPreboss`, and `entryOfferPolicy`.
+- [ ] One Preboss template and declaration batch policy own every supported
+      Shop/free offer role.
 - [ ] Preboss selection, not an authored completion flag, starts the completion
       tail.
 - [ ] Takeover prebosses fill every normal door and never a special exit.
@@ -1828,21 +1866,21 @@ Documentation:
       and target addresses use decision identity and declaration-owned keys.
 - [ ] Retained invalid structure exposes projected repair scope and never
       requires React to infer deletion ownership.
-- [ ] Commit 4 closes the unified biome refactor with a passing complete gate
+- [x] Commit 4 closes the unified biome refactor with a passing complete gate
       before presentation and confirmation polish begins.
 - [ ] Commit 5 changes no catalog, authored-project, simulation, candidate,
       address, or semantic-repair contract.
-- [ ] Browser-native confirmation is absent; one accessible application dialog
-      confirms exactly one undoable semantic command.
+- [ ] Commit 5 replaces browser-native confirmation with one accessible
+      application dialog that confirms exactly one undoable semantic command.
 - [ ] Schema 9 rejects schema 8 and uses the new catalog version.
-- [ ] Obsolete fixed-entry/fixed-slot, canonical-terminal, history-terminal,
-      and terminal-form repair APIs are absent from production.
+- [ ] Obsolete layout-specific entry, completion-form history, and
+      completion-form repair APIs are absent from production.
 - [ ] No arbitrary room replacement or duplicate visit-order authority exists.
 - [ ] No Chaos declaration, state, command, simulator, candidate, or UI behavior
       is added.
 - [ ] The exit-decision envelope remains the documented future owner of Chaos
       selection.
-- [ ] The complete repository gate passes.
+- [x] The complete repository gate passes.
 
 Do not mark Phase 7 Commit 12 complete until all five commits and the complete
 repository gate pass.

@@ -261,6 +261,10 @@ describe('BiomeWorkspace', () => {
     expect(openedCard.querySelector('[data-assessment]')?.getAttribute('data-assessment')).toBe(
       'assessed',
     );
+    expect(
+      within(openedCard).getByText('Closing this slot removes 1 room occurrence.'),
+    ).toBeTruthy();
+    expect(openedCard.querySelector('[data-command="CloseHubSlot"]')).not.toBeNull();
     const beforeReward = nHubOccurrence(view.application, 'combat04').state;
     await view.user.click(within(openedCard).getByLabelText('Reward'));
     const rewardTypes = within(await screen.findByRole('listbox')).getAllByRole('option');
@@ -298,6 +302,8 @@ describe('BiomeWorkspace', () => {
       { name: 'Combat 04 open' },
     );
     act(() => close.focus());
+    const historyBeforeClose =
+      view.application.store.getState().projectWorkspace.history.past.length;
     await view.user.keyboard('[Space]');
     await waitFor(() =>
       expect(
@@ -305,6 +311,9 @@ describe('BiomeWorkspace', () => {
           (target) => target.hubSlotKey === 'combat04',
         ),
       ).toBe(false),
+    );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeClose + 1,
     );
   });
 
@@ -940,7 +949,7 @@ describe('BiomeWorkspace', () => {
     expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
   });
 
-  it('renders O’s fixed direct Preboss action without a selector and creates its entered Shop lazily', async () => {
+  it('renders O’s fixed width-one Preboss takeover without a selector and creates its entered Shop lazily', async () => {
     const owner = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
       occurrenceId: oOccurrenceIds.combat02,
@@ -979,7 +988,7 @@ describe('BiomeWorkspace', () => {
         candidate.source.occurrenceId === oOccurrenceIds.combat02,
     );
     if (decision?.kind !== 'exit' || decision.normal.kind !== 'batch') {
-      throw new Error('O direct Preboss action did not create one atomic batch');
+      throw new Error('O fixed width-one takeover did not create one atomic batch');
     }
     expect(decision.selection).toEqual({ kind: 'derived' });
     const prebossId = decision.normal.targets[0]?.occurrenceId;
@@ -987,7 +996,7 @@ describe('BiomeWorkspace', () => {
       (occurrence) => occurrence.occurrenceId === prebossId,
     );
     if (preboss?.state.kind !== 'shop' || preboss.state.shop === undefined) {
-      throw new Error('O direct Preboss must materialize its entered World Shop');
+      throw new Error('O fixed width-one takeover must materialize its entered World Shop');
     }
     expect(preboss.gameName).toBe('O_PreBoss01');
     const projected = workspaceBiome(view.application, 'Surface', 'O');
@@ -1007,7 +1016,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.getAllByText('Purchased')).not.toHaveLength(0);
   });
 
-  it('keeps Q’s staged direct Preboss action on the selected spine after decision serialization is reordered', async () => {
+  it('keeps Q’s fixed width-one Preboss takeover on the selected spine after decision serialization is reordered', async () => {
     const owner = createExitDecisionAddress(qBiome, {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,
@@ -1056,7 +1065,7 @@ describe('BiomeWorkspace', () => {
         candidate.source.occurrenceId === qOccurrenceIds.secondMiniboss1,
     );
     if (decision?.kind !== 'exit' || decision.normal.kind !== 'batch') {
-      throw new Error('Q direct Preboss action did not create one atomic batch');
+      throw new Error('Q fixed width-one takeover did not create one atomic batch');
     }
     const prebossId = decision.normal.targets[0]?.occurrenceId;
     const preboss = plan?.topology?.occurrences.find(
@@ -1066,7 +1075,7 @@ describe('BiomeWorkspace', () => {
       gameName: 'Q_PreBoss01',
       state: { kind: 'shop', shop: expect.any(Object) },
     });
-    if (preboss === undefined) throw new Error('Q direct Preboss occurrence is missing');
+    if (preboss === undefined) throw new Error('Q fixed width-one takeover occurrence is missing');
     act(() =>
       view.application.store.dispatch(
         semanticOwnerFocused(createOccurrenceAddress(qBiome, preboss.occurrenceId)),
@@ -1075,7 +1084,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.getAllByText('Purchased')).not.toHaveLength(0);
   });
 
-  it('keeps an unavailable direct Preboss action explanatory and non-destructive', async () => {
+  it('keeps an unavailable fixed width-one Preboss takeover explanatory and non-destructive', async () => {
     const qOwner = createExitDecisionAddress(qBiome, {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,

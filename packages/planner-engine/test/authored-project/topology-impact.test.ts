@@ -3,6 +3,7 @@ import {
   createOccurrenceId,
   describeClearTopologyImpact,
   describeExitDecisionRemovalImpact,
+  describeHubSlotClosureImpact,
   describeTopologyRemovalImpact,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
@@ -141,7 +142,7 @@ describe('topology removal impact', () => {
           kind: 'hub' as const,
           hubKey: 'hub',
           openTargets: [{ hubSlotKey: 'combat01', occurrenceId: hubSlot }],
-          visitOrder: ['combat01'],
+          visitOrder: [],
         },
         {
           kind: 'exit' as const,
@@ -208,6 +209,116 @@ describe('topology removal impact', () => {
       hubSlot,
     ]);
     expect(withoutHandoff.decisions).toEqual([topology.decisions[0], topology.decisions[1]]);
+  });
+
+  it('owns the detached physical subtree when closing an unvisited Hub slot', () => {
+    const hubSlot = createOccurrenceId('hub-slot-combat01');
+    const hubChild = createOccurrenceId('hub-slot-child');
+    const topology = {
+      startOccurrenceId: root,
+      occurrences: [root, hubSlot, hubChild].map((occurrenceId) => ({
+        occurrenceId,
+        gameName: 'TestRoom',
+        state: { kind: 'none' as const },
+      })),
+      decisions: [
+        {
+          kind: 'hub' as const,
+          hubKey: 'hub',
+          openTargets: [{ hubSlotKey: 'combat01', occurrenceId: hubSlot }],
+          visitOrder: [],
+        },
+        {
+          kind: 'exit' as const,
+          source: { kind: 'occurrence' as const, occurrenceId: hubSlot },
+          normal: {
+            kind: 'linked' as const,
+            exitKey: 'exit1',
+            occurrenceId: hubChild,
+          },
+          selection: { kind: 'derived' as const },
+        },
+      ],
+    };
+
+    expect(describeHubSlotClosureImpact(topology, 'hub', 'combat01', 1)).toEqual({
+      removedExitDecisionSources: [{ kind: 'occurrence', occurrenceId: hubSlot }],
+      removedHubDecisionKeys: [],
+      removedOccurrenceIds: [hubSlot, hubChild],
+    });
+    expect(describeHubSlotClosureImpact(topology, 'hub', 'combat02', 1)).toBeUndefined();
+  });
+
+  it('removes the completed-Hub handoff subtree when closing falls below its open-slot minimum', () => {
+    const hubSlot = createOccurrenceId('hub-slot-combat01');
+    const retainedSlot = createOccurrenceId('hub-slot-combat02');
+    const preboss = createOccurrenceId('hub-preboss');
+    const completionChild = createOccurrenceId('hub-completion-child');
+    const topology = {
+      startOccurrenceId: root,
+      occurrences: [root, hubSlot, retainedSlot, preboss, completionChild].map((occurrenceId) => ({
+        occurrenceId,
+        gameName: 'TestRoom',
+        state: { kind: 'none' as const },
+      })),
+      decisions: [
+        {
+          kind: 'hub' as const,
+          hubKey: 'hub',
+          openTargets: [
+            { hubSlotKey: 'combat01', occurrenceId: hubSlot },
+            { hubSlotKey: 'combat02', occurrenceId: retainedSlot },
+          ],
+          visitOrder: ['combat01'],
+        },
+        {
+          kind: 'exit' as const,
+          source: { kind: 'hubDecision' as const, decisionKey: 'hub' },
+          normal: {
+            kind: 'batch' as const,
+            rewardStore: { kind: 'none' as const },
+            batchState: null,
+            targets: [{ exitKey: 'preboss', occurrenceId: preboss }],
+          },
+          selection: { kind: 'derived' as const },
+        },
+        {
+          kind: 'exit' as const,
+          source: { kind: 'occurrence' as const, occurrenceId: preboss },
+          normal: {
+            kind: 'linked' as const,
+            exitKey: 'exit1',
+            occurrenceId: completionChild,
+          },
+          selection: { kind: 'derived' as const },
+        },
+      ],
+    };
+
+    const impact = describeHubSlotClosureImpact(topology, 'hub', 'combat01', 2);
+    expect(impact).toEqual({
+      removedExitDecisionSources: [
+        { kind: 'hubDecision', decisionKey: 'hub' },
+        { kind: 'occurrence', occurrenceId: preboss },
+      ],
+      removedHubDecisionKeys: [],
+      removedOccurrenceIds: [hubSlot, preboss, completionChild],
+    });
+    if (impact === undefined) throw new Error('Hub slot closure impact is missing');
+    expect(applyTopologyRemovalImpact(topology, impact)).toEqual({
+      startOccurrenceId: root,
+      occurrences: [root, retainedSlot].map((occurrenceId) => ({
+        occurrenceId,
+        gameName: 'TestRoom',
+        state: { kind: 'none' as const },
+      })),
+      decisions: [topology.decisions[0]],
+    });
+    expect(describeHubSlotClosureImpact(topology, 'hub', 'combat01', 1)).toEqual({
+      removedExitDecisionSources: [],
+      removedHubDecisionKeys: [],
+      removedOccurrenceIds: [hubSlot],
+    });
   });
 
   it('describes ClearTopology as every persisted occurrence and decision owner', () => {

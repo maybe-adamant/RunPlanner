@@ -64,7 +64,7 @@ policy, not a duplicated store choice. Non-ShipCombat O sources retain the
 ordinary authored base-store choice where their room-start selection is
 otherwise observable.
 
-### Candidate families and direct completion
+### Candidate families and declaration-fixed completion
 
 O combat declarations retain three game-data families: the ordinary recent
 ShipCombat-phase family, early depth-limited maps that replace that inherited

@@ -1,10 +1,10 @@
 import { clockworkRoomLifecycleProfiles } from './clockwork';
 import { ephyraRoomLifecycleProfiles } from './ephyra';
 import { fieldsRoomLifecycleProfiles } from './fields';
+import { prebossCompletionRoomLifecycleProfiles } from './preboss-completion';
 import { shipRoomLifecycleProfiles } from './ship';
 import { shopsRoomLifecycleProfiles } from './shops';
 import { specializedRewardRoomLifecycleProfiles, standardRoomLifecycleProfiles } from './standard';
-import { terminalRoomLifecycleProfiles } from './terminal';
 
 export const roomLifecycleProfiles = [
   ...standardRoomLifecycleProfiles,
@@ -14,5 +14,5 @@ export const roomLifecycleProfiles = [
   ...fieldsRoomLifecycleProfiles,
   ...shipRoomLifecycleProfiles,
   ...shopsRoomLifecycleProfiles,
-  ...terminalRoomLifecycleProfiles,
+  ...prebossCompletionRoomLifecycleProfiles,
 ] as const;

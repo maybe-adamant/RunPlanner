@@ -4,6 +4,7 @@ import {
   applyTopologyRemovalImpact,
   describeClearTopologyImpact,
   describeExitDecisionRemovalImpact,
+  describeHubSlotClosureImpact,
   describeTopologyRemovalImpact,
 } from '../topologyImpact';
 import type { ExitDecisionSourceAddress } from '../addresses';
@@ -1056,19 +1057,23 @@ function updateHub(
     if (target === undefined) return document;
     if (hub.visitOrder.includes(target.hubSlotKey))
       failCommand(command, 'remove Hub visits before closing a slot');
+    const impact = describeHubSlotClosureImpact(
+      topology,
+      descriptor.hubKey,
+      target.hubSlotKey,
+      descriptor.openCount.min,
+    );
+    if (impact === undefined)
+      failCommand(command, `Hub slot ${target.hubSlotKey} has no open target`);
     const replacement: HubDecision = Object.freeze({
       ...hub,
       openTargets: Object.freeze(hub.openTargets.filter((candidate) => candidate !== target)),
     });
-    const without = Object.freeze({
-      ...topology,
-      occurrences: Object.freeze(
-        topology.occurrences.filter(
-          (occurrence) => occurrence.occurrenceId !== target.occurrenceId,
-        ),
-      ),
-    });
-    return updateTopology(document, located, replaceDecision(without, replacement));
+    return updateTopology(
+      document,
+      located,
+      replaceDecision(applyTopologyRemovalImpact(topology, impact), replacement),
+    );
   }
   if (command.visit.hubKey !== descriptor.hubKey)
     failCommand(command, 'Hub address does not match this decision');
@@ -1092,12 +1097,6 @@ function updateHub(
   }
   if (visits.length > descriptor.requiredVisits)
     failCommand(command, `Hub supports ${descriptor.requiredVisits} visits`);
-  if (
-    visits.length === descriptor.requiredVisits &&
-    hub.openTargets.length < descriptor.openCount.min
-  ) {
-    failCommand(command, `Hub completion requires ${descriptor.openCount.min} open slots`);
-  }
   const withoutCompletedHandoff =
     command.kind === 'RemoveHubVisitsFrom' && visits.length < descriptor.requiredVisits
       ? removeCompletedHubHandoff(topology, descriptor.hubKey)

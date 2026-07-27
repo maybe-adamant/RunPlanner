@@ -39,8 +39,8 @@ The cross-biome frontier audit is now recorded in
 `../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`. Contextual selection lands before
 the final frontier and presentation closure because frontier guidance consumes
 the same progressive coverage and candidate evidence. Ordinary-decision,
-takeover Preboss, I mixed-batch, completed-Hub, and direct Preboss behaviors do
-not collapse into one action.
+takeover Preboss, I mixed-batch, completed-Hub, and declaration-fixed
+width-one Preboss behaviors do not collapse into one action.
 
 The broad visual treatment of route findings, enrichment color, graph views,
 and final application styling are also outside this first set. Existing

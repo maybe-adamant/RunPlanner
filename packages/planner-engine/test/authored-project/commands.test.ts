@@ -21,9 +21,9 @@ import {
   createTargetAddress,
   declaredPhysicalExits,
   decodeProjectDocument,
-  directShopOnlyPrebossForSource,
+  fixedWidthOneTakeoverForSource,
   encodeProjectDocument,
-  fixedPrebossTransitionForSource,
+  fixedWidthOneTakeoverTransitionForSource,
   ProjectCommandContractError,
   ProjectDocumentContractError,
   redoProjectHistory,
@@ -494,7 +494,7 @@ describe('authored-project commands and topology', () => {
       },
     ]);
     expect(
-      fixedPrebossTransitionForSource(catalog, layout, topology, {
+      fixedWidthOneTakeoverTransitionForSource(catalog, layout, topology, {
         kind: 'hubDecision',
         decisionKey: 'hub',
       }),
@@ -527,7 +527,36 @@ describe('authored-project commands and topology', () => {
     );
   });
 
-  it('recognizes O and Q direct Shop-only Prebosses from their selected bounded spine', () => {
+  it('removes the completed-Hub Preboss handoff when an unvisited ninth slot closes', () => {
+    const project = applyProjectCommand(completeNProject(), catalog, {
+      kind: 'CloseHubSlot',
+      slot: createHubSlotAddress(nBiome, 'hub', 'combat07'),
+    });
+    const topology = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    if (topology === null || topology === undefined) throw new Error('N topology is required');
+    const hub = topology.decisions.find((decision) => decision.kind === 'hub');
+    if (hub?.kind !== 'hub') throw new Error('N Hub decision is required');
+
+    expect(hub.openTargets).toHaveLength(8);
+    expect(hub.openTargets.map((target) => target.hubSlotKey)).not.toContain('combat07');
+    expect(hub.openTargets.map((target) => target.hubSlotKey)).toContain('combat08');
+    expect(hub.visitOrder).toHaveLength(6);
+    expect(
+      topology.decisions.some(
+        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+      ),
+    ).toBe(false);
+    expect(topology.occurrences.some((occurrence) => occurrence.gameName === 'N_PreBoss01')).toBe(
+      false,
+    );
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+  });
+
+  it('recognizes O and Q fixed width-one Preboss takeovers from their selected bounded spine', () => {
     const oOwner = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
       occurrenceId: createOccurrenceId('complete-o-6'),
@@ -541,18 +570,18 @@ describe('authored-project commands and topology', () => {
       ?.biomes.find((biome) => biome.biomeKey === 'O')?.topology;
     const oLayout = catalog.biomeLayouts.byKey.O;
     if (oTopology === null || oTopology === undefined || oLayout === undefined) {
-      throw new Error('O topology and layout are required for direct Preboss coverage');
+      throw new Error('O topology and layout are required for fixed width-one takeover coverage');
     }
     expect(
-      directShopOnlyPrebossForSource(catalog, oLayout, oTopology, oOwner.source),
+      fixedWidthOneTakeoverForSource(catalog, oLayout, oTopology, oOwner.source),
     ).toMatchObject({
       gameName: 'O_PreBoss01',
     });
     expect(
-      fixedPrebossTransitionForSource(catalog, oLayout, oTopology, oOwner.source),
-    ).toMatchObject({ kind: 'shopOnlyDirectPreboss', room: { gameName: 'O_PreBoss01' } });
+      fixedWidthOneTakeoverTransitionForSource(catalog, oLayout, oTopology, oOwner.source),
+    ).toMatchObject({ kind: 'fixedWidthOneTakeover', room: { gameName: 'O_PreBoss01' } });
     expect(
-      directShopOnlyPrebossForSource(catalog, oLayout, oTopology, {
+      fixedWidthOneTakeoverForSource(catalog, oLayout, oTopology, {
         kind: 'occurrence',
         occurrenceId: createOccurrenceId('complete-o-5'),
       }),
@@ -585,18 +614,20 @@ describe('authored-project commands and topology', () => {
       ?.biomes.find((biome) => biome.biomeKey === 'Q')?.topology;
     const qLayout = catalog.biomeLayouts.byKey.Q;
     if (qTopology === null || qTopology === undefined || qLayout === undefined) {
-      throw new Error('Q reordered topology and layout are required for direct Preboss coverage');
+      throw new Error(
+        'Q reordered topology and layout are required for fixed width-one takeover coverage',
+      );
     }
     expect(
-      directShopOnlyPrebossForSource(catalog, qLayout, qTopology, qOwner.source),
+      fixedWidthOneTakeoverForSource(catalog, qLayout, qTopology, qOwner.source),
     ).toMatchObject({
       gameName: 'Q_PreBoss01',
     });
     expect(
-      fixedPrebossTransitionForSource(catalog, qLayout, qTopology, qOwner.source),
-    ).toMatchObject({ kind: 'shopOnlyDirectPreboss', room: { gameName: 'Q_PreBoss01' } });
+      fixedWidthOneTakeoverTransitionForSource(catalog, qLayout, qTopology, qOwner.source),
+    ).toMatchObject({ kind: 'fixedWidthOneTakeover', room: { gameName: 'Q_PreBoss01' } });
     expect(
-      directShopOnlyPrebossForSource(catalog, qLayout, qTopology, {
+      fixedWidthOneTakeoverForSource(catalog, qLayout, qTopology, {
         kind: 'occurrence',
         occurrenceId: createOccurrenceId('complete-q-second-fork'),
       }),

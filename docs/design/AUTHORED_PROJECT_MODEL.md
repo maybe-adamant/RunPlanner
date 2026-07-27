@@ -14,9 +14,17 @@ schema 8 and earlier documents rather than inventing unified decisions, N Hub
 state, or a Preboss selection for a stale document. Catalog versions must match
 exactly.
 
-There is one biome plan and one topology language. The old `LinearBiome`,
-`HubBiome`, terminal-transition, fixed-entry-slot, continuation, and picked
-contracts are absent from production state and semantic addresses.
+There is one biome plan and one topology language. Production state and
+semantic addresses have no layout-specific plan family, completion-transition
+decision, fixed-entry slot, continuation, or picked contract.
+
+### Superseded vocabulary
+
+Historical delivery records may refer to `LinearBiome`, `HubBiome`, terminal
+transitions, fixed-entry slots, continuations, or picked contracts. Those names
+identify the pre-unified migration state only; they are not current persisted
+or semantic contracts. [`MIGRATION_PROVENANCE.md`](../progress/MIGRATION_PROVENANCE.md)
+retains that evidence.
 
 ```ts
 interface AuthoredBiomePlan {
@@ -70,8 +78,8 @@ physical or semantic exit keys, never rendered indexes.
 `Hub Decision` owns N's persistent board: fixed-slot open references, ordered
 visits, and completion predicate. It does not own N Preboss room-local state.
 
-`Preboss` is a Room Declaration role inside a normal-door batch. It is not a
-terminal decision variant. Offering it does not complete a biome; selecting it
+`Preboss` is a Room Declaration role inside a normal-door batch, not a
+separate decision variant. Offering it does not complete a biome; selecting it
 does. Boss and optional Postboss rooms are catalog-derived completion tail
 rooms, not authored decisions or occurrences.
 
@@ -168,7 +176,7 @@ Shop leaf; later targets are counted-free leaves only when the policy declares
 them. A width-one policy has no later offer. Individual takeover targets are
 not room-replaceable or capacity-repairable.
 
-Selecting a Preboss derives completion. There is no persisted terminal flag,
+Selecting a Preboss derives completion. There is no persisted completion flag,
 entry mode, or `closesBiomeWhenPicked` duplicate. The selected Preboss's
 ordinary peers remain real unpicked occurrences.
 
@@ -192,7 +200,12 @@ is not replaceable. Open unvisited slots remain real offered leaves.
 
 The completed-Hub batch is permitted only after the declared open-set and
 six-visit predicate holds. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
-a rendered visit index or synthetic N terminal owner.
+a rendered visit index or synthetic N completion owner.
+
+Closing an unvisited slot below the declared open-set minimum retains the
+already-authored visit sequence as an incomplete Hub board, but atomically
+removes the completed-Hub batch and every descendant it owns. The handoff may
+be authored again only after the board is restored to its completion predicate.
 
 ## Occurrence State and Replacement
 
@@ -288,4 +301,4 @@ The authored model contains no Chaos gate, special-exit placeholder,
 probability score, RNG seed, game-profile predicate, generic graph edge,
 rendered coordinate, React state, ImGui storage, silent repair, or guessed
 fallback. Future Chaos support extends the exit-decision envelope; it does not
-reintroduce a terminal or biome-plan family.
+create a separate completion or layout-specific biome-plan family.

@@ -178,25 +178,6 @@ export function composeBiomeHistoryPrefix({
   return foldBiomeHistoryPrefixEvents(builder.events, seed);
 }
 
-export function composeFixedEntryChain<Room extends CanonicalLifecycleRoom>(
-  writer: HistorySegmentWriter,
-  rooms: readonly Room[],
-  connect: (writer: HistorySegmentWriter, source: Room, target: Room, targetIndex: number) => void,
-  fail: (detail: string) => never,
-): Room {
-  const entry = rooms[0];
-  if (entry === undefined) {
-    return fail('history requires a canonical entry room');
-  }
-  appendStandaloneRoomCreated(writer, entry, 'biomeEntry');
-  let source = entry;
-  for (const [index, target] of rooms.slice(1).entries()) {
-    connect(writer, source, target, index + 1);
-    source = target;
-  }
-  return source;
-}
-
 function appendCompletionTail(
   writer: HistorySegmentWriter,
   catalog: Catalog,

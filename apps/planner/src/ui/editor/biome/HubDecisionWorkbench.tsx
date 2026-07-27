@@ -23,6 +23,7 @@ import { candidateMayBeAuthored } from '../../feedback/candidatePresentation';
 import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 import { CandidateSelect } from './CandidateSelect';
 import { RewardControlEditor } from './OccurrenceWorkbench';
+import { topologyRemovalScopeSummary } from './topologyRemovalPresentation';
 
 interface HubDecisionWorkbenchProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
@@ -82,38 +83,46 @@ function HubSlotMembership({
     structurallyDisabled || (candidate !== undefined && !candidateMayBeAuthored(candidate));
 
   return (
-    <label className="hub-membership-control" data-candidate-support={candidateSupport(candidate)}>
-      <input
-        aria-busy={candidates.pending || undefined}
-        aria-label={`${slot.label} open`}
-        checked={slot.open}
-        disabled={disabled}
-        onChange={(event) => {
-          const open = event.target.checked;
-          const options = candidates.result ?? candidates.activate();
-          const option = options?.find((candidate) => candidate.value === open);
-          if (!candidateMayBeAuthored(option)) {
-            return;
-          }
-          dispatch(semanticOwnerFocused(interaction.owner));
-          dispatch(
-            authoredProjectCommandDispatched(
-              open
-                ? {
-                    kind: 'OpenHubSlot',
-                    occurrenceId: proposedOccurrenceId,
-                    slot: interaction.owner,
-                  }
-                : { kind: 'CloseHubSlot', slot: interaction.owner },
-            ),
-          );
-        }}
-        onFocus={candidates.activate}
-        onPointerDown={candidates.activate}
-        type="checkbox"
-      />
-      Open
-    </label>
+    <div className="hub-membership-action">
+      <label
+        className="hub-membership-control"
+        data-candidate-support={candidateSupport(candidate)}
+      >
+        <input
+          aria-busy={candidates.pending || undefined}
+          aria-label={`${slot.label} open`}
+          checked={slot.open}
+          disabled={disabled}
+          onChange={(event) => {
+            const open = event.target.checked;
+            const options = candidates.result ?? candidates.activate();
+            const option = options?.find((candidate) => candidate.value === open);
+            if (!candidateMayBeAuthored(option)) {
+              return;
+            }
+            const command = open
+              ? {
+                  kind: 'OpenHubSlot' as const,
+                  occurrenceId: proposedOccurrenceId,
+                  slot: interaction.owner,
+                }
+              : interaction.close?.command;
+            if (command === undefined) return;
+            dispatch(semanticOwnerFocused(interaction.owner));
+            dispatch(authoredProjectCommandDispatched(command));
+          }}
+          onFocus={candidates.activate}
+          onPointerDown={candidates.activate}
+          type="checkbox"
+        />
+        Open
+      </label>
+      {slot.open && interaction.close !== undefined ? (
+        <p className="repair-scope" data-command={interaction.close.command.kind}>
+          Closing this slot removes {topologyRemovalScopeSummary(interaction.close.impact)}.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

@@ -22,9 +22,10 @@ import {
   declaredPhysicalExits as resolveDeclaredPhysicalExits,
   describeClearTopologyImpact,
   describeExitDecisionRemovalImpact,
+  describeHubSlotClosureImpact,
   describeTopologyRemovalImpact,
-  directShopOnlyPrebossForLayout,
-  fixedPrebossTransitionForSource,
+  fixedWidthOneTakeoverForLayout,
+  fixedWidthOneTakeoverTransitionForSource,
   semanticAddressKey,
   type AuthoredBiomePlan,
   type AuthoredBatchState,
@@ -251,6 +252,11 @@ export interface WorkspaceHubSlotInteraction {
    * adapter remains the only code that evaluates candidate evidence.
    */
   readonly bind: (proposedOccurrenceId: OccurrenceId) => WorkspaceCandidateInteraction<boolean>;
+  /** CloseHubSlot and its engine-derived destructive scope for an open slot. */
+  readonly close?: {
+    readonly command: Extract<ProjectCommand, { readonly kind: 'CloseHubSlot' }>;
+    readonly impact: WorkspaceTopologyRemovalScope;
+  };
   readonly key: string;
   readonly owner: HubSlotAddress;
   readonly roomGameName: string;
@@ -265,8 +271,8 @@ interface WorkspaceTakeoverBatchInteractionBase {
 }
 
 /**
- * A forked takeover is intentionally owned by an exit decision, never by a
- * target. The application adapter obtains target ids from loaded engine
+ * A candidate takeover is intentionally owned by an exit decision, never by
+ * a target. The application adapter obtains target ids from loaded engine
  * evidence before dispatching its atomic command.
  */
 export interface WorkspaceCandidateTakeoverBatchInteraction extends WorkspaceTakeoverBatchInteractionBase {
@@ -276,17 +282,17 @@ export interface WorkspaceCandidateTakeoverBatchInteraction extends WorkspaceTak
   readonly load: () => readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[];
 }
 
-/** The fixed O/Q Preboss keeps candidate validation inside a semantic capability. */
-export type WorkspaceDirectPrebossActionResult =
+/** The fixed O/Q width-one takeover keeps validation inside a semantic capability. */
+export type WorkspaceFixedWidthOneTakeoverActionResult =
   | { readonly kind: 'command'; readonly command: TakeoverBatchCommand }
   | { readonly kind: 'unavailable'; readonly message: string };
 
-/** O/Q have one declaration-required Preboss action, not a candidate picker. */
-export interface WorkspaceDirectPrebossTakeoverInteraction extends WorkspaceTakeoverBatchInteractionBase {
+/** O/Q have one declaration-required width-one takeover action, not a candidate picker. */
+export interface WorkspaceFixedWidthOneTakeoverInteraction extends WorkspaceTakeoverBatchInteractionBase {
   readonly action: 'create';
-  readonly execute: () => WorkspaceDirectPrebossActionResult;
+  readonly execute: () => WorkspaceFixedWidthOneTakeoverActionResult;
   readonly label: string;
-  readonly presentation: 'directPreboss';
+  readonly presentation: 'fixedWidthOneTakeover';
   /** Projection-owned description of the declaration-owned Preboss outcome. */
   readonly summary: string;
 }
@@ -309,7 +315,7 @@ export interface WorkspaceTakeoverRepairInteraction extends WorkspaceTakeoverBat
 
 export type WorkspaceTakeoverBatchInteraction =
   | WorkspaceCandidateTakeoverBatchInteraction
-  | WorkspaceDirectPrebossTakeoverInteraction
+  | WorkspaceFixedWidthOneTakeoverInteraction
   | WorkspaceCompletedHubHandoffInteraction
   | WorkspaceTakeoverRepairInteraction;
 
@@ -585,12 +591,25 @@ export interface WorkspaceMissingPhysicalTarget {
  * that exact current scope so an interaction adapter can describe it without
  * walking topology or rediscovering descendants from rendered rows.
  */
-export interface WorkspaceBatchRepairScope {
-  readonly command: 'ReconcileBatchExitCapacity' | 'ReconcileTakeoverBatch';
+interface WorkspaceBatchRepairScopeBase {
   readonly owner: ExitDecisionAddress;
   readonly removedDecisionOwners: readonly ExitDecisionAddress[];
   readonly removedOccurrenceIds: readonly OccurrenceId[];
 }
+
+/**
+ * Ordinary retained exits have a complete static command. Takeover repair
+ * needs declaration-derived target identities, so its semantic capability
+ * owns execution separately while this scope remains display-only.
+ */
+export type WorkspaceBatchRepairScope =
+  | (WorkspaceBatchRepairScopeBase & {
+      readonly command: Extract<ProjectCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>;
+      readonly commandKind: 'ReconcileBatchExitCapacity';
+    })
+  | (WorkspaceBatchRepairScopeBase & {
+      readonly commandKind: 'ReconcileTakeoverBatch';
+    });
 
 /** Read-only Fields outcome context derived by materialization/generation. */
 export interface WorkspaceFieldsBatchContext {
@@ -1909,11 +1928,14 @@ function batchRepairScopeForRoots(
 ): WorkspaceBatchRepairScope | undefined {
   const removal = projectRemovalScope(context.biome, plan, roots);
   if (removal === undefined) return undefined;
-  return Object.freeze({
-    command: kind === 'takeoverBatch' ? 'ReconcileTakeoverBatch' : 'ReconcileBatchExitCapacity',
-    owner,
-    ...removal,
-  });
+  return kind === 'takeoverBatch'
+    ? Object.freeze({ commandKind: 'ReconcileTakeoverBatch' as const, owner, ...removal })
+    : Object.freeze({
+        command: Object.freeze({ kind: 'ReconcileBatchExitCapacity' as const, decision: owner }),
+        commandKind: 'ReconcileBatchExitCapacity' as const,
+        owner,
+        ...removal,
+      });
 }
 
 function takeoverReplacementImpact(
@@ -2915,7 +2937,7 @@ function createInteractionCatalog(
       ...(selected === undefined ? {} : { selected }),
     });
   };
-  const createDirectPrebossInteraction = ({
+  const createFixedWidthOneTakeoverInteraction = ({
     gameName,
     owner,
     requiredExitKeys,
@@ -2923,7 +2945,7 @@ function createInteractionCatalog(
     readonly gameName: string;
     readonly owner: ExitDecisionAddress;
     readonly requiredExitKeys: readonly string[];
-  }): WorkspaceDirectPrebossTakeoverInteraction => {
+  }): WorkspaceFixedWidthOneTakeoverInteraction => {
     const candidate = takeoverCandidate(gameName);
     const room = requireRoom(catalog, gameName);
     const summary =
@@ -2931,11 +2953,10 @@ function createInteractionCatalog(
         ? `Enter ${candidate.label}. This declaration-owned transition creates one automatically entered World Shop.`
         : `Enter ${candidate.label} through this declaration-owned transition.`;
     return Object.freeze({
-      execute(): WorkspaceDirectPrebossActionResult {
-        // The interaction is direct to the player, but its one fixed
-        // declaration still receives the engine's contextual validation only
-        // when they ask to take it. React never loads or interprets a
-        // candidate result.
+      execute(): WorkspaceFixedWidthOneTakeoverActionResult {
+        // This fixed declaration still receives the engine's contextual
+        // validation only when the player takes it. React never loads or
+        // interprets a candidate result.
         const evaluated = takeoverCandidates(owner, Object.freeze([gameName]))[0];
         if (
           evaluated?.evaluation.kind !== 'takeoverPrebossBatch' ||
@@ -2949,7 +2970,7 @@ function createInteractionCatalog(
             kind: 'unavailable' as const,
             message:
               explanation?.message ??
-              'This direct Preboss transition is not supported by the current route state.',
+              'This fixed Preboss takeover is not supported by the current route state.',
           });
         }
         return Object.freeze({
@@ -2960,9 +2981,9 @@ function createInteractionCatalog(
             existingTargetOccurrenceIds: new Map(),
             gameName,
             // `requiredExitKeys` comes from shared topology authority.  The
-            // lazy engine evaluation above establishes whether this direct
-            // Preboss is currently possible; it does not make React derive
-            // the physical exit vocabulary.
+            // The lazy engine evaluation above establishes whether this fixed
+            // width-one takeover is currently possible; it does not make
+            // React derive the physical exit vocabulary.
             requiredExitKeys,
           }),
         });
@@ -2971,7 +2992,7 @@ function createInteractionCatalog(
       key: semanticAddressKey(owner),
       label: candidate.label,
       owner,
-      presentation: 'directPreboss' as const,
+      presentation: 'fixedWidthOneTakeover' as const,
       summary,
     });
   };
@@ -3163,7 +3184,7 @@ function createInteractionCatalog(
         continue;
       }
       const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
-      const directPreboss = directShopOnlyPrebossForLayout(catalog, layout);
+      const fixedWidthOneTakeover = fixedWidthOneTakeoverForLayout(catalog, layout);
       topologyRemovals.set(
         semanticAddressKey(biome),
         Object.freeze({
@@ -3183,6 +3204,15 @@ function createInteractionCatalog(
               (target) => target.hubSlotKey === slot.slotKey,
             );
             const owner = createHubSlotAddress(biome, decision.hubKey, slot.slotKey);
+            const closeImpact =
+              opened === undefined
+                ? undefined
+                : describeHubSlotClosureImpact(
+                    plan.topology,
+                    decision.hubKey,
+                    slot.slotKey,
+                    layout.progression.openCount.min,
+                  );
             const values = Object.freeze([false, true]);
             hubSlots.set(
               semanticAddressKey(owner),
@@ -3203,6 +3233,14 @@ function createInteractionCatalog(
                       ),
                     `${semanticAddressKey(owner)}:proposed:${proposedOccurrenceId}`,
                   ),
+                ...(closeImpact === undefined
+                  ? {}
+                  : {
+                      close: Object.freeze({
+                        command: Object.freeze({ kind: 'CloseHubSlot' as const, slot: owner }),
+                        impact: topologyRemovalScope(biome, closeImpact),
+                      }),
+                    }),
                 key: semanticAddressKey(owner),
                 owner,
                 roomGameName: slot.roomGameName,
@@ -3360,7 +3398,7 @@ function createInteractionCatalog(
             }
             if (
               layout.progression.kind === 'generated' &&
-              directPreboss === undefined &&
+              fixedWidthOneTakeover === undefined &&
               takeoverGameNames.length > 0
             ) {
               const impact = takeoverReplacementImpact(biome, plan, decision);
@@ -3376,7 +3414,7 @@ function createInteractionCatalog(
               );
             }
           }
-        } else if (layout.progression.kind === 'generated' && directPreboss === undefined) {
+        } else if (layout.progression.kind === 'generated' && fixedWidthOneTakeover === undefined) {
           const candidatesForTakeover = catalog.rooms.values
             .filter((room) => room.biomeKey === plan.biomeKey && isTakeover(room))
             .map((room) => room.gameName);
@@ -3546,13 +3584,13 @@ function createInteractionCatalog(
           const gameNames = catalog.rooms.values
             .filter((room) => room.biomeKey === plan.biomeKey && isTakeover(room))
             .map((room) => room.gameName);
-          const fixedPrebossAtFrontier = fixedPrebossTransitionForSource(
+          const fixedWidthOneTakeoverAtFrontier = fixedWidthOneTakeoverTransitionForSource(
             catalog,
             layout,
             plan.topology,
             frontier.source,
           );
-          if (fixedPrebossAtFrontier !== undefined && existing === undefined) {
+          if (fixedWidthOneTakeoverAtFrontier !== undefined && existing === undefined) {
             const requiredExits = resolveDeclaredPhysicalExits(
               catalog,
               layout,
@@ -3566,14 +3604,14 @@ function createInteractionCatalog(
             if (requiredExitKeys !== undefined) {
               takeoverBatches.set(
                 semanticAddressKey(frontier),
-                fixedPrebossAtFrontier.kind === 'completedHubHandoff'
+                fixedWidthOneTakeoverAtFrontier.kind === 'completedHubHandoff'
                   ? createCompletedHubHandoffInteraction({
-                      gameName: fixedPrebossAtFrontier.room.gameName,
+                      gameName: fixedWidthOneTakeoverAtFrontier.room.gameName,
                       owner: frontier,
                       requiredExitKeys,
                     })
-                  : createDirectPrebossInteraction({
-                      gameName: fixedPrebossAtFrontier.room.gameName,
+                  : createFixedWidthOneTakeoverInteraction({
+                      gameName: fixedWidthOneTakeoverAtFrontier.room.gameName,
                       owner: frontier,
                       requiredExitKeys,
                     }),
@@ -3581,7 +3619,7 @@ function createInteractionCatalog(
             }
           } else if (
             layout.progression.kind === 'generated' &&
-            directPreboss === undefined &&
+            fixedWidthOneTakeover === undefined &&
             gameNames.length > 0 &&
             !takeoverBatches.has(semanticAddressKey(frontier))
           ) {
@@ -3609,7 +3647,7 @@ function createInteractionCatalog(
           if (
             existing === undefined &&
             frontier.source.kind === 'occurrence' &&
-            fixedPrebossAtFrontier === undefined
+            fixedWidthOneTakeoverAtFrontier === undefined
           ) {
             const action: WorkspaceStructuralInteraction =
               layout.progression.kind === 'hub' &&

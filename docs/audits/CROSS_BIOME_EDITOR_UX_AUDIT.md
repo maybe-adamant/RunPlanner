@@ -34,7 +34,7 @@ candidate support as forced, possible, impossible, or unassessed. An unreached
 local owner uses `coverageNotReached`; later route biomes retain distinct
 upstream-incomplete and upstream-invalid gates. The contextual picker work may evolve its controls,
 but it must continue to consume the shared projection rather than recreate a
-whole-biome editor.
+second editor surface.
 
 ## Biome Interaction Matrix
 
@@ -45,9 +45,9 @@ whole-biome editor.
 | H     | Exactly four Fields batches; each batch owns Min/Max and one or two physical targets                | No base batch store; combat targets own two or three active cage rewards   | Takeover Preboss batch after the fourth Fields batch                                | Create through four Fields batches, then the takeover Preboss batch |
 | I     | Eligibility-driven Clockwork batches with one or two exits; Goal/NonGoal is derived                 | No base batch store; combat targets retain dormant-capable NonGoal rewards | Preboss is a generated peer after Goals complete and closes the biome when selected | Create the next ordinary decision only                              |
 | N     | Fixed Opening/PreHub, 26 fixed Hub slots, nine or ten open members, and six ordered visits          | Joint Hub rewards, parent-local side rooms, and fixed WorldShop            | Completed-Hub handoff creates fixed width-one Preboss Shop                          | Hub membership and visit order; create the handoff after six visits |
-| O     | Exactly six one-exit decisions; ShipCombat rooms own two/three encounters and one/two active wheels | Outgoing store may derive from the final active wheel                      | Direct width-one Preboss batch after the sixth decision                             | Create through six decisions, then the direct Preboss batch         |
+| O     | Exactly six one-exit decisions; ShipCombat rooms own two/three encounters and one/two active wheels | Outgoing store may derive from the final active wheel                      | Declaration-fixed width-one Preboss batch after the sixth decision                  | Create through six decisions, then the width-one Preboss batch      |
 | P     | Eligibility-driven standard batches with source-sensitive compatibility                             | Authored Run/Meta batch store and target incoming rewards                  | Takeover Preboss batch; Shop plus at most one free reward                           | Create another batch or a supported takeover Preboss batch          |
-| Q     | Six declaration-owned stages; ordinary stages have one exit and miniboss stages have two            | No ordinary base store; miniboss targets own counted rewards               | Direct width-one Preboss batch after the sixth stage                                | Create the next declared stage, then the direct Preboss batch       |
+| Q     | Six declaration-owned stages; ordinary stages have one exit and miniboss stages have two            | No ordinary base store; miniboss targets own counted rewards               | Declaration-fixed width-one Preboss batch after the sixth stage                     | Create the next declared stage, then the width-one Preboss batch    |
 
 ## Contextual Coverage Shapes
 
@@ -154,14 +154,14 @@ They do not justify one shared authoring action:
 - H permits those forms at different fixed-count boundaries;
 - I has only an ordinary generated decision whose selected target may itself
   close the biome;
-- O/Q have declaration-required direct Preboss batches after bounded
+- O/Q have declaration-required width-one Preboss batches after bounded
   progression;
 - N has no ordinary continuation frontier: its completed-Hub handoff belongs
   to the Hub workbench.
 
 Phase 7 may share labels or command components only when at least two concrete
 consumers retain identical semantics. It must not turn I's generated Preboss,
-N's completed-Hub handoff, or O/Q's direct Preboss batch into cosmetic variants
+N's completed-Hub handoff, or O/Q's declaration-fixed width-one Preboss batch into cosmetic variants
 of the F/G/P takeover batch.
 
 ## Retained-Invalid and Repair Policy

@@ -1,4 +1,10 @@
-import type { BiomeTopology, ExitDecision, ExitDecisionSource, OccurrenceId } from './model';
+import type {
+  BiomeTopology,
+  ExitDecision,
+  ExitDecisionSource,
+  HubDecision,
+  OccurrenceId,
+} from './model';
 
 /**
  * The command authority owns the structural consequences of removing one or
@@ -101,6 +107,55 @@ export function describeTopologyRemovalImpact(
         : [],
     ),
   );
+  return impactFor(topology, removedOccurrences, removedSourceKeys, new Set());
+}
+
+/**
+ * Describes the full topology consequence of closing a Hub slot. The Hub
+ * decision itself stays authored and is updated by CloseHubSlot. Crossing the
+ * declared open-set minimum additionally detaches the completed-Hub handoff
+ * because the retained board is incomplete.
+ */
+export function describeHubSlotClosureImpact(
+  topology: BiomeTopology,
+  hubKey: string,
+  hubSlotKey: string,
+  minimumOpenCount: number,
+): TopologyRemovalImpact | undefined {
+  const hub = topology.decisions.find(
+    (decision): decision is HubDecision => decision.kind === 'hub' && decision.hubKey === hubKey,
+  );
+  const target = hub?.openTargets.find((candidate) => candidate.hubSlotKey === hubSlotKey);
+  if (hub === undefined || target === undefined) return undefined;
+
+  const roots = new Set<OccurrenceId>([target.occurrenceId]);
+  const removedSourceKeys = new Set<string>();
+  // An undersized Hub remains an intentionally incomplete authored board, but
+  // it can no longer own its completed-Hub exit.  Remove that handoff and its
+  // selected subtree in the same CloseHubSlot impact as the detached slot.
+  if (hub.openTargets.length - 1 < minimumOpenCount) {
+    const handoff = topology.decisions.find(
+      (decision): decision is ExitDecision =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'hubDecision' &&
+        decision.source.decisionKey === hubKey,
+    );
+    if (handoff !== undefined) {
+      removedSourceKeys.add(sourceKey(handoff.source));
+      targetsForDecision(handoff).forEach((occurrenceId) => roots.add(occurrenceId));
+    }
+  }
+
+  const removedOccurrences = collectOccurrenceDescendants(topology, roots);
+  for (const decision of topology.decisions) {
+    if (
+      decision.kind === 'exit' &&
+      decision.source.kind === 'occurrence' &&
+      removedOccurrences.has(decision.source.occurrenceId)
+    ) {
+      removedSourceKeys.add(sourceKey(decision.source));
+    }
+  }
   return impactFor(topology, removedOccurrences, removedSourceKeys, new Set());
 }
 

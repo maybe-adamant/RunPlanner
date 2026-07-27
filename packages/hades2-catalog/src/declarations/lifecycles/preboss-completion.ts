@@ -1,6 +1,10 @@
 import type { RawRoomLifecycleProfileDeclaration } from '../types';
 
-export const terminalRoomLifecycleProfiles = [
+/**
+ * Preboss takeover rooms and their derived completion tail share the same
+ * lifecycle declaration family. They are no longer a separate topology form.
+ */
+export const prebossCompletionRoomLifecycleProfiles = [
   {
     key: 'PrebossFreeRewardRoom',
     encounterProfileKeys: ['Shop'],

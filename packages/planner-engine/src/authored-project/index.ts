@@ -72,16 +72,17 @@ export {
   declaredPhysicalExits,
   declaredPhysicalExitKeys,
   decodeBiomeTopology,
-  directShopOnlyPrebossForLayout,
-  directShopOnlyPrebossForSource,
-  fixedPrebossTransitionForSource,
+  fixedWidthOneTakeoverForLayout,
+  fixedWidthOneTakeoverForSource,
+  fixedWidthOneTakeoverTransitionForSource,
   type DeclaredPhysicalExit,
-  type FixedPrebossTransition,
+  type FixedWidthOneTakeoverTransition,
 } from './topology';
 export {
   applyTopologyRemovalImpact,
   describeClearTopologyImpact,
   describeExitDecisionRemovalImpact,
+  describeHubSlotClosureImpact,
   describeTopologyRemovalImpact,
   type TopologyRemovalImpact,
 } from './topologyImpact';
