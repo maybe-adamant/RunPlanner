@@ -132,8 +132,8 @@ show only a truthfully projected completion horizon or state that length varies.
 The UI never derives an expected route length or interprets force rules locally.
 
 `STRUCTURED_EDITOR_WORKSPACE.md` owns the concrete route-rail,
-ordinary-decision, Hub, inspector, coverage, empty-outline, dialog, and repair
-presentation contracts.
+ordinary-decision, Hub, inspector, coverage, empty-outline, undo-first
+destructive-action, and repair presentation contracts.
 
 ## Rows Versus Domain Language
 
@@ -261,9 +261,11 @@ is:
 
 Restoring capacity before reconciliation restores those targets as available.
 
-Destructive commands receive appropriate confirmation when their visible
-impact is substantial. The command layer, not the dialog, defines the actual
-deletion scope.
+In-project destructive commands execute immediately when the user invokes an
+explicitly labeled action. Their projected impact remains visible before
+activation, one semantic command creates one history entry, and Undo/Redo is
+the shared recovery mechanism. The command layer, not React, defines the
+actual deletion scope.
 
 ## Room and Reward Editors
 
@@ -447,7 +449,7 @@ Session state may include:
 - panel expansion;
 - selector category and search text;
 - zoom or viewport if a graph projection is introduced;
-- pending dialog state.
+- non-modal edit-announcement state.
 
 Session state must never be required to reconstruct the authored project.
 

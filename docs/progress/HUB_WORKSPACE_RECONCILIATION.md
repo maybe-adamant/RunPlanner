@@ -47,8 +47,10 @@ recovery, repair, performance, architecture, terminology, and complete-gate
 evidence. Its final closure repair makes a ninth-to-eighth unvisited Hub-slot
 edit remove the completed-Hub handoff and its descendant subtree in the same
 engine-owned impact, while retaining the six authored visits on an incomplete
-board. Commit 5 is now the sole follow-up: presentation polish and accessible
-confirmation without changing the unified domain contracts.
+board. Commit 5 is now the sole follow-up and is split into two reviewable
+slices without changing the unified domain contracts: Commit 5a removes
+browser confirmation in favor of explicit scope plus exact undo/redo, and
+Commit 5b completes presentation, responsive, and accessibility polish.
 
 Final Commit 4 validation after the completed-Hub closure repair on 2026-07-26:
 
@@ -77,11 +79,11 @@ to retain obsolete dedicated editor paths or revision-labelled behavior in
 current authority.
 
 This tracker supersedes the presentation-only Phase 7 Commit 12 and
-Commit 13 plan. Phase 7 Commit 12 will be delivered through the seven
+Commit 13 plan. Phase 7 Commit 12 will be delivered through the eight
 independently reviewable commits defined below. Commits 1, 2, 3a, 3b, 3c, and 4
-establish and close the unified biome refactor. Commit 5 is a follow-up
-presentation and accessibility pass that preserves those domain contracts
-while delivering the same final product acceptance.
+establish and close the unified biome refactor. Commits 5a and 5b are
+undo-first interaction and presentation/accessibility follow-ups that preserve
+those domain contracts while delivering the same final product acceptance.
 
 The implementation must update its owning authorities as it lands:
 
@@ -1088,7 +1090,7 @@ normal peers.
 `WorkspaceInteractionCatalog` gains an explicit source-owned batch interaction
 descriptor alongside its existing per-control candidate interactions. The
 descriptor captures the semantic decision owner, lazily loads the one engine
-candidate domain, and exposes one confirmed action to the application
+candidate domain, and exposes one semantic action to the application
 interaction adapter. That adapter allocates the occurrence IDs required by the
 evidence and dispatches the atomic command. React does not infer exit count,
 order, Preboss identity, or support from room declarations or from the
@@ -1142,25 +1144,36 @@ projects the exact repair scope and the owning structural command; React does
 not rediscover which occurrences or leaves will be removed.
 
 This projection and its semantic repair workflows are part of the unified
-refactor. They do not depend on replacing the browser confirmation surface.
+refactor. They do not depend on a confirmation surface.
 
-### Follow-Up Destructive Confirmation
+### Follow-Up Undo-First Destructive Editing
 
-The follow-up polish commit changes no catalog, authored-project, simulation,
-candidate, or semantic-repair contract.
+The follow-up interaction and polish commits change no catalog,
+authored-project, simulation, candidate, or semantic-repair contract.
 
-Browser-native `globalThis.confirm` is removed from production. Destructive
-route shrink, topology clear, Hub membership removal, exit-capacity repair, and
-takeover repair use one accessible application dialog built on
-`@radix-ui/react-dialog`.
-Application-owned UI-session state stores the pending semantic intent and
-human-readable deletion scope. The dialog primitive owns focus trapping,
-keyboard dismissal, labelling, and focus return, but it does not determine
-domain deletion.
+Browser-native `globalThis.confirm` is removed from production and is not
+replaced by an application confirmation dialog. In-project structural edits are
+already local, semantic, and exactly reversible: route-prefix shrink, topology
+clear, decision removal, Hub membership closure, Hub-visit truncation,
+exit-capacity repair, and takeover replacement or repair dispatch immediately
+as one command and create one undo entry.
 
-Confirming dispatches exactly one semantic command and therefore creates one
-undoable authored transition. Cancelling or dismissing changes no authored
-state, evaluation, autosave, or undo history.
+Undo-first safety requires the action to be understandable before it runs:
+
+- the control uses an explicit destructive or repair verb;
+- the engine- or application-projected removal scope is visible beside it;
+- React dispatches the supplied semantic command without recalculating scope;
+- a stable non-modal status announces the completed action and that Undo is
+  available;
+- if the invoking control disappears, focus moves to the nearest stable
+  surviving semantic owner; and
+- Undo restores the exact prior project and evaluation, while Redo reapplies
+  the same edit. Autosave follows both published states.
+
+No pending destructive intent or dialog state is added. Confirmation remains
+appropriate only for a future side effect outside project history, such as
+permanently deleting an external profile; no current workspace command has
+that contract.
 
 ## Pre-Reconciliation Code Anchors (Historical)
 
@@ -1184,10 +1197,11 @@ stable design documents above, not the left-hand column below.
 | Progressive products  | materialization, history, rewards, generation, and candidates have Linear/Hub roots                                        | shared orchestration with variant-owned algorithms                                |
 | Workspace projection  | `structuredWorkspace.ts` defines Linear/Hub products and per-control interactions                                          | one workspace envelope, explicit node union, and atomic batch interaction         |
 | React composition     | `App.tsx` chooses `LinearWorkspace` or `HubBiomeEditor`                                                                    | projection-driven `BiomeWorkspace`; Hub survives only as one workbench            |
-| Destructive UI        | shell and biome editors call `globalThis.confirm` directly                                                                 | application-owned pending intent and one accessible shared dialog                 |
+| Destructive UI        | shell and biome editors call `globalThis.confirm` directly                                                                 | immediate scoped semantic actions with stable status/focus and exact undo/redo    |
 
-The destructive-UI transition belongs only to follow-up Commit 5. Commits 1,
-2, 3a through 3c, and 4 own every other transition in this table.
+The destructive-UI transition belongs only to follow-up Commit 5a. Commits 1,
+2, 3a through 3c, and 4 own every other transition in this table; Commit 5b
+then closes presentation and accessibility polish.
 
 ## Implementation Order
 
@@ -1201,6 +1215,7 @@ catalog and authored project
   -> shared biome workspace
   -> Hub integration and application cutover
   -> unified-contract closure
+  -> undo-first destructive interaction
   -> presentation and accessibility polish
 ```
 
@@ -1224,9 +1239,10 @@ builds the shared workspace against that projection without retaining an
 adapter to the old editors. Commit 3c restores the connected application:
 repository-wide type checking, planner and product tests, and the production
 build become required again. Commit 4 runs the complete repository gate and
-closes the unified biome refactor. Commit 5 then replaces global confirmation,
-completes broader visual and accessibility polish, reruns the complete gate,
-and closes the tracker.
+closes the unified biome refactor. Commit 5a removes global confirmation,
+hardens inline scope, focus, announcement, and exact undo/redo behavior, and
+Commit 5b completes broader visual and accessibility polish, reruns the
+complete gate, and closes the tracker.
 
 ## Implementation Slices
 
@@ -1649,8 +1665,9 @@ Deliver:
 - explicit backlog wording for the future Chaos special-exit feature;
 - deletion of obsolete terminal, direct/forked, and full-biome Hub terminology
   from production code and current authority statements;
-- record the unified biome refactor as closed, with Commit 5 as the sole
-  remaining follow-up before the tracker and active Phase 7 frontier advance;
+- record the unified biome refactor as closed, with Commits 5a and 5b as the
+  remaining undo-first interaction and presentation follow-ups before the
+  tracker and active Phase 7 frontier advance;
 - confirmation that no expected downstream failure recorded by Commits 1, 2,
   3a, or 3b remains.
 
@@ -1672,9 +1689,10 @@ Gate:
 - no Chaos production behavior entered this task;
 - `npm run check` and `git diff --check` pass without timeout relaxation.
 
-Commit 4 does not require the global confirmation replacement or the broader
-visual-polish acceptance owned by Commit 5. Existing confirmation calls may
-remain at this boundary, but no new browser-confirmation path may be added.
+Commit 4 does not require the undo-first destructive-flow cleanup or the
+broader visual-polish acceptance owned by Commits 5a and 5b. Existing
+confirmation calls may remain at this boundary, but no new browser-confirmation
+path may be added.
 
 Delivered closure evidence:
 
@@ -1691,68 +1709,129 @@ Delivered closure evidence:
 - current authority uses one forward-looking decision and completion vocabulary
   and records Chaos only as a future special-exit extension.
 
-### Commit 5: Complete Workspace Polish and Accessible Confirmation
+### Commit 5a: Make Destructive Editing Undo-First
 
 Suggested subject:
 
 ```text
-feat(editor): polish unified workspace interactions
+refactor(editor): make destructive edits undo-first
 ```
 
-This is a follow-up to the closed refactor, not another domain-model slice. It
-must consume the unified projection and semantic repair commands delivered by
-Commits 1, 2, 3a through 3c, and 4 without changing their ownership.
+This is an interaction follow-up to the closed refactor, not another
+domain-model slice. It consumes the unified projection, command-owned removal
+scope, and semantic repair commands delivered by Commits 1, 2, 3a through 3c,
+and 4 without changing their ownership.
 
 Deliver:
 
-- add `@radix-ui/react-dialog` at the planner application boundary and update
-  the package manifest and lockfile;
-- replace every production `globalThis.confirm` path with one accessible shared
-  destructive-action dialog;
-- keep the pending semantic intent and human-readable deletion scope in
-  application-owned UI-session state;
-- make confirmation dispatch exactly the projected semantic command, with no
-  React-owned topology or deletion inference;
-- complete visual hierarchy, density, spacing, and responsive polish for the
-  board, rail, batch, dialog, and inspector;
-- close keyboard, pointer, labelling, focus-trap, dismissal, and focus-return
-  behavior for the shared workspace and destructive dialog;
-- add confirmation product workflows for route shrink, topology clear, Hub
-  membership removal, ordinary exit-capacity repair, and takeover repair;
-- update the owning editor, contextual-UX, structured-workspace, audit,
-  progress, and README references for the delivered polish;
-- mark this tracker delivered and advance the one active progress frontier only
-  after the complete gate passes.
+- remove every production `globalThis.confirm` call without adding a
+  replacement confirmation dialog or dialog dependency;
+- keep route-prefix shrink, topology clear, decision removal, Hub membership
+  closure, Hub-visit truncation, ordinary exit-capacity repair, and takeover
+  replacement or repair as immediate semantic actions;
+- retain or add exact visible scope beside each structural deletion or repair,
+  using projection-owned impact rather than React topology traversal;
+- use explicit action labels that name the operation rather than a generic
+  destructive affordance;
+- dispatch exactly one semantic command and create exactly one undo entry for
+  every completed action;
+- publish a stable non-modal status naming the completed edit and that Undo is
+  available, without placing presentation text in authored state;
+- move focus to the nearest stable surviving semantic owner when the invoking
+  control is removed, while leaving focus in place when the control survives;
+- preserve the existing Undo/Redo buttons and keyboard shortcuts as the shared
+  recovery surface; and
+- add no pending destructive-intent or dialog state.
 
 Tests:
 
-- destructive-dialog labelling, focus trap, Escape, cancel, focus return, and
-  exact visible deletion scope;
-- confirmation dispatches one semantic command and creates one undoable
-  authored transition;
-- cancellation and dismissal change no authored state, evaluation, autosave,
-  candidate work, or undo history;
-- route shrink, topology clear, Hub membership removal, ordinary retained-exit
-  repair, and takeover repair use the shared dialog;
-- representative keyboard and pointer workflows remain correct after the
-  presentation changes;
-- responsive board, rail, batch, dialog, and inspector fixtures;
-- architecture-boundary coverage continues to reject React-owned topology,
-  repair, reward, or lifecycle rules.
+- pointer and keyboard activation dispatch immediately for route shrink,
+  topology clear, decision removal, Hub membership closure, Hub-visit
+  truncation, ordinary retained-exit repair, and takeover replacement/repair;
+- each action creates one history entry, Undo restores the exact prior project
+  and evaluation, and Redo reapplies the same edit;
+- autosave publishes the edited, undone, and redone states without a second
+  repair command;
+- visible scope names the projected occurrence, decision, Hub, visit, or route
+  consequence before activation;
+- the post-action non-modal status is screen-reader legible and focus lands on
+  a stable surviving control when necessary;
+- production contains no `globalThis.confirm`, confirmation-dialog dependency,
+  or pending-dialog state; and
+- architecture coverage continues to reject React-owned topology or deletion
+  inference.
 
 Gate:
 
-- no catalog, authored-project, simulation, candidate, or semantic-address
-  contract from Commit 4 changes;
-- production contains no `globalThis.confirm`;
-- every destructive path renders the projected deletion scope and dispatches
-  exactly one semantic command only after confirmation;
-- cancelling or dismissing the dialog has no authored or derived side effect;
+- no catalog, authored-project, simulation, candidate, semantic-address, or
+  semantic-repair contract from Commit 4 changes;
+- every in-project destructive edit is immediate, visibly scoped, one-command,
+  and exactly undoable/redoable;
+- Undo/Redo buttons and Ctrl/Cmd keyboard shortcuts remain available;
+- route shrink and topology clear receive no exceptional modal path;
+- no external irreversible operation or new confirmation abstraction is
+  introduced;
+- no Chaos production behavior enters the follow-up; and
+- `npm run test:planner`, `npm run test:product`, `npm run lint`,
+  `npm run format:check`, and `git diff --check` pass.
+
+### Commit 5b: Complete Workspace Presentation Polish
+
+Suggested subject:
+
+```text
+feat(editor): polish unified workspace presentation
+```
+
+This slice preserves the undo-first interaction contract from Commit 5a and
+changes presentation only.
+
+Deliver:
+
+- complete visual hierarchy, density, and spacing for the route rail, focused
+  inspector, ordinary/mixed/takeover batches, N Hub board and visit timeline,
+  repair scope, and non-modal edit status;
+- keep the rail compact and navigational, with the inspector as the dominant
+  editing surface rather than a second equal-weight editor;
+- keep all 26 N Hub slots visible while making closed slots materially quieter
+  and denser than open slots;
+- distinguish picked, frontier, finding, blocked, unassessed, and focused state
+  with text or structure in addition to color;
+- close desktop, intermediate-width, and narrow responsive behavior without
+  horizontal overflow or inaccessible controls;
+- preserve keyboard and pointer navigation, semantic finding focus, visible
+  focus, and useful post-edit focus placement;
+- update the owning editor, contextual-UX, structured-workspace, audit,
+  progress, and README references for the delivered product; and
+- mark this tracker delivered and advance the one active progress frontier only
+  after the complete gate passes.
+
+Tests and review evidence:
+
+- representative keyboard and pointer workflows remain correct after the
+  presentation changes;
+- responsive rail, batch, Hub board, status, and inspector fixtures cover
+  desktop, intermediate, and narrow compositions;
+- representative F/G/P ordinary and takeover, H Fields, I mixed, N Hub, O
+  wheel, and Q staged states receive a visual review at desktop and narrow
+  widths;
 - the 750 ms rebuild/candidate/edit and 50 ms cached-undo thresholds continue
   to pass without relaxation;
+- architecture-boundary coverage continues to reject React-owned topology,
+  repair, reward, or lifecycle rules; and
+- the complete repository gate and documentation closure are recorded.
+
+Gate:
+
+- no catalog, authored-project, simulation, candidate, semantic-address, or
+  semantic-repair contract from Commit 4 changes;
+- the undo-first behavior and exact recovery evidence from Commit 5a remain
+  intact;
 - the final workspace satisfies the visual, responsive, keyboard, and
   accessibility acceptance above;
-- no Chaos production behavior enters the follow-up;
+- no graph library, Tailwind adoption, generic component wrapper layer, or
+  confirmation-dialog dependency is introduced;
+- no Chaos production behavior enters the follow-up; and
 - `npm run check` and `git diff --check` pass without timeout relaxation.
 
 ## Expected File Scope
@@ -1791,13 +1870,20 @@ Planner application, unified refactor:
   leaf controls into shared workbench modules;
 - refactor-owned shared styles and interaction tests.
 
-Planner application, follow-up polish:
+Planner application, undo-first follow-up:
 
-- planner package manifest and lockfile with `@radix-ui/react-dialog`;
-- application-owned pending-dialog state and one accessible shared destructive
-  dialog;
-- presentation-only board, rail, batch, dialog, and inspector style changes;
-- destructive-action accessibility and product-interaction tests.
+- removal of browser-native confirmation from route, biome, decision, Hub,
+  visit, ordinary-repair, and takeover action surfaces;
+- projection-owned scope text, one application-owned non-modal edit status,
+  and semantic post-edit focus routing;
+- exact history, autosave, keyboard, accessibility, and product-interaction
+  tests for every destructive command family.
+
+Planner application, presentation follow-up:
+
+- presentation-only board, rail, batch, status, and inspector style changes;
+- desktop, intermediate-width, and narrow responsive coverage;
+- final keyboard, accessibility, performance, and cross-biome visual evidence.
 
 Documentation:
 
@@ -1815,7 +1901,8 @@ Documentation:
 ## Review Checklist
 
 The completed markers below record the Commit 4 closure. Remaining unchecked
-items are Commit 5 final-product revalidation, not unfinished Slice 4 work.
+items include Commits 5a and 5b final-product revalidation, not unfinished
+Slice 4 work.
 
 - [ ] One normalized biome envelope exists across catalog, authored project,
       evaluation, projection, and workspace.
@@ -1867,11 +1954,14 @@ items are Commit 5 final-product revalidation, not unfinished Slice 4 work.
 - [ ] Retained invalid structure exposes projected repair scope and never
       requires React to infer deletion ownership.
 - [x] Commit 4 closes the unified biome refactor with a passing complete gate
-      before presentation and confirmation polish begins.
-- [ ] Commit 5 changes no catalog, authored-project, simulation, candidate,
-      address, or semantic-repair contract.
-- [ ] Commit 5 replaces browser-native confirmation with one accessible
-      application dialog that confirms exactly one undoable semantic command.
+      before undo-first interaction and presentation polish begin.
+- [ ] Commits 5a and 5b change no catalog, authored-project, simulation,
+      candidate, address, or semantic-repair contract.
+- [ ] Commit 5a removes browser-native confirmation without adding a
+      replacement dialog, and every destructive edit remains visibly scoped,
+      immediate, one-command, and exactly undoable/redoable.
+- [ ] Commit 5b closes the visual, responsive, keyboard, accessibility, and
+      cross-biome presentation acceptance.
 - [ ] Schema 9 rejects schema 8 and uses the new catalog version.
 - [ ] Obsolete layout-specific entry, completion-form history, and
       completion-form repair APIs are absent from production.
@@ -1880,7 +1970,8 @@ items are Commit 5 final-product revalidation, not unfinished Slice 4 work.
       is added.
 - [ ] The exit-decision envelope remains the documented future owner of Chaos
       selection.
-- [x] The complete repository gate passes.
+- [x] The Commit 4 complete repository gate passes.
+- [ ] The Commit 5b final complete repository gate passes.
 
-Do not mark Phase 7 Commit 12 complete until all five commits and the complete
-repository gate pass.
+Do not mark Phase 7 Commit 12 complete until all eight slices and the final
+complete repository gate pass.
