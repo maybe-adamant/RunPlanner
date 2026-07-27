@@ -218,8 +218,9 @@ or visual polish:
 9. an N-specific `HubDecisionWorkbench` inside the shared `BiomeWorkspace`,
    using the same inspector and semantic-focus language without acquiring
    ordinary-decision semantics;
-10. frontier vocabulary, scoped dialogs, repair UX, accessibility, spacing,
-    performance, and responsive closure across all eight biomes.
+10. frontier vocabulary, projected repair scope, undo-first destructive UX,
+    accessibility, spacing, performance, and responsive closure across all
+    eight biomes.
 
 The implementation may replace controls incrementally. It must not create a
 candidate-only simulator, move game rules into React, or require a wholesale

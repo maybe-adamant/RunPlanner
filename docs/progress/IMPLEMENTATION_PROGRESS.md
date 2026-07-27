@@ -26,12 +26,13 @@ generated-decision parity without changing domain state or simulation.
 The unified biome refactor through [Phase 7 Commit 12, Slice 4](HUB_WORKSPACE_RECONCILIATION.md)
 is complete. Commits 1, 2, 3a, 3b, 3c, and 4 established the unified catalog
 and authored model, migrated the planner engine, projected the common workspace,
-built its shared React surface, closed its product/recovery/performance/architecture
-evidence, and passed the complete repository gate. The next active work is
-Commit 5, the follow-up presentation-polish and accessible-confirmation slice;
-it does not change the closed domain contracts. The tracker supersedes the
-former presentation-only Commit 12 and Commit 13 wording in
-`IMPLEMENTATION_PLAN.md`.
+built its shared React surface, closed its
+product/recovery/performance/architecture evidence, and passed the complete
+repository gate. The next active work is Commit 5a, the undo-first
+destructive-editing follow-up; Commit 5b then closes presentation, responsive,
+and accessibility polish. Neither changes the closed domain contracts. The
+tracker supersedes the former presentation-only Commit 12 and Commit 13 wording
+in `IMPLEMENTATION_PLAN.md`.
 
 Commit 1 is complete. The catalog and authored-project boundary uses catalog
 `0.15.0-unified-biome-decisions` and schema 9 only: one biome envelope, common
@@ -103,8 +104,8 @@ made a ninth-to-eighth Hub-slot closure atomically remove the completed-Hub
 handoff while retaining the six authored visits as an incomplete board. It
 passed catalog, planner-engine, and planner TypeScript checks, 59 Vitest files
 with 605 tests, ESLint, Prettier, production build, and `git diff --check`.
-Commit 5 is the sole remaining follow-up before this tracker and the active
-Phase 7 frontier advance.
+Commits 5a and 5b are the remaining undo-first interaction and presentation
+follow-ups before this tracker and the active Phase 7 frontier advance.
 
 For historical context, room-replacement retention closed before the unified
 refactor. The delivered policy uses the

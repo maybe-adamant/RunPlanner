@@ -18,8 +18,8 @@ This document owns:
 - picked-path and unpicked-offer visual hierarchy;
 - progressive coverage and finding placement;
 - empty-biome outlines;
-- destructive dialogs, repair presentation, accessibility, and responsive
-  behavior.
+- undo-first destructive editing, repair presentation, accessibility, and
+  responsive behavior.
 
 [`CONTEXTUAL_EDITOR_UX.md`](CONTEXTUAL_EDITOR_UX.md) owns contextual room and
 reward selector behavior. [`EDITOR_MODEL.md`](EDITOR_MODEL.md) owns the broader
@@ -56,8 +56,8 @@ serialized topology.
   Preboss-handoff, or route-gating rule.
 - One visible user intent dispatches one semantic command and creates one undo
   entry.
-- Focus, expansion, search, disclosure, viewport, and dialog state remain
-  transient UI-session state.
+- Focus, expansion, search, disclosure, viewport, and non-modal edit-status
+  state remain transient UI-session state.
 - The simulator models possibility, not probability. The workspace does not
   display likelihood or an expected route length.
 
@@ -293,10 +293,11 @@ ordinary finding presentation.
 
 ## Destructive Actions and Repair
 
-Commit 5 replaces browser-native confirmation with accessible application
-dialogs. Until then, destructive actions still name their exact visible scope,
-such as the number of downstream decisions and occurrences removed; Commit 4
-does not add another browser-confirmation path.
+Commit 5a removes browser-native confirmation without replacing it with an
+application dialog. Every current in-project structural edit is one semantic
+command and one history entry, so safety comes from an explicit action,
+projected scope before activation, exact Undo/Redo recovery, and a non-modal
+completion status rather than an interrupting confirmation step.
 
 Retained-overflow and Preboss-handoff repairs remain explicit:
 
@@ -304,10 +305,13 @@ Retained-overflow and Preboss-handoff repairs remain explicit:
 2. show which picked target or Preboss realization is no longer available;
 3. let the user select a representable continuation;
 4. expose the owning reconciliation command;
-5. remove retained structure only after explicit confirmation.
+5. reconcile immediately when the user invokes that explicit action;
+6. report the completed edit and the availability of Undo.
 
-Dialogs describe commands; they do not calculate deletion scope or repair the
-project themselves.
+Action labels and scope descriptions consume command-owned impact; they do not
+calculate deletion scope or repair the project themselves. If the invoking
+control disappears, focus moves to the nearest stable surviving semantic
+owner. Otherwise, focus remains in place.
 
 The authored-project core calculates the pure removal impact once, and command
 execution consumes that same result. The application projection may translate
@@ -321,11 +325,13 @@ remains visible as incomplete with its authored visits retained.
 
 ## Component Foundation
 
-Use accessible primitives for popovers, dialogs, radio groups, disclosures, and
-keyboard navigation. The contextual picker uses Radix Popover plus `cmdk`,
-styled through the existing hand-written CSS. The later destructive-dialog
-slice will add Radix Dialog at that contact point. Tailwind adoption and literal
-shadcn component copying are out of scope.
+Use accessible primitives for popovers, radio groups, disclosures, status
+announcements, and keyboard navigation. The contextual picker uses Radix
+Popover plus `cmdk`, styled through the existing hand-written CSS. No
+destructive-dialog dependency is required for in-project editing. Confirmation
+is reserved for a future operation that is both externally consequential and
+not recoverable through project history. Tailwind adoption and literal shadcn
+component copying are out of scope.
 
 Dependency choice remains subordinate to the ownership contract. A component
 library must not hide semantic commands, make caller-owned option models mutable,

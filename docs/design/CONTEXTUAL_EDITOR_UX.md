@@ -514,7 +514,7 @@ The common component must support:
 11. ordinary decision rail and focused-inspector presentation;
 12. `HubDecisionWorkbench`, board, visit timeline, and focused-inspector
     presentation;
-13. frontier, dialogs, repair, accessibility, performance, and responsiveness
+13. frontier, undo-first repair, accessibility, performance, and responsiveness
     closure across F/G/H/I/N/O/P/Q.
 
 Each slice should leave the existing product loop usable. Contextual-selector

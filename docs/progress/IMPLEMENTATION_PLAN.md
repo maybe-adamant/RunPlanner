@@ -2140,25 +2140,32 @@ Gate:
 The former presentation-only Commit 12 and Commit 13 plan is superseded by
 [`HUB_WORKSPACE_RECONCILIATION.md`](HUB_WORKSPACE_RECONCILIATION.md).
 
-Commit 12 will be delivered through five independently reviewable commits:
+Commit 12 will be delivered through eight independently reviewable slices:
 
-1. establish the unified catalog and schema 9 authored decision model;
-2. migrate simulation and planner-engine products to that authority;
-3. rebuild the application projection and React editor as one biome workspace;
-4. close the unified domain/workspace contract, parity, architecture
+1. Commit 1 establishes the unified catalog and schema 9 authored decision
+   model;
+2. Commit 2 migrates simulation and planner-engine products to that authority;
+3. Commit 3a migrates application composition and shared projections;
+4. Commit 3b builds the shared React workbenches;
+5. Commit 3c integrates the Hub workbench and restores the connected
+   application;
+6. Commit 4 closes the unified domain/workspace contract, parity, architecture
    boundaries, and owning documentation;
-5. follow with presentation polish and accessible destructive confirmation
+7. Commit 5a removes browser confirmation in favor of visibly scoped,
+   immediate, exactly undoable semantic edits; and
+8. Commit 5b completes presentation, responsive, and accessibility polish
    without changing the closed domain contracts.
 
 The tracker owns the concrete contracts, deliverables, tests, and per-commit
 gates, including the explicitly accepted temporary downstream breakage after
 the first two ownership slices and the connected-application restoration gate
-in the third. The fourth commit is the explicit end of the unified biome
-refactor; the fifth preserves that authority while completing the final UI
-acceptance formerly carried by Commit 13. Specifically, the tracker replaces
-the old forked/direct/fixed-terminal presentation taxonomy with common exit
-decisions, normal-door batches, one specialized Hub decision, and
-declaration-derived biome completion.
+across the three application slices. Commit 4 is the explicit end of the
+unified biome refactor; Commits 5a and 5b preserve that authority while
+completing the final interaction and presentation acceptance formerly carried
+by Commit 13. Specifically, the tracker replaces the old
+forked/direct/fixed-terminal presentation taxonomy with common exit decisions,
+normal-door batches, one specialized Hub decision, and declaration-derived
+biome completion.
 
 ### Phase Acceptance
 
