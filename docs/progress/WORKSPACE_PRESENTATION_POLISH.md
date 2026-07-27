@@ -4,9 +4,11 @@
 
 This is the active implementation plan for Phase 7 Commit 5b. Commit 5a is
 complete in `44a2b8d`; it removed the remaining browser confirmation prompts
-without introducing a destructive-action abstraction. Commit 5b is limited to
-the four presentation changes below. Exact authored Shop purchase order is the
-separate cross-layer Commit 5c defined by
+without introducing a destructive-action abstraction. Commit 5b.1 is complete
+in `e059b7d`, and Commit 5b.2 is complete in `4d46957`. Commit 5b.3 is the
+active delivery slice, followed by Commit 5b.4 closure. Commit 5b remains
+limited to the four presentation changes below. Exact authored Shop purchase
+order is the separate cross-layer Commit 5c defined by
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md).
 
 Stable ownership remains with
@@ -348,13 +350,10 @@ Across the shared workspace:
 
 Each slice is independently reviewable and must leave the editor usable.
 
-### Commit 5b.1: Structure Ephyra Rail and Visit Details
+### Commit 5b.1: Structure Ephyra Rail and Visit Details — complete
 
-Suggested subject:
-
-```text
-feat(editor): structure Ephyra visit navigation
-```
+Delivered in `e059b7d` (`feat(planner): structure Ephyra rail and visit
+details`).
 
 Owns Change 1 only.
 
@@ -375,13 +374,14 @@ Gate:
 - `npm run test:product`;
 - lint, format check, and `git diff --check`.
 
-### Commit 5b.2: Simplify Ephyra Side-Room Ordering
+Review validation ran the root typecheck, `npm run test:planner` (22 files, 183
+tests), the changed Surface and Underworld product-loop fixtures (2 files, 11
+tests), lint, format check, and `git diff --check`. The complete product lane and
+repository gate remain part of Commit 5b.4 closure.
 
-Suggested subject:
+### Commit 5b.2: Simplify Ephyra Side-Room Ordering — complete
 
-```text
-feat(editor): simplify Ephyra side room ordering
-```
+Delivered in `4d46957` (`feat(planner): streamline Ephyra side room ordering`).
 
 Owns Change 2 only.
 
@@ -398,6 +398,9 @@ Gate:
 - planner typecheck;
 - `npm run test:planner`;
 - lint, format check, and `git diff --check`.
+
+Review validation ran the root typecheck, `npm run test:planner` (22 files, 185
+tests), lint, format check, and `git diff --check`.
 
 ### Commit 5b.3: Hide Dormant Fields and Ship Sections
 

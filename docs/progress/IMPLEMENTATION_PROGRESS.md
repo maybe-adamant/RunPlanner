@@ -29,12 +29,13 @@ model, migrated the planner engine, projected the common workspace, built its
 shared React surface, closed its
 product/recovery/performance/architecture evidence, and passed the complete
 repository gate. Commit 5a then removed the remaining browser confirmation
-prompts while preserving the existing semantic-command/history flow. The
-active work is the four bounded Commit 5b slices in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md): N rail
-hierarchy, direct side-room order editing, active-only H/O room-local
-presentation, and player-facing product vocabulary. None changes the closed
-domain contracts. Commit 5c then follows the separate
+prompts while preserving the existing semantic-command/history flow. Commit
+5b.1 delivered the N rail hierarchy, and Commit 5b.2 delivered direct side-room
+order editing. The active frontier is Commit 5b.3's active-only H/O room-local
+presentation in
+[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
+by Commit 5b.4's player-facing product vocabulary and 5b closure. None changes
+the closed domain contracts. Commit 5c then follows the separate
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan: schema 10 authors an
 exact Shop purchase order, simulation validates that exact sequence, and the
 editor exposes the order directly. Commit 5c intentionally replaces the schema
@@ -113,9 +114,27 @@ passed catalog, planner-engine, and planner TypeScript checks, 59 Vitest files
 with 605 tests, ESLint, Prettier, production build, and `git diff --check`.
 Commit 5a is complete in `44a2b8d`. Its complete gate passed catalog,
 planner-engine, and planner TypeScript checks, 59 Vitest files with 605 tests,
-ESLint, Prettier, production build, and `git diff --check`. The four Commit 5b
-presentation slices and three Commit 5c Shop-order slices are the remaining
-work before the active Phase 7 frontier advances.
+ESLint, Prettier, production build, and `git diff --check`.
+
+Commit 5b.1 is complete in `e059b7d`. It presents N as Opening, PreHub, a
+persistent Hub with six occurrence-owned visit children, and Preboss; keeps
+main Hub rewards on the board; moves visit-local detail to each child; and
+anchors hidden linked and takeover removal actions on their visible stages.
+Review validation passed the root typecheck, `npm run test:planner` (22 files,
+183 tests), the changed Surface and Underworld product-loop fixtures (2 files,
+11 tests), ESLint, Prettier, and `git diff --check`. This was not recorded as a
+complete product-lane or repository-gate run.
+
+Commit 5b.2 is complete in `4d46957`. It replaces adjacent side-room order
+buttons with one generated/entry-order grid whose row interactions project
+every direct candidate-backed position as a complete sequence. Direct
+insertion, removal compaction, impossible positions, and one-command Undo/Redo
+are covered. Review validation passed the root typecheck,
+`npm run test:planner` (22 files, 185 tests), ESLint, Prettier, and
+`git diff --check`.
+
+Commit 5b.3, Commit 5b.4, and the three Commit 5c Shop-order slices are the
+remaining work before the active Phase 7 frontier advances.
 
 For historical context, room-replacement retention closed before the unified
 refactor. The delivered policy uses the
