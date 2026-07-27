@@ -449,7 +449,6 @@ Session state may include:
 - panel expansion;
 - selector category and search text;
 - zoom or viewport if a graph projection is introduced;
-- non-modal edit-announcement state.
 
 Session state must never be required to reconstruct the authored project.
 

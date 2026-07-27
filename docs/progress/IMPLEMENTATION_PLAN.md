@@ -2137,10 +2137,13 @@ Gate:
 
 ### Commit 12: Unified Biome Decisions and Workspace
 
-The former presentation-only Commit 12 and Commit 13 plan is superseded by
-[`HUB_WORKSPACE_RECONCILIATION.md`](HUB_WORKSPACE_RECONCILIATION.md).
+The unified biome refactor is complete through Commit 4. Its delivered sequence
+and evidence remain recorded in `IMPLEMENTATION_PROGRESS.md` and Git history.
+The former presentation-only Commit 12 and Commit 13 wording is superseded by
+the focused follow-ups below.
 
-Commit 12 will be delivered through eight independently reviewable slices:
+Commit 12 and its focused follow-ups will be delivered through fourteen
+independently reviewable slices:
 
 1. Commit 1 establishes the unified catalog and schema 9 authored decision
    model;
@@ -2152,18 +2155,19 @@ Commit 12 will be delivered through eight independently reviewable slices:
 6. Commit 4 closes the unified domain/workspace contract, parity, architecture
    boundaries, and owning documentation;
 7. Commit 5a removes browser confirmation while preserving the existing
-   immediate semantic-command and project-history behavior; and
-8. Commit 5b completes presentation, responsive, and accessibility polish
-   without changing the closed domain contracts.
+   immediate semantic-command and project-history behavior;
+8. Commit 5b delivers the four bounded changes in
+   `WORKSPACE_PRESENTATION_POLISH.md` without changing the closed domain
+   contracts; and
+9. Commit 5c replaces the Shop purchased-set model with exact authored order
+   through the three slices in `SHOP_PURCHASE_ORDER.md`.
 
-The tracker owns the concrete contracts, deliverables, tests, and per-commit
-gates, including the explicitly accepted temporary downstream breakage after
-the first two ownership slices and the connected-application restoration gate
-across the three application slices. Commit 4 is the explicit end of the
-unified biome refactor; Commits 5a and 5b preserve that authority while
-completing the final interaction and presentation acceptance formerly carried
-by Commit 13. Specifically, the tracker replaces the old
-forked/direct/fixed-terminal presentation taxonomy with common exit decisions,
+The owning design documents define the delivered contracts. Commit 4 is the
+explicit end of the unified biome refactor; Commits 5a and 5b preserve that
+authority while completing the final interaction and presentation acceptance
+formerly carried by Commit 13. Commit 5c is a separate authored-Shop correction
+that replaces the schema 9 purchased-set contract without reopening biome
+topology. The current presentation taxonomy uses common exit decisions,
 normal-door batches, one specialized Hub decision, and declaration-derived
 biome completion.
 

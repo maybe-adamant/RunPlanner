@@ -135,19 +135,20 @@ copied elsewhere.
 - Evidence and disposition:
   [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
   [Ephyra side-room findings](docs/audits/N_SIDE_ROOM_FINDINGS.md),
-  [cross-biome UX audit](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md), and
+  [cross-biome UX audit](docs/audits/CROSS_BIOME_EDITOR_UX_AUDIT.md),
+  [user-facing vocabulary audit](docs/audits/USER_FACING_VOCABULARY_AUDIT.md),
+  and
   [migration provenance](docs/progress/MIGRATION_PROVENANCE.md).
 - Delivery:
   [implementation plan](docs/progress/IMPLEMENTATION_PLAN.md) for forward
   acceptance gates and
   [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
   active frontier and chronological delivery record. Phase 7 Slice 4
-  reconciliation is complete; Commit 5a is the active confirmation-prompt
-  removal follow-up, followed by Commit 5b presentation,
-  responsive, and accessibility polish. The
-  [unified biome decisions and workspace tracker](docs/progress/HUB_WORKSPACE_RECONCILIATION.md)
-  records that closure, the active follow-up, and the explicit future Chaos
-  backlog.
+  reconciliation and Commit 5a prompt removal are complete. The active
+  [workspace presentation polish](docs/progress/WORKSPACE_PRESENTATION_POLISH.md)
+  plan splits Commit 5b into four bounded UI changes. The following
+  [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) gives Commit
+  5c its own schema, engine, projection, and UI slices.
 
 ## Source Evidence
 
