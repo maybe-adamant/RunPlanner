@@ -617,6 +617,79 @@ describe('unified structured workspace projection', () => {
     ]);
   });
 
+  it('projects every direct Ephyra side-room position as a complete candidate proposal', () => {
+    const projectedWorkspace = workspace(createRepresentativeNOPQProject());
+    const combat05 = roomWorkbench(projectedWorkspace, 'N', 'N_Combat05');
+    if (combat05.roomLocal.kind !== 'ephyra') {
+      throw new Error('N Combat 05 side-room workbench is missing');
+    }
+    const sideDoor2 = combat05.roomLocal.sideRooms.slots.find((slot) => slot.key === 'sideDoor2');
+    const sideDoor3 = combat05.roomLocal.sideRooms.slots.find((slot) => slot.key === 'sideDoor3');
+    if (sideDoor2 === undefined || sideDoor3 === undefined) {
+      throw new Error('N Combat 05 side-room slots are missing');
+    }
+
+    expect(sideDoor2.entryOrder).toEqual({
+      interactionKey: semanticAddressKey(sideDoor2.address) + ':entry-order',
+      options: [
+        {
+          key: 'notEntered',
+          label: 'Not entered',
+          position: null,
+          proposedEnteredSlotKeys: ['sideDoor1'],
+        },
+        {
+          key: 'position:1',
+          label: '1st',
+          position: 1,
+          proposedEnteredSlotKeys: ['sideDoor2', 'sideDoor1'],
+        },
+        {
+          key: 'position:2',
+          label: '2nd',
+          position: 2,
+          proposedEnteredSlotKeys: ['sideDoor1', 'sideDoor2'],
+        },
+      ],
+      selectedKey: 'position:1',
+    });
+    expect(sideDoor3.entryOrder).toEqual({
+      interactionKey: semanticAddressKey(sideDoor3.address) + ':entry-order',
+      options: [
+        {
+          key: 'notEntered',
+          label: 'Not entered',
+          position: null,
+          proposedEnteredSlotKeys: ['sideDoor2', 'sideDoor1'],
+        },
+        {
+          key: 'position:1',
+          label: '1st',
+          position: 1,
+          proposedEnteredSlotKeys: ['sideDoor3', 'sideDoor2', 'sideDoor1'],
+        },
+        {
+          key: 'position:2',
+          label: '2nd',
+          position: 2,
+          proposedEnteredSlotKeys: ['sideDoor2', 'sideDoor3', 'sideDoor1'],
+        },
+        {
+          key: 'position:3',
+          label: '3rd',
+          position: 3,
+          proposedEnteredSlotKeys: ['sideDoor2', 'sideDoor1', 'sideDoor3'],
+        },
+      ],
+      selectedKey: 'notEntered',
+    });
+    expect(
+      projectedWorkspace.interactions.sideRoomEntryOrders
+        .get(sideDoor3.entryOrder.interactionKey)
+        ?.choices.map((choice) => choice.value),
+    ).toEqual(sideDoor3.entryOrder.options.map((option) => option.proposedEnteredSlotKeys));
+  });
+
   it('reprojects authored Hub visit children in visit order after replacement and truncation', () => {
     const initial = appendCompleteN(
       createProjectDocument(catalog, {

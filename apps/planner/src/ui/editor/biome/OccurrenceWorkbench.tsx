@@ -1,12 +1,13 @@
 import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
+import { candidateSupport, presentCandidateLabel } from '../../../projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
-  type WorkspaceEphyraSideRoomEntryAction,
+  type WorkspaceEphyraSideRoomDescriptor,
   type WorkspaceRewardControl,
   type WorkspaceRoomSummary,
 } from '../../../projections/structuredWorkspace';
@@ -104,54 +105,73 @@ export function RewardControlEditor({
   );
 }
 
-function EphyraSideEntryAction({
-  action,
-  ariaLabel,
+function EphyraSideRoomEntryOrderSelect({
+  group,
   interactions,
-  label,
-  onApply,
+  side,
 }: {
-  readonly action: WorkspaceEphyraSideRoomEntryAction;
-  readonly ariaLabel: string;
+  readonly group: Extract<
+    WorkspaceRoomSummary['roomLocal'],
+    { readonly kind: 'ephyra' }
+  >['sideRooms'];
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly label: string;
-  readonly onApply: () => void;
+  readonly side: WorkspaceEphyraSideRoomDescriptor;
 }) {
   const interaction = requireWorkspaceInteraction(
     interactions.sideRoomEntryOrders,
-    action.interactionKey,
+    side.entryOrder.interactionKey,
   );
   const candidates = useWorkspaceInteraction(interaction);
-  const option = candidates.result?.[0];
-  const canApply = candidateMayBeAuthored(option);
+  const dispatch = useAppDispatch();
+  const selectedIndex = side.entryOrder.options.findIndex(
+    (option) => option.key === side.entryOrder.selectedKey,
+  );
+  if (selectedIndex < 0) {
+    throw new Error(`${side.label} has no selected entry-order option`);
+  }
+  const selectedCandidate = candidates.result?.[selectedIndex];
+
+  const replace = (key: string): void => {
+    const optionIndex = side.entryOrder.options.findIndex((option) => option.key === key);
+    const option = side.entryOrder.options[optionIndex];
+    const candidateResults = candidates.result ?? candidates.activate();
+    const candidate = candidateResults?.[optionIndex];
+    if (option === undefined || !candidateMayBeAuthored(candidate)) return;
+    dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceSideRoomEntryOrder',
+        group: group.address,
+        enteredSlotKeys: option.proposedEnteredSlotKeys,
+      }),
+    );
+  };
   return (
-    <button
-      aria-busy={candidates.pending || undefined}
-      aria-label={
-        option !== undefined && !canApply ? `${ariaLabel} unavailable in this state` : ariaLabel
-      }
-      className={action.kind === 'remove' ? 'danger-action' : undefined}
-      data-candidate-support={
-        option === undefined
-          ? candidates.pending
-            ? 'loading'
-            : 'unavailable'
-          : canApply
-            ? 'possible'
-            : 'impossible'
-      }
-      disabled={option !== undefined && !canApply}
-      onClick={() => {
-        const options = candidates.result ?? candidates.activate();
-        const next = options?.[0];
-        if (candidateMayBeAuthored(next)) onApply();
-      }}
-      onFocus={candidates.activate}
-      onPointerDown={candidates.activate}
-      type="button"
-    >
-      {label}
-    </button>
+    <label className="field-control ephyra-side-entry-order">
+      <span className="visually-hidden">{side.label} entry order</span>
+      <select
+        aria-busy={candidates.pending || undefined}
+        data-candidate-support={candidateSupport(selectedCandidate)}
+        onChange={(event) => replace(event.target.value)}
+        onFocus={candidates.activate}
+        onPointerDown={candidates.activate}
+        value={side.entryOrder.selectedKey}
+      >
+        {side.entryOrder.options.map((option, index) => {
+          const candidate = candidates.result?.[index];
+          const disabled = candidate !== undefined && !candidateMayBeAuthored(candidate);
+          return (
+            <option
+              data-candidate-support={candidateSupport(candidate)}
+              disabled={disabled}
+              key={option.key}
+              value={option.key}
+            >
+              {presentCandidateLabel(option.label, candidate)}
+            </option>
+          );
+        })}
+      </select>
+    </label>
   );
 }
 
@@ -197,121 +217,75 @@ function EphyraWorkbench({
               {group.enteredSlotKeys.length} entered · {group.slots.length} possible
             </span>
           </header>
-          <div className="ephyra-side-list">
-            {group.slots.map((side) => {
-              const generation = requireWorkspaceInteraction(
-                interactions.sideRoomGenerations,
-                workspaceInteractionKey(side.address),
-              );
-              const action = (kind: WorkspaceEphyraSideRoomEntryAction['kind']) =>
-                side.entryActions.find((candidate) => candidate.kind === kind);
-              const enterOrRemove = action(side.entered ? 'remove' : 'enter');
-              const earlier = action('moveEarlier');
-              const later = action('moveLater');
-              return (
-                <article
-                  aria-label={side.label}
-                  className="ephyra-side-card"
-                  data-generated={side.generation === 'generated'}
-                  key={side.key}
-                >
-                  <div className="local-reward-heading">
-                    <div>
-                      <p className="card-kicker">Door {side.physicalDoorId}</p>
-                      <div className="owner-markers">
-                        <h4>{side.label}</h4>
-                        <SemanticOwnerMarker address={side.address} />
-                      </div>
-                    </div>
-                    <span className="neutral-status">
-                      {side.entered ? `Entered ${side.enteredOrdinal}` : 'Not entered'}
-                    </span>
-                  </div>
-                  <div className="ephyra-side-controls">
-                    <CandidateSelect
-                      id={`side-${side.marker.focusKey}-generation`}
-                      interaction={generation}
-                      label={`${side.label} generation`}
-                      onReplace={(value) =>
-                        dispatch(
-                          authoredProjectCommandDispatched({
-                            kind: 'ReplaceSideRoomGeneration',
-                            sideRoom: side.address,
-                            generation: value,
-                          }),
-                        )
-                      }
-                    />
-                    {enterOrRemove === undefined ? null : (
-                      <EphyraSideEntryAction
-                        action={enterOrRemove}
-                        interactions={interactions}
-                        label={side.entered ? 'Remove From Entry Order' : 'Enter Last'}
-                        ariaLabel={`${side.entered ? 'Remove from entry order' : 'Enter last'}: ${side.label}`}
-                        onApply={() =>
-                          dispatch(
-                            authoredProjectCommandDispatched({
-                              kind: 'ReplaceSideRoomEntryOrder',
-                              group: group.address,
-                              enteredSlotKeys: enterOrRemove.proposedEnteredSlotKeys,
-                            }),
-                          )
-                        }
-                      />
-                    )}
-                  </div>
-                  {!side.entered || (earlier === undefined && later === undefined) ? null : (
-                    <div className="side-order-actions">
-                      {earlier === undefined ? null : (
-                        <EphyraSideEntryAction
-                          action={earlier}
-                          interactions={interactions}
-                          label="Earlier"
-                          ariaLabel={`Move ${side.label} earlier`}
-                          onApply={() =>
+          <div className="ephyra-side-grid-scroll">
+            <table className="ephyra-side-grid">
+              <caption className="visually-hidden">
+                Ephyra side-room generation and entry order
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Side room</th>
+                  <th scope="col">Generated</th>
+                  <th scope="col">Entry order</th>
+                </tr>
+              </thead>
+              <tbody>
+                {group.slots.map((side) => {
+                  const generation = requireWorkspaceInteraction(
+                    interactions.sideRoomGenerations,
+                    workspaceInteractionKey(side.address),
+                  );
+                  return (
+                    <tr
+                      className="ephyra-side-grid-row"
+                      data-generated={side.generation === 'generated'}
+                      key={side.key}
+                    >
+                      <th scope="row">
+                        <div className="ephyra-side-room-heading">
+                          <p className="card-kicker">Door {side.physicalDoorId}</p>
+                          <div className="owner-markers">
+                            <span>{side.label}</span>
+                            <SemanticOwnerMarker address={side.address} />
+                          </div>
+                        </div>
+                        <div className="ephyra-side-reward room-state-with-marker">
+                          <SemanticOwnerMarker address={side.rewardControl.marker.address} />
+                          <RewardControlEditor
+                            control={side.rewardControl}
+                            idPrefix={`side-${side.marker.focusKey}`}
+                            interactions={interactions}
+                          />
+                        </div>
+                      </th>
+                      <td>
+                        <CandidateSelect
+                          id={`side-${side.marker.focusKey}-generation`}
+                          interaction={generation}
+                          label={`${side.label} generation`}
+                          onReplace={(value) =>
                             dispatch(
                               authoredProjectCommandDispatched({
-                                kind: 'ReplaceSideRoomEntryOrder',
-                                group: group.address,
-                                enteredSlotKeys: earlier.proposedEnteredSlotKeys,
+                                kind: 'ReplaceSideRoomGeneration',
+                                sideRoom: side.address,
+                                generation: value,
                               }),
                             )
                           }
                         />
-                      )}
-                      {later === undefined ? null : (
-                        <EphyraSideEntryAction
-                          action={later}
+                      </td>
+                      <td>
+                        <EphyraSideRoomEntryOrderSelect
+                          group={group}
                           interactions={interactions}
-                          label="Later"
-                          ariaLabel={`Move ${side.label} later`}
-                          onApply={() =>
-                            dispatch(
-                              authoredProjectCommandDispatched({
-                                kind: 'ReplaceSideRoomEntryOrder',
-                                group: group.address,
-                                enteredSlotKeys: later.proposedEnteredSlotKeys,
-                              }),
-                            )
-                          }
+                          side={side}
                         />
-                      )}
-                    </div>
-                  )}
-                  <div
-                    className="room-state-with-marker"
-                    data-active={side.generation === 'generated'}
-                  >
-                    <SemanticOwnerMarker address={side.rewardControl.marker.address} />
-                    <RewardControlEditor
-                      control={side.rewardControl}
-                      idPrefix={`side-${side.marker.focusKey}`}
-                      interactions={interactions}
-                    />
-                  </div>
-                </article>
-              );
-            })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </section>
       )}

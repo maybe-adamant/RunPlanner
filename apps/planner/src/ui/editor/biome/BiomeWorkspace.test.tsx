@@ -37,7 +37,11 @@ import {
 import { semanticFindingKey } from '../../../projections/evaluationProjection';
 import type { WorkspaceNode } from '../../../projections/structuredWorkspace';
 import { findingSelected, semanticOwnerFocused } from '../../../state/editorSessionSlice';
-import { authoredProjectReplaced } from '../../../state/projectWorkspaceSlice';
+import {
+  authoredProjectRedoRequested,
+  authoredProjectReplaced,
+  authoredProjectUndoRequested,
+} from '../../../state/projectWorkspaceSlice';
 import { useAppSelector } from '../../../state/store';
 import {
   appendCompleteN,
@@ -459,20 +463,36 @@ describe('BiomeWorkspace', () => {
       'sideDoor1',
     ]);
 
-    await view.user.click(screen.getByRole('button', { name: 'Move Side Room 02 earlier' }));
+    const entryOrder = async (label: string): Promise<HTMLSelectElement> => {
+      const control = screen.getByRole('combobox', { name: label }) as HTMLSelectElement;
+      await view.user.click(control);
+      await waitFor(() =>
+        expect(
+          Array.from(control.options).some(
+            (option) =>
+              option.value === 'position:1' && option.dataset.candidateSupport !== 'unavailable',
+          ),
+        ).toBe(true),
+      );
+      return control;
+    };
+
+    await view.user.selectOptions(await entryOrder('Side Room 07 entry order'), 'position:2');
     await waitFor(() =>
       expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
         'sideDoor1',
         'sideDoor2',
       ]),
     );
-    await view.user.click(
-      screen.getByRole('button', { name: 'Remove from entry order: Side Room 07' }),
-    );
+    await view.user.selectOptions(await entryOrder('Side Room 03 entry order'), 'position:1');
     await waitFor(() =>
-      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual(['sideDoor1']),
+      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
+        'sideDoor3',
+        'sideDoor1',
+        'sideDoor2',
+      ]),
     );
-    await view.user.click(screen.getByRole('button', { name: 'Enter last: Side Room 07' }));
+    await view.user.selectOptions(await entryOrder('Side Room 03 entry order'), 'notEntered');
     await waitFor(() =>
       expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
         'sideDoor1',
@@ -517,7 +537,7 @@ describe('BiomeWorkspace', () => {
     ).toBe(false);
   });
 
-  it('keeps a not-generated side room out of entry order without dispatching a mutation', async () => {
+  it('keeps every impossible side-room position visible and disabled when not generated', async () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'ReplaceSideRoomGeneration',
       sideRoom: createLocalChildAddress(
@@ -534,12 +554,25 @@ describe('BiomeWorkspace', () => {
     if (timeline === null) throw new Error('N Hub visit timeline is missing');
     await view.user.click(within(timeline).getByRole('button', { name: 'Combat 02' }));
 
-    const sideRoom = screen.getByRole('article', { name: 'Side Room 03' });
-    const enter = within(sideRoom).getByRole('button', { name: 'Enter last: Side Room 03' });
-    act(() => enter.focus());
-    await waitFor(() => expect(enter).toHaveProperty('disabled', true));
+    const entryOrder = screen.getByRole('combobox', {
+      name: 'Side Room 03 entry order',
+    }) as HTMLSelectElement;
+    await view.user.click(entryOrder);
+    await waitFor(() => {
+      expect(Array.from(entryOrder.options).map((option) => option.textContent)).toEqual([
+        'Not entered',
+        '1st — unavailable',
+        '2nd — unavailable',
+      ]);
+      expect(entryOrder.value).toBe('notEntered');
+      expect(entryOrder.options[0]?.disabled).toBe(false);
+      expect(
+        Array.from(entryOrder.options)
+          .slice(1)
+          .every((option) => option.disabled),
+      ).toBe(true);
+    });
     const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
-    await view.user.click(enter);
 
     const occurrence = nHubOccurrence(view.application, 'combat02');
     if (occurrence.state.kind !== 'ephyraCombat') {
@@ -551,6 +584,66 @@ describe('BiomeWorkspace', () => {
     });
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyLength,
+    );
+  });
+
+  it('applies a direct side-room insertion as one undoable complete order', async () => {
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /Visit 1 · Combat 05/ }));
+
+    const table = screen.getByRole('table', {
+      name: 'Ephyra side-room generation and entry order',
+    });
+    expect(within(table).getByRole('columnheader', { name: 'Side room' })).toBeTruthy();
+    expect(within(table).getByRole('columnheader', { name: 'Generated' })).toBeTruthy();
+    expect(within(table).getByRole('columnheader', { name: 'Entry order' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Enter last|Earlier|Later/ })).toBeNull();
+
+    const entryOrder = within(table).getByRole('combobox', {
+      name: 'Side Room 03 entry order',
+    }) as HTMLSelectElement;
+    await view.user.click(entryOrder);
+    await waitFor(() =>
+      expect(
+        Array.from(entryOrder.options).find((option) => option.value === 'position:1')?.dataset
+          .candidateSupport,
+      ).not.toBe('unavailable'),
+    );
+    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.selectOptions(entryOrder, 'position:1');
+    await waitFor(() =>
+      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
+        'sideDoor3',
+        'sideDoor2',
+        'sideDoor1',
+      ]),
+    );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength + 1,
+    );
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
+        'sideDoor2',
+        'sideDoor1',
+      ]),
+    );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength,
+    );
+
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    await waitFor(() =>
+      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
+        'sideDoor3',
+        'sideDoor2',
+        'sideDoor1',
+      ]),
+    );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength + 1,
     );
   });
 
