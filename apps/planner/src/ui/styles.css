@@ -624,6 +624,37 @@ button:disabled {
   background: rgb(174 152 202 / 7%);
 }
 
+.biome-hub-rail-group::before {
+  bottom: 0;
+}
+
+.biome-hub-rail-visits {
+  display: grid;
+  gap: 5px;
+  padding: 0;
+  margin: 7px 0 0 17px;
+  list-style: none;
+}
+
+.biome-hub-rail-visit {
+  position: relative;
+}
+
+.biome-hub-rail-visit::before {
+  position: absolute;
+  top: 50%;
+  left: -12px;
+  width: 8px;
+  height: 8px;
+  border-bottom: 1px solid #4b4855;
+  border-left: 1px solid #4b4855;
+  content: '';
+}
+
+.biome-hub-rail-visit .biome-rail-node {
+  padding: 6px 8px;
+}
+
 .biome-rail-kicker,
 .biome-rail-summary,
 .biome-rail-status,
@@ -652,6 +683,42 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 7px;
+}
+
+.biome-completion-outline {
+  margin-top: 14px;
+  padding: 10px;
+  border: 1px solid #34353e;
+  border-radius: 9px;
+  color: #aaa7af;
+  background: rgb(13 14 18 / 24%);
+}
+
+.biome-completion-outline > .card-kicker {
+  margin: 0 0 6px;
+}
+
+.biome-completion-outline ol {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.biome-completion-outline li {
+  display: flex;
+  gap: 7px;
+  font-size: 0.78rem;
+}
+
+.biome-completion-outline li > span {
+  color: #8f8c95;
+}
+
+.biome-completion-outline li > strong {
+  color: #d8d3cb;
+  font-weight: 500;
 }
 
 .biome-inspector {
@@ -1857,5 +1924,9 @@ select {
 
   .hub-visit-row > button {
     grid-column: 2;
+  }
+
+  .biome-hub-rail-visits {
+    margin-left: 12px;
   }
 }

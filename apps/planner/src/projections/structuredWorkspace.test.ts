@@ -57,6 +57,7 @@ import {
   createStructuredWorkspaceProjection,
   type WorkspaceBiome,
   type WorkspaceNode,
+  type WorkspaceRailEntry,
 } from './structuredWorkspace';
 
 const projection = createStructuredWorkspaceProjection(catalog, {
@@ -88,6 +89,7 @@ function kinds(projected: WorkspaceBiome): readonly WorkspaceNode['kind'][] {
 function railShape(projected: WorkspaceBiome): readonly string[] {
   return projected.rail.map((entry) => {
     if (entry.kind === 'frontier') return `frontier:${entry.frontier.kind}`;
+    if (entry.kind === 'hubGroup') return 'hubDecision';
     const { node } = entry;
     switch (node.kind) {
       case 'occurrenceWorkbench':
@@ -476,7 +478,8 @@ describe('unified structured workspace projection', () => {
   });
 
   it('projects one declaration-owned Hub node with all physical slots and stable visit owners', () => {
-    const projected = biome(workspace(createRepresentativeNOPQProject()), 'N');
+    const projectedWorkspace = workspace(createRepresentativeNOPQProject());
+    const projected = biome(projectedWorkspace, 'N');
     const hub = projected.nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
         node.kind === 'hubDecision',
@@ -528,7 +531,130 @@ describe('unified structured workspace projection', () => {
           node.kind === 'occurrenceWorkbench' &&
           node.room.occurrenceId === combat02.room?.occurrenceId,
       ),
-    ).toMatchObject({ railVisibility: 'inspectorOnly' });
+    ).toMatchObject({ inspectorPresentation: 'hubRoomLocal', railVisibility: 'inspectorOnly' });
+
+    const railHub = projected.rail.find(
+      (entry): entry is Extract<(typeof projected.rail)[number], { readonly kind: 'hubGroup' }> =>
+        entry.kind === 'hubGroup',
+    );
+    if (railHub === undefined) throw new Error('N Hub rail group is missing');
+    expect(railHub.visits.map((visit) => visit.label)).toEqual([
+      'Visit 1 · Combat 05',
+      'Visit 2 · Satyr Champion',
+      'Visit 3 · Combat 02',
+      'Visit 4 · Combat 11',
+      'Visit 5 · Combat 23',
+      'Visit 6 · Combat 09',
+    ]);
+    expect(railHub.visits.map((visit) => visit.marker.address.kind)).toEqual(
+      railHub.visits.map(() => 'occurrence'),
+    );
+    expect(railHub.visits[2]).toMatchObject({
+      marker: combat02.room.marker,
+      node: { key: `occurrence:${semanticAddressKey(combat02.room.address)}` },
+      visitMarker: hub.visits[2]?.marker,
+    });
+    const mainReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat02'));
+    expect(projectedWorkspace.focusByOwner.get(semanticAddressKey(mainReward))).toMatchObject({
+      focusAddress: hub.owner,
+      ownerAddress: mainReward,
+    });
+    const preHub = projected.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.gameName === 'N_PreHub01',
+    );
+    const preboss = projected.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.gameName === 'N_PreBoss01',
+    );
+    const preHubDecision = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    const prebossDecision = createExitDecisionAddress(nBiome, {
+      kind: 'hubDecision',
+      decisionKey: 'hub',
+    });
+    expect(preHub?.sourceDecisionRemoval).toEqual({
+      interactionKey: semanticAddressKey(preHubDecision),
+      label: 'Remove PreHub',
+    });
+    expect(preboss?.sourceDecisionRemoval).toEqual({
+      interactionKey: semanticAddressKey(prebossDecision),
+      label: 'Remove Preboss',
+    });
+    expect(
+      projectedWorkspace.interactions.topologyRemovals.get(semanticAddressKey(preHubDecision)),
+    ).toMatchObject({ owner: preHubDecision });
+    expect(
+      projectedWorkspace.interactions.topologyRemovals.get(semanticAddressKey(prebossDecision)),
+    ).toMatchObject({ owner: prebossDecision });
+    expect(
+      projected.rail.map((entry) => {
+        if (entry.kind === 'hubGroup') return 'hub';
+        if (entry.kind === 'frontier') return `frontier:${entry.frontier.kind}`;
+        return entry.node.kind === 'occurrenceWorkbench'
+          ? `room:${entry.node.room.gameName}`
+          : entry.node.kind;
+      }),
+    ).toEqual(['room:N_Opening01', 'room:N_PreHub01', 'hub', 'room:N_PreBoss01']);
+    expect(
+      projected.rail.some((entry) => entry.kind === 'node' && entry.node.kind === 'linkedExit'),
+    ).toBe(false);
+    expect(
+      projected.rail.some(
+        (entry) =>
+          entry.kind === 'node' &&
+          (entry.node.kind === 'ordinaryBatch' ||
+            entry.node.kind === 'mixedBatch' ||
+            entry.node.kind === 'takeoverBatch') &&
+          entry.node.owner.source.kind === 'hubDecision',
+      ),
+    ).toBe(false);
+    expect(projected.completionOutline.map((node) => node.label)).toEqual([
+      'Polyphemus',
+      'Postboss',
+    ]);
+  });
+
+  it('reprojects authored Hub visit children in visit order after replacement and truncation', () => {
+    const initial = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'n-rail-visit-reprojection',
+        name: 'N rail visit reprojection',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false, visitSlotKeys: nVisitSlotKeys.slice(0, 3) },
+    );
+    const hubChildren = (project: ReturnType<typeof createProjectDocument>) => {
+      const entry = biome(workspace(project), 'N').rail.find(
+        (candidate): candidate is Extract<WorkspaceRailEntry, { readonly kind: 'hubGroup' }> =>
+          candidate.kind === 'hubGroup',
+      );
+      if (entry === undefined) throw new Error('N Hub rail group is missing');
+      return entry.visits;
+    };
+
+    expect(hubChildren(initial).map((visit) => visit.label)).toEqual([
+      'Visit 1 · Combat 05',
+      'Visit 2 · Satyr Champion',
+      'Visit 3 · Combat 02',
+    ]);
+    const replaced = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceHubVisit',
+      hubSlotKey: 'combat10',
+      visit: createHubVisitAddress(nBiome, 'hub', 2),
+    });
+    expect(hubChildren(replaced).map((visit) => visit.label)).toEqual([
+      'Visit 1 · Combat 05',
+      'Visit 2 · Combat 10',
+      'Visit 3 · Combat 02',
+    ]);
+    const truncated = applyProjectCommand(replaced, catalog, {
+      kind: 'RemoveHubVisitsFrom',
+      visit: createHubVisitAddress(nBiome, 'hub', 2),
+    });
+    expect(hubChildren(truncated).map((visit) => visit.label)).toEqual(['Visit 1 · Combat 05']);
   });
 
   it('keeps the complete Hub board outline visible before N has authored its fixed start', () => {
@@ -557,25 +683,24 @@ describe('unified structured workspace projection', () => {
       name: 'N entry before Hub outline',
       configuredBiomeCounts: { Surface: 1 },
     });
-    expect(railShape(biome(workspace(empty), 'N'))).toEqual([
-      'frontier:start',
-      'hubDecision',
-      'completion:boss:N_Boss01',
-      'completion:postboss:N_PostBoss01',
-    ]);
+    expect(railShape(biome(workspace(empty), 'N'))).toEqual(['frontier:start', 'hubDecision']);
 
     const withOpening = applyProjectCommand(empty, catalog, {
       kind: 'CreateStart',
       biome: biomeAddress,
       occurrenceId: nOccurrenceIds.opening,
     });
-    expect(railShape(biome(workspace(withOpening), 'N'))).toEqual([
+    const openingWorkspace = biome(workspace(withOpening), 'N');
+    expect(railShape(openingWorkspace)).toEqual([
       'room:N_Opening01',
       'frontier:exitDecision',
       'hubDecision',
-      'completion:boss:N_Boss01',
-      'completion:postboss:N_PostBoss01',
     ]);
+    expect(
+      openingWorkspace.nodes.some(
+        (node) => node.kind === 'occurrenceWorkbench' && node.sourceDecisionRemoval !== undefined,
+      ),
+    ).toBe(false);
 
     const withPreHub = applyProjectCommand(withOpening, catalog, {
       kind: 'CreateLinkedExit',
@@ -585,12 +710,26 @@ describe('unified structured workspace projection', () => {
       }),
       occurrenceId: nOccurrenceIds.preHub,
     });
-    expect(railShape(biome(workspace(withPreHub), 'N')).slice(0, 4)).toEqual([
+    const preHubWorkspace = biome(workspace(withPreHub), 'N');
+    expect(railShape(preHubWorkspace).slice(0, 3)).toEqual([
       'room:N_Opening01',
-      'linked:N_PreHub01',
       'room:N_PreHub01',
       'hubDecision',
     ]);
+    expect(
+      preHubWorkspace.nodes.find(
+        (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+          node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === nOccurrenceIds.preHub,
+      )?.sourceDecisionRemoval,
+    ).toMatchObject({ label: 'Remove PreHub' });
+    expect(
+      preHubWorkspace.nodes.some(
+        (node) =>
+          node.kind === 'occurrenceWorkbench' &&
+          node.room.gameName === 'N_PreBoss01' &&
+          node.sourceDecisionRemoval !== undefined,
+      ),
+    ).toBe(false);
   });
 
   it('projects the completed-Hub handoff as one source-owned takeover action before N Preboss exists', () => {
@@ -696,6 +835,26 @@ describe('unified structured workspace projection', () => {
       'unassessed',
       'unassessed',
       'unassessed',
+      'assessed',
+    ]);
+    const retainedRailHub = n.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'hubGroup' }> =>
+        entry.kind === 'hubGroup',
+    );
+    if (retainedRailHub === undefined) throw new Error('retained N Hub rail group is missing');
+    expect(retainedRailHub.visits.map((visit) => visit.label)).toEqual([
+      'Visit 1 · Combat 05',
+      'Visit 2 · Satyr Champion',
+      'Visit 3 · Combat 02',
+    ]);
+    expect(retainedRailHub.visits.map((visit) => visit.visitMarker.assessment)).toEqual([
+      'unassessed',
+      'unassessed',
+      'unassessed',
+    ]);
+    expect(retainedRailHub.visits.map((visit) => visit.marker.assessment)).toEqual([
+      'assessed',
+      'assessed',
       'assessed',
     ]);
     expect(

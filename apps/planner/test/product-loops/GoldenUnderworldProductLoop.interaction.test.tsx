@@ -248,7 +248,7 @@ describe('underworld product loop', () => {
     takeoverApplication.dispose();
   });
 
-  it('keeps pointer and keyboard workflows available across linked, ordinary, takeover, mixed, Hub, and completion decisions', async () => {
+  it('keeps pointer and keyboard workflows available across ordinary, takeover, mixed, fixed-stage, Hub, and completion decisions', async () => {
     const application = createApplication();
     application.store.dispatch(
       authoredProjectReplaced(createGoldenFGHIProject(application.catalog)),
@@ -288,12 +288,12 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     const nStructure = screen.getByRole('region', { name: 'Ephyra structure' });
-    const linked = nStructure.querySelector<HTMLButtonElement>('[data-kind="linkedExit"] button');
-    if (linked === null) throw new Error('N linked exit rail node is missing');
-    await view.user.click(linked);
-    expect(
-      screen.getByText(/This declaration-owned exit is linked to its fixed room/),
-    ).toBeTruthy();
+    const preHub = Array.from(
+      nStructure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
+    ).find((button) => button.textContent?.includes('Pre-Hub'));
+    if (preHub === undefined) throw new Error('N PreHub rail stage is missing');
+    await view.user.click(preHub);
+    expect(screen.getAllByRole('heading', { name: 'Pre-Hub' })).toHaveLength(2);
 
     const hub = nStructure.querySelector<HTMLButtonElement>('[data-kind="hubDecision"] button');
     if (hub === null) throw new Error('N Hub rail node is missing');

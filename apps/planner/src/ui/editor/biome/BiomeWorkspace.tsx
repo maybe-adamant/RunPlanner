@@ -2,6 +2,7 @@ import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/au
 import type { ReactNode } from 'react';
 
 import {
+  requireWorkspaceInteraction,
   workspaceInteractionKey,
   type StructuredWorkspaceProjection,
   type WorkspaceBiome,
@@ -29,7 +30,7 @@ import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 
 interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
-  readonly focusByOwner?: StructuredWorkspaceProjection['focusByOwner'];
+  readonly focusByOwner: StructuredWorkspaceProjection['focusByOwner'];
   readonly interactions: WorkspaceInteractionCatalog;
 }
 
@@ -67,6 +68,30 @@ function roomOwnsAddress(room: WorkspaceRoomSummary, addressKey: string): boolea
         markerMatches(offer.purchase.marker, addressKey),
       );
   }
+}
+
+/** A Hub rail parent owns board controls, while visit and local-room focus stays nested. */
+function hubGroupOwnsAddress(
+  hub: Extract<WorkspaceNode, { readonly kind: 'hubDecision' }>,
+  addressKey: string,
+): boolean {
+  return (
+    markerMatches(hub.marker, addressKey) ||
+    markerMatches(hub.openSet, addressKey) ||
+    hub.slots.some((slot) => markerMatches(slot.marker, addressKey))
+  );
+}
+
+/** A nested visit excludes the Hub slot marker carried for direct inspection. */
+function hubVisitOwnsAddress(
+  visit: Extract<WorkspaceRailEntry, { readonly kind: 'hubGroup' }>['visits'][number],
+  addressKey: string,
+): boolean {
+  return (
+    markerMatches(visit.visitMarker, addressKey) ||
+    markerMatches(visit.node.marker, addressKey) ||
+    visit.node.localDetailMarkers.some((marker) => markerMatches(marker, addressKey))
+  );
 }
 
 function nodeOwnsAddress(node: WorkspaceNode, addressKey: string): boolean {
@@ -256,10 +281,13 @@ function railMarker(node: WorkspaceNode): WorkspaceMarker {
 function FocusButton({
   children,
   marker,
+  presentationMarker = marker,
   selected,
 }: {
   readonly children: ReactNode;
   readonly marker: WorkspaceMarker;
+  /** May retain a distinct staged-owner assessment while focus stays on a room. */
+  readonly presentationMarker?: WorkspaceMarker;
   readonly selected: boolean;
 }) {
   const dispatch = useAppDispatch();
@@ -267,8 +295,8 @@ function FocusButton({
     <button
       aria-pressed={selected}
       className="biome-rail-node"
-      data-assessment={marker.assessment}
-      data-findings={marker.findingCount > 0}
+      data-assessment={presentationMarker.assessment}
+      data-findings={presentationMarker.findingCount > 0}
       data-selected={selected}
       data-workspace-node={marker.focusKey}
       onClick={() => dispatch(semanticOwnerFocused(marker.address))}
@@ -332,6 +360,59 @@ function RailFrontier({
   );
 }
 
+function HubRailVisit({
+  selectedAddressKey,
+  visit,
+}: {
+  readonly selectedAddressKey: string | undefined;
+  readonly visit: Extract<WorkspaceRailEntry, { readonly kind: 'hubGroup' }>['visits'][number];
+}) {
+  const selected =
+    selectedAddressKey !== undefined && hubVisitOwnsAddress(visit, selectedAddressKey);
+  return (
+    <li className="biome-hub-rail-visit">
+      <FocusButton marker={visit.marker} presentationMarker={visit.visitMarker} selected={selected}>
+        <span className="biome-rail-kicker">Hub visit</span>
+        <strong>{visit.label}</strong>
+        <span className="biome-rail-status">
+          {assessmentLabel(visit.visitMarker)}
+          <FindingCount count={visit.visitMarker.findingCount} label="findings" />
+        </span>
+      </FocusButton>
+    </li>
+  );
+}
+
+function HubRailGroup({
+  entry,
+  selectedAddressKey,
+}: {
+  readonly entry: Extract<WorkspaceRailEntry, { readonly kind: 'hubGroup' }>;
+  readonly selectedAddressKey: string | undefined;
+}) {
+  const selected =
+    selectedAddressKey !== undefined && hubGroupOwnsAddress(entry.node, selectedAddressKey);
+  return (
+    <div className="biome-rail-stop biome-hub-rail-group" data-kind="hubDecision">
+      <FocusButton marker={entry.marker} selected={selected}>
+        <span className="biome-rail-kicker">Persistent board</span>
+        <strong>Hub</strong>
+        <span className="biome-rail-status">
+          {assessmentLabel(entry.marker)}
+          <FindingCount count={entry.marker.findingCount} label="findings" />
+        </span>
+      </FocusButton>
+      {entry.visits.length === 0 ? null : (
+        <ol aria-label="Hub visits" className="biome-hub-rail-visits">
+          {entry.visits.map((visit) => (
+            <HubRailVisit key={visit.key} selectedAddressKey={selectedAddressKey} visit={visit} />
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 function RailEntry({
   entry,
   selectedAddressKey,
@@ -344,6 +425,8 @@ function RailEntry({
       return (
         <RailNode marker={entry.marker} node={entry.node} selectedAddressKey={selectedAddressKey} />
       );
+    case 'hubGroup':
+      return <HubRailGroup entry={entry} selectedAddressKey={selectedAddressKey} />;
     case 'frontier':
       return <RailFrontier frontier={entry.frontier} selectedAddressKey={selectedAddressKey} />;
   }
@@ -374,14 +457,29 @@ function InspectorNode({
   readonly node: WorkspaceNode;
 }) {
   switch (node.kind) {
-    case 'occurrenceWorkbench':
+    case 'occurrenceWorkbench': {
+      const sourceRemovalAnchor = node.sourceDecisionRemoval;
+      const sourceRemoval =
+        sourceRemovalAnchor === undefined
+          ? undefined
+          : requireWorkspaceInteraction(
+              interactions.topologyRemovals,
+              sourceRemovalAnchor.interactionKey,
+            );
       return (
-        <OccurrenceWorkbench
-          interactions={interactions}
-          {...(nextFrontier === undefined ? {} : { nextFrontier: nextFrontier.marker })}
-          room={node.room}
-        />
+        <>
+          <OccurrenceWorkbench
+            interactions={interactions}
+            {...(nextFrontier === undefined ? {} : { nextFrontier: nextFrontier.marker })}
+            presentation={node.inspectorPresentation}
+            room={node.room}
+          />
+          {sourceRemovalAnchor === undefined || sourceRemoval === undefined ? null : (
+            <TopologyRemovalAction interaction={sourceRemoval} label={sourceRemovalAnchor.label} />
+          )}
+        </>
       );
+    }
     case 'linkedExit':
       return <LinkedExitWorkbench interactions={interactions} node={node} />;
     case 'ordinaryBatch':
@@ -395,6 +493,30 @@ function InspectorNode({
   }
 }
 
+function CompletionOutline({
+  completion,
+}: {
+  readonly completion: WorkspaceBiome['completionOutline'];
+}) {
+  if (completion.length === 0) return null;
+  return (
+    <section aria-label="Biome completion" className="biome-completion-outline">
+      <p className="card-kicker">Completion</p>
+      <ol>
+        {completion.map((node) => {
+          const roleLabel = node.role === 'postboss' ? 'Postboss' : 'Boss';
+          return (
+            <li key={node.key}>
+              <span>{roleLabel}</span>
+              {node.label === roleLabel ? null : <strong>{node.label}</strong>}
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 /**
  * Projection-driven workbench for every biome.  It intentionally has
  * no catalog or authored-plan prop: structural facts and room-local state come
@@ -404,7 +526,7 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const explicitAddress =
     focusedOwner !== null && ownsBiome(focusedOwner, biome)
-      ? (focusByOwner?.get(semanticAddressKey(focusedOwner))?.focusAddress ?? focusedOwner)
+      ? (focusByOwner.get(semanticAddressKey(focusedOwner))?.focusAddress ?? focusedOwner)
       : undefined;
   const explicitKey =
     explicitAddress === undefined ? undefined : semanticAddressKey(explicitAddress);
@@ -486,6 +608,7 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
             <RailEntry entry={entry} key={entry.key} selectedAddressKey={selectedAddressKey} />
           ))}
         </div>
+        <CompletionOutline completion={biome.completionOutline} />
       </section>
       <aside aria-label="Focused inspector" className="biome-inspector">
         <header className="biome-inspector-heading">

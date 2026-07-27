@@ -237,6 +237,16 @@ export type WorkspaceTopologyRemovalInteraction =
       readonly owner: ExitDecisionAddress;
     };
 
+/**
+ * A player-facing room stage may host the removal action for its hidden
+ * source decision. The action and exact impact stay in the interaction
+ * catalog; this product only declares the presentation anchor.
+ */
+export interface WorkspaceStageDecisionRemoval {
+  readonly interactionKey: string;
+  readonly label: string;
+}
+
 export interface WorkspaceExitSelectionInteraction {
   readonly key: string;
   readonly owner: ExitDecisionAddress;
@@ -760,7 +770,19 @@ export interface WorkspaceHubDecisionNode {
 export interface WorkspaceOccurrenceWorkbenchNode {
   readonly kind: 'occurrenceWorkbench';
   readonly key: string;
+  /**
+   * Projection-owned semantic owners for this room's additional local detail.
+   * Hub child rail selection consumes these rather than inferring room policy.
+   */
+  readonly localDetailMarkers: readonly WorkspaceMarker[];
   readonly marker: WorkspaceMarker;
+  /**
+   * Hub targets keep their incoming offer on the persistent board. Their
+   * occurrence workbench therefore exposes only room-local detail.
+   */
+  readonly inspectorPresentation: 'full' | 'hubRoomLocal';
+  /** A hidden N source decision remains removable from its destination stage. */
+  readonly sourceDecisionRemoval?: WorkspaceStageDecisionRemoval;
   /**
    * A physical target can fail before its room-local state does. The compact
    * rail therefore presents the target owner while retaining the occurrence
@@ -820,6 +842,27 @@ export type WorkspaceNode =
   | WorkspaceOccurrenceWorkbenchNode
   | WorkspaceCompletionNode;
 
+/** One authored Hub visit becomes an indented occurrence-owned rail child. */
+export interface WorkspaceHubVisitRailEntry {
+  readonly key: string;
+  readonly label: string;
+  /** The visited occurrence owns rail focus and local finding navigation. */
+  readonly marker: WorkspaceMarker;
+  readonly node: WorkspaceOccurrenceWorkbenchNode;
+  /** The Hub visit remains available for visit-order presentation and markers. */
+  readonly visitMarker: WorkspaceMarker;
+  readonly visitIndex: number;
+}
+
+/** N's persistent Hub is the only nested rail group in this workspace slice. */
+export interface WorkspaceHubRailEntry {
+  readonly kind: 'hubGroup';
+  readonly key: string;
+  readonly marker: WorkspaceMarker;
+  readonly node: WorkspaceHubDecisionNode;
+  readonly visits: readonly WorkspaceHubVisitRailEntry[];
+}
+
 /**
  * The projection owns visual rail placement. In particular, an active
  * ordinary frontier precedes derived completion endpoints in an incomplete
@@ -832,6 +875,7 @@ export type WorkspaceRailEntry =
       readonly marker: WorkspaceMarker;
       readonly node: WorkspaceNode;
     }
+  | WorkspaceHubRailEntry
   | {
       readonly kind: 'frontier';
       readonly frontier: Extract<
@@ -846,6 +890,8 @@ export type WorkspaceRailEntry =
 export interface WorkspaceBiome {
   readonly biomeKey: string;
   readonly completion: readonly WorkspaceCompletionNode[];
+  /** Read-only completion landmarks when a Hub owns the authoring rail. */
+  readonly completionOutline: readonly WorkspaceCompletionNode[];
   readonly entry?: WorkspaceOccurrenceWorkbenchNode;
   readonly fields: readonly WorkspaceBiomeField[];
   readonly frontier: WorkspaceAuthoringFrontier | null;
@@ -1737,6 +1783,38 @@ function roomLocalForOccurrence(
   }
 }
 
+/**
+ * A room workbench's local surface is distinct from its incoming reward. Hub
+ * visits use this explicit set for child selection so board-owned offers do
+ * not become child-owned merely because they share an occurrence.
+ */
+function localDetailMarkers(roomLocal: WorkspaceRoomLocal): readonly WorkspaceMarker[] {
+  switch (roomLocal.kind) {
+    case 'none':
+    case 'fixed':
+    case 'incomingReward':
+      return Object.freeze([]);
+    case 'ephyra':
+      return Object.freeze([
+        roomLocal.sideRooms.marker,
+        ...roomLocal.sideRooms.slots.flatMap((slot) => [slot.marker, slot.rewardControl.marker]),
+      ]);
+    case 'fields':
+      return Object.freeze(roomLocal.cages.map((cage) => cage.control.marker));
+    case 'ship':
+      return Object.freeze(
+        roomLocal.wheels.flatMap((wheel) => [
+          wheel.marker,
+          ...wheel.offers.map((offer) => offer.control.marker),
+        ]),
+      );
+    case 'shop':
+      return Object.freeze(
+        roomLocal.offers.flatMap((offer) => [offer.purchase.marker, offer.rewardControl.marker]),
+      );
+  }
+}
+
 function projectOccurrence(
   context: MutableProjectionContext,
   occurrence: RoomOccurrence,
@@ -1778,8 +1856,10 @@ function projectOccurrence(
     ...(summary === undefined ? {} : { rewardSummary: summary }),
   });
   return Object.freeze({
+    inspectorPresentation: 'full' as const,
     kind: 'occurrenceWorkbench' as const,
     key: `occurrence:${semanticAddressKey(address)}`,
+    localDetailMarkers: localDetailMarkers(roomSummary.roomLocal),
     marker: roomSummary.marker,
     room: roomSummary,
   });
@@ -1804,10 +1884,33 @@ function isMixed(room: RoomDeclaration | undefined): boolean {
   return room?.prebossBatchPolicy?.kind === 'retainNormalPeers';
 }
 
+function hubStageDecisionRemoval(
+  context: MutableProjectionContext,
+  plan: AuthoredBiomePlan,
+  owner: ExitDecisionAddress,
+  stage: 'preHub' | 'preboss',
+): WorkspaceStageDecisionRemoval | undefined {
+  const layout = context.catalog.biomeLayouts.byKey[plan.biomeKey];
+  if (layout?.progression.kind !== 'hub') return undefined;
+  const isExpectedSource =
+    stage === 'preHub'
+      ? layout.start.kind === 'fixedAuthored' &&
+        owner.source.kind === 'occurrence' &&
+        authoredOccurrence(plan, owner.source.occurrenceId)?.gameName === layout.start.roomGameName
+      : owner.source.kind === 'hubDecision' &&
+        owner.source.decisionKey === layout.progression.hubKey;
+  if (!isExpectedSource) return undefined;
+  return Object.freeze({
+    interactionKey: workspaceInteractionKey(owner),
+    label: stage === 'preHub' ? 'Remove PreHub' : 'Remove Preboss',
+  });
+}
+
 function targetNode(
   context: MutableProjectionContext,
   plan: AuthoredBiomePlan,
   target: CanonicalTarget,
+  sourceDecisionRemoval: WorkspaceStageDecisionRemoval | undefined = undefined,
 ): { readonly target: WorkspacePhysicalTarget; readonly node?: WorkspaceOccurrenceWorkbenchNode } {
   const occurrence = canonicalRoomOccurrence(plan, target.room);
   const targetMarker = marker(context, target.origin);
@@ -1818,7 +1921,11 @@ function targetNode(
   const node =
     occurrenceNode === undefined
       ? undefined
-      : Object.freeze({ ...occurrenceNode, railMarker: targetMarker });
+      : Object.freeze({
+          ...occurrenceNode,
+          ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
+          railMarker: targetMarker,
+        });
   const room = node?.room;
   if (room === undefined) {
     throw new StructuredWorkspaceProjectionContractError(
@@ -2046,8 +2153,14 @@ function projectBatch(
   readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
 } {
   const owner = batch.origin;
-  const projectedTargets = batch.targets.map((target) => targetNode(context, plan, target));
   const kind = batchKind(context.catalog, batch);
+  const sourceDecisionRemoval =
+    kind === 'takeoverBatch' && batch.source.kind === 'hubDecision'
+      ? hubStageDecisionRemoval(context, plan, owner, 'preboss')
+      : undefined;
+  const projectedTargets = batch.targets.map((target) =>
+    targetNode(context, plan, target, sourceDecisionRemoval),
+  );
   const repairScope = batchRepairScope(context, plan, batch, kind);
   const fields = fieldsContextForCanonicalBatch(context, batch);
   const rewardStore =
@@ -2103,7 +2216,8 @@ function projectLinkedExit(
   readonly node: WorkspaceLinkedExitNode;
   readonly workbench?: WorkspaceOccurrenceWorkbenchNode;
 } {
-  const projected = targetNode(context, plan, linked.target);
+  const sourceDecisionRemoval = hubStageDecisionRemoval(context, plan, linked.origin, 'preHub');
+  const projected = targetNode(context, plan, linked.target, sourceDecisionRemoval);
   const node: WorkspaceLinkedExitNode = Object.freeze({
     kind: 'linkedExit' as const,
     key: `linked:${semanticAddressKey(linked.origin)}`,
@@ -2127,6 +2241,42 @@ interface ProjectedHubTarget {
   readonly occurrenceId: OccurrenceId;
 }
 
+function hubMainRewardMarker(room: WorkspaceRoomSummary): WorkspaceMarker | undefined {
+  switch (room.roomLocal.kind) {
+    case 'fixed':
+      return room.roomLocal.marker;
+    case 'incomingReward':
+      return room.roomLocal.control.marker;
+    case 'ephyra':
+      return room.roomLocal.incomingReward.marker;
+    case 'none':
+    case 'fields':
+    case 'ship':
+    case 'shop':
+      return undefined;
+  }
+}
+
+/** Hub main offers retain their semantic owner but navigate to the Hub board. */
+function redirectHubMainRewardFocus(
+  context: MutableProjectionContext,
+  hub: WorkspaceMarker,
+  mainReward: WorkspaceMarker,
+): void {
+  context.focusByOwner.set(
+    mainReward.focusKey,
+    Object.freeze({
+      biomeKey: context.biome.biomeKey,
+      focusAddress: hub.address,
+      focusKey: hub.focusKey,
+      nodeKey: `hub:${hub.focusKey}`,
+      ownerAddress: mainReward.address,
+      region: 'structure' as const,
+      routeKey: context.routeKey,
+    }),
+  );
+}
+
 /**
  * The Hub board is one declaration-owned decision.  Materialization may only
  * retain a prefix of it, while the authored decision can retain later rooms
@@ -2146,6 +2296,7 @@ function projectHubNode(
   readonly node: WorkspaceHubDecisionNode;
   readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
 } {
+  const hubMarker = marker(context, owner);
   const occurrences = hubOccurrenceMap(plan);
   const visited = new Set(visitOrder);
   const workbenches: WorkspaceOccurrenceWorkbenchNode[] = [];
@@ -2163,11 +2314,14 @@ function projectHubNode(
     if (occurrenceNode !== undefined) {
       const workbench = Object.freeze({
         ...occurrenceNode,
+        inspectorPresentation: 'hubRoomLocal' as const,
         railMarker: slotMarker,
         railVisibility: 'inspectorOnly' as const,
       });
       workbenches.push(workbench);
       roomsBySlot.set(slot.slotKey, workbench.room);
+      const mainReward = hubMainRewardMarker(workbench.room);
+      if (mainReward !== undefined) redirectHubMainRewardFocus(context, hubMarker, mainReward);
     }
     return Object.freeze({
       canClose: boardAuthored && target !== undefined && !entered,
@@ -2207,7 +2361,7 @@ function projectHubNode(
       kind: 'hubDecision' as const,
       key: `hub:${semanticAddressKey(owner)}`,
       hubKey: descriptor.hubKey,
-      marker: marker(context, owner),
+      marker: hubMarker,
       openSet: marker(context, createHubOpenSetAddress(context.biome, descriptor.hubKey)),
       openSlotCount: Object.freeze({
         current: targets.size,
@@ -2454,6 +2608,11 @@ function projectAuthoredBatch(
   readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
 } {
   const owner = createExitDecisionAddress(context.biome, decision.source);
+  const kind = rawBatchKind(context, plan, decision);
+  const sourceDecisionRemoval =
+    kind === 'takeoverBatch' && decision.source.kind === 'hubDecision'
+      ? hubStageDecisionRemoval(context, plan, owner, 'preboss')
+      : undefined;
   const physical = physicalExitsForSource(context, plan, decision.source);
   const rank = new Map(physical.map((exit) => [exit.exitKey, exit.index] as const));
   const fieldsActiveCageCount = authoredFieldsActiveCageCount(context, plan, decision);
@@ -2480,6 +2639,7 @@ function projectAuthoredBatch(
       const targetMarker = marker(context, targetAddress);
       const workbench = Object.freeze({
         ...projectOccurrence(context, occurrence, false, undefined, fieldsActiveCageCount),
+        ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
         railMarker: targetMarker,
       });
       workbenches.push(workbench);
@@ -2509,7 +2669,6 @@ function projectAuthoredBatch(
     targetsByKey,
     missingTargetPrerequisite(context, plan, decision),
   );
-  const kind = rawBatchKind(context, plan, decision);
   const repairScope = batchRepairScopeForRoots(
     context,
     plan,
@@ -2572,6 +2731,8 @@ function projectAuthoredLinkedExit(
   readonly node: WorkspaceLinkedExitNode;
   readonly workbench: WorkspaceOccurrenceWorkbenchNode;
 } {
+  const owner = createExitDecisionAddress(context.biome, decision.source);
+  const sourceDecisionRemoval = hubStageDecisionRemoval(context, plan, owner, 'preHub');
   const occurrence = authoredOccurrence(plan, decision.normal.occurrenceId);
   if (occurrence === undefined) {
     throw new StructuredWorkspaceProjectionContractError(
@@ -2586,12 +2747,12 @@ function projectAuthoredLinkedExit(
   const targetMarker = marker(context, targetAddress);
   const workbench = Object.freeze({
     ...projectOccurrence(context, occurrence),
+    ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
     railMarker: targetMarker,
   });
   const physical = physicalExitsForSource(context, plan, decision.source).find(
     (exit) => exit.exitKey === decision.normal.exitKey,
   );
-  const owner = createExitDecisionAddress(context.biome, decision.source);
   return Object.freeze({
     node: Object.freeze({
       kind: 'linkedExit' as const,
@@ -3702,6 +3863,87 @@ function railMarkerForNode(node: WorkspaceNode): WorkspaceMarker {
   return node.kind === 'occurrenceWorkbench' ? (node.railMarker ?? node.marker) : node.marker;
 }
 
+/**
+ * The rail needs the visit's room-local workbench identity, while the Hub
+ * board retains its distinct visit-order owner.  Publishing both avoids
+ * making React join visits to occurrences or infer which Hub rooms are shown.
+ */
+function projectHubRailEntry(
+  node: WorkspaceHubDecisionNode,
+  structuralNodes: readonly WorkspaceNode[],
+): WorkspaceHubRailEntry {
+  const workbenchesByOccurrenceId = new Map(
+    structuralNodes
+      .filter(
+        (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
+          candidate.kind === 'occurrenceWorkbench',
+      )
+      .map((workbench) => [workbench.room.occurrenceId, workbench] as const),
+  );
+  const visits: WorkspaceHubVisitRailEntry[] = [];
+  for (const visit of node.visits) {
+    if (visit.authoring !== 'authored') continue;
+    if (visit.room === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `Hub visit ${visit.visitIndex} has no authored room workbench`,
+      );
+    }
+    const workbench = workbenchesByOccurrenceId.get(visit.room.occurrenceId);
+    if (workbench === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `Hub visit ${visit.visitIndex} room ${visit.room.occurrenceId} is not projected`,
+      );
+    }
+    if (workbench.inspectorPresentation !== 'hubRoomLocal') {
+      throw new StructuredWorkspaceProjectionContractError(
+        `Hub visit ${visit.visitIndex} must use a room-local workbench presentation`,
+      );
+    }
+    visits.push(
+      Object.freeze({
+        key: `${node.key}:visit:${visit.visitIndex}`,
+        label: `Visit ${visit.visitIndex} · ${visit.room.label}`,
+        marker: workbench.room.marker,
+        node: workbench,
+        visitIndex: visit.visitIndex,
+        visitMarker: visit.marker,
+      }),
+    );
+  }
+  return Object.freeze({
+    kind: 'hubGroup' as const,
+    key: node.key,
+    marker: node.marker,
+    node,
+    visits: Object.freeze(visits),
+  });
+}
+
+/**
+ * A fixed N transition remains an inspectable node, but once its target room
+ * exists the room is the player-facing rail stage.  The source-owned command
+ * and finding destination remain in `WorkspaceBiome.nodes`.
+ */
+function isHubRailScaffoldWithRenderedTarget(
+  node: WorkspaceNode,
+  renderedOccurrenceIds: ReadonlySet<OccurrenceId>,
+): boolean {
+  if (node.kind === 'linkedExit') {
+    return renderedOccurrenceIds.has(node.target.room.occurrenceId);
+  }
+  if (
+    node.kind !== 'ordinaryBatch' &&
+    node.kind !== 'mixedBatch' &&
+    node.kind !== 'takeoverBatch'
+  ) {
+    return false;
+  }
+  return (
+    node.owner.source.kind === 'hubDecision' &&
+    node.targets.some((target) => renderedOccurrenceIds.has(target.room.occurrenceId))
+  );
+}
+
 function projectBiome(
   catalog: Catalog,
   routeKey: string,
@@ -3872,9 +4114,22 @@ function projectBiome(
     });
   });
   nodes.push(...completion);
-  const railNodes = structuralNodes.filter(
-    (node) => node.kind !== 'occurrenceWorkbench' || node.railVisibility !== 'inspectorOnly',
+  const renderedOccurrenceIds = new Set(
+    structuralNodes
+      .filter(
+        (node): node is WorkspaceOccurrenceWorkbenchNode => node.kind === 'occurrenceWorkbench',
+      )
+      .map((node) => node.room.occurrenceId),
   );
+  const railNodes = structuralNodes
+    .filter(
+      (node) => node.kind !== 'occurrenceWorkbench' || node.railVisibility !== 'inspectorOnly',
+    )
+    .filter(
+      (node) =>
+        layout.progression.kind !== 'hub' ||
+        !isHubRailScaffoldWithRenderedTarget(node, renderedOccurrenceIds),
+    );
   // The N board is declaration-owned outline structure until the fixed
   // Opening -> PreHub path has reached it. Keep that read-only preview after
   // the active entry frontier; otherwise it would claim a position in the
@@ -3892,15 +4147,17 @@ function projectBiome(
     (frontier?.kind === 'exitDecision' && frontier.owner.source.kind !== 'hubDecision')
       ? frontier
       : undefined;
+  const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry =>
+    node.kind === 'hubDecision'
+      ? projectHubRailEntry(node, structuralNodes)
+      : Object.freeze({
+          kind: 'node' as const,
+          key: node.key,
+          marker: railMarkerForNode(node),
+          node,
+        });
   const rail = Object.freeze([
-    ...reachableRailNodes.map((node) =>
-      Object.freeze({
-        kind: 'node' as const,
-        key: node.key,
-        marker: railMarkerForNode(node),
-        node,
-      }),
-    ),
+    ...reachableRailNodes.map(railEntryForNode),
     ...(railFrontier === undefined
       ? []
       : [
@@ -3911,27 +4168,24 @@ function projectBiome(
             marker: railFrontier.marker,
           }),
         ]),
-    ...hubOutlines.map((node) =>
-      Object.freeze({
-        kind: 'node' as const,
-        key: node.key,
-        marker: railMarkerForNode(node),
-        node,
-      }),
-    ),
-    ...completion.map((node) =>
-      Object.freeze({
-        kind: 'node' as const,
-        key: node.key,
-        marker: node.marker,
-        node,
-      }),
-    ),
+    ...hubOutlines.map(railEntryForNode),
+    ...(layout.progression.kind === 'hub'
+      ? []
+      : completion.map((node) =>
+          Object.freeze({
+            kind: 'node' as const,
+            key: node.key,
+            marker: node.marker,
+            node,
+          }),
+        )),
   ]);
   const biomeMarker = marker(context, biomeAddress, `biome:${routeKey}:${plan.biomeKey}`);
   const projected = Object.freeze({
     biomeKey: plan.biomeKey,
     completion: Object.freeze(completion),
+    completionOutline:
+      layout.progression.kind === 'hub' ? Object.freeze(completion) : Object.freeze([]),
     ...(entry === undefined ? {} : { entry }),
     fields,
     frontier,

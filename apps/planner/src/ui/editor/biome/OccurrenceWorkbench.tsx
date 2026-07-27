@@ -24,6 +24,8 @@ import { RoomSelector } from './RoomSelector';
 interface OccurrenceWorkbenchProps {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly nextFrontier?: WorkspaceMarker;
+  /** Hub visits retain their main offer on the Hub board. */
+  readonly presentation: 'full' | 'hubRoomLocal';
   readonly room: WorkspaceRoomSummary;
 }
 
@@ -157,24 +159,34 @@ function EphyraWorkbench({
   entered,
   interactions,
   room,
+  showIncomingReward,
 }: {
   readonly entered: boolean;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'ephyra' }>;
+  readonly showIncomingReward: boolean;
 }) {
   const dispatch = useAppDispatch();
   const group = room.sideRooms;
   return (
     <>
-      <div className="room-state-with-marker">
-        <SemanticOwnerMarker address={room.incomingReward.marker.address} />
-        <RewardControlEditor
-          control={room.incomingReward}
-          idPrefix={`ephyra-${room.incomingReward.marker.focusKey}`}
-          interactions={interactions}
-        />
-      </div>
-      {!entered ? null : (
+      {!showIncomingReward ? null : (
+        <div className="room-state-with-marker">
+          <SemanticOwnerMarker address={room.incomingReward.marker.address} />
+          <RewardControlEditor
+            control={room.incomingReward}
+            idPrefix={`ephyra-${room.incomingReward.marker.focusKey}`}
+            interactions={interactions}
+          />
+        </div>
+      )}
+      {!entered ? (
+        showIncomingReward ? null : (
+          <p className="fixed-room-state">
+            Side rooms become available after this room is visited.
+          </p>
+        )
+      ) : (
         <section className="ephyra-side-editor" aria-label="Ephyra side rooms">
           <header className="local-reward-heading">
             <div className="owner-markers">
@@ -529,11 +541,18 @@ function ShopWorkbench({
 export function OccurrenceWorkbench({
   interactions,
   nextFrontier,
+  presentation,
   room,
 }: OccurrenceWorkbenchProps) {
   const dispatch = useAppDispatch();
   const idPrefix = `occurrence-${room.occurrenceId}`;
   const state = room.roomLocal;
+  const showMainReward = presentation === 'full';
+  const hasRoomLocalDetail =
+    state.kind === 'ephyra' ||
+    state.kind === 'fields' ||
+    state.kind === 'ship' ||
+    state.kind === 'shop';
 
   return (
     <article className="room-card biome-occurrence-workbench">
@@ -564,8 +583,13 @@ export function OccurrenceWorkbench({
           owner={room.roomPicker.address}
         />
       )}
-      {state.kind === 'none' ? <p className="fixed-room-state">No room-local reward.</p> : null}
-      {state.kind === 'fixed' ? (
+      {!showMainReward && !hasRoomLocalDetail ? (
+        <p className="fixed-room-state">No additional room details.</p>
+      ) : null}
+      {showMainReward && state.kind === 'none' ? (
+        <p className="fixed-room-state">No room-local reward.</p>
+      ) : null}
+      {showMainReward && state.kind === 'fixed' ? (
         <div className="room-state-with-marker">
           <SemanticOwnerMarker address={state.marker.address} />
           {state.control === undefined ? (
@@ -579,7 +603,7 @@ export function OccurrenceWorkbench({
           )}
         </div>
       ) : null}
-      {state.kind === 'incomingReward' ? (
+      {showMainReward && state.kind === 'incomingReward' ? (
         <div className="room-state-with-marker">
           <SemanticOwnerMarker address={state.control.marker.address} />
           {state.clockworkReward === 'goal' ? (
@@ -599,7 +623,12 @@ export function OccurrenceWorkbench({
         </div>
       ) : null}
       {state.kind === 'ephyra' ? (
-        <EphyraWorkbench entered={room.entered} interactions={interactions} room={state} />
+        <EphyraWorkbench
+          entered={room.entered}
+          interactions={interactions}
+          room={state}
+          showIncomingReward={showMainReward}
+        />
       ) : null}
       {state.kind === 'fields' ? (
         <FieldsWorkbench interactions={interactions} room={state} />
@@ -608,7 +637,7 @@ export function OccurrenceWorkbench({
         <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
       ) : null}
       {state.kind === 'shop' ? <ShopWorkbench interactions={interactions} room={state} /> : null}
-      {room.rewardSummary === undefined ? null : (
+      {!showMainReward || room.rewardSummary === undefined ? null : (
         <p className="biome-room-summary">{room.rewardSummary}</p>
       )}
       {nextFrontier === undefined ? null : (
