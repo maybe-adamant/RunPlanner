@@ -56,8 +56,8 @@ serialized topology.
   Preboss-handoff, or route-gating rule.
 - One visible user intent dispatches one semantic command and creates one undo
   entry.
-- Focus, expansion, search, disclosure, viewport, and non-modal edit-status
-  state remain transient UI-session state.
+- Focus, expansion, search, disclosure, and viewport state remain transient
+  UI-session state.
 - The simulator models possibility, not probability. The workspace does not
   display likelihood or an expected route length.
 
