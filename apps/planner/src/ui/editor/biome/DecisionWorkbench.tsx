@@ -144,17 +144,12 @@ export function TopologyRemovalAction({
 }) {
   const dispatch = useAppDispatch();
   const scope = topologyRemovalScopeSummary(interaction.impact);
-  const prompt =
-    interaction.action === 'clearTopology'
-      ? `Clear this biome's authored topology? This removes ${scope}.`
-      : `Remove this decision? This removes ${scope}.`;
   return (
     <div className="topology-removal-action" data-command={interaction.command.kind}>
       <p className="repair-scope">This removes {scope}.</p>
       <button
         className="danger-action"
         onClick={() => {
-          if (!globalThis.confirm(prompt)) return;
           dispatch(semanticOwnerFocused(interaction.owner));
           dispatch(authoredProjectCommandDispatched(interaction.command));
         }}

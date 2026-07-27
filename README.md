@@ -142,8 +142,8 @@ copied elsewhere.
   acceptance gates and
   [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
   active frontier and chronological delivery record. Phase 7 Slice 4
-  reconciliation is complete; Commit 5a is the active undo-first
-  destructive-editing follow-up, followed by Commit 5b presentation,
+  reconciliation is complete; Commit 5a is the active confirmation-prompt
+  removal follow-up, followed by Commit 5b presentation,
   responsive, and accessibility polish. The
   [unified biome decisions and workspace tracker](docs/progress/HUB_WORKSPACE_RECONCILIATION.md)
   records that closure, the active follow-up, and the explicit future Chaos

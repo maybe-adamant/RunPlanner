@@ -2151,8 +2151,8 @@ Commit 12 will be delivered through eight independently reviewable slices:
    application;
 6. Commit 4 closes the unified domain/workspace contract, parity, architecture
    boundaries, and owning documentation;
-7. Commit 5a removes browser confirmation in favor of visibly scoped,
-   immediate, exactly undoable semantic edits; and
+7. Commit 5a removes browser confirmation while preserving the existing
+   immediate semantic-command and project-history behavior; and
 8. Commit 5b completes presentation, responsive, and accessibility polish
    without changing the closed domain contracts.
 

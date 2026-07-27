@@ -80,15 +80,6 @@ function RouteOverview({
           id={`${workspaceRoute.routeKey}-configured-prefix`}
           onChange={(event) => {
             const nextConfiguredBiomeCount = Number(event.target.value);
-            const removedBiomeCount = configuredBiomeCount - nextConfiguredBiomeCount;
-            if (
-              removedBiomeCount > 0 &&
-              !globalThis.confirm(
-                `Remove ${removedBiomeCount} configured ${removedBiomeCount === 1 ? 'biome' : 'biomes'} and all authored state in the removed prefix? Undo can restore it.`,
-              )
-            ) {
-              return;
-            }
             dispatch(
               authoredProjectCommandDispatched({
                 kind: 'ConfigureRoutePrefix',

@@ -18,7 +18,7 @@ This document owns:
 - picked-path and unpicked-offer visual hierarchy;
 - progressive coverage and finding placement;
 - empty-biome outlines;
-- undo-first destructive editing, repair presentation, accessibility, and
+- prompt-free destructive editing, repair presentation, accessibility, and
   responsive behavior.
 
 [`CONTEXTUAL_EDITOR_UX.md`](CONTEXTUAL_EDITOR_UX.md) owns contextual room and
@@ -293,11 +293,12 @@ ordinary finding presentation.
 
 ## Destructive Actions and Repair
 
-Commit 5a removes browser-native confirmation without replacing it with an
-application dialog. Every current in-project structural edit is one semantic
-command and one history entry, so safety comes from an explicit action,
-projected scope before activation, exact Undo/Redo recovery, and a non-modal
-completion status rather than an interrupting confirmation step.
+Commit 5a removes browser-native confirmation from the existing immediate
+semantic-command paths without replacing it with an application dialog. Every
+current in-project structural edit already has one semantic command and one
+history entry; existing Undo/Redo remains its recovery mechanism. This follow-
+up does not add a generic destructive-action abstraction, completion status,
+or post-edit focus policy.
 
 Retained-overflow and Preboss-handoff repairs remain explicit:
 
@@ -306,12 +307,12 @@ Retained-overflow and Preboss-handoff repairs remain explicit:
 3. let the user select a representable continuation;
 4. expose the owning reconciliation command;
 5. reconcile immediately when the user invokes that explicit action;
-6. report the completed edit and the availability of Undo.
+6. rely on the existing Undo/Redo history controls for recovery when needed.
 
-Action labels and scope descriptions consume command-owned impact; they do not
-calculate deletion scope or repair the project themselves. If the invoking
-control disappears, focus moves to the nearest stable surviving semantic
-owner. Otherwise, focus remains in place.
+Existing action labels and scope descriptions consume command-owned impact;
+they do not calculate deletion scope or repair the project themselves. Commit
+5a does not expand those existing presentation contracts or add a new post-edit
+focus rule.
 
 The authored-project core calculates the pure removal impact once, and command
 execution consumes that same result. The application projection may translate

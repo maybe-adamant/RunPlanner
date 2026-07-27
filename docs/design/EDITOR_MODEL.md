@@ -132,8 +132,8 @@ show only a truthfully projected completion horizon or state that length varies.
 The UI never derives an expected route length or interprets force rules locally.
 
 `STRUCTURED_EDITOR_WORKSPACE.md` owns the concrete route-rail,
-ordinary-decision, Hub, inspector, coverage, empty-outline, undo-first
-destructive-action, and repair presentation contracts.
+ordinary-decision, Hub, inspector, coverage, empty-outline, prompt-removal,
+and repair presentation contracts.
 
 ## Rows Versus Domain Language
 
