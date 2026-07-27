@@ -82,7 +82,7 @@ describe('underworld product loop', () => {
     expect(g?.topology).not.toBeNull();
   });
 
-  it('preserves destructive route-prefix confirmation and undo around shared workspace state', async () => {
+  it('shrinks a route prefix immediately and preserves existing undo behavior', async () => {
     const application = createApplication();
     application.store.dispatch(
       authoredProjectCommandDispatched({
@@ -101,12 +101,12 @@ describe('underworld product loop', () => {
     );
     const beforeShrink = application.store.getState().projectWorkspace.history.present;
     const view = renderPlannerForInteraction({ application });
-    vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    const confirmation = vi.spyOn(globalThis, 'confirm');
 
     await view.user.click(screen.getByRole('button', { name: 'Route' }));
     await view.user.selectOptions(screen.getByLabelText('Configured biomes'), '0');
     expect(application.store.getState().projectWorkspace.evaluation.status).toBe('empty');
-    expect(globalThis.confirm).toHaveBeenCalledOnce();
+    expect(confirmation).not.toHaveBeenCalled();
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(application.store.getState().projectWorkspace.history.present).toBe(beforeShrink);

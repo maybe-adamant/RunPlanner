@@ -418,9 +418,9 @@ describe('BiomeWorkspace', () => {
 
     await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
 
-    const confirmation = vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    const confirmation = vi.spyOn(globalThis, 'confirm');
     await view.user.click(screen.getByRole('button', { name: 'Remove visits from Visit 2' }));
-    expect(confirmation).toHaveBeenCalledOnce();
+    expect(confirmation).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(nHubState(view.application).decision.visitOrder).toEqual(['combat05']),
     );
@@ -441,9 +441,9 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(project, 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
 
-    const confirmation = vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    const confirmation = vi.spyOn(globalThis, 'confirm');
     await view.user.click(screen.getByRole('button', { name: 'Remove visits from Visit 6' }));
-    expect(confirmation).toHaveBeenCalledOnce();
+    expect(confirmation).not.toHaveBeenCalled();
     await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toHaveLength(5));
 
     expect(
@@ -854,9 +854,9 @@ describe('BiomeWorkspace', () => {
     const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
     expect(within(inspector).getByText(/This removes .*exit decision/)).toBeTruthy();
 
-    const confirmation = vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    const confirmation = vi.spyOn(globalThis, 'confirm');
     await removal.user.click(within(inspector).getByRole('button', { name: 'Remove decision' }));
-    expect(confirmation).toHaveBeenCalledWith(expect.stringContaining('Remove this decision'));
+    expect(confirmation).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(
         removal.application.store
@@ -902,9 +902,9 @@ describe('BiomeWorkspace', () => {
     const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
 
     expect(within(inspector).getByText(/This removes .*Hub board/)).toBeTruthy();
-    const confirmation = vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    const confirmation = vi.spyOn(globalThis, 'confirm');
     await view.user.click(within(inspector).getByRole('button', { name: 'Remove decision' }));
-    expect(confirmation).toHaveBeenCalledWith(expect.stringContaining('Remove this decision'));
+    expect(confirmation).not.toHaveBeenCalled();
     await waitFor(() => {
       const plan = view.application.store
         .getState()

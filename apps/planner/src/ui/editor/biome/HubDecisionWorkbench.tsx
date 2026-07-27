@@ -275,11 +275,6 @@ function HubVisitRow({
           aria-label={`Remove visits from Visit ${visit.visitIndex}`}
           className="danger-action"
           onClick={() => {
-            if (
-              !globalThis.confirm(`Remove Hub visit ${visit.visitIndex} and every later visit?`)
-            ) {
-              return;
-            }
             dispatch(
               authoredProjectCommandDispatched({
                 kind: 'RemoveHubVisitsFrom',
