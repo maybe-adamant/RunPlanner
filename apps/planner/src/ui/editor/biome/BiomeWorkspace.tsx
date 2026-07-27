@@ -2,6 +2,7 @@ import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/au
 import type { ReactNode } from 'react';
 
 import {
+  workspaceInteractionKey,
   type StructuredWorkspaceProjection,
   type WorkspaceBiome,
   type WorkspaceCompletionNode,
@@ -16,10 +17,15 @@ import {
 import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../../state/store';
 import { FindingCount, SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
-import { AuthoringFrontier, BatchWorkbench, LinkedExitWorkbench } from './DecisionWorkbench';
+import {
+  AuthoringFrontier,
+  BatchWorkbench,
+  LinkedExitWorkbench,
+  TopologyRemovalAction,
+} from './DecisionWorkbench';
 import { BiomeFieldControls } from './BiomeFieldControls';
+import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
-import { BiomeWorkspaceContractError } from './workspaceContract';
 
 interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
@@ -43,6 +49,11 @@ function roomOwnsAddress(room: WorkspaceRoomSummary, addressKey: string): boolea
     case 'incomingReward':
     case 'fields':
       return false;
+    case 'ephyra':
+      return (
+        markerMatches(room.roomLocal.sideRooms.marker, addressKey) ||
+        room.roomLocal.sideRooms.slots.some((side) => markerMatches(side.marker, addressKey))
+      );
     case 'fixed':
       return markerMatches(room.roomLocal.marker, addressKey);
     case 'ship':
@@ -86,8 +97,18 @@ function nodeOwnsAddress(node: WorkspaceNode, addressKey: string): boolean {
     case 'completion':
       return false;
     case 'hubDecision':
-      throw new BiomeWorkspaceContractError(
-        'BiomeWorkspace cannot inspect a Hub decision before the Hub workbench cutover.',
+      return (
+        markerMatches(node.openSet, addressKey) ||
+        node.slots.some(
+          (slot) =>
+            markerMatches(slot.marker, addressKey) ||
+            (slot.room !== undefined && roomOwnsAddress(slot.room, addressKey)),
+        ) ||
+        node.visits.some(
+          (visit) =>
+            markerMatches(visit.marker, addressKey) ||
+            (visit.room !== undefined && roomOwnsAddress(visit.room, addressKey)),
+        )
       );
   }
 }
@@ -96,6 +117,28 @@ function directNodeForAddress(
   nodes: readonly WorkspaceNode[],
   addressKey: string,
 ): WorkspaceNode | undefined {
+  const hub = nodes.find(
+    (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+      node.kind === 'hubDecision' && nodeOwnsAddress(node, addressKey),
+  );
+  if (hub !== undefined) {
+    const visit = hub.visits.find((candidate) => markerMatches(candidate.marker, addressKey));
+    const room =
+      visit?.room ??
+      hub.slots.find((slot) => slot.room !== undefined && roomOwnsAddress(slot.room, addressKey))
+        ?.room ??
+      hub.visits.find(
+        (candidate) => candidate.room !== undefined && roomOwnsAddress(candidate.room, addressKey),
+      )?.room;
+    if (room !== undefined) {
+      const occurrence = nodes.find(
+        (node): node is WorkspaceOccurrenceWorkbenchNode =>
+          node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === room.occurrenceId,
+      );
+      if (occurrence !== undefined) return occurrence;
+    }
+    return hub;
+  }
   const occurrence = nodes.find(
     (node): node is WorkspaceOccurrenceWorkbenchNode =>
       node.kind === 'occurrenceWorkbench' && nodeOwnsAddress(node, addressKey),
@@ -109,7 +152,28 @@ function fallbackSubject(biome: WorkspaceBiome): InspectorSubject | undefined {
   // frontier. Commands explicitly focus their created occurrence or decision,
   // so revealing this frontier never steals focus after an edit.
   if (biome.frontier?.kind === 'start' || biome.frontier?.kind === 'exitDecision') {
+    if (
+      biome.frontier.kind === 'exitDecision' &&
+      biome.frontier.owner.source.kind === 'hubDecision'
+    ) {
+      const hub = biome.nodes.find(
+        (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+          node.kind === 'hubDecision',
+      );
+      if (hub !== undefined) return { kind: 'node', node: hub };
+    }
     return { kind: 'frontier', marker: biome.frontier.marker };
+  }
+  if (
+    biome.frontier?.kind === 'hubDecision' ||
+    biome.frontier?.kind === 'hubVisit' ||
+    biome.frontier?.kind === 'hubOpenSet'
+  ) {
+    const hub = biome.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    if (hub !== undefined) return { kind: 'node', node: hub };
   }
   const entered = biome.nodes
     .filter(
@@ -162,9 +226,7 @@ function nodeLabel(node: WorkspaceNode): string {
     case 'completion':
       return node.label;
     case 'hubDecision':
-      throw new BiomeWorkspaceContractError(
-        'BiomeWorkspace cannot label a Hub decision before the Hub workbench cutover.',
-      );
+      return 'Ephyra Hub';
   }
 }
 
@@ -183,9 +245,7 @@ function nodeKicker(node: WorkspaceNode): string {
     case 'completion':
       return node.role === 'postboss' ? 'Postboss' : 'Boss';
     case 'hubDecision':
-      throw new BiomeWorkspaceContractError(
-        'BiomeWorkspace cannot label a Hub decision before the Hub workbench cutover.',
-      );
+      return 'Hub decision';
   }
 }
 
@@ -303,10 +363,12 @@ function CompletionWorkbench({ node }: { readonly node: WorkspaceCompletionNode 
 }
 
 function InspectorNode({
+  frontier,
   interactions,
   nextFrontier,
   node,
 }: {
+  readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly nextFrontier?: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'exitDecision' }>;
   readonly node: WorkspaceNode;
@@ -321,7 +383,7 @@ function InspectorNode({
         />
       );
     case 'linkedExit':
-      return <LinkedExitWorkbench node={node} />;
+      return <LinkedExitWorkbench interactions={interactions} node={node} />;
     case 'ordinaryBatch':
     case 'mixedBatch':
     case 'takeoverBatch':
@@ -329,32 +391,16 @@ function InspectorNode({
     case 'completion':
       return <CompletionWorkbench node={node} />;
     case 'hubDecision':
-      throw new BiomeWorkspaceContractError(
-        'BiomeWorkspace received a Hub decision before the Hub workbench cutover.',
-      );
-  }
-}
-
-function assertNonHubNodes(biome: WorkspaceBiome): void {
-  if (biome.nodes.some((node) => node.kind === 'hubDecision')) {
-    throw new BiomeWorkspaceContractError(
-      'BiomeWorkspace cannot render Hub decisions until the Hub-specific workbench exists.',
-    );
-  }
-  if (biome.frontier?.kind === 'hubDecision' || biome.frontier?.kind === 'hubVisit') {
-    throw new BiomeWorkspaceContractError(
-      'BiomeWorkspace cannot render Hub authoring frontiers until the Hub-specific workbench exists.',
-    );
+      return <HubDecisionWorkbench frontier={frontier} interactions={interactions} node={node} />;
   }
 }
 
 /**
- * Projection-driven workbench for every non-Hub biome.  It intentionally has
+ * Projection-driven workbench for every biome.  It intentionally has
  * no catalog or authored-plan prop: structural facts and room-local state come
  * exclusively from the Slice 3a workspace envelope and semantic interactions.
  */
 export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorkspaceProps) {
-  assertNonHubNodes(biome);
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const explicitAddress =
     focusedOwner !== null && ownsBiome(focusedOwner, biome)
@@ -362,11 +408,26 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
       : undefined;
   const explicitKey =
     explicitAddress === undefined ? undefined : semanticAddressKey(explicitAddress);
+  const completedHubHandoffNode =
+    explicitKey === undefined ||
+    biome.frontier?.kind !== 'exitDecision' ||
+    biome.frontier.owner.source.kind !== 'hubDecision' ||
+    !markerMatches(biome.frontier.marker, explicitKey)
+      ? undefined
+      : biome.nodes.find(
+          (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+            node.kind === 'hubDecision',
+        );
   const explicitNode =
-    explicitKey === undefined ? undefined : directNodeForAddress(biome.nodes, explicitKey);
+    explicitKey === undefined
+      ? undefined
+      : (directNodeForAddress(biome.nodes, explicitKey) ?? completedHubHandoffNode);
   const explicitFrontier =
     explicitKey === undefined ||
     biome.frontier === null ||
+    (biome.frontier.kind !== 'start' && biome.frontier.kind !== 'exitDecision') ||
+    (biome.frontier.kind === 'exitDecision' &&
+      biome.frontier.owner.source.kind === 'hubDecision') ||
     !markerMatches(biome.frontier.marker, explicitKey)
       ? undefined
       : ({ kind: 'frontier', marker: biome.frontier.marker } as const);
@@ -388,13 +449,19 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
       : subject?.kind === 'node'
         ? nodeLabel(subject.node)
         : biome.label;
-  const exitFrontier = biome.frontier?.kind === 'exitDecision' ? biome.frontier : undefined;
+  const exitFrontier =
+    biome.frontier?.kind === 'exitDecision' && biome.frontier.owner.source.kind !== 'hubDecision'
+      ? biome.frontier
+      : undefined;
   const nearbyFrontier =
     subject?.kind === 'node' &&
     exitFrontier?.predecessorNodeKey !== undefined &&
     subject.node.key === exitFrontier.predecessorNodeKey
       ? exitFrontier
       : undefined;
+  const clearTopology = interactions.topologyRemovals.get(
+    workspaceInteractionKey(biome.marker.address),
+  );
 
   return (
     <div className="biome-workspace">
@@ -411,6 +478,9 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
           </div>
           <span className="neutral-status">{biome.source}</span>
         </header>
+        {clearTopology === undefined ? null : (
+          <TopologyRemovalAction interaction={clearTopology} label={`Clear ${biome.label}`} />
+        )}
         <div className="biome-rail">
           {biome.rail.map((entry) => (
             <RailEntry entry={entry} key={entry.key} selectedAddressKey={selectedAddressKey} />
@@ -431,6 +501,7 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
           ) : null
         ) : (
           <InspectorNode
+            frontier={biome.frontier}
             interactions={interactions}
             {...(nearbyFrontier === undefined ? {} : { nextFrontier: nearbyFrontier })}
             node={subject.node}

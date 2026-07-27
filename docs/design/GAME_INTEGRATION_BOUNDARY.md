@@ -35,7 +35,7 @@ The plan is expected to describe semantic desired and predicted facts such as:
 - generated exit rooms and their rewards;
 - picked exit;
 - room-local encounter/reward choices;
-- terminal realization;
+- selected Preboss and derived completion realization;
 - stable authored occurrence identity beside concrete game names for audit
   reports.
 

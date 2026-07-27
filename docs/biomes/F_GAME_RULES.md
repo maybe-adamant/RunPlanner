@@ -3,8 +3,8 @@
 ## Purpose and Scope
 
 This document is the concrete game-rule authority for Erebus (`F`). Shared
-picker, physical-door, cap, force, offer/acquisition, generated-store, standard
-linear, and takeover-Preboss semantics are defined by
+picker, physical-door, cap, force, offer/acquisition, generated-store,
+generated-decision, and takeover-Preboss semantics are defined by
 `../design/GAME_GENERATION_RULES.md`.
 
 Exact room-local exits, requirements, caps, labels, encounter-profile keys,

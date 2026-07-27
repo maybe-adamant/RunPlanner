@@ -564,7 +564,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(validTenthSlot).toMatchObject({ kind: 'hubSlot', result: { selectedPossible: true } });
     expect(requiredOpenSlot).toMatchObject({
       kind: 'hubSlot',
-      result: { selectedPossible: false, findings: [{ code: 'hubOpenSetIncomplete' }] },
+      result: { selectedPossible: true, findings: [] },
     });
     expect(alternateVisit).toMatchObject({
       kind: 'hubVisit',

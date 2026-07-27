@@ -379,6 +379,33 @@ describe('Hub progressive biome evaluation', () => {
         coverage: { kind: 'none', reason: 'notEvaluated' },
       },
     });
+
+    // The Hub exists here, but its board is deliberately still empty.  The
+    // minimum open count is a board-level completeness finding, not a reason
+    // to make the first physical-door action unavailable.
+    const freshBoard = openHub(0);
+    const firstSlot = {
+      kind: 'hubSlot' as const,
+      slot: createHubSlotAddress(nBiome, 'hub', nOpenSlotKeys[0]!),
+      open: true,
+      occurrenceId: createOccurrenceId('progressive-n-first-slot'),
+    };
+    expect(
+      createPreparedProjectCandidateSession(catalog, freshBoard).evaluate(firstSlot),
+    ).toMatchObject({
+      kind: 'hubSlot',
+      result: { selectedPossible: true, findings: [] },
+    });
+    const withFirstSlot = applyProjectCommand(freshBoard, catalog, {
+      kind: 'OpenHubSlot',
+      slot: firstSlot.slot,
+      occurrenceId: firstSlot.occurrenceId,
+    });
+    const hub = withFirstSlot.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')
+      ?.topology?.decisions.find((decision) => decision.kind === 'hub');
+    expect(hub).toMatchObject({ kind: 'hub', openTargets: [{ hubSlotKey: nOpenSlotKeys[0] }] });
   });
 
   it('preserves Hub visit commands as one-based semantic addresses', () => {

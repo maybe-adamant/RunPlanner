@@ -371,8 +371,8 @@ export function selectedOrdinaryBatchIndex(
 /**
  * Returns the fixed Shop-only takeover that is required after a bounded
  * generated spine reaches its final ordinary decision. This is derived from
- * normalized progression and Preboss policy rather than a persisted terminal
- * flag; Hub handoff and counted forked takeovers intentionally do not match.
+ * normalized progression and Preboss policy rather than a persisted legacy
+ * taxonomy flag; Hub handoff and counted forked takeovers intentionally do not match.
  */
 export function directShopOnlyPrebossForLayout(
   catalog: Catalog,
@@ -425,13 +425,13 @@ export function directShopOnlyPrebossForSource(
 /**
  * A fixed Preboss handoff is declared by its progression source, not inferred
  * by the application from a room name or a candidate domain. Shop-only
- * generated terminals still need contextual candidate validation; the
+ * generated direct Preboss transition still needs contextual candidate validation; the
  * completed Hub handoff has already established its six-visit prerequisite
  * structurally and therefore creates its one fixed target directly.
  */
 export type FixedPrebossTransition =
   | { readonly kind: 'completedHubHandoff'; readonly room: RoomDeclaration }
-  | { readonly kind: 'shopOnlyTerminal'; readonly room: RoomDeclaration };
+  | { readonly kind: 'shopOnlyDirectPreboss'; readonly room: RoomDeclaration };
 
 export function fixedPrebossTransitionForSource(
   catalog: Catalog,
@@ -451,7 +451,7 @@ export function fixedPrebossTransitionForSource(
   const room = directShopOnlyPrebossForSource(catalog, layout, topology, source);
   return room === undefined
     ? undefined
-    : Object.freeze({ kind: 'shopOnlyTerminal' as const, room });
+    : Object.freeze({ kind: 'shopOnlyDirectPreboss' as const, room });
 }
 
 function validateSelectedDecisionCycles(

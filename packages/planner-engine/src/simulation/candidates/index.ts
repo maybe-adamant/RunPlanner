@@ -705,7 +705,12 @@ function hubCandidateFindings(
     return remainsOpen ? [slot.slotKey] : [];
   });
   const count = candidateOpenSlotKeys.length;
-  if (count < state.descriptor.openCount.min || count > state.descriptor.openCount.max) {
+  // An undersized board is an incomplete authored decision, not evidence that
+  // the slot edit itself is unavailable.  A player must be able to assemble a
+  // fresh Hub one physical door at a time; completeness reports the missing
+  // minimum separately at the board owner.  Exceeding the declaration maximum
+  // is still an invalid proposal.
+  if (count > state.descriptor.openCount.max) {
     return Object.freeze([
       hubOpenSetIncompleteFinding(
         query,
@@ -2422,15 +2427,30 @@ function evaluateSideRoomEntryOrder(
   if (new Set(query.enteredSlotKeys).size !== query.enteredSlotKeys.length) {
     throw new CandidateEvaluationContractError('side-room entry order must contain distinct slots');
   }
+  const generatedSlotKeys = Object.freeze(
+    group.slots.flatMap((slot) =>
+      sideState.sideRooms[slot.slotKey]?.generation === 'generated' ? [slot.slotKey] : [],
+    ),
+  );
+  let includesUngeneratedSlot = false;
   for (const slotKey of query.enteredSlotKeys) {
     if (!group.slots.some((slot) => slot.slotKey === slotKey)) {
       throw new CandidateEvaluationContractError(`unknown side-room slot ${slotKey}`);
     }
     if (sideState.sideRooms[slotKey]?.generation !== 'generated') {
-      throw new CandidateEvaluationContractError(
-        `${slotKey} must be generated before it can be entered`,
-      );
+      includesUngeneratedSlot = true;
     }
+  }
+  if (includesUngeneratedSlot) {
+    return Object.freeze({
+      kind: 'sideRoomEntryOrder',
+      result: Object.freeze({
+        candidateEnteredSlotKeys: Object.freeze([...query.enteredSlotKeys]),
+        generatedSlotKeys,
+        findings: Object.freeze([]),
+        selectedPossible: false,
+      }),
+    });
   }
   const descriptor = catalog.biomeLayouts.byKey[plan.biomeKey]?.progression;
   if (descriptor?.kind !== 'hub') {
@@ -2475,11 +2495,7 @@ function evaluateSideRoomEntryOrder(
     kind: 'sideRoomEntryOrder',
     result: Object.freeze({
       candidateEnteredSlotKeys: Object.freeze([...query.enteredSlotKeys]),
-      generatedSlotKeys: Object.freeze(
-        group.slots.flatMap((slot) =>
-          sideState.sideRooms[slot.slotKey]?.generation === 'generated' ? [slot.slotKey] : [],
-        ),
-      ),
+      generatedSlotKeys,
       findings,
       selectedPossible: proposal !== undefined && findings.length === 0,
     }),

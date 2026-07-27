@@ -40,9 +40,9 @@ export function ShopPurchaseControl({
         disabled={projection.result !== undefined && !candidateMayBeAuthored(proposed)}
         id={id}
         onChange={(event) => {
-          const next = projection.result?.find((option) => option.value === event.target.checked);
+          const options = projection.result ?? projection.activate();
+          const next = options?.find((option) => option.value === event.target.checked);
           if (candidateMayBeAuthored(next)) onChange(event.target.checked);
-          else projection.activate();
         }}
         onFocus={projection.activate}
         onPointerDown={projection.activate}

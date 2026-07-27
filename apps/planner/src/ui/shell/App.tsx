@@ -1,9 +1,6 @@
-import { createRouteAddress, type AuthoredRoutePlan } from '@run-planner/engine/authored-project';
+import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
-import {
-  type ProjectEvaluation,
-  type ProjectRouteEvaluation,
-} from '@run-planner/engine/simulation';
+import { type ProjectEvaluation } from '@run-planner/engine/simulation';
 
 import {
   presentBiomeFeedbackContext,
@@ -37,10 +34,9 @@ import {
   SemanticOwnerMarker,
   StatusBadge,
 } from '../feedback/EvaluationFeedback';
-import { LinearWorkspace } from '../editor/linear/LinearWorkspace';
+import { BiomeWorkspace } from '../editor/biome/BiomeWorkspace';
 import { ProjectFileControls } from '../project/ProjectFileControls';
 import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
-import { HubBiomeEditor } from '../editor/hub/HubBiomeEditor';
 
 interface AppProps {
   readonly catalog: Catalog;
@@ -54,14 +50,15 @@ function RouteOverview({
   label,
   navigation,
   feedback,
-  route,
+  workspaceRoute,
 }: {
   readonly label: string;
   readonly navigation: RouteEditorNavigation;
   readonly feedback: RouteFeedbackPresentation;
-  readonly route: AuthoredRoutePlan;
+  readonly workspaceRoute: WorkspaceRoute;
 }) {
   const dispatch = useAppDispatch();
+  const configuredBiomeCount = workspaceRoute.biomes.length;
   return (
     <section className="route-overview">
       <header className="panel-heading">
@@ -70,20 +67,20 @@ function RouteOverview({
           <h2>{label}</h2>
         </div>
         <div className="panel-heading-actions">
-          <SemanticOwnerMarker address={createRouteAddress(route.routeKey)} />
+          <SemanticOwnerMarker address={workspaceRoute.marker.address} />
           <StatusBadge status={feedback.status} />
           <FindingCount count={feedback.findingCount} label={`${label} findings`} />
-          <span className="neutral-status">{route.biomes.length} configured</span>
+          <span className="neutral-status">{configuredBiomeCount} configured</span>
         </div>
       </header>
-      <label className="field-control" htmlFor={`${route.routeKey}-configured-prefix`}>
+      <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-configured-prefix`}>
         <span>Configured biomes</span>
         <select
-          disabled={navigation.biomePanels.length === 0 && route.biomes.length === 0}
-          id={`${route.routeKey}-configured-prefix`}
+          disabled={navigation.biomePanels.length === 0 && configuredBiomeCount === 0}
+          id={`${workspaceRoute.routeKey}-configured-prefix`}
           onChange={(event) => {
-            const configuredBiomeCount = Number(event.target.value);
-            const removedBiomeCount = route.biomes.length - configuredBiomeCount;
+            const nextConfiguredBiomeCount = Number(event.target.value);
+            const removedBiomeCount = configuredBiomeCount - nextConfiguredBiomeCount;
             if (
               removedBiomeCount > 0 &&
               !globalThis.confirm(
@@ -95,12 +92,12 @@ function RouteOverview({
             dispatch(
               authoredProjectCommandDispatched({
                 kind: 'ConfigureRoutePrefix',
-                route: createRouteAddress(route.routeKey),
-                configuredBiomeCount,
+                route: createRouteAddress(workspaceRoute.routeKey),
+                configuredBiomeCount: nextConfiguredBiomeCount,
               }),
             );
           }}
-          value={route.biomes.length}
+          value={configuredBiomeCount}
         >
           <option value={0}>None</option>
           {navigation.biomePanels.map((biome, index) => (
@@ -124,8 +121,6 @@ function RouteWorkspace({
   feedback,
   interactions,
   projectEvaluation,
-  route,
-  routeEvaluation,
   workspace,
   workspaceRoute,
 }: {
@@ -134,37 +129,23 @@ function RouteWorkspace({
   readonly feedback: RouteFeedbackPresentation;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly projectEvaluation: ProjectEvaluation;
-  readonly route: AuthoredRoutePlan;
-  readonly routeEvaluation: ProjectRouteEvaluation;
   readonly workspace: StructuredWorkspaceProjection;
   readonly workspaceRoute: WorkspaceRoute;
 }) {
   const dispatch = useAppDispatch();
   const selectedBiomeKey = useAppSelector(
-    (state) => state.editorSession.activeBiomeKeyByRoute[route.routeKey] ?? null,
-  );
-  const configuredPanels = navigation.biomePanels.filter((panel) =>
-    route.biomes.some((biome) => biome.biomeKey === panel.biomeKey),
-  );
-  const activeBiomePlan = route.biomes.find((biome) => biome.biomeKey === selectedBiomeKey);
-  const activeBiomeEvaluation = routeEvaluation.biomes.find(
-    (biome) => biome.biomeKey === selectedBiomeKey,
+    (state) => state.editorSession.activeBiomeKeyByRoute[workspaceRoute.routeKey] ?? null,
   );
   const activeBiomeProjection = workspaceRoute.biomes.find(
     (biome) => biome.biomeKey === selectedBiomeKey,
   );
-  if (
-    activeBiomePlan !== undefined &&
-    activeBiomeEvaluation !== undefined &&
-    activeBiomePlan.kind !== activeBiomeEvaluation.kind
-  ) {
-    throw new Error(`${activeBiomeEvaluation.biomeKey} plan and evaluation kinds do not match`);
-  }
-  const displayedBiomeKey = activeBiomePlan?.biomeKey ?? null;
+  const displayedBiomeKey = activeBiomeProjection?.biomeKey ?? null;
   const activeBiomeFeedback =
     displayedBiomeKey === null ? undefined : feedback.biomes.get(displayedBiomeKey);
   if (displayedBiomeKey !== null && activeBiomeFeedback === undefined) {
-    throw new Error(`${route.routeKey} feedback omitted configured biome ${displayedBiomeKey}`);
+    throw new Error(
+      `${workspaceRoute.routeKey} feedback omitted configured biome ${displayedBiomeKey}`,
+    );
   }
   const contextMessage =
     activeBiomeFeedback === undefined
@@ -181,46 +162,41 @@ function RouteWorkspace({
             className="panel-navigation-item"
             data-active={displayedBiomeKey === null}
             onClick={() =>
-              dispatch(routePanelSelected({ routeKey: route.routeKey, biomeKey: null }))
+              dispatch(routePanelSelected({ routeKey: workspaceRoute.routeKey, biomeKey: null }))
             }
             type="button"
           >
             Route
           </button>
-          {configuredPanels.map((panel) => {
-            const biomeFeedback = feedback.biomes.get(panel.biomeKey);
-            const biomeProjection = workspaceRoute.rail.find(
-              (candidate) => candidate.biomeKey === panel.biomeKey,
-            );
+          {workspaceRoute.rail.map((biomeProjection) => {
+            const biomeFeedback = feedback.biomes.get(biomeProjection.biomeKey);
             if (biomeFeedback === undefined) {
               throw new Error(
-                `${route.routeKey} feedback omitted configured biome ${panel.biomeKey}`,
+                `${workspaceRoute.routeKey} feedback omitted configured biome ${biomeProjection.biomeKey}`,
               );
             }
-            if (biomeProjection === undefined) {
-              throw new Error(
-                `${route.routeKey} workspace omitted configured biome ${panel.biomeKey}`,
-              );
-            }
-            const feedbackId = `${route.routeKey}-${panel.biomeKey}-navigation-feedback`;
+            const feedbackId = `${workspaceRoute.routeKey}-${biomeProjection.biomeKey}-navigation-feedback`;
             return (
               <button
-                aria-current={panel.biomeKey === displayedBiomeKey ? 'page' : undefined}
+                aria-current={biomeProjection.biomeKey === displayedBiomeKey ? 'page' : undefined}
                 aria-describedby={feedbackId}
-                aria-label={panel.label}
+                aria-label={biomeProjection.label}
                 className="panel-navigation-item"
-                data-active={panel.biomeKey === displayedBiomeKey}
+                data-active={biomeProjection.biomeKey === displayedBiomeKey}
                 data-feedback-context={biomeFeedback.context}
                 data-projection-source={biomeProjection.source}
-                key={panel.biomeKey}
+                key={biomeProjection.biomeKey}
                 onClick={() =>
                   dispatch(
-                    routePanelSelected({ routeKey: route.routeKey, biomeKey: panel.biomeKey }),
+                    routePanelSelected({
+                      routeKey: workspaceRoute.routeKey,
+                      biomeKey: biomeProjection.biomeKey,
+                    }),
                   )
                 }
                 type="button"
               >
-                <span>{panel.label}</span>
+                <span>{biomeProjection.label}</span>
                 <span
                   aria-label={`${biomeFeedback.status.label}${biomeFeedback.findingCount === 0 ? '' : `, ${biomeFeedback.findingCount} findings`}`}
                   className="navigation-feedback"
@@ -229,7 +205,7 @@ function RouteWorkspace({
                   <NavigationStatusMarker status={biomeFeedback.status} />
                   <FindingCount
                     count={biomeFeedback.findingCount}
-                    label={`${panel.label} findings`}
+                    label={`${biomeProjection.label} findings`}
                   />
                 </span>
               </button>
@@ -239,10 +215,7 @@ function RouteWorkspace({
       </div>
       <div className="editor-panel" aria-live="polite">
         <ProjectFindings catalog={catalog} evaluation={projectEvaluation} />
-        <div
-          className="editor-panel-content"
-          data-editor-layout={activeBiomePlan?.kind === 'LinearBiome' ? 'linear' : 'standard'}
-        >
+        <div className="editor-panel-content" data-editor-layout="workspace">
           {contextMessage === undefined ? null : (
             <p
               className="feedback-context-banner"
@@ -256,33 +229,15 @@ function RouteWorkspace({
               label={navigation.label}
               navigation={navigation}
               feedback={feedback}
-              route={route}
+              workspaceRoute={workspaceRoute}
             />
-          ) : activeBiomePlan?.kind === 'HubBiome' ? (
-            <HubBiomeEditor
-              catalog={catalog}
-              evaluation={
-                activeBiomeEvaluation?.kind === 'HubBiome' ? activeBiomeEvaluation : undefined
-              }
+          ) : activeBiomeProjection === undefined ? null : (
+            <BiomeWorkspace
+              biome={activeBiomeProjection}
+              focusByOwner={workspace.focusByOwner}
               interactions={interactions}
-              plan={activeBiomePlan}
-              routeKey={route.routeKey}
             />
-          ) : activeBiomePlan?.kind === 'LinearBiome' ? (
-            activeBiomeProjection?.kind === 'LinearBiome' ? (
-              <LinearWorkspace
-                catalog={catalog}
-                evaluation={
-                  activeBiomeEvaluation?.kind === 'LinearBiome' ? activeBiomeEvaluation : undefined
-                }
-                interactions={interactions}
-                plan={activeBiomePlan}
-                projection={activeBiomeProjection}
-                routeKey={route.routeKey}
-                workspace={workspace}
-              />
-            ) : null
-          ) : null}
+          )}
         </div>
       </div>
     </div>
@@ -302,10 +257,6 @@ export function App({
   const workspace = structuredWorkspace.project(project, evaluation);
   const dispatch = useAppDispatch();
   const feedback = projectFeedbackHierarchy(evaluation);
-  const activeRoute = project.routes.find((route) => route.routeKey === activeRouteKey);
-  const activeRouteEvaluation = evaluation.routes.find(
-    (route) => route.routeKey === activeRouteKey,
-  );
   const activeRouteNavigation =
     activeRouteKey === null ? undefined : editorNavigation.routes.byKey[activeRouteKey];
   const activeRouteFeedback =
@@ -314,9 +265,7 @@ export function App({
 
   if (
     activeRouteKey !== null &&
-    (activeRoute === undefined ||
-      activeRouteEvaluation === undefined ||
-      activeRouteNavigation === undefined ||
+    (activeRouteNavigation === undefined ||
       activeRouteFeedback === undefined ||
       activeWorkspaceRoute === undefined)
   ) {
@@ -384,9 +333,7 @@ export function App({
         </button>
       </nav>
 
-      {activeRoute !== undefined &&
-        activeRouteEvaluation !== undefined &&
-        activeRouteNavigation !== undefined &&
+      {activeRouteNavigation !== undefined &&
         activeRouteFeedback !== undefined &&
         activeWorkspaceRoute !== undefined && (
           <RouteWorkspace
@@ -395,8 +342,6 @@ export function App({
             interactions={workspace.interactions}
             navigation={activeRouteNavigation}
             projectEvaluation={evaluation}
-            route={activeRoute}
-            routeEvaluation={activeRouteEvaluation}
             workspace={workspace}
             workspaceRoute={activeWorkspaceRoute}
           />

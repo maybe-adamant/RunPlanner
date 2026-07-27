@@ -2,15 +2,18 @@
 
 ## Purpose
 
-This audit is the entry record for Phase 7. It compares the completed
-F/G/H/I/N/O/P/Q product loops before contextual selection, frontier, feedback,
-and visual presentation are changed.
+This audit is the Phase 7 cross-biome inventory. It compares the F/G/H/I/N/O/P/Q
+product loops that informed contextual selection, frontier, feedback, and the
+structured workspace.
 
 The biome game-rule documents and normalized layout declarations remain the
-domain authorities. This document records what the completed editors prove
-about shared UX and what must remain layout-specific.
+domain authorities. This document records what the product loops prove about
+shared UX and what must remain decision-variant-specific. The current
+application presents every configured biome through `WorkspaceBiome` and
+`BiomeWorkspace`; `HubDecisionWorkbench` is the one N-specific workbench
+inside that shared composition.
 
-## Phase 7 Entry Baseline
+## Phase 7 Entry Baseline and Current Direction
 
 All eight route biomes are authorable, simulatable, editable, profile-safe,
 recoverable, and reachable through catalog-driven navigation. The common
@@ -23,28 +26,28 @@ application already provides:
 - retained authored values after upstream replacement;
 - scoped findings and direct semantic navigation;
 - cached candidate projections keyed by immutable project identity;
-- one layout-dispatched route workspace for Linear and Hub biomes.
+- one shared `WorkspaceBiome` projection with ordinary and Hub decision nodes.
 
-This was the baseline at Phase 7 entry. Commits 1 through 4 now evaluate the
-maximum truthful Linear or Hub prefix and project addressed candidate support
-as forced, possible, impossible, or unassessed. An unreached local owner uses
-`coverageNotReached`; later route biomes retain distinct upstream-incomplete
-and upstream-invalid gates. The native Type then Room selects and separate
-reward type/payload selects remain the active UI until the following picker
-slices consume that foundation.
+This was the baseline at Phase 7 entry. The unified workspace now evaluates the
+maximum truthful ordinary-decision or Hub prefix and projects addressed
+candidate support as forced, possible, impossible, or unassessed. An unreached
+local owner uses `coverageNotReached`; later route biomes retain distinct
+upstream-incomplete and upstream-invalid gates. The contextual picker work may evolve its controls,
+but it must continue to consume the shared projection rather than recreate a
+whole-biome editor.
 
 ## Biome Interaction Matrix
 
-| Biome | Progression and ordinary decisions                                                                  | Reward/local surface                                                       | Terminal ownership                                                                     | Current frontier interaction                                                            |
-| ----- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| F     | Eligibility-driven standard batches; source rooms expose one or two exits                           | Authored Run/Meta batch store and target incoming rewards                  | Independent forked preboss; Shop plus at most one free reward                          | Add another batch or create the preboss fork                                            |
-| G     | Eligibility-driven standard batches; source rooms expose one to three exits                         | Authored Run/Meta batch store and target incoming rewards                  | Independent forked preboss; Shop plus at most two free rewards                         | Add another batch or create the preboss fork                                            |
-| H     | Exactly four Fields batches; each batch owns Min/Max and one or two physical targets                | No base batch store; combat targets own two or three active cage rewards   | Independent forked preboss after the fourth batch                                      | Add until four batches, then create the preboss fork                                    |
-| I     | Eligibility-driven Clockwork batches with one or two exits; Goal/NonGoal is derived                 | No base batch store; combat targets retain dormant-capable NonGoal rewards | Preboss is a generated peer after Goals complete and closes the biome only when picked | Add Next Decision only; no independent preboss action                                   |
-| N     | Fixed Opening/PreHub, one persistent 9-or-10-slot board, and six ordered visits                     | Joint Hub rewards, parent-local side rooms, and fixed WorldShop            | Fixed authored preboss after Hub traversal                                             | No linear frontier action; board membership and visit order are the structural controls |
-| O     | Exactly six one-exit decisions; ShipCombat rooms own two/three encounters and one/two active wheels | Outgoing store may derive from the final active wheel                      | One direct shop-only preboss after the sixth decision                                  | Add until six decisions, then create the direct terminal                                |
-| P     | Eligibility-driven standard batches with source-sensitive compatibility                             | Authored Run/Meta batch store and target incoming rewards                  | Independent forked preboss; Shop plus at most one free reward                          | Add another batch or create the preboss fork                                            |
-| Q     | Six declaration-owned stages; ordinary stages have one exit and miniboss stages have two            | No ordinary base store; miniboss targets own counted rewards               | One direct WorldShop preboss after the sixth stage                                     | Add the next declared stage, then create the direct terminal                            |
+| Biome | Progression and ordinary decisions                                                                  | Reward/local surface                                                       | Preboss and completion form                                                         | Current authoring interaction                                       |
+| ----- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| F     | Eligibility-driven standard batches; source rooms expose one or two exits                           | Authored Run/Meta batch store and target incoming rewards                  | Takeover Preboss batch; Shop plus at most one free reward                           | Create another batch or a supported takeover Preboss batch          |
+| G     | Eligibility-driven standard batches; source rooms expose one to three exits                         | Authored Run/Meta batch store and target incoming rewards                  | Takeover Preboss batch; Shop plus at most two free rewards                          | Create another batch or a supported takeover Preboss batch          |
+| H     | Exactly four Fields batches; each batch owns Min/Max and one or two physical targets                | No base batch store; combat targets own two or three active cage rewards   | Takeover Preboss batch after the fourth Fields batch                                | Create through four Fields batches, then the takeover Preboss batch |
+| I     | Eligibility-driven Clockwork batches with one or two exits; Goal/NonGoal is derived                 | No base batch store; combat targets retain dormant-capable NonGoal rewards | Preboss is a generated peer after Goals complete and closes the biome when selected | Create the next ordinary decision only                              |
+| N     | Fixed Opening/PreHub, 26 fixed Hub slots, nine or ten open members, and six ordered visits          | Joint Hub rewards, parent-local side rooms, and fixed WorldShop            | Completed-Hub handoff creates fixed width-one Preboss Shop                          | Hub membership and visit order; create the handoff after six visits |
+| O     | Exactly six one-exit decisions; ShipCombat rooms own two/three encounters and one/two active wheels | Outgoing store may derive from the final active wheel                      | Direct width-one Preboss batch after the sixth decision                             | Create through six decisions, then the direct Preboss batch         |
+| P     | Eligibility-driven standard batches with source-sensitive compatibility                             | Authored Run/Meta batch store and target incoming rewards                  | Takeover Preboss batch; Shop plus at most one free reward                           | Create another batch or a supported takeover Preboss batch          |
+| Q     | Six declaration-owned stages; ordinary stages have one exit and miniboss stages have two            | No ordinary base store; miniboss targets own counted rewards               | Direct width-one Preboss batch after the sixth stage                                | Create the next declared stage, then the direct Preboss batch       |
 
 ## Contextual Coverage Shapes
 
@@ -57,15 +60,15 @@ supports:
 - H advances through four batch-owned Fields outcomes, jointly generated
   targets, and active cage prefixes;
 - I advances through Clockwork batches while deriving Goal/NonGoal and
-  generated preboss support from the pre-decision history;
+  generated Preboss support from the pre-decision history;
 - O advances by room occurrence, but a covered ShipCombat occurrence includes
   its ordered internal phases and active reward wheels;
 - Q advances by declaration-owned stage rather than by an unrestricted room
   domain;
 - N advances through semantic regions: fixed entry, complete physical open
-  board, ordered visits with parent-local side state, fixed preboss, and
-  completion. The open board is a joint generation surface; rendered slot
-  order cannot masquerade as a truthful linear evaluation prefix.
+  board, ordered visits with parent-local side state, completed-Hub handoff,
+  and completion. The open board is a joint generation surface; rendered slot
+  order cannot masquerade as a truthful ordinary decision prefix.
 
 This prevents an F-shaped partial evaluator from becoming the cross-biome
 authority. `BiomeEvaluationPoint` remains a semantic owner plus lifecycle
@@ -99,17 +102,18 @@ The following presentation policy is shared across every biome:
 
 ## Room Selection Findings
 
-One grouped searchable room picker is justified across the Linear biomes, but
-its concrete domain remains layout- and owner-specific:
+One grouped searchable room picker is justified across the replaceable ordinary
+occurrences, but its concrete domain remains decision-variant- and
+owner-specific:
 
 - F/G/P use history, depth, caps, force, compatibility, and reward context;
 - H additionally exposes fixed-count and Fields pressure;
-- I includes a generated preboss candidate only when Clockwork history supports
+- I includes a generated Preboss candidate only when Clockwork history supports
   it;
 - O uses one-exit topology and ship-specific eligibility;
 - Q begins from its declaration-owned stage pool before contextual assessment;
 - N does not use arbitrary room replacement for fixed Hub slots and therefore
-  must not be forced through the Linear room picker.
+  must not be forced through an ordinary room picker.
 
 Room kind is grouping and search vocabulary, not authored state or a required
 first interaction. Zero- and one-option groups do not create an extra category
@@ -144,20 +148,21 @@ The editors justify one shared frontier presentation container with:
 - an explanation when an action is not yet available;
 - explicit destructive repair actions for existing downstream structure.
 
-They do not justify one shared frontier action:
+They do not justify one shared authoring action:
 
-- F/G/P choose between another ordinary decision and an independent terminal
-  fork;
+- F/G/P choose between another ordinary decision and a takeover Preboss batch;
 - H permits those forms at different fixed-count boundaries;
 - I has only an ordinary generated decision whose selected target may itself
   close the biome;
-- O/Q have declaration-required direct terminals after bounded progression;
-- N has no linear continuation frontier.
+- O/Q have declaration-required direct Preboss batches after bounded
+  progression;
+- N has no ordinary continuation frontier: its completed-Hub handoff belongs
+  to the Hub workbench.
 
 Phase 7 may share labels or command components only when at least two concrete
-consumers retain identical semantics. It must not turn I's generated preboss,
-N's fixed terminal, or O/Q's direct terminal into cosmetic variants of the
-F/G/P fork.
+consumers retain identical semantics. It must not turn I's generated Preboss,
+N's completed-Hub handoff, or O/Q's direct Preboss batch into cosmetic variants
+of the F/G/P takeover batch.
 
 ## Retained-Invalid and Repair Policy
 
@@ -166,7 +171,8 @@ The shared rule remains preserve first, repair explicitly:
 - a room replacement may retain targets beyond the replacement room's exit
   capacity;
 - a retained picked exit may become unavailable;
-- a terminal transition may become unsupported by its predecessor;
+- a Preboss batch or completed-Hub handoff may become unsupported by its
+  predecessor;
 - a previously selected room, reward, source, Fields outcome, wheel value, Hub
   membership, visit, or side-room state may become impossible;
 - dormant cage, NonGoal, wheel, shop, and side-room values remain authored
@@ -197,18 +203,21 @@ invalid.
 Phase 7 must implement contextual-selection foundations before final frontier
 or visual polish:
 
-1. progressive evaluation and route gating for Linear and Hub coverage shapes;
+1. progressive evaluation and route gating for ordinary-decision and Hub
+   coverage shapes;
 2. typed candidate evidence and one application contextual-option resolver;
 3. one application-projected picker model and grouped contextual room selection;
 4. resolved-store reward domains followed by sibling, source, Devotion-pair,
    and counted-bag-aware payload domains;
 5. one compact compound reward interaction;
 6. coverage-derived feedback hierarchy and blocked presentation;
-7. one layout-dispatched structured-workspace projection over authored topology,
+7. one `WorkspaceBiome` structured-workspace projection over authored topology,
    progressive coverage, findings, and contextual controls;
-8. a picked-path Linear rail and compact generated leaves for F/G/H/I/O/P/Q;
-9. an N-specific Hub board and visit timeline using the same inspector and
-   semantic-focus language without acquiring Linear semantics;
+8. a picked-path ordinary-decision rail and compact generated leaves for
+   F/G/H/I/O/P/Q;
+9. an N-specific `HubDecisionWorkbench` inside the shared `BiomeWorkspace`,
+   using the same inspector and semantic-focus language without acquiring
+   ordinary-decision semantics;
 10. frontier vocabulary, scoped dialogs, repair UX, accessibility, spacing,
     performance, and responsive closure across all eight biomes.
 

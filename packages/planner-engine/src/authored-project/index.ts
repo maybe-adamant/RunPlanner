@@ -78,7 +78,13 @@ export {
   type DeclaredPhysicalExit,
   type FixedPrebossTransition,
 } from './topology';
-export { describeTopologyRemovalImpact } from './topologyImpact';
+export {
+  applyTopologyRemovalImpact,
+  describeClearTopologyImpact,
+  describeExitDecisionRemovalImpact,
+  describeTopologyRemovalImpact,
+  type TopologyRemovalImpact,
+} from './topologyImpact';
 export { createInitialBatchState, decodeBatchState } from './batchState';
 export {
   applyProjectHistoryCommand,

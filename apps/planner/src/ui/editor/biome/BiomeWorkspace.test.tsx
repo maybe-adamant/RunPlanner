@@ -5,8 +5,13 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createCompletionRoomAddress,
   createExitDecisionAddress,
+  createHubDecisionAddress,
+  createHubOpenSetAddress,
+  createHubVisitAddress,
   createIncomingRewardAddress,
+  createLocalChildAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -18,9 +23,9 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Provider } from 'react-redux';
 
 import {
@@ -34,7 +39,11 @@ import { findingSelected, semanticOwnerFocused } from '../../../state/editorSess
 import { authoredProjectReplaced } from '../../../state/projectWorkspaceSlice';
 import { useAppSelector } from '../../../state/store';
 import {
+  appendCompleteN,
   createRepresentativeNOPQProject,
+  nBiome,
+  nOccurrenceId,
+  nOccurrenceIds,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -52,9 +61,11 @@ import {
   goldenHBiome,
 } from '../../../../test/fixtures/underworldProject';
 import { BiomeWorkspace } from './BiomeWorkspace';
-import { BiomeWorkspaceContractError } from './workspaceContract';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 interface WorkspaceHarnessProps {
   readonly application: PlannerApplication;
@@ -105,6 +116,42 @@ function workspaceBiome(application: PlannerApplication, routeKey: string, biome
   if (biome === undefined)
     throw new Error(`${routeKey}/${biomeKey} has no projected workspace biome`);
   return biome;
+}
+
+function nHubState(application: PlannerApplication) {
+  const plan = application.store
+    .getState()
+    .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+    ?.biomes.find((biome) => biome.biomeKey === 'N');
+  const topology = plan?.topology;
+  if (topology === undefined || topology === null) {
+    throw new Error('N Hub test project has no authored topology');
+  }
+  const decision = topology.decisions.find((candidate) => candidate.kind === 'hub');
+  if (decision?.kind !== 'hub') throw new Error('N Hub test project has no Hub decision');
+  return { decision, topology };
+}
+
+function nHubOccurrence(application: PlannerApplication, hubSlotKey: string) {
+  const { decision, topology } = nHubState(application);
+  const target = decision.openTargets.find((candidate) => candidate.hubSlotKey === hubSlotKey);
+  if (target === undefined) throw new Error(`N Hub slot ${hubSlotKey} is not open`);
+  const occurrence = topology.occurrences.find(
+    (candidate) => candidate.occurrenceId === target.occurrenceId,
+  );
+  if (occurrence === undefined) throw new Error(`N Hub slot ${hubSlotKey} has no occurrence`);
+  return occurrence;
+}
+
+function orderedNHubSideEntries(application: PlannerApplication, hubSlotKey: string) {
+  const occurrence = nHubOccurrence(application, hubSlotKey);
+  if (occurrence.state.kind !== 'ephyraCombat') {
+    throw new Error(`${hubSlotKey} is not an Ephyra combat occurrence`);
+  }
+  return Object.entries(occurrence.state.sideRooms)
+    .filter(([, side]) => side.enteredOrdinal !== null)
+    .sort(([, left], [, right]) => left.enteredOrdinal! - right.enteredOrdinal!)
+    .map(([sideSlotKey]) => sideSlotKey);
 }
 
 function railMarkerKeys(container: HTMLElement): readonly string[] {
@@ -160,13 +207,305 @@ function fTwoDoorBatchProject(): {
 }
 
 describe('BiomeWorkspace', () => {
-  it('fails loudly until the Hub-specific workbench owns a projected Hub decision', () => {
-    expect(() => renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N')).toThrow(
-      BiomeWorkspaceContractError,
+  it('renders a declaration-owned Hub board with every physical slot and visit row', async () => {
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+
+    expect(screen.getByRole('heading', { name: 'Open Ephyra rooms' })).toBeTruthy();
+    expect(screen.getAllByLabelText(/Hub slot$/)).toHaveLength(26);
+    expect(document.querySelectorAll('.hub-visit-row')).toHaveLength(6);
+    expect(screen.getByText('Pylon visit order')).toBeTruthy();
+  });
+
+  it('routes an authored Hub visit to its occurrence-owned Ephyra side-room workbench', async () => {
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+    const timeline = document.querySelector<HTMLElement>('.hub-visit-timeline');
+    if (timeline === null) throw new Error('N Hub visit timeline is missing');
+
+    await view.user.click(within(timeline).getByRole('button', { name: 'Combat 02' }));
+
+    expect(screen.getAllByRole('heading', { name: 'Combat 02' })).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: 'Side rooms' })).toBeTruthy();
+    expect(screen.getByText('Door 558353')).toBeTruthy();
+    expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
+  });
+
+  it('opens, edits, focuses, and closes an unvisited Hub room through its compact board card', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-compact-unvisited-room',
+        name: 'Hub compact unvisited room',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+    );
+    const view = renderWorkspace(project, 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+
+    const closedCard = screen.getByRole('article', { name: 'Combat 04 Hub slot' });
+    const open = within(closedCard).getByRole('checkbox', { name: 'Combat 04 open' });
+    expect(closedCard.querySelector('[data-assessment]')?.getAttribute('data-assessment')).toBe(
+      'assessed',
+    );
+
+    await view.user.pointer({ keys: '[MouseLeft]', target: open });
+    await waitFor(() =>
+      expect(
+        nHubState(view.application).decision.openTargets.some(
+          (target) => target.hubSlotKey === 'combat04',
+        ),
+      ).toBe(true),
+    );
+
+    const openedCard = screen.getByRole('article', { name: 'Combat 04 Hub slot' });
+    expect(openedCard.querySelector('[data-assessment]')?.getAttribute('data-assessment')).toBe(
+      'assessed',
+    );
+    const beforeReward = nHubOccurrence(view.application, 'combat04').state;
+    await view.user.click(within(openedCard).getByLabelText('Reward'));
+    const rewardTypes = within(await screen.findByRole('listbox')).getAllByRole('option');
+    const replacementType = rewardTypes.find(
+      (option) =>
+        option.getAttribute('aria-disabled') !== 'true' &&
+        option.getAttribute('data-selected-value') !== 'true',
+    );
+    if (replacementType === undefined) {
+      throw new Error('Combat 04 has no editable alternative reward type');
+    }
+    await view.user.click(replacementType);
+    if (replacementType.textContent === 'Boon') {
+      const boonSources = within(await screen.findByRole('listbox')).getAllByRole('option');
+      const replacementSource = boonSources.find(
+        (option) =>
+          option.getAttribute('aria-disabled') !== 'true' &&
+          option.getAttribute('data-selected-value') !== 'true',
+      );
+      if (replacementSource === undefined) {
+        throw new Error('Combat 04 has no editable alternative Boon source');
+      }
+      await view.user.click(replacementSource);
+    }
+    await waitFor(() =>
+      expect(nHubOccurrence(view.application, 'combat04').state).not.toEqual(beforeReward),
+    );
+
+    await view.user.click(within(openedCard).getByRole('button', { name: 'Inspect Combat 04' }));
+    expect(screen.getAllByRole('heading', { name: 'Combat 04' })).toHaveLength(2);
+
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+    const close = within(screen.getByRole('article', { name: 'Combat 04 Hub slot' })).getByRole(
+      'checkbox',
+      { name: 'Combat 04 open' },
+    );
+    act(() => close.focus());
+    await view.user.keyboard('[Space]');
+    await waitFor(() =>
+      expect(
+        nHubState(view.application).decision.openTargets.some(
+          (target) => target.hubSlotKey === 'combat04',
+        ),
+      ).toBe(false),
     );
   });
 
-  it('preserves each non-Hub projected rail in semantic order', () => {
+  it('edits, appends, replaces, and removes Hub visits while preserving a visited room’s side order', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-visit-commands',
+        name: 'Hub visit commands',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
+    );
+    const view = renderWorkspace(project, 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+
+    const hubVisitControl = (visitIndex: number): HTMLSelectElement => {
+      const timeline = document.querySelector<HTMLElement>('.hub-visit-timeline');
+      const row = timeline?.querySelectorAll<HTMLElement>('.hub-visit-row')[visitIndex - 1];
+      if (row === undefined) throw new Error(`N Hub visit ${visitIndex} row is missing`);
+      return within(row).getByRole('combobox') as HTMLSelectElement;
+    };
+
+    const chooseAvailableVisit = async (
+      control: HTMLSelectElement,
+      excludedSlotKeys: readonly string[],
+    ): Promise<string> => {
+      await view.user.click(control);
+      await waitFor(() => {
+        const available = Array.from(control.options).find(
+          (option) =>
+            option.value !== control.value &&
+            !excludedSlotKeys.includes(option.value) &&
+            option.disabled === false &&
+            option.dataset.candidateSupport !== 'unavailable',
+        );
+        expect(available).toBeDefined();
+      });
+      const choice = Array.from(control.options).find(
+        (option) =>
+          option.value !== control.value &&
+          !excludedSlotKeys.includes(option.value) &&
+          option.disabled === false &&
+          option.dataset.candidateSupport !== 'unavailable',
+      );
+      if (choice === undefined) throw new Error('Hub visit has no available replacement room');
+      await view.user.selectOptions(control, choice.value);
+      return choice.value;
+    };
+
+    const appended = await chooseAvailableVisit(
+      hubVisitControl(3),
+      nHubState(view.application).decision.visitOrder,
+    );
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual([
+        'combat05',
+        'miniBoss01',
+        appended,
+      ]),
+    );
+
+    const replacement = await chooseAvailableVisit(
+      hubVisitControl(2),
+      nHubState(view.application).decision.visitOrder.filter((slotKey) => slotKey !== 'miniBoss01'),
+    );
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual([
+        'combat05',
+        replacement,
+        appended,
+      ]),
+    );
+
+    const timeline = document.querySelector<HTMLElement>('.hub-visit-timeline');
+    if (timeline === null) throw new Error('N Hub visit timeline is missing');
+    await view.user.click(within(timeline).getByRole('button', { name: 'Combat 05' }));
+    expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
+      'sideDoor2',
+      'sideDoor1',
+    ]);
+
+    await view.user.click(screen.getByRole('button', { name: 'Move Side Room 02 earlier' }));
+    await waitFor(() =>
+      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
+        'sideDoor1',
+        'sideDoor2',
+      ]),
+    );
+    await view.user.click(
+      screen.getByRole('button', { name: 'Remove from entry order: Side Room 07' }),
+    );
+    await waitFor(() =>
+      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual(['sideDoor1']),
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Enter last: Side Room 07' }));
+    await waitFor(() =>
+      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
+        'sideDoor1',
+        'sideDoor2',
+      ]),
+    );
+
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+
+    const confirmation = vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    await view.user.click(screen.getByRole('button', { name: 'Remove visits from Visit 2' }));
+    expect(confirmation).toHaveBeenCalledOnce();
+    await waitFor(() =>
+      expect(nHubState(view.application).decision.visitOrder).toEqual(['combat05']),
+    );
+    expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
+      'sideDoor1',
+      'sideDoor2',
+    ]);
+  });
+
+  it('removes the completed-Hub Preboss handoff when a visit is truncated', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-handoff-truncation',
+        name: 'Hub handoff truncation',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+    );
+    const view = renderWorkspace(project, 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+
+    const confirmation = vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    await view.user.click(screen.getByRole('button', { name: 'Remove visits from Visit 6' }));
+    expect(confirmation).toHaveBeenCalledOnce();
+    await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toHaveLength(5));
+
+    expect(
+      nHubState(view.application).topology.decisions.some(
+        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps a not-generated side room out of entry order without dispatching a mutation', async () => {
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceSideRoomGeneration',
+      sideRoom: createLocalChildAddress(
+        nBiome,
+        nOccurrenceId('combat02'),
+        'sideRooms',
+        'sideDoor2',
+      ),
+      generation: 'notGenerated',
+    });
+    const view = renderWorkspace(project, 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+    const timeline = document.querySelector<HTMLElement>('.hub-visit-timeline');
+    if (timeline === null) throw new Error('N Hub visit timeline is missing');
+    await view.user.click(within(timeline).getByRole('button', { name: 'Combat 02' }));
+
+    const sideRoom = screen.getByRole('article', { name: 'Side Room 03' });
+    const enter = within(sideRoom).getByRole('button', { name: 'Enter last: Side Room 03' });
+    act(() => enter.focus());
+    await waitFor(() => expect(enter).toHaveProperty('disabled', true));
+    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(enter);
+
+    const occurrence = nHubOccurrence(view.application, 'combat02');
+    if (occurrence.state.kind !== 'ephyraCombat') {
+      throw new Error('Combat 02 must retain its Ephyra state');
+    }
+    expect(occurrence.state.sideRooms.sideDoor2).toMatchObject({
+      generation: 'notGenerated',
+      enteredOrdinal: null,
+    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength,
+    );
+  });
+
+  it('keeps the Hub board and its exact next visit visible at an invalid local boundary', async () => {
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveHubVisitsFrom',
+      visit: createHubVisitAddress(nBiome, 'hub', 4),
+    });
+    const view = renderWorkspace(project, 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /Hub decision.*Ephyra Hub/ }));
+
+    expect(screen.getAllByLabelText(/Hub slot$/)).toHaveLength(26);
+    const timeline = document.querySelector<HTMLElement>('.hub-visit-timeline');
+    if (timeline === null) throw new Error('N Hub visit timeline is missing');
+    const rows = timeline.querySelectorAll<HTMLElement>('.hub-visit-row');
+    expect(rows).toHaveLength(6);
+    expect(rows[3]?.dataset.authoring).toBe('next');
+    expect(
+      within(rows[3]!).getByRole('combobox', { name: /^Visit 4 room/ }).dataset.candidateSupport,
+    ).toBe('unavailable');
+  });
+
+  it('preserves each ordinary-decision rail in semantic order', () => {
     const underworld = createGoldenFGHIProject(catalog);
     const surface = createRepresentativeNOPQProject();
     const cases = [
@@ -189,6 +528,42 @@ describe('BiomeWorkspace', () => {
       );
       cleanup();
     }
+  });
+
+  it('renders N’s entry frontiers before its future Hub outline', () => {
+    const emptyProjectDocument = emptyProject('Surface', 1);
+    const emptyView = renderWorkspace(emptyProjectDocument, 'Surface', 'N');
+    const emptyRail = railMarkerKeys(emptyView.container);
+    const emptyWorkspace = workspaceBiome(emptyView.application, 'Surface', 'N');
+    if (emptyWorkspace.frontier?.kind !== 'start') {
+      throw new Error('empty N start frontier is missing');
+    }
+    expect(emptyRail).toEqual([
+      emptyWorkspace.frontier?.marker.focusKey,
+      semanticAddressKey(createHubDecisionAddress(nBiome, 'hub')),
+      semanticAddressKey(createCompletionRoomAddress(nBiome, 'boss')),
+      semanticAddressKey(createCompletionRoomAddress(nBiome, 'postboss')),
+    ]);
+    cleanup();
+
+    const openingProject = applyProjectCommand(emptyProjectDocument, catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    const openingView = renderWorkspace(openingProject, 'Surface', 'N');
+    const openingRail = railMarkerKeys(openingView.container);
+    const openingWorkspace = workspaceBiome(openingView.application, 'Surface', 'N');
+    if (openingWorkspace.frontier?.kind !== 'exitDecision') {
+      throw new Error('Opening-only N exit frontier is missing');
+    }
+    expect(openingRail).toEqual([
+      semanticAddressKey(createOccurrenceAddress(nBiome, nOccurrenceIds.opening)),
+      openingWorkspace.frontier?.marker.focusKey,
+      semanticAddressKey(createHubDecisionAddress(nBiome, 'hub')),
+      semanticAddressKey(createCompletionRoomAddress(nBiome, 'boss')),
+      semanticAddressKey(createCompletionRoomAddress(nBiome, 'postboss')),
+    ]);
   });
 
   it('renders the fixed N Opening and linked PreHub without a room selector or Hub action', async () => {
@@ -216,7 +591,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('button', { name: 'Create linked exit' })).toBeTruthy();
   });
 
-  it('fails loudly at the N Hub frontier after authoring its fixed PreHub exit', () => {
+  it('creates N’s Hub board through the projected Hub frontier after its fixed PreHub exit', async () => {
     const biome = createBiomeAddress('Surface', 'N');
     const openingId = createOccurrenceId('workspace-n-opening');
     let project = emptyProject('Surface', 1);
@@ -231,7 +606,91 @@ describe('BiomeWorkspace', () => {
       occurrenceId: createOccurrenceId('workspace-n-prehub'),
     });
 
-    expect(() => renderWorkspace(project, 'Surface', 'N')).toThrow(BiomeWorkspaceContractError);
+    const view = renderWorkspace(project, 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: 'Create Hub board' }));
+
+    const nPlan = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    expect(nPlan?.topology?.decisions.some((decision) => decision.kind === 'hub')).toBe(true);
+    expect(screen.getAllByLabelText(/Hub slot$/)).toHaveLength(26);
+
+    // A board begins below the nine-slot completion threshold.  Its first
+    // physical door remains actionable so the player can assemble it instead
+    // of needing an impossible all-at-once authoring action.
+    await view.user.click(screen.getByLabelText('Combat 01 open'));
+    await waitFor(() =>
+      expect(
+        nHubState(view.application).decision.openTargets.some(
+          (target) => target.hubSlotKey === 'combat01',
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it('defaults a fresh authored Hub to its exact open-set board without authoring focus', () => {
+    const biome = createBiomeAddress('Surface', 'N');
+    const openingId = createOccurrenceId('workspace-n-default-opening');
+    let project = emptyProject('Surface', 1);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: openingId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateLinkedExit',
+      decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: openingId }),
+      occurrenceId: createOccurrenceId('workspace-n-default-prehub'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateHubDecision',
+      hub: createHubDecisionAddress(biome, 'hub'),
+    });
+
+    const view = renderWorkspace(project, 'Surface', 'N');
+    const openSet = createHubOpenSetAddress(biome, 'hub');
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(0);
+    expect(screen.getByRole('heading', { name: 'Open Ephyra rooms' })).toBeTruthy();
+    expect(
+      document.getElementById(`semantic-owner-${encodeURIComponent(semanticAddressKey(openSet))}`),
+    ).toBeTruthy();
+  });
+
+  it('routes an explicit completed-Hub handoff focus back to the Hub workbench and executes it', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'workspace-n-completed-handoff',
+        name: 'N completed handoff',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    const view = renderWorkspace(project, 'Surface', 'N');
+    const handoff = createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
+      kind: 'hubDecision',
+      decisionKey: 'hub',
+    });
+
+    act(() => view.application.store.dispatch(semanticOwnerFocused(handoff)));
+    expect(screen.getByRole('heading', { name: 'Open Ephyra rooms' })).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Preboss' }));
+
+    const nPlan = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    expect(
+      nPlan?.topology?.decisions.some(
+        (decision) =>
+          decision.kind === 'exit' &&
+          semanticAddressKey(
+            createExitDecisionAddress(createBiomeAddress('Surface', 'N'), decision.source),
+          ) === semanticAddressKey(handoff),
+      ),
+    ).toBe(true);
   });
 
   it('authors only the projected next physical exit and focuses its created occurrence', async () => {
@@ -373,6 +832,83 @@ describe('BiomeWorkspace', () => {
     const values = Array.from(selector.options).map((option) => option.value);
     expect(values).toContain('MetaProgress');
     expect(values).not.toContain('RunProgress');
+  });
+
+  it('restores generic decision removal and biome clearing from projected engine scope', async () => {
+    const owner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFStartId,
+    });
+    const removal = renderWorkspace(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    act(() => removal.application.store.dispatch(semanticOwnerFocused(owner)));
+    const beforeRemoval = removal.application.store.getState().projectWorkspace.history.past.length;
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    expect(within(inspector).getByText(/This removes .*exit decision/)).toBeTruthy();
+
+    const confirmation = vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    await removal.user.click(within(inspector).getByRole('button', { name: 'Remove decision' }));
+    expect(confirmation).toHaveBeenCalledWith(expect.stringContaining('Remove this decision'));
+    await waitFor(() =>
+      expect(
+        removal.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+          ?.biomes.find((candidate) => candidate.biomeKey === 'F')
+          ?.topology?.decisions.some(
+            (decision) =>
+              decision.kind === 'exit' &&
+              semanticAddressKey(createExitDecisionAddress(goldenFBiome, decision.source)) ===
+                semanticAddressKey(owner),
+          ),
+      ).toBe(false),
+    );
+    expect(removal.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      beforeRemoval + 1,
+    );
+
+    cleanup();
+    const clearing = renderWorkspace(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const beforeClear = clearing.application.store.getState().projectWorkspace.history.past.length;
+    await clearing.user.click(screen.getByRole('button', { name: 'Clear Erebus' }));
+    await waitFor(() =>
+      expect(
+        clearing.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+          ?.biomes.find((candidate) => candidate.biomeKey === 'F')?.topology,
+      ).toBeNull(),
+    );
+    expect(clearing.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      beforeClear + 1,
+    );
+  });
+
+  it('presents N linked-PreHub removal as the engine-owned Hub-board impact', async () => {
+    const linked = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    act(() => view.application.store.dispatch(semanticOwnerFocused(linked)));
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+
+    expect(within(inspector).getByText(/This removes .*Hub board/)).toBeTruthy();
+    const confirmation = vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    await view.user.click(within(inspector).getByRole('button', { name: 'Remove decision' }));
+    expect(confirmation).toHaveBeenCalledWith(expect.stringContaining('Remove this decision'));
+    await waitFor(() => {
+      const plan = view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+      expect(plan?.topology).not.toBeNull();
+      expect(plan?.topology?.decisions.some((decision) => decision.kind === 'hub')).toBe(false);
+      expect(
+        plan?.topology?.occurrences.some(
+          (occurrence) => occurrence.occurrenceId === nOccurrenceIds.preHub,
+        ),
+      ).toBe(false);
+    });
   });
 
   it('keeps a target-owned finding on its compact room rail leaf', async () => {

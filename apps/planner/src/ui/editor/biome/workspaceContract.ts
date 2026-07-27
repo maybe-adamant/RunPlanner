@@ -1,4 +1,4 @@
-/** Signals a projection shape that the shared non-Hub workspace cannot render. */
+/** Signals a workspace projection shape that no rendered workbench has claimed. */
 export class BiomeWorkspaceContractError extends Error {
   constructor(detail: string) {
     super(detail);
