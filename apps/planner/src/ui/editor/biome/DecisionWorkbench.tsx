@@ -20,7 +20,6 @@ import {
   type WorkspaceMissingPhysicalTarget,
   type WorkspacePhysicalTarget,
   type WorkspaceTakeoverBatchInteraction,
-  type WorkspaceTakeoverReplacementImpact,
   type WorkspaceTakeoverBatchNode,
   type WorkspaceOrdinaryBatchNode,
   type WorkspaceMixedBatchNode,
@@ -40,7 +39,6 @@ import { candidateMayBeAuthored, candidateSelectState } from '../../feedback/can
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 import { CandidateSelect } from './CandidateSelect';
 import { RoomSelector } from './RoomSelector';
-import { topologyRemovalScopeSummary } from './topologyRemovalPresentation';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
@@ -84,56 +82,31 @@ function roomStatus(target: WorkspacePhysicalTarget): string {
   return target.nextPath === 'startsCompletion' ? 'Preboss route' : 'Generated offer';
 }
 
-function scopeSummary(
-  scope: WorkspaceBatchRepairScope | WorkspaceTakeoverReplacementImpact,
-  excludedOccurrenceIds: readonly string[] = [],
-): string {
-  const excluded = new Set(excludedOccurrenceIds);
-  const occurrenceCount = scope.removedOccurrenceIds.filter((id) => !excluded.has(id)).length;
-  const decisionCount = scope.removedDecisionOwners.length;
-  const parts = [
-    occurrenceCount === 0
-      ? undefined
-      : `${occurrenceCount} ${occurrenceCount === 1 ? 'room occurrence' : 'room occurrences'}`,
-    decisionCount === 0
-      ? undefined
-      : `${decisionCount} ${decisionCount === 1 ? 'downstream decision' : 'downstream decisions'}`,
-  ].filter((value): value is string => value !== undefined);
-  return parts.length === 0 ? 'No authored descendants' : parts.join(' and ');
-}
-
 function ExactRepairScope({ scope }: { readonly scope: WorkspaceBatchRepairScope }) {
   const dispatch = useAppDispatch();
   if (scope.commandKind === 'ReconcileTakeoverBatch') {
-    return (
-      <p className="repair-scope" data-command={scope.commandKind}>
-        Repair will reconcile {scopeSummary(scope)} through the projected takeover action.
-      </p>
-    );
+    return null;
   }
   return (
-    <div className="repair-scope" data-command={scope.commandKind}>
-      <p>Repair removes {scopeSummary(scope)}.</p>
-      <button
-        className="secondary-action"
-        onClick={() =>
-          (() => {
-            dispatch(semanticOwnerFocused(scope.owner));
-            dispatch(authoredProjectCommandDispatched(scope.command));
-          })()
-        }
-        type="button"
-      >
-        Reconcile unavailable exits
-      </button>
-    </div>
+    <button
+      className="secondary-action"
+      data-command={scope.commandKind}
+      onClick={() =>
+        (() => {
+          dispatch(semanticOwnerFocused(scope.owner));
+          dispatch(authoredProjectCommandDispatched(scope.command));
+        })()
+      }
+      type="button"
+    >
+      Reconcile unavailable exits
+    </button>
   );
 }
 
 /**
- * The domain exposes both the semantic command and its exact removal impact.
- * This renderer deliberately never follows descendants itself: it only makes
- * the projected scope legible before dispatching that one command.
+ * The domain owns removal impact and supplies the semantic command. This
+ * renderer dispatches that command without deriving descendant scope itself.
  */
 export function TopologyRemovalAction({
   interaction,
@@ -143,10 +116,8 @@ export function TopologyRemovalAction({
   readonly label: string;
 }) {
   const dispatch = useAppDispatch();
-  const scope = topologyRemovalScopeSummary(interaction.impact);
   return (
     <div className="topology-removal-action" data-command={interaction.command.kind}>
-      <p className="repair-scope">This removes {scope}.</p>
       <button
         className="danger-action"
         onClick={() => {
@@ -331,20 +302,6 @@ function ExitSelectionControl({
   );
 }
 
-function TakeoverImpact({
-  impact,
-}: {
-  readonly impact: WorkspaceTakeoverReplacementImpact | undefined;
-}) {
-  return impact === undefined ? null : (
-    <p className="repair-scope" data-command={impact.command}>
-      This replacement removes {scopeSummary(impact, impact.replacedOccurrenceIds)} and resets{' '}
-      {impact.replacedOccurrenceIds.length}{' '}
-      {impact.replacedOccurrenceIds.length === 1 ? 'physical target' : 'physical targets'}.
-    </p>
-  );
-}
-
 function CandidateTakeoverAction({
   interaction,
 }: {
@@ -395,7 +352,6 @@ function CandidateTakeoverAction({
         <h4>{title}</h4>
         <SemanticOwnerMarker address={interaction.owner} />
       </div>
-      <TakeoverImpact impact={interaction.impact} />
       <label className="field-control" htmlFor={`${interaction.key}-takeover`}>
         <span>Preboss declaration</span>
         <select
@@ -466,7 +422,6 @@ function FixedWidthOneTakeoverAction({
         <h4>Go to Preboss</h4>
         <SemanticOwnerMarker address={interaction.owner} />
       </div>
-      <TakeoverImpact impact={interaction.impact} />
       <p className="fixed-room-state">{interaction.summary}</p>
       {message === undefined ? null : <p className="candidate-explanation">{message}</p>}
       <button

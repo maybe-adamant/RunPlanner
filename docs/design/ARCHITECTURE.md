@@ -188,11 +188,15 @@ It does not own biome or reward rules.
 The React UI consumes authored state and a coherent derived result. It
 dispatches semantic commands. It may own transient navigation and interaction
 state, but it cannot directly modify topology tables or room payload records.
-The core calculates destructive topology impact; the application projection
-translates that semantic impact into visible scope; React displays the scope
-and dispatches the supplied command. React never walks authored descendants to
-infer removal, and the planner engine never carries labels, layout order, or
-other presentation/session state.
+The core calculates topology-removal impact and supplies the semantic command.
+Every effective semantic command, whether it adds, changes, or removes
+authored state, uses the same history transition and Undo/Redo recovery.
+Removal controls may use a red danger affordance to communicate their
+subtractive effect, but it does not create a distinct command, confirmation,
+or recovery path. React dispatches commands without deriving or persistently
+displaying deletion scope. React never walks authored descendants to infer
+removal, and the planner engine never carries labels, layout order, or other
+presentation/session state.
 Route tabs and per-route panel selection are catalog-driven UI-session state;
 they do not introduce route-specific reducers or authored fields.
 

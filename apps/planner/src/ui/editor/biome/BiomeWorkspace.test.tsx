@@ -329,10 +329,7 @@ describe('BiomeWorkspace', () => {
     expect(openedCard.querySelector('[data-assessment]')?.getAttribute('data-assessment')).toBe(
       'assessed',
     );
-    expect(
-      within(openedCard).getByText('Closing this slot removes 1 room occurrence.'),
-    ).toBeTruthy();
-    expect(openedCard.querySelector('[data-command="CloseHubSlot"]')).not.toBeNull();
+    expect(within(openedCard).queryByText(/Closing this slot removes/)).toBeNull();
     const beforeReward = nHubOccurrence(view.application, 'combat04').state;
     await view.user.click(within(openedCard).getByLabelText('Reward'));
     const rewardTypes = within(await screen.findByRole('listbox')).getAllByRole('option');
@@ -1007,7 +1004,7 @@ describe('BiomeWorkspace', () => {
     expect(values).not.toContain('RunProgress');
   });
 
-  it('restores generic decision removal and biome clearing from projected engine scope', async () => {
+  it('restores generic decision removal and biome clearing as immediate semantic commands', async () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
@@ -1016,7 +1013,7 @@ describe('BiomeWorkspace', () => {
     act(() => removal.application.store.dispatch(semanticOwnerFocused(owner)));
     const beforeRemoval = removal.application.store.getState().projectWorkspace.history.past.length;
     const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
-    expect(within(inspector).getByText(/This removes .*exit decision/)).toBeTruthy();
+    expect(within(inspector).queryByText(/This removes/)).toBeNull();
 
     const confirmation = vi.spyOn(globalThis, 'confirm');
     await removal.user.click(within(inspector).getByRole('button', { name: 'Remove decision' }));
@@ -1073,7 +1070,7 @@ describe('BiomeWorkspace', () => {
     );
     const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
 
-    expect(within(inspector).getByText(/This removes .*Hub board/)).toBeTruthy();
+    expect(within(inspector).queryByText(/This removes/)).toBeNull();
     const confirmation = vi.spyOn(globalThis, 'confirm');
     await view.user.click(within(inspector).getByRole('button', { name: 'Remove PreHub' }));
     expect(confirmation).not.toHaveBeenCalled();
@@ -1117,7 +1114,7 @@ describe('BiomeWorkspace', () => {
       ),
     );
     const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
-    expect(within(inspector).getByText(/This removes/)).toBeTruthy();
+    expect(within(inspector).queryByText(/This removes/)).toBeNull();
     const removal = within(inspector).getByRole('button', { name: 'Remove Preboss' });
 
     removal.focus();
@@ -1319,7 +1316,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.getAllByText('Purchased')).not.toHaveLength(0);
   });
 
-  it('keeps an unavailable fixed width-one Preboss takeover explanatory and non-destructive', async () => {
+  it('keeps an unavailable fixed width-one Preboss takeover explanatory and non-committing', async () => {
     const qOwner = createExitDecisionAddress(qBiome, {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,
@@ -1434,7 +1431,7 @@ describe('BiomeWorkspace', () => {
     );
   });
 
-  it('reconciles a retained takeover through its projected repair scope', async () => {
+  it('reconciles a retained takeover through its semantic command', async () => {
     const complete = createGoldenFGHIProject(catalog);
     const gPlan = complete.routes
       .find((route) => route.routeKey === 'Underworld')
@@ -1465,7 +1462,6 @@ describe('BiomeWorkspace', () => {
     );
     if (takeover === undefined) throw new Error('retained G takeover workbench is missing');
     act(() => view.application.store.dispatch(semanticOwnerFocused(takeover.owner)));
-    expect(document.querySelector('[data-command="ReconcileTakeoverBatch"]')).not.toBeNull();
     const before = view.application.store.getState().projectWorkspace.history.past.length;
 
     await view.user.click(screen.getByRole('button', { name: 'Repair Preboss batch' }));
@@ -1532,7 +1528,7 @@ describe('BiomeWorkspace', () => {
     expect(repaired.missingTargets).toHaveLength(0);
   });
 
-  it('renders and applies an ordinary retained-exit repair from its projected scope', async () => {
+  it('renders and applies an ordinary retained-exit repair as a semantic command', async () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(1, 1),
@@ -1545,7 +1541,7 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(project, 'Underworld', 'F');
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
     expect(document.querySelector('[data-command="ReconcileBatchExitCapacity"]')).not.toBeNull();
-    expect(screen.getByText('Repair removes 1 room occurrence.')).toBeTruthy();
+    expect(screen.queryByText(/Repair removes/)).toBeNull();
     expect(
       Array.from(document.querySelectorAll('.biome-target-row .card-kicker')).map(
         (element) => element.textContent,
@@ -1631,7 +1627,6 @@ describe('BiomeWorkspace', () => {
     const gView = renderWorkspace(gProject, 'Underworld', 'G');
     act(() => gView.application.store.dispatch(semanticOwnerFocused(gOwner)));
     const gBefore = gView.application.store.getState().projectWorkspace.history.past.length;
-    expect(document.querySelector('[data-command="ReconcileTakeoverBatch"]')).not.toBeNull();
     await gView.user.click(screen.getByRole('button', { name: 'Repair Preboss batch' }));
     expect(gView.application.store.getState().projectWorkspace.history.past).toHaveLength(
       gBefore + 1,

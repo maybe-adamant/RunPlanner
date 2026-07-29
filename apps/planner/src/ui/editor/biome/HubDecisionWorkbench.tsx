@@ -23,7 +23,6 @@ import { candidateMayBeAuthored } from '../../feedback/candidatePresentation';
 import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 import { CandidateSelect } from './CandidateSelect';
 import { RewardControlEditor } from './OccurrenceWorkbench';
-import { topologyRemovalScopeSummary } from './topologyRemovalPresentation';
 
 interface HubDecisionWorkbenchProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
@@ -117,11 +116,6 @@ function HubSlotMembership({
         />
         Open
       </label>
-      {slot.open && interaction.close !== undefined ? (
-        <p className="repair-scope" data-command={interaction.close.command.kind}>
-          Closing this slot removes {topologyRemovalScopeSummary(interaction.close.impact)}.
-        </p>
-      ) : null}
     </div>
   );
 }

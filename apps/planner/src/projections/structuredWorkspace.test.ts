@@ -155,7 +155,7 @@ describe('unified structured workspace projection', () => {
     expect(kinds(biome(surface, 'Q'))).toContain('takeoverBatch');
   });
 
-  it('publishes generic topology removals with engine-owned destructive scope', () => {
+  it('publishes generic topology removals with engine-owned removal impact', () => {
     const project = createRepresentativeNOPQProject();
     const projected = workspace(project);
     const nPlan = project.routes

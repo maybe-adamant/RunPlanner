@@ -136,7 +136,7 @@ describe('underworld product loop', () => {
     await ordinaryView.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await ordinaryView.user.click(screen.getByRole('button', { name: 'Erebus' }));
     act(() => ordinaryApplication.store.dispatch(semanticOwnerFocused(ordinaryOwner)));
-    expect(screen.getByText('Repair removes 1 room occurrence.')).toBeTruthy();
+    expect(screen.queryByText(/Repair removes/)).toBeNull();
     expect(document.querySelector('[data-command="ReconcileBatchExitCapacity"]')).not.toBeNull();
     const ordinaryHistoryBefore =
       ordinaryApplication.store.getState().projectWorkspace.history.past.length;
@@ -206,12 +206,7 @@ describe('underworld product loop', () => {
     await takeoverView.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await takeoverView.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     act(() => takeoverApplication.store.dispatch(semanticOwnerFocused(takeoverOwner)));
-    expect(document.querySelector('[data-command="ReconcileTakeoverBatch"]')).not.toBeNull();
-    expect(
-      screen.getByText(
-        'Repair will reconcile 1 room occurrence through the projected takeover action.',
-      ),
-    ).toBeTruthy();
+    expect(screen.queryByText(/Repair will reconcile/)).toBeNull();
     const takeoverHistoryBefore =
       takeoverApplication.store.getState().projectWorkspace.history.past.length;
     takeoverDispatch.mockClear();

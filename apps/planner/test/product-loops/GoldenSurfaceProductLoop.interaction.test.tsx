@@ -276,10 +276,7 @@ describe('surface product loop', () => {
       name: 'Combat 03 open',
     }) as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
-    expect(
-      within(card).getByText('Closing this slot removes 2 room occurrences and 1 exit decision.'),
-    ).toBeTruthy();
-    expect(card.querySelector('[data-command="CloseHubSlot"]')).not.toBeNull();
+    expect(within(card).queryByText(/Closing this slot removes/)).toBeNull();
 
     const historyBeforeClose = application.store.getState().projectWorkspace.history.past.length;
     dispatch.mockClear();
@@ -338,7 +335,7 @@ describe('surface product loop', () => {
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
   });
 
-  it('closes an unvisited Hub member through its projected scope as one undoable autosaved command', async () => {
+  it('closes an unvisited Hub member as one undoable autosaved command', async () => {
     const recovery = createRecoveryPersistence();
     const application = createApplication({
       autosaveRecovery: recovery.adapter,
@@ -366,8 +363,7 @@ describe('surface product loop', () => {
     }) as HTMLInputElement;
     await view.user.pointer({ keys: '[MouseLeft]', target: checkbox });
     await waitFor(() => expect(checkbox.checked).toBe(true));
-    expect(within(card).getByText('Closing this slot removes 1 room occurrence.')).toBeTruthy();
-    expect(card.querySelector('[data-command="CloseHubSlot"]')).not.toBeNull();
+    expect(within(card).queryByText(/Closing this slot removes/)).toBeNull();
     const hub = application.store
       .getState()
       .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')

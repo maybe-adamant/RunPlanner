@@ -749,8 +749,7 @@ button:disabled {
   min-width: 0;
 }
 
-.takeover-action,
-.repair-scope {
+.takeover-action {
   display: grid;
   gap: 8px;
   margin-top: 12px;
@@ -762,21 +761,12 @@ button:disabled {
   font-size: 0.82rem;
 }
 
-.takeover-action h4,
-.repair-scope p {
+.takeover-action h4 {
   margin: 0;
 }
 
 .topology-removal-action {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   margin: 12px 14px 14px;
-}
-
-.topology-removal-action > .repair-scope {
-  flex: 1;
-  margin: 0;
 }
 
 .topology-removal-action > .danger-action {
@@ -1981,8 +1971,7 @@ select {
   }
 
   .panel-heading-actions,
-  .frontier-buttons,
-  .topology-removal-action {
+  .frontier-buttons {
     flex-wrap: wrap;
   }
 
