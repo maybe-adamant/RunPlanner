@@ -434,7 +434,7 @@ describe('surface product loop', () => {
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(currentProject(application)));
   });
 
-  it('routes an actual Project Findings click to the exact shared-workspace target inspector', async () => {
+  it('routes a selected-route Findings click to the exact shared-workspace target inspector', async () => {
     const application = createApplication();
     const target = createTargetAddress(
       pBiome,
@@ -452,20 +452,25 @@ describe('surface product loop', () => {
     );
     application.store.dispatch(authoredProjectReplaced(invalidProject));
     const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
 
-    const findingIndex = application.store
+    const surfaceEvaluation = application.store
       .getState()
-      .projectWorkspace.evaluation.findings.findIndex(
-        (finding) =>
-          finding.code === 'targetRoomUnavailable' &&
-          semanticAddressKey(finding.origin) === semanticAddressKey(target),
-      );
-    if (findingIndex < 0) throw new Error('The guaranteed Olympus target finding is missing');
+      .projectWorkspace.evaluation.routes.find((route) => route.routeKey === 'Surface');
+    if (surfaceEvaluation === undefined) throw new Error('Surface evaluation is missing');
+    const findingIndex = surfaceEvaluation.findings.findIndex(
+      (finding) =>
+        finding.code === 'targetRoomUnavailable' &&
+        semanticAddressKey(finding.origin) === semanticAddressKey(target),
+    );
+    if (findingIndex < 0) {
+      throw new Error('The selected Surface Findings panel omitted the Olympus target finding');
+    }
     const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Project Findings is missing its section');
+    if (findings === null) throw new Error('Findings is missing its section');
     const historyBefore = application.store.getState().projectWorkspace.history;
     const findingButton = within(findings).getAllByRole('button')[findingIndex];
-    if (findingButton === undefined) throw new Error('Project Findings omitted the target finding');
+    if (findingButton === undefined) throw new Error('Findings omitted the target finding');
     await view.user.click(findingButton);
 
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);

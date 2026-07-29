@@ -401,6 +401,13 @@ owner address and projects them into UI destinations:
 Finding resolution is direct lookup. It never scans rows for a matching game
 room name.
 
+The visible `Findings` panel is route-scoped: an active route tab lists only
+that route evaluation's findings, across its configured biomes. Settings has
+no Findings panel. Project and route status summaries may still expose
+aggregate counts, but they do not turn Settings into a diagnostic destination.
+If a future project-owned finding is introduced, it requires an explicit
+presentation destination rather than falling back to Settings.
+
 Context-invalid authored values remain visible and are decorated.
 Declaration-impossible values may be absent. Contextual pickers ordinarily
 omit unselected impossible values while keeping them inspectable through an

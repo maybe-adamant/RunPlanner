@@ -133,6 +133,12 @@ function RouteWorkspace({
   const displayedBiomeKey = activeBiomeProjection?.biomeKey ?? null;
   const activeBiomeFeedback =
     displayedBiomeKey === null ? undefined : feedback.biomes.get(displayedBiomeKey);
+  const routeEvaluation = projectEvaluation.routes.find(
+    (route) => route.routeKey === workspaceRoute.routeKey,
+  );
+  if (routeEvaluation === undefined) {
+    throw new Error(`Project evaluation omitted route ${workspaceRoute.routeKey}`);
+  }
   if (displayedBiomeKey !== null && activeBiomeFeedback === undefined) {
     throw new Error(
       `${workspaceRoute.routeKey} feedback omitted configured biome ${displayedBiomeKey}`,
@@ -205,7 +211,15 @@ function RouteWorkspace({
         </nav>
       </div>
       <div className="editor-panel" aria-live="polite">
-        <ProjectFindings catalog={catalog} evaluation={projectEvaluation} />
+        <ProjectFindings
+          catalog={catalog}
+          emptyMessage={
+            routeEvaluation.status === 'empty'
+              ? 'Configure a biome in this route to begin simulation.'
+              : 'No findings in this route.'
+          }
+          findings={routeEvaluation.findings}
+        />
         <div
           className="editor-panel-content"
           data-editor-layout={displayedBiomeKey === null ? 'overview' : 'biome'}
@@ -342,31 +356,28 @@ export function App({
         )}
 
       {activeRouteKey === null && (
-        <>
-          <ProjectFindings catalog={catalog} evaluation={evaluation} />
-          <section className="settings-panel" aria-live="polite">
-            <header className="panel-heading">
-              <div>
-                <p className="eyebrow">Application</p>
-                <h2>Settings</h2>
-              </div>
-            </header>
-            <dl className="catalog-summary">
-              <div>
-                <dt>Project</dt>
-                <dd>{project.name}</dd>
-              </div>
-              <div>
-                <dt>Catalog</dt>
-                <dd>{catalogSummary.version}</dd>
-              </div>
-              <div>
-                <dt>Rooms</dt>
-                <dd>{catalogSummary.roomCount}</dd>
-              </div>
-            </dl>
-          </section>
-        </>
+        <section className="settings-panel" aria-live="polite">
+          <header className="panel-heading">
+            <div>
+              <p className="eyebrow">Application</p>
+              <h2>Settings</h2>
+            </div>
+          </header>
+          <dl className="catalog-summary">
+            <div>
+              <dt>Project</dt>
+              <dd>{project.name}</dd>
+            </div>
+            <div>
+              <dt>Catalog</dt>
+              <dd>{catalogSummary.version}</dd>
+            </div>
+            <div>
+              <dt>Rooms</dt>
+              <dd>{catalogSummary.roomCount}</dd>
+            </div>
+          </dl>
+        </section>
       )}
     </main>
   );

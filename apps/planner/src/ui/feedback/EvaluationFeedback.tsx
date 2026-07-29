@@ -1,6 +1,6 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
-import { type ProjectEvaluation, type SemanticFinding } from '@run-planner/engine/simulation';
+import { type SemanticFinding } from '@run-planner/engine/simulation';
 import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
 import {
@@ -136,10 +136,12 @@ export function SemanticOwnerMarker({ address }: { readonly address: SemanticAdd
 
 export function ProjectFindings({
   catalog,
-  evaluation,
+  emptyMessage,
+  findings,
 }: {
   readonly catalog: Catalog;
-  readonly evaluation: ProjectEvaluation;
+  readonly emptyMessage: string;
+  readonly findings: readonly SemanticFinding[];
 }) {
   const dispatch = useAppDispatch();
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
@@ -149,17 +151,13 @@ export function ProjectFindings({
     <section className="project-findings" aria-labelledby="project-findings-title">
       <header className="project-findings-heading">
         <h2 id="project-findings-title">Findings</h2>
-        <span className="findings-count">{evaluation.findings.length}</span>
+        <span className="findings-count">{findings.length}</span>
       </header>
-      {evaluation.findings.length === 0 ? (
-        <p className="findings-empty">
-          {evaluation.status === 'empty'
-            ? 'Configure a biome to begin simulation.'
-            : 'No findings in the evaluated route prefix.'}
-        </p>
+      {findings.length === 0 ? (
+        <p className="findings-empty">{emptyMessage}</p>
       ) : (
         <ol className="findings-list">
-          {evaluation.findings.map((finding, index) => {
+          {findings.map((finding, index) => {
             const copy = presentFinding(finding);
             const key = semanticFindingKey(finding);
             return (
