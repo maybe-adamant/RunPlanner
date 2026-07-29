@@ -569,7 +569,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(alternateVisit).toMatchObject({
       kind: 'hubVisit',
       result: {
-        selectedPossible: false,
+        selectedPossible: true,
         findings: [expect.objectContaining({ code: 'sideRoomGenerationUnavailable' })],
       },
     });
