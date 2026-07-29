@@ -671,9 +671,22 @@ describe('BiomeWorkspace', () => {
       'unassessed',
       'unassessed',
     ]);
+    const visitControl = within(rows[3]!).getByRole('combobox', {
+      name: /^Visit 4 room/,
+    }) as HTMLSelectElement;
+    expect(visitControl.dataset.candidateSupport).toBe('unavailable');
+    const { decision } = nHubState(view.application);
     expect(
-      within(rows[3]!).getByRole('combobox', { name: /^Visit 4 room/ }).dataset.candidateSupport,
-    ).toBe('unavailable');
+      Array.from(visitControl.options)
+        .map((option) => option.value)
+        .filter(Boolean)
+        .sort(),
+    ).toEqual(
+      decision.openTargets
+        .filter((target) => !decision.visitOrder.includes(target.hubSlotKey))
+        .map((target) => target.hubSlotKey)
+        .sort(),
+    );
   });
 
   it('preserves each ordinary-decision rail in semantic order', () => {

@@ -2278,7 +2278,10 @@ function evaluateHubVisit(
       openHubSlotKeys,
       occupiedVisitIndexes,
       findings,
-      selectedPossible: structurallyPossible && proposal !== undefined && findings.length === 0,
+      // A visit may expose incomplete or invalid room-local work that the user
+      // must repair next. That downstream state is feedback, not a reason to
+      // reject an otherwise distinct open Hub slot from authored visit order.
+      selectedPossible: structurallyPossible && proposal !== undefined,
     }),
   });
 }

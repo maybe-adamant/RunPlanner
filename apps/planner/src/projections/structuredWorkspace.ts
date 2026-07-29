@@ -3409,9 +3409,17 @@ function createInteractionCatalog(
               }),
             );
           }
-          const hubSlotKeys = Object.freeze(layout.progression.slots.map((slot) => slot.slotKey));
+          // Visit order is constrained by the authored board, not by candidate
+          // coverage. An invalid room-local leaf can make visit evaluation
+          // unassessed, but it must not expand this selector back to every
+          // declaration-fixed Hub slot.
+          const hubVisitSlots = Object.freeze(
+            layout.progression.slots.filter((slot) =>
+              decision.openTargets.some((target) => target.hubSlotKey === slot.slotKey),
+            ),
+          );
           const hubVisitChoices = Object.freeze(
-            layout.progression.slots.map((slot) =>
+            hubVisitSlots.map((slot) =>
               Object.freeze({
                 label: requireRoom(catalog, slot.roomGameName).label,
                 value: slot.slotKey,
@@ -3422,10 +3430,18 @@ function createInteractionCatalog(
             if (visitIndex > layout.progression.requiredVisits) break;
             const slotKey = decision.visitOrder[visitIndex - 1];
             const owner = createHubVisitAddress(biome, decision.hubKey, visitIndex);
+            const visitChoices = Object.freeze(
+              hubVisitChoices.filter(
+                (choice) => choice.value === slotKey || !decision.visitOrder.includes(choice.value),
+              ),
+            );
             hubVisits.set(
               semanticAddressKey(owner),
-              candidateInteraction(owner, hubVisitChoices, slotKey, () =>
-                candidates.hubVisits(owner, hubSlotKeys),
+              candidateInteraction(owner, visitChoices, slotKey, () =>
+                candidates.hubVisits(
+                  owner,
+                  Object.freeze(visitChoices.map((choice) => choice.value)),
+                ),
               ),
             );
           }
