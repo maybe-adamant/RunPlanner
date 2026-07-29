@@ -206,7 +206,10 @@ function RouteWorkspace({
       </div>
       <div className="editor-panel" aria-live="polite">
         <ProjectFindings catalog={catalog} evaluation={projectEvaluation} />
-        <div className="editor-panel-content" data-editor-layout="workspace">
+        <div
+          className="editor-panel-content"
+          data-editor-layout={displayedBiomeKey === null ? 'overview' : 'biome'}
+        >
           {contextMessage === undefined ? null : (
             <p
               className="feedback-context-banner"
