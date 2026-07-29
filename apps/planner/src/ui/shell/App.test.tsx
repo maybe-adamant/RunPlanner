@@ -41,6 +41,12 @@ function appMarkup(application: ReturnType<typeof createApplication>): string {
   );
 }
 
+function findingsMarkup(markup: string): string {
+  const match = /<section class="project-findings"[\s\S]*?<\/section>/.exec(markup);
+  if (match === null) throw new Error('Findings panel is missing');
+  return match[0];
+}
+
 function configureF(application: ReturnType<typeof createApplication>): void {
   application.store.dispatch(
     authoredProjectCommandDispatched({
@@ -67,8 +73,39 @@ describe('App', () => {
     expect(markup).toContain('Project editor');
     expect(markup).toContain('Empty project');
     expect(markup).toContain('Findings');
-    expect(markup).toContain('Configure a biome to begin simulation.');
+    expect(markup).toContain('Configure a biome in this route to begin simulation.');
     expect(markup).toContain('data-editor-layout="overview"');
+  });
+
+  it('shows Findings only for the selected route, not Settings', () => {
+    const application = createApplication();
+
+    expect(appMarkup(application)).toContain('class="project-findings"');
+
+    application.store.dispatch(settingsSelected());
+
+    expect(appMarkup(application)).not.toContain('class="project-findings"');
+  });
+
+  it('limits Findings to the selected route', () => {
+    const application = createApplication();
+    for (const routeKey of ['Underworld', 'Surface'] as const) {
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ConfigureRoutePrefix',
+          configuredBiomeCount: 1,
+          route: createRouteAddress(routeKey),
+        }),
+      );
+    }
+
+    application.store.dispatch(routeSelected('Underworld'));
+    expect(findingsMarkup(appMarkup(application))).toContain('Erebus');
+    expect(findingsMarkup(appMarkup(application))).not.toContain('Ephyra');
+
+    application.store.dispatch(routeSelected('Surface'));
+    expect(findingsMarkup(appMarkup(application))).toContain('Ephyra');
+    expect(findingsMarkup(appMarkup(application))).not.toContain('Erebus');
   });
 
   it('renders a configured biome through the shared workspace rather than a biome-kind editor', () => {
