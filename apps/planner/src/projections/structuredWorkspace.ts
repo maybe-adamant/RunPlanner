@@ -211,9 +211,10 @@ export type WorkspaceStructuralInteraction =
     };
 
 /**
- * A destructive topology command carries its engine-derived impact all the
- * way to the renderer. React may present that scope, but cannot walk
- * descendants or infer which Hub structure a linked exit owns.
+ * A topology-removal command carries its engine-derived impact all the way to
+ * the renderer. React may use the supplied interaction to expose a named
+ * removal action, but cannot walk descendants or infer which Hub structure a
+ * linked exit owns.
  */
 export interface WorkspaceTopologyRemovalScope {
   readonly removedDecisionOwners: readonly ExitDecisionAddress[];
@@ -262,7 +263,7 @@ export interface WorkspaceHubSlotInteraction {
    * adapter remains the only code that evaluates candidate evidence.
    */
   readonly bind: (proposedOccurrenceId: OccurrenceId) => WorkspaceCandidateInteraction<boolean>;
-  /** CloseHubSlot and its engine-derived destructive scope for an open slot. */
+  /** CloseHubSlot and its engine-derived removal impact for an open slot. */
   readonly close?: {
     readonly command: Extract<ProjectCommand, { readonly kind: 'CloseHubSlot' }>;
     readonly impact: WorkspaceTopologyRemovalScope;
@@ -2044,7 +2045,7 @@ function batchRepairScope(
 /**
  * The command owns retained-target reconciliation. Both canonical and raw
  * authored projections ask this one domain-derived calculation for its exact
- * destructive scope; blocked suffixes must not silently lose the repair that
+ * removal impact; blocked suffixes must not silently lose the repair that
  * their persisted topology still requires.
  */
 function batchRepairScopeForRoots(

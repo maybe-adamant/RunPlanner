@@ -1180,7 +1180,7 @@ Required categories include:
 - Preboss and completion policies;
 - optional encounter phases;
 - reward payload and bag-entry provenance;
-- downstream retention and explicit destructive commands;
+- downstream retention and explicit topology-removal commands;
 - blocked downstream biome processing;
 - determinism: equal normalized inputs produce deeply equal outputs.
 

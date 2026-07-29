@@ -63,7 +63,7 @@ shop, wheel, side-room, or Fields cage state.
 creation validates the source's current declaration-owned exit key. A source
 room replacement may retain structurally represented targets whose keys are no
 longer supplied by the new room. Those targets are context-invalid rather than
-silently deleted. `ReconcileBatchExitCapacity` is the explicit destructive
+silently deleted. `ReconcileBatchExitCapacity` is the explicit topology-removal
 repair: it removes unavailable targets and their downstream subtree, then
 normalizes selection from the retained keys.
 
@@ -146,7 +146,7 @@ preserves the first three when their ownership is structurally sound;
 evaluation reports the contextual problem at its semantic owner and stops
 progressive traversal at that frontier.
 
-Commands are the only destructive authority. They reject partial takeover
+Commands are the only topology-removal authority. They reject partial takeover
 shape, duplicate target keys, incompatible declarations, impossible selection
 states, and edits to a dead leaf with downstream state. Undo and redo record
 those semantic authored edits, not findings, focus, canvas positions, or

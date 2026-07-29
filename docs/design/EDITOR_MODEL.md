@@ -229,7 +229,7 @@ than a persistent `Next Step` field:
   where its declaration permits it;
 - create the fixed completed-Hub handoff only after the sixth authored visit;
 - remove from this decision;
-- clear biome through an explicit destructive action.
+- clear biome through an explicit removal action.
 
 The shared frontier presentation and variant-owned action sets are recorded in
 `../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`. React may share the container, but
@@ -261,11 +261,12 @@ is:
 
 Restoring capacity before reconciliation restores those targets as available.
 
-In-project destructive commands execute immediately when the user invokes an
-explicitly labeled action. Their projected impact remains visible before
-activation, one semantic command creates one history entry, and Undo/Redo is
-the shared recovery mechanism. The command layer, not React, defines the
-actual deletion scope.
+In-project authored commands execute immediately when the user invokes an
+explicitly labeled action. Commands that remove existing authored structure use
+the red danger treatment as a visual affordance only: adding, changing, and
+removing all create one semantic-command history entry and share Undo/Redo
+recovery. The UI does not persistently display projected deletion scope. The
+command layer, not React, defines the actual deletion scope.
 
 ## Room and Reward Editors
 
@@ -536,7 +537,7 @@ groups, menus, and tooltips. The editor should support:
 - typeahead/search for room and reward selectors;
 - visible focus state;
 - labels independent of color;
-- explicit destructive-action descriptions;
+- labels that clearly name removal actions without relying on color alone;
 - navigation from a finding to its semantic owner;
 - predictable undo/redo shortcuts.
 

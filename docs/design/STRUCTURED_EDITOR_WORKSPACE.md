@@ -18,7 +18,7 @@ This document owns:
 - picked-path and unpicked-offer visual hierarchy;
 - progressive coverage and finding placement;
 - empty-biome outlines;
-- prompt-free destructive editing, repair presentation, accessibility, and
+- prompt-free removal editing, repair presentation, accessibility, and
   responsive behavior.
 
 [`CONTEXTUAL_EDITOR_UX.md`](CONTEXTUAL_EDITOR_UX.md) owns contextual room and
@@ -306,14 +306,16 @@ compatible values remain at their stable semantic owners, newly introduced
 leaves show declaration defaults, and retained context-invalid values receive
 ordinary finding presentation.
 
-## Destructive Actions and Repair
+## Removal Actions and Repair
 
 Commit 5a removes browser-native confirmation from the existing immediate
 semantic-command paths without replacing it with an application dialog. Every
 current in-project structural edit already has one semantic command and one
-history entry; existing Undo/Redo remains its recovery mechanism. This follow-
-up does not add a generic destructive-action abstraction, completion status,
-or post-edit focus policy.
+history entry; existing Undo/Redo remains its recovery mechanism. Controls
+that remove existing authored structure use the red danger affordance only to
+communicate that subtractive effect. They do not receive a different command,
+history, confirmation, or recovery path. This follow-up does not add a generic
+removal-action abstraction, completion status, or post-edit focus policy.
 
 Retained-overflow and Preboss-handoff repairs remain explicit:
 
@@ -324,19 +326,20 @@ Retained-overflow and Preboss-handoff repairs remain explicit:
 5. reconcile immediately when the user invokes that explicit action;
 6. rely on the existing Undo/Redo history controls for recovery when needed.
 
-Existing action labels and scope descriptions consume command-owned impact;
-they do not calculate deletion scope or repair the project themselves. Commit
-5a does not expand those existing presentation contracts or add a new post-edit
-focus rule.
+Existing action labels invoke semantic commands; they do not calculate
+deletion scope or repair the project themselves. Persistent deletion-scope
+copy is intentionally absent from the editor until user research identifies a
+specific action that needs it. Commit 5a does not add a new post-edit focus
+rule.
 
 The authored-project core calculates the pure removal impact once, and command
-execution consumes that same result. The application projection may translate
-its semantic sources into a presentation scope, but neither it nor React walks
-authored descendants to infer deletion.
+execution consumes that same result. The application projection carries that
+impact for command behavior, but neither it nor React walks authored
+descendants to infer deletion.
 
 For a completed Hub, closing an unvisited slot that crosses the declared
 open-set minimum includes both the detached slot subtree and the Hub-owned
-completed-handoff subtree in that one projected scope. The resulting board
+completed-handoff subtree in that one engine-owned impact. The resulting board
 remains visible as incomplete with its authored visits retained.
 
 ## Component Foundation
@@ -344,10 +347,10 @@ remains visible as incomplete with its authored visits retained.
 Use accessible primitives for popovers, radio groups, disclosures, status
 announcements, and keyboard navigation. The contextual picker uses Radix
 Popover plus `cmdk`, styled through the existing hand-written CSS. No
-destructive-dialog dependency is required for in-project editing. Confirmation
-is reserved for a future operation that is both externally consequential and
-not recoverable through project history. Tailwind adoption and literal shadcn
-component copying are out of scope.
+removal-confirmation dialog dependency is required for in-project editing.
+Confirmation is reserved for a future operation that is both externally
+consequential and not recoverable through project history. Tailwind adoption
+and literal shadcn component copying are out of scope.
 
 Dependency choice remains subordinate to the ownership contract. A component
 library must not hide semantic commands, make caller-owned option models mutable,
@@ -367,8 +370,8 @@ The structured workspace is complete when:
 - empty and partial biomes show only truthful declared or projected structure;
 - no expected length, probability, invented exit, or hypothetical future room is
   presented as a game fact;
-- destructive and repair interactions state scope and dispatch only existing
-  semantic commands;
+- removal and repair interactions use explicit labels and dispatch only
+  existing semantic commands;
 - the layout remains keyboard operable, screen-reader legible, and responsive;
 - no persisted authored contract, simulation rule, or topology identity is introduced for
   presentation convenience.

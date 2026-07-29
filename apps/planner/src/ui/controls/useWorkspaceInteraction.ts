@@ -22,7 +22,7 @@ export function useWorkspaceInteraction<Result>(
    * Loads the interaction on demand.  Synchronous interactions return their
    * result so a native pointer or keyboard action can both validate and apply
    * its semantic command in one gesture; asynchronous interactions remain a
-   * deliberately non-destructive first activation.
+   * deliberately non-committing first activation.
    */
   readonly activate: () => Result | undefined;
   readonly pending: boolean;
