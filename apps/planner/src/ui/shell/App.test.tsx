@@ -68,6 +68,7 @@ describe('App', () => {
     expect(markup).toContain('Empty project');
     expect(markup).toContain('Findings');
     expect(markup).toContain('Configure a biome to begin simulation.');
+    expect(markup).toContain('data-editor-layout="overview"');
   });
 
   it('renders a configured biome through the shared workspace rather than a biome-kind editor', () => {
@@ -87,6 +88,7 @@ describe('App', () => {
     expect(markup).toContain('Opening 01');
     expect(markup).toContain('Focused inspector');
     expect(markup).toContain('Continue authoring here');
+    expect(markup).toContain('data-editor-layout="biome"');
   });
 
   it('renders N’s Hub through the same workspace shell and preserves its board owners', () => {

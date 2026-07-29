@@ -79,6 +79,21 @@ These are presentation regions, not persisted panels. The exact responsive
 composition may become two columns, stacked regions, or an inspector drawer at
 narrow widths.
 
+### Desktop Sizing and Scroll Ownership
+
+At desktop widths, an active biome workspace fills the editor height remaining
+after findings and any route-context message. The workspace shell itself is
+not a vertical scrollport. Its Biome structure and Focused inspector regions
+are independently sized vertical scrollports, so scrolling one never moves the
+other. A short structure rail does not advertise overflow merely because its
+connector decoration extends beyond a terminal stop.
+
+The route overview remains ordinary editor-panel content and may use that
+panel's scroll container. At narrow widths the layout intentionally returns to
+one document-flow column rather than retaining nested scrollports. These are
+CSS presentation boundaries only: scroll position remains transient and no
+layout state enters the authored project or semantic commands.
+
 The existing horizontal route tabs remain the top-level route/Settings
 navigation. The route rail is the selected route's local overview and biome
 navigation, not a competing second route selector.

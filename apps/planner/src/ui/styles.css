@@ -515,13 +515,13 @@ button:disabled {
   display: grid;
   min-height: 0;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: 18px;
 }
 
 .biome-structure-region,
 .biome-inspector {
-  height: 100%;
-  max-height: 100%;
+  min-height: 0;
   min-width: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -531,6 +531,7 @@ button:disabled {
 .biome-structure-region {
   padding-right: 18px;
   border-right: 1px solid #30313a;
+  scrollbar-gutter: auto;
 }
 
 .biome-structure-heading,
@@ -564,12 +565,20 @@ button:disabled {
 
 .biome-rail-stop::before {
   position: absolute;
-  top: -10px;
-  bottom: -10px;
+  top: -7px;
+  bottom: -7px;
   left: 4px;
   width: 2px;
   background: #3f3d48;
   content: '';
+}
+
+.biome-rail > .biome-rail-stop:first-child::before {
+  top: 0;
+}
+
+.biome-rail > .biome-rail-stop:last-child::before {
+  bottom: 0;
 }
 
 .biome-rail-stop::after {
@@ -853,6 +862,23 @@ button:disabled {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+
+/*
+ * A biome workspace owns the editor's remaining height. Its two regions are
+ * independent scrollports; route overview content continues to use the
+ * ordinary editor-panel scroll container.
+ */
+.editor-panel-content[data-editor-layout='biome'] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.editor-panel-content[data-editor-layout='biome'] > .biome-workspace {
+  grid-row: 2;
+  min-height: 0;
 }
 
 .settings-panel {
@@ -1876,6 +1902,15 @@ select {
     padding: 14px 0 0;
     overflow-y: visible;
     scrollbar-gutter: auto;
+  }
+
+  .editor-panel-content[data-editor-layout='biome'] {
+    display: block;
+    overflow: visible;
+  }
+
+  .editor-panel-content[data-editor-layout='biome'] > .biome-workspace {
+    grid-row: auto;
   }
 
   .biome-workspace {
