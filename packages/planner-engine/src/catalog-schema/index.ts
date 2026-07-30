@@ -6,11 +6,9 @@ import type {
 import type { RewardKernelCatalog } from '../reward-kernel/model';
 import type { CounterAxis, RequirementExpression } from '../requirements/model';
 import type { ProducerLifecyclePointKey } from '../reward-kernel/model';
+import type { CatalogCollection } from '../normalized/collection';
 
-export interface CatalogCollection<T> {
-  readonly values: readonly T[];
-  readonly byKey: Readonly<Record<string, T>>;
-}
+export type { CatalogCollection } from '../normalized/collection';
 
 export interface BiomeDeclaration {
   readonly key: string;

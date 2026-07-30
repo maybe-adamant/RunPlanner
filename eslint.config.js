@@ -5,6 +5,27 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 const platformImports = ['react', 'react-dom', 'react-redux', '@reduxjs/*', '@tauri-apps/*'];
+const engineBoundaryImports = [
+  ...platformImports,
+  '@run-planner/hades2-catalog',
+  '@run-planner/planner',
+];
+const catalogSchemaImportPatterns = [
+  '../catalog-schema',
+  '../catalog-schema/**',
+  '**/catalog-schema',
+  '**/catalog-schema/**',
+  '@run-planner/engine/catalog-schema',
+  '@run-planner/engine/catalog-schema/**',
+];
+const rewardKernelImportPatterns = [
+  '../reward-kernel',
+  '../reward-kernel/**',
+  '**/reward-kernel',
+  '**/reward-kernel/**',
+  '@run-planner/engine/reward-kernel',
+  '@run-planner/engine/reward-kernel/**',
+];
 
 export default tseslint.config(
   {
@@ -91,7 +112,43 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          patterns: [...platformImports, '@run-planner/hades2-catalog', '@run-planner/planner'],
+          patterns: engineBoundaryImports,
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/planner-engine/src/normalized/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: engineBoundaryImports },
+            {
+              group: [...catalogSchemaImportPatterns, ...rewardKernelImportPatterns],
+              message:
+                'Normalized collection primitives remain below catalog-schema and reward-kernel.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/planner-engine/src/reward-kernel/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: engineBoundaryImports },
+            {
+              group: catalogSchemaImportPatterns,
+              message:
+                'Reward-kernel imports normalized collection primitives directly, not catalog-schema.',
+            },
+          ],
         },
       ],
     },

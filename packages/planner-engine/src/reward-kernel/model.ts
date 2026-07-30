@@ -1,4 +1,4 @@
-import type { CatalogCollection } from '../catalog-schema';
+import type { CatalogCollection } from '../normalized/collection';
 import type { RequirementEvaluationContext } from '../requirements/evaluator';
 import type { RequirementExpression } from '../requirements/model';
 
