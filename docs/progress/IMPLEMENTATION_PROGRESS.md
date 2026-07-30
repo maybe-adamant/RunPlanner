@@ -63,7 +63,11 @@ interaction and rejects duplicate authored owners rather than letting React
 condition visibility on a missing interaction. This changes no schema, command,
 catalog, or simulator authority. The complete repository gate passed with 60
 test files and 630 tests, all package typechecks, ESLint, Prettier, and the
-production build.
+production build. Commit `9b5ddfd` preserves the bounded delivery specification
+and its audit evidence. Its stable hierarchy, authored-first assembly,
+activation, control-existence, and semantic-reachability contracts now live in
+the owning editor design documents, so the temporary specification has been
+retired.
 
 Commit 1 is complete. The catalog and authored-project boundary uses catalog
 `0.15.0-unified-biome-decisions` and schema 9 only: one biome envelope, common

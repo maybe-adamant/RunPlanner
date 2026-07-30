@@ -184,11 +184,55 @@ ordinary, Preboss, or Hub controls.
 Incomplete-biome structure is an authored-topology projection enriched by
 progressive evaluation. It must not be described as canonical topology.
 
-The bounded implementation and cross-biome audit plan for enforcing this
-direction uniformly is maintained in
-[`AUTHORED_FIRST_WORKSPACE_PROJECTION.md`](../progress/AUTHORED_FIRST_WORKSPACE_PROJECTION.md).
-That delivery specification does not change this document's stable ownership
-contract.
+### Authored-First Assembly
+
+Persisted authored topology determines workspace membership and order.
+Evaluation is an optional overlay indexed by semantic owner; it may add
+assessment, availability, Goal state, simulated entry, and derived lifecycle
+facts. Evaluation must not create, remove, or replace a persisted decision,
+target, occurrence, or editable offer-time leaf.
+
+The projector walks the authored start and then authored exit decisions or the
+Hub in selected-topology order. A selected target subtree precedes retained
+physical peers. Peers follow the current physical-exit order with a stable
+semantic tie-breaker. Disconnected or malformed but structurally representable
+state remains reachable through the same deterministic ordering; the codec and
+semantic commands, not projection, remain responsible for structural validity.
+Simulation order never substitutes for authored topology order.
+
+The physical exits for a decision are those resolved from its current authored
+batch and layout state. A current exit without an authored target is projected
+as a missing offer. A retained authored target outside that current set remains
+visible as an unavailable offer; projection does not discard it or promise
+blank rows for merely potential or policy-gated exits.
+
+Room-local activation follows the hierarchy and source rules in
+[`EDITOR_MODEL.md`](EDITOR_MODEL.md#decision-and-room-data-hierarchy).
+Mandatory room and reward leaves do not depend on activation, findings,
+candidate support, or evaluation coverage. Optional picked-room details may
+depend on authored `detailsActive`, while evaluated `entered` remains a
+separate fact.
+
+### Projection Closure
+
+Before React renders the workspace, the application independently enumerates
+the semantic owners and declaration-required editable leaves implied by the
+authored state. It verifies that:
+
+- every decision, target, occurrence, and active declaration-owned leaf has one
+  reachable projection;
+- every exact semantic address resolves to its containing inspector and exact
+  interaction;
+- advertised interactions exist and conflicting or duplicate authored owners
+  fail the projection contract;
+- fine-grained findings resolve to their exact owner rather than a biome-level
+  fallback.
+
+A target's room and reward may be nested inside its decision workbench. Closure
+therefore validates semantic-owner reachability, not a count or shape of
+standalone UI nodes. Candidate support and findings decorate reachable
+controls; they never decide whether a mandatory authored control exists. React
+must not silently omit a required control because an interaction lookup failed.
 
 ## Ordinary Decision Workspace
 

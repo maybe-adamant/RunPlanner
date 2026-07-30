@@ -108,6 +108,48 @@ parent-exit state while changing the exact history/execution trace.
 Projectors consume normalized domain state and never infer topology from
 rendered components.
 
+### Decision and Room Data Hierarchy
+
+The authored and projected hierarchy is:
+
+```text
+decision batch
+  -> physical target reference
+    -> Room Occurrence
+      -> mandatory offer-time leaves
+      -> optional picked-room details
+```
+
+The batch owns decision topology and selection. A target is the relationship
+from one physical exit to one persisted Room Occurrence. The occurrence owns
+its game room declaration and room-local state, including its incoming reward.
+Presentation may place the room and reward controls together on the decision
+card without transferring their semantic ownership to the batch or target.
+
+Every structurally owned occurrence must have one reachable control package.
+That package may be nested in its decision workbench; it need not appear as a
+standalone workspace node. Exact target, occurrence, reward, and room-local
+addresses all resolve to that containing inspector and then to their own
+interaction.
+
+Mandatory offer-time leaves remain authored and editable for picked and
+unpicked rooms. Optional picked-room details become active only when the
+authored topology activates the occurrence:
+
+| Occurrence source                 | Authored activation                                |
+| --------------------------------- | -------------------------------------------------- |
+| Biome start or fixed entry        | active when the occurrence exists                  |
+| Linked exit                       | active when the link exists                        |
+| Ordinary or takeover batch target | active when selected by its decision               |
+| N Hub main target                 | active when present in the authored visit sequence |
+| Derived completion                | no authored room-local detail activation           |
+
+Activation is not simulated entry. The workspace carries authored
+`detailsActive` separately from evaluated `entered`, so progressive coverage or
+an unavailable evaluator cannot erase authored detail ownership. Dormant
+optional state is retained and becomes editable again if the same occurrence is
+reactivated.
+
 ## Structured Workspace Presentation
 
 The primary editor presents a route rail, one shared biome-structure region, and
