@@ -2156,20 +2156,27 @@ independently reviewable slices:
    boundaries, and owning documentation;
 7. Commit 5a removes browser confirmation while preserving the existing
    immediate semantic-command and project-history behavior;
-8. Commit 5b delivers the four bounded changes in
+8. the neutral dependency correction and workspace/React campaign in
+   `REANCHOR_AND_REORGANIZE.md` make that active product flow,
+   responsibility, import direction, and dependency injection explicit without
+   advancing the feature frontier;
+9. Commit 5b delivers the four bounded changes in
    `WORKSPACE_PRESENTATION_POLISH.md` without changing the closed domain
-   contracts; and
-9. Commit 5c replaces the Shop purchased-set model with exact authored order
-   through the three slices in `SHOP_PURCHASE_ORDER.md`.
+   contracts;
+10. the remaining candidate, authored-core, history, and reward campaigns in
+    `REANCHOR_AND_REORGANIZE.md` close before the next cross-layer feature; and
+11. Commit 5c replaces the Shop purchased-set model with exact authored order
+    through the three slices in `SHOP_PURCHASE_ORDER.md`.
 
 The owning design documents define the delivered contracts. Commit 4 is the
 explicit end of the unified biome refactor; Commits 5a and 5b preserve that
 authority while completing the final interaction and presentation acceptance
-formerly carried by Commit 13. Commit 5c is a separate authored-Shop correction
-that replaces the schema 9 purchased-set contract without reopening biome
-topology. The current presentation taxonomy uses common exit decisions,
-normal-door batches, one specialized Hub decision, and declaration-derived
-biome completion.
+formerly carried by Commit 13. The re-anchor campaigns change neither that
+authority nor the closed feature contract. Commit 5c is a separate
+authored-Shop correction that replaces the schema 9 purchased-set contract
+without reopening biome topology. The current presentation taxonomy uses
+common exit decisions, normal-door batches, one specialized Hub decision, and
+declaration-derived biome completion.
 
 ### Phase Acceptance
 

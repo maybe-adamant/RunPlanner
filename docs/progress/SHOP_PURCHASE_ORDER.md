@@ -4,7 +4,9 @@
 
 This is the planned implementation authority for Phase 7 Commit 5c. It follows
 the four presentation-only Commit 5b slices in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md).
+[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) and the
+remaining pre-5c campaigns in
+[`REANCHOR_AND_REORGANIZE.md`](REANCHOR_AND_REORGANIZE.md).
 
 Commit 5c deliberately changes the persisted Shop contract: the authored plan
 will record one exact purchase sequence rather than a boolean purchased set

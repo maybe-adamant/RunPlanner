@@ -2,13 +2,17 @@
 
 ## Status
 
-This is the active implementation plan for Phase 7 Commit 5b. Commit 5a is
+This is the feature implementation plan for Phase 7 Commit 5b. Commit 5a is
 complete in `44a2b8d`; it removed the remaining browser confirmation prompts
 without introducing a destructive-action abstraction. Commit 5b.1 is complete
-in `e059b7d`, and Commit 5b.2 is complete in `4d46957`. Commit 5b.3 is the
-active delivery slice, followed by Commit 5b.4 closure. Commit 5b remains
-limited to the four presentation changes below. Exact authored Shop purchase
-order is the separate cross-layer Commit 5c defined by
+in `e059b7d`, and Commit 5b.2 is complete in `4d46957`. Commit 5b.3 remains the
+feature frontier, followed by Commit 5b.4 closure, but delivery is temporarily
+sequenced through the neutral dependency correction and workspace/React
+Campaign A in
+[`REANCHOR_AND_REORGANIZE.md`](REANCHOR_AND_REORGANIZE.md). Commit 5b may resume
+when that campaign closes and remains limited to the four presentation changes
+below. Exact authored Shop purchase order is the separate cross-layer Commit 5c
+defined by
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md).
 
 The decision-highlight rail follow-up documented below was delivered out of

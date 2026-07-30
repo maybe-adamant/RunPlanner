@@ -31,11 +31,18 @@ product/recovery/performance/architecture evidence, and passed the complete
 repository gate. Commit 5a then removed the remaining browser confirmation
 prompts while preserving the existing semantic-command/history flow. Commit
 5b.1 delivered the N rail hierarchy, and Commit 5b.2 delivered direct side-room
-order editing. The active frontier is Commit 5b.3's active-only H/O room-local
-presentation in
+order editing. The feature frontier remains Commit 5b.3's active-only H/O
+room-local presentation in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
-by Commit 5b.4's player-facing product vocabulary and 5b closure. None changes
-the closed domain contracts. Commit 5c then follows the separate
+by Commit 5b.4's player-facing product vocabulary and 5b closure. Delivery is
+temporarily sequenced through the neutral dependency correction and
+workspace/React Campaign A in
+[`REANCHOR_AND_REORGANIZE.md`](REANCHOR_AND_REORGANIZE.md). That campaign makes
+the active product flow, module responsibility, import direction, and
+dependency injection explicit before more presentation work crosses the same
+workspace gravity well. It does not advance the feature frontier or change
+closed domain contracts. After Commit 5b closes, the plan's candidate,
+authored-core, history, and reward campaigns must close before the separate
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan: schema 10 authors an
 exact Shop purchase order, simulation validates that exact sequence, and the
 editor exposes the order directly. Commit 5c intentionally replaces the schema
@@ -160,8 +167,9 @@ are covered. Review validation passed the root typecheck,
 `npm run test:planner` (22 files, 185 tests), ESLint, Prettier, and
 `git diff --check`.
 
-Commit 5b.3, Commit 5b.4, and the three Commit 5c Shop-order slices are the
-remaining work before the active Phase 7 frontier advances.
+Re-anchor Campaign A, Commit 5b.3, Commit 5b.4, the remaining re-anchor
+campaigns, and the three Commit 5c Shop-order slices are the remaining work
+before the active Phase 7 frontier advances.
 
 For historical context, room-replacement retention closed before the unified
 refactor. The delivered policy uses the
