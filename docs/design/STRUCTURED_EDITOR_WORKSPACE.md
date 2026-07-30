@@ -184,6 +184,12 @@ ordinary, Preboss, or Hub controls.
 Incomplete-biome structure is an authored-topology projection enriched by
 progressive evaluation. It must not be described as canonical topology.
 
+The bounded implementation and cross-biome audit plan for enforcing this
+direction uniformly is maintained in
+[`AUTHORED_FIRST_WORKSPACE_PROJECTION.md`](../progress/AUTHORED_FIRST_WORKSPACE_PROJECTION.md).
+That delivery specification does not change this document's stable ownership
+contract.
+
 ## Ordinary Decision Workspace
 
 For F/G/H/I/O/P/Q, the center region presents a concise decision-point rail:
@@ -205,7 +211,8 @@ Selecting a decision shows all of its physical offers together. Every authored
 offer keeps its room selector and reward editor at the same visual level,
 because the room and incoming reward jointly describe the offered door.
 Single-choice controls live on those cards, and the picked card receives the
-strongest emphasis because it continues the entered route.
+strongest emphasis because it is the authored selected route. Evaluated entry
+is shown separately when materialization has actually reached that room.
 
 Unpicked targets remain fully visible in the decision workbench because they
 still affect reward bags, sibling conflicts, source support, and possibility

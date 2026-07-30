@@ -52,6 +52,19 @@ Opening, PreHub, Hub, Preboss, and subordinate visit presentation.
 The complete repository gate passes with 59 test files and 618 tests, followed
 by all package typechecks, lint, formatting, production build, and diff checks.
 
+An out-of-sequence authored-first workspace projection correction is complete
+without advancing that active frontier. The workspace now walks persisted
+authored topology before applying optional evaluator overlays; `detailsActive`
+is separate from evaluated `entered`; and findings or unavailable evaluation
+never suppress an authored control. Traversal gives the selected authored
+subtree precedence over retained physical peers and has deterministic malformed
+in-memory fallback ordering. Projection closure requires every advertised
+interaction and rejects duplicate authored owners rather than letting React
+condition visibility on a missing interaction. This changes no schema, command,
+catalog, or simulator authority. The complete repository gate passed with 60
+test files and 630 tests, all package typechecks, ESLint, Prettier, and the
+production build.
+
 Commit 1 is complete. The catalog and authored-project boundary uses catalog
 `0.15.0-unified-biome-decisions` and schema 9 only: one biome envelope, common
 exit/Hub decisions, declaration-derived Preboss batches, and progressive N

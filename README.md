@@ -131,7 +131,11 @@ copied elsewhere.
   [candidate evaluation](docs/design/CANDIDATE_EVALUATION_MODEL.md),
   [editor ownership](docs/design/EDITOR_MODEL.md),
   [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md), and the
-  [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md).
+  [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md). The
+  focused
+  [authored-first workspace projection specification](docs/progress/AUTHORED_FIRST_WORKSPACE_PROJECTION.md)
+  records its delivered implementation and cross-biome audit evidence for projection
+  closure.
 - Evidence and disposition:
   [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
   [Ephyra side-room findings](docs/audits/N_SIDE_ROOM_FINDINGS.md),

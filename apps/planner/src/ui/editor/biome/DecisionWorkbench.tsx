@@ -76,8 +76,9 @@ function batchRewardStoreAddress(marker: WorkspaceMarker): BatchRewardStoreAddre
 }
 
 function roomStatus(target: WorkspacePhysicalTarget): string {
+  if (target.room.entered) return 'Entered route';
+  if (target.selected) return 'Selected route';
   if (target.physicalState === 'unavailable') return 'Unavailable retained offer';
-  if (target.selected) return 'Entered route';
   if (target.retained) return 'Retained authored offer';
   if (target.clockworkReward === 'goal') return 'Clockwork Goal';
   if (target.clockworkReward === 'nonGoal') return 'Clockwork NonGoal';
@@ -147,9 +148,13 @@ function TargetRow({
   const address = targetAddress(target);
   const replaceable =
     node.targetInteraction === 'replaceable' && target.physicalState === 'available';
-  const selectionInteraction = interactions.exitSelections.get(
-    workspaceInteractionKey(node.selection.address),
-  );
+  const selectionInteraction =
+    node.targets.length === 1
+      ? undefined
+      : requireWorkspaceInteraction(
+          interactions.exitSelections,
+          workspaceInteractionKey(node.selection.address),
+        );
   const selectionChoice = selectionInteraction?.targets.find(
     (choice) => choice.value === target.exitKey,
   );
@@ -303,7 +308,7 @@ function BatchSelectionStatus({
   return (
     <p className="fixed-room-state">
       {node.targets.some((target) => target.selected)
-        ? 'The entered room is fixed by this decision.'
+        ? 'The selected room is fixed by this decision.'
         : 'This decision awaits its declaration-owned selection.'}
     </p>
   );
@@ -524,8 +529,17 @@ function BatchSettings({
   const store =
     node.rewardStore === undefined
       ? undefined
-      : interactions.batchRewardStores.get(workspaceInteractionKey(node.rewardStore.address));
-  const fields = interactions.fieldsCageOutcomes.get(workspaceInteractionKey(node.owner));
+      : requireWorkspaceInteraction(
+          interactions.batchRewardStores,
+          workspaceInteractionKey(node.rewardStore.address),
+        );
+  const fields =
+    node.fieldsCageOutcome === undefined
+      ? undefined
+      : requireWorkspaceInteraction(
+          interactions.fieldsCageOutcomes,
+          workspaceInteractionKey(node.fieldsCageOutcome.address),
+        );
   return (
     <div className="batch-controls">
       {store === undefined ? null : (
@@ -614,10 +628,17 @@ export function BatchWorkbench({
     node.missingTargets.length === 0
       ? undefined
       : projectedTakeover;
-  const removal = interactions.topologyRemovals.get(workspaceInteractionKey(node.owner));
-  const exitSelection = interactions.exitSelections.get(
-    workspaceInteractionKey(node.selection.address),
+  const removal = requireWorkspaceInteraction(
+    interactions.topologyRemovals,
+    workspaceInteractionKey(node.owner),
   );
+  const exitSelection =
+    node.targets.length === 1
+      ? undefined
+      : requireWorkspaceInteraction(
+          interactions.exitSelections,
+          workspaceInteractionKey(node.selection.address),
+        );
   return (
     <section
       className="decision-card biome-batch-workbench"
@@ -639,7 +660,7 @@ export function BatchWorkbench({
       <BatchSettings interactions={interactions} node={node} />
       <BatchSelectionStatus interaction={exitSelection} node={node} />
       <div className="decision-selection-heading">
-        <span>Entered room</span>
+        <span>Room selection</span>
         <SemanticOwnerMarker address={exitSelectionAddress(node.selection)} />
       </div>
       <div
@@ -664,9 +685,7 @@ export function BatchWorkbench({
       </div>
       {node.repairScope === undefined ? null : <ExactRepairScope scope={node.repairScope} />}
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
-      {removal === undefined ? null : (
-        <TopologyRemovalAction interaction={removal} label="Remove decision" />
-      )}
+      <TopologyRemovalAction interaction={removal} label="Remove decision" />
       {nextFrontier === undefined ? null : (
         <button
           className="secondary-action decision-next-action"
@@ -687,7 +706,10 @@ export function LinkedExitWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceLinkedExitNode;
 }) {
-  const removal = interactions.topologyRemovals.get(workspaceInteractionKey(node.owner));
+  const removal = requireWorkspaceInteraction(
+    interactions.topologyRemovals,
+    workspaceInteractionKey(node.owner),
+  );
   return (
     <section className="decision-card linked-exit-workbench">
       <header className="decision-heading">
@@ -709,9 +731,7 @@ export function LinkedExitWorkbench({
         presentation="full"
         room={node.target.room}
       />
-      {removal === undefined ? null : (
-        <TopologyRemovalAction interaction={removal} label="Remove decision" />
-      )}
+      <TopologyRemovalAction interaction={removal} label="Remove decision" />
     </section>
   );
 }
@@ -799,8 +819,20 @@ function ExitFrontier({
   readonly frontier: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'exitDecision' }>;
 }) {
   const dispatch = useAppDispatch();
-  const structural = interactions.structural.get(frontier.interactionKey);
-  const takeover = interactions.takeoverBatches.get(frontier.interactionKey);
+  const capabilities = interactions.exitFrontierCapabilities.get(frontier.interactionKey);
+  const structural =
+    capabilities?.structural === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.structural, frontier.interactionKey);
+  const takeover =
+    capabilities?.takeover !== true
+      ? undefined
+      : requireWorkspaceInteraction(interactions.takeoverBatches, frontier.interactionKey);
+  if (structural !== undefined && structural.action !== capabilities?.structural) {
+    throw new BiomeWorkspaceContractError(
+      'An exit frontier structural interaction must match its projected capability.',
+    );
+  }
   return (
     <section className="frontier-actions biome-exit-frontier">
       <div>

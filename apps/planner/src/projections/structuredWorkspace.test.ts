@@ -54,6 +54,8 @@ import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
 import {
+  assertWorkspaceInteractionClosure,
+  authoredWorkspaceLeafRequirements,
   createStructuredWorkspaceProjection,
   type WorkspaceBiome,
   type WorkspaceNode,
@@ -233,6 +235,138 @@ describe('unified structured workspace projection', () => {
       'hubDecision',
       'takeoverBatch',
     ]);
+  });
+
+  it('orders a selected authored subtree before retained peers independently of serialization order', () => {
+    const base = createGoldenFGHIProject(catalog);
+    const forkSource = goldenFOccurrenceId(1, 1);
+    const selectedChildSource = goldenFOccurrenceId(2, 2);
+    const retainedChildSource = goldenFOccurrenceId(2, 1);
+    const movedDecisionSource = goldenFOccurrenceId(3, 1);
+    const withSelectedSpine = (reverse: boolean): typeof base =>
+      ({
+        ...base,
+        routes: base.routes.map((route) =>
+          route.routeKey !== 'Underworld'
+            ? route
+            : {
+                ...route,
+                biomes: route.biomes.map((plan) =>
+                  plan.biomeKey !== 'F' || plan.topology === null
+                    ? plan
+                    : {
+                        ...plan,
+                        topology: {
+                          ...plan.topology,
+                          decisions: (reverse
+                            ? [...plan.topology.decisions].reverse()
+                            : plan.topology.decisions
+                          ).map((decision) => {
+                            if (decision.kind !== 'exit') return decision;
+                            const normal =
+                              decision.normal.kind !== 'batch' || !reverse
+                                ? decision.normal
+                                : {
+                                    ...decision.normal,
+                                    targets: [...decision.normal.targets].reverse(),
+                                  };
+                            if (
+                              decision.source.kind === 'occurrence' &&
+                              decision.source.occurrenceId === forkSource
+                            ) {
+                              return {
+                                ...decision,
+                                normal,
+                                selection: { kind: 'normal' as const, exitKey: 'exit2' },
+                              };
+                            }
+                            if (
+                              decision.source.kind === 'occurrence' &&
+                              decision.source.occurrenceId === movedDecisionSource
+                            ) {
+                              return {
+                                ...decision,
+                                normal,
+                                source: {
+                                  kind: 'occurrence' as const,
+                                  occurrenceId: selectedChildSource,
+                                },
+                              };
+                            }
+                            return normal === decision.normal ? decision : { ...decision, normal };
+                          }),
+                        },
+                      },
+                ),
+              },
+        ),
+      }) as typeof base;
+    const projected = workspace(withSelectedSpine(false));
+    const reversed = workspace(withSelectedSpine(true));
+    const orderedDecisionOwners = (value: ReturnType<typeof workspace>) =>
+      biome(value, 'F')
+        .nodes.filter(
+          (
+            node,
+          ): node is Extract<
+            WorkspaceNode,
+            {
+              readonly kind: 'linkedExit' | 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch';
+            }
+          > =>
+            node.kind === 'linkedExit' ||
+            node.kind === 'ordinaryBatch' ||
+            node.kind === 'mixedBatch' ||
+            node.kind === 'takeoverBatch',
+        )
+        .map((node) => semanticAddressKey(node.owner));
+    const sourceOwner = (occurrenceId: ReturnType<typeof goldenFOccurrenceId>) =>
+      semanticAddressKey(
+        createExitDecisionAddress(goldenFBiome, { kind: 'occurrence', occurrenceId }),
+      );
+    const owners = orderedDecisionOwners(projected);
+    expect(owners).toEqual(
+      [
+        goldenFStartId,
+        forkSource,
+        selectedChildSource,
+        goldenFOccurrenceId(4, 1),
+        goldenFOccurrenceId(5, 1),
+        goldenFOccurrenceId(6, 1),
+        goldenFOccurrenceId(7, 1),
+        goldenFOccurrenceId(8, 1),
+        goldenFOccurrenceId(9, 1),
+        goldenFOccurrenceId(10, 1),
+        retainedChildSource,
+      ].map(sourceOwner),
+    );
+    expect(orderedDecisionOwners(reversed)).toEqual(owners);
+
+    const selectedNode = biome(projected, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        semanticAddressKey(node.owner) === sourceOwner(selectedChildSource),
+    );
+    const reversedSelectedNode = biome(reversed, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        semanticAddressKey(node.owner) === sourceOwner(selectedChildSource),
+    );
+    if (selectedNode === undefined || reversedSelectedNode === undefined) {
+      throw new Error('selected F retained-subtree decision is missing');
+    }
+    expect(reversedSelectedNode.targets.map((target) => target.exitKey)).toEqual(
+      selectedNode.targets.map((target) => target.exitKey),
+    );
+    expect(
+      reversed.interactions.exitSelections
+        .get(reversedSelectedNode.selection.focusKey)
+        ?.targets.map((choice) => choice.value),
+    ).toEqual(
+      projected.interactions.exitSelections
+        .get(selectedNode.selection.focusKey)
+        ?.targets.map((choice) => choice.value),
+    );
   });
 
   it('projects each ordinary-biome rail as decision points with picked summaries', () => {
@@ -1553,9 +1687,21 @@ describe('unified structured workspace projection', () => {
     // a later persisted selection picks its sibling.
     encodedDecision.selection = { kind: 'normal', exitKey: 'exit1' };
     const decoded = decodeProjectDocument(encoded, catalog);
+    const decodedPlan = decoded.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (decodedPlan === undefined) throw new Error('decoded F plan is missing');
+    expect(
+      authoredWorkspaceLeafRequirements(catalog, fBiome, decodedPlan).some(
+        (requirement) =>
+          semanticAddressKey(requirement.address) ===
+          semanticAddressKey(createShopOfferAddress(fBiome, shop, offerKey)),
+      ),
+    ).toBe(false);
 
     const projected = workspace(decoded);
     const dormant = roomWorkbench(projected, 'F', 'F_Shop01');
+    expect(dormant.detailsActive).toBe(false);
     expect(dormant.entered).toBe(false);
     expect(dormant.rewardSummary).toBeUndefined();
     expect(dormant.rewardControls).toEqual([]);
@@ -1574,6 +1720,361 @@ describe('unified structured workspace projection', () => {
         semanticAddressKey(createShopPurchaseAddress(fBiome, shop, offerKey)),
       ),
     ).toBe(false);
+  });
+
+  it('keeps a selected Shop detailed and editable behind an unresolved authored prefix', () => {
+    const project = createGoldenFGHIProject(catalog);
+    const f = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (f?.topology === null || f === undefined) throw new Error('golden F topology is missing');
+    const boundary = f.topology.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === goldenFOccurrenceId(1, 1),
+    );
+    if (boundary?.kind !== 'exit') throw new Error('golden F width-two decision is missing');
+    const blocked = {
+      ...project,
+      routes: project.routes.map((route) =>
+        route.routeKey !== 'Underworld'
+          ? route
+          : {
+              ...route,
+              biomes: route.biomes.map((plan) =>
+                plan.biomeKey !== 'F' || plan.topology === null
+                  ? plan
+                  : {
+                      ...plan,
+                      topology: {
+                        ...plan.topology,
+                        decisions: plan.topology.decisions.map((decision) =>
+                          decision === boundary
+                            ? { ...decision, selection: { kind: 'unresolved' as const } }
+                            : decision,
+                        ),
+                      },
+                    },
+              ),
+            },
+      ),
+    };
+    const projected = workspace(blocked);
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const selectedShop = biome(projected, 'F').nodes.find(
+      (candidate): candidate is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === shopId,
+    )?.room;
+    if (selectedShop === undefined) throw new Error('selected F Preboss Shop is missing');
+
+    expect(selectedShop.detailsActive).toBe(true);
+    expect(selectedShop.entered).toBe(false);
+    expect(selectedShop.roomLocal).toMatchObject({ kind: 'shop', materialized: true });
+    expect(selectedShop.rewardControls).not.toHaveLength(0);
+    const offer = createShopOfferAddress(goldenFBiome, shopId, 'MajorNonBoon');
+    const purchase = createShopPurchaseAddress(goldenFBiome, shopId, 'MajorNonBoon');
+    expect(projected.interactions.rewards.has(semanticAddressKey(offer))).toBe(true);
+    expect(projected.interactions.shopPurchases.has(semanticAddressKey(purchase))).toBe(true);
+  });
+
+  it('fails fast when a hard-required projected control lacks its exact interaction', () => {
+    const assertMissingInteraction = (
+      projected: ReturnType<typeof workspace>,
+      interactions: typeof projected.interactions,
+      expected: RegExp,
+    ) => {
+      expect(() =>
+        assertWorkspaceInteractionClosure(projected.routes, new Map(), new Map(), interactions),
+      ).toThrow(expected);
+    };
+    const surface = workspace(createRepresentativeNOPQProject());
+    const underworld = workspace(createGoldenFGHIProject(catalog));
+
+    const purchase = createShopPurchaseAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon');
+    const withoutShopPurchase = {
+      ...surface.interactions,
+      shopPurchases: new Map(surface.interactions.shopPurchases),
+    };
+    withoutShopPurchase.shopPurchases.delete(semanticAddressKey(purchase));
+    assertMissingInteraction(
+      surface,
+      withoutShopPurchase,
+      /Shop purchase .* has no exact workspace interaction/,
+    );
+
+    const ship = roomWorkbench(surface, 'O', 'O_Combat04');
+    if (ship.roomLocal.kind !== 'ship') throw new Error('O Ship room is missing');
+    const withoutShipEncounter = {
+      ...surface.interactions,
+      shipEncounterCounts: new Map(surface.interactions.shipEncounterCounts),
+    };
+    withoutShipEncounter.shipEncounterCounts.delete(ship.marker.focusKey);
+    assertMissingInteraction(
+      surface,
+      withoutShipEncounter,
+      /Ship encounter count .* has no exact workspace interaction/,
+    );
+
+    const fields = biome(underworld, 'H').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' | 'mixedBatch' }> =>
+        (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') &&
+        node.fieldsCageOutcome !== undefined,
+    );
+    if (fields?.fieldsCageOutcome === undefined) throw new Error('H Fields batch is missing');
+    const withoutFieldsOutcome = {
+      ...underworld.interactions,
+      fieldsCageOutcomes: new Map(underworld.interactions.fieldsCageOutcomes),
+    };
+    withoutFieldsOutcome.fieldsCageOutcomes.delete(fields.fieldsCageOutcome.focusKey);
+    assertMissingInteraction(
+      underworld,
+      withoutFieldsOutcome,
+      /Fields cage outcome .* has no exact workspace interaction/,
+    );
+
+    const takeover = biome(underworld, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'takeoverBatch' }> =>
+        node.kind === 'takeoverBatch',
+    );
+    if (takeover === undefined) throw new Error('F takeover batch is missing');
+    const withoutTakeover = {
+      ...underworld.interactions,
+      takeoverBatches: new Map(underworld.interactions.takeoverBatches),
+    };
+    withoutTakeover.takeoverBatches.delete(takeover.takeoverInteractionKey);
+    assertMissingInteraction(
+      underworld,
+      withoutTakeover,
+      /takeover batch .* has no exact workspace interaction/,
+    );
+
+    const emptyN = createProjectDocument(catalog, {
+      projectId: 'missing-start-interaction',
+      name: 'Missing start interaction',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    const startWorkspace = workspace(emptyN);
+    const startFrontier = biome(startWorkspace, 'N').frontier;
+    if (startFrontier?.kind !== 'start') throw new Error('N start frontier is missing');
+    const withoutStart = {
+      ...startWorkspace.interactions,
+      starts: new Map(startWorkspace.interactions.starts),
+    };
+    withoutStart.starts.delete(startFrontier.interactionKey);
+    assertMissingInteraction(
+      startWorkspace,
+      withoutStart,
+      /start frontier .* has no exact workspace interaction/,
+    );
+
+    const withOpening = applyProjectCommand(emptyN, catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    const atHub = applyProjectCommand(withOpening, catalog, {
+      kind: 'CreateLinkedExit',
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceIds.opening,
+      }),
+      occurrenceId: nOccurrenceIds.preHub,
+    });
+    const hubWorkspace = workspace(atHub);
+    const hubFrontier = biome(hubWorkspace, 'N').frontier;
+    if (hubFrontier?.kind !== 'hubDecision') throw new Error('N Hub creation frontier is missing');
+    const withoutHubCreation = {
+      ...hubWorkspace.interactions,
+      structural: new Map(hubWorkspace.interactions.structural),
+    };
+    withoutHubCreation.structural.delete(hubFrontier.interactionKey);
+    assertMissingInteraction(
+      hubWorkspace,
+      withoutHubCreation,
+      /Hub creation frontier .* has no exact workspace interaction/,
+    );
+
+    const staged = biome(surface, 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.sourceDecisionRemoval !== undefined,
+    );
+    if (staged?.sourceDecisionRemoval === undefined) throw new Error('N staged removal is missing');
+    const withoutStagedRemoval = {
+      ...surface.interactions,
+      topologyRemovals: new Map(surface.interactions.topologyRemovals),
+    };
+    withoutStagedRemoval.topologyRemovals.delete(staged.sourceDecisionRemoval.interactionKey);
+    assertMissingInteraction(
+      surface,
+      withoutStagedRemoval,
+      /(?:linked-exit topology removal|staged decision removal) .* has no exact workspace interaction/,
+    );
+  });
+
+  it('requires direct removals and every advertised frontier capability', () => {
+    const assertMissingInteraction = (
+      projected: ReturnType<typeof workspace>,
+      interactions: typeof projected.interactions,
+      expected: RegExp,
+    ) => {
+      expect(() =>
+        assertWorkspaceInteractionClosure(projected.routes, new Map(), new Map(), interactions),
+      ).toThrow(expected);
+    };
+    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const surface = workspace(createRepresentativeNOPQProject());
+
+    const ordinary = biome(underworld, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch',
+    );
+    if (ordinary === undefined) throw new Error('F ordinary batch is missing');
+    const withoutOrdinaryRemoval = {
+      ...underworld.interactions,
+      topologyRemovals: new Map(underworld.interactions.topologyRemovals),
+    };
+    withoutOrdinaryRemoval.topologyRemovals.delete(semanticAddressKey(ordinary.owner));
+    assertMissingInteraction(
+      underworld,
+      withoutOrdinaryRemoval,
+      /decision topology removal .* has no exact workspace interaction/,
+    );
+
+    const linked = biome(surface, 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'linkedExit' }> =>
+        node.kind === 'linkedExit',
+    );
+    if (linked === undefined) throw new Error('N linked exit is missing');
+    const withoutLinkedRemoval = {
+      ...surface.interactions,
+      topologyRemovals: new Map(surface.interactions.topologyRemovals),
+    };
+    withoutLinkedRemoval.topologyRemovals.delete(semanticAddressKey(linked.owner));
+    assertMissingInteraction(
+      surface,
+      withoutLinkedRemoval,
+      /linked-exit topology removal .* has no exact workspace interaction/,
+    );
+
+    const withoutBiomeRemoval = {
+      ...surface.interactions,
+      topologyRemovals: new Map(surface.interactions.topologyRemovals),
+    };
+    withoutBiomeRemoval.topologyRemovals.delete(
+      semanticAddressKey(biome(surface, 'N').marker.address),
+    );
+    assertMissingInteraction(
+      surface,
+      withoutBiomeRemoval,
+      /biome topology removal .* has no exact workspace interaction/,
+    );
+
+    const takeover = biome(underworld, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'takeoverBatch' }> =>
+        node.kind === 'takeoverBatch',
+    );
+    if (takeover === undefined || takeover.targets.length === 1) {
+      throw new Error('F multi-target takeover batch is missing');
+    }
+    const withoutTakeoverSelection = {
+      ...underworld.interactions,
+      exitSelections: new Map(underworld.interactions.exitSelections),
+    };
+    withoutTakeoverSelection.exitSelections.delete(takeover.selection.focusKey);
+    assertMissingInteraction(
+      underworld,
+      withoutTakeoverSelection,
+      /exit selection .* has no exact workspace interaction/,
+    );
+
+    const storedTakeoverProject = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, takeover.source),
+      storeKey: 'RunProgress',
+    });
+    const storedTakeoverWorkspace = workspace(storedTakeoverProject);
+    const storedTakeover = biome(storedTakeoverWorkspace, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'takeoverBatch' }> =>
+        node.kind === 'takeoverBatch',
+    );
+    if (storedTakeover?.rewardStore === undefined) {
+      throw new Error('non-null F takeover reward store is not projected');
+    }
+    expect(
+      storedTakeoverWorkspace.interactions.batchRewardStores.has(
+        storedTakeover.rewardStore.focusKey,
+      ),
+    ).toBe(true);
+    const withoutTakeoverStore = {
+      ...storedTakeoverWorkspace.interactions,
+      batchRewardStores: new Map(storedTakeoverWorkspace.interactions.batchRewardStores),
+    };
+    withoutTakeoverStore.batchRewardStores.delete(storedTakeover.rewardStore.focusKey);
+    assertMissingInteraction(
+      storedTakeoverWorkspace,
+      withoutTakeoverStore,
+      /batch reward store .* has no exact workspace interaction/,
+    );
+
+    const hub = biome(surface, 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    const closableSlot = hub?.slots.find((slot) => slot.canClose);
+    if (closableSlot === undefined) throw new Error('closable N Hub slot is missing');
+    const hubSlot = surface.interactions.hubSlots.get(closableSlot.marker.focusKey);
+    if (hubSlot === undefined) throw new Error('closable N Hub interaction is missing');
+    const withoutHubClose = {
+      ...surface.interactions,
+      hubSlots: new Map(surface.interactions.hubSlots),
+    };
+    const { close, ...hubSlotWithoutClose } = hubSlot;
+    expect(close).toBeDefined();
+    withoutHubClose.hubSlots.set(closableSlot.marker.focusKey, hubSlotWithoutClose);
+    assertMissingInteraction(
+      surface,
+      withoutHubClose,
+      /.*closable Hub slot has no exact close interaction/,
+    );
+
+    const emptyF = createProjectDocument(catalog, {
+      projectId: 'missing-frontier-capability',
+      name: 'Missing frontier capability',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    const atFExitFrontier = applyProjectCommand(emptyF, catalog, {
+      kind: 'CreateStart',
+      biome: goldenFBiome,
+      occurrenceId: goldenFStartId,
+      gameName: 'F_Opening01',
+    });
+    const frontierWorkspace = workspace(atFExitFrontier);
+    const frontier = biome(frontierWorkspace, 'F').frontier;
+    if (frontier?.kind !== 'exitDecision') throw new Error('F exit frontier is missing');
+    expect(
+      frontierWorkspace.interactions.exitFrontierCapabilities.get(frontier.interactionKey),
+    ).toEqual({ structural: 'createBatch', takeover: true });
+    const withoutFrontierStructural = {
+      ...frontierWorkspace.interactions,
+      structural: new Map(frontierWorkspace.interactions.structural),
+    };
+    withoutFrontierStructural.structural.delete(frontier.interactionKey);
+    assertMissingInteraction(
+      frontierWorkspace,
+      withoutFrontierStructural,
+      /exit frontier structural action .* has no exact workspace interaction/,
+    );
+    const withoutFrontierTakeover = {
+      ...frontierWorkspace.interactions,
+      takeoverBatches: new Map(frontierWorkspace.interactions.takeoverBatches),
+    };
+    withoutFrontierTakeover.takeoverBatches.delete(frontier.interactionKey);
+    assertMissingInteraction(
+      frontierWorkspace,
+      withoutFrontierTakeover,
+      /exit frontier takeover action .* has no exact workspace interaction/,
+    );
   });
 
   it('projects biome-field, fixed-payload, and authored-choice-start controls with exact owners', () => {

@@ -176,12 +176,12 @@ function EphyraSideRoomEntryOrderSelect({
 }
 
 function EphyraWorkbench({
-  entered,
+  detailsActive,
   interactions,
   room,
   showIncomingReward,
 }: {
-  readonly entered: boolean;
+  readonly detailsActive: boolean;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'ephyra' }>;
   readonly showIncomingReward: boolean;
@@ -200,10 +200,10 @@ function EphyraWorkbench({
           />
         </div>
       )}
-      {!entered ? (
+      {!detailsActive ? (
         showIncomingReward ? null : (
           <p className="fixed-room-state">
-            Side rooms become available after this room is visited.
+            Side rooms become available after this room is selected in the visit order.
           </p>
         )
       ) : (
@@ -578,7 +578,7 @@ export function RoomOfferEditor({
       ) : null}
       {state.kind === 'ephyra' ? (
         <EphyraWorkbench
-          entered={room.entered}
+          detailsActive={room.detailsActive}
           interactions={interactions}
           room={state}
           showIncomingReward={showMainReward}
