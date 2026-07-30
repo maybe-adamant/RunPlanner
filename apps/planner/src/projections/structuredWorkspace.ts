@@ -873,16 +873,20 @@ export interface WorkspaceHubRailEntry {
 }
 
 /**
- * The projection owns visual rail placement. In particular, an active
- * ordinary frontier precedes derived completion endpoints in an incomplete
- * biome; React must not reconstruct that ordering from node categories.
+ * The projection owns this selective player-facing navigation outline. The
+ * rail highlights decisions, anchor stages, and the active frontier; it is not
+ * an exhaustive index of workspace nodes or semantic data.
  */
 export type WorkspaceRailEntry =
   | {
       readonly kind: 'node';
       readonly key: string;
+      /** Player-facing structure label such as Decision 2 or Preboss. */
+      readonly label: string;
       readonly marker: WorkspaceMarker;
       readonly node: WorkspaceNode;
+      /** Compact picked-room and reward context for the structure rail. */
+      readonly summary?: string;
     }
   | WorkspaceHubRailEntry
   | {
@@ -899,7 +903,7 @@ export type WorkspaceRailEntry =
 export interface WorkspaceBiome {
   readonly biomeKey: string;
   readonly completion: readonly WorkspaceCompletionNode[];
-  /** Read-only completion landmarks when a Hub owns the authoring rail. */
+  /** Read-only completion landmarks presented separately from every biome rail. */
   readonly completionOutline: readonly WorkspaceCompletionNode[];
   readonly entry?: WorkspaceOccurrenceWorkbenchNode;
   readonly fields: readonly WorkspaceBiomeField[];
@@ -1992,6 +1996,45 @@ function batchTopologyState(
     : 'complete';
 }
 
+type WorkspaceDecisionBatchNode =
+  WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
+
+function decisionOwnedMarkers(node: WorkspaceDecisionBatchNode): readonly WorkspaceMarker[] {
+  return Object.freeze([
+    node.marker,
+    node.selection,
+    ...(node.rewardStore === undefined ? [] : [node.rewardStore]),
+    ...node.targets.flatMap((target) => [
+      target.marker,
+      target.room.marker,
+      ...target.room.rewardControls.map((control) => control.marker),
+      ...localDetailMarkers(target.room.roomLocal),
+      ...(target.room.roomLocal.kind === 'fixed' ? [target.room.roomLocal.marker] : []),
+    ]),
+    ...node.missingTargets.map((target) => target.marker),
+  ]);
+}
+
+/**
+ * Ordinary offer and finding owners remain exact semantic addresses, while
+ * their visible workbench is the decision that contains them. Hub-owned
+ * stages keep their existing board/visit routing.
+ */
+function redirectDecisionFocus(
+  context: MutableProjectionContext,
+  node: WorkspaceDecisionBatchNode,
+): void {
+  if (node.source.kind === 'hubDecision') return;
+  for (const focusMarker of decisionOwnedMarkers(node)) {
+    const existing = context.focusByOwner.get(focusMarker.focusKey);
+    if (existing === undefined) continue;
+    context.focusByOwner.set(
+      focusMarker.focusKey,
+      Object.freeze({ ...existing, nodeKey: node.key }),
+    );
+  }
+}
+
 function projectRemovalScope(
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
@@ -2026,20 +2069,6 @@ function topologyRemovalScope(
     removedHubDecisionKeys: impact.removedHubDecisionKeys,
     removedOccurrenceIds: impact.removedOccurrenceIds,
   });
-}
-
-function batchRepairScope(
-  context: MutableProjectionContext,
-  plan: AuthoredBiomePlan,
-  batch: CanonicalBatch,
-  kind: 'ordinaryBatch' | 'takeoverBatch' | 'mixedBatch',
-): WorkspaceBatchRepairScope | undefined {
-  const roots = new Set(
-    batch.targets
-      .filter((target) => target.exit.kind === 'unavailable')
-      .map((target) => target.room.occurrenceId),
-  );
-  return batchRepairScopeForRoots(context, plan, batch.origin, kind, roots);
 }
 
 /**
@@ -2129,13 +2158,14 @@ function missingTargetsForBatch(
   context: MutableProjectionContext,
   plan: AuthoredBiomePlan,
   batch: CanonicalBatch,
+  projectedTargetExitKeys: ReadonlySet<string>,
 ): readonly WorkspaceMissingPhysicalTarget[] {
   if (batch.parent.origin.kind === 'hubRoom') return Object.freeze([]);
   return missingTargetsForPhysicalExits(
     context,
     batch.source,
     physicalExitsForSource(context, plan, batch.source),
-    new Set(batch.targets.map((target) => target.exit.exitKey)),
+    projectedTargetExitKeys,
   );
 }
 
@@ -2175,15 +2205,55 @@ function projectBatch(
   readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
 } {
   const owner = batch.origin;
-  const kind = batchKind(context.catalog, batch);
+  const authored = authoredBatchForOwner(context, plan, owner);
+  const kind =
+    authored === undefined
+      ? batchKind(context.catalog, batch)
+      : rawBatchKind(context, plan, authored);
   const sourceDecisionRemoval =
     kind === 'takeoverBatch' && batch.source.kind === 'hubDecision'
       ? hubStageDecisionRemoval(context, plan, owner, 'preboss')
       : undefined;
-  const projectedTargets = batch.targets.map((target) =>
+  const materializedTargets = batch.targets.map((target) =>
     targetNode(context, plan, target, sourceDecisionRemoval),
   );
-  const repairScope = batchRepairScope(context, plan, batch, kind);
+  const materializedExitKeys = new Set(materializedTargets.map((target) => target.target.exitKey));
+  const physical = physicalExitsForSource(context, plan, batch.source);
+  const retainedTargets =
+    authored === undefined
+      ? []
+      : authored.normal.targets
+          .filter((target) => !materializedExitKeys.has(target.exitKey))
+          .map((target) =>
+            authoredBatchTargetNode(
+              context,
+              plan,
+              authored,
+              target,
+              physical,
+              authoredFieldsActiveCageCount(context, plan, authored),
+              sourceDecisionRemoval,
+            ),
+          );
+  // A progressive product may stop while processing one physical peer. The
+  // materialized prefix remains authoritative where it exists, but retained
+  // authored peers must still project as room offers rather than synthetic
+  // empty exits so their room-local rewards and findings remain editable.
+  const projectedTargets = [...materializedTargets, ...retainedTargets].sort(
+    (left, right) => left.target.index - right.target.index,
+  );
+  const projectedTargetExitKeys = new Set(projectedTargets.map((target) => target.target.exitKey));
+  const repairScope = batchRepairScopeForRoots(
+    context,
+    plan,
+    batch.origin,
+    kind,
+    new Set(
+      projectedTargets
+        .filter((target) => target.target.physicalState === 'unavailable')
+        .map((target) => target.target.room.occurrenceId),
+    ),
+  );
   const fields = fieldsContextForCanonicalBatch(context, batch);
   const rewardStore =
     batch.rewardStore.kind === 'authoredBaseStore'
@@ -2194,7 +2264,7 @@ function projectBatch(
     ...(fields === undefined ? {} : { fields }),
     key: `batch:${semanticAddressKey(owner)}`,
     marker: marker(context, owner),
-    missingTargets: missingTargetsForBatch(context, plan, batch),
+    missingTargets: missingTargetsForBatch(context, plan, batch, projectedTargetExitKeys),
     owner,
     ...(repairScope === undefined ? {} : { repairScope }),
     ...(rewardStore === undefined ? {} : { rewardStore }),
@@ -2222,6 +2292,7 @@ function projectBatch(
             kind: 'ordinaryBatch' as const,
             targetInteraction: 'replaceable' as const,
           });
+  redirectDecisionFocus(context, projected);
   return Object.freeze({
     batch: projected,
     workbenches: Object.freeze(
@@ -2496,6 +2567,65 @@ type AuthoredBatchDecision = ExitDecision & {
 type AuthoredLinkedExitDecision = ExitDecision & {
   readonly normal: Extract<ExitDecision['normal'], { readonly kind: 'linked' }>;
 };
+type AuthoredBatchTarget = AuthoredBatchDecision['normal']['targets'][number];
+
+function authoredBatchForOwner(
+  context: MutableProjectionContext,
+  plan: AuthoredBiomePlan,
+  owner: ExitDecisionAddress,
+): AuthoredBatchDecision | undefined {
+  return plan.topology?.decisions.find(
+    (decision): decision is AuthoredBatchDecision =>
+      decision.kind === 'exit' &&
+      decision.normal.kind === 'batch' &&
+      semanticAddressKey(createExitDecisionAddress(context.biome, decision.source)) ===
+        semanticAddressKey(owner),
+  );
+}
+
+function authoredBatchTargetNode(
+  context: MutableProjectionContext,
+  plan: AuthoredBiomePlan,
+  decision: AuthoredBatchDecision,
+  target: AuthoredBatchTarget,
+  physical: readonly DeclaredPhysicalExit[],
+  fieldsActiveCageCount: number | undefined,
+  sourceDecisionRemoval: WorkspaceStageDecisionRemoval | undefined,
+): { readonly target: WorkspacePhysicalTarget; readonly node: WorkspaceOccurrenceWorkbenchNode } {
+  const occurrence = authoredOccurrence(plan, target.occurrenceId);
+  if (occurrence === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${plan.biomeKey} target ${target.occurrenceId} is absent from authored occurrences`,
+    );
+  }
+  const targetAddress = createTargetAddress(context.biome, decision.source, target.exitKey);
+  const targetMarker = marker(context, targetAddress);
+  const node = Object.freeze({
+    ...projectOccurrence(context, occurrence, false, undefined, fieldsActiveCageCount),
+    ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
+    railMarker: targetMarker,
+  });
+  const exit = physical.find((candidate) => candidate.exitKey === target.exitKey);
+  return Object.freeze({
+    node,
+    target: Object.freeze({
+      exitKey: target.exitKey,
+      index: exit?.index ?? requiredNormalExitOrdinal(target.exitKey),
+      marker: targetMarker,
+      physicalState: exit === undefined ? ('unavailable' as const) : ('available' as const),
+      selected:
+        decision.selection.kind === 'normal' && decision.selection.exitKey === target.exitKey,
+      retained: true,
+      nextPath:
+        requireRoom(context.catalog, occurrence.gameName).kind === 'Preboss'
+          ? ('startsCompletion' as const)
+          : decision.selection.kind === 'normal' && decision.selection.exitKey === target.exitKey
+            ? ('continuesSpine' as const)
+            : ('deadLeaf' as const),
+      room: node.room,
+    }),
+  });
+}
 
 /**
  * A retained or upstream-blocked Fields target has no canonical room yet, but
@@ -2639,8 +2769,7 @@ function projectAuthoredBatch(
   const rank = new Map(physical.map((exit) => [exit.exitKey, exit.index] as const));
   const fieldsActiveCageCount = authoredFieldsActiveCageCount(context, plan, decision);
   const fields = fieldsContextForAuthoredBatch(context, plan, decision);
-  const workbenches: WorkspaceOccurrenceWorkbenchNode[] = [];
-  const targets = [...decision.normal.targets]
+  const projectedTargets = [...decision.normal.targets]
     .sort(
       (left, right) =>
         (rank.get(left.exitKey) ??
@@ -2650,39 +2779,18 @@ function projectAuthoredBatch(
           normalExitOrdinal(right.exitKey) ??
           unknownPhysicalExitSortIndex),
     )
-    .map((target) => {
-      const occurrence = authoredOccurrence(plan, target.occurrenceId);
-      if (occurrence === undefined) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${plan.biomeKey} target ${target.occurrenceId} is absent from authored occurrences`,
-        );
-      }
-      const targetAddress = createTargetAddress(context.biome, decision.source, target.exitKey);
-      const targetMarker = marker(context, targetAddress);
-      const workbench = Object.freeze({
-        ...projectOccurrence(context, occurrence, false, undefined, fieldsActiveCageCount),
-        ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
-        railMarker: targetMarker,
-      });
-      workbenches.push(workbench);
-      const exit = physical.find((candidate) => candidate.exitKey === target.exitKey);
-      return Object.freeze({
-        exitKey: target.exitKey,
-        index: exit?.index ?? requiredNormalExitOrdinal(target.exitKey),
-        marker: targetMarker,
-        physicalState: exit === undefined ? ('unavailable' as const) : ('available' as const),
-        selected:
-          decision.selection.kind === 'normal' && decision.selection.exitKey === target.exitKey,
-        retained: true,
-        nextPath:
-          requireRoom(context.catalog, occurrence.gameName).kind === 'Preboss'
-            ? ('startsCompletion' as const)
-            : decision.selection.kind === 'normal' && decision.selection.exitKey === target.exitKey
-              ? ('continuesSpine' as const)
-              : ('deadLeaf' as const),
-        room: workbench.room,
-      });
-    });
+    .map((target) =>
+      authoredBatchTargetNode(
+        context,
+        plan,
+        decision,
+        target,
+        physical,
+        fieldsActiveCageCount,
+        sourceDecisionRemoval,
+      ),
+    );
+  const targets = projectedTargets.map((target) => target.target);
   const targetsByKey = new Set(decision.normal.targets.map((target) => target.exitKey));
   const missingTargets = missingTargetsForPhysicalExits(
     context,
@@ -2742,7 +2850,11 @@ function projectAuthoredBatch(
             kind: 'ordinaryBatch' as const,
             targetInteraction: 'replaceable' as const,
           });
-  return Object.freeze({ batch, workbenches: Object.freeze(workbenches) });
+  redirectDecisionFocus(context, batch);
+  return Object.freeze({
+    batch,
+    workbenches: Object.freeze(projectedTargets.map((target) => target.node)),
+  });
 }
 
 function projectAuthoredLinkedExit(
@@ -3889,6 +4001,78 @@ function railMarkerForNode(node: WorkspaceNode): WorkspaceMarker {
   return node.kind === 'occurrenceWorkbench' ? (node.railMarker ?? node.marker) : node.marker;
 }
 
+function pickedTargetSummary(
+  node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode,
+): string | undefined {
+  const picked = node.targets.find((target) => target.selected);
+  if (picked === undefined) return undefined;
+  return picked.room.rewardSummary === undefined
+    ? picked.room.label
+    : `${picked.room.label} · ${picked.room.rewardSummary}`;
+}
+
+function decisionRailMarker(
+  node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode,
+): WorkspaceMarker {
+  const markers = new Map<string, WorkspaceMarker>();
+  for (const value of decisionOwnedMarkers(node)) markers.set(value.focusKey, value);
+  const findingCount = [...markers.values()].reduce(
+    (total, marker) => total + marker.findingCount,
+    0,
+  );
+  return findingCount === node.marker.findingCount
+    ? node.marker
+    : Object.freeze({ ...node.marker, findingCount });
+}
+
+function nodeRailPresentation(
+  node: WorkspaceNode,
+  decisionIndex: number | undefined,
+  isEntry = false,
+): { readonly label: string; readonly summary?: string } {
+  switch (node.kind) {
+    case 'occurrenceWorkbench': {
+      const entryLabel = isEntry && node.room.kind === 'Opening' ? 'Opening' : node.room.label;
+      const rewardSummary =
+        entryLabel === node.room.label
+          ? node.room.rewardSummary
+          : node.room.rewardSummary === undefined
+            ? node.room.label
+            : `${node.room.label} · ${node.room.rewardSummary}`;
+      return {
+        label: entryLabel,
+        ...(rewardSummary === undefined ? {} : { summary: rewardSummary }),
+      };
+    }
+    case 'linkedExit':
+      return {
+        label: node.target.room.label,
+        ...(node.target.room.rewardSummary === undefined
+          ? {}
+          : { summary: node.target.room.rewardSummary }),
+      };
+    case 'ordinaryBatch':
+    case 'mixedBatch': {
+      const summary = pickedTargetSummary(node);
+      return {
+        label: `Decision ${decisionIndex ?? 1}`,
+        ...(summary === undefined ? {} : { summary }),
+      };
+    }
+    case 'takeoverBatch': {
+      const summary = pickedTargetSummary(node);
+      return {
+        label: 'Preboss',
+        ...(summary === undefined ? {} : { summary }),
+      };
+    }
+    case 'completion':
+      return { label: node.label };
+    case 'hubDecision':
+      return { label: 'Hub' };
+  }
+}
+
 /**
  * The rail needs the visit's room-local workbench identity, while the Hub
  * board retains its distinct visit-order owner.  Publishing both avoids
@@ -4000,7 +4184,7 @@ function projectBiome(
   // Structural completeness is authoritative even when simulation coverage is
   // blocked upstream.  In particular, a Hub's next visit must remain a
   // projectable frontier after its board has been authored.
-  const frontier = authoringFrontier(context, plan);
+  let frontier = authoringFrontier(context, plan);
   const nextHubVisitIndex = frontier?.kind === 'hubVisit' ? frontier.owner.visitIndex : undefined;
   const fields = projectBiomeFields(context, plan, layout);
   if (plan.topology !== null && layout.start.kind === 'authoredChoice') {
@@ -4128,6 +4312,25 @@ function projectBiome(
     }
   }
   const structuralNodes = Object.freeze([...nodes]);
+  if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'occurrence') {
+    const predecessorOccurrenceId = frontier.owner.source.occurrenceId;
+    const predecessorDecision = structuralNodes.find(
+      (
+        node,
+      ): node is
+        WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.targets.some((target) => target.room.occurrenceId === predecessorOccurrenceId),
+    );
+    if (predecessorDecision !== undefined) {
+      frontier = Object.freeze({
+        ...frontier,
+        predecessorNodeKey: predecessorDecision.key,
+      });
+    }
+  }
   const completion = layout.completion.rooms.map((descriptor) => {
     const address = createCompletionRoomAddress(biomeAddress, descriptor.role);
     return Object.freeze({
@@ -4148,9 +4351,14 @@ function projectBiome(
       .map((node) => node.room.occurrenceId),
   );
   const railNodes = structuralNodes
-    .filter(
-      (node) => node.kind !== 'occurrenceWorkbench' || node.railVisibility !== 'inspectorOnly',
-    )
+    .filter((node) => {
+      if (node.kind !== 'occurrenceWorkbench') return true;
+      if (node.railVisibility === 'inspectorOnly') return false;
+      // Ordinary room offers belong inside their owning decision workbench.
+      // N's fixed Opening, PreHub, and Preboss occurrences remain structural
+      // stages, while an ordinary biome keeps only its authored entry.
+      return layout.progression.kind === 'hub' || node.key === entry?.key;
+    })
     .filter(
       (node) =>
         layout.progression.kind !== 'hub' ||
@@ -4173,15 +4381,27 @@ function projectBiome(
     (frontier?.kind === 'exitDecision' && frontier.owner.source.kind !== 'hubDecision')
       ? frontier
       : undefined;
-  const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry =>
-    node.kind === 'hubDecision'
-      ? projectHubRailEntry(node, structuralNodes)
-      : Object.freeze({
-          kind: 'node' as const,
-          key: node.key,
-          marker: railMarkerForNode(node),
-          node,
-        });
+  let decisionIndex = 0;
+  const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry => {
+    if (node.kind === 'hubDecision') return projectHubRailEntry(node, structuralNodes);
+    if (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') decisionIndex += 1;
+    const presentation = nodeRailPresentation(
+      node,
+      node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch' ? decisionIndex : undefined,
+      node.key === entry?.key,
+    );
+    return Object.freeze({
+      kind: 'node' as const,
+      key: node.key,
+      label: presentation.label,
+      marker:
+        node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch' || node.kind === 'takeoverBatch'
+          ? decisionRailMarker(node)
+          : railMarkerForNode(node),
+      node,
+      ...(presentation.summary === undefined ? {} : { summary: presentation.summary }),
+    });
+  };
   const rail = Object.freeze([
     ...reachableRailNodes.map(railEntryForNode),
     ...(railFrontier === undefined
@@ -4195,23 +4415,12 @@ function projectBiome(
           }),
         ]),
     ...hubOutlines.map(railEntryForNode),
-    ...(layout.progression.kind === 'hub'
-      ? []
-      : completion.map((node) =>
-          Object.freeze({
-            kind: 'node' as const,
-            key: node.key,
-            marker: node.marker,
-            node,
-          }),
-        )),
   ]);
   const biomeMarker = marker(context, biomeAddress, `biome:${routeKey}:${plan.biomeKey}`);
   const projected = Object.freeze({
     biomeKey: plan.biomeKey,
     completion: Object.freeze(completion),
-    completionOutline:
-      layout.progression.kind === 'hub' ? Object.freeze(completion) : Object.freeze([]),
+    completionOutline: Object.freeze(completion),
     ...(entry === undefined ? {} : { entry }),
     fields,
     frontier,

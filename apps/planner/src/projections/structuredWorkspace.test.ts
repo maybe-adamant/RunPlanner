@@ -235,184 +235,17 @@ describe('unified structured workspace projection', () => {
     ]);
   });
 
-  it('freezes each ordinary-decision rail in game-domain order', () => {
+  it('projects each ordinary-biome rail as decision points with picked summaries', () => {
     const underworld = workspace(createGoldenFGHIProject(catalog));
     const surface = workspace(createRepresentativeNOPQProject());
     const expected = {
-      F: [
-        'room:F_Opening01',
-        'ordinaryBatch',
-        'room:F_Combat02',
-        'ordinaryBatch',
-        'room:F_Combat03',
-        'room:F_Combat03',
-        'ordinaryBatch',
-        'room:F_Combat04',
-        'room:F_Combat04',
-        'ordinaryBatch',
-        'room:F_Combat05',
-        'room:F_Combat11',
-        'ordinaryBatch',
-        'room:F_Combat06',
-        'room:F_Combat06',
-        'ordinaryBatch',
-        'room:F_MiniBoss01',
-        'room:F_MiniBoss02',
-        'ordinaryBatch',
-        'room:F_Combat11',
-        'ordinaryBatch',
-        'room:F_Combat12',
-        'room:F_Combat12',
-        'ordinaryBatch',
-        'room:F_Combat14',
-        'room:F_Combat14',
-        'ordinaryBatch',
-        'room:F_Combat15',
-        'room:F_Combat15',
-        'takeoverBatch',
-        'room:F_PreBoss01',
-        'room:F_PreBoss01',
-        'completion:boss:F_Boss01',
-        'completion:postboss:F_PostBoss01',
-      ],
-      G: [
-        'room:G_Intro',
-        'ordinaryBatch',
-        'room:G_Combat01',
-        'ordinaryBatch',
-        'room:G_Combat02',
-        'room:G_Combat02',
-        'ordinaryBatch',
-        'room:G_Story01',
-        'room:G_Combat03',
-        'room:G_Combat03',
-        'ordinaryBatch',
-        'room:G_Combat10',
-        'ordinaryBatch',
-        'room:G_Shop01',
-        'room:G_Combat12',
-        'ordinaryBatch',
-        'room:G_MiniBoss01',
-        'room:G_MiniBoss02',
-        'ordinaryBatch',
-        'room:G_Combat12',
-        'room:G_Combat13',
-        'takeoverBatch',
-        'room:G_PreBoss01',
-        'room:G_PreBoss01',
-        'completion:boss:G_Boss01',
-        'completion:postboss:G_PostBoss01',
-      ],
-      H: [
-        'room:H_Intro',
-        'ordinaryBatch',
-        'room:H_Combat02',
-        'ordinaryBatch',
-        'room:H_Combat09',
-        'room:H_Combat03',
-        'ordinaryBatch',
-        'room:H_MiniBoss01',
-        'room:H_Bridge01',
-        'ordinaryBatch',
-        'room:H_Combat05',
-        'room:H_Combat04',
-        'takeoverBatch',
-        'room:H_PreBoss01',
-        'room:H_PreBoss01',
-        'completion:boss:H_Boss01',
-        'completion:postboss:H_PostBoss01',
-      ],
-      I: [
-        'room:I_Intro',
-        'ordinaryBatch',
-        'room:I_Combat01',
-        'ordinaryBatch',
-        'room:I_Combat03',
-        'room:I_Story01',
-        'ordinaryBatch',
-        'room:I_Combat05',
-        'room:I_Combat02',
-        'ordinaryBatch',
-        'room:I_Combat06',
-        'ordinaryBatch',
-        'room:I_Combat09',
-        'mixedBatch',
-        'room:I_PreBoss02',
-        'room:I_MiniBoss01',
-        'completion:boss:I_Boss01',
-        'completion:postboss:I_PostBoss01',
-      ],
-      O: [
-        'room:O_Intro',
-        'ordinaryBatch',
-        'room:O_Combat04',
-        'ordinaryBatch',
-        'room:O_Combat07',
-        'ordinaryBatch',
-        'room:O_Combat01',
-        'ordinaryBatch',
-        'room:O_Devotion01',
-        'ordinaryBatch',
-        'room:O_Story01',
-        'ordinaryBatch',
-        'room:O_Combat02',
-        'takeoverBatch',
-        'room:O_PreBoss01',
-        'completion:boss:O_Boss01',
-        'completion:postboss:O_PostBoss01',
-      ],
-      P: [
-        'room:P_Intro',
-        'ordinaryBatch',
-        'room:P_Combat03',
-        'room:P_Combat05',
-        'ordinaryBatch',
-        'room:P_Combat02',
-        'room:P_Combat06',
-        'ordinaryBatch',
-        'room:P_Combat04',
-        'room:P_Combat08',
-        'ordinaryBatch',
-        'room:P_Combat07',
-        'room:P_Combat11',
-        'ordinaryBatch',
-        'room:P_MiniBoss01',
-        'room:P_Combat09',
-        'ordinaryBatch',
-        'room:P_Combat10',
-        'room:P_Combat13',
-        'ordinaryBatch',
-        'room:P_Story01',
-        'room:P_Reprieve01',
-        'ordinaryBatch',
-        'room:P_Combat12',
-        'room:P_Combat14',
-        'takeoverBatch',
-        'room:P_PreBoss01',
-        'room:P_PreBoss01',
-        'completion:boss:P_Boss01',
-        'completion:postboss:P_PostBoss01',
-      ],
-      Q: [
-        'room:Q_Intro',
-        'ordinaryBatch',
-        'room:Q_Combat10',
-        'ordinaryBatch',
-        'room:Q_Combat03',
-        'ordinaryBatch',
-        'room:Q_MiniBoss02',
-        'room:Q_MiniBoss05',
-        'ordinaryBatch',
-        'room:Q_Combat01',
-        'ordinaryBatch',
-        'room:Q_Combat12',
-        'ordinaryBatch',
-        'room:Q_MiniBoss03',
-        'room:Q_MiniBoss04',
-        'takeoverBatch',
-        'room:Q_PreBoss01',
-        'completion:boss:Q_Boss01',
-      ],
+      F: { decisions: 10, entry: 'Opening', preboss: true },
+      G: { decisions: 7, entry: 'Entrance', preboss: true },
+      H: { decisions: 4, entry: 'Entrance', preboss: true },
+      I: { decisions: 6, entry: 'Entrance', preboss: false },
+      O: { decisions: 6, entry: 'Entrance', preboss: true },
+      P: { decisions: 8, entry: 'Entrance', preboss: true },
+      Q: { decisions: 6, entry: 'Entrance', preboss: true },
     } as const;
 
     for (const [projected, biomeKey] of [
@@ -424,21 +257,64 @@ describe('unified structured workspace projection', () => {
       [surface, 'P'],
       [surface, 'Q'],
     ] as const) {
-      expect(railShape(biome(projected, biomeKey))).toEqual(expected[biomeKey]);
+      const projectedBiome = biome(projected, biomeKey);
+      const contract = expected[biomeKey];
+      const nodeEntries = projectedBiome.rail.filter(
+        (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+          entry.kind === 'node',
+      );
+      expect(nodeEntries.map((entry) => entry.label)).toEqual([
+        contract.entry,
+        ...Array.from({ length: contract.decisions }, (_, index) => `Decision ${index + 1}`),
+        ...(contract.preboss ? ['Preboss'] : []),
+      ]);
+      expect(
+        nodeEntries
+          .filter(
+            (entry) =>
+              entry.node.kind === 'ordinaryBatch' ||
+              entry.node.kind === 'mixedBatch' ||
+              entry.node.kind === 'takeoverBatch',
+          )
+          .every((entry) => entry.summary !== undefined),
+      ).toBe(true);
+      expect(
+        nodeEntries.some(
+          (entry) =>
+            entry.node.kind === 'occurrenceWorkbench' &&
+            entry.node.key !== projectedBiome.entry?.key,
+        ),
+      ).toBe(false);
     }
+
+    const firstFDecision = biome(underworld, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch',
+    );
+    const firstFTarget = firstFDecision?.targets[0];
+    if (firstFDecision === undefined || firstFTarget === undefined) {
+      throw new Error('F Decision 1 target is missing');
+    }
+    expect(underworld.focusByOwner.get(firstFTarget.room.marker.focusKey)).toMatchObject({
+      focusAddress: firstFTarget.room.marker.address,
+      nodeKey: firstFDecision.key,
+    });
+    expect(
+      underworld.focusByOwner.get(firstFTarget.room.rewardControls[0]!.marker.focusKey),
+    ).toMatchObject({
+      nodeKey: firstFDecision.key,
+    });
   });
 
-  it('places an active ordinary frontier before derived completion endpoints', () => {
+  it('keeps completion landmarks outside the decision-point rail', () => {
     const empty = createProjectDocument(catalog, {
       projectId: 'frontier-before-completion',
       name: 'Frontier before completion',
       configuredBiomeCounts: { Underworld: 1 },
     });
-    expect(railShape(biome(workspace(empty), 'F'))).toEqual([
-      'frontier:start',
-      'completion:boss:F_Boss01',
-      'completion:postboss:F_PostBoss01',
-    ]);
+    const emptyBiome = biome(workspace(empty), 'F');
+    expect(railShape(emptyBiome)).toEqual(['frontier:start']);
+    expect(emptyBiome.completionOutline.map((node) => node.label)).toEqual(['Hecate', 'Postboss']);
 
     const startId = createOccurrenceId('frontier-before-completion-start');
     const started = applyProjectCommand(empty, catalog, {
@@ -450,8 +326,6 @@ describe('unified structured workspace projection', () => {
     expect(railShape(biome(workspace(started), 'F'))).toEqual([
       'room:F_Opening01',
       'frontier:exitDecision',
-      'completion:boss:F_Boss01',
-      'completion:postboss:F_PostBoss01',
     ]);
   });
 
@@ -1086,7 +960,8 @@ describe('unified structured workspace projection', () => {
       storeKey: 'RunProgress',
     });
     const projected = workspace(configuredPartial);
-    const batch = biome(projected, 'F').nodes.find(
+    const projectedBiome = biome(projected, 'F');
+    const batch = projectedBiome.nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
         node.kind === 'ordinaryBatch' &&
         node.owner.source.kind === 'occurrence' &&
@@ -1108,6 +983,16 @@ describe('unified structured workspace projection', () => {
       owner: first.owner,
     });
     expect(projected.interactions.rooms.has(semanticAddressKey(second.owner))).toBe(false);
+    expect(first.marker.findingCount).toBeGreaterThan(0);
+    const railDecision = projectedBiome.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' && entry.node.key === batch.key,
+    );
+    if (railDecision === undefined) throw new Error('F partial decision rail stop is missing');
+    expect(railDecision.marker.findingCount).toBeGreaterThanOrEqual(first.marker.findingCount);
+    expect(projected.focusByOwner.get(first.marker.focusKey)).toMatchObject({
+      nodeKey: batch.key,
+    });
   });
 
   it('keeps target authoring behind its declaration-owned batch setup', () => {
@@ -2107,7 +1992,8 @@ describe('unified structured workspace projection', () => {
             },
       ),
     };
-    const retained = biome(workspace(incomplete), 'F').nodes.find(
+    const projected = workspace(incomplete);
+    const retained = biome(projected, 'F').nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
         node.kind === 'ordinaryBatch' &&
         node.owner.source.kind === 'occurrence' &&
@@ -2120,6 +2006,51 @@ describe('unified structured workspace projection', () => {
     expect(retained.targets.every((target) => target.marker.assessment === 'unassessed')).toBe(
       true,
     );
+    const retainedTarget = retained.targets.find((target) => target.room.rewardControls.length > 0);
+    if (retainedTarget === undefined) throw new Error('retained F reward target is missing');
+    expect(projected.focusByOwner.get(retainedTarget.room.marker.focusKey)).toMatchObject({
+      nodeKey: retained.key,
+    });
+    expect(
+      projected.focusByOwner.get(retainedTarget.room.rewardControls[0]!.marker.focusKey),
+    ).toMatchObject({
+      nodeKey: retained.key,
+    });
+  });
+
+  it('keeps a reward-invalid physical peer as an authored offer instead of a blank exit', () => {
+    const secondPeer = goldenFOccurrenceId(2, 2);
+    const rewardInvalid = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, secondPeer),
+      value: { rewardType: 'MetaCurrencyDrop' },
+    });
+    const invalid = applyProjectCommand(rewardInvalid, catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenFOccurrenceId(10, 1),
+      }),
+    });
+    const projected = workspace(invalid);
+    const decision = biome(projected, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        node.owner.source.kind === 'occurrence' &&
+        node.owner.source.occurrenceId === goldenFOccurrenceId(1, 1),
+    );
+    if (decision === undefined) throw new Error('F peer decision is missing');
+
+    expect(decision.targets.map((target) => target.room.occurrenceId)).toEqual([
+      goldenFOccurrenceId(2, 1),
+      secondPeer,
+    ]);
+    expect(decision.missingTargets).toEqual([]);
+    const retainedPeer = decision.targets.find((target) => target.room.occurrenceId === secondPeer);
+    if (retainedPeer === undefined) throw new Error('invalid F peer is missing');
+    expect(retainedPeer.retained).toBe(true);
+    expect(retainedPeer.room.rewardControls).toHaveLength(1);
+    expect(retainedPeer.room.rewardControls[0]?.owner.kind).toBe('incomingReward');
   });
 
   it('indexes exact finding owners and falls back only to the owning biome shell', () => {

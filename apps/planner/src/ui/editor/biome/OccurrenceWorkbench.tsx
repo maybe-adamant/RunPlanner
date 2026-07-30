@@ -511,15 +511,22 @@ function ShopWorkbench({
   );
 }
 
-/** A room-local editor that consumes the structured workspace only. */
-export function OccurrenceWorkbench({
+/**
+ * Renders the complete reward-bearing state for one room offer without
+ * introducing a second room card. Ordinary decisions use this directly so
+ * room selection, reward selection, and picked state remain one surface.
+ */
+export function RoomOfferEditor({
+  idPrefix,
   interactions,
-  nextFrontier,
   presentation,
   room,
-}: OccurrenceWorkbenchProps) {
-  const dispatch = useAppDispatch();
-  const idPrefix = `occurrence-${room.occurrenceId}`;
+}: {
+  readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly presentation: 'full' | 'hubRoomLocal';
+  readonly room: WorkspaceRoomSummary;
+}) {
   const state = room.roomLocal;
   const showMainReward = presentation === 'full';
   const hasRoomLocalDetail =
@@ -529,34 +536,7 @@ export function OccurrenceWorkbench({
     state.kind === 'shop';
 
   return (
-    <article className="room-card biome-occurrence-workbench">
-      <header className="room-card-heading">
-        <div>
-          <p className="card-kicker">{room.entered ? 'Entered room' : 'Offered room'}</p>
-          <h3>{room.label}</h3>
-        </div>
-        <div className="owner-markers">
-          <span className="room-kind">{room.kind}</span>
-          <SemanticOwnerMarker address={room.address} />
-        </div>
-      </header>
-      {room.roomPicker === undefined ? null : (
-        <RoomSelector
-          idPrefix={idPrefix}
-          interactions={interactions}
-          label="Starting room"
-          onSelect={(gameName) =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceOccurrenceRoom',
-                occurrence: room.address,
-                gameName,
-              }),
-            )
-          }
-          owner={room.roomPicker.address}
-        />
-      )}
+    <>
       {!showMainReward && !hasRoomLocalDetail ? (
         <p className="fixed-room-state">No additional room details.</p>
       ) : null}
@@ -614,6 +594,55 @@ export function OccurrenceWorkbench({
       {!showMainReward || room.rewardSummary === undefined ? null : (
         <p className="biome-room-summary">{room.rewardSummary}</p>
       )}
+    </>
+  );
+}
+
+/** A room-local editor that consumes the structured workspace only. */
+export function OccurrenceWorkbench({
+  interactions,
+  nextFrontier,
+  presentation,
+  room,
+}: OccurrenceWorkbenchProps) {
+  const dispatch = useAppDispatch();
+  const idPrefix = `occurrence-${room.occurrenceId}`;
+
+  return (
+    <article className="room-card biome-occurrence-workbench">
+      <header className="room-card-heading">
+        <div>
+          <p className="card-kicker">{room.entered ? 'Entered room' : 'Offered room'}</p>
+          <h3>{room.label}</h3>
+        </div>
+        <div className="owner-markers">
+          <span className="room-kind">{room.kind}</span>
+          <SemanticOwnerMarker address={room.address} />
+        </div>
+      </header>
+      {room.roomPicker === undefined ? null : (
+        <RoomSelector
+          idPrefix={idPrefix}
+          interactions={interactions}
+          label="Starting room"
+          onSelect={(gameName) =>
+            dispatch(
+              authoredProjectCommandDispatched({
+                kind: 'ReplaceOccurrenceRoom',
+                occurrence: room.address,
+                gameName,
+              }),
+            )
+          }
+          owner={room.roomPicker.address}
+        />
+      )}
+      <RoomOfferEditor
+        idPrefix={idPrefix}
+        interactions={interactions}
+        presentation={presentation}
+        room={room}
+      />
       {nextFrontier === undefined ? null : (
         <button
           className="secondary-action"

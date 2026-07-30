@@ -42,6 +42,16 @@ editor exposes the order directly. Commit 5c intentionally replaces the schema
 9 purchased-set contract. These plans supersede the former presentation-only
 Commit 12 and Commit 13 wording in `IMPLEMENTATION_PLAN.md`.
 
+An out-of-sequence decision-highlight rail follow-up is complete without
+advancing that active frontier. Ordinary biome rails now emphasize entry,
+decision, and distinct Preboss highlights instead of exhaustively indexing
+every room occurrence. The exhaustive workspace still retains all target,
+occurrence, reward, finding, retained-invalid, and room-local products; focusing
+one opens its exact control inside the containing decision. N retains its
+Opening, PreHub, Hub, Preboss, and subordinate visit presentation.
+The complete repository gate passes with 59 test files and 618 tests, followed
+by all package typechecks, lint, formatting, production build, and diff checks.
+
 Commit 1 is complete. The catalog and authored-project boundary uses catalog
 `0.15.0-unified-biome-decisions` and schema 9 only: one biome envelope, common
 exit/Hub decisions, declaration-derived Preboss batches, and progressive N

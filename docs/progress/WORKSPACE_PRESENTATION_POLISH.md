@@ -11,12 +11,36 @@ limited to the four presentation changes below. Exact authored Shop purchase
 order is the separate cross-layer Commit 5c defined by
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md).
 
+The decision-highlight rail follow-up documented below was delivered out of
+sequence and does not complete, renumber, or replace the still-active 5b.3 and
+5b.4 slices.
+
 Stable ownership remains with
 [`STRUCTURED_EDITOR_WORKSPACE.md`](../design/STRUCTURED_EDITOR_WORKSPACE.md),
 [`CONTEXTUAL_EDITOR_UX.md`](../design/CONTEXTUAL_EDITOR_UX.md),
 [`REWARD_MODEL.md`](../design/REWARD_MODEL.md), and the affected biome
 authorities. This document owns delivery order, concrete UI policy, file scope,
 and acceptance evidence for the follow-up.
+
+## Delivered Decision-Highlight Rail Follow-Up
+
+This out-of-sequence presentation follow-up supersedes this plan's requirement
+that F/G/H/I/O/P/Q preserve their previously flat rail fixtures. The rail is a
+selective decision-highlight projection, not the exhaustive workspace:
+ordinary room occurrences and all other semantic products remain projected,
+while the player-facing rail shows one stop per biome decision with a picked
+room and reward summary. Selecting that stop presents all offered rooms,
+rewards, and picked controls together. N retains the four-stage rail and
+subordinate authored visit navigation delivered here. Current authority lives in
+[`STRUCTURED_EDITOR_WORKSPACE.md`](../design/STRUCTURED_EDITOR_WORKSPACE.md);
+5b.1 and 5b.2 below remain historical delivery evidence, while 5b.3 and 5b.4
+remain the planned active slices.
+
+Focused projection, editor, and product-loop coverage proves decision summaries,
+co-located room and reward editing, exact finding focus, retained-invalid
+offers, incomplete-decision fallback, and unchanged N Hub/visit behavior.
+The complete repository gate passes with 59 test files and 618 tests, followed
+by all package typechecks, lint, formatting, production build, and diff checks.
 
 ## Goal
 

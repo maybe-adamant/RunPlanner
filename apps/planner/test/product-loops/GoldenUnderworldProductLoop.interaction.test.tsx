@@ -111,7 +111,7 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(application.store.getState().projectWorkspace.history.present).toBe(beforeShrink);
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
-    expect(screen.getByText('Opening 02')).toBeTruthy();
+    expect(screen.getByText(/Opening 02/)).toBeTruthy();
   });
 
   it('uses one projected semantic repair command for retained ordinary and takeover exits', async () => {
@@ -243,7 +243,7 @@ describe('underworld product loop', () => {
     takeoverApplication.dispose();
   });
 
-  it('keeps pointer and keyboard workflows available across ordinary, takeover, mixed, fixed-stage, Hub, and completion decisions', async () => {
+  it('keeps pointer and keyboard workflows available across decisions, fixed stages, Hub, and completion landmarks', async () => {
     const application = createApplication();
     application.store.dispatch(
       authoredProjectReplaced(createGoldenFGHIProject(application.catalog)),
@@ -259,7 +259,9 @@ describe('underworld product loop', () => {
     if (ordinary === null) throw new Error('F ordinary batch rail node is missing');
     act(() => ordinary.focus());
     await view.user.keyboard('{Enter}');
-    expect(screen.getByText('Generated exits')).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Choose a room and reward' }),
+    ).toBeTruthy();
 
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     const gStructure = screen.getByRole('region', { name: 'Oceanus structure' });
@@ -268,14 +270,16 @@ describe('underworld product loop', () => {
     );
     if (takeover === null) throw new Error('G takeover rail node is missing');
     await view.user.click(takeover);
-    expect(screen.getByText('Atomic Preboss batch')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Preboss' })).toBeTruthy();
 
     await view.user.click(screen.getByRole('button', { name: 'Tartarus' }));
     const iStructure = screen.getByRole('region', { name: 'Tartarus structure' });
     const mixed = iStructure.querySelector<HTMLButtonElement>('[data-kind="mixedBatch"] button');
     if (mixed === null) throw new Error('I mixed batch rail node is missing');
     await view.user.click(mixed);
-    expect(screen.getByText('Mixed normal batch')).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Choose a room and reward' }),
+    ).toBeTruthy();
 
     act(() =>
       application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject())),
@@ -300,14 +304,8 @@ describe('underworld product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
     const pStructure = screen.getByRole('region', { name: 'Olympus structure' });
-    const completion = Array.from(
-      pStructure.querySelectorAll<HTMLElement>('[data-kind="completion"]'),
-    ).at(-1);
-    const completionButton = completion?.querySelector<HTMLButtonElement>('button');
-    if (completionButton === null || completionButton === undefined) {
-      throw new Error('P completion rail node is missing');
-    }
-    await view.user.click(completionButton);
-    expect(screen.getByText(/derived from the biome layout/i)).toBeTruthy();
+    expect(pStructure.querySelector('[data-kind="completion"]')).toBeNull();
+    const completion = within(pStructure).getByRole('region', { name: 'Biome completion' });
+    expect(within(completion).getByText('Prometheus')).toBeTruthy();
   });
 });

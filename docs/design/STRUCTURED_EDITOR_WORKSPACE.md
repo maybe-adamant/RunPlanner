@@ -69,8 +69,8 @@ The primary authoring surface uses three conceptual regions:
 +----------------+-----------------------------+---------------------------+
 | Route rail     | Biome structure             | Focused inspector         |
 |                |                             |                           |
-| route status   | authored path / Hub board   | selected decision, room,  |
-| biome status   | offers and coverage         | reward, finding, or       |
+| route status   | decision points / Hub board | selected decision, room,  |
+| biome status   | picked summaries / coverage | reward, finding, or       |
 | navigation     | active frontier             | repair surface            |
 +----------------+-----------------------------+---------------------------+
 ```
@@ -111,11 +111,22 @@ editable when blocked, but its contextual state remains unassessed.
 ### Biome Structure
 
 Every configured biome renders through one `BiomeWorkspace` composition over a
-`WorkspaceBiome` projection. Its exhaustive workspace-node union presents
+`WorkspaceBiome` projection. Its exhaustive workspace-node union retains
 ordinary decisions, linked exits, takeover and mixed Preboss batches,
-completion, and the Hub decision without React inspecting authored topology.
-`HubDecisionWorkbench` is the one N-specific workbench and is nested inside
-that shared workspace; it does not create a second editor surface.
+completion, occurrence-local workbenches, and the Hub decision without React
+inspecting authored topology. The projected rail deliberately exposes only
+player-facing biome stages and decision points; exhaustive node ownership does
+not imply one rail stop per node. `HubDecisionWorkbench` is the one N-specific
+workbench and is nested inside that shared workspace; it does not create a
+second editor surface.
+
+The rail is a selective decision-highlight and navigation projection, not
+workspace authority. Omitting a semantic owner from the rail changes neither
+its authored data nor its workspace node, findings, contextual controls, focus
+destination, or editability. Room rewards and any future encounters, features,
+items, or other room-local products remain available through the containing
+decision or fixed-stage inspector unless a separate player-facing navigation
+need justifies another rail highlight.
 
 The center region does not attempt to make ordinary decision topology and the
 Hub board look structurally identical. It does give both the same route rail,
@@ -123,10 +134,14 @@ semantic focus, finding navigation, coverage, and focused-inspector language.
 
 ### Focused Inspector
 
-The inspector renders one focused semantic owner and the controls that belong to
-it. A decision focus may include its batch policy, physical exits, picked state,
-and compact target summaries. A room or local-child focus renders its concrete
-room, reward, shop, wheel, cage, side-room, or other owned state.
+The inspector renders the workbench containing the focused semantic owner and
+the controls that belong to it. An ordinary decision workbench includes its
+batch policy and every physical offer's picked state, room selector, and reward
+controls together. Focusing an ordinary target, occurrence, or reward opens that
+same decision workbench at its exact semantic control; it does not create a
+parallel room stop in the rail. Fixed entries and N visit-local details retain
+occurrence workbenches where they are player-facing stages or subordinate Hub
+navigation.
 
 Finding navigation selects the owning route and biome, focuses the semantic
 owner, and brings its inspector surface into view. The inspector never searches
@@ -150,11 +165,12 @@ markers, Preboss and completion-outline facts, and semantic focus destinations.
 React renders that projection and dispatches semantic commands.
 
 Creation establishes explicit transient semantic focus through the existing
-semantic-owner action. Every authored start selects its created Room Occurrence,
-and creating an ordinary batch, a takeover Preboss batch, or a completed-Hub
-handoff from the visible frontier first selects that frontier's owning
-workbench. Later edits retain that resolvable owner even when they reveal a new
-authoring frontier.
+semantic-owner action. Every authored start selects its created Room Occurrence.
+Creating an ordinary target selects its target owner while remaining in the
+owning decision workbench. Creating an ordinary batch, a takeover Preboss
+batch, or a completed-Hub handoff from the visible frontier first selects that
+frontier's owning workbench. Later edits retain that resolvable owner even when
+they reveal a new authoring frontier.
 
 The newly revealed frontier remains visible in the rail without stealing
 inspector focus. The workspace may attach that exact frontier marker only to
@@ -170,36 +186,40 @@ progressive evaluation. It must not be described as canonical topology.
 
 ## Ordinary Decision Workspace
 
-For F/G/H/I/O/P/Q, the center region presents a structured decision rail:
+For F/G/H/I/O/P/Q, the center region presents a concise decision-point rail:
 
 - the authored start or fixed entries;
-- each picked continuation as the trunk;
-- each generated decision as one stop;
+- each generated decision as exactly one stop, with a brief picked room and
+  reward summary;
 - the active continuation frontier;
 - retained downstream structure after an invalid upstream edit;
-- layout-owned Preboss-batch and completion structure;
-- completion rooms as derived, read-only endpoints where applicable.
+- a layout-owned Preboss stage where it is distinct from an ordinary decision;
+- completion rooms as a separate derived, read-only outline.
 
 The rail is not a freeform graph. Its visual position is derived from semantic
 topology and never persisted.
 
-### Picked Continuation and Generated Leaves
+### Decision Offers and Picked Summary
 
-The picked exit receives the strongest visual connection because it continues
-the entered route. Unpicked targets remain real generated offers and are not
-discarded presentation details. They may affect reward bags, sibling conflicts,
-source support, and possibility evaluation.
+Selecting a decision shows all of its physical offers together. Every authored
+offer keeps its room selector and reward editor at the same visual level,
+because the room and incoming reward jointly describe the offered door.
+Single-choice controls live on those cards, and the picked card receives the
+strongest emphasis because it continues the entered route.
 
-An unpicked target may collapse to one compact leaf summary, but the summary
-must retain:
-
-- its room label and incoming reward summary;
-- assessed, unassessed, invalid, or finding state;
-- a direct focus or expansion action;
-- enough distinction to locate sibling and bag conflicts.
+Unpicked targets remain fully visible in the decision workbench because they
+still affect reward bags, sibling conflicts, source support, and possibility
+evaluation. They do not become equal-weight stops on the biome rail. The rail
+shows only the picked room and reward as the decision's compact summary, while
+target, occurrence, reward, and finding focus all resolve to the exact control
+inside the decision.
 
 Picked and unpicked targets use the same occurrence identity and semantic
-addresses. Visual weight does not change ownership.
+addresses. Visual grouping does not change ownership.
+
+The one-stop-per-decision rule applies only to rail presentation. It does not
+collapse, delete, or coarsen the decision's target, occurrence, reward,
+room-local, or finding products.
 
 ### Variant-Owned Structure
 
@@ -286,8 +306,8 @@ to calculate it.
 
 ## Contextual Controls
 
-The inspector and compact leaves compose the shared contextual controls from
-`CONTEXTUAL_EDITOR_UX.md`:
+The inspector's decision offers and fixed-stage workbenches compose the shared
+contextual controls from `CONTEXTUAL_EDITOR_UX.md`:
 
 - grouped room selection for replaceable ordinary occurrences;
 - required-first and unavailable disclosures;
@@ -360,13 +380,15 @@ or move presentation policy into generic wrappers.
 
 The structured workspace is complete when:
 
-- ordinary-decision biomes show the picked continuation, generated leaves,
-  active frontier, Preboss structure, coverage, and findings without a long
-  equal-weight card stack;
+- ordinary-decision biomes show one rail stop per decision, a picked room and
+  reward summary, active frontier, Preboss structure, coverage, and findings
+  without adding every room offer to the rail;
 - N shows its board and visit timeline through `HubDecisionWorkbench` without
   acquiring ordinary-decision semantics;
-- every compact leaf remains inspectable and preserves reward and finding state;
-- finding navigation focuses the exact semantic owner in the inspector;
+- every ordinary decision exposes room, reward, and picked state together while
+  preserving unpicked reward and finding state;
+- finding navigation focuses the exact semantic owner inside its owning
+  decision or N visit-local workbench;
 - empty and partial biomes show only truthful declared or projected structure;
 - no expected length, probability, invented exit, or hypothetical future room is
   presented as a game fact;

@@ -114,12 +114,20 @@ The primary editor presents a route rail, one shared biome-structure region, and
 a focused semantic inspector. This is a structured projection over the unified
 workspace envelope, not a graph canvas or a second serialized UI tree.
 
-For ordinary decisions, the picked continuation forms the visual trunk and
-generated unpicked targets remain compact inspectable leaves. Visual emphasis
-does not change their game meaning: unpicked rewards still participate in
-sibling, bag, source, and possibility evaluation. For N, the center region
-remains the fixed Hub board plus ordered visit timeline rather than a false
-ordinary spine.
+For ordinary biomes, the structure rail is an outline of authored decision
+points rather than an exhaustive entity index. Each decision appears once with
+a compact picked-room and reward summary. Selecting it shows every physical
+offer with room selection, reward selection, and picked state together.
+Generated unpicked targets remain fully inspectable in that decision surface;
+their rewards still participate in sibling, bag, source, and possibility
+evaluation. For N, the center region remains the fixed Hub board plus ordered
+visit timeline rather than a false ordinary spine.
+
+Rail inclusion controls visual prominence and navigation only. It does not
+control whether a semantic owner, authored value, finding, or editor exists.
+Occurrence, target, reward, retained-invalid, and room-local products remain in
+the exhaustive workspace projection even when they do not receive independent
+rail stops.
 
 The structure projection consumes authored topology plus progressive or
 canonical evaluation. An incomplete biome is never described as canonical. Its
@@ -280,13 +288,14 @@ Room editors are selected by room template and receive:
 
 They do not receive mutable biome topology.
 
-After a room replacement, both the compact summary and focused inspector render
-the same reconciled authored snapshot: compatible incoming and local values
-remain selected, new or structurally incompatible leaves show replacement
-defaults, and leaves no longer admitted by the declaration disappear. A
-retained value that is context-invalid displays ordinary finding and candidate
-guidance at its stable leaf address. The room selection remains one undoable
-command; the editor performs no secondary repair or confirmation step.
+After a room replacement, both the decision's picked summary and its inline
+offer card render the same reconciled authored snapshot: compatible incoming
+and local values remain selected, new or structurally incompatible leaves show
+replacement defaults, and leaves no longer admitted by the declaration
+disappear. A retained value that is context-invalid displays ordinary finding
+and candidate guidance at its stable leaf address. The room selection remains
+one undoable command; the editor performs no secondary repair or confirmation
+step.
 
 Compatibility is limited to catalog-backed production leaf contracts. The
 current replacement surface covers counted rewards plus H cage and O wheel
@@ -322,8 +331,10 @@ an eventual result, not as visible shop information. An unpurchased box retains
 the complete source payload dormantly; contextual validation does not require
 that source to be possible until purchase.
 
-Every ordinary generated decision projects its store according to policy. An
-`authoredBaseStore` batch renders one batch-owned `Reward Pool` selector for
+Every ordinary generated decision projects its store according to policy. Its
+physical offer cards place each room selector beside that room's resolved reward
+editor, including for unpicked offers. An `authoredBaseStore` batch renders one
+batch-owned `Reward Pool` selector for
 its `baseRewardStoreKey`. A new authored selector displays an explicit
 unresolved placeholder and keeps dependent room controls inactive until one
 semantic replacement command selects the pool. A `sourceOfferPoint` batch
