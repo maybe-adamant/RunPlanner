@@ -80,6 +80,10 @@ function HubSlotMembership({
   const structurallyDisabled = slot.open ? !slot.canClose : !slot.canOpen;
   const disabled =
     structurallyDisabled || (candidate !== undefined && !candidateMayBeAuthored(candidate));
+  const close = slot.canClose ? interaction.close : undefined;
+  if (slot.canClose && close === undefined) {
+    throw new Error('A closable Hub slot must retain its CloseHubSlot interaction.');
+  }
 
   return (
     <div className="hub-membership-action">
@@ -105,8 +109,7 @@ function HubSlotMembership({
                   occurrenceId: proposedOccurrenceId,
                   slot: interaction.owner,
                 }
-              : interaction.close?.command;
-            if (command === undefined) return;
+              : close!.command;
             dispatch(semanticOwnerFocused(interaction.owner));
             dispatch(authoredProjectCommandDispatched(command));
           }}
@@ -233,7 +236,9 @@ function HubVisitRow({
         <div className="owner-markers">
           <button
             className="semantic-focus-link"
-            onClick={() => dispatch(semanticOwnerFocused(visit.marker.address))}
+            onClick={() =>
+              dispatch(semanticOwnerFocused(visit.room?.marker.address ?? visit.marker.address))
+            }
             type="button"
           >
             {visit.room?.label ?? label}

@@ -260,14 +260,16 @@ function fallbackSubject(biome: WorkspaceBiome): InspectorSubject | undefined {
     if (hub !== undefined) return { kind: 'node', node: hub };
   }
   if (incompleteDecision !== undefined) return { kind: 'node', node: incompleteDecision };
-  const entered = biome.nodes
+  const activeDetails = biome.nodes
     .filter(
       (node): node is WorkspaceOccurrenceWorkbenchNode =>
-        node.kind === 'occurrenceWorkbench' && node.room.entered,
+        node.kind === 'occurrenceWorkbench' && node.room.detailsActive,
     )
     .at(-1);
-  if (entered !== undefined) {
-    if (entered.sourceDecisionRemoval !== undefined) return { kind: 'node', node: entered };
+  if (activeDetails !== undefined) {
+    if (activeDetails.sourceDecisionRemoval !== undefined) {
+      return { kind: 'node', node: activeDetails };
+    }
     const decision = biome.nodes.find(
       (
         node,
@@ -278,16 +280,16 @@ function fallbackSubject(biome: WorkspaceBiome): InspectorSubject | undefined {
         (node.kind === 'ordinaryBatch' ||
           node.kind === 'mixedBatch' ||
           node.kind === 'takeoverBatch') &&
-        node.targets.some((target) => target.room.occurrenceId === entered.room.occurrenceId),
+        node.targets.some((target) => target.room.occurrenceId === activeDetails.room.occurrenceId),
     );
     if (decision !== undefined) return { kind: 'node', node: decision };
     const hub = biome.nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
         node.kind === 'hubDecision' &&
-        node.slots.some((slot) => slot.room?.occurrenceId === entered.room.occurrenceId),
+        node.slots.some((slot) => slot.room?.occurrenceId === activeDetails.room.occurrenceId),
     );
     if (hub !== undefined) return { kind: 'node', node: hub };
-    return { kind: 'node', node: entered };
+    return { kind: 'node', node: activeDetails };
   }
   const entry = biome.entry;
   if (entry !== undefined) return { kind: 'node', node: entry };
@@ -685,9 +687,13 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
     subject.node.key === exitFrontier.predecessorNodeKey
       ? exitFrontier
       : undefined;
-  const clearTopology = interactions.topologyRemovals.get(
-    workspaceInteractionKey(biome.marker.address),
-  );
+  const clearTopology =
+    biome.entry === undefined
+      ? undefined
+      : requireWorkspaceInteraction(
+          interactions.topologyRemovals,
+          workspaceInteractionKey(biome.marker.address),
+        );
 
   return (
     <div className="biome-workspace">

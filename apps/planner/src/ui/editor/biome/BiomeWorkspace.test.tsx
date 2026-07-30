@@ -1320,6 +1320,67 @@ describe('BiomeWorkspace', () => {
     ).not.toHaveLength(0);
   });
 
+  it('labels an authored-selected retained route without claiming it was entered', () => {
+    const base = createGoldenFGHIProject(catalog);
+    const blocked = {
+      ...base,
+      routes: base.routes.map((route) =>
+        route.routeKey !== 'Underworld'
+          ? route
+          : {
+              ...route,
+              biomes: route.biomes.map((plan) =>
+                plan.biomeKey !== 'F' || plan.topology === null
+                  ? plan
+                  : {
+                      ...plan,
+                      topology: {
+                        ...plan.topology,
+                        decisions: plan.topology.decisions.map((decision) =>
+                          decision.kind === 'exit' &&
+                          decision.source.kind === 'occurrence' &&
+                          decision.source.occurrenceId === goldenFOccurrenceId(1, 1)
+                            ? { ...decision, selection: { kind: 'unresolved' as const } }
+                            : decision,
+                        ),
+                      },
+                    },
+              ),
+            },
+      ),
+    };
+    const view = renderWorkspace(blocked, 'Underworld', 'F');
+    const decision = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
+      (
+        node,
+      ): node is Extract<
+        WorkspaceNode,
+        { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+      > =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.targets.some((target) => target.selected && !target.room.entered),
+    );
+    if (decision === undefined) throw new Error('selected retained F decision is missing');
+    const target = decision.targets.find(
+      (candidate) => candidate.selected && !candidate.room.entered,
+    );
+    if (target === undefined) throw new Error('selected retained F room is missing');
+
+    act(() => view.application.store.dispatch(semanticOwnerFocused(decision.owner)));
+
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const selectedControl = within(inspector).getByRole('radio', {
+      name: `Pick ${target.room.label} from Exit ${target.index}`,
+    });
+    const offer = selectedControl.closest<HTMLElement>('article');
+    if (offer === null) throw new Error('selected retained F room offer is missing');
+    expect(within(offer).getByText('Selected route')).toBeTruthy();
+    expect(within(offer).queryByText('Entered route')).toBeNull();
+    expect(within(inspector).getByText('Room selection')).toBeTruthy();
+  });
+
   it('renders O’s fixed width-one Preboss takeover without a selector and creates its entered Shop lazily', async () => {
     const owner = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
@@ -1496,7 +1557,14 @@ describe('BiomeWorkspace', () => {
       throw new Error('F ordinary batch must be occurrence-owned');
     }
     const shop = createOccurrenceId('biome-workspace-dormant-shop');
-    const withDormantShop = applyProjectCommand(project, catalog, {
+    const sibling = createOccurrenceId('biome-workspace-dormant-shop-sibling');
+    const withSibling = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenFBiome, owner.source, 'exit1'),
+      occurrenceId: sibling,
+      gameName: 'F_Combat04',
+    });
+    const withDormantShop = applyProjectCommand(withSibling, catalog, {
       kind: 'CreateTarget',
       target: createTargetAddress(goldenFBiome, owner.source, 'exit2'),
       occurrenceId: shop,

@@ -211,6 +211,20 @@ export type WorkspaceStructuralInteraction =
     };
 
 /**
+ * A visible incomplete exit frontier can expose two independent semantic
+ * actions. This metadata is the declaration that React and closure checks use
+ * to require each corresponding interaction rather than treating either map
+ * lookup as a visibility condition.
+ */
+export interface WorkspaceExitFrontierCapabilities {
+  readonly structural?: Extract<
+    WorkspaceStructuralInteraction,
+    { readonly owner: ExitDecisionAddress }
+  >['action'];
+  readonly takeover?: true;
+}
+
+/**
  * A topology-removal command carries its engine-derived impact all the way to
  * the renderer. React may use the supplied interaction to expose a named
  * removal action, but cannot walk descendants or infer which Hub structure a
@@ -338,6 +352,7 @@ export interface WorkspaceTakeoverCandidate {
 
 export interface WorkspaceInteractionCatalog {
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
+  readonly exitFrontierCapabilities: ReadonlyMap<string, WorkspaceExitFrontierCapabilities>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
@@ -361,6 +376,32 @@ export interface WorkspaceInteractionCatalog {
   readonly structural: ReadonlyMap<string, WorkspaceStructuralInteraction>;
   readonly takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>;
   readonly topologyRemovals: ReadonlyMap<string, WorkspaceTopologyRemovalInteraction>;
+}
+
+/**
+ * An authored/declaration-derived editable leaf. This is deliberately built
+ * without consulting workspace nodes, markers, controls, or evaluator output
+ * so projection closure cannot validate only what the renderer happened to
+ * publish.
+ */
+export type WorkspaceAuthoredLeafInteractionKind =
+  | 'reward'
+  | 'rewardWheelOfferCount'
+  | 'rewardWheelPick'
+  | 'rewardWheelStore'
+  | 'shipEncounterCount'
+  | 'shopPurchase'
+  | 'sideRoomEntryOrder'
+  | 'sideRoomGeneration';
+
+export interface WorkspaceAuthoredLeafInteractionRequirement {
+  readonly key: string;
+  readonly kind: WorkspaceAuthoredLeafInteractionKind;
+}
+
+export interface WorkspaceAuthoredLeafRequirement {
+  readonly address: SemanticAddress;
+  readonly interactions: readonly WorkspaceAuthoredLeafInteractionRequirement[];
 }
 
 export function workspaceInteractionKey(owner: SemanticAddress): string {
@@ -541,6 +582,12 @@ export type WorkspaceRoomLocal =
 
 export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
+  /**
+   * Authored selection/visit state for declaration-defined picked-room
+   * details. This deliberately does not claim that evaluation reached the
+   * room; see `entered`.
+   */
+  readonly detailsActive: boolean;
   readonly entered: boolean;
   readonly gameName: string;
   readonly kind: RoomDeclaration['kind'];
@@ -666,6 +713,7 @@ export interface WorkspaceLinkedExitNode {
 interface WorkspaceBatchNodeBase {
   readonly batchState: CanonicalBatch['batchState'] | AuthoredBatchState;
   readonly fields?: WorkspaceFieldsBatchContext;
+  readonly fieldsCageOutcome?: WorkspaceMarker;
   readonly key: string;
   readonly marker: WorkspaceMarker;
   readonly missingTargets: readonly WorkspaceMissingPhysicalTarget[];
@@ -983,6 +1031,41 @@ function requiredNormalExitOrdinal(exitKey: string): number {
 
 /** Kept solely as a defensive sort fallback; it is never a published ordinal. */
 const unknownPhysicalExitSortIndex = Number.MAX_SAFE_INTEGER;
+
+interface AuthoredTargetOrderable {
+  readonly exitKey: string;
+  readonly occurrenceId: OccurrenceId;
+}
+
+function compareCodeUnitStrings(left: string, right: string): number {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
+/**
+ * The catalog normally gives each declared exit a unique physical ordinal.
+ * This total comparator keeps the workspace deterministic even when a
+ * malformed in-memory document bypasses codec validation.
+ */
+function compareAuthoredTargetsInPhysicalOrder(
+  physicalOrder: ReadonlyMap<string, number>,
+  left: AuthoredTargetOrderable,
+  right: AuthoredTargetOrderable,
+): number {
+  const rankDifference =
+    (physicalOrder.get(left.exitKey) ??
+      normalExitOrdinal(left.exitKey) ??
+      unknownPhysicalExitSortIndex) -
+    (physicalOrder.get(right.exitKey) ??
+      normalExitOrdinal(right.exitKey) ??
+      unknownPhysicalExitSortIndex);
+  if (rankDifference !== 0) return rankDifference;
+  const exitKeyDifference = compareCodeUnitStrings(left.exitKey, right.exitKey);
+  return exitKeyDifference !== 0
+    ? exitKeyDifference
+    : compareCodeUnitStrings(left.occurrenceId, right.occurrenceId);
+}
 
 /** A linked exit is validated by the core as the source room's sole normal door. */
 const linkedExitOrdinal = 1;
@@ -1309,7 +1392,7 @@ function controlsForOccurrence(
   context: MutableProjectionContext,
   occurrence: RoomOccurrence,
   room: RoomDeclaration,
-  entered: boolean,
+  detailsActive: boolean,
 ): readonly WorkspaceRewardControl[] {
   const controls: WorkspaceRewardControl[] = [];
   const incoming = createIncomingRewardAddress(context.biome, occurrence.occurrenceId);
@@ -1424,11 +1507,10 @@ function controlsForOccurrence(
       break;
     }
     case 'shop': {
-      // Shop state may remain persisted after its physical exit becomes an
-      // unpicked offer. Inventory is a lifecycle product, not an authored
-      // leaf: keep the state for a later re-pick but do not publish controls
-      // before this room has actually been entered.
-      if (!entered) break;
+      // Selecting a Shop target creates its declaration-owned inventory.
+      // A retained, selected Shop stays editable even when evaluation has not
+      // reached it; an unpicked Shop remains a dormant structural leaf.
+      if (!detailsActive) break;
       if (occurrence.state.shop === undefined) break;
       const profile = context.catalog.rewards.shops.byKey[occurrence.state.shop.profileKey];
       if (profile === undefined) {
@@ -1552,7 +1634,7 @@ function roomLocalForOccurrence(
   occurrence: RoomOccurrence,
   room: RoomDeclaration,
   controls: readonly WorkspaceRewardControl[],
-  entered: boolean,
+  detailsActive: boolean,
   canonical: CanonicalAuthoredRoom | undefined,
   authoredFieldsActiveCageCount: number | undefined = undefined,
 ): WorkspaceRoomLocal {
@@ -1759,7 +1841,7 @@ function roomLocalForOccurrence(
     }
     case 'shop': {
       const state = occurrence.state;
-      if (!entered || state.shop === undefined) {
+      if (!detailsActive || state.shop === undefined) {
         return Object.freeze({
           kind: 'shop' as const,
           materialized: false,
@@ -1841,25 +1923,31 @@ function localDetailMarkers(roomLocal: WorkspaceRoomLocal): readonly WorkspaceMa
   }
 }
 
+interface WorkspaceOccurrenceProjectionInput {
+  readonly authoredFieldsActiveCageCount?: number;
+  readonly detailsActive: boolean;
+  readonly evaluatedRoom?: CanonicalAuthoredRoom;
+}
+
 function projectOccurrence(
   context: MutableProjectionContext,
   occurrence: RoomOccurrence,
-  entered = false,
-  canonical?: CanonicalAuthoredRoom,
-  authoredFieldsActiveCageCount?: number,
+  input: WorkspaceOccurrenceProjectionInput,
 ): WorkspaceOccurrenceWorkbenchNode {
   const room = requireRoom(context.catalog, occurrence.gameName);
   const address = createOccurrenceAddress(context.biome, occurrence.occurrenceId);
+  const entered = input.evaluatedRoom?.entered ?? false;
   // A dormant Shop is a dead leaf. Its persisted inventory remains available
   // to the command model if the room is picked again, but neither its offer
-  // summary nor its editable lifecycle controls are currently materialized.
+  // summary nor its editable lifecycle controls are active.
   const summary =
-    occurrence.state.kind === 'shop' && !entered
+    occurrence.state.kind === 'shop' && !input.detailsActive
       ? undefined
       : rewardSummary(context.catalog, room, occurrence.state);
-  const rewardControls = controlsForOccurrence(context, occurrence, room, entered);
+  const rewardControls = controlsForOccurrence(context, occurrence, room, input.detailsActive);
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
+    detailsActive: input.detailsActive,
     entered,
     gameName: occurrence.gameName,
     kind: room.kind,
@@ -1874,14 +1962,14 @@ function projectOccurrence(
       occurrence,
       room,
       rewardControls,
-      entered,
-      canonical,
-      authoredFieldsActiveCageCount,
+      input.detailsActive,
+      input.evaluatedRoom,
+      input.authoredFieldsActiveCageCount,
     ),
     rewardControls,
     ...(summary === undefined ? {} : { rewardSummary: summary }),
   });
-  return Object.freeze({
+  const node = Object.freeze({
     inspectorPresentation: 'full' as const,
     kind: 'occurrenceWorkbench' as const,
     key: `occurrence:${semanticAddressKey(address)}`,
@@ -1889,17 +1977,12 @@ function projectOccurrence(
     marker: roomSummary.marker,
     room: roomSummary,
   });
+  redirectOccurrenceFocus(context, node);
+  return node;
 }
 
 function authoredOccurrence(plan: AuthoredBiomePlan, id: OccurrenceId): RoomOccurrence | undefined {
   return plan.topology?.occurrences.find((candidate) => candidate.occurrenceId === id);
-}
-
-function canonicalRoomOccurrence(
-  plan: AuthoredBiomePlan,
-  room: CanonicalAuthoredRoom,
-): RoomOccurrence | undefined {
-  return authoredOccurrence(plan, room.occurrenceId);
 }
 
 function isTakeover(room: RoomDeclaration | undefined): boolean {
@@ -1932,87 +2015,60 @@ function hubStageDecisionRemoval(
   });
 }
 
-function targetNode(
-  context: MutableProjectionContext,
-  plan: AuthoredBiomePlan,
-  target: CanonicalTarget,
-  sourceDecisionRemoval: WorkspaceStageDecisionRemoval | undefined = undefined,
-): { readonly target: WorkspacePhysicalTarget; readonly node?: WorkspaceOccurrenceWorkbenchNode } {
-  const occurrence = canonicalRoomOccurrence(plan, target.room);
-  const targetMarker = marker(context, target.origin);
-  const occurrenceNode =
-    occurrence === undefined
-      ? undefined
-      : projectOccurrence(context, occurrence, target.room.entered, target.room);
-  const node =
-    occurrenceNode === undefined
-      ? undefined
-      : Object.freeze({
-          ...occurrenceNode,
-          ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
-          railMarker: targetMarker,
-        });
-  const room = node?.room;
-  if (room === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${plan.biomeKey} materialized target ${target.room.occurrenceId} is absent from authored occurrences`,
-    );
-  }
-  return Object.freeze({
-    target: Object.freeze({
-      ...(target.room.clockworkReward === undefined
-        ? {}
-        : { clockworkReward: target.room.clockworkReward }),
-      exitKey: target.exit.exitKey,
-      index: target.exit.index,
-      marker: targetMarker,
-      physicalState: target.exit.kind,
-      selected: target.picked,
-      retained: target.exit.kind === 'unavailable',
-      nextPath: target.continuation,
-      room,
-    }),
-    ...(node === undefined ? {} : { node }),
-  });
-}
-
-function batchKind(
-  catalog: Catalog,
-  batch: CanonicalBatch,
-): 'ordinaryBatch' | 'takeoverBatch' | 'mixedBatch' {
-  const rooms = batch.targets.map((target) => catalog.rooms.byKey[target.room.gameName]);
-  if (rooms.length > 0 && rooms.every(isTakeover)) return 'takeoverBatch';
-  if (rooms.some(isMixed)) return 'mixedBatch';
-  return 'ordinaryBatch';
-}
-
-function batchTopologyState(
-  batch: CanonicalBatch,
-  partial: boolean,
-): 'complete' | 'partial' | 'retained' {
-  if (partial) return 'partial';
-  return batch.targets.some((target) => target.exit.kind === 'unavailable')
-    ? 'retained'
-    : 'complete';
-}
-
 type WorkspaceDecisionBatchNode =
   WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
+
+function occurrenceOwnedMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
+  return Object.freeze([
+    room.marker,
+    ...room.rewardControls.map((control) => control.marker),
+    ...localDetailMarkers(room.roomLocal),
+    ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),
+  ]);
+}
 
 function decisionOwnedMarkers(node: WorkspaceDecisionBatchNode): readonly WorkspaceMarker[] {
   return Object.freeze([
     node.marker,
     node.selection,
     ...(node.rewardStore === undefined ? [] : [node.rewardStore]),
-    ...node.targets.flatMap((target) => [
-      target.marker,
-      target.room.marker,
-      ...target.room.rewardControls.map((control) => control.marker),
-      ...localDetailMarkers(target.room.roomLocal),
-      ...(target.room.roomLocal.kind === 'fixed' ? [target.room.roomLocal.marker] : []),
-    ]),
+    ...node.targets.flatMap((target) => [target.marker, ...occurrenceOwnedMarkers(target.room)]),
     ...node.missingTargets.map((target) => target.marker),
   ]);
+}
+
+function redirectMarkersToNode(
+  context: MutableProjectionContext,
+  markers: readonly WorkspaceMarker[],
+  nodeKey: string,
+): void {
+  for (const focusMarker of markers) {
+    const existing = context.focusByOwner.get(focusMarker.focusKey);
+    if (existing === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${focusMarker.focusKey} has no registered focus destination`,
+      );
+    }
+    context.focusByOwner.set(focusMarker.focusKey, Object.freeze({ ...existing, nodeKey }));
+  }
+}
+
+function redirectOccurrenceFocus(
+  context: MutableProjectionContext,
+  node: WorkspaceOccurrenceWorkbenchNode,
+): void {
+  redirectMarkersToNode(context, occurrenceOwnedMarkers(node.room), node.key);
+}
+
+function redirectLinkedFocus(
+  context: MutableProjectionContext,
+  node: WorkspaceLinkedExitNode,
+): void {
+  redirectMarkersToNode(
+    context,
+    Object.freeze([node.marker, node.target.marker, ...occurrenceOwnedMarkers(node.target.room)]),
+    node.key,
+  );
 }
 
 /**
@@ -2025,14 +2081,7 @@ function redirectDecisionFocus(
   node: WorkspaceDecisionBatchNode,
 ): void {
   if (node.source.kind === 'hubDecision') return;
-  for (const focusMarker of decisionOwnedMarkers(node)) {
-    const existing = context.focusByOwner.get(focusMarker.focusKey);
-    if (existing === undefined) continue;
-    context.focusByOwner.set(
-      focusMarker.focusKey,
-      Object.freeze({ ...existing, nodeKey: node.key }),
-    );
-  }
+  redirectMarkersToNode(context, decisionOwnedMarkers(node), node.key);
 }
 
 function projectRemovalScope(
@@ -2154,21 +2203,6 @@ function missingTargetsForPhysicalExits(
   return Object.freeze(missing);
 }
 
-function missingTargetsForBatch(
-  context: MutableProjectionContext,
-  plan: AuthoredBiomePlan,
-  batch: CanonicalBatch,
-  projectedTargetExitKeys: ReadonlySet<string>,
-): readonly WorkspaceMissingPhysicalTarget[] {
-  if (batch.parent.origin.kind === 'hubRoom') return Object.freeze([]);
-  return missingTargetsForPhysicalExits(
-    context,
-    batch.source,
-    physicalExitsForSource(context, plan, batch.source),
-    projectedTargetExitKeys,
-  );
-}
-
 function fieldsContextForCanonicalBatch(
   context: MutableProjectionContext,
   batch: CanonicalBatch,
@@ -2193,134 +2227,6 @@ function fieldsContextForCanonicalBatch(
           }),
         }),
   });
-}
-
-function projectBatch(
-  context: MutableProjectionContext,
-  plan: AuthoredBiomePlan,
-  batch: CanonicalBatch,
-  partial = false,
-): {
-  readonly batch: WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode | WorkspaceMixedBatchNode;
-  readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
-} {
-  const owner = batch.origin;
-  const authored = authoredBatchForOwner(context, plan, owner);
-  const kind =
-    authored === undefined
-      ? batchKind(context.catalog, batch)
-      : rawBatchKind(context, plan, authored);
-  const sourceDecisionRemoval =
-    kind === 'takeoverBatch' && batch.source.kind === 'hubDecision'
-      ? hubStageDecisionRemoval(context, plan, owner, 'preboss')
-      : undefined;
-  const materializedTargets = batch.targets.map((target) =>
-    targetNode(context, plan, target, sourceDecisionRemoval),
-  );
-  const materializedExitKeys = new Set(materializedTargets.map((target) => target.target.exitKey));
-  const physical = physicalExitsForSource(context, plan, batch.source);
-  const retainedTargets =
-    authored === undefined
-      ? []
-      : authored.normal.targets
-          .filter((target) => !materializedExitKeys.has(target.exitKey))
-          .map((target) =>
-            authoredBatchTargetNode(
-              context,
-              plan,
-              authored,
-              target,
-              physical,
-              authoredFieldsActiveCageCount(context, plan, authored),
-              sourceDecisionRemoval,
-            ),
-          );
-  // A progressive product may stop while processing one physical peer. The
-  // materialized prefix remains authoritative where it exists, but retained
-  // authored peers must still project as room offers rather than synthetic
-  // empty exits so their room-local rewards and findings remain editable.
-  const projectedTargets = [...materializedTargets, ...retainedTargets].sort(
-    (left, right) => left.target.index - right.target.index,
-  );
-  const projectedTargetExitKeys = new Set(projectedTargets.map((target) => target.target.exitKey));
-  const repairScope = batchRepairScopeForRoots(
-    context,
-    plan,
-    batch.origin,
-    kind,
-    new Set(
-      projectedTargets
-        .filter((target) => target.target.physicalState === 'unavailable')
-        .map((target) => target.target.room.occurrenceId),
-    ),
-  );
-  const fields = fieldsContextForCanonicalBatch(context, batch);
-  const rewardStore =
-    batch.rewardStore.kind === 'authoredBaseStore'
-      ? marker(context, batch.rewardStore.origin)
-      : undefined;
-  const base = {
-    batchState: batch.batchState,
-    ...(fields === undefined ? {} : { fields }),
-    key: `batch:${semanticAddressKey(owner)}`,
-    marker: marker(context, owner),
-    missingTargets: missingTargetsForBatch(context, plan, batch, projectedTargetExitKeys),
-    owner,
-    ...(repairScope === undefined ? {} : { repairScope }),
-    ...(rewardStore === undefined ? {} : { rewardStore }),
-    selection: marker(context, batch.selectedOrigin),
-    source: batch.source,
-    targets: Object.freeze(projectedTargets.map((value) => value.target)),
-    topologyState: batchTopologyState(batch, partial),
-  } as const;
-  const projected =
-    kind === 'takeoverBatch'
-      ? Object.freeze({
-          ...base,
-          kind: 'takeoverBatch' as const,
-          targetInteraction: 'readOnly' as const,
-          takeoverInteractionKey: workspaceInteractionKey(owner),
-        })
-      : kind === 'mixedBatch'
-        ? Object.freeze({
-            ...base,
-            kind: 'mixedBatch' as const,
-            targetInteraction: 'replaceable' as const,
-          })
-        : Object.freeze({
-            ...base,
-            kind: 'ordinaryBatch' as const,
-            targetInteraction: 'replaceable' as const,
-          });
-  redirectDecisionFocus(context, projected);
-  return Object.freeze({
-    batch: projected,
-    workbenches: Object.freeze(
-      projectedTargets.flatMap((value) => (value.node === undefined ? [] : [value.node])),
-    ),
-  });
-}
-
-function projectLinkedExit(
-  context: MutableProjectionContext,
-  plan: AuthoredBiomePlan,
-  linked: CanonicalLinkedExit,
-): {
-  readonly node: WorkspaceLinkedExitNode;
-  readonly workbench?: WorkspaceOccurrenceWorkbenchNode;
-} {
-  const sourceDecisionRemoval = hubStageDecisionRemoval(context, plan, linked.origin, 'preHub');
-  const projected = targetNode(context, plan, linked.target, sourceDecisionRemoval);
-  const node: WorkspaceLinkedExitNode = Object.freeze({
-    kind: 'linkedExit' as const,
-    key: `linked:${semanticAddressKey(linked.origin)}`,
-    marker: marker(context, linked.origin),
-    owner: linked.origin,
-    source: { kind: 'occurrence' as const, occurrenceId: linked.source.occurrenceId },
-    target: projected.target,
-  });
-  if (projected.node === undefined) return Object.freeze({ node });
-  return Object.freeze({ node, workbench: projected.node });
 }
 
 function hubOccurrenceMap(plan: AuthoredBiomePlan): ReadonlyMap<OccurrenceId, RoomOccurrence> {
@@ -2399,11 +2305,14 @@ function projectHubNode(
     const occurrence = target === undefined ? undefined : occurrences.get(target.occurrenceId);
     const address = createHubSlotAddress(context.biome, descriptor.hubKey, slot.slotKey);
     const slotMarker = marker(context, address);
-    const entered = visited.has(slot.slotKey);
+    const detailsActive = visited.has(slot.slotKey);
     const occurrenceNode =
       occurrence === undefined
         ? undefined
-        : projectOccurrence(context, occurrence, entered, target?.canonical);
+        : projectOccurrence(context, occurrence, {
+            detailsActive,
+            ...(target?.canonical === undefined ? {} : { evaluatedRoom: target.canonical }),
+          });
     if (occurrenceNode !== undefined) {
       const workbench = Object.freeze({
         ...occurrenceNode,
@@ -2417,7 +2326,7 @@ function projectHubNode(
       if (mainReward !== undefined) redirectHubMainRewardFocus(context, hubMarker, mainReward);
     }
     return Object.freeze({
-      canClose: boardAuthored && target !== undefined && !entered,
+      canClose: boardAuthored && target !== undefined && !detailsActive,
       canOpen: boardAuthored && target === undefined && targets.size < descriptor.openCount.max,
       hubSlotKey: slot.slotKey,
       label: requireRoom(context.catalog, slot.roomGameName).label,
@@ -2426,7 +2335,7 @@ function projectHubNode(
       physicalDoorId: slot.physicalDoorId,
       ...(occurrenceNode === undefined ? {} : { room: occurrenceNode.room }),
       roomKind: requireRoom(context.catalog, slot.roomGameName).kind,
-      visited: entered,
+      visited: detailsActive,
     });
   });
   const visits = Array.from({ length: descriptor.requiredVisits }, (_, index) => {
@@ -2448,93 +2357,138 @@ function projectHubNode(
       visitIndex,
     });
   });
-  return Object.freeze({
-    node: Object.freeze({
-      authoring: boardAuthored ? ('authored' as const) : ('outline' as const),
-      kind: 'hubDecision' as const,
-      key: `hub:${semanticAddressKey(owner)}`,
-      hubKey: descriptor.hubKey,
-      marker: hubMarker,
-      openSet: marker(context, createHubOpenSetAddress(context.biome, descriptor.hubKey)),
-      openSlotCount: Object.freeze({
-        current: targets.size,
-        min: descriptor.openCount.min,
-        max: descriptor.openCount.max,
-      }),
-      owner,
-      requiredVisitCount: descriptor.requiredVisits,
-      slots: Object.freeze(slots),
-      visits: Object.freeze(visits),
+  const node = Object.freeze({
+    authoring: boardAuthored ? ('authored' as const) : ('outline' as const),
+    kind: 'hubDecision' as const,
+    key: `hub:${semanticAddressKey(owner)}`,
+    hubKey: descriptor.hubKey,
+    marker: hubMarker,
+    openSet: marker(context, createHubOpenSetAddress(context.biome, descriptor.hubKey)),
+    openSlotCount: Object.freeze({
+      current: targets.size,
+      min: descriptor.openCount.min,
+      max: descriptor.openCount.max,
     }),
+    owner,
+    requiredVisitCount: descriptor.requiredVisits,
+    slots: Object.freeze(slots),
+    visits: Object.freeze(visits),
+  });
+  redirectMarkersToNode(
+    context,
+    Object.freeze([
+      node.marker,
+      node.openSet,
+      ...node.slots.map((slot) => slot.marker),
+      ...node.visits.map((visit) => visit.marker),
+    ]),
+    node.key,
+  );
+  return Object.freeze({
+    node,
     workbenches: Object.freeze(workbenches),
   });
 }
 
-function projectHub(
-  context: MutableProjectionContext,
-  plan: AuthoredBiomePlan,
-  hub: CanonicalHubDecision,
-  descriptor: HubDecisionDescriptor,
-  nextVisitIndex: number | undefined,
-): {
-  readonly node: WorkspaceHubDecisionNode;
-  readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
-} {
-  const authoredHub = plan.topology?.decisions.find(
-    (decision): decision is HubDecision =>
-      decision.kind === 'hub' && decision.hubKey === descriptor.hubKey,
-  );
-  const targets = new Map<string, ProjectedHubTarget>(
-    hub.board.targets.map(
-      (target) =>
-        [
-          target.hubSlotKey,
-          Object.freeze({ canonical: target.room, occurrenceId: target.room.occurrenceId }),
-        ] as const,
-    ),
-  );
-  // A progressive snapshot may stop before later, retained authored Hub
-  // visits. They remain visible and unassessed rather than disappearing from
-  // the workspace when an earlier owner is invalid.
-  for (const target of authoredHub?.openTargets ?? []) {
-    if (!targets.has(target.hubSlotKey)) {
-      targets.set(target.hubSlotKey, Object.freeze({ occurrenceId: target.occurrenceId }));
-    }
-  }
-  return projectHubNode(
-    context,
-    plan,
-    descriptor,
-    hub.origin,
-    targets,
-    authoredHub?.visitOrder ?? hub.visits.map((visit) => visit.target.hubSlotKey),
-    nextVisitIndex,
-    true,
-  );
-}
-
-function projectAuthoredHub(
+function projectAuthoredHubWithOverlay(
   context: MutableProjectionContext,
   plan: AuthoredBiomePlan,
   hub: HubDecision,
   descriptor: HubDecisionDescriptor,
+  evaluated: CanonicalHubDecision | undefined,
   nextVisitIndex: number | undefined,
 ): {
   readonly node: WorkspaceHubDecisionNode;
   readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
 } {
   const owner = createHubDecisionAddress(context.biome, descriptor.hubKey);
+  if (evaluated !== undefined) {
+    if (
+      semanticAddressKey(evaluated.origin) !== semanticAddressKey(owner) ||
+      semanticAddressKey(evaluated.board.origin) !==
+        semanticAddressKey(createHubOpenSetAddress(context.biome, descriptor.hubKey))
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner)} evaluated Hub does not match authored topology`,
+      );
+    }
+  }
+  const evaluatedTargets = new Map(
+    (evaluated?.board.targets ?? []).map((target) => [target.hubSlotKey, target] as const),
+  );
+  if (evaluatedTargets.size !== (evaluated?.board.targets.length ?? 0)) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(owner)} has duplicate evaluated Hub slot targets`,
+    );
+  }
+  const authoredTargets = new Map(hub.openTargets.map((target) => [target.hubSlotKey, target]));
+  const targets = new Map<string, ProjectedHubTarget>();
+  for (const target of hub.openTargets) {
+    const overlay = evaluatedTargets.get(target.hubSlotKey);
+    evaluatedTargets.delete(target.hubSlotKey);
+    const address = createHubSlotAddress(context.biome, descriptor.hubKey, target.hubSlotKey);
+    if (
+      overlay !== undefined &&
+      (semanticAddressKey(overlay.origin) !== semanticAddressKey(address) ||
+        overlay.room.occurrenceId !== target.occurrenceId ||
+        semanticAddressKey(overlay.room.origin) !==
+          semanticAddressKey(createOccurrenceAddress(context.biome, target.occurrenceId)) ||
+        overlay.room.gameName !== authoredOccurrence(plan, target.occurrenceId)?.gameName)
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(address)} evaluated Hub target does not match its authored occurrence`,
+      );
+    }
+    targets.set(
+      target.hubSlotKey,
+      Object.freeze({
+        ...(overlay === undefined ? {} : { canonical: overlay.room }),
+        occurrenceId: target.occurrenceId,
+      }),
+    );
+  }
+  if (evaluatedTargets.size > 0) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(owner)} has evaluated Hub targets with no authored slot`,
+    );
+  }
+  const evaluatedVisitIndexes = new Set<number>();
+  for (const visit of evaluated?.visits ?? []) {
+    if (evaluatedVisitIndexes.has(visit.visitIndex)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner)} has duplicate evaluated Hub visit ${visit.visitIndex}`,
+      );
+    }
+    evaluatedVisitIndexes.add(visit.visitIndex);
+    const expectedSlot = hub.visitOrder[visit.visitIndex - 1];
+    const target = authoredTargets.get(visit.target.hubSlotKey);
+    const expectedVisit = createHubVisitAddress(context.biome, descriptor.hubKey, visit.visitIndex);
+    const expectedTarget = createHubSlotAddress(
+      context.biome,
+      descriptor.hubKey,
+      visit.target.hubSlotKey,
+    );
+    if (
+      expectedSlot !== visit.target.hubSlotKey ||
+      target === undefined ||
+      target.occurrenceId !== visit.target.room.occurrenceId ||
+      visit.target.room.gameName !== authoredOccurrence(plan, target.occurrenceId)?.gameName ||
+      semanticAddressKey(visit.target.room.origin) !==
+        semanticAddressKey(createOccurrenceAddress(context.biome, target.occurrenceId)) ||
+      semanticAddressKey(visit.origin) !== semanticAddressKey(expectedVisit) ||
+      semanticAddressKey(visit.target.origin) !== semanticAddressKey(expectedTarget)
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner)} has an evaluated Hub visit that does not match authored order`,
+      );
+    }
+  }
   return projectHubNode(
     context,
     plan,
     descriptor,
     owner,
-    new Map(
-      hub.openTargets.map(
-        (target) =>
-          [target.hubSlotKey, Object.freeze({ occurrenceId: target.occurrenceId })] as const,
-      ),
-    ),
+    targets,
     hub.visitOrder,
     nextVisitIndex,
     true,
@@ -2569,62 +2523,244 @@ type AuthoredLinkedExitDecision = ExitDecision & {
 };
 type AuthoredBatchTarget = AuthoredBatchDecision['normal']['targets'][number];
 
-function authoredBatchForOwner(
-  context: MutableProjectionContext,
-  plan: AuthoredBiomePlan,
-  owner: ExitDecisionAddress,
-): AuthoredBatchDecision | undefined {
-  return plan.topology?.decisions.find(
-    (decision): decision is AuthoredBatchDecision =>
-      decision.kind === 'exit' &&
-      decision.normal.kind === 'batch' &&
-      semanticAddressKey(createExitDecisionAddress(context.biome, decision.source)) ===
-        semanticAddressKey(owner),
+function authoredTargetIsSelected(
+  decision: AuthoredBatchDecision,
+  target: AuthoredBatchTarget,
+): boolean {
+  if (decision.selection.kind === 'normal') {
+    return decision.selection.exitKey === target.exitKey;
+  }
+  return (
+    decision.selection.kind === 'derived' && decision.normal.targets[0]?.exitKey === target.exitKey
   );
 }
 
-function authoredBatchTargetNode(
-  context: MutableProjectionContext,
-  plan: AuthoredBiomePlan,
-  decision: AuthoredBatchDecision,
-  target: AuthoredBatchTarget,
-  physical: readonly DeclaredPhysicalExit[],
-  fieldsActiveCageCount: number | undefined,
-  sourceDecisionRemoval: WorkspaceStageDecisionRemoval | undefined,
-): { readonly target: WorkspacePhysicalTarget; readonly node: WorkspaceOccurrenceWorkbenchNode } {
-  const occurrence = authoredOccurrence(plan, target.occurrenceId);
-  if (occurrence === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${plan.biomeKey} target ${target.occurrenceId} is absent from authored occurrences`,
+/**
+ * Detail activation is an authored relationship. It is intentionally derived
+ * from topology alone so a blocked or invalid evaluator prefix cannot remove
+ * an active room's declaration-owned lifecycle surface.
+ */
+function authoredDetailsActiveOccurrenceIds(plan: AuthoredBiomePlan): ReadonlySet<OccurrenceId> {
+  const active = new Set<OccurrenceId>();
+  const topology = plan.topology;
+  if (topology === null) return active;
+  active.add(topology.startOccurrenceId);
+  for (const decision of topology.decisions) {
+    if (decision.kind === 'hub') {
+      for (const slotKey of decision.visitOrder) {
+        const target = decision.openTargets.find((candidate) => candidate.hubSlotKey === slotKey);
+        if (target !== undefined) active.add(target.occurrenceId);
+      }
+      continue;
+    }
+    if (decision.normal.kind === 'linked') {
+      active.add(decision.normal.occurrenceId);
+      continue;
+    }
+    const target = decision.normal.targets.find((candidate) =>
+      authoredTargetIsSelected(decision as AuthoredBatchDecision, candidate),
     );
+    if (target !== undefined) active.add(target.occurrenceId);
   }
-  const targetAddress = createTargetAddress(context.biome, decision.source, target.exitKey);
-  const targetMarker = marker(context, targetAddress);
-  const node = Object.freeze({
-    ...projectOccurrence(context, occurrence, false, undefined, fieldsActiveCageCount),
-    ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
-    railMarker: targetMarker,
-  });
-  const exit = physical.find((candidate) => candidate.exitKey === target.exitKey);
-  return Object.freeze({
-    node,
-    target: Object.freeze({
-      exitKey: target.exitKey,
-      index: exit?.index ?? requiredNormalExitOrdinal(target.exitKey),
-      marker: targetMarker,
-      physicalState: exit === undefined ? ('unavailable' as const) : ('available' as const),
-      selected:
-        decision.selection.kind === 'normal' && decision.selection.exitKey === target.exitKey,
-      retained: true,
-      nextPath:
-        requireRoom(context.catalog, occurrence.gameName).kind === 'Preboss'
-          ? ('startsCompletion' as const)
-          : decision.selection.kind === 'normal' && decision.selection.exitKey === target.exitKey
-            ? ('continuesSpine' as const)
-            : ('deadLeaf' as const),
-      room: node.room,
-    }),
-  });
+  return active;
+}
+
+interface MutableWorkspaceAuthoredLeafRequirement {
+  readonly address: SemanticAddress;
+  readonly interactions: Map<
+    WorkspaceAuthoredLeafInteractionKind,
+    WorkspaceAuthoredLeafInteractionRequirement
+  >;
+}
+
+function authoredLeafInteraction(
+  kind: WorkspaceAuthoredLeafInteractionKind,
+  key: string,
+): WorkspaceAuthoredLeafInteractionRequirement {
+  return Object.freeze({ key, kind });
+}
+
+/**
+ * Enumerates the leaf contract from persisted room state and declarations.
+ *
+ * This must stay independent of workspace products: it is the expected side
+ * of the closure audit. It includes offer-time values for all authored
+ * occurrences, while Ephyra side details and Shop inventory remain dormant
+ * until their room is on an authored active detail path.
+ */
+export function authoredWorkspaceLeafRequirements(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  plan: AuthoredBiomePlan,
+): readonly WorkspaceAuthoredLeafRequirement[] {
+  const required = new Map<string, MutableWorkspaceAuthoredLeafRequirement>();
+  const requireLeaf = (
+    address: SemanticAddress,
+    ...interactions: readonly WorkspaceAuthoredLeafInteractionRequirement[]
+  ): void => {
+    const key = semanticAddressKey(address);
+    let requirement = required.get(key);
+    if (requirement === undefined) {
+      requirement = {
+        address,
+        interactions: new Map(),
+      };
+      required.set(key, requirement);
+    }
+    for (const interaction of interactions) {
+      const existing = requirement.interactions.get(interaction.kind);
+      if (existing !== undefined && existing.key !== interaction.key) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} has conflicting authored ${interaction.kind} interaction requirements`,
+        );
+      }
+      requirement.interactions.set(interaction.kind, interaction);
+    }
+  };
+  const requireReward = (address: SemanticAddress): void =>
+    requireLeaf(address, authoredLeafInteraction('reward', semanticAddressKey(address)));
+  const topology = plan.topology;
+  if (topology === null) return Object.freeze([]);
+  const detailsActive = authoredDetailsActiveOccurrenceIds(plan);
+  for (const occurrence of topology.occurrences) {
+    const room = requireRoom(catalog, occurrence.gameName);
+    const occurrenceAddress = createOccurrenceAddress(biome, occurrence.occurrenceId);
+    const incoming = createIncomingRewardAddress(biome, occurrence.occurrenceId);
+    switch (occurrence.state.kind) {
+      case 'none':
+        break;
+      case 'fixed': {
+        const offer = fixedRewardOffer(room, occurrence.state);
+        const rewardType = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+        requireLeaf(
+          incoming,
+          ...(rewardType?.payloadDomain === undefined
+            ? []
+            : [authoredLeafInteraction('reward', semanticAddressKey(incoming))]),
+        );
+        break;
+      }
+      case 'counted':
+      case 'freeReward':
+        requireReward(incoming);
+        break;
+      case 'ephyraCombat': {
+        requireReward(incoming);
+        // Main rewards are offer-time data. The side-room lifecycle is
+        // picked-room customization, so an unvisited Hub room retains it as
+        // dormant state rather than publishing editable children.
+        if (!detailsActive.has(occurrence.occurrenceId)) break;
+        const group = room.localChildren.find((child) => child.kind === 'fixedRoomSlots');
+        if (group === undefined && Object.keys(occurrence.state.sideRooms).length === 0) break;
+        if (group?.kind !== 'fixedRoomSlots') {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${room.gameName} Ephyra state has no fixed side-room declaration`,
+          );
+        }
+        requireLeaf(createLocalChildGroupAddress(biome, occurrence.occurrenceId, group.key));
+        for (const slot of group.slots) {
+          const sideAddress = createLocalChildAddress(
+            biome,
+            occurrence.occurrenceId,
+            group.key,
+            slot.slotKey,
+          );
+          requireLeaf(
+            sideAddress,
+            authoredLeafInteraction('sideRoomGeneration', semanticAddressKey(sideAddress)),
+            authoredLeafInteraction(
+              'sideRoomEntryOrder',
+              workspaceSideRoomEntryOrderKey(sideAddress),
+            ),
+          );
+          requireReward(
+            createLocalRewardAddress(biome, occurrence.occurrenceId, group.key, slot.slotKey),
+          );
+        }
+        break;
+      }
+      case 'fieldsCombat': {
+        const group = room.localChildren.find((child) => child.kind === 'boundedRewardSlots');
+        if (group?.kind !== 'boundedRewardSlots') {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${room.gameName} Fields state has no bounded cage declaration`,
+          );
+        }
+        for (const slotKey of group.slotKeys) {
+          requireReward(
+            createLocalRewardAddress(biome, occurrence.occurrenceId, group.key, slotKey),
+          );
+        }
+        break;
+      }
+      case 'shipCombat': {
+        const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
+        if (profile === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${room.gameName} Ship state has no encounter profile`,
+          );
+        }
+        requireLeaf(
+          occurrenceAddress,
+          authoredLeafInteraction('shipEncounterCount', semanticAddressKey(occurrenceAddress)),
+        );
+        for (const phase of profile.phases) {
+          const wheel = phase.offerPoint;
+          if (wheel === undefined) continue;
+          const wheelAddress = createRewardWheelAddress(biome, occurrence.occurrenceId, wheel.key);
+          const wheelKey = semanticAddressKey(wheelAddress);
+          requireLeaf(
+            wheelAddress,
+            authoredLeafInteraction('rewardWheelOfferCount', wheelKey),
+            authoredLeafInteraction('rewardWheelStore', wheelKey),
+            authoredLeafInteraction('rewardWheelPick', wheelKey),
+          );
+          for (const offerKey of wheel.offerKeys) {
+            requireReward(
+              createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheel.key, offerKey),
+            );
+          }
+        }
+        break;
+      }
+      case 'shop': {
+        // A persisted unpicked Shop inventory is deliberately dormant. A
+        // selected-but-unassessed Shop is active because this checks authored
+        // detail activation rather than evaluator entry.
+        if (!detailsActive.has(occurrence.occurrenceId) || occurrence.state.shop === undefined) {
+          break;
+        }
+        const profile = catalog.rewards.shops.byKey[occurrence.state.shop.profileKey];
+        if (profile === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${room.gameName} shop profile ${occurrence.state.shop.profileKey} is missing`,
+          );
+        }
+        for (const slot of profile.slots.values) {
+          const offer = createShopOfferAddress(biome, occurrence.occurrenceId, slot.key);
+          requireReward(offer);
+          requireLeaf(
+            createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key),
+            authoredLeafInteraction(
+              'shopPurchase',
+              semanticAddressKey(
+                createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key),
+              ),
+            ),
+          );
+        }
+        break;
+      }
+    }
+  }
+  return Object.freeze(
+    [...required.values()].map((requirement) =>
+      Object.freeze({
+        address: requirement.address,
+        interactions: Object.freeze([...requirement.interactions.values()]),
+      }),
+    ),
+  );
 }
 
 /**
@@ -2751,15 +2887,131 @@ function rawBatchTopologyState(
     : 'retained';
 }
 
-function projectAuthoredBatch(
+/** Evaluation enriches an authored batch but never supplies its membership. */
+interface EvaluatedBatchOverlay {
+  readonly batch: CanonicalBatch;
+  readonly partial: boolean;
+}
+
+function projectAuthoredTargetWithOverlay(
   context: MutableProjectionContext,
   plan: AuthoredBiomePlan,
   decision: AuthoredBatchDecision,
+  target: AuthoredBatchTarget,
+  physical: readonly DeclaredPhysicalExit[],
+  fieldsActiveCageCount: number | undefined,
+  sourceDecisionRemoval: WorkspaceStageDecisionRemoval | undefined,
+  evaluatedTarget: CanonicalTarget | undefined,
+): { readonly target: WorkspacePhysicalTarget; readonly node: WorkspaceOccurrenceWorkbenchNode } {
+  const occurrence = authoredOccurrence(plan, target.occurrenceId);
+  if (occurrence === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${plan.biomeKey} target ${target.occurrenceId} is absent from authored occurrences`,
+    );
+  }
+  const address = createTargetAddress(context.biome, decision.source, target.exitKey);
+  if (evaluatedTarget !== undefined) {
+    if (semanticAddressKey(evaluatedTarget.origin) !== semanticAddressKey(address)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(address)} received an evaluated target for ${semanticAddressKey(evaluatedTarget.origin)}`,
+      );
+    }
+    const occurrenceAddress = createOccurrenceAddress(context.biome, occurrence.occurrenceId);
+    if (
+      evaluatedTarget.room.occurrenceId !== occurrence.occurrenceId ||
+      evaluatedTarget.room.gameName !== occurrence.gameName ||
+      semanticAddressKey(evaluatedTarget.room.origin) !== semanticAddressKey(occurrenceAddress)
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(address)} evaluated room does not match its authored occurrence`,
+      );
+    }
+  }
+  const selected = authoredTargetIsSelected(decision, target);
+  const declaredExit = physical.find((candidate) => candidate.exitKey === target.exitKey);
+  const physicalState =
+    evaluatedTarget?.exit.kind ??
+    (declaredExit === undefined ? ('unavailable' as const) : ('available' as const));
+  const fallbackContinuation: WorkspacePhysicalTarget['nextPath'] =
+    requireRoom(context.catalog, occurrence.gameName).kind === 'Preboss'
+      ? 'startsCompletion'
+      : selected
+        ? 'continuesSpine'
+        : 'deadLeaf';
+  const markerForTarget = marker(context, address);
+  const node = Object.freeze({
+    ...projectOccurrence(context, occurrence, {
+      ...(fieldsActiveCageCount === undefined
+        ? {}
+        : { authoredFieldsActiveCageCount: fieldsActiveCageCount }),
+      detailsActive: selected,
+      ...(evaluatedTarget === undefined ? {} : { evaluatedRoom: evaluatedTarget.room }),
+    }),
+    ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
+    railMarker: markerForTarget,
+  });
+  return Object.freeze({
+    node,
+    target: Object.freeze({
+      ...(evaluatedTarget?.room.clockworkReward === undefined
+        ? {}
+        : { clockworkReward: evaluatedTarget.room.clockworkReward }),
+      exitKey: target.exitKey,
+      index:
+        evaluatedTarget?.exit.index ??
+        declaredExit?.index ??
+        requiredNormalExitOrdinal(target.exitKey),
+      marker: markerForTarget,
+      physicalState,
+      selected,
+      retained: evaluatedTarget === undefined || physicalState === 'unavailable',
+      nextPath: evaluatedTarget?.continuation ?? fallbackContinuation,
+      room: node.room,
+    }),
+  });
+}
+
+function topologyStateForAuthoredBatch(
+  context: MutableProjectionContext,
+  owner: ExitDecisionAddress,
+  evaluated: EvaluatedBatchOverlay | undefined,
+): 'complete' | 'partial' | 'retained' {
+  if (evaluated?.partial === true || rawBatchTopologyState(context, owner) === 'partial') {
+    return 'partial';
+  }
+  if (evaluated === undefined) return 'retained';
+  return evaluated.batch.targets.some((target) => target.exit.kind === 'unavailable')
+    ? 'retained'
+    : 'complete';
+}
+
+function projectAuthoredBatchWithOverlay(
+  context: MutableProjectionContext,
+  plan: AuthoredBiomePlan,
+  decision: AuthoredBatchDecision,
+  evaluated: EvaluatedBatchOverlay | undefined,
 ): {
   readonly batch: WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode | WorkspaceMixedBatchNode;
   readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
 } {
   const owner = createExitDecisionAddress(context.biome, decision.source);
+  if (
+    evaluated !== undefined &&
+    semanticAddressKey(evaluated.batch.origin) !== semanticAddressKey(owner)
+  ) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(owner)} received an evaluated batch for ${semanticAddressKey(evaluated.batch.origin)}`,
+    );
+  }
+  const evaluatedTargets = new Map<string, CanonicalTarget>();
+  for (const target of evaluated?.batch.targets ?? []) {
+    if (evaluatedTargets.has(target.exit.exitKey)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner)} has duplicate evaluated target ${target.exit.exitKey}`,
+      );
+    }
+    evaluatedTargets.set(target.exit.exitKey, target);
+  }
   const kind = rawBatchKind(context, plan, decision);
   const sourceDecisionRemoval =
     kind === 'takeoverBatch' && decision.source.kind === 'hubDecision'
@@ -2768,19 +3020,12 @@ function projectAuthoredBatch(
   const physical = physicalExitsForSource(context, plan, decision.source);
   const rank = new Map(physical.map((exit) => [exit.exitKey, exit.index] as const));
   const fieldsActiveCageCount = authoredFieldsActiveCageCount(context, plan, decision);
-  const fields = fieldsContextForAuthoredBatch(context, plan, decision);
   const projectedTargets = [...decision.normal.targets]
-    .sort(
-      (left, right) =>
-        (rank.get(left.exitKey) ??
-          normalExitOrdinal(left.exitKey) ??
-          unknownPhysicalExitSortIndex) -
-        (rank.get(right.exitKey) ??
-          normalExitOrdinal(right.exitKey) ??
-          unknownPhysicalExitSortIndex),
-    )
-    .map((target) =>
-      authoredBatchTargetNode(
+    .sort((left, right) => compareAuthoredTargetsInPhysicalOrder(rank, left, right))
+    .map((target) => {
+      const overlay = evaluatedTargets.get(target.exitKey);
+      evaluatedTargets.delete(target.exitKey);
+      return projectAuthoredTargetWithOverlay(
         context,
         plan,
         decision,
@@ -2788,15 +3033,20 @@ function projectAuthoredBatch(
         physical,
         fieldsActiveCageCount,
         sourceDecisionRemoval,
-      ),
+        overlay,
+      );
+    });
+  if (evaluatedTargets.size > 0) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(owner)} has evaluated targets with no authored target`,
     );
-  const targets = projectedTargets.map((target) => target.target);
-  const targetsByKey = new Set(decision.normal.targets.map((target) => target.exitKey));
+  }
+  const targets = projectedTargets.map((value) => value.target);
   const missingTargets = missingTargetsForPhysicalExits(
     context,
     decision.source,
     physical,
-    targetsByKey,
+    new Set(decision.normal.targets.map((target) => target.exitKey)),
     missingTargetPrerequisite(context, plan, decision),
   );
   const repairScope = batchRepairScopeForRoots(
@@ -2810,15 +3060,30 @@ function projectAuthoredBatch(
         .map((target) => target.room.occurrenceId),
     ),
   );
+  const layout = context.catalog.biomeLayouts.byKey[plan.biomeKey];
+  const fieldsCageOutcome =
+    kind !== 'takeoverBatch' &&
+    layout?.progression.kind === 'generated' &&
+    layout.progression.batchPolicy.kind === 'fields'
+      ? marker(context, owner)
+      : undefined;
+  const fields =
+    evaluated === undefined
+      ? fieldsContextForAuthoredBatch(context, plan, decision)
+      : fieldsContextForCanonicalBatch(context, evaluated.batch);
+  const hasEditableAuthoredRewardStore =
+    decision.normal.rewardStore.kind === 'authoredBaseStore' &&
+    (kind !== 'takeoverBatch' || decision.normal.rewardStore.baseRewardStoreKey !== null);
   const base = {
     batchState: decision.normal.batchState,
+    ...(fieldsCageOutcome === undefined ? {} : { fieldsCageOutcome }),
     ...(fields === undefined ? {} : { fields }),
     key: `batch:${semanticAddressKey(owner)}`,
     marker: marker(context, owner),
     missingTargets,
     owner,
     ...(repairScope === undefined ? {} : { repairScope }),
-    ...(decision.normal.rewardStore.kind === 'authoredBaseStore'
+    ...(hasEditableAuthoredRewardStore
       ? {
           rewardStore: marker(
             context,
@@ -2829,9 +3094,9 @@ function projectAuthoredBatch(
     selection: marker(context, createExitSelectionAddress(context.biome, decision.source)),
     source: decision.source,
     targets: Object.freeze(targets),
-    topologyState: rawBatchTopologyState(context, owner),
+    topologyState: topologyStateForAuthoredBatch(context, owner, evaluated),
   } as const;
-  const batch: WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode | WorkspaceMixedBatchNode =
+  const batch: WorkspaceDecisionBatchNode =
     kind === 'takeoverBatch'
       ? Object.freeze({
           ...base,
@@ -2851,62 +3116,149 @@ function projectAuthoredBatch(
             targetInteraction: 'replaceable' as const,
           });
   redirectDecisionFocus(context, batch);
+  if (sourceDecisionRemoval !== undefined) {
+    const workbench = projectedTargets[0]?.node;
+    if (workbench === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner)} Hub handoff has no authored target workbench`,
+      );
+    }
+    redirectMarkersToNode(context, decisionOwnedMarkers(batch), workbench.key);
+  }
   return Object.freeze({
     batch,
     workbenches: Object.freeze(projectedTargets.map((target) => target.node)),
   });
 }
 
-function projectAuthoredLinkedExit(
+function projectAuthoredLinkedExitWithOverlay(
   context: MutableProjectionContext,
   plan: AuthoredBiomePlan,
   decision: AuthoredLinkedExitDecision,
+  evaluated: CanonicalLinkedExit | undefined,
 ): {
   readonly node: WorkspaceLinkedExitNode;
   readonly workbench: WorkspaceOccurrenceWorkbenchNode;
 } {
   const owner = createExitDecisionAddress(context.biome, decision.source);
-  const sourceDecisionRemoval = hubStageDecisionRemoval(context, plan, owner, 'preHub');
   const occurrence = authoredOccurrence(plan, decision.normal.occurrenceId);
   if (occurrence === undefined) {
     throw new StructuredWorkspaceProjectionContractError(
       `${plan.biomeKey} linked target ${decision.normal.occurrenceId} is absent from authored occurrences`,
     );
   }
-  const targetAddress = createTargetAddress(
-    context.biome,
-    decision.source,
-    decision.normal.exitKey,
-  );
-  const targetMarker = marker(context, targetAddress);
-  const workbench = Object.freeze({
-    ...projectOccurrence(context, occurrence),
-    ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
-    railMarker: targetMarker,
-  });
+  const address = createTargetAddress(context.biome, decision.source, decision.normal.exitKey);
+  if (evaluated !== undefined) {
+    if (
+      semanticAddressKey(evaluated.origin) !== semanticAddressKey(owner) ||
+      semanticAddressKey(evaluated.target.origin) !== semanticAddressKey(address) ||
+      evaluated.target.room.occurrenceId !== occurrence.occurrenceId ||
+      evaluated.target.room.gameName !== occurrence.gameName ||
+      semanticAddressKey(evaluated.target.room.origin) !==
+        semanticAddressKey(createOccurrenceAddress(context.biome, occurrence.occurrenceId))
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner)} evaluated linked exit does not match authored topology`,
+      );
+    }
+  }
+  const sourceDecisionRemoval = hubStageDecisionRemoval(context, plan, owner, 'preHub');
+  const markerForTarget = marker(context, address);
   const physical = physicalExitsForSource(context, plan, decision.source).find(
     (exit) => exit.exitKey === decision.normal.exitKey,
   );
-  return Object.freeze({
-    node: Object.freeze({
-      kind: 'linkedExit' as const,
-      key: `linked:${semanticAddressKey(owner)}`,
-      marker: marker(context, owner),
-      owner,
-      source: decision.source,
-      target: Object.freeze({
-        exitKey: decision.normal.exitKey,
-        index: physical?.index ?? linkedExitOrdinal,
-        marker: targetMarker,
-        physicalState: physical === undefined ? ('unavailable' as const) : ('available' as const),
-        selected: true,
-        retained: true,
-        nextPath: 'continuesSpine' as const,
-        room: workbench.room,
-      }),
+  const physicalState =
+    evaluated?.target.exit.kind ??
+    (physical === undefined ? ('unavailable' as const) : ('available' as const));
+  const workbench = Object.freeze({
+    ...projectOccurrence(context, occurrence, {
+      detailsActive: true,
+      ...(evaluated === undefined ? {} : { evaluatedRoom: evaluated.target.room }),
     }),
+    ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
+    railMarker: markerForTarget,
+  });
+  const node = Object.freeze({
+    kind: 'linkedExit' as const,
+    key: `linked:${semanticAddressKey(owner)}`,
+    marker: marker(context, owner),
+    owner,
+    source: decision.source,
+    target: Object.freeze({
+      ...(evaluated?.target.room.clockworkReward === undefined
+        ? {}
+        : { clockworkReward: evaluated.target.room.clockworkReward }),
+      exitKey: decision.normal.exitKey,
+      index: evaluated?.target.exit.index ?? physical?.index ?? linkedExitOrdinal,
+      marker: markerForTarget,
+      physicalState,
+      selected: true,
+      retained: evaluated === undefined || physicalState === 'unavailable',
+      nextPath: evaluated?.target.continuation ?? ('continuesSpine' as const),
+      room: workbench.room,
+    }),
+  });
+  if (sourceDecisionRemoval === undefined) {
+    redirectLinkedFocus(context, node);
+  } else {
+    redirectMarkersToNode(
+      context,
+      Object.freeze([node.marker, node.target.marker, ...occurrenceOwnedMarkers(node.target.room)]),
+      workbench.key,
+    );
+  }
+  return Object.freeze({
+    node,
     workbench,
   });
+}
+
+function authoredExitDecisionMap(
+  context: MutableProjectionContext,
+  topology: NonNullable<AuthoredBiomePlan['topology']>,
+): Map<string, ExitDecision> {
+  const bySource = new Map<string, ExitDecision>();
+  for (const decision of topology.decisions) {
+    if (decision.kind !== 'exit') continue;
+    const key = semanticAddressKey(createExitDecisionAddress(context.biome, decision.source));
+    if (bySource.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        key + ' has duplicate authored exit-decision owner',
+      );
+    }
+    bySource.set(key, decision);
+  }
+  return bySource;
+}
+
+function assertAuthoredTopologyProjectionIdentities(
+  context: MutableProjectionContext,
+  plan: AuthoredBiomePlan,
+): void {
+  const topology = plan.topology;
+  if (topology === null) return;
+  const occurrenceIds = new Set<OccurrenceId>();
+  for (const occurrence of topology.occurrences) {
+    if (occurrenceIds.has(occurrence.occurrenceId)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        semanticAddressKey(createOccurrenceAddress(context.biome, occurrence.occurrenceId)) +
+          ' has duplicate authored occurrence identity',
+      );
+    }
+    occurrenceIds.add(occurrence.occurrenceId);
+  }
+  authoredExitDecisionMap(context, topology);
+  const hubOwners = new Set<string>();
+  for (const decision of topology.decisions) {
+    if (decision.kind !== 'hub') continue;
+    const key = semanticAddressKey(createHubDecisionAddress(context.biome, decision.hubKey));
+    if (hubOwners.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        key + ' has duplicate authored Hub-decision owner',
+      );
+    }
+    hubOwners.add(key);
+  }
 }
 
 function authoredExitDecisionsInTopologyOrder(
@@ -2915,14 +3267,7 @@ function authoredExitDecisionsInTopologyOrder(
 ): readonly ExitDecision[] {
   const topology = plan.topology;
   if (topology === null) return Object.freeze([]);
-  const bySource = new Map(
-    topology.decisions
-      .filter((decision): decision is ExitDecision => decision.kind === 'exit')
-      .map((decision) => [
-        semanticAddressKey(createExitDecisionAddress(context.biome, decision.source)),
-        decision,
-      ]),
-  );
+  const bySource = authoredExitDecisionMap(context, topology);
   const ordered: ExitDecision[] = [];
   const visited = new Set<string>();
   const visit = (source: ExitDecisionSourceAddress): void => {
@@ -2932,27 +3277,40 @@ function authoredExitDecisionsInTopologyOrder(
     if (decision === undefined) return;
     visited.add(key);
     ordered.push(decision);
-    if (decision.normal.kind !== 'batch') return;
+    if (decision.normal.kind === 'linked') {
+      visit({ kind: 'occurrence', occurrenceId: decision.normal.occurrenceId });
+      return;
+    }
     const rank = new Map(
       physicalExitsForSource(context, plan, decision.source).map(
         (exit) => [exit.exitKey, exit.index] as const,
       ),
     );
-    for (const target of [...decision.normal.targets].sort(
-      (left, right) =>
-        (rank.get(left.exitKey) ??
-          normalExitOrdinal(left.exitKey) ??
-          unknownPhysicalExitSortIndex) -
-        (rank.get(right.exitKey) ??
-          normalExitOrdinal(right.exitKey) ??
-          unknownPhysicalExitSortIndex),
-    )) {
+    const targets = [...decision.normal.targets].sort((left, right) =>
+      compareAuthoredTargetsInPhysicalOrder(rank, left, right),
+    );
+    const selectedExitKey =
+      decision.selection.kind === 'normal'
+        ? decision.selection.exitKey
+        : decision.selection.kind === 'derived'
+          ? decision.normal.targets[0]?.exitKey
+          : undefined;
+    const selected =
+      selectedExitKey === undefined
+        ? undefined
+        : targets.find((target) => target.exitKey === selectedExitKey);
+    // The selected target owns the reachable authored spine. Retained peers
+    // still follow in physical order, after that spine rather than before it.
+    for (const target of [
+      ...(selected === undefined ? [] : [selected]),
+      ...targets.filter((target) => target !== selected),
+    ]) {
       visit({ kind: 'occurrence', occurrenceId: target.occurrenceId });
     }
   };
   visit({ kind: 'occurrence', occurrenceId: topology.startOccurrenceId });
   for (const [key, decision] of [...bySource.entries()].sort(([left], [right]) =>
-    left.localeCompare(right),
+    compareCodeUnitStrings(left, right),
   )) {
     if (!visited.has(key)) visit(decision.source);
   }
@@ -2969,6 +3327,104 @@ function materialized(
   if (evaluation === undefined) return undefined;
   if (evaluation.authoring === 'complete') return evaluation.snapshot;
   return 'materializedPrefix' in evaluation ? evaluation.materializedPrefix : undefined;
+}
+
+interface EvaluatedBiomeOverlay {
+  readonly batches: ReadonlyMap<string, EvaluatedBatchOverlay>;
+  readonly entryRoom?: CanonicalAuthoredRoom;
+  readonly hubs: ReadonlyMap<string, CanonicalHubDecision>;
+  readonly linkedExits: ReadonlyMap<string, CanonicalLinkedExit>;
+}
+
+function evaluatedBiomeOverlay(
+  snapshot: CanonicalBiome | MaterializedBiomePrefix | undefined,
+): EvaluatedBiomeOverlay {
+  const batches = new Map<string, EvaluatedBatchOverlay>();
+  const linkedExits = new Map<string, CanonicalLinkedExit>();
+  const hubs = new Map<string, CanonicalHubDecision>();
+  const insert = <T>(map: Map<string, T>, key: string, value: T, label: string): void => {
+    if (map.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `evaluation has duplicate ${label} owner ${key}`,
+      );
+    }
+    map.set(key, value);
+  };
+  for (const decision of snapshot?.decisions ?? []) {
+    const key = semanticAddressKey(decision.origin);
+    switch (decision.kind) {
+      case 'batch':
+        insert(batches, key, Object.freeze({ batch: decision, partial: false }), 'batch');
+        break;
+      case 'linkedExit':
+        insert(linkedExits, key, decision, 'linked exit');
+        break;
+      case 'hub':
+        insert(hubs, key, decision, 'Hub');
+        break;
+    }
+  }
+  const partial = snapshot?.kind === 'biomePrefix' ? partialBatchFromPrefix(snapshot) : undefined;
+  if (partial !== undefined) {
+    const key = semanticAddressKey(partial.origin);
+    if (batches.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `evaluation has duplicate batch owner ${key}`,
+      );
+    }
+    batches.set(key, Object.freeze({ batch: partial, partial: true }));
+  }
+  return Object.freeze({
+    batches,
+    ...(snapshot?.entryRoom === undefined ? {} : { entryRoom: snapshot.entryRoom }),
+    hubs,
+    linkedExits,
+  });
+}
+
+function assertEvaluationOwnersMatchAuthoredTopology(
+  context: MutableProjectionContext,
+  plan: AuthoredBiomePlan,
+  overlay: EvaluatedBiomeOverlay,
+  authoredExitDecisions: readonly ExitDecision[],
+): void {
+  const exits = new Map(
+    authoredExitDecisions.map(
+      (decision) =>
+        [
+          semanticAddressKey(createExitDecisionAddress(context.biome, decision.source)),
+          decision,
+        ] as const,
+    ),
+  );
+  for (const key of overlay.batches.keys()) {
+    if (exits.get(key)?.normal.kind !== 'batch') {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has an evaluated batch without an authored batch decision`,
+      );
+    }
+  }
+  for (const key of overlay.linkedExits.keys()) {
+    if (exits.get(key)?.normal.kind !== 'linked') {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has an evaluated linked exit without an authored linked decision`,
+      );
+    }
+  }
+  const hubs = new Set(
+    (plan.topology?.decisions ?? [])
+      .filter((decision): decision is HubDecision => decision.kind === 'hub')
+      .map((decision) =>
+        semanticAddressKey(createHubDecisionAddress(context.biome, decision.hubKey)),
+      ),
+  );
+  for (const key of overlay.hubs.keys()) {
+    if (!hubs.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has an evaluated Hub without an authored Hub decision`,
+      );
+    }
+  }
 }
 
 function authoringFrontier(
@@ -3397,6 +3853,7 @@ function createInteractionCatalog(
   }
 
   const batchRewardStores = new Map<string, WorkspaceCandidateInteraction<string>>();
+  const exitFrontierCapabilities = new Map<string, WorkspaceExitFrontierCapabilities>();
   const exitSelections = new Map<string, WorkspaceExitSelectionInteraction>();
   const fieldsCageOutcomes = new Map<string, WorkspaceCandidateInteraction<'min' | 'max'>>();
   const hubSlots = new Map<string, WorkspaceHubSlotInteraction>();
@@ -3591,14 +4048,8 @@ function createInteractionCatalog(
                   : {}),
                 targets: Object.freeze(
                   [...decision.normal.targets]
-                    .sort(
-                      (left, right) =>
-                        (physicalOrder.get(left.exitKey) ??
-                          normalExitOrdinal(left.exitKey) ??
-                          unknownPhysicalExitSortIndex) -
-                        (physicalOrder.get(right.exitKey) ??
-                          normalExitOrdinal(right.exitKey) ??
-                          unknownPhysicalExitSortIndex),
+                    .sort((left, right) =>
+                      compareAuthoredTargetsInPhysicalOrder(physicalOrder, left, right),
                     )
                     .map((target) =>
                       Object.freeze({ label: target.exitKey, value: target.exitKey }),
@@ -3620,6 +4071,34 @@ function createInteractionCatalog(
           const existingTargetOccurrenceIds = new Map(
             decision.normal.targets.map((target) => [target.exitKey, target.occurrenceId] as const),
           );
+          const policy =
+            layout.progression.kind === 'generated'
+              ? layout.progression.rewardStorePolicy
+              : undefined;
+          const authoredRewardStore =
+            decision.normal.rewardStore.kind === 'authoredBaseStore'
+              ? decision.normal.rewardStore
+              : undefined;
+          if (
+            authoredRewardStore !== undefined &&
+            (!takeover || authoredRewardStore.baseRewardStoreKey !== null) &&
+            policy?.kind === 'authoredBaseStore'
+          ) {
+            const store = createBatchRewardStoreAddress(biome, decision.source);
+            batchRewardStores.set(
+              semanticAddressKey(store),
+              candidateInteraction(
+                store,
+                Object.freeze(
+                  policy.storeKeys.map((value) =>
+                    Object.freeze({ label: storeLabel(value), value }),
+                  ),
+                ),
+                authoredRewardStore.baseRewardStoreKey ?? undefined,
+                () => candidates.batchRewardStores(store, policy.storeKeys),
+              ),
+            );
+          }
           if (takeover) {
             const gameName = targetRooms[0]?.gameName;
             const requiredExits = resolveDeclaredPhysicalExits(
@@ -3644,30 +4123,6 @@ function createInteractionCatalog(
               );
             }
           } else {
-            const policy =
-              layout.progression.kind === 'generated'
-                ? layout.progression.rewardStorePolicy
-                : undefined;
-            if (policy?.kind === 'authoredBaseStore') {
-              const store = createBatchRewardStoreAddress(biome, decision.source);
-              const selected =
-                decision.normal.rewardStore.kind === 'authoredBaseStore'
-                  ? (decision.normal.rewardStore.baseRewardStoreKey ?? undefined)
-                  : undefined;
-              batchRewardStores.set(
-                semanticAddressKey(store),
-                candidateInteraction(
-                  store,
-                  Object.freeze(
-                    policy.storeKeys.map((value) =>
-                      Object.freeze({ label: storeLabel(value), value }),
-                    ),
-                  ),
-                  selected,
-                  () => candidates.batchRewardStores(store, policy.storeKeys),
-                ),
-              );
-            }
             if (
               layout.progression.kind === 'generated' &&
               layout.progression.batchPolicy.kind === 'fields'
@@ -3784,10 +4239,10 @@ function createInteractionCatalog(
         }
         if (occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined) {
           for (const [offerKey, offer] of Object.entries(occurrence.state.shop.offers)) {
-            // A persisted Shop inventory is not a live editor until its room
-            // lifecycle has entered it. The room-local projection publishes
-            // an offer control precisely at that boundary, so re-use that
-            // authority rather than inspecting selection topology here.
+            // A persisted Shop inventory becomes editable when the projected
+            // room's authored detail surface is active. Re-use the published
+            // offer control as that authority so selected, unassessed Shops
+            // remain editable while unpicked retained inventory stays dormant.
             const offerAddress = createShopOfferAddress(biome, occurrence.occurrenceId, offerKey);
             if (!rewardControls.has(semanticAddressKey(offerAddress))) continue;
             const purchase = createShopPurchaseAddress(biome, occurrence.occurrenceId, offerKey);
@@ -3889,33 +4344,62 @@ function createInteractionCatalog(
             plan.topology,
             frontier.source,
           );
-          if (fixedWidthOneTakeoverAtFrontier !== undefined && existing === undefined) {
-            const requiredExits = resolveDeclaredPhysicalExits(
-              catalog,
-              layout,
-              plan.topology,
-              frontier.source,
+          const key = semanticAddressKey(frontier);
+          const fixedWidthOneRequiredExits =
+            fixedWidthOneTakeoverAtFrontier === undefined
+              ? undefined
+              : resolveDeclaredPhysicalExits(catalog, layout, plan.topology, frontier.source);
+          const fixedWidthOneRequiredExitKeys =
+            fixedWidthOneRequiredExits === undefined
+              ? undefined
+              : Object.freeze(fixedWidthOneRequiredExits.map((exit) => exit.exitKey));
+          const structuralCapability: WorkspaceExitFrontierCapabilities['structural'] =
+            existing === undefined &&
+            frontier.source.kind === 'occurrence' &&
+            fixedWidthOneTakeoverAtFrontier === undefined
+              ? layout.progression.kind === 'hub' &&
+                frontier.source.occurrenceId === plan.topology.startOccurrenceId
+                ? 'createLinkedExit'
+                : 'createBatch'
+              : undefined;
+          const takeoverCapability =
+            existing === undefined &&
+            ((fixedWidthOneTakeoverAtFrontier !== undefined &&
+              fixedWidthOneRequiredExitKeys !== undefined) ||
+              (fixedWidthOneTakeoverAtFrontier === undefined &&
+                layout.progression.kind === 'generated' &&
+                fixedWidthOneTakeover === undefined &&
+                gameNames.length > 0))
+              ? (true as const)
+              : undefined;
+          if (structuralCapability !== undefined || takeoverCapability !== undefined) {
+            exitFrontierCapabilities.set(
+              key,
+              Object.freeze({
+                ...(structuralCapability === undefined ? {} : { structural: structuralCapability }),
+                ...(takeoverCapability === undefined ? {} : { takeover: takeoverCapability }),
+              }),
             );
-            const requiredExitKeys =
-              requiredExits === undefined
-                ? undefined
-                : Object.freeze(requiredExits.map((exit) => exit.exitKey));
-            if (requiredExitKeys !== undefined) {
-              takeoverBatches.set(
-                semanticAddressKey(frontier),
-                fixedWidthOneTakeoverAtFrontier.kind === 'completedHubHandoff'
-                  ? createCompletedHubHandoffInteraction({
-                      gameName: fixedWidthOneTakeoverAtFrontier.room.gameName,
-                      owner: frontier,
-                      requiredExitKeys,
-                    })
-                  : createFixedWidthOneTakeoverInteraction({
-                      gameName: fixedWidthOneTakeoverAtFrontier.room.gameName,
-                      owner: frontier,
-                      requiredExitKeys,
-                    }),
-              );
-            }
+          }
+          if (
+            fixedWidthOneTakeoverAtFrontier !== undefined &&
+            existing === undefined &&
+            fixedWidthOneRequiredExitKeys !== undefined
+          ) {
+            takeoverBatches.set(
+              key,
+              fixedWidthOneTakeoverAtFrontier.kind === 'completedHubHandoff'
+                ? createCompletedHubHandoffInteraction({
+                    gameName: fixedWidthOneTakeoverAtFrontier.room.gameName,
+                    owner: frontier,
+                    requiredExitKeys: fixedWidthOneRequiredExitKeys,
+                  })
+                : createFixedWidthOneTakeoverInteraction({
+                    gameName: fixedWidthOneTakeoverAtFrontier.room.gameName,
+                    owner: frontier,
+                    requiredExitKeys: fixedWidthOneRequiredExitKeys,
+                  }),
+            );
           } else if (
             layout.progression.kind === 'generated' &&
             fixedWidthOneTakeover === undefined &&
@@ -3964,6 +4448,19 @@ function createInteractionCatalog(
                   });
             structural.set(action.key, action);
           }
+          if (structuralCapability !== undefined) {
+            const structuralAction = structural.get(key);
+            if (structuralAction?.action !== structuralCapability) {
+              throw new StructuredWorkspaceProjectionContractError(
+                key + ' exit frontier structural capability was not constructed',
+              );
+            }
+          }
+          if (takeoverCapability === true && !takeoverBatches.has(key)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              key + ' exit frontier takeover capability was not constructed',
+            );
+          }
         } else if (frontier.kind === 'hubDecision') {
           const action: WorkspaceStructuralInteraction = Object.freeze({
             action: 'createHubDecision' as const,
@@ -3977,6 +4474,7 @@ function createInteractionCatalog(
   }
   return Object.freeze({
     batchRewardStores,
+    exitFrontierCapabilities,
     exitSelections,
     fieldsCageOutcomes,
     hubSlots,
@@ -4154,6 +4652,356 @@ function isHubRailScaffoldWithRenderedTarget(
   );
 }
 
+function workspaceMarkersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
+  switch (node.kind) {
+    case 'linkedExit':
+      return Object.freeze([
+        node.marker,
+        node.target.marker,
+        ...occurrenceOwnedMarkers(node.target.room),
+      ]);
+    case 'ordinaryBatch':
+    case 'mixedBatch':
+    case 'takeoverBatch':
+      return decisionOwnedMarkers(node);
+    case 'hubDecision':
+      return Object.freeze([
+        node.marker,
+        node.openSet,
+        ...node.slots.map((slot) => slot.marker),
+        ...node.visits.map((visit) => visit.marker),
+        ...node.slots.flatMap((slot) => {
+          const mainReward = slot.room === undefined ? undefined : hubMainRewardMarker(slot.room);
+          return mainReward === undefined ? [] : [mainReward];
+        }),
+      ]);
+    case 'occurrenceWorkbench':
+      return occurrenceOwnedMarkers(node.room);
+    case 'completion':
+      return Object.freeze([node.marker]);
+  }
+}
+
+function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
+  switch (address.kind) {
+    case 'batchRewardStore':
+    case 'exitSelection':
+    case 'target':
+    case 'occurrence':
+    case 'incomingReward':
+    case 'localReward':
+    case 'localChild':
+    case 'localChildGroup':
+    case 'rewardWheel':
+    case 'rewardWheelOffer':
+    case 'hubSlot':
+    case 'hubVisit':
+    case 'shopOffer':
+    case 'shopPurchase':
+      return true;
+    default:
+      return false;
+  }
+}
+
+function assertWorkspaceMarkerDestination(
+  focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>,
+  nodesByKey: ReadonlyMap<string, WorkspaceNode>,
+  containingNodeKeys: ReadonlySet<string>,
+  marker: WorkspaceMarker,
+  detail: string,
+): void {
+  const destination = focusByOwner.get(marker.focusKey);
+  if (destination === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${detail} ${marker.focusKey} has no workspace focus destination`,
+    );
+  }
+  if (semanticAddressKey(destination.ownerAddress) !== marker.focusKey) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${detail} ${marker.focusKey} is registered with a conflicting focus owner`,
+    );
+  }
+  if (destination.region !== 'structure' || !nodesByKey.has(destination.nodeKey)) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${detail} ${marker.focusKey} does not resolve to a reachable workspace node`,
+    );
+  }
+  if (!containingNodeKeys.has(destination.nodeKey)) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${detail} ${marker.focusKey} does not resolve to a containing workspace package`,
+    );
+  }
+}
+
+function exactlyOneWorkspaceValue<TValue>(values: readonly TValue[], detail: string): TValue {
+  if (values.length !== 1) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${detail} resolves to ${values.length} workspace values instead of one`,
+    );
+  }
+  return values[0]!;
+}
+
+interface WorkspaceMarkerPackageIndex {
+  readonly markerPackageKeys: Map<string, Set<string>>;
+  readonly markersByOwner: Map<string, WorkspaceMarker>;
+  readonly nodesByKey: Map<string, WorkspaceNode>;
+}
+
+function workspaceMarkerPackageIndex(
+  structuralNodes: readonly WorkspaceNode[],
+  detail: string,
+): WorkspaceMarkerPackageIndex {
+  const nodesByKey = new Map<string, WorkspaceNode>();
+  const markersByOwner = new Map<string, WorkspaceMarker>();
+  const markerPackageKeys = new Map<string, Set<string>>();
+  for (const node of structuralNodes) {
+    if (nodesByKey.has(node.key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${detail} projects duplicate workspace node ${node.key}`,
+      );
+    }
+    nodesByKey.set(node.key, node);
+  }
+  for (const node of structuralNodes) {
+    for (const workspaceMarker of workspaceMarkersForNode(node)) {
+      const prior = markersByOwner.get(workspaceMarker.focusKey);
+      if (
+        prior !== undefined &&
+        semanticAddressKey(prior.address) !== semanticAddressKey(workspaceMarker.address)
+      ) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${detail} projects conflicting marker packages for ${workspaceMarker.focusKey}`,
+        );
+      }
+      markersByOwner.set(workspaceMarker.focusKey, workspaceMarker);
+      const packages = markerPackageKeys.get(workspaceMarker.focusKey) ?? new Set<string>();
+      packages.add(node.key);
+      markerPackageKeys.set(workspaceMarker.focusKey, packages);
+    }
+  }
+  return { markerPackageKeys, markersByOwner, nodesByKey };
+}
+
+/**
+ * The workspace is a semantic adapter over authored topology. This closes the
+ * adapter contract before findings are allowed to use a coarse biome fallback:
+ * every persisted owner must have one rendered package and every published
+ * marker must lead to a real structural node.
+ */
+function assertWorkspaceProjectionClosure(
+  context: MutableProjectionContext,
+  plan: AuthoredBiomePlan,
+  structuralNodes: readonly WorkspaceNode[],
+): void {
+  const { markerPackageKeys, markersByOwner, nodesByKey } = workspaceMarkerPackageIndex(
+    structuralNodes,
+    plan.biomeKey,
+  );
+  for (const node of structuralNodes) {
+    if (node.kind !== 'occurrenceWorkbench' || node.sourceDecisionRemoval === undefined) {
+      continue;
+    }
+    const source = structuralNodes.find(
+      (candidate): candidate is WorkspaceLinkedExitNode | WorkspaceDecisionBatchNode =>
+        (candidate.kind === 'linkedExit' ||
+          candidate.kind === 'ordinaryBatch' ||
+          candidate.kind === 'mixedBatch' ||
+          candidate.kind === 'takeoverBatch') &&
+        candidate.marker.focusKey === node.sourceDecisionRemoval!.interactionKey,
+    );
+    if (source === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${node.sourceDecisionRemoval.interactionKey} has no source decision package`,
+      );
+    }
+    for (const workspaceMarker of workspaceMarkersForNode(source)) {
+      const packages = markerPackageKeys.get(workspaceMarker.focusKey);
+      if (packages === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${workspaceMarker.focusKey} has no registered source marker package`,
+        );
+      }
+      packages.add(node.key);
+    }
+  }
+  for (const [owner, workspaceMarker] of markersByOwner) {
+    assertWorkspaceMarkerDestination(
+      context.focusByOwner,
+      nodesByKey,
+      markerPackageKeys.get(owner)!,
+      workspaceMarker,
+      plan.biomeKey,
+    );
+  }
+
+  const topology = plan.topology;
+  if (topology !== null) {
+    const occurrenceNodes = new Map<OccurrenceId, WorkspaceOccurrenceWorkbenchNode>();
+    for (const occurrence of topology.occurrences) {
+      const occurrenceNode = exactlyOneWorkspaceValue(
+        structuralNodes.filter(
+          (node): node is WorkspaceOccurrenceWorkbenchNode =>
+            node.kind === 'occurrenceWorkbench' &&
+            node.room.occurrenceId === occurrence.occurrenceId,
+        ),
+        `${plan.biomeKey} occurrence ${occurrence.occurrenceId}`,
+      );
+      if (occurrenceNode.room.gameName !== occurrence.gameName) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${plan.biomeKey} occurrence ${occurrence.occurrenceId} projects a different room declaration`,
+        );
+      }
+      occurrenceNodes.set(occurrence.occurrenceId, occurrenceNode);
+    }
+
+    for (const decision of topology.decisions) {
+      if (decision.kind === 'hub') {
+        const owner = createHubDecisionAddress(context.biome, decision.hubKey);
+        const hub = exactlyOneWorkspaceValue(
+          structuralNodes.filter(
+            (node): node is WorkspaceHubDecisionNode =>
+              node.kind === 'hubDecision' &&
+              semanticAddressKey(node.owner) === semanticAddressKey(owner),
+          ),
+          `${plan.biomeKey} Hub ${decision.hubKey}`,
+        );
+        for (const target of decision.openTargets) {
+          const slot = exactlyOneWorkspaceValue(
+            hub.slots.filter((candidate) => candidate.hubSlotKey === target.hubSlotKey),
+            `${semanticAddressKey(owner)} slot ${target.hubSlotKey}`,
+          );
+          if (!slot.open || slot.room?.occurrenceId !== target.occurrenceId) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(owner)} slot ${target.hubSlotKey} does not project its authored occurrence`,
+            );
+          }
+        }
+        for (const [index, slotKey] of decision.visitOrder.entries()) {
+          const visit = exactlyOneWorkspaceValue(
+            hub.visits.filter((candidate) => candidate.visitIndex === index + 1),
+            `${semanticAddressKey(owner)} visit ${index + 1}`,
+          );
+          if (visit.authoring !== 'authored' || visit.hubSlotKey !== slotKey) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(owner)} visit ${index + 1} does not project authored order`,
+            );
+          }
+        }
+        continue;
+      }
+
+      const owner = createExitDecisionAddress(context.biome, decision.source);
+      const decisionNode = exactlyOneWorkspaceValue(
+        structuralNodes.filter(
+          (
+            node,
+          ): node is
+            | WorkspaceLinkedExitNode
+            | WorkspaceOrdinaryBatchNode
+            | WorkspaceMixedBatchNode
+            | WorkspaceTakeoverBatchNode =>
+            node.kind !== 'hubDecision' &&
+            node.kind !== 'occurrenceWorkbench' &&
+            node.kind !== 'completion' &&
+            semanticAddressKey(node.owner) === semanticAddressKey(owner),
+        ),
+        `${semanticAddressKey(owner)} decision`,
+      );
+      if (decision.normal.kind === 'linked') {
+        if (
+          decisionNode.kind !== 'linkedExit' ||
+          decisionNode.target.exitKey !== decision.normal.exitKey ||
+          decisionNode.target.room.occurrenceId !== decision.normal.occurrenceId
+        ) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${semanticAddressKey(owner)} does not project its authored linked target`,
+          );
+        }
+        continue;
+      }
+      if (decisionNode.kind === 'linkedExit') {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(owner)} projects a linked exit for an authored batch`,
+        );
+      }
+      for (const target of decision.normal.targets) {
+        const projectedTarget = exactlyOneWorkspaceValue(
+          decisionNode.targets.filter((candidate) => candidate.exitKey === target.exitKey),
+          `${semanticAddressKey(owner)} target ${target.exitKey}`,
+        );
+        if (projectedTarget.room.occurrenceId !== target.occurrenceId) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${semanticAddressKey(owner)} target ${target.exitKey} projects a different occurrence`,
+          );
+        }
+        if (!occurrenceNodes.has(target.occurrenceId)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${semanticAddressKey(owner)} target ${target.exitKey} has no occurrence workbench`,
+          );
+        }
+      }
+    }
+  }
+
+  for (const findings of context.findingsByOwner.values()) {
+    for (const finding of findings) {
+      if (!isFineGrainedFindingOwner(finding.origin)) continue;
+      const workspaceMarker = markersByOwner.get(semanticAddressKey(finding.origin));
+      if (workspaceMarker === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(finding.origin)} finding has no exact workspace marker`,
+        );
+      }
+      assertWorkspaceMarkerDestination(
+        context.focusByOwner,
+        nodesByKey,
+        markerPackageKeys.get(workspaceMarker.focusKey)!,
+        workspaceMarker,
+        `${semanticAddressKey(finding.origin)} finding`,
+      );
+    }
+  }
+}
+
+/**
+ * Checks the rendered side of the authored leaf contract before findings can
+ * use generic destination fallback. The expected requirements are produced
+ * solely from authored state and declarations by `authoredWorkspaceLeafRequirements`.
+ */
+export function assertAuthoredWorkspaceLeafProjectionClosure(
+  requirements: readonly WorkspaceAuthoredLeafRequirement[],
+  focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>,
+  structuralNodes: readonly WorkspaceNode[],
+): void {
+  const { markerPackageKeys, markersByOwner, nodesByKey } = workspaceMarkerPackageIndex(
+    structuralNodes,
+    'authored leaf audit',
+  );
+  for (const requirement of requirements) {
+    const key = semanticAddressKey(requirement.address);
+    const workspaceMarker = markersByOwner.get(key);
+    if (workspaceMarker === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} required authored leaf has no workspace marker`,
+      );
+    }
+    if (semanticAddressKey(workspaceMarker.address) !== key) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} required authored leaf resolves to a conflicting workspace marker`,
+      );
+    }
+    assertWorkspaceMarkerDestination(
+      focusByOwner,
+      nodesByKey,
+      markerPackageKeys.get(key)!,
+      workspaceMarker,
+      'required authored leaf',
+    );
+  }
+}
+
 function projectBiome(
   catalog: Catalog,
   routeKey: string,
@@ -4161,12 +5009,14 @@ function projectBiome(
   evaluation: ProjectBiomeEvaluation | undefined,
   focusByOwner: Map<string, WorkspaceInspectorDestination>,
 ): {
+  readonly authoredLeafRequirements: readonly WorkspaceAuthoredLeafRequirement[];
   readonly biome: WorkspaceBiome;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
 } {
   const biomeAddress = createBiomeAddress(routeKey, plan.biomeKey);
   const snapshot = materialized(evaluation);
+  const overlay = evaluatedBiomeOverlay(snapshot);
   const context: MutableProjectionContext = {
     assessedKeys: assessedAddresses(snapshot),
     catalog,
@@ -4181,6 +5031,8 @@ function projectBiome(
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
   if (layout === undefined)
     throw new StructuredWorkspaceProjectionContractError(`${plan.biomeKey} has no layout`);
+  assertAuthoredTopologyProjectionIdentities(context, plan);
+  const authoredLeafRequirements = authoredWorkspaceLeafRequirements(catalog, biomeAddress, plan);
   // Structural completeness is authoritative even when simulation coverage is
   // blocked upstream.  In particular, a Hub's next visit must remain a
   // projectable frontier after its board has been authored.
@@ -4198,118 +5050,87 @@ function projectBiome(
       );
     }
   }
+  const authoredExitDecisions = authoredExitDecisionsInTopologyOrder(context, plan);
+  assertEvaluationOwnersMatchAuthoredTopology(context, plan, overlay, authoredExitDecisions);
   indexOrdinaryTargetControls(context, plan);
   const nodes: WorkspaceNode[] = [];
   let entry: WorkspaceOccurrenceWorkbenchNode | undefined;
   if (plan.topology !== null) {
     const start = authoredOccurrence(plan, plan.topology.startOccurrenceId);
     if (start !== undefined) {
-      entry = projectOccurrence(
-        context,
-        start,
-        snapshot?.entryRoom?.entered ?? false,
-        snapshot?.entryRoom,
-      );
+      if (
+        overlay.entryRoom !== undefined &&
+        (overlay.entryRoom.occurrenceId !== start.occurrenceId ||
+          overlay.entryRoom.gameName !== start.gameName ||
+          semanticAddressKey(overlay.entryRoom.origin) !==
+            semanticAddressKey(createOccurrenceAddress(context.biome, start.occurrenceId)))
+      ) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${plan.biomeKey} evaluated entry does not match the authored start`,
+        );
+      }
+      entry = projectOccurrence(context, start, {
+        detailsActive: true,
+        ...(overlay.entryRoom === undefined ? {} : { evaluatedRoom: overlay.entryRoom }),
+      });
       nodes.push(entry);
     }
   }
-  for (const decision of snapshot?.decisions ?? []) {
-    switch (decision.kind) {
-      case 'linkedExit': {
-        const projected = projectLinkedExit(context, plan, decision);
-        nodes.push(projected.node);
-        if (projected.workbench !== undefined) nodes.push(projected.workbench);
-        break;
-      }
-      case 'batch': {
-        const projected = projectBatch(context, plan, decision);
-        nodes.push(projected.batch, ...projected.workbenches);
-        break;
-      }
-      case 'hub': {
-        if (layout.progression.kind !== 'hub') {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${plan.biomeKey} materialized Hub without Hub descriptor`,
-          );
-        }
-        const projected = projectHub(
-          context,
-          plan,
-          decision,
-          layout.progression,
-          nextHubVisitIndex,
-        );
-        nodes.push(projected.node, ...projected.workbenches);
-        break;
-      }
-    }
-  }
-  if (layout.progression.kind === 'hub' && plan.topology !== null) {
-    const hubDescriptor = layout.progression;
-    const authoredHub = plan.topology.decisions.find(
-      (decision): decision is HubDecision =>
-        decision.kind === 'hub' && decision.hubKey === hubDescriptor.hubKey,
+  if (overlay.entryRoom !== undefined && entry === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${plan.biomeKey} has an evaluated entry without an authored start`,
     );
-    const alreadyProjected = nodes.some(
-      (node) => node.kind === 'hubDecision' && node.hubKey === hubDescriptor.hubKey,
-    );
-    if (authoredHub !== undefined && !alreadyProjected) {
-      const projected = projectAuthoredHub(
-        context,
-        plan,
-        authoredHub,
-        hubDescriptor,
-        nextHubVisitIndex,
-      );
-      nodes.push(projected.node, ...projected.workbenches);
-    }
-    if (!alreadyProjected && authoredHub === undefined) {
-      const projected = projectHubOutline(context, plan, hubDescriptor);
-      nodes.push(projected.node, ...projected.workbenches);
-    }
-  } else if (layout.progression.kind === 'hub') {
-    // The board itself is always visible, including before N's fixed start
-    // has been authored.  Its controls stay disabled until the Hub decision
-    // exists, but React still has a complete declaration-owned outline.
-    const projected = projectHubOutline(context, plan, layout.progression);
-    nodes.push(projected.node, ...projected.workbenches);
   }
-  const prefix = snapshot?.kind === 'biomePrefix' ? snapshot : undefined;
-  const partial = prefix === undefined ? undefined : partialBatchFromPrefix(prefix);
-  if (
-    partial !== undefined &&
-    !snapshot?.decisions.some(
-      (decision) =>
-        decision.kind === 'batch' &&
-        semanticAddressKey(decision.origin) === semanticAddressKey(partial.origin),
-    )
-  ) {
-    const projected = projectBatch(context, plan, partial, true);
-    nodes.push(projected.batch, ...projected.workbenches);
-  }
-  const representedExitOwners = new Set(
-    (snapshot?.decisions ?? [])
-      .filter(
-        (decision): decision is CanonicalLinkedExit | CanonicalBatch =>
-          decision.kind === 'linkedExit' || decision.kind === 'batch',
-      )
-      .map((decision) => semanticAddressKey(decision.origin)),
-  );
-  if (partial !== undefined) representedExitOwners.add(semanticAddressKey(partial.origin));
-  for (const decision of authoredExitDecisionsInTopologyOrder(context, plan)) {
+  const projectAuthoredExitDecision = (decision: ExitDecision): void => {
     const owner = createExitDecisionAddress(context.biome, decision.source);
-    if (representedExitOwners.has(semanticAddressKey(owner))) continue;
     if (decision.normal.kind === 'linked') {
-      const projected = projectAuthoredLinkedExit(
+      const projected = projectAuthoredLinkedExitWithOverlay(
         context,
         plan,
         decision as AuthoredLinkedExitDecision,
+        overlay.linkedExits.get(semanticAddressKey(owner)),
       );
       nodes.push(projected.node, projected.workbench);
     } else {
-      const projected = projectAuthoredBatch(context, plan, decision as AuthoredBatchDecision);
+      const projected = projectAuthoredBatchWithOverlay(
+        context,
+        plan,
+        decision as AuthoredBatchDecision,
+        overlay.batches.get(semanticAddressKey(owner)),
+      );
       nodes.push(projected.batch, ...projected.workbenches);
     }
+  };
+  // Hub-owned handoffs belong after the persistent board, even when their
+  // authored decision is otherwise traversed as a disconnected suffix.
+  // Evaluation cannot be allowed to reorder that authored stage.
+  for (const decision of authoredExitDecisions) {
+    if (decision.source.kind === 'hubDecision') continue;
+    projectAuthoredExitDecision(decision);
+  }
+  if (layout.progression.kind === 'hub') {
+    const hubDescriptor = layout.progression;
+    const authoredHub = plan.topology?.decisions.find(
+      (decision): decision is HubDecision =>
+        decision.kind === 'hub' && decision.hubKey === hubDescriptor.hubKey,
+    );
+    const owner = createHubDecisionAddress(context.biome, hubDescriptor.hubKey);
+    const projected =
+      authoredHub === undefined
+        ? projectHubOutline(context, plan, hubDescriptor)
+        : projectAuthoredHubWithOverlay(
+            context,
+            plan,
+            authoredHub,
+            hubDescriptor,
+            overlay.hubs.get(semanticAddressKey(owner)),
+            nextHubVisitIndex,
+          );
+    nodes.push(projected.node, ...projected.workbenches);
+  }
+  for (const decision of authoredExitDecisions) {
+    if (decision.source.kind !== 'hubDecision') continue;
+    projectAuthoredExitDecision(decision);
   }
   const structuralNodes = Object.freeze([...nodes]);
   if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'occurrence') {
@@ -4333,7 +5154,7 @@ function projectBiome(
   }
   const completion = layout.completion.rooms.map((descriptor) => {
     const address = createCompletionRoomAddress(biomeAddress, descriptor.role);
-    return Object.freeze({
+    const node: WorkspaceCompletionNode = Object.freeze({
       kind: 'completion' as const,
       key: `completion:${semanticAddressKey(address)}`,
       marker: marker(context, address),
@@ -4341,8 +5162,17 @@ function projectBiome(
       gameName: descriptor.roomGameName,
       label: requireRoom(catalog, descriptor.roomGameName).label,
     });
+    redirectMarkersToNode(context, Object.freeze([node.marker]), node.key);
+    return node;
   });
   nodes.push(...completion);
+  const completedNodes = Object.freeze([...nodes]);
+  assertAuthoredWorkspaceLeafProjectionClosure(
+    authoredLeafRequirements,
+    context.focusByOwner,
+    completedNodes,
+  );
+  assertWorkspaceProjectionClosure(context, plan, completedNodes);
   const renderedOccurrenceIds = new Set(
     structuralNodes
       .filter(
@@ -4432,6 +5262,7 @@ function projectBiome(
     status: statusFor(evaluation),
   });
   return Object.freeze({
+    authoredLeafRequirements,
     biome: projected,
     roomControls: context.roomControls,
     rewardControls: context.rewardControls,
@@ -4449,11 +5280,386 @@ function registerFindingDestinations(
   for (const finding of findings) {
     const key = semanticAddressKey(finding.origin);
     if (focusByOwner.has(key)) continue;
+    if (isFineGrainedFindingOwner(finding.origin)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} finding has no exact workspace destination`,
+      );
+    }
     if (!('routeKey' in finding.origin) || !('biomeKey' in finding.origin)) continue;
     const biome = createBiomeAddress(finding.origin.routeKey, finding.origin.biomeKey);
     const fallback = focusByOwner.get(semanticAddressKey(biome));
     if (fallback === undefined) continue;
     focusByOwner.set(key, Object.freeze({ ...fallback, ownerAddress: finding.origin }));
+  }
+}
+
+function requireWorkspaceProjectionInteraction(
+  interactions: ReadonlyMap<string, unknown>,
+  key: string,
+  detail: string,
+): void {
+  if (!interactions.has(key)) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${detail} ${key} has no exact workspace interaction`,
+    );
+  }
+}
+
+/**
+ * Checks the interaction side of the independently enumerated authored leaf
+ * contract. This is intentionally not derived from room controls or rendered
+ * room-local products, which could both disappear with the same projection
+ * omission.
+ */
+export function assertAuthoredWorkspaceLeafInteractionClosure(
+  requirements: readonly WorkspaceAuthoredLeafRequirement[],
+  interactions: WorkspaceInteractionCatalog,
+): void {
+  for (const requirement of requirements) {
+    for (const interaction of requirement.interactions) {
+      switch (interaction.kind) {
+        case 'reward':
+          requireWorkspaceProjectionInteraction(
+            interactions.rewards,
+            interaction.key,
+            'authored reward leaf',
+          );
+          break;
+        case 'rewardWheelOfferCount':
+          requireWorkspaceProjectionInteraction(
+            interactions.rewardWheelOfferCounts,
+            interaction.key,
+            'authored reward-wheel offer-count leaf',
+          );
+          break;
+        case 'rewardWheelPick':
+          requireWorkspaceProjectionInteraction(
+            interactions.rewardWheelPicks,
+            interaction.key,
+            'authored reward-wheel pick leaf',
+          );
+          break;
+        case 'rewardWheelStore':
+          requireWorkspaceProjectionInteraction(
+            interactions.rewardWheelStores,
+            interaction.key,
+            'authored reward-wheel store leaf',
+          );
+          break;
+        case 'shipEncounterCount':
+          requireWorkspaceProjectionInteraction(
+            interactions.shipEncounterCounts,
+            interaction.key,
+            'authored Ship encounter-count leaf',
+          );
+          break;
+        case 'shopPurchase':
+          requireWorkspaceProjectionInteraction(
+            interactions.shopPurchases,
+            interaction.key,
+            'authored Shop purchase leaf',
+          );
+          break;
+        case 'sideRoomEntryOrder':
+          requireWorkspaceProjectionInteraction(
+            interactions.sideRoomEntryOrders,
+            interaction.key,
+            'authored side-room entry-order leaf',
+          );
+          break;
+        case 'sideRoomGeneration':
+          requireWorkspaceProjectionInteraction(
+            interactions.sideRoomGenerations,
+            interaction.key,
+            'authored side-room generation leaf',
+          );
+          break;
+      }
+    }
+  }
+}
+
+function assertWorkspaceRoomInteractionClosure(
+  room: WorkspaceRoomSummary,
+  interactions: WorkspaceInteractionCatalog,
+): void {
+  if (room.roomPicker !== undefined) {
+    requireWorkspaceProjectionInteraction(
+      interactions.rooms,
+      workspaceInteractionKey(room.roomPicker.address),
+      'room picker',
+    );
+  }
+  for (const control of room.rewardControls) {
+    requireWorkspaceProjectionInteraction(
+      interactions.rewards,
+      control.marker.focusKey,
+      'reward control',
+    );
+  }
+  switch (room.roomLocal.kind) {
+    case 'none':
+    case 'fixed':
+    case 'incomingReward':
+    case 'fields':
+      return;
+    case 'ephyra':
+      for (const sideRoom of room.roomLocal.sideRooms.slots) {
+        requireWorkspaceProjectionInteraction(
+          interactions.sideRoomGenerations,
+          sideRoom.marker.focusKey,
+          'side-room generation',
+        );
+        requireWorkspaceProjectionInteraction(
+          interactions.sideRoomEntryOrders,
+          sideRoom.entryOrder.interactionKey,
+          'side-room entry order',
+        );
+      }
+      return;
+    case 'ship':
+      requireWorkspaceProjectionInteraction(
+        interactions.shipEncounterCounts,
+        room.marker.focusKey,
+        'Ship encounter count',
+      );
+      for (const wheel of room.roomLocal.wheels) {
+        requireWorkspaceProjectionInteraction(
+          interactions.rewardWheelOfferCounts,
+          wheel.marker.focusKey,
+          'reward-wheel offer count',
+        );
+        requireWorkspaceProjectionInteraction(
+          interactions.rewardWheelStores,
+          wheel.marker.focusKey,
+          'reward-wheel store',
+        );
+        requireWorkspaceProjectionInteraction(
+          interactions.rewardWheelPicks,
+          wheel.marker.focusKey,
+          'reward-wheel pick',
+        );
+      }
+      return;
+    case 'shop':
+      for (const offer of room.roomLocal.offers) {
+        requireWorkspaceProjectionInteraction(
+          interactions.shopPurchases,
+          offer.purchase.marker.focusKey,
+          'Shop purchase',
+        );
+      }
+      return;
+  }
+}
+
+export function assertWorkspaceInteractionClosure(
+  routes: readonly WorkspaceRoute[],
+  roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>,
+  rewardControls: ReadonlyMap<string, WorkspaceRewardControl>,
+  interactions: WorkspaceInteractionCatalog,
+  authoredLeafRequirements: readonly WorkspaceAuthoredLeafRequirement[] = Object.freeze([]),
+): void {
+  assertAuthoredWorkspaceLeafInteractionClosure(authoredLeafRequirements, interactions);
+  for (const [key, control] of roomControls) {
+    requireWorkspaceProjectionInteraction(interactions.rooms, key, control.kind);
+  }
+  for (const [key, control] of rewardControls) {
+    requireWorkspaceProjectionInteraction(interactions.rewards, key, control.kind);
+  }
+  for (const route of routes) {
+    for (const biome of route.biomes) {
+      for (const node of biome.nodes) {
+        switch (node.kind) {
+          case 'occurrenceWorkbench':
+            assertWorkspaceRoomInteractionClosure(node.room, interactions);
+            break;
+          case 'ordinaryBatch':
+          case 'mixedBatch':
+            if (node.targets.length !== 1) {
+              requireWorkspaceProjectionInteraction(
+                interactions.exitSelections,
+                node.selection.focusKey,
+                'exit selection',
+              );
+            }
+            if (node.rewardStore !== undefined) {
+              requireWorkspaceProjectionInteraction(
+                interactions.batchRewardStores,
+                node.rewardStore.focusKey,
+                'batch reward store',
+              );
+            }
+            if (node.fieldsCageOutcome !== undefined) {
+              requireWorkspaceProjectionInteraction(
+                interactions.fieldsCageOutcomes,
+                node.fieldsCageOutcome.focusKey,
+                'Fields cage outcome',
+              );
+            }
+            requireWorkspaceProjectionInteraction(
+              interactions.topologyRemovals,
+              workspaceInteractionKey(node.owner),
+              'decision topology removal',
+            );
+            break;
+          case 'takeoverBatch':
+            if (node.targets.length !== 1) {
+              requireWorkspaceProjectionInteraction(
+                interactions.exitSelections,
+                node.selection.focusKey,
+                'exit selection',
+              );
+            }
+            if (node.rewardStore !== undefined) {
+              requireWorkspaceProjectionInteraction(
+                interactions.batchRewardStores,
+                node.rewardStore.focusKey,
+                'batch reward store',
+              );
+            }
+            requireWorkspaceProjectionInteraction(
+              interactions.takeoverBatches,
+              node.takeoverInteractionKey,
+              'takeover batch',
+            );
+            requireWorkspaceProjectionInteraction(
+              interactions.topologyRemovals,
+              workspaceInteractionKey(node.owner),
+              'decision topology removal',
+            );
+            break;
+          case 'hubDecision':
+            if (node.authoring !== 'authored') break;
+            for (const slot of node.slots) {
+              requireWorkspaceProjectionInteraction(
+                interactions.hubSlots,
+                slot.marker.focusKey,
+                'Hub slot',
+              );
+              const interaction = interactions.hubSlots.get(slot.marker.focusKey);
+              if (slot.canClose && interaction?.close === undefined) {
+                throw new StructuredWorkspaceProjectionContractError(
+                  slot.marker.focusKey + ' closable Hub slot has no exact close interaction',
+                );
+              }
+            }
+            for (const visit of node.visits) {
+              if (visit.authoring === 'locked') continue;
+              requireWorkspaceProjectionInteraction(
+                interactions.hubVisits,
+                visit.marker.focusKey,
+                'Hub visit',
+              );
+            }
+            break;
+          case 'linkedExit':
+            requireWorkspaceProjectionInteraction(
+              interactions.topologyRemovals,
+              workspaceInteractionKey(node.owner),
+              'linked-exit topology removal',
+            );
+            break;
+          case 'completion':
+            break;
+        }
+      }
+      if (biome.entry !== undefined) {
+        requireWorkspaceProjectionInteraction(
+          interactions.topologyRemovals,
+          workspaceInteractionKey(biome.marker.address),
+          'biome topology removal',
+        );
+      }
+      for (const node of biome.nodes) {
+        if (node.kind !== 'occurrenceWorkbench' || node.sourceDecisionRemoval === undefined) {
+          continue;
+        }
+        requireWorkspaceProjectionInteraction(
+          interactions.topologyRemovals,
+          node.sourceDecisionRemoval.interactionKey,
+          'staged decision removal',
+        );
+      }
+      const frontier = biome.frontier;
+      if (frontier === null) continue;
+      switch (frontier.kind) {
+        case 'start':
+          requireWorkspaceProjectionInteraction(
+            interactions.starts,
+            frontier.interactionKey,
+            'start frontier',
+          );
+          break;
+        case 'hubDecision':
+          requireWorkspaceProjectionInteraction(
+            interactions.structural,
+            frontier.interactionKey,
+            'Hub creation frontier',
+          );
+          break;
+        case 'exitDecision': {
+          const hasDecisionWorkbench = biome.nodes.some(
+            (node) =>
+              (node.kind === 'linkedExit' ||
+                node.kind === 'ordinaryBatch' ||
+                node.kind === 'mixedBatch' ||
+                node.kind === 'takeoverBatch') &&
+              node.marker.focusKey === frontier.marker.focusKey,
+          );
+          const requiresFrontierActions =
+            !hasDecisionWorkbench || frontier.owner.source.kind === 'hubDecision';
+          if (!requiresFrontierActions) break;
+          const capability = interactions.exitFrontierCapabilities.get(frontier.interactionKey);
+          if (capability?.structural !== undefined) {
+            const structural = interactions.structural.get(frontier.interactionKey);
+            requireWorkspaceProjectionInteraction(
+              interactions.structural,
+              frontier.interactionKey,
+              'exit frontier structural action',
+            );
+            if (structural?.action !== capability.structural) {
+              throw new StructuredWorkspaceProjectionContractError(
+                frontier.interactionKey +
+                  ' exit frontier structural capability disagrees with its interaction',
+              );
+            }
+          } else if (interactions.structural.has(frontier.interactionKey)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              frontier.interactionKey + ' exit frontier has an unadvertised structural interaction',
+            );
+          }
+          if (capability?.takeover === true) {
+            requireWorkspaceProjectionInteraction(
+              interactions.takeoverBatches,
+              frontier.interactionKey,
+              'exit frontier takeover action',
+            );
+          } else if (interactions.takeoverBatches.has(frontier.interactionKey)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              frontier.interactionKey + ' exit frontier has an unadvertised takeover interaction',
+            );
+          }
+          if (capability === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              'exit frontier ' +
+                frontier.interactionKey +
+                ' has no workspace authoring interaction',
+            );
+          }
+          if (frontier.owner.source.kind === 'hubDecision' && capability.takeover !== true) {
+            throw new StructuredWorkspaceProjectionContractError(
+              frontier.interactionKey +
+                ' Hub handoff frontier has no workspace authoring interaction',
+            );
+          }
+          break;
+        }
+        case 'hubVisit':
+        case 'hubOpenSet':
+          break;
+      }
+    }
   }
 }
 
@@ -4476,6 +5682,7 @@ export function createStructuredWorkspaceProjection(
       const focusByOwner = new Map<string, WorkspaceInspectorDestination>();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
+      const authoredLeafRequirements: WorkspaceAuthoredLeafRequirement[] = [];
       const routes = project.routes.map((route) => {
         const routeEvaluation = evaluation.routes.find(
           (candidate) => candidate.routeKey === route.routeKey,
@@ -4493,6 +5700,7 @@ export function createStructuredWorkspaceProjection(
           );
           for (const [key, control] of projected.roomControls) roomControls.set(key, control);
           for (const [key, control] of projected.rewardControls) rewardControls.set(key, control);
+          authoredLeafRequirements.push(...projected.authoredLeafRequirements);
           return projected.biome;
         });
         const routeAddress = { kind: 'route' as const, routeKey: route.routeKey };
@@ -4533,17 +5741,25 @@ export function createStructuredWorkspaceProjection(
         });
       });
       registerFindingDestinations(evaluation.findings, focusByOwner);
+      const interactions = createInteractionCatalog(
+        catalog,
+        project,
+        evaluation,
+        services,
+        roomControls,
+        rewardControls,
+      );
+      assertWorkspaceInteractionClosure(
+        routes,
+        roomControls,
+        rewardControls,
+        interactions,
+        Object.freeze([...authoredLeafRequirements]),
+      );
       const projectAddress = { kind: 'project' as const };
       const result = Object.freeze({
         focusByOwner,
-        interactions: createInteractionCatalog(
-          catalog,
-          project,
-          evaluation,
-          services,
-          roomControls,
-          rewardControls,
-        ),
+        interactions,
         marker: Object.freeze({
           address: projectAddress,
           assessment: 'assessed' as const,
