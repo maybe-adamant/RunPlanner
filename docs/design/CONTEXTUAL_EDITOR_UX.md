@@ -171,6 +171,20 @@ before this contextual policy evaluates their new simulation context. The
 picker does not decide leaf compatibility or reset retained values; that is the
 authored-model command contract.
 
+### Control-Existence Invariant
+
+Mandatory authored controls are projected from authored state and declaration
+requirements, not from findings, candidate support, or evaluation coverage.
+Those overlays may change a control's assessed state, availability, reason
+text, or emphasis, but they never suppress the control. An unassessed control
+remains visible without fabricated support.
+
+A missing interaction for a required semantic address is an application
+contract error, not a React visibility condition. Fine-grained finding
+navigation resolves the exact semantic owner, opens its containing workbench,
+and focuses its exact interaction even when that control is nested in a
+decision card.
+
 ### Ordinary and Diagnostic Presentation
 
 The ordinary picker emphasizes supported authoring:
