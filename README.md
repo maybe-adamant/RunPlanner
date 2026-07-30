@@ -145,8 +145,12 @@ copied elsewhere.
   [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
   active frontier and chronological delivery record. Phase 7 Slice 4
   reconciliation and Commit 5a prompt removal are complete. The active
+  [re-anchor and reorganization](docs/progress/REANCHOR_AND_REORGANIZE.md)
+  plan begins with a behavior-preserving workspace/React prerequisite before
+  the feature frontier resumes. The following
   [workspace presentation polish](docs/progress/WORKSPACE_PRESENTATION_POLISH.md)
-  plan splits Commit 5b into four bounded UI changes. The following
+  plan splits Commit 5b into four bounded UI changes. The remaining re-anchor
+  campaigns then close before the
   [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) gives Commit
   5c its own schema, engine, projection, and UI slices.
 
