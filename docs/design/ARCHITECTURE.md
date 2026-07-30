@@ -112,6 +112,7 @@ RunPlanner/
 
     planner-engine/
       src/
+        normalized/
         catalog-schema/
         authored-project/
         requirements/
@@ -126,13 +127,17 @@ RunPlanner/
     progress/
 ```
 
-`packages/planner-engine` defines pure semantic types and operations. It defines
-the normalized catalog interface required by simulation, but its production
-code cannot import the catalog package. `packages/hades2-catalog` constructs
-that interface from explicit declarations. The planner app is the composition
-root that constructs the catalog, creates application state, invokes the
-simulator, and binds results to React. Tests live beside the authority they
-exercise; cross-layer browser fixtures live under `apps/planner/test/`.
+`packages/planner-engine` defines pure semantic types and operations. Its
+`normalized/` primitives sit below catalog-schema and reward-kernel; they do
+not import either higher-level product. Catalog-schema re-exports the supported
+collection contract for catalog construction, while reward-kernel consumes the
+neutral contract directly. The engine defines the normalized catalog interface
+required by simulation, but its production code cannot import the catalog
+package. `packages/hades2-catalog` constructs that interface from explicit
+declarations. The planner app is the composition root that constructs the
+catalog, creates application state, invokes the simulator, and binds results to
+React. Tests live beside the authority they exercise; cross-layer browser
+fixtures live under `apps/planner/test/`.
 
 This avoids a catalog/engine dependency cycle:
 
