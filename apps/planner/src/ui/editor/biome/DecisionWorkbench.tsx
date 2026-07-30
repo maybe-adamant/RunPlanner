@@ -14,6 +14,7 @@ import {
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
   type WorkspaceBatchRepairScope,
+  type WorkspaceExitSelectionInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceLinkedExitNode,
   type WorkspaceMarker,
@@ -38,6 +39,7 @@ import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction'
 import { candidateMayBeAuthored, candidateSelectState } from '../../feedback/candidatePresentation';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
 import { CandidateSelect } from './CandidateSelect';
+import { RoomOfferEditor } from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 
@@ -134,24 +136,55 @@ export function TopologyRemovalAction({
 
 function TargetRow({
   interactions,
+  node,
   target,
-  targetInteraction,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly node: BatchNode;
   readonly target: WorkspacePhysicalTarget;
-  readonly targetInteraction: BatchNode['targetInteraction'];
 }) {
   const dispatch = useAppDispatch();
   const address = targetAddress(target);
-  const replaceable = targetInteraction === 'replaceable' && target.physicalState === 'available';
+  const replaceable =
+    node.targetInteraction === 'replaceable' && target.physicalState === 'available';
+  const selectionInteraction = interactions.exitSelections.get(
+    workspaceInteractionKey(node.selection.address),
+  );
+  const selectionChoice = selectionInteraction?.targets.find(
+    (choice) => choice.value === target.exitKey,
+  );
+  const selection = exitSelectionAddress(node.selection);
   return (
     <article
+      aria-label={`${target.room.label} room offer`}
       className="exit-row biome-target-row"
       data-available={target.physicalState === 'available'}
       data-picked={target.selected}
       data-retained={target.retained}
     >
-      <div className="exit-marker" aria-hidden="true" />
+      {selectionChoice === undefined ? (
+        <div className="exit-marker" aria-hidden="true" />
+      ) : (
+        <label className="picked-control">
+          <span className="visually-hidden">{`Pick ${target.room.label} from Exit ${target.index}`}</span>
+          <input
+            aria-label={`Pick ${target.room.label} from Exit ${target.index}`}
+            checked={selectionInteraction?.selectedExitKey === target.exitKey}
+            disabled={target.physicalState === 'unavailable'}
+            name={`selection-${node.key}`}
+            onChange={() =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'SetExitSelection',
+                  selection,
+                  value: { kind: 'normal', exitKey: target.exitKey },
+                }),
+              )
+            }
+            type="radio"
+          />
+        </label>
+      )}
       <div className="exit-content">
         <div className="exit-heading">
           <div>
@@ -164,7 +197,7 @@ function TargetRow({
             <span className="neutral-status">{roomStatus(target)}</span>
           </div>
         </div>
-        {targetInteraction === 'readOnly' ? (
+        {node.targetInteraction === 'readOnly' ? (
           <p className="fixed-room-state">This Preboss batch is authored atomically.</p>
         ) : !replaceable ? (
           <p className="fixed-room-state">
@@ -189,6 +222,12 @@ function TargetRow({
             owner={address}
           />
         )}
+        <RoomOfferEditor
+          idPrefix={`target-${target.room.occurrenceId}-reward`}
+          interactions={interactions}
+          presentation="full"
+          room={target.room}
+        />
       </div>
     </article>
   );
@@ -203,7 +242,12 @@ function MissingTargetRow({
 }) {
   const dispatch = useAppDispatch();
   return (
-    <article className="exit-row biome-target-row" data-available="true" data-missing="true">
+    <article
+      aria-label={`Exit ${target.index} unspecified room offer`}
+      className="exit-row biome-target-row"
+      data-available="true"
+      data-missing="true"
+    >
       <div className="exit-marker" aria-hidden="true" />
       <div className="exit-content">
         <div className="exit-heading">
@@ -231,7 +275,7 @@ function MissingTargetRow({
                   gameName,
                 }),
               );
-              dispatch(semanticOwnerFocused(occurrenceAddressFor(target.owner, occurrenceId)));
+              dispatch(semanticOwnerFocused(target.owner));
             }}
             owner={target.owner}
           />
@@ -248,57 +292,20 @@ function MissingTargetRow({
   );
 }
 
-function ExitSelectionControl({
-  interactions,
+function BatchSelectionStatus({
+  interaction,
   node,
 }: {
-  readonly interactions: WorkspaceInteractionCatalog;
+  readonly interaction: WorkspaceExitSelectionInteraction | undefined;
   readonly node: BatchNode;
 }) {
-  const dispatch = useAppDispatch();
-  const interaction = interactions.exitSelections.get(
-    workspaceInteractionKey(node.selection.address),
-  );
-  if (interaction === undefined) {
-    return (
-      <p className="fixed-room-state">
-        {node.targets.some((target) => target.selected)
-          ? 'The entered exit is derived by this batch.'
-          : 'This batch awaits its declaration-owned selection.'}
-      </p>
-    );
-  }
-  const selection = exitSelectionAddress(node.selection);
+  if (interaction !== undefined) return null;
   return (
-    <fieldset className="exit-selection-control">
-      <legend>
-        Entered exit <SemanticOwnerMarker address={selection} />
-      </legend>
-      {interaction.targets.map((choice) => {
-        const target = node.targets.find((candidate) => candidate.exitKey === choice.value);
-        const unavailable = target?.physicalState === 'unavailable';
-        return (
-          <label key={choice.value}>
-            <input
-              checked={interaction.selectedExitKey === choice.value}
-              disabled={unavailable}
-              name={`selection-${node.key}`}
-              onChange={() =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'SetExitSelection',
-                    selection,
-                    value: { kind: 'normal', exitKey: choice.value },
-                  }),
-                )
-              }
-              type="radio"
-            />
-            {`Exit ${choice.value.replace(/^exit/, '')}`}
-          </label>
-        );
-      })}
-    </fieldset>
+    <p className="fixed-room-state">
+      {node.targets.some((target) => target.selected)
+        ? 'The entered room is fixed by this decision.'
+        : 'This decision awaits its declaration-owned selection.'}
+    </p>
   );
 }
 
@@ -587,11 +594,16 @@ function BatchSettings({
 /** Renders an ordinary, staged, mixed, or atomic takeover decision from its projection. */
 export function BatchWorkbench({
   interactions,
+  label,
+  nextFrontier,
   node,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly label: string;
+  readonly nextFrontier?: WorkspaceMarker;
   readonly node: BatchNode;
 }) {
+  const dispatch = useAppDispatch();
   const projectedTakeover =
     node.kind === 'takeoverBatch'
       ? requireWorkspaceInteraction(interactions.takeoverBatches, node.takeoverInteractionKey)
@@ -603,6 +615,9 @@ export function BatchWorkbench({
       ? undefined
       : projectedTakeover;
   const removal = interactions.topologyRemovals.get(workspaceInteractionKey(node.owner));
+  const exitSelection = interactions.exitSelections.get(
+    workspaceInteractionKey(node.selection.address),
+  );
   return (
     <section
       className="decision-card biome-batch-workbench"
@@ -611,14 +626,10 @@ export function BatchWorkbench({
     >
       <header className="decision-heading">
         <div>
-          <p className="card-kicker">
-            {node.kind === 'takeoverBatch'
-              ? 'Atomic Preboss batch'
-              : node.kind === 'mixedBatch'
-                ? 'Mixed normal batch'
-                : 'Normal batch'}
-          </p>
-          <h3>{node.targets.length === 0 ? 'Configure physical exits' : 'Generated exits'}</h3>
+          <p className="card-kicker">{label}</p>
+          <h3>
+            {node.targets.length === 0 ? 'Configure room offers' : 'Choose a room and reward'}
+          </h3>
         </div>
         <div className="owner-markers">
           <SemanticOwnerMarker address={node.owner} />
@@ -626,15 +637,18 @@ export function BatchWorkbench({
         </div>
       </header>
       <BatchSettings interactions={interactions} node={node} />
-      <ExitSelectionControl interactions={interactions} node={node} />
-      <div className="exit-list">
+      <BatchSelectionStatus interaction={exitSelection} node={node} />
+      <div className="decision-selection-heading">
+        <span>Entered room</span>
+        <SemanticOwnerMarker address={exitSelectionAddress(node.selection)} />
+      </div>
+      <div
+        aria-label={`${label} room offers`}
+        className="exit-list"
+        role={exitSelection === undefined ? 'group' : 'radiogroup'}
+      >
         {node.targets.map((target) => (
-          <TargetRow
-            interactions={interactions}
-            key={target.exitKey}
-            target={target}
-            targetInteraction={node.targetInteraction}
-          />
+          <TargetRow interactions={interactions} key={target.exitKey} node={node} target={target} />
         ))}
         {node.kind === 'takeoverBatch' ? (
           node.missingTargets.length === 0 ? null : (
@@ -652,6 +666,15 @@ export function BatchWorkbench({
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
       {removal === undefined ? null : (
         <TopologyRemovalAction interaction={removal} label="Remove decision" />
+      )}
+      {nextFrontier === undefined ? null : (
+        <button
+          className="secondary-action decision-next-action"
+          onClick={() => dispatch(semanticOwnerFocused(nextFrontier.address))}
+          type="button"
+        >
+          Move to Next Decision
+        </button>
       )}
     </section>
   );
@@ -680,6 +703,12 @@ export function LinkedExitWorkbench({
       <p className="fixed-room-state">
         This declaration-owned exit is linked to its fixed room; there is no room selector.
       </p>
+      <RoomOfferEditor
+        idPrefix={`linked-${node.target.room.occurrenceId}-reward`}
+        interactions={interactions}
+        presentation="full"
+        room={node.target.room}
+      />
       {removal === undefined ? null : (
         <TopologyRemovalAction interaction={removal} label="Remove decision" />
       )}

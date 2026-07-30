@@ -689,7 +689,7 @@ describe('BiomeWorkspace', () => {
     );
   });
 
-  it('preserves each ordinary-decision rail in semantic order', () => {
+  it('renders ordinary rails in semantic decision order and defaults to a decision inspector', () => {
     const underworld = createGoldenFGHIProject(catalog);
     const surface = createRepresentativeNOPQProject();
     const cases = [
@@ -710,8 +710,101 @@ describe('BiomeWorkspace', () => {
       expect(railMarkerKeys(view.container)).toEqual(
         projected.rail.map((entry) => entry.marker.focusKey),
       );
+      const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+      expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
+      expect(inspector.querySelector('.biome-occurrence-workbench')).toBeNull();
       cleanup();
     }
+  });
+
+  it('defaults an untouched incomplete batch to its current decision workbench', () => {
+    const { owner, project } = fTwoDoorBatchProject();
+    const view = renderWorkspace(project, 'Underworld', 'F');
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const projected = workspaceBiome(view.application, 'Underworld', 'F');
+    const partial = projected.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        semanticAddressKey(node.owner) === semanticAddressKey(owner),
+    );
+    if (partial === undefined) throw new Error('F current partial decision is missing');
+
+    expect(partial.missingTargets).not.toHaveLength(0);
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
+    expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
+    expect(
+      within(inspector).getByRole('heading', { level: 3, name: 'Configure room offers' }),
+    ).toBeTruthy();
+    expect(within(inspector).getByRole('button', { name: 'Exit 1 room' })).toBeTruthy();
+  });
+
+  it('edits picked room and reward together while refreshing the decision summary', async () => {
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(pBiome, {
+        kind: 'occurrence',
+        occurrenceId: pOccurrenceId('P_Combat03', 1, 1),
+      }),
+    });
+    const view = renderWorkspace(project, 'Surface', 'P');
+    const decision = createExitDecisionAddress(pBiome, {
+      kind: 'occurrence',
+      occurrenceId: pOccurrenceIds.intro,
+    });
+    const railDecision = railButtonForMarker(view.container, semanticAddressKey(decision));
+    await view.user.click(railDecision);
+
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const radios = within(inspector).getAllByRole('radio');
+    const unpicked = radios.find((radio) => !(radio as HTMLInputElement).checked);
+    if (unpicked === undefined) throw new Error('P Decision 1 has no unpicked room');
+    const unpickedOffer = unpicked.closest<HTMLElement>('.biome-target-row');
+    if (unpickedOffer === null) throw new Error('P unpicked room offer is missing');
+    const selectedRoomLabel = unpickedOffer.getAttribute('aria-label')?.replace(/ room offer$/, '');
+    if (selectedRoomLabel === undefined) throw new Error('P unpicked room label is missing');
+    expect(within(unpickedOffer).getByRole('button', { name: /^Exit \d+ room$/ })).toBeTruthy();
+    expect(within(unpickedOffer).getByRole('button', { name: 'Reward' })).toBeTruthy();
+
+    const historyBeforePick =
+      view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(unpicked);
+    await waitFor(() => {
+      expect(railDecision.textContent).toContain(selectedRoomLabel);
+      expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+        historyBeforePick + 1,
+      );
+    });
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(decision);
+
+    const pickedOffer = within(inspector).getByRole('article', {
+      name: `${selectedRoomLabel} room offer`,
+    });
+    const rewardButton = within(pickedOffer).getByRole('button', { name: 'Reward' });
+    const summaryBeforeReward = railDecision.querySelector('.biome-rail-summary')?.textContent;
+    await view.user.click(rewardButton);
+    const replacement = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .find(
+        (option) =>
+          option.getAttribute('aria-disabled') !== 'true' &&
+          option.getAttribute('data-selected-value') !== 'true' &&
+          !/Boon|Devotion|Blind Box/.test(option.textContent ?? ''),
+      );
+    if (replacement === undefined) {
+      throw new Error('P picked room has no payload-free replacement reward');
+    }
+    const historyBeforeReward =
+      view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(replacement);
+    await waitFor(() => {
+      expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+        historyBeforeReward + 1,
+      );
+      expect(railDecision.querySelector('.biome-rail-summary')?.textContent).not.toBe(
+        summaryBeforeReward,
+      );
+    });
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(decision);
   });
 
   it('renders N’s entry frontiers before its future Hub outline', () => {
@@ -876,7 +969,7 @@ describe('BiomeWorkspace', () => {
     ).toBe(true);
   });
 
-  it('authors only the projected next physical exit and focuses its created occurrence', async () => {
+  it('authors only the next physical exit and keeps room and reward editing in its decision', async () => {
     const { owner, project } = fTwoDoorBatchProject();
     const view = renderWorkspace(project, 'Underworld', 'F');
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
@@ -897,17 +990,22 @@ describe('BiomeWorkspace', () => {
     await view.user.click(possible);
 
     const focused = view.application.store.getState().editorSession.focusedSemanticOwner;
-    expect(focused).toMatchObject({ kind: 'occurrence', biomeKey: 'F', routeKey: 'Underworld' });
+    expect(focused).toMatchObject({ kind: 'target', biomeKey: 'F', routeKey: 'Underworld' });
     const structure = screen.getByRole('region', { name: /structure$/ });
     const decisionRail = Array.from(
       structure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
     ).find((button) => button.dataset.workspaceNode === semanticAddressKey(owner));
     if (decisionRail === undefined) throw new Error('F authored decision rail stop is missing');
-    await view.user.click(decisionRail);
+    expect(decisionRail.dataset.selected).toBe('true');
     expect(screen.getByRole('button', { name: 'Exit 2 room' })).not.toHaveProperty(
       'disabled',
       true,
     );
+    const authoredOffer = document.querySelector<HTMLElement>(
+      '.biome-target-row:not([data-missing="true"])',
+    );
+    if (authoredOffer === null) throw new Error('F authored room offer is missing');
+    expect(within(authoredOffer).getByRole('button', { name: 'Reward' })).toBeTruthy();
   });
 
   it('creates a takeover batch through one projected atomic action', async () => {
@@ -1165,12 +1263,7 @@ describe('BiomeWorkspace', () => {
     });
   });
 
-  it('keeps a target-owned finding on its compact room rail leaf', async () => {
-    const target = createTargetAddress(
-      pBiome,
-      { kind: 'occurrence', occurrenceId: pOccurrenceIds.intro },
-      'exit1',
-    );
+  it('aggregates a target-owned finding onto its decision rail stop', async () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat03', 1, 1)),
@@ -1178,20 +1271,53 @@ describe('BiomeWorkspace', () => {
     });
     const view = renderWorkspace(project, 'Surface', 'P');
     const structure = screen.getByRole('region', { name: /Olympus structure/ });
-    const railLeaf = Array.from(
+    const decision = createExitDecisionAddress(pBiome, {
+      kind: 'occurrence',
+      occurrenceId: pOccurrenceIds.intro,
+    });
+    const railDecision = Array.from(
       structure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
-    ).find((button) => button.dataset.workspaceNode === semanticAddressKey(target));
-    if (railLeaf === undefined) throw new Error('P invalid target rail leaf is missing');
+    ).find((button) => button.dataset.workspaceNode === semanticAddressKey(decision));
+    if (railDecision === undefined) throw new Error('P invalid target decision is missing');
 
-    expect(railLeaf.dataset.findings).toBe('true');
-    expect(railLeaf.textContent).toContain('1 finding');
-    expect(railLeaf.textContent).toContain('Combat 02');
+    expect(railDecision.dataset.findings).toBe('true');
+    expect(railDecision.textContent).toContain('1 finding');
+    expect(railDecision.textContent).toContain('Combat 02');
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
 
-    await view.user.click(railLeaf);
+    await view.user.click(railDecision);
     const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
-    expect(within(inspector).getByRole('heading', { level: 3, name: 'Combat 02' })).toBeTruthy();
-    expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
+    expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
+    expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
+  });
+
+  it('focuses retained downstream room rewards inside their decision workbench', () => {
+    const project = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+      gameName: 'F_Combat01',
+    });
+    const view = renderWorkspace(project, 'Underworld', 'F');
+    const retained = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        node.topologyState === 'retained' &&
+        node.targets.some((target) => target.room.rewardControls.length > 0),
+    );
+    if (retained === undefined) throw new Error('F retained downstream decision is missing');
+    const target = retained.targets.find((candidate) => candidate.room.rewardControls.length > 0);
+    const reward = target?.room.rewardControls[0];
+    if (target === undefined || reward === undefined) {
+      throw new Error('F retained downstream reward is missing');
+    }
+
+    act(() => view.application.store.dispatch(semanticOwnerFocused(reward.marker.address)));
+
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
+    expect(
+      within(inspector).getAllByRole('article', { name: `${target.room.label} room offer` }),
+    ).not.toHaveLength(0);
   });
 
   it('renders O’s fixed width-one Preboss takeover without a selector and creates its entered Shop lazily', async () => {
@@ -1668,7 +1794,9 @@ describe('BiomeWorkspace', () => {
     if (mixed === undefined) throw new Error('I mixed Preboss workbench is missing');
     act(() => i.application.store.dispatch(semanticOwnerFocused(mixed.owner)));
     expect(document.querySelector('[data-batch-kind="mixedBatch"]')).not.toBeNull();
-    expect(screen.getByText('Mixed normal batch')).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Choose a room and reward' }),
+    ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Exit 1 room' })).not.toHaveProperty(
       'disabled',
       true,
@@ -1698,15 +1826,12 @@ describe('BiomeWorkspace', () => {
     );
     expect(screen.getAllByText('Purchased')).not.toHaveLength(0);
     const structure = screen.getByRole('region', { name: /Olympus structure/ });
-    const completion = Array.from(
-      structure.querySelectorAll<HTMLElement>('[data-kind="completion"]'),
-    ).at(-1);
-    if (completion === undefined) throw new Error('P completion rail node is missing');
-    await p.user.click(within(completion).getByRole('button'));
-    expect(screen.getByText(/derived from the biome layout/i)).toBeTruthy();
+    expect(structure.querySelector('[data-kind="completion"]')).toBeNull();
+    const completion = within(structure).getByRole('region', { name: 'Biome completion' });
+    expect(within(completion).getByText('Prometheus')).toBeTruthy();
   });
 
-  it('focuses a fixed Story reward at its owning occurrence workbench', () => {
+  it('focuses a fixed Story reward inside its owning decision workbench', () => {
     const project = createRepresentativeNOPQProject();
     const view = renderWorkspace(project, 'Surface', 'P');
     const storyOccurrenceId = pOccurrenceId('P_Story01', 7, 1);
@@ -1723,12 +1848,12 @@ describe('BiomeWorkspace', () => {
     );
 
     const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
-    const workbench = inspector.querySelector<HTMLElement>('.biome-occurrence-workbench');
-    if (workbench === null) throw new Error('P Story occurrence inspector is missing');
-    expect(
-      within(workbench).getByRole('heading', { level: 3, name: story.room.label }),
-    ).toBeTruthy();
-    expect(within(workbench).getByText(/^Fixed reward:/)).toBeTruthy();
+    const workbench = inspector.querySelector<HTMLElement>('.biome-batch-workbench');
+    if (workbench === null) throw new Error('P Story decision inspector is missing');
+    const offer = within(workbench).getByRole('article', {
+      name: `${story.room.label} room offer`,
+    });
+    expect(within(offer).getByText(/^Fixed reward:/)).toBeTruthy();
   });
 
   it('moves keyboard focus through semantic owners without authoring a change', async () => {
@@ -1736,7 +1861,7 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(project, 'Underworld', 'F');
     const structure = screen.getByRole('region', { name: /structure$/ });
     const railButtons = within(structure).getAllByRole('button');
-    const target = railButtons.find((button) => button.textContent?.includes('Normal exits'));
+    const target = railButtons.find((button) => button.textContent?.includes('Decision 1'));
     if (target === undefined) throw new Error('F normal batch rail node is missing');
     target.focus();
     await view.user.keyboard('{Enter}');
@@ -1792,7 +1917,7 @@ describe('BiomeWorkspace', () => {
     expect(visit?.dataset.selected).toBe('true');
   });
 
-  it('navigates a guaranteed target finding to its owning occurrence workbench', () => {
+  it('navigates a guaranteed target finding to its owning decision workbench', () => {
     const target = createTargetAddress(
       pBiome,
       { kind: 'occurrence', occurrenceId: pOccurrenceIds.intro },
@@ -1833,8 +1958,8 @@ describe('BiomeWorkspace', () => {
     );
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);
     const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
-    const workbench = inspector.querySelector<HTMLElement>('.biome-occurrence-workbench');
-    if (workbench === null) throw new Error('P target finding inspector is missing');
-    expect(within(workbench).getByRole('heading', { level: 3, name: 'Combat 02' })).toBeTruthy();
+    const workbench = inspector.querySelector<HTMLElement>('.biome-batch-workbench');
+    if (workbench === null) throw new Error('P target finding decision is missing');
+    expect(within(workbench).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
 });

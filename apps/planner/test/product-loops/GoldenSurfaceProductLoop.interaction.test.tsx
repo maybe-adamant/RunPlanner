@@ -3,6 +3,7 @@
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createExitDecisionAddress,
   createHubSlotAddress,
   createOccurrenceAddress,
   createProjectDocument,
@@ -430,7 +431,7 @@ describe('surface product loop', () => {
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(currentProject(application)));
   });
 
-  it('routes a selected-route Findings click to the exact shared-workspace target inspector', async () => {
+  it('routes a selected-route Findings click to the owning decision inspector', async () => {
     const application = createApplication();
     const target = createTargetAddress(
       pBiome,
@@ -474,7 +475,8 @@ describe('surface product loop', () => {
     expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Surface).toBe('P');
     expect(application.store.getState().projectWorkspace.history).toBe(historyBefore);
     const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
-    expect(within(inspector).getByRole('heading', { level: 3, name: 'Combat 02' })).toBeTruthy();
+    expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
+    expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
 
   it('treats a shared-workspace rail focus as session-only work', async () => {
@@ -492,28 +494,27 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Thessaly' }));
     const structure = screen.getByRole('region', { name: 'Thessaly structure' });
-    const combat04Rail = Array.from(
+    const decisionOwner = createExitDecisionAddress(oBiome, {
+      kind: 'occurrence',
+      occurrenceId: oOccurrenceIds.intro,
+    });
+    const decisionRail = Array.from(
       structure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
-    ).find((button) => button.textContent?.includes('Combat 04'));
-    if (combat04Rail === undefined) throw new Error('Thessaly Combat 04 rail node is missing');
+    ).find((button) => button.dataset.workspaceNode === semanticAddressKey(decisionOwner));
+    if (decisionRail === undefined) throw new Error('Thessaly Decision 1 rail node is missing');
     const historyBefore = application.store.getState().projectWorkspace.history;
     const evaluationBefore = application.store.getState().projectWorkspace.evaluation;
     work.length = 0;
 
-    await view.user.click(combat04Rail);
+    await view.user.click(decisionRail);
 
-    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      createTargetAddress(
-        oBiome,
-        { kind: 'occurrence', occurrenceId: oOccurrenceIds.intro },
-        'exit1',
-      ),
-    );
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(decisionOwner);
     expect(application.store.getState().projectWorkspace.history).toBe(historyBefore);
     expect(application.store.getState().projectWorkspace.evaluation).toBe(evaluationBefore);
     expect(recovery.hasPendingAutosave()).toBe(false);
     expect(work.filter((event) => event.kind === 'projectEvaluation')).toEqual([]);
     expect(work.filter((event) => event.kind === 'queryBatch')).toEqual([]);
-    expect(screen.getByRole('heading', { level: 3, name: 'Combat 04' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Decision 1' })).toBeTruthy();
+    expect(screen.getByRole('article', { name: 'Combat 04 room offer' })).toBeTruthy();
   });
 });
