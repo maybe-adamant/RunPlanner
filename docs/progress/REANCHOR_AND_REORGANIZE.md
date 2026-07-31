@@ -13,7 +13,8 @@ workspace public entry and private contract/projector seam. A2.1 established
 the authored-first source index, A2.2 established occurrence activation,
 lifecycle, and publication facts, A2.3 made occurrence reward controls
 explicit assembly output, and A2.4 did the same for room pickers; common
-semantic assembly remains in progress.
+semantic assembly remains in progress. A2.5 made completed biome focus
+destinations an explicit assembly output as well.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -422,8 +423,7 @@ the final lifecycle contract.
 **A2.3 transition note.** An occurrence now returns its reward-control
 package with its workbench node. Biome and project composition collect those
 packages explicitly and reject duplicate semantic owners rather than silently
-replacing a control in a later map. Focus products still use the older
-common-assembly path and remain in scope for the following slices.
+replacing a control in a later map.
 
 **A2.4 transition note.** An authored-choice start passes its occurrence-owned
 picker into, then back out of, occurrence assembly. Ordinary and mixed batches
@@ -431,6 +431,13 @@ return their target-pickers from the same physical-target and missing-target
 products they render; this replaces the earlier raw-plan prepass. The local and
 project composition boundaries reject duplicate picker owners. This does not
 make room pickers authored leaves or change their existing availability policy.
+
+**A2.5 transition note.** Each biome now returns its completed
+focus-destination map. Marker registration and redirects remain a local mutable
+builder within that single semantic stage; project composition validates and
+merges the returned maps before adding route and generic-finding destinations.
+This does not redesign focus semantics or move the React default-inspector
+fallback.
 
 #### A3: Specialized Hub and room-local assembly
 
