@@ -106,7 +106,6 @@ import {
   createWorkspaceProjectSourceIndex,
   type WorkspaceBiomeSource,
   type WorkspaceEvaluatedBatchOverlay,
-  type WorkspaceProjectSourceIndex,
 } from './source-index';
 import {
   authoredFieldsActiveCageCountForDecision,
@@ -1127,6 +1126,29 @@ export type WorkspaceTakeoverInteractionRequirement =
       readonly requiredExitKeys: readonly string[];
     };
 
+type WorkspaceExitFrontierStructuralRequirement =
+  | { readonly action: 'createBatch' }
+  | { readonly action: 'createLinkedExit'; readonly targetGameName: string };
+
+/**
+ * Production requirement for a structural authoring frontier. Exit-frontier
+ * capability is the public permission to resolve the corresponding action,
+ * so it stays packaged with structural creation rather than being rebuilt by
+ * an interaction-side topology traversal.
+ */
+export type WorkspaceFrontierInteractionRequirement =
+  | {
+      readonly capabilities: WorkspaceExitFrontierCapabilities;
+      readonly kind: 'exitFrontier';
+      readonly owner: ExitDecisionAddress;
+      readonly structural?: WorkspaceExitFrontierStructuralRequirement;
+    }
+  | {
+      readonly kind: 'hubDecisionFrontier';
+      readonly owner: HubDecisionAddress;
+      readonly structural: { readonly action: 'createHubDecision' };
+    };
+
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
@@ -1153,6 +1175,12 @@ function startInteractionRequirementKey(requirement: WorkspaceStartInteractionRe
 
 function takeoverInteractionRequirementKey(
   requirement: WorkspaceTakeoverInteractionRequirement,
+): string {
+  return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
+}
+
+function frontierInteractionRequirementKey(
+  requirement: WorkspaceFrontierInteractionRequirement,
 ): string {
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
@@ -1469,6 +1497,21 @@ export function appendUniqueTakeoverInteractionRequirements(
     if (requirementsByIdentity.has(key)) {
       throw new StructuredWorkspaceProjectionContractError(
         `${key} has multiple projected takeover interaction requirements`,
+      );
+    }
+    requirementsByIdentity.set(key, requirement);
+  }
+}
+
+export function appendUniqueFrontierInteractionRequirements(
+  requirementsByIdentity: Map<string, WorkspaceFrontierInteractionRequirement>,
+  requirements: Iterable<WorkspaceFrontierInteractionRequirement>,
+): void {
+  for (const requirement of requirements) {
+    const key = frontierInteractionRequirementKey(requirement);
+    if (requirementsByIdentity.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected frontier interaction requirements`,
       );
     }
     requirementsByIdentity.set(key, requirement);
@@ -1819,7 +1862,7 @@ function declaredTakeoverExitKeys(
   return exits === undefined ? undefined : Object.freeze(exits.map((exit) => exit.exitKey));
 }
 
-function exitDecisionsByOwner(
+function authoredExitDecisionsByOwner(
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
 ): ReadonlyMap<string, ExitDecision> {
@@ -1829,7 +1872,7 @@ function exitDecisionsByOwner(
     const key = semanticAddressKey(createExitDecisionAddress(biome, decision.source));
     if (decisions.has(key)) {
       throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple authored exit decisions for takeover assembly`,
+        `${key} has multiple authored exit decisions for workspace assembly`,
       );
     }
     decisions.set(key, decision);
@@ -1863,7 +1906,7 @@ function takeoverInteractionRequirementsForBiome(
   const occurrences = new Map(
     topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence] as const),
   );
-  const authoredDecisions = exitDecisionsByOwner(biome, plan);
+  const authoredDecisions = authoredExitDecisionsByOwner(biome, plan);
   const candidateGameNames = takeoverCandidateGameNames(catalog, plan.biomeKey);
   const fixedWidthOneTakeover = fixedWidthOneTakeoverForLayout(catalog, layout);
   for (const decision of authoredDecisions.values()) {
@@ -1956,6 +1999,98 @@ function takeoverInteractionRequirementsForBiome(
     );
   }
   return Object.freeze([...requirementsByOwner.values()]);
+}
+
+function takeoverRequirementForOwner(
+  requirements: ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement>,
+  owner: ExitDecisionAddress,
+): WorkspaceTakeoverInteractionRequirement | undefined {
+  const key = `takeoverBatch:${semanticAddressKey(owner)}`;
+  const requirement = requirements.get(key);
+  if (
+    requirement !== undefined &&
+    semanticAddressKey(requirement.owner) !== semanticAddressKey(owner)
+  ) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${key} takeover interaction requirement has a conflicting semantic owner`,
+    );
+  }
+  return requirement;
+}
+
+/**
+ * Frontier capability and structural creation are one presentation contract:
+ * an exit capability authorizes the UI lookup of its exact structural or
+ * takeover action. Takeover requirements are already assembled from the same
+ * authored plan, so this package can advertise a frontier action without
+ * re-deriving candidate policy or consulting bound interactions.
+ */
+function frontierInteractionRequirementsForBiome(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+  takeoverRequirements: ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement>,
+): readonly WorkspaceFrontierInteractionRequirement[] {
+  const topology = plan.topology;
+  if (topology === null) return Object.freeze([]);
+  const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
+  if (completeness.completion !== 'incomplete') return Object.freeze([]);
+  switch (completeness.frontier.kind) {
+    case 'exitDecision': {
+      const owner = completeness.frontier;
+      const existing = authoredExitDecisionsByOwner(biome, plan).get(semanticAddressKey(owner));
+      const fixedTransition = fixedWidthOneTakeoverTransitionForSource(
+        catalog,
+        layout,
+        topology,
+        owner.source,
+      );
+      const structural =
+        existing === undefined &&
+        owner.source.kind === 'occurrence' &&
+        fixedTransition === undefined
+          ? layout.progression.kind === 'hub' &&
+            owner.source.occurrenceId === topology.startOccurrenceId
+            ? Object.freeze({
+                action: 'createLinkedExit' as const,
+                targetGameName: layout.progression.linkedExit.roomGameName,
+              })
+            : Object.freeze({ action: 'createBatch' as const })
+          : undefined;
+      const takeoverRequirement = takeoverRequirementForOwner(takeoverRequirements, owner);
+      const takeover = existing === undefined && takeoverRequirement !== undefined;
+      if (takeover && takeoverRequirement.action !== 'create') {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(owner)} active frontier takeover must create rather than ${takeoverRequirement.action}`,
+        );
+      }
+      if (structural === undefined && !takeover) return Object.freeze([]);
+      return Object.freeze([
+        Object.freeze({
+          capabilities: Object.freeze({
+            ...(structural === undefined ? {} : { structural: structural.action }),
+            ...(takeover ? { takeover: true as const } : {}),
+          }),
+          kind: 'exitFrontier' as const,
+          owner,
+          ...(structural === undefined ? {} : { structural }),
+        }),
+      ]);
+    }
+    case 'hubDecision':
+      return Object.freeze([
+        Object.freeze({
+          kind: 'hubDecisionFrontier' as const,
+          owner: completeness.frontier,
+          structural: Object.freeze({ action: 'createHubDecision' as const }),
+        }),
+      ]);
+    case 'hubOpenSet':
+    case 'hubVisit':
+      return Object.freeze([]);
+  }
+  return Object.freeze([]);
 }
 
 function missingTargetsForPhysicalExits(
@@ -3924,12 +4059,95 @@ function bindTakeoverBatchInteractions(
   return takeoverBatches;
 }
 
+interface WorkspaceFrontierInteractionCatalog {
+  readonly exitFrontierCapabilities: ReadonlyMap<string, WorkspaceExitFrontierCapabilities>;
+  readonly structural: ReadonlyMap<string, WorkspaceStructuralInteraction>;
+}
+
+function bindFrontierInteractions(
+  requirements: Iterable<WorkspaceFrontierInteractionRequirement>,
+  takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>,
+): WorkspaceFrontierInteractionCatalog {
+  const exitFrontierCapabilities = new Map<string, WorkspaceExitFrontierCapabilities>();
+  const structural = new Map<string, WorkspaceStructuralInteraction>();
+  const bindStructural = (action: WorkspaceStructuralInteraction): void => {
+    if (structural.has(action.key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${action.key} has multiple bound structural frontier interactions`,
+      );
+    }
+    structural.set(action.key, action);
+  };
+  for (const requirement of requirements) {
+    const key = semanticAddressKey(requirement.owner);
+    switch (requirement.kind) {
+      case 'exitFrontier': {
+        const capabilities = requirement.capabilities;
+        if (capabilities.structural !== requirement.structural?.action) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} frontier structural capability disagrees with its requirement`,
+          );
+        }
+        if (capabilities.structural === undefined && capabilities.takeover !== true) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} frontier interaction requirement has no authoring capability`,
+          );
+        }
+        if (exitFrontierCapabilities.has(key)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} has multiple bound exit frontier capability packages`,
+          );
+        }
+        exitFrontierCapabilities.set(key, capabilities);
+        if (capabilities.takeover === true && !takeoverBatches.has(key)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} exit frontier takeover capability was not bound`,
+          );
+        }
+        switch (requirement.structural?.action) {
+          case undefined:
+            break;
+          case 'createBatch':
+            bindStructural(
+              Object.freeze({
+                action: 'createBatch' as const,
+                key,
+                owner: requirement.owner,
+              }),
+            );
+            break;
+          case 'createLinkedExit':
+            bindStructural(
+              Object.freeze({
+                action: 'createLinkedExit' as const,
+                key,
+                owner: requirement.owner,
+                targetGameName: requirement.structural.targetGameName,
+              }),
+            );
+            break;
+        }
+        break;
+      }
+      case 'hubDecisionFrontier':
+        bindStructural(
+          Object.freeze({
+            action: 'createHubDecision' as const,
+            key,
+            owner: requirement.owner,
+          }),
+        );
+        break;
+    }
+  }
+  return Object.freeze({ exitFrontierCapabilities, structural });
+}
+
 function createInteractionCatalog(
   catalog: Catalog,
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   services: StructuredWorkspaceContextualServices,
-  sources: WorkspaceProjectSourceIndex,
   occurrenceInteractionRequirements: ReadonlyMap<string, WorkspaceOccurrenceInteractionRequirement>,
   batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>,
   hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>,
@@ -3939,6 +4157,7 @@ function createInteractionCatalog(
   >,
   startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>,
   takeoverInteractionRequirements: ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement>,
+  frontierInteractionRequirements: ReadonlyMap<string, WorkspaceFrontierInteractionRequirement>,
   roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>,
   rewardControls: ReadonlyMap<string, WorkspaceRewardControl>,
 ): WorkspaceInteractionCatalog {
@@ -3973,6 +4192,10 @@ function createInteractionCatalog(
     catalog,
     candidates,
     takeoverInteractionRequirements.values(),
+  );
+  const { exitFrontierCapabilities, structural } = bindFrontierInteractions(
+    frontierInteractionRequirements.values(),
+    takeoverBatches,
   );
   const rooms = new Map<string, WorkspaceRoomInteraction>();
   for (const [key, control] of roomControls) {
@@ -4051,110 +4274,6 @@ function createInteractionCatalog(
     );
   }
 
-  const exitFrontierCapabilities = new Map<string, WorkspaceExitFrontierCapabilities>();
-  const structural = new Map<string, WorkspaceStructuralInteraction>();
-
-  for (const route of sources.routes) {
-    for (const biomeSource of route.biomes) {
-      const { biome, layout, plan } = biomeSource;
-      if (plan.topology === null) {
-        continue;
-      }
-      const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
-      const fixedWidthOneTakeover = fixedWidthOneTakeoverForLayout(catalog, layout);
-      if (completeness.completion === 'incomplete') {
-        const frontier = completeness.frontier;
-        if (frontier.kind === 'exitDecision') {
-          const existing = biomeSource.exitDecision(frontier.source);
-          const candidateGameNames = takeoverCandidateGameNames(catalog, plan.biomeKey);
-          const fixedWidthOneTakeoverAtFrontier = fixedWidthOneTakeoverTransitionForSource(
-            catalog,
-            layout,
-            plan.topology,
-            frontier.source,
-          );
-          const key = semanticAddressKey(frontier);
-          const fixedWidthOneRequiredExits =
-            fixedWidthOneTakeoverAtFrontier === undefined
-              ? undefined
-              : resolveDeclaredPhysicalExits(catalog, layout, plan.topology, frontier.source);
-          const fixedWidthOneRequiredExitKeys =
-            fixedWidthOneRequiredExits === undefined
-              ? undefined
-              : Object.freeze(fixedWidthOneRequiredExits.map((exit) => exit.exitKey));
-          const structuralCapability: WorkspaceExitFrontierCapabilities['structural'] =
-            existing === undefined &&
-            frontier.source.kind === 'occurrence' &&
-            fixedWidthOneTakeoverAtFrontier === undefined
-              ? layout.progression.kind === 'hub' &&
-                frontier.source.occurrenceId === plan.topology.startOccurrenceId
-                ? 'createLinkedExit'
-                : 'createBatch'
-              : undefined;
-          const takeoverCapability =
-            existing === undefined &&
-            ((fixedWidthOneTakeoverAtFrontier !== undefined &&
-              fixedWidthOneRequiredExitKeys !== undefined) ||
-              (fixedWidthOneTakeoverAtFrontier === undefined &&
-                layout.progression.kind === 'generated' &&
-                fixedWidthOneTakeover === undefined &&
-                candidateGameNames !== undefined))
-              ? (true as const)
-              : undefined;
-          if (structuralCapability !== undefined || takeoverCapability !== undefined) {
-            exitFrontierCapabilities.set(
-              key,
-              Object.freeze({
-                ...(structuralCapability === undefined ? {} : { structural: structuralCapability }),
-                ...(takeoverCapability === undefined ? {} : { takeover: takeoverCapability }),
-              }),
-            );
-          }
-          if (
-            existing === undefined &&
-            frontier.source.kind === 'occurrence' &&
-            fixedWidthOneTakeoverAtFrontier === undefined
-          ) {
-            const action: WorkspaceStructuralInteraction =
-              layout.progression.kind === 'hub' &&
-              frontier.source.occurrenceId === plan.topology.startOccurrenceId
-                ? Object.freeze({
-                    action: 'createLinkedExit' as const,
-                    key: semanticAddressKey(frontier),
-                    owner: frontier,
-                    targetGameName: layout.progression.linkedExit.roomGameName,
-                  })
-                : Object.freeze({
-                    action: 'createBatch' as const,
-                    key: semanticAddressKey(frontier),
-                    owner: frontier,
-                  });
-            structural.set(action.key, action);
-          }
-          if (structuralCapability !== undefined) {
-            const structuralAction = structural.get(key);
-            if (structuralAction?.action !== structuralCapability) {
-              throw new StructuredWorkspaceProjectionContractError(
-                key + ' exit frontier structural capability was not constructed',
-              );
-            }
-          }
-          if (takeoverCapability === true && !takeoverBatches.has(key)) {
-            throw new StructuredWorkspaceProjectionContractError(
-              key + ' exit frontier takeover capability was not constructed',
-            );
-          }
-        } else if (frontier.kind === 'hubDecision') {
-          const action: WorkspaceStructuralInteraction = Object.freeze({
-            action: 'createHubDecision' as const,
-            key: semanticAddressKey(frontier),
-            owner: frontier,
-          });
-          structural.set(action.key, action);
-        }
-      }
-    }
-  }
   return Object.freeze({
     batchRewardStores,
     exitFrontierCapabilities,
@@ -5559,6 +5678,195 @@ function assertTakeoverInteractionRequirementsMatchAuthoredState(
   }
 }
 
+type WorkspaceExpectedFrontierInteractionRequirement =
+  | {
+      readonly capabilities: WorkspaceExitFrontierCapabilities;
+      readonly kind: 'exitFrontier';
+      readonly owner: ExitDecisionAddress;
+      readonly structural?: WorkspaceExitFrontierStructuralRequirement;
+    }
+  | {
+      readonly kind: 'hubDecisionFrontier';
+      readonly owner: HubDecisionAddress;
+      readonly structural: { readonly action: 'createHubDecision' };
+    };
+
+/**
+ * Independently enumerate structural frontier packages from persisted
+ * topology, completeness, and layout policy. This intentionally does not
+ * inspect a projected frontier, another requirement collection, source-index
+ * lookup, or bound interaction map: omission of the frontier package itself
+ * must remain observable.
+ */
+function expectedFrontierInteractionRequirements(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+): ReadonlyMap<string, WorkspaceExpectedFrontierInteractionRequirement> {
+  const topology = plan.topology;
+  if (topology === null) return new Map();
+  const expected = new Map<string, WorkspaceExpectedFrontierInteractionRequirement>();
+  const add = (requirement: WorkspaceExpectedFrontierInteractionRequirement): void => {
+    const key = `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
+    if (expected.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple expected frontier interaction requirements`,
+      );
+    }
+    expected.set(key, requirement);
+  };
+  const authoredDecisions = new Map<string, ExitDecision>();
+  for (const decision of topology.decisions) {
+    if (decision.kind !== 'exit') continue;
+    const key = semanticAddressKey(createExitDecisionAddress(biome, decision.source));
+    if (authoredDecisions.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple expected authored frontier decision owners`,
+      );
+    }
+    authoredDecisions.set(key, decision);
+  }
+  const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
+  if (completeness.completion !== 'incomplete') return expected;
+  switch (completeness.frontier.kind) {
+    case 'exitDecision': {
+      const owner = completeness.frontier;
+      const existing = authoredDecisions.get(semanticAddressKey(owner));
+      const fixedTransition = fixedWidthOneTakeoverTransitionForSource(
+        catalog,
+        layout,
+        topology,
+        owner.source,
+      );
+      const structural =
+        existing === undefined &&
+        owner.source.kind === 'occurrence' &&
+        fixedTransition === undefined
+          ? layout.progression.kind === 'hub' &&
+            owner.source.occurrenceId === topology.startOccurrenceId
+            ? Object.freeze({
+                action: 'createLinkedExit' as const,
+                targetGameName: layout.progression.linkedExit.roomGameName,
+              })
+            : Object.freeze({ action: 'createBatch' as const })
+          : undefined;
+      const fixedExits =
+        fixedTransition === undefined
+          ? undefined
+          : resolveDeclaredPhysicalExits(catalog, layout, topology, owner.source);
+      const candidateGameNames = catalog.rooms.values
+        .filter((room) => room.biomeKey === plan.biomeKey && isTakeover(room))
+        .map((room) => room.gameName);
+      const takeover =
+        existing === undefined &&
+        ((fixedTransition !== undefined && fixedExits !== undefined) ||
+          (fixedTransition === undefined &&
+            layout.progression.kind === 'generated' &&
+            fixedWidthOneTakeoverForLayout(catalog, layout) === undefined &&
+            candidateGameNames.length > 0));
+      if (structural === undefined && !takeover) return expected;
+      add(
+        Object.freeze({
+          capabilities: Object.freeze({
+            ...(structural === undefined ? {} : { structural: structural.action }),
+            ...(takeover ? { takeover: true as const } : {}),
+          }),
+          kind: 'exitFrontier' as const,
+          owner,
+          ...(structural === undefined ? {} : { structural }),
+        }),
+      );
+      return expected;
+    }
+    case 'hubDecision':
+      add(
+        Object.freeze({
+          kind: 'hubDecisionFrontier' as const,
+          owner: completeness.frontier,
+          structural: Object.freeze({ action: 'createHubDecision' as const }),
+        }),
+      );
+      return expected;
+    case 'hubOpenSet':
+    case 'hubVisit':
+      return expected;
+  }
+  return expected;
+}
+
+function sameFrontierInteractionRequirement(
+  actual: WorkspaceFrontierInteractionRequirement,
+  expected: WorkspaceExpectedFrontierInteractionRequirement,
+): boolean {
+  if (
+    actual.kind !== expected.kind ||
+    semanticAddressKey(actual.owner) !== semanticAddressKey(expected.owner)
+  ) {
+    return false;
+  }
+  if (actual.kind === 'hubDecisionFrontier') {
+    return (
+      expected.kind === 'hubDecisionFrontier' &&
+      actual.structural.action === expected.structural.action
+    );
+  }
+  if (expected.kind !== 'exitFrontier') return false;
+  if (
+    actual.capabilities.structural !== expected.capabilities.structural ||
+    actual.capabilities.takeover !== expected.capabilities.takeover ||
+    actual.structural?.action !== expected.structural?.action
+  ) {
+    return false;
+  }
+  if (actual.structural?.action !== 'createLinkedExit') {
+    return expected.structural?.action !== 'createLinkedExit';
+  }
+  return (
+    expected.structural?.action === 'createLinkedExit' &&
+    expected.structural.targetGameName === actual.structural.targetGameName
+  );
+}
+
+function assertFrontierInteractionRequirementsMatchAuthoredState(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+  takeoverRequirements: ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement>,
+  requirements: ReadonlyMap<string, WorkspaceFrontierInteractionRequirement>,
+): void {
+  const expected = expectedFrontierInteractionRequirements(catalog, biome, layout, plan);
+  for (const [key, expectation] of expected) {
+    const requirement = requirements.get(key);
+    if (requirement === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} required frontier interaction package is absent`,
+      );
+    }
+    if (!sameFrontierInteractionRequirement(requirement, expectation)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} frontier interaction requirement disagrees with authored state`,
+      );
+    }
+    if (requirement.kind === 'exitFrontier' && requirement.capabilities.takeover === true) {
+      const takeover = takeoverRequirementForOwner(takeoverRequirements, requirement.owner);
+      if (takeover?.action !== 'create') {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} advertised takeover capability has no exact create requirement`,
+        );
+      }
+    }
+  }
+  for (const key of requirements.keys()) {
+    if (!expected.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} projected frontier interaction package has no active authored frontier`,
+      );
+    }
+  }
+}
+
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
@@ -5567,6 +5875,10 @@ function projectBiome(
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
   readonly focusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
+  readonly frontierInteractionRequirements: ReadonlyMap<
+    string,
+    WorkspaceFrontierInteractionRequirement
+  >;
   readonly hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>;
   readonly occurrenceInteractionRequirements: ReadonlyMap<
     string,
@@ -5601,6 +5913,10 @@ function projectBiome(
   const takeoverInteractionRequirements = new Map<
     string,
     WorkspaceTakeoverInteractionRequirement
+  >();
+  const frontierInteractionRequirements = new Map<
+    string,
+    WorkspaceFrontierInteractionRequirement
   >();
   const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
@@ -5793,6 +6109,16 @@ function projectBiome(
     takeoverInteractionRequirements,
     takeoverInteractionRequirementsForBiome(catalog, biomeAddress, layout, plan),
   );
+  appendUniqueFrontierInteractionRequirements(
+    frontierInteractionRequirements,
+    frontierInteractionRequirementsForBiome(
+      catalog,
+      biomeAddress,
+      layout,
+      plan,
+      takeoverInteractionRequirements,
+    ),
+  );
   assertBatchInteractionRequirementsMatchAuthoredState(
     catalog,
     biomeAddress,
@@ -5823,6 +6149,14 @@ function projectBiome(
     layout,
     plan,
     takeoverInteractionRequirements,
+  );
+  assertFrontierInteractionRequirementsMatchAuthoredState(
+    catalog,
+    biomeAddress,
+    layout,
+    plan,
+    takeoverInteractionRequirements,
+    frontierInteractionRequirements,
   );
   assertAuthoredWorkspaceLeafProjectionClosure(
     authoredLeafRequirements,
@@ -5927,6 +6261,7 @@ function projectBiome(
     batchInteractionRequirements,
     biome: projected,
     focusDestinations,
+    frontierInteractionRequirements,
     hubInteractionRequirements,
     occurrenceInteractionRequirements,
     roomControls,
@@ -6400,6 +6735,119 @@ function assertTakeoverInteractionRequirementClosure(
   }
 }
 
+/**
+ * Frontier capability is a lookup permission, so verify it and structural
+ * creation as one exact bound product without contacting candidate loaders.
+ */
+function assertFrontierInteractionRequirementClosure(
+  requirements: Iterable<WorkspaceFrontierInteractionRequirement>,
+  interactions: WorkspaceInteractionCatalog,
+): void {
+  const expectedCapabilityKeys = new Set<string>();
+  const expectedStructuralKeys = new Set<string>();
+  const requireStructural = (
+    key: string,
+    owner: ExitDecisionAddress | HubDecisionAddress,
+    action: WorkspaceStructuralInteraction,
+  ): void => {
+    const interaction = interactions.structural.get(key);
+    if (
+      interaction === undefined ||
+      interaction.action !== action.action ||
+      interaction.key !== key ||
+      semanticAddressKey(interaction.owner) !== semanticAddressKey(owner)
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `Frontier interaction requirement ${key} has no exact structural action`,
+      );
+    }
+    if (
+      action.action === 'createLinkedExit' &&
+      (interaction.action !== 'createLinkedExit' ||
+        interaction.targetGameName !== action.targetGameName)
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `Frontier interaction requirement ${key} has conflicting linked-exit facts`,
+      );
+    }
+  };
+  for (const requirement of requirements) {
+    const key = semanticAddressKey(requirement.owner);
+    switch (requirement.kind) {
+      case 'exitFrontier': {
+        if (expectedCapabilityKeys.has(key)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `Frontier interaction requirement ${key} has multiple capability packages`,
+          );
+        }
+        expectedCapabilityKeys.add(key);
+        const capabilities = interactions.exitFrontierCapabilities.get(key);
+        if (
+          capabilities === undefined ||
+          capabilities.structural !== requirement.capabilities.structural ||
+          capabilities.takeover !== requirement.capabilities.takeover
+        ) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `Frontier interaction requirement ${key} has no exact capability package`,
+          );
+        }
+        if (requirement.capabilities.takeover === true) {
+          const takeover = interactions.takeoverBatches.get(key);
+          if (takeover === undefined || semanticAddressKey(takeover.owner) !== key) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `Frontier interaction requirement ${key} has no exact takeover action`,
+            );
+          }
+        }
+        if (requirement.structural === undefined) {
+          if (interactions.structural.has(key)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `Frontier interaction requirement ${key} has an unadvertised structural action`,
+            );
+          }
+          break;
+        }
+        expectedStructuralKeys.add(key);
+        const action: WorkspaceStructuralInteraction =
+          requirement.structural.action === 'createBatch'
+            ? Object.freeze({ action: 'createBatch' as const, key, owner: requirement.owner })
+            : Object.freeze({
+                action: 'createLinkedExit' as const,
+                key,
+                owner: requirement.owner,
+                targetGameName: requirement.structural.targetGameName,
+              });
+        requireStructural(key, requirement.owner, action);
+        break;
+      }
+      case 'hubDecisionFrontier': {
+        if (expectedStructuralKeys.has(key)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `Frontier interaction requirement ${key} has multiple structural packages`,
+          );
+        }
+        expectedStructuralKeys.add(key);
+        requireStructural(
+          key,
+          requirement.owner,
+          Object.freeze({ action: 'createHubDecision' as const, key, owner: requirement.owner }),
+        );
+        break;
+      }
+    }
+  }
+  if (interactions.exitFrontierCapabilities.size !== expectedCapabilityKeys.size) {
+    throw new StructuredWorkspaceProjectionContractError(
+      'workspace exit frontier capabilities have no exact requirement package',
+    );
+  }
+  if (interactions.structural.size !== expectedStructuralKeys.size) {
+    throw new StructuredWorkspaceProjectionContractError(
+      'workspace structural interactions have no exact requirement package',
+    );
+  }
+}
+
 function assertWorkspaceRoomInteractionClosure(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,
@@ -6716,6 +7164,10 @@ export function createStructuredWorkspaceProjection(
         string,
         WorkspaceTakeoverInteractionRequirement
       >();
+      const frontierInteractionRequirements = new Map<
+        string,
+        WorkspaceFrontierInteractionRequirement
+      >();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const authoredLeafRequirements: WorkspaceAuthoredLeafRequirement[] = [];
@@ -6747,6 +7199,10 @@ export function createStructuredWorkspaceProjection(
           appendUniqueTakeoverInteractionRequirements(
             takeoverInteractionRequirements,
             projected.takeoverInteractionRequirements.values(),
+          );
+          appendUniqueFrontierInteractionRequirements(
+            frontierInteractionRequirements,
+            projected.frontierInteractionRequirements.values(),
           );
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
@@ -6800,13 +7256,13 @@ export function createStructuredWorkspaceProjection(
         project,
         evaluation,
         services,
-        sources,
         occurrenceInteractionRequirements,
         batchInteractionRequirements,
         hubInteractionRequirements,
         topologyRemovalInteractionRequirements,
         startInteractionRequirements,
         takeoverInteractionRequirements,
+        frontierInteractionRequirements,
         roomControls,
         rewardControls,
       );
@@ -6828,6 +7284,10 @@ export function createStructuredWorkspaceProjection(
       assertTakeoverInteractionRequirementClosure(
         takeoverInteractionRequirements.values(),
         catalog,
+        interactions,
+      );
+      assertFrontierInteractionRequirementClosure(
+        frontierInteractionRequirements.values(),
         interactions,
       );
       assertWorkspaceInteractionClosure(

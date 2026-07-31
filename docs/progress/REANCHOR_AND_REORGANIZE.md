@@ -19,7 +19,8 @@ the first occurrence-owned non-reward interaction packages explicitly. A4.2
 does the same for authored batch controls. A4.3 does the same for authored Hub
 board slots and visits. A4.4 does the same for generic authored-topology
 removals. A4.5 does the same for topology-free authored starts. A4.6 does the
-same for takeover batches.
+same for takeover batches. A4.7 does the same for the coupled frontier
+capability and structural-action family.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -512,9 +513,8 @@ already-bound candidate session without loading candidates during workspace
 projection. An independent plan/layout audit requires a package only while
 topology is null and rejects one once authored topology exists; direct closure
 preserves exact fixed-start facts without defeating laziness. Takeover actions
-are now returned by their own package; frontier capabilities and structural
-actions remain in the source-index binding until their own cohesive requirement
-exists.
+are returned by their own package in A4.6; the coupled frontier capability and
+structural-action family follows in A4.7.
 
 **A4.6 transition note.** Biome assembly now returns one `takeoverBatch`
 requirement for every currently published takeover interaction: candidate
@@ -526,9 +526,21 @@ bound candidate session without loading candidate values during projection.
 The independent persisted-topology, layout-policy, and structural-frontier
 audit verifies all four presentations, including retained/disconnected suffixes
 and a frontier replacement without an impact preview. The remaining raw
-frontier pass can only advertise and verify a bound takeover action; its
-capability and structural-action products move together in the next cohesive
-slice.
+frontier pass is replaced by the A4.7 frontier package, which keeps capability
+and structural-action products together.
+
+**A4.7 transition note.** Biome assembly now returns one `frontier`
+interaction package for every active structural frontier. An exit package owns
+the exact capability map entry and its optional `createBatch` or
+`createLinkedExit` action; a Hub-decision package owns `createHubDecision`.
+Binding mechanically produces both public maps and no longer traverses source
+routes to rediscover frontier policy. An exit advertises takeover only when its
+active owner is unauthored and has a returned create requirement; existing
+candidate, replacement, and repair controls remain node-owned rather than
+becoming frontier permissions. An independent persisted topology/completeness
+and layout-policy expected enumeration does not read rendered frontiers,
+source-index lookup, other requirements, or bound maps; direct closure then
+checks the exact capability, structural, and takeover-map handoff.
 
 #### A5: Presentation, focus, and closure
 
