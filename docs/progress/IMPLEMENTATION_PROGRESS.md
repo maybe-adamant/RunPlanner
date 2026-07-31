@@ -61,6 +61,15 @@ editor exposes the order directly. Commit 5c intentionally replaces the schema
 9 purchased-set contract. These plans supersede the former presentation-only
 Commit 12 and Commit 13 wording in `IMPLEMENTATION_PLAN.md`.
 
+Campaign A7 and A8 are complete. A7 moved the private marker and
+preliminary-destination builder plus all room-local occurrence assembly into
+their own products. A8 moved ordinary/linked decision assembly and
+topology-owned interaction requirements into sibling modules while preserving
+the existing authored composition order and independent expected-owner audit.
+The A8 complete repository gate passed with 69 test files and 682 tests,
+typechecks, lint, formatting, and the production build. A9 through A11 remain
+the active Campaign A work before Commit 5b.3 can resume.
+
 An out-of-sequence decision-highlight rail follow-up is complete without
 advancing that active frontier. Ordinary biome rails now emphasize entry,
 decision, and distinct Preboss highlights instead of exhaustively indexing
