@@ -17,27 +17,40 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
-import {
-  StructuredWorkspaceProjectionContractError,
-  workspaceSideRoomEntryOrderKey,
-  type WorkspaceAuthoredLeafInteractionKind,
-  type WorkspaceAuthoredLeafInteractionRequirement,
-  type WorkspaceAuthoredLeafRequirement,
-} from '../contract';
+/**
+ * Test-only, independently derived editable-leaf identities. These types do
+ * not belong to the workspace contract: production builds workspace products,
+ * while tests use this oracle to make omitted products observable.
+ */
+export type ExpectedWorkspaceLeafInteractionKind =
+  | 'reward'
+  | 'rewardWheelOfferCount'
+  | 'rewardWheelPick'
+  | 'rewardWheelStore'
+  | 'shipEncounterCount'
+  | 'shopPurchase'
+  | 'sideRoomEntryOrder'
+  | 'sideRoomGeneration';
+
+export interface ExpectedWorkspaceLeafInteraction {
+  readonly key: string;
+  readonly kind: ExpectedWorkspaceLeafInteractionKind;
+}
+
+export interface ExpectedWorkspaceLeafRequirement {
+  readonly address: SemanticAddress;
+  readonly interactions: readonly ExpectedWorkspaceLeafInteraction[];
+}
 
 function requireExpectedRoom(catalog: Catalog, gameName: string): RoomDeclaration {
   const room = catalog.rooms.byKey[gameName];
-  if (room === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(`room ${gameName} is missing`);
-  }
+  if (room === undefined) throw new Error(`room ${gameName} is missing`);
   return room;
 }
 
 function resolveExpectedFixedRewardType(room: RoomDeclaration): string {
   if (room.incomingReward.kind !== 'fixed') {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${room.gameName} fixed state has ${room.incomingReward.kind} reward binding`,
-    );
+    throw new Error(`${room.gameName} fixed state has ${room.incomingReward.kind} reward binding`);
   }
   return room.incomingReward.offer.rewardType;
 }
@@ -51,20 +64,18 @@ function authoredTargetIsSelected(
   decision: AuthoredBatchDecision,
   target: AuthoredBatchTarget,
 ): boolean {
-  if (decision.selection.kind === 'normal') {
-    return decision.selection.exitKey === target.exitKey;
-  }
+  if (decision.selection.kind === 'normal') return decision.selection.exitKey === target.exitKey;
   return (
     decision.selection.kind === 'derived' && decision.normal.targets[0]?.exitKey === target.exitKey
   );
 }
 
 /**
- * Detail activation is an authored relationship. It is intentionally derived
- * from topology alone so a blocked or invalid evaluator prefix cannot remove
- * an active room's declaration-owned lifecycle surface.
+ * Topology alone determines whether declaration-owned picked-room detail is
+ * visible. It deliberately does not inspect simulation coverage or workspace
+ * output.
  */
-export function expectedDetailsActiveOccurrenceIds(
+export function expectedWorkspaceDetailsActiveOccurrenceIds(
   plan: AuthoredBiomePlan,
 ): ReadonlySet<OccurrenceId> {
   const active = new Set<OccurrenceId>();
@@ -91,63 +102,55 @@ export function expectedDetailsActiveOccurrenceIds(
   return active;
 }
 
-interface MutableWorkspaceAuthoredLeafRequirement {
+interface MutableExpectedWorkspaceLeafRequirement {
   readonly address: SemanticAddress;
   readonly interactions: Map<
-    WorkspaceAuthoredLeafInteractionKind,
-    WorkspaceAuthoredLeafInteractionRequirement
+    ExpectedWorkspaceLeafInteractionKind,
+    ExpectedWorkspaceLeafInteraction
   >;
 }
 
-function authoredLeafInteraction(
-  kind: WorkspaceAuthoredLeafInteractionKind,
+function expectedLeafInteraction(
+  kind: ExpectedWorkspaceLeafInteractionKind,
   key: string,
-): WorkspaceAuthoredLeafInteractionRequirement {
+): ExpectedWorkspaceLeafInteraction {
   return Object.freeze({ key, kind });
 }
 
 /**
- * Enumerates the leaf contract from persisted room state and declarations.
- *
- * This must stay independent of workspace products: it is the expected side
- * of the closure audit. It includes offer-time values for all authored
- * occurrences, while Ephyra side details and Shop inventory remain dormant
- * until their room is on an authored active detail path.
+ * Enumerate editable leaves from persisted room state and declarations without
+ * importing any workspace producer, marker, presentation, binding, or facade
+ * product. This is an identity/visibility oracle, not a payload mirror.
  */
-export function authoredWorkspaceLeafRequirements(
+export function expectedWorkspaceLeafRequirements(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
-): readonly WorkspaceAuthoredLeafRequirement[] {
-  const required = new Map<string, MutableWorkspaceAuthoredLeafRequirement>();
+): readonly ExpectedWorkspaceLeafRequirement[] {
+  const required = new Map<string, MutableExpectedWorkspaceLeafRequirement>();
   const requireLeaf = (
     address: SemanticAddress,
-    ...interactions: readonly WorkspaceAuthoredLeafInteractionRequirement[]
+    ...interactions: readonly ExpectedWorkspaceLeafInteraction[]
   ): void => {
     const key = semanticAddressKey(address);
     let requirement = required.get(key);
     if (requirement === undefined) {
-      requirement = {
-        address,
-        interactions: new Map(),
-      };
+      requirement = { address, interactions: new Map() };
       required.set(key, requirement);
     }
     for (const interaction of interactions) {
       const existing = requirement.interactions.get(interaction.kind);
       if (existing !== undefined && existing.key !== interaction.key) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${key} has conflicting authored ${interaction.kind} interaction requirements`,
-        );
+        throw new Error(`${key} has conflicting expected ${interaction.kind} interaction keys`);
       }
       requirement.interactions.set(interaction.kind, interaction);
     }
   };
   const requireReward = (address: SemanticAddress): void =>
-    requireLeaf(address, authoredLeafInteraction('reward', semanticAddressKey(address)));
+    requireLeaf(address, expectedLeafInteraction('reward', semanticAddressKey(address)));
   const topology = plan.topology;
   if (topology === null) return Object.freeze([]);
-  const detailsActive = expectedDetailsActiveOccurrenceIds(plan);
+  const detailsActive = expectedWorkspaceDetailsActiveOccurrenceIds(plan);
   for (const occurrence of topology.occurrences) {
     const room = requireExpectedRoom(catalog, occurrence.gameName);
     const occurrenceAddress = createOccurrenceAddress(biome, occurrence.occurrenceId);
@@ -156,13 +159,12 @@ export function authoredWorkspaceLeafRequirements(
       case 'none':
         break;
       case 'fixed': {
-        const offer = { rewardType: resolveExpectedFixedRewardType(room) };
-        const rewardType = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+        const rewardType = catalog.rewards.rewardTypes.byKey[resolveExpectedFixedRewardType(room)];
         requireLeaf(
           incoming,
           ...(rewardType?.payloadDomain === undefined
             ? []
-            : [authoredLeafInteraction('reward', semanticAddressKey(incoming))]),
+            : [expectedLeafInteraction('reward', semanticAddressKey(incoming))]),
         );
         break;
       }
@@ -172,16 +174,11 @@ export function authoredWorkspaceLeafRequirements(
         break;
       case 'ephyraCombat': {
         requireReward(incoming);
-        // Main rewards are offer-time data. The side-room lifecycle is
-        // picked-room customization, so an unvisited Hub room retains it as
-        // dormant state rather than publishing editable children.
         if (!detailsActive.has(occurrence.occurrenceId)) break;
         const group = room.localChildren.find((child) => child.kind === 'fixedRoomSlots');
         if (group === undefined && Object.keys(occurrence.state.sideRooms).length === 0) break;
         if (group?.kind !== 'fixedRoomSlots') {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName} Ephyra state has no fixed side-room declaration`,
-          );
+          throw new Error(`${room.gameName} Ephyra state has no fixed side-room declaration`);
         }
         requireLeaf(createLocalChildGroupAddress(biome, occurrence.occurrenceId, group.key));
         for (const slot of group.slots) {
@@ -193,10 +190,10 @@ export function authoredWorkspaceLeafRequirements(
           );
           requireLeaf(
             sideAddress,
-            authoredLeafInteraction('sideRoomGeneration', semanticAddressKey(sideAddress)),
-            authoredLeafInteraction(
+            expectedLeafInteraction('sideRoomGeneration', semanticAddressKey(sideAddress)),
+            expectedLeafInteraction(
               'sideRoomEntryOrder',
-              workspaceSideRoomEntryOrderKey(sideAddress),
+              `${semanticAddressKey(sideAddress)}:entry-order`,
             ),
           );
           requireReward(
@@ -208,9 +205,7 @@ export function authoredWorkspaceLeafRequirements(
       case 'fieldsCombat': {
         const group = room.localChildren.find((child) => child.kind === 'boundedRewardSlots');
         if (group?.kind !== 'boundedRewardSlots') {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName} Fields state has no bounded cage declaration`,
-          );
+          throw new Error(`${room.gameName} Fields state has no bounded cage declaration`);
         }
         for (const slotKey of group.slotKeys) {
           requireReward(
@@ -221,14 +216,11 @@ export function authoredWorkspaceLeafRequirements(
       }
       case 'shipCombat': {
         const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
-        if (profile === undefined) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${room.gameName} Ship state has no encounter profile`,
-          );
-        }
+        if (profile === undefined)
+          throw new Error(`${room.gameName} Ship state has no encounter profile`);
         requireLeaf(
           occurrenceAddress,
-          authoredLeafInteraction('shipEncounterCount', semanticAddressKey(occurrenceAddress)),
+          expectedLeafInteraction('shipEncounterCount', semanticAddressKey(occurrenceAddress)),
         );
         for (const phase of profile.phases) {
           const wheel = phase.offerPoint;
@@ -237,9 +229,9 @@ export function authoredWorkspaceLeafRequirements(
           const wheelKey = semanticAddressKey(wheelAddress);
           requireLeaf(
             wheelAddress,
-            authoredLeafInteraction('rewardWheelOfferCount', wheelKey),
-            authoredLeafInteraction('rewardWheelStore', wheelKey),
-            authoredLeafInteraction('rewardWheelPick', wheelKey),
+            expectedLeafInteraction('rewardWheelOfferCount', wheelKey),
+            expectedLeafInteraction('rewardWheelStore', wheelKey),
+            expectedLeafInteraction('rewardWheelPick', wheelKey),
           );
           for (const offerKey of wheel.offerKeys) {
             requireReward(
@@ -250,29 +242,22 @@ export function authoredWorkspaceLeafRequirements(
         break;
       }
       case 'shop': {
-        // A persisted unpicked Shop inventory is deliberately dormant. A
-        // selected-but-unassessed Shop is active because this checks authored
-        // detail activation rather than evaluator entry.
         if (!detailsActive.has(occurrence.occurrenceId) || occurrence.state.shop === undefined) {
           break;
         }
         const profile = catalog.rewards.shops.byKey[occurrence.state.shop.profileKey];
         if (profile === undefined) {
-          throw new StructuredWorkspaceProjectionContractError(
+          throw new Error(
             `${room.gameName} shop profile ${occurrence.state.shop.profileKey} is missing`,
           );
         }
         for (const slot of profile.slots.values) {
           const offer = createShopOfferAddress(biome, occurrence.occurrenceId, slot.key);
           requireReward(offer);
+          const purchase = createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key);
           requireLeaf(
-            createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key),
-            authoredLeafInteraction(
-              'shopPurchase',
-              semanticAddressKey(
-                createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key),
-              ),
-            ),
+            purchase,
+            expectedLeafInteraction('shopPurchase', semanticAddressKey(purchase)),
           );
         }
         break;
@@ -288,9 +273,3 @@ export function authoredWorkspaceLeafRequirements(
     ),
   );
 }
-
-/**
- * The occurrence facts are a production convenience, never the expected side
- * of this audit. Compare them to the independently enumerated authored leaf
- * requirements before semantic assembly relies on them.
- */

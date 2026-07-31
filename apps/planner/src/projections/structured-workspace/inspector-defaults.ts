@@ -1,7 +1,6 @@
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
 import {
-  StructuredWorkspaceProjectionContractError,
   type WorkspaceAuthoringFrontier,
   type WorkspaceDefaultInspectorDestination,
   type WorkspaceNode,
@@ -153,79 +152,4 @@ export function defaultInspectorDestination(
   if (input.entry !== undefined) return nodeDestination(input, input.entry);
   const first = nodes[0];
   return first === undefined ? null : nodeDestination(input, first);
-}
-
-function railMarkerCount(rail: readonly WorkspaceRailEntry[], focusKey: string): number {
-  let count = 0;
-  for (const entry of rail) {
-    switch (entry.kind) {
-      case 'frontier':
-      case 'node':
-        if (entry.marker.focusKey === focusKey) count += 1;
-        break;
-      case 'hubGroup':
-        if (entry.marker.focusKey === focusKey) count += 1;
-        count += entry.visits.filter((visit) => visit.marker.focusKey === focusKey).length;
-        break;
-    }
-  }
-  return count;
-}
-
-/** Structural closure for the returned default; policy is covered by the fixture matrix. */
-export function assertWorkspaceDefaultInspectorDestinationClosure(
-  input: WorkspaceInspectorDefaultsInput,
-  destination: WorkspaceDefaultInspectorDestination | null,
-): void {
-  if (destination === null) {
-    if (input.frontier !== null || input.entry !== undefined || input.nodes.length > 0) {
-      throw new StructuredWorkspaceProjectionContractError(
-        'Workspace default inspector is null despite a renderable subject.',
-      );
-    }
-    return;
-  }
-  switch (destination.kind) {
-    case 'frontier': {
-      const frontier = input.frontier;
-      if (
-        (frontier?.kind !== 'start' && frontier?.kind !== 'exitDecision') ||
-        frontier.marker.focusKey !== destination.frontierFocusKey ||
-        destination.selectedRailKey !== frontier.marker.focusKey
-      ) {
-        throw new StructuredWorkspaceProjectionContractError(
-          'Workspace default frontier does not match the active authoring frontier.',
-        );
-      }
-      if (railMarkerCount(input.rail, destination.selectedRailKey) === 0) {
-        throw new StructuredWorkspaceProjectionContractError(
-          'Workspace default frontier has no selected rail marker.',
-        );
-      }
-      return;
-    }
-    case 'node': {
-      const matches = input.nodes.filter((node) => node.key === destination.nodeKey);
-      if (matches.length !== 1) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${destination.nodeKey} default inspector node resolves to ${matches.length} nodes.`,
-        );
-      }
-      const expectedRailKey = selectedRailKeyForNode(input.rail, destination.nodeKey);
-      if (destination.selectedRailKey !== expectedRailKey) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${destination.nodeKey} default inspector rail selection disagrees with workspace rail.`,
-        );
-      }
-      if (
-        destination.selectedRailKey !== undefined &&
-        railMarkerCount(input.rail, destination.selectedRailKey) === 0
-      ) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${destination.nodeKey} default inspector rail selection is not rendered.`,
-        );
-      }
-      return;
-    }
-  }
 }

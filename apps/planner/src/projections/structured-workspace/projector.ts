@@ -1,23 +1,8 @@
-import {
-  createBiomeAddress,
-  semanticAddressKey,
-  type ProjectDocument,
-} from '@run-planner/engine/authored-project';
+import { semanticAddressKey, type ProjectDocument } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import type { ProjectEvaluation, SemanticFinding } from '@run-planner/engine/simulation';
+import type { ProjectEvaluation } from '@run-planner/engine/simulation';
 import { assertProjectEvaluationSource } from '@run-planner/engine/simulation';
 
-import { authoredWorkspaceLeafRequirements } from './audit/authored-leaf-expectations';
-import { assertWorkspaceAuthoredRequirementClosure } from './audit/authored-requirement-closure';
-import {
-  assertWorkspaceInteractionClosure,
-  assertWorkspaceRequirementInteractionClosure,
-} from './audit/interaction-closure';
-import {
-  assertAuthoredWorkspaceLeafProjectionClosure,
-  assertWorkspaceProjectionClosure,
-  isFineGrainedFindingOwner,
-} from './audit/semantic-closure';
 import {
   appendUniqueFocusDestinations,
   appendUniqueRewardControls,
@@ -25,7 +10,7 @@ import {
 } from './assembly-products';
 import { assembleWorkspaceBiomeSemantics } from './biome-semantic-assembly';
 import { presentWorkspaceBiome } from './biome-presentation';
-import { StructuredWorkspaceProjectionContractError } from './contract';
+import { registerWorkspaceFindingDestinations } from './finding-routing';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
 import { bindWorkspaceInteractions } from './interaction-binding';
 import {
@@ -48,7 +33,6 @@ import type {
   StructuredWorkspaceContextualServices,
   StructuredWorkspaceProjection,
   StructuredWorkspaceProjectionService,
-  WorkspaceAuthoredLeafRequirement,
   WorkspaceBiome,
   WorkspaceInspectorDestination,
   WorkspaceRewardControl,
@@ -60,7 +44,6 @@ function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
 ): {
-  readonly authoredLeafRequirements: readonly WorkspaceAuthoredLeafRequirement[];
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
   readonly focusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
@@ -85,38 +68,9 @@ function projectBiome(
     WorkspaceTopologyRemovalInteractionRequirement
   >;
 } {
-  const { biome: biomeAddress, layout, plan } = source;
   const semantic = assembleWorkspaceBiomeSemantics(catalog, source);
-  const authoredLeafRequirements = authoredWorkspaceLeafRequirements(catalog, biomeAddress, plan);
-  assertWorkspaceAuthoredRequirementClosure({
-    authoredLeafRequirements,
-    batchInteractionRequirements: semantic.batchInteractionRequirements,
-    biome: biomeAddress,
-    catalog,
-    frontierInteractionRequirements: semantic.frontierInteractionRequirements,
-    hubInteractionRequirements: semantic.hubInteractionRequirements,
-    layout,
-    occurrenceFacts: semantic.occurrenceFacts,
-    plan,
-    startInteractionRequirements: semantic.startInteractionRequirements,
-    takeoverInteractionRequirements: semantic.takeoverInteractionRequirements,
-    topologyRemovalInteractionRequirements: semantic.topologyRemovalInteractionRequirements,
-  });
-  assertAuthoredWorkspaceLeafProjectionClosure(
-    authoredLeafRequirements,
-    semantic.preliminaryFocusDestinations,
-    semantic.nodes,
-  );
-  assertWorkspaceProjectionClosure(
-    biomeAddress,
-    source.findings,
-    semantic.preliminaryFocusDestinations,
-    plan,
-    semantic.nodes,
-  );
   const presentation = presentWorkspaceBiome(semantic);
   return Object.freeze({
-    authoredLeafRequirements,
     batchInteractionRequirements: semantic.batchInteractionRequirements,
     biome: presentation.biome,
     focusDestinations: presentation.focusDestinations,
@@ -133,43 +87,6 @@ function projectBiome(
 
 function routeStatus(route: { readonly status: ProjectEvaluation['status'] }): WorkspaceStatus {
   return route.status;
-}
-
-function registerFindingDestinations(
-  findings: readonly SemanticFinding[],
-  focusByOwner: Map<string, WorkspaceInspectorDestination>,
-): void {
-  for (const finding of findings) {
-    const key = semanticAddressKey(finding.origin);
-    if (focusByOwner.has(key)) continue;
-    if (isFineGrainedFindingOwner(finding.origin)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} finding has no exact workspace destination`,
-      );
-    }
-    if (!('routeKey' in finding.origin) || !('biomeKey' in finding.origin)) continue;
-    const biome = createBiomeAddress(finding.origin.routeKey, finding.origin.biomeKey);
-    const fallback = focusByOwner.get(semanticAddressKey(biome));
-    if (fallback === undefined) continue;
-    // A coarse finding uses the biome's inspector fallback, but it is still an
-    // explicit owner. Do not inherit a no-focus rail selection from the
-    // biome shell (notably its active start frontier).
-    focusByOwner.set(
-      key,
-      Object.freeze({
-        ...(fallback.biomeKey === undefined ? {} : { biomeKey: fallback.biomeKey }),
-        focusAddress: fallback.focusAddress,
-        focusKey: fallback.focusKey,
-        ...(fallback.inspectorSubject === undefined
-          ? {}
-          : { inspectorSubject: fallback.inspectorSubject }),
-        nodeKey: fallback.nodeKey,
-        ownerAddress: finding.origin,
-        region: fallback.region,
-        ...(fallback.routeKey === undefined ? {} : { routeKey: fallback.routeKey }),
-      }),
-    );
-  }
 }
 
 export function createStructuredWorkspaceProjection(
@@ -210,7 +127,6 @@ export function createStructuredWorkspaceProjection(
       >();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
-      const authoredLeafRequirements: WorkspaceAuthoredLeafRequirement[] = [];
       const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation);
       const routes = sources.routes.map((routeSource) => {
         const biomes = routeSource.biomes.map((biomeSource) => {
@@ -246,7 +162,6 @@ export function createStructuredWorkspaceProjection(
           );
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
-          authoredLeafRequirements.push(...projected.authoredLeafRequirements);
           return projected.biome;
         });
         const routeAddress = { kind: 'route' as const, routeKey: routeSource.routeKey };
@@ -290,7 +205,7 @@ export function createStructuredWorkspaceProjection(
             routeSource.evaluation === undefined ? 'blocked' : routeStatus(routeSource.evaluation),
         });
       });
-      registerFindingDestinations(evaluation.findings, focusByOwner);
+      registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, routes);
       const interactions = bindWorkspaceInteractions({
         batchInteractionRequirements,
         catalog,
@@ -306,24 +221,6 @@ export function createStructuredWorkspaceProjection(
         takeoverInteractionRequirements,
         topologyRemovalInteractionRequirements,
       });
-      assertWorkspaceRequirementInteractionClosure({
-        batchInteractionRequirements: batchInteractionRequirements.values(),
-        catalog,
-        frontierInteractionRequirements: frontierInteractionRequirements.values(),
-        hubInteractionRequirements: hubInteractionRequirements.values(),
-        interactions,
-        occurrenceInteractionRequirements: occurrenceInteractionRequirements.values(),
-        startInteractionRequirements: startInteractionRequirements.values(),
-        takeoverInteractionRequirements: takeoverInteractionRequirements.values(),
-        topologyRemovalInteractionRequirements: topologyRemovalInteractionRequirements.values(),
-      });
-      assertWorkspaceInteractionClosure(
-        routes,
-        roomControls,
-        rewardControls,
-        interactions,
-        Object.freeze([...authoredLeafRequirements]),
-      );
       const projectAddress = { kind: 'project' as const };
       const result = Object.freeze({
         focusByOwner,

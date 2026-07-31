@@ -16,10 +16,7 @@ import {
   type WorkspaceTakeoverBatchNode,
 } from './contract';
 import { bindWorkspaceInspectorDestinations } from './inspector-destinations';
-import {
-  assertWorkspaceDefaultInspectorDestinationClosure,
-  defaultInspectorDestination,
-} from './inspector-defaults';
+import { defaultInspectorDestination } from './inspector-defaults';
 import { workspaceDecisionOwnedMarkers } from './marker-ownership';
 import type { WorkspaceBiomeSemanticAssembly } from './biome-semantic-assembly';
 
@@ -274,7 +271,6 @@ export function presentWorkspaceBiome(
     rail,
   });
   const defaultInspector = defaultInspectorDestination(inspectorDefaults);
-  assertWorkspaceDefaultInspectorDestinationClosure(inspectorDefaults, defaultInspector);
   const biome = Object.freeze({
     biomeKey: semantic.biomeKey,
     completion: semantic.completion,

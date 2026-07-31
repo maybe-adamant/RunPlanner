@@ -20,7 +20,11 @@ import type {
 import type { ProjectBiomeEvaluation } from '@run-planner/engine/simulation';
 import { evaluateBiomeCompleteness } from '@run-planner/engine/simulation';
 
-import { appendUniqueRewardControls, appendUniqueRoomControls } from './assembly-products';
+import {
+  appendUniqueRewardControls,
+  appendUniqueRoomControls,
+  appendUniqueWorkspaceNodes,
+} from './assembly-products';
 import { requireWorkspaceRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
@@ -73,6 +77,7 @@ import {
   type WorkspaceBiomeOccurrenceAssemblyFacts,
   type WorkspaceOccurrenceAssemblyFact,
 } from './occurrence-facts';
+import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import type { WorkspaceDecisionBatchNode } from './marker-ownership';
 import type { WorkspaceBiomeSource } from './source-index';
 import { assembleWorkspaceTopologyInteractions } from './topology-interaction-assembly';
@@ -99,7 +104,6 @@ export interface WorkspaceBiomeSemanticAssembly {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly nodes: readonly WorkspaceNode[];
-  readonly occurrenceFacts: WorkspaceBiomeOccurrenceAssemblyFacts;
   readonly occurrenceInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceOccurrenceInteractionRequirement
@@ -316,7 +320,7 @@ function appendDecisionAssembly(
     );
     appendUniqueRoomControls(roomControls, assembly.roomControls);
     appendUniqueRewardControls(rewardControls, assembly.rewardControls);
-    nodes.push(assembly.node, assembly.workbench);
+    appendUniqueWorkspaceNodes(nodes, [assembly.node, assembly.workbench]);
     return;
   }
   appendUniqueBatchInteractionRequirements(
@@ -329,7 +333,7 @@ function appendDecisionAssembly(
   );
   appendUniqueRoomControls(roomControls, assembly.roomControls);
   appendUniqueRewardControls(rewardControls, assembly.rewardControls);
-  nodes.push(assembly.batch, ...assembly.workbenches);
+  appendUniqueWorkspaceNodes(nodes, [assembly.batch, ...assembly.workbenches]);
 }
 
 function appendHubAssembly(
@@ -350,7 +354,7 @@ function appendHubAssembly(
   );
   appendUniqueRoomControls(roomControls, assembly.roomControls);
   appendUniqueRewardControls(rewardControls, assembly.rewardControls);
-  nodes.push(assembly.node, ...assembly.workbenches);
+  appendUniqueWorkspaceNodes(nodes, [assembly.node, ...assembly.workbenches]);
 }
 
 function enrichFrontierPredecessor(
@@ -382,7 +386,8 @@ export function assembleWorkspaceBiomeSemantics(
   source: WorkspaceBiomeSource,
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
-  const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(catalog, source);
+  const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(source);
+  const fieldsActiveCageCounts = createWorkspaceFieldsActiveCageCounts(catalog, source);
   const markerBuilder = createWorkspaceBiomeMarkerDestinationBuilder({
     assessmentFor: (address) => assessmentForSource(source, address),
     biome,
@@ -426,16 +431,21 @@ export function assembleWorkspaceBiomeSemantics(
       );
     }
   }
-  const assembleOccurrence: WorkspaceOccurrenceAssembler = (request) =>
-    assembleWorkspaceOccurrence({
+  const assembleOccurrence: WorkspaceOccurrenceAssembler = (request) => {
+    const fieldsActiveCageCount = fieldsActiveCageCounts.countForOccurrence(
+      request.occurrence.occurrenceId,
+    );
+    return assembleWorkspaceOccurrence({
       biome,
       catalog,
       ...(request.evaluatedRoom === undefined ? {} : { evaluatedRoom: request.evaluatedRoom }),
+      ...(fieldsActiveCageCount === undefined ? {} : { fieldsActiveCageCount }),
       facts: requireOccurrenceAssemblyFacts(biome, occurrenceFacts, request.occurrence),
       markerDestinations,
       occurrence: request.occurrence,
       ...(request.roomPicker === undefined ? {} : { roomPicker: request.roomPicker }),
     });
+  };
   const nodes: WorkspaceNode[] = [];
   let entry: WorkspaceOccurrenceWorkbenchNode | undefined;
   if (plan.topology !== null) {
@@ -466,7 +476,7 @@ export function assembleWorkspaceBiomeSemantics(
       );
       appendUniqueRoomControls(roomControls, projectedEntry.roomControls);
       appendUniqueRewardControls(rewardControls, projectedEntry.rewardControls);
-      nodes.push(entry);
+      appendUniqueWorkspaceNodes(nodes, [entry]);
     }
   }
   if (source.entryRoom !== undefined && entry === undefined) {
@@ -485,6 +495,7 @@ export function assembleWorkspaceBiomeSemantics(
               assembleOccurrence,
               catalog,
               decision: decision as WorkspaceAuthoredLinkedExitDecision,
+              fieldsActiveCageCounts,
               kind: 'linkedExit',
               markerDestinations,
               source,
@@ -494,6 +505,7 @@ export function assembleWorkspaceBiomeSemantics(
               catalog,
               decision: decision as WorkspaceAuthoredLinkedExitDecision,
               evaluated,
+              fieldsActiveCageCounts,
               kind: 'linkedExit',
               markerDestinations,
               source,
@@ -506,6 +518,7 @@ export function assembleWorkspaceBiomeSemantics(
               assembleOccurrence,
               catalog,
               decision: decision as WorkspaceAuthoredBatchDecision,
+              fieldsActiveCageCounts,
               kind: 'batch',
               markerDestinations,
               source,
@@ -515,6 +528,7 @@ export function assembleWorkspaceBiomeSemantics(
               catalog,
               decision: decision as WorkspaceAuthoredBatchDecision,
               evaluated,
+              fieldsActiveCageCounts,
               kind: 'batch',
               markerDestinations,
               source,
@@ -585,7 +599,7 @@ export function assembleWorkspaceBiomeSemantics(
       return node;
     }),
   );
-  nodes.push(...completion);
+  appendUniqueWorkspaceNodes(nodes, completion);
   const completedNodes = Object.freeze([...nodes]);
   appendUniqueTopologyRemovalInteractionRequirements(
     topologyRemovalInteractionRequirements,
@@ -619,7 +633,6 @@ export function assembleWorkspaceBiomeSemantics(
     label: catalog.biomes.byKey[plan.biomeKey]?.label ?? plan.biomeKey,
     marker: biomeMarker,
     nodes: completedNodes,
-    occurrenceFacts,
     occurrenceInteractionRequirements,
     preliminaryFocusDestinations,
     progressionKind: layout.progression.kind,

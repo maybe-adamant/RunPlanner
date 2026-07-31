@@ -15,6 +15,7 @@ import {
   assembleWorkspaceOccurrence,
   type WorkspaceOccurrenceAssemblyRequest,
 } from './occurrence-assembly';
+import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceBiomeMarkerDestinationBuilder } from './marker-builder';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
@@ -32,7 +33,8 @@ function biomeSource(project: ProjectDocument): WorkspaceBiomeSource {
 }
 
 function hubKit(source: WorkspaceBiomeSource) {
-  const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(catalog, source);
+  const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source);
+  const fieldsActiveCageCounts = createWorkspaceFieldsActiveCageCounts(catalog, source);
   const markers = createWorkspaceBiomeMarkerDestinationBuilder({
     assessmentFor: (address) =>
       source.evaluation === undefined
@@ -48,6 +50,9 @@ function hubKit(source: WorkspaceBiomeSource) {
   if (descriptor.kind !== 'hub') throw new Error('N Hub descriptor is missing');
   const assembleOccurrence = (input: WorkspaceOccurrenceAssemblyRequest) => {
     const occurrenceFacts = facts.occurrence(input.occurrence.occurrenceId);
+    const fieldsActiveCageCount = fieldsActiveCageCounts.countForOccurrence(
+      input.occurrence.occurrenceId,
+    );
     if (occurrenceFacts === undefined) {
       throw new Error(input.occurrence.occurrenceId + ' occurrence facts are missing');
     }
@@ -55,6 +60,7 @@ function hubKit(source: WorkspaceBiomeSource) {
       biome: source.biome,
       catalog,
       ...(input.evaluatedRoom === undefined ? {} : { evaluatedRoom: input.evaluatedRoom }),
+      ...(fieldsActiveCageCount === undefined ? {} : { fieldsActiveCageCount }),
       facts: occurrenceFacts,
       markerDestinations: markers.emitter,
       occurrence: input.occurrence,

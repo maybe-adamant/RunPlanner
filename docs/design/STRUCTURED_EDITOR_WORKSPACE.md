@@ -185,9 +185,10 @@ WorkspaceBiomeSource
   -> WorkspaceBiomeSemanticAssembly
        ├-> biome presentation (rail, default inspector, exact destinations)
        └-> project-wide interaction binding
-semantic assembly + presentation + bound interactions
-  -> local construction invariants
-  -> cached structured-workspace service
+biome presentation + evaluated findings
+  -> exact finding routing
+semantic assembly + presentation + exact finding routing + bound interactions
+  -> cached structured-workspace service (with local construction invariants)
 
 test support: catalog + persisted authored state
   -> independent expected owners, leaves, and structural controls

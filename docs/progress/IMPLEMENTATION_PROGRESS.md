@@ -32,9 +32,9 @@ repository gate. Commit 5a then removed the remaining browser confirmation
 prompts while preserving the existing semantic-command/history flow. Commit
 5b.1 delivered the N rail hierarchy, and Commit 5b.2 delivered direct side-room
 order editing. Commit 5b.3's active-only H/O room-local presentation in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) remains
-the next feature slice, but it is paused while workspace/React Campaign A
-contracts two overextended audit paths. A1 through A6 established the
+[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) is again
+the next feature slice: the A12/A13 workspace/React contraction gate is
+complete. A1 through A6 established the
 authored-first workspace source/assembly products,
 explicit interaction binding, projection-owned default and exact inspector
 destinations, and React consumption without topology or containment
@@ -54,8 +54,8 @@ and occurrence assembly, decision/topology assembly, Hub/biome semantic
 assembly, independent audits, and presentation out of that facade. The A11
 structural checkpoint is complete, but a fresh post-A11 read found that
 parallel authored expectation models and family-by-family binding self-audits
-still make several changes happen twice. A12 and A13 contract those paths
-before Commit 5b.3 resumes. After Commit 5b closes, the plan's candidate,
+still made several changes happen twice. A12 and A13 have contracted those
+paths, so Commit 5b.3 may resume. After Commit 5b closes, the plan's candidate,
 authored-core, history, and reward campaigns must close before the separate
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan: schema 10 authors an
 exact Shop purchase order, simulation validates that exact sequence, and the
@@ -101,36 +101,38 @@ A6 6,213-line projector without a parallel assembly path.
 
 The fresh contraction audit keeps the authored-first source index, family
 assembly products, typed interaction requirements, exact binder, presentation
-sibling, projected inspector destinations, and thin facade. It rejects three
+sibling, projected inspector destinations, and thin facade. It identified three
 pieces of excess machinery. First, the 388-line occurrence-facts product fully
-models leaf lifecycle/publication even though occurrence assembly consumes only
-`detailsActive` and Fields active-cage count. A12 will make that count one
-shared narrow derivation for both occurrence and decision assembly, rather than
+modeled leaf lifecycle/publication even though occurrence assembly consumed only
+`detailsActive` and Fields active-cage count. A12 made that count one shared
+narrow derivation for both occurrence and decision assembly, rather than
 leaving either an occurrence-facts dependency or a second calculation. Second,
-the 673-line authored-interaction expectation module reconstructs the same
+the 673-line authored-interaction expectation module reconstructed the same
 batch, Hub, topology, start, takeover, and frontier policy produced by
-assembly, while the 620-line authored-requirement closure compares the two
-field by field. Third, the 917-line interaction closure revalidates every typed
+assembly, while the 620-line authored-requirement closure compared the two
+field by field. Third, the 917-line interaction closure revalidated every typed
 requirement-to-binding handoff before its final rendered-control and
-authored-leaf closure. The public entry also exports 74 contract types, 36
+authored-leaf closure. The public entry also exported 74 contract types, 36
 without a named consumer outside the private subsystem.
 
-A12 now removes the exhaustive occurrence-leaf shadow plus authored leaf and
-interaction expectation construction from production. Independently derived
-owner, leaf, and structural-control identity/visibility expectations remain
-only in `apps/planner/test/` support, where they add distinct omission coverage
-without recreating the payload mirror. A12 also preserves malformed
-declaration/state rejection before dormant leaf-publication branches. A13 then
-removes broad requirement-to-binding, final interaction, semantic reachability,
+A12 removed the exhaustive occurrence-leaf shadow and authored leaf/interaction
+expectation construction from production. Independently derived owner, leaf,
+and structural-control identity/visibility expectations live only in
+`apps/planner/test/` support, where they add distinct omission coverage without
+recreating the payload mirror. It also preserves malformed declaration/state
+rejection before dormant leaf-publication branches. A13 removed broad
+requirement-to-binding, final interaction, semantic reachability,
 default-inspector, and destination closure passes from production while keeping
 local input/provenance, duplicate-key, and exact fine-grained-finding-destination
-invariants. It trims audit-only/unconsumed public exports and completes the
-missing import-direction assertions for both test expectation families. Both
-commits must be production-net-negative without introducing replacement
-registries, development-only runtime modes, or compatibility layers. The A11
-work-count and complete-gate results remain their behavioral baseline. Commit
-5b.3 resumes only after the A13 contraction gate in
-`REANCHOR_AND_REORGANIZE.md` passes.
+invariants. It trimmed audit-only/unconsumed public exports and completed the
+missing import-direction assertions for both test expectation families. The
+combined production inventory is 7,463 non-test structured-workspace lines,
+down 3,295 from the A11 baseline; the production `audit/` directory is gone.
+Neither change introduced a replacement registry, development-only runtime
+mode, or compatibility layer. The A13 contraction gate in
+`REANCHOR_AND_REORGANIZE.md` is complete: the final single-flight `npm run
+check` passed 76 test files and 703 tests, all typechecks, lint, formatting,
+and the production build. Commit 5b.3 may resume.
 
 An out-of-sequence decision-highlight rail follow-up is complete without
 advancing that active frontier. Ordinary biome rails now emphasize entry,
@@ -250,9 +252,9 @@ are covered. Review validation passed the root typecheck,
 `npm run test:planner` (22 files, 185 tests), ESLint, Prettier, and
 `git diff --check`.
 
-Re-anchor Campaign A12 and A13, Commit 5b.3, Commit 5b.4, the remaining
-re-anchor campaigns, and the three Commit 5c Shop-order slices are the
-remaining work before the active Phase 7 frontier advances.
+Commit 5b.3, Commit 5b.4, the remaining re-anchor campaigns, and the three
+Commit 5c Shop-order slices are the remaining work before the active Phase 7
+frontier advances.
 
 For historical context, room-replacement retention closed before the unified
 refactor. The delivered policy uses the

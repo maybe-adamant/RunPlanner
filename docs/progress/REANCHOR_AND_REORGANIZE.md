@@ -36,19 +36,19 @@ assembly, A8 separated decision and topology-interaction assembly, A9 separated
 Hub and biome semantic assembly, A10 separated independent expectations and
 closures, and A11 separated biome presentation from the cached service facade.
 
-A fresh post-A11 read reopens Campaign A for two bounded contraction commits.
-The family and dependency seams are worth keeping, but A2.2 and A4 expanded
-their verification into parallel semantic models: occurrence leaves are fully
-classified once for assembly and again for independent leaf closure; interaction
-policy is fully reconstructed on an expected side and then checked again at the
-requirement-to-binding and rendered-product boundaries. A12 removes the
-production shadow-authored models and relocates any valuable independent
-expectations to tests. A13 removes the remaining post-build production
-self-audits, trims the public workspace entry to deliberate consumers, and
-closes the final import matrix.
-Commit 5b.3 in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) is paused
-until that contraction gate passes. Campaign B remains separate.
+A fresh post-A11 read reopened Campaign A for two bounded contraction commits.
+The family and dependency seams were worth keeping, but A2.2 and A4 had
+expanded verification into parallel semantic models: occurrence leaves were
+fully classified once for assembly and again for independent leaf closure, and
+interaction policy was fully reconstructed on an expected side before being
+checked again at the requirement-to-binding and rendered-product boundaries.
+A12 removed the production shadow-authored models and relocated valuable
+independent expectations to tests. A13 removed the remaining post-build
+production self-audits, trimmed the public workspace entry to deliberate
+consumers, and closed the final import matrix. The contraction gate is complete,
+so Commit 5b.3 in
+[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) may
+resume. Campaign B remains separate.
 
 This document is temporary delivery authority. Stable ownership remains with
 the documents under `docs/design/`. When the program closes, any durable
@@ -349,8 +349,8 @@ Moving code is complete only when the new module:
 
 This plan authorizes one small dependency correction and four gated campaigns.
 The original sixteen-to-twenty-commit estimate is superseded by the completed
-review history and the current code audit. Foundation plus twenty-three Campaign
-A review commits are delivered through A11; A12 and A13 are the final bounded
+review history and the current code audit. Foundation plus twenty-five Campaign
+A review commits are delivered through A13, including the final bounded
 contraction units. With the later campaign ranges below, the truthful program
 estimate is thirty-six to thirty-nine implementation commits, not an exact
 quota. A boundary may merge
@@ -363,8 +363,8 @@ temporary compatibility machinery. The sequence below is the default:
 ```text
 neutral dependency anchor
   -> Campaign A: workspace and React
-  -> contraction checkpoint: A12 and A13
-  -> checkpoint: Commit 5b.3 and 5b.4 may resume
+  -> completed contraction checkpoint: A12 and A13
+  -> active checkpoint: Commit 5b.3 and 5b.4 may resume
   -> Campaign B: candidate evaluation
   -> Campaign C: authored core
   -> Campaign D: history and reward evaluation
@@ -378,13 +378,13 @@ path it owns.
 
 ### Relative Work and Risk
 
-| Work                            |          Review commits | Relative size                     | Primary risk                                                                   |
-| ------------------------------- | ----------------------: | --------------------------------- | ------------------------------------------------------------------------------ |
-| Neutral dependency anchor       |             1 delivered | Small                             | Unnecessarily changing external import surfaces                                |
-| Campaign A: workspace and React | 23 delivered, 2 pending | Extra-large                       | Losing authored reachability, focus, or lazy interaction behavior              |
-| Campaign B: candidates          |                     3–4 | Extra-large                       | Replacing one large file with a universal context or altered coverage recovery |
-| Campaign C: authored core       |                     4–5 | Extra-large                       | Scattering atomic topology and room-state invariants                           |
-| Campaign D: history and rewards |                     3–4 | Extra-large/highest semantic risk | Moving an event to the wrong chronological state                               |
+| Work                            | Review commits | Relative size                     | Primary risk                                                                   |
+| ------------------------------- | -------------: | --------------------------------- | ------------------------------------------------------------------------------ |
+| Neutral dependency anchor       |    1 delivered | Small                             | Unnecessarily changing external import surfaces                                |
+| Campaign A: workspace and React |   25 delivered | Extra-large                       | Losing authored reachability, focus, or lazy interaction behavior              |
+| Campaign B: candidates          |            3–4 | Extra-large                       | Replacing one large file with a universal context or altered coverage recovery |
+| Campaign C: authored core       |            4–5 | Extra-large                       | Scattering atomic topology and room-state invariants                           |
+| Campaign D: history and rewards |            3–4 | Extra-large/highest semantic risk | Moving an event to the wrong chronological state                               |
 
 The range describes review units, not elapsed time. Campaign gates exist so the
 project can reassess value, coupling, and remaining risk before authorizing the
@@ -403,11 +403,11 @@ next broad movement.
 
 ### Campaign A: Workspace Flow and React Consumption
 
-Campaign A is the prerequisite for Commit 5b.3 to resume. A1 through A6
+Campaign A was the prerequisite for Commit 5b.3 to resume. A1 through A6
 established the necessary returned products and consumer boundary; A7 through
-A11 completed the corresponding private ownership boundaries. A12 and A13 now
-contract redundant representations around those boundaries before the campaign
-closes. Exact filenames follow returned products, not a file-count target.
+A11 completed the corresponding private ownership boundaries. A12 and A13
+contracted redundant representations around those boundaries and closed the
+campaign. Exact filenames follow returned products, not a file-count target.
 
 #### Campaign A entry characterization
 
@@ -1020,7 +1020,7 @@ flow. It does not fold families back into the facade, move policy into React,
 or replace the typed requirement maps with a generic registry, service locator,
 event bus, or dependency-injection container.
 
-#### A12: Remove production shadow-authored models
+#### A12: Remove production shadow-authored models (delivered)
 
 - narrow occurrence projection facts to `detailsActive` by occurrence, and
   make Fields active-cage count one shared, narrowly named derivation keyed by
@@ -1055,17 +1055,16 @@ event bus, or dependency-injection container.
   unpicked Ephyra side details and Shop inventory remain withheld; picked or
   visited details remain available even when invalid, blocked, or unassessed.
 
-A12 must delete the superseded production models and comparisons in the same
-commit. Test-only expected enumeration may remain explicit and independently
-derived, but it must live under `apps/planner/test/`. Production must not import
-or execute that support, and the test helpers must not import production
-assembly, marker ownership, presentation, binding, or facade products. The
-commit must not leave forwarding wrappers, compatibility types, a generic audit
-description language, or a development-only runtime mode. Its production diff
-is expected to be net-negative; the named deletions and the smaller change
-neighborhood are the acceptance criteria, not a target line count.
+A12 deleted the superseded production models and comparisons in the same
+change. Its independently derived expected enumeration lives under
+`apps/planner/test/`; production neither imports nor executes that support, and
+the helpers reject imports from assembly, marker ownership, presentation,
+binding, and facade products. It left no forwarding wrapper, compatibility type,
+generic audit-description language, or development-only runtime mode. The
+named deletions and smaller change neighborhood, rather than a target line
+count, are the acceptance criteria.
 
-#### A13: Remove post-build runtime audits and close the public boundary
+#### A13: Remove post-build runtime audits and close the public boundary (delivered)
 
 - keep `bindWorkspaceInteractions` as the one exhaustive typed transformation
   from returned requirements, controls, injected contextual services, and the
@@ -1104,17 +1103,17 @@ neighborhood are the acceptance criteria, not a target line count.
   exposes no runtime closure-audit seam, and its closure wording names
   independent test-time verification plus retained local production invariants.
 
-A13 is not permission to remove local invariant checks, simplify interaction
-payloads, candidate commands, or semantic addresses. Direct binder and
-workspace fixtures must still cover exact owner/key handoff, duplicate
-rejection, command facts, candidate domains, semantic reachability, lazy load,
-cache reuse, dormant malformed-state rejection, and exact fine-finding
-destinations. Like A12, it must be production-net-negative and must not replace
-the deleted audit with another abstraction.
+A13 did not remove local invariant checks, simplify interaction payloads,
+candidate commands, or semantic addresses. Direct binder and workspace fixtures
+cover exact owner/key handoff, duplicate rejection, command facts, candidate
+domains, semantic reachability, lazy load, cache reuse, dormant malformed-state
+rejection, and exact fine-finding destinations. Like A12, it is
+production-net-negative and does not replace the deleted audit with another
+abstraction.
 
 #### Campaign A contraction gate
 
-Campaign A closes only when A12 and A13 demonstrate all of the following:
+Campaign A is closed: A12 and A13 demonstrate all of the following:
 
 1. tests independently close persisted decisions, targets, occurrences, and Hub
    ownership over reachable semantic products;
@@ -1145,8 +1144,8 @@ Campaign A closes only when A12 and A13 demonstrate all of the following:
     actual deletions and any retained duplication explicitly;
 11. `npm run check` and `git diff --check` pass at the final A13 gate.
 
-Commit 5b.3 and Commit 5b.4 remain paused until this gate passes. Campaign B
-remains separate and does not begin as part of the contraction.
+Commit 5b.3 and Commit 5b.4 may resume. Campaign B remains separate and does
+not begin as part of the contraction.
 
 ### Campaign B: Candidate Evaluation
 
@@ -1417,11 +1416,23 @@ baseline for A7 through A13. Its diagnostic source baseline is 9,848 lines in
 growth visible while the responsibility and import audits remain authoritative.
 
 The A11 structural checkpoint passed 76 files and 695 tests. Its contraction
-baseline is 10,758 non-test lines in `structured-workspace/`, a 349-line
-projector, a 2,969-line production `audit/` directory, and 479 lines in
-`BiomeWorkspace.tsx`. A12 and A13 must repeat the executable work-count fixtures
-and record their own production inventory; their net-negative requirement is a
-guard against replacing deleted shadow models with differently named copies.
+baseline was 10,758 non-test lines in `structured-workspace/` across 29 files,
+a 349-line projector, a 2,969-line production `audit/` directory, and 479
+lines in `BiomeWorkspace.tsx`.
+
+A12/A13 delivery removes the production `audit/` directory: the deleted modules
+are `authored-interaction-expectations`, `authored-leaf-expectations`,
+`authored-requirement-closure`, `interaction-closure`, `interaction-equality`,
+and `semantic-closure`. It also deletes broad default-inspector and destination
+closure passes. Retained production seams are narrow and local: the shared
+`fields-cage-counts` derivation, the exact `finding-routing` owner, and
+construction-time duplicate/provenance/declaration checks. Independent leaf,
+topology, and structural-control closure now lives only in test support and
+does not mirror interaction payloads. The final inventory is 7,463 non-test
+lines across 25 files: a 3,295-line and four-file reduction with no renamed
+shadow audit. The final single-flight `npm run check` passed 76 test files and
+703 tests, all typechecks, lint, formatting, and the production build; `git
+diff --check` also passed.
 
 ## Non-Goals
 
@@ -1444,10 +1455,10 @@ guard against replacing deleted shadow models with differently named copies.
 
 This plan is complete only after the foundation and all four campaigns pass
 their gates, the complete repository gate passes, and the final audit matrix
-has no unresolved ownership or import finding. Campaign A completion now means
-the A13 contraction gate, not the earlier A11 structural checkpoint. It may
-then return active delivery to Commit 5b.3/5b.4 while this document continues
-to own the remaining pre-5c campaigns.
+has no unresolved ownership or import finding. Campaign A closed at the A13
+contraction gate, rather than the earlier A11 structural checkpoint, and active
+delivery may return to Commit 5b.3/5b.4 while this document continues to own
+the remaining pre-5c campaigns.
 
 Durable results belong in:
 

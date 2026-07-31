@@ -1,10 +1,15 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createExitDecisionAddress,
+  createHubSlotAddress,
+  createHubVisitAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
+  createProjectDocument,
   createShopPurchaseAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -27,17 +32,20 @@ import {
   nBiome,
   nOccurrenceId,
 } from '../../test/fixtures/surfaceProject';
+import {
+  assertAuthoredWorkspaceTopologyClosure,
+  assertExpectedWorkspaceLeafClosure,
+  assertExpectedWorkspaceStructuralControlClosure,
+  assertRenderedWorkspaceStructuralControlClosure,
+} from '../../test/support/structuredWorkspaceClosure';
+import { expectedWorkspaceLeafRequirements } from '../../test/support/structuredWorkspaceExpectations';
+import { expectedWorkspaceStructuralControls } from '../../test/support/structuredWorkspaceStructuralControls';
 import { createCandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
-import {
-  assertAuthoredWorkspaceLeafInteractionClosure,
-  assertAuthoredWorkspaceLeafProjectionClosure,
-  authoredWorkspaceLeafRequirements,
-  createStructuredWorkspaceProjection,
-  StructuredWorkspaceProjectionContractError,
-} from './structured-workspace';
+import { StructuredWorkspaceProjectionContractError } from './structured-workspace/contract';
+import { createStructuredWorkspaceProjection } from './structured-workspace';
 
 /**
  * These tests deliberately bypass only evaluator provenance. Production still
@@ -80,6 +88,10 @@ function projection() {
       createContextualPickerProjection(createContextualOptionResolver(catalog)),
     ),
   });
+}
+
+function withoutProperty(value: object, property: string): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([key]) => key !== property));
 }
 
 function fBatch(snapshot: CanonicalBiome): CanonicalBatch {
@@ -355,7 +367,7 @@ describe('structured workspace overlay contract', () => {
       'sideRooms',
       'sideDoor2',
     );
-    const requirement = authoredWorkspaceLeafRequirements(catalog, nBiome, plan).find(
+    const requirement = expectedWorkspaceLeafRequirements(catalog, nBiome, plan).find(
       (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(address),
     );
     if (requirement === undefined) throw new Error('N side-room reward requirement is missing');
@@ -371,12 +383,44 @@ describe('structured workspace overlay contract', () => {
     // exact class of projector omission that a self-confirming marker scan
     // could not catch.
     expect(() =>
-      assertAuthoredWorkspaceLeafProjectionClosure(
-        [requirement],
-        projected.focusByOwner,
-        n.nodes.filter((node) => node.kind !== 'occurrenceWorkbench'),
-      ),
+      assertExpectedWorkspaceLeafClosure({
+        focusByOwner: projected.focusByOwner,
+        interactions: projected.interactions,
+        nodes: n.nodes.filter((node) => node.kind !== 'occurrenceWorkbench'),
+        requirements: [requirement],
+      }),
     ).toThrow(/required authored leaf has no workspace marker/);
+
+    const containingNode = n.nodes.find(
+      (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === nOccurrenceId('combat05'),
+    );
+    const wrongNode = n.nodes.find((node) => node.key !== containingNode?.key);
+    const originalDestination = projected.focusByOwner.get(semanticAddressKey(address));
+    if (
+      containingNode === undefined ||
+      wrongNode === undefined ||
+      originalDestination === undefined
+    ) {
+      throw new Error('N side-room containment fixture is missing');
+    }
+    const wrongDestination = new Map(projected.focusByOwner);
+    wrongDestination.set(
+      semanticAddressKey(address),
+      Object.freeze({
+        ...originalDestination,
+        inspectorSubject: { kind: 'node' as const, nodeKey: wrongNode.key },
+        nodeKey: wrongNode.key,
+      }),
+    );
+    expect(() =>
+      assertExpectedWorkspaceLeafClosure({
+        focusByOwner: wrongDestination,
+        interactions: projected.interactions,
+        nodes: n.nodes,
+        requirements: [requirement],
+      }),
+    ).toThrow(/required authored leaf .* has no exact workspace inspector destination/);
 
     const withoutRewardInteraction = {
       ...projected.interactions,
@@ -384,8 +428,386 @@ describe('structured workspace overlay contract', () => {
     };
     withoutRewardInteraction.rewards.delete(semanticAddressKey(address));
     expect(() =>
-      assertAuthoredWorkspaceLeafInteractionClosure([requirement], withoutRewardInteraction),
+      assertExpectedWorkspaceLeafClosure({
+        focusByOwner: projected.focusByOwner,
+        interactions: withoutRewardInteraction,
+        nodes: n.nodes,
+        requirements: [requirement],
+      }),
     ).toThrow(/authored reward leaf .* has no exact workspace interaction/);
+  });
+
+  it('independently closes persisted decisions, targets, occurrences, and Hub ownership', () => {
+    for (const project of [createGoldenFGHIProject(catalog), createRepresentativeNOPQProject()]) {
+      const projected = projection().project(project, simulateProject(catalog, project));
+      for (const route of project.routes) {
+        for (const plan of route.biomes) {
+          if (plan.topology === null) continue;
+          const biome = projected.routes
+            .find((candidate) => candidate.routeKey === route.routeKey)
+            ?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey);
+          if (biome === undefined) throw new Error(`${plan.biomeKey} workspace biome is missing`);
+          assertAuthoredWorkspaceTopologyClosure({
+            biome: { biomeKey: plan.biomeKey, kind: 'biome', routeKey: route.routeKey },
+            focusByOwner: projected.focusByOwner,
+            nodes: biome.nodes,
+            plan,
+          });
+        }
+      }
+    }
+  });
+
+  it('closes structural occurrence packages without requiring standalone workbench nodes', () => {
+    const project = createGoldenFGHIProject(catalog);
+    const projected = projection().project(project, simulateProject(catalog, project));
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = projected.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (plan?.topology === null || plan === undefined || f === undefined) {
+      throw new Error('complete F topology fixture is missing');
+    }
+    const batch = f.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof f.nodes)[number],
+        { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+      > =>
+        node.kind === 'ordinaryBatch' ||
+        node.kind === 'mixedBatch' ||
+        node.kind === 'takeoverBatch',
+    );
+    const target = batch?.targets[0];
+    const workbench = f.nodes.find(
+      (node): node is Extract<(typeof f.nodes)[number], { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === target?.room.occurrenceId,
+    );
+    const detached = plan.topology.occurrences[0];
+    if (
+      batch === undefined ||
+      target === undefined ||
+      workbench === undefined ||
+      detached === undefined
+    ) {
+      throw new Error('complete F nested target fixture is missing');
+    }
+    const nestedDestinations = new Map(projected.focusByOwner);
+    for (const address of [
+      createOccurrenceAddress(goldenFBiome, target.room.occurrenceId),
+      createTargetAddress(goldenFBiome, batch.source, target.exitKey),
+    ]) {
+      const destination = nestedDestinations.get(semanticAddressKey(address));
+      if (destination === undefined) throw new Error('complete F target destination is missing');
+      nestedDestinations.set(
+        semanticAddressKey(address),
+        Object.freeze({
+          ...destination,
+          inspectorSubject: Object.freeze({ kind: 'node' as const, nodeKey: batch.key }),
+          nodeKey: batch.key,
+        }),
+      );
+    }
+    const planWithDetachedRecord: AuthoredBiomePlan = {
+      ...plan,
+      topology: {
+        ...plan.topology,
+        occurrences: Object.freeze([
+          ...plan.topology.occurrences,
+          Object.freeze({
+            ...detached,
+            occurrenceId: createOccurrenceId('topology-closure-detached-record'),
+          }),
+        ]),
+      },
+    };
+
+    expect(() =>
+      assertAuthoredWorkspaceTopologyClosure({
+        biome: goldenFBiome,
+        focusByOwner: nestedDestinations,
+        nodes: f.nodes.filter((node) => node.key !== workbench.key),
+        plan: planWithDetachedRecord,
+      }),
+    ).not.toThrow();
+  });
+
+  it('makes target and authored Hub sub-owner markers and exact destinations observable', () => {
+    const fProject = createGoldenFGHIProject(catalog);
+    const fProjected = projection().project(fProject, simulateProject(catalog, fProject));
+    const fPlan = fProject.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    const f = fProjected.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (fPlan?.topology === null || fPlan === undefined || f === undefined) {
+      throw new Error('complete F topology fixture is missing');
+    }
+    const batch = f.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof f.nodes)[number],
+        { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+      > =>
+        node.kind === 'ordinaryBatch' ||
+        node.kind === 'mixedBatch' ||
+        node.kind === 'takeoverBatch',
+    );
+    const target = batch?.targets[0];
+    if (batch === undefined || target === undefined) {
+      throw new Error('complete F target fixture is missing');
+    }
+    const targetAddress = createTargetAddress(goldenFBiome, batch.source, target.exitKey);
+    const assertF = (nodes: readonly unknown[], focusByOwner: ReadonlyMap<string, unknown>) =>
+      assertAuthoredWorkspaceTopologyClosure({
+        biome: goldenFBiome,
+        focusByOwner,
+        nodes,
+        plan: fPlan,
+      });
+    const missingTargetDestination = new Map(fProjected.focusByOwner);
+    missingTargetDestination.delete(semanticAddressKey(targetAddress));
+    expect(() => assertF(f.nodes, missingTargetDestination)).toThrow(/target .* destination/);
+
+    const unrelatedFNode = f.nodes.find((node) => node.kind === 'completion');
+    const targetDestination = fProjected.focusByOwner.get(semanticAddressKey(targetAddress));
+    if (unrelatedFNode === undefined || targetDestination === undefined) {
+      throw new Error('complete F unrelated target destination fixture is missing');
+    }
+    const misroutedTarget = new Map(fProjected.focusByOwner);
+    misroutedTarget.set(
+      semanticAddressKey(targetAddress),
+      Object.freeze({
+        ...targetDestination,
+        inspectorSubject: Object.freeze({ kind: 'node' as const, nodeKey: unrelatedFNode.key }),
+        nodeKey: unrelatedFNode.key,
+      }),
+    );
+    expect(() => assertF(f.nodes, misroutedTarget)).toThrow(
+      /target .* no exact workspace inspector destination/,
+    );
+    const withoutTargetMarker = f.nodes.map((node) => {
+      if (
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.key === batch.key
+      ) {
+        return Object.freeze({
+          ...node,
+          targets: Object.freeze(
+            node.targets.map((candidate) =>
+              candidate.exitKey === target.exitKey
+                ? withoutProperty(candidate, 'marker')
+                : candidate,
+            ),
+          ),
+        });
+      }
+      if (
+        node.kind === 'occurrenceWorkbench' &&
+        node.room.occurrenceId === target.room.occurrenceId
+      ) {
+        return withoutProperty(node, 'railMarker');
+      }
+      return node;
+    });
+    expect(() => assertF(withoutTargetMarker, fProjected.focusByOwner)).toThrow(
+      /target .* has no workspace marker/,
+    );
+
+    const nProject = createRepresentativeNOPQProject();
+    const nProjected = projection().project(nProject, simulateProject(catalog, nProject));
+    const nPlan = nProject.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const n = nProjected.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    if (nPlan?.topology === null || nPlan === undefined || n === undefined) {
+      throw new Error('complete N topology fixture is missing');
+    }
+    const decision = nPlan.topology.decisions.find(
+      (
+        candidate,
+      ): candidate is Extract<
+        (typeof nPlan.topology.decisions)[number],
+        { readonly kind: 'hub' }
+      > => candidate.kind === 'hub',
+    );
+    const hub = n.nodes.find(
+      (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    const slotTarget = decision?.openTargets[0];
+    const firstVisitSlotKey = decision?.visitOrder[0];
+    if (
+      decision === undefined ||
+      hub === undefined ||
+      slotTarget === undefined ||
+      firstVisitSlotKey === undefined
+    ) {
+      throw new Error('complete N Hub sub-owner fixture is missing');
+    }
+    const slotAddress = createHubSlotAddress(nBiome, decision.hubKey, slotTarget.hubSlotKey);
+    const visitAddress = createHubVisitAddress(nBiome, decision.hubKey, 1);
+    const assertN = (nodes: readonly unknown[], focusByOwner: ReadonlyMap<string, unknown>) =>
+      assertAuthoredWorkspaceTopologyClosure({
+        biome: nBiome,
+        focusByOwner,
+        nodes,
+        plan: nPlan,
+      });
+    for (const [address, detail] of [
+      [slotAddress, 'slot'],
+      [visitAddress, 'visit 1'],
+    ] as const) {
+      const withoutDestination = new Map(nProjected.focusByOwner);
+      withoutDestination.delete(semanticAddressKey(address));
+      expect(() => assertN(n.nodes, withoutDestination)).toThrow(
+        new RegExp(`${detail} .* destination`),
+      );
+    }
+    const unrelatedNNode = n.nodes.find(
+      (node) =>
+        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId !== slotTarget.occurrenceId,
+    );
+    const slotDestination = nProjected.focusByOwner.get(semanticAddressKey(slotAddress));
+    if (unrelatedNNode === undefined || slotDestination === undefined) {
+      throw new Error('complete N unrelated slot destination fixture is missing');
+    }
+    const misroutedSlot = new Map(nProjected.focusByOwner);
+    misroutedSlot.set(
+      semanticAddressKey(slotAddress),
+      Object.freeze({
+        ...slotDestination,
+        inspectorSubject: Object.freeze({ kind: 'node' as const, nodeKey: unrelatedNNode.key }),
+        nodeKey: unrelatedNNode.key,
+      }),
+    );
+    expect(() => assertN(n.nodes, misroutedSlot)).toThrow(
+      /slot .* no exact workspace inspector destination/,
+    );
+    const withoutSlotMarker = n.nodes.map((node) => {
+      if (node.kind === 'hubDecision' && node.key === hub.key) {
+        return Object.freeze({
+          ...node,
+          slots: Object.freeze(
+            node.slots.map((slot) =>
+              slot.hubSlotKey === slotTarget.hubSlotKey ? withoutProperty(slot, 'marker') : slot,
+            ),
+          ),
+        });
+      }
+      if (
+        node.kind === 'occurrenceWorkbench' &&
+        node.room.occurrenceId === slotTarget.occurrenceId
+      ) {
+        return withoutProperty(node, 'railMarker');
+      }
+      return node;
+    });
+    expect(() => assertN(withoutSlotMarker, nProjected.focusByOwner)).toThrow(
+      /slot .* has no workspace marker/,
+    );
+    const withoutVisitMarker = n.nodes.map((node) =>
+      node.kind !== 'hubDecision' || node.key !== hub.key
+        ? node
+        : Object.freeze({
+            ...node,
+            visits: Object.freeze(
+              node.visits.map((visit) =>
+                visit.visitIndex === 1 ? withoutProperty(visit, 'marker') : visit,
+              ),
+            ),
+          }),
+    );
+    expect(() => assertN(withoutVisitMarker, nProjected.focusByOwner)).toThrow(
+      /visit 1 has no workspace marker/,
+    );
+  });
+
+  it('independently closes structural control identities and rendered interaction handoff', () => {
+    const emptyN = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Surface: 1 },
+      name: 'Structural oracle empty N',
+      projectId: 'structural-oracle-empty-n',
+    });
+    const emptyF = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Underworld: 1 },
+      name: 'Structural oracle frontier F',
+      projectId: 'structural-oracle-frontier-f',
+    });
+    const fFrontier = applyProjectCommand(emptyF, catalog, {
+      biome: goldenFBiome,
+      gameName: 'F_Opening01',
+      kind: 'CreateStart',
+      occurrenceId: createOccurrenceId('structural-oracle-f-opening'),
+    });
+    const nStarted = applyProjectCommand(emptyN, catalog, {
+      biome: nBiome,
+      kind: 'CreateStart',
+      occurrenceId: nOccurrenceId('opening'),
+    });
+    const nHubFrontier = applyProjectCommand(nStarted, catalog, {
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceId('opening'),
+      }),
+      kind: 'CreateLinkedExit',
+      occurrenceId: nOccurrenceId('preHub'),
+    });
+    for (const project of [
+      createGoldenFGHIProject(catalog),
+      createRepresentativeNOPQProject(),
+      emptyN,
+      fFrontier,
+      nHubFrontier,
+    ]) {
+      const projected = projection().project(project, simulateProject(catalog, project));
+      assertRenderedWorkspaceStructuralControlClosure({
+        interactions: projected.interactions,
+        routes: projected.routes,
+      });
+      for (const route of project.routes) {
+        for (const plan of route.biomes) {
+          assertExpectedWorkspaceStructuralControlClosure({
+            controls: expectedWorkspaceStructuralControls(
+              catalog,
+              { biomeKey: plan.biomeKey, kind: 'biome', routeKey: route.routeKey },
+              plan,
+            ),
+            interactions: projected.interactions,
+          });
+        }
+      }
+    }
+  });
+
+  it('makes a missing independently expected structural interaction observable', () => {
+    const project = createRepresentativeNOPQProject();
+    const projected = projection().project(project, simulateProject(catalog, project));
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    if (plan === undefined) throw new Error('Surface/N plan is missing');
+    const controls = expectedWorkspaceStructuralControls(catalog, nBiome, plan);
+    const slot = controls.find((control) => control.kind === 'hubSlot');
+    if (slot === undefined) throw new Error('Surface/N Hub slot control is missing');
+    const interactions = {
+      ...projected.interactions,
+      hubSlots: new Map(projected.interactions.hubSlots),
+    };
+    interactions.hubSlots.delete(slot.key);
+
+    expect(() =>
+      assertExpectedWorkspaceStructuralControlClosure({ controls, interactions }),
+    ).toThrow(/hubSlot .* has no exact workspace interaction/);
   });
 
   it('keeps Ephyra side details dormant until the authored Hub visit activates them', () => {
@@ -409,7 +831,7 @@ describe('structured workspace overlay contract', () => {
       'sideRooms',
       'sideDoor1',
     );
-    const dormant = authoredWorkspaceLeafRequirements(catalog, nBiome, plan);
+    const dormant = expectedWorkspaceLeafRequirements(catalog, nBiome, plan);
     expect(
       dormant.some(
         (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(incoming),
@@ -440,11 +862,11 @@ describe('structured workspace overlay contract', () => {
         ),
       },
     };
-    const activated = authoredWorkspaceLeafRequirements(catalog, nBiome, visited).find(
+    const activated = expectedWorkspaceLeafRequirements(catalog, nBiome, visited).find(
       (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideReward),
     );
     expect(activated?.interactions.map((interaction) => interaction.kind)).toEqual(['reward']);
-    const activatedChild = authoredWorkspaceLeafRequirements(catalog, nBiome, visited).find(
+    const activatedChild = expectedWorkspaceLeafRequirements(catalog, nBiome, visited).find(
       (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideChild),
     );
     expect(activatedChild?.interactions.map((interaction) => interaction.kind)).toEqual([
