@@ -18,16 +18,9 @@ import type {
   WorkspaceRoomPickerControl,
 } from './contract';
 import {
-  appendUniqueBatchInteractionRequirements,
   appendUniqueFocusDestinations,
-  appendUniqueFrontierInteractionRequirements,
-  appendUniqueHubInteractionRequirements,
-  appendUniqueOccurrenceInteractionRequirements,
   appendUniqueRewardControls,
   appendUniqueRoomControls,
-  appendUniqueStartInteractionRequirements,
-  appendUniqueTakeoverInteractionRequirements,
-  appendUniqueTopologyRemovalInteractionRequirements,
 } from './projector';
 import type {
   WorkspaceBatchInteractionRequirement,
@@ -37,7 +30,16 @@ import type {
   WorkspaceStartInteractionRequirement,
   WorkspaceTakeoverInteractionRequirement,
   WorkspaceTopologyRemovalInteractionRequirement,
-} from './projector';
+} from './interaction-requirements';
+import {
+  appendUniqueBatchInteractionRequirements,
+  appendUniqueFrontierInteractionRequirements,
+  appendUniqueHubInteractionRequirements,
+  appendUniqueOccurrenceInteractionRequirements,
+  appendUniqueStartInteractionRequirements,
+  appendUniqueTakeoverInteractionRequirements,
+  appendUniqueTopologyRemovalInteractionRequirements,
+} from './interaction-requirements';
 
 function explicitControl(occurrenceKey: string): WorkspaceRewardControl {
   const address = createIncomingRewardAddress(

@@ -20,7 +20,9 @@ does the same for authored batch controls. A4.3 does the same for authored Hub
 board slots and visits. A4.4 does the same for generic authored-topology
 removals. A4.5 does the same for topology-free authored starts. A4.6 does the
 same for takeover batches. A4.7 does the same for the coupled frontier
-capability and structural-action family.
+capability and structural-action family. A4.8 extracts those now-closed
+requirement contracts and their exact binding transformation without moving
+semantic assembly or its independent audits.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -122,7 +124,7 @@ wells merely because they are long. They remain declaration-owned and direct.
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `apps/planner/src/projections/structured-workspace/` | Source lookup, authored/evaluated overlay, room and Hub assembly, candidate interaction construction, rail presentation, focus registration, and several closure audits share one projector and broad mutable context.             | Turn workspace projection into an explicit sequence of immutable products with a thin public service facade.                                                                                      |
 | `MutableProjectionContext` and `projectOccurrence`   | Catalog/evaluation facts, findings, route/biome identity, focus destinations, room controls, and reward controls are accumulated together. A projection function returns a node while also registering products for later phases.  | Pass stage-specific inputs. Each stage returns every product later stages consume. Local builders may mutate privately, but cross-stage products cannot be discovered through prior side effects. |
-| `createInteractionCatalog`                           | Re-traverses authored state while consuming maps populated during semantic projection, so interaction ownership is split between traversal and hidden registration.                                                                | Bind interactions from an explicit requirement product emitted by semantic assembly and independently checked against authored owners.                                                            |
+| Workspace interaction binding                        | The former catalog builder combined binding mechanics with the projector, obscuring its input boundary and encouraging more semantic traversal there.                                                                              | Bind every public interaction map from explicit requirements plus catalog/project/evaluation and injected services; keep semantic production and independent audits with assembly.                |
 | `BiomeWorkspace.tsx`                                 | `roomOwnsAddress`, `nodeOwnsAddress`, `nodeForAddress`, and `fallbackSubject` reconstruct semantic containment and default inspection despite the projection already publishing focus information.                                 | Project exact explicit and default inspector destinations. React resolves keys and renders; it does not rediscover semantic ownership.                                                            |
 | `simulation/candidates/index.ts`                     | Public query/result contract, evaluation recovery, progressive repair, every candidate family, and session dispatch share one module.                                                                                              | Separate the public contract, exact session-bound sources, family-specific preparation products, candidate-family evaluators, and a thin dispatcher.                                              |
 | `simulation/rewards/biome.ts`                        | Snapshot indexing, mutable evaluation state, event-family handling, candidate context capture, support recording, and final projection are interleaved in one chronological loop.                                                  | Keep the chronological coordinator visible, but give it an explicit state product, source indexes, and event-family handlers.                                                                     |
@@ -210,7 +212,7 @@ authored project + exact evaluation
        - interaction requirements
        - semantic destination requirements
   -> WorkspaceInteractionBinding
-       consumes source index + requirements + injected services
+       consumes exact catalog/project/evaluation + requirements + injected services
   -> WorkspacePresentation
        - decision-highlight rail
        - exact focus destinations
@@ -456,10 +458,10 @@ fallback.
 
 #### A4: Interaction requirements and binding
 
-- bind interactions through
-  `WorkspaceSourceIndex + interaction requirements + injected services`;
-- let requirements express semantic intent while the bounded source index
-  supplies authored facts needed to construct commands;
+- bind interactions through a named `WorkspaceInteractionBindingInput` of
+  catalog/project/evaluation, interaction requirements, and injected services;
+- let requirements express semantic intent while the already-bound candidate
+  session supplies contextual facts needed to construct commands;
 - stop hidden registration and independent raw-project traversal;
 - preserve lazy candidate loading and semantic command construction;
 - prove requirement completeness against independently derived authored owners.
@@ -541,6 +543,16 @@ becoming frontier permissions. An independent persisted topology/completeness
 and layout-policy expected enumeration does not read rendered frontiers,
 source-index lookup, other requirements, or bound maps; direct closure then
 checks the exact capability, structural, and takeover-map handoff.
+
+**A4.8 transition note.** The completed interaction contract families now live
+in `interaction-requirements.ts`, and `interaction-binding.ts` owns the one
+exact transformation from `WorkspaceInteractionBindingInput` to every public
+interaction map. The binding module imports neither the projector nor the
+source index and performs no topology/frontier traversal. Semantic producers,
+independent expected-owner audits, closures, and assembly stay in the
+projector, where they still share genuine authored topology and presentation
+context. The small declaration lookup sits beneath both modules, so this
+boundary does not create a reverse dependency.
 
 #### A5: Presentation, focus, and closure
 
