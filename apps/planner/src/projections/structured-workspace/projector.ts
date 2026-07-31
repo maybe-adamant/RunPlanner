@@ -180,7 +180,6 @@ interface MutableProjectionContext {
   readonly focusByOwner: Map<string, WorkspaceInspectorDestination>;
   readonly biome: BiomeAddress;
   readonly routeKey: string;
-  readonly roomControls: Map<string, WorkspaceRoomPickerControl>;
   readonly source: WorkspaceBiomeSource;
 }
 
@@ -955,10 +954,12 @@ function localDetailMarkers(roomLocal: WorkspaceRoomLocal): readonly WorkspaceMa
 
 interface WorkspaceOccurrenceProjectionInput {
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
+  readonly roomPicker?: WorkspaceRoomPickerControl;
 }
 
 interface WorkspaceOccurrenceAssembly {
   readonly node: WorkspaceOccurrenceWorkbenchNode;
+  readonly roomControls: readonly WorkspaceRoomPickerControl[];
   readonly rewardControls: readonly WorkspaceRewardControl[];
 }
 
@@ -976,6 +977,14 @@ function projectOccurrence(
     );
   }
   const { detailsActive } = occurrenceFacts;
+  if (
+    input.roomPicker !== undefined &&
+    semanticAddressKey(input.roomPicker.address) !== semanticAddressKey(address)
+  ) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(address)} received a room picker for ${semanticAddressKey(input.roomPicker.address)}`,
+    );
+  }
   const entered = input.evaluatedRoom?.entered ?? false;
   // A dormant Shop is a dead leaf. Its persisted inventory remains available
   // to the command model if the room is picked again, but neither its offer
@@ -985,6 +994,8 @@ function projectOccurrence(
       ? undefined
       : rewardSummary(context.catalog, room, occurrence.state);
   const rewardControls = controlsForOccurrence(context, occurrence, room, detailsActive);
+  const roomControls =
+    input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
     detailsActive,
@@ -994,9 +1005,7 @@ function projectOccurrence(
     label: room.label,
     marker: marker(context, address),
     occurrenceId: occurrence.occurrenceId,
-    ...(context.roomControls.get(semanticAddressKey(address)) === undefined
-      ? {}
-      : { roomPicker: context.roomControls.get(semanticAddressKey(address))! }),
+    ...(input.roomPicker === undefined ? {} : { roomPicker: input.roomPicker }),
     roomLocal: roomLocalForOccurrence(
       context,
       occurrence,
@@ -1018,7 +1027,23 @@ function projectOccurrence(
     room: roomSummary,
   });
   redirectOccurrenceFocus(context, node);
-  return Object.freeze({ node, rewardControls });
+  return Object.freeze({ node, roomControls, rewardControls });
+}
+
+/** @internal Composition never silently replaces a separately projected room control. */
+export function appendUniqueRoomControls(
+  controlsByOwner: Map<string, WorkspaceRoomPickerControl>,
+  controls: Iterable<WorkspaceRoomPickerControl>,
+): void {
+  for (const control of controls) {
+    const key = semanticAddressKey(control.address);
+    if (controlsByOwner.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected room controls`,
+      );
+    }
+    controlsByOwner.set(key, control);
+  }
 }
 
 /** @internal Composition never silently replaces a separately projected reward control. */
@@ -1344,6 +1369,7 @@ function redirectHubMainRewardFocus(
  */
 interface WorkspaceHubAssembly {
   readonly node: WorkspaceHubDecisionNode;
+  readonly roomControls: readonly WorkspaceRoomPickerControl[];
   readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
 }
@@ -1360,6 +1386,7 @@ function projectHubNode(
 ): WorkspaceHubAssembly {
   const hubMarker = marker(context, owner);
   const occurrences = hubOccurrenceMap(plan);
+  const roomControls: WorkspaceRoomPickerControl[] = [];
   const rewardControls: WorkspaceRewardControl[] = [];
   const workbenches: WorkspaceOccurrenceWorkbenchNode[] = [];
   const roomsBySlot = new Map<string, WorkspaceRoomSummary>();
@@ -1380,6 +1407,7 @@ function projectHubNode(
           });
     const occurrenceNode = occurrenceAssembly?.node;
     if (occurrenceNode !== undefined) {
+      roomControls.push(...occurrenceAssembly!.roomControls);
       rewardControls.push(...occurrenceAssembly!.rewardControls);
       const workbench = Object.freeze({
         ...occurrenceNode,
@@ -1453,6 +1481,7 @@ function projectHubNode(
   );
   return Object.freeze({
     node,
+    roomControls: Object.freeze(roomControls),
     rewardControls: Object.freeze(rewardControls),
     workbenches: Object.freeze(workbenches),
   });
@@ -1993,6 +2022,7 @@ function projectAuthoredTargetWithOverlay(
   evaluatedTarget: CanonicalTarget | undefined,
 ): {
   readonly node: WorkspaceOccurrenceWorkbenchNode;
+  readonly roomControls: readonly WorkspaceRoomPickerControl[];
   readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly target: WorkspacePhysicalTarget;
 } {
@@ -2042,6 +2072,7 @@ function projectAuthoredTargetWithOverlay(
   });
   return Object.freeze({
     node,
+    roomControls: occurrenceAssembly.roomControls,
     rewardControls: occurrenceAssembly.rewardControls,
     target: Object.freeze({
       ...(evaluatedTarget?.room.clockworkReward === undefined
@@ -2076,6 +2107,44 @@ function topologyStateForAuthoredBatch(
     : 'complete';
 }
 
+/**
+ * A normal decision owns its target pickers. This consumes the same physical
+ * target and missing-target products rendered by the workbench, rather than
+ * creating controls in an earlier unrelated topology pass.
+ */
+function roomControlsForBatch(
+  context: MutableProjectionContext,
+  decision: AuthoredBatchDecision,
+  kind: 'ordinaryBatch' | 'takeoverBatch' | 'mixedBatch',
+  physical: readonly DeclaredPhysicalExit[],
+  targets: readonly WorkspacePhysicalTarget[],
+  missingTargets: readonly WorkspaceMissingPhysicalTarget[],
+): readonly WorkspaceRoomPickerControl[] {
+  if (kind === 'takeoverBatch' || decision.source.kind !== 'occurrence') {
+    return Object.freeze([]);
+  }
+  const targetsByExit = new Map(targets.map((target) => [target.exitKey, target] as const));
+  const missingByExit = new Map(missingTargets.map((target) => [target.exitKey, target] as const));
+  const controls: WorkspaceRoomPickerControl[] = [];
+  for (const exit of [...physical].sort((left, right) => left.index - right.index)) {
+    const target = targetsByExit.get(exit.exitKey);
+    if (target !== undefined) {
+      controls.push(
+        targetRoomControl(
+          createTargetAddress(context.biome, decision.source, target.exitKey),
+          target.room.gameName,
+        ),
+      );
+      continue;
+    }
+    const missing = missingByExit.get(exit.exitKey);
+    if (missing?.authoring.kind === 'ready') {
+      controls.push(targetRoomControl(missing.owner));
+    }
+  }
+  return Object.freeze(controls);
+}
+
 function projectAuthoredBatchWithOverlay(
   context: MutableProjectionContext,
   plan: AuthoredBiomePlan,
@@ -2083,6 +2152,7 @@ function projectAuthoredBatchWithOverlay(
   evaluated: EvaluatedBatchOverlay | undefined,
 ): {
   readonly batch: WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode | WorkspaceMixedBatchNode;
+  readonly roomControls: readonly WorkspaceRoomPickerControl[];
   readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
 } {
@@ -2138,6 +2208,14 @@ function projectAuthoredBatchWithOverlay(
     physical,
     new Set(decision.normal.targets.map((target) => target.exitKey)),
     missingTargetPrerequisite(context, plan, decision),
+  );
+  const targetRoomControls = roomControlsForBatch(
+    context,
+    decision,
+    kind,
+    physical,
+    targets,
+    missingTargets,
   );
   const repairScope = batchRepairScopeForRoots(
     context,
@@ -2217,6 +2295,10 @@ function projectAuthoredBatchWithOverlay(
   }
   return Object.freeze({
     batch,
+    roomControls: Object.freeze([
+      ...projectedTargets.flatMap((target) => target.roomControls),
+      ...targetRoomControls,
+    ]),
     rewardControls: Object.freeze(projectedTargets.flatMap((target) => target.rewardControls)),
     workbenches: Object.freeze(projectedTargets.map((target) => target.node)),
   });
@@ -2229,6 +2311,7 @@ function projectAuthoredLinkedExitWithOverlay(
   evaluated: CanonicalLinkedExit | undefined,
 ): {
   readonly node: WorkspaceLinkedExitNode;
+  readonly roomControls: readonly WorkspaceRoomPickerControl[];
   readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly workbench: WorkspaceOccurrenceWorkbenchNode;
 } {
@@ -2301,6 +2384,7 @@ function projectAuthoredLinkedExitWithOverlay(
   }
   return Object.freeze({
     node,
+    roomControls: occurrenceAssembly.roomControls,
     rewardControls: occurrenceAssembly.rewardControls,
     workbench,
   });
@@ -2362,77 +2446,28 @@ function authoringFrontier(
   }
 }
 
-function targetControl(
-  context: MutableProjectionContext,
+function targetRoomControl(
   address: TargetAddress,
-  selectedGameName: string | undefined,
-): void {
-  context.roomControls.set(
-    semanticAddressKey(address),
-    Object.freeze({
-      address,
-      kind: 'targetRoomPicker',
-      ...(selectedGameName === undefined ? {} : { selectedGameName }),
-    }),
-  );
+  selectedGameName?: string,
+): WorkspaceRoomPickerControl {
+  return Object.freeze({
+    address,
+    kind: 'targetRoomPicker',
+    ...(selectedGameName === undefined ? {} : { selectedGameName }),
+  });
 }
 
 function startRoomControl(
-  context: MutableProjectionContext,
   address: OccurrenceAddress,
   candidateGameNames: readonly string[],
   selectedGameName: string,
-): void {
-  context.roomControls.set(
-    semanticAddressKey(address),
-    Object.freeze({
-      address,
-      candidateGameNames: Object.freeze([...candidateGameNames]),
-      kind: 'startRoomPicker' as const,
-      selectedGameName,
-    }),
-  );
-}
-
-function indexOrdinaryTargetControls(
-  context: MutableProjectionContext,
-  plan: AuthoredBiomePlan,
-): void {
-  if (plan.topology === null) return;
-  for (const decision of plan.topology.decisions) {
-    if (decision.kind !== 'exit' || decision.normal.kind !== 'batch') continue;
-    if (decision.source.kind !== 'occurrence') continue;
-    const targets = decision.normal.targets.map((target) => ({
-      target,
-      room: authoredOccurrence(context, target.occurrenceId),
-    }));
-    if (
-      targets.length > 0 &&
-      targets.every((target) =>
-        isTakeover(target.room && requireRoom(context.catalog, target.room.gameName)),
-      )
-    ) {
-      continue;
-    }
-    const source = decision.source;
-    const exits = physicalExitsForSource(context, plan, source);
-    const prerequisite = missingTargetPrerequisite(context, plan, decision);
-    let encounteredMissingTarget = false;
-    for (const exit of [...exits].sort((left, right) => left.index - right.index)) {
-      const exitKey = exit.exitKey;
-      const target = targets.find((candidate) => candidate.target.exitKey === exitKey);
-      if (target === undefined && (prerequisite !== undefined || encounteredMissingTarget)) {
-        encounteredMissingTarget = true;
-        continue;
-      }
-      targetControl(
-        context,
-        createTargetAddress(context.biome, source, exitKey),
-        target?.room?.gameName,
-      );
-      if (target === undefined) encounteredMissingTarget = true;
-    }
-  }
+): WorkspaceRoomPickerControl {
+  return Object.freeze({
+    address,
+    candidateGameNames: Object.freeze([...candidateGameNames]),
+    kind: 'startRoomPicker' as const,
+    selectedGameName,
+  });
 }
 
 function candidateInteraction<T>(
@@ -3872,6 +3907,7 @@ function projectBiome(
 } {
   const { biome: biomeAddress, evaluation, layout, plan } = source;
   const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(catalog, source);
+  const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
   const context: MutableProjectionContext = {
     catalog,
@@ -3880,7 +3916,6 @@ function projectBiome(
     focusByOwner,
     biome: biomeAddress,
     routeKey: biomeAddress.routeKey,
-    roomControls: new Map(),
     source,
   };
   const authoredLeafRequirements = authoredWorkspaceLeafRequirements(catalog, biomeAddress, plan);
@@ -3895,11 +3930,11 @@ function projectBiome(
   let frontier = authoringFrontier(context, plan);
   const nextHubVisitIndex = frontier?.kind === 'hubVisit' ? frontier.owner.visitIndex : undefined;
   const fields = projectBiomeFields(context, plan, layout);
+  let startRoomPicker: WorkspaceRoomPickerControl | undefined;
   if (plan.topology !== null && layout.start.kind === 'authoredChoice') {
     const start = authoredOccurrence(context, plan.topology.startOccurrenceId);
     if (start !== undefined) {
-      startRoomControl(
-        context,
+      startRoomPicker = startRoomControl(
         createOccurrenceAddress(context.biome, start.occurrenceId),
         layout.start.roomGameNames,
         start.gameName,
@@ -3907,7 +3942,6 @@ function projectBiome(
     }
   }
   const authoredExitDecisions = source.exitDecisions;
-  indexOrdinaryTargetControls(context, plan);
   const nodes: WorkspaceNode[] = [];
   let entry: WorkspaceOccurrenceWorkbenchNode | undefined;
   if (plan.topology !== null) {
@@ -3926,8 +3960,10 @@ function projectBiome(
       }
       const projectedEntry = projectOccurrence(context, start, {
         ...(source.entryRoom === undefined ? {} : { evaluatedRoom: source.entryRoom }),
+        ...(startRoomPicker === undefined ? {} : { roomPicker: startRoomPicker }),
       });
       entry = projectedEntry.node;
+      appendUniqueRoomControls(roomControls, projectedEntry.roomControls);
       appendUniqueRewardControls(rewardControls, projectedEntry.rewardControls);
       nodes.push(entry);
     }
@@ -3946,6 +3982,7 @@ function projectBiome(
         decision as AuthoredLinkedExitDecision,
         source.evaluatedLinkedExit(owner),
       );
+      appendUniqueRoomControls(roomControls, projected.roomControls);
       appendUniqueRewardControls(rewardControls, projected.rewardControls);
       nodes.push(projected.node, projected.workbench);
     } else {
@@ -3955,6 +3992,7 @@ function projectBiome(
         decision as AuthoredBatchDecision,
         source.evaluatedBatch(owner),
       );
+      appendUniqueRoomControls(roomControls, projected.roomControls);
       appendUniqueRewardControls(rewardControls, projected.rewardControls);
       nodes.push(projected.batch, ...projected.workbenches);
     }
@@ -3981,6 +4019,7 @@ function projectBiome(
             source.evaluatedHub(owner),
             nextHubVisitIndex,
           );
+    appendUniqueRoomControls(roomControls, projected.roomControls);
     appendUniqueRewardControls(rewardControls, projected.rewardControls);
     nodes.push(projected.node, ...projected.workbenches);
   }
@@ -4124,7 +4163,7 @@ function projectBiome(
   return Object.freeze({
     authoredLeafRequirements,
     biome: projected,
-    roomControls: context.roomControls,
+    roomControls,
     rewardControls,
   });
 }
@@ -4547,7 +4586,7 @@ export function createStructuredWorkspaceProjection(
       const routes = sources.routes.map((routeSource) => {
         const biomes = routeSource.biomes.map((biomeSource) => {
           const projected = projectBiome(catalog, biomeSource, focusByOwner);
-          for (const [key, control] of projected.roomControls) roomControls.set(key, control);
+          appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
           authoredLeafRequirements.push(...projected.authoredLeafRequirements);
           return projected.biome;

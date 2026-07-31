@@ -11,8 +11,9 @@ Foundation and Campaign A's required pre-movement default-inspector and
 work-count characterization are complete. A1 established the structured
 workspace public entry and private contract/projector seam. A2.1 established
 the authored-first source index, A2.2 established occurrence activation,
-lifecycle, and publication facts, and A2.3 made occurrence reward controls
-explicit assembly output; common semantic assembly remains in progress.
+lifecycle, and publication facts, A2.3 made occurrence reward controls
+explicit assembly output, and A2.4 did the same for room pickers; common
+semantic assembly remains in progress.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -421,8 +422,15 @@ the final lifecycle contract.
 **A2.3 transition note.** An occurrence now returns its reward-control
 package with its workbench node. Biome and project composition collect those
 packages explicitly and reject duplicate semantic owners rather than silently
-replacing a control in a later map. Room-picker and focus products still use
-the older common-assembly path and remain in scope for the following slices.
+replacing a control in a later map. Focus products still use the older
+common-assembly path and remain in scope for the following slices.
+
+**A2.4 transition note.** An authored-choice start passes its occurrence-owned
+picker into, then back out of, occurrence assembly. Ordinary and mixed batches
+return their target-pickers from the same physical-target and missing-target
+products they render; this replaces the earlier raw-plan prepass. The local and
+project composition boundaries reject duplicate picker owners. This does not
+make room pickers authored leaves or change their existing availability policy.
 
 #### A3: Specialized Hub and room-local assembly
 
