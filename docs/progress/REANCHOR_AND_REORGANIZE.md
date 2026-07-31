@@ -14,7 +14,8 @@ the authored-first source index, A2.2 established occurrence activation,
 lifecycle, and publication facts, A2.3 made occurrence reward controls
 explicit assembly output, and A2.4 did the same for room pickers; common
 semantic assembly remains in progress. A2.5 made completed biome focus
-destinations an explicit assembly output as well.
+destinations an explicit assembly output as well. A4.1 now returns and binds
+the first occurrence-owned non-reward interaction packages explicitly.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -457,6 +458,16 @@ fallback.
 - stop hidden registration and independent raw-project traversal;
 - preserve lazy candidate loading and semantic command construction;
 - prove requirement completeness against independently derived authored owners.
+
+**A4.1 transition note.** Occurrence assembly now returns Ephyra side-room,
+Ship, and materialized-Shop interaction packages alongside its room and reward
+controls. Binding consumes those returned packages and one exact candidate
+session; it no longer re-traverses raw authored occurrences for that family.
+The independently derived authored-leaf audit remains separate: dormant
+Ephyra side leaves stay intentionally published in this transition, while a
+dormant Shop emits no package. Fields, batch, Hub, topology, and frontier
+interaction families remain in the source-index binding until their own
+complete requirements exist.
 
 #### A5: Presentation, focus, and closure
 

@@ -729,6 +729,52 @@ describe('unified structured workspace projection', () => {
         .get(sideDoor3.entryOrder.interactionKey)
         ?.choices.map((choice) => choice.value),
     ).toEqual(sideDoor3.entryOrder.options.map((option) => option.proposedEnteredSlotKeys));
+    for (const sideRoom of [sideDoor2, sideDoor3]) {
+      const selected = sideRoom.entryOrder.options.find(
+        (option) => option.key === sideRoom.entryOrder.selectedKey,
+      );
+      if (selected === undefined)
+        throw new Error(`${sideRoom.key} has no selected entry-order option`);
+      expect(
+        projectedWorkspace.interactions.sideRoomGenerations.get(
+          semanticAddressKey(sideRoom.address),
+        ),
+      ).toMatchObject({ owner: sideRoom.address, selected: sideRoom.generation });
+      expect(
+        projectedWorkspace.interactions.sideRoomEntryOrders.get(sideRoom.entryOrder.interactionKey),
+      ).toMatchObject({
+        owner: combat05.roomLocal.sideRooms.address,
+        selected: selected.proposedEnteredSlotKeys,
+      });
+    }
+  });
+
+  it('retains currently published dormant Ephyra side-room interactions', () => {
+    const projectedWorkspace = workspace(createRepresentativeNOPQProject());
+    const combat10 = roomWorkbench(projectedWorkspace, 'N', 'N_Combat10');
+    if (combat10.roomLocal.kind !== 'ephyra') {
+      throw new Error('N Combat 10 side-room workbench is missing');
+    }
+
+    expect(combat10.detailsActive).toBe(false);
+    for (const sideRoom of combat10.roomLocal.sideRooms.slots) {
+      const selected = sideRoom.entryOrder.options.find(
+        (option) => option.key === sideRoom.entryOrder.selectedKey,
+      );
+      if (selected === undefined)
+        throw new Error(`${sideRoom.key} has no selected entry-order option`);
+      expect(
+        projectedWorkspace.interactions.sideRoomGenerations.get(
+          semanticAddressKey(sideRoom.address),
+        ),
+      ).toMatchObject({ owner: sideRoom.address, selected: sideRoom.generation });
+      expect(
+        projectedWorkspace.interactions.sideRoomEntryOrders.get(sideRoom.entryOrder.interactionKey),
+      ).toMatchObject({
+        owner: combat10.roomLocal.sideRooms.address,
+        selected: selected.proposedEnteredSlotKeys,
+      });
+    }
   });
 
   it('reprojects authored Hub visit children in visit order after replacement and truncation', () => {
@@ -1710,6 +1756,27 @@ describe('unified structured workspace projection', () => {
     expect(ship.roomLocal.wheels[0]?.offers[0]?.control.owner.address).toEqual(
       createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
     );
+    expect(
+      surface.interactions.shipEncounterCounts.get(semanticAddressKey(ship.address)),
+    ).toMatchObject({
+      owner: ship.address,
+      selected: ship.roomLocal.encounterCount,
+    });
+    for (const wheel of ship.roomLocal.wheels) {
+      const key = semanticAddressKey(wheel.address);
+      expect(surface.interactions.rewardWheelOfferCounts.get(key)).toMatchObject({
+        owner: wheel.address,
+        selected: wheel.offerCount,
+      });
+      expect(surface.interactions.rewardWheelStores.get(key)).toMatchObject({
+        owner: wheel.address,
+        selected: wheel.storeKey,
+      });
+      expect(surface.interactions.rewardWheelPicks.get(key)).toMatchObject({
+        owner: wheel.address,
+        selected: wheel.pickedOfferIndex,
+      });
+    }
 
     const shop = roomWorkbench(surface, 'N', 'N_PreBoss01');
     expect(shop.roomLocal.kind).toBe('shop');
@@ -1909,7 +1976,10 @@ describe('unified structured workspace projection', () => {
     const offer = createShopOfferAddress(goldenFBiome, shopId, 'MajorNonBoon');
     const purchase = createShopPurchaseAddress(goldenFBiome, shopId, 'MajorNonBoon');
     expect(projected.interactions.rewards.has(semanticAddressKey(offer))).toBe(true);
-    expect(projected.interactions.shopPurchases.has(semanticAddressKey(purchase))).toBe(true);
+    expect(projected.interactions.shopPurchases.get(semanticAddressKey(purchase))).toMatchObject({
+      owner: purchase,
+      selected: false,
+    });
   });
 
   it('fails fast when a hard-required projected control lacks its exact interaction', () => {

@@ -2,6 +2,7 @@ import {
   createBiomeAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -14,9 +15,11 @@ import type {
 } from './contract';
 import {
   appendUniqueFocusDestinations,
+  appendUniqueOccurrenceInteractionRequirements,
   appendUniqueRewardControls,
   appendUniqueRoomControls,
 } from './projector';
+import type { WorkspaceOccurrenceInteractionRequirement } from './projector';
 
 function explicitControl(occurrenceKey: string): WorkspaceRewardControl {
   const address = createIncomingRewardAddress(
@@ -64,6 +67,23 @@ function redirectedRewardFocusDestination(): WorkspaceInspectorDestination {
   });
 }
 
+function shipInteractionRequirement(): WorkspaceOccurrenceInteractionRequirement {
+  const owner = createOccurrenceAddress(
+    createBiomeAddress('Underworld', 'F'),
+    createOccurrenceId('duplicate-ship-interaction'),
+  );
+  return Object.freeze({
+    encounterCount: 2,
+    encounterCountChoices: Object.freeze([
+      Object.freeze({ label: 'Intro + 1 combat', value: 2 as const }),
+      Object.freeze({ label: 'Intro + 2 combats', value: 3 as const }),
+    ]),
+    kind: 'shipCombat' as const,
+    owner,
+    wheels: Object.freeze([]),
+  });
+}
+
 describe('structured workspace assembly products', () => {
   it('rejects duplicate semantic owners while composing returned reward controls', () => {
     const control = explicitControl('duplicate-reward-control');
@@ -106,5 +126,18 @@ describe('structured workspace assembly products', () => {
     ).toThrow(
       `wrong-focus-owner focus destination key does not match its semantic owner ${ownerKey}`,
     );
+  });
+
+  it('rejects duplicate occurrence interaction packages by kind and semantic owner', () => {
+    const requirement = shipInteractionRequirement();
+    const identity = `shipCombat:${semanticAddressKey(requirement.owner)}`;
+    const requirements = new Map<string, WorkspaceOccurrenceInteractionRequirement>();
+
+    appendUniqueOccurrenceInteractionRequirements(requirements, [requirement]);
+
+    expect(requirements.get(identity)).toBe(requirement);
+    expect(() =>
+      appendUniqueOccurrenceInteractionRequirements(requirements, [requirement]),
+    ).toThrow(`${identity} has multiple projected occurrence interaction requirements`);
   });
 });
