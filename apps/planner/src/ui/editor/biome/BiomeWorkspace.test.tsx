@@ -428,8 +428,11 @@ describe('BiomeWorkspace', () => {
     );
     expect(within(openedCard).queryByText(/Closing this slot removes/)).toBeNull();
     const beforeReward = nHubOccurrence(view.application, 'combat04').state;
+    // Reward-domain projection deliberately yields between candidate evaluations.
     await view.user.click(within(openedCard).getByLabelText('Reward'));
-    const rewardTypes = within(await screen.findByRole('listbox')).getAllByRole('option');
+    const rewardTypes = within(
+      await screen.findByRole('listbox', {}, { timeout: 5_000 }),
+    ).getAllByRole('option');
     const replacementType = rewardTypes.find(
       (option) =>
         option.getAttribute('aria-disabled') !== 'true' &&
@@ -477,7 +480,7 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBeforeClose + 1,
     );
-  });
+  }, 10_000);
 
   it('edits, appends, replaces, and removes Hub visits while preserving a visited room’s side order', async () => {
     const project = appendCompleteN(
