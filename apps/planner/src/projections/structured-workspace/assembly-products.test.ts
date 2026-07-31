@@ -1,5 +1,7 @@
 import {
   createBiomeAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
   createOccurrenceAddress,
@@ -14,12 +16,16 @@ import type {
   WorkspaceRoomPickerControl,
 } from './contract';
 import {
+  appendUniqueBatchInteractionRequirements,
   appendUniqueFocusDestinations,
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueRewardControls,
   appendUniqueRoomControls,
 } from './projector';
-import type { WorkspaceOccurrenceInteractionRequirement } from './projector';
+import type {
+  WorkspaceBatchInteractionRequirement,
+  WorkspaceOccurrenceInteractionRequirement,
+} from './projector';
 
 function explicitControl(occurrenceKey: string): WorkspaceRewardControl {
   const address = createIncomingRewardAddress(
@@ -84,6 +90,22 @@ function shipInteractionRequirement(): WorkspaceOccurrenceInteractionRequirement
   });
 }
 
+function batchInteractionRequirement(): WorkspaceBatchInteractionRequirement {
+  const biome = createBiomeAddress('Underworld', 'F');
+  const owner = createExitDecisionAddress(biome, {
+    kind: 'occurrence',
+    occurrenceId: createOccurrenceId('duplicate-batch-interaction'),
+  });
+  return Object.freeze({
+    exitSelection: Object.freeze({
+      owner: createExitSelectionAddress(biome, owner.source),
+      targets: Object.freeze([]),
+    }),
+    kind: 'batchControls' as const,
+    owner,
+  });
+}
+
 describe('structured workspace assembly products', () => {
   it('rejects duplicate semantic owners while composing returned reward controls', () => {
     const control = explicitControl('duplicate-reward-control');
@@ -139,5 +161,18 @@ describe('structured workspace assembly products', () => {
     expect(() =>
       appendUniqueOccurrenceInteractionRequirements(requirements, [requirement]),
     ).toThrow(`${identity} has multiple projected occurrence interaction requirements`);
+  });
+
+  it('rejects duplicate batch interaction packages by kind and semantic owner', () => {
+    const requirement = batchInteractionRequirement();
+    const identity = `batchControls:${semanticAddressKey(requirement.owner)}`;
+    const requirements = new Map<string, WorkspaceBatchInteractionRequirement>();
+
+    appendUniqueBatchInteractionRequirements(requirements, [requirement]);
+
+    expect(requirements.get(identity)).toBe(requirement);
+    expect(() => appendUniqueBatchInteractionRequirements(requirements, [requirement])).toThrow(
+      `${identity} has multiple projected batch interaction requirements`,
+    );
   });
 });

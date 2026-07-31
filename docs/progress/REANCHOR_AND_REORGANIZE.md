@@ -15,7 +15,8 @@ lifecycle, and publication facts, A2.3 made occurrence reward controls
 explicit assembly output, and A2.4 did the same for room pickers; common
 semantic assembly remains in progress. A2.5 made completed biome focus
 destinations an explicit assembly output as well. A4.1 now returns and binds
-the first occurrence-owned non-reward interaction packages explicitly.
+the first occurrence-owned non-reward interaction packages explicitly. A4.2
+does the same for authored batch controls.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -468,6 +469,17 @@ Ephyra side leaves stay intentionally published in this transition, while a
 dormant Shop emits no package. Fields, batch, Hub, topology, and frontier
 interaction families remain in the source-index binding until their own
 complete requirements exist.
+
+**A4.2 transition note.** Authored batch assembly now returns one
+`batchControls` package for its published exit selection, authored base reward
+store, and Fields cage outcome controls. Binding consumes that package and the
+same bound candidate session; it no longer re-traverses raw decisions for
+those maps. An independent authored topology and layout-policy audit verifies
+the expected package identities before binding, including empty setup batches,
+blocked or retained batches, and the null-versus-selected takeover reward-store
+policy. Hub, topology/removal, takeover action, start, and frontier families
+remain in the source-index binding until their own complete requirements
+exist.
 
 #### A5: Presentation, focus, and closure
 

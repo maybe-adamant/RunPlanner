@@ -106,6 +106,7 @@ describe('workspace candidate interaction families', () => {
     ] as const;
 
     expect(projectEvaluationCount).toBe(2);
+    expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
     for (const family of families) {
       events.length = 0;
       const interaction = firstInteraction(family, workspaces);

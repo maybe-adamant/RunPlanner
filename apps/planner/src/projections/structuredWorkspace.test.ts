@@ -400,6 +400,35 @@ describe('unified structured workspace projection', () => {
         .get(selectedNode.selection.focusKey)
         ?.targets.map((choice) => choice.value),
     );
+    const forkNode = biome(projected, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' && semanticAddressKey(node.owner) === sourceOwner(forkSource),
+    );
+    const reversedForkNode = biome(reversed, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' && semanticAddressKey(node.owner) === sourceOwner(forkSource),
+    );
+    if (forkNode === undefined || reversedForkNode === undefined) {
+      throw new Error('selected F fork decision is missing');
+    }
+    const expectedForkSelection = {
+      key: forkNode.selection.focusKey,
+      owner: forkNode.owner,
+      selectedExitKey: 'exit2',
+      targets: [
+        { label: 'exit1', value: 'exit1' },
+        { label: 'exit2', value: 'exit2' },
+      ],
+    };
+    expect(projected.interactions.exitSelections.get(forkNode.selection.focusKey)).toEqual(
+      expectedForkSelection,
+    );
+    expect(reversed.interactions.exitSelections.get(reversedForkNode.selection.focusKey)).toEqual({
+      ...expectedForkSelection,
+      key: reversedForkNode.selection.focusKey,
+      owner: reversedForkNode.owner,
+    });
+    expect(forkNode.selection.address).not.toEqual(forkNode.owner);
   });
 
   it('projects each ordinary-biome rail as decision points with picked summaries', () => {
@@ -1068,6 +1097,30 @@ describe('unified structured workspace projection', () => {
     );
     if (partialBatch === undefined) throw new Error('empty F batch was not projected');
     expect(partialBatch.missingTargets.map((target) => target.exitKey)).not.toHaveLength(0);
+    expect(batchWorkspace.interactions.exitSelections.get(partialBatch.selection.focusKey)).toEqual(
+      {
+        key: partialBatch.selection.focusKey,
+        owner: partialBatch.owner,
+        targets: [],
+      },
+    );
+    if (partialBatch.rewardStore === undefined) {
+      throw new Error('empty F batch reward-store marker is missing');
+    }
+    expect(
+      batchWorkspace.interactions.batchRewardStores.get(partialBatch.rewardStore.focusKey),
+    ).toMatchObject({
+      choices: [
+        { label: 'Run Progress', value: 'RunProgress' },
+        { label: 'Meta Progress', value: 'MetaProgress' },
+      ],
+      key: partialBatch.rewardStore.focusKey,
+      owner: partialBatch.rewardStore.address,
+    });
+    expect(
+      batchWorkspace.interactions.batchRewardStores.get(partialBatch.rewardStore.focusKey)
+        ?.selected,
+    ).toBeUndefined();
     const [firstMissingTarget, ...laterMissingTargets] = partialBatch.missingTargets;
     if (firstMissingTarget === undefined) throw new Error('F target frontier is missing');
     expect(firstMissingTarget.authoring).toEqual({
@@ -1236,6 +1289,23 @@ describe('unified structured workspace projection', () => {
         node.owner.source.occurrenceId === hStartId,
     );
     if (fieldsBatch === undefined) throw new Error('H Fields batch was not projected');
+    if (fieldsBatch.fieldsCageOutcome === undefined) {
+      throw new Error('H Fields cage-outcome marker is missing');
+    }
+    expect(
+      projected.interactions.fieldsCageOutcomes.get(fieldsBatch.fieldsCageOutcome.focusKey),
+    ).toMatchObject({
+      choices: [
+        { label: 'Minimum', value: 'min' },
+        { label: 'Maximum', value: 'max' },
+      ],
+      key: fieldsBatch.fieldsCageOutcome.focusKey,
+      owner: fieldsBatch.owner,
+    });
+    expect(
+      projected.interactions.fieldsCageOutcomes.get(fieldsBatch.fieldsCageOutcome.focusKey)
+        ?.selected,
+    ).toBeUndefined();
     const target = fieldsBatch.missingTargets[0];
     if (target === undefined) throw new Error('H Fields target is missing');
     expect(target.authoring).toEqual({
@@ -1277,6 +1347,25 @@ describe('unified structured workspace projection', () => {
 
     const projected = workspace(project);
     expect(biome(projected, 'H').status).toBe('blocked');
+    const blockedBatch = biome(projected, 'H').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' | 'mixedBatch' }> =>
+        (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') &&
+        node.fieldsCageOutcome !== undefined,
+    );
+    if (blockedBatch?.fieldsCageOutcome === undefined) {
+      throw new Error('blocked H Fields batch is missing');
+    }
+    expect(
+      projected.interactions.fieldsCageOutcomes.get(blockedBatch.fieldsCageOutcome.focusKey),
+    ).toMatchObject({
+      choices: [
+        { label: 'Minimum', value: 'min' },
+        { label: 'Maximum', value: 'max' },
+      ],
+      key: blockedBatch.fieldsCageOutcome.focusKey,
+      owner: blockedBatch.owner,
+      selected: 'min',
+    });
     const fields = roomWorkbench(projected, 'H', 'H_Combat02');
     if (fields.roomLocal.kind !== 'fields') throw new Error('Fields room-local state is missing');
     expect(fields.roomLocal.cages.map((cage) => cage.active)).toEqual([true, true, false]);
@@ -2181,6 +2270,12 @@ describe('unified structured workspace projection', () => {
     if (takeover === undefined || takeover.targets.length === 1) {
       throw new Error('F multi-target takeover batch is missing');
     }
+    expect(takeover.rewardStore).toBeUndefined();
+    expect(
+      underworld.interactions.batchRewardStores.has(
+        semanticAddressKey(createBatchRewardStoreAddress(goldenFBiome, takeover.source)),
+      ),
+    ).toBe(false);
     const withoutTakeoverSelection = {
       ...underworld.interactions,
       exitSelections: new Map(underworld.interactions.exitSelections),
@@ -2206,10 +2301,18 @@ describe('unified structured workspace projection', () => {
       throw new Error('non-null F takeover reward store is not projected');
     }
     expect(
-      storedTakeoverWorkspace.interactions.batchRewardStores.has(
+      storedTakeoverWorkspace.interactions.batchRewardStores.get(
         storedTakeover.rewardStore.focusKey,
       ),
-    ).toBe(true);
+    ).toMatchObject({
+      choices: [
+        { label: 'Run Progress', value: 'RunProgress' },
+        { label: 'Meta Progress', value: 'MetaProgress' },
+      ],
+      key: storedTakeover.rewardStore.focusKey,
+      owner: storedTakeover.rewardStore.address,
+      selected: 'RunProgress',
+    });
     const withoutTakeoverStore = {
       ...storedTakeoverWorkspace.interactions,
       batchRewardStores: new Map(storedTakeoverWorkspace.interactions.batchRewardStores),
