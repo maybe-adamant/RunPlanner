@@ -1557,6 +1557,66 @@ describe('unified structured workspace projection', () => {
     }
   });
 
+  it('binds explicit start, authored target, and ready target-picker products by exact owner', () => {
+    const complete = workspace(createGoldenFGHIProject(catalog));
+    const completeF = biome(complete, 'F');
+    const startPicker = completeF.entry?.room.roomPicker;
+    const authoredBatch = completeF.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch',
+    );
+    const authoredTarget = authoredBatch?.targets[0];
+    if (
+      startPicker?.kind !== 'startRoomPicker' ||
+      authoredTarget === undefined ||
+      authoredTarget.marker.address.kind !== 'target'
+    ) {
+      throw new Error('complete F room-picker fixtures are missing');
+    }
+
+    const fBiome = createBiomeAddress('Underworld', 'F');
+    const startId = createOccurrenceId('ready-room-picker-start');
+    let incomplete = createProjectDocument(catalog, {
+      projectId: 'ready-room-picker',
+      name: 'Ready room picker',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    incomplete = applyProjectCommand(incomplete, catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    const decision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: startId,
+    });
+    incomplete = applyProjectCommand(incomplete, catalog, { kind: 'CreateBatch', decision });
+    incomplete = applyProjectCommand(incomplete, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, decision.source),
+      storeKey: 'RunProgress',
+    });
+    const partial = workspace(incomplete);
+    const missing = biome(partial, 'F')
+      .nodes.find(
+        (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+          node.kind === 'ordinaryBatch' &&
+          node.owner.source.kind === 'occurrence' &&
+          node.owner.source.occurrenceId === startId,
+      )
+      ?.missingTargets.find((target) => target.authoring.kind === 'ready');
+    if (missing === undefined) throw new Error('ready F target picker is missing');
+
+    for (const { projected, owner } of [
+      { owner: startPicker.address, projected: complete },
+      { owner: authoredTarget.marker.address, projected: complete },
+      { owner: missing.owner, projected: partial },
+    ]) {
+      expect(projected.interactions.rooms.get(semanticAddressKey(owner))).toMatchObject({ owner });
+    }
+  });
+
   it('keeps fixed, Fields, ship-wheel, and Shop reward state in compact room summaries', () => {
     const underworld = workspace(createGoldenFGHIProject(catalog));
     const surface = workspace(createRepresentativeNOPQProject());
