@@ -7,12 +7,12 @@ import {
   type StructuredWorkspaceProjection,
   type WorkspaceBiome,
   type WorkspaceCompletionNode,
+  type WorkspaceDefaultInspectorDestination,
+  type WorkspaceInspectorDestination,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
   type WorkspaceNode,
-  type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRailEntry,
-  type WorkspaceRoomSummary,
   type WorkspaceAuthoringFrontier,
 } from '../../../projections/structured-workspace';
 import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
@@ -38,265 +38,6 @@ type InspectorSubject =
   | { readonly kind: 'frontier'; readonly marker: WorkspaceMarker }
   | { readonly kind: 'node'; readonly node: WorkspaceNode };
 
-function markerMatches(marker: WorkspaceMarker, addressKey: string): boolean {
-  return marker.focusKey === addressKey;
-}
-
-function roomOwnsAddress(room: WorkspaceRoomSummary, addressKey: string): boolean {
-  if (markerMatches(room.marker, addressKey)) return true;
-  if (room.rewardControls.some((control) => markerMatches(control.marker, addressKey))) return true;
-  switch (room.roomLocal.kind) {
-    case 'none':
-    case 'incomingReward':
-    case 'fields':
-      return false;
-    case 'ephyra':
-      return (
-        markerMatches(room.roomLocal.sideRooms.marker, addressKey) ||
-        room.roomLocal.sideRooms.slots.some((side) => markerMatches(side.marker, addressKey))
-      );
-    case 'fixed':
-      return markerMatches(room.roomLocal.marker, addressKey);
-    case 'ship':
-      return room.roomLocal.wheels.some(
-        (wheel) =>
-          markerMatches(wheel.marker, addressKey) ||
-          wheel.offers.some((offer) => markerMatches(offer.control.marker, addressKey)),
-      );
-    case 'shop':
-      return room.roomLocal.offers.some((offer) =>
-        markerMatches(offer.purchase.marker, addressKey),
-      );
-  }
-}
-
-/** A Hub rail parent owns board controls, while visit and local-room focus stays nested. */
-function hubGroupOwnsAddress(
-  hub: Extract<WorkspaceNode, { readonly kind: 'hubDecision' }>,
-  addressKey: string,
-): boolean {
-  return (
-    markerMatches(hub.marker, addressKey) ||
-    markerMatches(hub.openSet, addressKey) ||
-    hub.slots.some((slot) => markerMatches(slot.marker, addressKey))
-  );
-}
-
-/** A nested visit excludes the Hub slot marker carried for direct inspection. */
-function hubVisitOwnsAddress(
-  visit: Extract<WorkspaceRailEntry, { readonly kind: 'hubGroup' }>['visits'][number],
-  addressKey: string,
-): boolean {
-  return (
-    markerMatches(visit.visitMarker, addressKey) ||
-    markerMatches(visit.node.marker, addressKey) ||
-    visit.node.localDetailMarkers.some((marker) => markerMatches(marker, addressKey))
-  );
-}
-
-function nodeOwnsAddress(node: WorkspaceNode, addressKey: string): boolean {
-  if (markerMatches(node.marker, addressKey)) return true;
-  switch (node.kind) {
-    case 'occurrenceWorkbench':
-      return (
-        (node.railMarker !== undefined && markerMatches(node.railMarker, addressKey)) ||
-        roomOwnsAddress(node.room, addressKey)
-      );
-    case 'linkedExit':
-      return (
-        markerMatches(node.target.marker, addressKey) ||
-        roomOwnsAddress(node.target.room, addressKey)
-      );
-    case 'ordinaryBatch':
-    case 'mixedBatch':
-    case 'takeoverBatch':
-      return (
-        markerMatches(node.selection, addressKey) ||
-        (node.rewardStore !== undefined && markerMatches(node.rewardStore, addressKey)) ||
-        node.targets.some(
-          (target) =>
-            markerMatches(target.marker, addressKey) || roomOwnsAddress(target.room, addressKey),
-        ) ||
-        node.missingTargets.some((target) => markerMatches(target.marker, addressKey))
-      );
-    case 'completion':
-      return false;
-    case 'hubDecision':
-      return (
-        markerMatches(node.openSet, addressKey) ||
-        node.slots.some(
-          (slot) =>
-            markerMatches(slot.marker, addressKey) ||
-            (slot.room !== undefined && roomOwnsAddress(slot.room, addressKey)),
-        ) ||
-        node.visits.some(
-          (visit) =>
-            markerMatches(visit.marker, addressKey) ||
-            (visit.room !== undefined && roomOwnsAddress(visit.room, addressKey)),
-        )
-      );
-  }
-}
-
-function nodeForAddress(
-  nodes: readonly WorkspaceNode[],
-  addressKey: string,
-): WorkspaceNode | undefined {
-  const hub = nodes.find(
-    (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
-      node.kind === 'hubDecision' && nodeOwnsAddress(node, addressKey),
-  );
-  if (hub !== undefined) {
-    const visit = hub.visits.find((candidate) => markerMatches(candidate.marker, addressKey));
-    const room =
-      visit?.room ??
-      hub.slots.find((slot) => slot.room !== undefined && roomOwnsAddress(slot.room, addressKey))
-        ?.room ??
-      hub.visits.find(
-        (candidate) => candidate.room !== undefined && roomOwnsAddress(candidate.room, addressKey),
-      )?.room;
-    if (room !== undefined) {
-      const occurrence = nodes.find(
-        (node): node is WorkspaceOccurrenceWorkbenchNode =>
-          node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === room.occurrenceId,
-      );
-      if (occurrence !== undefined) return occurrence;
-    }
-    return hub;
-  }
-  const fixedHubStage = nodes.find(
-    (node): node is WorkspaceOccurrenceWorkbenchNode =>
-      node.kind === 'occurrenceWorkbench' &&
-      node.sourceDecisionRemoval !== undefined &&
-      nodeOwnsAddress(node, addressKey),
-  );
-  if (fixedHubStage !== undefined) return fixedHubStage;
-  const decision = nodes.find(
-    (
-      node,
-    ): node is Extract<
-      WorkspaceNode,
-      { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
-    > =>
-      (node.kind === 'ordinaryBatch' ||
-        node.kind === 'mixedBatch' ||
-        node.kind === 'takeoverBatch') &&
-      nodeOwnsAddress(node, addressKey),
-  );
-  if (decision !== undefined) return decision;
-  const linked = nodes.find(
-    (node): node is Extract<WorkspaceNode, { readonly kind: 'linkedExit' }> =>
-      node.kind === 'linkedExit' && nodeOwnsAddress(node, addressKey),
-  );
-  if (linked !== undefined) return linked;
-  const occurrence = nodes.find(
-    (node): node is WorkspaceOccurrenceWorkbenchNode =>
-      node.kind === 'occurrenceWorkbench' && nodeOwnsAddress(node, addressKey),
-  );
-  if (occurrence !== undefined) return occurrence;
-  return nodes.find((node) => nodeOwnsAddress(node, addressKey));
-}
-
-function fallbackSubject(biome: WorkspaceBiome): InspectorSubject | undefined {
-  const incompleteDecision = biome.nodes
-    .filter(
-      (
-        node,
-      ): node is Extract<
-        WorkspaceNode,
-        { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
-      > =>
-        (node.kind === 'ordinaryBatch' ||
-          node.kind === 'mixedBatch' ||
-          node.kind === 'takeoverBatch') &&
-        node.source.kind !== 'hubDecision' &&
-        (node.topologyState === 'partial' ||
-          node.missingTargets.length > 0 ||
-          (node.targets.length > 0 && !node.targets.some((target) => target.selected))),
-    )
-    .at(-1);
-  // An untouched workspace should lead with the next truthful authoring
-  // frontier. Commands explicitly focus their created occurrence or decision,
-  // so revealing this frontier never steals focus after an edit.
-  if (biome.frontier?.kind === 'start' || biome.frontier?.kind === 'exitDecision') {
-    if (biome.frontier.kind === 'exitDecision') {
-      const frontierOwner = biome.frontier.owner;
-      const frontierDecision = biome.nodes.find(
-        (
-          node,
-        ): node is Extract<
-          WorkspaceNode,
-          { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
-        > =>
-          (node.kind === 'ordinaryBatch' ||
-            node.kind === 'mixedBatch' ||
-            node.kind === 'takeoverBatch') &&
-          node.source.kind !== 'hubDecision' &&
-          semanticAddressKey(node.owner) === semanticAddressKey(frontierOwner),
-      );
-      if (frontierDecision !== undefined) return { kind: 'node', node: frontierDecision };
-    }
-    if (
-      biome.frontier.kind === 'exitDecision' &&
-      biome.frontier.owner.source.kind === 'hubDecision'
-    ) {
-      const hub = biome.nodes.find(
-        (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
-          node.kind === 'hubDecision',
-      );
-      if (hub !== undefined) return { kind: 'node', node: hub };
-    }
-    return { kind: 'frontier', marker: biome.frontier.marker };
-  }
-  if (
-    biome.frontier?.kind === 'hubDecision' ||
-    biome.frontier?.kind === 'hubVisit' ||
-    biome.frontier?.kind === 'hubOpenSet'
-  ) {
-    const hub = biome.nodes.find(
-      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
-        node.kind === 'hubDecision',
-    );
-    if (hub !== undefined) return { kind: 'node', node: hub };
-  }
-  if (incompleteDecision !== undefined) return { kind: 'node', node: incompleteDecision };
-  const activeDetails = biome.nodes
-    .filter(
-      (node): node is WorkspaceOccurrenceWorkbenchNode =>
-        node.kind === 'occurrenceWorkbench' && node.room.detailsActive,
-    )
-    .at(-1);
-  if (activeDetails !== undefined) {
-    if (activeDetails.sourceDecisionRemoval !== undefined) {
-      return { kind: 'node', node: activeDetails };
-    }
-    const decision = biome.nodes.find(
-      (
-        node,
-      ): node is Extract<
-        WorkspaceNode,
-        { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
-      > =>
-        (node.kind === 'ordinaryBatch' ||
-          node.kind === 'mixedBatch' ||
-          node.kind === 'takeoverBatch') &&
-        node.targets.some((target) => target.room.occurrenceId === activeDetails.room.occurrenceId),
-    );
-    if (decision !== undefined) return { kind: 'node', node: decision };
-    const hub = biome.nodes.find(
-      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
-        node.kind === 'hubDecision' &&
-        node.slots.some((slot) => slot.room?.occurrenceId === activeDetails.room.occurrenceId),
-    );
-    if (hub !== undefined) return { kind: 'node', node: hub };
-    return { kind: 'node', node: activeDetails };
-  }
-  const entry = biome.entry;
-  if (entry !== undefined) return { kind: 'node', node: entry };
-  const first = biome.nodes[0];
-  return first === undefined ? undefined : { kind: 'node', node: first };
-}
-
 function ownsBiome(address: SemanticAddress, biome: WorkspaceBiome): boolean {
   if (!('biomeKey' in address) || !('routeKey' in address)) return false;
   const biomeAddress = biome.marker.address;
@@ -305,6 +46,33 @@ function ownsBiome(address: SemanticAddress, biome: WorkspaceBiome): boolean {
     address.routeKey === biomeAddress.routeKey &&
     address.biomeKey === biomeAddress.biomeKey
   );
+}
+
+/** React resolves projected keys only; containment and fallback policy stay in projection. */
+function resolveInspectorSubject(
+  biome: WorkspaceBiome,
+  destination:
+    | WorkspaceDefaultInspectorDestination
+    | WorkspaceInspectorDestination['inspectorSubject']
+    | undefined,
+): InspectorSubject | undefined {
+  if (destination === undefined) return undefined;
+  switch (destination.kind) {
+    case 'node': {
+      const node = biome.nodes.find((candidate) => candidate.key === destination.nodeKey);
+      return node === undefined ? undefined : { kind: 'node', node };
+    }
+    case 'frontier': {
+      const frontier = biome.frontier;
+      if (
+        (frontier?.kind !== 'start' && frontier?.kind !== 'exitDecision') ||
+        frontier.marker.focusKey !== destination.frontierFocusKey
+      ) {
+        return undefined;
+      }
+      return { kind: 'frontier', marker: frontier.marker };
+    }
+  }
 }
 
 function assessmentLabel(marker: WorkspaceMarker): string {
@@ -357,10 +125,6 @@ function nodeKicker(node: WorkspaceNode): string {
   }
 }
 
-function railMarker(node: WorkspaceNode): WorkspaceMarker {
-  return node.kind === 'occurrenceWorkbench' ? (node.railMarker ?? node.room.marker) : node.marker;
-}
-
 function FocusButton({
   children,
   marker,
@@ -392,13 +156,13 @@ function FocusButton({
 
 function RailNode({
   entry,
-  selectedAddressKey,
+  selectedRailKey,
 }: {
   readonly entry: Extract<WorkspaceRailEntry, { readonly kind: 'node' }>;
-  readonly selectedAddressKey: string | undefined;
+  readonly selectedRailKey: string | undefined;
 }) {
   const { marker, node } = entry;
-  const selected = selectedAddressKey !== undefined && nodeOwnsAddress(node, selectedAddressKey);
+  const selected = selectedRailKey === marker.focusKey;
   return (
     <div className="biome-rail-stop" data-kind={node.kind}>
       <FocusButton marker={marker} selected={selected}>
@@ -418,20 +182,17 @@ function RailNode({
 
 function RailFrontier({
   frontier,
-  selectedAddressKey,
+  selectedRailKey,
 }: {
   readonly frontier: Extract<
     WorkspaceAuthoringFrontier,
     { readonly kind: 'start' | 'exitDecision' }
   >;
-  readonly selectedAddressKey: string | undefined;
+  readonly selectedRailKey: string | undefined;
 }) {
   return (
     <div className="biome-rail-stop biome-frontier-stop">
-      <FocusButton
-        marker={frontier.marker}
-        selected={selectedAddressKey === frontier.marker.focusKey}
-      >
+      <FocusButton marker={frontier.marker} selected={selectedRailKey === frontier.marker.focusKey}>
         <span className="biome-rail-kicker">Coverage frontier</span>
         <strong>
           {frontier.kind === 'start' ? 'Start biome here' : 'Continue authoring here'}
@@ -443,14 +204,13 @@ function RailFrontier({
 }
 
 function HubRailVisit({
-  selectedAddressKey,
+  selectedRailKey,
   visit,
 }: {
-  readonly selectedAddressKey: string | undefined;
+  readonly selectedRailKey: string | undefined;
   readonly visit: Extract<WorkspaceRailEntry, { readonly kind: 'hubGroup' }>['visits'][number];
 }) {
-  const selected =
-    selectedAddressKey !== undefined && hubVisitOwnsAddress(visit, selectedAddressKey);
+  const selected = selectedRailKey === visit.marker.focusKey;
   return (
     <li className="biome-hub-rail-visit">
       <FocusButton marker={visit.marker} presentationMarker={visit.visitMarker} selected={selected}>
@@ -467,13 +227,12 @@ function HubRailVisit({
 
 function HubRailGroup({
   entry,
-  selectedAddressKey,
+  selectedRailKey,
 }: {
   readonly entry: Extract<WorkspaceRailEntry, { readonly kind: 'hubGroup' }>;
-  readonly selectedAddressKey: string | undefined;
+  readonly selectedRailKey: string | undefined;
 }) {
-  const selected =
-    selectedAddressKey !== undefined && hubGroupOwnsAddress(entry.node, selectedAddressKey);
+  const selected = selectedRailKey === entry.marker.focusKey;
   return (
     <div className="biome-rail-stop biome-hub-rail-group" data-kind="hubDecision">
       <FocusButton marker={entry.marker} selected={selected}>
@@ -490,7 +249,7 @@ function HubRailGroup({
       {entry.visits.length === 0 ? null : (
         <ol aria-label="Hub visits" className="biome-hub-rail-visits">
           {entry.visits.map((visit) => (
-            <HubRailVisit key={visit.key} selectedAddressKey={selectedAddressKey} visit={visit} />
+            <HubRailVisit key={visit.key} selectedRailKey={selectedRailKey} visit={visit} />
           ))}
         </ol>
       )}
@@ -500,18 +259,18 @@ function HubRailGroup({
 
 function RailEntry({
   entry,
-  selectedAddressKey,
+  selectedRailKey,
 }: {
   readonly entry: WorkspaceRailEntry;
-  readonly selectedAddressKey: string | undefined;
+  readonly selectedRailKey: string | undefined;
 }) {
   switch (entry.kind) {
     case 'node':
-      return <RailNode entry={entry} selectedAddressKey={selectedAddressKey} />;
+      return <RailNode entry={entry} selectedRailKey={selectedRailKey} />;
     case 'hubGroup':
-      return <HubRailGroup entry={entry} selectedAddressKey={selectedAddressKey} />;
+      return <HubRailGroup entry={entry} selectedRailKey={selectedRailKey} />;
     case 'frontier':
-      return <RailFrontier frontier={entry.frontier} selectedAddressKey={selectedAddressKey} />;
+      return <RailFrontier frontier={entry.frontier} selectedRailKey={selectedRailKey} />;
   }
 }
 
@@ -624,53 +383,26 @@ function structureLabelForNode(biome: WorkspaceBiome, node: WorkspaceNode): stri
  */
 export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorkspaceProps) {
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
+  const scopedFocusedOwner =
+    focusedOwner !== null && ownsBiome(focusedOwner, biome) ? focusedOwner : undefined;
   const explicitDestination =
-    focusedOwner !== null && ownsBiome(focusedOwner, biome)
-      ? focusByOwner.get(semanticAddressKey(focusedOwner))
-      : undefined;
-  const explicitAddress =
-    focusedOwner !== null && ownsBiome(focusedOwner, biome)
-      ? (explicitDestination?.focusAddress ?? focusedOwner)
-      : undefined;
-  const explicitKey =
-    explicitAddress === undefined ? undefined : semanticAddressKey(explicitAddress);
-  const completedHubHandoffNode =
-    explicitKey === undefined ||
-    biome.frontier?.kind !== 'exitDecision' ||
-    biome.frontier.owner.source.kind !== 'hubDecision' ||
-    !markerMatches(biome.frontier.marker, explicitKey)
+    scopedFocusedOwner === undefined
       ? undefined
-      : biome.nodes.find(
-          (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
-            node.kind === 'hubDecision',
-        );
-  const explicitNode =
-    explicitKey === undefined
-      ? undefined
-      : (biome.nodes.find((node) => node.key === explicitDestination?.nodeKey) ??
-        nodeForAddress(biome.nodes, explicitKey) ??
-        completedHubHandoffNode);
-  const explicitFrontier =
-    explicitKey === undefined ||
-    biome.frontier === null ||
-    (biome.frontier.kind !== 'start' && biome.frontier.kind !== 'exitDecision') ||
-    (biome.frontier.kind === 'exitDecision' &&
-      biome.frontier.owner.source.kind === 'hubDecision') ||
-    !markerMatches(biome.frontier.marker, explicitKey)
-      ? undefined
-      : ({ kind: 'frontier', marker: biome.frontier.marker } as const);
-  const fallback = fallbackSubject(biome);
-  const subject: InspectorSubject | undefined =
-    explicitNode === undefined
-      ? (explicitFrontier ?? fallback)
-      : { kind: 'node', node: explicitNode };
-  const selectedAddressKey =
-    explicitKey ??
-    (subject?.kind === 'frontier'
-      ? subject.marker.focusKey
-      : subject?.kind === 'node'
-        ? railMarker(subject.node).focusKey
-        : undefined);
+      : focusByOwner.get(semanticAddressKey(scopedFocusedOwner));
+  const defaultSubject = resolveInspectorSubject(
+    biome,
+    biome.defaultInspectorDestination ?? undefined,
+  );
+  const subject =
+    scopedFocusedOwner === undefined
+      ? defaultSubject
+      : (resolveInspectorSubject(biome, explicitDestination?.inspectorSubject) ?? defaultSubject);
+  // An explicit semantic owner intentionally suppresses default rail selection
+  // when it resolves through a coarse fallback or is stale after a removal.
+  const selectedRailKey =
+    scopedFocusedOwner === undefined
+      ? biome.defaultInspectorDestination?.selectedRailKey
+      : explicitDestination?.selectedRailKey;
   const inspectorTitle =
     subject?.kind === 'frontier'
       ? 'Active frontier'
@@ -715,7 +447,7 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
         )}
         <div className="biome-rail">
           {biome.rail.map((entry) => (
-            <RailEntry entry={entry} key={entry.key} selectedAddressKey={selectedAddressKey} />
+            <RailEntry entry={entry} key={entry.key} selectedRailKey={selectedRailKey} />
           ))}
         </div>
         <CompletionOutline completion={biome.completionOutline} />
