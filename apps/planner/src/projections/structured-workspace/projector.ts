@@ -177,7 +177,8 @@ interface MutableProjectionContext {
   readonly catalog: Catalog;
   readonly occurrenceFacts: WorkspaceBiomeOccurrenceAssemblyFacts;
   readonly evaluation: ProjectBiomeEvaluation | undefined;
-  readonly focusByOwner: Map<string, WorkspaceInspectorDestination>;
+  /** Biome-local destination builder; returned as a completed assembly product. */
+  readonly focusDestinations: Map<string, WorkspaceInspectorDestination>;
   readonly biome: BiomeAddress;
   readonly routeKey: string;
   readonly source: WorkspaceBiomeSource;
@@ -296,8 +297,8 @@ function marker(
     findingCount: findings.length,
     focusKey,
   });
-  if (!context.focusByOwner.has(focusKey)) {
-    context.focusByOwner.set(
+  if (!context.focusDestinations.has(focusKey)) {
+    context.focusDestinations.set(
       focusKey,
       Object.freeze({
         biomeKey: context.biome.biomeKey,
@@ -1062,6 +1063,27 @@ export function appendUniqueRewardControls(
   }
 }
 
+/** @internal Composition never silently replaces a separately projected focus destination. */
+export function appendUniqueFocusDestinations(
+  destinationsByOwner: Map<string, WorkspaceInspectorDestination>,
+  destinations: Iterable<readonly [string, WorkspaceInspectorDestination]>,
+): void {
+  for (const [key, destination] of destinations) {
+    const ownerKey = semanticAddressKey(destination.ownerAddress);
+    if (key !== ownerKey) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} focus destination key does not match its semantic owner ${ownerKey}`,
+      );
+    }
+    if (destinationsByOwner.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected focus destinations`,
+      );
+    }
+    destinationsByOwner.set(key, destination);
+  }
+}
+
 function authoredOccurrence(
   context: MutableProjectionContext,
   id: OccurrenceId,
@@ -1128,13 +1150,13 @@ function redirectMarkersToNode(
   nodeKey: string,
 ): void {
   for (const focusMarker of markers) {
-    const existing = context.focusByOwner.get(focusMarker.focusKey);
+    const existing = context.focusDestinations.get(focusMarker.focusKey);
     if (existing === undefined) {
       throw new StructuredWorkspaceProjectionContractError(
         `${focusMarker.focusKey} has no registered focus destination`,
       );
     }
-    context.focusByOwner.set(focusMarker.focusKey, Object.freeze({ ...existing, nodeKey }));
+    context.focusDestinations.set(focusMarker.focusKey, Object.freeze({ ...existing, nodeKey }));
   }
 }
 
@@ -1347,7 +1369,7 @@ function redirectHubMainRewardFocus(
   hub: WorkspaceMarker,
   mainReward: WorkspaceMarker,
 ): void {
-  context.focusByOwner.set(
+  context.focusDestinations.set(
     mainReward.focusKey,
     Object.freeze({
       biomeKey: context.biome.biomeKey,
@@ -3723,7 +3745,7 @@ function assertWorkspaceProjectionClosure(
   }
   for (const [owner, workspaceMarker] of markersByOwner) {
     assertWorkspaceMarkerDestination(
-      context.focusByOwner,
+      context.focusDestinations,
       nodesByKey,
       markerPackageKeys.get(owner)!,
       workspaceMarker,
@@ -3849,7 +3871,7 @@ function assertWorkspaceProjectionClosure(
       );
     }
     assertWorkspaceMarkerDestination(
-      context.focusByOwner,
+      context.focusDestinations,
       nodesByKey,
       markerPackageKeys.get(workspaceMarker.focusKey)!,
       workspaceMarker,
@@ -3898,22 +3920,23 @@ export function assertAuthoredWorkspaceLeafProjectionClosure(
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
-  focusByOwner: Map<string, WorkspaceInspectorDestination>,
 ): {
   readonly authoredLeafRequirements: readonly WorkspaceAuthoredLeafRequirement[];
   readonly biome: WorkspaceBiome;
+  readonly focusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
 } {
   const { biome: biomeAddress, evaluation, layout, plan } = source;
   const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(catalog, source);
+  const focusDestinations = new Map<string, WorkspaceInspectorDestination>();
   const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
   const context: MutableProjectionContext = {
     catalog,
     occurrenceFacts,
     evaluation,
-    focusByOwner,
+    focusDestinations,
     biome: biomeAddress,
     routeKey: biomeAddress.routeKey,
     source,
@@ -4064,7 +4087,7 @@ function projectBiome(
   const completedNodes = Object.freeze([...nodes]);
   assertAuthoredWorkspaceLeafProjectionClosure(
     authoredLeafRequirements,
-    context.focusByOwner,
+    context.focusDestinations,
     completedNodes,
   );
   assertWorkspaceProjectionClosure(context, plan, completedNodes);
@@ -4163,6 +4186,7 @@ function projectBiome(
   return Object.freeze({
     authoredLeafRequirements,
     biome: projected,
+    focusDestinations,
     roomControls,
     rewardControls,
   });
@@ -4585,7 +4609,8 @@ export function createStructuredWorkspaceProjection(
       const sources = createWorkspaceProjectSourceIndex(catalog, project, evaluation);
       const routes = sources.routes.map((routeSource) => {
         const biomes = routeSource.biomes.map((biomeSource) => {
-          const projected = projectBiome(catalog, biomeSource, focusByOwner);
+          const projected = projectBiome(catalog, biomeSource);
+          appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
           authoredLeafRequirements.push(...projected.authoredLeafRequirements);
@@ -4599,17 +4624,19 @@ export function createStructuredWorkspaceProjection(
           findingCount: routeSource.evaluation?.findings.length ?? 0,
           focusKey: semanticAddressKey(routeAddress),
         });
-        focusByOwner.set(
-          routeMarker.focusKey,
-          Object.freeze({
-            focusAddress: routeAddress,
-            focusKey: routeMarker.focusKey,
-            nodeKey: `route:${routeSource.routeKey}`,
-            ownerAddress: routeAddress,
-            region: 'routeRail',
-            routeKey: routeSource.routeKey,
-          }),
-        );
+        appendUniqueFocusDestinations(focusByOwner, [
+          [
+            routeMarker.focusKey,
+            Object.freeze<WorkspaceInspectorDestination>({
+              focusAddress: routeAddress,
+              focusKey: routeMarker.focusKey,
+              nodeKey: `route:${routeSource.routeKey}`,
+              ownerAddress: routeAddress,
+              region: 'routeRail',
+              routeKey: routeSource.routeKey,
+            }),
+          ],
+        ]);
         return Object.freeze({
           biomes: Object.freeze(biomes),
           label: catalog.routes.byKey[routeSource.routeKey]?.label ?? routeSource.routeKey,
