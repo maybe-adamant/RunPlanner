@@ -60,7 +60,7 @@ import {
   type WorkspaceBiome,
   type WorkspaceNode,
   type WorkspaceRailEntry,
-} from './structuredWorkspace';
+} from './structured-workspace';
 
 const projection = createStructuredWorkspaceProjection(catalog, {
   candidateSessions: createCandidateSessionFactory(catalog),

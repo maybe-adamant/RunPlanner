@@ -164,6 +164,17 @@ The projection owns visual grouping, ordering, compact summaries, coverage
 markers, Preboss and completion-outline facts, and semantic focus destinations.
 React renders that projection and dispatches semantic commands.
 
+### Public Workspace Entry
+
+Application composition and React consume the structured workspace only through
+the `projections/structured-workspace` public entry. Its exported vocabulary,
+service, interaction helpers, and closure-audit seam are the stable projection
+contract. Contract declarations and projector assembly are private modules:
+the projector may consume the contract, but neither module may depend on the
+public entry or become an alternate consumer import path. This keeps workspace
+construction replaceable without making React or application composition depend
+on its internal assembly order.
+
 Creation establishes explicit transient semantic focus through the existing
 semantic-owner action. Every authored start selects its created Room Occurrence.
 Creating an ordinary target selects its target owner while remaining in the

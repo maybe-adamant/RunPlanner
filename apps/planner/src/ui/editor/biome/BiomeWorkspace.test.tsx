@@ -39,7 +39,7 @@ import type {
   WorkspaceBiome,
   WorkspaceNode,
   WorkspaceOccurrenceWorkbenchNode,
-} from '../../../projections/structuredWorkspace';
+} from '../../../projections/structured-workspace';
 import { findingSelected, semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import {
   authoredProjectRedoRequested,

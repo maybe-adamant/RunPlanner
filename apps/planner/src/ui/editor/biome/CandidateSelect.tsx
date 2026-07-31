@@ -1,5 +1,5 @@
 import { presentCandidateLabel } from '../../../projections/candidateProjection';
-import type { WorkspaceCandidateInteraction } from '../../../projections/structuredWorkspace';
+import type { WorkspaceCandidateInteraction } from '../../../projections/structured-workspace';
 import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 import { candidateMayBeAuthored, candidateSelectState } from '../../feedback/candidatePresentation';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';

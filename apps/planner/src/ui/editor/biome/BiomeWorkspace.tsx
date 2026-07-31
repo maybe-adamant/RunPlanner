@@ -14,7 +14,7 @@ import {
   type WorkspaceRailEntry,
   type WorkspaceRoomSummary,
   type WorkspaceAuthoringFrontier,
-} from '../../../projections/structuredWorkspace';
+} from '../../../projections/structured-workspace';
 import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '../../../state/store';
 import { FindingCount, SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';

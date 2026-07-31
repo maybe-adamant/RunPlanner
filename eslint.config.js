@@ -26,6 +26,17 @@ const rewardKernelImportPatterns = [
   '@run-planner/engine/reward-kernel',
   '@run-planner/engine/reward-kernel/**',
 ];
+const structuredWorkspaceBoundaryImportPatterns = [
+  {
+    group: ['**/projections/structuredWorkspace'],
+    message: 'The structured workspace moved to the structured-workspace public entry point.',
+  },
+  {
+    group: ['**/projections/structured-workspace/*'],
+    message:
+      'Structured-workspace contract and construction modules are private; import the public entry point.',
+  },
+];
 
 export default tseslint.config(
   {
@@ -58,6 +69,18 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.flat.recommended.rules,
       ...reactRefresh.configs.vite.rules,
+    },
+  },
+  {
+    files: ['apps/planner/src/**/*.{ts,tsx}', 'apps/planner/test/**/*.{ts,tsx}'],
+    ignores: ['apps/planner/src/projections/structured-workspace/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: structuredWorkspaceBoundaryImportPatterns,
+        },
+      ],
     },
   },
   {
@@ -97,10 +120,11 @@ export default tseslint.config(
               message: 'Reward projection authority belongs behind the structured workspace.',
             },
             {
-              group: ['**/projections/structuredWorkspace'],
+              group: ['**/projections/structured-workspace'],
               importNames: ['createStructuredWorkspaceProjection'],
               message: 'Structured-workspace construction belongs to application composition.',
             },
+            ...structuredWorkspaceBoundaryImportPatterns,
           ],
         },
       ],

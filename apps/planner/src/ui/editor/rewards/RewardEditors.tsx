@@ -11,7 +11,7 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
-} from '../../../projections/structuredWorkspace';
+} from '../../../projections/structured-workspace';
 import { ContextualPicker } from '../../controls/ContextualPicker';
 import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 

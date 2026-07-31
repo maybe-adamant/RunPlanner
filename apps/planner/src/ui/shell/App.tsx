@@ -26,7 +26,7 @@ import type {
   StructuredWorkspaceProjectionService,
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
-} from '../../projections/structuredWorkspace';
+} from '../../projections/structured-workspace';
 import {
   FindingCount,
   NavigationStatusMarker,

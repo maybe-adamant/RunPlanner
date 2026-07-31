@@ -7,7 +7,7 @@ import { createCandidateSessionFactory } from '../projections/candidateProjectio
 import { createContextualOptionResolver } from '../projections/contextualOptions';
 import { createContextualPickerProjection } from '../projections/contextualPicker';
 import { createRewardPickerProjection } from '../projections/rewardPicker';
-import { createStructuredWorkspaceProjection } from '../projections/structuredWorkspace';
+import { createStructuredWorkspaceProjection } from '../projections/structured-workspace';
 import {
   createAutosaveCoordinator,
   restoreStartupProject,
