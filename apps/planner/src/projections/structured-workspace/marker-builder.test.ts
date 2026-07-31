@@ -1,0 +1,68 @@
+import {
+  createBiomeAddress,
+  createIncomingRewardAddress,
+  createOccurrenceId,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
+import { describe, expect, it } from 'vitest';
+
+import { createWorkspaceBiomeMarkerDestinationBuilder } from './marker-builder';
+
+const biome = createBiomeAddress('Underworld', 'F');
+
+function builder() {
+  return createWorkspaceBiomeMarkerDestinationBuilder({
+    assessmentFor: () => 'unassessed',
+    biome,
+    findingCountFor: () => 0,
+    routeKey: biome.routeKey,
+  });
+}
+
+describe('structured workspace marker destination builder', () => {
+  it('keeps registration private while emitting first-registration destinations', () => {
+    const value = builder();
+    const address = createIncomingRewardAddress(biome, createOccurrenceId('first-registration'));
+    const first = value.emitter.marker(address, 'first-node');
+    const duplicate = value.emitter.marker(address, 'later-node');
+
+    expect('destinations' in value.emitter).toBe(false);
+    expect(first).toEqual(duplicate);
+    expect(value.destinations().get(first.focusKey)?.nodeKey).toBe('first-node');
+  });
+
+  it('redirects exact owners without exposing accumulated registrations to emitters', () => {
+    const value = builder();
+    const reward = value.emitter.marker(
+      createIncomingRewardAddress(biome, createOccurrenceId('redirected-reward')),
+    );
+    const hub = value.emitter.marker(biome, 'hub-node');
+
+    value.emitter.redirect([reward], 'decision-node');
+    value.emitter.redirectTo(reward, hub, 'hub-node');
+
+    const destination = value.destinations().get(reward.focusKey);
+    expect(destination).toMatchObject({
+      focusAddress: hub.address,
+      focusKey: hub.focusKey,
+      nodeKey: 'hub-node',
+      ownerAddress: reward.address,
+    });
+  });
+
+  it('returns snapshots so one family cannot observe later family emissions', () => {
+    const value = builder();
+    const first = value.emitter.marker(
+      createIncomingRewardAddress(biome, createOccurrenceId('first-family')),
+    );
+    const beforeLaterFamily = value.destinations();
+    const later = value.emitter.marker(
+      createIncomingRewardAddress(biome, createOccurrenceId('later-family')),
+    );
+
+    expect(beforeLaterFamily.has(later.focusKey)).toBe(false);
+    expect(value.destinations().has(first.focusKey)).toBe(true);
+    expect(value.destinations().has(later.focusKey)).toBe(true);
+    expect(semanticAddressKey(first.address)).not.toBe(semanticAddressKey(later.address));
+  });
+});
