@@ -94,6 +94,10 @@ import {
 } from './occurrence-facts';
 import { bindWorkspaceInteractions } from './interaction-binding';
 import {
+  assertWorkspaceDefaultInspectorDestinationClosure,
+  defaultInspectorDestination,
+} from './inspector-defaults';
+import {
   appendUniqueBatchInteractionRequirements,
   appendUniqueFrontierInteractionRequirements,
   appendUniqueHubInteractionRequirements,
@@ -5073,6 +5077,15 @@ function projectBiome(
         ]),
     ...hubOutlines.map(railEntryForNode),
   ]);
+  const projectedNodes = Object.freeze(nodes);
+  const inspectorDefaults = Object.freeze({
+    ...(entry === undefined ? {} : { entry }),
+    frontier,
+    nodes: projectedNodes,
+    rail,
+  });
+  const defaultInspector = defaultInspectorDestination(inspectorDefaults);
+  assertWorkspaceDefaultInspectorDestinationClosure(inspectorDefaults, defaultInspector);
   const biomeMarker = marker(
     context,
     biomeAddress,
@@ -5082,12 +5095,13 @@ function projectBiome(
     biomeKey: plan.biomeKey,
     completion: Object.freeze(completion),
     completionOutline: Object.freeze(completion),
+    defaultInspectorDestination: defaultInspector,
     ...(entry === undefined ? {} : { entry }),
     fields,
     frontier,
     label: catalog.biomes.byKey[plan.biomeKey]?.label ?? plan.biomeKey,
     marker: biomeMarker,
-    nodes: Object.freeze(nodes),
+    nodes: projectedNodes,
     rail,
     source: sourceFor(evaluation),
     status: statusFor(evaluation),

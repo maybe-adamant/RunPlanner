@@ -26,6 +26,7 @@ export type {
   WorkspaceCompletedHubHandoffInteraction,
   WorkspaceCompletionNode,
   WorkspaceCountedRewardControl,
+  WorkspaceDefaultInspectorDestination,
   WorkspaceEphyraSideRoomDescriptor,
   WorkspaceEphyraSideRoomEntryOption,
   WorkspaceEphyraSideRoomEntryOrderControl,
