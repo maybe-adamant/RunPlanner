@@ -146,12 +146,19 @@ describe('workspace candidate interaction families', () => {
       },
     );
     const owner = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start });
-    const interaction = services.structuredWorkspace
-      .project(project, simulateProject(catalog, project))
-      .interactions.takeoverBatches.get(semanticAddressKey(owner));
+    const interactions = services.structuredWorkspace.project(
+      project,
+      simulateProject(catalog, project),
+    ).interactions;
+    const interaction = interactions.takeoverBatches.get(semanticAddressKey(owner));
     if (interaction?.presentation !== 'candidate') {
       throw new Error('F authored takeover candidate interaction is missing');
     }
+
+    expect(interactions.exitFrontierCapabilities.get(semanticAddressKey(owner))).toEqual({
+      structural: 'createBatch',
+      takeover: true,
+    });
 
     expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
 
@@ -164,6 +171,37 @@ describe('workspace candidate interaction families', () => {
     events.length = 0;
     expect(interaction.load()).toBe(candidates);
     expect(events).toEqual([]);
+  });
+
+  it('does not advertise an existing decision takeover as an active frontier capability', () => {
+    const services = createStructuredWorkspaceTestServices();
+    const biome = createBiomeAddress('Underworld', 'F');
+    const occurrenceId = createOccurrenceId('candidate-interaction-existing-takeover-start');
+    const owner = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId });
+    const started = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'candidate-interaction-existing-takeover',
+        name: 'Candidate interaction existing takeover',
+        configuredBiomeCounts: { Underworld: 1 },
+      }),
+      catalog,
+      {
+        kind: 'CreateStart',
+        biome,
+        gameName: 'F_Opening01',
+        occurrenceId,
+      },
+    );
+    const project = applyProjectCommand(started, catalog, { kind: 'CreateBatch', decision: owner });
+    const interactions = services.structuredWorkspace.project(
+      project,
+      simulateProject(catalog, project),
+    ).interactions;
+    const takeover = interactions.takeoverBatches.get(semanticAddressKey(owner));
+
+    expect(takeover).toMatchObject({ action: 'replace', owner, presentation: 'candidate' });
+    expect(interactions.exitFrontierCapabilities.has(semanticAddressKey(owner))).toBe(false);
+    expect(interactions.structural.has(semanticAddressKey(owner))).toBe(false);
   });
 
   it('loads every family from its addressed domain without reacquiring project evaluation', async () => {
