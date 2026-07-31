@@ -87,8 +87,8 @@ export type {
 } from './contract';
 export {
   assertAuthoredWorkspaceLeafInteractionClosure,
-  assertAuthoredWorkspaceLeafProjectionClosure,
   assertWorkspaceInteractionClosure,
-  authoredWorkspaceLeafRequirements,
-  createStructuredWorkspaceProjection,
-} from './projector';
+} from './audit/interaction-closure';
+export { authoredWorkspaceLeafRequirements } from './audit/authored-leaf-expectations';
+export { assertAuthoredWorkspaceLeafProjectionClosure } from './audit/semantic-closure';
+export { createStructuredWorkspaceProjection } from './projector';

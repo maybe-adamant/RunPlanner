@@ -61,7 +61,7 @@ editor exposes the order directly. Commit 5c intentionally replaces the schema
 9 purchased-set contract. These plans supersede the former presentation-only
 Commit 12 and Commit 13 wording in `IMPLEMENTATION_PLAN.md`.
 
-Campaign A7 through A9 are complete. A7 moved the private marker and
+Campaign A7 through A10 are complete. A7 moved the private marker and
 preliminary-destination builder plus all room-local occurrence assembly into
 their own products. A8 moved ordinary/linked decision assembly and
 topology-owned interaction requirements into sibling modules while preserving
@@ -72,7 +72,16 @@ state authoritative in the returned room product, while the named semantic
 assembly freezes all producer-side nodes, controls, markers, facts, and
 interaction requirements before audit or presentation. The A9 complete
 repository gate passed with 71 test files and 687 tests, typechecks, lint,
-formatting, and the production build. A10 and A11 remain the active Campaign A
+formatting, and the production build. A10 then separated independently derived
+authored leaf and interaction expectations from occurrence-fact agreement,
+semantic reachability, and bound/final interaction closure under `audit/`.
+The workspace barrel preserves the public audit seams through direct exports,
+and an architecture fixture now prohibits expected-side imports from workspace
+product authorities. Focused audit fixtures cover independent leaf activation,
+fact mutations, withheld findings, omitted markers, and bound interactions;
+the established workspace contract fixture retains malformed and duplicate
+owner coverage. A10's typecheck, `npm run test:planner` (38 files, 265 tests),
+lint, formatting, and diff checks passed. A11 remains the active Campaign A
 work before Commit 5b.3 can resume.
 
 An out-of-sequence decision-highlight rail follow-up is complete without
