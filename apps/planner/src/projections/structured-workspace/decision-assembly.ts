@@ -24,26 +24,26 @@ import {
   type WorkspaceBatchRepairScope,
   type WorkspaceFieldsBatchContext,
   type WorkspaceLinkedExitNode,
-  type WorkspaceMarker,
-  type WorkspaceMixedBatchNode,
   type WorkspaceMissingPhysicalTarget,
   type WorkspaceMissingTargetAuthoring,
   type WorkspaceOccurrenceWorkbenchNode,
-  type WorkspaceOrdinaryBatchNode,
   type WorkspacePhysicalTarget,
   type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
   type WorkspaceStageDecisionRemoval,
-  type WorkspaceTakeoverBatchNode,
 } from './contract';
 import type {
   WorkspaceBatchInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
 } from './interaction-requirements';
+import {
+  workspaceDecisionOwnedMarkers,
+  workspaceOccurrenceOwnedMarkers,
+  type WorkspaceDecisionBatchNode,
+} from './marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from './marker-builder';
 import { compareAuthoredTargetsInPhysicalOrder, requiredNormalExitOrdinal } from './ordering';
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
-import { workspaceOccurrenceOwnedMarkers } from './occurrence-assembly';
 import { authoredFieldsActiveCageCountForDecision } from './occurrence-facts';
 import { workspaceRoomRetainsNormalPeers, workspaceRoomTakesOverNormalDoors } from './room-policy';
 import { workspaceRewardStoreLabel } from './reward-labels';
@@ -62,9 +62,6 @@ export type WorkspaceAuthoredLinkedExitDecision = ExitDecision & {
 type AuthoredBatchDecision = WorkspaceAuthoredBatchDecision;
 type AuthoredLinkedExitDecision = WorkspaceAuthoredLinkedExitDecision;
 type AuthoredBatchTarget = WorkspaceAuthoredBatchDecision['normal']['targets'][number];
-
-export type WorkspaceDecisionBatchNode =
-  WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
 
 type WorkspaceMissingTargetSetupPrerequisite = Extract<
   WorkspaceMissingTargetAuthoring,
@@ -152,22 +149,6 @@ function hubStageDecisionRemoval(
     interactionKey: workspaceInteractionKey(owner),
     label: stage === 'preHub' ? 'Remove PreHub' : 'Remove Preboss',
   });
-}
-
-/** Rendered decision containment only; independent audits do not consume it. */
-export function workspaceDecisionOwnedMarkers(
-  node: WorkspaceDecisionBatchNode,
-): readonly WorkspaceMarker[] {
-  return Object.freeze([
-    node.marker,
-    node.selection,
-    ...(node.rewardStore === undefined ? [] : [node.rewardStore]),
-    ...node.targets.flatMap((target) => [
-      target.marker,
-      ...workspaceOccurrenceOwnedMarkers(target.room),
-    ]),
-    ...node.missingTargets.map((target) => target.marker),
-  ]);
 }
 
 function redirectLinkedFocus(

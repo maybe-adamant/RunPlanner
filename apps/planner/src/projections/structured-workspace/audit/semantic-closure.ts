@@ -24,10 +24,10 @@ import {
 } from '../contract';
 import {
   workspaceDecisionOwnedMarkers,
+  workspaceHubMainRewardMarker,
+  workspaceOccurrenceOwnedMarkers,
   type WorkspaceDecisionBatchNode,
-} from '../decision-assembly';
-import { workspaceHubMainRewardMarker } from '../hub-assembly';
-import { workspaceOccurrenceOwnedMarkers } from '../occurrence-assembly';
+} from '../marker-ownership';
 
 function workspaceMarkersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
   switch (node.kind) {

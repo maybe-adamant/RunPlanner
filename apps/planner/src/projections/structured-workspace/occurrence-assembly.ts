@@ -30,7 +30,6 @@ import {
   workspaceSideRoomEntryOrderKey,
   type WorkspaceEphyraSideRoomEntryOption,
   type WorkspaceEphyraSideRoomEntryOrderControl,
-  type WorkspaceMarker,
   type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
   type WorkspaceRoomLocal,
@@ -38,6 +37,7 @@ import {
   type WorkspaceRoomSummary,
 } from './contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
+import { workspaceLocalDetailMarkers, workspaceOccurrenceOwnedMarkers } from './marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from './marker-builder';
 import { workspaceRewardStoreLabel } from './reward-labels';
 
@@ -666,54 +666,6 @@ function roomLocalForOccurrence(
   }
 }
 
-/** A workbench's room-local surface excludes its incoming offer. */
-function localDetailMarkers(roomLocal: WorkspaceRoomLocal): readonly WorkspaceMarker[] {
-  switch (roomLocal.kind) {
-    case 'none':
-    case 'fixed':
-    case 'incomingReward':
-      return Object.freeze([]);
-    case 'ephyra':
-      return roomLocal.sideRooms.kind === 'withheld'
-        ? Object.freeze([])
-        : Object.freeze([
-            roomLocal.sideRooms.group.marker,
-            ...roomLocal.sideRooms.group.slots.flatMap((slot) => [
-              slot.marker,
-              slot.rewardControl.marker,
-            ]),
-          ]);
-    case 'fields':
-      return Object.freeze(roomLocal.cages.map((cage) => cage.control.marker));
-    case 'ship':
-      return Object.freeze(
-        roomLocal.wheels.flatMap((wheel) => [
-          wheel.marker,
-          ...wheel.offers.map((offer) => offer.control.marker),
-        ]),
-      );
-    case 'shop':
-      return Object.freeze(
-        roomLocal.offers.flatMap((offer) => [offer.purchase.marker, offer.rewardControl.marker]),
-      );
-  }
-}
-
-/**
- * Exact occurrence owners may be nested in a decision or linked-exit
- * workbench, but they retain one shared marker package for containment routing.
- */
-export function workspaceOccurrenceOwnedMarkers(
-  room: WorkspaceRoomSummary,
-): readonly WorkspaceMarker[] {
-  return Object.freeze([
-    room.marker,
-    ...room.rewardControls.map((control) => control.marker),
-    ...localDetailMarkers(room.roomLocal),
-    ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),
-  ]);
-}
-
 function occurrenceInteractionRequirements(
   catalog: Catalog,
   room: WorkspaceRoomSummary,
@@ -877,7 +829,7 @@ export function assembleWorkspaceOccurrence(
     inspectorPresentation: 'full' as const,
     kind: 'occurrenceWorkbench' as const,
     key: `occurrence:${semanticAddressKey(address)}`,
-    localDetailMarkers: localDetailMarkers(roomSummary.roomLocal),
+    localDetailMarkers: workspaceLocalDetailMarkers(roomSummary.roomLocal),
     marker: roomSummary.marker,
     room: roomSummary,
   });

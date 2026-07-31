@@ -30,6 +30,7 @@ import type {
   WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
 } from './interaction-requirements';
+import { workspaceHubMainRewardMarker } from './marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from './marker-builder';
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
 import { workspaceTopologyRemovalScope } from './topology-presentation';
@@ -80,25 +81,6 @@ function hubOccurrenceMap(
   return new Map(
     (topology?.occurrences ?? []).map((occurrence) => [occurrence.occurrenceId, occurrence]),
   );
-}
-
-/** Rendered-room helper shared by final marker closure only. */
-export function workspaceHubMainRewardMarker(
-  room: WorkspaceRoomSummary,
-): WorkspaceMarker | undefined {
-  switch (room.roomLocal.kind) {
-    case 'fixed':
-      return room.roomLocal.marker;
-    case 'incomingReward':
-      return room.roomLocal.control.marker;
-    case 'ephyra':
-      return room.roomLocal.incomingReward.marker;
-    case 'none':
-    case 'fields':
-    case 'ship':
-    case 'shop':
-      return undefined;
-  }
 }
 
 /** Hub main offers retain their semantic owner but navigate to the Hub board. */

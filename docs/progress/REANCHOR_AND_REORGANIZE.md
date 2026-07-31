@@ -29,13 +29,13 @@ every biome-local exact focus owner to a final inspector subject and optional
 rail selection, so React resolves only projected keys and no longer recreates
 containment or fallback policy.
 
-A1 through A6 complete the workspace contract correction, interaction-binding
-boundary, projection-owned inspector destinations, and exact React consumption.
-They do not complete Campaign A's internal reorganization. The current
-`projector.ts` still owns occurrence, decision, Hub, topology-interaction, rail,
-expected-owner audit, bound-interaction closure, biome composition, route
-composition, and caching responsibilities. A7 through A11 now finish those
-movements before the feature frontier returns to Commit 5b.3 in
+A1 through A11 complete the workspace contract correction, interaction-binding
+boundary, projection-owned inspector destinations, exact React consumption, and
+the internal workspace reorganization. A7 separated marker/occurrence assembly,
+A8 separated decision and topology-interaction assembly, A9 separated Hub and
+biome semantic assembly, A10 separated independent expectations and closures,
+and A11 separated biome presentation from the cached service facade. The
+feature frontier may now return to Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md). Campaign
 B remains the separate candidate-engine campaign and does not begin as part of
 this correction.
@@ -324,9 +324,9 @@ Moving code is complete only when the new module:
 
 This plan authorizes one small dependency correction and four gated campaigns.
 The original sixteen-to-twenty-commit estimate is superseded by the completed
-review history and the current code audit. Foundation plus eighteen Campaign A
-review commits are delivered; five Campaign A review commits remain. With the
-later campaign ranges below, the truthful program estimate is thirty-four to
+review history and the current code audit. Foundation plus twenty-three Campaign
+A review commits are delivered, including A7 through A11. With the later
+campaign ranges below, the truthful program estimate is thirty-four to
 thirty-seven implementation commits, not an exact quota. A boundary may merge
 when it would otherwise rewrite the same transition twice, or split when a
 vertical semantic family is too large for truthful review.
@@ -351,13 +351,13 @@ path it owns.
 
 ### Relative Work and Risk
 
-| Work                            |            Review commits | Relative size                     | Primary risk                                                                   |
-| ------------------------------- | ------------------------: | --------------------------------- | ------------------------------------------------------------------------------ |
-| Neutral dependency anchor       |               1 delivered | Small                             | Unnecessarily changing external import surfaces                                |
-| Campaign A: workspace and React | 18 delivered, 5 remaining | Extra-large                       | Losing authored reachability, focus, or lazy interaction behavior              |
-| Campaign B: candidates          |                       3–4 | Extra-large                       | Replacing one large file with a universal context or altered coverage recovery |
-| Campaign C: authored core       |                       4–5 | Extra-large                       | Scattering atomic topology and room-state invariants                           |
-| Campaign D: history and rewards |                       3–4 | Extra-large/highest semantic risk | Moving an event to the wrong chronological state                               |
+| Work                            |         Review commits | Relative size                     | Primary risk                                                                   |
+| ------------------------------- | ---------------------: | --------------------------------- | ------------------------------------------------------------------------------ |
+| Neutral dependency anchor       |            1 delivered | Small                             | Unnecessarily changing external import surfaces                                |
+| Campaign A: workspace and React | 23 delivered, complete | Extra-large                       | Losing authored reachability, focus, or lazy interaction behavior              |
+| Campaign B: candidates          |                    3–4 | Extra-large                       | Replacing one large file with a universal context or altered coverage recovery |
+| Campaign C: authored core       |                    4–5 | Extra-large                       | Scattering atomic topology and room-state invariants                           |
+| Campaign D: history and rewards |                    3–4 | Extra-large/highest semantic risk | Moving an event to the wrong chronological state                               |
 
 The range describes review units, not elapsed time. Campaign gates exist so the
 project can reassess value, coupling, and remaining risk before authorizing the
@@ -376,12 +376,10 @@ next broad movement.
 
 ### Campaign A: Workspace Flow and React Consumption
 
-Campaign A remains the only prerequisite before Commit 5b.3 resumes. A1 through
-A6 established the necessary returned products and consumer boundary, but the
-source area is not yet cohesive: its projector still combines several product
-lifecycles and validation policies. A7 through A11 use the established seams to
-finish that reorganization. Exact filenames follow the returned products, not
-a file-count target.
+Campaign A was the prerequisite for Commit 5b.3 to resume. A1 through A6
+established the necessary returned products and consumer boundary; A7 through
+A11 completed the corresponding private ownership boundaries. Exact filenames
+follow returned products, not a file-count target.
 
 #### Campaign A entry characterization
 
@@ -893,9 +891,63 @@ expected-owner, or interaction-family construction/validation logic. A
 maintainer must be able to change one such family in its owning module and
 tests without entering the facade or an unrelated family.
 
-Campaign A closes only after A11, the complete gate, and the corrected audit
-matrix pass. Commit 5b.3 and Commit 5b.4 remain paused until then. Campaign B
-does not begin during A7 through A11.
+**A11 transition note.** `biome-presentation.ts` now transforms one completed
+`WorkspaceBiomeSemanticAssembly` into the final biome rail, Hub visit groups,
+default inspector, and exact inspector/rail destinations. `marker-ownership.ts`
+is a contract-only marker package shared by assembly, presentation, and
+product-facing closure without letting any of those consumers acquire another
+family's construction authority. The cached projector facade now composes
+source indexes, semantic assembly, presentation, independent audits, route and
+project markers, project-wide interaction binding, caching, and final freezing;
+it contains none of the moved occurrence, decision, Hub, rail, or closure
+construction paths. Focused presentation fixtures cover generated and Hub rail
+policy, hidden Hub scaffolds, visit workbench identity, default selection, exact
+destinations, and decision marker aggregation. The architecture fixture enforces
+the final sibling directions and protects neutral marker ownership.
+
+#### Campaign A final responsibility inventory
+
+| Product or concern                      | Named owner                                                | Direct inputs and consumers                                                          |
+| --------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Authored/evaluated lookup               | `source-index.ts`                                          | Catalog, atomic project/evaluation -> biome semantic assembly and facade composition |
+| Room-local occurrence package           | `occurrence-assembly.ts`                                   | One occurrence plus lifecycle facts -> decision and Hub assembly                     |
+| Ordinary, linked, and topology packages | `decision-assembly.ts`, `topology-interaction-assembly.ts` | Authored decision/layout facts -> biome semantic assembly                            |
+| Hub board and visit package             | `hub-assembly.ts`                                          | Authored Hub topology and declarations -> biome semantic assembly                    |
+| Complete biome semantic product         | `biome-semantic-assembly.ts`                               | Source-index product -> presentation, interaction binding, and product-facing audits |
+| Rail/default/destination presentation   | `biome-presentation.ts`                                    | Semantic assembly -> facade composition                                              |
+| Exact executable interactions           | `interaction-binding.ts`                                   | Project-wide semantic requirements and services -> facade composition                |
+| Independent expectations and closure    | `audit/`                                                   | Catalog plus persisted state, then completed products -> facade assertion points     |
+| Final cached workspace                  | `projector.ts`                                             | Returned stage products -> public projection service                                 |
+
+The final production line is deliberately branched rather than serializing
+presentation through interaction binding:
+
+```text
+WorkspaceBiomeSource
+  -> WorkspaceBiomeSemanticAssembly
+       ├-> biome presentation
+       └-> project-wide interaction binding
+catalog + persisted authored state
+  -> independent authored-owner expectations
+semantic products + presentation + bound interactions + expectations
+  -> final closure
+  -> cached workspace facade
+```
+
+The A6 diagnostic baseline was 9,848 non-test structured-workspace lines and a
+6,213-line projector. A7 through A11 measured 9,984, 10,226, 10,438, 10,716,
+and 10,758 non-test lines respectively; the final facade is 349 lines. The
+42-line A10-to-A11 increase names the immutable presentation product, its
+narrow rail-policy fact, and contract-only marker ownership rather than copying
+assembly into a parallel path. The accompanying direction fixture is test code,
+not hidden production machinery. The count is diagnostic evidence: the actual
+enforcement is the returned-product boundaries, focused fixtures, and import
+directions above.
+
+Campaign A is closed after A11, the complete gate, and the corrected audit
+matrix. Commit 5b.3 and Commit 5b.4 are no longer paused; Commit 5b.3 is the
+active feature frontier. Campaign B remains separate and does not begin as part
+of this movement.
 
 ### Campaign B: Candidate Evaluation
 
