@@ -32,7 +32,7 @@ import type {
 } from '@run-planner/engine/simulation';
 
 import { StructuredWorkspaceProjectionContractError } from './contract';
-import { compareAuthoredTargetsInPhysicalOrder, compareCodeUnitStrings } from './ordering';
+import { compareAuthoredTargetsInPhysicalOrder, compareCodeUnitStrings } from './assembly/ordering';
 
 export interface WorkspaceEvaluatedBatchOverlay {
   readonly batch: CanonicalBatch;
