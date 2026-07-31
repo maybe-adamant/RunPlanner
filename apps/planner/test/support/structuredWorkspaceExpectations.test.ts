@@ -8,14 +8,10 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createRepresentativeNOPQProject,
-  nBiome,
-  nOccurrenceId,
-} from '../../../../test/fixtures/surfaceProject';
-import { authoredWorkspaceLeafRequirements } from './authored-leaf-expectations';
+import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '../fixtures/surfaceProject';
+import { expectedWorkspaceLeafRequirements } from './structuredWorkspaceExpectations';
 
-describe('authored workspace leaf expectations', () => {
+describe('structured workspace test expectations', () => {
   it('derives Ephyra detail leaves from authored visit order rather than evaluation coverage', () => {
     const project = createRepresentativeNOPQProject();
     const plan = project.routes
@@ -37,7 +33,7 @@ describe('authored workspace leaf expectations', () => {
       'sideRooms',
       'sideDoor1',
     );
-    const dormant = authoredWorkspaceLeafRequirements(catalog, nBiome, plan);
+    const dormant = expectedWorkspaceLeafRequirements(catalog, nBiome, plan);
     expect(
       dormant.some(
         (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(incoming),
@@ -68,13 +64,13 @@ describe('authored workspace leaf expectations', () => {
         ),
       },
     };
-    const activatedReward = authoredWorkspaceLeafRequirements(catalog, nBiome, visited).find(
+    const activatedReward = expectedWorkspaceLeafRequirements(catalog, nBiome, visited).find(
       (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideReward),
     );
     expect(activatedReward?.interactions.map((interaction) => interaction.kind)).toEqual([
       'reward',
     ]);
-    const activatedChild = authoredWorkspaceLeafRequirements(catalog, nBiome, visited).find(
+    const activatedChild = expectedWorkspaceLeafRequirements(catalog, nBiome, visited).find(
       (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideChild),
     );
     expect(activatedChild?.interactions.map((interaction) => interaction.kind)).toEqual([

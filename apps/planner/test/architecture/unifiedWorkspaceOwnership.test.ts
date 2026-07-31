@@ -11,6 +11,7 @@ const structuredWorkspaceRoot = join(
   repositoryRoot,
   'apps/planner/src/projections/structured-workspace',
 );
+const workspaceTestSupportRoot = join(repositoryRoot, 'apps/planner/test/support');
 
 function productionSources(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -72,10 +73,11 @@ describe('unified workspace ownership boundary', () => {
     }
   });
 
-  it('keeps independently derived authored expectations free of workspace product authorities', () => {
-    const expectedAuditSources = [
-      join(structuredWorkspaceRoot, 'audit/authored-leaf-expectations.ts'),
-      join(structuredWorkspaceRoot, 'audit/authored-interaction-expectations.ts'),
+  it('keeps test-only authored expectations free of workspace product authorities', () => {
+    const expectedSupportSources = [
+      join(workspaceTestSupportRoot, 'structuredWorkspaceClosure.ts'),
+      join(workspaceTestSupportRoot, 'structuredWorkspaceExpectations.ts'),
+      join(workspaceTestSupportRoot, 'structuredWorkspaceStructuralControls.ts'),
     ];
     const forbiddenImports = [
       /from\s+['"][^'"]*source-index['"]/,
@@ -86,27 +88,30 @@ describe('unified workspace ownership boundary', () => {
       /from\s+['"][^'"]*biome-semantic-assembly['"]/,
       /from\s+['"][^'"]*assembly-products['"]/,
       /from\s+['"][^'"]*marker-builder['"]/,
+      /from\s+['"][^'"]*marker-ownership['"]/,
+      /from\s+['"][^'"]*biome-presentation['"]/,
       /from\s+['"][^'"]*topology-presentation['"]/,
       /from\s+['"][^'"]*room-policy['"]/,
       /from\s+['"][^'"]*catalog-room['"]/,
       /from\s+['"][^'"]*inspector-[^'"]*['"]/,
       /from\s+['"][^'"]*interaction-binding['"]/,
       /from\s+['"][^'"]*projector['"]/,
+      /from\s+['"][^'"]*projections\/structured-workspace['"]/,
     ];
 
-    for (const path of expectedAuditSources) {
+    for (const path of expectedSupportSources) {
       const source = readFileSync(path, 'utf8');
       for (const forbiddenImport of forbiddenImports) {
-        expect(
-          source,
-          `${relative(structuredWorkspaceRoot, path)} imports ${forbiddenImport}`,
-        ).not.toMatch(forbiddenImport);
+        expect(source, `${relative(repositoryRoot, path)} imports ${forbiddenImport}`).not.toMatch(
+          forbiddenImport,
+        );
       }
     }
   });
 
   it('keeps final workspace presentation, interaction binding, and facade directional', () => {
     const presentationPath = join(structuredWorkspaceRoot, 'biome-presentation.ts');
+    const semanticAssemblyPath = join(structuredWorkspaceRoot, 'biome-semantic-assembly.ts');
     const interactionBindingPath = join(structuredWorkspaceRoot, 'interaction-binding.ts');
     const markerOwnershipPath = join(structuredWorkspaceRoot, 'marker-ownership.ts');
     const projectorPath = join(structuredWorkspaceRoot, 'projector.ts');
@@ -124,6 +129,12 @@ describe('unified workspace ownership boundary', () => {
       /from\s+['"][^'"]*biome-presentation['"]/,
       /from\s+['"][^'"]*inspector-defaults['"]/,
       /from\s+['"][^'"]*inspector-destinations['"]/,
+    ];
+    const forbiddenSemanticAssemblyImports = [
+      /from\s+['"][^'"]*audit\//,
+      /from\s+['"][^'"]*biome-presentation['"]/,
+      /from\s+['"][^'"]*interaction-binding['"]/,
+      /from\s+['"][^'"]*inspector-[^'"]*['"]/,
     ];
     const forbiddenMarkerOwnershipImports = [
       /from\s+['"][^'"]*source-index['"]/,
@@ -150,6 +161,7 @@ describe('unified workspace ownership boundary', () => {
 
     for (const [path, forbiddenImports] of [
       [presentationPath, forbiddenPresentationImports],
+      [semanticAssemblyPath, forbiddenSemanticAssemblyImports],
       [interactionBindingPath, forbiddenInteractionBindingImports],
       [markerOwnershipPath, forbiddenMarkerOwnershipImports],
       [projectorPath, forbiddenFacadeImports],

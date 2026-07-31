@@ -23,6 +23,7 @@ import {
   oOccurrenceIds,
 } from '../../../test/fixtures/surfaceProject';
 import { assembleWorkspaceOccurrence } from './occurrence-assembly';
+import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceBiomeMarkerDestinationBuilder } from './marker-builder';
 import { createWorkspaceProjectSourceIndex } from './source-index';
@@ -48,10 +49,12 @@ function assemble(
   const source = biomeSource(project, routeKey, biomeKey);
   const occurrence = source.occurrence(occurrenceId);
   if (occurrence === undefined) throw new Error(`${occurrenceId} occurrence is missing`);
-  const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(catalog, source).occurrence(
-    occurrenceId,
-  );
+  const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source).occurrence(occurrenceId);
   if (facts === undefined) throw new Error(`${occurrenceId} facts are missing`);
+  const fieldsActiveCageCount = createWorkspaceFieldsActiveCageCounts(
+    catalog,
+    source,
+  ).countForOccurrence(occurrenceId);
   const markers = createWorkspaceBiomeMarkerDestinationBuilder({
     assessmentFor: (address) =>
       source.evaluation === undefined
@@ -66,6 +69,7 @@ function assemble(
   const assembly = assembleWorkspaceOccurrence({
     biome: source.biome,
     catalog,
+    ...(fieldsActiveCageCount === undefined ? {} : { fieldsActiveCageCount }),
     facts,
     markerDestinations: markers.emitter,
     occurrence,
@@ -212,5 +216,53 @@ describe('structured workspace occurrence assembly', () => {
         (control) => semanticAddressKey(control.owner.address) === semanticAddressKey(incoming),
       ),
     ).toBe(true);
+  });
+
+  it('rejects unknown and missing Ephyra side-room state before dormant details are withheld', () => {
+    const source = biomeSource(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const occurrence = source.occurrence(nOccurrenceId('combat10'));
+    const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source).occurrence(
+      nOccurrenceId('combat10'),
+    );
+    if (
+      occurrence === undefined ||
+      occurrence.state.kind !== 'ephyraCombat' ||
+      facts === undefined
+    ) {
+      throw new Error('dormant Ephyra fixture is missing');
+    }
+    expect(facts.detailsActive).toBe(false);
+    const markers = createWorkspaceBiomeMarkerDestinationBuilder({
+      assessmentFor: () => 'unassessed',
+      biome: source.biome,
+      findingCountFor: () => 0,
+      routeKey: source.biome.routeKey,
+    });
+    const { sideDoor1, ...missingSideRoomState } = occurrence.state.sideRooms;
+    if (sideDoor1 === undefined) throw new Error('dormant Ephyra fixture has no first side room');
+    const unknownSlot = {
+      ...occurrence,
+      state: {
+        ...occurrence.state,
+        sideRooms: {
+          ...occurrence.state.sideRooms,
+          invalidSideDoor: sideDoor1,
+        },
+      },
+    };
+    const missingSlot = {
+      ...occurrence,
+      state: { ...occurrence.state, sideRooms: missingSideRoomState },
+    };
+    const input = (candidate: typeof occurrence) => ({
+      biome: source.biome,
+      catalog,
+      facts,
+      markerDestinations: markers.emitter,
+      occurrence: candidate,
+    });
+
+    expect(() => assembleWorkspaceOccurrence(input(unknownSlot))).toThrow(/no side-room slot/);
+    expect(() => assembleWorkspaceOccurrence(input(missingSlot))).toThrow(/is missing side room/);
   });
 });

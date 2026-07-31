@@ -1,5 +1,3 @@
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
-
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceBiome,
@@ -14,20 +12,6 @@ import {
 export interface WorkspaceInspectorDestinationBindingInput {
   readonly biome: WorkspaceBiome;
   readonly destinationsByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
-}
-
-function sameInspectorSubject(
-  left: WorkspaceInspectorSubject | undefined,
-  right: WorkspaceInspectorSubject | undefined,
-): boolean {
-  if (left === undefined || right === undefined) return left === right;
-  if (left.kind !== right.kind) return false;
-  return left.kind === 'node'
-    ? left.nodeKey ===
-        (right as Extract<WorkspaceInspectorSubject, { readonly kind: 'node' }>).nodeKey
-    : left.frontierFocusKey ===
-        (right as Extract<WorkspaceInspectorSubject, { readonly kind: 'frontier' }>)
-          .frontierFocusKey;
 }
 
 function subjectForDefault(biome: WorkspaceBiome): WorkspaceInspectorSubject | undefined {
@@ -211,23 +195,6 @@ function selectedRailKeysByFocusKey(
   return result;
 }
 
-function directRailMarkerCount(rail: readonly WorkspaceRailEntry[], focusKey: string): number {
-  let count = 0;
-  for (const entry of rail) {
-    switch (entry.kind) {
-      case 'frontier':
-      case 'node':
-        if (entry.marker.focusKey === focusKey) count += 1;
-        break;
-      case 'hubGroup':
-        if (entry.marker.focusKey === focusKey) count += 1;
-        count += entry.visits.filter((visit) => visit.marker.focusKey === focusKey).length;
-        break;
-    }
-  }
-  return count;
-}
-
 /**
  * Decorates biome-local exact focus destinations from final, already-published
  * nodes, rail, frontier, and no-focus default products. No authored topology,
@@ -250,72 +217,5 @@ export function bindWorkspaceInspectorDestinations(
       }),
     );
   }
-  assertWorkspaceInspectorDestinationClosure(input, result);
   return result;
-}
-
-/** Structural closure for final exact-focus presentation products. */
-export function assertWorkspaceInspectorDestinationClosure(
-  input: WorkspaceInspectorDestinationBindingInput,
-  destinationsByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>,
-): void {
-  const railByFocusKey = selectedRailKeysByFocusKey(input.biome.rail);
-  for (const [ownerKey, destination] of destinationsByOwner) {
-    if (semanticAddressKey(destination.ownerAddress) !== ownerKey) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${ownerKey} inspector destination key does not match its semantic owner.`,
-      );
-    }
-    if (semanticAddressKey(destination.focusAddress) !== destination.focusKey) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${ownerKey} inspector destination focus key does not match its focus address.`,
-      );
-    }
-    const expectedSubject = subjectForDestination(input.biome, destination);
-    if (!sameInspectorSubject(destination.inspectorSubject, expectedSubject)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${ownerKey} inspector destination does not resolve to its final workspace subject.`,
-      );
-    }
-    const inspectorSubject = destination.inspectorSubject;
-    switch (inspectorSubject?.kind) {
-      case 'node': {
-        const matches = input.biome.nodes.filter((node) => node.key === inspectorSubject.nodeKey);
-        if (matches.length !== 1) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${ownerKey} inspector node resolves to ${matches.length} workspace nodes.`,
-          );
-        }
-        break;
-      }
-      case 'frontier': {
-        const frontier = input.biome.frontier;
-        if (
-          (frontier?.kind !== 'start' && frontier?.kind !== 'exitDecision') ||
-          frontier.marker.focusKey !== inspectorSubject.frontierFocusKey
-        ) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${ownerKey} inspector frontier does not match the active workspace frontier.`,
-          );
-        }
-        break;
-      }
-      case undefined:
-        break;
-    }
-    const expectedRailKey = railByFocusKey.get(destination.focusKey);
-    if (destination.selectedRailKey !== expectedRailKey) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${ownerKey} inspector rail selection disagrees with final workspace presentation.`,
-      );
-    }
-    if (
-      destination.selectedRailKey !== undefined &&
-      directRailMarkerCount(input.biome.rail, destination.selectedRailKey) === 0
-    ) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${ownerKey} inspector rail selection is not rendered by the workspace rail.`,
-      );
-    }
-  }
 }

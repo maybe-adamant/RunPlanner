@@ -18,6 +18,7 @@ import {
   assembleWorkspaceOccurrence,
   type WorkspaceOccurrenceAssemblyRequest,
 } from './occurrence-assembly';
+import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceBiomeMarkerDestinationBuilder } from './marker-builder';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
@@ -39,7 +40,8 @@ function biomeSource(
 }
 
 function decisionKit(source: WorkspaceBiomeSource) {
-  const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(catalog, source);
+  const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source);
+  const fieldsActiveCageCounts = createWorkspaceFieldsActiveCageCounts(catalog, source);
   const markers = createWorkspaceBiomeMarkerDestinationBuilder({
     assessmentFor: (address) =>
       source.evaluation === undefined
@@ -53,6 +55,9 @@ function decisionKit(source: WorkspaceBiomeSource) {
   });
   const assembleOccurrence = (input: WorkspaceOccurrenceAssemblyRequest) => {
     const occurrenceFacts = facts.occurrence(input.occurrence.occurrenceId);
+    const fieldsActiveCageCount = fieldsActiveCageCounts.countForOccurrence(
+      input.occurrence.occurrenceId,
+    );
     if (occurrenceFacts === undefined) {
       throw new Error(`${input.occurrence.occurrenceId} occurrence facts are missing`);
     }
@@ -60,12 +65,13 @@ function decisionKit(source: WorkspaceBiomeSource) {
       biome: source.biome,
       catalog,
       ...(input.evaluatedRoom === undefined ? {} : { evaluatedRoom: input.evaluatedRoom }),
+      ...(fieldsActiveCageCount === undefined ? {} : { fieldsActiveCageCount }),
       facts: occurrenceFacts,
       markerDestinations: markers.emitter,
       occurrence: input.occurrence,
     });
   };
-  return { assembleOccurrence, markers };
+  return { assembleOccurrence, fieldsActiveCageCounts, markers };
 }
 
 function batchDecision(source: WorkspaceBiomeSource): WorkspaceAuthoredBatchDecision {
@@ -94,6 +100,7 @@ describe('structured workspace decision assembly', () => {
       catalog,
       decision,
       ...(evaluated === undefined ? {} : { evaluated }),
+      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
@@ -123,6 +130,7 @@ describe('structured workspace decision assembly', () => {
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: batchDecision(source),
+      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
@@ -146,6 +154,7 @@ describe('structured workspace decision assembly', () => {
       catalog,
       decision,
       ...(evaluated === undefined ? {} : { evaluated }),
+      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'linkedExit',
       markerDestinations: kit.markers.emitter,
       source,

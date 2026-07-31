@@ -36,6 +36,7 @@ import type {
   WorkspaceBatchInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
 } from './interaction-requirements';
+import type { WorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import {
   workspaceDecisionOwnedMarkers,
   workspaceOccurrenceOwnedMarkers,
@@ -44,7 +45,6 @@ import {
 import type { WorkspaceMarkerDestinationEmitter } from './marker-builder';
 import { compareAuthoredTargetsInPhysicalOrder, requiredNormalExitOrdinal } from './ordering';
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
-import { authoredFieldsActiveCageCountForDecision } from './occurrence-facts';
 import { workspaceRoomRetainsNormalPeers, workspaceRoomTakesOverNormalDoors } from './room-policy';
 import { workspaceRewardStoreLabel } from './reward-labels';
 import type { WorkspaceBiomeSource, WorkspaceEvaluatedBatchOverlay } from './source-index';
@@ -78,6 +78,8 @@ const linkedExitOrdinal = 1;
 interface WorkspaceDecisionAssemblyBaseInput {
   readonly assembleOccurrence: WorkspaceOccurrenceAssembler;
   readonly catalog: Catalog;
+  /** Shared biome-level Fields derivation; this layer must not recompute it. */
+  readonly fieldsActiveCageCounts: WorkspaceFieldsActiveCageCounts;
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly source: WorkspaceBiomeSource;
 }
@@ -262,11 +264,7 @@ function fieldsContextForAuthoredBatch(
   decision: AuthoredBatchDecision,
 ): WorkspaceFieldsBatchContext | undefined {
   if (decision.normal.batchState === null) return undefined;
-  const doorCageRewardCount = authoredFieldsActiveCageCountForDecision(
-    input.catalog,
-    input.source,
-    decision,
-  );
+  const doorCageRewardCount = input.fieldsActiveCageCounts.countForDecision(decision);
   if (doorCageRewardCount === undefined) return undefined;
   const cageTargetCount = decision.normal.targets.filter((target) => {
     const occurrence = input.source.occurrence(target.occurrenceId);

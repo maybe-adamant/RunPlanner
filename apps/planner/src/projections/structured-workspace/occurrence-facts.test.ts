@@ -1,29 +1,15 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import {
-  createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalRewardAddress,
-  createOccurrenceId,
-  createRewardWheelAddress,
-  createRewardWheelOfferAddress,
-  createShopOfferAddress,
-  type ProjectDocument,
-} from '@run-planner/engine/authored-project';
+import { createOccurrenceId, type ProjectDocument } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
-  goldenFBiome,
   goldenFOccurrenceId,
-  goldenHBiome,
 } from '../../../test/fixtures/underworldProject';
 import {
   createRepresentativeNOPQProject,
-  nBiome,
   nOccurrenceId,
-  oBiome,
-  oOccurrenceIds,
 } from '../../../test/fixtures/surfaceProject';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceProjectSourceIndex } from './source-index';
@@ -75,49 +61,21 @@ function withFPrebossSelection(
 }
 
 describe('structured workspace occurrence assembly facts', () => {
-  it('keeps authored detail activation separate from evaluated entry and classifies Ephyra leaves', () => {
+  it('keeps authored detail activation separate from evaluated entry', () => {
     const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(
-      catalog,
       biomeSource(createRepresentativeNOPQProject(), 'Surface', 'N'),
     );
     const activeEphyra = nOccurrenceId('combat05');
     const dormantEphyra = nOccurrenceId('combat10');
-    const activeSideReward = createLocalRewardAddress(
-      nBiome,
-      activeEphyra,
-      'sideRooms',
-      'sideDoor1',
-    );
-    const dormantSideChild = createLocalChildAddress(
-      nBiome,
-      dormantEphyra,
-      'sideRooms',
-      'sideDoor1',
-    );
-    const dormantSideReward = createLocalRewardAddress(
-      nBiome,
-      dormantEphyra,
-      'sideRooms',
-      'sideDoor1',
-    );
 
     expect(facts.occurrence(activeEphyra)?.detailsActive).toBe(true);
     expect(facts.occurrence(dormantEphyra)?.detailsActive).toBe(false);
-    expect(facts.leafLifecycle(createIncomingRewardAddress(nBiome, dormantEphyra))).toBe('active');
-    expect(facts.leafLifecycle(activeSideReward)).toBe('active');
-    expect(facts.leafLifecycle(dormantSideChild)).toBe('dormant');
-    expect(facts.leafLifecycle(dormantSideReward)).toBe('dormant');
-    expect(facts.leafSurface(dormantSideReward)).toBe('withheld');
-    expect(
-      facts.leafLifecycle(createIncomingRewardAddress(nBiome, createOccurrenceId('not-in-plan'))),
-    ).toBe('absent');
+    expect(facts.occurrence(createOccurrenceId('not-in-plan'))).toBeUndefined();
   });
 
-  it('keeps a selected Shop active behind an unresolved prefix and marks its retained unpicked inventory dormant', () => {
+  it('keeps a selected Shop active behind an unresolved prefix while its retained sibling is inactive', () => {
     const shop = createOccurrenceId('golden-f-preboss-shop');
-    const offer = createShopOfferAddress(goldenFBiome, shop, 'MajorNonBoon');
     const selected = createWorkspaceBiomeOccurrenceAssemblyFacts(
-      catalog,
       biomeSource(
         withFPrebossSelection(createGoldenFGHIProject(catalog), 'exit1'),
         'Underworld',
@@ -125,7 +83,6 @@ describe('structured workspace occurrence assembly facts', () => {
       ),
     );
     const unpicked = createWorkspaceBiomeOccurrenceAssemblyFacts(
-      catalog,
       biomeSource(
         withFPrebossSelection(createGoldenFGHIProject(catalog), 'exit2'),
         'Underworld',
@@ -134,41 +91,6 @@ describe('structured workspace occurrence assembly facts', () => {
     );
 
     expect(selected.occurrence(shop)?.detailsActive).toBe(true);
-    expect(selected.leafLifecycle(offer)).toBe('active');
-    expect(selected.leafSurface(offer)).toBe('published');
     expect(unpicked.occurrence(shop)?.detailsActive).toBe(false);
-    expect(unpicked.leafLifecycle(offer)).toBe('dormant');
-    expect(unpicked.leafSurface(offer)).toBe('withheld');
-  });
-
-  it('keeps authored dormant Fields and Ship leaves published for editing', () => {
-    const fields = createWorkspaceBiomeOccurrenceAssemblyFacts(
-      catalog,
-      biomeSource(createGoldenFGHIProject(catalog), 'Underworld', 'H'),
-    );
-    const ship = createWorkspaceBiomeOccurrenceAssemblyFacts(
-      catalog,
-      biomeSource(createRepresentativeNOPQProject(), 'Surface', 'O'),
-    );
-    const cage3 = createLocalRewardAddress(
-      goldenHBiome,
-      createOccurrenceId('golden-h-combat02'),
-      'cages',
-      'cage3',
-    );
-    const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel2');
-    const inactiveOffer = createRewardWheelOfferAddress(
-      oBiome,
-      oOccurrenceIds.combat04,
-      'wheel1',
-      'offer2',
-    );
-
-    expect(fields.leafLifecycle(cage3)).toBe('dormant');
-    expect(fields.leafSurface(cage3)).toBe('published');
-    expect(ship.leafLifecycle(wheel2)).toBe('dormant');
-    expect(ship.leafSurface(wheel2)).toBe('published');
-    expect(ship.leafLifecycle(inactiveOffer)).toBe('dormant');
-    expect(ship.leafSurface(inactiveOffer)).toBe('published');
   });
 });

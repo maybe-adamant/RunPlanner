@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 
 import type {
   WorkspaceInspectorDestination,
+  WorkspaceNode,
   WorkspaceRewardControl,
   WorkspaceRoomPickerControl,
 } from './contract';
@@ -21,6 +22,7 @@ import {
   appendUniqueFocusDestinations,
   appendUniqueRewardControls,
   appendUniqueRoomControls,
+  appendUniqueWorkspaceNodes,
 } from './assembly-products';
 import type {
   WorkspaceBatchInteractionRequirement,
@@ -85,6 +87,23 @@ function redirectedRewardFocusDestination(): WorkspaceInspectorDestination {
     region: 'structure',
     routeKey: biome.routeKey,
   });
+}
+
+function completionNode(key: string): WorkspaceNode {
+  const biome = createBiomeAddress('Underworld', 'F');
+  return Object.freeze({
+    gameName: 'F_Boss01',
+    key,
+    kind: 'completion' as const,
+    label: 'Synthetic completion',
+    marker: Object.freeze({
+      address: biome,
+      assessment: 'unassessed' as const,
+      findingCount: 0,
+      focusKey: semanticAddressKey(biome),
+    }),
+    role: 'boss',
+  }) as WorkspaceNode;
 }
 
 function shipInteractionRequirement(): WorkspaceOccurrenceInteractionRequirement {
@@ -202,6 +221,18 @@ function frontierInteractionRequirement(): WorkspaceFrontierInteractionRequireme
 }
 
 describe('structured workspace assembly products', () => {
+  it('rejects duplicate structural node keys while composing semantic families', () => {
+    const node = completionNode('duplicate-node');
+    const nodes: WorkspaceNode[] = [];
+
+    appendUniqueWorkspaceNodes(nodes, [node]);
+
+    expect(nodes).toEqual([node]);
+    expect(() => appendUniqueWorkspaceNodes(nodes, [node])).toThrow(
+      'duplicate-node has multiple projected workspace nodes',
+    );
+  });
+
   it('rejects duplicate semantic owners while composing returned reward controls', () => {
     const control = explicitControl('duplicate-reward-control');
     const controls = new Map<string, WorkspaceRewardControl>();

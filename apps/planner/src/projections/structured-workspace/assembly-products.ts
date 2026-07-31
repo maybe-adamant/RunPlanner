@@ -3,9 +3,27 @@ import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceInspectorDestination,
+  type WorkspaceNode,
   type WorkspaceRewardControl,
   type WorkspaceRoomPickerControl,
 } from './contract';
+
+/** Composition rejects duplicate structural identities as each family returns nodes. */
+export function appendUniqueWorkspaceNodes(
+  nodes: WorkspaceNode[],
+  additions: Iterable<WorkspaceNode>,
+): void {
+  const keys = new Set(nodes.map((node) => node.key));
+  for (const node of additions) {
+    if (keys.has(node.key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${node.key} has multiple projected workspace nodes`,
+      );
+    }
+    keys.add(node.key);
+    nodes.push(node);
+  }
+}
 
 /** Composition never silently replaces a separately projected room control. */
 export function appendUniqueRoomControls(

@@ -314,26 +314,6 @@ export interface WorkspaceInteractionCatalog {
   readonly topologyRemovals: ReadonlyMap<string, WorkspaceTopologyRemovalInteraction>;
 }
 
-export type WorkspaceAuthoredLeafInteractionKind =
-  | 'reward'
-  | 'rewardWheelOfferCount'
-  | 'rewardWheelPick'
-  | 'rewardWheelStore'
-  | 'shipEncounterCount'
-  | 'shopPurchase'
-  | 'sideRoomEntryOrder'
-  | 'sideRoomGeneration';
-
-export interface WorkspaceAuthoredLeafInteractionRequirement {
-  readonly key: string;
-  readonly kind: WorkspaceAuthoredLeafInteractionKind;
-}
-
-export interface WorkspaceAuthoredLeafRequirement {
-  readonly address: SemanticAddress;
-  readonly interactions: readonly WorkspaceAuthoredLeafInteractionRequirement[];
-}
-
 export class StructuredWorkspaceProjectionContractError extends Error {
   constructor(detail: string) {
     super(detail);

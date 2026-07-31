@@ -51,13 +51,16 @@ import {
   qBiome,
   qOccurrenceIds,
 } from '../../test/fixtures/surfaceProject';
+import {
+  assertExpectedWorkspaceLeafClosure,
+  assertRenderedWorkspaceStructuralControlClosure,
+} from '../../test/support/structuredWorkspaceClosure';
+import { expectedWorkspaceLeafRequirements } from '../../test/support/structuredWorkspaceExpectations';
 import { createCandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
 import {
-  assertWorkspaceInteractionClosure,
-  authoredWorkspaceLeafRequirements,
   createStructuredWorkspaceProjection,
   type WorkspaceBiome,
   type WorkspaceNode,
@@ -77,6 +80,33 @@ const projection = createStructuredWorkspaceProjection(catalog, {
 function workspace(project: ReturnType<typeof createProjectDocument>) {
   const evaluation = simulateProject(catalog, project);
   return projection.project(project, evaluation);
+}
+
+function assertIndependentWorkspaceInteractionClosure(
+  project: ReturnType<typeof createProjectDocument>,
+  projected: ReturnType<typeof workspace>,
+  interactions: typeof projected.interactions,
+): void {
+  assertRenderedWorkspaceStructuralControlClosure({ interactions, routes: projected.routes });
+  for (const route of project.routes) {
+    for (const plan of route.biomes) {
+      const projectedBiome = projected.routes
+        .find((candidate) => candidate.routeKey === route.routeKey)
+        ?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey);
+      if (projectedBiome === undefined)
+        throw new Error(`${plan.biomeKey} workspace biome is missing`);
+      assertExpectedWorkspaceLeafClosure({
+        focusByOwner: projected.focusByOwner,
+        interactions,
+        nodes: projectedBiome.nodes,
+        requirements: expectedWorkspaceLeafRequirements(
+          catalog,
+          { biomeKey: plan.biomeKey, kind: 'biome', routeKey: route.routeKey },
+          plan,
+        ),
+      });
+    }
+  }
 }
 
 function biome(projected: ReturnType<typeof workspace>, biomeKey: string): WorkspaceBiome {
@@ -2147,7 +2177,7 @@ describe('unified structured workspace projection', () => {
       ?.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (decodedPlan === undefined) throw new Error('decoded F plan is missing');
     expect(
-      authoredWorkspaceLeafRequirements(catalog, fBiome, decodedPlan).some(
+      expectedWorkspaceLeafRequirements(catalog, fBiome, decodedPlan).some(
         (requirement) =>
           semanticAddressKey(requirement.address) ===
           semanticAddressKey(createShopOfferAddress(fBiome, shop, offerKey)),
@@ -2238,16 +2268,19 @@ describe('unified structured workspace projection', () => {
 
   it('fails fast when a hard-required projected control lacks its exact interaction', () => {
     const assertMissingInteraction = (
+      project: ReturnType<typeof createProjectDocument>,
       projected: ReturnType<typeof workspace>,
       interactions: typeof projected.interactions,
       expected: RegExp,
     ) => {
       expect(() =>
-        assertWorkspaceInteractionClosure(projected.routes, new Map(), new Map(), interactions),
+        assertIndependentWorkspaceInteractionClosure(project, projected, interactions),
       ).toThrow(expected);
     };
-    const surface = workspace(createRepresentativeNOPQProject());
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const surfaceProject = createRepresentativeNOPQProject();
+    const surface = workspace(surfaceProject);
+    const underworldProject = createGoldenFGHIProject(catalog);
+    const underworld = workspace(underworldProject);
 
     const purchase = createShopPurchaseAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon');
     const withoutShopPurchase = {
@@ -2256,6 +2289,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutShopPurchase.shopPurchases.delete(semanticAddressKey(purchase));
     assertMissingInteraction(
+      surfaceProject,
       surface,
       withoutShopPurchase,
       /Shop purchase .* has no exact workspace interaction/,
@@ -2269,6 +2303,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutShipEncounter.shipEncounterCounts.delete(ship.marker.focusKey);
     assertMissingInteraction(
+      surfaceProject,
       surface,
       withoutShipEncounter,
       /Ship encounter count .* has no exact workspace interaction/,
@@ -2286,6 +2321,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutFieldsOutcome.fieldsCageOutcomes.delete(fields.fieldsCageOutcome.focusKey);
     assertMissingInteraction(
+      underworldProject,
       underworld,
       withoutFieldsOutcome,
       /Fields cage outcome .* has no exact workspace interaction/,
@@ -2302,6 +2338,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutTakeover.takeoverBatches.delete(takeover.takeoverInteractionKey);
     assertMissingInteraction(
+      underworldProject,
       underworld,
       withoutTakeover,
       /takeover batch .* has no exact workspace interaction/,
@@ -2321,6 +2358,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutStart.starts.delete(startFrontier.interactionKey);
     assertMissingInteraction(
+      emptyN,
       startWorkspace,
       withoutStart,
       /start frontier .* has no exact workspace interaction/,
@@ -2348,6 +2386,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutHubCreation.structural.delete(hubFrontier.interactionKey);
     assertMissingInteraction(
+      atHub,
       hubWorkspace,
       withoutHubCreation,
       /Hub creation frontier .* has no exact workspace interaction/,
@@ -2364,6 +2403,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutStagedRemoval.topologyRemovals.delete(staged.sourceDecisionRemoval.interactionKey);
     assertMissingInteraction(
+      surfaceProject,
       surface,
       withoutStagedRemoval,
       /(?:linked-exit topology removal|staged decision removal) .* has no exact workspace interaction/,
@@ -2372,16 +2412,19 @@ describe('unified structured workspace projection', () => {
 
   it('requires direct removals and every advertised frontier capability', () => {
     const assertMissingInteraction = (
+      project: ReturnType<typeof createProjectDocument>,
       projected: ReturnType<typeof workspace>,
       interactions: typeof projected.interactions,
       expected: RegExp,
     ) => {
       expect(() =>
-        assertWorkspaceInteractionClosure(projected.routes, new Map(), new Map(), interactions),
+        assertIndependentWorkspaceInteractionClosure(project, projected, interactions),
       ).toThrow(expected);
     };
-    const underworld = workspace(createGoldenFGHIProject(catalog));
-    const surface = workspace(createRepresentativeNOPQProject());
+    const underworldProject = createGoldenFGHIProject(catalog);
+    const underworld = workspace(underworldProject);
+    const surfaceProject = createRepresentativeNOPQProject();
+    const surface = workspace(surfaceProject);
 
     const ordinary = biome(underworld, 'F').nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
@@ -2394,6 +2437,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutOrdinaryRemoval.topologyRemovals.delete(semanticAddressKey(ordinary.owner));
     assertMissingInteraction(
+      underworldProject,
       underworld,
       withoutOrdinaryRemoval,
       /decision topology removal .* has no exact workspace interaction/,
@@ -2410,6 +2454,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutLinkedRemoval.topologyRemovals.delete(semanticAddressKey(linked.owner));
     assertMissingInteraction(
+      surfaceProject,
       surface,
       withoutLinkedRemoval,
       /linked-exit topology removal .* has no exact workspace interaction/,
@@ -2423,6 +2468,7 @@ describe('unified structured workspace projection', () => {
       semanticAddressKey(biome(surface, 'N').marker.address),
     );
     assertMissingInteraction(
+      surfaceProject,
       surface,
       withoutBiomeRemoval,
       /biome topology removal .* has no exact workspace interaction/,
@@ -2447,6 +2493,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutTakeoverSelection.exitSelections.delete(takeover.selection.focusKey);
     assertMissingInteraction(
+      underworldProject,
       underworld,
       withoutTakeoverSelection,
       /exit selection .* has no exact workspace interaction/,
@@ -2484,6 +2531,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutTakeoverStore.batchRewardStores.delete(storedTakeover.rewardStore.focusKey);
     assertMissingInteraction(
+      storedTakeoverProject,
       storedTakeoverWorkspace,
       withoutTakeoverStore,
       /batch reward store .* has no exact workspace interaction/,
@@ -2505,6 +2553,7 @@ describe('unified structured workspace projection', () => {
     expect(close).toBeDefined();
     withoutHubClose.hubSlots.set(closableSlot.marker.focusKey, hubSlotWithoutClose);
     assertMissingInteraction(
+      surfaceProject,
       surface,
       withoutHubClose,
       /.*closable Hub slot has no exact close interaction/,
@@ -2533,6 +2582,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutFrontierStructural.structural.delete(frontier.interactionKey);
     assertMissingInteraction(
+      atFExitFrontier,
       frontierWorkspace,
       withoutFrontierStructural,
       /exit frontier structural action .* has no exact workspace interaction/,
@@ -2543,6 +2593,7 @@ describe('unified structured workspace projection', () => {
     };
     withoutFrontierTakeover.takeoverBatches.delete(frontier.interactionKey);
     assertMissingInteraction(
+      atFExitFrontier,
       frontierWorkspace,
       withoutFrontierTakeover,
       /exit frontier takeover action .* has no exact workspace interaction/,
