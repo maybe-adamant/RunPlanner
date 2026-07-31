@@ -31,24 +31,30 @@ product/recovery/performance/architecture evidence, and passed the complete
 repository gate. Commit 5a then removed the remaining browser confirmation
 prompts while preserving the existing semantic-command/history flow. Commit
 5b.1 delivered the N rail hierarchy, and Commit 5b.2 delivered direct side-room
-order editing. The feature frontier remains Commit 5b.3's active-only H/O
-room-local presentation in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
-by Commit 5b.4's player-facing product vocabulary and 5b closure. The neutral
-dependency correction and workspace/React Campaign A in
-[`REANCHOR_AND_REORGANIZE.md`](REANCHOR_AND_REORGANIZE.md) are complete. That
-campaign established the authored-first workspace source/assembly products,
-explicit interaction binding, projection-owned default and exact inspector
-destinations, and React consumption without topology or containment
-reconstruction. It retained authored-active controls through invalid or
-unassessed evaluation while moving optional dormant Ephyra side details into
-the same withheld policy as Shop inventory. The final `npm run check` passed
-with 65 test files and 668 tests,
-typechecks, lint, formatting, and production build; its work-count fixtures
-retain zero render evaluation/query work, lazy cached interactions, and the
-product-loop edit/Undo budgets. Commit 5b.3 may now resume. After Commit 5b
-closes, the plan's candidate,
-authored-core, history, and reward campaigns must close before the separate
+order editing. Commit 5b.3's active-only H/O room-local presentation in
+[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) remains
+the feature frontier, but delivery is still paused for workspace/React Campaign
+A in [`REANCHOR_AND_REORGANIZE.md`](REANCHOR_AND_REORGANIZE.md). A1 through A6
+established the authored-first workspace source/assembly products, explicit
+interaction binding, projection-owned default and exact inspector destinations,
+and React consumption without topology or containment reconstruction. They also
+retained authored-active controls through invalid or unassessed evaluation
+while moving optional dormant Ephyra side details into the same withheld policy
+as Shop inventory. Their A6 checkpoint `npm run check` passed with 65 test files
+and 668 tests, typechecks, lint, formatting, and production build; its work-count
+fixtures retain zero render evaluation/query work, lazy cached interactions,
+and the product-loop edit/Undo budgets.
+
+The post-checkpoint comparison against `f69dc709` found that Campaign A's
+contract correction had not completed its internal module reorganization: the
+structured-workspace production area grew from 5,781 to 9,848 lines and the
+main projector still owns 6,213 lines spanning semantic families,
+presentation, audits, closure, and composition. A7 through A11 now move marker
+and occurrence assembly, decision/topology assembly, Hub/biome semantic
+assembly, independent audits, and presentation out of that facade. Commit 5b.3
+resumes only after that corrected Campaign A gate. After Commit 5b closes, the
+plan's candidate, authored-core, history, and reward campaigns must close
+before the separate
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan: schema 10 authors an
 exact Shop purchase order, simulation validates that exact sequence, and the
 editor exposes the order directly. Commit 5c intentionally replaces the schema
