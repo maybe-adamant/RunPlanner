@@ -1074,6 +1074,24 @@ export interface WorkspaceTopologyRemovalInteractionRequirement {
   readonly removals: readonly WorkspaceTopologyRemovalInteraction[];
 }
 
+/**
+ * Production requirement for the authored start frontier of one topology-free
+ * biome. The binder resolves declaration labels and candidate rooms lazily.
+ */
+export interface WorkspaceStartInteractionRequirement {
+  readonly kind: 'start';
+  readonly owner: BiomeAddress;
+  readonly start:
+    | {
+        readonly gameName: string;
+        readonly kind: 'fixed';
+      }
+    | {
+        readonly gameNames: readonly [string, ...string[]];
+        readonly kind: 'choice';
+      };
+}
+
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
@@ -1091,6 +1109,10 @@ function hubInteractionRequirementKey(requirement: WorkspaceHubInteractionRequir
 function topologyRemovalInteractionRequirementKey(
   requirement: WorkspaceTopologyRemovalInteractionRequirement,
 ): string {
+  return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
+}
+
+function startInteractionRequirementKey(requirement: WorkspaceStartInteractionRequirement): string {
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
 
@@ -1380,6 +1402,22 @@ export function appendUniqueTopologyRemovalInteractionRequirements(
   }
 }
 
+/** @internal Composition never silently replaces an authored-biome start requirement. */
+export function appendUniqueStartInteractionRequirements(
+  requirementsByIdentity: Map<string, WorkspaceStartInteractionRequirement>,
+  requirements: Iterable<WorkspaceStartInteractionRequirement>,
+): void {
+  for (const requirement of requirements) {
+    const key = startInteractionRequirementKey(requirement);
+    if (requirementsByIdentity.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected start interaction requirements`,
+      );
+    }
+    requirementsByIdentity.set(key, requirement);
+  }
+}
+
 /** @internal Composition never silently replaces a separately projected focus destination. */
 export function appendUniqueFocusDestinations(
   destinationsByOwner: Map<string, WorkspaceInspectorDestination>,
@@ -1584,6 +1622,42 @@ function topologyRemovalInteractionRequirementsForBiome(
       kind: 'topologyRemovals' as const,
       owner: biome,
       removals: Object.freeze(removals),
+    }),
+  ]);
+}
+
+function startInteractionRequirementsForBiome(
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+): readonly WorkspaceStartInteractionRequirement[] {
+  if (plan.topology !== null) return Object.freeze([]);
+  if (layout.start.kind === 'fixedAuthored') {
+    return Object.freeze([
+      Object.freeze({
+        kind: 'start' as const,
+        owner: biome,
+        start: Object.freeze({ gameName: layout.start.roomGameName, kind: 'fixed' as const }),
+      }),
+    ]);
+  }
+  const [firstGameName, ...laterGameNames] = layout.start.roomGameNames;
+  if (firstGameName === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(biome)} authored-choice start has no declared room`,
+    );
+  }
+  return Object.freeze([
+    Object.freeze({
+      kind: 'start' as const,
+      owner: biome,
+      start: Object.freeze({
+        gameNames: Object.freeze([firstGameName, ...laterGameNames]) as readonly [
+          string,
+          ...string[],
+        ],
+        kind: 'choice' as const,
+      }),
     }),
   ]);
 }
@@ -3364,6 +3438,67 @@ function bindTopologyRemovalInteractions(
   return topologyRemovals;
 }
 
+function bindStartInteractions(
+  catalog: Catalog,
+  candidates: CandidateProjectionSession,
+  services: StructuredWorkspaceContextualServices,
+  requirements: Iterable<WorkspaceStartInteractionRequirement>,
+): ReadonlyMap<string, WorkspaceStartInteraction> {
+  const starts = new Map<string, WorkspaceStartInteraction>();
+  for (const requirement of requirements) {
+    const key = semanticAddressKey(requirement.owner);
+    if (starts.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple bound start interactions`,
+      );
+    }
+    const gameNames =
+      requirement.start.kind === 'fixed'
+        ? Object.freeze([requirement.start.gameName])
+        : requirement.start.gameNames;
+    const rooms = Object.freeze(gameNames.map((gameName) => requireRoom(catalog, gameName)));
+    let model: ContextualPickerModel<RoomDeclaration> | undefined;
+    const load = (): ContextualPickerModel<RoomDeclaration> => {
+      if (model !== undefined) return model;
+      model = services.contextualPicker.project(
+        candidates.startRooms(requirement.owner, rooms),
+        (option) =>
+          Object.freeze({
+            category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
+            label: option.value.label,
+            selected: false,
+          }),
+        (room) => room.gameName,
+      );
+      return model;
+    };
+    if (requirement.start.kind === 'fixed') {
+      starts.set(
+        key,
+        Object.freeze({
+          fixedGameName: requirement.start.gameName,
+          fixedLabel: requireRoom(catalog, requirement.start.gameName).label,
+          key,
+          kind: 'fixed' as const,
+          load,
+          owner: requirement.owner,
+        }),
+      );
+    } else {
+      starts.set(
+        key,
+        Object.freeze({
+          key,
+          kind: 'choice' as const,
+          load,
+          owner: requirement.owner,
+        }),
+      );
+    }
+  }
+  return starts;
+}
+
 function createInteractionCatalog(
   catalog: Catalog,
   project: ProjectDocument,
@@ -3377,6 +3512,7 @@ function createInteractionCatalog(
     string,
     WorkspaceTopologyRemovalInteractionRequirement
   >,
+  startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>,
   roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>,
   rewardControls: ReadonlyMap<string, WorkspaceRewardControl>,
 ): WorkspaceInteractionCatalog {
@@ -3400,6 +3536,12 @@ function createInteractionCatalog(
   );
   const topologyRemovals = bindTopologyRemovalInteractions(
     topologyRemovalInteractionRequirements.values(),
+  );
+  const starts = bindStartInteractions(
+    catalog,
+    candidates,
+    services,
+    startInteractionRequirements.values(),
   );
   const takeoverCandidate = (gameName: string): WorkspaceTakeoverCandidate => {
     const room = requireRoom(catalog, gameName);
@@ -3652,7 +3794,6 @@ function createInteractionCatalog(
   }
 
   const exitFrontierCapabilities = new Map<string, WorkspaceExitFrontierCapabilities>();
-  const starts = new Map<string, WorkspaceStartInteraction>();
   const structural = new Map<string, WorkspaceStructuralInteraction>();
   const takeoverBatches = new Map<string, WorkspaceTakeoverBatchInteraction>();
 
@@ -3660,41 +3801,6 @@ function createInteractionCatalog(
     for (const biomeSource of route.biomes) {
       const { biome, layout, plan } = biomeSource;
       if (plan.topology === null) {
-        const rooms = Object.freeze(
-          (layout.start.kind === 'authoredChoice'
-            ? layout.start.roomGameNames
-            : [layout.start.roomGameName]
-          ).map((gameName) => requireRoom(catalog, gameName)),
-        );
-        let model: ContextualPickerModel<RoomDeclaration> | undefined;
-        starts.set(
-          semanticAddressKey(biome),
-          Object.freeze({
-            ...(layout.start.kind === 'fixedAuthored'
-              ? {
-                  fixedGameName: layout.start.roomGameName,
-                  fixedLabel: requireRoom(catalog, layout.start.roomGameName).label,
-                  kind: 'fixed' as const,
-                }
-              : { kind: 'choice' as const }),
-            key: semanticAddressKey(biome),
-            owner: biome,
-            load(): ContextualPickerModel<RoomDeclaration> {
-              if (model !== undefined) return model;
-              model = services.contextualPicker.project(
-                candidates.startRooms(biome, rooms),
-                (option) =>
-                  Object.freeze({
-                    category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
-                    label: option.value.label,
-                    selected: false,
-                  }),
-                (room) => room.gameName,
-              );
-              return model;
-            },
-          }),
-        );
         continue;
       }
       const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
@@ -4961,6 +5067,78 @@ function assertTopologyRemovalInteractionRequirementsMatchAuthoredState(
   }
 }
 
+interface WorkspaceExpectedStartInteractionRequirement {
+  readonly owner: BiomeAddress;
+  readonly start: WorkspaceStartInteractionRequirement['start'];
+}
+
+/** Independently enumerate start policy from the persisted topology and layout. */
+function expectedStartInteractionRequirements(
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+): ReadonlyMap<string, WorkspaceExpectedStartInteractionRequirement> {
+  if (plan.topology !== null) return new Map();
+  const start =
+    layout.start.kind === 'fixedAuthored'
+      ? Object.freeze({ gameName: layout.start.roomGameName, kind: 'fixed' as const })
+      : Object.freeze({
+          gameNames: Object.freeze([...layout.start.roomGameNames]) as readonly [
+            string,
+            ...string[],
+          ],
+          kind: 'choice' as const,
+        });
+  const key = `start:${semanticAddressKey(biome)}`;
+  return new Map([[key, Object.freeze({ owner: biome, start })]]);
+}
+
+function sameStartInteractionRequirement(
+  actual: WorkspaceStartInteractionRequirement,
+  expected: WorkspaceExpectedStartInteractionRequirement,
+): boolean {
+  if (semanticAddressKey(actual.owner) !== semanticAddressKey(expected.owner)) return false;
+  const expectedStart = expected.start;
+  if (actual.start.kind !== expectedStart.kind) return false;
+  if (actual.start.kind === 'fixed') {
+    return expectedStart.kind === 'fixed' && actual.start.gameName === expectedStart.gameName;
+  }
+  if (expectedStart.kind !== 'choice') return false;
+  return (
+    actual.start.gameNames.length === expectedStart.gameNames.length &&
+    actual.start.gameNames.every((gameName, index) => gameName === expectedStart.gameNames[index])
+  );
+}
+
+function assertStartInteractionRequirementsMatchAuthoredState(
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+  requirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>,
+): void {
+  const expected = expectedStartInteractionRequirements(biome, layout, plan);
+  for (const [key, expectation] of expected) {
+    const requirement = requirements.get(key);
+    if (requirement === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} required authored start interaction is absent`,
+      );
+    }
+    if (!sameStartInteractionRequirement(requirement, expectation)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} start interaction requirement disagrees with authored state`,
+      );
+    }
+  }
+  for (const key of requirements.keys()) {
+    if (!expected.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} projected start interaction requirement has no topology-free biome owner`,
+      );
+    }
+  }
+}
+
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
@@ -4976,6 +5154,7 @@ function projectBiome(
   >;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
+  readonly startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>;
   readonly topologyRemovalInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceTopologyRemovalInteractionRequirement
@@ -4994,6 +5173,7 @@ function projectBiome(
     string,
     WorkspaceTopologyRemovalInteractionRequirement
   >();
+  const startInteractionRequirements = new Map<string, WorkspaceStartInteractionRequirement>();
   const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
   const context: MutableProjectionContext = {
@@ -5177,6 +5357,10 @@ function projectBiome(
     topologyRemovalInteractionRequirements,
     topologyRemovalInteractionRequirementsForBiome(biomeAddress, plan),
   );
+  appendUniqueStartInteractionRequirements(
+    startInteractionRequirements,
+    startInteractionRequirementsForBiome(biomeAddress, layout, plan),
+  );
   assertBatchInteractionRequirementsMatchAuthoredState(
     catalog,
     biomeAddress,
@@ -5194,6 +5378,12 @@ function projectBiome(
     biomeAddress,
     plan,
     topologyRemovalInteractionRequirements,
+  );
+  assertStartInteractionRequirementsMatchAuthoredState(
+    biomeAddress,
+    layout,
+    plan,
+    startInteractionRequirements,
   );
   assertAuthoredWorkspaceLeafProjectionClosure(
     authoredLeafRequirements,
@@ -5302,6 +5492,7 @@ function projectBiome(
     occurrenceInteractionRequirements,
     roomControls,
     rewardControls,
+    startInteractionRequirements,
     topologyRemovalInteractionRequirements,
   });
 }
@@ -5638,6 +5829,49 @@ function assertTopologyRemovalInteractionRequirementClosure(
   }
 }
 
+/** Verify every topology-free biome start binds to its exact projected action. */
+function assertStartInteractionRequirementClosure(
+  requirements: Iterable<WorkspaceStartInteractionRequirement>,
+  catalog: Catalog,
+  interactions: WorkspaceInteractionCatalog,
+): void {
+  const expectedKeys = new Set<string>();
+  for (const requirement of requirements) {
+    const key = semanticAddressKey(requirement.owner);
+    expectedKeys.add(key);
+    const interaction = interactions.starts.get(key);
+    if (
+      interaction === undefined ||
+      interaction.key !== key ||
+      semanticAddressKey(interaction.owner) !== key
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `Start interaction requirement ${key} has no exact workspace interaction`,
+      );
+    }
+    if (requirement.start.kind === 'fixed') {
+      if (
+        interaction.kind !== 'fixed' ||
+        interaction.fixedGameName !== requirement.start.gameName ||
+        interaction.fixedLabel !== requireRoom(catalog, requirement.start.gameName).label
+      ) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `Start interaction requirement ${key} has conflicting fixed-start facts`,
+        );
+      }
+    } else if (interaction.kind !== 'choice') {
+      throw new StructuredWorkspaceProjectionContractError(
+        `Start interaction requirement ${key} has a conflicting choice-start presentation`,
+      );
+    }
+  }
+  if (interactions.starts.size !== expectedKeys.size) {
+    throw new StructuredWorkspaceProjectionContractError(
+      'workspace start interactions have no exact requirement package',
+    );
+  }
+}
+
 function assertWorkspaceRoomInteractionClosure(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,
@@ -5949,6 +6183,7 @@ export function createStructuredWorkspaceProjection(
         string,
         WorkspaceTopologyRemovalInteractionRequirement
       >();
+      const startInteractionRequirements = new Map<string, WorkspaceStartInteractionRequirement>();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const authoredLeafRequirements: WorkspaceAuthoredLeafRequirement[] = [];
@@ -5972,6 +6207,10 @@ export function createStructuredWorkspaceProjection(
           appendUniqueTopologyRemovalInteractionRequirements(
             topologyRemovalInteractionRequirements,
             projected.topologyRemovalInteractionRequirements.values(),
+          );
+          appendUniqueStartInteractionRequirements(
+            startInteractionRequirements,
+            projected.startInteractionRequirements.values(),
           );
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
@@ -6030,6 +6269,7 @@ export function createStructuredWorkspaceProjection(
         batchInteractionRequirements,
         hubInteractionRequirements,
         topologyRemovalInteractionRequirements,
+        startInteractionRequirements,
         roomControls,
         rewardControls,
       );
@@ -6041,6 +6281,11 @@ export function createStructuredWorkspaceProjection(
       assertHubInteractionRequirementClosure(hubInteractionRequirements.values(), interactions);
       assertTopologyRemovalInteractionRequirementClosure(
         topologyRemovalInteractionRequirements.values(),
+        interactions,
+      );
+      assertStartInteractionRequirementClosure(
+        startInteractionRequirements.values(),
+        catalog,
         interactions,
       );
       assertWorkspaceInteractionClosure(

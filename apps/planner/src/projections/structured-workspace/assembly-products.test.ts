@@ -24,12 +24,14 @@ import {
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueRewardControls,
   appendUniqueRoomControls,
+  appendUniqueStartInteractionRequirements,
   appendUniqueTopologyRemovalInteractionRequirements,
 } from './projector';
 import type {
   WorkspaceBatchInteractionRequirement,
   WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
+  WorkspaceStartInteractionRequirement,
   WorkspaceTopologyRemovalInteractionRequirement,
 } from './projector';
 
@@ -154,6 +156,17 @@ function topologyRemovalInteractionRequirement(): WorkspaceTopologyRemovalIntera
   });
 }
 
+function startInteractionRequirement(): WorkspaceStartInteractionRequirement {
+  return Object.freeze({
+    kind: 'start' as const,
+    owner: createBiomeAddress('Underworld', 'F'),
+    start: Object.freeze({
+      gameNames: Object.freeze(['F_Opening01']) as readonly [string, ...string[]],
+      kind: 'choice' as const,
+    }),
+  });
+}
+
 describe('structured workspace assembly products', () => {
   it('rejects duplicate semantic owners while composing returned reward controls', () => {
     const control = explicitControl('duplicate-reward-control');
@@ -248,5 +261,18 @@ describe('structured workspace assembly products', () => {
     expect(() =>
       appendUniqueTopologyRemovalInteractionRequirements(requirements, [requirement]),
     ).toThrow(`${identity} has multiple projected topology-removal interaction requirements`);
+  });
+
+  it('rejects duplicate start requirements by kind and biome owner', () => {
+    const requirement = startInteractionRequirement();
+    const identity = `start:${semanticAddressKey(requirement.owner)}`;
+    const requirements = new Map<string, WorkspaceStartInteractionRequirement>();
+
+    appendUniqueStartInteractionRequirements(requirements, [requirement]);
+
+    expect(requirements.get(identity)).toBe(requirement);
+    expect(() => appendUniqueStartInteractionRequirements(requirements, [requirement])).toThrow(
+      `${identity} has multiple projected start interaction requirements`,
+    );
   });
 });
