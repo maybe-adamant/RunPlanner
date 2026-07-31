@@ -1064,6 +1064,16 @@ export interface WorkspaceHubInteractionRequirement {
   }[];
 }
 
+/**
+ * Production requirements for generic topology-removal controls owned by one
+ * authored biome. Hub-slot closure stays with its Hub board package.
+ */
+export interface WorkspaceTopologyRemovalInteractionRequirement {
+  readonly kind: 'topologyRemovals';
+  readonly owner: BiomeAddress;
+  readonly removals: readonly WorkspaceTopologyRemovalInteraction[];
+}
+
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
@@ -1075,6 +1085,12 @@ function batchInteractionRequirementKey(requirement: WorkspaceBatchInteractionRe
 }
 
 function hubInteractionRequirementKey(requirement: WorkspaceHubInteractionRequirement): string {
+  return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
+}
+
+function topologyRemovalInteractionRequirementKey(
+  requirement: WorkspaceTopologyRemovalInteractionRequirement,
+): string {
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
 
@@ -1348,6 +1364,22 @@ export function appendUniqueHubInteractionRequirements(
   }
 }
 
+/** @internal Composition never silently replaces an authored-biome removal package. */
+export function appendUniqueTopologyRemovalInteractionRequirements(
+  requirementsByIdentity: Map<string, WorkspaceTopologyRemovalInteractionRequirement>,
+  requirements: Iterable<WorkspaceTopologyRemovalInteractionRequirement>,
+): void {
+  for (const requirement of requirements) {
+    const key = topologyRemovalInteractionRequirementKey(requirement);
+    if (requirementsByIdentity.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected topology-removal interaction requirements`,
+      );
+    }
+    requirementsByIdentity.set(key, requirement);
+  }
+}
+
 /** @internal Composition never silently replaces a separately projected focus destination. */
 export function appendUniqueFocusDestinations(
   destinationsByOwner: Map<string, WorkspaceInspectorDestination>,
@@ -1510,6 +1542,50 @@ function topologyRemovalScope(
     removedHubDecisionKeys: impact.removedHubDecisionKeys,
     removedOccurrenceIds: impact.removedOccurrenceIds,
   });
+}
+
+/**
+ * Generic removal controls are authored-topology facts, not rendered-node
+ * facts. Keep every valid exit owner reachable even when evaluation blocks or
+ * disconnects its visible suffix.
+ */
+function topologyRemovalInteractionRequirementsForBiome(
+  biome: BiomeAddress,
+  plan: AuthoredBiomePlan,
+): readonly WorkspaceTopologyRemovalInteractionRequirement[] {
+  const topology = plan.topology;
+  if (topology === null) return Object.freeze([]);
+  const removals: WorkspaceTopologyRemovalInteraction[] = [
+    Object.freeze({
+      action: 'clearTopology' as const,
+      command: Object.freeze({ kind: 'ClearTopology' as const, biome }),
+      impact: topologyRemovalScope(biome, describeClearTopologyImpact(topology)),
+      key: semanticAddressKey(biome),
+      owner: biome,
+    }),
+  ];
+  for (const decision of topology.decisions) {
+    if (decision.kind === 'hub') continue;
+    const owner = createExitDecisionAddress(biome, decision.source);
+    const impact = describeExitDecisionRemovalImpact(topology, decision.source);
+    if (impact === undefined) continue;
+    removals.push(
+      Object.freeze({
+        action: 'removeExitDecision' as const,
+        command: Object.freeze({ kind: 'RemoveExitDecision' as const, decision: owner }),
+        impact: topologyRemovalScope(biome, impact),
+        key: semanticAddressKey(owner),
+        owner,
+      }),
+    );
+  }
+  return Object.freeze([
+    Object.freeze({
+      kind: 'topologyRemovals' as const,
+      owner: biome,
+      removals: Object.freeze(removals),
+    }),
+  ]);
 }
 
 /**
@@ -3271,6 +3347,23 @@ function bindHubInteractions(
   return Object.freeze({ hubSlots, hubVisits });
 }
 
+function bindTopologyRemovalInteractions(
+  requirements: Iterable<WorkspaceTopologyRemovalInteractionRequirement>,
+): ReadonlyMap<string, WorkspaceTopologyRemovalInteraction> {
+  const topologyRemovals = new Map<string, WorkspaceTopologyRemovalInteraction>();
+  for (const requirement of requirements) {
+    for (const removal of requirement.removals) {
+      if (topologyRemovals.has(removal.key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${removal.key} has multiple bound topology-removal interactions`,
+        );
+      }
+      topologyRemovals.set(removal.key, removal);
+    }
+  }
+  return topologyRemovals;
+}
+
 function createInteractionCatalog(
   catalog: Catalog,
   project: ProjectDocument,
@@ -3280,6 +3373,10 @@ function createInteractionCatalog(
   occurrenceInteractionRequirements: ReadonlyMap<string, WorkspaceOccurrenceInteractionRequirement>,
   batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>,
   hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>,
+  topologyRemovalInteractionRequirements: ReadonlyMap<
+    string,
+    WorkspaceTopologyRemovalInteractionRequirement
+  >,
   roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>,
   rewardControls: ReadonlyMap<string, WorkspaceRewardControl>,
 ): WorkspaceInteractionCatalog {
@@ -3300,6 +3397,9 @@ function createInteractionCatalog(
   const { hubSlots, hubVisits } = bindHubInteractions(
     candidates,
     hubInteractionRequirements.values(),
+  );
+  const topologyRemovals = bindTopologyRemovalInteractions(
+    topologyRemovalInteractionRequirements.values(),
   );
   const takeoverCandidate = (gameName: string): WorkspaceTakeoverCandidate => {
     const room = requireRoom(catalog, gameName);
@@ -3555,7 +3655,6 @@ function createInteractionCatalog(
   const starts = new Map<string, WorkspaceStartInteraction>();
   const structural = new Map<string, WorkspaceStructuralInteraction>();
   const takeoverBatches = new Map<string, WorkspaceTakeoverBatchInteraction>();
-  const topologyRemovals = new Map<string, WorkspaceTopologyRemovalInteraction>();
 
   for (const route of sources.routes) {
     for (const biomeSource of route.biomes) {
@@ -3600,32 +3699,9 @@ function createInteractionCatalog(
       }
       const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
       const fixedWidthOneTakeover = fixedWidthOneTakeoverForLayout(catalog, layout);
-      topologyRemovals.set(
-        semanticAddressKey(biome),
-        Object.freeze({
-          action: 'clearTopology' as const,
-          command: Object.freeze({ kind: 'ClearTopology' as const, biome }),
-          impact: topologyRemovalScope(biome, describeClearTopologyImpact(plan.topology)),
-          key: semanticAddressKey(biome),
-          owner: biome,
-        }),
-      );
       for (const decision of plan.topology.decisions) {
         if (decision.kind === 'hub') continue;
         const owner = createExitDecisionAddress(biome, decision.source);
-        const removalImpact = describeExitDecisionRemovalImpact(plan.topology, decision.source);
-        if (removalImpact !== undefined) {
-          topologyRemovals.set(
-            semanticAddressKey(owner),
-            Object.freeze({
-              action: 'removeExitDecision' as const,
-              command: Object.freeze({ kind: 'RemoveExitDecision' as const, decision: owner }),
-              impact: topologyRemovalScope(biome, removalImpact),
-              key: semanticAddressKey(owner),
-              owner,
-            }),
-          );
-        }
         if (decision.normal.kind === 'batch') {
           const targetRooms = decision.normal.targets.map((target) =>
             biomeSource.occurrence(target.occurrenceId),
@@ -4659,22 +4735,31 @@ function expectedHubInteractionRequirements(
   return new Map([[key, Object.freeze({ owner, slots, visits })]]);
 }
 
+function sameTopologyRemovalScope(
+  actual: WorkspaceTopologyRemovalScope,
+  expected: WorkspaceTopologyRemovalScope,
+): boolean {
+  const same = <T>(left: readonly T[], right: readonly T[]): boolean =>
+    left.length === right.length && left.every((value, index) => value === right[index]);
+  return (
+    same(
+      actual.removedDecisionOwners.map(semanticAddressKey),
+      expected.removedDecisionOwners.map(semanticAddressKey),
+    ) &&
+    same(actual.removedHubDecisionKeys, expected.removedHubDecisionKeys) &&
+    same(actual.removedOccurrenceIds, expected.removedOccurrenceIds)
+  );
+}
+
 function sameHubSlotClose(
   actual: WorkspaceHubSlotInteraction['close'],
   expected: WorkspaceHubSlotInteraction['close'],
 ): boolean {
   if (actual === undefined || expected === undefined) return actual === expected;
-  const same = <T>(left: readonly T[], right: readonly T[]): boolean =>
-    left.length === right.length && left.every((value, index) => value === right[index]);
   return (
     actual.command.kind === expected.command.kind &&
     semanticAddressKey(actual.command.slot) === semanticAddressKey(expected.command.slot) &&
-    same(
-      actual.impact.removedDecisionOwners.map(semanticAddressKey),
-      expected.impact.removedDecisionOwners.map(semanticAddressKey),
-    ) &&
-    same(actual.impact.removedHubDecisionKeys, expected.impact.removedHubDecisionKeys) &&
-    same(actual.impact.removedOccurrenceIds, expected.impact.removedOccurrenceIds)
+    sameTopologyRemovalScope(actual.impact, expected.impact)
   );
 }
 
@@ -4764,6 +4849,118 @@ function assertHubInteractionRequirementsMatchAuthoredState(
   }
 }
 
+interface WorkspaceExpectedTopologyRemovalInteractionRequirement {
+  readonly owner: BiomeAddress;
+  readonly removals: readonly WorkspaceTopologyRemovalInteraction[];
+}
+
+/**
+ * Independently enumerate generic removal controls from persisted topology.
+ * This does not rely on projected nodes, so blocked and disconnected suffixes
+ * cannot silently lose their semantic removal owner.
+ */
+function expectedTopologyRemovalInteractionRequirements(
+  biome: BiomeAddress,
+  plan: AuthoredBiomePlan,
+): ReadonlyMap<string, WorkspaceExpectedTopologyRemovalInteractionRequirement> {
+  const topology = plan.topology;
+  if (topology === null) return new Map();
+  const removals: WorkspaceTopologyRemovalInteraction[] = [
+    Object.freeze({
+      action: 'clearTopology' as const,
+      command: Object.freeze({ kind: 'ClearTopology' as const, biome }),
+      impact: topologyRemovalScope(biome, describeClearTopologyImpact(topology)),
+      key: semanticAddressKey(biome),
+      owner: biome,
+    }),
+  ];
+  for (const decision of topology.decisions) {
+    if (decision.kind === 'hub') continue;
+    const owner = createExitDecisionAddress(biome, decision.source);
+    const impact = describeExitDecisionRemovalImpact(topology, decision.source);
+    if (impact === undefined) continue;
+    removals.push(
+      Object.freeze({
+        action: 'removeExitDecision' as const,
+        command: Object.freeze({ kind: 'RemoveExitDecision' as const, decision: owner }),
+        impact: topologyRemovalScope(biome, impact),
+        key: semanticAddressKey(owner),
+        owner,
+      }),
+    );
+  }
+  const key = `topologyRemovals:${semanticAddressKey(biome)}`;
+  return new Map([[key, Object.freeze({ owner: biome, removals: Object.freeze(removals) })]]);
+}
+
+function sameTopologyRemovalInteraction(
+  actual: WorkspaceTopologyRemovalInteraction,
+  expected: WorkspaceTopologyRemovalInteraction,
+): boolean {
+  if (
+    actual.action !== expected.action ||
+    actual.key !== expected.key ||
+    semanticAddressKey(actual.owner) !== semanticAddressKey(expected.owner) ||
+    !sameTopologyRemovalScope(actual.impact, expected.impact)
+  ) {
+    return false;
+  }
+  switch (actual.action) {
+    case 'clearTopology':
+      return (
+        expected.action === 'clearTopology' &&
+        semanticAddressKey(actual.command.biome) === semanticAddressKey(expected.command.biome)
+      );
+    case 'removeExitDecision':
+      return (
+        expected.action === 'removeExitDecision' &&
+        semanticAddressKey(actual.command.decision) ===
+          semanticAddressKey(expected.command.decision)
+      );
+  }
+}
+
+function assertTopologyRemovalInteractionRequirementsMatchAuthoredState(
+  biome: BiomeAddress,
+  plan: AuthoredBiomePlan,
+  requirements: ReadonlyMap<string, WorkspaceTopologyRemovalInteractionRequirement>,
+): void {
+  const expected = expectedTopologyRemovalInteractionRequirements(biome, plan);
+  for (const [key, expectation] of expected) {
+    const requirement = requirements.get(key);
+    if (requirement === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} required authored topology-removal interaction package is absent`,
+      );
+    }
+    if (semanticAddressKey(requirement.owner) !== semanticAddressKey(expectation.owner)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} topology-removal requirement has a conflicting semantic owner`,
+      );
+    }
+    if (requirement.removals.length !== expectation.removals.length) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} does not cover every authored topology-removal owner`,
+      );
+    }
+    for (const removal of expectation.removals) {
+      const actual = requirement.removals.find((candidate) => candidate.key === removal.key);
+      if (actual === undefined || !sameTopologyRemovalInteraction(actual, removal)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} topology-removal requirement ${removal.key} disagrees with authored state`,
+        );
+      }
+    }
+  }
+  for (const key of requirements.keys()) {
+    if (!expected.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} projected topology-removal package has no authored biome owner`,
+      );
+    }
+  }
+}
+
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
@@ -4779,6 +4976,10 @@ function projectBiome(
   >;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
+  readonly topologyRemovalInteractionRequirements: ReadonlyMap<
+    string,
+    WorkspaceTopologyRemovalInteractionRequirement
+  >;
 } {
   const { biome: biomeAddress, evaluation, layout, plan } = source;
   const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(catalog, source);
@@ -4789,6 +4990,10 @@ function projectBiome(
   >();
   const batchInteractionRequirements = new Map<string, WorkspaceBatchInteractionRequirement>();
   const hubInteractionRequirements = new Map<string, WorkspaceHubInteractionRequirement>();
+  const topologyRemovalInteractionRequirements = new Map<
+    string,
+    WorkspaceTopologyRemovalInteractionRequirement
+  >();
   const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
   const context: MutableProjectionContext = {
@@ -4968,6 +5173,10 @@ function projectBiome(
   });
   nodes.push(...completion);
   const completedNodes = Object.freeze([...nodes]);
+  appendUniqueTopologyRemovalInteractionRequirements(
+    topologyRemovalInteractionRequirements,
+    topologyRemovalInteractionRequirementsForBiome(biomeAddress, plan),
+  );
   assertBatchInteractionRequirementsMatchAuthoredState(
     catalog,
     biomeAddress,
@@ -4980,6 +5189,11 @@ function projectBiome(
     layout,
     plan,
     hubInteractionRequirements,
+  );
+  assertTopologyRemovalInteractionRequirementsMatchAuthoredState(
+    biomeAddress,
+    plan,
+    topologyRemovalInteractionRequirements,
   );
   assertAuthoredWorkspaceLeafProjectionClosure(
     authoredLeafRequirements,
@@ -5088,6 +5302,7 @@ function projectBiome(
     occurrenceInteractionRequirements,
     roomControls,
     rewardControls,
+    topologyRemovalInteractionRequirements,
   });
 }
 
@@ -5399,6 +5614,30 @@ function assertHubInteractionRequirementClosure(
   }
 }
 
+/** Verify every authored-biome removal package binds to its exact controls. */
+function assertTopologyRemovalInteractionRequirementClosure(
+  requirements: Iterable<WorkspaceTopologyRemovalInteractionRequirement>,
+  interactions: WorkspaceInteractionCatalog,
+): void {
+  const expectedKeys = new Set<string>();
+  for (const requirement of requirements) {
+    for (const removal of requirement.removals) {
+      expectedKeys.add(removal.key);
+      const interaction = interactions.topologyRemovals.get(removal.key);
+      if (interaction === undefined || !sameTopologyRemovalInteraction(interaction, removal)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `Topology-removal requirement ${removal.key} has no exact workspace interaction`,
+        );
+      }
+    }
+  }
+  if (interactions.topologyRemovals.size !== expectedKeys.size) {
+    throw new StructuredWorkspaceProjectionContractError(
+      'workspace topology-removal interactions have no exact requirement package',
+    );
+  }
+}
+
 function assertWorkspaceRoomInteractionClosure(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,
@@ -5706,6 +5945,10 @@ export function createStructuredWorkspaceProjection(
       >();
       const batchInteractionRequirements = new Map<string, WorkspaceBatchInteractionRequirement>();
       const hubInteractionRequirements = new Map<string, WorkspaceHubInteractionRequirement>();
+      const topologyRemovalInteractionRequirements = new Map<
+        string,
+        WorkspaceTopologyRemovalInteractionRequirement
+      >();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const authoredLeafRequirements: WorkspaceAuthoredLeafRequirement[] = [];
@@ -5725,6 +5968,10 @@ export function createStructuredWorkspaceProjection(
           appendUniqueHubInteractionRequirements(
             hubInteractionRequirements,
             projected.hubInteractionRequirements.values(),
+          );
+          appendUniqueTopologyRemovalInteractionRequirements(
+            topologyRemovalInteractionRequirements,
+            projected.topologyRemovalInteractionRequirements.values(),
           );
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
@@ -5782,6 +6029,7 @@ export function createStructuredWorkspaceProjection(
         occurrenceInteractionRequirements,
         batchInteractionRequirements,
         hubInteractionRequirements,
+        topologyRemovalInteractionRequirements,
         roomControls,
         rewardControls,
       );
@@ -5791,6 +6039,10 @@ export function createStructuredWorkspaceProjection(
       );
       assertBatchInteractionRequirementClosure(batchInteractionRequirements.values(), interactions);
       assertHubInteractionRequirementClosure(hubInteractionRequirements.values(), interactions);
+      assertTopologyRemovalInteractionRequirementClosure(
+        topologyRemovalInteractionRequirements.values(),
+        interactions,
+      );
       assertWorkspaceInteractionClosure(
         routes,
         roomControls,

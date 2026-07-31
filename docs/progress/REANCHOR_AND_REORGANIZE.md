@@ -17,7 +17,8 @@ semantic assembly remains in progress. A2.5 made completed biome focus
 destinations an explicit assembly output as well. A4.1 now returns and binds
 the first occurrence-owned non-reward interaction packages explicitly. A4.2
 does the same for authored batch controls. A4.3 does the same for authored Hub
-board slots and visits.
+board slots and visits. A4.4 does the same for generic authored-topology
+removals.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -491,6 +492,17 @@ full downstream-removal scope, plus exact visit choice sets. A board outline
 emits no package. A newly authored, empty board intentionally retains its
 otherwise locked structural-next Visit 1 interaction, preserving the existing
 internal projection contract while the UI keeps that row non-actionable.
+
+**A4.4 transition note.** Authored biome assembly now returns one
+`topologyRemovals` package containing its clear-topology control and every
+non-Hub exit-decision removal whose core removal impact is defined. Binding is
+an exact mechanical handoff because these controls have no candidate or
+service-derived data. An independent persisted-topology audit verifies exact
+owners, commands, and all downstream-removal scope arrays, including retained
+or disconnected suffixes and Hub-source Preboss exits. Hub boards themselves
+still have no generic removal control; Hub-slot closure remains owned by the
+`hubControls` package. Starts, takeover actions, and frontier capabilities
+remain in the source-index binding until their own cohesive requirements exist.
 
 #### A5: Presentation, focus, and closure
 
