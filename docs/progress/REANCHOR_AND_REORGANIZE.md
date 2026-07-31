@@ -729,6 +729,15 @@ leave forwarding wrappers, export the builder, freeze a partial registration
 map, or export a generic projection context. No occurrence consumer may read
 registration state populated by an earlier occurrence.
 
+**A7 transition note.** `marker-builder.ts` now owns the private biome-local
+marker and preliminary-destination map, exposing occurrence and later-family
+assemblers only an emit-and-redirect capability. `occurrence-assembly.ts`
+returns immutable room-local node, control, and interaction-requirement
+products. Its focused fixtures cover ordinary and fixed rooms, Ephyra,
+Fields, Ship, Shop, incoming rewards, and evaluation-absent authored details.
+The builder remains owned by biome composition until A9 freezes the completed
+semantic product.
+
 #### A8: Ordinary, linked, and topology-interaction assembly
 
 - move ordinary and takeover batch targets, linked exits, physical missing and
@@ -741,13 +750,13 @@ registration state populated by an earlier occurrence.
   application assembly only adapts those returned facts into presentation and
   semantic-command products;
 - define a closed `DecisionAssemblyInput` consisting of the current
-  `WorkspaceBiomeSource`, its matching evaluated overlays, explicit pure-core
-  layout facts, an `assembleOccurrence` dependency that returns only
+  `WorkspaceBiomeSource`, its matching evaluated overlay, explicit catalog,
+  an `assembleOccurrence` dependency that returns only
   `WorkspaceOccurrenceAssembly`, and the emit-only
   marker/preliminary-destination capability;
-- limit topology-interaction assembly inputs to that same source and evaluated
-  overlay, explicit pure-core layout/frontier/removal facts, and the declared
-  command-requirement constructors it invokes;
+- limit topology-interaction assembly inputs to catalog plus that same
+  immutable source; it invokes the declared pure-core layout, frontier, and
+  removal queries itself and returns only requirement packages;
 - return nodes, workbenches, controls, and requirement packages explicitly;
 - do not pass `ProjectDocument`, contextual services, candidate sessions, or a
   catch-all workspace context into either assembly, and do not allow either
@@ -759,6 +768,18 @@ registration state populated by an earlier occurrence.
 Shared helpers introduced here must be narrow facts below both consumers, such
 as removal-scope presentation or address equality. They must not combine
 producer enumeration with audit enumeration.
+
+**A8 transition note.** `decision-assembly.ts` now owns ordinary, mixed, and
+takeover batch targets, linked exits, retained and missing physical targets,
+room pickers, repair scopes, and their exact focus redirects. It consumes a
+closed evaluated-overlay variant and an occurrence-product collaborator, never
+the marker builder's accumulated state. `topology-interaction-assembly.ts`
+returns only start, removal, takeover, and frontier requirement packages from
+catalog plus `WorkspaceBiomeSource`; it has no marker, rendered-node,
+candidate-session, or binding input. `topology-presentation.ts` and
+`room-policy.ts` are deliberately narrow shared leaf facts, while the expected
+takeover audit remains independently derived. The original entry, non-Hub,
+Hub, then Hub-handoff ordering stays in biome composition.
 
 #### A9: Hub and biome semantic assembly
 
