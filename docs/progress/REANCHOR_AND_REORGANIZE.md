@@ -22,7 +22,9 @@ removals. A4.5 does the same for topology-free authored starts. A4.6 does the
 same for takeover batches. A4.7 does the same for the coupled frontier
 capability and structural-action family. A4.8 extracts those now-closed
 requirement contracts and their exact binding transformation without moving
-semantic assembly or its independent audits.
+semantic assembly or its independent audits. A5.1 now publishes one explicit
+default inspector destination from the final workspace products; React retains
+its characterization fallback until A6 consumes that destination.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -553,6 +555,19 @@ independent expected-owner audits, closures, and assembly stay in the
 projector, where they still share genuine authored topology and presentation
 context. The small declaration lookup sits beneath both modules, so this
 boundary does not create a reverse dependency.
+
+**A5.1 transition note.** Each projected biome now carries a nullable,
+discriminated `WorkspaceDefaultInspectorDestination`: a direct frontier focus
+and rail key, or a direct node and optional rail key. It is derived only after
+the final entry, frontier, nodes, and rail exist; it does not read the source
+index, raw topology, evaluation, candidates, or UI-session state. A structural
+closure verifies exact node/frontier and rail resolution, while a
+projection-level fixture matrix preserves the established priority: active
+frontier (with its ordinary and Hub handoffs), last incomplete decision, last
+active detail and its containing workbench, entry, first node, then empty.
+`focusByOwner` remains the separate exact semantic-owner navigation product.
+React intentionally continues to use its existing fallback in this slice; A6
+will replace it only after equivalence is retained.
 
 #### A5: Presentation, focus, and closure
 

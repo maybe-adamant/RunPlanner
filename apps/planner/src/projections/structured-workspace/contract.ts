@@ -62,6 +62,25 @@ export interface WorkspaceInspectorDestination {
   readonly routeKey?: string;
 }
 
+/**
+ * The presentation-selected inspector subject when no semantic owner is
+ * explicitly focused. This is deliberately distinct from `focusByOwner`:
+ * exact owner navigation may redirect a leaf into its containing workbench,
+ * while a default may be the active authoring frontier itself.
+ */
+export type WorkspaceDefaultInspectorDestination =
+  | {
+      readonly frontierFocusKey: string;
+      readonly kind: 'frontier';
+      readonly selectedRailKey: string;
+    }
+  | {
+      readonly kind: 'node';
+      readonly nodeKey: string;
+      /** Omitted only when the chosen structural node has no rail entry. */
+      readonly selectedRailKey?: string;
+    };
+
 export interface WorkspaceInteractionChoice<T> {
   readonly label: string;
   readonly value: T;
@@ -753,6 +772,8 @@ export interface WorkspaceBiome {
   readonly biomeKey: string;
   readonly completion: readonly WorkspaceCompletionNode[];
   readonly completionOutline: readonly WorkspaceCompletionNode[];
+  /** Explicitly null only when this workspace has no renderable subject. */
+  readonly defaultInspectorDestination: WorkspaceDefaultInspectorDestination | null;
   readonly entry?: WorkspaceOccurrenceWorkbenchNode;
   readonly fields: readonly WorkspaceBiomeField[];
   readonly frontier: WorkspaceAuthoringFrontier | null;
