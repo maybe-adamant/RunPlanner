@@ -8,6 +8,7 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
   type WorkspaceEphyraSideRoomDescriptor,
+  type WorkspaceEphyraSideRoomGroup,
   type WorkspaceRewardControl,
   type WorkspaceRoomSummary,
 } from '../../../projections/structured-workspace';
@@ -110,10 +111,7 @@ function EphyraSideRoomEntryOrderSelect({
   interactions,
   side,
 }: {
-  readonly group: Extract<
-    WorkspaceRoomSummary['roomLocal'],
-    { readonly kind: 'ephyra' }
-  >['sideRooms'];
+  readonly group: WorkspaceEphyraSideRoomGroup;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly side: WorkspaceEphyraSideRoomDescriptor;
 }) {
@@ -176,119 +174,122 @@ function EphyraSideRoomEntryOrderSelect({
 }
 
 function EphyraWorkbench({
-  detailsActive,
   interactions,
   room,
   showIncomingReward,
 }: {
-  readonly detailsActive: boolean;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'ephyra' }>;
   readonly showIncomingReward: boolean;
 }) {
   const dispatch = useAppDispatch();
-  const group = room.sideRooms;
-  return (
-    <>
-      {!showIncomingReward ? null : (
-        <div className="room-state-with-marker">
-          <SemanticOwnerMarker address={room.incomingReward.marker.address} />
-          <RewardControlEditor
-            control={room.incomingReward}
-            idPrefix={`ephyra-${room.incomingReward.marker.focusKey}`}
-            interactions={interactions}
-          />
-        </div>
-      )}
-      {!detailsActive ? (
-        showIncomingReward ? null : (
+  const incomingReward = !showIncomingReward ? null : (
+    <div className="room-state-with-marker">
+      <SemanticOwnerMarker address={room.incomingReward.marker.address} />
+      <RewardControlEditor
+        control={room.incomingReward}
+        idPrefix={`ephyra-${room.incomingReward.marker.focusKey}`}
+        interactions={interactions}
+      />
+    </div>
+  );
+  if (room.sideRooms.kind === 'withheld') {
+    return (
+      <>
+        {incomingReward}
+        {showIncomingReward ? null : (
           <p className="fixed-room-state">
             Side rooms become available after this room is selected in the visit order.
           </p>
-        )
-      ) : (
-        <section className="ephyra-side-editor" aria-label="Ephyra side rooms">
-          <header className="local-reward-heading">
-            <div className="owner-markers">
-              <h4>Side rooms</h4>
-              <SemanticOwnerMarker address={group.address} />
-            </div>
-            <span className="neutral-status">
-              {group.enteredSlotKeys.length} entered · {group.slots.length} possible
-            </span>
-          </header>
-          <div className="ephyra-side-grid-scroll">
-            <table className="ephyra-side-grid">
-              <caption className="visually-hidden">
-                Ephyra side-room generation and entry order
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Side room</th>
-                  <th scope="col">Generated</th>
-                  <th scope="col">Entry order</th>
-                </tr>
-              </thead>
-              <tbody>
-                {group.slots.map((side) => {
-                  const generation = requireWorkspaceInteraction(
-                    interactions.sideRoomGenerations,
-                    workspaceInteractionKey(side.address),
-                  );
-                  return (
-                    <tr
-                      className="ephyra-side-grid-row"
-                      data-generated={side.generation === 'generated'}
-                      key={side.key}
-                    >
-                      <th scope="row">
-                        <div className="ephyra-side-room-heading">
-                          <p className="card-kicker">Door {side.physicalDoorId}</p>
-                          <div className="owner-markers">
-                            <span>{side.label}</span>
-                            <SemanticOwnerMarker address={side.address} />
-                          </div>
-                        </div>
-                        <div className="ephyra-side-reward room-state-with-marker">
-                          <SemanticOwnerMarker address={side.rewardControl.marker.address} />
-                          <RewardControlEditor
-                            control={side.rewardControl}
-                            idPrefix={`side-${side.marker.focusKey}`}
-                            interactions={interactions}
-                          />
-                        </div>
-                      </th>
-                      <td>
-                        <CandidateSelect
-                          id={`side-${side.marker.focusKey}-generation`}
-                          interaction={generation}
-                          label={`${side.label} generation`}
-                          onReplace={(value) =>
-                            dispatch(
-                              authoredProjectCommandDispatched({
-                                kind: 'ReplaceSideRoomGeneration',
-                                sideRoom: side.address,
-                                generation: value,
-                              }),
-                            )
-                          }
-                        />
-                      </td>
-                      <td>
-                        <EphyraSideRoomEntryOrderSelect
-                          group={group}
-                          interactions={interactions}
-                          side={side}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        )}
+      </>
+    );
+  }
+  const group = room.sideRooms.group;
+  return (
+    <>
+      {incomingReward}
+      <section className="ephyra-side-editor" aria-label="Ephyra side rooms">
+        <header className="local-reward-heading">
+          <div className="owner-markers">
+            <h4>Side rooms</h4>
+            <SemanticOwnerMarker address={group.address} />
           </div>
-        </section>
-      )}
+          <span className="neutral-status">
+            {group.enteredSlotKeys.length} entered · {group.slots.length} possible
+          </span>
+        </header>
+        <div className="ephyra-side-grid-scroll">
+          <table className="ephyra-side-grid">
+            <caption className="visually-hidden">
+              Ephyra side-room generation and entry order
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Side room</th>
+                <th scope="col">Generated</th>
+                <th scope="col">Entry order</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.slots.map((side) => {
+                const generation = requireWorkspaceInteraction(
+                  interactions.sideRoomGenerations,
+                  workspaceInteractionKey(side.address),
+                );
+                return (
+                  <tr
+                    className="ephyra-side-grid-row"
+                    data-generated={side.generation === 'generated'}
+                    key={side.key}
+                  >
+                    <th scope="row">
+                      <div className="ephyra-side-room-heading">
+                        <p className="card-kicker">Door {side.physicalDoorId}</p>
+                        <div className="owner-markers">
+                          <span>{side.label}</span>
+                          <SemanticOwnerMarker address={side.address} />
+                        </div>
+                      </div>
+                      <div className="ephyra-side-reward room-state-with-marker">
+                        <SemanticOwnerMarker address={side.rewardControl.marker.address} />
+                        <RewardControlEditor
+                          control={side.rewardControl}
+                          idPrefix={`side-${side.marker.focusKey}`}
+                          interactions={interactions}
+                        />
+                      </div>
+                    </th>
+                    <td>
+                      <CandidateSelect
+                        id={`side-${side.marker.focusKey}-generation`}
+                        interaction={generation}
+                        label={`${side.label} generation`}
+                        onReplace={(value) =>
+                          dispatch(
+                            authoredProjectCommandDispatched({
+                              kind: 'ReplaceSideRoomGeneration',
+                              sideRoom: side.address,
+                              generation: value,
+                            }),
+                          )
+                        }
+                      />
+                    </td>
+                    <td>
+                      <EphyraSideRoomEntryOrderSelect
+                        group={group}
+                        interactions={interactions}
+                        side={side}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </>
   );
 }
@@ -578,7 +579,6 @@ export function RoomOfferEditor({
       ) : null}
       {state.kind === 'ephyra' ? (
         <EphyraWorkbench
-          detailsActive={room.detailsActive}
           interactions={interactions}
           room={state}
           showIncomingReward={showMainReward}

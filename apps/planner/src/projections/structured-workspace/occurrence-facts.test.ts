@@ -107,9 +107,7 @@ describe('structured workspace occurrence assembly facts', () => {
     expect(facts.leafLifecycle(activeSideReward)).toBe('active');
     expect(facts.leafLifecycle(dormantSideChild)).toBe('dormant');
     expect(facts.leafLifecycle(dormantSideReward)).toBe('dormant');
-    // A3 will move this current React-hidden, prepublished side surface to a
-    // withheld semantic assembly alongside its interaction binding.
-    expect(facts.leafSurface(dormantSideReward)).toBe('published');
+    expect(facts.leafSurface(dormantSideReward)).toBe('withheld');
     expect(
       facts.leafLifecycle(createIncomingRewardAddress(nBiome, createOccurrenceId('not-in-plan'))),
     ).toBe('absent');

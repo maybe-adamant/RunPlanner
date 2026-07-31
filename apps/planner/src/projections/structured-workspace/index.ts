@@ -31,6 +31,7 @@ export type {
   WorkspaceEphyraSideRoomEntryOption,
   WorkspaceEphyraSideRoomEntryOrderControl,
   WorkspaceEphyraSideRoomGroup,
+  WorkspaceEphyraSideRoomSurface,
   WorkspaceExitFrontierCapabilities,
   WorkspaceExitSelectionInteraction,
   WorkspaceExplicitRewardControl,

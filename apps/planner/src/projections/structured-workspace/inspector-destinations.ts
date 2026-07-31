@@ -91,12 +91,16 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
     case 'incomingReward':
     case 'fields':
       break;
-    case 'ephyra':
-      keys.push(
-        room.roomLocal.sideRooms.marker.focusKey,
-        ...room.roomLocal.sideRooms.slots.map((slot) => slot.marker.focusKey),
-      );
+    case 'ephyra': {
+      const sideRooms = room.roomLocal.sideRooms;
+      if (sideRooms.kind === 'published') {
+        keys.push(
+          sideRooms.group.marker.focusKey,
+          ...sideRooms.group.slots.map((slot) => slot.marker.focusKey),
+        );
+      }
       break;
+    }
     case 'fixed':
       keys.push(room.roomLocal.marker.focusKey);
       break;
