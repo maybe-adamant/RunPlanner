@@ -7,6 +7,10 @@ import { describe, expect, it } from 'vitest';
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const uiRoot = join(repositoryRoot, 'apps/planner/src/ui');
 const engineRoot = join(repositoryRoot, 'packages/planner-engine/src');
+const structuredWorkspaceRoot = join(
+  repositoryRoot,
+  'apps/planner/src/projections/structured-workspace',
+);
 
 function productionSources(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -64,6 +68,39 @@ describe('unified workspace ownership boundary', () => {
         expect(source, `${relative(engineRoot, path)} imports a UI library`).not.toMatch(
           forbiddenImport,
         );
+      }
+    }
+  });
+
+  it('keeps independently derived authored expectations free of workspace product authorities', () => {
+    const expectedAuditSources = [
+      join(structuredWorkspaceRoot, 'audit/authored-leaf-expectations.ts'),
+      join(structuredWorkspaceRoot, 'audit/authored-interaction-expectations.ts'),
+    ];
+    const forbiddenImports = [
+      /from\s+['"][^'"]*source-index['"]/,
+      /from\s+['"][^'"]*occurrence-assembly['"]/,
+      /from\s+['"][^'"]*occurrence-facts['"]/,
+      /from\s+['"][^'"]*decision-assembly['"]/,
+      /from\s+['"][^'"]*hub-assembly['"]/,
+      /from\s+['"][^'"]*biome-semantic-assembly['"]/,
+      /from\s+['"][^'"]*assembly-products['"]/,
+      /from\s+['"][^'"]*marker-builder['"]/,
+      /from\s+['"][^'"]*topology-presentation['"]/,
+      /from\s+['"][^'"]*room-policy['"]/,
+      /from\s+['"][^'"]*catalog-room['"]/,
+      /from\s+['"][^'"]*inspector-[^'"]*['"]/,
+      /from\s+['"][^'"]*interaction-binding['"]/,
+      /from\s+['"][^'"]*projector['"]/,
+    ];
+
+    for (const path of expectedAuditSources) {
+      const source = readFileSync(path, 'utf8');
+      for (const forbiddenImport of forbiddenImports) {
+        expect(
+          source,
+          `${relative(structuredWorkspaceRoot, path)} imports ${forbiddenImport}`,
+        ).not.toMatch(forbiddenImport);
       }
     }
   });

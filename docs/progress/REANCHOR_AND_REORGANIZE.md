@@ -846,6 +846,20 @@ Opening -> PreHub -> Hub -> Preboss order.
 - retain omission, duplicate-owner, malformed overlay, withheld-leaf finding,
   and exact-interaction mutation fixtures beside the corresponding audit.
 
+**A10 transition note.** The `audit/` area now separates expected-side
+enumeration from product-facing verification. `authored-leaf-expectations.ts`
+and `authored-interaction-expectations.ts` consume only authored/catalog
+contracts, direct pure-core facts, workspace contracts, and requirement types;
+they do not import source, assembly, presentation, destination, or binding
+products. Requirement agreement, semantic marker reachability, and bound/final
+interaction closure consume completed products in separate modules. The public
+workspace barrel re-exports the established closure seams directly from those
+owners. Architecture coverage prevents expected modules from gaining a
+product-authority import, and focused audit fixtures cover authored activation,
+fact disagreement, omitted markers, withheld finding owners, and exact bound
+interactions while the existing public workspace fixtures retain malformed,
+duplicate-owner, and complete interaction-family coverage.
+
 This is a movement and dependency-enforcement commit. It does not reduce audit
 strictness merely to make extraction easier.
 
