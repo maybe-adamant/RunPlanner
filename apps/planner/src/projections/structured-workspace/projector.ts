@@ -1,12 +1,9 @@
 import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
-  createBiomeFieldAddress,
-  createCompletionRoomAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
-  createHubOpenSetAddress,
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
@@ -35,25 +32,12 @@ import {
   type HubDecisionAddress,
   type HubSlotAddress,
   type HubVisitAddress,
-  type OccurrenceAddress,
   type OccurrenceId,
   type ProjectDocument,
-  type RoomOccurrence,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
-import type {
-  AuthoredFieldDescriptor,
-  BiomeLayout,
-  Catalog,
-  HubDecisionDescriptor,
-} from '@run-planner/engine/catalog-schema';
-import type {
-  CanonicalAuthoredRoom,
-  CanonicalHubDecision,
-  ProjectBiomeEvaluation,
-  ProjectEvaluation,
-  SemanticFinding,
-} from '@run-planner/engine/simulation';
+import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
+import type { ProjectEvaluation, SemanticFinding } from '@run-planner/engine/simulation';
 import {
   assertProjectEvaluationSource,
   evaluateBiomeCompleteness,
@@ -64,27 +48,23 @@ import {
   resolveWorkspaceFixedRewardOffer,
 } from './catalog-room';
 import {
+  appendUniqueFocusDestinations,
+  appendUniqueRewardControls,
+  appendUniqueRoomControls,
+} from './assembly-products';
+import { assembleWorkspaceBiomeSemantics } from './biome-semantic-assembly';
+import { workspaceHubMainRewardMarker } from './hub-assembly';
+import {
   StructuredWorkspaceProjectionContractError,
   workspaceInteractionKey,
   workspaceSideRoomEntryOrderKey,
 } from './contract';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
+import { type WorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
+import { workspaceOccurrenceOwnedMarkers } from './occurrence-assembly';
 import {
-  createWorkspaceBiomeOccurrenceAssemblyFacts,
-  type WorkspaceBiomeOccurrenceAssemblyFacts,
-  type WorkspaceOccurrenceAssemblyFact,
-} from './occurrence-facts';
-import {
-  assembleWorkspaceOccurrence,
-  workspaceOccurrenceOwnedMarkers,
-} from './occurrence-assembly';
-import {
-  assembleWorkspaceDecision,
   workspaceDecisionOwnedMarkers,
-  type WorkspaceAuthoredBatchDecision,
-  type WorkspaceAuthoredLinkedExitDecision,
   type WorkspaceDecisionBatchNode,
-  type WorkspaceDecisionOccurrenceInput,
 } from './decision-assembly';
 import { bindWorkspaceInteractions } from './interaction-binding';
 import {
@@ -109,12 +89,7 @@ import {
   type WorkspaceTakeoverInteractionRequirement,
   type WorkspaceTopologyRemovalInteractionRequirement,
 } from './interaction-requirements';
-import {
-  createWorkspaceBiomeMarkerDestinationBuilder,
-  type WorkspaceMarkerDestinationEmitter,
-} from './marker-builder';
 import { workspaceRoomTakesOverNormalDoors } from './room-policy';
-import { assembleWorkspaceTopologyInteractions } from './topology-interaction-assembly';
 import {
   workspaceRemovalScopeForRoots,
   workspaceTopologyRemovalScope,
@@ -123,15 +98,11 @@ import type {
   StructuredWorkspaceContextualServices,
   StructuredWorkspaceProjection,
   StructuredWorkspaceProjectionService,
-  WorkspaceAssessment,
   WorkspaceAuthoredLeafInteractionKind,
   WorkspaceAuthoredLeafInteractionRequirement,
   WorkspaceAuthoredLeafRequirement,
-  WorkspaceAuthoringFrontier,
   WorkspaceBiome,
-  WorkspaceBiomeField,
   WorkspaceCandidateInteraction,
-  WorkspaceCompletionNode,
   WorkspaceExitFrontierCapabilities,
   WorkspaceHubDecisionNode,
   WorkspaceHubRailEntry,
@@ -146,7 +117,6 @@ import type {
   WorkspaceNode,
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOrdinaryBatchNode,
-  WorkspaceProjectionSource,
   WorkspaceRailEntry,
   WorkspaceRewardControl,
   WorkspaceRoomPickerControl,
@@ -159,551 +129,6 @@ import type {
   WorkspaceTopologyRemovalInteraction,
   WorkspaceTopologyRemovalScope,
 } from './contract';
-
-interface BiomeProjectionContext {
-  readonly catalog: Catalog;
-  readonly occurrenceFacts: WorkspaceBiomeOccurrenceAssemblyFacts;
-  readonly evaluation: ProjectBiomeEvaluation | undefined;
-  /** Write-only marker/destination capability; the builder remains in composition. */
-  readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
-  readonly biome: BiomeAddress;
-  readonly source: WorkspaceBiomeSource;
-}
-
-function statusFor(evaluation: ProjectBiomeEvaluation | undefined): WorkspaceStatus {
-  if (evaluation === undefined) return 'blocked';
-  if (evaluation.authoring === 'incomplete') return 'incomplete';
-  return evaluation.validity;
-}
-
-function sourceFor(evaluation: ProjectBiomeEvaluation | undefined): WorkspaceProjectionSource {
-  if (evaluation === undefined) return 'authored';
-  return evaluation.authoring === 'complete' ? 'canonical' : 'progressive';
-}
-
-function assessmentForSource(
-  source: WorkspaceBiomeSource,
-  address: SemanticAddress,
-): WorkspaceAssessment {
-  const { evaluation } = source;
-  if (evaluation === undefined) return 'blocked';
-  if (evaluation.coverage.kind === 'none') return 'unassessed';
-  if (evaluation.coverage.kind === 'complete') return 'assessed';
-  return source.isAssessed(address) || source.findingsFor(address).length > 0
-    ? 'assessed'
-    : 'unassessed';
-}
-
-function biomeFieldLabel(field: AuthoredFieldDescriptor): string {
-  switch (field.key) {
-    case 'maxNonGoalRewards':
-      return 'Rolled non-goal limit';
-    default:
-      return field.key;
-  }
-}
-
-function projectBiomeFields(
-  context: BiomeProjectionContext,
-  plan: AuthoredBiomePlan,
-  layout: BiomeLayout,
-): readonly WorkspaceBiomeField[] {
-  return Object.freeze(
-    layout.fields.map((field) => {
-      const address = createBiomeFieldAddress(context.biome, field.key);
-      const value = plan.state[field.key] ?? null;
-      const base = {
-        address,
-        key: field.key,
-        label: biomeFieldLabel(field),
-        marker: context.markerDestinations.marker(address),
-      };
-      switch (field.kind) {
-        case 'boolean':
-          if (value !== null && typeof value !== 'boolean') {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${plan.biomeKey} field ${field.key} is not boolean`,
-            );
-          }
-          return Object.freeze({
-            ...base,
-            kind: 'boolean' as const,
-            value,
-            values: Object.freeze([false, true]),
-          });
-        case 'boundedInteger':
-          if (value !== null && typeof value !== 'number') {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${plan.biomeKey} field ${field.key} is not numeric`,
-            );
-          }
-          return Object.freeze({
-            ...base,
-            kind: 'boundedInteger' as const,
-            value,
-            values: Object.freeze(
-              Array.from({ length: field.max - field.min + 1 }, (_, index) => field.min + index),
-            ),
-          });
-        case 'enum':
-          if (value !== null && typeof value !== 'string') {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${plan.biomeKey} field ${field.key} is not an enum value`,
-            );
-          }
-          return Object.freeze({
-            ...base,
-            kind: 'enum' as const,
-            value,
-            values: field.values,
-          });
-      }
-    }),
-  );
-}
-
-/** @internal Composition never silently replaces a separately projected room control. */
-export function appendUniqueRoomControls(
-  controlsByOwner: Map<string, WorkspaceRoomPickerControl>,
-  controls: Iterable<WorkspaceRoomPickerControl>,
-): void {
-  for (const control of controls) {
-    const key = semanticAddressKey(control.address);
-    if (controlsByOwner.has(key)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple projected room controls`,
-      );
-    }
-    controlsByOwner.set(key, control);
-  }
-}
-
-/** @internal Composition never silently replaces a separately projected reward control. */
-export function appendUniqueRewardControls(
-  controlsByOwner: Map<string, WorkspaceRewardControl>,
-  controls: Iterable<WorkspaceRewardControl>,
-): void {
-  for (const control of controls) {
-    const key = semanticAddressKey(control.owner.address);
-    if (controlsByOwner.has(key)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple projected reward controls`,
-      );
-    }
-    controlsByOwner.set(key, control);
-  }
-}
-
-/** @internal Composition never silently replaces a separately projected focus destination. */
-export function appendUniqueFocusDestinations(
-  destinationsByOwner: Map<string, WorkspaceInspectorDestination>,
-  destinations: Iterable<readonly [string, WorkspaceInspectorDestination]>,
-): void {
-  for (const [key, destination] of destinations) {
-    const ownerKey = semanticAddressKey(destination.ownerAddress);
-    if (key !== ownerKey) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} focus destination key does not match its semantic owner ${ownerKey}`,
-      );
-    }
-    if (destinationsByOwner.has(key)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple projected focus destinations`,
-      );
-    }
-    destinationsByOwner.set(key, destination);
-  }
-}
-
-function authoredOccurrence(
-  context: BiomeProjectionContext,
-  id: OccurrenceId,
-): RoomOccurrence | undefined {
-  return context.source.occurrence(id);
-}
-
-function requireOccurrenceAssemblyFacts(
-  context: BiomeProjectionContext,
-  occurrence: RoomOccurrence,
-): WorkspaceOccurrenceAssemblyFact {
-  const facts = context.occurrenceFacts.occurrence(occurrence.occurrenceId);
-  if (facts === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${semanticAddressKey(createOccurrenceAddress(context.biome, occurrence.occurrenceId))} has no authored occurrence assembly facts`,
-    );
-  }
-  return facts;
-}
-
-function hubOccurrenceMap(plan: AuthoredBiomePlan): ReadonlyMap<OccurrenceId, RoomOccurrence> {
-  return new Map(
-    (plan.topology?.occurrences ?? []).map((occurrence) => [occurrence.occurrenceId, occurrence]),
-  );
-}
-
-interface ProjectedHubTarget {
-  readonly canonical?: CanonicalAuthoredRoom;
-  readonly occurrenceId: OccurrenceId;
-}
-
-function hubMainRewardMarker(room: WorkspaceRoomSummary): WorkspaceMarker | undefined {
-  switch (room.roomLocal.kind) {
-    case 'fixed':
-      return room.roomLocal.marker;
-    case 'incomingReward':
-      return room.roomLocal.control.marker;
-    case 'ephyra':
-      return room.roomLocal.incomingReward.marker;
-    case 'none':
-    case 'fields':
-    case 'ship':
-    case 'shop':
-      return undefined;
-  }
-}
-
-/** Hub main offers retain their semantic owner but navigate to the Hub board. */
-function redirectHubMainRewardFocus(
-  context: BiomeProjectionContext,
-  hub: WorkspaceMarker,
-  mainReward: WorkspaceMarker,
-): void {
-  context.markerDestinations.redirectTo(mainReward, hub, `hub:${hub.focusKey}`);
-}
-
-/**
- * The Hub board is one declaration-owned decision.  Materialization may only
- * retain a prefix of it, while the authored decision can retain later rooms
- * and visits.  Project both through the same board shape so React never has
- * to choose between topology and the simulator product.
- */
-interface WorkspaceHubAssembly {
-  readonly hubInteractionRequirements: readonly WorkspaceHubInteractionRequirement[];
-  readonly node: WorkspaceHubDecisionNode;
-  readonly occurrenceInteractionRequirements: readonly WorkspaceOccurrenceInteractionRequirement[];
-  readonly roomControls: readonly WorkspaceRoomPickerControl[];
-  readonly rewardControls: readonly WorkspaceRewardControl[];
-  readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
-}
-
-function projectHubNode(
-  context: BiomeProjectionContext,
-  plan: AuthoredBiomePlan,
-  descriptor: HubDecisionDescriptor,
-  owner: HubDecisionAddress,
-  targets: ReadonlyMap<string, ProjectedHubTarget>,
-  visitOrder: readonly string[],
-  nextVisitIndex: number | undefined,
-  boardAuthored: boolean,
-): WorkspaceHubAssembly {
-  const hubMarker = context.markerDestinations.marker(owner);
-  const occurrences = hubOccurrenceMap(plan);
-  const hubInteractionRequirements: WorkspaceHubInteractionRequirement[] = [];
-  const slotRequirements: WorkspaceHubInteractionRequirement['slots'][number][] = [];
-  const occurrenceInteractionRequirements: WorkspaceOccurrenceInteractionRequirement[] = [];
-  const roomControls: WorkspaceRoomPickerControl[] = [];
-  const rewardControls: WorkspaceRewardControl[] = [];
-  const workbenches: WorkspaceOccurrenceWorkbenchNode[] = [];
-  const roomsBySlot = new Map<string, WorkspaceRoomSummary>();
-  const slots = descriptor.slots.map((slot) => {
-    const target = targets.get(slot.slotKey);
-    const occurrence = target === undefined ? undefined : occurrences.get(target.occurrenceId);
-    const address = createHubSlotAddress(context.biome, descriptor.hubKey, slot.slotKey);
-    const closeImpact =
-      boardAuthored && target !== undefined && plan.topology !== null
-        ? describeHubSlotClosureImpact(
-            plan.topology,
-            descriptor.hubKey,
-            slot.slotKey,
-            descriptor.openCount.min,
-          )
-        : undefined;
-    const close =
-      closeImpact === undefined
-        ? undefined
-        : Object.freeze({
-            command: Object.freeze({ kind: 'CloseHubSlot' as const, slot: address }),
-            impact: workspaceTopologyRemovalScope(context.biome, closeImpact),
-          });
-    const slotMarker = context.markerDestinations.marker(address);
-    const detailsActive =
-      occurrence === undefined
-        ? false
-        : (context.occurrenceFacts.occurrence(occurrence.occurrenceId)?.detailsActive ?? false);
-    const occurrenceAssembly =
-      occurrence === undefined
-        ? undefined
-        : assembleWorkspaceOccurrence({
-            biome: context.biome,
-            catalog: context.catalog,
-            ...(target?.canonical === undefined ? {} : { evaluatedRoom: target.canonical }),
-            facts: requireOccurrenceAssemblyFacts(context, occurrence),
-            markerDestinations: context.markerDestinations,
-            occurrence,
-          });
-    const occurrenceNode = occurrenceAssembly?.node;
-    if (occurrenceNode !== undefined) {
-      occurrenceInteractionRequirements.push(
-        ...occurrenceAssembly!.occurrenceInteractionRequirements,
-      );
-      roomControls.push(...occurrenceAssembly!.roomControls);
-      rewardControls.push(...occurrenceAssembly!.rewardControls);
-      const workbench = Object.freeze({
-        ...occurrenceNode,
-        inspectorPresentation: 'hubRoomLocal' as const,
-        railMarker: slotMarker,
-        railVisibility: 'inspectorOnly' as const,
-      });
-      workbenches.push(workbench);
-      roomsBySlot.set(slot.slotKey, workbench.room);
-      const mainReward = hubMainRewardMarker(workbench.room);
-      if (mainReward !== undefined) redirectHubMainRewardFocus(context, hubMarker, mainReward);
-    }
-    if (boardAuthored) {
-      slotRequirements.push(
-        Object.freeze({
-          choices: Object.freeze([
-            Object.freeze({ label: 'Closed', value: false }),
-            Object.freeze({ label: 'Open', value: true }),
-          ]),
-          ...(close === undefined ? {} : { close }),
-          ...(target === undefined ? {} : { openedOccurrenceId: target.occurrenceId }),
-          owner: address,
-          roomGameName: slot.roomGameName,
-          selected: target !== undefined,
-        }),
-      );
-    }
-    return Object.freeze({
-      canClose: boardAuthored && target !== undefined && !detailsActive,
-      canOpen: boardAuthored && target === undefined && targets.size < descriptor.openCount.max,
-      hubSlotKey: slot.slotKey,
-      label: requireRoom(context.catalog, slot.roomGameName).label,
-      marker: slotMarker,
-      open: target !== undefined,
-      physicalDoorId: slot.physicalDoorId,
-      ...(occurrenceNode === undefined ? {} : { room: occurrenceNode.room }),
-      roomKind: requireRoom(context.catalog, slot.roomGameName).kind,
-      visited: detailsActive,
-    });
-  });
-  const hubVisitSlots = Object.freeze(descriptor.slots.filter((slot) => targets.has(slot.slotKey)));
-  const hubVisitChoices = Object.freeze(
-    hubVisitSlots.map((slot) =>
-      Object.freeze({
-        label: requireRoom(context.catalog, slot.roomGameName).label,
-        value: slot.slotKey,
-      }),
-    ),
-  );
-  const visitRequirements = boardAuthored
-    ? Object.freeze(
-        Array.from(
-          { length: Math.min(descriptor.requiredVisits, visitOrder.length + 1) },
-          (_, index) => {
-            const visitIndex = index + 1;
-            const selectedHubSlotKey = visitOrder[index];
-            return Object.freeze({
-              choices: Object.freeze(
-                hubVisitChoices.filter(
-                  (choice) =>
-                    choice.value === selectedHubSlotKey || !visitOrder.includes(choice.value),
-                ),
-              ),
-              owner: createHubVisitAddress(context.biome, descriptor.hubKey, visitIndex),
-              ...(selectedHubSlotKey === undefined ? {} : { selectedHubSlotKey }),
-            });
-          },
-        ),
-      )
-    : Object.freeze([]);
-  const visits = Array.from({ length: descriptor.requiredVisits }, (_, index) => {
-    const visitIndex = index + 1;
-    const hubSlotKey = visitOrder[index];
-    const authoring =
-      hubSlotKey !== undefined
-        ? ('authored' as const)
-        : nextVisitIndex === visitIndex
-          ? ('next' as const)
-          : ('locked' as const);
-    return Object.freeze({
-      authoring,
-      marker: context.markerDestinations.marker(
-        createHubVisitAddress(context.biome, descriptor.hubKey, visitIndex),
-      ),
-      ...(hubSlotKey === undefined ? {} : { hubSlotKey }),
-      ...(hubSlotKey === undefined || roomsBySlot.get(hubSlotKey) === undefined
-        ? {}
-        : { room: roomsBySlot.get(hubSlotKey)! }),
-      visitIndex,
-    });
-  });
-  const node = Object.freeze({
-    authoring: boardAuthored ? ('authored' as const) : ('outline' as const),
-    kind: 'hubDecision' as const,
-    key: `hub:${semanticAddressKey(owner)}`,
-    hubKey: descriptor.hubKey,
-    marker: hubMarker,
-    openSet: context.markerDestinations.marker(
-      createHubOpenSetAddress(context.biome, descriptor.hubKey),
-    ),
-    openSlotCount: Object.freeze({
-      current: targets.size,
-      min: descriptor.openCount.min,
-      max: descriptor.openCount.max,
-    }),
-    owner,
-    requiredVisitCount: descriptor.requiredVisits,
-    slots: Object.freeze(slots),
-    visits: Object.freeze(visits),
-  });
-  context.markerDestinations.redirect(
-    Object.freeze([
-      node.marker,
-      node.openSet,
-      ...node.slots.map((slot) => slot.marker),
-      ...node.visits.map((visit) => visit.marker),
-    ]),
-    node.key,
-  );
-  if (boardAuthored) {
-    hubInteractionRequirements.push(
-      Object.freeze({
-        kind: 'hubControls' as const,
-        owner,
-        slots: Object.freeze(slotRequirements),
-        visits: visitRequirements,
-      }),
-    );
-  }
-  return Object.freeze({
-    hubInteractionRequirements: Object.freeze(hubInteractionRequirements),
-    node,
-    occurrenceInteractionRequirements: Object.freeze(occurrenceInteractionRequirements),
-    roomControls: Object.freeze(roomControls),
-    rewardControls: Object.freeze(rewardControls),
-    workbenches: Object.freeze(workbenches),
-  });
-}
-
-function projectAuthoredHubWithOverlay(
-  context: BiomeProjectionContext,
-  plan: AuthoredBiomePlan,
-  hub: HubDecision,
-  descriptor: HubDecisionDescriptor,
-  evaluated: CanonicalHubDecision | undefined,
-  nextVisitIndex: number | undefined,
-): WorkspaceHubAssembly {
-  const owner = createHubDecisionAddress(context.biome, descriptor.hubKey);
-  if (evaluated !== undefined) {
-    if (
-      semanticAddressKey(evaluated.origin) !== semanticAddressKey(owner) ||
-      semanticAddressKey(evaluated.board.origin) !==
-        semanticAddressKey(createHubOpenSetAddress(context.biome, descriptor.hubKey))
-    ) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${semanticAddressKey(owner)} evaluated Hub does not match authored topology`,
-      );
-    }
-  }
-  const evaluatedTargets = new Map(
-    (evaluated?.board.targets ?? []).map((target) => [target.hubSlotKey, target] as const),
-  );
-  if (evaluatedTargets.size !== (evaluated?.board.targets.length ?? 0)) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${semanticAddressKey(owner)} has duplicate evaluated Hub slot targets`,
-    );
-  }
-  const authoredTargets = new Map(hub.openTargets.map((target) => [target.hubSlotKey, target]));
-  const targets = new Map<string, ProjectedHubTarget>();
-  for (const target of hub.openTargets) {
-    const overlay = evaluatedTargets.get(target.hubSlotKey);
-    evaluatedTargets.delete(target.hubSlotKey);
-    const address = createHubSlotAddress(context.biome, descriptor.hubKey, target.hubSlotKey);
-    if (
-      overlay !== undefined &&
-      (semanticAddressKey(overlay.origin) !== semanticAddressKey(address) ||
-        overlay.room.occurrenceId !== target.occurrenceId ||
-        semanticAddressKey(overlay.room.origin) !==
-          semanticAddressKey(createOccurrenceAddress(context.biome, target.occurrenceId)) ||
-        overlay.room.gameName !== authoredOccurrence(context, target.occurrenceId)?.gameName)
-    ) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${semanticAddressKey(address)} evaluated Hub target does not match its authored occurrence`,
-      );
-    }
-    targets.set(
-      target.hubSlotKey,
-      Object.freeze({
-        ...(overlay === undefined ? {} : { canonical: overlay.room }),
-        occurrenceId: target.occurrenceId,
-      }),
-    );
-  }
-  if (evaluatedTargets.size > 0) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${semanticAddressKey(owner)} has evaluated Hub targets with no authored slot`,
-    );
-  }
-  const evaluatedVisitIndexes = new Set<number>();
-  for (const visit of evaluated?.visits ?? []) {
-    if (evaluatedVisitIndexes.has(visit.visitIndex)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${semanticAddressKey(owner)} has duplicate evaluated Hub visit ${visit.visitIndex}`,
-      );
-    }
-    evaluatedVisitIndexes.add(visit.visitIndex);
-    const expectedSlot = hub.visitOrder[visit.visitIndex - 1];
-    const target = authoredTargets.get(visit.target.hubSlotKey);
-    const expectedVisit = createHubVisitAddress(context.biome, descriptor.hubKey, visit.visitIndex);
-    const expectedTarget = createHubSlotAddress(
-      context.biome,
-      descriptor.hubKey,
-      visit.target.hubSlotKey,
-    );
-    if (
-      expectedSlot !== visit.target.hubSlotKey ||
-      target === undefined ||
-      target.occurrenceId !== visit.target.room.occurrenceId ||
-      visit.target.room.gameName !== authoredOccurrence(context, target.occurrenceId)?.gameName ||
-      semanticAddressKey(visit.target.room.origin) !==
-        semanticAddressKey(createOccurrenceAddress(context.biome, target.occurrenceId)) ||
-      semanticAddressKey(visit.origin) !== semanticAddressKey(expectedVisit) ||
-      semanticAddressKey(visit.target.origin) !== semanticAddressKey(expectedTarget)
-    ) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${semanticAddressKey(owner)} has an evaluated Hub visit that does not match authored order`,
-      );
-    }
-  }
-  return projectHubNode(
-    context,
-    plan,
-    descriptor,
-    owner,
-    targets,
-    hub.visitOrder,
-    nextVisitIndex,
-    true,
-  );
-}
-
-function projectHubOutline(
-  context: BiomeProjectionContext,
-  plan: AuthoredBiomePlan,
-  descriptor: HubDecisionDescriptor,
-): WorkspaceHubAssembly {
-  return projectHubNode(
-    context,
-    plan,
-    descriptor,
-    createHubDecisionAddress(context.biome, descriptor.hubKey),
-    new Map(),
-    Object.freeze([]),
-    undefined,
-    false,
-  );
-}
 
 type AuthoredBatchDecision = ExitDecision & {
   readonly normal: Extract<ExitDecision['normal'], { readonly kind: 'batch' }>;
@@ -1012,75 +437,6 @@ function assertOccurrenceAssemblyFactsMatchAuthoredLeafRequirements(
   }
 }
 
-function authoringFrontier(
-  context: BiomeProjectionContext,
-  plan: AuthoredBiomePlan,
-): WorkspaceAuthoringFrontier | null {
-  if (plan.topology === null) {
-    return Object.freeze({
-      kind: 'start' as const,
-      interactionKey: semanticAddressKey(context.biome),
-      marker: context.markerDestinations.marker(context.biome),
-      owner: context.biome,
-    });
-  }
-  const completeness = evaluateBiomeCompleteness(context.catalog, context.biome, plan);
-  if (completeness.completion === 'complete') return null;
-  const frontier = completeness.frontier;
-  switch (frontier.kind) {
-    case 'exitDecision': {
-      const predecessorNodeKey =
-        frontier.source.kind === 'occurrence'
-          ? `occurrence:${semanticAddressKey(
-              createOccurrenceAddress(context.biome, frontier.source.occurrenceId),
-            )}`
-          : undefined;
-      return Object.freeze({
-        kind: 'exitDecision' as const,
-        interactionKey: semanticAddressKey(frontier),
-        marker: context.markerDestinations.marker(frontier),
-        owner: frontier,
-        ...(predecessorNodeKey === undefined ? {} : { predecessorNodeKey }),
-      });
-    }
-    case 'hubDecision':
-      return Object.freeze({
-        kind: 'hubDecision' as const,
-        interactionKey: semanticAddressKey(frontier),
-        marker: context.markerDestinations.marker(frontier),
-        owner: frontier,
-      });
-    case 'hubVisit':
-      return Object.freeze({
-        kind: 'hubVisit' as const,
-        interactionKey: semanticAddressKey(frontier),
-        marker: context.markerDestinations.marker(frontier),
-        owner: frontier,
-      });
-    case 'hubOpenSet':
-      return Object.freeze({
-        kind: 'hubOpenSet' as const,
-        marker: context.markerDestinations.marker(frontier),
-        owner: frontier,
-      });
-    default:
-      return null;
-  }
-}
-
-function startRoomControl(
-  address: OccurrenceAddress,
-  candidateGameNames: readonly string[],
-  selectedGameName: string,
-): WorkspaceRoomPickerControl {
-  return Object.freeze({
-    address,
-    candidateGameNames: Object.freeze([...candidateGameNames]),
-    kind: 'startRoomPicker' as const,
-    selectedGameName,
-  });
-}
-
 function railMarkerForNode(node: WorkspaceNode): WorkspaceMarker {
   return node.kind === 'occurrenceWorkbench' ? (node.railMarker ?? node.marker) : node.marker;
 }
@@ -1257,7 +613,8 @@ function workspaceMarkersForNode(node: WorkspaceNode): readonly WorkspaceMarker[
         ...node.slots.map((slot) => slot.marker),
         ...node.visits.map((visit) => visit.marker),
         ...node.slots.flatMap((slot) => {
-          const mainReward = slot.room === undefined ? undefined : hubMainRewardMarker(slot.room);
+          const mainReward =
+            slot.room === undefined ? undefined : workspaceHubMainRewardMarker(slot.room);
           return mainReward === undefined ? [] : [mainReward];
         }),
       ]);
@@ -1377,7 +734,8 @@ function workspaceMarkerPackageIndex(
  * marker must lead to a real structural node.
  */
 function assertWorkspaceProjectionClosure(
-  context: BiomeProjectionContext,
+  biome: BiomeAddress,
+  source: WorkspaceBiomeSource,
   focusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>,
   plan: AuthoredBiomePlan,
   structuralNodes: readonly WorkspaceNode[],
@@ -1445,7 +803,7 @@ function assertWorkspaceProjectionClosure(
 
     for (const decision of topology.decisions) {
       if (decision.kind === 'hub') {
-        const owner = createHubDecisionAddress(context.biome, decision.hubKey);
+        const owner = createHubDecisionAddress(biome, decision.hubKey);
         const hub = exactlyOneWorkspaceValue(
           structuralNodes.filter(
             (node): node is WorkspaceHubDecisionNode =>
@@ -1479,7 +837,7 @@ function assertWorkspaceProjectionClosure(
         continue;
       }
 
-      const owner = createExitDecisionAddress(context.biome, decision.source);
+      const owner = createExitDecisionAddress(biome, decision.source);
       const decisionNode = exactlyOneWorkspaceValue(
         structuralNodes.filter(
           (
@@ -1532,7 +890,7 @@ function assertWorkspaceProjectionClosure(
     }
   }
 
-  for (const finding of context.source.findings) {
+  for (const finding of source.findings) {
     if (!isFineGrainedFindingOwner(finding.origin)) continue;
     const workspaceMarker = markersByOwner.get(semanticAddressKey(finding.origin));
     if (workspaceMarker === undefined) {
@@ -2711,306 +2069,66 @@ function projectBiome(
     WorkspaceTopologyRemovalInteractionRequirement
   >;
 } {
-  const { biome: biomeAddress, evaluation, layout, plan } = source;
-  const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(catalog, source);
-  const markerBuilder = createWorkspaceBiomeMarkerDestinationBuilder({
-    assessmentFor: (address) => assessmentForSource(source, address),
-    biome: biomeAddress,
-    findingCountFor: (address) => source.findingsFor(address).length,
-    routeKey: biomeAddress.routeKey,
-  });
-  const occurrenceInteractionRequirements = new Map<
-    string,
-    WorkspaceOccurrenceInteractionRequirement
-  >();
-  const batchInteractionRequirements = new Map<string, WorkspaceBatchInteractionRequirement>();
-  const hubInteractionRequirements = new Map<string, WorkspaceHubInteractionRequirement>();
-  const topologyRemovalInteractionRequirements = new Map<
-    string,
-    WorkspaceTopologyRemovalInteractionRequirement
-  >();
-  const startInteractionRequirements = new Map<string, WorkspaceStartInteractionRequirement>();
-  const takeoverInteractionRequirements = new Map<
-    string,
-    WorkspaceTakeoverInteractionRequirement
-  >();
-  const frontierInteractionRequirements = new Map<
-    string,
-    WorkspaceFrontierInteractionRequirement
-  >();
-  const roomControls = new Map<string, WorkspaceRoomPickerControl>();
-  const rewardControls = new Map<string, WorkspaceRewardControl>();
-  const context: BiomeProjectionContext = {
-    catalog,
-    occurrenceFacts,
-    evaluation,
-    markerDestinations: markerBuilder.emitter,
-    biome: biomeAddress,
-    source,
-  };
-  const topologyInteractions = assembleWorkspaceTopologyInteractions({ catalog, source });
+  const { biome: biomeAddress, layout, plan } = source;
+  const semantic = assembleWorkspaceBiomeSemantics(catalog, source);
   const authoredLeafRequirements = authoredWorkspaceLeafRequirements(catalog, biomeAddress, plan);
   assertOccurrenceAssemblyFactsMatchAuthoredLeafRequirements(
-    occurrenceFacts,
+    semantic.occurrenceFacts,
     plan,
     authoredLeafRequirements,
-  );
-  // Structural completeness is authoritative even when simulation coverage is
-  // blocked upstream.  In particular, a Hub's next visit must remain a
-  // projectable frontier after its board has been authored.
-  let frontier = authoringFrontier(context, plan);
-  const nextHubVisitIndex = frontier?.kind === 'hubVisit' ? frontier.owner.visitIndex : undefined;
-  const fields = projectBiomeFields(context, plan, layout);
-  let startRoomPicker: WorkspaceRoomPickerControl | undefined;
-  if (plan.topology !== null && layout.start.kind === 'authoredChoice') {
-    const start = authoredOccurrence(context, plan.topology.startOccurrenceId);
-    if (start !== undefined) {
-      startRoomPicker = startRoomControl(
-        createOccurrenceAddress(context.biome, start.occurrenceId),
-        layout.start.roomGameNames,
-        start.gameName,
-      );
-    }
-  }
-  const authoredExitDecisions = source.exitDecisions;
-  const nodes: WorkspaceNode[] = [];
-  let entry: WorkspaceOccurrenceWorkbenchNode | undefined;
-  if (plan.topology !== null) {
-    const start = authoredOccurrence(context, plan.topology.startOccurrenceId);
-    if (start !== undefined) {
-      if (
-        source.entryRoom !== undefined &&
-        (source.entryRoom.occurrenceId !== start.occurrenceId ||
-          source.entryRoom.gameName !== start.gameName ||
-          semanticAddressKey(source.entryRoom.origin) !==
-            semanticAddressKey(createOccurrenceAddress(context.biome, start.occurrenceId)))
-      ) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${plan.biomeKey} evaluated entry does not match the authored start`,
-        );
-      }
-      const projectedEntry = assembleWorkspaceOccurrence({
-        biome: context.biome,
-        catalog: context.catalog,
-        ...(source.entryRoom === undefined ? {} : { evaluatedRoom: source.entryRoom }),
-        facts: requireOccurrenceAssemblyFacts(context, start),
-        markerDestinations: context.markerDestinations,
-        occurrence: start,
-        ...(startRoomPicker === undefined ? {} : { roomPicker: startRoomPicker }),
-      });
-      entry = projectedEntry.node;
-      appendUniqueOccurrenceInteractionRequirements(
-        occurrenceInteractionRequirements,
-        projectedEntry.occurrenceInteractionRequirements,
-      );
-      appendUniqueRoomControls(roomControls, projectedEntry.roomControls);
-      appendUniqueRewardControls(rewardControls, projectedEntry.rewardControls);
-      nodes.push(entry);
-    }
-  }
-  if (source.entryRoom !== undefined && entry === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${plan.biomeKey} has an evaluated entry without an authored start`,
-    );
-  }
-  const assembleDecisionOccurrence = (input: WorkspaceDecisionOccurrenceInput) =>
-    assembleWorkspaceOccurrence({
-      biome: context.biome,
-      catalog: context.catalog,
-      ...(input.evaluatedRoom === undefined ? {} : { evaluatedRoom: input.evaluatedRoom }),
-      facts: requireOccurrenceAssemblyFacts(context, input.occurrence),
-      markerDestinations: context.markerDestinations,
-      occurrence: input.occurrence,
-    });
-  const projectAuthoredExitDecision = (decision: ExitDecision): void => {
-    const owner = createExitDecisionAddress(context.biome, decision.source);
-    if (decision.normal.kind === 'linked') {
-      const evaluated = source.evaluatedLinkedExit(owner);
-      const projected = assembleWorkspaceDecision({
-        assembleOccurrence: assembleDecisionOccurrence,
-        catalog,
-        decision: decision as WorkspaceAuthoredLinkedExitDecision,
-        ...(evaluated === undefined ? {} : { evaluated }),
-        kind: 'linkedExit',
-        markerDestinations: context.markerDestinations,
-        source,
-      });
-      if (projected.kind !== 'linkedExit') {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(owner)} linked decision produced a batch assembly`,
-        );
-      }
-      appendUniqueOccurrenceInteractionRequirements(
-        occurrenceInteractionRequirements,
-        projected.occurrenceInteractionRequirements,
-      );
-      appendUniqueRoomControls(roomControls, projected.roomControls);
-      appendUniqueRewardControls(rewardControls, projected.rewardControls);
-      nodes.push(projected.node, projected.workbench);
-    } else {
-      const evaluated = source.evaluatedBatch(owner);
-      const projected = assembleWorkspaceDecision({
-        assembleOccurrence: assembleDecisionOccurrence,
-        catalog,
-        decision: decision as WorkspaceAuthoredBatchDecision,
-        ...(evaluated === undefined ? {} : { evaluated }),
-        kind: 'batch',
-        markerDestinations: context.markerDestinations,
-        source,
-      });
-      if (projected.kind !== 'batch') {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(owner)} batch decision produced a linked-exit assembly`,
-        );
-      }
-      appendUniqueBatchInteractionRequirements(
-        batchInteractionRequirements,
-        projected.batchInteractionRequirements,
-      );
-      appendUniqueOccurrenceInteractionRequirements(
-        occurrenceInteractionRequirements,
-        projected.occurrenceInteractionRequirements,
-      );
-      appendUniqueRoomControls(roomControls, projected.roomControls);
-      appendUniqueRewardControls(rewardControls, projected.rewardControls);
-      nodes.push(projected.batch, ...projected.workbenches);
-    }
-  };
-  // Hub-owned handoffs belong after the persistent board, even when their
-  // authored decision is otherwise traversed as a disconnected suffix.
-  // Evaluation cannot be allowed to reorder that authored stage.
-  for (const decision of authoredExitDecisions) {
-    if (decision.source.kind === 'hubDecision') continue;
-    projectAuthoredExitDecision(decision);
-  }
-  if (layout.progression.kind === 'hub') {
-    const hubDescriptor = layout.progression;
-    const authoredHub = source.hubDecision(hubDescriptor.hubKey);
-    const owner = createHubDecisionAddress(context.biome, hubDescriptor.hubKey);
-    const projected =
-      authoredHub === undefined
-        ? projectHubOutline(context, plan, hubDescriptor)
-        : projectAuthoredHubWithOverlay(
-            context,
-            plan,
-            authoredHub,
-            hubDescriptor,
-            source.evaluatedHub(owner),
-            nextHubVisitIndex,
-          );
-    appendUniqueHubInteractionRequirements(
-      hubInteractionRequirements,
-      projected.hubInteractionRequirements,
-    );
-    appendUniqueOccurrenceInteractionRequirements(
-      occurrenceInteractionRequirements,
-      projected.occurrenceInteractionRequirements,
-    );
-    appendUniqueRoomControls(roomControls, projected.roomControls);
-    appendUniqueRewardControls(rewardControls, projected.rewardControls);
-    nodes.push(projected.node, ...projected.workbenches);
-  }
-  for (const decision of authoredExitDecisions) {
-    if (decision.source.kind !== 'hubDecision') continue;
-    projectAuthoredExitDecision(decision);
-  }
-  const structuralNodes = Object.freeze([...nodes]);
-  if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'occurrence') {
-    const predecessorOccurrenceId = frontier.owner.source.occurrenceId;
-    const predecessorDecision = structuralNodes.find(
-      (
-        node,
-      ): node is
-        WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode =>
-        (node.kind === 'ordinaryBatch' ||
-          node.kind === 'mixedBatch' ||
-          node.kind === 'takeoverBatch') &&
-        node.targets.some((target) => target.room.occurrenceId === predecessorOccurrenceId),
-    );
-    if (predecessorDecision !== undefined) {
-      frontier = Object.freeze({
-        ...frontier,
-        predecessorNodeKey: predecessorDecision.key,
-      });
-    }
-  }
-  const completion = layout.completion.rooms.map((descriptor) => {
-    const address = createCompletionRoomAddress(biomeAddress, descriptor.role);
-    const node: WorkspaceCompletionNode = Object.freeze({
-      kind: 'completion' as const,
-      key: `completion:${semanticAddressKey(address)}`,
-      marker: context.markerDestinations.marker(address),
-      role: descriptor.role,
-      gameName: descriptor.roomGameName,
-      label: requireRoom(catalog, descriptor.roomGameName).label,
-    });
-    context.markerDestinations.redirect(Object.freeze([node.marker]), node.key);
-    return node;
-  });
-  nodes.push(...completion);
-  const completedNodes = Object.freeze([...nodes]);
-  appendUniqueTopologyRemovalInteractionRequirements(
-    topologyRemovalInteractionRequirements,
-    topologyInteractions.topologyRemovalInteractionRequirements,
-  );
-  appendUniqueStartInteractionRequirements(
-    startInteractionRequirements,
-    topologyInteractions.startInteractionRequirements,
-  );
-  appendUniqueTakeoverInteractionRequirements(
-    takeoverInteractionRequirements,
-    topologyInteractions.takeoverInteractionRequirements,
-  );
-  appendUniqueFrontierInteractionRequirements(
-    frontierInteractionRequirements,
-    topologyInteractions.frontierInteractionRequirements,
   );
   assertBatchInteractionRequirementsMatchAuthoredState(
     catalog,
     biomeAddress,
     layout,
     plan,
-    batchInteractionRequirements,
+    semantic.batchInteractionRequirements,
   );
   assertHubInteractionRequirementsMatchAuthoredState(
     biomeAddress,
     layout,
     plan,
-    hubInteractionRequirements,
+    semantic.hubInteractionRequirements,
   );
   assertTopologyRemovalInteractionRequirementsMatchAuthoredState(
     biomeAddress,
     plan,
-    topologyRemovalInteractionRequirements,
+    semantic.topologyRemovalInteractionRequirements,
   );
   assertStartInteractionRequirementsMatchAuthoredState(
     biomeAddress,
     layout,
     plan,
-    startInteractionRequirements,
+    semantic.startInteractionRequirements,
   );
   assertTakeoverInteractionRequirementsMatchAuthoredState(
     catalog,
     biomeAddress,
     layout,
     plan,
-    takeoverInteractionRequirements,
+    semantic.takeoverInteractionRequirements,
   );
   assertFrontierInteractionRequirementsMatchAuthoredState(
     catalog,
     biomeAddress,
     layout,
     plan,
-    takeoverInteractionRequirements,
-    frontierInteractionRequirements,
+    semantic.takeoverInteractionRequirements,
+    semantic.frontierInteractionRequirements,
   );
-  const preliminaryFocusDestinations = markerBuilder.destinations();
   assertAuthoredWorkspaceLeafProjectionClosure(
     authoredLeafRequirements,
-    preliminaryFocusDestinations,
-    completedNodes,
+    semantic.preliminaryFocusDestinations,
+    semantic.nodes,
   );
-  assertWorkspaceProjectionClosure(context, preliminaryFocusDestinations, plan, completedNodes);
+  assertWorkspaceProjectionClosure(
+    biomeAddress,
+    source,
+    semantic.preliminaryFocusDestinations,
+    plan,
+    semantic.nodes,
+  );
+  const { entry, frontier, structuralNodes } = semantic;
   const renderedOccurrenceIds = new Set(
     structuralNodes
       .filter(
@@ -3084,52 +2202,46 @@ function projectBiome(
         ]),
     ...hubOutlines.map(railEntryForNode),
   ]);
-  const projectedNodes = Object.freeze(nodes);
   const inspectorDefaults = Object.freeze({
     ...(entry === undefined ? {} : { entry }),
     frontier,
-    nodes: projectedNodes,
+    nodes: semantic.nodes,
     rail,
   });
   const defaultInspector = defaultInspectorDestination(inspectorDefaults);
   assertWorkspaceDefaultInspectorDestinationClosure(inspectorDefaults, defaultInspector);
-  const biomeMarker = context.markerDestinations.marker(
-    biomeAddress,
-    `biome:${biomeAddress.routeKey}:${plan.biomeKey}`,
-  );
   const projected = Object.freeze({
-    biomeKey: plan.biomeKey,
-    completion: Object.freeze(completion),
-    completionOutline: Object.freeze(completion),
+    biomeKey: semantic.biomeKey,
+    completion: semantic.completion,
+    completionOutline: semantic.completionOutline,
     defaultInspectorDestination: defaultInspector,
     ...(entry === undefined ? {} : { entry }),
-    fields,
+    fields: semantic.fields,
     frontier,
-    label: catalog.biomes.byKey[plan.biomeKey]?.label ?? plan.biomeKey,
-    marker: biomeMarker,
-    nodes: projectedNodes,
+    label: semantic.label,
+    marker: semantic.marker,
+    nodes: semantic.nodes,
     rail,
-    source: sourceFor(evaluation),
-    status: statusFor(evaluation),
+    source: semantic.source,
+    status: semantic.status,
   });
-  const focusDestinations = markerBuilder.destinations();
   const presentationFocusDestinations = bindWorkspaceInspectorDestinations({
     biome: projected,
-    destinationsByOwner: focusDestinations,
+    destinationsByOwner: semantic.preliminaryFocusDestinations,
   });
   return Object.freeze({
     authoredLeafRequirements,
-    batchInteractionRequirements,
+    batchInteractionRequirements: semantic.batchInteractionRequirements,
     biome: projected,
     focusDestinations: presentationFocusDestinations,
-    frontierInteractionRequirements,
-    hubInteractionRequirements,
-    occurrenceInteractionRequirements,
-    roomControls,
-    rewardControls,
-    startInteractionRequirements,
-    takeoverInteractionRequirements,
-    topologyRemovalInteractionRequirements,
+    frontierInteractionRequirements: semantic.frontierInteractionRequirements,
+    hubInteractionRequirements: semantic.hubInteractionRequirements,
+    occurrenceInteractionRequirements: semantic.occurrenceInteractionRequirements,
+    roomControls: semantic.roomControls,
+    rewardControls: semantic.rewardControls,
+    startInteractionRequirements: semantic.startInteractionRequirements,
+    takeoverInteractionRequirements: semantic.takeoverInteractionRequirements,
+    topologyRemovalInteractionRequirements: semantic.topologyRemovalInteractionRequirements,
   });
 }
 

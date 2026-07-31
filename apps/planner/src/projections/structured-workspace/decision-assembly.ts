@@ -9,11 +9,9 @@ import {
   type ExitDecision,
   type ExitDecisionAddress,
   type OccurrenceId,
-  type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
-  CanonicalAuthoredRoom,
   CanonicalBatch,
   CanonicalLinkedExit,
   CanonicalTarget,
@@ -44,7 +42,7 @@ import type {
 } from './interaction-requirements';
 import type { WorkspaceMarkerDestinationEmitter } from './marker-builder';
 import { compareAuthoredTargetsInPhysicalOrder, requiredNormalExitOrdinal } from './ordering';
-import type { WorkspaceOccurrenceAssembly } from './occurrence-assembly';
+import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
 import { workspaceOccurrenceOwnedMarkers } from './occurrence-assembly';
 import { authoredFieldsActiveCageCountForDecision } from './occurrence-facts';
 import { workspaceRoomRetainsNormalPeers, workspaceRoomTakesOverNormalDoors } from './room-policy';
@@ -80,17 +78,8 @@ const linkedExitOrdinal = 1;
  * The decision layer can assemble room-local products, but cannot inspect the
  * occurrence assembler's inputs or marker registration state.
  */
-export interface WorkspaceDecisionOccurrenceInput {
-  readonly evaluatedRoom?: CanonicalAuthoredRoom;
-  readonly occurrence: RoomOccurrence;
-}
-
-export type WorkspaceDecisionOccurrenceAssembler = (
-  input: WorkspaceDecisionOccurrenceInput,
-) => WorkspaceOccurrenceAssembly;
-
 interface WorkspaceDecisionAssemblyBaseInput {
-  readonly assembleOccurrence: WorkspaceDecisionOccurrenceAssembler;
+  readonly assembleOccurrence: WorkspaceOccurrenceAssembler;
   readonly catalog: Catalog;
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly source: WorkspaceBiomeSource;

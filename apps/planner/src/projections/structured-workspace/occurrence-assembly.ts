@@ -69,6 +69,20 @@ export interface WorkspaceOccurrenceAssembly {
   readonly rewardControls: readonly WorkspaceRewardControl[];
 }
 
+/**
+ * A family can request one authored occurrence product without gaining access
+ * to the biome-local lifecycle facts or marker registration builder.
+ */
+export interface WorkspaceOccurrenceAssemblyRequest {
+  readonly evaluatedRoom?: CanonicalAuthoredRoom;
+  readonly occurrence: RoomOccurrence;
+  readonly roomPicker?: WorkspaceRoomPickerControl;
+}
+
+export type WorkspaceOccurrenceAssembler = (
+  input: WorkspaceOccurrenceAssemblyRequest,
+) => WorkspaceOccurrenceAssembly;
+
 function summarizeOffers(catalog: Catalog, offers: readonly ResolvedRewardOffer[]): string {
   return offers.map((offer) => summarizeRewardOffer(catalog, offer)).join(', ');
 }

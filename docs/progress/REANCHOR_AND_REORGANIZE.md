@@ -806,6 +806,22 @@ The semantic assembly does not contain authored expected leaves, construct
 rails, choose inspector defaults, bind contextual interactions, or run an
 expected-owner audit.
 
+**A9 transition note.** Hub assembly now owns declaration-owned Hub outlines
+and authored boards, slot and visit overlay reconciliation, Hub room
+workbenches, close impacts, Hub controls, and main-reward redirects. It
+consumes the common occurrence-product request and derives visited and
+canClose from that returned room product rather than re-reading lifecycle
+facts. Biome semantic assembly privately owns the biome marker builder and
+composes fields/frontier, entry, non-Hub decisions, Hub, Hub handoffs, and
+completion in authored order. Its immutable WorkspaceBiomeSemanticAssembly
+returns node, marker, control, occurrence-fact, and producer-requirement
+products before audit or presentation begins. The facade now invokes that
+product, retaining independent expected-owner audit and rail/default-inspector
+work for A10 and A11. Direct Hub and semantic fixtures lock
+outline/authored fallback, Hub-local focus, one occurrence workbench per
+authored occurrence, finalized marker coverage, and N's
+Opening -> PreHub -> Hub -> Preboss order.
+
 #### A10: Independent expected-owner and closure modules
 
 - move authored-leaf expectation, occurrence-fact agreement, marker and

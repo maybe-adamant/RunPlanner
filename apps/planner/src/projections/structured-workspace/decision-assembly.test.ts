@@ -13,9 +13,11 @@ import {
   assembleWorkspaceDecision,
   type WorkspaceAuthoredBatchDecision,
   type WorkspaceAuthoredLinkedExitDecision,
-  type WorkspaceDecisionOccurrenceInput,
 } from './decision-assembly';
-import { assembleWorkspaceOccurrence } from './occurrence-assembly';
+import {
+  assembleWorkspaceOccurrence,
+  type WorkspaceOccurrenceAssemblyRequest,
+} from './occurrence-assembly';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceBiomeMarkerDestinationBuilder } from './marker-builder';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
@@ -49,7 +51,7 @@ function decisionKit(source: WorkspaceBiomeSource) {
     findingCountFor: (address) => source.findingsFor(address).length,
     routeKey: source.biome.routeKey,
   });
-  const assembleOccurrence = (input: WorkspaceDecisionOccurrenceInput) => {
+  const assembleOccurrence = (input: WorkspaceOccurrenceAssemblyRequest) => {
     const occurrenceFacts = facts.occurrence(input.occurrence.occurrenceId);
     if (occurrenceFacts === undefined) {
       throw new Error(`${input.occurrence.occurrenceId} occurrence facts are missing`);
