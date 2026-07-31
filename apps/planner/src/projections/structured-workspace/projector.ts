@@ -29,11 +29,13 @@ import {
   semanticAddressKey,
   type AuthoredBiomePlan,
   type AuthoredRoomState,
+  type BatchRewardStoreAddress,
   type BiomeAddress,
   type DeclaredPhysicalExit,
   type ExitDecision,
   type ExitDecisionAddress,
   type ExitDecisionSourceAddress,
+  type ExitSelectionAddress,
   type HubDecision,
   type HubDecisionAddress,
   type LocalChildAddress,
@@ -1011,9 +1013,39 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     };
 
+/**
+ * Production requirements for the ordinary controls owned by one authored
+ * batch decision. They package the exact surface the batch projection
+ * publishes without making takeover, removal, or frontier policy part of
+ * this transition.
+ */
+export interface WorkspaceBatchInteractionRequirement {
+  readonly exitSelection?: {
+    readonly owner: ExitSelectionAddress;
+    readonly selectedExitKey?: string;
+    readonly targets: readonly WorkspaceInteractionChoice<string>[];
+  };
+  readonly fieldsCageOutcome?: {
+    readonly owner: ExitDecisionAddress;
+    readonly outcomeChoices: readonly WorkspaceInteractionChoice<'min' | 'max'>[];
+    readonly selected?: 'min' | 'max';
+  };
+  readonly kind: 'batchControls';
+  readonly owner: ExitDecisionAddress;
+  readonly rewardStore?: {
+    readonly owner: BatchRewardStoreAddress;
+    readonly selected?: string;
+    readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
+  };
+}
+
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
+  return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
+}
+
+function batchInteractionRequirementKey(requirement: WorkspaceBatchInteractionRequirement): string {
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
 
@@ -1249,6 +1281,22 @@ export function appendUniqueOccurrenceInteractionRequirements(
     if (requirementsByIdentity.has(key)) {
       throw new StructuredWorkspaceProjectionContractError(
         `${key} has multiple projected occurrence interaction requirements`,
+      );
+    }
+    requirementsByIdentity.set(key, requirement);
+  }
+}
+
+/** @internal Composition never silently replaces a batch-owned interaction package. */
+export function appendUniqueBatchInteractionRequirements(
+  requirementsByIdentity: Map<string, WorkspaceBatchInteractionRequirement>,
+  requirements: Iterable<WorkspaceBatchInteractionRequirement>,
+): void {
+  for (const requirement of requirements) {
+    const key = batchInteractionRequirementKey(requirement);
+    if (requirementsByIdentity.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected batch interaction requirements`,
       );
     }
     requirementsByIdentity.set(key, requirement);
@@ -2367,6 +2415,73 @@ function roomControlsForBatch(
   return Object.freeze(controls);
 }
 
+function batchInteractionRequirements(
+  context: MutableProjectionContext,
+  decision: AuthoredBatchDecision,
+  batch: WorkspaceDecisionBatchNode,
+): readonly WorkspaceBatchInteractionRequirement[] {
+  const exitSelection =
+    decision.selection.kind === 'derived'
+      ? undefined
+      : Object.freeze({
+          owner: createExitSelectionAddress(context.biome, decision.source),
+          ...(decision.selection.kind === 'normal'
+            ? { selectedExitKey: decision.selection.exitKey }
+            : {}),
+          targets: Object.freeze(
+            batch.targets.map((target) =>
+              Object.freeze({ label: target.exitKey, value: target.exitKey }),
+            ),
+          ),
+        });
+  const layout = context.source.layout;
+  const policy =
+    layout?.progression.kind === 'generated' ? layout.progression.rewardStorePolicy : undefined;
+  const authoredRewardStore =
+    decision.normal.rewardStore.kind === 'authoredBaseStore'
+      ? decision.normal.rewardStore
+      : undefined;
+  const rewardStore =
+    authoredRewardStore !== undefined &&
+    (batch.kind !== 'takeoverBatch' || authoredRewardStore.baseRewardStoreKey !== null) &&
+    policy?.kind === 'authoredBaseStore'
+      ? Object.freeze({
+          owner: createBatchRewardStoreAddress(context.biome, decision.source),
+          ...(authoredRewardStore.baseRewardStoreKey === null
+            ? {}
+            : { selected: authoredRewardStore.baseRewardStoreKey }),
+          storeChoices: Object.freeze(
+            policy.storeKeys.map((value) => Object.freeze({ label: storeLabel(value), value })),
+          ),
+        })
+      : undefined;
+  const fieldsCageOutcome =
+    batch.fieldsCageOutcome === undefined
+      ? undefined
+      : Object.freeze({
+          owner: batch.owner,
+          outcomeChoices: Object.freeze([
+            Object.freeze({ label: 'Minimum', value: 'min' as const }),
+            Object.freeze({ label: 'Maximum', value: 'max' as const }),
+          ]),
+          ...(decision.normal.batchState?.cageOutcome === undefined
+            ? {}
+            : { selected: decision.normal.batchState.cageOutcome }),
+        });
+  if (exitSelection === undefined && rewardStore === undefined && fieldsCageOutcome === undefined) {
+    return Object.freeze([]);
+  }
+  return Object.freeze([
+    Object.freeze({
+      ...(exitSelection === undefined ? {} : { exitSelection }),
+      ...(fieldsCageOutcome === undefined ? {} : { fieldsCageOutcome }),
+      kind: 'batchControls' as const,
+      owner: batch.owner,
+      ...(rewardStore === undefined ? {} : { rewardStore }),
+    }),
+  ]);
+}
+
 function projectAuthoredBatchWithOverlay(
   context: MutableProjectionContext,
   plan: AuthoredBiomePlan,
@@ -2374,6 +2489,7 @@ function projectAuthoredBatchWithOverlay(
   evaluated: EvaluatedBatchOverlay | undefined,
 ): {
   readonly batch: WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode | WorkspaceMixedBatchNode;
+  readonly batchInteractionRequirements: readonly WorkspaceBatchInteractionRequirement[];
   readonly occurrenceInteractionRequirements: readonly WorkspaceOccurrenceInteractionRequirement[];
   readonly roomControls: readonly WorkspaceRoomPickerControl[];
   readonly rewardControls: readonly WorkspaceRewardControl[];
@@ -2516,8 +2632,10 @@ function projectAuthoredBatchWithOverlay(
     }
     redirectMarkersToNode(context, decisionOwnedMarkers(batch), workbench.key);
   }
+  const decisionInteractionRequirements = batchInteractionRequirements(context, decision, batch);
   return Object.freeze({
     batch,
+    batchInteractionRequirements: decisionInteractionRequirements,
     occurrenceInteractionRequirements: Object.freeze(
       projectedTargets.flatMap((target) => target.occurrenceInteractionRequirements),
     ),
@@ -2894,6 +3012,82 @@ function bindOccurrenceLocalInteractions(
   });
 }
 
+interface WorkspaceBatchInteractionCatalog {
+  readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
+  readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
+  readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
+}
+
+function bindBatchInteractions(
+  candidates: CandidateProjectionSession,
+  requirements: Iterable<WorkspaceBatchInteractionRequirement>,
+): WorkspaceBatchInteractionCatalog {
+  const batchRewardStores = new Map<string, WorkspaceCandidateInteraction<string>>();
+  const exitSelections = new Map<string, WorkspaceExitSelectionInteraction>();
+  const fieldsCageOutcomes = new Map<string, WorkspaceCandidateInteraction<'min' | 'max'>>();
+  for (const requirement of requirements) {
+    if (requirement.exitSelection !== undefined) {
+      const { exitSelection } = requirement;
+      const key = semanticAddressKey(exitSelection.owner);
+      if (exitSelections.has(key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} has multiple bound exit-selection interactions`,
+        );
+      }
+      exitSelections.set(
+        key,
+        Object.freeze({
+          key,
+          owner: requirement.owner,
+          ...(exitSelection.selectedExitKey === undefined
+            ? {}
+            : { selectedExitKey: exitSelection.selectedExitKey }),
+          targets: exitSelection.targets,
+        }),
+      );
+    }
+    if (requirement.rewardStore !== undefined) {
+      const { rewardStore } = requirement;
+      const key = semanticAddressKey(rewardStore.owner);
+      if (batchRewardStores.has(key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} has multiple bound batch reward-store interactions`,
+        );
+      }
+      const storeKeys = Object.freeze(rewardStore.storeChoices.map((choice) => choice.value));
+      batchRewardStores.set(
+        key,
+        candidateInteraction(
+          rewardStore.owner,
+          rewardStore.storeChoices,
+          rewardStore.selected,
+          () => candidates.batchRewardStores(rewardStore.owner, storeKeys),
+        ),
+      );
+    }
+    if (requirement.fieldsCageOutcome !== undefined) {
+      const { fieldsCageOutcome } = requirement;
+      const key = semanticAddressKey(fieldsCageOutcome.owner);
+      if (fieldsCageOutcomes.has(key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} has multiple bound Fields cage-outcome interactions`,
+        );
+      }
+      const values = Object.freeze(fieldsCageOutcome.outcomeChoices.map((choice) => choice.value));
+      fieldsCageOutcomes.set(
+        key,
+        candidateInteraction(
+          fieldsCageOutcome.owner,
+          fieldsCageOutcome.outcomeChoices,
+          fieldsCageOutcome.selected,
+          () => candidates.fieldsCageOutcomes(fieldsCageOutcome.owner, values),
+        ),
+      );
+    }
+  }
+  return Object.freeze({ batchRewardStores, exitSelections, fieldsCageOutcomes });
+}
+
 function createInteractionCatalog(
   catalog: Catalog,
   project: ProjectDocument,
@@ -2901,6 +3095,7 @@ function createInteractionCatalog(
   services: StructuredWorkspaceContextualServices,
   sources: WorkspaceProjectSourceIndex,
   occurrenceInteractionRequirements: ReadonlyMap<string, WorkspaceOccurrenceInteractionRequirement>,
+  batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>,
   roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>,
   rewardControls: ReadonlyMap<string, WorkspaceRewardControl>,
 ): WorkspaceInteractionCatalog {
@@ -2914,6 +3109,10 @@ function createInteractionCatalog(
     sideRoomEntryOrders,
     sideRoomGenerations,
   } = bindOccurrenceLocalInteractions(candidates, occurrenceInteractionRequirements.values());
+  const { batchRewardStores, exitSelections, fieldsCageOutcomes } = bindBatchInteractions(
+    candidates,
+    batchInteractionRequirements.values(),
+  );
   const takeoverCandidate = (gameName: string): WorkspaceTakeoverCandidate => {
     const room = requireRoom(catalog, gameName);
     return Object.freeze({ gameName: room.gameName, label: room.label });
@@ -3164,10 +3363,7 @@ function createInteractionCatalog(
     );
   }
 
-  const batchRewardStores = new Map<string, WorkspaceCandidateInteraction<string>>();
   const exitFrontierCapabilities = new Map<string, WorkspaceExitFrontierCapabilities>();
-  const exitSelections = new Map<string, WorkspaceExitSelectionInteraction>();
-  const fieldsCageOutcomes = new Map<string, WorkspaceCandidateInteraction<'min' | 'max'>>();
   const hubSlots = new Map<string, WorkspaceHubSlotInteraction>();
   const hubVisits = new Map<string, WorkspaceCandidateInteraction<string>>();
   const starts = new Map<string, WorkspaceStartInteraction>();
@@ -3334,33 +3530,6 @@ function createInteractionCatalog(
           );
         }
         if (decision.normal.kind === 'batch') {
-          if (decision.selection.kind !== 'derived') {
-            const declaredExits =
-              resolveDeclaredPhysicalExits(catalog, layout, plan.topology, decision.source) ?? [];
-            const physicalOrder = new Map<string, number>(
-              declaredExits.map((exit) => [exit.exitKey, exit.index] as const),
-            );
-            const selection = createExitSelectionAddress(biome, decision.source);
-            exitSelections.set(
-              semanticAddressKey(selection),
-              Object.freeze({
-                key: semanticAddressKey(selection),
-                owner,
-                ...(decision.selection.kind === 'normal'
-                  ? { selectedExitKey: decision.selection.exitKey }
-                  : {}),
-                targets: Object.freeze(
-                  [...decision.normal.targets]
-                    .sort((left, right) =>
-                      compareAuthoredTargetsInPhysicalOrder(physicalOrder, left, right),
-                    )
-                    .map((target) =>
-                      Object.freeze({ label: target.exitKey, value: target.exitKey }),
-                    ),
-                ),
-              }),
-            );
-          }
           const targetRooms = decision.normal.targets.map((target) =>
             biomeSource.occurrence(target.occurrenceId),
           );
@@ -3374,34 +3543,6 @@ function createInteractionCatalog(
           const existingTargetOccurrenceIds = new Map(
             decision.normal.targets.map((target) => [target.exitKey, target.occurrenceId] as const),
           );
-          const policy =
-            layout.progression.kind === 'generated'
-              ? layout.progression.rewardStorePolicy
-              : undefined;
-          const authoredRewardStore =
-            decision.normal.rewardStore.kind === 'authoredBaseStore'
-              ? decision.normal.rewardStore
-              : undefined;
-          if (
-            authoredRewardStore !== undefined &&
-            (!takeover || authoredRewardStore.baseRewardStoreKey !== null) &&
-            policy?.kind === 'authoredBaseStore'
-          ) {
-            const store = createBatchRewardStoreAddress(biome, decision.source);
-            batchRewardStores.set(
-              semanticAddressKey(store),
-              candidateInteraction(
-                store,
-                Object.freeze(
-                  policy.storeKeys.map((value) =>
-                    Object.freeze({ label: storeLabel(value), value }),
-                  ),
-                ),
-                authoredRewardStore.baseRewardStoreKey ?? undefined,
-                () => candidates.batchRewardStores(store, policy.storeKeys),
-              ),
-            );
-          }
           if (takeover) {
             const gameName = targetRooms[0]?.gameName;
             const requiredExits = resolveDeclaredPhysicalExits(
@@ -3426,23 +3567,6 @@ function createInteractionCatalog(
               );
             }
           } else {
-            if (
-              layout.progression.kind === 'generated' &&
-              layout.progression.batchPolicy.kind === 'fields'
-            ) {
-              fieldsCageOutcomes.set(
-                semanticAddressKey(owner),
-                candidateInteraction(
-                  owner,
-                  Object.freeze([
-                    Object.freeze({ label: 'Minimum', value: 'min' as const }),
-                    Object.freeze({ label: 'Maximum', value: 'max' as const }),
-                  ]),
-                  decision.normal.batchState?.cageOutcome,
-                  () => candidates.fieldsCageOutcomes(owner, Object.freeze(['min', 'max'])),
-                ),
-              );
-            }
             if (
               layout.progression.kind === 'generated' &&
               fixedWidthOneTakeover === undefined &&
@@ -4146,11 +4270,210 @@ export function assertAuthoredWorkspaceLeafProjectionClosure(
   }
 }
 
+interface WorkspaceExpectedBatchInteractionRequirement {
+  readonly exitSelection?: {
+    readonly key: string;
+    readonly owner: ExitDecisionAddress;
+  };
+  readonly fieldsCageOutcome?: {
+    readonly key: string;
+    readonly owner: ExitDecisionAddress;
+  };
+  readonly owner: ExitDecisionAddress;
+  readonly rewardStore?: {
+    readonly key: string;
+    readonly owner: BatchRewardStoreAddress;
+  };
+}
+
+function expectedBatchInteractionRequirements(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+): ReadonlyMap<string, WorkspaceExpectedBatchInteractionRequirement> {
+  const topology = plan.topology;
+  if (topology === null) return new Map();
+  const occurrences = new Map(
+    topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence] as const),
+  );
+  const expected = new Map<string, WorkspaceExpectedBatchInteractionRequirement>();
+  for (const decision of topology.decisions) {
+    if (decision.kind !== 'exit' || decision.normal.kind !== 'batch') continue;
+    const owner = createExitDecisionAddress(biome, decision.source);
+    const targetDeclarations = decision.normal.targets.map((target) => {
+      const occurrence = occurrences.get(target.occurrenceId);
+      return occurrence === undefined ? undefined : requireRoom(catalog, occurrence.gameName);
+    });
+    const takeover = targetDeclarations.length > 0 && targetDeclarations.every(isTakeover);
+    const selection =
+      decision.selection.kind === 'derived'
+        ? undefined
+        : Object.freeze({
+            key: semanticAddressKey(createExitSelectionAddress(biome, decision.source)),
+            owner,
+          });
+    const authoredRewardStore =
+      decision.normal.rewardStore.kind === 'authoredBaseStore'
+        ? decision.normal.rewardStore
+        : undefined;
+    const policy =
+      layout.progression.kind === 'generated' ? layout.progression.rewardStorePolicy : undefined;
+    const rewardStore =
+      authoredRewardStore !== undefined &&
+      (!takeover || authoredRewardStore.baseRewardStoreKey !== null) &&
+      policy?.kind === 'authoredBaseStore'
+        ? (() => {
+            const address = createBatchRewardStoreAddress(biome, decision.source);
+            return Object.freeze({ key: semanticAddressKey(address), owner: address });
+          })()
+        : undefined;
+    const fieldsCageOutcome =
+      !takeover &&
+      layout.progression.kind === 'generated' &&
+      layout.progression.batchPolicy.kind === 'fields'
+        ? Object.freeze({ key: semanticAddressKey(owner), owner })
+        : undefined;
+    if (selection === undefined && rewardStore === undefined && fieldsCageOutcome === undefined) {
+      continue;
+    }
+    const requirement = Object.freeze({
+      ...(selection === undefined ? {} : { exitSelection: selection }),
+      ...(fieldsCageOutcome === undefined ? {} : { fieldsCageOutcome }),
+      owner,
+      ...(rewardStore === undefined ? {} : { rewardStore }),
+    });
+    const key = `batchControls:${semanticAddressKey(owner)}`;
+    if (expected.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple expected authored batch interaction packages`,
+      );
+    }
+    expected.set(key, requirement);
+  }
+  return expected;
+}
+
+/**
+ * Independently enumerate batch-control owners from authored topology and
+ * declaration policy. This makes a missing package observable before binding
+ * or rendered-node closure can merely report its missing interaction.
+ */
+function assertBatchInteractionRequirementsMatchAuthoredState(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+  requirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>,
+): void {
+  const expected = expectedBatchInteractionRequirements(catalog, biome, layout, plan);
+  const assertAddress = (
+    actual: SemanticAddress,
+    expectedAddress: SemanticAddress,
+    detail: string,
+  ): void => {
+    if (semanticAddressKey(actual) !== semanticAddressKey(expectedAddress)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${detail} has a conflicting semantic owner`,
+      );
+    }
+  };
+  for (const [key, expectation] of expected) {
+    const requirement = requirements.get(key);
+    if (requirement === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} required authored batch interaction package is absent`,
+      );
+    }
+    assertAddress(requirement.owner, expectation.owner, `${key} batch decision owner`);
+    if (expectation.exitSelection === undefined) {
+      if (requirement.exitSelection !== undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} unexpectedly projects an exit-selection requirement`,
+        );
+      }
+    } else {
+      if (requirement.exitSelection === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} required exit-selection requirement is absent`,
+        );
+      }
+      assertAddress(
+        requirement.owner,
+        expectation.exitSelection.owner,
+        `${key} exit-selection decision owner`,
+      );
+      if (semanticAddressKey(requirement.exitSelection.owner) !== expectation.exitSelection.key) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} exit-selection requirement has a conflicting interaction key`,
+        );
+      }
+    }
+    if (expectation.rewardStore === undefined) {
+      if (requirement.rewardStore !== undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} unexpectedly projects a batch reward-store requirement`,
+        );
+      }
+    } else {
+      if (requirement.rewardStore === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} required batch reward-store requirement is absent`,
+        );
+      }
+      if (semanticAddressKey(requirement.rewardStore.owner) !== expectation.rewardStore.key) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} batch reward-store requirement has a conflicting interaction key`,
+        );
+      }
+      assertAddress(
+        requirement.rewardStore.owner,
+        expectation.rewardStore.owner,
+        `${key} batch reward-store owner`,
+      );
+    }
+    if (expectation.fieldsCageOutcome === undefined) {
+      if (requirement.fieldsCageOutcome !== undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} unexpectedly projects a Fields cage-outcome requirement`,
+        );
+      }
+    } else {
+      if (requirement.fieldsCageOutcome === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} required Fields cage-outcome requirement is absent`,
+        );
+      }
+      if (
+        semanticAddressKey(requirement.fieldsCageOutcome.owner) !==
+        expectation.fieldsCageOutcome.key
+      ) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} Fields cage-outcome requirement has a conflicting interaction key`,
+        );
+      }
+      assertAddress(
+        requirement.fieldsCageOutcome.owner,
+        expectation.fieldsCageOutcome.owner,
+        `${key} Fields cage-outcome owner`,
+      );
+    }
+  }
+  for (const key of requirements.keys()) {
+    if (!expected.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} projected batch interaction package has no authored owner`,
+      );
+    }
+  }
+}
+
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
 ): {
   readonly authoredLeafRequirements: readonly WorkspaceAuthoredLeafRequirement[];
+  readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
   readonly focusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
   readonly occurrenceInteractionRequirements: ReadonlyMap<
@@ -4167,6 +4490,7 @@ function projectBiome(
     string,
     WorkspaceOccurrenceInteractionRequirement
   >();
+  const batchInteractionRequirements = new Map<string, WorkspaceBatchInteractionRequirement>();
   const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
   const context: MutableProjectionContext = {
@@ -4260,6 +4584,10 @@ function projectBiome(
         decision as AuthoredBatchDecision,
         source.evaluatedBatch(owner),
       );
+      appendUniqueBatchInteractionRequirements(
+        batchInteractionRequirements,
+        projected.batchInteractionRequirements,
+      );
       appendUniqueOccurrenceInteractionRequirements(
         occurrenceInteractionRequirements,
         projected.occurrenceInteractionRequirements,
@@ -4338,6 +4666,13 @@ function projectBiome(
   });
   nodes.push(...completion);
   const completedNodes = Object.freeze([...nodes]);
+  assertBatchInteractionRequirementsMatchAuthoredState(
+    catalog,
+    biomeAddress,
+    layout,
+    plan,
+    batchInteractionRequirements,
+  );
   assertAuthoredWorkspaceLeafProjectionClosure(
     authoredLeafRequirements,
     context.focusDestinations,
@@ -4438,6 +4773,7 @@ function projectBiome(
   });
   return Object.freeze({
     authoredLeafRequirements,
+    batchInteractionRequirements,
     biome: projected,
     focusDestinations,
     occurrenceInteractionRequirements,
@@ -4640,6 +4976,57 @@ function assertOccurrenceInteractionRequirementClosure(
           );
         }
         break;
+    }
+  }
+}
+
+/** Verify every emitted batch-control package binds to its exact key and owner. */
+function assertBatchInteractionRequirementClosure(
+  requirements: Iterable<WorkspaceBatchInteractionRequirement>,
+  interactions: WorkspaceInteractionCatalog,
+): void {
+  const requireInteraction = <T extends { readonly key: string; readonly owner: SemanticAddress }>(
+    values: ReadonlyMap<string, T>,
+    key: string,
+    owner: SemanticAddress,
+    detail: string,
+  ): void => {
+    const interaction = values.get(key);
+    if (interaction === undefined || interaction.key !== key) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${detail} ${key} has no exact workspace interaction`,
+      );
+    }
+    if (semanticAddressKey(interaction.owner) !== semanticAddressKey(owner)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${detail} ${key} has an interaction for a conflicting semantic owner`,
+      );
+    }
+  };
+  for (const requirement of requirements) {
+    if (requirement.exitSelection !== undefined) {
+      requireInteraction(
+        interactions.exitSelections,
+        semanticAddressKey(requirement.exitSelection.owner),
+        requirement.owner,
+        'exit-selection requirement',
+      );
+    }
+    if (requirement.rewardStore !== undefined) {
+      requireInteraction(
+        interactions.batchRewardStores,
+        semanticAddressKey(requirement.rewardStore.owner),
+        requirement.rewardStore.owner,
+        'batch reward-store requirement',
+      );
+    }
+    if (requirement.fieldsCageOutcome !== undefined) {
+      requireInteraction(
+        interactions.fieldsCageOutcomes,
+        semanticAddressKey(requirement.fieldsCageOutcome.owner),
+        requirement.fieldsCageOutcome.owner,
+        'Fields cage-outcome requirement',
+      );
     }
   }
 }
@@ -4949,6 +5336,7 @@ export function createStructuredWorkspaceProjection(
         string,
         WorkspaceOccurrenceInteractionRequirement
       >();
+      const batchInteractionRequirements = new Map<string, WorkspaceBatchInteractionRequirement>();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const authoredLeafRequirements: WorkspaceAuthoredLeafRequirement[] = [];
@@ -4960,6 +5348,10 @@ export function createStructuredWorkspaceProjection(
           appendUniqueOccurrenceInteractionRequirements(
             occurrenceInteractionRequirements,
             projected.occurrenceInteractionRequirements.values(),
+          );
+          appendUniqueBatchInteractionRequirements(
+            batchInteractionRequirements,
+            projected.batchInteractionRequirements.values(),
           );
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
@@ -5015,6 +5407,7 @@ export function createStructuredWorkspaceProjection(
         services,
         sources,
         occurrenceInteractionRequirements,
+        batchInteractionRequirements,
         roomControls,
         rewardControls,
       );
@@ -5022,6 +5415,7 @@ export function createStructuredWorkspaceProjection(
         occurrenceInteractionRequirements.values(),
         interactions,
       );
+      assertBatchInteractionRequirementClosure(batchInteractionRequirements.values(), interactions);
       assertWorkspaceInteractionClosure(
         routes,
         roomControls,
