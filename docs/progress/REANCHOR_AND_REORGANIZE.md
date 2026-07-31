@@ -8,9 +8,11 @@ but it does not change the authored schema, game rules, simulation semantics,
 candidate results, workspace behavior, or player-facing design.
 
 Foundation and Campaign A's required pre-movement default-inspector and
-work-count characterization are complete. A1 has established the structured
-workspace public entry and private contract/projector seam; A2 is the next
-delivery slice.
+work-count characterization are complete. A1 established the structured
+workspace public entry and private contract/projector seam. A2.1 established
+the authored-first source index, and A2.2 established occurrence activation,
+lifecycle, and publication facts; common semantic assembly remains in
+progress.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -405,6 +407,16 @@ default-destination contract and retains React equivalence coverage.
   requirements explicitly;
 - remove cross-stage control/focus registration from common occurrence
   projection.
+
+**A2.2 transition note.** The facts distinguish an authored leaf's lifecycle
+from whether the current semantic product publishes it. Dormant Fields and
+Ship leaves remain published and editable by design. Dormant Shop inventory is
+withheld. Dormant Ephyra side leaves are truthfully marked **published** for
+now because the existing projector and interaction binding still emit them and
+React hides their controls behind `detailsActive`. A3 must move the Ephyra
+room-local projection and its interaction binding to one withheld policy in
+the same change; A2 must not pretend that this transitional shape is already
+the final lifecycle contract.
 
 #### A3: Specialized Hub and room-local assembly
 

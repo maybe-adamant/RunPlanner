@@ -99,6 +99,11 @@ import {
   type WorkspaceEvaluatedBatchOverlay,
   type WorkspaceProjectSourceIndex,
 } from './source-index';
+import {
+  authoredFieldsActiveCageCountForDecision,
+  createWorkspaceBiomeOccurrenceAssemblyFacts,
+  type WorkspaceBiomeOccurrenceAssemblyFacts,
+} from './occurrence-facts';
 import type {
   StructuredWorkspaceContextualServices,
   StructuredWorkspaceProjection,
@@ -170,6 +175,7 @@ const linkedExitOrdinal = 1;
 
 interface MutableProjectionContext {
   readonly catalog: Catalog;
+  readonly occurrenceFacts: WorkspaceBiomeOccurrenceAssemblyFacts;
   readonly evaluation: ProjectBiomeEvaluation | undefined;
   readonly focusByOwner: Map<string, WorkspaceInspectorDestination>;
   readonly biome: BiomeAddress;
@@ -950,8 +956,6 @@ function localDetailMarkers(roomLocal: WorkspaceRoomLocal): readonly WorkspaceMa
 }
 
 interface WorkspaceOccurrenceProjectionInput {
-  readonly authoredFieldsActiveCageCount?: number;
-  readonly detailsActive: boolean;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
 }
 
@@ -962,18 +966,25 @@ function projectOccurrence(
 ): WorkspaceOccurrenceWorkbenchNode {
   const room = requireRoom(context.catalog, occurrence.gameName);
   const address = createOccurrenceAddress(context.biome, occurrence.occurrenceId);
+  const occurrenceFacts = context.occurrenceFacts.occurrence(occurrence.occurrenceId);
+  if (occurrenceFacts === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(address)} has no authored occurrence assembly facts`,
+    );
+  }
+  const { detailsActive } = occurrenceFacts;
   const entered = input.evaluatedRoom?.entered ?? false;
   // A dormant Shop is a dead leaf. Its persisted inventory remains available
   // to the command model if the room is picked again, but neither its offer
   // summary nor its editable lifecycle controls are active.
   const summary =
-    occurrence.state.kind === 'shop' && !input.detailsActive
+    occurrence.state.kind === 'shop' && !detailsActive
       ? undefined
       : rewardSummary(context.catalog, room, occurrence.state);
-  const rewardControls = controlsForOccurrence(context, occurrence, room, input.detailsActive);
+  const rewardControls = controlsForOccurrence(context, occurrence, room, detailsActive);
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
-    detailsActive: input.detailsActive,
+    detailsActive,
     entered,
     gameName: occurrence.gameName,
     kind: room.kind,
@@ -988,9 +999,9 @@ function projectOccurrence(
       occurrence,
       room,
       rewardControls,
-      input.detailsActive,
+      detailsActive,
       input.evaluatedRoom,
-      input.authoredFieldsActiveCageCount,
+      occurrenceFacts.fieldsActiveCageCount,
     ),
     rewardControls,
     ...(summary === undefined ? {} : { rewardSummary: summary }),
@@ -1327,7 +1338,6 @@ function projectHubNode(
 } {
   const hubMarker = marker(context, owner);
   const occurrences = hubOccurrenceMap(plan);
-  const visited = new Set(visitOrder);
   const workbenches: WorkspaceOccurrenceWorkbenchNode[] = [];
   const roomsBySlot = new Map<string, WorkspaceRoomSummary>();
   const slots = descriptor.slots.map((slot) => {
@@ -1335,12 +1345,14 @@ function projectHubNode(
     const occurrence = target === undefined ? undefined : occurrences.get(target.occurrenceId);
     const address = createHubSlotAddress(context.biome, descriptor.hubKey, slot.slotKey);
     const slotMarker = marker(context, address);
-    const detailsActive = visited.has(slot.slotKey);
+    const detailsActive =
+      occurrence === undefined
+        ? false
+        : (context.occurrenceFacts.occurrence(occurrence.occurrenceId)?.detailsActive ?? false);
     const occurrenceNode =
       occurrence === undefined
         ? undefined
         : projectOccurrence(context, occurrence, {
-            detailsActive,
             ...(target?.canonical === undefined ? {} : { evaluatedRoom: target.canonical }),
           });
     if (occurrenceNode !== undefined) {
@@ -1570,7 +1582,7 @@ function authoredTargetIsSelected(
  * from topology alone so a blocked or invalid evaluator prefix cannot remove
  * an active room's declaration-owned lifecycle surface.
  */
-function authoredDetailsActiveOccurrenceIds(plan: AuthoredBiomePlan): ReadonlySet<OccurrenceId> {
+function expectedDetailsActiveOccurrenceIds(plan: AuthoredBiomePlan): ReadonlySet<OccurrenceId> {
   const active = new Set<OccurrenceId>();
   const topology = plan.topology;
   if (topology === null) return active;
@@ -1651,7 +1663,7 @@ export function authoredWorkspaceLeafRequirements(
     requireLeaf(address, authoredLeafInteraction('reward', semanticAddressKey(address)));
   const topology = plan.topology;
   if (topology === null) return Object.freeze([]);
-  const detailsActive = authoredDetailsActiveOccurrenceIds(plan);
+  const detailsActive = expectedDetailsActiveOccurrenceIds(plan);
   for (const occurrence of topology.occurrences) {
     const room = requireRoom(catalog, occurrence.gameName);
     const occurrenceAddress = createOccurrenceAddress(biome, occurrence.occurrenceId);
@@ -1794,46 +1806,77 @@ export function authoredWorkspaceLeafRequirements(
 }
 
 /**
- * A retained or upstream-blocked Fields target has no canonical room yet, but
- * its authored batch outcome still declares exactly which cage slots are live.
- * This is a presentation fact from the normalized layout plus authored batch
- * state, not an attempt to simulate an unassessed suffix.
+ * The occurrence facts are a production convenience, never the expected side
+ * of this audit. Compare them to the independently enumerated authored leaf
+ * requirements before semantic assembly relies on them.
  */
-function authoredFieldsActiveCageCount(
-  context: MutableProjectionContext,
+function assertOccurrenceAssemblyFactsMatchAuthoredLeafRequirements(
+  facts: WorkspaceBiomeOccurrenceAssemblyFacts,
   plan: AuthoredBiomePlan,
-  decision: AuthoredBatchDecision,
-): number | undefined {
-  const layout = context.catalog.biomeLayouts.byKey[plan.biomeKey];
-  if (
-    layout?.progression.kind !== 'generated' ||
-    layout.progression.batchPolicy.kind !== 'fields' ||
-    decision.normal.batchState === null
-  ) {
-    return undefined;
-  }
-  let maxCount = layout.progression.batchPolicy.maxDoorCageRewards;
-  for (const target of decision.normal.targets) {
-    const occurrence = authoredOccurrence(context, target.occurrenceId);
-    if (occurrence === undefined) continue;
-    const room = requireRoom(context.catalog, occurrence.gameName);
-    const cages = room.localChildren.find((child) => child.kind === 'boundedRewardSlots');
-    if (cages?.kind === 'boundedRewardSlots') {
-      maxCount = Math.min(maxCount, cages.maxActiveSlots);
+  requirements: readonly WorkspaceAuthoredLeafRequirement[],
+): void {
+  const expectedDetailsActive = expectedDetailsActiveOccurrenceIds(plan);
+  const authoredOccurrenceIds = new Set(
+    (plan.topology?.occurrences ?? []).map((occurrence) => occurrence.occurrenceId),
+  );
+  for (const occurrenceId of authoredOccurrenceIds) {
+    const fact = facts.occurrence(occurrenceId);
+    if (fact === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(createOccurrenceAddress(facts.biome, occurrenceId))} has no authored occurrence assembly facts`,
+      );
+    }
+    if (fact.detailsActive !== expectedDetailsActive.has(occurrenceId)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(createOccurrenceAddress(facts.biome, occurrenceId))} has incorrect authored detail activation`,
+      );
     }
   }
-  return decision.normal.batchState.cageOutcome === 'min'
-    ? layout.progression.batchPolicy.minDoorCageRewards
-    : maxCount;
+  for (const fact of facts.occurrences) {
+    if (!authoredOccurrenceIds.has(fact.occurrenceId)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(createOccurrenceAddress(facts.biome, fact.occurrenceId))} has no authored occurrence owner`,
+      );
+    }
+  }
+  const expected = new Set(
+    requirements.map((requirement) => semanticAddressKey(requirement.address)),
+  );
+  for (const occurrence of facts.occurrences) {
+    for (const leaf of occurrence.leaves) {
+      const key = semanticAddressKey(leaf.address);
+      if (leaf.lifecycle === 'active' && leaf.surface === 'published' && !expected.has(key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} active authored occurrence leaf is absent from the independent closure requirements`,
+        );
+      }
+      if (leaf.surface === 'withheld' && expected.has(key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} withheld authored occurrence leaf is unexpectedly required by the independent closure`,
+        );
+      }
+    }
+  }
+  for (const requirement of requirements) {
+    const surface = facts.leafSurface(requirement.address);
+    if (surface !== 'published') {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(requirement.address)} required authored leaf is ${surface} in occurrence assembly facts`,
+      );
+    }
+  }
 }
 
 function fieldsContextForAuthoredBatch(
   context: MutableProjectionContext,
-  plan: AuthoredBiomePlan,
   decision: AuthoredBatchDecision,
 ): WorkspaceFieldsBatchContext | undefined {
   if (decision.normal.batchState === null) return undefined;
-  const doorCageRewardCount = authoredFieldsActiveCageCount(context, plan, decision);
+  const doorCageRewardCount = authoredFieldsActiveCageCountForDecision(
+    context.catalog,
+    context.source,
+    decision,
+  );
   if (doorCageRewardCount === undefined) return undefined;
   const cageTargetCount = decision.normal.targets.filter((target) => {
     const occurrence = authoredOccurrence(context, target.occurrenceId);
@@ -1926,7 +1969,6 @@ function projectAuthoredTargetWithOverlay(
   decision: AuthoredBatchDecision,
   target: AuthoredBatchTarget,
   physical: readonly DeclaredPhysicalExit[],
-  fieldsActiveCageCount: number | undefined,
   sourceDecisionRemoval: WorkspaceStageDecisionRemoval | undefined,
   evaluatedTarget: CanonicalTarget | undefined,
 ): { readonly target: WorkspacePhysicalTarget; readonly node: WorkspaceOccurrenceWorkbenchNode } {
@@ -1968,10 +2010,6 @@ function projectAuthoredTargetWithOverlay(
   const markerForTarget = marker(context, address);
   const node = Object.freeze({
     ...projectOccurrence(context, occurrence, {
-      ...(fieldsActiveCageCount === undefined
-        ? {}
-        : { authoredFieldsActiveCageCount: fieldsActiveCageCount }),
-      detailsActive: selected,
       ...(evaluatedTarget === undefined ? {} : { evaluatedRoom: evaluatedTarget.room }),
     }),
     ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
@@ -2046,7 +2084,6 @@ function projectAuthoredBatchWithOverlay(
       : undefined;
   const physical = physicalExitsForSource(context, plan, decision.source);
   const rank = new Map(physical.map((exit) => [exit.exitKey, exit.index] as const));
-  const fieldsActiveCageCount = authoredFieldsActiveCageCount(context, plan, decision);
   const projectedTargets = [...decision.normal.targets]
     .sort((left, right) => compareAuthoredTargetsInPhysicalOrder(rank, left, right))
     .map((target) => {
@@ -2058,7 +2095,6 @@ function projectAuthoredBatchWithOverlay(
         decision,
         target,
         physical,
-        fieldsActiveCageCount,
         sourceDecisionRemoval,
         overlay,
       );
@@ -2096,7 +2132,7 @@ function projectAuthoredBatchWithOverlay(
       : undefined;
   const fields =
     evaluated === undefined
-      ? fieldsContextForAuthoredBatch(context, plan, decision)
+      ? fieldsContextForAuthoredBatch(context, decision)
       : fieldsContextForCanonicalBatch(context, evaluated.batch);
   const hasEditableAuthoredRewardStore =
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
@@ -2199,7 +2235,6 @@ function projectAuthoredLinkedExitWithOverlay(
     (physical === undefined ? ('unavailable' as const) : ('available' as const));
   const workbench = Object.freeze({
     ...projectOccurrence(context, occurrence, {
-      detailsActive: true,
       ...(evaluated === undefined ? {} : { evaluatedRoom: evaluated.target.room }),
     }),
     ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
@@ -3805,8 +3840,10 @@ function projectBiome(
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
 } {
   const { biome: biomeAddress, evaluation, layout, plan } = source;
+  const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(catalog, source);
   const context: MutableProjectionContext = {
     catalog,
+    occurrenceFacts,
     evaluation,
     focusByOwner,
     biome: biomeAddress,
@@ -3816,6 +3853,11 @@ function projectBiome(
     source,
   };
   const authoredLeafRequirements = authoredWorkspaceLeafRequirements(catalog, biomeAddress, plan);
+  assertOccurrenceAssemblyFactsMatchAuthoredLeafRequirements(
+    occurrenceFacts,
+    plan,
+    authoredLeafRequirements,
+  );
   // Structural completeness is authoritative even when simulation coverage is
   // blocked upstream.  In particular, a Hub's next visit must remain a
   // projectable frontier after its board has been authored.
@@ -3852,7 +3894,6 @@ function projectBiome(
         );
       }
       entry = projectOccurrence(context, start, {
-        detailsActive: true,
         ...(source.entryRoom === undefined ? {} : { evaluatedRoom: source.entryRoom }),
       });
       nodes.push(entry);
