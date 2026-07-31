@@ -42,7 +42,6 @@ import {
   type WorkspaceAuthoredBatchDecision,
   type WorkspaceAuthoredLinkedExitDecision,
   type WorkspaceDecisionAssembly,
-  type WorkspaceDecisionBatchNode,
 } from './decision-assembly';
 import { assembleWorkspaceHub } from './hub-assembly';
 import {
@@ -74,6 +73,7 @@ import {
   type WorkspaceBiomeOccurrenceAssemblyFacts,
   type WorkspaceOccurrenceAssemblyFact,
 } from './occurrence-facts';
+import type { WorkspaceDecisionBatchNode } from './marker-ownership';
 import type { WorkspaceBiomeSource } from './source-index';
 import { assembleWorkspaceTopologyInteractions } from './topology-interaction-assembly';
 
@@ -105,6 +105,8 @@ export interface WorkspaceBiomeSemanticAssembly {
     WorkspaceOccurrenceInteractionRequirement
   >;
   readonly preliminaryFocusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
+  /** Presentation needs only this declared rail policy, never the full layout. */
+  readonly progressionKind: BiomeLayout['progression']['kind'];
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
   readonly source: WorkspaceProjectionSource;
@@ -620,6 +622,7 @@ export function assembleWorkspaceBiomeSemantics(
     occurrenceFacts,
     occurrenceInteractionRequirements,
     preliminaryFocusDestinations,
+    progressionKind: layout.progression.kind,
     roomControls,
     rewardControls,
     source: sourceFor(evaluation),

@@ -175,6 +175,34 @@ public entry or become an alternate consumer import path. This keeps workspace
 construction replaceable without making React or application composition depend
 on its internal assembly order.
 
+### Internal Projection Production Line
+
+The private workspace implementation preserves one directed production line:
+
+```text
+WorkspaceBiomeSource
+  -> WorkspaceBiomeSemanticAssembly
+       ├-> biome presentation (rail, default inspector, exact destinations)
+       └-> project-wide interaction binding
+catalog + persisted authored state
+  -> independent authored-owner expectations
+semantic assembly + presentation + bound interactions + expectations
+  -> final-product closure
+  -> cached structured-workspace service
+```
+
+The semantic assembly owns complete biome facts: authored structural nodes,
+room-local products, controls, preliminary destinations, and interaction
+requirements. Biome presentation and interaction binding are sibling consumers
+of that immutable product. Presentation owns the selective rail, Hub visit
+grouping, default inspector, and final inspector/rail destinations; interaction
+binding owns executable command adapters and does not consume presentation.
+Independently derived authored-owner expectations remain a separate catalog plus
+persisted-state audit path. The cached service composes these returned products,
+project and route markers, coarse finding fallbacks, and the final immutable
+workspace; it does not construct occurrence, decision, Hub, rail, or audit
+families itself.
+
 Creation establishes explicit transient semantic focus through the existing
 semantic-owner action. Every authored start selects its created Room Occurrence.
 Creating an ordinary target selects its target owner while remaining in the

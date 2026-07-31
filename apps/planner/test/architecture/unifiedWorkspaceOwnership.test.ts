@@ -104,4 +104,63 @@ describe('unified workspace ownership boundary', () => {
       }
     }
   });
+
+  it('keeps final workspace presentation, interaction binding, and facade directional', () => {
+    const presentationPath = join(structuredWorkspaceRoot, 'biome-presentation.ts');
+    const interactionBindingPath = join(structuredWorkspaceRoot, 'interaction-binding.ts');
+    const markerOwnershipPath = join(structuredWorkspaceRoot, 'marker-ownership.ts');
+    const projectorPath = join(structuredWorkspaceRoot, 'projector.ts');
+    const forbiddenPresentationImports = [
+      /from\s+['"][^'"]*source-index['"]/,
+      /from\s+['"][^'"]*audit\//,
+      /from\s+['"][^'"]*interaction-binding['"]/,
+      /from\s+['"][^'"]*occurrence-assembly['"]/,
+      /from\s+['"][^'"]*decision-assembly['"]/,
+      /from\s+['"][^'"]*hub-assembly['"]/,
+      /from\s+['"][^'"]*topology-interaction-assembly['"]/,
+      /from\s+['"][^'"]*marker-builder['"]/,
+    ];
+    const forbiddenInteractionBindingImports = [
+      /from\s+['"][^'"]*biome-presentation['"]/,
+      /from\s+['"][^'"]*inspector-defaults['"]/,
+      /from\s+['"][^'"]*inspector-destinations['"]/,
+    ];
+    const forbiddenMarkerOwnershipImports = [
+      /from\s+['"][^'"]*source-index['"]/,
+      /from\s+['"][^'"]*occurrence-assembly['"]/,
+      /from\s+['"][^'"]*decision-assembly['"]/,
+      /from\s+['"][^'"]*hub-assembly['"]/,
+      /from\s+['"][^'"]*biome-semantic-assembly['"]/,
+      /from\s+['"][^'"]*biome-presentation['"]/,
+      /from\s+['"][^'"]*topology-interaction-assembly['"]/,
+      /from\s+['"][^'"]*marker-builder['"]/,
+      /from\s+['"][^'"]*audit\//,
+      /from\s+['"][^'"]*interaction-binding['"]/,
+      /from\s+['"][^'"]*inspector-[^'"]*['"]/,
+    ];
+    const forbiddenFacadeImports = [
+      /from\s+['"][^'"]*occurrence-assembly['"]/,
+      /from\s+['"][^'"]*decision-assembly['"]/,
+      /from\s+['"][^'"]*hub-assembly['"]/,
+      /from\s+['"][^'"]*topology-interaction-assembly['"]/,
+      /from\s+['"][^'"]*marker-(?:builder|ownership)['"]/,
+      /from\s+['"][^'"]*inspector-defaults['"]/,
+      /from\s+['"][^'"]*inspector-destinations['"]/,
+    ];
+
+    for (const [path, forbiddenImports] of [
+      [presentationPath, forbiddenPresentationImports],
+      [interactionBindingPath, forbiddenInteractionBindingImports],
+      [markerOwnershipPath, forbiddenMarkerOwnershipImports],
+      [projectorPath, forbiddenFacadeImports],
+    ] as const) {
+      const source = readFileSync(path, 'utf8');
+      for (const forbiddenImport of forbiddenImports) {
+        expect(
+          source,
+          `${relative(structuredWorkspaceRoot, path)} imports ${forbiddenImport}`,
+        ).not.toMatch(forbiddenImport);
+      }
+    }
+  });
 });
