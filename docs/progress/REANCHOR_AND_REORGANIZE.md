@@ -18,7 +18,7 @@ destinations an explicit assembly output as well. A4.1 now returns and binds
 the first occurrence-owned non-reward interaction packages explicitly. A4.2
 does the same for authored batch controls. A4.3 does the same for authored Hub
 board slots and visits. A4.4 does the same for generic authored-topology
-removals.
+removals. A4.5 does the same for topology-free authored starts.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -501,8 +501,18 @@ service-derived data. An independent persisted-topology audit verifies exact
 owners, commands, and all downstream-removal scope arrays, including retained
 or disconnected suffixes and Hub-source Preboss exits. Hub boards themselves
 still have no generic removal control; Hub-slot closure remains owned by the
-`hubControls` package. Starts, takeover actions, and frontier capabilities
-remain in the source-index binding until their own cohesive requirements exist.
+`hubControls` package. Takeover actions and frontier capabilities remain in the
+source-index binding until their own cohesive requirements exist.
+
+**A4.5 transition note.** Topology-free biome assembly now returns one `start`
+package, preserving declaration-fixed versus authored-choice start policy.
+Binding resolves catalog labels and candidate room declarations through the
+already-bound candidate session without loading candidates during workspace
+projection. An independent plan/layout audit requires a package only while
+topology is null and rejects one once authored topology exists; direct closure
+preserves exact fixed-start facts without defeating laziness. Takeover actions
+and frontier capabilities remain in the source-index binding until their own
+cohesive requirements exist.
 
 #### A5: Presentation, focus, and closure
 

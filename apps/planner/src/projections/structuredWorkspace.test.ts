@@ -1090,6 +1090,7 @@ describe('unified structured workspace projection', () => {
     expect(emptyF.frontier).toMatchObject({ kind: 'start', owner: fBiome });
     if (emptyF.frontier?.kind !== 'start') throw new Error('F start frontier is missing');
     expect(empty.interactions.starts.get(emptyF.frontier.interactionKey)).toMatchObject({
+      kind: 'choice',
       owner: fBiome,
     });
 
@@ -1104,6 +1105,7 @@ describe('unified structured workspace projection', () => {
       kind: 'occurrence',
       occurrenceId: fStart,
     });
+    expect(workspace(startedF).interactions.starts.has(semanticAddressKey(fBiome))).toBe(false);
     expect(
       workspace(startedF).interactions.structural.get(semanticAddressKey(batchOwner)),
     ).toMatchObject({
