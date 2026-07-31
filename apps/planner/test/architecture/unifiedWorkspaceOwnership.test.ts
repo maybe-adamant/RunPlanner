@@ -110,10 +110,16 @@ describe('unified workspace ownership boundary', () => {
   });
 
   it('keeps final workspace presentation, interaction binding, and facade directional', () => {
-    const presentationPath = join(structuredWorkspaceRoot, 'biome-presentation.ts');
-    const semanticAssemblyPath = join(structuredWorkspaceRoot, 'biome-semantic-assembly.ts');
-    const interactionBindingPath = join(structuredWorkspaceRoot, 'interaction-binding.ts');
-    const markerOwnershipPath = join(structuredWorkspaceRoot, 'marker-ownership.ts');
+    const presentationPath = join(structuredWorkspaceRoot, 'presentation/biome-presentation.ts');
+    const semanticAssemblyPath = join(
+      structuredWorkspaceRoot,
+      'assembly/biome-semantic-assembly.ts',
+    );
+    const interactionBindingPath = join(
+      structuredWorkspaceRoot,
+      'interactions/interaction-binding.ts',
+    );
+    const markerOwnershipPath = join(structuredWorkspaceRoot, 'navigation/marker-ownership.ts');
     const projectorPath = join(structuredWorkspaceRoot, 'projector.ts');
     const forbiddenPresentationImports = [
       /from\s+['"][^'"]*source-index['"]/,

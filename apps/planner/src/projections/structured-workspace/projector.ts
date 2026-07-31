@@ -7,12 +7,12 @@ import {
   appendUniqueFocusDestinations,
   appendUniqueRewardControls,
   appendUniqueRoomControls,
-} from './assembly-products';
-import { assembleWorkspaceBiomeSemantics } from './biome-semantic-assembly';
-import { presentWorkspaceBiome } from './biome-presentation';
-import { registerWorkspaceFindingDestinations } from './finding-routing';
+} from './assembly/assembly-products';
+import { assembleWorkspaceBiomeSemantics } from './assembly/biome-semantic-assembly';
+import { presentWorkspaceBiome } from './presentation/biome-presentation';
+import { registerWorkspaceFindingDestinations } from './navigation/finding-routing';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
-import { bindWorkspaceInteractions } from './interaction-binding';
+import { bindWorkspaceInteractions } from './interactions/interaction-binding';
 import {
   appendUniqueBatchInteractionRequirements,
   appendUniqueFrontierInteractionRequirements,
@@ -28,7 +28,7 @@ import {
   type WorkspaceStartInteractionRequirement,
   type WorkspaceTakeoverInteractionRequirement,
   type WorkspaceTopologyRemovalInteractionRequirement,
-} from './interaction-requirements';
+} from './interactions/interaction-requirements';
 import type {
   StructuredWorkspaceContextualServices,
   StructuredWorkspaceProjection,
