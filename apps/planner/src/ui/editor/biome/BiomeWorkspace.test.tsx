@@ -355,6 +355,24 @@ describe('BiomeWorkspace', () => {
     expect(within(inspector).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
   });
 
+  it('renders a dormant Ephyra side surface without editable side controls', () => {
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(nBiome, nOccurrenceId('combat10'))),
+      ),
+    );
+
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    expect(
+      within(inspector).getByText(
+        'Side rooms become available after this room is selected in the visit order.',
+      ),
+    ).toBeTruthy();
+    expect(within(inspector).queryByRole('heading', { name: 'Side rooms' })).toBeNull();
+    expect(within(inspector).queryByLabelText('Side Room 01 generation')).toBeNull();
+  });
+
   it('keeps Hub timeline and board focus represented by the nested rail', async () => {
     const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());

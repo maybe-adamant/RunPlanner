@@ -187,7 +187,7 @@ function occurrenceLeafFacts(
   };
   const incoming = createIncomingRewardAddress(biome, occurrence.occurrenceId);
   const detailLifecycle = detailsActive ? ('active' as const) : ('dormant' as const);
-  const shopSurface = detailsActive ? ('published' as const) : ('withheld' as const);
+  const pickedDetailSurface = detailsActive ? ('published' as const) : ('withheld' as const);
   switch (occurrence.state.kind) {
     case 'none':
       break;
@@ -220,20 +220,18 @@ function occurrenceLeafFacts(
       add(
         createLocalChildGroupAddress(biome, occurrence.occurrenceId, group.key),
         detailLifecycle,
-        // A3 will move Ephyra's dormant side leaves from this transitional,
-        // prepublished shape to one coherent withheld semantic assembly.
-        'published',
+        pickedDetailSurface,
       );
       for (const slot of group.slots) {
         add(
           createLocalChildAddress(biome, occurrence.occurrenceId, group.key, slot.slotKey),
           detailLifecycle,
-          'published',
+          pickedDetailSurface,
         );
         add(
           createLocalRewardAddress(biome, occurrence.occurrenceId, group.key, slot.slotKey),
           detailLifecycle,
-          'published',
+          pickedDetailSurface,
         );
       }
       break;
@@ -310,12 +308,12 @@ function occurrenceLeafFacts(
         add(
           createShopOfferAddress(biome, occurrence.occurrenceId, slot.key),
           detailLifecycle,
-          shopSurface,
+          pickedDetailSurface,
         );
         add(
           createShopPurchaseAddress(biome, occurrence.occurrenceId, slot.key),
           detailLifecycle,
-          shopSurface,
+          pickedDetailSurface,
         );
       }
       break;

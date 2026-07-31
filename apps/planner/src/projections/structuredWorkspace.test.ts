@@ -10,6 +10,8 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
+  createLocalChildAddress,
+  createLocalChildGroupAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -605,7 +607,13 @@ describe('unified structured workspace projection', () => {
       'authored',
     ]);
     const combat02 = hub.slots.find((slot) => slot.hubSlotKey === 'combat02');
-    if (combat02?.room?.roomLocal.kind !== 'ephyra') {
+    const combat02Room = combat02?.room;
+    if (
+      combat02 === undefined ||
+      combat02Room === undefined ||
+      combat02Room.roomLocal.kind !== 'ephyra' ||
+      combat02Room.roomLocal.sideRooms.kind !== 'published'
+    ) {
       throw new Error('N Combat 02 side-room workbench is missing');
     }
     expect(combat02).toMatchObject({
@@ -613,7 +621,7 @@ describe('unified structured workspace projection', () => {
       roomKind: 'Combat',
       visited: true,
     });
-    expect(combat02.room.roomLocal.sideRooms).toMatchObject({
+    expect(combat02Room.roomLocal.sideRooms.group).toMatchObject({
       enteredSlotKeys: ['sideDoor1'],
       slots: [
         { key: 'sideDoor1', physicalDoorId: 558353, entered: true },
@@ -645,8 +653,8 @@ describe('unified structured workspace projection', () => {
       railHub.visits.map(() => 'occurrence'),
     );
     expect(railHub.visits[2]).toMatchObject({
-      marker: combat02.room.marker,
-      node: { key: `occurrence:${semanticAddressKey(combat02.room.address)}` },
+      marker: combat02Room.marker,
+      node: { key: `occurrence:${semanticAddressKey(combat02Room.address)}` },
       visitMarker: hub.visits[2]?.marker,
     });
     const mainReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat02'));
@@ -715,11 +723,12 @@ describe('unified structured workspace projection', () => {
   it('projects every direct Ephyra side-room position as a complete candidate proposal', () => {
     const projectedWorkspace = workspace(createRepresentativeNOPQProject());
     const combat05 = roomWorkbench(projectedWorkspace, 'N', 'N_Combat05');
-    if (combat05.roomLocal.kind !== 'ephyra') {
+    if (combat05.roomLocal.kind !== 'ephyra' || combat05.roomLocal.sideRooms.kind !== 'published') {
       throw new Error('N Combat 05 side-room workbench is missing');
     }
-    const sideDoor2 = combat05.roomLocal.sideRooms.slots.find((slot) => slot.key === 'sideDoor2');
-    const sideDoor3 = combat05.roomLocal.sideRooms.slots.find((slot) => slot.key === 'sideDoor3');
+    const group = combat05.roomLocal.sideRooms.group;
+    const sideDoor2 = group.slots.find((slot) => slot.key === 'sideDoor2');
+    const sideDoor3 = group.slots.find((slot) => slot.key === 'sideDoor3');
     if (sideDoor2 === undefined || sideDoor3 === undefined) {
       throw new Error('N Combat 05 side-room slots are missing');
     }
@@ -797,38 +806,83 @@ describe('unified structured workspace projection', () => {
       expect(
         projectedWorkspace.interactions.sideRoomEntryOrders.get(sideRoom.entryOrder.interactionKey),
       ).toMatchObject({
-        owner: combat05.roomLocal.sideRooms.address,
+        owner: group.address,
         selected: selected.proposedEnteredSlotKeys,
       });
     }
   });
 
-  it('retains currently published dormant Ephyra side-room interactions', () => {
+  it('withholds dormant Ephyra side-room owners, controls, and interactions', () => {
     const projectedWorkspace = workspace(createRepresentativeNOPQProject());
     const combat10 = roomWorkbench(projectedWorkspace, 'N', 'N_Combat10');
     if (combat10.roomLocal.kind !== 'ephyra') {
       throw new Error('N Combat 10 side-room workbench is missing');
     }
+    const group = createLocalChildGroupAddress(nBiome, nOccurrenceId('combat10'), 'sideRooms');
+    const sideRoom = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat10'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    const sideReward = createLocalRewardAddress(
+      nBiome,
+      nOccurrenceId('combat10'),
+      'sideRooms',
+      'sideDoor1',
+    );
 
     expect(combat10.detailsActive).toBe(false);
-    for (const sideRoom of combat10.roomLocal.sideRooms.slots) {
-      const selected = sideRoom.entryOrder.options.find(
-        (option) => option.key === sideRoom.entryOrder.selectedKey,
-      );
-      if (selected === undefined)
-        throw new Error(`${sideRoom.key} has no selected entry-order option`);
-      expect(
-        projectedWorkspace.interactions.sideRoomGenerations.get(
-          semanticAddressKey(sideRoom.address),
-        ),
-      ).toMatchObject({ owner: sideRoom.address, selected: sideRoom.generation });
-      expect(
-        projectedWorkspace.interactions.sideRoomEntryOrders.get(sideRoom.entryOrder.interactionKey),
-      ).toMatchObject({
-        owner: combat10.roomLocal.sideRooms.address,
-        selected: selected.proposedEnteredSlotKeys,
-      });
+    expect(combat10.roomLocal.sideRooms).toEqual({ kind: 'withheld' });
+    expect(combat10.rewardControls).toHaveLength(1);
+    expect(projectedWorkspace.focusByOwner.has(semanticAddressKey(group))).toBe(false);
+    expect(projectedWorkspace.focusByOwner.has(semanticAddressKey(sideRoom))).toBe(false);
+    expect(projectedWorkspace.focusByOwner.has(semanticAddressKey(sideReward))).toBe(false);
+    expect(projectedWorkspace.interactions.rewards.has(semanticAddressKey(sideReward))).toBe(false);
+    expect(
+      projectedWorkspace.interactions.sideRoomGenerations.has(semanticAddressKey(sideRoom)),
+    ).toBe(false);
+    expect(
+      projectedWorkspace.interactions.sideRoomEntryOrders.has(
+        `${semanticAddressKey(sideRoom)}:entry-order`,
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps authored-active Ephyra side details published when their Hub evaluation is invalid', () => {
+    const invalidBoard = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const projectedWorkspace = workspace(invalidBoard);
+    const combat05 = roomWorkbench(projectedWorkspace, 'N', 'N_Combat05');
+    if (combat05.roomLocal.kind !== 'ephyra' || combat05.roomLocal.sideRooms.kind !== 'published') {
+      throw new Error('invalid N Combat 05 side-room workbench is missing');
     }
+    const sideRoom = combat05.roomLocal.sideRooms.group.slots.find(
+      (slot) => slot.key === 'sideDoor1',
+    );
+    if (sideRoom === undefined) throw new Error('invalid N Combat 05 side room is missing');
+
+    expect(biome(projectedWorkspace, 'N').status).toBe('invalid');
+    expect(combat05.detailsActive).toBe(true);
+    expect(combat05.roomLocal.sideRooms.kind).toBe('published');
+    expect(
+      combat05.rewardControls.some(
+        (control) =>
+          semanticAddressKey(control.owner.address) ===
+          semanticAddressKey(sideRoom.rewardControl.owner.address),
+      ),
+    ).toBe(true);
+    expect(
+      projectedWorkspace.interactions.sideRoomGenerations.get(semanticAddressKey(sideRoom.address)),
+    ).toMatchObject({ owner: sideRoom.address, selected: sideRoom.generation });
+    expect(
+      projectedWorkspace.interactions.sideRoomEntryOrders.get(sideRoom.entryOrder.interactionKey),
+    ).toMatchObject({
+      owner: combat05.roomLocal.sideRooms.group.address,
+    });
   });
 
   it('reprojects authored Hub visit children in visit order after replacement and truncation', () => {

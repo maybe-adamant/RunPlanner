@@ -321,6 +321,26 @@ describe('structured workspace overlay contract', () => {
     );
   });
 
+  it('rejects a fine-grained finding on a withheld dormant Ephyra side leaf', () => {
+    const project = createRepresentativeNOPQProject();
+    const evaluation = simulateProject(catalog, project);
+    const finding = {
+      code: 'sideRoomGenerationUnavailable',
+      evidence: {},
+      origin: createLocalChildAddress(nBiome, nOccurrenceId('combat10'), 'sideRooms', 'sideDoor1'),
+      phase: 'rewardGeneration',
+      severity: 'error',
+    } as const satisfies SemanticFinding;
+    const malformed: ProjectEvaluation = {
+      ...evaluation,
+      findings: [...evaluation.findings, finding],
+    };
+
+    expect(() => projection().project(project, malformed)).toThrow(
+      /finding has no exact workspace destination/,
+    );
+  });
+
   it('rejects an independently expected editable leaf omitted from projection products', () => {
     const project = createRepresentativeNOPQProject();
     const plan = project.routes

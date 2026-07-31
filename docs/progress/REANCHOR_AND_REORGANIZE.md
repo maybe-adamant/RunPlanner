@@ -12,12 +12,13 @@ work-count characterization are complete. A1 established the structured
 workspace public entry and private contract/projector seam. A2.1 established
 the authored-first source index, A2.2 established occurrence activation,
 lifecycle, and publication facts, A2.3 made occurrence reward controls
-explicit assembly output, and A2.4 did the same for room pickers; common
-semantic assembly remains in progress. A2.5 made completed biome focus
-destinations an explicit assembly output as well. A4.1 now returns and binds
-the first occurrence-owned non-reward interaction packages explicitly. A4.2
-does the same for authored batch controls. A4.3 does the same for authored Hub
-board slots and visits. A4.4 does the same for generic authored-topology
+explicit assembly output, A2.4 did the same for room pickers, and A2.5 made
+completed biome focus destinations an explicit assembly output. A3 now closes
+the shared occurrence assembly for Hub, Ephyra, Fields, Ship, and Shop room
+details, including an explicit withheld Ephyra side-room surface. A4.1 now
+returns and binds the first occurrence-owned non-reward interaction packages
+explicitly. A4.2 does the same for authored batch controls. A4.3 does the same
+for authored Hub board slots and visits. A4.4 does the same for generic authored-topology
 removals. A4.5 does the same for topology-free authored starts. A4.6 does the
 same for takeover batches. A4.7 does the same for the coupled frontier
 capability and structural-action family. A4.8 extracts those now-closed
@@ -28,12 +29,12 @@ every biome-local exact focus owner to a final inspector subject and optional
 rail selection, so React resolves only projected keys and no longer recreates
 containment or fallback policy.
 
-The feature frontier remains Commit 5b.3 in
+Campaign A is complete. The feature frontier returns to Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
 by Commit 5b.4 and the separate schema-changing Commit 5c in
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md). The workspace/React
-campaign in this plan is the bounded prerequisite before Commit 5b.3 resumes.
-The remaining authored-core and engine campaigns must close before Commit 5c,
+campaign in this plan was the bounded prerequisite for that resumption. The
+remaining authored-core and engine campaigns must close before Commit 5c,
 which would otherwise add behavior through those same gravity wells.
 
 This document is temporary delivery authority. Stable ownership remains with
@@ -370,10 +371,10 @@ next broad movement.
 
 ### Campaign A: Workspace Flow and React Consumption
 
-Campaign A is the only prerequisite before Commit 5b.3 resumes. The target
-location is a cohesive `structured-workspace/` projection area with one
-intentional public entry point. Exact filenames follow the returned products,
-not a file-count target.
+Campaign A was the only prerequisite before Commit 5b.3 resumed. It now closes
+with a cohesive `structured-workspace/` projection area and one intentional
+public entry point. Exact filenames follow the returned products, not a
+file-count target.
 
 #### Campaign A entry characterization
 
@@ -422,15 +423,14 @@ default-destination contract and retains React equivalence coverage.
 - remove cross-stage control/focus registration from common occurrence
   projection.
 
-**A2.2 transition note.** The facts distinguish an authored leaf's lifecycle
+**A2.2 completion note.** The facts distinguish an authored leaf's lifecycle
 from whether the current semantic product publishes it. Dormant Fields and
-Ship leaves remain published and editable by design. Dormant Shop inventory is
-withheld. Dormant Ephyra side leaves are truthfully marked **published** for
-now because the existing projector and interaction binding still emit them and
-React hides their controls behind `detailsActive`. A3 must move the Ephyra
-room-local projection and its interaction binding to one withheld policy in
-the same change; A2 must not pretend that this transitional shape is already
-the final lifecycle contract.
+Ship leaves remain published and editable by design. Dormant Shop inventory and
+Ephyra side-group, side-child, and side-reward leaves are withheld. Ephyra's
+main incoming reward remains offer-time data and therefore remains published.
+`detailsActive` is authored activation rather than evaluated entry, so an
+authored-active Ephyra room continues to publish its side surface even when
+evaluation is invalid or incomplete.
 
 **A2.3 transition note.** An occurrence now returns its reward-control
 package with its workbench node. Biome and project composition collect those
@@ -460,6 +460,14 @@ fallback.
 - preserve one reachable occurrence projection for nested and standalone
   workbench shapes.
 
+**A3 completion note.** Hub visits and standalone workbenches both call the
+same occurrence assembly. Fields cages, Ship wheels, Shop inventory, and
+Ephyra details remain declaration-specific products returned from that stage.
+Ephyra side details are a discriminated `published`/`withheld` semantic
+surface: dormant values remain authored but create no markers, controls,
+candidate interactions, or focus destinations. React renders the returned
+surface rather than hiding otherwise-published controls.
+
 #### A4: Interaction requirements and binding
 
 - bind interactions through a named `WorkspaceInteractionBindingInput` of
@@ -475,10 +483,10 @@ Ship, and materialized-Shop interaction packages alongside its room and reward
 controls. Binding consumes those returned packages and one exact candidate
 session; it no longer re-traverses raw authored occurrences for that family.
 The independently derived authored-leaf audit remains separate: dormant
-Ephyra side leaves stay intentionally published in this transition, while a
-dormant Shop emits no package. Fields, batch, Hub, topology, and frontier
-interaction families remain in the source-index binding until their own
-complete requirements exist.
+Ephyra side leaves and dormant Shop inventory emit no package, while authored-
+active invalid or unassessed details remain published. Fields, batch, Hub,
+topology, and frontier interaction families remain in the source-index binding
+until their own complete requirements exist.
 
 **A4.2 transition note.** Authored batch assembly now returns one
 `batchControls` package for its published exit selection, authored base reward
@@ -610,11 +618,30 @@ offers, Hub board/visit/local-detail routing, fixed PreHub/Preboss stages,
 completed-Hub handoff behavior, and keyboard focus without scanning room or
 topology shape in React.
 
-Campaign A closes when planner projection, workspace contract, candidate
-interaction, authored-first, decision-highlight rail, Hub, malformed-state,
-focus, React, product-loop, performance, and deterministic-output fixtures
-pass. Commit 5b.3 and Commit 5b.4 may then resume without waiting for the
-remaining campaigns.
+**Campaign A closure evidence (2026-07-30).** The final review found no
+unresolved ownership, import-direction, hidden-registration, or React
+reconstruction issue. The workspace source index remains address/source lookup
+only; pure-core topology policy remains outside it. Occurrence assembly returns
+the authored room/reward/lifecycle, interaction-requirement, and focus products
+used by Hub and ordinary presentation. Final inspector destinations expose
+direct renderable subjects and optional rail selection, so React does not
+reconstruct containment or fallback policy. The lifecycle matrix proves dormant
+Ephyra side owners are withheld while authored-active invalid Ephyra details
+remain editable, and a fine-grained finding on a withheld leaf is rejected
+rather than misrouted.
+
+`npm run check` passed with 65 test files and 668 tests, together with
+typecheck, lint, formatting, and the production build. The named work-count
+fixtures remained part of that gate: renders perform zero evaluation/candidate
+queries, representative workspace construction performs two explicit project
+evaluations, cold interaction loading performs its declared batch count and
+then caches, and the product loop preserves one candidate batch per cold
+activation, one project evaluation per edit, and zero work for cached Undo.
+`git diff --check` also passed. The Vite chunk-size advisory is unchanged and
+non-blocking.
+
+Campaign A is complete. Commit 5b.3 and Commit 5b.4 may resume without waiting
+for the remaining campaigns.
 
 ### Campaign B: Candidate Evaluation
 

@@ -34,14 +34,20 @@ prompts while preserving the existing semantic-command/history flow. Commit
 order editing. The feature frontier remains Commit 5b.3's active-only H/O
 room-local presentation in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
-by Commit 5b.4's player-facing product vocabulary and 5b closure. Delivery is
-temporarily sequenced through the neutral dependency correction and
-workspace/React Campaign A in
-[`REANCHOR_AND_REORGANIZE.md`](REANCHOR_AND_REORGANIZE.md). That campaign makes
-the active product flow, module responsibility, import direction, and
-dependency injection explicit before more presentation work crosses the same
-workspace gravity well. It does not advance the feature frontier or change
-closed domain contracts. After Commit 5b closes, the plan's candidate,
+by Commit 5b.4's player-facing product vocabulary and 5b closure. The neutral
+dependency correction and workspace/React Campaign A in
+[`REANCHOR_AND_REORGANIZE.md`](REANCHOR_AND_REORGANIZE.md) are complete. That
+campaign established the authored-first workspace source/assembly products,
+explicit interaction binding, projection-owned default and exact inspector
+destinations, and React consumption without topology or containment
+reconstruction. It retained authored-active controls through invalid or
+unassessed evaluation while moving optional dormant Ephyra side details into
+the same withheld policy as Shop inventory. The final `npm run check` passed
+with 65 test files and 668 tests,
+typechecks, lint, formatting, and production build; its work-count fixtures
+retain zero render evaluation/query work, lazy cached interactions, and the
+product-loop edit/Undo budgets. Commit 5b.3 may now resume. After Commit 5b
+closes, the plan's candidate,
 authored-core, history, and reward campaigns must close before the separate
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan: schema 10 authors an
 exact Shop purchase order, simulation validates that exact sequence, and the

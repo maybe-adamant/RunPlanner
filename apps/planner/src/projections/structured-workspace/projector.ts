@@ -455,6 +455,7 @@ function controlsForOccurrence(
           `${room.gameName} Ephyra state has no fixed side-room declaration`,
         );
       }
+      if (!detailsActive) break;
       for (const [slotKey, side] of Object.entries(occurrence.state.sideRooms)) {
         const slot = group.slots.find((candidate) => candidate.slotKey === slotKey);
         if (slot === undefined) {
@@ -713,6 +714,13 @@ function roomLocalForOccurrence(
           `${room.gameName} Ephyra state has no fixed side-room declaration`,
         );
       }
+      if (!detailsActive) {
+        return Object.freeze({
+          kind: 'ephyra' as const,
+          incomingReward,
+          sideRooms: Object.freeze({ kind: 'withheld' as const }),
+        });
+      }
       const groupAddress = createLocalChildGroupAddress(
         context.biome,
         occurrence.occurrenceId,
@@ -759,10 +767,13 @@ function roomLocalForOccurrence(
         kind: 'ephyra' as const,
         incomingReward,
         sideRooms: Object.freeze({
-          address: groupAddress,
-          enteredSlotKeys: Object.freeze(enteredSlotKeys),
-          marker: marker(context, groupAddress),
-          slots: Object.freeze(slots),
+          group: Object.freeze({
+            address: groupAddress,
+            enteredSlotKeys: Object.freeze(enteredSlotKeys),
+            marker: marker(context, groupAddress),
+            slots: Object.freeze(slots),
+          }),
+          kind: 'published' as const,
         }),
       });
     }
@@ -934,10 +945,15 @@ function localDetailMarkers(roomLocal: WorkspaceRoomLocal): readonly WorkspaceMa
     case 'incomingReward':
       return Object.freeze([]);
     case 'ephyra':
-      return Object.freeze([
-        roomLocal.sideRooms.marker,
-        ...roomLocal.sideRooms.slots.flatMap((slot) => [slot.marker, slot.rewardControl.marker]),
-      ]);
+      return roomLocal.sideRooms.kind === 'withheld'
+        ? Object.freeze([])
+        : Object.freeze([
+            roomLocal.sideRooms.group.marker,
+            ...roomLocal.sideRooms.group.slots.flatMap((slot) => [
+              slot.marker,
+              slot.rewardControl.marker,
+            ]),
+          ]);
     case 'fields':
       return Object.freeze(roomLocal.cages.map((cage) => cage.control.marker));
     case 'ship':
@@ -977,7 +993,9 @@ function occurrenceInteractionRequirements(
     case 'fields':
       return Object.freeze([]);
     case 'ephyra': {
-      const sideRooms = room.roomLocal.sideRooms.slots.map((sideRoom) =>
+      if (room.roomLocal.sideRooms.kind === 'withheld') return Object.freeze([]);
+      const group = room.roomLocal.sideRooms.group;
+      const sideRooms = group.slots.map((sideRoom) =>
         Object.freeze({
           address: sideRoom.address,
           entryOrder: sideRoom.entryOrder,
@@ -992,7 +1010,7 @@ function occurrenceInteractionRequirements(
             Object.freeze({ label: 'Generated', value: 'generated' as const }),
             Object.freeze({ label: 'Not generated', value: 'notGenerated' as const }),
           ]),
-          owner: room.roomLocal.sideRooms.address,
+          owner: group.address,
           sideRooms: Object.freeze(sideRooms),
         }),
       ]);
@@ -5745,7 +5763,8 @@ function assertWorkspaceRoomInteractionClosure(
     case 'fields':
       return;
     case 'ephyra':
-      for (const sideRoom of room.roomLocal.sideRooms.slots) {
+      if (room.roomLocal.sideRooms.kind === 'withheld') return;
+      for (const sideRoom of room.roomLocal.sideRooms.group.slots) {
         requireWorkspaceProjectionInteraction(
           interactions.sideRoomGenerations,
           sideRoom.marker.focusKey,

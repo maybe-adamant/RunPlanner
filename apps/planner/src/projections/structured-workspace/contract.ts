@@ -464,6 +464,18 @@ export interface WorkspaceEphyraSideRoomGroup {
   readonly slots: readonly WorkspaceEphyraSideRoomDescriptor[];
 }
 
+/**
+ * Side rooms are optional picked-room detail. A dormant authored occurrence
+ * retains its values but does not publish child owners, controls, or
+ * interactions until its authored visit activates it.
+ */
+export type WorkspaceEphyraSideRoomSurface =
+  | { readonly kind: 'withheld' }
+  | {
+      readonly group: WorkspaceEphyraSideRoomGroup;
+      readonly kind: 'published';
+    };
+
 export type WorkspaceRoomLocal =
   | { readonly kind: 'none' }
   | {
@@ -480,7 +492,7 @@ export type WorkspaceRoomLocal =
   | {
       readonly kind: 'ephyra';
       readonly incomingReward: WorkspaceCountedRewardControl;
-      readonly sideRooms: WorkspaceEphyraSideRoomGroup;
+      readonly sideRooms: WorkspaceEphyraSideRoomSurface;
     }
   | {
       readonly kind: 'fields';
