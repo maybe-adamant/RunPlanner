@@ -21,7 +21,7 @@ import {
   appendUniqueFocusDestinations,
   appendUniqueRewardControls,
   appendUniqueRoomControls,
-} from './projector';
+} from './assembly-products';
 import type {
   WorkspaceBatchInteractionRequirement,
   WorkspaceFrontierInteractionRequirement,
