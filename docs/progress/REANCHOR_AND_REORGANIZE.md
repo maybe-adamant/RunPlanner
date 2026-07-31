@@ -10,9 +10,9 @@ candidate results, workspace behavior, or player-facing design.
 Foundation and Campaign A's required pre-movement default-inspector and
 work-count characterization are complete. A1 established the structured
 workspace public entry and private contract/projector seam. A2.1 established
-the authored-first source index, and A2.2 established occurrence activation,
-lifecycle, and publication facts; common semantic assembly remains in
-progress.
+the authored-first source index, A2.2 established occurrence activation,
+lifecycle, and publication facts, and A2.3 made occurrence reward controls
+explicit assembly output; common semantic assembly remains in progress.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -417,6 +417,12 @@ React hides their controls behind `detailsActive`. A3 must move the Ephyra
 room-local projection and its interaction binding to one withheld policy in
 the same change; A2 must not pretend that this transitional shape is already
 the final lifecycle contract.
+
+**A2.3 transition note.** An occurrence now returns its reward-control
+package with its workbench node. Biome and project composition collect those
+packages explicitly and reject duplicate semantic owners rather than silently
+replacing a control in a later map. Room-picker and focus products still use
+the older common-assembly path and remain in scope for the following slices.
 
 #### A3: Specialized Hub and room-local assembly
 
