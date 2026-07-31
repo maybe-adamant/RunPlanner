@@ -60,6 +60,7 @@ import {
   type WorkspaceBiome,
   type WorkspaceNode,
   type WorkspaceRailEntry,
+  type WorkspaceRoomSummary,
 } from './structured-workspace';
 
 const projection = createStructuredWorkspaceProjection(catalog, {
@@ -121,6 +122,38 @@ function roomWorkbench(
   );
   if (node === undefined) throw new Error(`${gameName} workbench is missing`);
   return node.room;
+}
+
+function projectedRooms(projected: ReturnType<typeof workspace>): readonly WorkspaceRoomSummary[] {
+  const rooms = new Map<string, WorkspaceRoomSummary>();
+  const include = (room: WorkspaceRoomSummary) => {
+    rooms.set(semanticAddressKey(room.address), room);
+  };
+  for (const biome of projected.routes.flatMap((route) => route.biomes)) {
+    for (const node of biome.nodes) {
+      switch (node.kind) {
+        case 'occurrenceWorkbench':
+          include(node.room);
+          break;
+        case 'linkedExit':
+          include(node.target.room);
+          break;
+        case 'ordinaryBatch':
+        case 'mixedBatch':
+        case 'takeoverBatch':
+          node.targets.forEach((target) => include(target.room));
+          break;
+        case 'hubDecision':
+          node.slots.forEach((slot) => {
+            if (slot.room !== undefined) include(slot.room);
+          });
+          break;
+        case 'completion':
+          break;
+      }
+    }
+  }
+  return Object.freeze([...rooms.values()]);
 }
 
 const workspaceNodeKinds: Readonly<Record<WorkspaceNode['kind'], true>> = Object.freeze({
@@ -1481,6 +1514,47 @@ describe('unified structured workspace projection', () => {
     expect(shop!.authoredRewardTypes).toEqual(
       shopProfile.groups.byKey[shopSlot.groupKey]!.rewardTypes,
     );
+  });
+
+  it('binds every returned room reward control from entry, batch, linked, and Hub assembly', () => {
+    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const surface = workspace(createRepresentativeNOPQProject());
+    const entry = biome(underworld, 'F').entry;
+    const ordinary = biome(underworld, 'F').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch',
+    );
+    const linked = biome(surface, 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'linkedExit' }> =>
+        node.kind === 'linkedExit',
+    );
+    const hub = biome(surface, 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    const hubRoom = hub?.slots.find((slot) => slot.open)?.room;
+    const ordinaryRoom = ordinary?.targets[0]?.room;
+    if (
+      entry === undefined ||
+      ordinaryRoom === undefined ||
+      linked === undefined ||
+      hubRoom === undefined
+    ) {
+      throw new Error('entry, ordinary, linked, and Hub reward assembly fixtures are missing');
+    }
+
+    for (const room of [entry.room, ordinaryRoom, linked.target.room, hubRoom]) {
+      expect(room.rewardControls.length).toBeGreaterThan(0);
+    }
+    for (const projected of [underworld, surface]) {
+      for (const room of projectedRooms(projected)) {
+        for (const control of room.rewardControls) {
+          expect(
+            projected.interactions.rewards.get(semanticAddressKey(control.owner.address))?.owner,
+          ).toEqual(control.owner.address);
+        }
+      }
+    }
   });
 
   it('keeps fixed, Fields, ship-wheel, and Shop reward state in compact room summaries', () => {

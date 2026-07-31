@@ -181,7 +181,6 @@ interface MutableProjectionContext {
   readonly biome: BiomeAddress;
   readonly routeKey: string;
   readonly roomControls: Map<string, WorkspaceRoomPickerControl>;
-  readonly rewardControls: Map<string, WorkspaceRewardControl>;
   readonly source: WorkspaceBiomeSource;
 }
 
@@ -395,7 +394,6 @@ function rewardControl(
           offer,
           owner: owner as CountedRewardCandidateOwner,
         });
-  context.rewardControls.set(semanticAddressKey(owner.address), item);
   return item;
 }
 
@@ -959,11 +957,16 @@ interface WorkspaceOccurrenceProjectionInput {
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
 }
 
+interface WorkspaceOccurrenceAssembly {
+  readonly node: WorkspaceOccurrenceWorkbenchNode;
+  readonly rewardControls: readonly WorkspaceRewardControl[];
+}
+
 function projectOccurrence(
   context: MutableProjectionContext,
   occurrence: RoomOccurrence,
   input: WorkspaceOccurrenceProjectionInput,
-): WorkspaceOccurrenceWorkbenchNode {
+): WorkspaceOccurrenceAssembly {
   const room = requireRoom(context.catalog, occurrence.gameName);
   const address = createOccurrenceAddress(context.biome, occurrence.occurrenceId);
   const occurrenceFacts = context.occurrenceFacts.occurrence(occurrence.occurrenceId);
@@ -1015,7 +1018,23 @@ function projectOccurrence(
     room: roomSummary,
   });
   redirectOccurrenceFocus(context, node);
-  return node;
+  return Object.freeze({ node, rewardControls });
+}
+
+/** @internal Composition never silently replaces a separately projected reward control. */
+export function appendUniqueRewardControls(
+  controlsByOwner: Map<string, WorkspaceRewardControl>,
+  controls: Iterable<WorkspaceRewardControl>,
+): void {
+  for (const control of controls) {
+    const key = semanticAddressKey(control.owner.address);
+    if (controlsByOwner.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected reward controls`,
+      );
+    }
+    controlsByOwner.set(key, control);
+  }
 }
 
 function authoredOccurrence(
@@ -1323,6 +1342,12 @@ function redirectHubMainRewardFocus(
  * and visits.  Project both through the same board shape so React never has
  * to choose between topology and the simulator product.
  */
+interface WorkspaceHubAssembly {
+  readonly node: WorkspaceHubDecisionNode;
+  readonly rewardControls: readonly WorkspaceRewardControl[];
+  readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
+}
+
 function projectHubNode(
   context: MutableProjectionContext,
   plan: AuthoredBiomePlan,
@@ -1332,12 +1357,10 @@ function projectHubNode(
   visitOrder: readonly string[],
   nextVisitIndex: number | undefined,
   boardAuthored: boolean,
-): {
-  readonly node: WorkspaceHubDecisionNode;
-  readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
-} {
+): WorkspaceHubAssembly {
   const hubMarker = marker(context, owner);
   const occurrences = hubOccurrenceMap(plan);
+  const rewardControls: WorkspaceRewardControl[] = [];
   const workbenches: WorkspaceOccurrenceWorkbenchNode[] = [];
   const roomsBySlot = new Map<string, WorkspaceRoomSummary>();
   const slots = descriptor.slots.map((slot) => {
@@ -1349,13 +1372,15 @@ function projectHubNode(
       occurrence === undefined
         ? false
         : (context.occurrenceFacts.occurrence(occurrence.occurrenceId)?.detailsActive ?? false);
-    const occurrenceNode =
+    const occurrenceAssembly =
       occurrence === undefined
         ? undefined
         : projectOccurrence(context, occurrence, {
             ...(target?.canonical === undefined ? {} : { evaluatedRoom: target.canonical }),
           });
+    const occurrenceNode = occurrenceAssembly?.node;
     if (occurrenceNode !== undefined) {
+      rewardControls.push(...occurrenceAssembly!.rewardControls);
       const workbench = Object.freeze({
         ...occurrenceNode,
         inspectorPresentation: 'hubRoomLocal' as const,
@@ -1428,6 +1453,7 @@ function projectHubNode(
   );
   return Object.freeze({
     node,
+    rewardControls: Object.freeze(rewardControls),
     workbenches: Object.freeze(workbenches),
   });
 }
@@ -1439,10 +1465,7 @@ function projectAuthoredHubWithOverlay(
   descriptor: HubDecisionDescriptor,
   evaluated: CanonicalHubDecision | undefined,
   nextVisitIndex: number | undefined,
-): {
-  readonly node: WorkspaceHubDecisionNode;
-  readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
-} {
+): WorkspaceHubAssembly {
   const owner = createHubDecisionAddress(context.biome, descriptor.hubKey);
   if (evaluated !== undefined) {
     if (
@@ -1541,10 +1564,7 @@ function projectHubOutline(
   context: MutableProjectionContext,
   plan: AuthoredBiomePlan,
   descriptor: HubDecisionDescriptor,
-): {
-  readonly node: WorkspaceHubDecisionNode;
-  readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
-} {
+): WorkspaceHubAssembly {
   return projectHubNode(
     context,
     plan,
@@ -1971,7 +1991,11 @@ function projectAuthoredTargetWithOverlay(
   physical: readonly DeclaredPhysicalExit[],
   sourceDecisionRemoval: WorkspaceStageDecisionRemoval | undefined,
   evaluatedTarget: CanonicalTarget | undefined,
-): { readonly target: WorkspacePhysicalTarget; readonly node: WorkspaceOccurrenceWorkbenchNode } {
+): {
+  readonly node: WorkspaceOccurrenceWorkbenchNode;
+  readonly rewardControls: readonly WorkspaceRewardControl[];
+  readonly target: WorkspacePhysicalTarget;
+} {
   const occurrence = authoredOccurrence(context, target.occurrenceId);
   if (occurrence === undefined) {
     throw new StructuredWorkspaceProjectionContractError(
@@ -2008,15 +2032,17 @@ function projectAuthoredTargetWithOverlay(
         ? 'continuesSpine'
         : 'deadLeaf';
   const markerForTarget = marker(context, address);
+  const occurrenceAssembly = projectOccurrence(context, occurrence, {
+    ...(evaluatedTarget === undefined ? {} : { evaluatedRoom: evaluatedTarget.room }),
+  });
   const node = Object.freeze({
-    ...projectOccurrence(context, occurrence, {
-      ...(evaluatedTarget === undefined ? {} : { evaluatedRoom: evaluatedTarget.room }),
-    }),
+    ...occurrenceAssembly.node,
     ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
     railMarker: markerForTarget,
   });
   return Object.freeze({
     node,
+    rewardControls: occurrenceAssembly.rewardControls,
     target: Object.freeze({
       ...(evaluatedTarget?.room.clockworkReward === undefined
         ? {}
@@ -2057,6 +2083,7 @@ function projectAuthoredBatchWithOverlay(
   evaluated: EvaluatedBatchOverlay | undefined,
 ): {
   readonly batch: WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode | WorkspaceMixedBatchNode;
+  readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
 } {
   const owner = createExitDecisionAddress(context.biome, decision.source);
@@ -2190,6 +2217,7 @@ function projectAuthoredBatchWithOverlay(
   }
   return Object.freeze({
     batch,
+    rewardControls: Object.freeze(projectedTargets.flatMap((target) => target.rewardControls)),
     workbenches: Object.freeze(projectedTargets.map((target) => target.node)),
   });
 }
@@ -2201,6 +2229,7 @@ function projectAuthoredLinkedExitWithOverlay(
   evaluated: CanonicalLinkedExit | undefined,
 ): {
   readonly node: WorkspaceLinkedExitNode;
+  readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly workbench: WorkspaceOccurrenceWorkbenchNode;
 } {
   const owner = createExitDecisionAddress(context.biome, decision.source);
@@ -2233,10 +2262,11 @@ function projectAuthoredLinkedExitWithOverlay(
   const physicalState =
     evaluated?.target.exit.kind ??
     (physical === undefined ? ('unavailable' as const) : ('available' as const));
+  const occurrenceAssembly = projectOccurrence(context, occurrence, {
+    ...(evaluated === undefined ? {} : { evaluatedRoom: evaluated.target.room }),
+  });
   const workbench = Object.freeze({
-    ...projectOccurrence(context, occurrence, {
-      ...(evaluated === undefined ? {} : { evaluatedRoom: evaluated.target.room }),
-    }),
+    ...occurrenceAssembly.node,
     ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
     railMarker: markerForTarget,
   });
@@ -2271,6 +2301,7 @@ function projectAuthoredLinkedExitWithOverlay(
   }
   return Object.freeze({
     node,
+    rewardControls: occurrenceAssembly.rewardControls,
     workbench,
   });
 }
@@ -3841,6 +3872,7 @@ function projectBiome(
 } {
   const { biome: biomeAddress, evaluation, layout, plan } = source;
   const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(catalog, source);
+  const rewardControls = new Map<string, WorkspaceRewardControl>();
   const context: MutableProjectionContext = {
     catalog,
     occurrenceFacts,
@@ -3849,7 +3881,6 @@ function projectBiome(
     biome: biomeAddress,
     routeKey: biomeAddress.routeKey,
     roomControls: new Map(),
-    rewardControls: new Map(),
     source,
   };
   const authoredLeafRequirements = authoredWorkspaceLeafRequirements(catalog, biomeAddress, plan);
@@ -3893,9 +3924,11 @@ function projectBiome(
           `${plan.biomeKey} evaluated entry does not match the authored start`,
         );
       }
-      entry = projectOccurrence(context, start, {
+      const projectedEntry = projectOccurrence(context, start, {
         ...(source.entryRoom === undefined ? {} : { evaluatedRoom: source.entryRoom }),
       });
+      entry = projectedEntry.node;
+      appendUniqueRewardControls(rewardControls, projectedEntry.rewardControls);
       nodes.push(entry);
     }
   }
@@ -3913,6 +3946,7 @@ function projectBiome(
         decision as AuthoredLinkedExitDecision,
         source.evaluatedLinkedExit(owner),
       );
+      appendUniqueRewardControls(rewardControls, projected.rewardControls);
       nodes.push(projected.node, projected.workbench);
     } else {
       const projected = projectAuthoredBatchWithOverlay(
@@ -3921,6 +3955,7 @@ function projectBiome(
         decision as AuthoredBatchDecision,
         source.evaluatedBatch(owner),
       );
+      appendUniqueRewardControls(rewardControls, projected.rewardControls);
       nodes.push(projected.batch, ...projected.workbenches);
     }
   };
@@ -3946,6 +3981,7 @@ function projectBiome(
             source.evaluatedHub(owner),
             nextHubVisitIndex,
           );
+    appendUniqueRewardControls(rewardControls, projected.rewardControls);
     nodes.push(projected.node, ...projected.workbenches);
   }
   for (const decision of authoredExitDecisions) {
@@ -4089,7 +4125,7 @@ function projectBiome(
     authoredLeafRequirements,
     biome: projected,
     roomControls: context.roomControls,
-    rewardControls: context.rewardControls,
+    rewardControls,
   });
 }
 
@@ -4512,7 +4548,7 @@ export function createStructuredWorkspaceProjection(
         const biomes = routeSource.biomes.map((biomeSource) => {
           const projected = projectBiome(catalog, biomeSource, focusByOwner);
           for (const [key, control] of projected.roomControls) roomControls.set(key, control);
-          for (const [key, control] of projected.rewardControls) rewardControls.set(key, control);
+          appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
           authoredLeafRequirements.push(...projected.authoredLeafRequirements);
           return projected.biome;
         });
