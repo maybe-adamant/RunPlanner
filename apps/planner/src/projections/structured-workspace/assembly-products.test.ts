@@ -24,11 +24,13 @@ import {
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueRewardControls,
   appendUniqueRoomControls,
+  appendUniqueTopologyRemovalInteractionRequirements,
 } from './projector';
 import type {
   WorkspaceBatchInteractionRequirement,
   WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
+  WorkspaceTopologyRemovalInteractionRequirement,
 } from './projector';
 
 function explicitControl(occurrenceKey: string): WorkspaceRewardControl {
@@ -131,6 +133,27 @@ function hubInteractionRequirement(): WorkspaceHubInteractionRequirement {
   });
 }
 
+function topologyRemovalInteractionRequirement(): WorkspaceTopologyRemovalInteractionRequirement {
+  const owner = createBiomeAddress('Surface', 'N');
+  return Object.freeze({
+    kind: 'topologyRemovals' as const,
+    owner,
+    removals: Object.freeze([
+      Object.freeze({
+        action: 'clearTopology' as const,
+        command: Object.freeze({ kind: 'ClearTopology' as const, biome: owner }),
+        impact: Object.freeze({
+          removedDecisionOwners: Object.freeze([]),
+          removedHubDecisionKeys: Object.freeze([]),
+          removedOccurrenceIds: Object.freeze([]),
+        }),
+        key: semanticAddressKey(owner),
+        owner,
+      }),
+    ]),
+  });
+}
+
 describe('structured workspace assembly products', () => {
   it('rejects duplicate semantic owners while composing returned reward controls', () => {
     const control = explicitControl('duplicate-reward-control');
@@ -212,5 +235,18 @@ describe('structured workspace assembly products', () => {
     expect(() => appendUniqueHubInteractionRequirements(requirements, [requirement])).toThrow(
       `${identity} has multiple projected Hub interaction requirements`,
     );
+  });
+
+  it('rejects duplicate topology-removal packages by kind and biome owner', () => {
+    const requirement = topologyRemovalInteractionRequirement();
+    const identity = `topologyRemovals:${semanticAddressKey(requirement.owner)}`;
+    const requirements = new Map<string, WorkspaceTopologyRemovalInteractionRequirement>();
+
+    appendUniqueTopologyRemovalInteractionRequirements(requirements, [requirement]);
+
+    expect(requirements.get(identity)).toBe(requirement);
+    expect(() =>
+      appendUniqueTopologyRemovalInteractionRequirements(requirements, [requirement]),
+    ).toThrow(`${identity} has multiple projected topology-removal interaction requirements`);
   });
 });

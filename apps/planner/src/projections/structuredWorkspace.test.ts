@@ -204,7 +204,12 @@ describe('unified structured workspace projection', () => {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.opening,
     });
+    const preboss = createExitDecisionAddress(nBiome, {
+      kind: 'hubDecision',
+      decisionKey: 'hub',
+    });
     const removeLinked = projected.interactions.topologyRemovals.get(semanticAddressKey(linked));
+    const removePreboss = projected.interactions.topologyRemovals.get(semanticAddressKey(preboss));
 
     expect(clear).toMatchObject({
       action: 'clearTopology',
@@ -233,6 +238,26 @@ describe('unified structured workspace projection', () => {
         ]),
       },
     });
+    expect(removePreboss).toMatchObject({
+      action: 'removeExitDecision',
+      command: { kind: 'RemoveExitDecision', decision: preboss },
+      owner: preboss,
+      impact: { removedOccurrenceIds: [nOccurrenceIds.preboss] },
+    });
+    expect(
+      projected.interactions.topologyRemovals.has(
+        semanticAddressKey(createHubDecisionAddress(nBiome, 'hub')),
+      ),
+    ).toBe(false);
+
+    const empty = workspace(
+      createProjectDocument(catalog, {
+        projectId: 'topology-removal-outline',
+        name: 'Topology removal outline',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+    );
+    expect(empty.interactions.topologyRemovals).toHaveLength(0);
   });
 
   it('keeps declaration and canonical decision order rather than array-position topology rules', () => {
