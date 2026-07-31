@@ -46,6 +46,7 @@ export type {
   WorkspaceHubVisitRailEntry,
   WorkspaceHubVisitState,
   WorkspaceInspectorDestination,
+  WorkspaceInspectorSubject,
   WorkspaceInteractionCatalog,
   WorkspaceInteractionChoice,
   WorkspaceLinkedExitNode,

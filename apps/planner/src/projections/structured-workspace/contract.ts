@@ -52,14 +52,39 @@ export interface WorkspaceMarker {
   readonly focusKey: string;
 }
 
+/** A renderable inspector subject identified without rediscovering containment. */
+export type WorkspaceInspectorSubject =
+  | {
+      readonly frontierFocusKey: string;
+      readonly kind: 'frontier';
+    }
+  | {
+      readonly kind: 'node';
+      readonly nodeKey: string;
+    };
+
 export interface WorkspaceInspectorDestination {
   readonly biomeKey?: string;
   readonly focusAddress: SemanticAddress;
   readonly focusKey: string;
+  /**
+   * Final presentation binding for an exact semantic owner. Omitted only when
+   * the owning workspace has no renderable inspector subject.
+   */
+  readonly inspectorSubject?: WorkspaceInspectorSubject;
+  /**
+   * Assembly-time containing-node route. It may be a non-node marker for a
+   * frontier or coarse owner; React resolves `inspectorSubject` instead.
+   */
   readonly nodeKey: string;
   readonly ownerAddress: SemanticAddress;
   readonly region: 'inspector' | 'routeRail' | 'structure';
   readonly routeKey?: string;
+  /**
+   * The selected rendered rail marker key for this exact focus. Absence is
+   * intentional for coarse fallback owners and hidden structural sources.
+   */
+  readonly selectedRailKey?: string;
 }
 
 /**
@@ -69,17 +94,13 @@ export interface WorkspaceInspectorDestination {
  * while a default may be the active authoring frontier itself.
  */
 export type WorkspaceDefaultInspectorDestination =
-  | {
-      readonly frontierFocusKey: string;
-      readonly kind: 'frontier';
+  | (Extract<WorkspaceInspectorSubject, { readonly kind: 'frontier' }> & {
       readonly selectedRailKey: string;
-    }
-  | {
-      readonly kind: 'node';
-      readonly nodeKey: string;
+    })
+  | (Extract<WorkspaceInspectorSubject, { readonly kind: 'node' }> & {
       /** Omitted only when the chosen structural node has no rail entry. */
       readonly selectedRailKey?: string;
-    };
+    });
 
 export interface WorkspaceInteractionChoice<T> {
   readonly label: string;

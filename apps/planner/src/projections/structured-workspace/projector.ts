@@ -97,6 +97,7 @@ import {
   assertWorkspaceDefaultInspectorDestinationClosure,
   defaultInspectorDestination,
 } from './inspector-defaults';
+import { bindWorkspaceInspectorDestinations } from './inspector-destinations';
 import {
   appendUniqueBatchInteractionRequirements,
   appendUniqueFrontierInteractionRequirements,
@@ -5106,11 +5107,15 @@ function projectBiome(
     source: sourceFor(evaluation),
     status: statusFor(evaluation),
   });
+  const presentationFocusDestinations = bindWorkspaceInspectorDestinations({
+    biome: projected,
+    destinationsByOwner: focusDestinations,
+  });
   return Object.freeze({
     authoredLeafRequirements,
     batchInteractionRequirements,
     biome: projected,
-    focusDestinations,
+    focusDestinations: presentationFocusDestinations,
     frontierInteractionRequirements,
     hubInteractionRequirements,
     occurrenceInteractionRequirements,
@@ -5142,7 +5147,24 @@ function registerFindingDestinations(
     const biome = createBiomeAddress(finding.origin.routeKey, finding.origin.biomeKey);
     const fallback = focusByOwner.get(semanticAddressKey(biome));
     if (fallback === undefined) continue;
-    focusByOwner.set(key, Object.freeze({ ...fallback, ownerAddress: finding.origin }));
+    // A coarse finding uses the biome's inspector fallback, but it is still an
+    // explicit owner. Do not inherit a no-focus rail selection from the
+    // biome shell (notably its active start frontier).
+    focusByOwner.set(
+      key,
+      Object.freeze({
+        ...(fallback.biomeKey === undefined ? {} : { biomeKey: fallback.biomeKey }),
+        focusAddress: fallback.focusAddress,
+        focusKey: fallback.focusKey,
+        ...(fallback.inspectorSubject === undefined
+          ? {}
+          : { inspectorSubject: fallback.inspectorSubject }),
+        nodeKey: fallback.nodeKey,
+        ownerAddress: finding.origin,
+        region: fallback.region,
+        ...(fallback.routeKey === undefined ? {} : { routeKey: fallback.routeKey }),
+      }),
+    );
   }
 }
 

@@ -23,8 +23,10 @@ same for takeover batches. A4.7 does the same for the coupled frontier
 capability and structural-action family. A4.8 extracts those now-closed
 requirement contracts and their exact binding transformation without moving
 semantic assembly or its independent audits. A5.1 now publishes one explicit
-default inspector destination from the final workspace products; React retains
-its characterization fallback until A6 consumes that destination.
+default inspector destination from the final workspace products. A6 now binds
+every biome-local exact focus owner to a final inspector subject and optional
+rail selection, so React resolves only projected keys and no longer recreates
+containment or fallback policy.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -594,6 +596,19 @@ will replace it only after equivalence is retained.
 - preserve keyboard, focus, findings, Undo/Redo, autosave, and recovery
   behavior;
 - run the complete Campaign A gate and record its architecture evidence.
+
+**A6 transition note.** Final workspace presentation now decorates each
+biome-local `focusByOwner` destination after its marker, nodes, rail, frontier,
+and A5 default exist. `inspectorSubject` is the renderable node or frontier;
+`selectedRailKey` is separately optional because coarse owners and hidden
+fixed-stage sources intentionally show an inspector without selecting a rail
+stop. The pre-existing assembly `nodeKey` remains an internal containment route
+and is not a React resolution contract. React resolves only those direct keys,
+uses the A5 default only when there is no explicit owner, and leaves an
+explicit-but-coarse or stale owner unselected. This preserves normal nested
+offers, Hub board/visit/local-detail routing, fixed PreHub/Preboss stages,
+completed-Hub handoff behavior, and keyboard focus without scanning room or
+topology shape in React.
 
 Campaign A closes when planner projection, workspace contract, candidate
 interaction, authored-first, decision-highlight rail, Hub, malformed-state,

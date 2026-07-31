@@ -892,6 +892,27 @@ describe('BiomeWorkspace', () => {
     expect(within(exitInspector).getByRole('button', { name: 'Add normal exits' })).toBeTruthy();
   });
 
+  it('keeps a stale explicit biome owner on the projected default without selecting the rail', () => {
+    const view = renderWorkspace(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const projected = workspaceBiome(view.application, 'Underworld', 'F');
+    expect(projected.defaultInspectorDestination?.kind).toBe('node');
+
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(
+          createOccurrenceAddress(goldenFBiome, createOccurrenceId('stale-biome-workspace-owner')),
+        ),
+      ),
+    );
+
+    expect(selectedRailMarkerKeys(view.container)).toEqual([]);
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Focused inspector' })
+        .querySelector('.biome-batch-workbench'),
+    ).not.toBeNull();
+  });
+
   it('uses the last incomplete decision and the last active ordinary detail by projection order', () => {
     const multiIncomplete = withUnresolvedFSelections(createGoldenFGHIProject(catalog), [
       goldenFOccurrenceId(1, 1),
@@ -1346,7 +1367,7 @@ describe('BiomeWorkspace', () => {
     expect(within(inspector).getByRole('heading', { level: 3, name: 'Preboss' })).toBeTruthy();
   });
 
-  it('characterizes defensive default subjects outside current authored projection inputs', () => {
+  it('resolves defensive projected defaults outside current authored projection inputs', () => {
     const { project: partialProject, start } = fTwoDoorBatchProject();
     let bareExitProject = emptyProject('Underworld', 1);
     bareExitProject = applyProjectCommand(bareExitProject, catalog, {
@@ -1374,6 +1395,11 @@ describe('BiomeWorkspace', () => {
     }
     const matchingExitDefault: WorkspaceBiome = {
       ...partialBiome,
+      defaultInspectorDestination: {
+        kind: 'node',
+        nodeKey: matchingDecision.key,
+        selectedRailKey: matchingDecision.marker.focusKey,
+      },
       frontier: matchingFrontier,
     };
     const matchingExitView = renderProjectedBiome(decisionApplication, matchingExitDefault);
@@ -1402,6 +1428,11 @@ describe('BiomeWorkspace', () => {
     // branches explicit here without inventing impossible authored documents.
     const entryDefault: WorkspaceBiome = {
       ...fBiome,
+      defaultInspectorDestination: {
+        kind: 'node',
+        nodeKey: entry.key,
+        selectedRailKey: entry.marker.focusKey,
+      },
       nodes: fBiome.nodes.map(inactiveOccurrenceDetails),
     };
     const entryView = renderProjectedBiome(fApplication, entryDefault);
@@ -1420,6 +1451,7 @@ describe('BiomeWorkspace', () => {
     if (first === undefined) throw new Error('complete F completion node is missing');
     const firstNodeDefault: WorkspaceBiome = {
       ...withoutWorkspaceEntry(fBiome),
+      defaultInspectorDestination: { kind: 'node', nodeKey: first.key },
       nodes: [first],
       rail: [],
     };
@@ -1438,6 +1470,7 @@ describe('BiomeWorkspace', () => {
 
     const noSubjectDefault: WorkspaceBiome = {
       ...firstNodeDefault,
+      defaultInspectorDestination: null,
       nodes: [],
     };
     const noSubjectView = renderProjectedBiome(fApplication, noSubjectDefault);
@@ -1460,6 +1493,11 @@ describe('BiomeWorkspace', () => {
     if (hub === undefined) throw new Error('complete N Hub node is missing');
     const hubDetailDefault: WorkspaceBiome = {
       ...nBiomeWorkspace,
+      defaultInspectorDestination: {
+        kind: 'node',
+        nodeKey: hub.key,
+        selectedRailKey: hub.marker.focusKey,
+      },
       frontier: null,
       nodes: nBiomeWorkspace.nodes.filter(
         (node) =>
