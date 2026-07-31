@@ -37,7 +37,7 @@ import {
   authoredWorkspaceLeafRequirements,
   createStructuredWorkspaceProjection,
   StructuredWorkspaceProjectionContractError,
-} from './structuredWorkspace';
+} from './structured-workspace';
 
 /**
  * These tests deliberately bypass only evaluator provenance. Production still

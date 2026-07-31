@@ -21,8 +21,8 @@ import type {
   CandidateSessionFactoryOptions,
   RewardCandidateOwner,
 } from '../../../projections/candidateProjection';
-import type { WorkspaceInteractionCatalog } from '../../../projections/structuredWorkspace';
-import type { StructuredWorkspaceProjectionService } from '../../../projections/structuredWorkspace';
+import type { WorkspaceInteractionCatalog } from '../../../projections/structured-workspace';
+import type { StructuredWorkspaceProjectionService } from '../../../projections/structured-workspace';
 import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
 import {
   createRepresentativeNOProject,

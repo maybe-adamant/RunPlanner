@@ -12,7 +12,7 @@ import {
   type WorkspaceHubVisit,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
-} from '../../../projections/structuredWorkspace';
+} from '../../../projections/structured-workspace';
 import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { useAppDispatch } from '../../../state/store';

@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 import type {
   WorkspaceHubSlotInteraction,
   WorkspaceInteractionCatalog,
-} from '../../src/projections/structuredWorkspace';
+} from '../../src/projections/structured-workspace';
 import { createStructuredWorkspaceTestServices } from '../fixtures/structuredWorkspace';
 import {
   appendCompleteN,

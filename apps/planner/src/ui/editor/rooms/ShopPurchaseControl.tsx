@@ -4,7 +4,7 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
-} from '../../../projections/structuredWorkspace';
+} from '../../../projections/structured-workspace';
 import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
 import { candidateMayBeAuthored } from '../../feedback/candidatePresentation';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';

@@ -1,4 +1,4 @@
-import type { WorkspaceBiomeField } from '../../../projections/structuredWorkspace';
+import type { WorkspaceBiomeField } from '../../../projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
 import { useAppDispatch } from '../../../state/store';
 import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';

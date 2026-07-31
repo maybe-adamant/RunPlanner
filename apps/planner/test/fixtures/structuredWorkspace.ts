@@ -11,7 +11,7 @@ import {
   createStructuredWorkspaceProjection,
   type StructuredWorkspaceProjection,
   type WorkspaceBiome,
-} from '../../src/projections/structuredWorkspace';
+} from '../../src/projections/structured-workspace';
 
 export function requireWorkspaceBiome(
   workspace: StructuredWorkspaceProjection,
