@@ -25,6 +25,7 @@ import {
   appendUniqueRewardControls,
   appendUniqueRoomControls,
   appendUniqueStartInteractionRequirements,
+  appendUniqueTakeoverInteractionRequirements,
   appendUniqueTopologyRemovalInteractionRequirements,
 } from './projector';
 import type {
@@ -32,6 +33,7 @@ import type {
   WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
   WorkspaceStartInteractionRequirement,
+  WorkspaceTakeoverInteractionRequirement,
   WorkspaceTopologyRemovalInteractionRequirement,
 } from './projector';
 
@@ -167,6 +169,21 @@ function startInteractionRequirement(): WorkspaceStartInteractionRequirement {
   });
 }
 
+function takeoverInteractionRequirement(): WorkspaceTakeoverInteractionRequirement {
+  const owner = createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
+    kind: 'occurrence',
+    occurrenceId: createOccurrenceId('duplicate-takeover-interaction'),
+  });
+  return Object.freeze({
+    action: 'create' as const,
+    existingTargets: Object.freeze([]),
+    gameNames: Object.freeze(['F_PreBoss01']) as readonly [string, ...string[]],
+    kind: 'takeoverBatch' as const,
+    owner,
+    presentation: 'candidate' as const,
+  });
+}
+
 describe('structured workspace assembly products', () => {
   it('rejects duplicate semantic owners while composing returned reward controls', () => {
     const control = explicitControl('duplicate-reward-control');
@@ -273,6 +290,19 @@ describe('structured workspace assembly products', () => {
     expect(requirements.get(identity)).toBe(requirement);
     expect(() => appendUniqueStartInteractionRequirements(requirements, [requirement])).toThrow(
       `${identity} has multiple projected start interaction requirements`,
+    );
+  });
+
+  it('rejects duplicate takeover requirements by kind and decision owner', () => {
+    const requirement = takeoverInteractionRequirement();
+    const identity = `takeoverBatch:${semanticAddressKey(requirement.owner)}`;
+    const requirements = new Map<string, WorkspaceTakeoverInteractionRequirement>();
+
+    appendUniqueTakeoverInteractionRequirements(requirements, [requirement]);
+
+    expect(requirements.get(identity)).toBe(requirement);
+    expect(() => appendUniqueTakeoverInteractionRequirements(requirements, [requirement])).toThrow(
+      `${identity} has multiple projected takeover interaction requirements`,
     );
   });
 });

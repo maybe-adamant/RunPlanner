@@ -124,6 +124,48 @@ describe('workspace candidate interaction families', () => {
     expect(events).toEqual([]);
   });
 
+  it('binds frontier takeover candidates lazily from their source decision', () => {
+    const events: CandidateEvaluationEvent[] = [];
+    const services = createStructuredWorkspaceTestServices({
+      observeCandidateEvaluation: (event) => events.push(event),
+    });
+    const biome = createBiomeAddress('Underworld', 'F');
+    const start = createOccurrenceId('candidate-interaction-takeover-start');
+    const project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'candidate-interaction-takeover',
+        name: 'Candidate interaction takeover',
+        configuredBiomeCounts: { Underworld: 1 },
+      }),
+      catalog,
+      {
+        kind: 'CreateStart',
+        biome,
+        occurrenceId: start,
+        gameName: 'F_Opening01',
+      },
+    );
+    const owner = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start });
+    const interaction = services.structuredWorkspace
+      .project(project, simulateProject(catalog, project))
+      .interactions.takeoverBatches.get(semanticAddressKey(owner));
+    if (interaction?.presentation !== 'candidate') {
+      throw new Error('F authored takeover candidate interaction is missing');
+    }
+
+    expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
+
+    const candidates = interaction.load();
+    const queryBatches = events.filter((event) => event.kind === 'queryBatch');
+    expect(queryBatches).toHaveLength(1);
+    expect(queryBatches[0]?.queryCount).toBeGreaterThan(0);
+    expect(candidates.map((candidate) => candidate.value.gameName)).toEqual(['F_PreBoss01']);
+
+    events.length = 0;
+    expect(interaction.load()).toBe(candidates);
+    expect(events).toEqual([]);
+  });
+
   it('loads every family from its addressed domain without reacquiring project evaluation', async () => {
     const events: CandidateEvaluationEvent[] = [];
     let projectEvaluationCount = 0;
@@ -172,7 +214,10 @@ describe('workspace candidate interaction families', () => {
   });
 
   it('keeps source-owned takeover actions as explicit semantic capabilities', () => {
-    const services = createStructuredWorkspaceTestServices();
+    const events: CandidateEvaluationEvent[] = [];
+    const services = createStructuredWorkspaceTestServices({
+      observeCandidateEvaluation: (event) => events.push(event),
+    });
     const fBiome = createBiomeAddress('Underworld', 'F');
     const start = createOccurrenceId('candidate-interaction-f-start');
     const candidateProject = applyProjectCommand(
@@ -216,13 +261,12 @@ describe('workspace candidate interaction families', () => {
       fixedWidthOneProject,
       simulateProject(catalog, fixedWidthOneProject),
     ).interactions;
+    const fixedWidthOneOwner = createExitDecisionAddress(oBiome, {
+      kind: 'occurrence',
+      occurrenceId: oOccurrenceIds.combat02,
+    });
     const fixedWidthOneTakeover = fixedWidthOneInteractions.takeoverBatches.get(
-      semanticAddressKey(
-        createExitDecisionAddress(oBiome, {
-          kind: 'occurrence',
-          occurrenceId: oOccurrenceIds.combat02,
-        }),
-      ),
+      semanticAddressKey(fixedWidthOneOwner),
     );
     if (fixedWidthOneTakeover?.presentation !== 'fixedWidthOneTakeover') {
       throw new Error('O fixed width-one takeover capability is missing');
@@ -230,6 +274,18 @@ describe('workspace candidate interaction families', () => {
     expect(fixedWidthOneTakeover.action).toBe('create');
     expect('load' in fixedWidthOneTakeover).toBe(false);
     expect(typeof fixedWidthOneTakeover.execute).toBe('function');
+    expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
+    const fixedWidthOneResult = fixedWidthOneTakeover.execute();
+    if (fixedWidthOneResult.kind !== 'command') {
+      throw new Error('O fixed width-one takeover is unexpectedly unavailable');
+    }
+    expect(fixedWidthOneResult.command).toMatchObject({
+      kind: 'CreateTakeoverBatch',
+      decision: fixedWidthOneOwner,
+      gameName: 'O_PreBoss01',
+      targetOccurrenceIds: { exit1: expect.any(String) },
+    });
+    expect(events.filter((event) => event.kind === 'queryBatch')).toHaveLength(1);
 
     const hubHandoffProject = appendCompleteN(
       createProjectDocument(catalog, {

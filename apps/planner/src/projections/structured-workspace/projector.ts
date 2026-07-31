@@ -126,8 +126,6 @@ import type {
   WorkspaceBiome,
   WorkspaceBiomeField,
   WorkspaceCandidateInteraction,
-  WorkspaceCandidateTakeoverBatchInteraction,
-  WorkspaceCompletedHubHandoffInteraction,
   WorkspaceCompletionNode,
   WorkspaceEphyraSideRoomEntryOption,
   WorkspaceEphyraSideRoomEntryOrderControl,
@@ -135,7 +133,6 @@ import type {
   WorkspaceExitSelectionInteraction,
   WorkspaceFieldsBatchContext,
   WorkspaceFixedWidthOneTakeoverActionResult,
-  WorkspaceFixedWidthOneTakeoverInteraction,
   WorkspaceHubDecisionNode,
   WorkspaceHubRailEntry,
   WorkspaceHubSlotInteraction,
@@ -168,7 +165,6 @@ import type {
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTakeoverBatchNode,
   WorkspaceTakeoverCandidate,
-  WorkspaceTakeoverRepairInteraction,
   WorkspaceTakeoverReplacementImpact,
   WorkspaceTopologyRemovalInteraction,
   WorkspaceTopologyRemovalScope,
@@ -1092,6 +1088,45 @@ export interface WorkspaceStartInteractionRequirement {
       };
 }
 
+/**
+ * Production requirement for one authored or frontier takeover batch. It
+ * carries topology-owned command facts while binding supplies catalog labels
+ * and the exact session-bound candidate evaluator.
+ */
+export type WorkspaceTakeoverInteractionRequirement =
+  | {
+      readonly action: 'create' | 'replace';
+      readonly existingTargets: readonly {
+        readonly exitKey: string;
+        readonly occurrenceId: OccurrenceId;
+      }[];
+      readonly gameNames: readonly [string, ...string[]];
+      readonly impact?: WorkspaceTakeoverReplacementImpact;
+      readonly kind: 'takeoverBatch';
+      readonly owner: ExitDecisionAddress;
+      readonly presentation: 'candidate';
+    }
+  | {
+      readonly action: 'reconcile';
+      readonly existingTargets: readonly {
+        readonly exitKey: string;
+        readonly occurrenceId: OccurrenceId;
+      }[];
+      readonly gameName: string;
+      readonly kind: 'takeoverBatch';
+      readonly owner: ExitDecisionAddress;
+      readonly presentation: 'repair';
+      readonly requiredExitKeys: readonly string[];
+    }
+  | {
+      readonly action: 'create';
+      readonly gameName: string;
+      readonly kind: 'takeoverBatch';
+      readonly owner: ExitDecisionAddress;
+      readonly presentation: 'fixedWidthOneTakeover' | 'completedHubHandoff';
+      readonly requiredExitKeys: readonly string[];
+    };
+
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
@@ -1113,6 +1148,12 @@ function topologyRemovalInteractionRequirementKey(
 }
 
 function startInteractionRequirementKey(requirement: WorkspaceStartInteractionRequirement): string {
+  return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
+}
+
+function takeoverInteractionRequirementKey(
+  requirement: WorkspaceTakeoverInteractionRequirement,
+): string {
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
 
@@ -1418,6 +1459,22 @@ export function appendUniqueStartInteractionRequirements(
   }
 }
 
+/** @internal Composition never silently replaces an authored takeover package. */
+export function appendUniqueTakeoverInteractionRequirements(
+  requirementsByIdentity: Map<string, WorkspaceTakeoverInteractionRequirement>,
+  requirements: Iterable<WorkspaceTakeoverInteractionRequirement>,
+): void {
+  for (const requirement of requirements) {
+    const key = takeoverInteractionRequirementKey(requirement);
+    if (requirementsByIdentity.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected takeover interaction requirements`,
+      );
+    }
+    requirementsByIdentity.set(key, requirement);
+  }
+}
+
 /** @internal Composition never silently replaces a separately projected focus destination. */
 export function appendUniqueFocusDestinations(
   destinationsByOwner: Map<string, WorkspaceInspectorDestination>,
@@ -1709,6 +1766,196 @@ function takeoverReplacementImpact(
         .map((occurrence) => occurrence.occurrenceId) ?? [],
     ),
   });
+}
+
+function takeoverCandidateGameNames(
+  catalog: Catalog,
+  biomeKey: string,
+): readonly [string, ...string[]] | undefined {
+  const gameNames = catalog.rooms.values
+    .filter((room) => room.biomeKey === biomeKey && isTakeover(room))
+    .map((room) => room.gameName);
+  const [firstGameName, ...laterGameNames] = gameNames;
+  return firstGameName === undefined
+    ? undefined
+    : (Object.freeze([firstGameName, ...laterGameNames]) as readonly [string, ...string[]]);
+}
+
+function takeoverExistingTargets(
+  decision: ExitDecision,
+): readonly { readonly exitKey: string; readonly occurrenceId: OccurrenceId }[] {
+  if (decision.normal.kind !== 'batch') return Object.freeze([]);
+  return Object.freeze(
+    decision.normal.targets.map((target) =>
+      Object.freeze({ exitKey: target.exitKey, occurrenceId: target.occurrenceId }),
+    ),
+  );
+}
+
+function authoredBatchTakeoverGameName(
+  catalog: Catalog,
+  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  decision: ExitDecision,
+): string | undefined {
+  if (decision.normal.kind !== 'batch') return undefined;
+  const targetRooms = decision.normal.targets.map((target) => occurrences.get(target.occurrenceId));
+  const targetDeclarations = targetRooms.map((room) =>
+    room === undefined ? undefined : catalog.rooms.byKey[room.gameName],
+  );
+  return targetDeclarations.length > 0 && targetDeclarations.every(isTakeover)
+    ? targetRooms[0]?.gameName
+    : undefined;
+}
+
+function declaredTakeoverExitKeys(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+  source: ExitDecisionSourceAddress,
+): readonly string[] | undefined {
+  const topology = plan.topology;
+  if (topology === null) return undefined;
+  const exits = resolveDeclaredPhysicalExits(catalog, layout, topology, source);
+  return exits === undefined ? undefined : Object.freeze(exits.map((exit) => exit.exitKey));
+}
+
+function exitDecisionsByOwner(
+  biome: BiomeAddress,
+  plan: AuthoredBiomePlan,
+): ReadonlyMap<string, ExitDecision> {
+  const decisions = new Map<string, ExitDecision>();
+  for (const decision of plan.topology?.decisions ?? []) {
+    if (decision.kind !== 'exit') continue;
+    const key = semanticAddressKey(createExitDecisionAddress(biome, decision.source));
+    if (decisions.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple authored exit decisions for takeover assembly`,
+      );
+    }
+    decisions.set(key, decision);
+  }
+  return decisions;
+}
+
+/**
+ * Takeover controls are authored topology and declaration-policy facts. Emit
+ * the complete family before binding so retained decisions and an incomplete
+ * frontier do not depend on a second raw-project traversal in the binder.
+ */
+function takeoverInteractionRequirementsForBiome(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+): readonly WorkspaceTakeoverInteractionRequirement[] {
+  const topology = plan.topology;
+  if (topology === null) return Object.freeze([]);
+  const requirementsByOwner = new Map<string, WorkspaceTakeoverInteractionRequirement>();
+  const add = (requirement: WorkspaceTakeoverInteractionRequirement): void => {
+    const key = takeoverInteractionRequirementKey(requirement);
+    if (requirementsByOwner.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected takeover interaction requirements`,
+      );
+    }
+    requirementsByOwner.set(key, requirement);
+  };
+  const occurrences = new Map(
+    topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence] as const),
+  );
+  const authoredDecisions = exitDecisionsByOwner(biome, plan);
+  const candidateGameNames = takeoverCandidateGameNames(catalog, plan.biomeKey);
+  const fixedWidthOneTakeover = fixedWidthOneTakeoverForLayout(catalog, layout);
+  for (const decision of authoredDecisions.values()) {
+    const owner = createExitDecisionAddress(biome, decision.source);
+    const existingTargets = takeoverExistingTargets(decision);
+    const takeoverGameName = authoredBatchTakeoverGameName(catalog, occurrences, decision);
+    if (takeoverGameName !== undefined) {
+      const requiredExitKeys = declaredTakeoverExitKeys(catalog, layout, plan, decision.source);
+      if (requiredExitKeys !== undefined) {
+        add(
+          Object.freeze({
+            action: 'reconcile' as const,
+            existingTargets,
+            gameName: takeoverGameName,
+            kind: 'takeoverBatch' as const,
+            owner,
+            presentation: 'repair' as const,
+            requiredExitKeys,
+          }),
+        );
+      }
+      continue;
+    }
+    if (layout.progression.kind !== 'generated' || fixedWidthOneTakeover !== undefined) continue;
+    if (candidateGameNames === undefined) continue;
+    add(
+      Object.freeze({
+        action: decision.normal.kind === 'batch' ? ('replace' as const) : ('create' as const),
+        existingTargets,
+        gameNames: candidateGameNames,
+        ...(decision.normal.kind !== 'batch'
+          ? {}
+          : (() => {
+              const impact = takeoverReplacementImpact(biome, plan, decision);
+              return impact === undefined ? {} : { impact };
+            })()),
+        kind: 'takeoverBatch' as const,
+        owner,
+        presentation: 'candidate' as const,
+      }),
+    );
+  }
+  const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
+  if (completeness.completion !== 'incomplete' || completeness.frontier.kind !== 'exitDecision') {
+    return Object.freeze([...requirementsByOwner.values()]);
+  }
+  const owner = completeness.frontier;
+  const ownerKey = `takeoverBatch:${semanticAddressKey(owner)}`;
+  const existing = authoredDecisions.get(semanticAddressKey(owner));
+  const fixedTransition = fixedWidthOneTakeoverTransitionForSource(
+    catalog,
+    layout,
+    topology,
+    owner.source,
+  );
+  const requiredExitKeys =
+    fixedTransition === undefined
+      ? undefined
+      : declaredTakeoverExitKeys(catalog, layout, plan, owner.source);
+  if (fixedTransition !== undefined && existing === undefined && requiredExitKeys !== undefined) {
+    add(
+      Object.freeze({
+        action: 'create' as const,
+        gameName: fixedTransition.room.gameName,
+        kind: 'takeoverBatch' as const,
+        owner,
+        presentation:
+          fixedTransition.kind === 'completedHubHandoff'
+            ? ('completedHubHandoff' as const)
+            : ('fixedWidthOneTakeover' as const),
+        requiredExitKeys,
+      }),
+    );
+  } else if (
+    layout.progression.kind === 'generated' &&
+    fixedWidthOneTakeover === undefined &&
+    candidateGameNames !== undefined &&
+    !requirementsByOwner.has(ownerKey)
+  ) {
+    add(
+      Object.freeze({
+        action: existing?.normal.kind === 'batch' ? ('replace' as const) : ('create' as const),
+        existingTargets:
+          existing?.normal.kind === 'batch' ? takeoverExistingTargets(existing) : Object.freeze([]),
+        gameNames: candidateGameNames,
+        kind: 'takeoverBatch' as const,
+        owner,
+        presentation: 'candidate' as const,
+      }),
+    );
+  }
+  return Object.freeze([...requirementsByOwner.values()]);
 }
 
 function missingTargetsForPhysicalExits(
@@ -3499,6 +3746,184 @@ function bindStartInteractions(
   return starts;
 }
 
+function bindTakeoverBatchInteractions(
+  catalog: Catalog,
+  candidates: CandidateProjectionSession,
+  requirements: Iterable<WorkspaceTakeoverInteractionRequirement>,
+): ReadonlyMap<string, WorkspaceTakeoverBatchInteraction> {
+  const takeoverCandidate = (gameName: string): WorkspaceTakeoverCandidate => {
+    const room = requireRoom(catalog, gameName);
+    return Object.freeze({ gameName: room.gameName, label: room.label });
+  };
+  const takeoverCandidates = (
+    owner: ExitDecisionAddress,
+    gameNames: readonly string[],
+  ): readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[] =>
+    Object.freeze(
+      candidates.takeoverPrebossBatches(owner, gameNames).map((candidate) =>
+        Object.freeze({
+          evaluation: candidate.evaluation,
+          value: takeoverCandidate(candidate.value),
+        }),
+      ),
+    );
+  const targetOccurrences = (
+    targets: readonly { readonly exitKey: string; readonly occurrenceId: OccurrenceId }[],
+  ): ReadonlyMap<string, OccurrenceId> =>
+    new Map(targets.map((target) => [target.exitKey, target.occurrenceId] as const));
+  const takeoverBatches = new Map<string, WorkspaceTakeoverBatchInteraction>();
+  for (const requirement of requirements) {
+    const key = semanticAddressKey(requirement.owner);
+    if (takeoverBatches.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple bound takeover batch interactions`,
+      );
+    }
+    switch (requirement.presentation) {
+      case 'candidate': {
+        const existingTargetOccurrenceIds = targetOccurrences(requirement.existingTargets);
+        let loaded: readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[] | undefined;
+        const load = (): readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[] => {
+          if (loaded === undefined) {
+            loaded = takeoverCandidates(requirement.owner, requirement.gameNames);
+          }
+          return loaded;
+        };
+        takeoverBatches.set(
+          key,
+          Object.freeze({
+            action: requirement.action,
+            commandFor(selection: WorkspaceTakeoverCandidate): TakeoverBatchCommand {
+              const candidate = load().find(
+                (option) => option.value.gameName === selection.gameName,
+              );
+              if (
+                candidate?.evaluation.kind !== 'takeoverPrebossBatch' ||
+                !candidate.evaluation.result.selectedPossible
+              ) {
+                throw new StructuredWorkspaceProjectionContractError(
+                  `Takeover candidate ${selection.gameName} is not currently applicable.`,
+                );
+              }
+              return createTakeoverBatchCommand({
+                action: requirement.action,
+                decision: requirement.owner,
+                existingTargetOccurrenceIds,
+                gameName: selection.gameName,
+                requiredExitKeys: candidate.evaluation.result.requiredExitKeys,
+              });
+            },
+            ...(requirement.impact === undefined ? {} : { impact: requirement.impact }),
+            key,
+            load,
+            owner: requirement.owner,
+            presentation: 'candidate' as const,
+          }),
+        );
+        break;
+      }
+      case 'repair': {
+        const candidate = takeoverCandidate(requirement.gameName);
+        const existingTargetOccurrenceIds = targetOccurrences(requirement.existingTargets);
+        takeoverBatches.set(
+          key,
+          Object.freeze({
+            action: 'reconcile' as const,
+            execute: () =>
+              createTakeoverBatchCommand({
+                action: 'reconcile',
+                decision: requirement.owner,
+                existingTargetOccurrenceIds,
+                gameName: requirement.gameName,
+                requiredExitKeys: requirement.requiredExitKeys,
+              }),
+            key,
+            label: candidate.label,
+            owner: requirement.owner,
+            presentation: 'repair' as const,
+          }),
+        );
+        break;
+      }
+      case 'fixedWidthOneTakeover': {
+        const candidate = takeoverCandidate(requirement.gameName);
+        const room = requireRoom(catalog, requirement.gameName);
+        const summary =
+          room.incomingReward.kind === 'shop'
+            ? `Enter ${candidate.label}. This declaration-owned transition creates one automatically entered World Shop.`
+            : `Enter ${candidate.label} through this declaration-owned transition.`;
+        takeoverBatches.set(
+          key,
+          Object.freeze({
+            action: 'create' as const,
+            execute: (): WorkspaceFixedWidthOneTakeoverActionResult => {
+              // This fixed declaration still receives the engine's contextual
+              // validation only when the player takes it. React never loads or
+              // interprets a candidate result.
+              const evaluated = takeoverCandidates(
+                requirement.owner,
+                Object.freeze([requirement.gameName]),
+              )[0];
+              if (
+                evaluated?.evaluation.kind !== 'takeoverPrebossBatch' ||
+                !evaluated.evaluation.result.selectedPossible
+              ) {
+                const explanation =
+                  evaluated === undefined
+                    ? undefined
+                    : explainCandidateEvaluation(catalog, evaluated.evaluation);
+                return Object.freeze({
+                  kind: 'unavailable' as const,
+                  message:
+                    explanation?.message ??
+                    'This fixed Preboss takeover is not supported by the current route state.',
+                });
+              }
+              return Object.freeze({
+                kind: 'command' as const,
+                command: createTakeoverBatchCommand({
+                  action: 'create',
+                  decision: requirement.owner,
+                  existingTargetOccurrenceIds: new Map(),
+                  gameName: requirement.gameName,
+                  requiredExitKeys: requirement.requiredExitKeys,
+                }),
+              });
+            },
+            key,
+            label: candidate.label,
+            owner: requirement.owner,
+            presentation: 'fixedWidthOneTakeover' as const,
+            summary,
+          }),
+        );
+        break;
+      }
+      case 'completedHubHandoff':
+        takeoverBatches.set(
+          key,
+          Object.freeze({
+            action: 'create' as const,
+            execute: () =>
+              createTakeoverBatchCommand({
+                action: 'create',
+                decision: requirement.owner,
+                existingTargetOccurrenceIds: new Map(),
+                gameName: requirement.gameName,
+                requiredExitKeys: requirement.requiredExitKeys,
+              }),
+            key,
+            label: takeoverCandidate(requirement.gameName).label,
+            owner: requirement.owner,
+            presentation: 'completedHubHandoff' as const,
+          }),
+        );
+        break;
+    }
+  }
+  return takeoverBatches;
+}
+
 function createInteractionCatalog(
   catalog: Catalog,
   project: ProjectDocument,
@@ -3513,6 +3938,7 @@ function createInteractionCatalog(
     WorkspaceTopologyRemovalInteractionRequirement
   >,
   startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>,
+  takeoverInteractionRequirements: ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement>,
   roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>,
   rewardControls: ReadonlyMap<string, WorkspaceRewardControl>,
 ): WorkspaceInteractionCatalog {
@@ -3543,179 +3969,11 @@ function createInteractionCatalog(
     services,
     startInteractionRequirements.values(),
   );
-  const takeoverCandidate = (gameName: string): WorkspaceTakeoverCandidate => {
-    const room = requireRoom(catalog, gameName);
-    return Object.freeze({ gameName: room.gameName, label: room.label });
-  };
-  const takeoverCandidates = (
-    owner: ExitDecisionAddress,
-    gameNames: readonly string[],
-  ): readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[] =>
-    Object.freeze(
-      candidates.takeoverPrebossBatches(owner, gameNames).map((candidate) =>
-        Object.freeze({
-          evaluation: candidate.evaluation,
-          value: takeoverCandidate(candidate.value),
-        }),
-      ),
-    );
-  const createCandidateTakeoverInteraction = ({
-    action,
-    existingTargetOccurrenceIds,
-    gameNames,
-    impact,
-    owner,
-    selected,
-  }: {
-    readonly action: WorkspaceCandidateTakeoverBatchInteraction['action'];
-    readonly existingTargetOccurrenceIds?: ReadonlyMap<string, OccurrenceId>;
-    readonly gameNames: readonly string[];
-    readonly impact?: WorkspaceTakeoverReplacementImpact;
-    readonly owner: ExitDecisionAddress;
-    readonly selected?: WorkspaceTakeoverCandidate;
-  }): WorkspaceCandidateTakeoverBatchInteraction => {
-    let loaded: readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[] | undefined;
-    const load = (): readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[] => {
-      if (loaded === undefined) loaded = takeoverCandidates(owner, gameNames);
-      return loaded;
-    };
-    return Object.freeze({
-      action,
-      commandFor(selection: WorkspaceTakeoverCandidate): TakeoverBatchCommand {
-        const candidate = load().find((option) => option.value.gameName === selection.gameName);
-        if (
-          candidate?.evaluation.kind !== 'takeoverPrebossBatch' ||
-          !candidate.evaluation.result.selectedPossible
-        ) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `Takeover candidate ${selection.gameName} is not currently applicable.`,
-          );
-        }
-        return createTakeoverBatchCommand({
-          action,
-          decision: owner,
-          existingTargetOccurrenceIds: existingTargetOccurrenceIds ?? new Map(),
-          gameName: selection.gameName,
-          requiredExitKeys: candidate.evaluation.result.requiredExitKeys,
-        });
-      },
-      ...(impact === undefined ? {} : { impact }),
-      key: semanticAddressKey(owner),
-      load,
-      owner,
-      presentation: 'candidate' as const,
-      ...(selected === undefined ? {} : { selected }),
-    });
-  };
-  const createFixedWidthOneTakeoverInteraction = ({
-    gameName,
-    owner,
-    requiredExitKeys,
-  }: {
-    readonly gameName: string;
-    readonly owner: ExitDecisionAddress;
-    readonly requiredExitKeys: readonly string[];
-  }): WorkspaceFixedWidthOneTakeoverInteraction => {
-    const candidate = takeoverCandidate(gameName);
-    const room = requireRoom(catalog, gameName);
-    const summary =
-      room.incomingReward.kind === 'shop'
-        ? `Enter ${candidate.label}. This declaration-owned transition creates one automatically entered World Shop.`
-        : `Enter ${candidate.label} through this declaration-owned transition.`;
-    return Object.freeze({
-      execute(): WorkspaceFixedWidthOneTakeoverActionResult {
-        // This fixed declaration still receives the engine's contextual
-        // validation only when the player takes it. React never loads or
-        // interprets a candidate result.
-        const evaluated = takeoverCandidates(owner, Object.freeze([gameName]))[0];
-        if (
-          evaluated?.evaluation.kind !== 'takeoverPrebossBatch' ||
-          !evaluated.evaluation.result.selectedPossible
-        ) {
-          const explanation =
-            evaluated === undefined
-              ? undefined
-              : explainCandidateEvaluation(catalog, evaluated.evaluation);
-          return Object.freeze({
-            kind: 'unavailable' as const,
-            message:
-              explanation?.message ??
-              'This fixed Preboss takeover is not supported by the current route state.',
-          });
-        }
-        return Object.freeze({
-          kind: 'command' as const,
-          command: createTakeoverBatchCommand({
-            action: 'create',
-            decision: owner,
-            existingTargetOccurrenceIds: new Map(),
-            gameName,
-            // `requiredExitKeys` comes from shared topology authority.  The
-            // The lazy engine evaluation above establishes whether this fixed
-            // width-one takeover is currently possible; it does not make
-            // React derive the physical exit vocabulary.
-            requiredExitKeys,
-          }),
-        });
-      },
-      action: 'create' as const,
-      key: semanticAddressKey(owner),
-      label: candidate.label,
-      owner,
-      presentation: 'fixedWidthOneTakeover' as const,
-      summary,
-    });
-  };
-  const createCompletedHubHandoffInteraction = ({
-    gameName,
-    owner,
-    requiredExitKeys,
-  }: {
-    readonly gameName: string;
-    readonly owner: ExitDecisionAddress;
-    readonly requiredExitKeys: readonly string[];
-  }): WorkspaceCompletedHubHandoffInteraction =>
-    Object.freeze({
-      action: 'create' as const,
-      execute: () =>
-        createTakeoverBatchCommand({
-          action: 'create',
-          decision: owner,
-          existingTargetOccurrenceIds: new Map(),
-          gameName,
-          requiredExitKeys,
-        }),
-      key: semanticAddressKey(owner),
-      label: takeoverCandidate(gameName).label,
-      owner,
-      presentation: 'completedHubHandoff' as const,
-    });
-  const createTakeoverRepairInteraction = ({
-    existingTargetOccurrenceIds,
-    gameName,
-    owner,
-    requiredExitKeys,
-  }: {
-    readonly existingTargetOccurrenceIds: ReadonlyMap<string, OccurrenceId>;
-    readonly gameName: string;
-    readonly owner: ExitDecisionAddress;
-    readonly requiredExitKeys: readonly string[];
-  }): WorkspaceTakeoverRepairInteraction =>
-    Object.freeze({
-      action: 'reconcile' as const,
-      execute: () =>
-        createTakeoverBatchCommand({
-          action: 'reconcile',
-          decision: owner,
-          existingTargetOccurrenceIds,
-          gameName,
-          requiredExitKeys,
-        }),
-      key: semanticAddressKey(owner),
-      label: takeoverCandidate(gameName).label,
-      owner,
-      presentation: 'repair' as const,
-    });
+  const takeoverBatches = bindTakeoverBatchInteractions(
+    catalog,
+    candidates,
+    takeoverInteractionRequirements.values(),
+  );
   const rooms = new Map<string, WorkspaceRoomInteraction>();
   for (const [key, control] of roomControls) {
     const candidateRooms = (() => {
@@ -3795,7 +4053,6 @@ function createInteractionCatalog(
 
   const exitFrontierCapabilities = new Map<string, WorkspaceExitFrontierCapabilities>();
   const structural = new Map<string, WorkspaceStructuralInteraction>();
-  const takeoverBatches = new Map<string, WorkspaceTakeoverBatchInteraction>();
 
   for (const route of sources.routes) {
     for (const biomeSource of route.biomes) {
@@ -3805,88 +4062,11 @@ function createInteractionCatalog(
       }
       const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
       const fixedWidthOneTakeover = fixedWidthOneTakeoverForLayout(catalog, layout);
-      for (const decision of plan.topology.decisions) {
-        if (decision.kind === 'hub') continue;
-        const owner = createExitDecisionAddress(biome, decision.source);
-        if (decision.normal.kind === 'batch') {
-          const targetRooms = decision.normal.targets.map((target) =>
-            biomeSource.occurrence(target.occurrenceId),
-          );
-          const targetDeclarations = targetRooms.map((room) =>
-            room === undefined ? undefined : catalog.rooms.byKey[room.gameName],
-          );
-          const takeover = targetDeclarations.length > 0 && targetDeclarations.every(isTakeover);
-          const takeoverGameNames = catalog.rooms.values
-            .filter((room) => room.biomeKey === plan.biomeKey && isTakeover(room))
-            .map((room) => room.gameName);
-          const existingTargetOccurrenceIds = new Map(
-            decision.normal.targets.map((target) => [target.exitKey, target.occurrenceId] as const),
-          );
-          if (takeover) {
-            const gameName = targetRooms[0]?.gameName;
-            const requiredExits = resolveDeclaredPhysicalExits(
-              catalog,
-              layout,
-              plan.topology,
-              decision.source,
-            );
-            const requiredExitKeys =
-              requiredExits === undefined
-                ? undefined
-                : Object.freeze(requiredExits.map((exit) => exit.exitKey));
-            if (gameName !== undefined && requiredExitKeys !== undefined) {
-              takeoverBatches.set(
-                semanticAddressKey(owner),
-                createTakeoverRepairInteraction({
-                  existingTargetOccurrenceIds,
-                  gameName,
-                  owner,
-                  requiredExitKeys,
-                }),
-              );
-            }
-          } else {
-            if (
-              layout.progression.kind === 'generated' &&
-              fixedWidthOneTakeover === undefined &&
-              takeoverGameNames.length > 0
-            ) {
-              const impact = takeoverReplacementImpact(biome, plan, decision);
-              takeoverBatches.set(
-                semanticAddressKey(owner),
-                createCandidateTakeoverInteraction({
-                  action: 'replace' as const,
-                  existingTargetOccurrenceIds,
-                  gameNames: takeoverGameNames,
-                  ...(impact === undefined ? {} : { impact }),
-                  owner,
-                }),
-              );
-            }
-          }
-        } else if (layout.progression.kind === 'generated' && fixedWidthOneTakeover === undefined) {
-          const candidatesForTakeover = catalog.rooms.values
-            .filter((room) => room.biomeKey === plan.biomeKey && isTakeover(room))
-            .map((room) => room.gameName);
-          if (candidatesForTakeover.length > 0) {
-            takeoverBatches.set(
-              semanticAddressKey(owner),
-              createCandidateTakeoverInteraction({
-                action: 'create' as const,
-                gameNames: candidatesForTakeover,
-                owner,
-              }),
-            );
-          }
-        }
-      }
       if (completeness.completion === 'incomplete') {
         const frontier = completeness.frontier;
         if (frontier.kind === 'exitDecision') {
           const existing = biomeSource.exitDecision(frontier.source);
-          const gameNames = catalog.rooms.values
-            .filter((room) => room.biomeKey === plan.biomeKey && isTakeover(room))
-            .map((room) => room.gameName);
+          const candidateGameNames = takeoverCandidateGameNames(catalog, plan.biomeKey);
           const fixedWidthOneTakeoverAtFrontier = fixedWidthOneTakeoverTransitionForSource(
             catalog,
             layout,
@@ -3918,7 +4098,7 @@ function createInteractionCatalog(
               (fixedWidthOneTakeoverAtFrontier === undefined &&
                 layout.progression.kind === 'generated' &&
                 fixedWidthOneTakeover === undefined &&
-                gameNames.length > 0))
+                candidateGameNames !== undefined))
               ? (true as const)
               : undefined;
           if (structuralCapability !== undefined || takeoverCapability !== undefined) {
@@ -3927,52 +4107,6 @@ function createInteractionCatalog(
               Object.freeze({
                 ...(structuralCapability === undefined ? {} : { structural: structuralCapability }),
                 ...(takeoverCapability === undefined ? {} : { takeover: takeoverCapability }),
-              }),
-            );
-          }
-          if (
-            fixedWidthOneTakeoverAtFrontier !== undefined &&
-            existing === undefined &&
-            fixedWidthOneRequiredExitKeys !== undefined
-          ) {
-            takeoverBatches.set(
-              key,
-              fixedWidthOneTakeoverAtFrontier.kind === 'completedHubHandoff'
-                ? createCompletedHubHandoffInteraction({
-                    gameName: fixedWidthOneTakeoverAtFrontier.room.gameName,
-                    owner: frontier,
-                    requiredExitKeys: fixedWidthOneRequiredExitKeys,
-                  })
-                : createFixedWidthOneTakeoverInteraction({
-                    gameName: fixedWidthOneTakeoverAtFrontier.room.gameName,
-                    owner: frontier,
-                    requiredExitKeys: fixedWidthOneRequiredExitKeys,
-                  }),
-            );
-          } else if (
-            layout.progression.kind === 'generated' &&
-            fixedWidthOneTakeover === undefined &&
-            gameNames.length > 0 &&
-            !takeoverBatches.has(semanticAddressKey(frontier))
-          ) {
-            const existingTargetOccurrenceIds =
-              existing?.normal.kind === 'batch'
-                ? new Map(
-                    existing.normal.targets.map(
-                      (target) => [target.exitKey, target.occurrenceId] as const,
-                    ),
-                  )
-                : undefined;
-            takeoverBatches.set(
-              semanticAddressKey(frontier),
-              createCandidateTakeoverInteraction({
-                action:
-                  existing?.normal.kind === 'batch' ? ('replace' as const) : ('create' as const),
-                ...(existingTargetOccurrenceIds === undefined
-                  ? {}
-                  : { existingTargetOccurrenceIds }),
-                gameNames,
-                owner: frontier,
               }),
             );
           }
@@ -5139,6 +5273,292 @@ function assertStartInteractionRequirementsMatchAuthoredState(
   }
 }
 
+type WorkspaceExpectedTakeoverInteractionRequirement =
+  | {
+      readonly action: 'create' | 'replace';
+      readonly existingTargets: readonly {
+        readonly exitKey: string;
+        readonly occurrenceId: OccurrenceId;
+      }[];
+      readonly gameNames: readonly string[];
+      readonly impact?: WorkspaceTakeoverReplacementImpact;
+      readonly owner: ExitDecisionAddress;
+      readonly presentation: 'candidate';
+    }
+  | {
+      readonly action: 'reconcile';
+      readonly existingTargets: readonly {
+        readonly exitKey: string;
+        readonly occurrenceId: OccurrenceId;
+      }[];
+      readonly gameName: string;
+      readonly owner: ExitDecisionAddress;
+      readonly presentation: 'repair';
+      readonly requiredExitKeys: readonly string[];
+    }
+  | {
+      readonly action: 'create';
+      readonly gameName: string;
+      readonly owner: ExitDecisionAddress;
+      readonly presentation: 'fixedWidthOneTakeover' | 'completedHubHandoff';
+      readonly requiredExitKeys: readonly string[];
+    };
+
+/**
+ * Independently enumerate takeover controls from persisted topology,
+ * declaration policy, and structural completeness. This must not use
+ * projected workbenches, interaction requirements, or evaluation coverage.
+ */
+function expectedTakeoverInteractionRequirements(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+): ReadonlyMap<string, WorkspaceExpectedTakeoverInteractionRequirement> {
+  const topology = plan.topology;
+  if (topology === null) return new Map();
+  const expected = new Map<string, WorkspaceExpectedTakeoverInteractionRequirement>();
+  const add = (requirement: WorkspaceExpectedTakeoverInteractionRequirement): void => {
+    const key = `takeoverBatch:${semanticAddressKey(requirement.owner)}`;
+    if (expected.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple expected authored takeover interaction requirements`,
+      );
+    }
+    expected.set(key, requirement);
+  };
+  const occurrences = new Map(
+    topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence] as const),
+  );
+  const authoredDecisions = new Map<string, ExitDecision>();
+  for (const decision of topology.decisions) {
+    if (decision.kind !== 'exit') continue;
+    const key = semanticAddressKey(createExitDecisionAddress(biome, decision.source));
+    if (authoredDecisions.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple expected authored takeover decision owners`,
+      );
+    }
+    authoredDecisions.set(key, decision);
+  }
+  const candidateGameNames = catalog.rooms.values
+    .filter((room) => room.biomeKey === plan.biomeKey && isTakeover(room))
+    .map((room) => room.gameName);
+  const fixedWidthOneTakeover = fixedWidthOneTakeoverForLayout(catalog, layout);
+  for (const decision of authoredDecisions.values()) {
+    const owner = createExitDecisionAddress(biome, decision.source);
+    const existingTargets =
+      decision.normal.kind === 'batch'
+        ? Object.freeze(
+            decision.normal.targets.map((target) =>
+              Object.freeze({ exitKey: target.exitKey, occurrenceId: target.occurrenceId }),
+            ),
+          )
+        : Object.freeze([]);
+    const targetRooms =
+      decision.normal.kind === 'batch'
+        ? decision.normal.targets.map((target) => occurrences.get(target.occurrenceId))
+        : Object.freeze([]);
+    const targetDeclarations = targetRooms.map((room) =>
+      room === undefined ? undefined : catalog.rooms.byKey[room.gameName],
+    );
+    const takeoverGameName =
+      targetDeclarations.length > 0 && targetDeclarations.every(isTakeover)
+        ? targetRooms[0]?.gameName
+        : undefined;
+    if (takeoverGameName !== undefined) {
+      const exits = resolveDeclaredPhysicalExits(catalog, layout, topology, decision.source);
+      if (exits !== undefined) {
+        add(
+          Object.freeze({
+            action: 'reconcile' as const,
+            existingTargets,
+            gameName: takeoverGameName,
+            owner,
+            presentation: 'repair' as const,
+            requiredExitKeys: Object.freeze(exits.map((exit) => exit.exitKey)),
+          }),
+        );
+      }
+      continue;
+    }
+    if (
+      layout.progression.kind !== 'generated' ||
+      fixedWidthOneTakeover !== undefined ||
+      candidateGameNames.length === 0
+    ) {
+      continue;
+    }
+    const impact =
+      decision.normal.kind === 'batch'
+        ? takeoverReplacementImpact(biome, plan, decision)
+        : undefined;
+    add(
+      Object.freeze({
+        action: decision.normal.kind === 'batch' ? ('replace' as const) : ('create' as const),
+        existingTargets,
+        gameNames: Object.freeze([...candidateGameNames]),
+        ...(impact === undefined ? {} : { impact }),
+        owner,
+        presentation: 'candidate' as const,
+      }),
+    );
+  }
+  const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
+  if (completeness.completion !== 'incomplete' || completeness.frontier.kind !== 'exitDecision') {
+    return expected;
+  }
+  const owner = completeness.frontier;
+  const existing = authoredDecisions.get(semanticAddressKey(owner));
+  const fixedTransition = fixedWidthOneTakeoverTransitionForSource(
+    catalog,
+    layout,
+    topology,
+    owner.source,
+  );
+  const requiredExits =
+    fixedTransition === undefined
+      ? undefined
+      : resolveDeclaredPhysicalExits(catalog, layout, topology, owner.source);
+  if (fixedTransition !== undefined && existing === undefined && requiredExits !== undefined) {
+    add(
+      Object.freeze({
+        action: 'create' as const,
+        gameName: fixedTransition.room.gameName,
+        owner,
+        presentation:
+          fixedTransition.kind === 'completedHubHandoff'
+            ? ('completedHubHandoff' as const)
+            : ('fixedWidthOneTakeover' as const),
+        requiredExitKeys: Object.freeze(requiredExits.map((exit) => exit.exitKey)),
+      }),
+    );
+  } else if (
+    layout.progression.kind === 'generated' &&
+    fixedWidthOneTakeover === undefined &&
+    candidateGameNames.length > 0 &&
+    !expected.has(`takeoverBatch:${semanticAddressKey(owner)}`)
+  ) {
+    const existingTargets =
+      existing?.normal.kind === 'batch'
+        ? Object.freeze(
+            existing.normal.targets.map((target) =>
+              Object.freeze({ exitKey: target.exitKey, occurrenceId: target.occurrenceId }),
+            ),
+          )
+        : Object.freeze([]);
+    add(
+      Object.freeze({
+        action: existing?.normal.kind === 'batch' ? ('replace' as const) : ('create' as const),
+        existingTargets,
+        gameNames: Object.freeze([...candidateGameNames]),
+        owner,
+        presentation: 'candidate' as const,
+      }),
+    );
+  }
+  return expected;
+}
+
+function sameTakeoverReplacementImpact(
+  actual: WorkspaceTakeoverReplacementImpact | undefined,
+  expected: WorkspaceTakeoverReplacementImpact | undefined,
+): boolean {
+  if (actual === undefined || expected === undefined) return actual === expected;
+  const sameValues = <T>(left: readonly T[], right: readonly T[]): boolean =>
+    left.length === right.length && left.every((value, index) => value === right[index]);
+  return (
+    actual.command === expected.command &&
+    semanticAddressKey(actual.owner) === semanticAddressKey(expected.owner) &&
+    sameValues(
+      actual.removedDecisionOwners.map(semanticAddressKey),
+      expected.removedDecisionOwners.map(semanticAddressKey),
+    ) &&
+    sameValues(actual.removedOccurrenceIds, expected.removedOccurrenceIds) &&
+    sameValues(actual.replacedOccurrenceIds, expected.replacedOccurrenceIds)
+  );
+}
+
+function sameTakeoverExistingTargets(
+  actual: readonly { readonly exitKey: string; readonly occurrenceId: OccurrenceId }[],
+  expected: readonly { readonly exitKey: string; readonly occurrenceId: OccurrenceId }[],
+): boolean {
+  return (
+    actual.length === expected.length &&
+    actual.every(
+      (target, index) =>
+        target.exitKey === expected[index]?.exitKey &&
+        target.occurrenceId === expected[index]?.occurrenceId,
+    )
+  );
+}
+
+function sameTakeoverInteractionRequirement(
+  actual: WorkspaceTakeoverInteractionRequirement,
+  expected: WorkspaceExpectedTakeoverInteractionRequirement,
+): boolean {
+  if (semanticAddressKey(actual.owner) !== semanticAddressKey(expected.owner)) return false;
+  if (actual.presentation !== expected.presentation || actual.action !== expected.action)
+    return false;
+  switch (actual.presentation) {
+    case 'candidate':
+      return (
+        expected.presentation === 'candidate' &&
+        actual.gameNames.length === expected.gameNames.length &&
+        actual.gameNames.every((gameName, index) => gameName === expected.gameNames[index]) &&
+        sameTakeoverExistingTargets(actual.existingTargets, expected.existingTargets) &&
+        sameTakeoverReplacementImpact(actual.impact, expected.impact)
+      );
+    case 'repair':
+      return (
+        expected.presentation === 'repair' &&
+        actual.gameName === expected.gameName &&
+        sameTakeoverExistingTargets(actual.existingTargets, expected.existingTargets) &&
+        actual.requiredExitKeys.length === expected.requiredExitKeys.length &&
+        actual.requiredExitKeys.every((key, index) => key === expected.requiredExitKeys[index])
+      );
+    case 'fixedWidthOneTakeover':
+    case 'completedHubHandoff':
+      return (
+        (expected.presentation === 'fixedWidthOneTakeover' ||
+          expected.presentation === 'completedHubHandoff') &&
+        actual.gameName === expected.gameName &&
+        actual.requiredExitKeys.length === expected.requiredExitKeys.length &&
+        actual.requiredExitKeys.every((key, index) => key === expected.requiredExitKeys[index])
+      );
+  }
+}
+
+function assertTakeoverInteractionRequirementsMatchAuthoredState(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+  requirements: ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement>,
+): void {
+  const expected = expectedTakeoverInteractionRequirements(catalog, biome, layout, plan);
+  for (const [key, expectation] of expected) {
+    const requirement = requirements.get(key);
+    if (requirement === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} required takeover interaction requirement is absent`,
+      );
+    }
+    if (!sameTakeoverInteractionRequirement(requirement, expectation)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} takeover interaction requirement disagrees with authored state`,
+      );
+    }
+  }
+  for (const key of requirements.keys()) {
+    if (!expected.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} projected takeover interaction requirement has no authored or frontier owner`,
+      );
+    }
+  }
+}
+
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
@@ -5155,6 +5575,10 @@ function projectBiome(
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
   readonly startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>;
+  readonly takeoverInteractionRequirements: ReadonlyMap<
+    string,
+    WorkspaceTakeoverInteractionRequirement
+  >;
   readonly topologyRemovalInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceTopologyRemovalInteractionRequirement
@@ -5174,6 +5598,10 @@ function projectBiome(
     WorkspaceTopologyRemovalInteractionRequirement
   >();
   const startInteractionRequirements = new Map<string, WorkspaceStartInteractionRequirement>();
+  const takeoverInteractionRequirements = new Map<
+    string,
+    WorkspaceTakeoverInteractionRequirement
+  >();
   const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
   const context: MutableProjectionContext = {
@@ -5361,6 +5789,10 @@ function projectBiome(
     startInteractionRequirements,
     startInteractionRequirementsForBiome(biomeAddress, layout, plan),
   );
+  appendUniqueTakeoverInteractionRequirements(
+    takeoverInteractionRequirements,
+    takeoverInteractionRequirementsForBiome(catalog, biomeAddress, layout, plan),
+  );
   assertBatchInteractionRequirementsMatchAuthoredState(
     catalog,
     biomeAddress,
@@ -5384,6 +5816,13 @@ function projectBiome(
     layout,
     plan,
     startInteractionRequirements,
+  );
+  assertTakeoverInteractionRequirementsMatchAuthoredState(
+    catalog,
+    biomeAddress,
+    layout,
+    plan,
+    takeoverInteractionRequirements,
   );
   assertAuthoredWorkspaceLeafProjectionClosure(
     authoredLeafRequirements,
@@ -5493,6 +5932,7 @@ function projectBiome(
     roomControls,
     rewardControls,
     startInteractionRequirements,
+    takeoverInteractionRequirements,
     topologyRemovalInteractionRequirements,
   });
 }
@@ -5872,6 +6312,94 @@ function assertStartInteractionRequirementClosure(
   }
 }
 
+/**
+ * Verify the requirement-to-interaction handoff without invoking candidate
+ * loaders. The independent authored audit above owns candidate-domain facts;
+ * direct closure checks the exact eager presentation and command surface.
+ */
+function assertTakeoverInteractionRequirementClosure(
+  requirements: Iterable<WorkspaceTakeoverInteractionRequirement>,
+  catalog: Catalog,
+  interactions: WorkspaceInteractionCatalog,
+): void {
+  const expectedKeys = new Set<string>();
+  for (const requirement of requirements) {
+    const key = semanticAddressKey(requirement.owner);
+    expectedKeys.add(key);
+    const interaction = interactions.takeoverBatches.get(key);
+    if (
+      interaction === undefined ||
+      interaction.key !== key ||
+      semanticAddressKey(interaction.owner) !== key ||
+      interaction.presentation !== requirement.presentation ||
+      interaction.action !== requirement.action
+    ) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `Takeover interaction requirement ${key} has no exact workspace interaction`,
+      );
+    }
+    switch (requirement.presentation) {
+      case 'candidate':
+        if (
+          interaction.presentation !== 'candidate' ||
+          typeof interaction.load !== 'function' ||
+          typeof interaction.commandFor !== 'function' ||
+          !sameTakeoverReplacementImpact(interaction.impact, requirement.impact)
+        ) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `Takeover interaction requirement ${key} has conflicting candidate facts`,
+          );
+        }
+        break;
+      case 'repair':
+        if (
+          interaction.presentation !== 'repair' ||
+          typeof interaction.execute !== 'function' ||
+          interaction.label !== requireRoom(catalog, requirement.gameName).label
+        ) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `Takeover interaction requirement ${key} has conflicting repair facts`,
+          );
+        }
+        break;
+      case 'fixedWidthOneTakeover': {
+        const room = requireRoom(catalog, requirement.gameName);
+        const summary =
+          room.incomingReward.kind === 'shop'
+            ? `Enter ${room.label}. This declaration-owned transition creates one automatically entered World Shop.`
+            : `Enter ${room.label} through this declaration-owned transition.`;
+        if (
+          interaction.presentation !== 'fixedWidthOneTakeover' ||
+          typeof interaction.execute !== 'function' ||
+          interaction.label !== room.label ||
+          interaction.summary !== summary
+        ) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `Takeover interaction requirement ${key} has conflicting fixed-width-one facts`,
+          );
+        }
+        break;
+      }
+      case 'completedHubHandoff':
+        if (
+          interaction.presentation !== 'completedHubHandoff' ||
+          typeof interaction.execute !== 'function' ||
+          interaction.label !== requireRoom(catalog, requirement.gameName).label
+        ) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `Takeover interaction requirement ${key} has conflicting Hub-handoff facts`,
+          );
+        }
+        break;
+    }
+  }
+  if (interactions.takeoverBatches.size !== expectedKeys.size) {
+    throw new StructuredWorkspaceProjectionContractError(
+      'workspace takeover interactions have no exact requirement package',
+    );
+  }
+}
+
 function assertWorkspaceRoomInteractionClosure(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,
@@ -6184,6 +6712,10 @@ export function createStructuredWorkspaceProjection(
         WorkspaceTopologyRemovalInteractionRequirement
       >();
       const startInteractionRequirements = new Map<string, WorkspaceStartInteractionRequirement>();
+      const takeoverInteractionRequirements = new Map<
+        string,
+        WorkspaceTakeoverInteractionRequirement
+      >();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const authoredLeafRequirements: WorkspaceAuthoredLeafRequirement[] = [];
@@ -6211,6 +6743,10 @@ export function createStructuredWorkspaceProjection(
           appendUniqueStartInteractionRequirements(
             startInteractionRequirements,
             projected.startInteractionRequirements.values(),
+          );
+          appendUniqueTakeoverInteractionRequirements(
+            takeoverInteractionRequirements,
+            projected.takeoverInteractionRequirements.values(),
           );
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
@@ -6270,6 +6806,7 @@ export function createStructuredWorkspaceProjection(
         hubInteractionRequirements,
         topologyRemovalInteractionRequirements,
         startInteractionRequirements,
+        takeoverInteractionRequirements,
         roomControls,
         rewardControls,
       );
@@ -6285,6 +6822,11 @@ export function createStructuredWorkspaceProjection(
       );
       assertStartInteractionRequirementClosure(
         startInteractionRequirements.values(),
+        catalog,
+        interactions,
+      );
+      assertTakeoverInteractionRequirementClosure(
+        takeoverInteractionRequirements.values(),
         catalog,
         interactions,
       );
