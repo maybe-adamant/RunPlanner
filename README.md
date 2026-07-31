@@ -146,8 +146,9 @@ copied elsewhere.
   active frontier and chronological delivery record. Phase 7 Slice 4
   reconciliation and Commit 5a prompt removal are complete. The active
   [re-anchor and reorganization](docs/progress/REANCHOR_AND_REORGANIZE.md)
-  plan begins with a behavior-preserving workspace/React prerequisite before
-  the feature frontier resumes. The following
+  plan has reopened its behavior-preserving workspace/React prerequisite for
+  two deletion-oriented contraction commits before the feature frontier
+  resumes. The following
   [workspace presentation polish](docs/progress/WORKSPACE_PRESENTATION_POLISH.md)
   plan splits Commit 5b into four bounded UI changes. The remaining re-anchor
   campaigns then close before the

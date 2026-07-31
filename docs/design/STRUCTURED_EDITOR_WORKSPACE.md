@@ -168,12 +168,13 @@ React renders that projection and dispatches semantic commands.
 
 Application composition and React consume the structured workspace only through
 the `projections/structured-workspace` public entry. Its exported vocabulary,
-service, interaction helpers, and closure-audit seam are the stable projection
-contract. Contract declarations and projector assembly are private modules:
-the projector may consume the contract, but neither module may depend on the
-public entry or become an alternate consumer import path. This keeps workspace
-construction replaceable without making React or application composition depend
-on its internal assembly order.
+service, and deliberate interaction helpers are the stable projection contract.
+Independent closure helpers are test support, not a production public seam.
+Contract declarations and projector assembly are private modules: the projector
+may consume the contract, but neither module may depend on the public entry or
+become an alternate consumer import path. This keeps workspace construction
+replaceable without making React or application composition depend on its
+internal assembly order.
 
 ### Internal Projection Production Line
 
@@ -184,11 +185,14 @@ WorkspaceBiomeSource
   -> WorkspaceBiomeSemanticAssembly
        ├-> biome presentation (rail, default inspector, exact destinations)
        └-> project-wide interaction binding
-catalog + persisted authored state
-  -> independent authored-owner expectations
-semantic assembly + presentation + bound interactions + expectations
-  -> final-product closure
+semantic assembly + presentation + bound interactions
+  -> local construction invariants
   -> cached structured-workspace service
+
+test support: catalog + persisted authored state
+  -> independent expected owners, leaves, and structural controls
+production workspace products + expectations
+  -> test-time closure
 ```
 
 The semantic assembly owns complete biome facts: authored structural nodes,
@@ -197,10 +201,12 @@ requirements. Biome presentation and interaction binding are sibling consumers
 of that immutable product. Presentation owns the selective rail, Hub visit
 grouping, default inspector, and final inspector/rail destinations; interaction
 binding owns executable command adapters and does not consume presentation.
-Independently derived authored-owner expectations remain a separate catalog plus
-persisted-state audit path. The cached service composes these returned products,
-project and route markers, coarse finding fallbacks, and the final immutable
-workspace; it does not construct occurrence, decision, Hub, rail, or audit
+Independently derived authored-owner expectations live in test support and
+derive identity and visibility from catalog plus persisted state without
+importing assembly, marker ownership, presentation, binding, or facade
+products. The cached service composes the returned products, project and route
+markers, legitimate coarse finding fallbacks, and the final immutable workspace;
+it does not construct occurrence, decision, Hub, rail, or test-closure
 families itself.
 
 Creation establishes explicit transient semantic focus through the existing
@@ -252,26 +258,42 @@ candidate support, or evaluation coverage. Optional picked-room details may
 depend on authored `detailsActive`, while evaluated `entered` remains a
 separate fact.
 
-### Projection Closure
+Occurrence assembly consumes narrow authored activation facts. The Fields
+active-cage count is one shared decision-derived input for both occurrence and
+decision assembly, rather than a room-local lifecycle table or duplicated
+calculation. Declaration/state coherence is checked before room-local
+publication policy, including for dormant optional detail: malformed Ephyra
+side-room slots are rejected even when their controls are withheld.
 
-Before React renders the workspace, the application independently enumerates
-the semantic owners and declaration-required editable leaves implied by the
+### Projection Integrity and Independent Test Closure
+
+Production enforces invariants where products are constructed: exact
+project/evaluation provenance, declaration lookup, impossible evaluated-overlay
+rejection, duplicate semantic-key rejection, and required exact lookups. A
+fine-grained finding must resolve to an existing exact inspector subject when
+its destination is registered; it may not be converted into a default-inspector
+or biome-shell fallback. These are local production contracts, not a second
+traversal that reconstructs an expected workspace after the product is built.
+
+Test support independently enumerates the semantic owners, declaration-required
+editable leaves, and structural controls implied by catalog plus persisted
 authored state. It verifies that:
 
-- every decision, target, occurrence, and active declaration-owned leaf has one
-  reachable projection;
-- every exact semantic address resolves to its containing inspector and exact
-  interaction;
-- advertised interactions exist and conflicting or duplicate authored owners
-  fail the projection contract;
+- every decision, target, occurrence, Hub slot/visit, and active
+  declaration-owned leaf has one reachable projection;
+- every exact semantic address resolves to its containing inspector, marker,
+  and exact interaction;
+- advertised structural controls and frontier capabilities have the expected
+  kind, key, owner, and bound interaction;
 - fine-grained findings resolve to their exact owner rather than a biome-level
   fallback.
 
-A target's room and reward may be nested inside its decision workbench. Closure
-therefore validates semantic-owner reachability, not a count or shape of
-standalone UI nodes. Candidate support and findings decorate reachable
+A target's room and reward may be nested inside its decision workbench. Test
+closure therefore validates semantic-owner reachability, not a count or shape
+of standalone UI nodes. Candidate support and findings decorate reachable
 controls; they never decide whether a mandatory authored control exists. React
-must not silently omit a required control because an interaction lookup failed.
+renders projected facts and does not recreate topology, containment, lifecycle,
+or interaction policy.
 
 ## Ordinary Decision Workspace
 
