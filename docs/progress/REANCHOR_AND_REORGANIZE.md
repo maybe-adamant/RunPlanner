@@ -7,6 +7,10 @@ placement, product boundaries, dependency direction, and internal composition,
 but it does not change the authored schema, game rules, simulation semantics,
 candidate results, workspace behavior, or player-facing design.
 
+Foundation is complete. Campaign A has completed its required pre-movement
+default-inspector and work-count characterization; A1 is the next delivery
+slice.
+
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
 by Commit 5b.4 and the separate schema-changing Commit 5c in
@@ -370,6 +374,13 @@ fixtures for:
 These fixtures preserve behavior; they do not make the React fallback an
 authority.
 
+Current authored projections do not naturally reach every defensive tail of
+that fallback: an empty topology publishes a start frontier, every authored
+entry is details-active, and a completed Hub has a later fixed Preboss detail.
+Characterize those selector cases with minimal synthetic workspace envelopes,
+not fabricated authored documents. A5 moves the same matrix to the projected
+default-destination contract and retains React equivalence coverage.
+
 #### A1: Public workspace contract
 
 - separate public workspace, marker, interaction, rail, and destination
@@ -673,9 +684,11 @@ baseline directly:
   and zero candidate `queryBatch` events after setup;
 - `apps/planner/test/architecture/candidateInteractions.test.ts`: constructing
   the representative Underworld and Surface workspaces performs exactly two
-  explicit project evaluations in total, each cold representative interaction
-  emits exactly one positive `queryBatch`, and a repeated load emits no
-  additional query batch or project evaluation;
+  explicit project evaluations in total; every cold representative interaction
+  emits its recorded positive `queryBatch` count (one for every family except
+  the cooperative `rewards` family, which emits fourteen declaration-owned
+  batches); and a repeated load emits no additional query batch or project
+  evaluation;
 - `apps/planner/test/product-loops/UnifiedBiomePerformance.test.ts`: for both
   representative routes, cold candidate activation emits exactly one
   `queryBatch`, representative edit publication emits exactly one

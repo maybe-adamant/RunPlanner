@@ -29,13 +29,12 @@ import {
   goldenFStartId,
 } from '../fixtures/underworldProject';
 
-type InteractionFamily = keyof WorkspaceInteractionCatalog;
 type LoadableInteraction = {
   readonly load: () => unknown | Promise<unknown>;
   readonly owner: { readonly routeKey?: string; readonly biomeKey?: string };
 };
 
-const families: readonly InteractionFamily[] = [
+const families = [
   'batchRewardStores',
   'fieldsCageOutcomes',
   'hubSlots',
@@ -49,7 +48,30 @@ const families: readonly InteractionFamily[] = [
   'shopPurchases',
   'sideRoomEntryOrders',
   'sideRoomGenerations',
-];
+] as const satisfies readonly (keyof WorkspaceInteractionCatalog)[];
+
+type InteractionFamily = (typeof families)[number];
+
+/**
+ * Reward controls deliberately resolve each declaration-owned reward leaf in
+ * their cooperative domain pass. The other representative families each
+ * resolve through one addressed batch.
+ */
+const expectedColdQueryBatchCounts: Readonly<Record<InteractionFamily, number>> = Object.freeze({
+  batchRewardStores: 1,
+  fieldsCageOutcomes: 1,
+  hubSlots: 1,
+  hubVisits: 1,
+  rewards: 14,
+  rewardWheelOfferCounts: 1,
+  rewardWheelPicks: 1,
+  rewardWheelStores: 1,
+  rooms: 1,
+  shipEncounterCounts: 1,
+  shopPurchases: 1,
+  sideRoomEntryOrders: 1,
+  sideRoomGenerations: 1,
+});
 
 function firstInteraction(
   family: InteractionFamily,
@@ -88,17 +110,26 @@ describe('workspace candidate interaction families', () => {
       events.length = 0;
       const interaction = firstInteraction(family, workspaces);
 
-      if (family === 'hubSlots') {
-        const hubSlot = interaction as WorkspaceHubSlotInteraction;
-        await hubSlot.bind(createOccurrenceId('candidate-interaction-hub-slot')).load();
-      } else {
-        await (interaction as LoadableInteraction).load();
-      }
+      const loadable =
+        family === 'hubSlots'
+          ? (interaction as WorkspaceHubSlotInteraction).bind(
+              createOccurrenceId('candidate-interaction-hub-slot'),
+            )
+          : (interaction as LoadableInteraction);
+      await loadable.load();
 
       const queryBatches = events.filter((event) => event.kind === 'queryBatch');
-      expect(queryBatches.length, `${family} did not evaluate its domain`).toBeGreaterThan(0);
+      expect(
+        queryBatches,
+        `${family} did not evaluate its expected domain batch count`,
+      ).toHaveLength(expectedColdQueryBatchCounts[family]);
       expect(queryBatches.every((event) => event.queryCount > 0)).toBe(true);
       expect(projectEvaluationCount, `${family} reacquired project evaluation`).toBe(2);
+
+      events.length = 0;
+      await loadable.load();
+      expect(events).toHaveLength(0);
+      expect(projectEvaluationCount, `${family} repeat load reacquired project evaluation`).toBe(2);
     }
   });
 

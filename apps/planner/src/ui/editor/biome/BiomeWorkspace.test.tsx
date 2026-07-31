@@ -35,7 +35,11 @@ import {
   type PlannerApplication,
 } from '../../../composition/createApplication';
 import { semanticFindingKey } from '../../../projections/evaluationProjection';
-import type { WorkspaceNode } from '../../../projections/structuredWorkspace';
+import type {
+  WorkspaceBiome,
+  WorkspaceNode,
+  WorkspaceOccurrenceWorkbenchNode,
+} from '../../../projections/structuredWorkspace';
 import { findingSelected, semanticOwnerFocused } from '../../../state/editorSessionSlice';
 import {
   authoredProjectRedoRequested,
@@ -63,6 +67,7 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
   goldenGBiome,
+  goldenGOccurrenceId,
   goldenHBiome,
 } from '../../../../test/fixtures/underworldProject';
 import { BiomeWorkspace } from './BiomeWorkspace';
@@ -112,15 +117,31 @@ function renderWorkspace(
   return { application, user, ...view };
 }
 
-function workspaceBiome(application: PlannerApplication, routeKey: string, biomeKey: string) {
+function workspaceProjection(application: PlannerApplication) {
   const state = application.store.getState().projectWorkspace;
-  const biome = application.structuredWorkspace
-    .project(state.history.present, state.evaluation)
+  return application.structuredWorkspace.project(state.history.present, state.evaluation);
+}
+
+function workspaceBiome(application: PlannerApplication, routeKey: string, biomeKey: string) {
+  const biome = workspaceProjection(application)
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (biome === undefined)
     throw new Error(`${routeKey}/${biomeKey} has no projected workspace biome`);
   return biome;
+}
+
+function renderProjectedBiome(application: PlannerApplication, biome: WorkspaceBiome) {
+  const workspace = workspaceProjection(application);
+  return render(
+    <Provider store={application.store}>
+      <BiomeWorkspace
+        biome={biome}
+        focusByOwner={workspace.focusByOwner}
+        interactions={workspace.interactions}
+      />
+    </Provider>,
+  );
 }
 
 function nHubState(application: PlannerApplication) {
@@ -165,6 +186,21 @@ function railMarkerKeys(container: HTMLElement): readonly string[] {
   );
 }
 
+function selectedRailMarkerKeys(container: ParentNode): readonly string[] {
+  return Array.from(
+    container.querySelectorAll<HTMLButtonElement>('[data-workspace-node][data-selected="true"]'),
+  ).map((element) => element.dataset.workspaceNode ?? '');
+}
+
+function expectDefaultRailSelection(
+  application: PlannerApplication,
+  container: ParentNode,
+  expectedMarker: string,
+): void {
+  expect(application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
+  expect(selectedRailMarkerKeys(container)).toEqual([expectedMarker]);
+}
+
 function railButtonForMarker(container: ParentNode, marker: string): HTMLButtonElement {
   const button = Array.from(
     container.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
@@ -190,6 +226,7 @@ function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): Projec
 function fTwoDoorBatchProject(): {
   readonly owner: ReturnType<typeof createExitDecisionAddress>;
   readonly project: ProjectDocument;
+  readonly start: ReturnType<typeof createOccurrenceId>;
 } {
   const biome = createBiomeAddress('Underworld', 'F');
   const start = createOccurrenceId('biome-workspace-f-start');
@@ -222,7 +259,67 @@ function fTwoDoorBatchProject(): {
     rewardStore: createBatchRewardStoreAddress(biome, owner.source),
     storeKey: 'RunProgress',
   });
-  return { owner, project };
+  return { owner, project, start };
+}
+
+function nOpeningPreHubProject(): ProjectDocument {
+  let project = emptyProject('Surface', 1);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: nBiome,
+    occurrenceId: nOccurrenceIds.opening,
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'CreateLinkedExit',
+    decision: createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.opening,
+    }),
+    occurrenceId: nOccurrenceIds.preHub,
+  });
+}
+
+function withUnresolvedFSelections(
+  project: ProjectDocument,
+  sourceOccurrenceIds: readonly string[],
+): ProjectDocument {
+  return {
+    ...project,
+    routes: project.routes.map((route) =>
+      route.routeKey !== 'Underworld'
+        ? route
+        : {
+            ...route,
+            biomes: route.biomes.map((plan) =>
+              plan.biomeKey !== 'F' || plan.topology === null
+                ? plan
+                : {
+                    ...plan,
+                    topology: {
+                      ...plan.topology,
+                      decisions: plan.topology.decisions.map((decision) =>
+                        decision.kind === 'exit' &&
+                        decision.source.kind === 'occurrence' &&
+                        sourceOccurrenceIds.includes(decision.source.occurrenceId)
+                          ? { ...decision, selection: { kind: 'unresolved' as const } }
+                          : decision,
+                      ),
+                    },
+                  },
+            ),
+          },
+    ),
+  };
+}
+
+function inactiveOccurrenceDetails(node: WorkspaceNode): WorkspaceNode {
+  if (node.kind !== 'occurrenceWorkbench') return node;
+  return { ...node, room: { ...node.room, detailsActive: false } };
+}
+
+function withoutWorkspaceEntry({ entry, ...biome }: WorkspaceBiome): Omit<WorkspaceBiome, 'entry'> {
+  void entry;
+  return biome;
 }
 
 describe('BiomeWorkspace', () => {
@@ -730,12 +827,219 @@ describe('BiomeWorkspace', () => {
     if (partial === undefined) throw new Error('F current partial decision is missing');
 
     expect(partial.missingTargets).not.toHaveLength(0);
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
+    expect(projected.frontier).toBeNull();
+    expectDefaultRailSelection(view.application, view.container, semanticAddressKey(owner));
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
     expect(
       within(inspector).getByRole('heading', { level: 3, name: 'Configure room offers' }),
     ).toBeTruthy();
     expect(within(inspector).getByRole('button', { name: 'Exit 1 room' })).toBeTruthy();
+  });
+
+  it('characterizes active start and bare exit-frontier defaults', () => {
+    const empty = renderWorkspace(emptyProject('Underworld', 1), 'Underworld', 'F');
+    const emptyBiome = workspaceBiome(empty.application, 'Underworld', 'F');
+    if (emptyBiome.frontier?.kind !== 'start') throw new Error('empty F start frontier is missing');
+
+    const emptyInspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    expectDefaultRailSelection(
+      empty.application,
+      empty.container,
+      emptyBiome.frontier.marker.focusKey,
+    );
+    expect(
+      within(emptyInspector).getByRole('heading', { level: 2, name: 'Active frontier' }),
+    ).toBeTruthy();
+    expect(
+      within(emptyInspector).getByRole('heading', { level: 3, name: 'Choose starting room' }),
+    ).toBeTruthy();
+    cleanup();
+
+    const start = createOccurrenceId('default-inspector-f-start');
+    const started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+      kind: 'CreateStart',
+      biome: goldenFBiome,
+      occurrenceId: start,
+      gameName: 'F_Opening01',
+    });
+    const exit = renderWorkspace(started, 'Underworld', 'F');
+    const exitBiome = workspaceBiome(exit.application, 'Underworld', 'F');
+    if (exitBiome.frontier?.kind !== 'exitDecision') {
+      throw new Error('F start-only exit frontier is missing');
+    }
+    const exitFrontier = exitBiome.frontier;
+
+    const exitInspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    expect(
+      exitBiome.nodes.some(
+        (node) =>
+          (node.kind === 'ordinaryBatch' ||
+            node.kind === 'mixedBatch' ||
+            node.kind === 'takeoverBatch') &&
+          semanticAddressKey(node.owner) === semanticAddressKey(exitFrontier.owner),
+      ),
+    ).toBe(false);
+    expectDefaultRailSelection(exit.application, exit.container, exitFrontier.marker.focusKey);
+    expect(
+      within(exitInspector).getByRole('heading', { level: 2, name: 'Active frontier' }),
+    ).toBeTruthy();
+    expect(
+      within(exitInspector).getByRole('heading', { level: 3, name: 'Continue from this room' }),
+    ).toBeTruthy();
+    expect(within(exitInspector).getByRole('button', { name: 'Add normal exits' })).toBeTruthy();
+  });
+
+  it('uses the last incomplete decision and the last active ordinary detail by projection order', () => {
+    const multiIncomplete = withUnresolvedFSelections(createGoldenFGHIProject(catalog), [
+      goldenFOccurrenceId(1, 1),
+      goldenFOccurrenceId(2, 1),
+    ]);
+    const incomplete = renderWorkspace(multiIncomplete, 'Underworld', 'F');
+    const incompleteBiome = workspaceBiome(incomplete.application, 'Underworld', 'F');
+    const firstOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(1, 1),
+    });
+    const latestOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(2, 1),
+    });
+    const incompleteOwners = incompleteBiome.nodes
+      .filter(
+        (
+          node,
+        ): node is Extract<
+          WorkspaceNode,
+          { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+        > =>
+          (node.kind === 'ordinaryBatch' ||
+            node.kind === 'mixedBatch' ||
+            node.kind === 'takeoverBatch') &&
+          node.targets.length > 0 &&
+          !node.targets.some((target) => target.selected),
+      )
+      .map((node) => semanticAddressKey(node.owner));
+    if (incompleteBiome.frontier !== null) {
+      throw new Error('retained F decisions must not publish a frontier');
+    }
+
+    expect(incompleteOwners).toEqual([
+      semanticAddressKey(firstOwner),
+      semanticAddressKey(latestOwner),
+    ]);
+    expectDefaultRailSelection(
+      incomplete.application,
+      incomplete.container,
+      semanticAddressKey(latestOwner),
+    );
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Focused inspector' })
+        .querySelector('.biome-batch-workbench'),
+    ).not.toBeNull();
+    cleanup();
+
+    const complete = renderWorkspace(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const completeBiome = workspaceBiome(complete.application, 'Underworld', 'F');
+    const finalTakeover = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(10, 1),
+    });
+    if (completeBiome.frontier !== null) throw new Error('complete F must not have a frontier');
+    const finalTarget = completeBiome.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'takeoverBatch' }> =>
+        node.kind === 'takeoverBatch' &&
+        semanticAddressKey(node.owner) === semanticAddressKey(finalTakeover),
+    );
+    if (finalTarget === undefined || !finalTarget.targets.some((target) => target.selected)) {
+      throw new Error('complete F final active takeover target is missing');
+    }
+
+    expectDefaultRailSelection(
+      complete.application,
+      complete.container,
+      semanticAddressKey(finalTakeover),
+    );
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Focused inspector' })
+        .querySelector('.biome-batch-workbench'),
+    ).not.toBeNull();
+  });
+
+  it('keeps default ordinary destinations stable through retained-invalid and blocked suffixes', () => {
+    const retainedProject = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+      gameName: 'F_Combat01',
+    });
+    const retained = renderWorkspace(retainedProject, 'Underworld', 'F');
+    const retainedBiome = workspaceBiome(retained.application, 'Underworld', 'F');
+    const fFinalTakeover = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(10, 1),
+    });
+
+    expect(retainedBiome.status).toBe('invalid');
+    expect(
+      retainedBiome.nodes.some(
+        (node) =>
+          node.kind === 'ordinaryBatch' &&
+          node.topologyState === 'retained' &&
+          semanticAddressKey(node.owner) ===
+            semanticAddressKey(
+              createExitDecisionAddress(goldenFBiome, {
+                kind: 'occurrence',
+                occurrenceId: goldenFOccurrenceId(1, 1),
+              }),
+            ),
+      ),
+    ).toBe(true);
+    expectDefaultRailSelection(
+      retained.application,
+      retained.container,
+      semanticAddressKey(fFinalTakeover),
+    );
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Focused inspector' })
+        .querySelector('.biome-batch-workbench'),
+    ).not.toBeNull();
+    cleanup();
+
+    const blockedProject = withUnresolvedFSelections(createGoldenFGHIProject(catalog), [
+      goldenFOccurrenceId(1, 1),
+    ]);
+    const blocked = renderWorkspace(blockedProject, 'Underworld', 'G');
+    const blockedBiome = workspaceBiome(blocked.application, 'Underworld', 'G');
+    const gFinalTakeover = createExitDecisionAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenGOccurrenceId(7, 1),
+    });
+    const selectedRetained = blockedBiome.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'takeoverBatch' }> =>
+        node.kind === 'takeoverBatch' &&
+        semanticAddressKey(node.owner) === semanticAddressKey(gFinalTakeover),
+    );
+    if (
+      selectedRetained === undefined ||
+      !selectedRetained.targets.some((target) => target.selected && !target.room.entered)
+    ) {
+      throw new Error('blocked G selected retained Preboss target is missing');
+    }
+
+    expect(blockedBiome.status).toBe('blocked');
+    expect(selectedRetained.topologyState).toBe('retained');
+    expectDefaultRailSelection(
+      blocked.application,
+      blocked.container,
+      semanticAddressKey(gFinalTakeover),
+    );
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Focused inspector' })
+        .querySelector('.biome-batch-workbench'),
+    ).not.toBeNull();
   });
 
   it('edits picked room and reward together while refreshing the decision summary', async () => {
@@ -926,13 +1230,251 @@ describe('BiomeWorkspace', () => {
 
     const view = renderWorkspace(project, 'Surface', 'N');
     const openSet = createHubOpenSetAddress(biome, 'hub');
+    const projected = workspaceBiome(view.application, 'Surface', 'N');
+    if (projected.frontier?.kind !== 'hubOpenSet') {
+      throw new Error('fresh N Hub open-set frontier is missing');
+    }
 
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
+    expectDefaultRailSelection(
+      view.application,
+      view.container,
+      semanticAddressKey(createHubDecisionAddress(biome, 'hub')),
+    );
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(0);
     expect(screen.getByRole('heading', { name: 'Open Ephyra rooms' })).toBeTruthy();
     expect(
       document.getElementById(`semantic-owner-${encodeURIComponent(semanticAddressKey(openSet))}`),
     ).toBeTruthy();
+  });
+
+  it('characterizes Hub-decision and Hub-visit defaults plus the fixed Preboss exception', () => {
+    const hubMarker = semanticAddressKey(createHubDecisionAddress(nBiome, 'hub'));
+    const pendingHub = renderWorkspace(nOpeningPreHubProject(), 'Surface', 'N');
+    const pendingBiome = workspaceBiome(pendingHub.application, 'Surface', 'N');
+    if (pendingBiome.frontier?.kind !== 'hubDecision') {
+      throw new Error('N Hub-decision frontier is missing');
+    }
+
+    expectDefaultRailSelection(pendingHub.application, pendingHub.container, hubMarker);
+    expect(
+      within(screen.getByRole('complementary', { name: 'Focused inspector' })).getByRole(
+        'heading',
+        {
+          level: 3,
+          name: 'Open Ephyra rooms',
+        },
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Create Hub board' })).toBeTruthy();
+    cleanup();
+
+    const truncatedProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'RemoveHubVisitsFrom',
+      visit: createHubVisitAddress(nBiome, 'hub', 4),
+    });
+    const truncatedHub = renderWorkspace(truncatedProject, 'Surface', 'N');
+    const truncatedBiome = workspaceBiome(truncatedHub.application, 'Surface', 'N');
+    if (truncatedBiome.frontier?.kind !== 'hubVisit') {
+      throw new Error('N Hub-visit frontier is missing');
+    }
+
+    expectDefaultRailSelection(truncatedHub.application, truncatedHub.container, hubMarker);
+    expect(
+      within(screen.getByRole('complementary', { name: 'Focused inspector' })).getByRole(
+        'heading',
+        {
+          level: 3,
+          name: 'Pylon visit order',
+        },
+      ),
+    ).toBeTruthy();
+    const nextVisit = document.querySelector<HTMLElement>('.hub-visit-row[data-authoring="next"]');
+    expect(nextVisit).not.toBeNull();
+    cleanup();
+
+    const handoffProject = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'default-inspector-n-handoff',
+        name: 'N default Hub handoff',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    const handoff = renderWorkspace(handoffProject, 'Surface', 'N');
+    const handoffBiome = workspaceBiome(handoff.application, 'Surface', 'N');
+    if (
+      handoffBiome.frontier?.kind !== 'exitDecision' ||
+      handoffBiome.frontier.owner.source.kind !== 'hubDecision'
+    ) {
+      throw new Error('complete N Hub-owned handoff frontier is missing');
+    }
+
+    expectDefaultRailSelection(handoff.application, handoff.container, hubMarker);
+    expect(
+      within(screen.getByRole('complementary', { name: 'Focused inspector' })).getByRole(
+        'heading',
+        {
+          level: 3,
+          name: 'Open Ephyra rooms',
+        },
+      ),
+    ).toBeTruthy();
+    cleanup();
+
+    const complete = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const completeBiome = workspaceBiome(complete.application, 'Surface', 'N');
+    const preboss = completeBiome.nodes.find(
+      (node): node is WorkspaceOccurrenceWorkbenchNode =>
+        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === nOccurrenceIds.preboss,
+    );
+    if (completeBiome.frontier !== null || preboss?.sourceDecisionRemoval === undefined) {
+      throw new Error('complete N fixed Preboss detail is missing');
+    }
+
+    expectDefaultRailSelection(
+      complete.application,
+      complete.container,
+      semanticAddressKey(
+        createTargetAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }, 'preboss'),
+      ),
+    );
+    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
+    expect(within(inspector).getByRole('heading', { level: 3, name: 'Preboss' })).toBeTruthy();
+  });
+
+  it('characterizes defensive default subjects outside current authored projection inputs', () => {
+    const { project: partialProject, start } = fTwoDoorBatchProject();
+    let bareExitProject = emptyProject('Underworld', 1);
+    bareExitProject = applyProjectCommand(bareExitProject, catalog, {
+      kind: 'CreateStart',
+      biome: goldenFBiome,
+      occurrenceId: start,
+      gameName: 'F_Opening01',
+    });
+    const decisionApplication = createApplication();
+    decisionApplication.store.dispatch(authoredProjectReplaced(bareExitProject));
+    const bareExitBiome = workspaceBiome(decisionApplication, 'Underworld', 'F');
+    if (bareExitBiome.frontier?.kind !== 'exitDecision') {
+      throw new Error('synthetic matching F exit frontier is missing');
+    }
+    const matchingFrontier = bareExitBiome.frontier;
+    decisionApplication.store.dispatch(authoredProjectReplaced(partialProject));
+    const partialBiome = workspaceBiome(decisionApplication, 'Underworld', 'F');
+    const matchingDecision = partialBiome.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        semanticAddressKey(node.owner) === semanticAddressKey(matchingFrontier.owner),
+    );
+    if (matchingDecision === undefined) {
+      throw new Error('synthetic matching F exit decision is missing');
+    }
+    const matchingExitDefault: WorkspaceBiome = {
+      ...partialBiome,
+      frontier: matchingFrontier,
+    };
+    const matchingExitView = renderProjectedBiome(decisionApplication, matchingExitDefault);
+    expectDefaultRailSelection(
+      decisionApplication,
+      matchingExitView.container,
+      matchingDecision.marker.focusKey,
+    );
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Focused inspector' })
+        .querySelector('.biome-batch-workbench'),
+    ).not.toBeNull();
+    cleanup();
+    decisionApplication.dispose();
+
+    const fApplication = createApplication();
+    const fProject = createGoldenFGHIProject(catalog);
+    fApplication.store.dispatch(authoredProjectReplaced(fProject));
+    const fBiome = workspaceBiome(fApplication, 'Underworld', 'F');
+    const entry = fBiome.entry;
+    if (entry === undefined) throw new Error('complete F entry is missing');
+
+    // Every real entry currently has an active occurrence workbench and an
+    // empty topology publishes a start frontier. Keep the remaining fallback
+    // branches explicit here without inventing impossible authored documents.
+    const entryDefault: WorkspaceBiome = {
+      ...fBiome,
+      nodes: fBiome.nodes.map(inactiveOccurrenceDetails),
+    };
+    const entryView = renderProjectedBiome(fApplication, entryDefault);
+    expectDefaultRailSelection(fApplication, entryView.container, entry.marker.focusKey);
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Focused inspector' })
+        .querySelector('.biome-occurrence-workbench'),
+    ).not.toBeNull();
+    cleanup();
+
+    const first = fBiome.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
+        node.kind === 'completion',
+    );
+    if (first === undefined) throw new Error('complete F completion node is missing');
+    const firstNodeDefault: WorkspaceBiome = {
+      ...withoutWorkspaceEntry(fBiome),
+      nodes: [first],
+      rail: [],
+    };
+    const firstNodeView = renderProjectedBiome(fApplication, firstNodeDefault);
+    const firstNodeInspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    expect(selectedRailMarkerKeys(firstNodeView.container)).toEqual([]);
+    expect(
+      within(firstNodeInspector).getByRole('heading', { level: 2, name: first.label }),
+    ).toBeTruthy();
+    expect(
+      within(firstNodeInspector).getByText(
+        'This completion room is derived from the biome layout and is not an authored occurrence.',
+      ),
+    ).toBeTruthy();
+    cleanup();
+
+    const noSubjectDefault: WorkspaceBiome = {
+      ...firstNodeDefault,
+      nodes: [],
+    };
+    const noSubjectView = renderProjectedBiome(fApplication, noSubjectDefault);
+    expect(selectedRailMarkerKeys(noSubjectView.container)).toEqual([]);
+    expect(
+      within(screen.getByRole('complementary', { name: 'Focused inspector' })).getByText(
+        'No authored structure is available yet.',
+      ),
+    ).toBeTruthy();
+    cleanup();
+    fApplication.dispose();
+
+    const nApplication = createApplication();
+    nApplication.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
+    const nBiomeWorkspace = workspaceBiome(nApplication, 'Surface', 'N');
+    const hub = nBiomeWorkspace.nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    if (hub === undefined) throw new Error('complete N Hub node is missing');
+    const hubDetailDefault: WorkspaceBiome = {
+      ...nBiomeWorkspace,
+      frontier: null,
+      nodes: nBiomeWorkspace.nodes.filter(
+        (node) =>
+          node.kind !== 'occurrenceWorkbench' || node.room.occurrenceId !== nOccurrenceIds.preboss,
+      ),
+    };
+    const hubDetailView = renderProjectedBiome(nApplication, hubDetailDefault);
+    expectDefaultRailSelection(nApplication, hubDetailView.container, hub.marker.focusKey);
+    expect(
+      within(screen.getByRole('complementary', { name: 'Focused inspector' })).getByRole(
+        'heading',
+        {
+          level: 3,
+          name: 'Open Ephyra rooms',
+        },
+      ),
+    ).toBeTruthy();
+    nApplication.dispose();
   });
 
   it('routes an explicit completed-Hub handoff focus back to the Hub workbench and executes it', async () => {
