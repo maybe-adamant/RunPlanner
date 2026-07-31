@@ -1383,7 +1383,27 @@ describe('unified structured workspace projection', () => {
     const projected = workspace(project);
     const descriptor = catalog.biomeLayouts.byKey.N?.progression;
     if (descriptor?.kind !== 'hub') throw new Error('N Hub descriptor is missing');
+    const hub = biome(projected, 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    if (hub === undefined) throw new Error('authored N Hub board is missing');
     expect(projected.interactions.hubSlots).toHaveLength(descriptor.slots.length);
+    for (const slot of hub.slots) {
+      const interaction = projected.interactions.hubSlots.get(slot.marker.focusKey);
+      expect(interaction).toMatchObject({
+        key: slot.marker.focusKey,
+        owner: slot.marker.address,
+        roomGameName: descriptor.slots.find(
+          (descriptorSlot) => descriptorSlot.slotKey === slot.hubSlotKey,
+        )?.roomGameName,
+        selected: slot.open,
+      });
+    }
+    const visitedSlot = hub.slots.find((slot) => slot.open && slot.visited);
+    if (visitedSlot === undefined) throw new Error('visited N Hub slot is missing');
+    expect(visitedSlot.canClose).toBe(false);
+    expect(projected.interactions.hubSlots.get(visitedSlot.marker.focusKey)?.close).toBeDefined();
     const unvisitedSlot = createHubSlotAddress(nBiome, descriptor.hubKey, 'combat03');
     expect(projected.interactions.hubSlots.get(semanticAddressKey(unvisitedSlot))).toMatchObject({
       close: {
@@ -1392,8 +1412,72 @@ describe('unified structured workspace projection', () => {
       },
     });
     const nextVisit = createHubVisitAddress(nBiome, descriptor.hubKey, descriptor.requiredVisits);
+    expect(projected.interactions.hubVisits).toHaveLength(descriptor.requiredVisits);
+    const selectedSlots = hub.visits.flatMap((visit) =>
+      visit.hubSlotKey === undefined ? [] : [visit.hubSlotKey],
+    );
+    for (const visit of hub.visits) {
+      const interaction = projected.interactions.hubVisits.get(visit.marker.focusKey);
+      expect(interaction).toMatchObject({
+        key: visit.marker.focusKey,
+        owner: visit.marker.address,
+        ...(visit.hubSlotKey === undefined ? {} : { selected: visit.hubSlotKey }),
+      });
+      expect(interaction?.choices.map((choice) => choice.value)).toEqual(
+        hub.slots
+          .filter(
+            (slot) =>
+              slot.open &&
+              (slot.hubSlotKey === visit.hubSlotKey || !selectedSlots.includes(slot.hubSlotKey)),
+          )
+          .map((slot) => slot.hubSlotKey),
+      );
+    }
     expect(projected.interactions.hubVisits.get(semanticAddressKey(nextVisit))).toMatchObject({
       owner: nextVisit,
+    });
+  });
+
+  it('keeps Hub control publication authored-first while retaining the structural next visit', () => {
+    const initial = createProjectDocument(catalog, {
+      projectId: 'n-authored-hub-control-publication',
+      name: 'N authored Hub control publication',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    const outline = workspace(initial);
+    expect(outline.interactions.hubSlots).toHaveLength(0);
+    expect(outline.interactions.hubVisits).toHaveLength(0);
+
+    const opening = createOccurrenceId('n-authored-hub-control-opening');
+    let project = applyProjectCommand(initial, catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: opening,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateLinkedExit',
+      decision: createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId: opening }),
+      occurrenceId: createOccurrenceId('n-authored-hub-control-prehub'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateHubDecision',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+    });
+
+    const projected = workspace(project);
+    const hub = biome(projected, 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
+        node.kind === 'hubDecision',
+    );
+    if (hub === undefined) throw new Error('fresh authored N Hub board is missing');
+    expect(hub.authoring).toBe('authored');
+    expect(projected.interactions.hubSlots).toHaveLength(hub.slots.length);
+    expect(hub.visits[0]?.authoring).toBe('locked');
+    const firstVisit = createHubVisitAddress(nBiome, 'hub', 1);
+    expect(projected.interactions.hubVisits.get(semanticAddressKey(firstVisit))).toMatchObject({
+      choices: [],
+      key: semanticAddressKey(firstVisit),
+      owner: firstVisit,
     });
   });
 

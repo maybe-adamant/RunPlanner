@@ -16,7 +16,8 @@ explicit assembly output, and A2.4 did the same for room pickers; common
 semantic assembly remains in progress. A2.5 made completed biome focus
 destinations an explicit assembly output as well. A4.1 now returns and binds
 the first occurrence-owned non-reward interaction packages explicitly. A4.2
-does the same for authored batch controls.
+does the same for authored batch controls. A4.3 does the same for authored Hub
+board slots and visits.
 
 The feature frontier remains Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md), followed
@@ -480,6 +481,16 @@ blocked or retained batches, and the null-versus-selected takeover reward-store
 policy. Hub, topology/removal, takeover action, start, and frontier families
 remain in the source-index binding until their own complete requirements
 exist.
+
+**A4.3 transition note.** Authored Hub assembly now returns one `hubControls`
+package for every declared board slot and each authored or structural-next
+visit. Binding consumes that package and the same bound candidate session; it
+no longer re-traverses raw Hub decisions for those maps. The independent audit
+checks exact slot ownership, selected occurrences, closure commands and their
+full downstream-removal scope, plus exact visit choice sets. A board outline
+emits no package. A newly authored, empty board intentionally retains its
+otherwise locked structural-next Visit 1 interaction, preserving the existing
+internal projection contract while the UI keeps that row non-actionable.
 
 #### A5: Presentation, focus, and closure
 

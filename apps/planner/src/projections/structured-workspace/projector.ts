@@ -14,6 +14,7 @@ import {
   createLocalChildGroupAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
@@ -38,6 +39,8 @@ import {
   type ExitSelectionAddress,
   type HubDecision,
   type HubDecisionAddress,
+  type HubSlotAddress,
+  type HubVisitAddress,
   type LocalChildAddress,
   type LocalChildGroupAddress,
   type OccurrenceAddress,
@@ -1039,6 +1042,28 @@ export interface WorkspaceBatchInteractionRequirement {
   };
 }
 
+/**
+ * Production requirements for the persistent controls owned by one authored
+ * Hub board. Board outline presentation deliberately emits no package.
+ */
+export interface WorkspaceHubInteractionRequirement {
+  readonly kind: 'hubControls';
+  readonly owner: HubDecisionAddress;
+  readonly slots: readonly {
+    readonly choices: readonly WorkspaceInteractionChoice<boolean>[];
+    readonly close?: NonNullable<WorkspaceHubSlotInteraction['close']>;
+    readonly openedOccurrenceId?: OccurrenceId;
+    readonly owner: HubSlotAddress;
+    readonly roomGameName: string;
+    readonly selected: boolean;
+  }[];
+  readonly visits: readonly {
+    readonly choices: readonly WorkspaceInteractionChoice<string>[];
+    readonly owner: HubVisitAddress;
+    readonly selectedHubSlotKey?: string;
+  }[];
+}
+
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
@@ -1046,6 +1071,10 @@ function occurrenceInteractionRequirementKey(
 }
 
 function batchInteractionRequirementKey(requirement: WorkspaceBatchInteractionRequirement): string {
+  return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
+}
+
+function hubInteractionRequirementKey(requirement: WorkspaceHubInteractionRequirement): string {
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
 
@@ -1297,6 +1326,22 @@ export function appendUniqueBatchInteractionRequirements(
     if (requirementsByIdentity.has(key)) {
       throw new StructuredWorkspaceProjectionContractError(
         `${key} has multiple projected batch interaction requirements`,
+      );
+    }
+    requirementsByIdentity.set(key, requirement);
+  }
+}
+
+/** @internal Composition never silently replaces a Hub-owned interaction package. */
+export function appendUniqueHubInteractionRequirements(
+  requirementsByIdentity: Map<string, WorkspaceHubInteractionRequirement>,
+  requirements: Iterable<WorkspaceHubInteractionRequirement>,
+): void {
+  for (const requirement of requirements) {
+    const key = hubInteractionRequirementKey(requirement);
+    if (requirementsByIdentity.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected Hub interaction requirements`,
       );
     }
     requirementsByIdentity.set(key, requirement);
@@ -1630,6 +1675,7 @@ function redirectHubMainRewardFocus(
  * to choose between topology and the simulator product.
  */
 interface WorkspaceHubAssembly {
+  readonly hubInteractionRequirements: readonly WorkspaceHubInteractionRequirement[];
   readonly node: WorkspaceHubDecisionNode;
   readonly occurrenceInteractionRequirements: readonly WorkspaceOccurrenceInteractionRequirement[];
   readonly roomControls: readonly WorkspaceRoomPickerControl[];
@@ -1649,6 +1695,8 @@ function projectHubNode(
 ): WorkspaceHubAssembly {
   const hubMarker = marker(context, owner);
   const occurrences = hubOccurrenceMap(plan);
+  const hubInteractionRequirements: WorkspaceHubInteractionRequirement[] = [];
+  const slotRequirements: WorkspaceHubInteractionRequirement['slots'][number][] = [];
   const occurrenceInteractionRequirements: WorkspaceOccurrenceInteractionRequirement[] = [];
   const roomControls: WorkspaceRoomPickerControl[] = [];
   const rewardControls: WorkspaceRewardControl[] = [];
@@ -1658,6 +1706,22 @@ function projectHubNode(
     const target = targets.get(slot.slotKey);
     const occurrence = target === undefined ? undefined : occurrences.get(target.occurrenceId);
     const address = createHubSlotAddress(context.biome, descriptor.hubKey, slot.slotKey);
+    const closeImpact =
+      boardAuthored && target !== undefined && plan.topology !== null
+        ? describeHubSlotClosureImpact(
+            plan.topology,
+            descriptor.hubKey,
+            slot.slotKey,
+            descriptor.openCount.min,
+          )
+        : undefined;
+    const close =
+      closeImpact === undefined
+        ? undefined
+        : Object.freeze({
+            command: Object.freeze({ kind: 'CloseHubSlot' as const, slot: address }),
+            impact: topologyRemovalScope(context.biome, closeImpact),
+          });
     const slotMarker = marker(context, address);
     const detailsActive =
       occurrence === undefined
@@ -1687,6 +1751,21 @@ function projectHubNode(
       const mainReward = hubMainRewardMarker(workbench.room);
       if (mainReward !== undefined) redirectHubMainRewardFocus(context, hubMarker, mainReward);
     }
+    if (boardAuthored) {
+      slotRequirements.push(
+        Object.freeze({
+          choices: Object.freeze([
+            Object.freeze({ label: 'Closed', value: false }),
+            Object.freeze({ label: 'Open', value: true }),
+          ]),
+          ...(close === undefined ? {} : { close }),
+          ...(target === undefined ? {} : { openedOccurrenceId: target.occurrenceId }),
+          owner: address,
+          roomGameName: slot.roomGameName,
+          selected: target !== undefined,
+        }),
+      );
+    }
     return Object.freeze({
       canClose: boardAuthored && target !== undefined && !detailsActive,
       canOpen: boardAuthored && target === undefined && targets.size < descriptor.openCount.max,
@@ -1700,6 +1779,36 @@ function projectHubNode(
       visited: detailsActive,
     });
   });
+  const hubVisitSlots = Object.freeze(descriptor.slots.filter((slot) => targets.has(slot.slotKey)));
+  const hubVisitChoices = Object.freeze(
+    hubVisitSlots.map((slot) =>
+      Object.freeze({
+        label: requireRoom(context.catalog, slot.roomGameName).label,
+        value: slot.slotKey,
+      }),
+    ),
+  );
+  const visitRequirements = boardAuthored
+    ? Object.freeze(
+        Array.from(
+          { length: Math.min(descriptor.requiredVisits, visitOrder.length + 1) },
+          (_, index) => {
+            const visitIndex = index + 1;
+            const selectedHubSlotKey = visitOrder[index];
+            return Object.freeze({
+              choices: Object.freeze(
+                hubVisitChoices.filter(
+                  (choice) =>
+                    choice.value === selectedHubSlotKey || !visitOrder.includes(choice.value),
+                ),
+              ),
+              owner: createHubVisitAddress(context.biome, descriptor.hubKey, visitIndex),
+              ...(selectedHubSlotKey === undefined ? {} : { selectedHubSlotKey }),
+            });
+          },
+        ),
+      )
+    : Object.freeze([]);
   const visits = Array.from({ length: descriptor.requiredVisits }, (_, index) => {
     const visitIndex = index + 1;
     const hubSlotKey = visitOrder[index];
@@ -1746,7 +1855,18 @@ function projectHubNode(
     ]),
     node.key,
   );
+  if (boardAuthored) {
+    hubInteractionRequirements.push(
+      Object.freeze({
+        kind: 'hubControls' as const,
+        owner,
+        slots: Object.freeze(slotRequirements),
+        visits: visitRequirements,
+      }),
+    );
+  }
   return Object.freeze({
+    hubInteractionRequirements: Object.freeze(hubInteractionRequirements),
     node,
     occurrenceInteractionRequirements: Object.freeze(occurrenceInteractionRequirements),
     roomControls: Object.freeze(roomControls),
@@ -3088,6 +3208,69 @@ function bindBatchInteractions(
   return Object.freeze({ batchRewardStores, exitSelections, fieldsCageOutcomes });
 }
 
+interface WorkspaceHubInteractionCatalog {
+  readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
+  readonly hubVisits: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
+}
+
+function bindHubInteractions(
+  candidates: CandidateProjectionSession,
+  requirements: Iterable<WorkspaceHubInteractionRequirement>,
+): WorkspaceHubInteractionCatalog {
+  const hubSlots = new Map<string, WorkspaceHubSlotInteraction>();
+  const hubVisits = new Map<string, WorkspaceCandidateInteraction<string>>();
+  for (const requirement of requirements) {
+    for (const slot of requirement.slots) {
+      const key = semanticAddressKey(slot.owner);
+      if (hubSlots.has(key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} has multiple bound Hub-slot interactions`,
+        );
+      }
+      const values = Object.freeze(slot.choices.map((choice) => choice.value));
+      hubSlots.set(
+        key,
+        Object.freeze({
+          bind: (proposedOccurrenceId: OccurrenceId) =>
+            candidateInteraction(
+              slot.owner,
+              slot.choices,
+              slot.selected,
+              () =>
+                candidates.hubSlots(
+                  slot.owner,
+                  slot.openedOccurrenceId ?? proposedOccurrenceId,
+                  values,
+                ),
+              `${key}:proposed:${proposedOccurrenceId}`,
+            ),
+          ...(slot.close === undefined ? {} : { close: slot.close }),
+          key,
+          owner: slot.owner,
+          roomGameName: slot.roomGameName,
+          selected: slot.selected,
+        }),
+      );
+    }
+    for (const visit of requirement.visits) {
+      const key = semanticAddressKey(visit.owner);
+      if (hubVisits.has(key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} has multiple bound Hub-visit interactions`,
+        );
+      }
+      const values = Object.freeze(visit.choices.map((choice) => choice.value));
+      hubVisits.set(
+        key,
+        candidateInteraction(visit.owner, visit.choices, visit.selectedHubSlotKey, () =>
+          candidates.hubVisits(visit.owner, values),
+        ),
+      );
+    }
+  }
+  return Object.freeze({ hubSlots, hubVisits });
+}
+
 function createInteractionCatalog(
   catalog: Catalog,
   project: ProjectDocument,
@@ -3096,6 +3279,7 @@ function createInteractionCatalog(
   sources: WorkspaceProjectSourceIndex,
   occurrenceInteractionRequirements: ReadonlyMap<string, WorkspaceOccurrenceInteractionRequirement>,
   batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>,
+  hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>,
   roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>,
   rewardControls: ReadonlyMap<string, WorkspaceRewardControl>,
 ): WorkspaceInteractionCatalog {
@@ -3112,6 +3296,10 @@ function createInteractionCatalog(
   const { batchRewardStores, exitSelections, fieldsCageOutcomes } = bindBatchInteractions(
     candidates,
     batchInteractionRequirements.values(),
+  );
+  const { hubSlots, hubVisits } = bindHubInteractions(
+    candidates,
+    hubInteractionRequirements.values(),
   );
   const takeoverCandidate = (gameName: string): WorkspaceTakeoverCandidate => {
     const room = requireRoom(catalog, gameName);
@@ -3364,8 +3552,6 @@ function createInteractionCatalog(
   }
 
   const exitFrontierCapabilities = new Map<string, WorkspaceExitFrontierCapabilities>();
-  const hubSlots = new Map<string, WorkspaceHubSlotInteraction>();
-  const hubVisits = new Map<string, WorkspaceCandidateInteraction<string>>();
   const starts = new Map<string, WorkspaceStartInteraction>();
   const structural = new Map<string, WorkspaceStructuralInteraction>();
   const takeoverBatches = new Map<string, WorkspaceTakeoverBatchInteraction>();
@@ -3425,96 +3611,7 @@ function createInteractionCatalog(
         }),
       );
       for (const decision of plan.topology.decisions) {
-        if (decision.kind === 'hub') {
-          if (layout.progression.kind !== 'hub' || decision.hubKey !== layout.progression.hubKey)
-            continue;
-          for (const slot of layout.progression.slots) {
-            const opened = decision.openTargets.find(
-              (target) => target.hubSlotKey === slot.slotKey,
-            );
-            const owner = createHubSlotAddress(biome, decision.hubKey, slot.slotKey);
-            const closeImpact =
-              opened === undefined
-                ? undefined
-                : describeHubSlotClosureImpact(
-                    plan.topology,
-                    decision.hubKey,
-                    slot.slotKey,
-                    layout.progression.openCount.min,
-                  );
-            const values = Object.freeze([false, true]);
-            hubSlots.set(
-              semanticAddressKey(owner),
-              Object.freeze({
-                bind: (proposedOccurrenceId: OccurrenceId) =>
-                  candidateInteraction(
-                    owner,
-                    Object.freeze([
-                      Object.freeze({ label: 'Closed', value: false }),
-                      Object.freeze({ label: 'Open', value: true }),
-                    ]),
-                    opened !== undefined,
-                    () =>
-                      candidates.hubSlots(
-                        owner,
-                        opened?.occurrenceId ?? proposedOccurrenceId,
-                        values,
-                      ),
-                    `${semanticAddressKey(owner)}:proposed:${proposedOccurrenceId}`,
-                  ),
-                ...(closeImpact === undefined
-                  ? {}
-                  : {
-                      close: Object.freeze({
-                        command: Object.freeze({ kind: 'CloseHubSlot' as const, slot: owner }),
-                        impact: topologyRemovalScope(biome, closeImpact),
-                      }),
-                    }),
-                key: semanticAddressKey(owner),
-                owner,
-                roomGameName: slot.roomGameName,
-                selected: opened !== undefined,
-              }),
-            );
-          }
-          // Visit order is constrained by the authored board, not by candidate
-          // coverage. An invalid room-local leaf can make visit evaluation
-          // unassessed, but it must not expand this selector back to every
-          // declaration-fixed Hub slot.
-          const hubVisitSlots = Object.freeze(
-            layout.progression.slots.filter((slot) =>
-              decision.openTargets.some((target) => target.hubSlotKey === slot.slotKey),
-            ),
-          );
-          const hubVisitChoices = Object.freeze(
-            hubVisitSlots.map((slot) =>
-              Object.freeze({
-                label: requireRoom(catalog, slot.roomGameName).label,
-                value: slot.slotKey,
-              }),
-            ),
-          );
-          for (let visitIndex = 1; visitIndex <= decision.visitOrder.length + 1; visitIndex += 1) {
-            if (visitIndex > layout.progression.requiredVisits) break;
-            const slotKey = decision.visitOrder[visitIndex - 1];
-            const owner = createHubVisitAddress(biome, decision.hubKey, visitIndex);
-            const visitChoices = Object.freeze(
-              hubVisitChoices.filter(
-                (choice) => choice.value === slotKey || !decision.visitOrder.includes(choice.value),
-              ),
-            );
-            hubVisits.set(
-              semanticAddressKey(owner),
-              candidateInteraction(owner, visitChoices, slotKey, () =>
-                candidates.hubVisits(
-                  owner,
-                  Object.freeze(visitChoices.map((choice) => choice.value)),
-                ),
-              ),
-            );
-          }
-          continue;
-        }
+        if (decision.kind === 'hub') continue;
         const owner = createExitDecisionAddress(biome, decision.source);
         const removalImpact = describeExitDecisionRemovalImpact(plan.topology, decision.source);
         if (removalImpact !== undefined) {
@@ -4468,6 +4565,205 @@ function assertBatchInteractionRequirementsMatchAuthoredState(
   }
 }
 
+interface WorkspaceExpectedHubInteractionRequirement {
+  readonly owner: HubDecisionAddress;
+  readonly slots: readonly {
+    readonly close?: NonNullable<WorkspaceHubSlotInteraction['close']>;
+    readonly openedOccurrenceId?: OccurrenceId;
+    readonly owner: HubSlotAddress;
+    readonly roomGameName: string;
+    readonly selected: boolean;
+  }[];
+  readonly visits: readonly {
+    readonly choices: readonly string[];
+    readonly owner: HubVisitAddress;
+    readonly selectedHubSlotKey?: string;
+  }[];
+}
+
+function expectedHubInteractionRequirements(
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+): ReadonlyMap<string, WorkspaceExpectedHubInteractionRequirement> {
+  const topology = plan.topology;
+  if (topology === null || layout.progression.kind !== 'hub') return new Map();
+  const descriptor = layout.progression;
+  const authoredHubs = topology.decisions.filter(
+    (decision): decision is HubDecision =>
+      decision.kind === 'hub' && decision.hubKey === descriptor.hubKey,
+  );
+  if (authoredHubs.length === 0) return new Map();
+  if (authoredHubs.length > 1) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(createHubDecisionAddress(biome, descriptor.hubKey))} has multiple authored Hub boards`,
+    );
+  }
+  const hub = authoredHubs[0]!;
+  const owner = createHubDecisionAddress(biome, descriptor.hubKey);
+  const slots = Object.freeze(
+    descriptor.slots.map((slot) => {
+      const opened = hub.openTargets.find((target) => target.hubSlotKey === slot.slotKey);
+      const address = createHubSlotAddress(biome, descriptor.hubKey, slot.slotKey);
+      const closeImpact =
+        opened === undefined
+          ? undefined
+          : describeHubSlotClosureImpact(
+              topology,
+              descriptor.hubKey,
+              slot.slotKey,
+              descriptor.openCount.min,
+            );
+      return Object.freeze({
+        ...(closeImpact === undefined
+          ? {}
+          : {
+              close: Object.freeze({
+                command: Object.freeze({ kind: 'CloseHubSlot' as const, slot: address }),
+                impact: topologyRemovalScope(biome, closeImpact),
+              }),
+            }),
+        ...(opened === undefined ? {} : { openedOccurrenceId: opened.occurrenceId }),
+        owner: address,
+        roomGameName: slot.roomGameName,
+        selected: opened !== undefined,
+      });
+    }),
+  );
+  const openSlots = Object.freeze(
+    descriptor.slots.filter((slot) =>
+      hub.openTargets.some((target) => target.hubSlotKey === slot.slotKey),
+    ),
+  );
+  const visits = Object.freeze(
+    Array.from(
+      { length: Math.min(descriptor.requiredVisits, hub.visitOrder.length + 1) },
+      (_, index) => {
+        const selectedHubSlotKey = hub.visitOrder[index];
+        return Object.freeze({
+          choices: Object.freeze(
+            openSlots
+              .filter(
+                (slot) =>
+                  slot.slotKey === selectedHubSlotKey || !hub.visitOrder.includes(slot.slotKey),
+              )
+              .map((slot) => slot.slotKey),
+          ),
+          owner: createHubVisitAddress(biome, descriptor.hubKey, index + 1),
+          ...(selectedHubSlotKey === undefined ? {} : { selectedHubSlotKey }),
+        });
+      },
+    ),
+  );
+  const key = `hubControls:${semanticAddressKey(owner)}`;
+  return new Map([[key, Object.freeze({ owner, slots, visits })]]);
+}
+
+function sameHubSlotClose(
+  actual: WorkspaceHubSlotInteraction['close'],
+  expected: WorkspaceHubSlotInteraction['close'],
+): boolean {
+  if (actual === undefined || expected === undefined) return actual === expected;
+  const same = <T>(left: readonly T[], right: readonly T[]): boolean =>
+    left.length === right.length && left.every((value, index) => value === right[index]);
+  return (
+    actual.command.kind === expected.command.kind &&
+    semanticAddressKey(actual.command.slot) === semanticAddressKey(expected.command.slot) &&
+    same(
+      actual.impact.removedDecisionOwners.map(semanticAddressKey),
+      expected.impact.removedDecisionOwners.map(semanticAddressKey),
+    ) &&
+    same(actual.impact.removedHubDecisionKeys, expected.impact.removedHubDecisionKeys) &&
+    same(actual.impact.removedOccurrenceIds, expected.impact.removedOccurrenceIds)
+  );
+}
+
+/**
+ * Independently enumerate Hub controls from authored board state and its
+ * descriptor. This deliberately retains the raw structural-next visit even
+ * when a newly authored empty board still renders that row as locked.
+ */
+function assertHubInteractionRequirementsMatchAuthoredState(
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  plan: AuthoredBiomePlan,
+  requirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>,
+): void {
+  const expected = expectedHubInteractionRequirements(biome, layout, plan);
+  const sameKey = (actual: SemanticAddress, expectedAddress: SemanticAddress): boolean =>
+    semanticAddressKey(actual) === semanticAddressKey(expectedAddress);
+  const sameValues = <T>(actual: readonly T[], expectedValues: readonly T[]): boolean =>
+    actual.length === expectedValues.length &&
+    actual.every((value, index) => value === expectedValues[index]);
+  for (const [key, expectation] of expected) {
+    const requirement = requirements.get(key);
+    if (requirement === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} required authored Hub interaction package is absent`,
+      );
+    }
+    if (!sameKey(requirement.owner, expectation.owner)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} Hub requirement has a conflicting semantic owner`,
+      );
+    }
+    if (requirement.slots.length !== expectation.slots.length) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} does not cover every declared Hub slot`,
+      );
+    }
+    for (const slot of expectation.slots) {
+      const actual = requirement.slots.find((candidate) => sameKey(candidate.owner, slot.owner));
+      if (actual === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} Hub slot ${semanticAddressKey(slot.owner)} requirement is absent`,
+        );
+      }
+      if (
+        actual.selected !== slot.selected ||
+        actual.openedOccurrenceId !== slot.openedOccurrenceId ||
+        actual.roomGameName !== slot.roomGameName ||
+        !sameHubSlotClose(actual.close, slot.close) ||
+        !sameValues(
+          actual.choices.map((choice) => choice.value),
+          Object.freeze([false, true]),
+        )
+      ) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} Hub slot ${semanticAddressKey(slot.owner)} requirement disagrees with authored state`,
+        );
+      }
+    }
+    if (requirement.visits.length !== expectation.visits.length) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} does not cover every authored or structural-next Hub visit`,
+      );
+    }
+    for (const visit of expectation.visits) {
+      const actual = requirement.visits.find((candidate) => sameKey(candidate.owner, visit.owner));
+      if (
+        actual === undefined ||
+        actual.selectedHubSlotKey !== visit.selectedHubSlotKey ||
+        !sameValues(
+          actual.choices.map((choice) => choice.value),
+          visit.choices,
+        )
+      ) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} Hub visit ${semanticAddressKey(visit.owner)} requirement disagrees with authored state`,
+        );
+      }
+    }
+  }
+  for (const key of requirements.keys()) {
+    if (!expected.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} projected Hub interaction package has no authored board owner`,
+      );
+    }
+  }
+}
+
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
@@ -4476,6 +4772,7 @@ function projectBiome(
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
   readonly focusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
+  readonly hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>;
   readonly occurrenceInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceOccurrenceInteractionRequirement
@@ -4491,6 +4788,7 @@ function projectBiome(
     WorkspaceOccurrenceInteractionRequirement
   >();
   const batchInteractionRequirements = new Map<string, WorkspaceBatchInteractionRequirement>();
+  const hubInteractionRequirements = new Map<string, WorkspaceHubInteractionRequirement>();
   const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
   const context: MutableProjectionContext = {
@@ -4619,6 +4917,10 @@ function projectBiome(
             source.evaluatedHub(owner),
             nextHubVisitIndex,
           );
+    appendUniqueHubInteractionRequirements(
+      hubInteractionRequirements,
+      projected.hubInteractionRequirements,
+    );
     appendUniqueOccurrenceInteractionRequirements(
       occurrenceInteractionRequirements,
       projected.occurrenceInteractionRequirements,
@@ -4672,6 +4974,12 @@ function projectBiome(
     layout,
     plan,
     batchInteractionRequirements,
+  );
+  assertHubInteractionRequirementsMatchAuthoredState(
+    biomeAddress,
+    layout,
+    plan,
+    hubInteractionRequirements,
   );
   assertAuthoredWorkspaceLeafProjectionClosure(
     authoredLeafRequirements,
@@ -4776,6 +5084,7 @@ function projectBiome(
     batchInteractionRequirements,
     biome: projected,
     focusDestinations,
+    hubInteractionRequirements,
     occurrenceInteractionRequirements,
     roomControls,
     rewardControls,
@@ -5027,6 +5336,65 @@ function assertBatchInteractionRequirementClosure(
         requirement.fieldsCageOutcome.owner,
         'Fields cage-outcome requirement',
       );
+    }
+  }
+}
+
+/** Verify every emitted Hub package binds to its exact slot and visit controls. */
+function assertHubInteractionRequirementClosure(
+  requirements: Iterable<WorkspaceHubInteractionRequirement>,
+  interactions: WorkspaceInteractionCatalog,
+): void {
+  const sameChoices = <T>(
+    actual: readonly WorkspaceInteractionChoice<T>[],
+    expected: readonly WorkspaceInteractionChoice<T>[],
+  ): boolean =>
+    actual.length === expected.length &&
+    actual.every(
+      (choice, index) =>
+        choice.label === expected[index]?.label && choice.value === expected[index]?.value,
+    );
+  for (const requirement of requirements) {
+    for (const slot of requirement.slots) {
+      const key = semanticAddressKey(slot.owner);
+      const interaction = interactions.hubSlots.get(key);
+      if (
+        interaction === undefined ||
+        interaction.key !== key ||
+        semanticAddressKey(interaction.owner) !== key ||
+        interaction.roomGameName !== slot.roomGameName ||
+        interaction.selected !== slot.selected ||
+        !sameHubSlotClose(interaction.close, slot.close)
+      ) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `Hub-slot requirement ${key} has no exact workspace interaction`,
+        );
+      }
+      const bound = interaction.bind(createOccurrenceId(`hub-closure-${key}`));
+      if (
+        semanticAddressKey(bound.owner) !== key ||
+        !sameChoices(bound.choices, slot.choices) ||
+        bound.selected !== slot.selected
+      ) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `Hub-slot requirement ${key} has a conflicting bound interaction`,
+        );
+      }
+    }
+    for (const visit of requirement.visits) {
+      const key = semanticAddressKey(visit.owner);
+      const interaction = interactions.hubVisits.get(key);
+      if (
+        interaction === undefined ||
+        interaction.key !== key ||
+        semanticAddressKey(interaction.owner) !== key ||
+        interaction.selected !== visit.selectedHubSlotKey ||
+        !sameChoices(interaction.choices, visit.choices)
+      ) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `Hub-visit requirement ${key} has no exact workspace interaction`,
+        );
+      }
     }
   }
 }
@@ -5337,6 +5705,7 @@ export function createStructuredWorkspaceProjection(
         WorkspaceOccurrenceInteractionRequirement
       >();
       const batchInteractionRequirements = new Map<string, WorkspaceBatchInteractionRequirement>();
+      const hubInteractionRequirements = new Map<string, WorkspaceHubInteractionRequirement>();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const authoredLeafRequirements: WorkspaceAuthoredLeafRequirement[] = [];
@@ -5352,6 +5721,10 @@ export function createStructuredWorkspaceProjection(
           appendUniqueBatchInteractionRequirements(
             batchInteractionRequirements,
             projected.batchInteractionRequirements.values(),
+          );
+          appendUniqueHubInteractionRequirements(
+            hubInteractionRequirements,
+            projected.hubInteractionRequirements.values(),
           );
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
@@ -5408,6 +5781,7 @@ export function createStructuredWorkspaceProjection(
         sources,
         occurrenceInteractionRequirements,
         batchInteractionRequirements,
+        hubInteractionRequirements,
         roomControls,
         rewardControls,
       );
@@ -5416,6 +5790,7 @@ export function createStructuredWorkspaceProjection(
         interactions,
       );
       assertBatchInteractionRequirementClosure(batchInteractionRequirements.values(), interactions);
+      assertHubInteractionRequirementClosure(hubInteractionRequirements.values(), interactions);
       assertWorkspaceInteractionClosure(
         routes,
         roomControls,

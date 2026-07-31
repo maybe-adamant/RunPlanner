@@ -2,6 +2,8 @@ import {
   createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createHubDecisionAddress,
+  createHubSlotAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
   createOccurrenceAddress,
@@ -18,12 +20,14 @@ import type {
 import {
   appendUniqueBatchInteractionRequirements,
   appendUniqueFocusDestinations,
+  appendUniqueHubInteractionRequirements,
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueRewardControls,
   appendUniqueRoomControls,
 } from './projector';
 import type {
   WorkspaceBatchInteractionRequirement,
+  WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
 } from './projector';
 
@@ -106,6 +110,27 @@ function batchInteractionRequirement(): WorkspaceBatchInteractionRequirement {
   });
 }
 
+function hubInteractionRequirement(): WorkspaceHubInteractionRequirement {
+  const biome = createBiomeAddress('Surface', 'N');
+  const owner = createHubDecisionAddress(biome, 'duplicate-hub-interaction');
+  return Object.freeze({
+    kind: 'hubControls' as const,
+    owner,
+    slots: Object.freeze([
+      Object.freeze({
+        choices: Object.freeze([
+          Object.freeze({ label: 'Closed', value: false }),
+          Object.freeze({ label: 'Open', value: true }),
+        ]),
+        owner: createHubSlotAddress(biome, owner.hubKey, 'combat01'),
+        roomGameName: 'N_Combat01',
+        selected: false,
+      }),
+    ]),
+    visits: Object.freeze([]),
+  });
+}
+
 describe('structured workspace assembly products', () => {
   it('rejects duplicate semantic owners while composing returned reward controls', () => {
     const control = explicitControl('duplicate-reward-control');
@@ -173,6 +198,19 @@ describe('structured workspace assembly products', () => {
     expect(requirements.get(identity)).toBe(requirement);
     expect(() => appendUniqueBatchInteractionRequirements(requirements, [requirement])).toThrow(
       `${identity} has multiple projected batch interaction requirements`,
+    );
+  });
+
+  it('rejects duplicate Hub interaction packages by kind and semantic owner', () => {
+    const requirement = hubInteractionRequirement();
+    const identity = `hubControls:${semanticAddressKey(requirement.owner)}`;
+    const requirements = new Map<string, WorkspaceHubInteractionRequirement>();
+
+    appendUniqueHubInteractionRequirements(requirements, [requirement]);
+
+    expect(requirements.get(identity)).toBe(requirement);
+    expect(() => appendUniqueHubInteractionRequirements(requirements, [requirement])).toThrow(
+      `${identity} has multiple projected Hub interaction requirements`,
     );
   });
 });
