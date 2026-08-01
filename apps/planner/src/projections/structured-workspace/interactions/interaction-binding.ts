@@ -7,6 +7,7 @@ import {
   type SideRoomGeneration,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 
 import type {
@@ -56,6 +57,30 @@ import type {
   WorkspaceTakeoverInteractionRequirement,
   WorkspaceTopologyRemovalInteractionRequirement,
 } from './interaction-requirements';
+
+function rewardIntentFor(
+  owner: WorkspaceRewardControl['owner'],
+  value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
+): ReturnType<WorkspaceRewardInteraction['intentFor']> {
+  switch (owner.kind) {
+    case 'incomingReward':
+      return Object.freeze({
+        command: Object.freeze({ kind: 'ReplaceIncomingReward', reward: owner.address, value }),
+      });
+    case 'localReward':
+      return Object.freeze({
+        command: Object.freeze({ kind: 'ReplaceLocalReward', reward: owner.address, value }),
+      });
+    case 'rewardWheelOffer':
+      return Object.freeze({
+        command: Object.freeze({ kind: 'ReplaceRewardWheelOffer', offer: owner.address, value }),
+      });
+    case 'shopOffer':
+      return Object.freeze({
+        command: Object.freeze({ kind: 'ReplaceShopOffer', offer: owner.address, value }),
+      });
+  }
+}
 
 export interface WorkspaceInteractionBindingInput {
   readonly allocateOccurrenceId: OccurrenceIdFactory;
@@ -906,6 +931,7 @@ export function bindWorkspaceInteractions(
       Object.freeze({
         authoredRewardTypes: rewardTypes,
         choiceLabel: services.rewardPicker.choiceLabel,
+        intentFor: (offer: ResolvedRewardOffer) => rewardIntentFor(control.owner, offer),
         key,
         load: () => candidates.rewardDomain(control.owner, rewardTypes, control.offer),
         model: services.rewardPicker.project,

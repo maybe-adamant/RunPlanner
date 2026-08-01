@@ -15,7 +15,7 @@ import {
   type ProjectDocument,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -23,6 +23,7 @@ import {
   type ApplicationEvaluationEvent,
 } from '@planner/composition/createApplication';
 import type { WorkspaceBiome } from '@planner/projections/structured-workspace';
+import { authoredProjectUndoRequested } from '@planner/state/projectWorkspaceSlice';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -304,6 +305,19 @@ describe('DecisionWorkbench', () => {
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBeforeReward + 1,
     );
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() => {
+      const node = workspaceBiome(view.application, 'Surface', 'P').nodes.find(
+        (candidate) =>
+          candidate.kind === 'ordinaryBatch' &&
+          semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
+      );
+      const target =
+        node?.kind === 'ordinaryBatch'
+          ? node.targets.find((candidate) => candidate.room.label === roomLabel)
+          : undefined;
+      expect(target?.room.rewardSummary).toBe(rewardBefore);
+    });
   });
 
   it('creates a candidate takeover atomically and hides impossible unselected declarations', async () => {

@@ -1,6 +1,4 @@
 import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-
 import { candidateSupport, presentCandidateLabel } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
@@ -18,6 +16,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { CountedRewardEditor, RewardValueEditor } from '../rewards/RewardEditors';
 import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
 import { CandidateSelect } from './CandidateSelect';
@@ -31,51 +30,6 @@ interface OccurrenceWorkbenchProps {
   readonly room: WorkspaceRoomSummary;
 }
 
-function replaceReward(
-  dispatch: ReturnType<typeof useAppDispatch>,
-  control: WorkspaceRewardControl,
-  value: ResolvedRewardOffer,
-): void {
-  switch (control.owner.kind) {
-    case 'incomingReward':
-      dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceIncomingReward',
-          reward: control.owner.address,
-          value,
-        }),
-      );
-      return;
-    case 'localReward':
-      dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceLocalReward',
-          reward: control.owner.address,
-          value,
-        }),
-      );
-      return;
-    case 'rewardWheelOffer':
-      dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceRewardWheelOffer',
-          offer: control.owner.address,
-          value,
-        }),
-      );
-      return;
-    case 'shopOffer':
-      dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceShopOffer',
-          offer: control.owner.address,
-          value,
-        }),
-      );
-      return;
-  }
-}
-
 export function RewardControlEditor({
   control,
   idPrefix,
@@ -85,8 +39,13 @@ export function RewardControlEditor({
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const dispatch = useAppDispatch();
-  const onReplace = (value: ResolvedRewardOffer): void => replaceReward(dispatch, control, value);
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.rewards,
+    workspaceInteractionKey(control.owner.address),
+  );
+  const onReplace = (value: Parameters<typeof interaction.intentFor>[0]): void =>
+    executeIntent(interaction.intentFor(value));
   return control.kind === 'countedReward' ? (
     <CountedRewardEditor
       candidateOwner={control.owner}

@@ -4,11 +4,15 @@ import {
   createBiomeAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
+  createIncomingRewardAddress,
+  createLocalRewardAddress,
   createExitSelectionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRewardWheelOfferAddress,
   createRewardWheelAddress,
+  createShopOfferAddress,
   createShopPurchaseAddress,
   semanticAddressKey,
   type ProjectDocument,
@@ -28,6 +32,8 @@ import {
   nOccurrenceIds,
   oBiome,
   oOccurrenceIds,
+  pBiome,
+  pOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
 import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
@@ -163,6 +169,51 @@ describe('structured workspace interaction binding', () => {
       `F_Combat01 is outside the declared start domain for ${semanticAddressKey(biome)}`,
     );
     expect(allocations).toBe(0);
+  });
+
+  it('binds all four reward owners to their exact no-focus replacement intents', () => {
+    const project = createRepresentativeNOPQProject();
+    const surfaceInteractions = {
+      N: bind(project, 'Surface', 'N').interactions,
+      O: bind(project, 'Surface', 'O').interactions,
+      P: bind(project, 'Surface', 'P').interactions,
+    };
+    const replacement = { rewardType: 'MaxHealthDrop' } as const;
+    const incoming = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
+    const local = createLocalRewardAddress(
+      nBiome,
+      nOccurrenceId('combat05'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    const wheel = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat04,
+      'wheel1',
+      'offer1',
+    );
+    const shop = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'Boon');
+
+    expect(
+      surfaceInteractions.N.rewards.get(semanticAddressKey(incoming))?.intentFor(replacement),
+    ).toEqual({
+      command: { kind: 'ReplaceIncomingReward', reward: incoming, value: replacement },
+    });
+    expect(
+      surfaceInteractions.N.rewards.get(semanticAddressKey(local))?.intentFor(replacement),
+    ).toEqual({
+      command: { kind: 'ReplaceLocalReward', reward: local, value: replacement },
+    });
+    expect(
+      surfaceInteractions.O.rewards.get(semanticAddressKey(wheel))?.intentFor(replacement),
+    ).toEqual({
+      command: { kind: 'ReplaceRewardWheelOffer', offer: wheel, value: replacement },
+    });
+    expect(
+      surfaceInteractions.P.rewards.get(semanticAddressKey(shop))?.intentFor(replacement),
+    ).toEqual({
+      command: { kind: 'ReplaceShopOffer', offer: shop, value: replacement },
+    });
   });
 
   it('binds candidate takeovers to declaration labels and their exact create command', () => {
