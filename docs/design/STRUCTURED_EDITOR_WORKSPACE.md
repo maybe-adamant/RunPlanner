@@ -70,7 +70,7 @@ The primary authoring surface uses three conceptual regions:
 | Route rail     | Biome structure             | Focused inspector         |
 |                |                             |                           |
 | route status   | decision points / Hub board | selected decision, room,  |
-| biome status   | picked summaries / coverage | reward, finding, or       |
+| biome status   | decision labels / coverage  | reward, finding, or       |
 | navigation     | active frontier             | repair surface            |
 +----------------+-----------------------------+---------------------------+
 ```
@@ -311,8 +311,7 @@ or interaction policy.
 For F/G/H/I/O/P/Q, the center region presents a concise decision-point rail:
 
 - the authored start or fixed entries;
-- each generated decision as exactly one stop, with a brief picked room and
-  reward summary;
+- each generated decision as exactly one labeled stop;
 - the active continuation frontier;
 - retained downstream structure after an invalid upstream edit;
 - a layout-owned Preboss stage where it is distinct from an ordinary decision;
@@ -321,7 +320,7 @@ For F/G/H/I/O/P/Q, the center region presents a concise decision-point rail:
 The rail is not a freeform graph. Its visual position is derived from semantic
 topology and never persisted.
 
-### Decision Offers and Picked Summary
+### Decision Offers and Picked State
 
 Selecting a decision shows all of its physical offers together. Every authored
 offer keeps its room selector and reward editor at the same visual level,
@@ -333,9 +332,9 @@ is shown separately when materialization has actually reached that room.
 Unpicked targets remain fully visible in the decision workbench because they
 still affect reward bags, sibling conflicts, source support, and possibility
 evaluation. They do not become equal-weight stops on the biome rail. The rail
-shows only the picked room and reward as the decision's compact summary, while
-target, occurrence, reward, and finding focus all resolve to the exact control
-inside the decision.
+shows only the decision identity and semantic assessment, while target,
+occurrence, reward, and finding focus all resolve to the exact control inside
+the decision.
 
 Picked and unpicked targets use the same occurrence identity and semantic
 addresses. Visual grouping does not change ownership.
@@ -504,9 +503,9 @@ or move presentation policy into generic wrappers.
 
 The structured workspace is complete when:
 
-- ordinary-decision biomes show one rail stop per decision, a picked room and
-  reward summary, active frontier, Preboss structure, coverage, and findings
-  without adding every room offer to the rail;
+- ordinary-decision biomes show one labeled rail stop per decision, active
+  frontier, Preboss structure, coverage, and findings without adding every
+  room offer to the rail;
 - N shows its board and visit timeline through `HubDecisionWorkbench` without
   acquiring ordinary-decision semantics;
 - every ordinary decision exposes room, reward, and picked state together while

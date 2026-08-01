@@ -122,7 +122,8 @@ describe('App', () => {
 
     const markup = appMarkup(application);
     expect(markup).toContain('Biome structure');
-    expect(markup).toContain('Opening 01');
+    expect(markup).toContain('<strong>Opening</strong>');
+    expect(markup).not.toContain('Opening 01');
     expect(markup).toContain('Focused inspector');
     expect(markup).toContain('Continue authoring here');
     expect(markup).toContain('data-editor-layout="biome"');

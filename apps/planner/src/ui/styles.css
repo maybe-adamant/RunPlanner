@@ -665,8 +665,7 @@ button:disabled {
 
 .biome-rail-kicker,
 .biome-rail-summary,
-.biome-rail-status,
-.biome-room-summary {
+.biome-rail-status {
   color: #8f8c95;
   font-size: 0.7rem;
 }

@@ -249,9 +249,6 @@ function HubSlotCard({
         </button>
       )}
       {!slot.open ? <p className="fixed-room-state">Closed board slot.</p> : null}
-      {!slot.open || slot.room?.rewardSummary === undefined ? null : (
-        <p className="biome-room-summary">{slot.room.rewardSummary}</p>
-      )}
       {!slot.open || editableControl === undefined ? null : (
         <div className="room-state-with-marker">
           <SemanticOwnerMarker address={editableControl.marker.address} />

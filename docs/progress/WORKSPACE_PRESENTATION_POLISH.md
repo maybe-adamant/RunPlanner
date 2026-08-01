@@ -29,19 +29,34 @@ This out-of-sequence presentation follow-up supersedes this plan's requirement
 that F/G/H/I/O/P/Q preserve their previously flat rail fixtures. The rail is a
 selective decision-highlight projection, not the exhaustive workspace:
 ordinary room occurrences and all other semantic products remain projected,
-while the player-facing rail shows one stop per biome decision with a picked
-room and reward summary. Selecting that stop presents all offered rooms,
-rewards, and picked controls together. N retains the four-stage rail and
-subordinate authored visit navigation delivered here. Current authority lives in
+while the player-facing rail shows one labeled stop per biome decision.
+Selecting that stop presents all offered rooms, rewards, and picked controls
+together. N retains the four-stage rail and subordinate authored visit
+navigation delivered here. Current authority lives in
 [`STRUCTURED_EDITOR_WORKSPACE.md`](../design/STRUCTURED_EDITOR_WORKSPACE.md);
 5b.1 and 5b.2 below remain historical delivery evidence, while 5b.3 and 5b.4
 remain the planned active slices.
 
-Focused projection, editor, and product-loop coverage proves decision summaries,
-co-located room and reward editing, exact finding focus, retained-invalid
-offers, incomplete-decision fallback, and unchanged N Hub/visit behavior.
+Focused projection, editor, and product-loop coverage proves decision rail
+navigation, co-located room and reward editing, exact finding focus,
+retained-invalid offers, incomplete-decision fallback, and unchanged N
+Hub/visit behavior.
 The complete repository gate passes with 59 test files and 618 tests, followed
 by all package typechecks, lint, formatting, production build, and diff checks.
+
+## Pre-5b.3 Summary Cleanup
+
+The workspace no longer projects a generic room reward summary. The same
+redundant text previously appeared below room editors, in Hub slot cards, and
+as secondary ordinary-rail captions; each location either duplicated the
+editable reward controls or exposed dormant authored values. Ordinary rail
+stops now carry only their decision label and semantic assessment. The Hub's
+structural visit-count caption and fixed-room text remain distinct products.
+
+This is a standalone cleanup before 5b.3, not a fifth 5b presentation change:
+it removes a presentation product without changing catalog, authored state,
+commands, simulation, candidates, findings, or persistence. Commit 5b.3 keeps
+its existing active/dormant cage and wheel scope.
 
 ## Goal
 

@@ -513,9 +513,6 @@ export function RoomOfferEditor({
         <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
       ) : null}
       {state.kind === 'shop' ? <ShopWorkbench interactions={interactions} room={state} /> : null}
-      {!showMainReward || room.rewardSummary === undefined ? null : (
-        <p className="biome-room-summary">{room.rewardSummary}</p>
-      )}
     </>
   );
 }

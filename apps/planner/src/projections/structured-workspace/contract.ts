@@ -570,7 +570,6 @@ export interface WorkspaceRoomSummary {
   readonly occurrenceId: OccurrenceId;
   readonly roomLocal: WorkspaceRoomLocal;
   readonly rewardControls: readonly WorkspaceRewardControl[];
-  readonly rewardSummary?: string;
   readonly roomPicker?: WorkspaceRoomPickerControl;
 }
 
@@ -816,7 +815,6 @@ export type WorkspaceRailEntry =
       readonly label: string;
       readonly marker: WorkspaceMarker;
       readonly node: WorkspaceNode;
-      readonly summary?: string;
     }
   | WorkspaceHubRailEntry
   | {

@@ -272,7 +272,6 @@ describe('structured workspace occurrence assembly', () => {
 
     expect(fields.node.room.roomLocal.kind).toBe('fields');
     if (fields.node.room.roomLocal.kind !== 'fields') throw new Error('Fields surface is missing');
-    expect(fields.node.room.rewardSummary).toMatch(/^Cages · /);
     expect(Object.isFrozen(fields.node.room.roomLocal)).toBe(true);
     expect(Object.isFrozen(fields.node.room.roomLocal.cages)).toBe(true);
     expect(
@@ -298,7 +297,6 @@ describe('structured workspace occurrence assembly', () => {
 
     expect(ship.node.room.roomLocal.kind).toBe('ship');
     if (ship.node.room.roomLocal.kind !== 'ship') throw new Error('Ship surface is missing');
-    expect(ship.node.room.rewardSummary).toMatch(/^\d encounters · /);
     expect(Object.isFrozen(ship.node.room.roomLocal)).toBe(true);
     expect(Object.isFrozen(ship.node.room.roomLocal.wheels)).toBe(true);
     expect(ship.node.room.roomLocal.encounterCount).toBe(2);
@@ -359,7 +357,6 @@ describe('structured workspace occurrence assembly', () => {
 
     expect(selected.node.room.roomLocal.kind).toBe('shop');
     if (selected.node.room.roomLocal.kind !== 'shop') throw new Error('selected Shop is missing');
-    expect(selected.node.room.rewardSummary).toMatch(/^\d offers · \d purchased$/);
     expect(selected.node.room.roomLocal.materialized).toBe(true);
     expect(Object.isFrozen(selected.node.room.roomLocal)).toBe(true);
     expect(Object.isFrozen(selected.node.room.roomLocal.offers)).toBe(true);
@@ -418,7 +415,6 @@ describe('structured workspace occurrence assembly', () => {
     });
     expect(story.roomLocal.kind).toBe('fixed');
     if (story.roomLocal.kind !== 'fixed') throw new Error('Story fixed payload is missing');
-    expect(story.rewardSummary).toBeDefined();
     expect(story.roomLocal.marker.address).toEqual(
       createIncomingRewardAddress(pBiome, pOccurrenceId('P_Story01', 7, 1)),
     );

@@ -92,44 +92,6 @@ export type WorkspaceOccurrenceAssembler = (
   input: WorkspaceOccurrenceAssemblyRequest,
 ) => WorkspaceOccurrenceAssembly;
 
-function summarizeOffers(catalog: Catalog, offers: readonly ResolvedRewardOffer[]): string {
-  return offers.map((offer) => summarizeRewardOffer(catalog, offer)).join(', ');
-}
-
-function rewardSummary(
-  catalog: Catalog,
-  room: RoomDeclaration,
-  state: RoomOccurrence['state'],
-): string | undefined {
-  switch (state.kind) {
-    case 'none':
-      return undefined;
-    case 'fixed':
-      return summarizeRewardOffer(catalog, resolveWorkspaceFixedRewardOffer(room, state));
-    case 'counted':
-    case 'freeReward':
-    case 'ephyraCombat':
-      return summarizeRewardOffer(catalog, state.offer);
-    case 'fieldsCombat': {
-      const offers = Object.values(state.cages);
-      return offers.length === 0
-        ? 'Cages not configured'
-        : `Cages · ${summarizeOffers(catalog, offers)}`;
-    }
-    case 'shipCombat': {
-      const offers = Object.values(state.wheels).flatMap((wheel) => Object.values(wheel.offers));
-      return offers.length === 0
-        ? `${state.encounterCount} encounters · Wheels not configured`
-        : `${state.encounterCount} encounters · ${summarizeOffers(catalog, offers)}`;
-    }
-    case 'shop': {
-      if (state.shop === undefined) return 'Shop not configured';
-      const offers = Object.values(state.shop.offers);
-      return `${offers.length} offers · ${offers.filter((offer) => offer.purchased).length} purchased`;
-    }
-  }
-}
-
 function rewardControl(
   input: WorkspaceOccurrenceAssemblyInput,
   owner: RewardCandidateOwner,
@@ -810,13 +772,6 @@ export function assembleWorkspaceOccurrence(
     );
   }
   const entered = input.evaluatedRoom?.entered ?? false;
-  // A dormant Shop is a dead leaf. Its persisted inventory remains available
-  // to the command model if the room is picked again, but neither its offer
-  // summary nor its editable lifecycle controls are active.
-  const summary =
-    occurrence.state.kind === 'shop' && !input.facts.detailsActive
-      ? undefined
-      : rewardSummary(input.catalog, room, occurrence.state);
   const rewardControls = controlsForOccurrence(input, room);
   const roomControls =
     input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
@@ -832,7 +787,6 @@ export function assembleWorkspaceOccurrence(
     ...(input.roomPicker === undefined ? {} : { roomPicker: input.roomPicker }),
     roomLocal: roomLocalForOccurrence(input, room, rewardControls),
     rewardControls,
-    ...(summary === undefined ? {} : { rewardSummary: summary }),
   });
   const node: WorkspaceOccurrenceWorkbenchNode = Object.freeze({
     inspectorPresentation: 'full' as const,
