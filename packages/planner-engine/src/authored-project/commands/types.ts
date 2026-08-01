@@ -115,31 +115,23 @@ export type RoomReplacementCommand = {
   readonly gameName: string;
 };
 
-export type OccurrenceStateCommand =
+export type IncomingRewardCommand = {
+  readonly kind: 'ReplaceIncomingReward';
+  readonly reward: IncomingRewardAddress;
+  readonly value: ResolvedRewardOffer;
+};
+
+export type LocalRewardCommand = {
+  readonly kind: 'ReplaceLocalReward';
+  readonly reward: LocalRewardAddress;
+  readonly value: ResolvedRewardOffer;
+};
+
+export type ShipOccurrenceCommand =
   | {
       readonly kind: 'ReplaceShipEncounterCount';
       readonly occurrence: OccurrenceAddress;
       readonly encounterCount: 2 | 3;
-    }
-  | {
-      readonly kind: 'ReplaceIncomingReward';
-      readonly reward: IncomingRewardAddress;
-      readonly value: ResolvedRewardOffer;
-    }
-  | {
-      readonly kind: 'ReplaceLocalReward';
-      readonly reward: LocalRewardAddress;
-      readonly value: ResolvedRewardOffer;
-    }
-  | {
-      readonly kind: 'ReplaceSideRoomGeneration';
-      readonly sideRoom: LocalChildAddress;
-      readonly generation: 'generated' | 'notGenerated';
-    }
-  | {
-      readonly kind: 'ReplaceSideRoomEntryOrder';
-      readonly group: LocalChildGroupAddress;
-      readonly enteredSlotKeys: readonly string[];
     }
   | {
       readonly kind: 'ReplaceRewardWheelOfferCount';
@@ -160,7 +152,21 @@ export type OccurrenceStateCommand =
       readonly kind: 'ReplaceRewardWheelPicked';
       readonly wheel: RewardWheelAddress;
       readonly pickedOfferIndex: number;
+    };
+
+export type EphyraOccurrenceCommand =
+  | {
+      readonly kind: 'ReplaceSideRoomGeneration';
+      readonly sideRoom: LocalChildAddress;
+      readonly generation: 'generated' | 'notGenerated';
     }
+  | {
+      readonly kind: 'ReplaceSideRoomEntryOrder';
+      readonly group: LocalChildGroupAddress;
+      readonly enteredSlotKeys: readonly string[];
+    };
+
+export type ShopOccurrenceCommand =
   | {
       readonly kind: 'ReplaceShopOffer';
       readonly offer: ShopOfferAddress;
@@ -172,8 +178,15 @@ export type OccurrenceStateCommand =
       readonly purchased: boolean;
     };
 
+export type OccurrenceLeafCommand =
+  | IncomingRewardCommand
+  | LocalRewardCommand
+  | ShipOccurrenceCommand
+  | EphyraOccurrenceCommand
+  | ShopOccurrenceCommand;
+
 export type ProjectCommand =
-  ProjectStateCommand | TopologyCommand | RoomReplacementCommand | OccurrenceStateCommand;
+  ProjectStateCommand | TopologyCommand | RoomReplacementCommand | OccurrenceLeafCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,

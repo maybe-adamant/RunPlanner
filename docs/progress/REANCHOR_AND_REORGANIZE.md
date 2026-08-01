@@ -2048,8 +2048,8 @@ the same commit:
 3. Move incoming/local reward, Ship encounter/wheel, Ephyra generation/order,
    and Shop offer/purchase transitions into cohesive leaf handlers behind one
    exhaustive occurrence dispatcher. Add primary command tests for all thirteen
-   kinds currently handled by `occurrence-state.ts`: the Fields case in the
-   topology-command suite and the remaining twelve in room-replacement or
+   original kinds: the Fields case in the topology-command suite, room
+   replacement in its focused suite, and the eleven remaining kinds in
    occurrence-leaf suites. Retain only representative downstream UI and
    simulation witnesses, and delete `commands/occurrence-state.ts` plus the
    superseded broad `commands.test.ts` path.
@@ -2089,6 +2089,29 @@ simulation, and product tests remain boundary witnesses. The broad command
 suite now retains only the C4.3 Ship/history cases; no leaf family moved early
 and no automatic target pruning or capacity repair was introduced.
 
+##### C4.3 completion record (2026-08-01)
+
+`commands/occurrence.ts` now exhaustively dispatches the eleven remaining
+occurrence-leaf kinds to five exact transition owners: incoming reward, local
+reward, Ship encounter and wheels, Ephyra generation and entry order, and Shop
+offer and purchase handlers. `OccurrenceLeafCommand` composes those five
+explicit family unions, while the public dispatcher continues to list every
+kind and preserves the established proposal decode and command-error wrapping
+boundary. The Ephyra owner publishes only its exact side-group lookup to the
+local-reward handler. The leaf-only value comparison has five concrete
+consumers, and `occurrence-mutation.ts` remains limited to the immutable
+occurrence and topology writes shared with room replacement.
+
+Five focused command suites now own success, no-op identity, and rejection
+matrices for all eleven leaf kinds. A dedicated history suite owns effective
+and no-op edits, redo invalidation, boundary identity, exact undo/redo
+snapshots, and one atomic Shop-leaf witness without duplicating Shop policy.
+The superseded `commands/occurrence-state.ts` and broad `commands.test.ts` are
+deleted. Together with C4.1's Fields command and C4.2's room replacement, all
+thirteen formerly mixed occurrence/batch-state kinds have a primary command
+owner and test boundary; downstream simulation, topology, codec, React, and
+product suites remain representative witnesses.
+
 Handlers receive `document`, `catalog`, `located biome`, and their exact command
 type as needed. They do not receive a command context, service table, topology
 index, or prebuilt lookup bag. A mutation helper moves only after a second real
@@ -2120,6 +2143,23 @@ unnecessary public implementation export, production self-audit, or duplicated
 test matrix remains. The focused authored lane, affected simulation/planner
 lanes, import-direction checks, deterministic project fixtures, and complete
 repository gate pass.
+
+#### Campaign C completion record (2026-08-01)
+
+Campaign C now has one internal authority and primary test owner for room
+defaults, compatible replacement, persisted room-state decoding, topology
+queries, topology decoding, project-state commands, atomic topology commands,
+room replacement, and each occurrence-leaf family. The planned superseded
+files and broad command suite are deleted without a compatibility facade,
+second topology model, command context, implementation barrel, or duplicated
+leaf-policy matrix. Public consumers continue to use the authored-project
+package surface and the same decoded command publication boundary.
+
+The final focused authored lane passed 18 files and 153 tests. The complete
+repository gate passed 95 files and 771 tests, every workspace typecheck,
+lint, formatting, and the production build. Campaign D therefore begins from
+the explicit authored boundaries delivered by C rather than from the former
+mixed command or codec gravity wells.
 
 ### Campaign D: Ordered Engine State Flows
 

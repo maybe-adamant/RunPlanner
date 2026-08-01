@@ -3,7 +3,7 @@ import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
 import { ProjectDocumentContractError } from '../validation';
 import { locateBiome, projectCommandAddress, ProjectCommandContractError } from './contract';
-import { applyOccurrenceStateCommand } from './occurrence-state';
+import { applyOccurrenceCommand } from './occurrence';
 import { applyProjectStateCommand } from './project-state';
 import { applyRoomReplacementCommand } from './room-replacement';
 import { applyTopologyCommand } from './topology';
@@ -62,7 +62,7 @@ function applyUnchecked(
     case 'ReplaceRewardWheelPicked':
     case 'ReplaceShopOffer':
     case 'SetShopPurchase':
-      return applyOccurrenceStateCommand(
+      return applyOccurrenceCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),
