@@ -101,12 +101,7 @@ export default tseslint.config(
     },
   },
   {
-    files: [
-      'apps/planner/test/support/structured-workspace/expected-*.ts',
-      'apps/planner/test/support/structuredWorkspaceClosure.ts',
-      'apps/planner/test/support/structuredWorkspaceExpectations.ts',
-      'apps/planner/test/support/structuredWorkspaceStructuralControls.ts',
-    ],
+    files: ['apps/planner/test/support/structured-workspace/expected-*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',

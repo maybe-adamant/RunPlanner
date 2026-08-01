@@ -1,9 +1,18 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { createProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createHubVisitAddress,
+  createProjectDocument,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject } from '../../../../../../test/fixtures/authored-project';
+import {
+  createGoldenFGHIProject,
+  createRepresentativeNOPQProject,
+  nBiome,
+} from '../../../../../../test/fixtures/authored-project';
 import {
   appendCompleteN,
   nOccurrenceId,
@@ -143,5 +152,110 @@ describe('structured workspace biome presentation', () => {
       inspectorSubject: { kind: 'node', nodeKey: decision.key },
       selectedRailKey: rail.marker.focusKey,
     });
+  });
+
+  it('presents every generated biome as entry, numbered decision stops, and bounded Preboss', () => {
+    const underworld = createGoldenFGHIProject();
+    const surface = createRepresentativeNOPQProject();
+    const expected = {
+      F: {
+        decisions: 10,
+        entry: 'Opening',
+        preboss: true,
+        project: underworld,
+        route: 'Underworld',
+      },
+      G: {
+        decisions: 7,
+        entry: 'Entrance',
+        preboss: true,
+        project: underworld,
+        route: 'Underworld',
+      },
+      H: {
+        decisions: 4,
+        entry: 'Entrance',
+        preboss: true,
+        project: underworld,
+        route: 'Underworld',
+      },
+      I: {
+        decisions: 6,
+        entry: 'Entrance',
+        preboss: false,
+        project: underworld,
+        route: 'Underworld',
+      },
+      O: { decisions: 6, entry: 'Entrance', preboss: true, project: surface, route: 'Surface' },
+      P: { decisions: 8, entry: 'Entrance', preboss: true, project: surface, route: 'Surface' },
+      Q: { decisions: 6, entry: 'Entrance', preboss: true, project: surface, route: 'Surface' },
+    } as const;
+
+    for (const [biomeKey, contract] of Object.entries(expected)) {
+      const biome = present(contract.project, contract.route, biomeKey).presentation.biome;
+      const entries = biome.rail.filter(
+        (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+          entry.kind === 'node',
+      );
+      expect(entries.map((entry) => entry.label)).toEqual([
+        contract.entry,
+        ...Array.from({ length: contract.decisions }, (_, index) => `Decision ${index + 1}`),
+        ...(contract.preboss ? ['Preboss'] : []),
+      ]);
+      expect(
+        entries.some(
+          (entry) =>
+            entry.node.kind === 'occurrenceWorkbench' && entry.node.key !== biome.entry?.key,
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it('keeps completion landmarks outside an incomplete biome rail', () => {
+    const empty = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Underworld: 1 },
+      name: 'Presentation completion outline',
+      projectId: 'presentation-completion-outline',
+    });
+    const biome = present(empty, 'Underworld', 'F').presentation.biome;
+
+    expect(railShape(biome)).toEqual(['frontier:start']);
+    expect(biome.completionOutline.map((node) => node.label)).toEqual(['Hecate', 'Postboss']);
+  });
+
+  it('reprojects only authored Hub visit children after replacement and truncation', () => {
+    const initial = appendCompleteN(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Surface: 1 },
+        name: 'Hub visit presentation',
+        projectId: 'hub-visit-presentation',
+      }),
+      { includePreboss: false, visitSlotKeys: nVisitSlotKeys.slice(0, 3) },
+    );
+    const labels = (project: ProjectDocument) =>
+      hubRailEntry(present(project, 'Surface', 'N').presentation.biome.rail).visits.map(
+        (visit) => visit.label,
+      );
+
+    expect(labels(initial)).toEqual([
+      'Visit 1 · Combat 05',
+      'Visit 2 · Satyr Champion',
+      'Visit 3 · Combat 02',
+    ]);
+    const replaced = applyProjectCommand(initial, catalog, {
+      hubSlotKey: 'combat10',
+      kind: 'ReplaceHubVisit',
+      visit: createHubVisitAddress(nBiome, 'hub', 2),
+    });
+    expect(labels(replaced)).toEqual([
+      'Visit 1 · Combat 05',
+      'Visit 2 · Combat 10',
+      'Visit 3 · Combat 02',
+    ]);
+    const truncated = applyProjectCommand(replaced, catalog, {
+      kind: 'RemoveHubVisitsFrom',
+      visit: createHubVisitAddress(nBiome, 'hub', 2),
+    });
+    expect(labels(truncated)).toEqual(['Visit 1 · Combat 05']);
   });
 });

@@ -1,7 +1,11 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createExitDecisionAddress,
   createHubDecisionAddress,
+  createHubVisitAddress,
   createIncomingRewardAddress,
+  createOccurrenceId,
   createProjectDocument,
   semanticAddressKey,
   type ProjectDocument,
@@ -9,7 +13,13 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { appendCompleteN, nBiome, nOccurrenceId } from '../../../../../../test/fixtures/authored-project';
+import {
+  appendCompleteN,
+  createRepresentativeNOPQProject,
+  nBiome,
+  nOccurrenceId,
+  nOccurrenceIds,
+} from '../../../../../../test/fixtures/authored-project';
 import { assembleWorkspaceHub } from './hub-assembly';
 import {
   assembleWorkspaceOccurrence,
@@ -130,8 +140,18 @@ describe('structured workspace Hub assembly', () => {
     const close = assembly.hubInteractionRequirements[0]?.slots.find(
       (slot) => slot.owner.hubSlotKey === 'combat03',
     )?.close;
-    expect(close).toMatchObject({ command: { kind: 'CloseHubSlot' } });
-    expect(close?.impact.removedOccurrenceIds).toContain(nOccurrenceId('combat03'));
+    expect(close).toMatchObject({
+      command: { kind: 'CloseHubSlot' },
+      impact: {
+        removedDecisionOwners: [
+          createExitDecisionAddress(nBiome, {
+            kind: 'hubDecision',
+            decisionKey: kit.descriptor.hubKey,
+          }),
+        ],
+        removedOccurrenceIds: [nOccurrenceId('combat03'), nOccurrenceIds.preboss],
+      },
+    });
 
     const incoming = createIncomingRewardAddress(nBiome, nOccurrenceId('combat02'));
     expect(kit.markers.destinations().get(semanticAddressKey(incoming))).toMatchObject({
@@ -190,5 +210,146 @@ describe('structured workspace Hub assembly', () => {
       ),
     );
     expect(assembly.rewardControls.length).toBeGreaterThan(0);
+  });
+
+  it('retains invalid Hub board state and the authored/next/locked visit suffix after visit removal', () => {
+    const invalidBoard = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const source = biomeSource(invalidBoard);
+    const kit = hubKit(source);
+    if (kit.hub === undefined) throw new Error('invalid N Hub is missing');
+    const evaluated = source.evaluatedHub(kit.owner);
+    const complete =
+      evaluated === undefined
+        ? assembleWorkspaceHub({
+            assembleOccurrence: kit.assembleOccurrence,
+            biome: source.biome,
+            catalog,
+            descriptor: kit.descriptor,
+            hub: kit.hub,
+            markerDestinations: kit.markers.emitter,
+            topology: source.plan.topology,
+          })
+        : assembleWorkspaceHub({
+            assembleOccurrence: kit.assembleOccurrence,
+            biome: source.biome,
+            catalog,
+            descriptor: kit.descriptor,
+            evaluated,
+            hub: kit.hub,
+            markerDestinations: kit.markers.emitter,
+            topology: source.plan.topology,
+          });
+
+    expect(source.evaluation).toMatchObject({ authoring: 'complete', validity: 'invalid' });
+    expect(complete.node.slots).toHaveLength(kit.descriptor.slots.length);
+    expect(complete.node.visits.map((visit) => visit.authoring)).toEqual([
+      'authored',
+      'authored',
+      'authored',
+      'authored',
+      'authored',
+      'authored',
+    ]);
+    expect(
+      complete.node.slots.find((slot) => slot.hubSlotKey === 'combat10')?.room?.rewardControls[0]
+        ?.marker.findingCount,
+    ).toBe(1);
+
+    const retainedProject = applyProjectCommand(invalidBoard, catalog, {
+      kind: 'RemoveHubVisitsFrom',
+      visit: createHubVisitAddress(nBiome, kit.descriptor.hubKey, 4),
+    });
+    const retainedSource = biomeSource(retainedProject);
+    const retainedKit = hubKit(retainedSource);
+    if (retainedKit.hub === undefined) throw new Error('retained N Hub is missing');
+    const retainedEvaluated = retainedSource.evaluatedHub(retainedKit.owner);
+    const retained =
+      retainedEvaluated === undefined
+        ? assembleWorkspaceHub({
+            assembleOccurrence: retainedKit.assembleOccurrence,
+            biome: retainedSource.biome,
+            catalog,
+            descriptor: retainedKit.descriptor,
+            hub: retainedKit.hub,
+            markerDestinations: retainedKit.markers.emitter,
+            nextVisitIndex: 4,
+            topology: retainedSource.plan.topology,
+          })
+        : assembleWorkspaceHub({
+            assembleOccurrence: retainedKit.assembleOccurrence,
+            biome: retainedSource.biome,
+            catalog,
+            descriptor: retainedKit.descriptor,
+            evaluated: retainedEvaluated,
+            hub: retainedKit.hub,
+            markerDestinations: retainedKit.markers.emitter,
+            nextVisitIndex: 4,
+            topology: retainedSource.plan.topology,
+          });
+
+    expect(retained.node.slots).toHaveLength(retainedKit.descriptor.slots.length);
+    expect(retained.node.openSlotCount).toEqual({ current: 9, min: 9, max: 10 });
+    expect(retained.node.visits.map((visit) => visit.authoring)).toEqual([
+      'authored',
+      'authored',
+      'authored',
+      'next',
+      'locked',
+      'locked',
+    ]);
+    expect(retained.node.visits.slice(0, 4).map((visit) => visit.marker.assessment)).toEqual([
+      'unassessed',
+      'unassessed',
+      'unassessed',
+      'assessed',
+    ]);
+    expect(retained.hubInteractionRequirements[0]?.visits.at(-1)).toMatchObject({
+      owner: createHubVisitAddress(nBiome, retainedKit.descriptor.hubKey, 4),
+    });
+  });
+
+  it('publishes authored Hub controls and the structural first visit before evaluation enters it', () => {
+    const opening = createOccurrenceId('hub-assembly-authored-opening');
+    let project = applyProjectCommand(emptyNProject(), catalog, {
+      biome: nBiome,
+      kind: 'CreateStart',
+      occurrenceId: opening,
+    });
+    project = applyProjectCommand(project, catalog, {
+      decision: createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId: opening }),
+      kind: 'CreateLinkedExit',
+      occurrenceId: createOccurrenceId('hub-assembly-authored-prehub'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      kind: 'CreateHubDecision',
+    });
+    const source = biomeSource(project);
+    const kit = hubKit(source);
+    if (kit.hub === undefined) throw new Error('fresh authored N Hub is missing');
+    const assembly = assembleWorkspaceHub({
+      assembleOccurrence: kit.assembleOccurrence,
+      biome: source.biome,
+      catalog,
+      descriptor: kit.descriptor,
+      hub: kit.hub,
+      markerDestinations: kit.markers.emitter,
+      topology: source.plan.topology,
+    });
+    const requirement = assembly.hubInteractionRequirements[0];
+
+    expect(assembly.node.authoring).toBe('authored');
+    expect(requirement?.slots).toHaveLength(kit.descriptor.slots.length);
+    expect(requirement?.visits).toEqual([
+      {
+        choices: [],
+        owner: createHubVisitAddress(nBiome, kit.descriptor.hubKey, 1),
+      },
+    ]);
+    expect(assembly.node.visits[0]?.authoring).toBe('locked');
   });
 });

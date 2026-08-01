@@ -76,18 +76,10 @@ describe('structured workspace occurrence assembly facts', () => {
   it('keeps a selected Shop active behind an unresolved prefix while its retained sibling is inactive', () => {
     const shop = createOccurrenceId('golden-f-preboss-shop');
     const selected = createWorkspaceBiomeOccurrenceAssemblyFacts(
-      biomeSource(
-        withFPrebossSelection(createGoldenFGHIProject(), 'exit1'),
-        'Underworld',
-        'F',
-      ),
+      biomeSource(withFPrebossSelection(createGoldenFGHIProject(), 'exit1'), 'Underworld', 'F'),
     );
     const unpicked = createWorkspaceBiomeOccurrenceAssemblyFacts(
-      biomeSource(
-        withFPrebossSelection(createGoldenFGHIProject(), 'exit2'),
-        'Underworld',
-        'F',
-      ),
+      biomeSource(withFPrebossSelection(createGoldenFGHIProject(), 'exit2'), 'Underworld', 'F'),
     );
 
     expect(selected.occurrence(shop)?.detailsActive).toBe(true);

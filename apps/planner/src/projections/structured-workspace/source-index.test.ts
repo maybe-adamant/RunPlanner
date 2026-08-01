@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
+  goldenFOccurrenceId,
   goldenFStartId,
 } from '../../../../../test/fixtures/authored-project';
 import {
@@ -90,6 +91,139 @@ describe('structured workspace source index', () => {
         semanticAddressKey(createExitDecisionAddress(reversedF.biome, decision.source)),
       ),
     );
+  });
+
+  it('orders the selected authored subtree before retained peers independently of serialization order', () => {
+    const base = createGoldenFGHIProject();
+    const forkSource = goldenFOccurrenceId(1, 1);
+    const selectedChildSource = goldenFOccurrenceId(2, 2);
+    const movedDecisionSource = goldenFOccurrenceId(3, 1);
+    const withSelectedSpine = (reverse: boolean): typeof base =>
+      ({
+        ...base,
+        routes: base.routes.map((route) =>
+          route.routeKey !== 'Underworld'
+            ? route
+            : {
+                ...route,
+                biomes: route.biomes.map((plan) =>
+                  plan.biomeKey !== 'F' || plan.topology === null
+                    ? plan
+                    : {
+                        ...plan,
+                        topology: {
+                          ...plan.topology,
+                          decisions: (reverse
+                            ? [...plan.topology.decisions].reverse()
+                            : plan.topology.decisions
+                          ).map((decision) => {
+                            if (decision.kind !== 'exit') return decision;
+                            const normal =
+                              decision.normal.kind !== 'batch' || !reverse
+                                ? decision.normal
+                                : {
+                                    ...decision.normal,
+                                    targets: [...decision.normal.targets].reverse(),
+                                  };
+                            if (
+                              decision.source.kind === 'occurrence' &&
+                              decision.source.occurrenceId === forkSource
+                            ) {
+                              return {
+                                ...decision,
+                                normal,
+                                selection: { kind: 'normal' as const, exitKey: 'exit2' },
+                              };
+                            }
+                            if (
+                              decision.source.kind === 'occurrence' &&
+                              decision.source.occurrenceId === movedDecisionSource
+                            ) {
+                              return {
+                                ...decision,
+                                normal,
+                                source: {
+                                  kind: 'occurrence' as const,
+                                  occurrenceId: selectedChildSource,
+                                },
+                              };
+                            }
+                            return normal === decision.normal ? decision : { ...decision, normal };
+                          }),
+                        },
+                      },
+                ),
+              },
+        ),
+      }) as typeof base;
+    const orderedSources = (project: typeof base) =>
+      biomeSource(
+        createWorkspaceProjectSourceIndex(catalog, project, simulateProject(catalog, project)),
+        'Underworld',
+        'F',
+      ).exitDecisions.map((decision) =>
+        decision.source.kind === 'occurrence' ? decision.source.occurrenceId : decision.source.kind,
+      );
+    const ordered = orderedSources(withSelectedSpine(false));
+
+    expect(ordered).toEqual([
+      goldenFStartId,
+      forkSource,
+      selectedChildSource,
+      goldenFOccurrenceId(4, 1),
+      goldenFOccurrenceId(5, 1),
+      goldenFOccurrenceId(6, 1),
+      goldenFOccurrenceId(7, 1),
+      goldenFOccurrenceId(8, 1),
+      goldenFOccurrenceId(9, 1),
+      goldenFOccurrenceId(10, 1),
+      goldenFOccurrenceId(2, 1),
+    ]);
+    expect(orderedSources(withSelectedSpine(true))).toEqual(ordered);
+  });
+
+  it('retains downstream authored decisions when an unresolved prefix has no evaluated overlay', () => {
+    const base = createGoldenFGHIProject();
+    const incomplete = {
+      ...base,
+      routes: base.routes.map((route) =>
+        route.routeKey !== 'Underworld'
+          ? route
+          : {
+              ...route,
+              biomes: route.biomes.map((plan) =>
+                plan.biomeKey !== 'F' || plan.topology === null
+                  ? plan
+                  : {
+                      ...plan,
+                      topology: {
+                        ...plan.topology,
+                        decisions: plan.topology.decisions.map((decision) =>
+                          decision.kind === 'exit' &&
+                          decision.source.kind === 'occurrence' &&
+                          decision.source.occurrenceId === goldenFStartId
+                            ? { ...decision, selection: { kind: 'unresolved' as const } }
+                            : decision,
+                        ),
+                      },
+                    },
+              ),
+            },
+      ),
+    };
+    const source = biomeSource(
+      createWorkspaceProjectSourceIndex(catalog, incomplete, simulateProject(catalog, incomplete)),
+      'Underworld',
+      'F',
+    );
+    const owner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(1, 1),
+    });
+
+    expect(source.exitDecision(owner.source)).toBeDefined();
+    expect(source.evaluatedBatch(owner)).toBeUndefined();
+    expect(source.isAssessed(owner)).toBe(false);
   });
 
   it('keeps evaluator products and findings addressed to authored owners', () => {
