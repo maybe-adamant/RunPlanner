@@ -22,7 +22,6 @@ import type {
 } from '../model';
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
-import { replaceBiomeStateField } from '../biomeState';
 import {
   declaredPhysicalExitKeys,
   exitDecisionForSource,
@@ -37,8 +36,7 @@ import {
   withBiome,
   type LocatedBiome,
 } from './contract';
-import { applyOccurrenceStateCommand } from './occurrence-state';
-import type { ProjectCommand } from './types';
+import type { TopologyCommand } from './types';
 
 function sourceEquals(left: ExitDecisionSource, right: ExitDecisionSourceAddress): boolean {
   if (left.kind === 'occurrence' && right.kind === 'occurrence') {
@@ -61,7 +59,7 @@ function exitKeysForSource(
   catalog: Catalog,
   located: LocatedBiome,
   source: ExitDecisionSourceAddress,
-  command: ProjectCommand,
+  command: TopologyCommand,
 ): readonly string[] {
   const topology = located.plan.topology;
   if (topology !== null) {
@@ -89,7 +87,7 @@ function sourceRoom(
   catalog: Catalog,
   located: LocatedBiome,
   source: ExitDecisionSourceAddress,
-  command: ProjectCommand,
+  command: TopologyCommand,
 ): RoomDeclaration | undefined {
   if (source.kind === 'hubDecision') return undefined;
   return requireRoom(
@@ -232,7 +230,7 @@ function orderTargetsByPhysicalExit(
 function appendOccurrence(
   topology: BiomeTopology,
   occurrence: RoomOccurrence,
-  command: ProjectCommand,
+  command: TopologyCommand,
 ): BiomeTopology {
   if (
     topology.occurrences.some((candidate) => candidate.occurrenceId === occurrence.occurrenceId)
@@ -248,7 +246,7 @@ function appendOccurrence(
 function expectedPrebossRole(
   room: RoomDeclaration,
   index: number,
-  command: ProjectCommand,
+  command: TopologyCommand,
 ): RoomOccurrenceRole {
   if (room.kind !== 'Preboss' || room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors') {
     failCommand(command, `${room.gameName} is not a takeover Preboss declaration`);
@@ -283,7 +281,7 @@ function createStart(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<ProjectCommand, { readonly kind: 'CreateStart' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'CreateStart' }>,
 ): ProjectDocument {
   if (located.plan.topology !== null)
     failCommand(command, 'topology already has a start occurrence');
@@ -315,7 +313,7 @@ function createLinkedExit(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<ProjectCommand, { readonly kind: 'CreateLinkedExit' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'CreateLinkedExit' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   if (
@@ -354,7 +352,7 @@ function createBatch(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'CreateBatch' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   if (located.layout.progression.kind !== 'generated') {
@@ -398,7 +396,7 @@ function createTarget(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<ProjectCommand, { readonly kind: 'CreateTarget' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'CreateTarget' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   if (located.layout.progression.kind !== 'generated') {
@@ -562,7 +560,7 @@ function replaceTakeoverBatch(
   catalog: Catalog,
   located: LocatedBiome,
   command: Extract<
-    ProjectCommand,
+    TopologyCommand,
     { readonly kind: 'CreateTakeoverBatch' | 'ReplaceWithTakeoverBatch' | 'ReconcileTakeoverBatch' }
   >,
 ): ProjectDocument {
@@ -727,7 +725,7 @@ function setExitSelection(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<ProjectCommand, { readonly kind: 'SetExitSelection' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'SetExitSelection' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   const decision = exitDecisionForSource(topology, command.selection.source);
@@ -795,7 +793,7 @@ function replaceBatchRewardStore(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<ProjectCommand, { readonly kind: 'ReplaceBatchRewardStore' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'ReplaceBatchRewardStore' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   const decision = exitDecisionForSource(topology, command.rewardStore.source);
@@ -835,10 +833,61 @@ function replaceBatchRewardStore(
   );
 }
 
+function replaceFieldsCageOutcome(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: Extract<TopologyCommand, { readonly kind: 'ReplaceFieldsCageOutcome' }>,
+): ProjectDocument {
+  const topology = requireTopology(located.plan, command);
+  if (
+    located.layout.progression.kind !== 'generated' ||
+    located.layout.progression.batchPolicy.kind !== 'fields'
+  ) {
+    failCommand(command, 'batch does not expose a Fields cage outcome');
+  }
+  const decision = exitDecisionForSource(topology, command.decision.source);
+  if (decision?.normal.kind !== 'batch') {
+    failCommand(command, 'normal-door batch does not exist');
+  }
+  if (
+    decision.normal.targets.some(
+      (target) =>
+        catalog.rooms.byKey[
+          topology.occurrences.find((occurrence) => occurrence.occurrenceId === target.occurrenceId)
+            ?.gameName ?? ''
+        ]?.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
+    )
+  ) {
+    failCommand(command, 'takeover batches do not own Fields cage state');
+  }
+  if (decision.normal.batchState?.cageOutcome === command.cageOutcome) return document;
+  return updateTopology(
+    document,
+    located,
+    Object.freeze({
+      ...topology,
+      decisions: Object.freeze(
+        topology.decisions.map((candidate) =>
+          candidate === decision
+            ? Object.freeze({
+                ...candidate,
+                normal: Object.freeze({
+                  ...candidate.normal,
+                  batchState: Object.freeze({ cageOutcome: command.cageOutcome }),
+                }),
+              })
+            : candidate,
+        ),
+      ),
+    }),
+  );
+}
+
 function removeExitDecision(
   document: ProjectDocument,
   located: LocatedBiome,
-  command: Extract<ProjectCommand, { readonly kind: 'RemoveExitDecision' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'RemoveExitDecision' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   const impact = describeExitDecisionRemovalImpact(
@@ -853,7 +902,7 @@ function removeExitDecision(
 function clearTopology(
   document: ProjectDocument,
   located: LocatedBiome,
-  command: Extract<ProjectCommand, { readonly kind: 'ClearTopology' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'ClearTopology' }>,
 ): ProjectDocument {
   const topology = located.plan.topology;
   if (topology === null) return document;
@@ -868,7 +917,7 @@ function reconcileBatchExitCapacity(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<ProjectCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   const decision = exitDecisionForSource(topology, command.decision.source);
@@ -927,7 +976,7 @@ function reconcileBatchExitCapacity(
 function createHubDecision(
   document: ProjectDocument,
   located: LocatedBiome,
-  command: Extract<ProjectCommand, { readonly kind: 'CreateHubDecision' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'CreateHubDecision' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   if (
@@ -966,7 +1015,7 @@ function updateHub(
   catalog: Catalog,
   located: LocatedBiome,
   command: Extract<
-    ProjectCommand,
+    TopologyCommand,
     {
       readonly kind:
         | 'OpenHubSlot'
@@ -1092,11 +1141,11 @@ function updateHub(
   );
 }
 
-export function applyUnifiedTopologyCommand(
+export function applyTopologyCommand(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: ProjectCommand,
+  command: TopologyCommand,
 ): ProjectDocument {
   switch (command.kind) {
     case 'CreateStart':
@@ -1115,6 +1164,8 @@ export function applyUnifiedTopologyCommand(
       return reconcileBatchExitCapacity(document, catalog, located, command);
     case 'ReplaceBatchRewardStore':
       return replaceBatchRewardStore(document, catalog, located, command);
+    case 'ReplaceFieldsCageOutcome':
+      return replaceFieldsCageOutcome(document, catalog, located, command);
     case 'SetExitSelection':
       return setExitSelection(document, catalog, located, command);
     case 'RemoveExitDecision':
@@ -1127,28 +1178,7 @@ export function applyUnifiedTopologyCommand(
     case 'ReplaceHubVisit':
     case 'RemoveHubVisitsFrom':
       return updateHub(document, catalog, located, command);
-    case 'ReplaceBiomeField':
-      return withBiome(document, located, {
-        ...located.plan,
-        state: replaceBiomeStateField(
-          located.plan.state,
-          located.layout,
-          command.field.fieldKey,
-          command.value,
-          `${command.kind}.value`,
-        ),
-      });
     case 'ClearTopology':
       return clearTopology(document, located, command);
-    default: {
-      const stateResult = applyOccurrenceStateCommand(document, catalog, located, command);
-      return (
-        stateResult ??
-        failCommand(
-          command,
-          `${command.kind} has not yet been migrated to common topology commands`,
-        )
-      );
-    }
   }
 }

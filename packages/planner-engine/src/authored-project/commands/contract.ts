@@ -8,7 +8,7 @@ import type {
   ProjectDocument,
   RoomOccurrence,
 } from '../model';
-import type { BiomeProjectCommand, ProjectCommand } from './types';
+import type { BiomeOwnedProjectCommand, ProjectCommand } from './types';
 
 export class ProjectCommandContractError extends Error {
   readonly commandKind: ProjectCommand['kind'];
@@ -104,7 +104,7 @@ export interface LocatedBiome {
 export function locateBiome(
   document: ProjectDocument,
   catalog: Catalog,
-  command: BiomeProjectCommand,
+  command: BiomeOwnedProjectCommand,
 ): LocatedBiome {
   const address = projectCommandAddress(command);
   if (address.kind === 'project' || address.kind === 'route')

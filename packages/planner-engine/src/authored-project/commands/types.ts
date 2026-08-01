@@ -22,7 +22,7 @@ import type {
 } from '../addresses';
 import type { AuthoredFieldValue, ExitSelection, OccurrenceId } from '../model';
 
-export type ProjectCommand =
+export type ProjectStateCommand =
   | { readonly kind: 'RenameProject'; readonly name: string }
   | {
       readonly kind: 'ConfigureRoutePrefix';
@@ -33,7 +33,9 @@ export type ProjectCommand =
       readonly kind: 'ReplaceBiomeField';
       readonly field: BiomeFieldAddress;
       readonly value: AuthoredFieldValue;
-    }
+    };
+
+export type TopologyCommand =
   | {
       readonly kind: 'CreateStart';
       readonly biome: BiomeAddress;
@@ -90,16 +92,6 @@ export type ProjectCommand =
     }
   | { readonly kind: 'RemoveHubVisitsFrom'; readonly visit: HubVisitAddress }
   | {
-      readonly kind: 'ReplaceSideRoomGeneration';
-      readonly sideRoom: LocalChildAddress;
-      readonly generation: 'generated' | 'notGenerated';
-    }
-  | {
-      readonly kind: 'ReplaceSideRoomEntryOrder';
-      readonly group: LocalChildGroupAddress;
-      readonly enteredSlotKeys: readonly string[];
-    }
-  | {
       readonly kind: 'SetExitSelection';
       readonly selection: ExitSelectionAddress;
       readonly value: ExitSelection;
@@ -115,6 +107,9 @@ export type ProjectCommand =
       readonly decision: ExitDecisionAddress;
       readonly cageOutcome: 'min' | 'max';
     }
+  | { readonly kind: 'ClearTopology'; readonly biome: BiomeAddress };
+
+export type OccurrenceStateCommand =
   | {
       readonly kind: 'ReplaceOccurrenceRoom';
       readonly occurrence: OccurrenceAddress;
@@ -134,6 +129,16 @@ export type ProjectCommand =
       readonly kind: 'ReplaceLocalReward';
       readonly reward: LocalRewardAddress;
       readonly value: ResolvedRewardOffer;
+    }
+  | {
+      readonly kind: 'ReplaceSideRoomGeneration';
+      readonly sideRoom: LocalChildAddress;
+      readonly generation: 'generated' | 'notGenerated';
+    }
+  | {
+      readonly kind: 'ReplaceSideRoomEntryOrder';
+      readonly group: LocalChildGroupAddress;
+      readonly enteredSlotKeys: readonly string[];
     }
   | {
       readonly kind: 'ReplaceRewardWheelOfferCount';
@@ -164,11 +169,11 @@ export type ProjectCommand =
       readonly kind: 'SetShopPurchase';
       readonly purchase: ShopPurchaseAddress;
       readonly purchased: boolean;
-    }
-  | { readonly kind: 'ClearTopology'; readonly biome: BiomeAddress };
+    };
 
-export type ProjectMetadataCommand = Extract<
+export type ProjectCommand = ProjectStateCommand | TopologyCommand | OccurrenceStateCommand;
+
+export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,
   { readonly kind: 'RenameProject' | 'ConfigureRoutePrefix' }
 >;
-export type BiomeProjectCommand = Exclude<ProjectCommand, ProjectMetadataCommand>;

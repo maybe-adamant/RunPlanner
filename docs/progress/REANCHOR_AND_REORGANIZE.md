@@ -2054,6 +2054,19 @@ the same commit:
    simulation witnesses, and delete `commands/occurrence-state.ts` plus the
    superseded broad `commands.test.ts` path.
 
+##### C4.1 completion record (2026-08-01)
+
+`commands/project-state.ts` now owns Rename, route-prefix configuration, and
+biome-field changes; `commands/topology.ts` owns the still-atomic structural
+graph transitions, including decision-owned Fields cage state. The command
+types explicitly partition all 34 commands into 3 project-state, 19 topology,
+and 12 occurrence-state kinds, and the public dispatcher visibly exhausts
+those families without default delegation. The project-state and topology
+test suites own their primary transition matrices, including the exact
+document-error wrapping path and Fields no-op/rejection cases. The reduced
+broad command suite deliberately retains only C4.2/C4.3 replacement, leaf,
+and history witnesses; no remaining occurrence-state family was moved early.
+
 Handlers receive `document`, `catalog`, `located biome`, and their exact command
 type as needed. They do not receive a command context, service table, topology
 index, or prebuilt lookup bag. A mutation helper moves only after a second real

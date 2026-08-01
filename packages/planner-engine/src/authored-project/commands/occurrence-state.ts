@@ -10,11 +10,7 @@ import type {
 import type { RoomOccurrenceRole, RoomStateContext } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
-import {
-  exitDecisionForSource,
-  selectedExitKey,
-  selectedOrdinaryBatchIndex,
-} from '../topology/query';
+import { selectedExitKey, selectedOrdinaryBatchIndex } from '../topology/query';
 
 import {
   failCommand,
@@ -24,7 +20,7 @@ import {
   withBiome,
   type LocatedBiome,
 } from './contract';
-import type { ProjectCommand } from './types';
+import type { OccurrenceStateCommand } from './types';
 
 function sameOffer(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
@@ -52,7 +48,7 @@ function updateTopology(
 function resolvedBatchStore(
   topology: BiomeTopology,
   decision: ExitDecision,
-  command: ProjectCommand,
+  command: OccurrenceStateCommand,
 ): string | undefined {
   if (decision.normal.kind !== 'batch') return undefined;
   if (decision.normal.rewardStore.kind === 'authoredBaseStore') {
@@ -76,7 +72,7 @@ function resolvedBatchStore(
 function incomingStore(
   topology: BiomeTopology,
   source: ExitDecisionSource,
-  command: ProjectCommand,
+  command: OccurrenceStateCommand,
 ): string | undefined {
   if (source.kind !== 'occurrence') return undefined;
   const owner = topology.decisions.find(
@@ -91,7 +87,7 @@ function incomingStore(
 function prebossRole(
   room: RoomDeclaration,
   targetIndex: number,
-  command: ProjectCommand,
+  command: OccurrenceStateCommand,
 ): RoomOccurrenceRole {
   if (room.kind !== 'Preboss') return 'ordinary';
   const policy = room.prebossBatchPolicy;
@@ -115,7 +111,7 @@ function occurrenceContext(
   catalog: Catalog,
   located: LocatedBiome,
   occurrenceId: OccurrenceId,
-  command: ProjectCommand,
+  command: OccurrenceStateCommand,
   replacementRoom?: RoomDeclaration,
 ): OccurrenceContext {
   if (topology.startOccurrenceId === occurrenceId) {
@@ -187,7 +183,7 @@ function requireWheel(
   located: LocatedBiome,
   occurrenceId: OccurrenceId,
   wheelKey: string,
-  command: ProjectCommand,
+  command: OccurrenceStateCommand,
 ): {
   readonly occurrence: RoomOccurrence;
   readonly state: Extract<RoomOccurrence['state'], { readonly kind: 'shipCombat' }>;
@@ -215,7 +211,7 @@ function requireEphyraSideGroup(
   catalog: Catalog,
   located: LocatedBiome,
   groupKey: string,
-  command: ProjectCommand,
+  command: OccurrenceStateCommand,
 ) {
   if (occurrence.state.kind !== 'ephyraCombat') {
     failCommand(command, `${occurrence.gameName} has no Ephyra side-room state`);
@@ -234,7 +230,7 @@ function requireOrdinaryBatchTarget(
   located: LocatedBiome,
   occurrenceId: OccurrenceId,
   replacement: RoomDeclaration,
-  command: ProjectCommand,
+  command: OccurrenceStateCommand,
 ): void {
   const context = occurrenceContext(topology, catalog, located, occurrenceId, command, replacement);
   if (context.owner === undefined || context.owner.normal.kind !== 'batch') return;
@@ -333,54 +329,9 @@ export function applyOccurrenceStateCommand(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: ProjectCommand,
-): ProjectDocument | undefined {
+  command: OccurrenceStateCommand,
+): ProjectDocument {
   switch (command.kind) {
-    case 'ReplaceFieldsCageOutcome': {
-      const current = requireTopology(located.plan, command);
-      if (
-        located.layout.progression.kind !== 'generated' ||
-        located.layout.progression.batchPolicy.kind !== 'fields'
-      ) {
-        failCommand(command, 'batch does not expose a Fields cage outcome');
-      }
-      const decision = exitDecisionForSource(current, command.decision.source);
-      if (decision?.normal.kind !== 'batch')
-        failCommand(command, 'normal-door batch does not exist');
-      if (
-        decision.normal.targets.some(
-          (target) =>
-            catalog.rooms.byKey[
-              current.occurrences.find(
-                (occurrence) => occurrence.occurrenceId === target.occurrenceId,
-              )?.gameName ?? ''
-            ]?.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
-        )
-      ) {
-        failCommand(command, 'takeover batches do not own Fields cage state');
-      }
-      if (decision.normal.batchState?.cageOutcome === command.cageOutcome) return document;
-      return updateTopology(
-        document,
-        located,
-        Object.freeze({
-          ...current,
-          decisions: Object.freeze(
-            current.decisions.map((candidate) =>
-              candidate === decision
-                ? Object.freeze({
-                    ...candidate,
-                    normal: Object.freeze({
-                      ...candidate.normal,
-                      batchState: Object.freeze({ cageOutcome: command.cageOutcome }),
-                    }),
-                  })
-                : candidate,
-            ),
-          ),
-        }),
-      );
-    }
     case 'ReplaceOccurrenceRoom': {
       const current = requireTopology(located.plan, command);
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
@@ -798,7 +749,5 @@ export function applyOccurrenceStateCommand(
         ),
       );
     }
-    default:
-      return undefined;
   }
 }

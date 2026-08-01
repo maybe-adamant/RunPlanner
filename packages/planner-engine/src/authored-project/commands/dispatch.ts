@@ -3,8 +3,9 @@ import { decodeProjectDocument } from '../codec';
 import type { ProjectDocument } from '../model';
 import { ProjectDocumentContractError } from '../validation';
 import { locateBiome, projectCommandAddress, ProjectCommandContractError } from './contract';
-import { applyProjectMetadataCommand } from './history';
-import { applyUnifiedTopologyCommand } from './unified-topology';
+import { applyOccurrenceStateCommand } from './occurrence-state';
+import { applyProjectStateCommand } from './project-state';
+import { applyTopologyCommand } from './topology';
 import type { ProjectCommand } from './types';
 
 function applyUnchecked(
@@ -12,15 +13,55 @@ function applyUnchecked(
   catalog: Catalog,
   command: ProjectCommand,
 ): ProjectDocument {
-  if (command.kind === 'RenameProject' || command.kind === 'ConfigureRoutePrefix') {
-    return applyProjectMetadataCommand(document, catalog, command);
+  switch (command.kind) {
+    case 'RenameProject':
+    case 'ConfigureRoutePrefix':
+    case 'ReplaceBiomeField':
+      return applyProjectStateCommand(document, catalog, command);
+    case 'CreateStart':
+    case 'CreateLinkedExit':
+    case 'CreateBatch':
+    case 'CreateTarget':
+    case 'CreateTakeoverBatch':
+    case 'ReplaceWithTakeoverBatch':
+    case 'ReconcileTakeoverBatch':
+    case 'ReconcileBatchExitCapacity':
+    case 'CreateHubDecision':
+    case 'OpenHubSlot':
+    case 'CloseHubSlot':
+    case 'AppendHubVisit':
+    case 'ReplaceHubVisit':
+    case 'RemoveHubVisitsFrom':
+    case 'SetExitSelection':
+    case 'RemoveExitDecision':
+    case 'ReplaceBatchRewardStore':
+    case 'ReplaceFieldsCageOutcome':
+    case 'ClearTopology':
+      return applyTopologyCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceOccurrenceRoom':
+    case 'ReplaceShipEncounterCount':
+    case 'ReplaceIncomingReward':
+    case 'ReplaceLocalReward':
+    case 'ReplaceSideRoomGeneration':
+    case 'ReplaceSideRoomEntryOrder':
+    case 'ReplaceRewardWheelOfferCount':
+    case 'ReplaceRewardWheelStore':
+    case 'ReplaceRewardWheelOffer':
+    case 'ReplaceRewardWheelPicked':
+    case 'ReplaceShopOffer':
+    case 'SetShopPurchase':
+      return applyOccurrenceStateCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
   }
-  return applyUnifiedTopologyCommand(
-    document,
-    catalog,
-    locateBiome(document, catalog, command),
-    command,
-  );
 }
 
 export function applyProjectCommand(

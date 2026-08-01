@@ -1,14 +1,14 @@
 import type { Catalog } from '../../catalog-schema';
-import { createInitialBiomeState } from '../biomeState';
+import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
 import type { ProjectDocument } from '../model';
 
-import { failCommand } from './contract';
-import type { ProjectCommand, ProjectMetadataCommand } from './types';
+import { failCommand, locateBiome, withBiome } from './contract';
+import type { ProjectStateCommand } from './types';
 
 function configureRoutePrefix(
   document: ProjectDocument,
   catalog: Catalog,
-  command: Extract<ProjectCommand, { readonly kind: 'ConfigureRoutePrefix' }>,
+  command: Extract<ProjectStateCommand, { readonly kind: 'ConfigureRoutePrefix' }>,
 ): ProjectDocument {
   const routeDeclaration = catalog.routes.byKey[command.route.routeKey];
   if (routeDeclaration === undefined) {
@@ -61,15 +61,28 @@ function configureRoutePrefix(
   };
 }
 
-export function applyProjectMetadataCommand(
+export function applyProjectStateCommand(
   document: ProjectDocument,
   catalog: Catalog,
-  command: ProjectMetadataCommand,
+  command: ProjectStateCommand,
 ): ProjectDocument {
   switch (command.kind) {
     case 'RenameProject':
       return command.name === document.name ? document : { ...document, name: command.name };
     case 'ConfigureRoutePrefix':
       return configureRoutePrefix(document, catalog, command);
+    case 'ReplaceBiomeField': {
+      const located = locateBiome(document, catalog, command);
+      return withBiome(document, located, {
+        ...located.plan,
+        state: replaceBiomeStateField(
+          located.plan.state,
+          located.layout,
+          command.field.fieldKey,
+          command.value,
+          `${command.kind}.value`,
+        ),
+      });
+    }
   }
 }
