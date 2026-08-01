@@ -143,6 +143,28 @@ describe('structured workspace interaction binding', () => {
     expect(allocations).toBe(1);
   });
 
+  it('rejects an out-of-domain start choice before allocating an occurrence', () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const project = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Underworld: 1 },
+      name: 'Invalid start binding',
+      projectId: 'invalid-start-binding',
+    });
+    let allocations = 0;
+    const interaction = bind(project, 'Underworld', 'F', () => {
+      allocations += 1;
+      return createOccurrenceId('invalid-start-binding');
+    }).interactions.starts.get(semanticAddressKey(biome));
+    if (interaction?.kind !== 'choice') throw new Error('F choice start interaction is missing');
+    const combat = catalog.rooms.byKey.F_Combat01;
+    if (combat === undefined) throw new Error('F Combat 01 is missing');
+
+    expect(() => interaction.intentFor(combat)).toThrow(
+      `F_Combat01 is outside the declared start domain for ${semanticAddressKey(biome)}`,
+    );
+    expect(allocations).toBe(0);
+  });
+
   it('binds candidate takeovers to declaration labels and their exact create command', () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
