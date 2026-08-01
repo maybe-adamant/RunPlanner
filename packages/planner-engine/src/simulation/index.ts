@@ -126,7 +126,9 @@ export {
   evaluateBiomeRewards,
   rewardStoreCandidateSupport,
   BiomeRewardSimulationContractError,
+  RewardAuthoringDomainContractError,
   type BiomeRewardSimulation,
+  type CountedRewardOwnerAddress,
   type RewardBranch,
   type RewardEvent,
   type RewardSimulation,
@@ -188,6 +190,7 @@ export {
 export {
   assertProjectEvaluationAssembly,
   assertProjectEvaluationSource,
+  countedRewardTypeDomain,
   evaluateBiome,
   ProjectSimulationContractError,
   simulateProject,

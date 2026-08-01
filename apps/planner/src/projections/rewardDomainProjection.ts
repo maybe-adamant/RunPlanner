@@ -1,6 +1,9 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ProjectCandidateEvaluation } from '@run-planner/engine/simulation';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import {
+  locallyValidRewardOffers,
+  type ResolvedRewardOffer,
+} from '@run-planner/engine/reward-kernel';
 
 export interface PreparedRewardDomainOption {
   readonly key: string;
@@ -59,55 +62,6 @@ function appendUnique(
     : Object.freeze([...offers, offer]);
 }
 
-function sourceValues(catalog: Catalog, valueDomainKey: string): readonly string[] {
-  const domain = catalog.rewards.payloadDomains.byKey[valueDomainKey];
-  if (domain?.kind !== 'oneOf') {
-    throw new Error(`Reward source domain ${valueDomainKey} is missing`);
-  }
-  return domain.values;
-}
-
-function completeOffers(catalog: Catalog, rewardType: string): readonly ResolvedRewardOffer[] {
-  const declaration = catalog.rewards.rewardTypes.byKey[rewardType];
-  if (declaration === undefined) {
-    throw new Error(`Reward type ${rewardType} is missing`);
-  }
-  if (declaration.payloadDomain === undefined) {
-    return Object.freeze([{ rewardType }]);
-  }
-  const domain = catalog.rewards.payloadDomains.byKey[declaration.payloadDomain];
-  if (domain?.kind === 'oneOf') {
-    return Object.freeze(
-      domain.values.map((source) =>
-        Object.freeze({
-          rewardType,
-          payload: Object.freeze({ kind: 'BoonSource' as const, source }),
-        }),
-      ),
-    );
-  }
-  if (domain?.kind === 'distinctPair') {
-    const values = sourceValues(catalog, domain.valueDomain);
-    return Object.freeze(
-      values.flatMap((chosenSource) =>
-        values
-          .filter((spurnedSource) => spurnedSource !== chosenSource)
-          .map((spurnedSource) =>
-            Object.freeze({
-              rewardType,
-              payload: Object.freeze({
-                kind: 'DevotionPair' as const,
-                chosenSource,
-                spurnedSource,
-              }),
-            }),
-          ),
-      ),
-    );
-  }
-  throw new Error(`${declaration.gameName} has an unknown payload domain`);
-}
-
 function option(
   key: string,
   witnesses: readonly ResolvedRewardOffer[],
@@ -125,17 +79,21 @@ function option(
 }
 
 function payloadDomain(
-  catalog: Catalog,
   selected: ResolvedRewardOffer,
   selectedOffers: readonly ResolvedRewardOffer[],
 ): PreparedRewardPayloadDomain {
-  const declaration = catalog.rewards.rewardTypes.byKey[selected.rewardType];
-  if (declaration?.payloadDomain === undefined) {
+  if (selectedOffers.every((candidate) => candidate.payload === undefined)) {
     return Object.freeze({ kind: 'none' });
   }
-  const domain = catalog.rewards.payloadDomains.byKey[declaration.payloadDomain];
-  if (domain?.kind === 'oneOf') {
-    const sources = domain.values.map((source) => {
+  if (selectedOffers.every((candidate) => candidate.payload?.kind === 'BoonSource')) {
+    const values = [
+      ...new Set(
+        selectedOffers.flatMap((candidate) =>
+          candidate.payload?.kind === 'BoonSource' ? [candidate.payload.source] : [],
+        ),
+      ),
+    ];
+    const sources = values.map((source) => {
       const witness = selectedOffers.filter(
         (candidate) =>
           candidate.payload?.kind === 'BoonSource' && candidate.payload.source === source,
@@ -150,10 +108,18 @@ function payloadDomain(
     });
     return Object.freeze({ kind: 'oneOf', sources: Object.freeze(sources) });
   }
-  if (domain?.kind !== 'distinctPair') {
-    throw new Error(`${declaration.gameName} has an unknown payload domain`);
+  if (!selectedOffers.every((candidate) => candidate.payload?.kind === 'DevotionPair')) {
+    throw new Error(`${selected.rewardType} has inconsistent complete offers`);
   }
-  const values = sourceValues(catalog, domain.valueDomain);
+  const values = [
+    ...new Set(
+      selectedOffers.flatMap((candidate) =>
+        candidate.payload?.kind === 'DevotionPair'
+          ? [candidate.payload.chosenSource, candidate.payload.spurnedSource]
+          : [],
+      ),
+    ),
+  ];
   const selectedPair = selected.payload?.kind === 'DevotionPair' ? selected.payload : undefined;
   const chosenSources = values.map((source) => {
     let witnesses: readonly ResolvedRewardOffer[] = selectedOffers.filter(
@@ -209,7 +175,7 @@ export function prepareRewardDomain(
   selected: ResolvedRewardOffer,
 ): PreparedRewardDomain {
   const types = rewardTypes.map((rewardType) => {
-    let witnesses = completeOffers(catalog, rewardType);
+    let witnesses = locallyValidRewardOffers(catalog.rewards, rewardType);
     if (rewardType === selected.rewardType) {
       witnesses = appendUnique(witnesses, selected);
     }
@@ -219,7 +185,7 @@ export function prepareRewardDomain(
     types.push(
       option(
         selected.rewardType,
-        appendUnique(completeOffers(catalog, selected.rewardType), selected),
+        appendUnique(locallyValidRewardOffers(catalog.rewards, selected.rewardType), selected),
         selected,
       ),
     );
@@ -230,7 +196,7 @@ export function prepareRewardDomain(
   }
   return Object.freeze({
     types: Object.freeze(types),
-    payload: payloadDomain(catalog, selected, selectedType.witnesses),
+    payload: payloadDomain(selected, selectedType.witnesses),
   });
 }
 

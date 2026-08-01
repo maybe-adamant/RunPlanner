@@ -4,6 +4,7 @@ import {
   type BiomeAddress,
   type SemanticAddress,
 } from '../authored-project/addresses';
+import type { CountedRewardBinding } from '../reward-kernel';
 import type {
   AuthoredBiomePlan,
   AuthoredRoutePlan,
@@ -35,7 +36,12 @@ import {
   evaluateProgressiveBiomeAssembly,
   type BiomeGenerationValidation,
 } from './progressive/biome';
-import { evaluateBiomeRewardsAssembly, type BiomeRewardSimulation } from './rewards';
+import { evaluateBiomeRewardsAssembly } from './rewards/biome';
+import type { BiomeRewardSimulation } from './rewards/model';
+import {
+  resolveCountedRewardTypeDomain,
+  type CountedRewardOwnerAddress,
+} from './rewards/authoring-domain';
 import type { RewardProducerCandidateArtifacts } from './rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from './rewards/lifecycle-artifacts';
 
@@ -266,6 +272,26 @@ export function candidateArtifactsForProjectEvaluationAssembly(
     throw new ProjectSimulationContractError('candidate artifact access is not initialized');
   }
   return candidateArtifacts(requireExactProjectEvaluationAssembly(assembly));
+}
+
+/** Exact-assembly entry point for one synchronous counted-reward authoring domain. */
+export function countedRewardTypeDomain(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  owner: CountedRewardOwnerAddress,
+  binding: CountedRewardBinding,
+): readonly string[] {
+  const candidateArtifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
+  const evaluatedProducer = candidateArtifacts
+    .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
+    ?.rewardProducers.at(owner);
+  return resolveCountedRewardTypeDomain(
+    catalog,
+    assembly.project,
+    owner,
+    binding,
+    evaluatedProducer,
+  );
 }
 
 interface BiomeProjectEvaluationAssembly {

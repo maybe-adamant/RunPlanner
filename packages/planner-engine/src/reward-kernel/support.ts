@@ -36,6 +36,55 @@ function sourceDomainValues(
   throw new Error(`${rewardType.gameName} has no normalized source domain`);
 }
 
+/**
+ * Enumerates every complete offer admitted by one reward type's normalized
+ * local payload domain. Contextual source, peer, bag, and history support is
+ * deliberately evaluated later by the reward simulation.
+ */
+export function locallyValidRewardOffers(
+  catalog: RewardKernelCatalog,
+  rewardTypeGameName: string,
+): readonly ResolvedRewardOffer[] {
+  const rewardType = catalog.rewardTypes.byKey[rewardTypeGameName];
+  if (rewardType === undefined) {
+    throw new Error(`reward type ${rewardTypeGameName} is missing`);
+  }
+  if (rewardType.payloadDomain === undefined) {
+    return Object.freeze([Object.freeze({ rewardType: rewardType.gameName })]);
+  }
+  const domain = catalog.payloadDomains.byKey[rewardType.payloadDomain];
+  if (domain?.kind === 'oneOf') {
+    return Object.freeze(
+      domain.values.map((source) =>
+        Object.freeze({
+          rewardType: rewardType.gameName,
+          payload: Object.freeze({ kind: 'BoonSource' as const, source }),
+        }),
+      ),
+    );
+  }
+  if (domain?.kind !== 'distinctPair') {
+    throw new Error(`${rewardType.gameName} has no normalized payload domain`);
+  }
+  const values = sourceDomainValues(catalog, rewardType);
+  return Object.freeze(
+    values.flatMap((chosenSource) =>
+      values
+        .filter((spurnedSource) => spurnedSource !== chosenSource)
+        .map((spurnedSource) =>
+          Object.freeze({
+            rewardType: rewardType.gameName,
+            payload: Object.freeze({
+              kind: 'DevotionPair' as const,
+              chosenSource,
+              spurnedSource,
+            }),
+          }),
+        ),
+    ),
+  );
+}
+
 export function ordinarySourceGameNames(catalog: RewardKernelCatalog): readonly string[] {
   const ordinaryType = catalog.rewardTypes.values.find(
     (rewardType) =>

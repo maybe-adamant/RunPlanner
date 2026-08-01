@@ -1,8 +1,6 @@
 import {
+  countedRewardTypeDomain,
   createPreparedProjectCandidateSession,
-  type CanonicalAuthoredRoom,
-  type CanonicalBiome,
-  type MaterializedBiomePrefix,
   type CandidateEvaluationEvent,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
@@ -259,155 +257,6 @@ async function projectOptionsCooperatively<T>(
   return result;
 }
 
-function authoredRooms(
-  snapshot: CanonicalBiome | MaterializedBiomePrefix,
-): readonly CanonicalAuthoredRoom[] {
-  const rooms: CanonicalAuthoredRoom[] = [];
-  if (snapshot.entryRoom !== undefined) rooms.push(snapshot.entryRoom);
-  for (const decision of snapshot.decisions) {
-    switch (decision.kind) {
-      case 'linkedExit':
-        rooms.push(decision.target.room);
-        break;
-      case 'batch':
-        rooms.push(...decision.targets.map((target) => target.room));
-        break;
-      case 'hub':
-        rooms.push(...decision.board.targets.map((target) => target.room));
-        break;
-    }
-  }
-  if (snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision') {
-    rooms.push(...(snapshot.frontier.partialBatch?.targets.map((target) => target.room) ?? []));
-  }
-  return rooms;
-}
-
-function materializedBiome(
-  evaluation: ProjectEvaluation,
-  owner: CountedRewardCandidateOwner,
-): CanonicalBiome | MaterializedBiomePrefix | undefined {
-  const biome = evaluation.routes
-    .find((route) => route.routeKey === owner.address.routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === owner.address.biomeKey);
-  if (biome === undefined) return undefined;
-  if (biome.authoring === 'complete') return biome.snapshot;
-  return 'materializedPrefix' in biome ? biome.materializedPrefix : undefined;
-}
-
-function resolvedCountedStoreKey(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  owner: CountedRewardCandidateOwner,
-  binding: CountedRewardBinding,
-): string {
-  const snapshot = materializedBiome(evaluation, owner);
-  const room =
-    snapshot === undefined
-      ? undefined
-      : authoredRooms(snapshot).find((candidate) => {
-          if (owner.kind === 'incomingReward') {
-            return (
-              semanticAddressKey(candidate.incomingReward?.origin ?? candidate.origin) ===
-              semanticAddressKey(owner.address)
-            );
-          }
-          if (owner.kind === 'localReward') {
-            return candidate.localRewards?.some(
-              (reward) => semanticAddressKey(reward.origin) === semanticAddressKey(owner.address),
-            );
-          }
-          return candidate.rewardWheels?.some((wheel) =>
-            wheel.offers.some(
-              (offer) => semanticAddressKey(offer.origin) === semanticAddressKey(owner.address),
-            ),
-          );
-        });
-  const materializedStoreKey =
-    owner.kind === 'incomingReward'
-      ? room?.incomingReward?.resolvedStoreKey
-      : owner.kind === 'localReward'
-        ? room?.localRewards?.find(
-            (reward) => semanticAddressKey(reward.origin) === semanticAddressKey(owner.address),
-          )?.resolvedStoreKey
-        : room?.rewardWheels?.find((wheel) =>
-            wheel.offers.some(
-              (offer) => semanticAddressKey(offer.origin) === semanticAddressKey(owner.address),
-            ),
-          )?.storeKey;
-  const plan = project.routes
-    .find((route) => route.routeKey === owner.address.routeKey)
-    ?.biomes.find((candidate) => candidate.biomeKey === owner.address.biomeKey);
-  const occurrence = plan?.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === owner.address.occurrenceId,
-  );
-  const declaration =
-    occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName];
-  const authoredStoreKey = (() => {
-    if (owner.kind === 'rewardWheelOffer') {
-      return occurrence?.state.kind === 'shipCombat'
-        ? occurrence.state.wheels[owner.address.wheelKey]?.storeKey
-        : undefined;
-    }
-    if (owner.kind === 'localReward') {
-      const group = declaration?.localChildren.find(
-        (candidate) => candidate.key === owner.address.groupKey,
-      );
-      if (group?.kind === 'fixedRoomSlots') {
-        const slot = group.slots.find((candidate) => candidate.slotKey === owner.address.slotKey);
-        const sideRoom = slot === undefined ? undefined : catalog.rooms.byKey[slot.roomGameName];
-        return sideRoom?.forcedRewardStoreKey ?? sideRoom?.individualRewardStoreKey;
-      }
-      return declaration?.individualRewardStoreKey;
-    }
-    const creatingBatch = plan?.topology?.decisions.find(
-      (decision) =>
-        decision.kind === 'exit' &&
-        decision.normal.kind === 'batch' &&
-        decision.normal.targets.some(
-          (target) => target.occurrenceId === owner.address.occurrenceId,
-        ),
-    );
-    const batchStore =
-      creatingBatch?.kind === 'exit' && creatingBatch.normal.kind === 'batch'
-        ? creatingBatch.normal.rewardStore.kind === 'authoredBaseStore'
-          ? (creatingBatch.normal.rewardStore.baseRewardStoreKey ?? undefined)
-          : undefined
-        : undefined;
-    return declaration?.forcedRewardStoreKey ?? declaration?.individualRewardStoreKey ?? batchStore;
-  })();
-  const storeKey = materializedStoreKey ?? authoredStoreKey;
-  if (storeKey === undefined || !binding.storeKeys.includes(storeKey)) {
-    throw new Error(
-      `reward producer ${semanticAddressKey(owner.address)} has no resolved declaration-owned store`,
-    );
-  }
-  return storeKey;
-}
-
-function countedRewardTypeDomain(
-  catalog: Catalog,
-  binding: CountedRewardBinding,
-  storeKey: string,
-  selectedRewardType: string,
-): readonly string[] {
-  const store = catalog.rewards.stores.byKey[storeKey];
-  if (store === undefined) throw new Error(`reward producer resolved unknown store ${storeKey}`);
-  const seen = new Set<string>();
-  const rewardTypes = store.entries.flatMap((entry) => {
-    if (!binding.allowedRewardTypes.includes(entry.rewardType) || seen.has(entry.rewardType))
-      return [];
-    seen.add(entry.rewardType);
-    return [entry.rewardType];
-  });
-  if (!seen.has(selectedRewardType)) rewardTypes.push(selectedRewardType);
-  if (rewardTypes.length === 0) {
-    throw new Error(`reward producer store ${storeKey} has no selectable reward types`);
-  }
-  return Object.freeze(rewardTypes);
-}
-
 export function createCandidateSessionFactory(
   catalog: Catalog,
   options: CandidateSessionFactoryOptions = {},
@@ -453,14 +302,15 @@ export function createCandidateSessionFactory(
       projectCache = new Map();
       rewardTypeDomainCache.set(assembly, projectCache);
     }
-    const { evaluation, project } = assembly;
-    const storeKey = resolvedCountedStoreKey(catalog, project, evaluation, owner, binding);
-    const key = `reward-types:${semanticAddressKey(owner.address)}:${storeKey}:${selectedRewardType}`;
+    const selectable = countedRewardTypeDomain(catalog, assembly, owner.address, binding);
+    const key = `reward-types:${semanticAddressKey(owner.address)}:${domainKey(selectable)}:${selectedRewardType}`;
     const existing = projectCache.get(key);
     if (existing !== undefined) {
       return existing;
     }
-    const domain = countedRewardTypeDomain(catalog, binding, storeKey, selectedRewardType);
+    const domain = selectable.includes(selectedRewardType)
+      ? selectable
+      : Object.freeze([...selectable, selectedRewardType]);
     projectCache.set(key, domain);
     return domain;
   };

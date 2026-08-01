@@ -14,6 +14,7 @@ import {
   factsWithHistory,
   findShopGenerationWitnesses,
   isOfferSupportedAtResolutionPoint,
+  locallyValidRewardOffers,
   resolveAcquisitionRole,
   simulateShopPurchases,
   supportedPayloads,
@@ -191,6 +192,60 @@ describe('source support', () => {
         acquisitionRole: 'hiddenSource',
       }),
     ).toBe(false);
+  });
+});
+
+describe('locally valid complete offer domains', () => {
+  it('enumerates payload-free, one-source, and ordered distinct-pair offers in declaration order', () => {
+    expect(locallyValidRewardOffers(rewardKernelCatalog, 'MaxHealthDrop')).toEqual([
+      { rewardType: 'MaxHealthDrop' },
+    ]);
+
+    const sources = locallyValidRewardOffers(rewardKernelCatalog, 'Boon');
+    expect(sources.map((offer) => offer.payload)).toEqual(
+      rewardKernelCatalog.payloadDomains.byKey.BoonSource?.kind === 'oneOf'
+        ? rewardKernelCatalog.payloadDomains.byKey.BoonSource.values.map((source) => ({
+            kind: 'BoonSource',
+            source,
+          }))
+        : [],
+    );
+
+    const devotion = locallyValidRewardOffers(rewardKernelCatalog, 'Devotion');
+    expect(devotion).toHaveLength(72);
+    expect(devotion.slice(0, 3)).toEqual([
+      {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'AphroditeUpgrade',
+          spurnedSource: 'ApolloUpgrade',
+        },
+      },
+      {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'AphroditeUpgrade',
+          spurnedSource: 'AresUpgrade',
+        },
+      },
+      {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'AphroditeUpgrade',
+          spurnedSource: 'DemeterUpgrade',
+        },
+      },
+    ]);
+    expect(
+      devotion.every(
+        (offer) =>
+          offer.payload?.kind === 'DevotionPair' &&
+          offer.payload.chosenSource !== offer.payload.spurnedSource,
+      ),
+    ).toBe(true);
   });
 });
 

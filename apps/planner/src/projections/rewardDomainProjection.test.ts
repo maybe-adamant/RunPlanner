@@ -68,7 +68,6 @@ describe('relational reward domain projection', () => {
       })),
     );
 
-    expect(offers).toHaveLength(72);
     expect(prepared.payload.kind).toBe('distinctPair');
     if (prepared.payload.kind !== 'distinctPair' || projected.payload.kind !== 'distinctPair') {
       throw new Error('Devotion did not produce a paired domain');
@@ -77,6 +76,7 @@ describe('relational reward domain projection', () => {
       prepared.payload.chosenSources.find((option) => option.key === 'ApolloUpgrade')?.witnesses,
     ).toHaveLength(8);
     expect(prepared.payload.chosenSources).toHaveLength(9);
+    expect(prepared.payload.spurnedSources).toHaveLength(8);
     expect(
       prepared.payload.chosenSources.find((option) => option.key === 'AresUpgrade')?.witnesses,
     ).toHaveLength(8);
@@ -105,6 +105,19 @@ describe('relational reward domain projection', () => {
     ).toMatchObject({
       offer: selected,
       evaluation: { kind: 'incomingReward', result: { supported: false } },
+    });
+    expect(
+      projected.payload.spurnedSources.find((option) => option.key === 'ZeusUpgrade'),
+    ).toMatchObject({
+      key: 'ZeusUpgrade',
+      offer: {
+        rewardType: 'Devotion',
+        payload: {
+          kind: 'DevotionPair',
+          chosenSource: 'AphroditeUpgrade',
+          spurnedSource: 'ZeusUpgrade',
+        },
+      },
     });
   });
 });

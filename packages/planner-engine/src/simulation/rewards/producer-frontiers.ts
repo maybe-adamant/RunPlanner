@@ -19,6 +19,7 @@ export type RewardProducerOwnerAddress =
   IncomingRewardAddress | LocalRewardAddress | RewardWheelOfferAddress | ShopOfferAddress;
 
 export interface RewardProducerCandidateCapability {
+  readonly resolvedStoreKey?: string;
   readonly evaluateOffer: (
     owner: RewardProducerOwnerAddress,
     offer: ResolvedRewardOffer,
@@ -61,7 +62,15 @@ export function createRewardProducerCandidateArtifacts(
 ): RewardProducerCandidateArtifacts {
   const privateFrontiers = new Map<string, RewardProducerCandidateCapability>();
   for (const [key, frontier] of frontiers) {
-    privateFrontiers.set(key, Object.freeze({ evaluateOffer: frontier.evaluateOffer }));
+    privateFrontiers.set(
+      key,
+      Object.freeze({
+        evaluateOffer: frontier.evaluateOffer,
+        ...(frontier.resolvedStoreKey === undefined
+          ? {}
+          : { resolvedStoreKey: frontier.resolvedStoreKey }),
+      }),
+    );
   }
   return Object.freeze({
     at: (owner: RewardProducerOwnerAddress) => privateFrontiers.get(semanticAddressKey(owner)),

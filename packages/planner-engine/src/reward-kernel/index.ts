@@ -25,6 +25,7 @@ export {
 export {
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
+  locallyValidRewardOffers,
   ordinarySourceGameNames,
   supportedPayloads,
 } from './support';

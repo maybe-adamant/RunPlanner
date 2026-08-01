@@ -102,7 +102,8 @@ describe('candidate projection', () => {
 
   it('uses materialized resolved stores for counted reward domains', () => {
     const project = createGoldenFGHIProject();
-    const session = createCandidateSessionFactory(catalog).bind(
+    const observeCandidateEvaluation = vi.fn();
+    const session = createCandidateSessionFactory(catalog, { observeCandidateEvaluation }).bind(
       simulateProjectAssembly(catalog, project),
     );
     const occurrence = fPlan(project).topology!.occurrences.find(
@@ -126,6 +127,7 @@ describe('candidate projection', () => {
 
     expect(domain).toContain(occurrence.state.offer.rewardType);
     expect(domain).not.toContain('MetaCurrencyDrop');
+    expect(observeCandidateEvaluation).not.toHaveBeenCalled();
   });
 
   it('keeps takeovers source-owned and evaluates their one batch candidate', () => {
