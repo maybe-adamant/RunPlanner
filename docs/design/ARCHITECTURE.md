@@ -180,7 +180,9 @@ injection boundary. An `index.ts` exists only for a deliberate supported module
 surface, while an assembly or composition module owns wiring. The engine keeps
 its direct internal relative imports unless a separate boundary change justifies
 an internal API; it must not route internal dependencies through public barrels
-merely to shorten a path.
+merely to shorten a path. Planner aliases are scoped to the planner compiler
+configuration and are forbidden from pure package source. Pure packages use
+static imports so their dependency boundaries remain enforceable.
 
 Mechanically observable import and placement rules belong in TypeScript,
 ESLint, or focused architecture checks as well as this document. Tests should

@@ -3,7 +3,12 @@
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "@planner/*": ["./src/*"],
+      "@planner-test/*": ["./test/*"],
+      "@run-planner/test-fixtures": ["../../test/fixtures/authored-project/index.ts"]
+    }
   },
   "include": ["src", "test", "vite.config.ts"]
 }
