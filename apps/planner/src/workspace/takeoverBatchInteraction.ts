@@ -4,7 +4,7 @@ import type {
   ProjectCommand,
 } from '@run-planner/engine/authored-project';
 
-import { allocateOccurrenceId } from './occurrenceIds';
+import type { OccurrenceIdFactory } from './occurrenceIds';
 
 export type TakeoverBatchAction = 'create' | 'replace' | 'reconcile';
 
@@ -17,6 +17,7 @@ export type TakeoverBatchCommand = Extract<
 
 interface CreateTakeoverBatchCommandInput {
   readonly action: TakeoverBatchAction;
+  readonly allocateOccurrenceId: OccurrenceIdFactory;
   readonly decision: ExitDecisionAddress;
   readonly existingTargetOccurrenceIds: ReadonlyMap<string, OccurrenceId>;
   readonly gameName: string;
@@ -31,6 +32,7 @@ interface CreateTakeoverBatchCommandInput {
  */
 export function createTakeoverBatchCommand({
   action,
+  allocateOccurrenceId,
   decision,
   existingTargetOccurrenceIds,
   gameName,

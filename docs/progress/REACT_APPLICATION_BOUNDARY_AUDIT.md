@@ -846,6 +846,29 @@ repository gate remains the Gate C checkpoint requirement.
 - delete the unused linked-exit `targetGameName` interaction field once binding
   owns command construction.
 
+**Status — complete (2026-08-01).** Structural binding now supplies a complete
+before-focus `CreateBatch` intent and a lazy, injected-identity
+`CreateLinkedExit` intent with after-focus on its new occurrence. Candidate
+takeover create and replace, fixed-width takeover creation, and takeover repair
+now likewise return complete before-focus intents. Their candidate evidence,
+explanations, disabled states, and lazy evaluation behavior remain unchanged.
+
+`createTakeoverBatchCommand` receives the named injected occurrence-ID factory
+from binding rather than importing an ambient allocator. The completed-Hub
+handoff retains its existing public execution shape for C4, while its underlying
+constructor already receives that factory. The dead linked-exit `targetGameName`
+is removed from topology assembly, requirements, and bound interaction products.
+`DecisionWorkbench` no longer constructs C3 commands, allocates linked-exit
+identities, or rebuilds creation focus.
+
+Binding tests own exact normal-batch, linked-exit, candidate create/replace,
+fixed-width, and repair/reconcile intent shapes, including injected-ID laziness
+and preservation of existing takeover targets. Visible linked-exit and
+candidate-takeover flows retain focus, one-history-entry, and Undo witnesses.
+Focused C3 validation passed 5 files / 58 tests, typecheck, and the planner
+lane (43 files / 294 tests). The complete repository gate remains the Gate C
+checkpoint requirement.
+
 #### C4: Hub semantic commands
 
 - bind Hub visit append/replace/remove, board creation, slot opening, and the

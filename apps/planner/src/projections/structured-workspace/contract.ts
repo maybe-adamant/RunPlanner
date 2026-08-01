@@ -205,14 +205,19 @@ export type WorkspaceStartInteraction =
 export type WorkspaceStructuralInteraction =
   | {
       readonly action: 'createBatch';
+      readonly intent: WorkspaceCommandIntent<
+        Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
+      >;
       readonly key: string;
       readonly owner: ExitDecisionAddress;
     }
   | {
       readonly action: 'createLinkedExit';
+      readonly intent: () => WorkspaceCommandIntent<
+        Extract<ProjectCommand, { readonly kind: 'CreateLinkedExit' }>
+      >;
       readonly key: string;
       readonly owner: ExitDecisionAddress;
-      readonly targetGameName: string;
     }
   | {
       readonly action: 'createHubDecision';
@@ -286,13 +291,13 @@ interface WorkspaceTakeoverBatchInteractionBase {
 
 export interface WorkspaceCandidateTakeoverBatchInteraction extends WorkspaceTakeoverBatchInteractionBase {
   readonly presentation: 'candidate';
-  readonly commandFor: (candidate: WorkspaceTakeoverCandidate) => TakeoverBatchCommand;
+  readonly intentFor: (candidate: WorkspaceTakeoverCandidate) => WorkspaceTakeoverCommandIntent;
   readonly selected?: WorkspaceTakeoverCandidate;
   readonly load: () => readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[];
 }
 
 export type WorkspaceFixedWidthOneTakeoverActionResult =
-  | { readonly kind: 'command'; readonly command: TakeoverBatchCommand }
+  | { readonly kind: 'intent'; readonly intent: WorkspaceTakeoverCommandIntent }
   | { readonly kind: 'unavailable'; readonly message: string };
 
 export interface WorkspaceFixedWidthOneTakeoverInteraction extends WorkspaceTakeoverBatchInteractionBase {
@@ -312,7 +317,7 @@ export interface WorkspaceCompletedHubHandoffInteraction extends WorkspaceTakeov
 
 export interface WorkspaceTakeoverRepairInteraction extends WorkspaceTakeoverBatchInteractionBase {
   readonly action: 'reconcile';
-  readonly execute: () => TakeoverBatchCommand;
+  readonly intent: () => WorkspaceTakeoverCommandIntent;
   readonly label: string;
   readonly presentation: 'repair';
 }
@@ -322,6 +327,8 @@ export type WorkspaceTakeoverBatchInteraction =
   | WorkspaceFixedWidthOneTakeoverInteraction
   | WorkspaceCompletedHubHandoffInteraction
   | WorkspaceTakeoverRepairInteraction;
+
+type WorkspaceTakeoverCommandIntent = WorkspaceCommandIntent<TakeoverBatchCommand>;
 
 export interface WorkspaceTakeoverCandidate {
   readonly gameName: string;

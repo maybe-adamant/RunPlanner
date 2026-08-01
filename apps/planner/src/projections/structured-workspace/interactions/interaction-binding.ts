@@ -1,4 +1,5 @@
 import {
+  createBiomeAddress,
   createOccurrenceAddress,
   semanticAddressKey,
   type ExitDecisionAddress,
@@ -21,10 +22,7 @@ import {
   roomSelectorCategories,
   selectRoomsForTargetCategory,
 } from '@planner/projections/roomSelectorProjection';
-import {
-  createTakeoverBatchCommand,
-  type TakeoverBatchCommand,
-} from '@planner/workspace/takeoverBatchInteraction';
+import { createTakeoverBatchCommand } from '@planner/workspace/takeoverBatchInteraction';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
@@ -542,6 +540,7 @@ function bindStartInteractions(
 }
 
 function bindTakeoverBatchInteractions(
+  allocateOccurrenceId: OccurrenceIdFactory,
   catalog: Catalog,
   candidates: CandidateProjectionSession,
   requirements: Iterable<WorkspaceTakeoverInteractionRequirement>,
@@ -588,7 +587,7 @@ function bindTakeoverBatchInteractions(
           key,
           Object.freeze({
             action: requirement.action,
-            commandFor(selection: WorkspaceTakeoverCandidate): TakeoverBatchCommand {
+            intentFor(selection: WorkspaceTakeoverCandidate) {
               const candidate = load().find(
                 (option) => option.value.gameName === selection.gameName,
               );
@@ -600,12 +599,16 @@ function bindTakeoverBatchInteractions(
                   `Takeover candidate ${selection.gameName} is not currently applicable.`,
                 );
               }
-              return createTakeoverBatchCommand({
-                action: requirement.action,
-                decision: requirement.owner,
-                existingTargetOccurrenceIds,
-                gameName: selection.gameName,
-                requiredExitKeys: candidate.evaluation.result.requiredExitKeys,
+              return Object.freeze({
+                command: createTakeoverBatchCommand({
+                  action: requirement.action,
+                  allocateOccurrenceId,
+                  decision: requirement.owner,
+                  existingTargetOccurrenceIds,
+                  gameName: selection.gameName,
+                  requiredExitKeys: candidate.evaluation.result.requiredExitKeys,
+                }),
+                focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
               });
             },
             ...(requirement.impact === undefined ? {} : { impact: requirement.impact }),
@@ -624,13 +627,17 @@ function bindTakeoverBatchInteractions(
           key,
           Object.freeze({
             action: 'reconcile' as const,
-            execute: () =>
-              createTakeoverBatchCommand({
-                action: 'reconcile',
-                decision: requirement.owner,
-                existingTargetOccurrenceIds,
-                gameName: requirement.gameName,
-                requiredExitKeys: requirement.requiredExitKeys,
+            intent: () =>
+              Object.freeze({
+                command: createTakeoverBatchCommand({
+                  action: 'reconcile',
+                  allocateOccurrenceId,
+                  decision: requirement.owner,
+                  existingTargetOccurrenceIds,
+                  gameName: requirement.gameName,
+                  requiredExitKeys: requirement.requiredExitKeys,
+                }),
+                focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
               }),
             key,
             label: candidate.label,
@@ -675,13 +682,17 @@ function bindTakeoverBatchInteractions(
                 });
               }
               return Object.freeze({
-                kind: 'command' as const,
-                command: createTakeoverBatchCommand({
-                  action: 'create',
-                  decision: requirement.owner,
-                  existingTargetOccurrenceIds: new Map(),
-                  gameName: requirement.gameName,
-                  requiredExitKeys: requirement.requiredExitKeys,
+                kind: 'intent' as const,
+                intent: Object.freeze({
+                  command: createTakeoverBatchCommand({
+                    action: 'create',
+                    allocateOccurrenceId,
+                    decision: requirement.owner,
+                    existingTargetOccurrenceIds: new Map(),
+                    gameName: requirement.gameName,
+                    requiredExitKeys: requirement.requiredExitKeys,
+                  }),
+                  focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
                 }),
               });
             },
@@ -702,6 +713,7 @@ function bindTakeoverBatchInteractions(
             execute: () =>
               createTakeoverBatchCommand({
                 action: 'create',
+                allocateOccurrenceId,
                 decision: requirement.owner,
                 existingTargetOccurrenceIds: new Map(),
                 gameName: requirement.gameName,
@@ -725,6 +737,7 @@ interface WorkspaceFrontierInteractionCatalog {
 }
 
 function bindFrontierInteractions(
+  allocateOccurrenceId: OccurrenceIdFactory,
   requirements: Iterable<WorkspaceFrontierInteractionRequirement>,
   takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>,
 ): WorkspaceFrontierInteractionCatalog {
@@ -771,6 +784,13 @@ function bindFrontierInteractions(
             bindStructural(
               Object.freeze({
                 action: 'createBatch' as const,
+                intent: Object.freeze({
+                  command: Object.freeze({
+                    decision: requirement.owner,
+                    kind: 'CreateBatch' as const,
+                  }),
+                  focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
+                }),
                 key,
                 owner: requirement.owner,
               }),
@@ -780,9 +800,25 @@ function bindFrontierInteractions(
             bindStructural(
               Object.freeze({
                 action: 'createLinkedExit' as const,
+                intent: () => {
+                  const occurrenceId = allocateOccurrenceId();
+                  return Object.freeze({
+                    command: Object.freeze({
+                      decision: requirement.owner,
+                      kind: 'CreateLinkedExit' as const,
+                      occurrenceId,
+                    }),
+                    focus: Object.freeze({
+                      owner: createOccurrenceAddress(
+                        createBiomeAddress(requirement.owner.routeKey, requirement.owner.biomeKey),
+                        occurrenceId,
+                      ),
+                      timing: 'after' as const,
+                    }),
+                  });
+                },
                 key,
                 owner: requirement.owner,
-                targetGameName: requirement.structural.targetGameName,
               }),
             );
             break;
@@ -856,11 +892,13 @@ export function bindWorkspaceInteractions(
     startInteractionRequirements.values(),
   );
   const takeoverBatches = bindTakeoverBatchInteractions(
+    allocateOccurrenceId,
     catalog,
     candidates,
     takeoverInteractionRequirements.values(),
   );
   const { exitFrontierCapabilities, structural } = bindFrontierInteractions(
+    allocateOccurrenceId,
     frontierInteractionRequirements.values(),
     takeoverBatches,
   );
