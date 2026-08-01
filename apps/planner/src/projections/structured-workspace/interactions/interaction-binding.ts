@@ -11,10 +11,15 @@ import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schem
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 
-import type {
-  CandidateOptionProjection,
-  CandidateProjectionSession,
+import {
+  candidateSupport,
+  type CandidateOptionProjection,
+  type CandidateProjectionSession,
 } from '@planner/projections/candidateProjection';
+/*
+ * Candidate support is interpreted here, at the binding boundary that owns
+ * semantic applicability. React consumes the already-bound capability.
+ */
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import { explainCandidateEvaluation } from '@planner/projections/contextualOptions';
 import {
@@ -34,6 +39,7 @@ import type {
   WorkspaceExitSelectionInteraction,
   WorkspaceFixedWidthOneTakeoverActionResult,
   WorkspaceHubSlotInteraction,
+  WorkspaceHubVisitInteraction,
   WorkspaceInteractionCatalog,
   WorkspaceInteractionChoice,
   WorkspaceRewardControl,
@@ -374,15 +380,26 @@ function bindBatchInteractions(
 
 interface WorkspaceHubInteractionCatalog {
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
-  readonly hubVisits: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
+  readonly hubVisits: ReadonlyMap<string, WorkspaceHubVisitInteraction>;
 }
 
 function bindHubInteractions(
+  allocateOccurrenceId: OccurrenceIdFactory,
   candidates: CandidateProjectionSession,
   requirements: Iterable<WorkspaceHubInteractionRequirement>,
 ): WorkspaceHubInteractionCatalog {
   const hubSlots = new Map<string, WorkspaceHubSlotInteraction>();
-  const hubVisits = new Map<string, WorkspaceCandidateInteraction<string>>();
+  const hubVisits = new Map<string, WorkspaceHubVisitInteraction>();
+  const assertCandidateMayBeAuthored = <T>(
+    options: readonly CandidateOptionProjection<T>[],
+    value: T,
+    label: string,
+  ): void => {
+    const option = options.find((candidate) => Object.is(candidate.value, value));
+    if (option === undefined || candidateSupport(option) === 'impossible') {
+      throw new StructuredWorkspaceProjectionContractError(`${label} is not currently authorable.`);
+    }
+  };
   for (const requirement of requirements) {
     for (const slot of requirement.slots) {
       const key = semanticAddressKey(slot.owner);
@@ -392,27 +409,72 @@ function bindHubInteractions(
         );
       }
       const values = Object.freeze(slot.choices.map((choice) => choice.value));
+      if (!slot.selected) {
+        hubSlots.set(
+          key,
+          Object.freeze({
+            beginOpeningAttempt: () => {
+              const proposedOccurrenceId = allocateOccurrenceId();
+              let loaded: readonly CandidateOptionProjection<boolean>[] | undefined;
+              const load = () =>
+                (loaded ??= candidates.hubSlots(slot.owner, proposedOccurrenceId, values));
+              return Object.freeze({
+                choices: slot.choices,
+                intentFor: (open: true) => {
+                  assertCandidateMayBeAuthored(load(), open, `Hub slot ${key} opening`);
+                  return Object.freeze({
+                    command: Object.freeze({
+                      kind: 'OpenHubSlot' as const,
+                      occurrenceId: proposedOccurrenceId,
+                      slot: slot.owner,
+                    }),
+                    focus: Object.freeze({ owner: slot.owner, timing: 'before' as const }),
+                  });
+                },
+                key: `${key}:opening:${proposedOccurrenceId}`,
+                load,
+                owner: slot.owner,
+                selected: false,
+              });
+            },
+            key,
+            owner: slot.owner,
+            selected: false as const,
+          }),
+        );
+        continue;
+      }
+      const closeRequirement = slot.close;
+      const close =
+        closeRequirement === undefined
+          ? undefined
+          : (() => {
+              let loaded: readonly CandidateOptionProjection<boolean>[] | undefined;
+              const load = () =>
+                (loaded ??= candidates.hubSlots(slot.owner, slot.openedOccurrenceId, values));
+              return Object.freeze({
+                choices: slot.choices,
+                impact: closeRequirement.impact,
+                intentFor: (open: false) => {
+                  assertCandidateMayBeAuthored(load(), open, `Hub slot ${key} closure`);
+                  return Object.freeze({
+                    command: closeRequirement.command,
+                    focus: Object.freeze({ owner: slot.owner, timing: 'before' as const }),
+                  });
+                },
+                key: `${key}:close`,
+                load,
+                owner: slot.owner,
+                selected: true,
+              });
+            })();
       hubSlots.set(
         key,
         Object.freeze({
-          bind: (proposedOccurrenceId: OccurrenceId) =>
-            candidateInteraction(
-              slot.owner,
-              slot.choices,
-              slot.selected,
-              () =>
-                candidates.hubSlots(
-                  slot.owner,
-                  slot.openedOccurrenceId ?? proposedOccurrenceId,
-                  values,
-                ),
-              `${key}:proposed:${proposedOccurrenceId}`,
-            ),
-          ...(slot.close === undefined ? {} : { close: slot.close }),
+          ...(close === undefined ? {} : { close }),
           key,
           owner: slot.owner,
-          roomGameName: slot.roomGameName,
-          selected: slot.selected,
+          selected: true as const,
         }),
       );
     }
@@ -424,11 +486,37 @@ function bindHubInteractions(
         );
       }
       const values = Object.freeze(visit.choices.map((choice) => choice.value));
+      let loaded: readonly CandidateOptionProjection<string>[] | undefined;
+      const load = () => (loaded ??= candidates.hubVisits(visit.owner, values));
       hubVisits.set(
         key,
-        candidateInteraction(visit.owner, visit.choices, visit.selectedHubSlotKey, () =>
-          candidates.hubVisits(visit.owner, values),
-        ),
+        Object.freeze({
+          choices: visit.choices,
+          intentFor: (hubSlotKey: string) => {
+            assertCandidateMayBeAuthored(load(), hubSlotKey, `Hub visit ${key} selection`);
+            return Object.freeze({
+              command: Object.freeze(
+                visit.action === 'append'
+                  ? { hubSlotKey, kind: 'AppendHubVisit' as const, visit: visit.owner }
+                  : { hubSlotKey, kind: 'ReplaceHubVisit' as const, visit: visit.owner },
+              ),
+            });
+          },
+          key,
+          load,
+          owner: visit.owner,
+          ...(visit.removable
+            ? {
+                removal: Object.freeze({
+                  command: Object.freeze({
+                    kind: 'RemoveHubVisitsFrom' as const,
+                    visit: visit.owner,
+                  }),
+                }),
+                selected: visit.selectedHubSlotKey,
+              }
+            : {}),
+        }),
       );
     }
   }
@@ -710,14 +798,17 @@ function bindTakeoverBatchInteractions(
           key,
           Object.freeze({
             action: 'create' as const,
-            execute: () =>
-              createTakeoverBatchCommand({
-                action: 'create',
-                allocateOccurrenceId,
-                decision: requirement.owner,
-                existingTargetOccurrenceIds: new Map(),
-                gameName: requirement.gameName,
-                requiredExitKeys: requirement.requiredExitKeys,
+            intent: () =>
+              Object.freeze({
+                command: createTakeoverBatchCommand({
+                  action: 'create',
+                  allocateOccurrenceId,
+                  decision: requirement.owner,
+                  existingTargetOccurrenceIds: new Map(),
+                  gameName: requirement.gameName,
+                  requiredExitKeys: requirement.requiredExitKeys,
+                }),
+                focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
               }),
             key,
             label: takeoverCandidate(requirement.gameName).label,
@@ -829,6 +920,13 @@ function bindFrontierInteractions(
         bindStructural(
           Object.freeze({
             action: 'createHubDecision' as const,
+            intent: Object.freeze({
+              command: Object.freeze({
+                kind: 'CreateHubDecision' as const,
+                hub: requirement.owner,
+              }),
+              focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
+            }),
             key,
             owner: requirement.owner,
           }),
@@ -878,6 +976,7 @@ export function bindWorkspaceInteractions(
     batchInteractionRequirements.values(),
   );
   const { hubSlots, hubVisits } = bindHubInteractions(
+    allocateOccurrenceId,
     candidates,
     hubInteractionRequirements.values(),
   );

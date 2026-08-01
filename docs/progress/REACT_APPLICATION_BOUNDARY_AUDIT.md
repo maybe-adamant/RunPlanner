@@ -888,6 +888,32 @@ checkpoint requirement.
 - preserve Hub candidate presentation, transient board state, focus behavior,
   and one-effective-command/one-Undo behavior.
 
+**Status — complete (2026-08-01).** Hub requirements now distinguish append
+from replace and separately declare visit removal. Binding consumes that
+requirement-only policy to return exact visit and removal intents without
+mirroring the action discriminator into the UI-facing interaction. Hub board
+creation, slot open/close, and the completed handoff likewise return complete
+before-focus intents; visit edits and removal intentionally carry no focus.
+
+A closed slot now exposes `beginOpeningAttempt()` rather than accepting a
+React-allocated identity. Binding allocates the provisional occurrence ID only
+on explicit activation and the resulting stable attempt reuses it for both
+lazy candidate evaluation and its open intent. React retains that capability
+only as transient, interaction-scoped state; cancellation and a projected
+interaction replacement invalidate it synchronously. The shared interaction
+loader gained a narrow dynamic-capability controller so Hub React never calls
+`load()` directly; its tests retain completed per-interaction caching while
+discarding stale deferred work.
+
+The Hub workbench no longer allocates identities, narrows Hub-visit markers,
+or selects Hub command variants. The unused bound slot `roomGameName` is
+deleted. Exact close and authored-visit-removal invariants, candidate
+presentation, focus behavior, one-history-entry behavior, and Undo are
+covered by binding, controller, closure-mutation, and visible product tests.
+Focused C4 validation passed 7 files / 55 tests, typecheck, the planner lane
+(44 files / 301 tests), lint, formatting, and `git diff --check`. The complete
+repository gate remains the Gate C checkpoint requirement.
+
 #### Gate C checkpoint
 
 Review C1-C4 as completed families, not as progress toward universal command

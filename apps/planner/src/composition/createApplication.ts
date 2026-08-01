@@ -20,7 +20,7 @@ import {
 import { createEditorNavigation } from '../projections/editorNavigation';
 import { createInitialProject } from './projectBootstrap';
 import { createProjectOperations } from '../workspace/projectOperations';
-import { allocateOccurrenceId } from '../workspace/occurrenceIds';
+import { allocateOccurrenceId, type OccurrenceIdFactory } from '../workspace/occurrenceIds';
 import {
   createUnavailableProfileFileAdapter,
   type ProfileFileAdapter,
@@ -28,6 +28,7 @@ import {
 import { createPlannerStore } from '../state/store';
 
 export interface CreateApplicationOptions {
+  readonly allocateOccurrenceId?: OccurrenceIdFactory;
   readonly autosaveDelayMs?: number;
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly autosaveScheduler?: AutosaveScheduler;
@@ -79,7 +80,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       contextualPicker,
       rewardPicker,
     },
-    allocateOccurrenceId,
+    options.allocateOccurrenceId ?? allocateOccurrenceId,
   );
   const store = createPlannerStore({
     catalog,

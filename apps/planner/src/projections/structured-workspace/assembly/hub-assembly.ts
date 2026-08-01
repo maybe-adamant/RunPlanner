@@ -162,17 +162,25 @@ function projectHubNode(
     }
     if (boardAuthored) {
       slotRequirements.push(
-        Object.freeze({
-          choices: Object.freeze([
-            Object.freeze({ label: 'Closed', value: false }),
-            Object.freeze({ label: 'Open', value: true }),
-          ]),
-          ...(close === undefined ? {} : { close }),
-          ...(target === undefined ? {} : { openedOccurrenceId: target.occurrenceId }),
-          owner: address,
-          roomGameName: slot.roomGameName,
-          selected: target !== undefined,
-        }),
+        target === undefined
+          ? Object.freeze({
+              choices: Object.freeze([
+                Object.freeze({ label: 'Closed', value: false }),
+                Object.freeze({ label: 'Open', value: true }),
+              ]),
+              owner: address,
+              selected: false as const,
+            })
+          : Object.freeze({
+              choices: Object.freeze([
+                Object.freeze({ label: 'Closed', value: false }),
+                Object.freeze({ label: 'Open', value: true }),
+              ]),
+              ...(close === undefined ? {} : { close }),
+              openedOccurrenceId: target.occurrenceId,
+              owner: address,
+              selected: true as const,
+            }),
       );
     }
     return Object.freeze({
@@ -204,16 +212,22 @@ function projectHubNode(
           (_, index) => {
             const visitIndex = index + 1;
             const selectedHubSlotKey = visitOrder[index];
-            return Object.freeze({
-              choices: Object.freeze(
-                hubVisitChoices.filter(
-                  (choice) =>
-                    choice.value === selectedHubSlotKey || !visitOrder.includes(choice.value),
-                ),
+            const choices = Object.freeze(
+              hubVisitChoices.filter(
+                (choice) =>
+                  choice.value === selectedHubSlotKey || !visitOrder.includes(choice.value),
               ),
-              owner: createHubVisitAddress(biome, descriptor.hubKey, visitIndex),
-              ...(selectedHubSlotKey === undefined ? {} : { selectedHubSlotKey }),
-            });
+            );
+            const owner = createHubVisitAddress(biome, descriptor.hubKey, visitIndex);
+            return selectedHubSlotKey === undefined
+              ? Object.freeze({ action: 'append' as const, choices, owner, removable: false })
+              : Object.freeze({
+                  action: 'replace' as const,
+                  choices,
+                  owner,
+                  removable: true,
+                  selectedHubSlotKey,
+                });
           },
         ),
       )

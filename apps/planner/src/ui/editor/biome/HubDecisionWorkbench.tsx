@@ -1,5 +1,4 @@
-import { useMemo } from 'react';
-import type { HubVisitAddress } from '@run-planner/engine/authored-project';
+import { useRef, useState } from 'react';
 
 import {
   requireWorkspaceInteraction,
@@ -8,19 +7,23 @@ import {
   type WorkspaceCompletedHubHandoffInteraction,
   type WorkspaceHubDecisionNode,
   type WorkspaceHubSlot,
+  type WorkspaceHubSlotCloseInteraction,
   type WorkspaceHubSlotInteraction,
+  type WorkspaceHubSlotOpeningAttempt,
   type WorkspaceHubVisit,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { allocateOccurrenceId } from '@planner/workspace/occurrenceIds';
 import { candidateSupport } from '@planner/projections/candidateProjection';
 import { FindingCount, SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  useWorkspaceInteraction,
+  useWorkspaceInteractionController,
+} from '@planner/ui/controls/useWorkspaceInteraction';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { CandidateSelect } from './CandidateSelect';
 import { RewardControlEditor } from './OccurrenceWorkbench';
 
@@ -28,13 +31,6 @@ interface HubDecisionWorkbenchProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
-}
-
-function hubVisitAddress(visit: WorkspaceHubVisit): HubVisitAddress {
-  if (visit.marker.address.kind !== 'hubVisit') {
-    throw new Error('A Hub visit row must retain its Hub-visit semantic owner.');
-  }
-  return visit.marker.address;
 }
 
 function domId(value: string): string {
@@ -61,30 +57,99 @@ function MarkerAssessment({ marker }: { readonly marker: WorkspaceMarker }) {
   );
 }
 
-function HubSlotMembership({
+function ClosedHubSlotMembership({
   interaction,
   slot,
 }: {
-  readonly interaction: WorkspaceHubSlotInteraction;
+  readonly interaction: Extract<WorkspaceHubSlotInteraction, { readonly selected: false }>;
   readonly slot: WorkspaceHubSlot;
 }) {
-  const dispatch = useAppDispatch();
-  const proposedOccurrenceId = useMemo(() => allocateOccurrenceId(), []);
-  const candidateInteraction = useMemo(
-    () => interaction.bind(proposedOccurrenceId),
-    [interaction, proposedOccurrenceId],
-  );
-  const candidates = useWorkspaceInteraction(candidateInteraction);
-  const proposedOpen = !slot.open;
-  const candidate = candidates.result?.find((option) => option.value === proposedOpen);
-  const structurallyDisabled = slot.open ? !slot.canClose : !slot.canOpen;
-  const disabled =
-    structurallyDisabled || (candidate !== undefined && !candidateMayBeAuthored(candidate));
-  const close = slot.canClose ? interaction.close : undefined;
-  if (slot.canClose && close === undefined) {
-    throw new Error('A closable Hub slot must retain its CloseHubSlot interaction.');
-  }
+  const executeIntent = useCommandIntent();
+  type OpeningAttemptRecord = {
+    readonly attempt: WorkspaceHubSlotOpeningAttempt;
+    readonly interaction: typeof interaction;
+  };
+  const attemptRef = useRef<OpeningAttemptRecord | undefined>(undefined);
+  const [attemptRecord, setAttemptRecord] = useState<OpeningAttemptRecord | undefined>(undefined);
+  const beginAttempt = (): WorkspaceHubSlotOpeningAttempt => {
+    const existing = attemptRef.current;
+    if (existing?.interaction === interaction) return existing.attempt;
+    const opened = interaction.beginOpeningAttempt();
+    const record = Object.freeze({ attempt: opened, interaction });
+    attemptRef.current = record;
+    setAttemptRecord(record);
+    return opened;
+  };
+  const cancelAttempt = (): void => {
+    if (attemptRef.current?.interaction !== interaction) return;
+    attemptRef.current = undefined;
+    setAttemptRecord((record) => (record?.interaction === interaction ? undefined : record));
+  };
+  const candidates =
+    useWorkspaceInteractionController<ReturnType<WorkspaceHubSlotOpeningAttempt['load']>>();
+  const activeAttempt =
+    attemptRecord?.interaction === interaction ? attemptRecord.attempt : undefined;
+  const candidateState = candidates.observe(activeAttempt);
+  const candidate = candidateState.result?.find((option) => option.value);
+  const disabled = !slot.canOpen || (candidate !== undefined && !candidateMayBeAuthored(candidate));
 
+  return (
+    <div className="hub-membership-action">
+      <label
+        className="hub-membership-control"
+        data-candidate-support={candidateSupport(candidate)}
+        data-opening-attempt={attemptRecord?.interaction === interaction ? 'active' : undefined}
+      >
+        <input
+          aria-busy={candidateState.pending || undefined}
+          aria-label={`${slot.label} open`}
+          checked={false}
+          disabled={disabled}
+          onChange={(event) => {
+            if (!event.target.checked) return;
+            const activeAttempt = beginAttempt();
+            const options = candidateState.result ?? candidates.activate(activeAttempt);
+            const option = options?.find((candidate) => candidate.value);
+            if (!candidateMayBeAuthored(option)) {
+              return;
+            }
+            executeIntent(activeAttempt.intentFor(true));
+          }}
+          onBlur={cancelAttempt}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') cancelAttempt();
+          }}
+          onPointerDown={() => {
+            const activeAttempt = beginAttempt();
+            candidates.activate(activeAttempt);
+          }}
+          type="checkbox"
+        />
+        Open
+      </label>
+    </div>
+  );
+}
+
+function OpenHubSlotMembership({
+  close,
+  slot,
+}: {
+  readonly close: WorkspaceHubSlotCloseInteraction | undefined;
+  readonly slot: WorkspaceHubSlot;
+}) {
+  const executeIntent = useCommandIntent();
+  const candidates = useWorkspaceInteraction(
+    close ??
+      Object.freeze({
+        load: () => Object.freeze([]),
+      }),
+  );
+  const candidate = candidates.result?.find((option) => !option.value);
+  const disabled =
+    !slot.canClose ||
+    close === undefined ||
+    (candidate !== undefined && !candidateMayBeAuthored(candidate));
   return (
     <div className="hub-membership-action">
       <label
@@ -94,32 +159,42 @@ function HubSlotMembership({
         <input
           aria-busy={candidates.pending || undefined}
           aria-label={`${slot.label} open`}
-          checked={slot.open}
+          checked
           disabled={disabled}
           onChange={(event) => {
-            const open = event.target.checked;
+            if (event.target.checked || close === undefined) return;
             const options = candidates.result ?? candidates.activate();
-            const option = options?.find((candidate) => candidate.value === open);
-            if (!candidateMayBeAuthored(option)) {
-              return;
-            }
-            const command = open
-              ? {
-                  kind: 'OpenHubSlot' as const,
-                  occurrenceId: proposedOccurrenceId,
-                  slot: interaction.owner,
-                }
-              : close!.command;
-            dispatch(semanticOwnerFocused(interaction.owner));
-            dispatch(authoredProjectCommandDispatched(command));
+            const option = options?.find((candidate) => !candidate.value);
+            if (!candidateMayBeAuthored(option)) return;
+            executeIntent(close.intentFor(false));
           }}
-          onFocus={candidates.activate}
-          onPointerDown={candidates.activate}
+          onFocus={close === undefined ? undefined : candidates.activate}
+          onPointerDown={close === undefined ? undefined : candidates.activate}
           type="checkbox"
         />
         Open
       </label>
     </div>
+  );
+}
+
+function HubSlotMembership({
+  interaction,
+  slot,
+}: {
+  readonly interaction: WorkspaceHubSlotInteraction;
+  readonly slot: WorkspaceHubSlot;
+}) {
+  if (slot.open !== interaction.selected) {
+    throw new Error('A Hub slot interaction must match its projected membership state.');
+  }
+  if (interaction.selected && slot.canClose && interaction.close === undefined) {
+    throw new Error('A closable Hub slot must retain its CloseHubSlot interaction.');
+  }
+  return interaction.selected ? (
+    <OpenHubSlotMembership close={interaction.close} slot={slot} />
+  ) : (
+    <ClosedHubSlotMembership interaction={interaction} slot={slot} />
   );
 }
 
@@ -215,6 +290,7 @@ function HubVisitRow({
   readonly visit: WorkspaceHubVisit;
 }) {
   const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const canChoose = visit.authoring === 'authored' || visit.authoring === 'next';
   const interaction = canChoose
     ? requireWorkspaceInteraction(
@@ -222,6 +298,9 @@ function HubVisitRow({
         workspaceInteractionKey(visit.marker.address),
       )
     : undefined;
+  if (visit.authoring === 'authored' && interaction?.removal === undefined) {
+    throw new Error('An authored Hub visit must retain its RemoveHubVisitsFrom interaction.');
+  }
   const label =
     visit.authoring === 'locked'
       ? 'Complete prior visit'
@@ -253,31 +332,16 @@ function HubVisitRow({
             id={`hub-visit-${domId(visit.marker.focusKey)}`}
             interaction={interaction}
             label={`Visit ${visit.visitIndex} room`}
-            onReplace={(hubSlotKey) =>
-              dispatch(
-                authoredProjectCommandDispatched(
-                  visit.authoring === 'next'
-                    ? { kind: 'AppendHubVisit', hubSlotKey, visit: hubVisitAddress(visit) }
-                    : { kind: 'ReplaceHubVisit', hubSlotKey, visit: hubVisitAddress(visit) },
-                ),
-              )
-            }
+            onReplace={(hubSlotKey) => executeIntent(interaction.intentFor(hubSlotKey))}
             {...(visit.authoring === 'next' ? { placeholder: 'Choose next room' } : {})}
           />
         )}
       </div>
-      {visit.authoring !== 'authored' ? null : (
+      {interaction?.removal === undefined ? null : (
         <button
           aria-label={`Remove visits from Visit ${visit.visitIndex}`}
           className="danger-action"
-          onClick={() => {
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'RemoveHubVisitsFrom',
-                visit: hubVisitAddress(visit),
-              }),
-            );
-          }}
+          onClick={() => executeIntent(interaction.removal!)}
           type="button"
         >
           Remove From Here
@@ -292,7 +356,7 @@ function CompletedHubHandoff({
 }: {
   readonly interaction: WorkspaceCompletedHubHandoffInteraction;
 }) {
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   return (
     <section className="takeover-action" data-presentation={interaction.presentation}>
       <div className="owner-markers">
@@ -302,10 +366,7 @@ function CompletedHubHandoff({
       <p className="fixed-room-state">All required Hub visits are complete.</p>
       <button
         className="primary-action"
-        onClick={() => {
-          dispatch(semanticOwnerFocused(interaction.owner));
-          dispatch(authoredProjectCommandDispatched(interaction.execute()));
-        }}
+        onClick={() => executeIntent(interaction.intent())}
         type="button"
       >
         {interaction.label}
@@ -320,7 +381,7 @@ function CompletedHubHandoff({
  * or simulator product is re-read in the React layer.
  */
 export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisionWorkbenchProps) {
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const creation =
     frontier?.kind === 'hubDecision'
       ? requireWorkspaceInteraction(interactions.structural, frontier.interactionKey)
@@ -360,15 +421,7 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
           <div className="hub-board-action">
             <button
               className="primary-action"
-              onClick={() => {
-                dispatch(semanticOwnerFocused(creation.owner));
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'CreateHubDecision',
-                    hub: creation.owner,
-                  }),
-                );
-              }}
+              onClick={() => executeIntent(creation.intent)}
               type="button"
             >
               Create Hub board

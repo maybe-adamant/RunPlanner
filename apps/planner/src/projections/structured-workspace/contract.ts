@@ -221,6 +221,9 @@ export type WorkspaceStructuralInteraction =
     }
   | {
       readonly action: 'createHubDecision';
+      readonly intent: WorkspaceCommandIntent<
+        Extract<ProjectCommand, { readonly kind: 'CreateHubDecision' }>
+      >;
       readonly key: string;
       readonly owner: HubDecisionAddress;
     };
@@ -269,18 +272,44 @@ export interface WorkspaceExitSelectionInteraction {
   readonly targets: readonly WorkspaceInteractionChoice<string>[];
 }
 
-/** A closed Hub slot binds a proposed occurrence identity before evaluation. */
-export interface WorkspaceHubSlotInteraction {
-  readonly bind: (proposedOccurrenceId: OccurrenceId) => WorkspaceCandidateInteraction<boolean>;
-  readonly close?: {
-    readonly command: Extract<ProjectCommand, { readonly kind: 'CloseHubSlot' }>;
-    readonly impact: WorkspaceTopologyRemovalScope;
-  };
-  readonly key: string;
-  readonly owner: HubSlotAddress;
-  readonly roomGameName: string;
-  readonly selected: boolean;
+/** One explicitly activated opening attempt owns its provisional occurrence identity. */
+export interface WorkspaceHubSlotOpeningAttempt extends WorkspaceCandidateInteraction<boolean> {
+  readonly intentFor: (
+    open: true,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'OpenHubSlot' }>>;
 }
+
+export interface WorkspaceHubSlotCloseInteraction extends WorkspaceCandidateInteraction<boolean> {
+  readonly impact: WorkspaceTopologyRemovalScope;
+  readonly intentFor: (
+    open: false,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'CloseHubSlot' }>>;
+}
+
+export type WorkspaceHubSlotInteraction =
+  | {
+      readonly beginOpeningAttempt: () => WorkspaceHubSlotOpeningAttempt;
+      readonly key: string;
+      readonly owner: HubSlotAddress;
+      readonly selected: false;
+    }
+  | {
+      readonly close?: WorkspaceHubSlotCloseInteraction;
+      readonly key: string;
+      readonly owner: HubSlotAddress;
+      readonly selected: true;
+    };
+
+export type WorkspaceHubVisitInteraction = WorkspaceCandidateInteraction<string> & {
+  readonly intentFor: (
+    hubSlotKey: string,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'AppendHubVisit' | 'ReplaceHubVisit' }>
+  >;
+  readonly removal?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'RemoveHubVisitsFrom' }>
+  >;
+};
 
 interface WorkspaceTakeoverBatchInteractionBase {
   readonly action: 'create' | 'replace' | 'reconcile';
@@ -310,7 +339,7 @@ export interface WorkspaceFixedWidthOneTakeoverInteraction extends WorkspaceTake
 
 export interface WorkspaceCompletedHubHandoffInteraction extends WorkspaceTakeoverBatchInteractionBase {
   readonly action: 'create';
-  readonly execute: () => TakeoverBatchCommand;
+  readonly intent: () => WorkspaceTakeoverCommandIntent;
   readonly label: string;
   readonly presentation: 'completedHubHandoff';
 }
@@ -341,7 +370,7 @@ export interface WorkspaceInteractionCatalog {
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
-  readonly hubVisits: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
+  readonly hubVisits: ReadonlyMap<string, WorkspaceHubVisitInteraction>;
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;

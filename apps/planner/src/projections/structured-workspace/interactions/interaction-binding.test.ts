@@ -4,6 +4,8 @@ import {
   createBiomeAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
+  createHubDecisionAddress,
+  createHubVisitAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createExitSelectionAddress,
@@ -28,6 +30,7 @@ import {
   goldenFStartId,
   goldenGBiome,
   createRepresentativeNOPQProject,
+  appendCompleteN,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
@@ -92,6 +95,158 @@ function bind(
 }
 
 describe('structured workspace interaction binding', () => {
+  it('binds one provisional Hub-slot identity per explicit opening attempt', () => {
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'RemoveHubVisitsFrom',
+      visit: createHubVisitAddress(nBiome, 'hub', 6),
+    });
+    const allocated: ReturnType<typeof createOccurrenceId>[] = [];
+    const { interactions } = bind(project, 'Surface', 'N', () => {
+      const occurrenceId = createOccurrenceId(`bound-hub-opening-${allocated.length + 1}`);
+      allocated.push(occurrenceId);
+      return occurrenceId;
+    });
+    const slot = [...interactions.hubSlots.values()].find((candidate) => !candidate.selected);
+    if (slot === undefined) throw new Error('closed Hub-slot interaction is missing');
+
+    expect(allocated).toEqual([]);
+    const firstAttempt = slot.beginOpeningAttempt();
+    expect(allocated).toEqual([createOccurrenceId('bound-hub-opening-1')]);
+    const firstCandidates = firstAttempt.load();
+    expect(firstAttempt.load()).toBe(firstCandidates);
+    expect(firstAttempt.intentFor(true)).toEqual({
+      command: {
+        kind: 'OpenHubSlot',
+        occurrenceId: createOccurrenceId('bound-hub-opening-1'),
+        slot: slot.owner,
+      },
+      focus: { owner: slot.owner, timing: 'before' },
+    });
+    expect(allocated).toHaveLength(1);
+
+    const secondAttempt = slot.beginOpeningAttempt();
+    expect(secondAttempt).not.toBe(firstAttempt);
+    expect(allocated).toEqual([
+      createOccurrenceId('bound-hub-opening-1'),
+      createOccurrenceId('bound-hub-opening-2'),
+    ]);
+    expect(secondAttempt.key).toContain('bound-hub-opening-2');
+  });
+
+  it('binds Hub closure, visit edits, and visit removal to exact commands and focus policy', () => {
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'RemoveHubVisitsFrom',
+      visit: createHubVisitAddress(nBiome, 'hub', 6),
+    });
+    const { interactions } = bind(project, 'Surface', 'N');
+    const opened = [...interactions.hubSlots.values()].find(
+      (candidate) => candidate.selected && candidate.close !== undefined,
+    );
+    if (opened?.selected !== true || opened.close === undefined) {
+      throw new Error('closable Hub-slot interaction is missing');
+    }
+    const closeCandidate = opened.close.load().find((candidate) => !candidate.value);
+    if (closeCandidate === undefined) throw new Error('Hub closure candidate is missing');
+    expect(opened.close.intentFor(false)).toEqual({
+      command: { kind: 'CloseHubSlot', slot: opened.owner },
+      focus: { owner: opened.owner, timing: 'before' },
+    });
+
+    const replace = [...interactions.hubVisits.values()].find(
+      (interaction) => interaction.removal !== undefined,
+    );
+    const append = [...interactions.hubVisits.values()].find(
+      (interaction) => interaction.removal === undefined,
+    );
+    if (replace === undefined || append === undefined) {
+      throw new Error('Hub append/replace interactions are missing');
+    }
+    const replacement = replace.load().find((candidate) => candidate.value !== replace.selected);
+    const appended = append.load()[0];
+    if (replacement === undefined || appended === undefined) {
+      throw new Error('Hub visit candidates are missing');
+    }
+    expect(replace.intentFor(replacement.value)).toEqual({
+      command: {
+        hubSlotKey: replacement.value,
+        kind: 'ReplaceHubVisit',
+        visit: replace.owner,
+      },
+    });
+    expect(replace.removal).toEqual({
+      command: { kind: 'RemoveHubVisitsFrom', visit: replace.owner },
+    });
+    expect(append.intentFor(appended.value)).toEqual({
+      command: { hubSlotKey: appended.value, kind: 'AppendHubVisit', visit: append.owner },
+    });
+    expect(append.removal).toBeUndefined();
+  });
+
+  it('binds Hub board creation and completed handoff with before-focus intents', () => {
+    const opening = createOccurrenceId('bound-hub-board-opening');
+    let boardProject = applyProjectCommand(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Surface: 1 },
+        name: 'Bound Hub board',
+        projectId: 'bound-hub-board',
+      }),
+      catalog,
+      { biome: nBiome, kind: 'CreateStart', occurrenceId: opening },
+    );
+    boardProject = applyProjectCommand(boardProject, catalog, {
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'occurrence',
+        occurrenceId: opening,
+      }),
+      kind: 'CreateLinkedExit',
+      occurrenceId: createOccurrenceId('bound-hub-board-prehub'),
+    });
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const creation = bind(boardProject, 'Surface', 'N').interactions.structural.get(
+      semanticAddressKey(hub),
+    );
+    if (creation?.action !== 'createHubDecision') {
+      throw new Error('Hub board creation interaction is missing');
+    }
+    expect(creation.intent).toEqual({
+      command: { hub, kind: 'CreateHubDecision' },
+      focus: { owner: hub, timing: 'before' },
+    });
+
+    const handoffProject = appendCompleteN(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Surface: 1 },
+        name: 'Bound Hub handoff',
+        projectId: 'bound-hub-handoff',
+      }),
+      { includePreboss: false },
+    );
+    const handoffOwner = createExitDecisionAddress(nBiome, {
+      decisionKey: 'hub',
+      kind: 'hubDecision',
+    });
+    const allocated: ReturnType<typeof createOccurrenceId>[] = [];
+    const handoff = bind(handoffProject, 'Surface', 'N', () => {
+      const occurrenceId = createOccurrenceId(`bound-hub-handoff-${allocated.length + 1}`);
+      allocated.push(occurrenceId);
+      return occurrenceId;
+    }).interactions.takeoverBatches.get(semanticAddressKey(handoffOwner));
+    if (handoff?.presentation !== 'completedHubHandoff') {
+      throw new Error('completed Hub handoff interaction is missing');
+    }
+    expect(allocated).toEqual([]);
+    expect(handoff.intent()).toEqual({
+      command: {
+        decision: handoffOwner,
+        gameName: 'N_PreBoss01',
+        kind: 'CreateTakeoverBatch',
+        targetOccurrenceIds: { preboss: createOccurrenceId('bound-hub-handoff-1') },
+      },
+      focus: { owner: handoffOwner, timing: 'before' },
+    });
+    expect(allocated).toHaveLength(1);
+  });
+
   it('lazily binds the fixed start to one complete command and after-focus intent', () => {
     const project = createProjectDocument(catalog, {
       configuredBiomeCounts: { Surface: 1 },

@@ -14,10 +14,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import type {
-  WorkspaceHubSlotInteraction,
-  WorkspaceInteractionCatalog,
-} from '@planner/projections/structured-workspace';
+import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import { createStructuredWorkspaceTestServices } from '../fixtures/structuredWorkspace';
 import {
   appendCompleteN,
@@ -226,9 +223,14 @@ describe('workspace candidate interaction families', () => {
 
       const loadable =
         family === 'hubSlots'
-          ? (interaction as WorkspaceHubSlotInteraction).bind(
-              createOccurrenceId('candidate-interaction-hub-slot'),
-            )
+          ? (() => {
+              const hubSlot = [
+                ...workspaces[0].hubSlots.values(),
+                ...workspaces[1].hubSlots.values(),
+              ].find((candidate) => !candidate.selected);
+              if (hubSlot === undefined) throw new Error('closed Hub-slot interaction is missing');
+              return hubSlot.beginOpeningAttempt();
+            })()
           : (interaction as LoadableInteraction);
       await loadable.load();
 
@@ -345,7 +347,7 @@ describe('workspace candidate interaction families', () => {
     }
     expect(hubHandoff.action).toBe('create');
     expect('load' in hubHandoff).toBe(false);
-    expect(typeof hubHandoff.execute).toBe('function');
+    expect(typeof hubHandoff.intent).toBe('function');
 
     const repairProject = createGoldenFGHIProject();
     const repairInteractions = services.structuredWorkspace.project(

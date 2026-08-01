@@ -11,6 +11,7 @@ import {
   type LocalChildGroupAddress,
   type OccurrenceAddress,
   type OccurrenceId,
+  type ProjectCommand,
   type RewardWheelAddress,
   type ShopPurchaseAddress,
   type SideRoomGeneration,
@@ -19,8 +20,8 @@ import {
 import type {
   WorkspaceEphyraSideRoomEntryOrderControl,
   WorkspaceExitFrontierCapabilities,
-  WorkspaceHubSlotInteraction,
   WorkspaceInteractionChoice,
+  WorkspaceTopologyRemovalScope,
   WorkspaceTopologyRemovalInteraction,
   WorkspaceTakeoverReplacementImpact,
 } from '../contract';
@@ -101,19 +102,38 @@ export interface WorkspaceBatchInteractionRequirement {
 export interface WorkspaceHubInteractionRequirement {
   readonly kind: 'hubControls';
   readonly owner: HubDecisionAddress;
-  readonly slots: readonly {
-    readonly choices: readonly WorkspaceInteractionChoice<boolean>[];
-    readonly close?: NonNullable<WorkspaceHubSlotInteraction['close']>;
-    readonly openedOccurrenceId?: OccurrenceId;
-    readonly owner: HubSlotAddress;
-    readonly roomGameName: string;
-    readonly selected: boolean;
-  }[];
-  readonly visits: readonly {
-    readonly choices: readonly WorkspaceInteractionChoice<string>[];
-    readonly owner: HubVisitAddress;
-    readonly selectedHubSlotKey?: string;
-  }[];
+  readonly slots: readonly (
+    | {
+        readonly choices: readonly WorkspaceInteractionChoice<boolean>[];
+        readonly owner: HubSlotAddress;
+        readonly selected: false;
+      }
+    | {
+        readonly choices: readonly WorkspaceInteractionChoice<boolean>[];
+        readonly close?: {
+          readonly command: Extract<ProjectCommand, { readonly kind: 'CloseHubSlot' }>;
+          readonly impact: WorkspaceTopologyRemovalScope;
+        };
+        readonly openedOccurrenceId: OccurrenceId;
+        readonly owner: HubSlotAddress;
+        readonly selected: true;
+      }
+  )[];
+  readonly visits: readonly (
+    | {
+        readonly action: 'append';
+        readonly choices: readonly WorkspaceInteractionChoice<string>[];
+        readonly owner: HubVisitAddress;
+        readonly removable: false;
+      }
+    | {
+        readonly action: 'replace';
+        readonly choices: readonly WorkspaceInteractionChoice<string>[];
+        readonly owner: HubVisitAddress;
+        readonly removable: true;
+        readonly selectedHubSlotKey: string;
+      }
+  )[];
 }
 
 /**
