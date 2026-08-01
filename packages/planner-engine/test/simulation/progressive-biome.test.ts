@@ -319,7 +319,8 @@ describe('progressive biome evaluation', () => {
     expect(normalProducer).toBeDefined();
     expect(prefixProducer).toBeDefined();
     expect(normalProducer).not.toBe(prefixProducer);
-    expect(Object.keys(normalProducer ?? {})).toEqual(['evaluateOffer']);
+    expect(Object.keys(normalProducer ?? {})).toEqual(['evaluateOffer', 'resolvedStoreKey']);
+    expect(normalProducer?.resolvedStoreKey).toBe('MetaProgress');
     expect(clampedContext).toBeDefined();
     expect(beforeClampContext).toBeDefined();
     expect(beforeClampContext).not.toBe(clampedContext);

@@ -4,6 +4,10 @@ export {
   rewardStoreCandidateSupport,
   BiomeRewardSimulationContractError,
 } from './biome';
+export {
+  RewardAuthoringDomainContractError,
+  type CountedRewardOwnerAddress,
+} from './authoring-domain';
 export type {
   BiomeRewardSimulation,
   RewardBranch,

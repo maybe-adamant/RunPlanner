@@ -887,6 +887,9 @@ export function evaluateBiomeRewardsAssembly(
               reachableBranchCount: frontierBranches.length,
               acquisitionHorizon: 'ownEnteredLifecycle',
               owners: Object.freeze([incoming.origin]),
+              ...(binding === undefined || incoming.resolvedStoreKey === undefined
+                ? {}
+                : { resolvedStoreKey: incoming.resolvedStoreKey }),
               evaluateOffer: (
                 owner: SemanticAddress,
                 offer: CanonicalResolvedIncomingReward['offer'],
@@ -973,6 +976,7 @@ export function evaluateBiomeRewardsAssembly(
               reachableBranchCount: frontierBranches.length,
               acquisitionHorizon: 'ownEnteredLifecycle',
               owners: Object.freeze([localReward.origin]),
+              resolvedStoreKey: localReward.resolvedStoreKey,
               evaluateOffer: (
                 owner: SemanticAddress,
                 offer: CanonicalResolvedIncomingReward['offer'],
@@ -1305,6 +1309,7 @@ export function evaluateBiomeRewardsAssembly(
             reachableBranchCount: frontierBranches.length,
             acquisitionHorizon: 'ownEnteredLifecycle',
             owners,
+            resolvedStoreKey: wheel.storeKey,
             evaluateOffer: (
               owner: SemanticAddress,
               offer: CanonicalResolvedIncomingReward['offer'],

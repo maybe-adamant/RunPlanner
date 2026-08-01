@@ -136,7 +136,9 @@ function canonicalExit(room: RoomDeclaration | undefined, exitKey: string): Cano
   });
 }
 
-function orderedTargets(targets: readonly ExitTargetReference[]): readonly ExitTargetReference[] {
+export function orderedTargets(
+  targets: readonly ExitTargetReference[],
+): readonly ExitTargetReference[] {
   return Object.freeze(
     [...targets].sort((left, right) => {
       return (
@@ -186,7 +188,7 @@ function batchStoreKey(
  * Earlier ordinary peers materialize against that final store, while an
  * individual target override remains local to that target.
  */
-function finalSharedBatchStoreKey(
+export function finalSharedBatchStoreKey(
   catalog: Catalog,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   targets: readonly ExitTargetReference[],
