@@ -126,7 +126,6 @@ export {
   evaluateBiomeRewards,
   rewardStoreCandidateSupport,
   BiomeRewardSimulationContractError,
-  roomLifecycleCandidateContexts,
   type BiomeRewardSimulation,
   type RewardBranch,
   type RewardEvent,
@@ -134,10 +133,6 @@ export {
   type RewardStoreCandidateSupport,
   type RewardStoreSupportEntry,
   type TargetRewardHistoryCheckpoint,
-  type RoomLifecycleCandidateContextIndex,
-  type RoomLifecycleCandidateResult,
-  type ShipLifecycleCandidateContext,
-  type ShopPurchaseCandidateContext,
 } from './rewards';
 export {
   materializeBiome,
