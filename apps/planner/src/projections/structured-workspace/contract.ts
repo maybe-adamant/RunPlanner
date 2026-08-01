@@ -116,6 +116,7 @@ export interface WorkspaceCandidateInteraction<T> {
 
 export interface WorkspaceRewardInteraction {
   readonly authoredRewardTypes: readonly string[];
+  readonly intentFor: (offer: ResolvedRewardOffer) => WorkspaceRewardCommandIntent;
   readonly key: string;
   readonly owner: RewardCandidateOwner['address'];
   readonly choiceLabel: (step: RewardPickerStep, offer: ResolvedRewardOffer) => string;
@@ -152,6 +153,19 @@ export interface WorkspaceCommandIntent<Command extends ProjectCommand = Project
 
 type WorkspaceCreateStartIntent = WorkspaceCommandIntent<
   Extract<ProjectCommand, { readonly kind: 'CreateStart' }>
+>;
+
+type WorkspaceRewardCommandIntent = WorkspaceCommandIntent<
+  Extract<
+    ProjectCommand,
+    {
+      readonly kind:
+        | 'ReplaceIncomingReward'
+        | 'ReplaceLocalReward'
+        | 'ReplaceRewardWheelOffer'
+        | 'ReplaceShopOffer';
+    }
+  >
 >;
 
 /** A start remains an authored action even when its declaration fixes the room. */

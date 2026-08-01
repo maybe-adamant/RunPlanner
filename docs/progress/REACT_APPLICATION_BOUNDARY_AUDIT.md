@@ -786,6 +786,20 @@ C1 requires both A2 and the passed B1 pilot: it consumes the shared
 command-intent adapter rather than introducing a second dispatch shape just
 for rewards.
 
+**Status — complete (2026-08-01).** `WorkspaceRewardInteraction.intentFor`
+now binds the exhaustive incoming, local, wheel-offer, and Shop-offer reward
+replacement commands. The bound intents intentionally carry no focus. The
+existing reward picker still owns only lazy domain loading and its transient
+type/source/chosen/spurned selection flow; `RewardControlEditor` resolves the
+bound interaction and dispatches its returned intent without selecting a
+command variant. The old React reward-owner switch is deleted.
+
+Interaction-binding tests own the exact four intent shapes. The visible
+decision-workbench reward edit retains its one-history-entry and Undo witness.
+Focused C1 validation passed 3 files / 35 tests, typecheck, and the planner
+lane (43 files / 287 tests). The complete repository gate remains the Gate C
+checkpoint requirement.
+
 #### C2: Existing versus missing target commands
 
 - make target-room requirements discriminate an existing target from a missing
