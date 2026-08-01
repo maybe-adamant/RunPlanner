@@ -147,10 +147,11 @@ copied elsewhere.
   reconciliation and Commit 5a prompt removal are complete. The active
   [re-anchor and reorganization](docs/progress/REANCHOR_AND_REORGANIZE.md)
   plan has completed its production workspace contraction and bounded
-  test-ownership correction. The feature frontier may resume with the
+  test-ownership correction. Campaign B's candidate-capability entry audit is
+  complete, and its explicit evaluation-assembly/room-target unit is the next
+  cleanup slice. The behavior-ready
   [workspace presentation polish](docs/progress/WORKSPACE_PRESENTATION_POLISH.md)
-  plan, which splits Commit 5b into four bounded UI changes. The remaining re-anchor
-  campaigns then close before the
+  plan remains paused while the remaining re-anchor campaigns close. The
   [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) gives Commit
   5c its own schema, engine, projection, and UI slices.
 

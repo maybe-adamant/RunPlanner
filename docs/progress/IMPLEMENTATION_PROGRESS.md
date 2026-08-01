@@ -33,13 +33,17 @@ prompts while preserving the existing semantic-command/history flow. Commit
 5b.1 delivered the N rail hierarchy, and Commit 5b.2 delivered direct side-room
 order editing. Commit 5b.3's active-only H/O room-local presentation in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) remains
-the next feature slice, but the re-anchor plan had one bounded test-ownership
-correction first. The A12/A13 production contraction gate is complete, as is
+the next feature slice, but it is paused while the remaining re-anchor
+campaigns close. The A12/A13 production contraction gate is complete, as is
 the A14–A16 test-ownership correction. The correction canonicalized shared
 route fixtures, separated test infrastructure, re-anchored workspace
 projection/closure assertions, and aligned React coverage with the existing
-workbench owners. Commit 5b.3 may resume. A1 through A6 established
-the authored-first workspace source/assembly products,
+workbench owners. Campaign B's entry audit is complete: eighteen query kinds
+resolve through four semantic families; room-target, reward-producer, and
+room-lifecycle capabilities currently cross three result-keyed semantic
+sidecars. B1's exact evaluation-assembly and ordinary-room-target vertical
+slice is next. A1 through A6 established the authored-first workspace
+source/assembly products,
 explicit interaction binding, projection-owned default and exact inspector
 destinations, and React consumption without topology or containment
 reconstruction. They also retained authored-active controls through invalid or
@@ -61,9 +65,9 @@ parallel authored expectation models and family-by-family binding self-audits
 still made several changes happen twice. A12 and A13 have contracted those
 paths in production. A holistic test read then found that focused owner tests
 had been added without retiring overlapping facade and React assertions. The
-four review units—A14, A15.1, A15.2, and A16—closed that test ownership, so
-Commit 5b.3 may resume. After Commit 5b closes, the plan's candidate,
-authored-core, history, and reward campaigns must close before the separate
+four review units—A14, A15.1, A15.2, and A16—closed that test ownership.
+The current sequencing closes the plan's candidate, authored-core, history,
+and reward campaigns before Commit 5b.3 resumes and before the separate
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan: schema 10 authors an
 exact Shop purchase order, simulation validates that exact sequence, and the
 editor exposes the order directly. Commit 5c intentionally replaces the schema
@@ -142,8 +146,9 @@ passed 76 test files and 703 tests, all typechecks, lint, formatting,
 and the production build. The post-A13 test baseline is 28,607 lines in test
 files. A15.1 subsequently added 1,673 lines in ten non-test workspace
 expectation/closure support modules and 210 lines in three support self-tests.
-A14, A15.1, A15.2, and A16 completed the active correction; Commit 5b.3 may
-resume.
+A14, A15.1, A15.2, and A16 completed the active correction; Commit 5b.3 is
+behaviorally unblocked but remains paused by the cleanup sequence recorded
+above.
 
 The A14–A16 test-ownership correction is complete. A14 established the one
 canonical `test/fixtures/authored-project/` builder barrel for all shared
@@ -285,7 +290,7 @@ are covered. Review validation passed the root typecheck,
 `npm run test:planner` (22 files, 185 tests), ESLint, Prettier, and
 `git diff --check`.
 
-Commit 5b.3, Commit 5b.4, the remaining re-anchor campaigns, and the three
+The remaining re-anchor campaigns, Commit 5b.3, Commit 5b.4, and the three
 Commit 5c Shop-order slices are the remaining work before the active Phase 7
 frontier advances.
 
