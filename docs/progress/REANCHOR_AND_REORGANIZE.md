@@ -68,7 +68,7 @@ permitted project/evaluation identity attestation, and several ordinary
 memoization caches. B1 and B2 are complete: the room-target sidecar originated
 in generation, so its explicit evaluation assembly now runs end to end and has
 removed that sidecar with its room-target consumer; the remaining Linear
-structural families now have their own evaluators. B4 and B5 remain
+structural families now have their own evaluators. B5 remains
 separate vertical units.
 
 This document is temporary delivery authority. Stable ownership remains with
@@ -1763,6 +1763,26 @@ prefix/clamp policy coverage.
 - preserve sequential, joint-unordered, wheel, and joint-Shop frontier
   semantics, producer-owner evidence, exact pre-clamp repair, lazy capability
   lifetime, and deeply equal public reward/project results.
+
+##### B4 delivery record (2026-08-01)
+
+B4 makes reward-producer frontiers an explicit, opaque sibling of the
+data-only reward simulation. Complete project evaluation, incomplete-prefix
+evaluation, clamped replay, and exact pre-clamp replay each carry the producer
+capability produced by that same reward execution into their biome artifact and
+then the exact project assembly. Public reward and project outputs remain
+data-only and deeply equal to their prior facade results.
+
+The `frontiersBySimulation` sidecar, its producer registration and lookup
+accessors, and their public simulation exports are gone. The lifecycle-context
+sidecar remains intentionally isolated for B5. The reward producer evaluator
+now owns `incomingReward`, `localReward`, `rewardWheelOffer`, and `shopOffer`;
+the session extracts and passes only the addressed producer capability, never a
+biome artifact or assembly. Exact first-blocking producer repair obtains only
+the exact pre-clamp producer artifact, while later owners remain unavailable.
+Sequential, joint-unordered, wheel, and Shop policy matrices stay with their
+existing F/H/N/O owners; progressive tests now prove exact artifact threading,
+runtime opacity, foreign-owner exclusion, and blocked-owner repair.
 
 #### B5: Explicit room-lifecycle artifacts and thin dispatcher
 
