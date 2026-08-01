@@ -6,10 +6,7 @@ import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import {
-  createApplication,
-  type PlannerApplication,
-} from '../../src/composition/createApplication';
+import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import type {
   StructuredWorkspaceProjection,
   WorkspaceAuthoringFrontier,
@@ -19,19 +16,19 @@ import type {
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOrdinaryBatchNode,
   WorkspaceTakeoverBatchNode,
-} from '../../src/projections/structured-workspace';
-import { createEditorSessionReducer } from '../../src/state/editorSessionSlice';
-import { authoredProjectReplaced } from '../../src/state/projectWorkspaceSlice';
-import { useAppSelector } from '../../src/state/store';
-import { BiomeWorkspace } from '../../src/ui/editor/biome/BiomeWorkspace';
+} from '@planner/projections/structured-workspace';
+import { createEditorSessionReducer } from '@planner/state/editorSessionSlice';
+import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import { useAppSelector } from '@planner/state/store';
+import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import {
   AuthoringFrontier,
   BatchWorkbench,
   LinkedExitWorkbench,
   TopologyRemovalAction,
-} from '../../src/ui/editor/biome/DecisionWorkbench';
-import { HubDecisionWorkbench } from '../../src/ui/editor/biome/HubDecisionWorkbench';
-import { OccurrenceWorkbench } from '../../src/ui/editor/biome/OccurrenceWorkbench';
+} from '@planner/ui/editor/biome/DecisionWorkbench';
+import { HubDecisionWorkbench } from '@planner/ui/editor/biome/HubDecisionWorkbench';
+import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbench';
 import { projectStructuredWorkspaceFixture } from '../fixtures/structuredWorkspace';
 
 interface ProjectedHarnessProps {

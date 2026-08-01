@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { ContextualPickerModel } from '../../projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import { ContextualPicker } from './ContextualPicker';
 
 afterEach(cleanup);

@@ -21,8 +21,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createApplication,
   type ApplicationEvaluationEvent,
-} from '../../../composition/createApplication';
-import type { WorkspaceBiome } from '../../../projections/structured-workspace';
+} from '@planner/composition/createApplication';
+import type { WorkspaceBiome } from '@planner/projections/structured-workspace';
 import {
   createGoldenFGHIProject,
   goldenFBiome,

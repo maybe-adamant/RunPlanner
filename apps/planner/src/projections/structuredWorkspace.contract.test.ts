@@ -30,20 +30,20 @@ import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-pla
 import {
   expectedWorkspaceLeafRequirements,
   type ExpectedWorkspaceLeafInteraction,
-} from '../../test/support/structured-workspace/expected-leaves';
+} from '@planner-test/support/structured-workspace/expected-leaves';
 import {
   expectedWorkspaceStructuralControls,
   type ExpectedWorkspaceStructuralControl,
-} from '../../test/support/structured-workspace/expected-structural-controls';
-import { expectedWorkspaceTopologyManifest } from '../../test/support/structured-workspace/expected-topology';
-import { assertExpectedWorkspaceLeafClosure } from '../../test/support/structured-workspace/leaf-closure';
-import { observeWorkspaceProducts } from '../../test/support/structured-workspace/observed-workspace';
+} from '@planner-test/support/structured-workspace/expected-structural-controls';
+import { expectedWorkspaceTopologyManifest } from '@planner-test/support/structured-workspace/expected-topology';
+import { assertExpectedWorkspaceLeafClosure } from '@planner-test/support/structured-workspace/leaf-closure';
+import { observeWorkspaceProducts } from '@planner-test/support/structured-workspace/observed-workspace';
 import {
   assertExpectedWorkspaceStructuralControlClosure,
   assertRenderedWorkspaceStructuralControlClosure,
-} from '../../test/support/structured-workspace/structural-control-closure';
-import { assertExpectedWorkspaceTopologyClosure } from '../../test/support/structured-workspace/topology-closure';
-import { unsafeOmitWorkspaceProperty } from '../../test/support/structured-workspace/unsafe-product-mutation';
+} from '@planner-test/support/structured-workspace/structural-control-closure';
+import { assertExpectedWorkspaceTopologyClosure } from '@planner-test/support/structured-workspace/topology-closure';
+import { unsafeOmitWorkspaceProperty } from '@planner-test/support/structured-workspace/unsafe-product-mutation';
 import { createCandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';

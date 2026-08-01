@@ -7,7 +7,7 @@ import type {
   WorkspaceMarker,
   WorkspaceNode,
   WorkspaceRoomSummary,
-} from '../../../src/projections/structured-workspace';
+} from '@planner/projections/structured-workspace';
 
 export interface ObservedWorkspaceRoomPackage {
   readonly nodeKey: string;

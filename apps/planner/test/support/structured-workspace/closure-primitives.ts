@@ -1,6 +1,6 @@
 import { type SemanticAddress } from '@run-planner/engine/authored-project';
 
-import type { WorkspaceInteractionCatalog } from '../../../src/projections/structured-workspace';
+import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import type { ObservedWorkspaceProducts } from './observed-workspace';
 import { workspaceTestOwnerKey } from './test-keys';
 

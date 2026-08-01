@@ -34,7 +34,7 @@ import type {
 import type { ContextualPickerModel, ContextualPickerProjectionService } from '../contextualPicker';
 import type { ProjectedRewardDomain } from '../rewardDomainProjection';
 import type { RewardPickerProjectionService, RewardPickerStep } from '../rewardPicker';
-import type { TakeoverBatchCommand } from '../../workspace/takeoverBatchInteraction';
+import type { TakeoverBatchCommand } from '@planner/workspace/takeoverBatchInteraction';
 
 /**
  * Public structured-workspace vocabulary. The projector constructs these

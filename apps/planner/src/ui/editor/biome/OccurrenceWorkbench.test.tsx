@@ -17,15 +17,15 @@ import {
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { PlannerApplication } from '../../../composition/createApplication';
+import type { PlannerApplication } from '@planner/composition/createApplication';
 import type {
   WorkspaceBiome,
   WorkspaceOccurrenceWorkbenchNode,
-} from '../../../projections/structured-workspace';
+} from '@planner/projections/structured-workspace';
 import {
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
-} from '../../../state/projectWorkspaceSlice';
+} from '@planner/state/projectWorkspaceSlice';
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,

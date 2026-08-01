@@ -1,8 +1,11 @@
-import { presentCandidateLabel } from '../../../projections/candidateProjection';
-import type { WorkspaceCandidateInteraction } from '../../../projections/structured-workspace';
-import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
-import { candidateMayBeAuthored, candidateSelectState } from '../../feedback/candidatePresentation';
-import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
+import { presentCandidateLabel } from '@planner/projections/candidateProjection';
+import type { WorkspaceCandidateInteraction } from '@planner/projections/structured-workspace';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  candidateMayBeAuthored,
+  candidateSelectState,
+} from '@planner/ui/feedback/candidatePresentation';
+import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 
 type SelectValue = number | string;
 

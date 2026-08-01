@@ -22,11 +22,11 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Provider } from 'react-redux';
 
-import { createApplication, type PlannerApplication } from '../../../composition/createApplication';
-import { semanticFindingKey } from '../../../projections/evaluationProjection';
-import type { WorkspaceBiome, WorkspaceNode } from '../../../projections/structured-workspace';
-import { findingSelected, semanticOwnerFocused } from '../../../state/editorSessionSlice';
-import { authoredProjectReplaced } from '../../../state/projectWorkspaceSlice';
+import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
+import { semanticFindingKey } from '@planner/projections/evaluationProjection';
+import type { WorkspaceBiome, WorkspaceNode } from '@planner/projections/structured-workspace';
+import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,

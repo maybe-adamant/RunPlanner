@@ -14,11 +14,11 @@ import {
   createApplication,
   type ApplicationEvaluationEvent,
   type PlannerApplication,
-} from '../../src/composition/createApplication';
-import { authoredProjectReplaced } from '../../src/state/projectWorkspaceSlice';
-import { semanticOwnerFocused } from '../../src/state/editorSessionSlice';
-import { useAppSelector } from '../../src/state/store';
-import { BiomeWorkspace } from '../../src/ui/editor/biome/BiomeWorkspace';
+} from '@planner/composition/createApplication';
+import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { useAppSelector } from '@planner/state/store';
+import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures';
 

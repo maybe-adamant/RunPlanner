@@ -1,7 +1,7 @@
 import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
-import { candidateSupport, presentCandidateLabel } from '../../../projections/candidateProjection';
+import { candidateSupport, presentCandidateLabel } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -11,13 +11,13 @@ import {
   type WorkspaceEphyraSideRoomGroup,
   type WorkspaceRewardControl,
   type WorkspaceRoomSummary,
-} from '../../../projections/structured-workspace';
-import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
-import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
-import { useAppDispatch } from '../../../state/store';
-import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
-import { candidateMayBeAuthored } from '../../feedback/candidatePresentation';
-import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
+} from '@planner/projections/structured-workspace';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { useAppDispatch } from '@planner/state/store';
+import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { CountedRewardEditor, RewardValueEditor } from '../rewards/RewardEditors';
 import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
 import { CandidateSelect } from './CandidateSelect';

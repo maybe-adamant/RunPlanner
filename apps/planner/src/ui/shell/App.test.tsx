@@ -10,19 +10,19 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { createApplication } from '../../composition/createApplication';
+import { createApplication } from '@planner/composition/createApplication';
 import {
   findingSelected,
   routePanelSelected,
   routeSelected,
   semanticOwnerFocused,
   settingsSelected,
-} from '../../state/editorSessionSlice';
-import { semanticFindingKey } from '../../projections/evaluationProjection';
+} from '@planner/state/editorSessionSlice';
+import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
-} from '../../state/projectWorkspaceSlice';
+} from '@planner/state/projectWorkspaceSlice';
 import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 import { App } from './App';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';

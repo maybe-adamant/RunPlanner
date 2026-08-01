@@ -4,16 +4,16 @@ import { useMemo, useState } from 'react';
 import type {
   CountedRewardCandidateOwner,
   RewardCandidateOwner,
-} from '../../../projections/candidateProjection';
-import type { ContextualPickerModel } from '../../../projections/contextualPicker';
-import type { RewardPickerStep } from '../../../projections/rewardPicker';
+} from '@planner/projections/candidateProjection';
+import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import type { RewardPickerStep } from '@planner/projections/rewardPicker';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
-} from '../../../projections/structured-workspace';
-import { ContextualPicker } from '../../controls/ContextualPicker';
-import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
+} from '@planner/projections/structured-workspace';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 
 interface RewardValueEditorProps {
   readonly candidateOwner: RewardCandidateOwner;

@@ -10,12 +10,12 @@ import {
 } from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createApplication } from '../../src/composition/createApplication';
+import { createApplication } from '@planner/composition/createApplication';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
-} from '../../src/state/projectWorkspaceSlice';
-import { semanticOwnerFocused } from '../../src/state/editorSessionSlice';
+} from '@planner/state/projectWorkspaceSlice';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   createGoldenFGHIProject,
   goldenFBiome,

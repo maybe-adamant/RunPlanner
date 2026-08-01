@@ -1,7 +1,7 @@
-import type { WorkspaceBiomeField } from '../../../projections/structured-workspace';
-import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
-import { useAppDispatch } from '../../../state/store';
-import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
+import type { WorkspaceBiomeField } from '@planner/projections/structured-workspace';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { useAppDispatch } from '@planner/state/store';
+import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 
 function BiomeFieldControl({ field }: { readonly field: WorkspaceBiomeField }) {
   const dispatch = useAppDispatch();

@@ -147,6 +147,23 @@ hades2-catalog implements Catalog construction
 planner composes hades2-catalog with planner-engine
 ```
 
+## Module Import Conventions
+
+Cross-package consumers use the package's declared exports. Within the planner,
+imports that cross the stable `composition`, `persistence`, `projections`,
+`state`, `ui`, or `workspace` roots use `@planner/*`; planner fixtures and test
+support use `@planner-test/*`; and repository-wide authored-project fixtures
+use `@run-planner/test-fixtures`. Relative `./` and `../` imports remain the
+right choice inside one immediate feature neighborhood, but planner modules do
+not climb two or more parent directories.
+
+Aliases name an ownership root; they do not create a public API or dependency
+injection boundary. An `index.ts` exists only for a deliberate supported module
+surface, while an assembly or composition module owns wiring. The engine keeps
+its direct internal relative imports unless a separate boundary change justifies
+an internal API; it must not route internal dependencies through public barrels
+merely to shorten a path.
+
 ## Dependency Rules
 
 ### Planner Engine

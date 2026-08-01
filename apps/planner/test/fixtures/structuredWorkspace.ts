@@ -5,15 +5,15 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import {
   createCandidateSessionFactory,
   type CandidateSessionFactoryOptions,
-} from '../../src/projections/candidateProjection';
-import { createContextualOptionResolver } from '../../src/projections/contextualOptions';
-import { createContextualPickerProjection } from '../../src/projections/contextualPicker';
-import { createRewardPickerProjection } from '../../src/projections/rewardPicker';
+} from '@planner/projections/candidateProjection';
+import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
+import { createContextualPickerProjection } from '@planner/projections/contextualPicker';
+import { createRewardPickerProjection } from '@planner/projections/rewardPicker';
 import {
   createStructuredWorkspaceProjection,
   type StructuredWorkspaceProjection,
   type WorkspaceBiome,
-} from '../../src/projections/structured-workspace';
+} from '@planner/projections/structured-workspace';
 
 export function requireWorkspaceBiome(
   workspace: StructuredWorkspaceProjection,

@@ -4,11 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  createApplication,
-  type PlannerApplication,
-} from '../../src/composition/createApplication';
-import * as candidateProjection from '../../src/projections/candidateProjection';
+import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
+import * as candidateProjection from '@planner/projections/candidateProjection';
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const uiRoot = join(repositoryRoot, 'apps/planner/src/ui');
