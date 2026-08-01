@@ -229,7 +229,7 @@ describe('autosave recovery lifecycle', () => {
       future: [],
     });
     expect(selectProjectEvaluation(state)).toEqual(
-      source.store.getState().projectWorkspace.evaluation,
+      source.store.getState().projectWorkspace.assembly.evaluation,
     );
     expect(selectProfileStatus(state)).toBe('Recovered');
     expect(selectExplicitProfileBaselineJson(state)).toBeNull();

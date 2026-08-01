@@ -1,5 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import {
+  createBiomeAddress,
   createExitSelectionAddress,
   semanticAddressKey,
   type BiomeAddress,
@@ -7,11 +8,15 @@ import {
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan } from '../../authored-project/model';
 import {
-  evaluateBiomeRoomGeneration,
+  evaluateBiomeRoomGenerationAssembly,
   evaluateHubDecisionGeneration,
   type GeneratedRoomGenerationValidation,
   type HubRoomGenerationValidation,
 } from '../generation';
+import {
+  createBiomeCandidateArtifacts,
+  type BiomeCandidateArtifacts,
+} from '../candidate-artifacts';
 import {
   composeBiomeHistoryPrefix,
   type BiomeHistoryPrefix,
@@ -45,9 +50,19 @@ export interface ProgressiveBiomeEvaluation {
   readonly blockedAt?: SemanticAddress;
 }
 
+export interface ProgressiveBiomeEvaluationAssembly {
+  readonly evaluation: ProgressiveBiomeEvaluation;
+  readonly candidateArtifacts: BiomeCandidateArtifacts;
+}
+
 interface ProgressiveSeed {
   readonly history: CanonicalBiomeHistory;
   readonly rewardBranches: readonly RewardBranch[];
+}
+
+interface ProgressiveGenerationAssembly {
+  readonly validation: BiomeGenerationValidation;
+  readonly candidateArtifacts: BiomeCandidateArtifacts;
 }
 
 function generation(
@@ -58,8 +73,8 @@ function generation(
   history: BiomeHistoryPrefix,
   enteredBiomeCount: number,
   rewards: BiomeRewardSimulation,
-): BiomeGenerationValidation {
-  const ordinary = evaluateBiomeRoomGeneration(
+): ProgressiveGenerationAssembly {
+  const ordinary = evaluateBiomeRoomGenerationAssembly(
     catalog,
     prefix,
     history,
@@ -67,12 +82,25 @@ function generation(
     rewards.targetHistory,
   );
   const hub = evaluateHubDecisionGeneration(catalog, prefix, history);
-  return Object.freeze({
-    validity: ordinary.validity === 'valid' && hub.validity === 'valid' ? 'valid' : 'invalid',
-    ordinary,
+  const validation: BiomeGenerationValidation = Object.freeze({
+    validity:
+      ordinary.validation.validity === 'valid' && hub.validity === 'valid' ? 'valid' : 'invalid',
+    ordinary: ordinary.validation,
     hub,
-    findings: Object.freeze([...ordinary.findings, ...hub.findings]),
+    findings: Object.freeze([...ordinary.validation.findings, ...hub.findings]),
   });
+  return Object.freeze({
+    validation,
+    candidateArtifacts: createBiomeCandidateArtifacts(
+      createBiomeAddress(prefix.routeKey, prefix.biomeKey),
+      ordinary.candidateArtifacts,
+    ),
+  });
+}
+
+interface ProgressiveProducts {
+  readonly evaluation: Omit<ProgressiveBiomeEvaluation, 'materializedPrefix' | 'blockedAt'>;
+  readonly candidateArtifacts: BiomeCandidateArtifacts;
 }
 
 function products(
@@ -82,7 +110,7 @@ function products(
   },
   enteredBiomeCount: number,
   seed?: ProgressiveSeed,
-): Omit<ProgressiveBiomeEvaluation, 'materializedPrefix' | 'blockedAt'> {
+): ProgressiveProducts {
   const history = composeBiomeHistoryPrefix(catalog, prefix, seed?.history.afterTransition);
   if (history === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
@@ -94,11 +122,15 @@ function products(
     enteredBiomeCount,
     seed?.rewardBranches,
   );
+  const roomGeneration = generation(catalog, prefix, history, enteredBiomeCount, rewards);
   return Object.freeze({
-    history,
-    rewards,
-    roomGeneration: generation(catalog, prefix, history, enteredBiomeCount, rewards),
-    findings: Object.freeze([]),
+    evaluation: Object.freeze({
+      history,
+      rewards,
+      roomGeneration: roomGeneration.validation,
+      findings: Object.freeze([]),
+    }),
+    candidateArtifacts: roomGeneration.candidateArtifacts,
   });
 }
 
@@ -517,18 +549,34 @@ export function evaluateProgressiveBiomeBeforeClamp(
   enteredBiomeCount: number,
   seed?: ProgressiveSeed,
 ): ProgressiveBiomeEvaluation | null {
+  return (
+    evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, biome, plan, enteredBiomeCount, seed)
+      ?.evaluation ?? null
+  );
+}
+
+export function evaluateProgressiveBiomeAssemblyBeforeClamp(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  plan: AuthoredBiomePlan,
+  enteredBiomeCount: number,
+  seed?: ProgressiveSeed,
+): ProgressiveBiomeEvaluationAssembly | null {
   const initial = materializeBiomePrefix(catalog, biome, plan);
   if (initial?.entryRoom === undefined) return null;
   const materializedPrefix = initial as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
   const evaluated = products(catalog, materializedPrefix, enteredBiomeCount, seed);
-  const unsupported = firstUnsupportedFinding(materializedPrefix, evaluated);
+  const unsupported = firstUnsupportedFinding(materializedPrefix, evaluated.evaluation);
   return Object.freeze({
-    materializedPrefix,
-    ...evaluated,
-    findings: mergedFindings(evaluated),
-    ...(unsupported === undefined ? {} : { blockedAt: unsupported.finding.origin }),
+    evaluation: Object.freeze({
+      materializedPrefix,
+      ...evaluated.evaluation,
+      findings: mergedFindings(evaluated.evaluation),
+      ...(unsupported === undefined ? {} : { blockedAt: unsupported.finding.origin }),
+    }),
+    candidateArtifacts: evaluated.candidateArtifacts,
   });
 }
 
@@ -544,13 +592,26 @@ export function evaluateProgressiveBiome(
   enteredBiomeCount: number,
   seed?: ProgressiveSeed,
 ): ProgressiveBiomeEvaluation | null {
+  return (
+    evaluateProgressiveBiomeAssembly(catalog, biome, plan, enteredBiomeCount, seed)?.evaluation ??
+    null
+  );
+}
+
+export function evaluateProgressiveBiomeAssembly(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  plan: AuthoredBiomePlan,
+  enteredBiomeCount: number,
+  seed?: ProgressiveSeed,
+): ProgressiveBiomeEvaluationAssembly | null {
   const initial = materializeBiomePrefix(catalog, biome, plan);
   if (initial?.entryRoom === undefined) return null;
   let materializedPrefix = initial as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
   let evaluated = products(catalog, materializedPrefix, enteredBiomeCount, seed);
-  const unsupported = firstUnsupportedFinding(materializedPrefix, evaluated);
+  const unsupported = firstUnsupportedFinding(materializedPrefix, evaluated.evaluation);
   let retainedFindings: readonly SemanticFinding[] = Object.freeze([]);
   if (unsupported !== undefined) {
     retainedFindings = Object.freeze([unsupported.finding]);
@@ -562,9 +623,12 @@ export function evaluateProgressiveBiome(
     evaluated = products(catalog, materializedPrefix, enteredBiomeCount, seed);
   }
   return Object.freeze({
-    materializedPrefix,
-    ...evaluated,
-    findings: mergedFindings(evaluated, retainedFindings),
-    ...(unsupported === undefined ? {} : { blockedAt: unsupported.finding.origin }),
+    evaluation: Object.freeze({
+      materializedPrefix,
+      ...evaluated.evaluation,
+      findings: mergedFindings(evaluated.evaluation, retainedFindings),
+      ...(unsupported === undefined ? {} : { blockedAt: unsupported.finding.origin }),
+    }),
+    candidateArtifacts: evaluated.candidateArtifacts,
   });
 }

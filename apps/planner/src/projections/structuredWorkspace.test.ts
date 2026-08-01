@@ -1,6 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import { createProjectDocument, semanticAddressKey } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -28,7 +28,7 @@ const projection = createStructuredWorkspaceProjection(catalog, {
 });
 
 function project(project: ReturnType<typeof createProjectDocument>): StructuredWorkspaceProjection {
-  return projection.project(project, simulateProject(catalog, project));
+  return projection.project(simulateProjectAssembly(catalog, project));
 }
 
 function biome(workspace: StructuredWorkspaceProjection, biomeKey: string): WorkspaceBiome {
@@ -167,13 +167,26 @@ describe('unified structured workspace projection facade', () => {
     });
   });
 
-  it('caches only the exact authored-project and evaluation identity pair', () => {
+  it('caches only the exact project-evaluation assembly identity', () => {
     const authored = createGoldenFGHIProject();
-    const evaluation = simulateProject(catalog, authored);
-    const first = projection.project(authored, evaluation);
+    const assembly = simulateProjectAssembly(catalog, authored);
+    const first = projection.project(assembly);
 
-    expect(projection.project(authored, evaluation)).toBe(first);
-    expect(projection.project(authored, simulateProject(catalog, authored))).not.toBe(first);
+    expect(projection.project(assembly)).toBe(first);
+    expect(projection.project(simulateProjectAssembly(catalog, authored))).not.toBe(first);
+  });
+
+  it('rejects cloned and mixed assemblies at application boundaries', () => {
+    const authored = createGoldenFGHIProject();
+    const exact = simulateProjectAssembly(catalog, authored);
+    const other = simulateProjectAssembly(catalog, createRepresentativeNOPQProject());
+    const cloned = Object.freeze({ ...exact });
+    const mixed = Object.freeze({ ...exact, evaluation: other.evaluation });
+
+    expect(() => projection.project(cloned)).toThrow(/not produced by this simulator execution/);
+    expect(() => createCandidateSessionFactory(catalog).bind(mixed)).toThrow(
+      /not produced by this simulator execution/,
+    );
   });
 
   it('registers a coarse finding against only its owning biome shell', () => {
@@ -182,10 +195,11 @@ describe('unified structured workspace projection facade', () => {
       name: 'Facade finding routing',
       projectId: 'facade-finding-routing',
     });
-    const evaluation = simulateProject(catalog, authored);
+    const assembly = simulateProjectAssembly(catalog, authored);
+    const evaluation = assembly.evaluation;
     const finding = evaluation.findings[0];
     if (finding === undefined) throw new Error('empty Surface fixture has no finding');
-    const workspace = projection.project(authored, evaluation);
+    const workspace = projection.project(assembly);
 
     expect(workspace.focusByOwner.get(semanticAddressKey(finding.origin))).toMatchObject({
       biomeKey: 'N',

@@ -17,6 +17,7 @@ import {
   CandidateEvaluationContractError,
   type CandidateEvaluationEvent,
   createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
 
@@ -122,7 +123,7 @@ function boonPrefixProject(): ProjectDocument {
 }
 
 function candidateSession(project: ProjectDocument) {
-  return createPreparedProjectCandidateSession(catalog, project, simulateProject(catalog, project));
+  return createPreparedProjectCandidateSession(catalog, simulateProjectAssembly(catalog, project));
 }
 
 function roomCandidate(
@@ -243,7 +244,10 @@ describe('F candidate support', () => {
     const evaluation = simulateProject(catalog, project);
     expect(evaluation.status).toBe('incomplete');
     expect(evaluation.findings).toMatchObject([{ code: 'continuationMissing' }]);
-    const results = createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate([
+    const results = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate([
       {
         kind: 'shopOffer',
         offer: createShopOfferAddress(fBiome, shopId, offerKey),
@@ -325,8 +329,7 @@ describe('F candidate support', () => {
     const before = JSON.stringify(project);
     const session = createPreparedProjectCandidateSession(
       catalog,
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
     const target = createTargetAddress(fBiome, fDecision().source, 'exit1');
     const results = session.evaluate([
@@ -448,7 +451,7 @@ describe('F candidate support', () => {
     ).toThrow(/source-owned takeover Preboss batch/);
   });
 
-  it('enforces F candidate address and prepared-evaluation identity contracts', () => {
+  it('enforces the F candidate address contract', () => {
     const project = createFOpeningBatch();
     const missingTarget = createTargetAddress(fBiome, fDecision().source, 'exit2');
     const query = { kind: 'roomTarget' as const, target: missingTarget, gameName: 'F_Combat03' };
@@ -456,26 +459,18 @@ describe('F candidate support', () => {
     expect(() => candidateSession(project).evaluate(query)).toThrow(
       CandidateEvaluationContractError,
     );
-    const evaluation = simulateProject(catalog, project);
-    expect(() =>
-      createPreparedProjectCandidateSession(
-        catalog,
-        Object.freeze({ ...project, name: 'F candidate identity edit' }),
-        evaluation,
-      ),
-    ).toThrow('prepared project evaluation does not belong to the authored project identity');
   });
 
   it('batches F candidate queries against one exact authored project/evaluation pair', () => {
     const project = createCompleteFTakeoverProject();
-    const evaluation = simulateProject(catalog, project);
+    const assembly = simulateProjectAssembly(catalog, project);
     const events: CandidateEvaluationEvent[] = [];
-    const session = createPreparedProjectCandidateSession(catalog, project, evaluation, {
+    const session = createPreparedProjectCandidateSession(catalog, assembly, {
       observe: (event) => events.push(event),
     });
 
     expect(session.project).toBe(project);
-    expect(session.evaluation).toBe(evaluation);
+    expect(session.evaluation).toBe(assembly.evaluation);
     session.evaluate([
       {
         kind: 'startRoom',
@@ -507,8 +502,7 @@ describe('F candidate support', () => {
     if (offerKey === undefined || offer === undefined) throw new Error('F Shop has no offer');
     const results = createPreparedProjectCandidateSession(
       catalog,
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     ).evaluate([
       {
         kind: 'incomingReward',
@@ -541,7 +535,10 @@ describe('F candidate support', () => {
 
     expect(evaluation.status).toBe('invalid');
     expect(
-      createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate({
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
         kind: 'roomTarget',
         target,
         gameName: 'F_Combat04',

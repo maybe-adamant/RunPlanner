@@ -11,7 +11,7 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -42,7 +42,7 @@ import {
 const { structuredWorkspace } = createStructuredWorkspaceTestServices();
 
 function project(projectDocument: ProjectDocument) {
-  return structuredWorkspace.project(projectDocument, simulateProject(catalog, projectDocument));
+  return structuredWorkspace.project(simulateProjectAssembly(catalog, projectDocument));
 }
 
 function biome(projectDocument: ProjectDocument, biomeKey: string): WorkspaceBiome {

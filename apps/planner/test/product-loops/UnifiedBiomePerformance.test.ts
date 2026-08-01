@@ -83,7 +83,7 @@ describe('unified biome performance', () => {
     });
     const project = createGoldenFGHIProject();
     application.store.dispatch(authoredProjectReplaced(project));
-    const baseline = application.store.getState().projectWorkspace.evaluation;
+    const baseline = application.store.getState().projectWorkspace.assembly.evaluation;
     events.length = 0;
 
     const rebuild = measure(() => simulateProject(application.catalog, project));
@@ -94,7 +94,7 @@ describe('unified biome performance', () => {
       { kind: 'occurrence', occurrenceId: goldenGStartId },
       'exit1',
     );
-    const workspace = application.structuredWorkspace.project(project, baseline);
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
     const roomCandidates = workspace.interactions.rooms.get(semanticAddressKey(target));
     if (roomCandidates === undefined)
       throw new Error('G cold room-candidate interaction is missing');
@@ -118,7 +118,7 @@ describe('unified biome performance', () => {
     events.length = 0;
     const undo = measure(() => application.store.dispatch(authoredProjectUndoRequested()));
     expect(application.store.getState().projectWorkspace.history.present).toBe(project);
-    expect(application.store.getState().projectWorkspace.evaluation).toBe(baseline);
+    expect(application.store.getState().projectWorkspace.assembly.evaluation).toBe(baseline);
     expectCachedUndoWork(events, 'Underworld cached undo publication');
 
     expectInteractiveDuration(rebuild.durationMs, 'Underworld full rebuild');
@@ -135,14 +135,14 @@ describe('unified biome performance', () => {
     });
     const project = createRepresentativeNOPQProject();
     application.store.dispatch(authoredProjectReplaced(project));
-    const baseline = application.store.getState().projectWorkspace.evaluation;
+    const baseline = application.store.getState().projectWorkspace.assembly.evaluation;
     events.length = 0;
 
     const rebuild = measure(() => simulateProject(application.catalog, project));
     expect(rebuild.result).toEqual(baseline);
 
     const hubSlot = createHubSlotAddress(nBiome, 'hub', 'miniBoss02');
-    const workspace = application.structuredWorkspace.project(project, baseline);
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
     const hubCandidates = workspace.interactions.hubSlots.get(semanticAddressKey(hubSlot));
     if (hubCandidates === undefined)
       throw new Error('N cold Hub-slot candidate interaction is missing');
@@ -168,7 +168,7 @@ describe('unified biome performance', () => {
     events.length = 0;
     const undo = measure(() => application.store.dispatch(authoredProjectUndoRequested()));
     expect(application.store.getState().projectWorkspace.history.present).toBe(project);
-    expect(application.store.getState().projectWorkspace.evaluation).toBe(baseline);
+    expect(application.store.getState().projectWorkspace.assembly.evaluation).toBe(baseline);
     expectCachedUndoWork(events, 'Surface cached undo publication');
 
     expectInteractiveDuration(rebuild.durationMs, 'Surface full rebuild');

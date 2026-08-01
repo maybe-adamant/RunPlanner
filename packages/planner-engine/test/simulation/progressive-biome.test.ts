@@ -16,14 +16,24 @@ import {
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  createPreparedProjectCandidateSession,
+  simulateProject,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 
 import { bindTestCandidateSession } from './candidateSession';
 import {
   createFGenerationProject,
+  fGenerationBaselineBatches,
   fGenerationBiome,
   fGenerationOccurrenceId,
+  fGenerationTargetAddress,
 } from './support/f-generation-project';
+import {
+  evaluateProgressiveBiomeAssembly,
+  evaluateProgressiveBiomeAssemblyBeforeClamp,
+} from '../../src/simulation/progressive/biome';
 import { createUnselectedFTakeoverProject, fBiome, fCombatId } from './support/f-takeover-project';
 import {
   createGoldenFGHProject,
@@ -247,6 +257,57 @@ function partialGWithEarlierInvalidReward() {
 }
 
 describe('progressive biome evaluation', () => {
+  it('carries room-target artifacts from each normal, prefix, clamped, and pre-clamp execution', () => {
+    const complete = createFGenerationProject();
+    const incomplete = createFGenerationProject(undefined, { includeTakeover: false });
+    const firstFTarget = fGenerationTargetAddress(fGenerationBaselineBatches, 1, 1);
+    const normalResult = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, complete),
+    ).evaluate({ kind: 'roomTarget', target: firstFTarget, gameName: 'F_Combat02' });
+    const prefixResult = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, incomplete),
+    ).evaluate({ kind: 'roomTarget', target: firstFTarget, gameName: 'F_Combat02' });
+
+    const fixture = partialGWithInvalidSecondPhysicalTarget();
+    const routeEvaluation = simulateProject(catalog, fixture.project).routes.find(
+      (candidate) => candidate.routeKey === 'Underworld',
+    );
+    const previous = routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const plan = fixture.project.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'G');
+    if (previous?.authoring !== 'complete' || plan === undefined) {
+      throw new Error('progressive artifact fixture has no valid F seed or G plan');
+    }
+    const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
+    const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, 2, seed);
+    const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(
+      catalog,
+      goldenGBiome,
+      plan,
+      2,
+      seed,
+    );
+    const firstGTarget = createTargetAddress(goldenGBiome, source(fixture.source), 'exit1');
+    const invalidSecondGTarget = createTargetAddress(goldenGBiome, source(fixture.source), 'exit2');
+    const clampedContext = clamped?.candidateArtifacts.roomTargets.at(firstGTarget);
+    const beforeClampContext = beforeClamp?.candidateArtifacts.roomTargets.at(firstGTarget);
+
+    expect(normalResult).toMatchObject({ kind: 'roomTarget' });
+    expect(prefixResult).toMatchObject({ kind: 'roomTarget' });
+    expect(clampedContext).toBeDefined();
+    expect(beforeClampContext).toBeDefined();
+    expect(beforeClampContext).not.toBe(clampedContext);
+    const clampedFrontierContext = clamped?.candidateArtifacts.roomTargets.at(invalidSecondGTarget);
+    const beforeClampInvalidContext =
+      beforeClamp?.candidateArtifacts.roomTargets.at(invalidSecondGTarget);
+    expect(clampedFrontierContext).toBeDefined();
+    expect(beforeClampInvalidContext).toBeDefined();
+    expect(beforeClampInvalidContext).not.toBe(clampedFrontierContext);
+  });
+
   it('requires the Fields outcome before a target can be authored while retaining target eligibility', () => {
     const fixture = incompleteHFieldsProject();
     const evaluation = route(fixture.project, 'Underworld').biomes.find(

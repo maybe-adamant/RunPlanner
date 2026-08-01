@@ -51,6 +51,10 @@ import type {
   TakeoverPrebossBatchCandidateSupport,
 } from './model';
 import type { FindingEvidence, SemanticFinding } from '../model';
+import {
+  createRoomTargetCandidateArtifacts,
+  type RoomTargetCandidateArtifacts,
+} from '../candidate-artifacts';
 
 export class BiomeRoomGenerationContractError extends Error {
   constructor(detail: string) {
@@ -60,11 +64,6 @@ export class BiomeRoomGenerationContractError extends Error {
 }
 
 type ForceSupport = 'none' | 'optional' | 'required';
-
-const candidateContextsByValidation = new WeakMap<
-  GeneratedRoomGenerationValidation,
-  ReadonlyMap<string, RoomTargetCandidateContext>
->();
 
 interface CandidateEvaluation {
   readonly room: RoomDeclaration;
@@ -1295,13 +1294,18 @@ export function evaluateTakeoverPrebossBatchCandidate(
   );
 }
 
-export function evaluateBiomeRoomGeneration(
+export interface BiomeRoomGenerationAssembly {
+  readonly validation: GeneratedRoomGenerationValidation;
+  readonly candidateArtifacts: RoomTargetCandidateArtifacts;
+}
+
+export function evaluateBiomeRoomGenerationAssembly(
   catalog: Catalog,
   snapshot: BiomeGenerationSnapshot,
   history: BiomeGenerationHistory,
   enteredBiomeCount: number,
   rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
-): GeneratedRoomGenerationValidation {
+): BiomeRoomGenerationAssembly {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRoomGenerationContractError(
       'biome generation inputs do not share one biome owner',
@@ -1322,13 +1326,17 @@ export function evaluateBiomeRoomGeneration(
     );
   }
   if (layout.progression.kind === 'hub') {
-    return Object.freeze({
+    const validation: GeneratedRoomGenerationValidation = Object.freeze({
       biomeKey: snapshot.biomeKey,
       validity: 'valid',
       forcePressure: Object.freeze([]),
       encounterCounts: Object.freeze([]),
       fieldsCageOutcomes: Object.freeze([]),
       findings: Object.freeze([]),
+    });
+    return Object.freeze({
+      validation,
+      candidateArtifacts: createRoomTargetCandidateArtifacts(new Map()),
     });
   }
 
@@ -1426,18 +1434,24 @@ export function evaluateBiomeRoomGeneration(
     fieldsCageOutcomes: Object.freeze(fieldsCageOutcomes),
     findings: Object.freeze(findings),
   });
-  candidateContextsByValidation.set(validation, new Map(candidateContexts));
-  return validation;
+  return Object.freeze({
+    validation,
+    candidateArtifacts: createRoomTargetCandidateArtifacts(candidateContexts),
+  });
 }
 
-export function roomTargetCandidateContexts(
-  validation: GeneratedRoomGenerationValidation,
-): ReadonlyMap<string, RoomTargetCandidateContext> {
-  const contexts = candidateContextsByValidation.get(validation);
-  if (contexts === undefined) {
-    throw new BiomeRoomGenerationContractError(
-      `room generation for ${validation.biomeKey} has no prepared candidate contexts`,
-    );
-  }
-  return contexts;
+export function evaluateBiomeRoomGeneration(
+  catalog: Catalog,
+  snapshot: BiomeGenerationSnapshot,
+  history: BiomeGenerationHistory,
+  enteredBiomeCount: number,
+  rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
+): GeneratedRoomGenerationValidation {
+  return evaluateBiomeRoomGenerationAssembly(
+    catalog,
+    snapshot,
+    history,
+    enteredBiomeCount,
+    rewardHistoryCheckpoints,
+  ).validation;
 }

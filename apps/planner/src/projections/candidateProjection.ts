@@ -8,6 +8,7 @@ import {
   type ProjectCandidateQuery,
   type ProjectCandidateSession,
   type ProjectEvaluation,
+  type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import {
   semanticAddressKey,
@@ -134,10 +135,7 @@ export interface CandidateProjectionSession {
 }
 
 export interface CandidateSessionFactory {
-  readonly bind: (
-    project: ProjectDocument,
-    evaluation: ProjectEvaluation,
-  ) => CandidateProjectionSession;
+  readonly bind: (assembly: ProjectEvaluationAssembly) => CandidateProjectionSession;
 }
 
 export interface CandidateSessionFactoryOptions {
@@ -170,46 +168,38 @@ function rewardQueries(
 }
 
 function requireProjectCache(
-  cache: WeakMap<ProjectDocument, WeakMap<ProjectEvaluation, ProjectCandidateProjectionCache>>,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
+  cache: WeakMap<ProjectEvaluationAssembly, ProjectCandidateProjectionCache>,
+  assembly: ProjectEvaluationAssembly,
   catalog: Catalog,
   options: CandidateSessionFactoryOptions,
 ): ProjectCandidateProjectionCache {
-  let byEvaluation = cache.get(project);
-  if (byEvaluation === undefined) {
-    byEvaluation = new WeakMap();
-    cache.set(project, byEvaluation);
-  }
-  let projectCache = byEvaluation.get(evaluation);
+  let projectCache = cache.get(assembly);
   if (projectCache === undefined) {
     projectCache = {
       evaluator: createPreparedProjectCandidateSession(
         catalog,
-        project,
-        evaluation,
+        assembly,
         options.observeCandidateEvaluation === undefined
           ? {}
           : { observe: options.observeCandidateEvaluation },
       ),
       options: new Map(),
     };
-    byEvaluation.set(evaluation, projectCache);
+    cache.set(assembly, projectCache);
   }
   return projectCache;
 }
 
 function projectOptions<T>(
-  cache: WeakMap<ProjectDocument, WeakMap<ProjectEvaluation, ProjectCandidateProjectionCache>>,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
+  cache: WeakMap<ProjectEvaluationAssembly, ProjectCandidateProjectionCache>,
+  assembly: ProjectEvaluationAssembly,
   key: string,
   values: readonly T[],
   queries: readonly ProjectCandidateQuery[],
   catalog: Catalog,
   options: CandidateSessionFactoryOptions,
 ): readonly CandidateOptionProjection<T>[] {
-  const projectCache = requireProjectCache(cache, project, evaluation, catalog, options);
+  const projectCache = requireProjectCache(cache, assembly, catalog, options);
   const existing = projectCache.options.get(key);
   if (existing !== undefined) {
     return existing as readonly CandidateOptionProjection<T>[];
@@ -234,9 +224,8 @@ interface ProjectCandidateProjectionCache {
 }
 
 async function projectOptionsCooperatively<T>(
-  cache: WeakMap<ProjectDocument, WeakMap<ProjectEvaluation, ProjectCandidateProjectionCache>>,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
+  cache: WeakMap<ProjectEvaluationAssembly, ProjectCandidateProjectionCache>,
+  assembly: ProjectEvaluationAssembly,
   key: string,
   values: readonly T[],
   queries: readonly ProjectCandidateQuery[],
@@ -244,12 +233,12 @@ async function projectOptionsCooperatively<T>(
   options: CandidateSessionFactoryOptions,
   yieldToHost: () => Promise<void>,
 ): Promise<readonly CandidateOptionProjection<T>[]> {
-  const cached = cache.get(project)?.get(evaluation)?.options.get(key);
+  const cached = cache.get(assembly)?.options.get(key);
   if (cached !== undefined) {
     return cached as readonly CandidateOptionProjection<T>[];
   }
   await yieldToHost();
-  const projectCache = requireProjectCache(cache, project, evaluation, catalog, options);
+  const projectCache = requireProjectCache(cache, assembly, catalog, options);
   const existing = projectCache.options.get(key);
   if (existing !== undefined) {
     return existing as readonly CandidateOptionProjection<T>[];
@@ -429,20 +418,17 @@ export function createCandidateSessionFactory(
       new Promise((resolve) => {
         setTimeout(resolve, 0);
       }));
-  const cache = new WeakMap<
-    ProjectDocument,
-    WeakMap<ProjectEvaluation, ProjectCandidateProjectionCache>
+  const cache = new WeakMap<ProjectEvaluationAssembly, ProjectCandidateProjectionCache>();
+  const rewardTypeDomainCache = new WeakMap<
+    ProjectEvaluationAssembly,
+    Map<string, readonly string[]>
   >();
-  const rewardTypeDomainCache = new WeakMap<ProjectDocument, Map<string, readonly string[]>>();
   const preparedRewardDomainCache = new Map<string, PreparedRewardDomain>();
   const pendingRewardDomains = new WeakMap<
-    ProjectDocument,
-    WeakMap<ProjectEvaluation, Map<string, Promise<ProjectedRewardDomain>>>
+    ProjectEvaluationAssembly,
+    Map<string, Promise<ProjectedRewardDomain>>
   >();
-  const boundSessionCache = new WeakMap<
-    ProjectDocument,
-    WeakMap<ProjectEvaluation, CandidateProjectionSession>
-  >();
+  const boundSessionCache = new WeakMap<ProjectEvaluationAssembly, CandidateProjectionSession>();
   const prepareCachedRewardDomain = (
     rewardTypes: readonly string[],
     selected: ResolvedRewardOffer,
@@ -457,17 +443,17 @@ export function createCandidateSessionFactory(
     return prepared;
   };
   const countedRewardTypesFor = (
-    project: ProjectDocument,
-    evaluation: ProjectEvaluation,
+    assembly: ProjectEvaluationAssembly,
     owner: CountedRewardCandidateOwner,
     binding: CountedRewardBinding,
     selectedRewardType: string,
   ): readonly string[] => {
-    let projectCache = rewardTypeDomainCache.get(project);
+    let projectCache = rewardTypeDomainCache.get(assembly);
     if (projectCache === undefined) {
       projectCache = new Map();
-      rewardTypeDomainCache.set(project, projectCache);
+      rewardTypeDomainCache.set(assembly, projectCache);
     }
+    const { evaluation, project } = assembly;
     const storeKey = resolvedCountedStoreKey(catalog, project, evaluation, owner, binding);
     const key = `reward-types:${semanticAddressKey(owner.address)}:${storeKey}:${selectedRewardType}`;
     const existing = projectCache.get(key);
@@ -479,8 +465,7 @@ export function createCandidateSessionFactory(
     return domain;
   };
   const rewardDomainFor = (
-    project: ProjectDocument,
-    evaluation: ProjectEvaluation,
+    assembly: ProjectEvaluationAssembly,
     owner: RewardCandidateOwner,
     rewardTypes: readonly string[],
     selected: ResolvedRewardOffer,
@@ -489,15 +474,10 @@ export function createCandidateSessionFactory(
     const offers = rewardDomainOffers(prepared);
     const candidateKey = `reward-domain:${semanticAddressKey(owner.address)}:${domainKey(offers.map(offerKey))}`;
     const pendingKey = `${candidateKey}:selected:${offerKey(selected)}`;
-    let byEvaluation = pendingRewardDomains.get(project);
-    if (byEvaluation === undefined) {
-      byEvaluation = new WeakMap();
-      pendingRewardDomains.set(project, byEvaluation);
-    }
-    let projectPending = byEvaluation.get(evaluation);
+    let projectPending = pendingRewardDomains.get(assembly);
     if (projectPending === undefined) {
       projectPending = new Map();
-      byEvaluation.set(evaluation, projectPending);
+      pendingRewardDomains.set(assembly, projectPending);
     }
     const existing = projectPending.get(pendingKey);
     if (existing !== undefined) {
@@ -505,8 +485,7 @@ export function createCandidateSessionFactory(
     }
     const pending = projectOptionsCooperatively(
       cache,
-      project,
-      evaluation,
+      assembly,
       candidateKey,
       offers,
       rewardQueries(owner, offers),
@@ -522,15 +501,13 @@ export function createCandidateSessionFactory(
     return pending;
   };
   const startRoomsFor = (
-    project: ProjectDocument,
-    evaluation: ProjectEvaluation,
+    assembly: ProjectEvaluationAssembly,
     owner: BiomeAddress | OccurrenceAddress,
     rooms: readonly RoomDeclaration[],
   ) =>
     projectOptions(
       cache,
-      project,
-      evaluation,
+      assembly,
       `start:${semanticAddressKey(owner)}:${domainKey(rooms.map((room) => room.gameName))}`,
       rooms,
       rooms.map((room) => ({ kind: 'startRoom', owner, gameName: room.gameName })),
@@ -538,35 +515,26 @@ export function createCandidateSessionFactory(
       options,
     );
   const roomTargetsFor = (
-    project: ProjectDocument,
-    evaluation: ProjectEvaluation,
+    assembly: ProjectEvaluationAssembly,
     target: TargetAddress,
     rooms: readonly RoomDeclaration[],
   ) =>
     projectOptions(
       cache,
-      project,
-      evaluation,
+      assembly,
       `target:${semanticAddressKey(target)}:${domainKey(rooms.map((room) => room.gameName))}`,
       rooms,
       rooms.map((room) => ({ kind: 'roomTarget', target, gameName: room.gameName })),
       catalog,
       options,
     );
-  const bind = (
-    project: ProjectDocument,
-    evaluation: ProjectEvaluation,
-  ): CandidateProjectionSession => {
-    let byEvaluation = boundSessionCache.get(project);
-    if (byEvaluation === undefined) {
-      byEvaluation = new WeakMap();
-      boundSessionCache.set(project, byEvaluation);
-    }
-    const existing = byEvaluation.get(evaluation);
+  const bind = (assembly: ProjectEvaluationAssembly): CandidateProjectionSession => {
+    const existing = boundSessionCache.get(assembly);
     if (existing !== undefined) {
       return existing;
     }
-    requireProjectCache(cache, project, evaluation, catalog, options);
+    requireProjectCache(cache, assembly, catalog, options);
+    const { evaluation, project } = assembly;
     const session = Object.freeze({
       project,
       evaluation,
@@ -575,21 +543,20 @@ export function createCandidateSessionFactory(
         owner: CountedRewardCandidateOwner,
         binding: CountedRewardBinding,
         selectedRewardType: string,
-      ) => countedRewardTypesFor(project, evaluation, owner, binding, selectedRewardType),
+      ) => countedRewardTypesFor(assembly, owner, binding, selectedRewardType),
       rewardDomain: (
         owner: RewardCandidateOwner,
         rewardTypes: readonly string[],
         selected: ResolvedRewardOffer,
-      ) => rewardDomainFor(project, evaluation, owner, rewardTypes, selected),
+      ) => rewardDomainFor(assembly, owner, rewardTypes, selected),
       startRooms: (owner: BiomeAddress | OccurrenceAddress, rooms: readonly RoomDeclaration[]) =>
-        startRoomsFor(project, evaluation, owner, rooms),
+        startRoomsFor(assembly, owner, rooms),
       roomTargets: (target: TargetAddress, rooms: readonly RoomDeclaration[]) =>
-        roomTargetsFor(project, evaluation, target, rooms),
+        roomTargetsFor(assembly, target, rooms),
       batchRewardStores: (rewardStore: BatchRewardStoreAddress, storeKeys: readonly string[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `store:${semanticAddressKey(rewardStore)}:${domainKey(storeKeys)}`,
           storeKeys,
           storeKeys.map((storeKey) => ({ kind: 'batchRewardStore', rewardStore, storeKey })),
@@ -599,8 +566,7 @@ export function createCandidateSessionFactory(
       fieldsCageOutcomes: (decision: ExitDecisionAddress, outcomes: readonly ('min' | 'max')[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `fields:${semanticAddressKey(decision)}:${domainKey(outcomes)}`,
           outcomes,
           outcomes.map((cageOutcome) => ({
@@ -614,8 +580,7 @@ export function createCandidateSessionFactory(
       shipEncounterCounts: (occurrence: OccurrenceAddress, values: readonly (2 | 3)[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `ship-encounters:${semanticAddressKey(occurrence)}:${domainKey(values.map(String))}`,
           values,
           values.map((encounterCount) => ({
@@ -629,8 +594,7 @@ export function createCandidateSessionFactory(
       rewardWheelOfferCounts: (wheel: RewardWheelAddress, values: readonly number[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `wheel-count:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
           values,
           values.map((offerCount) => ({ kind: 'rewardWheelOfferCount', wheel, offerCount })),
@@ -640,8 +604,7 @@ export function createCandidateSessionFactory(
       rewardWheelStores: (wheel: RewardWheelAddress, storeKeys: readonly string[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `wheel-store:${semanticAddressKey(wheel)}:${domainKey(storeKeys)}`,
           storeKeys,
           storeKeys.map((storeKey) => ({ kind: 'rewardWheelStore', wheel, storeKey })),
@@ -651,8 +614,7 @@ export function createCandidateSessionFactory(
       rewardWheelPicks: (wheel: RewardWheelAddress, values: readonly number[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `wheel-pick:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
           values,
           values.map((pickedOfferIndex) => ({
@@ -666,8 +628,7 @@ export function createCandidateSessionFactory(
       hubSlots: (slot: HubSlotAddress, occurrenceId: OccurrenceId, values: readonly boolean[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `hub-slot:${semanticAddressKey(slot)}:${occurrenceId}:${domainKey(values.map(String))}`,
           values,
           values.map((open) => ({ kind: 'hubSlot', slot, open, occurrenceId })),
@@ -677,8 +638,7 @@ export function createCandidateSessionFactory(
       hubVisits: (visit: HubVisitAddress, hubSlotKeys: readonly string[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `hub-visit:${semanticAddressKey(visit)}:${domainKey(hubSlotKeys)}`,
           hubSlotKeys,
           hubSlotKeys.map((hubSlotKey) => ({ kind: 'hubVisit', visit, hubSlotKey })),
@@ -688,8 +648,7 @@ export function createCandidateSessionFactory(
       sideRoomGenerations: (sideRoom: LocalChildAddress, values: readonly SideRoomGeneration[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `side-generation:${semanticAddressKey(sideRoom)}:${domainKey(values)}`,
           values,
           values.map((generation) => ({ kind: 'sideRoomGeneration', sideRoom, generation })),
@@ -702,8 +661,7 @@ export function createCandidateSessionFactory(
       ) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `side-entry-order:${semanticAddressKey(group)}:${domainKey(values.map((value) => JSON.stringify(value)))}`,
           values,
           values.map((enteredSlotKeys) => ({
@@ -717,8 +675,7 @@ export function createCandidateSessionFactory(
       shopPurchases: (purchase: ShopPurchaseAddress, values: readonly boolean[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `shop-purchase:${semanticAddressKey(purchase)}:${domainKey(values.map(String))}`,
           values,
           values.map((purchased) => ({ kind: 'shopPurchase', purchase, purchased })),
@@ -728,8 +685,7 @@ export function createCandidateSessionFactory(
       takeoverPrebossBatches: (source: ExitDecisionAddress, gameNames: readonly string[]) =>
         projectOptions(
           cache,
-          project,
-          evaluation,
+          assembly,
           `takeover:${semanticAddressKey(source)}:${domainKey(gameNames)}`,
           gameNames,
           gameNames.map((gameName) => ({ kind: 'takeoverPrebossBatch', source, gameName })),
@@ -737,7 +693,7 @@ export function createCandidateSessionFactory(
           options,
         ),
     });
-    byEvaluation.set(evaluation, session);
+    boundSessionCache.set(assembly, session);
     return session;
   };
   return Object.freeze({ bind });

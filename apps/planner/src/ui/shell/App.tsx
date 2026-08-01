@@ -20,13 +20,13 @@ import {
 import {
   selectPresentProject,
   selectProjectEvaluation,
+  type RootState,
   useAppDispatch,
   useAppSelector,
 } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type {
   StructuredWorkspaceProjection,
-  StructuredWorkspaceProjectionService,
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
 } from '@planner/projections/structured-workspace';
@@ -46,7 +46,7 @@ interface AppProps {
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
   readonly projectOperations: ProjectOperations;
-  readonly structuredWorkspace: StructuredWorkspaceProjectionService;
+  readonly selectStructuredWorkspace: (state: RootState) => StructuredWorkspaceProjection;
 }
 
 function RouteOverview({
@@ -260,12 +260,12 @@ export function App({
   catalogSummary,
   editorNavigation,
   projectOperations,
-  structuredWorkspace,
+  selectStructuredWorkspace,
 }: AppProps) {
   const activeRouteKey = useAppSelector((state) => state.editorSession.activeRouteKey);
   const project = useAppSelector(selectPresentProject);
   const evaluation = useAppSelector(selectProjectEvaluation);
-  const workspace = structuredWorkspace.project(project, evaluation);
+  const workspace = useAppSelector(selectStructuredWorkspace);
   const dispatch = useAppDispatch();
   const feedback = projectFeedbackHierarchy(evaluation);
   const activeRouteNavigation =

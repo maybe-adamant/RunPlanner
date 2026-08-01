@@ -17,10 +17,12 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   simulateProject,
+  simulateProjectAssembly,
   type CanonicalBatch,
   type CanonicalBiome,
   type CanonicalHubDecision,
   type ProjectEvaluation,
+  type ProjectEvaluationAssembly,
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
@@ -45,6 +47,7 @@ import {
 import { assertExpectedWorkspaceTopologyClosure } from '@planner-test/support/structured-workspace/topology-closure';
 import { unsafeOmitWorkspaceProperty } from '@planner-test/support/structured-workspace/unsafe-product-mutation';
 import { createCandidateSessionFactory } from './candidateProjection';
+import type { CandidateProjectionSession, CandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
@@ -55,13 +58,16 @@ import {
 } from './structured-workspace';
 
 /**
- * These tests deliberately bypass only evaluator provenance. Production still
- * rejects foreign evaluations; the seam lets this adapter prove it rejects a
+ * These tests deliberately bypass only assembly provenance. Production still
+ * rejects foreign assemblies; the seam lets this adapter prove it rejects a
  * malformed evaluator overlay before React can render it.
  */
 vi.mock('@run-planner/engine/simulation', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@run-planner/engine/simulation')>();
-  return { ...actual, assertProjectEvaluationSource: () => undefined };
+  return {
+    ...actual,
+    assertProjectEvaluationAssembly: () => undefined,
+  };
 });
 
 function withMalformedAuthoredBiome(
@@ -86,15 +92,35 @@ function withMalformedAuthoredBiome(
   return { ...project, routes };
 }
 
-function projection() {
+const inertCandidateSessions: CandidateSessionFactory = Object.freeze({
+  bind(assembly: ProjectEvaluationAssembly) {
+    // Malformed-overlay tests never activate candidate loaders. Their inert
+    // session prevents the real exact-session boundary from accepting a
+    // deliberately forged assembly while preserving projection guard coverage.
+    return Object.freeze({
+      project: assembly.project,
+      evaluation: assembly.evaluation,
+    }) as CandidateProjectionSession;
+  },
+});
+
+function projection(
+  candidateSessions: CandidateSessionFactory = createCandidateSessionFactory(catalog),
+) {
   return createStructuredWorkspaceProjection(catalog, {
-    candidateSessions: createCandidateSessionFactory(catalog),
+    candidateSessions,
     contextualPicker: createContextualPickerProjection(createContextualOptionResolver(catalog)),
     rewardPicker: createRewardPickerProjection(
       catalog,
       createContextualPickerProjection(createContextualOptionResolver(catalog)),
     ),
   });
+}
+
+function projectWorkspace(project: ProjectDocument, evaluation?: ProjectEvaluation) {
+  const assembly = simulateProjectAssembly(catalog, project);
+  if (evaluation === undefined) return projection().project(assembly);
+  return projection(inertCandidateSessions).project(Object.freeze({ ...assembly, evaluation }));
 }
 
 function fBatch(snapshot: CanonicalBiome): CanonicalBatch {
@@ -293,7 +319,7 @@ describe('structured workspace overlay contract', () => {
         message: /duplicate authored Hub-decision owner/,
       },
     ]) {
-      expect(() => projection().project(project, evaluation)).toThrow(message);
+      expect(() => projectWorkspace(project, evaluation)).toThrow(message);
     }
   });
 
@@ -317,10 +343,10 @@ describe('structured workspace overlay contract', () => {
       };
     });
 
-    expect(() => projection().project(project, malformed)).toThrow(
+    expect(() => projectWorkspace(project, malformed)).toThrow(
       StructuredWorkspaceProjectionContractError,
     );
-    expect(() => projection().project(project, malformed)).toThrow(
+    expect(() => projectWorkspace(project, malformed)).toThrow(
       /evaluated batch without an authored batch decision/,
     );
   });
@@ -352,7 +378,7 @@ describe('structured workspace overlay contract', () => {
       };
     });
 
-    expect(() => projection().project(project, malformed)).toThrow(
+    expect(() => projectWorkspace(project, malformed)).toThrow(
       /evaluated targets with no authored target/,
     );
   });
@@ -387,7 +413,7 @@ describe('structured workspace overlay contract', () => {
       };
     });
 
-    expect(() => projection().project(project, malformed)).toThrow(
+    expect(() => projectWorkspace(project, malformed)).toThrow(
       /evaluated Hub visit that does not match authored order/,
     );
   });
@@ -411,7 +437,7 @@ describe('structured workspace overlay contract', () => {
       findings: [...evaluation.findings, finding],
     };
 
-    expect(() => projection().project(project, malformed)).toThrow(
+    expect(() => projectWorkspace(project, malformed)).toThrow(
       /finding has no exact workspace destination/,
     );
   });
@@ -431,7 +457,7 @@ describe('structured workspace overlay contract', () => {
       findings: [...evaluation.findings, finding],
     };
 
-    expect(() => projection().project(project, malformed)).toThrow(
+    expect(() => projectWorkspace(project, malformed)).toThrow(
       /finding has no exact workspace destination/,
     );
   });
@@ -455,7 +481,7 @@ describe('structured workspace overlay contract', () => {
     );
     if (requirement === undefined) throw new Error('N side-room reward requirement is missing');
 
-    const projected = projection().project(project, simulateProject(catalog, project));
+    const projected = projectWorkspace(project);
     const n = projected.routes
       .flatMap((route) => route.biomes)
       .find((biome) => biome.biomeKey === 'N');
@@ -537,7 +563,7 @@ describe('structured workspace overlay contract', () => {
       }
     >();
     for (const project of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
-      const projected = projection().project(project, simulateProject(catalog, project));
+      const projected = projectWorkspace(project);
       for (const route of project.routes) {
         for (const plan of route.biomes) {
           const nodes = projected.routes
@@ -588,7 +614,7 @@ describe('structured workspace overlay contract', () => {
 
   it('independently closes persisted decisions, targets, occurrences, and Hub ownership', () => {
     for (const project of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
-      const projected = projection().project(project, simulateProject(catalog, project));
+      const projected = projectWorkspace(project);
       for (const route of project.routes) {
         for (const plan of route.biomes) {
           if (plan.topology === null) continue;
@@ -616,7 +642,7 @@ describe('structured workspace overlay contract', () => {
 
   it('closes structural occurrence packages without requiring standalone workbench nodes', () => {
     const project = createGoldenFGHIProject();
-    const projected = projection().project(project, simulateProject(catalog, project));
+    const projected = projectWorkspace(project);
     const plan = project.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'F');
@@ -695,7 +721,7 @@ describe('structured workspace overlay contract', () => {
 
   it('makes target and authored Hub sub-owner markers and exact destinations observable', () => {
     const fProject = createGoldenFGHIProject();
-    const fProjected = projection().project(fProject, simulateProject(catalog, fProject));
+    const fProjected = projectWorkspace(fProject);
     const fPlan = fProject.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'F');
@@ -783,7 +809,7 @@ describe('structured workspace overlay contract', () => {
     );
 
     const nProject = createRepresentativeNOPQProject();
-    const nProjected = projection().project(nProject, simulateProject(catalog, nProject));
+    const nProjected = projectWorkspace(nProject);
     const nPlan = nProject.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N');
@@ -935,7 +961,7 @@ describe('structured workspace overlay contract', () => {
       fFrontier,
       nHubFrontier,
     ]) {
-      const projected = projection().project(project, simulateProject(catalog, project));
+      const projected = projectWorkspace(project);
       assertRenderedWorkspaceStructuralControlClosure({
         interactions: projected.interactions,
         routes: projected.routes,
@@ -999,7 +1025,7 @@ describe('structured workspace overlay contract', () => {
       fFrontier,
       nHubFrontier,
     ]) {
-      const projected = projection().project(project, simulateProject(catalog, project));
+      const projected = projectWorkspace(project);
       for (const route of project.routes) {
         for (const plan of route.biomes) {
           const controls = expectedWorkspaceStructuralControls(
@@ -1041,7 +1067,7 @@ describe('structured workspace overlay contract', () => {
     }
 
     const surface = createRepresentativeNOPQProject();
-    const projected = projection().project(surface, simulateProject(catalog, surface));
+    const projected = projectWorkspace(surface);
     const hub = projected.routes
       .flatMap((route) => route.biomes)
       .flatMap((biome) => biome.nodes)

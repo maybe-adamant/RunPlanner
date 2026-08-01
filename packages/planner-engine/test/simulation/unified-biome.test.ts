@@ -17,6 +17,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
   evaluateBiome,
   simulateProject,
 } from '@run-planner/engine/simulation';
@@ -535,7 +536,10 @@ describe('unified biome simulation', () => {
       'startsCompletion',
       'deadLeaf',
     ]);
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
     expect(() =>
       candidates.evaluate({
         kind: 'roomTarget',
@@ -575,7 +579,10 @@ describe('unified biome simulation', () => {
       ),
     ).toContain('f-prefix-combat');
     expect(biome.roomGeneration.ordinary.forcePressure).toHaveLength(1);
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
     const result = candidates.evaluate({
       kind: 'roomTarget',
       target: createTargetAddress(

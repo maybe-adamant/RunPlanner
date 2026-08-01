@@ -15,9 +15,9 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
   evaluateBiomeCompleteness,
   materializeBiome,
-  simulateProject,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -179,7 +179,6 @@ function ordinaryBatches(snapshot: ReturnType<typeof materialize>) {
 describe('H Fields materialization', () => {
   it('keeps Fields Min/Max and cage-local rewards as engine-owned candidate domains', () => {
     const project = createGoldenFGHProject();
-    const evaluation = simulateProject(catalog, project);
     const start = goldenHStartId;
     const combat = createOccurrenceId('golden-h-combat02');
     const occurrence = plan(project).topology?.occurrences.find(
@@ -190,25 +189,26 @@ describe('H Fields materialization', () => {
     }
     const reward = occurrence.state.cages.cage1;
     if (reward === undefined) throw new Error('H fixture must retain cage1');
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate(
-      [
-        {
-          kind: 'fieldsCageOutcome',
-          decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start }),
-          cageOutcome: 'min',
-        },
-        {
-          kind: 'fieldsCageOutcome',
-          decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start }),
-          cageOutcome: 'max',
-        },
-        {
-          kind: 'localReward',
-          reward: createLocalRewardAddress(biome, combat, 'cages', 'cage1'),
-          value: reward,
-        },
-      ],
-    );
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate([
+      {
+        kind: 'fieldsCageOutcome',
+        decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start }),
+        cageOutcome: 'min',
+      },
+      {
+        kind: 'fieldsCageOutcome',
+        decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start }),
+        cageOutcome: 'max',
+      },
+      {
+        kind: 'localReward',
+        reward: createLocalRewardAddress(biome, combat, 'cages', 'cage1'),
+        value: reward,
+      },
+    ]);
 
     expect(candidates).toMatchObject([
       { kind: 'fieldsCageOutcome', result: { cageOutcome: 'min', selectedPossible: true } },
@@ -229,8 +229,7 @@ describe('H Fields materialization', () => {
     expect(
       createPreparedProjectCandidateSession(
         catalog,
-        project,
-        simulateProject(catalog, project),
+        simulateProjectAssembly(catalog, project),
       ).evaluate({
         kind: 'fieldsCageOutcome',
         decision: createExitDecisionAddress(biome, {

@@ -1,5 +1,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { simulateProject, type CandidateEvaluationEvent } from '@run-planner/engine/simulation';
+import {
+  simulateProjectAssembly,
+  type CandidateEvaluationEvent,
+} from '@run-planner/engine/simulation';
 import { summarizeCatalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectDocument } from '@run-planner/engine/authored-project';
 
@@ -45,16 +48,19 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const editorNavigation = createEditorNavigation(catalog);
   const fallbackProject = createInitialProject(catalog);
   const startup = restoreStartupProject(fallbackProject, catalog, options.autosaveRecovery);
-  const evaluationCache = new WeakMap<ProjectDocument, ReturnType<typeof simulateProject>>();
-  const evaluateProject = (project: ProjectDocument) => {
+  const evaluationCache = new WeakMap<
+    ProjectDocument,
+    ReturnType<typeof simulateProjectAssembly>
+  >();
+  const assembleProjectEvaluation = (project: ProjectDocument) => {
     const existing = evaluationCache.get(project);
     if (existing !== undefined) {
       return existing;
     }
     options.observeEvaluationWork?.(Object.freeze({ kind: 'projectEvaluation', project }));
-    const evaluation = simulateProject(catalog, project);
-    evaluationCache.set(project, evaluation);
-    return evaluation;
+    const assembly = simulateProjectAssembly(catalog, project);
+    evaluationCache.set(project, assembly);
+    return assembly;
   };
   const candidateSessions = createCandidateSessionFactory(
     catalog,
@@ -72,7 +78,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   });
   const store = createPlannerStore({
     catalog,
-    evaluateProject,
+    assembleProjectEvaluation,
     initialProfileSession: startup.profileSession,
     initialProject: startup.project,
   });
@@ -93,6 +99,8 @@ export function createApplication(options: CreateApplicationOptions = {}) {
           scheduler: options.autosaveScheduler,
           store,
         });
+  const selectStructuredWorkspace = (state: ReturnType<typeof store.getState>) =>
+    structuredWorkspace.project(state.projectWorkspace.assembly);
 
   return {
     catalog,
@@ -100,6 +108,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     editorNavigation,
     projectOperations,
     store,
+    selectStructuredWorkspace,
     structuredWorkspace,
     dispose(): void {
       autosaveCoordinator?.dispose();

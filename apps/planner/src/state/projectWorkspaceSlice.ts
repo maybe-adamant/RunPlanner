@@ -9,15 +9,18 @@ import {
   type ProjectHistory,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
-import { type ProjectEvaluation } from '@run-planner/engine/simulation';
+import {
+  assertProjectEvaluationAssembly,
+  type ProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 
 import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
 
-export type ProjectEvaluator = (project: ProjectDocument) => ProjectEvaluation;
+export type ProjectEvaluationAssembler = (project: ProjectDocument) => ProjectEvaluationAssembly;
 
 export interface ProjectWorkspaceState {
+  readonly assembly: ProjectEvaluationAssembly;
   readonly history: ProjectHistory;
-  readonly evaluation: ProjectEvaluation;
 }
 
 export const authoredProjectCommandDispatched = createAction<ProjectCommand>(
@@ -31,42 +34,59 @@ export const authoredProjectReplaced = createAction<ProjectDocument>(
 
 function publishWorkspace(
   history: ProjectHistory,
-  evaluateProject: ProjectEvaluator,
+  assembleProjectEvaluation: ProjectEvaluationAssembler,
 ): ProjectWorkspaceState {
+  const assembly = assembleProjectEvaluation(history.present);
+  assertProjectEvaluationAssembly(assembly);
+  if (assembly.project !== history.present) {
+    throw new Error('project evaluation assembly does not match authored workspace identity');
+  }
   return Object.freeze({
+    assembly,
     history,
-    evaluation: evaluateProject(history.present),
   });
 }
 
 export function createProjectWorkspaceReducer(
   catalog: Catalog,
   initialProject: ProjectDocument,
-  evaluateProject: ProjectEvaluator,
+  assembleProjectEvaluation: ProjectEvaluationAssembler,
 ): Reducer<ProjectWorkspaceState> {
-  const initialState = publishWorkspace(createProjectHistory(initialProject), evaluateProject);
+  const initialState = publishWorkspace(
+    createProjectHistory(initialProject),
+    assembleProjectEvaluation,
+  );
 
   return (state = initialState, action) => {
     if (authoredProjectCommandDispatched.match(action)) {
       const history = applyProjectHistoryCommand(state.history, catalog, action.payload);
-      return history === state.history ? state : publishWorkspace(history, evaluateProject);
+      return history === state.history
+        ? state
+        : publishWorkspace(history, assembleProjectEvaluation);
     }
     if (authoredProjectUndoRequested.match(action)) {
       const history = undoProjectHistory(state.history);
-      return history === state.history ? state : publishWorkspace(history, evaluateProject);
+      return history === state.history
+        ? state
+        : publishWorkspace(history, assembleProjectEvaluation);
     }
     if (authoredProjectRedoRequested.match(action)) {
       const history = redoProjectHistory(state.history);
-      return history === state.history ? state : publishWorkspace(history, evaluateProject);
+      return history === state.history
+        ? state
+        : publishWorkspace(history, assembleProjectEvaluation);
     }
     if (authoredProjectReplaced.match(action)) {
-      return publishWorkspace(createProjectHistory(action.payload), evaluateProject);
+      return publishWorkspace(createProjectHistory(action.payload), assembleProjectEvaluation);
     }
     if (newProjectCreated.match(action)) {
-      return publishWorkspace(createProjectHistory(action.payload), evaluateProject);
+      return publishWorkspace(createProjectHistory(action.payload), assembleProjectEvaluation);
     }
     if (profileLoadSucceeded.match(action)) {
-      return publishWorkspace(createProjectHistory(action.payload.project), evaluateProject);
+      return publishWorkspace(
+        createProjectHistory(action.payload.project),
+        assembleProjectEvaluation,
+      );
     }
     return state;
   };

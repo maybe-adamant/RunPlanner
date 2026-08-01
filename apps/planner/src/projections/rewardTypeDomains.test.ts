@@ -9,7 +9,7 @@ import {
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures';
@@ -61,8 +61,7 @@ describe('producer-resolved reward type domains', () => {
   it('uses the materialized declaration-owned store for F through I', () => {
     const project = createGoldenFGHIProject();
     const session = createCandidateSessionFactory(catalog).bind(
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
     for (const [biomeKey, gameName, expected] of [
       ['F', 'F_Combat03', 'MaxHealthDrop'],
@@ -112,8 +111,7 @@ describe('producer-resolved reward type domains', () => {
   it('uses the current normalized producer state for N through Q', () => {
     const project = createRepresentativeNOPQProject();
     const session = createCandidateSessionFactory(catalog).bind(
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
     const n = occurrence(project, 'Surface', 'N', 'N_Combat05');
     const nDomain = session.countedRewardTypes(

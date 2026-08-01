@@ -14,7 +14,6 @@ import {
   type OccurrenceAddress,
   type OccurrenceId,
   type ProjectCommand,
-  type ProjectDocument,
   type RewardWheelAddress,
   type SemanticAddress,
   type SideRoomGeneration,
@@ -23,7 +22,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { CompletionRoomDescriptor, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type { CanonicalBatch, ProjectEvaluation } from '@run-planner/engine/simulation';
+import type { CanonicalBatch, ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 
 import type {
   CandidateOptionProjection,
@@ -824,7 +823,7 @@ export interface StructuredWorkspaceProjection {
 }
 
 export interface StructuredWorkspaceProjectionService {
-  project(project: ProjectDocument, evaluation: ProjectEvaluation): StructuredWorkspaceProjection;
+  project(assembly: ProjectEvaluationAssembly): StructuredWorkspaceProjection;
 }
 
 export interface StructuredWorkspaceContextualServices {

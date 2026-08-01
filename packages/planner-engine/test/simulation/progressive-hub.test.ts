@@ -14,6 +14,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -345,8 +346,10 @@ describe('Hub progressive biome evaluation', () => {
 
   it('keeps incomplete Hub selection explicit while still evaluating the board-completing slot', () => {
     const project = openHub(8);
-    const evaluation = simulateProject(catalog, project);
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
 
     expect(
       candidates.evaluate({
@@ -363,7 +366,10 @@ describe('Hub progressive biome evaluation', () => {
       configuredBiomeCounts: { Surface: 1 },
     });
     expect(
-      createPreparedProjectCandidateSession(catalog, empty).evaluate({
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, empty),
+      ).evaluate({
         kind: 'hubSlot',
         slot: createHubSlotAddress(nBiome, 'hub', 'combat01'),
         open: true,
@@ -391,7 +397,10 @@ describe('Hub progressive biome evaluation', () => {
       occurrenceId: createOccurrenceId('progressive-n-first-slot'),
     };
     expect(
-      createPreparedProjectCandidateSession(catalog, freshBoard).evaluate(firstSlot),
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, freshBoard),
+      ).evaluate(firstSlot),
     ).toMatchObject({
       kind: 'hubSlot',
       result: { selectedPossible: true, findings: [] },

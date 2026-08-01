@@ -13,7 +13,7 @@ import {
   type ProjectDocument,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures';
@@ -37,7 +37,7 @@ import type {
 const { structuredWorkspace } = createStructuredWorkspaceTestServices();
 
 function project(projectDocument: ProjectDocument): StructuredWorkspaceProjection {
-  return structuredWorkspace.project(projectDocument, simulateProject(catalog, projectDocument));
+  return structuredWorkspace.project(simulateProjectAssembly(catalog, projectDocument));
 }
 
 function biome(workspace: StructuredWorkspaceProjection, biomeKey: string): WorkspaceBiome {

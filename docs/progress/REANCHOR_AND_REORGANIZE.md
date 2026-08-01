@@ -62,13 +62,13 @@ A final Campaign A retrospective amended Campaigns B through D around
 vertical producer-to-consumer movement, explicit semantic products, primary
 test ownership, and conditional decomposition. Campaign B remains separate.
 
-Campaign B's entry audit is complete. It found eighteen query kinds grouped
-into four coherent semantic families and five review units, three semantic
-`WeakMap` sidecars, one permitted project/evaluation identity attestation, and
-several ordinary memoization caches. The room-target sidecar originates in
-generation rather than rewards, so the first implementation unit must
-establish the explicit evaluation assembly end to end and remove that sidecar
-with its room-target consumer. Production implementation has not begun.
+Campaign B's entry audit found eighteen query kinds grouped into four coherent
+semantic families and five review units, three semantic `WeakMap` sidecars, one
+permitted project/evaluation identity attestation, and several ordinary
+memoization caches. B1 is complete in the current change set: the room-target
+sidecar originated in generation, so its explicit evaluation assembly now runs
+end to end and has removed that sidecar with its room-target consumer. B2
+through B5 remain separate vertical units.
 
 This document is temporary delivery authority. Stable ownership remains with
 the documents under `docs/design/`. When the program closes, any durable
@@ -1551,23 +1551,35 @@ The progressive and unavailable responsibilities are also explicit:
 | catalog/history view -> static reward facts                | Derived-value cache             | Retain; it memoizes a reproducible calculation and is not the sole carrier of a semantic fact                                                                                   |
 | application project/evaluation and candidate-domain caches | Evaluation and projection cache | Retain while their keys remain explicit inputs and cache misses can reproduce the same result; they must not become a lookup path from public evaluation to candidate artifacts |
 
-The target internal product is an exact project-evaluation assembly: the
-existing data-only `ProjectEvaluation` plus biome-addressed in-memory candidate
-artifacts and the authored project identity that produced both. Public
+The target internal product is one exact project-evaluation assembly: the
+existing data-only `ProjectEvaluation`, the authored project identity, and
+biome-addressed in-memory candidate artifacts produced by that same execution.
+It is one atomic handoff, never independently threaded `project`,
+`evaluation`, and optional artifacts whose identities could be mixed. Public
 `simulateProject` remains a data-only facade over one assembly execution; it
 must not execute simulation once for public data and again for artifacts. The
-application evaluator publishes the exact assembly alongside the existing
-public evaluation value, and structured-workspace composition passes the
-artifact side unopened to candidate-session binding. React and reducers may
-transport that replaceable derived product but do not inspect or interpret its
-callable contents. A `WeakMap` or resolver from public evaluation back to the
-assembly is specifically not an acceptable handoff.
+application publishes one transient assembly product alongside the existing
+public evaluation selector, while structured-workspace composition passes the
+opaque artifact side unopened to candidate-session binding. React and reducers
+may transport that replaceable derived product but do not inspect or interpret
+its callable contents; it never enters persistence, profiles, autosave, or
+authored undo history. A `WeakMap` or resolver from public evaluation back to
+the assembly is specifically not an acceptable handoff.
 
 Progressive evaluation needs the same shape at biome scope. Normal, prefix,
 clamped, and pre-clamp repair paths must each return their data result and the
 artifacts produced by that exact execution. A candidate evaluator may receive
 only the family-specific artifact or authored/evaluated facts it needs; it may
-not receive the whole assembly as a universal source service.
+not receive the whole assembly as a universal source service. The direct
+`roomTargetCandidateContextAtFrontier` constructor remains legitimate for an
+ungenerated physical exit; it is an explicit exact-frontier product, not a
+result-keyed sidecar to remove.
+
+Candidate artifacts remain opaque, immutable capability products at this
+boundary. Do not expose a raw `Map` merely typed as `ReadonlyMap`: JavaScript
+can still mutate it after `Object.freeze`. An artifact exposes only the narrow
+family lookup or evaluation capability its consumer needs, while its mutable
+construction data stays private to the producing stage.
 
 ##### Primary test ownership and retained witnesses
 
@@ -1625,9 +1637,11 @@ units. These are review boundaries, not line-count quotas.
 
 - establish the deliberate query/result contract and explicit project/biome
   evaluation assembly while moving the complete `roomTarget` family with them;
-- change the existing exact session to require that assembly, but retain one
-  visible dispatcher in the current aggregate until the remaining evaluators
-  move; do not create a temporary fallback dispatcher or legacy evaluator;
+- change the existing exact session to require that one assembly, with no
+  `simulateProject` default or parallel project/evaluation/artifact arguments;
+  retain one visible dispatcher in the current aggregate until the remaining
+  evaluators move; do not create a temporary fallback dispatcher or legacy
+  evaluator;
 - make generation return its room-target candidate contexts explicitly and
   make normal, prefix, clamped, and pre-clamp project/progressive assembly carry
   the context produced by that exact execution;
@@ -1641,10 +1655,38 @@ units. These are review boundaries, not line-count quotas.
   fixtures while retaining all produced unavailable evidence;
 - keep identity, lazy evaluation, batching, observation, and exact result order
   at the session boundary;
+- prove that a missing or mismatched artifact cannot bind at the explicit
+  assembly boundary, while direct physical-exit frontier behavior,
+  selected-invalid target repair, deeply equal public simulation, and existing
+  lazy batch/work counts remain unchanged;
 - pass exact inputs to evaluators rather than a universal candidate context or
   source service that can answer unrelated queries;
 - retain the room-target policy matrix at its audited owner and delete
   duplicate session/facade assertions in the same slice.
+
+##### B1 delivery record (2026-07-31)
+
+B1 now delivers one identity-attested `ProjectEvaluationAssembly` from project
+simulation through Redux, structured-workspace composition, and exact
+candidate-session binding. Its public surface remains the data-only project and
+evaluation pair; the room-target capability is opaque, non-persisted, and
+available only to the internal family evaluator that consumes it. The assembly
+cannot be mixed, prototype-forged, reflection-constructed, or rebound with a
+substituted artifact.
+
+Generation's former room-target `WeakMap` sidecar and its registration,
+accessor, and public export are gone. Normal complete, incomplete-prefix,
+clamped-repair, and pre-clamp-repair paths return the exact artifacts that they
+produced; direct ungenerated physical-exit evaluation retains its explicit
+frontier constructor. The complete `roomTarget` policy has moved out of the
+aggregate dispatcher, and the unproduced `biomeIncomplete` result residue has
+been removed without changing the produced unavailable evidence.
+
+The public `simulateProject` facade is deeply equal to the assembly evaluation,
+ordinary evaluation selectors stay data-only, and cached undo/redo may reuse a
+prior immutable project identity's matching assembly without crossing identity
+boundaries. The completed gate is 82 test files / 718 tests plus typecheck,
+lint, formatting, production build, and `git diff --check`.
 
 #### B2: Remaining Linear structural families
 

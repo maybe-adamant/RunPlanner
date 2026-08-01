@@ -1,7 +1,10 @@
-import { semanticAddressKey, type ProjectDocument } from '@run-planner/engine/authored-project';
+import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import type { ProjectEvaluation } from '@run-planner/engine/simulation';
-import { assertProjectEvaluationSource } from '@run-planner/engine/simulation';
+import {
+  assertProjectEvaluationAssembly,
+  type ProjectEvaluation,
+  type ProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 
 import {
   appendUniqueFocusDestinations,
@@ -93,17 +96,12 @@ export function createStructuredWorkspaceProjection(
   catalog: Catalog,
   services: StructuredWorkspaceContextualServices,
 ): StructuredWorkspaceProjectionService {
-  const cache = new WeakMap<
-    ProjectDocument,
-    WeakMap<ProjectEvaluation, StructuredWorkspaceProjection>
-  >();
+  const cache = new WeakMap<ProjectEvaluationAssembly, StructuredWorkspaceProjection>();
   return Object.freeze({
-    project(
-      project: ProjectDocument,
-      evaluation: ProjectEvaluation,
-    ): StructuredWorkspaceProjection {
-      assertProjectEvaluationSource(project, evaluation);
-      const existing = cache.get(project)?.get(evaluation);
+    project(assembly: ProjectEvaluationAssembly): StructuredWorkspaceProjection {
+      assertProjectEvaluationAssembly(assembly);
+      const { evaluation, project } = assembly;
+      const existing = cache.get(assembly);
       if (existing !== undefined) return existing;
       const focusByOwner = new Map<string, WorkspaceInspectorDestination>();
       const occurrenceInteractionRequirements = new Map<
@@ -207,13 +205,12 @@ export function createStructuredWorkspaceProjection(
       });
       registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, routes);
       const interactions = bindWorkspaceInteractions({
+        assembly,
         batchInteractionRequirements,
         catalog,
-        evaluation,
         frontierInteractionRequirements,
         hubInteractionRequirements,
         occurrenceInteractionRequirements,
-        project,
         rewardControls,
         roomControls,
         services,
@@ -234,12 +231,7 @@ export function createStructuredWorkspaceProjection(
         routes: Object.freeze(routes),
         status: evaluation.status,
       });
-      let byEvaluation = cache.get(project);
-      if (byEvaluation === undefined) {
-        byEvaluation = new WeakMap();
-        cache.set(project, byEvaluation);
-      }
-      byEvaluation.set(evaluation, result);
+      cache.set(assembly, result);
       return result;
     },
   });

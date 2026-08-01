@@ -16,6 +16,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -151,10 +152,11 @@ describe('N Hub rewards, validation, and candidates', () => {
       ),
       generation: 'notGenerated',
     });
-    const evaluation = simulateProject(catalog, project);
-
     expect(
-      createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate({
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
         kind: 'sideRoomGeneration',
         sideRoom: createLocalChildAddress(
           nBiome,
@@ -195,8 +197,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
     const candidates = createPreparedProjectCandidateSession(
       catalog,
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
 
     expect(
@@ -248,7 +249,10 @@ describe('N Hub rewards, validation, and candidates', () => {
 
     expect(biome).toMatchObject({ authoring: 'incomplete', coverage: { kind: 'prefix' } });
     expect(
-      createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate({
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
         kind: 'hubVisit',
         visit: createHubVisitAddress(nBiome, 'hub', 4),
         hubSlotKey: 'combat09',
@@ -450,8 +454,11 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('evaluates board rewards and the Preboss shop from their prepared semantic owners', () => {
-    const { project, evaluation } = completeN();
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
+    const { project } = completeN();
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
 
     expect(
       candidates.evaluate({
@@ -470,9 +477,12 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('evaluates Hub membership, visits, and parent-local state through their semantic owners', () => {
-    const { project, evaluation } = completeN();
+    const { project } = completeN();
     const encodedBefore = encodeProjectDocument(project);
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
     const [
       conflictingMiniboss,
       validTenthSlot,
@@ -602,7 +612,10 @@ describe('N Hub rewards, validation, and candidates', () => {
       slot: createHubSlotAddress(nBiome, 'hub', 'combat12'),
       occurrenceId: nOccurrenceId('close-referenced-slot'),
     });
-    const candidate = createPreparedProjectCandidateSession(catalog, project).evaluate({
+    const candidate = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({
       kind: 'hubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat05'),
       open: false,
@@ -616,8 +629,11 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('keeps an unvisited ninth Hub slot closable while the completed handoff is removed', () => {
-    const { project, evaluation } = completeN();
-    const candidate = createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate({
+    const { project } = completeN();
+    const candidate = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({
       kind: 'hubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat03'),
       open: false,

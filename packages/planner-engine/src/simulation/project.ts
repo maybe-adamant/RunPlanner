@@ -10,7 +10,14 @@ import type {
   ProjectDocument,
 } from '../authored-project/model';
 import { evaluateBiomeCompleteness } from './completeness';
-import { evaluateBiomeRoomGeneration, evaluateHubDecisionGeneration } from './generation';
+import { evaluateBiomeRoomGenerationAssembly, evaluateHubDecisionGeneration } from './generation';
+import {
+  createBiomeCandidateArtifacts,
+  createEmptyBiomeCandidateArtifacts,
+  createProjectCandidateArtifacts,
+  type BiomeCandidateArtifacts,
+  type ProjectCandidateArtifacts,
+} from './candidate-artifacts';
 import {
   composeBiomeHistory,
   type BiomeHistoryPrefix,
@@ -24,7 +31,10 @@ import {
   type MaterializedBiomePrefix,
 } from './materialization';
 import type { SemanticFinding } from './model';
-import { evaluateProgressiveBiome, type BiomeGenerationValidation } from './progressive/biome';
+import {
+  evaluateProgressiveBiomeAssembly,
+  type BiomeGenerationValidation,
+} from './progressive/biome';
 import { evaluateBiomeRewards, type BiomeRewardSimulation } from './rewards';
 
 export interface BiomeEvaluationBase {
@@ -151,7 +161,65 @@ export interface ProjectEvaluation {
   readonly summary: ProjectEvaluationSummary;
 }
 
+export interface ProjectEvaluationAssembly {
+  readonly project: ProjectDocument;
+  readonly evaluation: ProjectEvaluation;
+}
+
 const evaluationSourceProjects = new WeakMap<ProjectEvaluation, ProjectDocument>();
+const exactProjectEvaluationAssemblyConstructionToken = Symbol(
+  'exactProjectEvaluationAssemblyConstructionToken',
+);
+let exactProjectEvaluationAssemblyArtifacts:
+  ((assembly: ProjectEvaluationAssembly) => ProjectCandidateArtifacts) | undefined;
+let isExactProjectEvaluationAssembly:
+  ((assembly: ProjectEvaluationAssembly) => boolean) | undefined;
+
+class ExactProjectEvaluationAssembly implements ProjectEvaluationAssembly {
+  readonly #candidateArtifacts: ProjectCandidateArtifacts;
+  readonly project: ProjectDocument;
+  readonly evaluation: ProjectEvaluation;
+
+  constructor(
+    project: ProjectDocument,
+    evaluation: ProjectEvaluation,
+    candidateArtifacts: ProjectCandidateArtifacts,
+    constructionToken: typeof exactProjectEvaluationAssemblyConstructionToken,
+  ) {
+    if (constructionToken !== exactProjectEvaluationAssemblyConstructionToken) {
+      throw new ProjectSimulationContractError(
+        'exact project evaluation assemblies may only be constructed by project simulation',
+      );
+    }
+    this.project = project;
+    this.evaluation = evaluation;
+    this.#candidateArtifacts = candidateArtifacts;
+    Object.freeze(this);
+  }
+
+  static {
+    exactProjectEvaluationAssemblyArtifacts = (
+      assembly: ProjectEvaluationAssembly,
+    ): ProjectCandidateArtifacts => {
+      if (!(assembly instanceof ExactProjectEvaluationAssembly)) {
+        throw new ProjectSimulationContractError(
+          'prepared project evaluation assembly was not produced by this simulator execution',
+        );
+      }
+      return assembly.#candidateArtifacts;
+    };
+    isExactProjectEvaluationAssembly = (assembly: ProjectEvaluationAssembly): boolean => {
+      const candidateArtifacts = exactProjectEvaluationAssemblyArtifacts;
+      if (candidateArtifacts === undefined) return false;
+      try {
+        candidateArtifacts(assembly);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+  }
+}
 
 export class ProjectSimulationContractError extends Error {
   constructor(detail: string) {
@@ -171,6 +239,43 @@ export function assertProjectEvaluationSource(
   }
 }
 
+function requireExactProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+): ProjectEvaluationAssembly {
+  if (isExactProjectEvaluationAssembly?.(assembly) !== true) {
+    throw new ProjectSimulationContractError(
+      'prepared project evaluation assembly was not produced by this simulator execution',
+    );
+  }
+  assertProjectEvaluationSource(assembly.project, assembly.evaluation);
+  return assembly;
+}
+
+export function assertProjectEvaluationAssembly(assembly: ProjectEvaluationAssembly): void {
+  requireExactProjectEvaluationAssembly(assembly);
+}
+
+/** Engine-internal capability access; the public assembly surface stays data-only. */
+export function candidateArtifactsForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+): ProjectCandidateArtifacts {
+  const candidateArtifacts = exactProjectEvaluationAssemblyArtifacts;
+  if (candidateArtifacts === undefined) {
+    throw new ProjectSimulationContractError('candidate artifact access is not initialized');
+  }
+  return candidateArtifacts(requireExactProjectEvaluationAssembly(assembly));
+}
+
+interface BiomeProjectEvaluationAssembly {
+  readonly evaluation: ProjectBiomeEvaluation;
+  readonly candidateArtifacts: BiomeCandidateArtifacts;
+}
+
+interface BiomeGenerationAssembly {
+  readonly validation: BiomeGenerationValidation;
+  readonly candidateArtifacts: BiomeCandidateArtifacts;
+}
+
 function generation(
   catalog: Catalog,
   snapshot:
@@ -178,8 +283,8 @@ function generation(
   history: CanonicalBiomeHistory | BiomeHistoryPrefix,
   enteredBiomeCount: number,
   rewards: BiomeRewardSimulation,
-): BiomeGenerationValidation {
-  const ordinary = evaluateBiomeRoomGeneration(
+): BiomeGenerationAssembly {
+  const ordinary = evaluateBiomeRoomGenerationAssembly(
     catalog,
     snapshot,
     history,
@@ -187,11 +292,19 @@ function generation(
     rewards.targetHistory,
   );
   const hub = evaluateHubDecisionGeneration(catalog, snapshot, history);
-  return Object.freeze({
-    validity: ordinary.validity === 'valid' && hub.validity === 'valid' ? 'valid' : 'invalid',
-    ordinary,
+  const validation: BiomeGenerationValidation = Object.freeze({
+    validity:
+      ordinary.validation.validity === 'valid' && hub.validity === 'valid' ? 'valid' : 'invalid',
+    ordinary: ordinary.validation,
     hub,
-    findings: Object.freeze([...ordinary.findings, ...hub.findings]),
+    findings: Object.freeze([...ordinary.validation.findings, ...hub.findings]),
+  });
+  return Object.freeze({
+    validation,
+    candidateArtifacts: createBiomeCandidateArtifacts(
+      createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
+      ordinary.candidateArtifacts,
+    ),
   });
 }
 
@@ -262,10 +375,20 @@ export function evaluateBiome(
   enteredBiomeCount: number,
   previous?: CompleteBiomeProjectEvaluation,
 ): ProjectBiomeEvaluation {
+  return evaluateBiomeAssembly(catalog, routeKey, plan, enteredBiomeCount, previous).evaluation;
+}
+
+function evaluateBiomeAssembly(
+  catalog: Catalog,
+  routeKey: string,
+  plan: AuthoredBiomePlan,
+  enteredBiomeCount: number,
+  previous?: CompleteBiomeProjectEvaluation,
+): BiomeProjectEvaluationAssembly {
   const origin = createBiomeAddress(routeKey, plan.biomeKey);
   const completeness = evaluateBiomeCompleteness(catalog, origin, plan);
   if (completeness.completion === 'incomplete') {
-    const progressive = evaluateProgressiveBiome(
+    const progressive = evaluateProgressiveBiomeAssembly(
       catalog,
       origin,
       plan,
@@ -276,29 +399,37 @@ export function evaluateBiome(
     );
     if (progressive === null) {
       return Object.freeze({
+        evaluation: Object.freeze({
+          biomeKey: plan.biomeKey,
+          origin,
+          authoring: 'incomplete',
+          frontier: completeness.frontier,
+          coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
+          findings: completeness.findings,
+        }),
+        candidateArtifacts: createEmptyBiomeCandidateArtifacts(origin),
+      });
+    }
+    return Object.freeze({
+      evaluation: Object.freeze({
         biomeKey: plan.biomeKey,
         origin,
         authoring: 'incomplete',
         frontier: completeness.frontier,
-        coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
-        findings: completeness.findings,
-      });
-    }
-    return Object.freeze({
-      biomeKey: plan.biomeKey,
-      origin,
-      authoring: 'incomplete',
-      frontier: completeness.frontier,
-      coverage: Object.freeze({
-        kind: 'prefix',
-        through: prefixCoveragePoint(progressive.materializedPrefix),
-        ...(progressive.blockedAt === undefined ? {} : { blockedAt: progressive.blockedAt }),
+        coverage: Object.freeze({
+          kind: 'prefix',
+          through: prefixCoveragePoint(progressive.evaluation.materializedPrefix),
+          ...(progressive.evaluation.blockedAt === undefined
+            ? {}
+            : { blockedAt: progressive.evaluation.blockedAt }),
+        }),
+        materializedPrefix: progressive.evaluation.materializedPrefix,
+        history: progressive.evaluation.history,
+        roomGeneration: progressive.evaluation.roomGeneration,
+        rewards: progressive.evaluation.rewards,
+        findings: Object.freeze([...completeness.findings, ...progressive.evaluation.findings]),
       }),
-      materializedPrefix: progressive.materializedPrefix,
-      history: progressive.history,
-      roomGeneration: progressive.roomGeneration,
-      rewards: progressive.rewards,
-      findings: Object.freeze([...completeness.findings, ...progressive.findings]),
+      candidateArtifacts: progressive.candidateArtifacts,
     });
   }
   const snapshot = materializeBiome(catalog, origin, completeness);
@@ -312,19 +443,24 @@ export function evaluateBiome(
     previous?.rewards.branches,
   );
   const roomGeneration = generation(catalog, snapshot, history, enteredBiomeCount, rewards);
-  const findings = Object.freeze([...roomGeneration.findings, ...rewards.findings]);
+  const findings = Object.freeze([...roomGeneration.validation.findings, ...rewards.findings]);
   return Object.freeze({
-    biomeKey: plan.biomeKey,
-    origin,
-    authoring: 'complete',
-    coverage: Object.freeze({ kind: 'complete' }),
-    validity:
-      roomGeneration.validity === 'valid' && rewards.validity === 'valid' ? 'valid' : 'invalid',
-    snapshot,
-    history,
-    roomGeneration,
-    rewards,
-    findings,
+    evaluation: Object.freeze({
+      biomeKey: plan.biomeKey,
+      origin,
+      authoring: 'complete',
+      coverage: Object.freeze({ kind: 'complete' }),
+      validity:
+        roomGeneration.validation.validity === 'valid' && rewards.validity === 'valid'
+          ? 'valid'
+          : 'invalid',
+      snapshot,
+      history,
+      roomGeneration: roomGeneration.validation,
+      rewards,
+      findings,
+    }),
+    candidateArtifacts: roomGeneration.candidateArtifacts,
   });
 }
 
@@ -390,8 +526,17 @@ function summarizeRoute(
   });
 }
 
-function evaluateRoute(catalog: Catalog, route: AuthoredRoutePlan): ProjectRouteEvaluation {
+interface RouteProjectEvaluationAssembly {
+  readonly evaluation: ProjectRouteEvaluation;
+  readonly candidateArtifacts: readonly BiomeCandidateArtifacts[];
+}
+
+function evaluateRouteAssembly(
+  catalog: Catalog,
+  route: AuthoredRoutePlan,
+): RouteProjectEvaluationAssembly {
   const evaluations: ProjectBiomeEvaluation[] = [];
+  const candidateArtifacts: BiomeCandidateArtifacts[] = [];
   const completeValidPrefix: string[] = [];
   const findings: SemanticFinding[] = [];
   let active: ActiveRouteBiome | null = null;
@@ -401,14 +546,16 @@ function evaluateRoute(catalog: Catalog, route: AuthoredRoutePlan): ProjectRoute
     if (previous?.authoring === 'incomplete') {
       throw new ProjectSimulationContractError('incomplete biome cannot seed route continuation');
     }
-    const evaluation = evaluateBiome(
+    const assembled = evaluateBiomeAssembly(
       catalog,
       route.routeKey,
       plan,
       index + 1,
       previous?.authoring === 'complete' ? previous : undefined,
     );
+    const evaluation = assembled.evaluation;
     evaluations.push(evaluation);
+    candidateArtifacts.push(assembled.candidateArtifacts);
     findings.push(...evaluation.findings);
     if (evaluation.authoring === 'incomplete' || evaluation.validity === 'invalid') {
       active = Object.freeze({
@@ -427,13 +574,16 @@ function evaluateRoute(catalog: Catalog, route: AuthoredRoutePlan): ProjectRoute
     blockedSuffix,
   });
   return Object.freeze({
-    routeKey: route.routeKey,
-    status: routeStatus(route.biomes.length, frozenEvaluations),
-    configuredBiomeKeys: Object.freeze(route.biomes.map((biome) => biome.biomeKey)),
-    biomes: frozenEvaluations,
-    processing,
-    findings: Object.freeze(findings),
-    summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing),
+    evaluation: Object.freeze({
+      routeKey: route.routeKey,
+      status: routeStatus(route.biomes.length, frozenEvaluations),
+      configuredBiomeKeys: Object.freeze(route.biomes.map((biome) => biome.biomeKey)),
+      biomes: frozenEvaluations,
+      processing,
+      findings: Object.freeze(findings),
+      summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing),
+    }),
+    candidateArtifacts: Object.freeze(candidateArtifacts),
   });
 }
 
@@ -468,8 +618,16 @@ function summarizeProject(routes: readonly ProjectRouteEvaluation[]): ProjectEva
 }
 
 export function simulateProject(catalog: Catalog, project: ProjectDocument): ProjectEvaluation {
+  return simulateProjectAssembly(catalog, project).evaluation;
+}
+
+export function simulateProjectAssembly(
+  catalog: Catalog,
+  project: ProjectDocument,
+): ProjectEvaluationAssembly {
   assertProjectMatchesCatalog(catalog, project);
-  const routes = Object.freeze(project.routes.map((route) => evaluateRoute(catalog, route)));
+  const assembledRoutes = project.routes.map((route) => evaluateRouteAssembly(catalog, route));
+  const routes = Object.freeze(assembledRoutes.map((route) => route.evaluation));
   const summary = summarizeProject(routes);
   const evaluation = Object.freeze({
     status:
@@ -487,5 +645,10 @@ export function simulateProject(catalog: Catalog, project: ProjectDocument): Pro
     summary,
   });
   evaluationSourceProjects.set(evaluation, project);
-  return evaluation;
+  return new ExactProjectEvaluationAssembly(
+    project,
+    evaluation,
+    createProjectCandidateArtifacts(assembledRoutes.flatMap((route) => route.candidateArtifacts)),
+    exactProjectEvaluationAssemblyConstructionToken,
+  );
 }

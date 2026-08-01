@@ -10,7 +10,10 @@ import {
   createTargetAddress,
   type ExitDecision,
 } from '@run-planner/engine/authored-project';
-import { simulateProject, type ProjectCandidateEvaluation } from '@run-planner/engine/simulation';
+import {
+  simulateProjectAssembly,
+  type ProjectCandidateEvaluation,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures';
@@ -73,12 +76,11 @@ function exitDecisions(
 describe('candidate projection', () => {
   it('keeps engine result unions intact and caches one query domain by semantic owner', () => {
     const project = createGoldenFGHIProject();
-    const evaluation = simulateProject(catalog, project);
+    const assembly = simulateProjectAssembly(catalog, project);
     const observeCandidateEvaluation = vi.fn();
-    const session = createCandidateSessionFactory(catalog, { observeCandidateEvaluation }).bind(
-      project,
-      evaluation,
-    );
+    const session = createCandidateSessionFactory(catalog, {
+      observeCandidateEvaluation,
+    }).bind(assembly);
     const first = exitDecisions(project)[0]!;
     const target = first.normal.kind === 'batch' ? first.normal.targets[0] : undefined;
     if (target === undefined) throw new Error('F first batch target is missing');
@@ -101,8 +103,7 @@ describe('candidate projection', () => {
   it('uses materialized resolved stores for counted reward domains', () => {
     const project = createGoldenFGHIProject();
     const session = createCandidateSessionFactory(catalog).bind(
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
     const occurrence = fPlan(project).topology!.occurrences.find(
       (candidate) => candidate.gameName === 'F_Combat03',
@@ -130,8 +131,7 @@ describe('candidate projection', () => {
   it('keeps takeovers source-owned and evaluates their one batch candidate', () => {
     const project = createGoldenFGHIProject();
     const session = createCandidateSessionFactory(catalog).bind(
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
     const takeover = exitDecisions(project).find(
       (decision) =>
@@ -163,8 +163,7 @@ describe('candidate projection', () => {
       occurrenceId: createOccurrenceId('unreached-g-source'),
     });
     const session = createCandidateSessionFactory(catalog).bind(
-      withGStart,
-      simulateProject(catalog, withGStart),
+      simulateProjectAssembly(catalog, withGStart),
     );
     const target = createTargetAddress(
       createBiomeAddress('Underworld', 'G'),
@@ -185,8 +184,7 @@ describe('candidate projection', () => {
   it('addresses batch-store candidates by their source rather than an array position', () => {
     const project = createGoldenFGHIProject();
     const session = createCandidateSessionFactory(catalog).bind(
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
     const decision = exitDecisions(project)[0]!;
     const store = createBatchRewardStoreAddress(

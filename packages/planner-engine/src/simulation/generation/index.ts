@@ -1,13 +1,14 @@
 export {
   evaluateBiomeRoomGeneration,
+  evaluateBiomeRoomGenerationAssembly,
   roomTargetCandidateContextAtFrontier,
   evaluateTakeoverPrebossBatchCandidate,
   evaluateTakeoverPrebossBatchCandidateAtFrontier,
   fieldsCageOutcomeCandidateSupport,
-  roomTargetCandidateContexts,
   BiomeRoomGenerationContractError,
   supportedFieldsCageOutcomes,
 } from './biome';
+export type { BiomeRoomGenerationAssembly } from './biome';
 export {
   evaluateHubOpenSetConstraints,
   evaluateHubDecisionGeneration,
