@@ -24,8 +24,14 @@ import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
   CanonicalBiome,
+  CanonicalCompletionRoom,
+  CanonicalDecision,
   CanonicalHubDecision,
+  CanonicalHubTarget,
+  CanonicalHubVisit,
   CanonicalLinkedExit,
+  CanonicalLocalChildRoom,
+  CanonicalTarget,
   MaterializedBiomePrefix,
   ProjectBiomeEvaluation,
   ProjectEvaluation,
@@ -70,75 +76,203 @@ export interface WorkspaceProjectSourceIndex {
   readonly routes: readonly WorkspaceRouteSource[];
 }
 
-function isSemanticAddress(value: unknown): value is SemanticAddress {
-  if (typeof value !== 'object' || value === null || !('kind' in value)) return false;
-  const address = value as Readonly<Record<string, unknown>>;
-  const string = (key: string) => typeof address[key] === 'string';
-  const biomeOwned = () => string('routeKey') && string('biomeKey');
-  const occurrenceOwned = () => biomeOwned() && string('occurrenceId');
-  switch (address.kind) {
-    case 'project':
-      return true;
-    case 'route':
-      return string('routeKey');
-    case 'biome':
-      return biomeOwned();
-    case 'biomeField':
-      return biomeOwned() && string('fieldKey');
-    case 'occurrence':
-    case 'incomingReward':
-      return occurrenceOwned();
-    case 'completionRoom':
-      return biomeOwned() && string('role');
-    case 'exitDecision':
-    case 'exitSelection':
-    case 'batchRewardStore':
-      return biomeOwned() && typeof address.source === 'object' && address.source !== null;
-    case 'target':
-      return (
-        biomeOwned() &&
-        string('exitKey') &&
-        typeof address.source === 'object' &&
-        address.source !== null
-      );
-    case 'hubDecision':
-    case 'hubOpenSet':
-    case 'hubRoom':
-      return biomeOwned() && string('hubKey');
-    case 'hubSlot':
-      return biomeOwned() && string('hubKey') && string('hubSlotKey');
-    case 'hubVisit':
-      return biomeOwned() && string('hubKey') && typeof address.visitIndex === 'number';
-    case 'localReward':
-    case 'localChild':
-      return occurrenceOwned() && string('groupKey') && string('slotKey');
-    case 'localChildGroup':
-      return occurrenceOwned() && string('groupKey');
-    case 'rewardWheel':
-      return occurrenceOwned() && string('wheelKey');
-    case 'rewardWheelOffer':
-      return occurrenceOwned() && string('wheelKey') && string('offerKey');
-    case 'shopOffer':
-    case 'shopPurchase':
-      return occurrenceOwned() && string('offerKey');
-    default:
-      return false;
+/**
+ * Application-local mapping from engine-published canonical entities to the
+ * semantic owners whose evaluation has actually been reached. It deliberately
+ * does not discover addresses by walking object shape: every owner below is
+ * either an explicit canonical origin or the engine's declared coverage point.
+ */
+export interface WorkspaceEvaluatedOwnerCoverage {
+  readonly isAssessed: (owner: SemanticAddress) => boolean;
+}
+
+type WorkspaceHubVisitFrontier = Extract<
+  NonNullable<MaterializedBiomePrefix['frontier']>,
+  { readonly phase: string }
+>;
+type WorkspacePrefixEvaluation = Extract<
+  ProjectBiomeEvaluation,
+  { readonly materializedPrefix: MaterializedBiomePrefix }
+>;
+
+function appendOwner(keys: Set<string>, owner: SemanticAddress): void {
+  keys.add(semanticAddressKey(owner));
+}
+
+function appendAuthoredRoomOwners(keys: Set<string>, room: CanonicalAuthoredRoom): void {
+  appendOwner(keys, room.origin);
+  if (room.incomingReward !== undefined) appendOwner(keys, room.incomingReward.origin);
+  for (const reward of room.localRewards ?? []) appendOwner(keys, reward.origin);
+  for (const wheel of room.rewardWheels ?? []) {
+    appendOwner(keys, wheel.origin);
+    for (const offer of wheel.offers) appendOwner(keys, offer.origin);
+  }
+  for (const offer of room.entryState?.offers ?? []) {
+    appendOwner(keys, offer.offerOrigin);
+    appendOwner(keys, offer.purchaseOrigin);
   }
 }
 
-function assessedAddresses(value: unknown): ReadonlySet<string> {
-  const keys = new Set<string>();
-  const visited = new WeakSet<object>();
-  const visit = (candidate: unknown): void => {
-    if (typeof candidate !== 'object' || candidate === null || visited.has(candidate)) return;
-    visited.add(candidate);
-    if (isSemanticAddress(candidate)) keys.add(semanticAddressKey(candidate));
-    for (const nested of Array.isArray(candidate) ? candidate : Object.values(candidate)) {
-      visit(nested);
+function appendLocalChildRoomOwners(keys: Set<string>, room: CanonicalLocalChildRoom): void {
+  appendOwner(keys, room.origin);
+  if (room.incomingReward !== undefined) appendOwner(keys, room.incomingReward.origin);
+}
+
+function appendTargetOwners(keys: Set<string>, target: CanonicalTarget): void {
+  appendOwner(keys, target.origin);
+  appendAuthoredRoomOwners(keys, target.room);
+}
+
+function appendBatchOwners(keys: Set<string>, batch: CanonicalBatch): void {
+  appendOwner(keys, batch.origin);
+  appendOwner(keys, batch.parent.origin);
+  appendOwner(keys, batch.rewardStore.origin);
+  appendOwner(keys, batch.selectedOrigin);
+  for (const target of batch.targets) appendTargetOwners(keys, target);
+}
+
+function appendLinkedExitOwners(keys: Set<string>, exit: CanonicalLinkedExit): void {
+  appendOwner(keys, exit.origin);
+  appendOwner(keys, exit.source.origin);
+  appendTargetOwners(keys, exit.target);
+}
+
+function appendHubTargetOwners(keys: Set<string>, target: CanonicalHubTarget): void {
+  appendOwner(keys, target.origin);
+  appendAuthoredRoomOwners(keys, target.room);
+}
+
+function appendHubVisitOwners(keys: Set<string>, visit: CanonicalHubVisit): void {
+  appendOwner(keys, visit.origin);
+  appendHubTargetOwners(keys, visit.target);
+  for (const local of visit.localSlots) appendLocalChildRoomOwners(keys, local);
+  for (const restore of visit.parentRestores) {
+    appendOwner(keys, restore.after);
+    appendOwner(keys, restore.room.origin);
+  }
+  appendOwner(keys, visit.hubRestore.after);
+  appendOwner(keys, visit.hubRestore.room.origin);
+}
+
+function appendHubOwners(
+  keys: Set<string>,
+  hub: CanonicalHubDecision,
+  omittedBoardTargetKey?: string,
+): void {
+  appendOwner(keys, hub.origin);
+  appendOwner(keys, hub.room.origin);
+  appendOwner(keys, hub.board.origin);
+  appendOwner(keys, hub.board.room.origin);
+  for (const target of hub.board.targets) {
+    if (semanticAddressKey(target.origin) !== omittedBoardTargetKey)
+      appendHubTargetOwners(keys, target);
+  }
+  for (const visit of hub.visits) appendHubVisitOwners(keys, visit);
+}
+
+function appendDecisionOwners(
+  keys: Set<string>,
+  decision: CanonicalDecision,
+  omittedHubBoardTargetKey?: string,
+): void {
+  switch (decision.kind) {
+    case 'batch':
+      appendBatchOwners(keys, decision);
+      return;
+    case 'linkedExit':
+      appendLinkedExitOwners(keys, decision);
+      return;
+    case 'hub':
+      appendHubOwners(keys, decision, omittedHubBoardTargetKey);
+      return;
+  }
+}
+
+function appendCompletionRoomOwners(keys: Set<string>, room: CanonicalCompletionRoom): void {
+  appendOwner(keys, room.origin);
+}
+
+function isHubVisitFrontier(
+  frontier: MaterializedBiomePrefix['frontier'],
+): frontier is WorkspaceHubVisitFrontier {
+  return frontier?.kind === 'hubVisit' && 'phase' in frontier;
+}
+
+function hasMaterializedPrefix(
+  evaluation: ProjectBiomeEvaluation,
+): evaluation is WorkspacePrefixEvaluation {
+  return evaluation.authoring === 'incomplete' && 'materializedPrefix' in evaluation;
+}
+
+function appendPrefixOwners(
+  keys: Set<string>,
+  prefix: MaterializedBiomePrefix,
+  evaluation: WorkspacePrefixEvaluation,
+): void {
+  const frontier = prefix.frontier;
+  const hubVisitFrontier = isHubVisitFrontier(frontier) ? frontier : undefined;
+  const omittedHubTargetKey =
+    hubVisitFrontier?.phase === 'targetLifecycle'
+      ? semanticAddressKey(hubVisitFrontier.target.origin)
+      : undefined;
+
+  if (prefix.entryRoom !== undefined) appendAuthoredRoomOwners(keys, prefix.entryRoom);
+  for (const decision of prefix.decisions) {
+    // A clamped target-lifecycle frontier still retains its board target for
+    // diagnosis, but coverage stops before that target. Earlier completed
+    // visits remain independently covered even if malformed state reuses it.
+    appendDecisionOwners(keys, decision, omittedHubTargetKey);
+  }
+
+  if (frontier?.kind === 'exitDecision') {
+    appendOwner(keys, frontier.origin);
+    appendOwner(keys, frontier.parent.origin);
+    appendOwner(keys, frontier.selectedOrigin);
+    if (frontier.partialBatch !== undefined) appendBatchOwners(keys, frontier.partialBatch);
+    else for (const target of frontier.targets) appendTargetOwners(keys, target);
+  }
+  if (hubVisitFrontier !== undefined) {
+    if (hubVisitFrontier.phase !== 'targetLifecycle') {
+      appendOwner(keys, hubVisitFrontier.origin);
+      appendHubTargetOwners(keys, hubVisitFrontier.target);
+      for (const local of hubVisitFrontier.localSlots) appendLocalChildRoomOwners(keys, local);
+      for (const restore of hubVisitFrontier.parentRestores) {
+        appendOwner(keys, restore.after);
+        appendOwner(keys, restore.room.origin);
+      }
     }
-  };
-  visit(value);
-  return keys;
+  }
+
+  // The point is the engine's explicit statement of the final covered owner.
+  // It also covers an empty frontier whose owner has no canonical child yet.
+  appendOwner(keys, evaluation.coverage.through.owner);
+}
+
+function createWorkspaceEvaluatedOwnerCoverage(
+  evaluation: ProjectBiomeEvaluation | undefined,
+): WorkspaceEvaluatedOwnerCoverage {
+  const keys = new Set<string>();
+  if (evaluation === undefined || evaluation.coverage.kind === 'none') {
+    return Object.freeze({
+      isAssessed: (owner: SemanticAddress) => keys.has(semanticAddressKey(owner)),
+    });
+  }
+  if (evaluation.authoring === 'complete') {
+    const snapshot = evaluation.snapshot;
+    appendAuthoredRoomOwners(keys, snapshot.entryRoom);
+    for (const decision of snapshot.decisions) appendDecisionOwners(keys, decision);
+    for (const room of snapshot.completionRooms) appendCompletionRoomOwners(keys, room);
+  } else {
+    if (!hasMaterializedPrefix(evaluation)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${evaluation.biomeKey} has incomplete evaluation without prefix coverage`,
+      );
+    }
+    appendPrefixOwners(keys, evaluation.materializedPrefix, evaluation);
+  }
+  return Object.freeze({
+    isAssessed: (owner: SemanticAddress) => keys.has(semanticAddressKey(owner)),
+  });
 }
 
 function indexFindings(
@@ -351,7 +485,7 @@ function createWorkspaceBiomeSource(
     }
   }
   const findingsByOwner = indexFindings(evaluation?.findings ?? []);
-  const assessedKeys = assessedAddresses(materialized(evaluation));
+  const coverage = createWorkspaceEvaluatedOwnerCoverage(evaluation);
   return Object.freeze({
     biome,
     ...(overlay.entryRoom === undefined ? {} : { entryRoom: overlay.entryRoom }),
@@ -368,7 +502,7 @@ function createWorkspaceBiomeSource(
       findingsByOwner.get(semanticAddressKey(owner)) ?? Object.freeze([]),
     hubDecision: (hubKey: string) =>
       hubDecisionsByKey.get(semanticAddressKey(createHubDecisionAddress(biome, hubKey))),
-    isAssessed: (owner: SemanticAddress) => assessedKeys.has(semanticAddressKey(owner)),
+    isAssessed: coverage.isAssessed,
     layout,
     occurrence: (occurrenceId: OccurrenceId) => occurrencesById.get(occurrenceId),
     plan,
