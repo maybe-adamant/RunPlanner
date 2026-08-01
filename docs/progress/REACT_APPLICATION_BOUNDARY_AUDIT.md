@@ -922,6 +922,42 @@ in Finding 2, that identity allocation has left React, and that no action union
 was added solely to mirror `ProjectCommand`. This checkpoint decides whether
 any mechanical family is worth moving.
 
+**Status — complete (2026-08-01).** The full repository gate passed after the
+C4 keyboard-continuity correction:
+typecheck, 96 test files / 810 tests, lint, formatting, and the production
+build. React no longer chooses the reward, target, structural/takeover, or Hub
+command variants named in Finding 2. Structured-editor React no longer
+allocates occurrence identities, and the completed binding surface uses
+capabilities and exact owners rather than a new mirror action union.
+
+**D1 — declined / intentionally retained.** Ship encounter count, wheel
+store/count/pick, Ephyra generation/order, and Shop purchase are seven fixed
+owner-plus-value translations. Candidate binding already owns their eligibility
+and laziness; none chooses a command variant, allocates identity, owns focus,
+or recovers an owner. A richer candidate-plus-intent product would repeat the
+same mappings in binding and add a command-shape matrix without removing a
+meaningful React consumer: `CandidateSelect` remains shared, Ephyra order is
+array-valued, Shop has its own control, and the occurrence workbench retains
+the independent start-room mapping. Revisit only if a later occurrence-local
+control gains real command-policy branching or a shared intent consumer can
+remove a whole boundary.
+
+**D2 — declined / intentionally retained.** Fields outcome, batch reward
+store, exit selection, and the authored-choice start-room replacement are
+likewise one fixed owner-plus-value command each. Moving batch store or exit
+selection would remove only a small marker narrowing helper while adding
+specialized interaction contracts and tests; the other two remove no ownership
+recovery at all. Existing tests do not carry a duplicate command-shape matrix
+to delete, and direct action imports remain for the deliberately out-of-scope
+removal, repair, and D1 controls. Preserve their current lazy candidate,
+selected-invalid, and one-command/Undo behavior. Reconsider only if one gains
+branching, focus, identity, or another consumer that creates actual
+duplication.
+
+Gate C therefore closes with C1-C4 complete and D1/D2 independently skipped;
+Gate E remains a separately justified product-contraction and enforcement
+decision.
+
 ### Gate D: Conditional mechanical mappings
 
 Gate D is optional. It is not required to close the policy-bearing correction.
