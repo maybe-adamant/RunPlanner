@@ -56,10 +56,19 @@ A16 completed the bounded test-ownership correction: canonical shared route
 fixtures, independent workspace expectation/observation infrastructure,
 focused projection and closure assertions, and React coverage aligned with the
 existing workbench boundaries. Commit 5b.3 in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) may now
-resume. A final Campaign A retrospective amended Campaigns B through D around
+[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) is
+behavior-ready but remains paused while the remaining cleanup campaigns close.
+A final Campaign A retrospective amended Campaigns B through D around
 vertical producer-to-consumer movement, explicit semantic products, primary
 test ownership, and conditional decomposition. Campaign B remains separate.
+
+Campaign B's entry audit is complete. It found eighteen query kinds grouped
+into four coherent semantic families and five review units, three semantic
+`WeakMap` sidecars, one permitted project/evaluation identity attestation, and
+several ordinary memoization caches. The room-target sidecar originates in
+generation rather than rewards, so the first implementation unit must
+establish the explicit evaluation assembly end to end and remove that sidecar
+with its room-target consumer. Production implementation has not begun.
 
 This document is temporary delivery authority. Stable ownership remains with
 the documents under `docs/design/`. When the program closes, any durable
@@ -381,11 +390,11 @@ neutral dependency anchor
   -> Campaign A: workspace and React
   -> completed production contraction checkpoint: A12 and A13
   -> completed test-ownership correction: A14, A15.1, A15.2, and A16
-  -> checkpoint: Commit 5b.3 and 5b.4 may resume
   -> Campaign B: candidate capability flow
   -> Campaign C: authored core
   -> Campaign D: ordered engine state flows
-  -> checkpoint: Commit 5c may begin
+  -> checkpoint: Commit 5b.3 and 5b.4 may resume
+  -> checkpoint: Commit 5c may begin after Commit 5b closes
 ```
 
 Campaigns B and C may exchange order if their opening audits show a narrower
@@ -401,7 +410,7 @@ exact Shop purchase order changes the chronological reward path it owns.
 | ------------------------------- | ----------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Neutral dependency anchor       | 1 delivered                   | Small                             | Unnecessarily changing external import surfaces                                                            |
 | Campaign A: workspace and React | 29 delivered                  | Extra-large                       | Losing authored reachability, focus, lazy interaction behavior, or independent test evidence               |
-| Campaign B: candidate flow      | Set by opening audit          | Extra-large                       | Wrapping hidden reward sidecars, creating a universal context, or altering progressive recovery            |
+| Campaign B: candidate flow      | 5 audited                     | Extra-large                       | Wrapping hidden reward sidecars, creating a universal context, or altering progressive recovery            |
 | Campaign C: authored core       | Set by opening audit          | Extra-large                       | Creating a second topology model or scattering atomic authored invariants                                  |
 | Campaign D: ordered engine flow | Set separately per state flow | Extra-large/highest semantic risk | Moving an event to the wrong chronological state or decomposing a cohesive fold without maintenance payoff |
 
@@ -1441,8 +1450,9 @@ following:
    suite does not regress materially from the recorded diagnostic run without
    explanation, and `npm run check` plus `git diff --check` pass.
 
-After this gate, Commit 5b.3 and Commit 5b.4 may resume. Campaign B remains
-separate and does not begin as part of the test correction.
+This gate behaviorally unblocks Commit 5b.3 and Commit 5b.4. The chosen cleanup
+sequence nevertheless begins Campaign B now and resumes those feature slices
+after Campaign D closes.
 
 ### Campaign B: Candidate Capability Flow
 
@@ -1470,58 +1480,226 @@ Before moving production code:
 - propose complete vertical review units and their expected deletions. Do not
   begin with a contract-only, source-interface-only, or context-only commit.
 
-#### B1: Exact session and first structural families
+##### Entry-audit result (2026-07-31)
 
-- establish the deliberate query/result surface and exact
-  project/evaluation-bound session while moving at least one complete structural
-  family with it;
-- keep identity attestation, lazy evaluation, batching, observation, and exact
-  result order at the session boundary;
-- move start-room, ordinary/takeover target, and progressive recovery in the
-  smallest complete family slices shown by the audit;
+The audit is complete; no production code changed. The present 2,655-line
+candidate module has four distinct change neighborhoods: the public
+query/result vocabulary, selected and progressive source recovery, family
+evaluation, and exact-session dispatch. Its length is evidence of mixed
+responsibility, not the acceptance target. The application-side 821-line
+candidate projection remains a cohesive exact-session adapter and cache at
+entry; Campaign B does not split it unless a vertical family move demonstrates
+an independent application responsibility.
+
+The mixed producer baseline is 1,443 lines in generation's biome evaluator,
+1,545 in reward's biome evaluator, 103 in the reward-frontier module, 491 in
+project evaluation, and 570 in progressive biome evaluation. Most of those
+lines own non-candidate simulation and are not movement targets. Per-unit diff
+accounting compares what actually moves or is deleted from these files; their
+combined size is not a Campaign-B success measure.
+
+The public contract contains eighteen query kinds:
+
+| Family                   | Query kinds                                                                                            | Current semantic sources                                                                                                                                                                            | Recovery and unavailable ownership                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Linear structural        | `startRoom`, `roomTarget`, `takeoverPrebossBatch`, `batchRewardStore`, `fieldsCageOutcome`             | Catalog layout and authored topology; selected generation pressure/store-support data; callable room-target contexts captured during generation; exact source history for takeover and prefix store | Linear progressive prefix or pre-clamp repair at the queried owner; authored prerequisite, coverage, or target gap |
+| Hub and local structural | `hubSlot`, `hubVisit`, `sideRoomGeneration`, `sideRoomEntryOrder`                                      | Authored Hub board, visits, occurrence-local side state, layout constraints, selected Hub generation support, and scoped command proposals                                                          | Hub coverage gates and the existing progressive Hub-region evaluator                                               |
+| Reward producer          | `incomingReward`, `localReward`, `rewardWheelOffer`, `shopOffer`                                       | Callable reward-producer frontiers captured before the exact sequential, joint, wheel, or Shop producer                                                                                             | Exact producer pre-clamp repair; producer-frontier or coverage gap                                                 |
+| Room lifecycle           | `shipEncounterCount`, `rewardWheelOfferCount`, `rewardWheelStore`, `rewardWheelPicked`, `shopPurchase` | Authored Ship/Shop state and declarations, selected encounter support, and callable lifecycle contexts captured before Ship wheels or Shop purchases                                                | Exact lifecycle-owner pre-clamp repair, with the complete-invalid sole-owner fallback                              |
+
+The successful-result union has one matching discriminant for every query kind
+plus the shared `unavailable` result. Room target and takeover evaluation are
+currently inline in session dispatch; fourteen named evaluators own the other
+branches, with `evaluateWheelLifecycle` deliberately covering the three
+state-level wheel queries. No query is dynamically registered.
+
+`roomTarget` is the important correction to the former sequence: its selected
+and repaired contexts are stored in a generation-result sidecar, so structural
+movement cannot finish before an explicit candidate-artifact product exists.
+`batchRewardStore` and `fieldsCageOutcome` consume data already present in the
+public evaluated products or derive exact prefix support; they do not require a
+callable sidecar. Hub slot evaluation is direct authored constraint evaluation,
+while the three ordered/local Hub queries intentionally apply a semantic
+command to an immutable proposal and evaluate only their scoped Hub region.
+
+The progressive and unavailable responsibilities are also explicit:
+
+- `candidateBiome` selects a complete or prefix result and rematerializes a
+  complete-invalid biome through the first-blocking clamp;
+- room targets, takeover batches, and unresolved batch stores each own a
+  dedicated prefix evaluator;
+- reward producers and lifecycle owners use exact pre-clamp repair, while
+  lifecycle owners alone may use the documented complete-invalid sole-owner
+  fallback;
+- Hub visit and local families own Hub-region coverage and replay rather than
+  using the Linear repair path;
+- `coverageNotReached`, `producerFrontierUnavailable`,
+  `targetNotReachable`, `authoredPrerequisiteMissing`,
+  `upstreamIncomplete`, and `upstreamInvalid` all have production producers;
+  `biomeIncomplete` has none. It is obsolete presentation-contract residue and
+  should be removed with the contract move rather than preserved as a dormant
+  compatibility variant.
+
+##### Sidecar classification
+
+| Storage                                                    | Classification                  | Campaign-B disposition                                                                                                                                                          |
+| ---------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| generation validation -> room-target contexts              | Semantic callable artifact      | Return it explicitly from generation and progressive/project assembly; delete the map, registration write, accessor, and public exports in B1                                   |
+| reward simulation -> producer frontiers                    | Semantic callable artifact      | Return it explicitly beside the data-only reward simulation; delete the map, registration/accessor path, and public exports in B4                                               |
+| reward simulation -> Ship/Shop lifecycle contexts          | Semantic callable artifact      | Return it explicitly beside the data-only reward simulation; delete the map, registration/accessor path, and public exports in B5                                               |
+| project evaluation -> authored project                     | Identity attestation            | May remain for callers that receive the data-only public evaluation; the explicit candidate assembly must carry and verify its own exact project identity                       |
+| catalog/history view -> static reward facts                | Derived-value cache             | Retain; it memoizes a reproducible calculation and is not the sole carrier of a semantic fact                                                                                   |
+| application project/evaluation and candidate-domain caches | Evaluation and projection cache | Retain while their keys remain explicit inputs and cache misses can reproduce the same result; they must not become a lookup path from public evaluation to candidate artifacts |
+
+The target internal product is an exact project-evaluation assembly: the
+existing data-only `ProjectEvaluation` plus biome-addressed in-memory candidate
+artifacts and the authored project identity that produced both. Public
+`simulateProject` remains a data-only facade over one assembly execution; it
+must not execute simulation once for public data and again for artifacts. The
+application evaluator publishes the exact assembly alongside the existing
+public evaluation value, and structured-workspace composition passes the
+artifact side unopened to candidate-session binding. React and reducers may
+transport that replaceable derived product but do not inspect or interpret its
+callable contents. A `WeakMap` or resolver from public evaluation back to the
+assembly is specifically not an acceptable handoff.
+
+Progressive evaluation needs the same shape at biome scope. Normal, prefix,
+clamped, and pre-clamp repair paths must each return their data result and the
+artifacts produced by that exact execution. A candidate evaluator may receive
+only the family-specific artifact or authored/evaluated facts it needs; it may
+not receive the whole assembly as a universal source service.
+
+##### Primary test ownership and retained witnesses
+
+| Authority                                     | Primary complete-matrix owner                                                                               | Retained boundary or biome-specific witnesses                                                                   |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Exact assembly/session contract               | `simulation/candidate-session.test.ts`                                                                      | Exact identity, batching, deterministic result order, observation, and representative unavailable evidence only |
+| Start, ordinary target, takeover, batch store | `simulation/biomes/f/candidates.test.ts`                                                                    | G seeded-invalid repair and O/P/Q declaration-specific generation policies remain in their biome suites         |
+| Incoming producer reward                      | `simulation/biomes/f/candidates.test.ts`                                                                    | G invalid repair, N joint board/Shop, and O wheel cases retain only their distinct producer policies            |
+| Fields and ordinary local reward              | `simulation/biomes/h/materialization.test.ts`                                                               | N retains Ephyra-local ownership and peer-policy cases                                                          |
+| Hub membership, visit, and side-room families | `simulation/biomes/n/rewards-validation-candidates.test.ts`                                                 | `progressive-hub.test.ts` owns prefix/clamp semantics rather than repeating the family matrix                   |
+| Ship and wheel lifecycle                      | `simulation/biomes/o/validation.test.ts`                                                                    | Product/browser suites retain one interaction witness, not lifecycle policy                                     |
+| Shop offer and purchase                       | N's candidate suite for joint inventory/offer; `simulation/biomes/p/simulation.test.ts` for purchase repair | F retains its invalid-boundary witness; candidate-session retains only one artifact-handoff result              |
+| Shared Linear coverage and repair             | `progressive-biome.test.ts`                                                                                 | `unified-biome.test.ts` remains an orchestration witness                                                        |
+| Application projection and cache              | `projections/candidateProjection.test.ts`                                                                   | Engine unions remain intact; tests do not restate engine eligibility                                            |
+| Lazy application interaction boundary         | `architecture/candidateInteractions.test.ts`                                                                | One addressed load per interaction family, exact assembly reuse, and repeat-load caching                        |
+| Import/API boundary and render purity         | `architecture/candidateBoundary.test.ts` and `candidateRenderPurity.interaction.test.tsx`                   | React retains zero evaluation/query work across F/G/H/I/N/O/P/Q                                                 |
+| Product-loop work                             | `product-loops/UnifiedBiomePerformance.test.ts`                                                             | Underworld and Surface each retain cold candidate, edit publication, and cached Undo witnesses                  |
+
+Several biome files mix candidate assertions with their owning simulation
+policy, which is healthy; they should not be split merely to create
+candidate-named files. The current diagnostic footprint is 3,003 lines across
+the eight engine session/biome files in the table and 907 lines across the four
+application boundary, purity, and product-loop files. Movement commits must
+delete displaced session or umbrella assertions instead of copying those
+matrices into new files.
+
+The executable work baseline is:
+
+- session evaluation of four ordered queries emits one `queryBatch` with
+  `queryCount: 4` and returns results in input order;
+- constructing representative Underworld and Surface workspaces performs two
+  project evaluations and zero candidate batches;
+- each of the thirteen table-driven workspace interaction families performs
+  one cold batch except the cooperative reward domain, which performs fourteen
+  declaration-owned batches; every repeat load performs zero work and no load
+  reacquires project evaluation;
+- authored-choice start and candidate takeover each remain lazy and emit one
+  batch only when loaded;
+- all nine F/G/H/I/N/O/P/Q render cases perform zero candidate batches and zero
+  project evaluations;
+- each representative Underworld and Surface product-loop candidate activation
+  emits exactly one batch and zero project evaluations, each edit publishes
+  exactly one project evaluation and zero candidate batches, and cached Undo
+  emits neither; the diagnostic limits remain 750 ms for rebuild/candidate/edit
+  and 50 ms for cached Undo;
+- the entry gate is 82 test files and 713 tests with the complete typecheck,
+  lint, formatting, production build, and diff checks passing.
+
+##### Audited vertical review units
+
+The audit replaces the former four-unit sequence with five producer-to-consumer
+units. These are review boundaries, not line-count quotas.
+
+#### B1: Exact evaluation assembly and ordinary room targets
+
+- establish the deliberate query/result contract and explicit project/biome
+  evaluation assembly while moving the complete `roomTarget` family with them;
+- change the existing exact session to require that assembly, but retain one
+  visible dispatcher in the current aggregate until the remaining evaluators
+  move; do not create a temporary fallback dispatcher or legacy evaluator;
+- make generation return its room-target candidate contexts explicitly and
+  make normal, prefix, clamped, and pre-clamp project/progressive assembly carry
+  the context produced by that exact execution;
+- publish the exact assembly once through application state and structured
+  workspace into candidate-session binding while preserving the existing
+  data-only `ProjectEvaluation` selector and deeply equal public simulation;
+- delete `candidateContextsByValidation`, its registration and accessor, their
+  generation/simulation exports, and both selected/repaired accessor paths from
+  the old candidate module in the same unit;
+- remove the unproduced `biomeIncomplete` variant and its synthetic presentation
+  fixtures while retaining all produced unavailable evidence;
+- keep identity, lazy evaluation, batching, observation, and exact result order
+  at the session boundary;
 - pass exact inputs to evaluators rather than a universal candidate context or
   source service that can answer unrelated queries;
-- move each primary policy matrix and delete its old umbrella assertions in the
-  same slice.
+- retain the room-target policy matrix at its audited owner and delete
+  duplicate session/facade assertions in the same slice.
 
-#### B2: Hub and local structural families
+#### B2: Remaining Linear structural families
 
-- move Hub slot/visit, side-room generation, and side-room entry-order families
-  behind the same session contract;
-- retain progressive repair and typed unavailable-context evidence at their
-  actual semantic owners;
-- preserve authored side-room order, Hub visit chronology, and exact owner
-  addresses without reacquiring project evaluation or reconstructing Hub state
-  in the dispatcher.
+- move `startRoom`, `takeoverPrebossBatch`, `batchRewardStore`, and
+  `fieldsCageOutcome` as complete family evaluators behind the same session;
+- give takeover/prefix-store/Fields evaluators only their exact catalog,
+  authored source, selected public data, and progressive facts;
+- keep source-domain validation, unresolved-store prerequisite evidence,
+  selected-invalid repair, and takeover ownership with their family;
+- remove their evaluator branches and displaced policy assertions from the old
+  aggregate as each family moves.
 
-#### B3: Explicit reward candidate artifacts
+#### B3: Hub and local structural families
 
-- replace reward-producer and room-lifecycle `WeakMap` registration with an
-  explicit internal evaluation assembly product pairing the data-only public
-  evaluation with named in-memory candidate artifacts;
-- keep the durable reward simulation data-only if that remains its healthier
-  public contract; do not add callable closures to persisted or serializable
-  state merely to remove a sidecar;
-- thread the explicit artifact only through the owning project-evaluation
-  assembly and candidate-session construction path. Preserve the deeply equal
-  public `ProjectEvaluation` result unless the entry audit identifies and
-  separately authorizes a real public-contract change;
-- move one complete reward or lifecycle candidate consumer with the new product
-  and delete both superseded registration/access paths in the same review unit;
-- prove that simulation output, candidate results, lazy work counts, and
-  candidate capability lifetime remain identical.
+- move `hubSlot`, `hubVisit`, `sideRoomGeneration`, and `sideRoomEntryOrder`
+  behind the exact session as one Hub-owned family;
+- retain direct board constraints for membership and the existing scoped Hub
+  proposal/region evaluation for visits and local changes; do not force them
+  through the Linear progressive-repair abstraction;
+- preserve authored side-room order, Hub visit chronology, first-blocking
+  coverage, and exact owner addresses without reacquiring project evaluation
+  or reconstructing Hub state in the dispatcher;
+- leave N's suite as the family matrix and remove duplicate session,
+  progressive-Hub, or application policy assertions.
 
-#### B4: Room-local families and thin dispatcher
+#### B4: Explicit reward-producer artifacts
 
-- move reward-store, incoming/local reward, Fields, Ship wheel, and Shop
-  evaluators in complete semantic-family slices;
-- pass only the authored/evaluated facts or explicit candidate artifact each
-  family consumes; do not introduce reward, lifecycle, Shop, or Hub dependency
-  bags;
-- leave one visible exhaustive session dispatcher over the public query union;
-- retain in session tests only identity, batching, ordering, lazy observation,
-  and representative family handoff. Focused family suites own their complete
-  policy matrices.
+- make reward evaluation return producer frontiers explicitly beside its
+  unchanged data-only simulation and thread them through the B1 assembly;
+- move `incomingReward`, `localReward`, `rewardWheelOffer`, and `shopOffer` as
+  one complete producer-frontier consumer family;
+- delete `frontiersBySimulation`, producer registration/accessor functions,
+  their public exports, and all old consumer calls in the same unit;
+- preserve sequential, joint-unordered, wheel, and joint-Shop frontier
+  semantics, producer-owner evidence, exact pre-clamp repair, lazy capability
+  lifetime, and deeply equal public reward/project results.
+
+#### B5: Explicit room-lifecycle artifacts and thin dispatcher
+
+- make reward evaluation return Ship and Shop lifecycle contexts explicitly
+  through the same assembly without exposing closures in public reward or
+  project data;
+- move `shipEncounterCount`, all three wheel-lifecycle queries, and
+  `shopPurchase` as complete family evaluators;
+- delete `lifecycleContextsBySimulation`, lifecycle registration/accessor
+  functions, their public exports, and every old consumer call in the same
+  unit;
+- preserve selected encounter support, ordered wheel continuation, dormant
+  wheel activation, Shop purchase timing, exact owner repair, and the
+  documented complete-invalid sole-owner fallback;
+- extract the now-thin exact session and its one visible exhaustive dispatcher
+  over all eighteen query kinds, convert the candidate entry to a deliberate
+  public barrel, and delete the old aggregate implementation;
+- retain in session tests only exact assembly identity, batching, ordering,
+  lazy observation, unavailable taxonomy, and representative family handoff.
 
 Campaign B closes when no candidate semantic fact or capability is discoverable
 only through registration or a result-keyed sidecar; every query kind has one
@@ -1883,8 +2061,8 @@ their gates, the complete repository gate passes, and the final audit matrix
 has no unresolved ownership or import finding. A13 closed the production
 contraction, rather than the earlier A11 structural checkpoint. Campaign A
 and its bounded A14/A15.1/A15.2/A16 test-ownership correction are complete;
-active delivery may return to Commit 5b.3/5b.4 while this document continues
-to own the remaining pre-5c campaigns.
+Campaign B is now active. Commit 5b.3/5b.4 remain behavior-ready and resume
+after the remaining cleanup campaigns close.
 
 Durable results belong in:
 
