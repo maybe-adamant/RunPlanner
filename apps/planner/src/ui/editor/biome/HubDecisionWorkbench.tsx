@@ -7,7 +7,6 @@ import {
   type WorkspaceCompletedHubHandoffInteraction,
   type WorkspaceHubDecisionNode,
   type WorkspaceHubSlot,
-  type WorkspaceHubSlotCloseInteraction,
   type WorkspaceHubSlotInteraction,
   type WorkspaceHubSlotOpeningAttempt,
   type WorkspaceHubVisit,
@@ -19,10 +18,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { candidateSupport } from '@planner/projections/candidateProjection';
 import { FindingCount, SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
-import {
-  useWorkspaceInteraction,
-  useWorkspaceInteractionController,
-} from '@planner/ui/controls/useWorkspaceInteraction';
+import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { CandidateSelect } from './CandidateSelect';
 import { RewardControlEditor } from './OccurrenceWorkbench';
@@ -57,127 +53,6 @@ function MarkerAssessment({ marker }: { readonly marker: WorkspaceMarker }) {
   );
 }
 
-function ClosedHubSlotMembership({
-  interaction,
-  slot,
-}: {
-  readonly interaction: Extract<WorkspaceHubSlotInteraction, { readonly selected: false }>;
-  readonly slot: WorkspaceHubSlot;
-}) {
-  const executeIntent = useCommandIntent();
-  type OpeningAttemptRecord = {
-    readonly attempt: WorkspaceHubSlotOpeningAttempt;
-    readonly interaction: typeof interaction;
-  };
-  const attemptRef = useRef<OpeningAttemptRecord | undefined>(undefined);
-  const [attemptRecord, setAttemptRecord] = useState<OpeningAttemptRecord | undefined>(undefined);
-  const beginAttempt = (): WorkspaceHubSlotOpeningAttempt => {
-    const existing = attemptRef.current;
-    if (existing?.interaction === interaction) return existing.attempt;
-    const opened = interaction.beginOpeningAttempt();
-    const record = Object.freeze({ attempt: opened, interaction });
-    attemptRef.current = record;
-    setAttemptRecord(record);
-    return opened;
-  };
-  const cancelAttempt = (): void => {
-    if (attemptRef.current?.interaction !== interaction) return;
-    attemptRef.current = undefined;
-    setAttemptRecord((record) => (record?.interaction === interaction ? undefined : record));
-  };
-  const candidates =
-    useWorkspaceInteractionController<ReturnType<WorkspaceHubSlotOpeningAttempt['load']>>();
-  const activeAttempt =
-    attemptRecord?.interaction === interaction ? attemptRecord.attempt : undefined;
-  const candidateState = candidates.observe(activeAttempt);
-  const candidate = candidateState.result?.find((option) => option.value);
-  const disabled = !slot.canOpen || (candidate !== undefined && !candidateMayBeAuthored(candidate));
-
-  return (
-    <div className="hub-membership-action">
-      <label
-        className="hub-membership-control"
-        data-candidate-support={candidateSupport(candidate)}
-        data-opening-attempt={attemptRecord?.interaction === interaction ? 'active' : undefined}
-      >
-        <input
-          aria-busy={candidateState.pending || undefined}
-          aria-label={`${slot.label} open`}
-          checked={false}
-          disabled={disabled}
-          onChange={(event) => {
-            if (!event.target.checked) return;
-            const activeAttempt = beginAttempt();
-            const options = candidateState.result ?? candidates.activate(activeAttempt);
-            const option = options?.find((candidate) => candidate.value);
-            if (!candidateMayBeAuthored(option)) {
-              return;
-            }
-            executeIntent(activeAttempt.intentFor(true));
-          }}
-          onBlur={cancelAttempt}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') cancelAttempt();
-          }}
-          onPointerDown={() => {
-            const activeAttempt = beginAttempt();
-            candidates.activate(activeAttempt);
-          }}
-          type="checkbox"
-        />
-        Open
-      </label>
-    </div>
-  );
-}
-
-function OpenHubSlotMembership({
-  close,
-  slot,
-}: {
-  readonly close: WorkspaceHubSlotCloseInteraction | undefined;
-  readonly slot: WorkspaceHubSlot;
-}) {
-  const executeIntent = useCommandIntent();
-  const candidates = useWorkspaceInteraction(
-    close ??
-      Object.freeze({
-        load: () => Object.freeze([]),
-      }),
-  );
-  const candidate = candidates.result?.find((option) => !option.value);
-  const disabled =
-    !slot.canClose ||
-    close === undefined ||
-    (candidate !== undefined && !candidateMayBeAuthored(candidate));
-  return (
-    <div className="hub-membership-action">
-      <label
-        className="hub-membership-control"
-        data-candidate-support={candidateSupport(candidate)}
-      >
-        <input
-          aria-busy={candidates.pending || undefined}
-          aria-label={`${slot.label} open`}
-          checked
-          disabled={disabled}
-          onChange={(event) => {
-            if (event.target.checked || close === undefined) return;
-            const options = candidates.result ?? candidates.activate();
-            const option = options?.find((candidate) => !candidate.value);
-            if (!candidateMayBeAuthored(option)) return;
-            executeIntent(close.intentFor(false));
-          }}
-          onFocus={close === undefined ? undefined : candidates.activate}
-          onPointerDown={close === undefined ? undefined : candidates.activate}
-          type="checkbox"
-        />
-        Open
-      </label>
-    </div>
-  );
-}
-
 function HubSlotMembership({
   interaction,
   slot,
@@ -191,10 +66,122 @@ function HubSlotMembership({
   if (interaction.selected && slot.canClose && interaction.close === undefined) {
     throw new Error('A closable Hub slot must retain its CloseHubSlot interaction.');
   }
-  return interaction.selected ? (
-    <OpenHubSlotMembership close={interaction.close} slot={slot} />
-  ) : (
-    <ClosedHubSlotMembership interaction={interaction} slot={slot} />
+  const executeIntent = useCommandIntent();
+  type OpeningInteraction = Extract<WorkspaceHubSlotInteraction, { readonly selected: false }>;
+  type OpeningAttemptRecord = {
+    readonly attempt: WorkspaceHubSlotOpeningAttempt;
+    readonly interaction: OpeningInteraction;
+    readonly interactionVersion: number;
+  };
+  const [interactionIdentity, setInteractionIdentity] = useState({ interaction, version: 0 });
+  const interactionVersion =
+    interactionIdentity.interaction === interaction
+      ? interactionIdentity.version
+      : interactionIdentity.version + 1;
+  if (interactionIdentity.interaction !== interaction) {
+    setInteractionIdentity(Object.freeze({ interaction, version: interactionVersion }));
+  }
+  const attemptRef = useRef<OpeningAttemptRecord | undefined>(undefined);
+  const [attemptRecord, setAttemptRecord] = useState<OpeningAttemptRecord | undefined>(undefined);
+  const beginAttempt = (): WorkspaceHubSlotOpeningAttempt => {
+    if (interaction.selected) {
+      throw new Error('An open Hub slot cannot begin another opening attempt.');
+    }
+    const existing = attemptRef.current;
+    if (
+      existing?.interaction === interaction &&
+      existing.interactionVersion === interactionVersion
+    ) {
+      return existing.attempt;
+    }
+    const attempt = interaction.beginOpeningAttempt();
+    const record = Object.freeze({ attempt, interaction, interactionVersion });
+    attemptRef.current = record;
+    setAttemptRecord(record);
+    return attempt;
+  };
+  const cancelAttempt = (): void => {
+    if (
+      attemptRef.current?.interaction !== interaction ||
+      attemptRef.current.interactionVersion !== interactionVersion
+    ) {
+      return;
+    }
+    attemptRef.current = undefined;
+    setAttemptRecord((record) =>
+      record?.interaction === interaction && record.interactionVersion === interactionVersion
+        ? undefined
+        : record,
+    );
+  };
+  const activeAttempt =
+    !interaction.selected &&
+    attemptRecord?.interaction === interaction &&
+    attemptRecord.interactionVersion === interactionVersion
+      ? attemptRecord.attempt
+      : undefined;
+  const candidates =
+    useWorkspaceInteractionController<ReturnType<WorkspaceHubSlotOpeningAttempt['load']>>();
+  const candidateInteraction = interaction.selected ? interaction.close : activeAttempt;
+  const candidateState = candidates.observe(candidateInteraction);
+  const proposedOpen = !slot.open;
+  const candidate = candidateState.result?.find((option) => option.value === proposedOpen);
+  const structurallyDisabled = slot.open ? !slot.canClose : !slot.canOpen;
+  const disabled =
+    structurallyDisabled ||
+    (interaction.selected && interaction.close === undefined) ||
+    (candidate !== undefined && !candidateMayBeAuthored(candidate));
+
+  return (
+    <div className="hub-membership-action">
+      <label
+        className="hub-membership-control"
+        data-candidate-support={candidateSupport(candidate)}
+        data-opening-attempt={activeAttempt === undefined ? undefined : 'active'}
+      >
+        <input
+          aria-busy={candidateState.pending || undefined}
+          aria-label={`${slot.label} open`}
+          checked={slot.open}
+          disabled={disabled}
+          onBlur={() => {
+            if (!interaction.selected) cancelAttempt();
+          }}
+          onChange={(event) => {
+            const open = event.target.checked;
+            if (open) {
+              const attempt = beginAttempt();
+              const options = candidateState.result ?? candidates.activate(attempt);
+              const option = options?.find((candidate) => candidate.value);
+              if (candidateMayBeAuthored(option)) executeIntent(attempt.intentFor(true));
+              return;
+            }
+            if (!interaction.selected || interaction.close === undefined) return;
+            const options = candidateState.result ?? candidates.activate(interaction.close);
+            const option = options?.find((candidate) => !candidate.value);
+            if (candidateMayBeAuthored(option)) executeIntent(interaction.close.intentFor(false));
+          }}
+          onFocus={() => {
+            if (interaction.selected && interaction.close !== undefined) {
+              candidates.activate(interaction.close);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && !interaction.selected) cancelAttempt();
+          }}
+          onPointerDown={() => {
+            if (interaction.selected) {
+              if (interaction.close !== undefined) candidates.activate(interaction.close);
+              return;
+            }
+            const attempt = beginAttempt();
+            candidates.activate(attempt);
+          }}
+          type="checkbox"
+        />
+        Open
+      </label>
+    </div>
   );
 }
 
