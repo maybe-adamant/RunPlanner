@@ -745,7 +745,7 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(project, 'Surface', 'N');
     const finding = view.application.store
       .getState()
-      .projectWorkspace.evaluation.findings.find(
+      .projectWorkspace.assembly.evaluation.findings.find(
         (candidate) =>
           candidate.code === 'sideRoomGenerationUnavailable' &&
           semanticAddressKey(candidate.origin) === semanticAddressKey(sideRoom),
@@ -786,7 +786,7 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(project, 'Surface', 'P');
     const finding = view.application.store
       .getState()
-      .projectWorkspace.evaluation.findings.find(
+      .projectWorkspace.assembly.evaluation.findings.find(
         (candidate) =>
           candidate.code === 'targetRoomUnavailable' &&
           semanticAddressKey(candidate.origin) === semanticAddressKey(target),

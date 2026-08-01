@@ -8,7 +8,10 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject, type CandidateEvaluationEvent } from '@run-planner/engine/simulation';
+import {
+  simulateProjectAssembly,
+  type CandidateEvaluationEvent,
+} from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import type {
@@ -99,8 +102,7 @@ describe('workspace candidate interaction families', () => {
       throw new Error('F authored-choice start declaration is missing');
     }
     const interactions = services.structuredWorkspace.project(
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     ).interactions;
     const start = interactions.starts.get(semanticAddressKey(biome));
     if (start?.kind !== 'choice') throw new Error('F authored-choice start interaction is missing');
@@ -143,8 +145,7 @@ describe('workspace candidate interaction families', () => {
     );
     const owner = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start });
     const interactions = services.structuredWorkspace.project(
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     ).interactions;
     const interaction = interactions.takeoverBatches.get(semanticAddressKey(owner));
     if (interaction?.presentation !== 'candidate') {
@@ -190,8 +191,7 @@ describe('workspace candidate interaction families', () => {
     );
     const project = applyProjectCommand(started, catalog, { kind: 'CreateBatch', decision: owner });
     const interactions = services.structuredWorkspace.project(
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     ).interactions;
     const takeover = interactions.takeoverBatches.get(semanticAddressKey(owner));
 
@@ -205,7 +205,7 @@ describe('workspace candidate interaction families', () => {
     let projectEvaluationCount = 0;
     const evaluate = (project: ProjectDocument) => {
       projectEvaluationCount += 1;
-      return simulateProject(catalog, project);
+      return simulateProjectAssembly(catalog, project);
     };
     const services = createStructuredWorkspaceTestServices({
       observeCandidateEvaluation: (event) => events.push(event),
@@ -214,8 +214,8 @@ describe('workspace candidate interaction families', () => {
     const underworld = createGoldenFGHIProject();
     const surface = createRepresentativeNOPQProject();
     const workspaces = [
-      services.structuredWorkspace.project(underworld, evaluate(underworld)).interactions,
-      services.structuredWorkspace.project(surface, evaluate(surface)).interactions,
+      services.structuredWorkspace.project(evaluate(underworld)).interactions,
+      services.structuredWorkspace.project(evaluate(surface)).interactions,
     ] as const;
 
     expect(projectEvaluationCount).toBe(2);
@@ -273,8 +273,7 @@ describe('workspace candidate interaction families', () => {
       occurrenceId: start,
     });
     const candidateInteractions = services.structuredWorkspace.project(
-      candidateProject,
-      simulateProject(catalog, candidateProject),
+      simulateProjectAssembly(catalog, candidateProject),
     ).interactions;
     const candidate = candidateInteractions.takeoverBatches.get(semanticAddressKey(candidateOwner));
     if (candidate?.presentation !== 'candidate') {
@@ -292,8 +291,7 @@ describe('workspace candidate interaction families', () => {
       }),
     });
     const fixedWidthOneInteractions = services.structuredWorkspace.project(
-      fixedWidthOneProject,
-      simulateProject(catalog, fixedWidthOneProject),
+      simulateProjectAssembly(catalog, fixedWidthOneProject),
     ).interactions;
     const fixedWidthOneOwner = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
@@ -330,8 +328,7 @@ describe('workspace candidate interaction families', () => {
       { includePreboss: false },
     );
     const hubHandoffInteractions = services.structuredWorkspace.project(
-      hubHandoffProject,
-      simulateProject(catalog, hubHandoffProject),
+      simulateProjectAssembly(catalog, hubHandoffProject),
     ).interactions;
     const hubHandoffOwner = createExitDecisionAddress(nBiome, {
       kind: 'hubDecision',
@@ -349,8 +346,7 @@ describe('workspace candidate interaction families', () => {
 
     const repairProject = createGoldenFGHIProject();
     const repairInteractions = services.structuredWorkspace.project(
-      repairProject,
-      simulateProject(catalog, repairProject),
+      simulateProjectAssembly(catalog, repairProject),
     ).interactions;
     const repair = [...repairInteractions.takeoverBatches.values()].find(
       (interaction) => interaction.presentation === 'repair',
@@ -372,7 +368,7 @@ describe('workspace candidate interaction families', () => {
       occurrenceId: goldenFStartId,
     });
     const interaction = services.structuredWorkspace
-      .project(project, simulateProject(catalog, project))
+      .project(simulateProjectAssembly(catalog, project))
       .interactions.takeoverBatches.get(semanticAddressKey(owner));
     if (interaction?.presentation !== 'candidate') {
       throw new Error('F opening takeover candidate capability is missing');

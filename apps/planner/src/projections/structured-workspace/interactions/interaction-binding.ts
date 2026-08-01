@@ -2,12 +2,11 @@ import {
   semanticAddressKey,
   type ExitDecisionAddress,
   type OccurrenceId,
-  type ProjectDocument,
   type SemanticAddress,
   type SideRoomGeneration,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import type { ProjectEvaluation } from '@run-planner/engine/simulation';
+import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 
 import type {
   CandidateOptionProjection,
@@ -57,9 +56,9 @@ import type {
 } from './interaction-requirements';
 
 export interface WorkspaceInteractionBindingInput {
+  readonly assembly: ProjectEvaluationAssembly;
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly catalog: Catalog;
-  readonly evaluation: ProjectEvaluation;
   readonly frontierInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceFrontierInteractionRequirement
@@ -69,7 +68,6 @@ export interface WorkspaceInteractionBindingInput {
     string,
     WorkspaceOccurrenceInteractionRequirement
   >;
-  readonly project: ProjectDocument;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly services: StructuredWorkspaceContextualServices;
@@ -755,20 +753,19 @@ function bindFrontierInteractions(
 
 /**
  * Bind every public interaction map from completed requirement products and
- * the exact contextual services for one project/evaluation pair. This module
+ * the exact contextual services for one project-evaluation assembly. This module
  * deliberately has no source-index or topology traversal.
  */
 export function bindWorkspaceInteractions(
   input: WorkspaceInteractionBindingInput,
 ): WorkspaceInteractionCatalog {
   const {
+    assembly,
     batchInteractionRequirements,
     catalog,
-    evaluation,
     frontierInteractionRequirements,
     hubInteractionRequirements,
     occurrenceInteractionRequirements,
-    project,
     rewardControls,
     roomControls,
     services,
@@ -776,7 +773,8 @@ export function bindWorkspaceInteractions(
     takeoverInteractionRequirements,
     topologyRemovalInteractionRequirements,
   } = input;
-  const candidates = services.candidateSessions.bind(project, evaluation);
+  const { project } = assembly;
+  const candidates = services.candidateSessions.bind(assembly);
   const {
     rewardWheelOfferCounts,
     rewardWheelPicks,

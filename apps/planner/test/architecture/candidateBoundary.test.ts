@@ -37,6 +37,7 @@ describe('candidate application boundary', () => {
       'dispose',
       'editorNavigation',
       'projectOperations',
+      'selectStructuredWorkspace',
       'store',
       'structuredWorkspace',
     ]);
@@ -65,7 +66,9 @@ describe('candidate application boundary', () => {
       'createStructuredWorkspaceProjection',
       'projectClockworkTopology',
       'projectLinearBatchState',
+      'ProjectEvaluationAssembly',
       'simulateProject',
+      'simulateProjectAssembly',
     ];
 
     for (const path of sourceFiles(uiRoot)) {

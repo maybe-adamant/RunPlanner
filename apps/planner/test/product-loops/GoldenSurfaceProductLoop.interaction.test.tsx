@@ -131,7 +131,7 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
 
-    expect(application.store.getState().projectWorkspace.evaluation).toMatchObject({
+    expect(application.store.getState().projectWorkspace.assembly.evaluation).toMatchObject({
       findings: [],
       status: 'valid',
       summary: {
@@ -159,7 +159,7 @@ describe('surface product loop', () => {
     }
 
     expect(simulateProject(application.catalog, authored)).toEqual(
-      application.store.getState().projectWorkspace.evaluation,
+      application.store.getState().projectWorkspace.assembly.evaluation,
     );
     recovery.flush();
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
@@ -170,7 +170,7 @@ describe('surface product loop', () => {
     expect(selectProfileStatus(application.store.getState())).toBe('Clean');
 
     await view.user.click(screen.getByRole('button', { name: 'New' }));
-    expect(application.store.getState().projectWorkspace.evaluation.status).toBe('empty');
+    expect(application.store.getState().projectWorkspace.assembly.evaluation.status).toBe('empty');
     await view.user.click(screen.getByRole('button', { name: 'Load Profile' }));
     await screen.findByText('Loaded the profile.');
     expect(currentProject(application)).toEqual(authored);
@@ -307,7 +307,7 @@ describe('surface product loop', () => {
     expect(
       topology.occurrences.some((occurrence) => occurrence.occurrenceId === nOccurrenceIds.preboss),
     ).toBe(false);
-    expect(application.store.getState().projectWorkspace.evaluation.findings).toEqual(
+    expect(application.store.getState().projectWorkspace.assembly.evaluation.findings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'hubOpenSetIncomplete' })]),
     );
     expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
@@ -453,7 +453,7 @@ describe('surface product loop', () => {
 
     const surfaceEvaluation = application.store
       .getState()
-      .projectWorkspace.evaluation.routes.find((route) => route.routeKey === 'Surface');
+      .projectWorkspace.assembly.evaluation.routes.find((route) => route.routeKey === 'Surface');
     if (surfaceEvaluation === undefined) throw new Error('Surface evaluation is missing');
     const findingIndex = surfaceEvaluation.findings.findIndex(
       (finding) =>
@@ -503,14 +503,16 @@ describe('surface product loop', () => {
     ).find((button) => button.dataset.workspaceNode === semanticAddressKey(decisionOwner));
     if (decisionRail === undefined) throw new Error('Thessaly Decision 1 rail node is missing');
     const historyBefore = application.store.getState().projectWorkspace.history;
-    const evaluationBefore = application.store.getState().projectWorkspace.evaluation;
+    const evaluationBefore = application.store.getState().projectWorkspace.assembly.evaluation;
     work.length = 0;
 
     await view.user.click(decisionRail);
 
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(decisionOwner);
     expect(application.store.getState().projectWorkspace.history).toBe(historyBefore);
-    expect(application.store.getState().projectWorkspace.evaluation).toBe(evaluationBefore);
+    expect(application.store.getState().projectWorkspace.assembly.evaluation).toBe(
+      evaluationBefore,
+    );
     expect(recovery.hasPendingAutosave()).toBe(false);
     expect(work.filter((event) => event.kind === 'projectEvaluation')).toEqual([]);
     expect(work.filter((event) => event.kind === 'queryBatch')).toEqual([]);

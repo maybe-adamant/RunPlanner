@@ -35,7 +35,7 @@ function appMarkup(application: ReturnType<typeof createApplication>): string {
         catalogSummary={application.catalogSummary}
         editorNavigation={application.editorNavigation}
         projectOperations={application.projectOperations}
-        structuredWorkspace={application.structuredWorkspace}
+        selectStructuredWorkspace={application.selectStructuredWorkspace}
       />
     </Provider>,
   );
@@ -148,7 +148,7 @@ describe('App', () => {
   it('navigates an incomplete finding to its exact shared-workspace frontier without authoring history', () => {
     const application = createApplication();
     configureF(application);
-    const finding = application.store.getState().projectWorkspace.evaluation.findings[0];
+    const finding = application.store.getState().projectWorkspace.assembly.evaluation.findings[0];
     if (finding === undefined) throw new Error('configured F should have an incomplete finding');
 
     application.store.dispatch(settingsSelected());
@@ -197,7 +197,7 @@ describe('App', () => {
     );
     const finding = application.store
       .getState()
-      .projectWorkspace.evaluation.findings.find(
+      .projectWorkspace.assembly.evaluation.findings.find(
         (candidate) => candidate.code === 'hubOpenSetIncomplete',
       );
     if (finding === undefined) throw new Error('fresh N Hub board has no open-set finding');

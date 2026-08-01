@@ -48,7 +48,7 @@ describe('underworld product loop', () => {
       expect(document.querySelector('.biome-workspace')).not.toBeNull();
     }
 
-    const evaluation = application.store.getState().projectWorkspace.evaluation;
+    const evaluation = application.store.getState().projectWorkspace.assembly.evaluation;
     expect(evaluation).toMatchObject({
       findings: [],
       status: 'valid',
@@ -103,7 +103,7 @@ describe('underworld product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Route' }));
     await view.user.selectOptions(screen.getByLabelText('Configured biomes'), '0');
-    expect(application.store.getState().projectWorkspace.evaluation.status).toBe('empty');
+    expect(application.store.getState().projectWorkspace.assembly.evaluation.status).toBe('empty');
     expect(confirmation).not.toHaveBeenCalled();
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));

@@ -295,11 +295,6 @@ function unavailableExplanation(
         message: `Choose the required ${label} before evaluating this option.`,
       };
     }
-    case 'biomeIncomplete':
-      return {
-        kind: evaluation.evidence.kind,
-        message: 'Complete the required authored structure before evaluating this option.',
-      };
     case 'coverageNotReached':
       return {
         kind: evaluation.evidence.kind,

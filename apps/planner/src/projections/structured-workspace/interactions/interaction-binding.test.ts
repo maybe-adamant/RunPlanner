@@ -10,7 +10,7 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -42,7 +42,8 @@ const services = {
 };
 
 function bind(project: ProjectDocument, routeKey: string, biomeKey: string) {
-  const evaluation = simulateProject(catalog, project);
+  const projectAssembly = simulateProjectAssembly(catalog, project);
+  const evaluation = projectAssembly.evaluation;
   const source = createWorkspaceProjectSourceIndex(catalog, project, evaluation)
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
@@ -51,13 +52,12 @@ function bind(project: ProjectDocument, routeKey: string, biomeKey: string) {
   return {
     assembly,
     interactions: bindWorkspaceInteractions({
+      assembly: projectAssembly,
       batchInteractionRequirements: assembly.batchInteractionRequirements,
       catalog,
-      evaluation,
       frontierInteractionRequirements: assembly.frontierInteractionRequirements,
       hubInteractionRequirements: assembly.hubInteractionRequirements,
       occurrenceInteractionRequirements: assembly.occurrenceInteractionRequirements,
-      project,
       rewardControls: assembly.rewardControls,
       roomControls: assembly.roomControls,
       services,

@@ -63,11 +63,7 @@ function WorkspaceHarness({
   readonly biomeKey: string;
   readonly routeKey: 'Surface' | 'Underworld';
 }) {
-  const state = useAppSelector((value) => value.projectWorkspace);
-  const workspace = application.structuredWorkspace.project(
-    state.history.present,
-    state.evaluation,
-  );
+  const workspace = useAppSelector(application.selectStructuredWorkspace);
   const biome = workspace.routes
     .find((route) => route.routeKey === routeKey)
     ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);

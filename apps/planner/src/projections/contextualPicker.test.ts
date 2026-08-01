@@ -32,8 +32,8 @@ describe('contextual picker projection', () => {
         value: 'unassessed',
         evaluation: {
           kind: 'unavailable' as const,
-          reason: 'biomeIncomplete' as const,
-          evidence: { kind: 'biomeIncomplete' as const, biome },
+          reason: 'producerFrontierUnavailable' as const,
+          evidence: { kind: 'producerFrontierUnavailable' as const, producer: biome },
         },
       },
     ]);

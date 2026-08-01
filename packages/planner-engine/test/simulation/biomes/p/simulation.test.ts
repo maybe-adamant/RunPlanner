@@ -11,6 +11,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -112,7 +113,10 @@ describe('P core loop', () => {
         }),
       }),
     );
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
     expect(
       candidates.evaluate({
         kind: 'roomTarget',
@@ -173,7 +177,10 @@ describe('P core loop', () => {
     );
     expect(p).toMatchObject({ authoring: 'complete', validity: 'invalid' });
     expect(
-      createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate({
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
         kind: 'shopPurchase',
         purchase,
         purchased: false,

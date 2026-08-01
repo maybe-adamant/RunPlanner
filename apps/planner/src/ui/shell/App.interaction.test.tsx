@@ -222,7 +222,7 @@ describe('project profile interaction', () => {
 
     expect(screen.getByText('Unsaved')).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
-    const savedEvaluation = application.store.getState().projectWorkspace.evaluation;
+    const savedEvaluation = application.store.getState().projectWorkspace.assembly.evaluation;
     await user.click(screen.getByRole('button', { name: 'Save Profile' }));
     expect(await screen.findByText('Saved the profile.')).toBeTruthy();
     expect(screen.getByText('Clean')).toBeTruthy();
@@ -243,7 +243,9 @@ describe('project profile interaction', () => {
     expect(configuredBiomeCount(application)).toBe(1);
     expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
     expect(application.store.getState().projectWorkspace.history.future).toEqual([]);
-    expect(application.store.getState().projectWorkspace.evaluation).toEqual(savedEvaluation);
+    expect(application.store.getState().projectWorkspace.assembly.evaluation).toEqual(
+      savedEvaluation,
+    );
     expect(screen.getByText('Clean')).toBeTruthy();
   });
 

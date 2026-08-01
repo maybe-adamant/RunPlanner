@@ -11,6 +11,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -154,14 +155,17 @@ describe('selected O validation', () => {
       wheel,
       storeKey: 'MetaProgress',
     });
-    const { evaluation, biome } = evaluateO(project);
+    const { biome } = evaluateO(project);
 
     expect(biome.validity).toBe('invalid');
     expect(biome.rewards.findings).toContainEqual(
       expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: offer }),
     );
     expect(
-      createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate({
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
         kind: 'rewardWheelStore',
         wheel,
         storeKey: 'RunProgress',
@@ -178,8 +182,11 @@ describe('selected O validation', () => {
   });
 
   it('evaluates a supported opening target through the prepared selected O prefix', () => {
-    const { project, evaluation } = evaluateO();
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
+    const { project } = evaluateO();
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
 
     expect(
       candidates.evaluate({
@@ -203,7 +210,7 @@ describe('selected O validation', () => {
   });
 
   it('keeps Ship and every reward-wheel candidate family in the engine', () => {
-    const { project, evaluation } = evaluateO();
+    const { project } = evaluateO();
     const occurrence = project.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'O')
@@ -219,27 +226,28 @@ describe('selected O validation', () => {
       throw new Error('O Ship fixture must retain wheel1 offer1');
     }
     const wheelAddress = createRewardWheelAddress(oBiome, occurrence.occurrenceId, 'wheel1');
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation).evaluate(
-      [
-        {
-          kind: 'shipEncounterCount',
-          occurrence: createOccurrenceAddress(oBiome, occurrence.occurrenceId),
-          encounterCount: occurrence.state.encounterCount,
-        },
-        { kind: 'rewardWheelOfferCount', wheel: wheelAddress, offerCount: wheel.offerCount },
-        { kind: 'rewardWheelStore', wheel: wheelAddress, storeKey: wheel.storeKey },
-        {
-          kind: 'rewardWheelOffer',
-          offer: createRewardWheelOfferAddress(oBiome, occurrence.occurrenceId, 'wheel1', 'offer1'),
-          value: offer,
-        },
-        {
-          kind: 'rewardWheelPicked',
-          wheel: wheelAddress,
-          pickedOfferIndex: wheel.pickedOfferIndex,
-        },
-      ],
-    );
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate([
+      {
+        kind: 'shipEncounterCount',
+        occurrence: createOccurrenceAddress(oBiome, occurrence.occurrenceId),
+        encounterCount: occurrence.state.encounterCount,
+      },
+      { kind: 'rewardWheelOfferCount', wheel: wheelAddress, offerCount: wheel.offerCount },
+      { kind: 'rewardWheelStore', wheel: wheelAddress, storeKey: wheel.storeKey },
+      {
+        kind: 'rewardWheelOffer',
+        offer: createRewardWheelOfferAddress(oBiome, occurrence.occurrenceId, 'wheel1', 'offer1'),
+        value: offer,
+      },
+      {
+        kind: 'rewardWheelPicked',
+        wheel: wheelAddress,
+        pickedOfferIndex: wheel.pickedOfferIndex,
+      },
+    ]);
 
     expect(candidates).toMatchObject([
       { kind: 'shipEncounterCount', result: { selectedPossible: true, findings: [] } },
@@ -251,8 +259,11 @@ describe('selected O validation', () => {
   });
 
   it('uses the source-offer policy on Ship continuation and the explicit base store on Devotion', () => {
-    const { project, evaluation } = evaluateO();
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
+    const { project } = evaluateO();
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
 
     expect(
       candidates.evaluate({

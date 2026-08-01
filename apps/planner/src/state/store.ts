@@ -15,13 +15,16 @@ import {
   createProfileSessionReducer,
   type ProfileSessionState,
 } from './profileSessionSlice';
-import { createProjectWorkspaceReducer, type ProjectEvaluator } from './projectWorkspaceSlice';
+import {
+  createProjectWorkspaceReducer,
+  type ProjectEvaluationAssembler,
+} from './projectWorkspaceSlice';
 
 export interface CreatePlannerStoreOptions {
   readonly catalog: Catalog;
   readonly initialProject: ProjectDocument;
   readonly initialProfileSession?: ProfileSessionState;
-  readonly evaluateProject: ProjectEvaluator;
+  readonly assembleProjectEvaluation: ProjectEvaluationAssembler;
 }
 
 export function createPlannerStore(options: CreatePlannerStoreOptions) {
@@ -32,7 +35,7 @@ export function createPlannerStore(options: CreatePlannerStoreOptions) {
       projectWorkspace: createProjectWorkspaceReducer(
         options.catalog,
         options.initialProject,
-        options.evaluateProject,
+        options.assembleProjectEvaluation,
       ),
       editorSession: createEditorSessionReducer(options.catalog),
       profileSession: createProfileSessionReducer(
@@ -46,10 +49,10 @@ export type PlannerStore = ReturnType<typeof createPlannerStore>;
 export type RootState = ReturnType<PlannerStore['getState']>;
 export type AppDispatch = PlannerStore['dispatch'];
 
-export const selectProjectWorkspace = (state: RootState) => state.projectWorkspace;
 export const selectProjectHistory = (state: RootState) => state.projectWorkspace.history;
 export const selectPresentProject = (state: RootState) => state.projectWorkspace.history.present;
-export const selectProjectEvaluation = (state: RootState) => state.projectWorkspace.evaluation;
+export const selectProjectEvaluation = (state: RootState) =>
+  state.projectWorkspace.assembly.evaluation;
 export const selectExplicitProfileBaselineJson = (state: RootState) =>
   state.profileSession.explicitBaselineJson;
 export const selectProfileSession = (state: RootState) => state.profileSession;

@@ -8,6 +8,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -89,8 +90,11 @@ describe('Q simulation', () => {
   });
 
   it('evaluates the foyer target immediately under the fixed no-store policy', () => {
-    const { project, evaluation } = completeQ();
-    const candidates = createPreparedProjectCandidateSession(catalog, project, evaluation);
+    const { project } = completeQ();
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
 
     expect(
       candidates.evaluate({

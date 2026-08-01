@@ -102,7 +102,6 @@ export {
   evaluateTakeoverPrebossBatchCandidateAtFrontier,
   evaluateHubDecisionGeneration,
   fieldsCageOutcomeCandidateSupport,
-  roomTargetCandidateContexts,
   supportedFieldsCageOutcomes,
   BiomeRoomGenerationContractError,
   HubDecisionGenerationContractError,
@@ -192,10 +191,12 @@ export {
   type SimulationPhase,
 } from './model';
 export {
+  assertProjectEvaluationAssembly,
   assertProjectEvaluationSource,
   evaluateBiome,
   ProjectSimulationContractError,
   simulateProject,
+  simulateProjectAssembly,
   type ActiveRouteBiome,
   type BiomeAuthoring,
   type BiomeEvaluationBase,
@@ -211,6 +212,7 @@ export {
   type PrefixBiomeEvaluationCoverage,
   type ProjectBiomeEvaluation,
   type ProjectEvaluation,
+  type ProjectEvaluationAssembly,
   type ProjectEvaluationSummary,
   type ProjectRouteEvaluation,
   type RouteEvaluationSummary,

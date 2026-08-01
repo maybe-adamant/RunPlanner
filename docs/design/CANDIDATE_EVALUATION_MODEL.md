@@ -12,7 +12,7 @@ history, selected-plan validation, and semantic findings.
 interaction policy over candidate results. This document owns the boundary
 between them:
 
-- how one immutable project evaluation prepares candidate contact;
+- how one exact project-evaluation assembly prepares candidate contact;
 - which selected-simulation facts candidate evaluation may consume;
 - how an interactable evaluates its complete domain on demand;
 - how much simulation a proposed value may replay;
@@ -23,9 +23,16 @@ project, profile document, autosave, undo history, or canonical game history.
 
 ## Current Production Shape and Refactor Motivation
 
-One semantic edit, undo, redo, or profile replacement creates a new immutable
-`ProjectDocument` and one matching `ProjectEvaluation`. Candidate preparation
-binds that exact pair and never acquires another project evaluation.
+One semantic edit or profile replacement creates a new immutable
+`ProjectDocument` and one exact evaluation assembly; undo and redo restore
+prior immutable identities and may reuse their cached matching assemblies. Its data-only
+`ProjectEvaluation` remains the public derived-result selector, while the
+assembly carries opaque candidate capabilities produced by the same simulation
+execution for families that have moved to explicit artifacts. Room-target
+preparation binds that one assembly and never acquires another project
+evaluation or resolves its capability from the public evaluation. Reward and
+lifecycle producer capabilities retain their documented transitional delivery
+until their own vertical slices move them into the assembly.
 
 Before the candidate refactor, the application expanded control domains into
 independent scalar queries. Reward, shop, room-lifecycle, and Hub alternatives
@@ -69,7 +76,8 @@ generation, reward, requirement, and finding authorities used by selected-plan
 simulation.
 
 ```text
-ProjectDocument + matching ProjectEvaluation
+ProjectEvaluationAssembly
+  { project, data-only evaluation, opaque candidate artifacts }
   -> PreparedCandidateSession
       -> locate semantic owner
       -> require route and biome coverage
@@ -129,9 +137,15 @@ prefix through its invalid owner. None of those frontiers returns to the Hub.
 
 ## Candidate Session
 
-A prepared session belongs to exactly one identity pair:
+A prepared session belongs to exactly one identity-attested assembly:
 
 ```ts
+interface ProjectEvaluationAssembly {
+  readonly project: ProjectDocument;
+  readonly evaluation: ProjectEvaluation;
+  // Opaque, non-persisted candidate capabilities from this exact execution.
+}
+
 interface PreparedCandidateSession {
   readonly project: ProjectDocument;
   readonly evaluation: ProjectEvaluation;
@@ -139,8 +153,11 @@ interface PreparedCandidateSession {
 }
 ```
 
-Construction verifies that the evaluation was produced from the exact project
-identity. A session may cache:
+Construction verifies that the assembly and its public evaluation came from
+one exact project execution. An explicit-artifact family also verifies and
+consumes its capability from that assembly. `simulateProject` is the data-only
+facade over that execution; it does not rerun simulation for candidate
+artifacts. A session may cache:
 
 - route, biome, occurrence, target, and semantic-owner indexes;
 - prepared generation views;
@@ -148,9 +165,12 @@ identity. A session may cache:
 - scoped lifecycle-region inputs;
 - evaluated domains keyed by semantic owner and exact domain identity.
 
-No cache crosses a `ProjectDocument` identity. A semantic edit, undo, redo,
-profile load, or new project receives a new evaluation and candidate session.
-Navigation, focus, search, and disclosure do not invalidate it.
+No cache crosses an exact assembly or `ProjectDocument` identity. A semantic
+edit, profile load, or new project receives a new document identity and a new
+assembly and candidate session. Undo or redo may restore a prior immutable
+document identity and reuse that identity's cached assembly and session; a
+cache miss still creates a fresh matching assembly. Navigation, focus, search,
+and disclosure do not invalidate it.
 
 The application API is domain-shaped rather than scalar-shaped. The former
 scalar compatibility service has been deleted. Engine fixtures bind the same
@@ -330,11 +350,13 @@ the candidate horizon run only when the candidate family depends on them.
 
 ## Application and React Boundary
 
-The application receives the current atomic project/evaluation pair and creates
-or retrieves its candidate session:
+The application publishes one transient exact assembly and creates or retrieves
+its candidate session from that assembly. The ordinary evaluation selector
+returns only the assembly's data-only evaluation:
 
 ```text
-Redux authored project + published evaluation
+Redux authored project + published exact assembly
+  -> data-only ProjectEvaluation selector
   -> project-bound candidate projection session
   -> contextual option and picker projection
   -> structured workspace interaction catalog
@@ -343,8 +365,12 @@ Redux authored project + published evaluation
 ```
 
 The candidate projection should not hide evaluation acquisition behind a
-general `evaluateProject(project)` callback. Passing the exact published
-evaluation makes identity, ownership, and invalidation explicit.
+general `evaluateProject(project)` callback or recover candidate artifacts from
+a public evaluation for an explicit-artifact family. Passing the exact
+published assembly makes identity, ownership, and invalidation explicit. The
+assembly is replaceable derived state: it never enters profiles, autosave,
+persistence, or authored undo history, and React does not inspect its callable
+artifacts.
 
 The structured workspace is the React contact. It owns the exact bound
 candidate session and carries a typed interaction descriptor for every live
@@ -370,9 +396,9 @@ candidate interaction. Room-target candidates consume its selected value from
 their prepared generation context.
 
 There is no separate candidate-evaluation harness for tests. Engine candidate
-tests bind the production session factory to a real project/evaluation pair.
-Workspace tests construct the production structured workspace, and React tests
-exercise the production application boundary. Test fixtures may provide
+tests bind the production session factory to a real assembly. Workspace tests
+construct the production structured workspace from that assembly, and React
+tests exercise the production application boundary. Test fixtures may provide
 authored setup, controlled catalogs, and injectable observers, but they must
 not implement a parallel candidate API or alternate evaluation behavior.
 

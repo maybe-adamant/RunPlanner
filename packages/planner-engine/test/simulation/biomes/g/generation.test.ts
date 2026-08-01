@@ -12,6 +12,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
   evaluateTakeoverPrebossBatchCandidate,
   simulateProject,
 } from '@run-planner/engine/simulation';
@@ -99,8 +100,7 @@ describe('G generation and takeover', () => {
     });
     const session = createPreparedProjectCandidateSession(
       catalog,
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
     const results = session.evaluate([
       {
@@ -146,7 +146,10 @@ describe('G generation and takeover', () => {
       crawler?.entry.ledgers.counters.biomeEncounterDepth,
     );
 
-    const session = createPreparedProjectCandidateSession(catalog, project, result);
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
     for (const gameName of ['G_MiniBoss01', 'G_MiniBoss03']) {
       const candidate = session.evaluate([
         {
@@ -244,8 +247,7 @@ describe('G generation and takeover', () => {
       throw new Error('G repair fixture must retain complete F history');
     const room = createPreparedProjectCandidateSession(
       catalog,
-      roomProject,
-      roomEvaluation,
+      simulateProjectAssembly(catalog, roomProject),
     ).evaluate({
       kind: 'roomTarget',
       target: createTargetAddress(
@@ -268,11 +270,9 @@ describe('G generation and takeover', () => {
       reward,
       value: { rewardType: 'MetaCurrencyDrop' },
     });
-    const { result: rewardEvaluation } = completeG(rewardProject);
     const candidate = createPreparedProjectCandidateSession(
       catalog,
-      rewardProject,
-      rewardEvaluation,
+      simulateProjectAssembly(catalog, rewardProject),
     ).evaluate({ kind: 'incomingReward', reward, value: { rewardType: 'MetaCurrencyDrop' } });
 
     expect(candidate).toMatchObject({
@@ -286,8 +286,10 @@ describe('G generation and takeover', () => {
 
   it('evaluates G room, store, and reward candidates through semantic owners', () => {
     const project = createCompleteFGProject();
-    const { result } = completeG(project);
-    const session = createPreparedProjectCandidateSession(catalog, project, result);
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
     const source = { kind: 'occurrence' as const, occurrenceId: goldenGStartId };
     const [room, store, reward] = session.evaluate([
       {

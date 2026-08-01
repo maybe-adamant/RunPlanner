@@ -40,7 +40,7 @@ createRoot(rootElement).render(
         catalogSummary={application.catalogSummary}
         editorNavigation={application.editorNavigation}
         projectOperations={application.projectOperations}
-        structuredWorkspace={application.structuredWorkspace}
+        selectStructuredWorkspace={application.selectStructuredWorkspace}
       />
     </Provider>
   </StrictMode>,

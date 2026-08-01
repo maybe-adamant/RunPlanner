@@ -42,11 +42,7 @@ interface ProjectedHarnessProps {
 }
 
 function ProjectedHarness({ application, biomeKey, renderBiome, routeKey }: ProjectedHarnessProps) {
-  const state = useAppSelector((value) => value.projectWorkspace);
-  const workspace = application.structuredWorkspace.project(
-    state.history.present,
-    state.evaluation,
-  );
+  const workspace = useAppSelector(application.selectStructuredWorkspace);
   const biome = workspace.routes
     .find((candidate) => candidate.routeKey === routeKey)
     ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
@@ -80,13 +76,13 @@ function staticWorkspaceFixture(project: ProjectDocument): {
   readonly store: ReturnType<typeof createStaticPresentationStore>;
   readonly workspace: StructuredWorkspaceProjection;
 } {
-  const { evaluation, workspace } = projectStructuredWorkspaceFixture(project);
-  const store = createStaticPresentationStore(evaluation);
+  const { assembly, workspace } = projectStructuredWorkspaceFixture(project);
+  const store = createStaticPresentationStore(assembly);
   return { store, workspace };
 }
 
 function createStaticPresentationStore(
-  evaluation: ReturnType<typeof projectStructuredWorkspaceFixture>['evaluation'],
+  assembly: ReturnType<typeof projectStructuredWorkspaceFixture>['assembly'],
 ) {
   return configureStore({
     middleware: (getDefaultMiddleware) =>
@@ -94,7 +90,7 @@ function createStaticPresentationStore(
     reducer: {
       editorSession: createEditorSessionReducer(catalog),
       profileSession: (state: Record<string, never> = {}) => state,
-      projectWorkspace: (state = { evaluation }) => state,
+      projectWorkspace: (state = { assembly }) => state,
     },
   });
 }
@@ -113,7 +109,7 @@ function staticBiome(
 
 export function workspaceProjection(application: PlannerApplication) {
   const state = application.store.getState().projectWorkspace;
-  return application.structuredWorkspace.project(state.history.present, state.evaluation);
+  return application.structuredWorkspace.project(state.assembly);
 }
 
 export function workspaceBiome(

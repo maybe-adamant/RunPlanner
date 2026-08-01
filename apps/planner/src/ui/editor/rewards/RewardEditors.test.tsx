@@ -10,7 +10,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -59,7 +59,7 @@ function interactionsFor(
   options: CandidateSessionFactoryOptions = {},
 ): WorkspaceInteractionCatalog {
   const { structuredWorkspace } = createStructuredWorkspaceTestServices(options);
-  return structuredWorkspace.project(project, simulateProject(catalog, project)).interactions;
+  return structuredWorkspace.project(simulateProjectAssembly(catalog, project)).interactions;
 }
 
 function renderReward({
@@ -115,9 +115,7 @@ function StoreRewardHarness({
     <RewardValueEditor
       candidateOwner={firstOwner}
       idPrefix="lifecycle-stale"
-      interactions={
-        structuredWorkspace.project(workspace.history.present, workspace.evaluation).interactions
-      }
+      interactions={structuredWorkspace.project(workspace.assembly).interactions}
       offer={projectRewardOffer(workspace.history.present)}
       onReplace={() => undefined}
     />
@@ -387,8 +385,8 @@ describe('reward editor projections', () => {
       yieldToHost: () => pending.promise,
     });
     const store = createPlannerStore({
+      assembleProjectEvaluation: (current) => simulateProjectAssembly(catalog, current),
       catalog,
-      evaluateProject: (current) => simulateProject(catalog, current),
       initialProject: project,
     });
     const user = userEvent.setup();

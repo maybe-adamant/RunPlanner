@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import * as simulationPublic from '@run-planner/engine/simulation';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
@@ -19,8 +20,12 @@ import {
 import {
   CandidateEvaluationContractError,
   createPreparedProjectCandidateSession,
+  ProjectSimulationContractError,
+  simulateProjectAssembly,
   simulateProject,
   type CandidateEvaluationEvent,
+  type ProjectEvaluation,
+  type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 
 import {
@@ -69,9 +74,10 @@ function withGTarget(project: ProjectDocument) {
 describe('candidate session', () => {
   it('binds one immutable project/evaluation pair and batches direct start and store domains', () => {
     const project = createCompleteFTakeoverProject();
-    const evaluation = simulateProject(catalog, project);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const evaluation = assembly.evaluation;
     const events: CandidateEvaluationEvent[] = [];
-    const session = createPreparedProjectCandidateSession(catalog, project, evaluation, {
+    const session = createPreparedProjectCandidateSession(catalog, assembly, {
       observe: (event) => events.push(event),
     });
     const store = createBatchRewardStoreAddress(fBiome, fDecision().source);
@@ -113,6 +119,59 @@ describe('candidate session', () => {
     ]);
   });
 
+  it('rejects missing, forged, and mixed exact-assembly products', () => {
+    const project = createCompleteFTakeoverProject();
+    const first = simulateProjectAssembly(catalog, project);
+    const second = simulateProjectAssembly(catalog, project);
+    const withoutArtifacts = Object.freeze({
+      project: first.project,
+      evaluation: first.evaluation,
+    }) as unknown as ProjectEvaluationAssembly;
+    const mixed = Object.freeze({
+      project: first.project,
+      evaluation: second.evaluation,
+    }) as ProjectEvaluationAssembly;
+    const forgedPrototype = Object.freeze(
+      Object.assign(Object.create(Object.getPrototypeOf(first)), {
+        project: first.project,
+        evaluation: first.evaluation,
+      }),
+    ) as ProjectEvaluationAssembly;
+    const reflectedAssemblyConstructor = Object.getPrototypeOf(first).constructor;
+    const ReflectedAssemblyConstructor = reflectedAssemblyConstructor as unknown as new (
+      project: ProjectDocument,
+      evaluation: ProjectEvaluation,
+      candidateArtifacts: unknown,
+    ) => ProjectEvaluationAssembly;
+
+    expect(() => createPreparedProjectCandidateSession(catalog, withoutArtifacts)).toThrow(
+      ProjectSimulationContractError,
+    );
+    expect(() => createPreparedProjectCandidateSession(catalog, mixed)).toThrow(
+      /was not produced by this simulator execution/,
+    );
+    expect(() => createPreparedProjectCandidateSession(catalog, forgedPrototype)).toThrow(
+      ProjectSimulationContractError,
+    );
+    expect('candidateArtifacts' in reflectedAssemblyConstructor).toBe(false);
+    expect('isExact' in reflectedAssemblyConstructor).toBe(false);
+    expect(
+      () => new ReflectedAssemblyConstructor(first.project, first.evaluation, Object.freeze({})),
+    ).toThrow(ProjectSimulationContractError);
+    expect(createPreparedProjectCandidateSession(catalog, first).evaluation).toBe(first.evaluation);
+  });
+
+  it('keeps the public simulation facade data-only and deeply equal', () => {
+    const project = createCompleteFTakeoverProject();
+    const assembly = simulateProjectAssembly(catalog, project);
+
+    expect(simulateProject(catalog, project)).toEqual(assembly.evaluation);
+    expect(Object.keys(assembly)).toEqual(['project', 'evaluation']);
+    expect('candidateArtifacts' in assembly).toBe(false);
+    expect('candidateArtifacts' in assembly.evaluation).toBe(false);
+    expect('candidateArtifactsForProjectEvaluationAssembly' in simulationPublic).toBe(false);
+  });
+
   it('evaluates an authored incoming reward from its captured producer frontier', () => {
     const project = createCompleteFTakeoverProject();
     const occurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
@@ -123,8 +182,7 @@ describe('candidate session', () => {
     }
     const result = createPreparedProjectCandidateSession(
       catalog,
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     ).evaluate({
       kind: 'incomingReward',
       reward: createIncomingRewardAddress(fBiome, occurrence.occurrenceId),
@@ -141,8 +199,7 @@ describe('candidate session', () => {
     const project = createUnresolvedFOpeningBatch(createFStart());
     const session = createPreparedProjectCandidateSession(
       catalog,
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
     const rewardStore = createBatchRewardStoreAddress(fBiome, fDecision().source);
     const target = createTargetAddress(fBiome, fDecision().source, 'exit1');
@@ -177,8 +234,7 @@ describe('candidate session', () => {
     const project = createCompleteFTakeoverProject();
     const session = createPreparedProjectCandidateSession(
       catalog,
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
     const results = session.evaluate([
       {
@@ -237,8 +293,7 @@ describe('candidate session', () => {
       throw new Error('F Preboss shop has no offer');
     const results = createPreparedProjectCandidateSession(
       catalog,
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     ).evaluate([
       {
         kind: 'shopOffer',
@@ -277,8 +332,7 @@ describe('candidate session', () => {
     const target = createTargetAddress(fBiome, fDecision().source, 'exit2');
     const session = createPreparedProjectCandidateSession(
       catalog,
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
 
     expect(() => session.evaluate({ kind: 'roomTarget', target, gameName: 'F_Combat03' })).toThrow(
@@ -299,8 +353,7 @@ describe('candidate session', () => {
     );
     const session = createPreparedProjectCandidateSession(
       catalog,
-      project,
-      simulateProject(catalog, project),
+      simulateProjectAssembly(catalog, project),
     );
 
     expect(() =>
@@ -334,8 +387,7 @@ describe('candidate session', () => {
     expect(
       createPreparedProjectCandidateSession(
         catalog,
-        withoutHandoff,
-        simulateProject(catalog, withoutHandoff),
+        simulateProjectAssembly(catalog, withoutHandoff),
       ).evaluate({
         kind: 'takeoverPrebossBatch',
         source: createExitDecisionAddress(nBiome, {
@@ -368,8 +420,7 @@ describe('candidate session', () => {
     expect(
       createPreparedProjectCandidateSession(
         catalog,
-        incomplete,
-        simulateProject(catalog, incomplete),
+        simulateProjectAssembly(catalog, incomplete),
       ).evaluate(query),
     ).toEqual({
       kind: 'unavailable',
@@ -383,7 +434,10 @@ describe('candidate session', () => {
       validity: 'invalid',
     });
     expect(
-      createPreparedProjectCandidateSession(catalog, invalid, invalidEvaluation).evaluate(query),
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, invalid),
+      ).evaluate(query),
     ).toEqual({
       kind: 'unavailable',
       reason: 'upstreamInvalid',
