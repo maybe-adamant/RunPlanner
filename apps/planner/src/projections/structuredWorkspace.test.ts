@@ -1,5 +1,9 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { createProjectDocument, semanticAddressKey } from '@run-planner/engine/authored-project';
+import {
+  createOccurrenceId,
+  createProjectDocument,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -18,14 +22,18 @@ import {
   type WorkspaceNode,
 } from './structured-workspace';
 
-const projection = createStructuredWorkspaceProjection(catalog, {
-  candidateSessions: createCandidateSessionFactory(catalog),
-  contextualPicker: createContextualPickerProjection(createContextualOptionResolver(catalog)),
-  rewardPicker: createRewardPickerProjection(
-    catalog,
-    createContextualPickerProjection(createContextualOptionResolver(catalog)),
-  ),
-});
+const projection = createStructuredWorkspaceProjection(
+  catalog,
+  {
+    candidateSessions: createCandidateSessionFactory(catalog),
+    contextualPicker: createContextualPickerProjection(createContextualOptionResolver(catalog)),
+    rewardPicker: createRewardPickerProjection(
+      catalog,
+      createContextualPickerProjection(createContextualOptionResolver(catalog)),
+    ),
+  },
+  () => createOccurrenceId('structured-workspace-facade-start'),
+);
 
 function project(project: ReturnType<typeof createProjectDocument>): StructuredWorkspaceProjection {
   return projection.project(simulateProjectAssembly(catalog, project));

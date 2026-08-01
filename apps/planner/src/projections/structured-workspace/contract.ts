@@ -141,11 +141,24 @@ export interface WorkspaceRoomInteraction {
   readonly selected?: RoomDeclaration;
 }
 
+/** One complete authored command plus navigation behavior owned by its interaction. */
+export interface WorkspaceCommandIntent<Command extends ProjectCommand = ProjectCommand> {
+  readonly command: Command;
+  readonly focus?: {
+    readonly owner: SemanticAddress;
+    readonly timing: 'after' | 'before';
+  };
+}
+
+type WorkspaceCreateStartIntent = WorkspaceCommandIntent<
+  Extract<ProjectCommand, { readonly kind: 'CreateStart' }>
+>;
+
 /** A start remains an authored action even when its declaration fixes the room. */
 export type WorkspaceStartInteraction =
   | {
-      readonly fixedGameName: string;
       readonly fixedLabel: string;
+      readonly intent: () => WorkspaceCreateStartIntent;
       readonly key: string;
       readonly kind: 'fixed';
       readonly load: () => ContextualPickerModel<RoomDeclaration>;
@@ -154,6 +167,7 @@ export type WorkspaceStartInteraction =
   | {
       readonly key: string;
       readonly kind: 'choice';
+      readonly intentFor: (room: RoomDeclaration) => WorkspaceCreateStartIntent;
       readonly load: () => ContextualPickerModel<RoomDeclaration>;
       readonly owner: BiomeAddress;
     };

@@ -42,6 +42,7 @@ import type {
   WorkspaceRoomPickerControl,
   WorkspaceStatus,
 } from './contract';
+import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 function projectBiome(
   catalog: Catalog,
@@ -95,6 +96,7 @@ function routeStatus(route: { readonly status: ProjectEvaluation['status'] }): W
 export function createStructuredWorkspaceProjection(
   catalog: Catalog,
   services: StructuredWorkspaceContextualServices,
+  allocateOccurrenceId: OccurrenceIdFactory,
 ): StructuredWorkspaceProjectionService {
   const cache = new WeakMap<ProjectEvaluationAssembly, StructuredWorkspaceProjection>();
   return Object.freeze({
@@ -205,6 +207,7 @@ export function createStructuredWorkspaceProjection(
       });
       registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, routes);
       const interactions = bindWorkspaceInteractions({
+        allocateOccurrenceId,
         assembly,
         batchInteractionRequirements,
         catalog,

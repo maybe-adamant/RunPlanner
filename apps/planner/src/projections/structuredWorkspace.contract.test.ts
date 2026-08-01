@@ -107,14 +107,18 @@ const inertCandidateSessions: CandidateSessionFactory = Object.freeze({
 function projection(
   candidateSessions: CandidateSessionFactory = createCandidateSessionFactory(catalog),
 ) {
-  return createStructuredWorkspaceProjection(catalog, {
-    candidateSessions,
-    contextualPicker: createContextualPickerProjection(createContextualOptionResolver(catalog)),
-    rewardPicker: createRewardPickerProjection(
-      catalog,
-      createContextualPickerProjection(createContextualOptionResolver(catalog)),
-    ),
-  });
+  return createStructuredWorkspaceProjection(
+    catalog,
+    {
+      candidateSessions,
+      contextualPicker: createContextualPickerProjection(createContextualOptionResolver(catalog)),
+      rewardPicker: createRewardPickerProjection(
+        catalog,
+        createContextualPickerProjection(createContextualOptionResolver(catalog)),
+      ),
+    },
+    () => createOccurrenceId('structured-workspace-contract-start'),
+  );
 }
 
 function projectWorkspace(project: ProjectDocument, evaluation?: ProjectEvaluation) {

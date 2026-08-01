@@ -14,6 +14,7 @@ export type {
   WorkspaceCandidateInteraction,
   WorkspaceCandidateTakeoverBatchInteraction,
   WorkspaceCompletedHubHandoffInteraction,
+  WorkspaceCommandIntent,
   WorkspaceCompletionNode,
   WorkspaceDefaultInspectorDestination,
   WorkspaceEphyraSideRoomDescriptor,
