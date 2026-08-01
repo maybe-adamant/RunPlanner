@@ -1,6 +1,6 @@
 import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
-import { decodeBiomeTopology } from './topology';
+import { decodeBiomeTopology } from './topology/codec';
 import {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type AuthoredBiomePlan,

@@ -4,6 +4,7 @@ import {
   createExitSelectionAddress,
   createOccurrenceAddress,
   createTargetAddress,
+  selectedExitTarget,
   semanticAddressKey,
   type DeclaredPhysicalExit,
   type ExitDecision,
@@ -118,18 +119,6 @@ export interface WorkspaceLinkedExitDecisionAssembly {
 
 export type WorkspaceDecisionAssembly =
   WorkspaceBatchDecisionAssembly | WorkspaceLinkedExitDecisionAssembly;
-
-function authoredTargetIsSelected(
-  decision: AuthoredBatchDecision,
-  target: AuthoredBatchTarget,
-): boolean {
-  if (decision.selection.kind === 'normal') {
-    return decision.selection.exitKey === target.exitKey;
-  }
-  return (
-    decision.selection.kind === 'derived' && decision.normal.targets[0]?.exitKey === target.exitKey
-  );
-}
 
 function hubStageDecisionRemoval(
   input: WorkspaceDecisionAssemblyBaseInput,
@@ -374,7 +363,7 @@ function projectAuthoredTargetWithOverlay(
       );
     }
   }
-  const selected = authoredTargetIsSelected(decision, target);
+  const selected = selectedExitTarget(decision)?.exitKey === target.exitKey;
   const declaredExit = physical.find((candidate) => candidate.exitKey === target.exitKey);
   const physicalState =
     evaluatedTarget?.exit.kind ??

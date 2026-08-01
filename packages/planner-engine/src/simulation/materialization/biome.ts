@@ -28,6 +28,11 @@ import type {
   OccurrenceId,
   RoomOccurrence,
 } from '../../authored-project/model';
+import {
+  exitDecisionForSource,
+  selectedExitKey,
+  selectedExitTarget,
+} from '../../authored-project/topology/query';
 import type { CompleteBiomeCompletenessResult } from '../completeness';
 import { materializeCompletionRooms } from './completion';
 import { materializeHubDecision } from './hub';
@@ -65,12 +70,6 @@ function sourceAddress(source: ExitDecisionSource): ExitDecisionSourceAddress {
   return source.kind === 'occurrence'
     ? Object.freeze({ kind: 'occurrence', occurrenceId: source.occurrenceId })
     : Object.freeze({ kind: 'hubDecision', decisionKey: source.decisionKey });
-}
-
-function sourceKey(source: ExitDecisionSource): string {
-  return source.kind === 'occurrence'
-    ? `occurrence:${source.occurrenceId}`
-    : `hubDecision:${source.decisionKey}`;
 }
 
 function requireLayout(catalog: Catalog, biome: BiomeAddress): BiomeLayout {
@@ -134,17 +133,6 @@ function canonicalExit(room: RoomDeclaration | undefined, exitKey: string): Cano
     type: exit.type,
     compatibilityPolicyKey: exit.compatibilityPolicyKey,
   });
-}
-
-function selectedExitKey(decision: ExitDecision): string | undefined {
-  if (decision.normal.kind === 'linked') return decision.normal.exitKey;
-  if (decision.selection.kind === 'derived') {
-    const target = decision.normal.targets[0];
-    if (target === undefined) fail('complete width-one batch has no target');
-    return target.exitKey;
-  }
-  if (decision.selection.kind === 'normal') return decision.selection.exitKey;
-  return undefined;
 }
 
 function orderedTargets(targets: readonly ExitTargetReference[]): readonly ExitTargetReference[] {
@@ -392,6 +380,9 @@ function materializeBatch(
     clockwork,
   );
   const selected = selectedExitKey(decision);
+  if (decision.selection.kind === 'derived' && selected === undefined) {
+    fail('complete width-one batch has no target');
+  }
   const ordered = orderedTargets(normal.targets);
   const sharedBatchStoreKey = finalSharedBatchStoreKey(
     catalog,
@@ -506,12 +497,10 @@ function hubDecision(
 }
 
 function handoffDecision(topology: BiomeTopology, descriptor: HubDecisionDescriptor): ExitDecision {
-  const decision = topology.decisions.find(
-    (candidate): candidate is ExitDecision =>
-      candidate.kind === 'exit' &&
-      candidate.source.kind === 'hubDecision' &&
-      candidate.source.decisionKey === descriptor.hubKey,
-  );
+  const decision = exitDecisionForSource(topology, {
+    kind: 'hubDecision',
+    decisionKey: descriptor.hubKey,
+  });
   if (decision === undefined) fail(`${descriptor.hubKey} completed-Hub exit is missing`);
   return decision;
 }
@@ -564,10 +553,10 @@ function decisionFrontier(
   partial?: CanonicalBatch,
 ): MaterializedExitDecisionFrontier {
   const address = sourceAddress(source);
-  const pickedExitKey =
-    decision === undefined || decision.selection.kind === 'unresolved'
-      ? null
-      : selectedExitKey(decision);
+  const pickedExitKey = decision === undefined ? null : selectedExitKey(decision);
+  if (decision?.selection.kind === 'derived' && pickedExitKey === undefined) {
+    fail('complete width-one batch has no target');
+  }
   return Object.freeze({
     kind: 'exitDecision',
     origin: createExitDecisionAddress(biome, address),
@@ -599,8 +588,10 @@ function isCompleteBatch(
     takeover ||
     normal.rewardStore.kind !== 'authoredBaseStore' ||
     normal.rewardStore.baseRewardStoreKey !== null;
-  const selected = selectedExitKey(decision);
-  const picked = normal.targets.find((target) => target.exitKey === selected);
+  const picked = selectedExitTarget(decision);
+  if (decision.selection.kind === 'derived' && picked === undefined) {
+    fail('complete width-one batch has no target');
+  }
   const pickedOccurrence = picked === undefined ? undefined : occurrences.get(picked.occurrenceId);
   return (
     allPhysicalTargets &&
@@ -689,10 +680,7 @@ export function materializeBiomePrefix(
       kind: 'occurrence',
       occurrenceId: current.occurrenceId,
     });
-    const decision = topology.decisions.find(
-      (candidate): candidate is ExitDecision =>
-        candidate.kind === 'exit' && sourceKey(candidate.source) === sourceKey(source),
-    );
+    const decision = exitDecisionForSource(topology, source);
     const sourceRoom = requireRoom(catalog, requireOccurrence(occurrences, current.occurrenceId));
     if (decision === undefined) {
       if (
@@ -740,10 +728,7 @@ export function materializeBiomePrefix(
           kind: 'hubDecision',
           decisionKey: layout.progression.hubKey,
         });
-        const handoff = topology.decisions.find(
-          (candidate): candidate is ExitDecision =>
-            candidate.kind === 'exit' && sourceKey(candidate.source) === sourceKey(handoffSource),
-        );
+        const handoff = exitDecisionForSource(topology, handoffSource);
         const parent = Object.freeze({ origin: hub.room.origin, gameName: hub.room.gameName });
         if (handoff === undefined || !isCompleteBatch(catalog, occurrences, undefined, handoff)) {
           return prefix(
@@ -862,10 +847,7 @@ export function materializeBiome(
       kind: 'occurrence',
       occurrenceId: currentRoom.occurrenceId,
     });
-    const decision = topology.decisions.find(
-      (candidate): candidate is ExitDecision =>
-        candidate.kind === 'exit' && sourceKey(candidate.source) === sourceKey(source),
-    );
+    const decision = exitDecisionForSource(topology, source);
     const sourceOccurrence = requireOccurrence(occurrences, currentRoom.occurrenceId);
     const sourceRoom = requireRoom(catalog, sourceOccurrence);
     if (decision === undefined) {

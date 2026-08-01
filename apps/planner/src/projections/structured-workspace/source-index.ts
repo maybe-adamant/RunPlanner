@@ -4,6 +4,7 @@ import {
   createHubDecisionAddress,
   createOccurrenceAddress,
   declaredPhysicalExits as resolveDeclaredPhysicalExits,
+  selectedExitTarget,
   semanticAddressKey,
   type AuthoredBiomePlan,
   type BiomeAddress,
@@ -258,16 +259,7 @@ function authoredExitDecisionsInTopologyOrder(
     const targets = [...decision.normal.targets].sort((left, right) =>
       compareAuthoredTargetsInPhysicalOrder(rank, left, right),
     );
-    const selectedExitKey =
-      decision.selection.kind === 'normal'
-        ? decision.selection.exitKey
-        : decision.selection.kind === 'derived'
-          ? decision.normal.targets[0]?.exitKey
-          : undefined;
-    const selected =
-      selectedExitKey === undefined
-        ? undefined
-        : targets.find((target) => target.exitKey === selectedExitKey);
+    const selected = selectedExitTarget(decision);
     for (const target of [
       ...(selected === undefined ? [] : [selected]),
       ...targets.filter((target) => target !== selected),

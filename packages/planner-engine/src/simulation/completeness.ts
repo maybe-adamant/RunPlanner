@@ -18,11 +18,11 @@ import type {
   BiomeTopology,
   ExitDecision,
   ExitDecisionSource,
-  ExitTargetReference,
   HubDecision,
   OccurrenceId,
   RoomOccurrence,
 } from '../authored-project/model';
+import { exitDecisionForSource, selectedExitTarget } from '../authored-project/topology/query';
 import type { CompletenessFindingCode, FindingEvidence, SemanticFinding } from './model';
 
 export interface IncompleteBiomeCompletenessResult {
@@ -89,20 +89,6 @@ function sourceAddress(source: ExitDecisionSource): ExitDecisionSourceAddress {
     : Object.freeze({ kind: 'hubDecision', decisionKey: source.decisionKey });
 }
 
-function sourceKey(source: ExitDecisionSource): string {
-  return source.kind === 'occurrence'
-    ? `occurrence:${source.occurrenceId}`
-    : `hubDecision:${source.decisionKey}`;
-}
-
-function decisionsBySource(topology: BiomeTopology): ReadonlyMap<string, ExitDecision> {
-  return new Map(
-    topology.decisions
-      .filter((decision): decision is ExitDecision => decision.kind === 'exit')
-      .map((decision) => [sourceKey(decision.source), decision]),
-  );
-}
-
 function hubDecision(topology: BiomeTopology, hubKey: string): HubDecision | undefined {
   return topology.decisions.find(
     (decision): decision is HubDecision => decision.kind === 'hub' && decision.hubKey === hubKey,
@@ -123,23 +109,6 @@ function sourceRoom(
     throw new CompletenessContractError(`trusted topology lost room ${occurrence.gameName}`);
   }
   return room;
-}
-
-function selectedExitKey(decision: ExitDecision): string | undefined {
-  if (decision.normal.kind === 'linked') return decision.normal.exitKey;
-  if (decision.selection.kind === 'derived') return decision.normal.targets[0]?.exitKey;
-  return decision.selection.kind === 'normal' ? decision.selection.exitKey : undefined;
-}
-
-function selectedTarget(
-  decision: ExitDecision,
-):
-  | ExitTargetReference
-  | { readonly exitKey: string; readonly occurrenceId: OccurrenceId }
-  | undefined {
-  if (decision.normal.kind === 'linked') return decision.normal;
-  const exitKey = selectedExitKey(decision);
-  return decision.normal.targets.find((target) => target.exitKey === exitKey);
 }
 
 function isTakeoverBatch(
@@ -299,7 +268,6 @@ export function evaluateBiomeCompleteness(
   }
 
   const occurrences = occurrenceMap(topology);
-  const decisions = decisionsBySource(topology);
   const findings: SemanticFinding[] = [];
   const traversed = new Set<OccurrenceId>();
   let current = topology.startOccurrenceId;
@@ -314,7 +282,7 @@ export function evaluateBiomeCompleteness(
     findPickedShopState(findings, biome, occurrence);
 
     const source: ExitDecisionSource = Object.freeze({ kind: 'occurrence', occurrenceId: current });
-    const decision = decisions.get(sourceKey(source));
+    const decision = exitDecisionForSource(topology, source);
     if (decision === undefined) {
       if (
         layout.progression.kind === 'hub' &&
@@ -326,7 +294,7 @@ export function evaluateBiomeCompleteness(
           kind: 'hubDecision',
           decisionKey: layout.progression.hubKey,
         });
-        const handoff = decisions.get(sourceKey(hubSource));
+        const handoff = exitDecisionForSource(topology, hubSource);
         if (handoff === undefined) {
           const origin = createExitDecisionAddress(biome, sourceAddress(hubSource));
           return incomplete([
@@ -345,7 +313,7 @@ export function evaluateBiomeCompleteness(
           undefined,
         );
         if (handoffFindings.length !== 0) return incomplete(handoffFindings);
-        const selected = selectedTarget(handoff);
+        const selected = selectedExitTarget(handoff);
         if (selected === undefined) {
           const origin = createExitSelectionAddress(biome, sourceAddress(handoff.source));
           return incomplete([
@@ -385,7 +353,7 @@ export function evaluateBiomeCompleteness(
       if (batchFindings.length !== 0) return incomplete([...findings, ...batchFindings]);
     }
 
-    const selected = selectedTarget(decision);
+    const selected = selectedExitTarget(decision);
     if (selected === undefined) {
       const origin = createExitSelectionAddress(biome, sourceAddress(decision.source));
       return incomplete([
