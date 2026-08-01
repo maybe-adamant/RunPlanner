@@ -14,7 +14,8 @@ import type {
   OccurrenceId,
   RoomOccurrence,
 } from './model';
-import { decodeRoomState, type RoomOccurrenceRole } from './roomState';
+import { decodeRoomState } from './room-state/codec';
+import type { RoomOccurrenceRole } from './room-state/declaration';
 import {
   expectArray,
   expectExactKeys,
