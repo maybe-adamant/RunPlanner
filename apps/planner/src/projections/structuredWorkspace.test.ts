@@ -36,7 +36,7 @@ import {
   goldenIBiome,
   goldenFOccurrenceId,
   goldenFStartId,
-} from '../../test/fixtures/underworldProject';
+} from '../../../../test/fixtures/authored-project';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
@@ -50,7 +50,7 @@ import {
   pOccurrenceId,
   qBiome,
   qOccurrenceIds,
-} from '../../test/fixtures/surfaceProject';
+} from '../../../../test/fixtures/authored-project';
 import {
   assertExpectedWorkspaceLeafClosure,
   assertRenderedWorkspaceStructuralControlClosure,
@@ -200,7 +200,7 @@ const workspaceNodeKinds: Readonly<Record<WorkspaceNode['kind'], true>> = Object
 
 describe('unified structured workspace projection', () => {
   it('uses one workspace envelope and exhaustive unified node union across both routes', () => {
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const underworld = workspace(createGoldenFGHIProject());
     const surface = workspace(createRepresentativeNOPQProject());
 
     for (const projected of [...underworld.routes, ...surface.routes].flatMap(
@@ -293,7 +293,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('keeps declaration and canonical decision order rather than array-position topology rules', () => {
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const underworld = workspace(createGoldenFGHIProject());
     const surface = workspace(createRepresentativeNOPQProject());
     const structuralKinds = (value: WorkspaceBiome) =>
       value.nodes
@@ -328,7 +328,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('orders a selected authored subtree before retained peers independently of serialization order', () => {
-    const base = createGoldenFGHIProject(catalog);
+    const base = createGoldenFGHIProject();
     const forkSource = goldenFOccurrenceId(1, 1);
     const selectedChildSource = goldenFOccurrenceId(2, 2);
     const retainedChildSource = goldenFOccurrenceId(2, 1);
@@ -489,7 +489,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('projects each ordinary-biome rail as decision points with picked summaries', () => {
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const underworld = workspace(createGoldenFGHIProject());
     const surface = workspace(createRepresentativeNOPQProject());
     const expected = {
       F: { decisions: 10, entry: 'Opening', preboss: true },
@@ -583,7 +583,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('keeps physical target order and selection separate from retained target workbenches', () => {
-    const projected = biome(workspace(createGoldenFGHIProject(catalog)), 'F');
+    const projected = biome(workspace(createGoldenFGHIProject()), 'F');
     const takeover = projected.nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'takeoverBatch' }> =>
         node.kind === 'takeoverBatch',
@@ -1617,7 +1617,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('exposes all F-through-Q takeover batches only from their decision owners while I keeps its Preboss target replaceable', () => {
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const underworld = workspace(createGoldenFGHIProject());
     const surface = workspace(createRepresentativeNOPQProject());
     for (const [projected, biomeKey] of [
       [underworld, 'F'],
@@ -1776,7 +1776,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('does not misclassify candidate, mixed, linked, or Hub progression as a fixed width-one takeover', () => {
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const underworld = workspace(createGoldenFGHIProject());
     const surface = workspace(createRepresentativeNOPQProject());
     const cases = [
       [underworld, 'F'],
@@ -1798,7 +1798,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('projects declaration-owned reward domains for side rooms, wheels, shops, and free Preboss rewards', () => {
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const underworld = workspace(createGoldenFGHIProject());
     const surface = workspace(createRepresentativeNOPQProject());
     const nCombat = catalog.rooms.byKey.N_Combat05;
     const sideGroup = nCombat?.localChildren.find((child) => child.kind === 'fixedRoomSlots');
@@ -1847,7 +1847,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('binds every returned room reward control from entry, batch, linked, and Hub assembly', () => {
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const underworld = workspace(createGoldenFGHIProject());
     const surface = workspace(createRepresentativeNOPQProject());
     const entry = biome(underworld, 'F').entry;
     const ordinary = biome(underworld, 'F').nodes.find(
@@ -1888,7 +1888,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('binds explicit start, authored target, and ready target-picker products by exact owner', () => {
-    const complete = workspace(createGoldenFGHIProject(catalog));
+    const complete = workspace(createGoldenFGHIProject());
     const completeF = biome(complete, 'F');
     const startPicker = completeF.entry?.room.roomPicker;
     const authoredBatch = completeF.nodes.find(
@@ -1948,7 +1948,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('keeps fixed, Fields, ship-wheel, and Shop reward state in compact room summaries', () => {
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const underworld = workspace(createGoldenFGHIProject());
     const surface = workspace(createRepresentativeNOPQProject());
     const summary = (
       projected: ReturnType<typeof workspace>,
@@ -1972,7 +1972,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('projects immutable Fields, Ship, and Shop workbench leaves in declaration order', () => {
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const underworld = workspace(createGoldenFGHIProject());
     const surface = workspace(createRepresentativeNOPQProject());
 
     const fields = roomWorkbench(underworld, 'H', 'H_Combat02');
@@ -2208,7 +2208,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('keeps a selected Shop detailed and editable behind an unresolved authored prefix', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const f = project.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((candidate) => candidate.biomeKey === 'F');
@@ -2279,7 +2279,7 @@ describe('unified structured workspace projection', () => {
     };
     const surfaceProject = createRepresentativeNOPQProject();
     const surface = workspace(surfaceProject);
-    const underworldProject = createGoldenFGHIProject(catalog);
+    const underworldProject = createGoldenFGHIProject();
     const underworld = workspace(underworldProject);
 
     const purchase = createShopPurchaseAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon');
@@ -2421,7 +2421,7 @@ describe('unified structured workspace projection', () => {
         assertIndependentWorkspaceInteractionClosure(project, projected, interactions),
       ).toThrow(expected);
     };
-    const underworldProject = createGoldenFGHIProject(catalog);
+    const underworldProject = createGoldenFGHIProject();
     const underworld = workspace(underworldProject);
     const surfaceProject = createRepresentativeNOPQProject();
     const surface = workspace(surfaceProject);
@@ -2499,7 +2499,7 @@ describe('unified structured workspace projection', () => {
       /exit selection .* has no exact workspace interaction/,
     );
 
-    const storedTakeoverProject = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    const storedTakeoverProject = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceBatchRewardStore',
       rewardStore: createBatchRewardStoreAddress(goldenFBiome, takeover.source),
       storeKey: 'RunProgress',
@@ -2601,7 +2601,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('projects biome-field, fixed-payload, and authored-choice-start controls with exact owners', () => {
-    const underworld = workspace(createGoldenFGHIProject(catalog));
+    const underworld = workspace(createGoldenFGHIProject());
     const surface = workspace(createRepresentativeNOPQProject());
 
     const i = biome(underworld, 'I');
@@ -2661,7 +2661,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('keeps target identity allocation and takeover command construction in the interaction adapter', () => {
-    const projected = workspace(createGoldenFGHIProject(catalog));
+    const projected = workspace(createGoldenFGHIProject());
     const f = biome(projected, 'F');
     const takeover = f.nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'takeoverBatch' }> =>
@@ -2684,7 +2684,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('projects the exact command-owned removal scope for retained ordinary and takeover batches', () => {
-    const narrowedF = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    const narrowedF = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(
         createBiomeAddress('Underworld', 'F'),
@@ -2712,7 +2712,7 @@ describe('unified structured workspace projection', () => {
       removedOccurrenceIds: [goldenFOccurrenceId(2, 2)],
     });
 
-    const gPlan = createGoldenFGHIProject(catalog).routes[0]!.biomes.find(
+    const gPlan = createGoldenFGHIProject().routes[0]!.biomes.find(
       (candidate) => candidate.biomeKey === 'G',
     );
     const takeoverDecision = gPlan?.topology?.decisions.find(
@@ -2729,7 +2729,7 @@ describe('unified structured workspace projection', () => {
     if (takeoverDecision?.kind !== 'exit' || takeoverDecision.source.kind !== 'occurrence') {
       throw new Error('G takeover source is missing');
     }
-    const narrowedG = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    const narrowedG = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(
         createBiomeAddress('Underworld', 'G'),
@@ -2759,7 +2759,7 @@ describe('unified structured workspace projection', () => {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(1, 1),
     });
-    let fProject = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    let fProject = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
       gameName: 'F_Combat01',
@@ -2792,7 +2792,7 @@ describe('unified structured workspace projection', () => {
       expect.objectContaining({ exitKey: 'exit2', index: 2, physicalState: 'unavailable' }),
     );
 
-    const base = createGoldenFGHIProject(catalog);
+    const base = createGoldenFGHIProject();
     const gPlan = base.routes[0]?.biomes.find((candidate) => candidate.biomeKey === 'G');
     const gTakeover = gPlan?.topology?.decisions.find(
       (decision) =>
@@ -2850,7 +2850,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('exposes the exact reset-and-descendant impact before replacing an ordinary batch with a takeover', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const projected = workspace(project);
     const owner = createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
       kind: 'occurrence',
@@ -2981,7 +2981,7 @@ describe('unified structured workspace projection', () => {
   });
 
   it('keeps later authored decisions visible as retained and unassessed after an incomplete prefix', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const f = project.routes[0]!.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (f?.topology === null || f === undefined) throw new Error('golden F topology is missing');
     const first = f.topology.decisions.find(
@@ -3044,7 +3044,7 @@ describe('unified structured workspace projection', () => {
 
   it('keeps a reward-invalid physical peer as an authored offer instead of a blank exit', () => {
     const secondPeer = goldenFOccurrenceId(2, 2);
-    const rewardInvalid = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    const rewardInvalid = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(goldenFBiome, secondPeer),
       value: { rewardType: 'MetaCurrencyDrop' },

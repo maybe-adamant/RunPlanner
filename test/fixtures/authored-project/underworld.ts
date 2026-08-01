@@ -40,7 +40,7 @@ interface BatchSpec {
 
 export interface GoldenGProjectOptions {
   readonly pickedMiniboss?: 'G_MiniBoss01' | 'G_MiniBoss02';
-  readonly terminalParent?: 'G_Combat12' | 'G_Combat14';
+  readonly prebossSource?: 'G_Combat12' | 'G_Combat14';
 }
 
 const fBatches: readonly BatchSpec[] = [
@@ -229,7 +229,7 @@ function createCompleteFProject(): ProjectDocument {
 
 function gBatches(options: GoldenGProjectOptions): readonly BatchSpec[] {
   const pickedMiniboss = options.pickedMiniboss ?? 'G_MiniBoss01';
-  const terminalParent = options.terminalParent ?? 'G_Combat12';
+  const prebossSource = options.prebossSource ?? 'G_Combat12';
   return [
     {
       storeKey: 'RunProgress',
@@ -309,7 +309,7 @@ function gBatches(options: GoldenGProjectOptions): readonly BatchSpec[] {
         pickedMiniboss === 'G_MiniBoss02'
           ? [
               {
-                gameName: terminalParent,
+                gameName: prebossSource,
                 offer: {
                   rewardType: 'Boon',
                   payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
@@ -318,7 +318,7 @@ function gBatches(options: GoldenGProjectOptions): readonly BatchSpec[] {
             ]
           : [
               {
-                gameName: terminalParent,
+                gameName: prebossSource,
                 offer: {
                   rewardType: 'Boon',
                   payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
@@ -361,10 +361,11 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
     }
     parent = goldenGOccurrenceId(batchIndex, 1);
   }
-  const terminalRoom = catalog.rooms.byKey[batches.at(-1)?.targets[0]?.gameName ?? ''];
-  if (terminalRoom === undefined) throw new Error('Golden G fixture has no terminal source room');
+  const prebossSourceRoom = catalog.rooms.byKey[batches.at(-1)?.targets[0]?.gameName ?? ''];
+  if (prebossSourceRoom === undefined)
+    throw new Error('Golden G fixture has no Preboss source room');
   const targetOccurrenceIds = Object.fromEntries(
-    terminalRoom.exits.map((exit) => [
+    prebossSourceRoom.exits.map((exit) => [
       `exit${exit.index}`,
       createOccurrenceId(
         exit.index === 1 ? 'golden-g-preboss-shop' : `golden-g-preboss-free-${exit.index}`,
@@ -377,7 +378,7 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
     gameName: 'G_PreBoss01',
     targetOccurrenceIds,
   });
-  for (const exit of terminalRoom.exits.filter((candidate) => candidate.index > 1)) {
+  for (const exit of prebossSourceRoom.exits.filter((candidate) => candidate.index > 1)) {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(
@@ -387,7 +388,7 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
       value: { rewardType: exit.index === 2 ? 'StackUpgrade' : 'HermesUpgrade' },
     });
   }
-  if (terminalRoom.exits.length > 1) {
+  if (prebossSourceRoom.exits.length > 1) {
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenGBiome, source(parent)),
@@ -622,12 +623,12 @@ function appendCompleteI(project: ProjectDocument): ProjectDocument {
   ]);
 }
 
-/** Complete F-through-H fixture used only by planner-engine tests. */
+/** Complete F-through-H authored-project fixture. */
 export function createGoldenFGHProject(): ProjectDocument {
   return appendCompleteH(createCompleteFGProject());
 }
 
-/** Complete Underworld fixture used only by planner-engine tests. */
+/** Complete Underworld authored-project fixture. */
 export function createGoldenFGHIProject(): ProjectDocument {
   return appendCompleteI(createGoldenFGHProject());
 }

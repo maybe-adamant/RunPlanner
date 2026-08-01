@@ -19,8 +19,12 @@ import { authoredProjectReplaced } from '../../src/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '../../src/state/editorSessionSlice';
 import { useAppSelector } from '../../src/state/store';
 import { BiomeWorkspace } from '../../src/ui/editor/biome/BiomeWorkspace';
-import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '../fixtures/surfaceProject';
-import { createGoldenFGHIProject } from '../fixtures/underworldProject';
+import {
+  createRepresentativeNOPQProject,
+  nBiome,
+  nOccurrenceId,
+} from '../../../../test/fixtures/authored-project';
+import { createGoldenFGHIProject } from '../../../../test/fixtures/authored-project';
 
 interface WorkspaceRenderCase {
   readonly biomeKey: string;
@@ -32,7 +36,7 @@ interface WorkspaceRenderCase {
 const cases: readonly WorkspaceRenderCase[] = [
   ...(['F', 'G', 'H', 'I'] as const).map((biomeKey) => ({
     biomeKey,
-    project: (application: PlannerApplication) => createGoldenFGHIProject(application.catalog),
+    project: () => createGoldenFGHIProject(),
     routeKey: 'Underworld' as const,
   })),
   ...(['O', 'P', 'Q'] as const).map((biomeKey) => ({

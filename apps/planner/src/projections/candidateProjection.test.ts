@@ -13,7 +13,7 @@ import {
 import { simulateProject, type ProjectCandidateEvaluation } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createGoldenFGHIProject } from '../../test/fixtures/underworldProject';
+import { createGoldenFGHIProject } from '../../../../test/fixtures/authored-project';
 import { candidateSupport, createCandidateSessionFactory } from './candidateProjection';
 
 const candidateTarget = createTargetAddress(
@@ -72,7 +72,7 @@ function exitDecisions(
 
 describe('candidate projection', () => {
   it('keeps engine result unions intact and caches one query domain by semantic owner', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const evaluation = simulateProject(catalog, project);
     const observeCandidateEvaluation = vi.fn();
     const session = createCandidateSessionFactory(catalog, { observeCandidateEvaluation }).bind(
@@ -99,7 +99,7 @@ describe('candidate projection', () => {
   });
 
   it('uses materialized resolved stores for counted reward domains', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const session = createCandidateSessionFactory(catalog).bind(
       project,
       simulateProject(catalog, project),
@@ -128,7 +128,7 @@ describe('candidate projection', () => {
   });
 
   it('keeps takeovers source-owned and evaluates their one batch candidate', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const session = createCandidateSessionFactory(catalog).bind(
       project,
       simulateProject(catalog, project),
@@ -183,7 +183,7 @@ describe('candidate projection', () => {
   });
 
   it('addresses batch-store candidates by their source rather than an array position', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const session = createCandidateSessionFactory(catalog).bind(
       project,
       simulateProject(catalog, project),

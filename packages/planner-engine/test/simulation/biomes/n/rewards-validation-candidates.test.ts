@@ -26,7 +26,7 @@ import {
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
-} from '../../support/surface-valid-project';
+} from '../../../../../../test/fixtures/authored-project';
 
 function completeN(project = createRepresentativeNProject()) {
   const evaluation = simulateProject(catalog, project);

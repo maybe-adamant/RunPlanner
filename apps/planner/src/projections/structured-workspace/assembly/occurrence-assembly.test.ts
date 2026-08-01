@@ -15,13 +15,13 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
-} from '../../../../test/fixtures/underworldProject';
+} from '../../../../../../test/fixtures/authored-project';
 import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
   oOccurrenceIds,
-} from '../../../../test/fixtures/surfaceProject';
+} from '../../../../../../test/fixtures/authored-project';
 import { assembleWorkspaceOccurrence } from './occurrence-assembly';
 import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
@@ -120,7 +120,7 @@ function withFPrebossSelection(
 
 describe('structured workspace occurrence assembly', () => {
   it('returns immutable ordinary and fixed workbenches with their exact marker destinations', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const fixed = assemble(project, 'Underworld', 'F', goldenFStartId);
     const ordinary = assemble(project, 'Underworld', 'F', goldenFOccurrenceId(1, 1));
 
@@ -153,7 +153,7 @@ describe('structured workspace occurrence assembly', () => {
 
   it('retains published dormant Fields and Ship controls with their occurrence-owned requirements', () => {
     const fields = assemble(
-      createGoldenFGHIProject(catalog),
+      createGoldenFGHIProject(),
       'Underworld',
       'H',
       createOccurrenceId('golden-h-combat02'),
@@ -178,13 +178,13 @@ describe('structured workspace occurrence assembly', () => {
   it('keeps a selected Shop editable and withholds retained unpicked Shop inventory', () => {
     const shop = createOccurrenceId('golden-f-preboss-shop');
     const selected = assemble(
-      withFPrebossSelection(createGoldenFGHIProject(catalog), 'exit1'),
+      withFPrebossSelection(createGoldenFGHIProject(), 'exit1'),
       'Underworld',
       'F',
       shop,
     ).assembly;
     const dormant = assemble(
-      withFPrebossSelection(createGoldenFGHIProject(catalog), 'exit2'),
+      withFPrebossSelection(createGoldenFGHIProject(), 'exit2'),
       'Underworld',
       'F',
       shop,

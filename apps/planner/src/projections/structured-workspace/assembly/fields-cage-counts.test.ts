@@ -3,7 +3,7 @@ import { type ProjectDocument } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject } from '../../../../test/fixtures/underworldProject';
+import { createGoldenFGHIProject } from '../../../../../../test/fixtures/authored-project';
 import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 
@@ -21,7 +21,7 @@ function hSource(project: ProjectDocument) {
 
 describe('structured workspace Fields active-cage counts', () => {
   it('derives one decision-owned count for its Fields target occurrences', () => {
-    const source = hSource(createGoldenFGHIProject(catalog));
+    const source = hSource(createGoldenFGHIProject());
     const decision = source.exitDecisions.find(
       (candidate) =>
         candidate.normal.kind === 'batch' &&

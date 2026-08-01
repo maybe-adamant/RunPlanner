@@ -23,8 +23,11 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
   goldenGStartId,
-} from '../fixtures/underworldProject';
-import { createRepresentativeNOPQProject, nBiome } from '../fixtures/surfaceProject';
+} from '../../../../test/fixtures/authored-project';
+import {
+  createRepresentativeNOPQProject,
+  nBiome,
+} from '../../../../test/fixtures/authored-project';
 
 const interactiveBudgetMs = 750;
 const cachedUndoBudgetMs = 50;
@@ -81,7 +84,7 @@ describe('unified biome performance', () => {
     const application = createApplication({
       observeEvaluationWork: (event) => events.push(event),
     });
-    const project = createGoldenFGHIProject(application.catalog);
+    const project = createGoldenFGHIProject();
     application.store.dispatch(authoredProjectReplaced(project));
     const baseline = application.store.getState().projectWorkspace.evaluation;
     events.length = 0;

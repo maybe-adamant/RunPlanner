@@ -21,7 +21,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
   goldenGStartId,
-} from '../../support/underworld-valid-project';
+} from '../../../../../../test/fixtures/authored-project';
 
 function completeG(project = createCompleteFGProject()) {
   const result = simulateProject(catalog, project);
@@ -173,7 +173,7 @@ describe('G generation and takeover', () => {
   });
 
   it('materializes a declaration-ordered three-door takeover batch', () => {
-    const { result, g } = completeG(createCompleteFGProject({ terminalParent: 'G_Combat14' }));
+    const { result, g } = completeG(createCompleteFGProject({ prebossSource: 'G_Combat14' }));
     const takeover = g.snapshot.decisions.at(-1);
     if (takeover?.kind !== 'batch') throw new Error('Golden G fixture lost its takeover batch');
 

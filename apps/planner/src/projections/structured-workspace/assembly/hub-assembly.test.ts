@@ -9,7 +9,7 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { appendCompleteN, nBiome, nOccurrenceId } from '../../../../test/fixtures/surfaceProject';
+import { appendCompleteN, nBiome, nOccurrenceId } from '../../../../../../test/fixtures/authored-project';
 import { assembleWorkspaceHub } from './hub-assembly';
 import {
   assembleWorkspaceOccurrence,

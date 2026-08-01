@@ -13,12 +13,12 @@ import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFStartId,
-} from '../../../test/fixtures/underworldProject';
+} from '../../../../../test/fixtures/authored-project';
 import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
-} from '../../../test/fixtures/surfaceProject';
+} from '../../../../../test/fixtures/authored-project';
 import { createWorkspaceProjectSourceIndex } from './source-index';
 
 function biomeSource(
@@ -34,7 +34,7 @@ function biomeSource(
 }
 
 function reversedFDecisionSerialization() {
-  const project = createGoldenFGHIProject(catalog);
+  const project = createGoldenFGHIProject();
   return {
     ...project,
     routes: project.routes.map((route) =>
@@ -60,7 +60,7 @@ function reversedFDecisionSerialization() {
 
 describe('structured workspace source index', () => {
   it('keeps authored source lookup and decision order independent of serialization order', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const indexed = createWorkspaceProjectSourceIndex(
       catalog,
       project,

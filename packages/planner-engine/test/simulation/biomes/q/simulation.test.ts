@@ -16,7 +16,7 @@ import {
   createRepresentativeNOPQProject,
   qBiome,
   qOccurrenceIds,
-} from '../../support/surface-valid-project';
+} from '../../../../../../test/fixtures/authored-project';
 
 function completeQ(project = createRepresentativeNOPQProject()) {
   const evaluation = simulateProject(catalog, project);

@@ -16,14 +16,14 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject, goldenFBiome } from '../../../../test/fixtures/underworldProject';
+import { createGoldenFGHIProject, goldenFBiome } from '../../../../../../test/fixtures/authored-project';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
-} from '../../../../test/fixtures/surfaceProject';
+} from '../../../../../../test/fixtures/authored-project';
 import {
   createStructuredWorkspaceTestServices,
   requireWorkspaceBiome,
@@ -123,7 +123,7 @@ describe('workspace inspector destinations', () => {
       selectedRailKey: startedF.frontier.marker.focusKey,
     });
 
-    const complete = project(createGoldenFGHIProject(catalog));
+    const complete = project(createGoldenFGHIProject());
     const f = biome(complete, 'F');
     const decision = f.nodes.find(
       (node): node is Extract<typeof node, { readonly kind: 'ordinaryBatch' }> =>
@@ -310,7 +310,7 @@ describe('workspace inspector destinations', () => {
   });
 
   it('binds Fields and Ship local leaves to their containing decision rail', () => {
-    const underworld = project(createGoldenFGHIProject(catalog));
+    const underworld = project(createGoldenFGHIProject());
     const h = biome(underworld, 'H');
     const fieldsDecision = h.nodes.find(
       (

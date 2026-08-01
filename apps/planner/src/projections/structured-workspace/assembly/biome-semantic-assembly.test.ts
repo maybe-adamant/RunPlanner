@@ -3,7 +3,7 @@ import { createProjectDocument, type ProjectDocument } from '@run-planner/engine
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { appendCompleteN, nBiome, nOccurrenceIds } from '../../../../test/fixtures/surfaceProject';
+import { appendCompleteN, nBiome, nOccurrenceIds } from '../../../../../../test/fixtures/authored-project';
 import { assembleWorkspaceBiomeSemantics } from './biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
 

@@ -20,7 +20,7 @@ import {
   createRepresentativeNProject,
   nBiome,
   nOccurrenceId,
-} from './support/surface-valid-project';
+} from '../../../../test/fixtures/authored-project';
 import {
   createCompleteFGProject,
   createGoldenFGHIProject,
@@ -31,7 +31,7 @@ import {
   goldenGOccurrenceId,
   goldenGStartId,
   goldenIBiome,
-} from './support/underworld-valid-project';
+} from '../../../../test/fixtures/authored-project';
 
 function route(project: ProjectDocument, routeKey: string) {
   const result = simulateProject(catalog, project);

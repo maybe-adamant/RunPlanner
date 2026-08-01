@@ -6,11 +6,11 @@ import { describe, expect, it } from 'vitest';
 import {
   createGoldenFGHIProject,
   goldenFOccurrenceId,
-} from '../../../../test/fixtures/underworldProject';
+} from '../../../../../../test/fixtures/authored-project';
 import {
   createRepresentativeNOPQProject,
   nOccurrenceId,
-} from '../../../../test/fixtures/surfaceProject';
+} from '../../../../../../test/fixtures/authored-project';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 
@@ -77,14 +77,14 @@ describe('structured workspace occurrence assembly facts', () => {
     const shop = createOccurrenceId('golden-f-preboss-shop');
     const selected = createWorkspaceBiomeOccurrenceAssemblyFacts(
       biomeSource(
-        withFPrebossSelection(createGoldenFGHIProject(catalog), 'exit1'),
+        withFPrebossSelection(createGoldenFGHIProject(), 'exit1'),
         'Underworld',
         'F',
       ),
     );
     const unpicked = createWorkspaceBiomeOccurrenceAssemblyFacts(
       biomeSource(
-        withFPrebossSelection(createGoldenFGHIProject(catalog), 'exit2'),
+        withFPrebossSelection(createGoldenFGHIProject(), 'exit2'),
         'Underworld',
         'F',
       ),

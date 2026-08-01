@@ -39,6 +39,9 @@ export const nOccurrenceIds = Object.freeze({
   preboss: createOccurrenceId('surface-n-preboss'),
 });
 
+/** N names concrete Opening, PreHub, and Preboss authored occurrences. */
+export const nFixedOccurrenceIds = nOccurrenceIds;
+
 export const oOccurrenceIds = Object.freeze({
   intro: createOccurrenceId('surface-o-intro'),
   combat04: createOccurrenceId('surface-o-combat04'),
@@ -211,6 +214,7 @@ function configureNSideRooms(project: ProjectDocument): ProjectDocument {
 }
 
 export interface CompleteNFixtureOptions {
+  readonly includePreboss?: boolean;
   readonly openSlotKeys?: readonly string[];
   readonly visitSlotKeys?: readonly string[];
 }
@@ -278,6 +282,7 @@ export function appendCompleteN(
     next = replaceIncoming(next, nBiome, nOccurrenceId(slotKey), value);
   }
   next = configureNSideRooms(next);
+  if (options.includePreboss === false) return next;
   next = applyProjectCommand(next, catalog, {
     kind: 'CreateTakeoverBatch',
     decision: createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
@@ -485,8 +490,10 @@ function emptySurfaceProject(configuredBiomeCount: 1 | 2 | 3 | 4): ProjectDocume
   });
 }
 
-export function createRepresentativeNProject(): ProjectDocument {
-  return appendCompleteN(emptySurfaceProject(1));
+export function createRepresentativeNProject(
+  options: CompleteNFixtureOptions = {},
+): ProjectDocument {
+  return appendCompleteN(emptySurfaceProject(1), options);
 }
 
 export function createRepresentativeNOProject(): ProjectDocument {

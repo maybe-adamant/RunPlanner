@@ -33,7 +33,7 @@ import {
   goldenGOccurrenceId,
   goldenHBiome,
   goldenIBiome,
-} from './support/underworld-valid-project';
+} from '../../../../test/fixtures/authored-project';
 import {
   createRepresentativeNOPQProject,
   oBiome,
@@ -42,7 +42,7 @@ import {
   pOccurrenceId,
   qBiome,
   qOccurrenceIds,
-} from './support/surface-valid-project';
+} from '../../../../test/fixtures/authored-project';
 
 function source(occurrenceId: OccurrenceId) {
   return { kind: 'occurrence' as const, occurrenceId };

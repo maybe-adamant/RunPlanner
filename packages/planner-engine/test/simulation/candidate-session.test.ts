@@ -32,7 +32,7 @@ import {
   fDecision,
   fStartId,
 } from './support/f-takeover-project';
-import { createRepresentativeNProject, nBiome } from './support/surface-valid-project';
+import { createRepresentativeNProject, nBiome } from '../../../../test/fixtures/authored-project';
 
 const gBiome = createBiomeAddress('Underworld', 'G');
 const gStartId = createOccurrenceId('candidate-g-start');
