@@ -147,7 +147,25 @@ hades2-catalog implements Catalog construction
 planner composes hades2-catalog with planner-engine
 ```
 
-## Module Import Conventions
+## Code Placement and Module Boundaries
+
+Source placement follows semantic ownership rather than the location of the
+first or most visible caller. A new module must have a named owner, explicit
+inputs, a returned product or transition, identifiable consumers, and tests at
+that authority boundary. Put it in the nearest existing feature neighborhood.
+Generic `common`, `shared`, `helpers`, and `services` areas are not default
+homes; a lower-level shared module is justified only when it owns a coherent
+contract used by several higher-level owners.
+
+An `index.ts` defines a deliberate supported module surface. It does not exist
+merely to shorten import paths or hide an internal dependency graph. An
+assembly or composition module wires products owned one level below it; wiring
+does not make that module the owner of their semantic policies. Production
+modules live under the owning package or application `src/`, while test-only
+fixtures, render harnesses, builders, expected manifests, and observers live
+under test support and are never imported by production.
+
+### Import Conventions
 
 Cross-package consumers use the package's declared exports. Within the planner,
 imports that cross the stable `composition`, `persistence`, `projections`,
@@ -163,6 +181,60 @@ surface, while an assembly or composition module owns wiring. The engine keeps
 its direct internal relative imports unless a separate boundary change justifies
 an internal API; it must not route internal dependencies through public barrels
 merely to shorten a path.
+
+Mechanically observable import and placement rules belong in TypeScript,
+ESLint, or focused architecture checks as well as this document. Tests should
+not encode incidental filenames or source tokens when the real contract is not
+statically observable.
+
+### Product Construction
+
+Every transformation receives explicit inputs and returns every semantic
+product required by a later consumer. A producer cannot publish an apparent
+result while storing required facts or callable capabilities only in a
+module-level registry, initialization side effect, or sidecar map keyed by that
+result. A cache or identity attestation may memoize or verify an already
+complete explicit product, but correctness cannot depend on discovering
+otherwise absent semantic data from it.
+
+Application-wide collaborators are constructed at the composition root and
+passed as narrow capabilities. Per-project work receives the exact authored
+project and matching evaluation together. Parameter objects, interfaces, and
+factories represent real construction or product boundaries; they are not
+introduced solely to shorten signatures or stage future movement. Catch-all
+contexts, dependency bags, service locators, mutable service tables, and
+dependency-injection containers are rejected.
+
+A stage may use a private mutable builder when that makes ordered construction
+clear. The builder cannot cross the stage boundary: the stage freezes and
+returns its complete product. Closed command, event, and query vocabularies
+retain visible exhaustive dispatch. A chronological coordinator or atomic
+transition aggregate may remain long when keeping the invariant in one place
+is more coherent than distributing it across handlers.
+
+### Reorganization Contract
+
+Before a broad structural refactor, record the current authority-to-consumer
+flow, hidden state, import direction, test ownership, expected deletion, and
+relevant work-count baselines. Delivery then proceeds in complete vertical
+slices. One slice moves an authority with its consumer handoff and primary
+tests and removes the superseded path in the same commit. Context-only,
+interface-only, state-wrapper-only, forwarding, and compatibility commits are
+not complete refactor boundaries.
+
+Behavior-preserving movement and behavior changes are separate review units.
+Production contact validation and invariant checks remain production concerns,
+but production must not acquire a shadow semantic model, exhaustive self-audit,
+or test manifest merely to prove a refactor. Independent omission, reachability,
+and closure evidence belongs in tests.
+
+Each policy and edge-case matrix has one primary assertion owner. Facade,
+integration, React parent, and product-loop suites retain representative
+boundary witnesses rather than duplicate the complete matrix. Line, file,
+directory, and test counts are diagnostic evidence—not acceptance quotas. A
+successful reorganization narrows the change neighborhood, leaves no parallel
+path, and explains any net production growth as a necessary enforceable
+boundary.
 
 ## Dependency Rules
 
