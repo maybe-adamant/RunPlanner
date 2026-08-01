@@ -34,6 +34,67 @@ The UI may dispatch semantic commands and render derived projections. It must
 not implement room eligibility, reward bags, lifecycle counters, or topology
 repair.
 
+## Ownership Lanes
+
+Treat the repository as three ownership lanes—two packages and one application.
+Route a change by the question it answers, not by the layer that first needs
+the result.
+
+### Hades II Catalog — `packages/hades2-catalog`
+
+- Owns Hades II declarations, source-backed game facts, catalog construction,
+  and normalization of those declarations into the engine's supported catalog
+  contract.
+- Answers “what does the game declare?” and “how is that declaration represented
+  in the normalized catalog?”
+- May depend on planner-engine's declared catalog-schema and normalized
+  contracts. It must not import the planner application or own authored-project,
+  simulation, validation, candidate, Redux, or UI behavior.
+- Primary tests are declaration, compiler, normalization, and catalog regression
+  tests. Use `npm run test:catalog` while developing this lane.
+
+### Planner Engine — `packages/planner-engine`
+
+- Owns the pure authored model, addresses, codecs, defaults, semantic commands,
+  history, requirements, reward kernel, materialization, simulation, candidates,
+  validation, findings, and engine-owned authoring queries.
+- Answers “what does this authored state mean?”, “is this transition valid?”,
+  and “what pure derived result follows from the catalog and authored snapshot?”
+- Defines the normalized interfaces it consumes but must not import the
+  `hades2-catalog` implementation or any planner application, React, Redux,
+  browser, filesystem, or presentation code.
+- Must not return picker sections, component state, focus destinations, labels
+  invented by the editor, or other React-facing products.
+- Primary tests live beside the owning engine authority. Use
+  `npm run test:engine` while developing this lane.
+
+### Planner Application and React — `apps/planner`
+
+- Owns application composition, persistence adapters, Redux coordination,
+  UI-session state, application projections, interaction binding, and React
+  presentation.
+- Answers “how is an engine product composed, presented, navigated, and invoked
+  in this application?”
+- The composition root may construct the catalog and engine collaborators.
+  Application projections may adapt supported engine products into editor
+  products; React renders those products and dispatches complete bound intents
+  or deliberately retained fixed semantic mappings.
+- Must not reproduce catalog normalization, authored-command validation,
+  topology closure, reward legality or store precedence, lifecycle,
+  simulation, candidate policy, or finding policy.
+- Put browser/filesystem effects behind application-owned adapters. Keep Redux
+  responsible for coordination and history publication, not domain semantics.
+- Primary tests are focused projection, interaction, Redux, UI, contract, and
+  product-loop witnesses. Use `npm run test:planner`, `npm run test:ui`,
+  `npm run test:contract`, or `npm run test:product` according to the boundary
+  changed.
+
+When a feature crosses lanes, establish the authoritative fact or transition in
+its owning lane first, expose the narrow supported product, and adapt it
+in the consuming lane. Keep the complete policy matrix with its authority;
+consumer and product-loop tests retain representative contact and workflow
+witnesses rather than copying that matrix.
+
 ## Code Placement and Module Boundaries
 
 - Place code with the semantic authority that owns its policy or product, not
