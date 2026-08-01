@@ -1,8 +1,14 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createExitDecisionAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceId,
+  createRewardWheelAddress,
+  createRewardWheelOfferAddress,
+  createShopOfferAddress,
+  createShopPurchaseAddress,
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -15,12 +21,16 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
+  goldenHBiome,
 } from '../../../../../../test/fixtures/authored-project';
 import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
+  oBiome,
   oOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
 } from '../../../../../../test/fixtures/authored-project';
 import { assembleWorkspaceOccurrence } from './occurrence-assembly';
 import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
@@ -141,14 +151,99 @@ describe('structured workspace occurrence assembly', () => {
 
     expect(active.node.room.roomLocal.kind).toBe('ephyra');
     if (active.node.room.roomLocal.kind !== 'ephyra') throw new Error('active Ephyra is missing');
-    expect(active.node.room.roomLocal.sideRooms.kind).toBe('published');
+    const activeSideRooms = active.node.room.roomLocal.sideRooms;
+    expect(activeSideRooms.kind).toBe('published');
+    if (activeSideRooms.kind !== 'published') throw new Error('active Ephyra sides are withheld');
     expect(active.occurrenceInteractionRequirements).toHaveLength(1);
+    const group = activeSideRooms.group;
+    const sideDoor2 = group.slots.find((slot) => slot.key === 'sideDoor2');
+    const sideDoor3 = group.slots.find((slot) => slot.key === 'sideDoor3');
+    if (sideDoor2 === undefined || sideDoor3 === undefined) {
+      throw new Error('active Ephyra side-room positions are missing');
+    }
+    expect(sideDoor2.entryOrder.options).toEqual([
+      {
+        key: 'notEntered',
+        label: 'Not entered',
+        position: null,
+        proposedEnteredSlotKeys: ['sideDoor1'],
+      },
+      {
+        key: 'position:1',
+        label: '1st',
+        position: 1,
+        proposedEnteredSlotKeys: ['sideDoor2', 'sideDoor1'],
+      },
+      {
+        key: 'position:2',
+        label: '2nd',
+        position: 2,
+        proposedEnteredSlotKeys: ['sideDoor1', 'sideDoor2'],
+      },
+    ]);
+    expect(sideDoor3.entryOrder.options.map((option) => option.proposedEnteredSlotKeys)).toEqual([
+      ['sideDoor2', 'sideDoor1'],
+      ['sideDoor3', 'sideDoor2', 'sideDoor1'],
+      ['sideDoor2', 'sideDoor3', 'sideDoor1'],
+      ['sideDoor2', 'sideDoor1', 'sideDoor3'],
+    ]);
 
     expect(dormant.node.room.roomLocal.kind).toBe('ephyra');
     if (dormant.node.room.roomLocal.kind !== 'ephyra') throw new Error('dormant Ephyra is missing');
     expect(dormant.node.room.rewardControls).toHaveLength(1);
     expect(dormant.node.room.roomLocal.sideRooms.kind).toBe('withheld');
     expect(dormant.occurrenceInteractionRequirements).toHaveLength(0);
+  });
+
+  it('keeps active Ephyra side details, controls, and requirements when its incoming reward is invalid', () => {
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const { assembly, source } = assemble(project, 'Surface', 'N', nOccurrenceId('combat05'));
+    const incoming = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
+
+    expect(source.evaluation).toMatchObject({ authoring: 'complete', validity: 'invalid' });
+    expect(source.findingsFor(incoming)).toHaveLength(1);
+    expect(assembly.node.room.detailsActive).toBe(true);
+    expect(assembly.node.room.roomLocal.kind).toBe('ephyra');
+    if (
+      assembly.node.room.roomLocal.kind !== 'ephyra' ||
+      assembly.node.room.roomLocal.sideRooms.kind !== 'published'
+    ) {
+      throw new Error('invalid active Ephyra side rooms are withheld');
+    }
+    const { group } = assembly.node.room.roomLocal.sideRooms;
+    const sideDoor1 = group.slots.find((slot) => slot.key === 'sideDoor1');
+    if (sideDoor1 === undefined) throw new Error('invalid active Ephyra side room is missing');
+
+    expect(
+      assembly.node.room.rewardControls.some(
+        (control) => semanticAddressKey(control.owner.address) === semanticAddressKey(incoming),
+      ),
+    ).toBe(true);
+    expect(
+      assembly.node.room.rewardControls.some(
+        (control) =>
+          semanticAddressKey(control.owner.address) ===
+          semanticAddressKey(sideDoor1.rewardControl.owner.address),
+      ),
+    ).toBe(true);
+    expect(
+      assembly.node.room.rewardControls.find(
+        (control) => semanticAddressKey(control.owner.address) === semanticAddressKey(incoming),
+      )?.marker.findingCount,
+    ).toBe(1);
+    expect(assembly.occurrenceInteractionRequirements).toHaveLength(1);
+    const requirement = assembly.occurrenceInteractionRequirements[0];
+    if (requirement?.kind !== 'ephyraSideRooms') {
+      throw new Error('invalid active Ephyra side-room requirement is missing');
+    }
+    expect(requirement.owner).toEqual(group.address);
+    expect(requirement.sideRooms.map((sideRoom) => sideRoom.address)).toContainEqual(
+      sideDoor1.address,
+    );
   });
 
   it('retains published dormant Fields and Ship controls with their occurrence-owned requirements', () => {
@@ -167,11 +262,73 @@ describe('structured workspace occurrence assembly', () => {
 
     expect(fields.node.room.roomLocal.kind).toBe('fields');
     if (fields.node.room.roomLocal.kind !== 'fields') throw new Error('Fields surface is missing');
-    expect(fields.node.room.roomLocal.cages.some((cage) => cage.active === false)).toBe(true);
+    expect(fields.node.room.rewardSummary).toMatch(/^Cages · /);
+    expect(Object.isFrozen(fields.node.room.roomLocal)).toBe(true);
+    expect(Object.isFrozen(fields.node.room.roomLocal.cages)).toBe(true);
+    expect(
+      fields.node.room.roomLocal.cages.map((cage) => [cage.key, cage.label, cage.active]),
+    ).toEqual([
+      ['cage1', 'Cage 1', true],
+      ['cage2', 'Cage 2', true],
+      ['cage3', 'Cage 3', false],
+    ]);
+    expect(fields.node.room.roomLocal.cages[0]?.control.owner.address).toEqual(
+      createLocalRewardAddress(
+        goldenHBiome,
+        createOccurrenceId('golden-h-combat02'),
+        'cages',
+        'cage1',
+      ),
+    );
+    expect(
+      fields.node.room.roomLocal.cages.every(
+        (cage) => Object.isFrozen(cage) && Object.isFrozen(cage.control),
+      ),
+    ).toBe(true);
 
     expect(ship.node.room.roomLocal.kind).toBe('ship');
     if (ship.node.room.roomLocal.kind !== 'ship') throw new Error('Ship surface is missing');
-    expect(ship.node.room.roomLocal.wheels.some((wheel) => wheel.active === false)).toBe(true);
+    expect(ship.node.room.rewardSummary).toMatch(/^\d encounters · /);
+    expect(Object.isFrozen(ship.node.room.roomLocal)).toBe(true);
+    expect(Object.isFrozen(ship.node.room.roomLocal.wheels)).toBe(true);
+    expect(ship.node.room.roomLocal.encounterCount).toBe(2);
+    expect(
+      ship.node.room.roomLocal.wheels.map((wheel) => [
+        wheel.key,
+        wheel.label,
+        wheel.active,
+        wheel.offerCount,
+        wheel.pickedOfferIndex,
+        wheel.storeKey,
+      ]),
+    ).toEqual([
+      ['wheel1', 'Reward wheel 1', true, 1, 1, 'RunProgress'],
+      ['wheel2', 'Reward wheel 2', false, 1, 1, 'RunProgress'],
+    ]);
+    expect(ship.node.room.roomLocal.wheels[0]?.address).toEqual(
+      createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
+    );
+    expect(ship.node.room.roomLocal.wheels[0]?.offers[0]?.control.owner.address).toEqual(
+      createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+    );
+    expect(
+      ship.node.room.roomLocal.wheels[0]?.offers.map((offer) => [
+        offer.key,
+        offer.label,
+        offer.active,
+      ]),
+    ).toEqual([
+      ['offer1', 'Offer 1', true],
+      ['offer2', 'Offer 2', false],
+    ]);
+    expect(
+      ship.node.room.roomLocal.wheels.every(
+        (wheel) =>
+          Object.isFrozen(wheel) &&
+          Object.isFrozen(wheel.offers) &&
+          wheel.offers.every((offer) => Object.isFrozen(offer) && Object.isFrozen(offer.control)),
+      ),
+    ).toBe(true);
     expect(ship.occurrenceInteractionRequirements[0]?.kind).toBe('shipCombat');
   });
 
@@ -192,13 +349,70 @@ describe('structured workspace occurrence assembly', () => {
 
     expect(selected.node.room.roomLocal.kind).toBe('shop');
     if (selected.node.room.roomLocal.kind !== 'shop') throw new Error('selected Shop is missing');
+    expect(selected.node.room.rewardSummary).toMatch(/^\d offers · \d purchased$/);
     expect(selected.node.room.roomLocal.materialized).toBe(true);
+    expect(Object.isFrozen(selected.node.room.roomLocal)).toBe(true);
+    expect(Object.isFrozen(selected.node.room.roomLocal.offers)).toBe(true);
+    expect(
+      selected.node.room.roomLocal.offers.map((offer) => [
+        offer.key,
+        offer.label,
+        offer.purchase.purchased,
+      ]),
+    ).toEqual([
+      ['Boon', 'Offer 1', false],
+      ['MajorNonBoon', 'Offer 2', false],
+      ['Minor', 'Offer 3', false],
+    ]);
+    expect(
+      selected.node.room.roomLocal.offers.every(
+        (offer) =>
+          Object.isFrozen(offer) &&
+          Object.isFrozen(offer.purchase) &&
+          Object.isFrozen(offer.rewardControl),
+      ),
+    ).toBe(true);
     expect(selected.occurrenceInteractionRequirements[0]?.kind).toBe('shopPurchases');
+    const selectedOffer = selected.node.room.roomLocal.offers.find(
+      (offer) => offer.key === 'MajorNonBoon',
+    );
+    expect(selectedOffer).toMatchObject({
+      label: 'Offer 2',
+      purchase: {
+        address: createShopPurchaseAddress(goldenFBiome, shop, 'MajorNonBoon'),
+        purchased: false,
+      },
+      rewardControl: {
+        owner: { address: createShopOfferAddress(goldenFBiome, shop, 'MajorNonBoon') },
+      },
+    });
 
     expect(dormant.node.room.roomLocal.kind).toBe('shop');
     if (dormant.node.room.roomLocal.kind !== 'shop') throw new Error('dormant Shop is missing');
     expect(dormant.node.room.roomLocal.materialized).toBe(false);
     expect(dormant.occurrenceInteractionRequirements).toHaveLength(0);
+  });
+
+  it('publishes fixed Devotion and Story payloads without inventing editable controls', () => {
+    const project = createRepresentativeNOPQProject();
+    const devotion = assemble(project, 'Surface', 'O', oOccurrenceIds.devotion).assembly.node.room;
+    const story = assemble(project, 'Surface', 'P', pOccurrenceId('P_Story01', 7, 1)).assembly.node
+      .room;
+
+    expect(devotion.roomLocal.kind).toBe('fixed');
+    if (devotion.roomLocal.kind !== 'fixed') throw new Error('Devotion fixed payload is missing');
+    expect(devotion.roomLocal.control).toMatchObject({
+      kind: 'explicitReward',
+      owner: { address: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion) },
+      rewardTypes: ['Devotion'],
+    });
+    expect(story.roomLocal.kind).toBe('fixed');
+    if (story.roomLocal.kind !== 'fixed') throw new Error('Story fixed payload is missing');
+    expect(story.rewardSummary).toBeDefined();
+    expect(story.roomLocal.marker.address).toEqual(
+      createIncomingRewardAddress(pBiome, pOccurrenceId('P_Story01', 7, 1)),
+    );
+    expect(story.roomLocal.control).toBeUndefined();
   });
 
   it('does not need evaluation entry to preserve authored room-local controls', () => {

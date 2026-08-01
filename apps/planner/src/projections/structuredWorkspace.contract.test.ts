@@ -4,7 +4,6 @@ import {
   createExitDecisionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
-  createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -33,19 +32,31 @@ import {
   nOccurrenceId,
 } from '../../../../test/fixtures/authored-project';
 import {
-  assertAuthoredWorkspaceTopologyClosure,
-  assertExpectedWorkspaceLeafClosure,
+  expectedWorkspaceLeafRequirements,
+  type ExpectedWorkspaceLeafInteraction,
+} from '../../test/support/structured-workspace/expected-leaves';
+import {
+  expectedWorkspaceStructuralControls,
+  type ExpectedWorkspaceStructuralControl,
+} from '../../test/support/structured-workspace/expected-structural-controls';
+import { expectedWorkspaceTopologyManifest } from '../../test/support/structured-workspace/expected-topology';
+import { assertExpectedWorkspaceLeafClosure } from '../../test/support/structured-workspace/leaf-closure';
+import { observeWorkspaceProducts } from '../../test/support/structured-workspace/observed-workspace';
+import {
   assertExpectedWorkspaceStructuralControlClosure,
   assertRenderedWorkspaceStructuralControlClosure,
-} from '../../test/support/structuredWorkspaceClosure';
-import { expectedWorkspaceLeafRequirements } from '../../test/support/structuredWorkspaceExpectations';
-import { expectedWorkspaceStructuralControls } from '../../test/support/structuredWorkspaceStructuralControls';
+} from '../../test/support/structured-workspace/structural-control-closure';
+import { assertExpectedWorkspaceTopologyClosure } from '../../test/support/structured-workspace/topology-closure';
+import { unsafeOmitWorkspaceProperty } from '../../test/support/structured-workspace/unsafe-product-mutation';
 import { createCandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
 import { createRewardPickerProjection } from './rewardPicker';
 import { StructuredWorkspaceProjectionContractError } from './structured-workspace/contract';
-import { createStructuredWorkspaceProjection } from './structured-workspace';
+import {
+  createStructuredWorkspaceProjection,
+  type WorkspaceInteractionCatalog,
+} from './structured-workspace';
 
 /**
  * These tests deliberately bypass only evaluator provenance. Production still
@@ -88,10 +99,6 @@ function projection() {
       createContextualPickerProjection(createContextualOptionResolver(catalog)),
     ),
   });
-}
-
-function withoutProperty(value: object, property: string): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(value).filter(([key]) => key !== property));
 }
 
 function fBatch(snapshot: CanonicalBiome): CanonicalBatch {
@@ -151,6 +158,86 @@ function nHub(snapshot: CanonicalBiome): CanonicalHubDecision {
   if (hub === undefined) throw new Error('complete N fixture has no canonical Hub');
   return hub;
 }
+
+function withoutLeafInteraction(
+  interactions: WorkspaceInteractionCatalog,
+  expected: ExpectedWorkspaceLeafInteraction,
+): WorkspaceInteractionCatalog {
+  const without = <T>(source: ReadonlyMap<string, T>) => {
+    const result = new Map(source);
+    result.delete(expected.key);
+    return result;
+  };
+  switch (expected.kind) {
+    case 'reward':
+      return { ...interactions, rewards: without(interactions.rewards) };
+    case 'rewardWheelOfferCount':
+      return {
+        ...interactions,
+        rewardWheelOfferCounts: without(interactions.rewardWheelOfferCounts),
+      };
+    case 'rewardWheelPick':
+      return { ...interactions, rewardWheelPicks: without(interactions.rewardWheelPicks) };
+    case 'rewardWheelStore':
+      return { ...interactions, rewardWheelStores: without(interactions.rewardWheelStores) };
+    case 'shipEncounterCount':
+      return { ...interactions, shipEncounterCounts: without(interactions.shipEncounterCounts) };
+    case 'shopPurchase':
+      return { ...interactions, shopPurchases: without(interactions.shopPurchases) };
+    case 'sideRoomEntryOrder':
+      return { ...interactions, sideRoomEntryOrders: without(interactions.sideRoomEntryOrders) };
+    case 'sideRoomGeneration':
+      return { ...interactions, sideRoomGenerations: without(interactions.sideRoomGenerations) };
+  }
+}
+
+function withoutStructuralInteraction(
+  interactions: WorkspaceInteractionCatalog,
+  expected: ExpectedWorkspaceStructuralControl,
+): WorkspaceInteractionCatalog {
+  const without = <T>(source: ReadonlyMap<string, T>) => {
+    const result = new Map(source);
+    result.delete(expected.key);
+    return result;
+  };
+  switch (expected.kind) {
+    case 'batchRewardStore':
+      return { ...interactions, batchRewardStores: without(interactions.batchRewardStores) };
+    case 'exitFrontierCapability':
+      return {
+        ...interactions,
+        exitFrontierCapabilities: without(interactions.exitFrontierCapabilities),
+      };
+    case 'exitSelection':
+      return { ...interactions, exitSelections: without(interactions.exitSelections) };
+    case 'fieldsCageOutcome':
+      return { ...interactions, fieldsCageOutcomes: without(interactions.fieldsCageOutcomes) };
+    case 'hubSlot':
+      return { ...interactions, hubSlots: without(interactions.hubSlots) };
+    case 'hubVisit':
+      return { ...interactions, hubVisits: without(interactions.hubVisits) };
+    case 'roomPicker':
+      return { ...interactions, rooms: without(interactions.rooms) };
+    case 'start':
+      return { ...interactions, starts: without(interactions.starts) };
+    case 'structural':
+      return { ...interactions, structural: without(interactions.structural) };
+    case 'takeoverBatch':
+      return { ...interactions, takeoverBatches: without(interactions.takeoverBatches) };
+    case 'topologyRemoval':
+      return { ...interactions, topologyRemovals: without(interactions.topologyRemovals) };
+  }
+}
+
+/*
+ * A15.2 ownership inventory for this suite:
+ * overlay owns duplicate authored identities, evaluator-only decisions/targets, and the mismatched
+ * Hub visit; exact finding routing owns missing and dormant fine-grained destinations; leaf closure
+ * owns omitted markers/destinations/interactions; topology closure owns route-wide reachability,
+ * nested occurrence packages, and target/Hub sub-owner mutations; structural-control closure owns
+ * exhaustive control handoff and omission mutations. The former Ephyra expectation-policy case is
+ * deleted here because `expected-leaves.test.ts` is now its sole owner.
+ */
 
 describe('structured workspace overlay contract', () => {
   it('rejects duplicate authored topology identities before materialization', () => {
@@ -384,10 +471,12 @@ describe('structured workspace overlay contract', () => {
     // could not catch.
     expect(() =>
       assertExpectedWorkspaceLeafClosure({
-        focusByOwner: projected.focusByOwner,
-        interactions: projected.interactions,
-        nodes: n.nodes.filter((node) => node.kind !== 'occurrenceWorkbench'),
-        requirements: [requirement],
+        expected: [requirement],
+        observed: observeWorkspaceProducts({
+          focusByOwner: projected.focusByOwner,
+          interactions: projected.interactions,
+          nodes: n.nodes.filter((node) => node.kind !== 'occurrenceWorkbench'),
+        }),
       }),
     ).toThrow(/required authored leaf has no workspace marker/);
 
@@ -415,10 +504,12 @@ describe('structured workspace overlay contract', () => {
     );
     expect(() =>
       assertExpectedWorkspaceLeafClosure({
-        focusByOwner: wrongDestination,
-        interactions: projected.interactions,
-        nodes: n.nodes,
-        requirements: [requirement],
+        expected: [requirement],
+        observed: observeWorkspaceProducts({
+          focusByOwner: wrongDestination,
+          interactions: projected.interactions,
+          nodes: n.nodes,
+        }),
       }),
     ).toThrow(/required authored leaf .* has no exact workspace inspector destination/);
 
@@ -429,12 +520,74 @@ describe('structured workspace overlay contract', () => {
     withoutRewardInteraction.rewards.delete(semanticAddressKey(address));
     expect(() =>
       assertExpectedWorkspaceLeafClosure({
-        focusByOwner: projected.focusByOwner,
-        interactions: withoutRewardInteraction,
-        nodes: n.nodes,
-        requirements: [requirement],
+        expected: [requirement],
+        observed: observeWorkspaceProducts({
+          focusByOwner: projected.focusByOwner,
+          interactions: withoutRewardInteraction,
+          nodes: n.nodes,
+        }),
       }),
     ).toThrow(/authored reward leaf .* has no exact workspace interaction/);
+  });
+
+  it('makes every independently expected editable-leaf interaction family observable', () => {
+    const examples = new Map<
+      ExpectedWorkspaceLeafInteraction['kind'],
+      {
+        expected: ReturnType<typeof expectedWorkspaceLeafRequirements>[number];
+        interaction: ExpectedWorkspaceLeafInteraction;
+        nodes: Parameters<typeof observeWorkspaceProducts>[0]['nodes'];
+        projected: ReturnType<ReturnType<typeof projection>['project']>;
+      }
+    >();
+    for (const project of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
+      const projected = projection().project(project, simulateProject(catalog, project));
+      for (const route of project.routes) {
+        for (const plan of route.biomes) {
+          const nodes = projected.routes
+            .find((candidate) => candidate.routeKey === route.routeKey)
+            ?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey)?.nodes;
+          if (nodes === undefined) throw new Error(`${plan.biomeKey} workspace biome is missing`);
+          const requirements = expectedWorkspaceLeafRequirements(
+            catalog,
+            { biomeKey: plan.biomeKey, kind: 'biome', routeKey: route.routeKey },
+            plan,
+          );
+          for (const expected of requirements) {
+            for (const interaction of expected.interactions) {
+              if (!examples.has(interaction.kind)) {
+                examples.set(interaction.kind, { expected, interaction, nodes, projected });
+              }
+            }
+          }
+        }
+      }
+    }
+    expect([...examples.keys()].sort()).toEqual(
+      [
+        'reward',
+        'rewardWheelOfferCount',
+        'rewardWheelPick',
+        'rewardWheelStore',
+        'shipEncounterCount',
+        'shopPurchase',
+        'sideRoomEntryOrder',
+        'sideRoomGeneration',
+      ].sort(),
+    );
+
+    for (const { expected, interaction, nodes, projected } of examples.values()) {
+      expect(() =>
+        assertExpectedWorkspaceLeafClosure({
+          expected: [expected],
+          observed: observeWorkspaceProducts({
+            focusByOwner: projected.focusByOwner,
+            interactions: withoutLeafInteraction(projected.interactions, interaction),
+            nodes,
+          }),
+        }),
+      ).toThrow(/has no exact workspace interaction/);
+    }
   });
 
   it('independently closes persisted decisions, targets, occurrences, and Hub ownership', () => {
@@ -447,11 +600,18 @@ describe('structured workspace overlay contract', () => {
             .find((candidate) => candidate.routeKey === route.routeKey)
             ?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey);
           if (biome === undefined) throw new Error(`${plan.biomeKey} workspace biome is missing`);
-          assertAuthoredWorkspaceTopologyClosure({
-            biome: { biomeKey: plan.biomeKey, kind: 'biome', routeKey: route.routeKey },
-            focusByOwner: projected.focusByOwner,
-            nodes: biome.nodes,
-            plan,
+          const address = {
+            biomeKey: plan.biomeKey,
+            kind: 'biome' as const,
+            routeKey: route.routeKey,
+          };
+          assertExpectedWorkspaceTopologyClosure({
+            expected: expectedWorkspaceTopologyManifest(address, plan),
+            observed: observeWorkspaceProducts({
+              focusByOwner: projected.focusByOwner,
+              interactions: projected.interactions,
+              nodes: biome.nodes,
+            }),
           });
         }
       }
@@ -526,11 +686,13 @@ describe('structured workspace overlay contract', () => {
     };
 
     expect(() =>
-      assertAuthoredWorkspaceTopologyClosure({
-        biome: goldenFBiome,
-        focusByOwner: nestedDestinations,
-        nodes: f.nodes.filter((node) => node.key !== workbench.key),
-        plan: planWithDetachedRecord,
+      assertExpectedWorkspaceTopologyClosure({
+        expected: expectedWorkspaceTopologyManifest(goldenFBiome, planWithDetachedRecord),
+        observed: observeWorkspaceProducts({
+          focusByOwner: nestedDestinations,
+          interactions: projected.interactions,
+          nodes: f.nodes.filter((node) => node.key !== workbench.key),
+        }),
       }),
     ).not.toThrow();
   });
@@ -563,12 +725,15 @@ describe('structured workspace overlay contract', () => {
       throw new Error('complete F target fixture is missing');
     }
     const targetAddress = createTargetAddress(goldenFBiome, batch.source, target.exitKey);
-    const assertF = (nodes: readonly unknown[], focusByOwner: ReadonlyMap<string, unknown>) =>
-      assertAuthoredWorkspaceTopologyClosure({
-        biome: goldenFBiome,
-        focusByOwner,
-        nodes,
-        plan: fPlan,
+    const expectedF = expectedWorkspaceTopologyManifest(goldenFBiome, fPlan);
+    const assertF = (nodes: typeof f.nodes, focusByOwner: typeof fProjected.focusByOwner) =>
+      assertExpectedWorkspaceTopologyClosure({
+        expected: expectedF,
+        observed: observeWorkspaceProducts({
+          focusByOwner,
+          interactions: fProjected.interactions,
+          nodes,
+        }),
       });
     const missingTargetDestination = new Map(fProjected.focusByOwner);
     missingTargetDestination.delete(semanticAddressKey(targetAddress));
@@ -603,7 +768,7 @@ describe('structured workspace overlay contract', () => {
           targets: Object.freeze(
             node.targets.map((candidate) =>
               candidate.exitKey === target.exitKey
-                ? withoutProperty(candidate, 'marker')
+                ? unsafeOmitWorkspaceProperty(candidate, 'marker')
                 : candidate,
             ),
           ),
@@ -613,7 +778,7 @@ describe('structured workspace overlay contract', () => {
         node.kind === 'occurrenceWorkbench' &&
         node.room.occurrenceId === target.room.occurrenceId
       ) {
-        return withoutProperty(node, 'railMarker');
+        return unsafeOmitWorkspaceProperty(node, 'railMarker');
       }
       return node;
     });
@@ -656,12 +821,15 @@ describe('structured workspace overlay contract', () => {
     }
     const slotAddress = createHubSlotAddress(nBiome, decision.hubKey, slotTarget.hubSlotKey);
     const visitAddress = createHubVisitAddress(nBiome, decision.hubKey, 1);
-    const assertN = (nodes: readonly unknown[], focusByOwner: ReadonlyMap<string, unknown>) =>
-      assertAuthoredWorkspaceTopologyClosure({
-        biome: nBiome,
-        focusByOwner,
-        nodes,
-        plan: nPlan,
+    const expectedN = expectedWorkspaceTopologyManifest(nBiome, nPlan);
+    const assertN = (nodes: typeof n.nodes, focusByOwner: typeof nProjected.focusByOwner) =>
+      assertExpectedWorkspaceTopologyClosure({
+        expected: expectedN,
+        observed: observeWorkspaceProducts({
+          focusByOwner,
+          interactions: nProjected.interactions,
+          nodes,
+        }),
       });
     for (const [address, detail] of [
       [slotAddress, 'slot'],
@@ -699,7 +867,9 @@ describe('structured workspace overlay contract', () => {
           ...node,
           slots: Object.freeze(
             node.slots.map((slot) =>
-              slot.hubSlotKey === slotTarget.hubSlotKey ? withoutProperty(slot, 'marker') : slot,
+              slot.hubSlotKey === slotTarget.hubSlotKey
+                ? unsafeOmitWorkspaceProperty(slot, 'marker')
+                : slot,
             ),
           ),
         });
@@ -708,7 +878,7 @@ describe('structured workspace overlay contract', () => {
         node.kind === 'occurrenceWorkbench' &&
         node.room.occurrenceId === slotTarget.occurrenceId
       ) {
-        return withoutProperty(node, 'railMarker');
+        return unsafeOmitWorkspaceProperty(node, 'railMarker');
       }
       return node;
     });
@@ -722,7 +892,7 @@ describe('structured workspace overlay contract', () => {
             ...node,
             visits: Object.freeze(
               node.visits.map((visit) =>
-                visit.visitIndex === 1 ? withoutProperty(visit, 'marker') : visit,
+                visit.visitIndex === 1 ? unsafeOmitWorkspaceProperty(visit, 'marker') : visit,
               ),
             ),
           }),
@@ -777,7 +947,7 @@ describe('structured workspace overlay contract', () => {
       for (const route of project.routes) {
         for (const plan of route.biomes) {
           assertExpectedWorkspaceStructuralControlClosure({
-            controls: expectedWorkspaceStructuralControls(
+            expected: expectedWorkspaceStructuralControls(
               catalog,
               { biomeKey: plan.biomeKey, kind: 'biome', routeKey: route.routeKey },
               plan,
@@ -789,89 +959,113 @@ describe('structured workspace overlay contract', () => {
     }
   });
 
-  it('makes a missing independently expected structural interaction observable', () => {
-    const project = createRepresentativeNOPQProject();
-    const projected = projection().project(project, simulateProject(catalog, project));
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
-    if (plan === undefined) throw new Error('Surface/N plan is missing');
-    const controls = expectedWorkspaceStructuralControls(catalog, nBiome, plan);
-    const slot = controls.find((control) => control.kind === 'hubSlot');
-    if (slot === undefined) throw new Error('Surface/N Hub slot control is missing');
-    const interactions = {
-      ...projected.interactions,
-      hubSlots: new Map(projected.interactions.hubSlots),
-    };
-    interactions.hubSlots.delete(slot.key);
-
-    expect(() =>
-      assertExpectedWorkspaceStructuralControlClosure({ controls, interactions }),
-    ).toThrow(/hubSlot .* has no exact workspace interaction/);
-  });
-
-  it('keeps Ephyra side details dormant until the authored Hub visit activates them', () => {
-    const project = createRepresentativeNOPQProject();
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N');
-    if (plan?.topology === null || plan === undefined) {
-      throw new Error('complete N topology is missing');
+  it('makes every independently expected structural interaction family observable', () => {
+    const emptyN = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Surface: 1 },
+      name: 'Structural mutation empty N',
+      projectId: 'structural-mutation-empty-n',
+    });
+    const emptyF = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Underworld: 1 },
+      name: 'Structural mutation F',
+      projectId: 'structural-mutation-f',
+    });
+    const fFrontier = applyProjectCommand(emptyF, catalog, {
+      biome: goldenFBiome,
+      gameName: 'F_Opening01',
+      kind: 'CreateStart',
+      occurrenceId: createOccurrenceId('structural-mutation-f-opening'),
+    });
+    const nStarted = applyProjectCommand(emptyN, catalog, {
+      biome: nBiome,
+      kind: 'CreateStart',
+      occurrenceId: nOccurrenceId('opening'),
+    });
+    const nHubFrontier = applyProjectCommand(nStarted, catalog, {
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceId('opening'),
+      }),
+      kind: 'CreateLinkedExit',
+      occurrenceId: nOccurrenceId('preHub'),
+    });
+    const examples = new Map<
+      ExpectedWorkspaceStructuralControl['kind'],
+      {
+        control: ExpectedWorkspaceStructuralControl;
+        interactions: WorkspaceInteractionCatalog;
+      }
+    >();
+    for (const project of [
+      createGoldenFGHIProject(),
+      createRepresentativeNOPQProject(),
+      emptyN,
+      fFrontier,
+      nHubFrontier,
+    ]) {
+      const projected = projection().project(project, simulateProject(catalog, project));
+      for (const route of project.routes) {
+        for (const plan of route.biomes) {
+          const controls = expectedWorkspaceStructuralControls(
+            catalog,
+            { biomeKey: plan.biomeKey, kind: 'biome', routeKey: route.routeKey },
+            plan,
+          );
+          for (const control of controls) {
+            if (!examples.has(control.kind)) {
+              examples.set(control.kind, { control, interactions: projected.interactions });
+            }
+          }
+        }
+      }
     }
-    const incoming = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
-    const sideReward = createLocalRewardAddress(
-      nBiome,
-      nOccurrenceId('combat10'),
-      'sideRooms',
-      'sideDoor1',
+    expect([...examples.keys()].sort()).toEqual(
+      [
+        'batchRewardStore',
+        'exitFrontierCapability',
+        'exitSelection',
+        'fieldsCageOutcome',
+        'hubSlot',
+        'hubVisit',
+        'roomPicker',
+        'start',
+        'structural',
+        'takeoverBatch',
+        'topologyRemoval',
+      ].sort(),
     );
-    const sideChild = createLocalChildAddress(
-      nBiome,
-      nOccurrenceId('combat10'),
-      'sideRooms',
-      'sideDoor1',
-    );
-    const dormant = expectedWorkspaceLeafRequirements(catalog, nBiome, plan);
-    expect(
-      dormant.some(
-        (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(incoming),
-      ),
-    ).toBe(true);
-    expect(
-      dormant.some(
-        (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideReward),
-      ),
-    ).toBe(false);
-    expect(
-      dormant.some(
-        (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideChild),
-      ),
-    ).toBe(false);
 
-    const visited: AuthoredBiomePlan = {
-      ...plan,
-      topology: {
-        ...plan.topology,
-        decisions: plan.topology.decisions.map((decision) =>
-          decision.kind !== 'hub'
-            ? decision
-            : {
-                ...decision,
-                visitOrder: Object.freeze([...decision.visitOrder.slice(0, -1), 'combat10']),
-              },
-        ),
-      },
-    };
-    const activated = expectedWorkspaceLeafRequirements(catalog, nBiome, visited).find(
-      (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideReward),
-    );
-    expect(activated?.interactions.map((interaction) => interaction.kind)).toEqual(['reward']);
-    const activatedChild = expectedWorkspaceLeafRequirements(catalog, nBiome, visited).find(
-      (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideChild),
-    );
-    expect(activatedChild?.interactions.map((interaction) => interaction.kind)).toEqual([
-      'sideRoomGeneration',
-      'sideRoomEntryOrder',
-    ]);
+    for (const { control, interactions } of examples.values()) {
+      expect(() =>
+        assertExpectedWorkspaceStructuralControlClosure({
+          expected: [control],
+          interactions: withoutStructuralInteraction(interactions, control),
+        }),
+      ).toThrow(/has no exact workspace interaction/);
+    }
+
+    const surface = createRepresentativeNOPQProject();
+    const projected = projection().project(surface, simulateProject(catalog, surface));
+    const hub = projected.routes
+      .flatMap((route) => route.biomes)
+      .flatMap((biome) => biome.nodes)
+      .find((node) => node.kind === 'hubDecision');
+    const closable =
+      hub?.kind === 'hubDecision' ? hub.slots.find((slot) => slot.canClose) : undefined;
+    const slotInteraction =
+      closable === undefined
+        ? undefined
+        : projected.interactions.hubSlots.get(closable.marker.focusKey);
+    if (closable === undefined || slotInteraction?.close === undefined) {
+      throw new Error('closable Hub mutation fixture is missing');
+    }
+    const hubSlots = new Map(projected.interactions.hubSlots);
+    hubSlots.set(closable.marker.focusKey, unsafeOmitWorkspaceProperty(slotInteraction, 'close'));
+    expect(() =>
+      assertRenderedWorkspaceStructuralControlClosure({
+        interactions: { ...projected.interactions, hubSlots },
+        routes: projected.routes,
+      }),
+    ).toThrow(/closable Hub slot has no exact close interaction/);
   });
 });

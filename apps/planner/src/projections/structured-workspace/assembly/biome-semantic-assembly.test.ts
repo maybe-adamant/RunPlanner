@@ -1,21 +1,41 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { createProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createBiomeFieldAddress,
+  createOccurrenceId,
+  createProjectDocument,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { appendCompleteN, nBiome, nOccurrenceIds } from '../../../../../../test/fixtures/authored-project';
+import {
+  appendCompleteN,
+  createGoldenFGHIProject,
+  createRepresentativeNOPQProject,
+  goldenFBiome,
+  goldenIBiome,
+  nBiome,
+  nOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
+} from '../../../../../../test/fixtures/authored-project';
 import { assembleWorkspaceBiomeSemantics } from './biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
 
-function biomeSource(project: ProjectDocument): WorkspaceBiomeSource {
+function biomeSource(
+  project: ProjectDocument,
+  routeKey = 'Surface',
+  biomeKey = 'N',
+): WorkspaceBiomeSource {
   const source = createWorkspaceProjectSourceIndex(
     catalog,
     project,
     simulateProject(catalog, project),
   )
-    .routes.find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((biome) => biome.plan.biomeKey === 'N');
-  if (source === undefined) throw new Error('Surface/N source is missing');
+    .routes.find((route) => route.routeKey === routeKey)
+    ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
+  if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
 }
 
@@ -135,5 +155,81 @@ describe('structured workspace biome semantic assembly', () => {
     expect(assembly.roomControls.size).toBe(0);
     expect(assembly.rewardControls.size).toBe(0);
     expect(assembly.startInteractionRequirements.size).toBe(1);
+  });
+
+  it('projects declaration-owned biome fields at semantic assembly ownership', () => {
+    const assembly = assembleWorkspaceBiomeSemantics(
+      catalog,
+      biomeSource(createGoldenFGHIProject(), 'Underworld', 'I'),
+    );
+
+    expect(assembly.fields).toEqual([
+      {
+        address: createBiomeFieldAddress(goldenIBiome, 'maxNonGoalRewards'),
+        key: 'maxNonGoalRewards',
+        kind: 'boundedInteger',
+        label: 'Rolled non-goal limit',
+        marker: expect.objectContaining({
+          address: createBiomeFieldAddress(goldenIBiome, 'maxNonGoalRewards'),
+        }),
+        value: 3,
+        values: [3, 4, 5, 6],
+      },
+    ]);
+  });
+
+  it('keeps incomplete and route-prefix-blocked biome products explicit', () => {
+    const initial = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Underworld: 2 },
+      name: 'Semantic prefix states',
+      projectId: 'semantic-prefix-states',
+    });
+    const f = assembleWorkspaceBiomeSemantics(catalog, biomeSource(initial, 'Underworld', 'F'));
+    const g = assembleWorkspaceBiomeSemantics(catalog, biomeSource(initial, 'Underworld', 'G'));
+
+    expect(f).toMatchObject({
+      frontier: { kind: 'start', owner: goldenFBiome },
+      status: 'incomplete',
+    });
+    expect(g).toMatchObject({ frontier: { kind: 'start' }, status: 'blocked' });
+
+    const partial = applyProjectCommand(initial, catalog, {
+      biome: goldenFBiome,
+      gameName: 'F_Opening01',
+      kind: 'CreateStart',
+      occurrenceId: createOccurrenceId('semantic-prefix-f-start'),
+    });
+    const partialF = assembleWorkspaceBiomeSemantics(
+      catalog,
+      biomeSource(partial, 'Underworld', 'F'),
+    );
+    expect(partialF).toMatchObject({
+      entry: { room: { gameName: 'F_Opening01' } },
+      source: 'progressive',
+      status: 'incomplete',
+    });
+  });
+
+  it('keeps a fully authored canonical biome published when evaluation is invalid', () => {
+    const invalid = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      gameName: 'P_Combat02',
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: {
+        biomeKey: pBiome.biomeKey,
+        kind: 'occurrence',
+        occurrenceId: pOccurrenceId('P_Combat03', 1, 1),
+        routeKey: pBiome.routeKey,
+      },
+    });
+    const assembly = assembleWorkspaceBiomeSemantics(catalog, biomeSource(invalid, 'Surface', 'P'));
+
+    expect(assembly).toMatchObject({ source: 'canonical', status: 'invalid' });
+    expect(
+      assembly.nodes.some(
+        (node) =>
+          (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') &&
+          node.targets.some((target) => target.marker.findingCount > 0),
+      ),
+    ).toBe(true);
   });
 });

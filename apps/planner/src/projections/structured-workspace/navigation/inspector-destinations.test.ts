@@ -16,7 +16,10 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject, goldenFBiome } from '../../../../../../test/fixtures/authored-project';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+} from '../../../../../../test/fixtures/authored-project';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
