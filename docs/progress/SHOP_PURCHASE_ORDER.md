@@ -382,7 +382,12 @@ replacement.
 Likely files:
 
 - candidate projection/session types and tests;
-- `structuredWorkspace.ts` Shop descriptors and interactions;
+- `apps/planner/src/projections/structured-workspace/contract.ts` for
+  `WorkspaceShop*` descriptors and the public `shopPurchases` map;
+- `apps/planner/src/projections/structured-workspace/assembly/occurrence-assembly.ts`
+  for Shop descriptors and requirements;
+- `apps/planner/src/projections/structured-workspace/interactions/interaction-binding.ts`
+  for session-bound Shop purchase interactions;
 - architecture-boundary fixtures;
 - app test factories affected by schema 10.
 

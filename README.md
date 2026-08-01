@@ -146,11 +146,10 @@ copied elsewhere.
   active frontier and chronological delivery record. Phase 7 Slice 4
   reconciliation and Commit 5a prompt removal are complete. The active
   [re-anchor and reorganization](docs/progress/REANCHOR_AND_REORGANIZE.md)
-  plan has reopened its behavior-preserving workspace/React prerequisite for
-  two deletion-oriented contraction commits before the feature frontier
-  resumes. The following
+  plan has completed its production workspace contraction and bounded
+  test-ownership correction. The feature frontier may resume with the
   [workspace presentation polish](docs/progress/WORKSPACE_PRESENTATION_POLISH.md)
-  plan splits Commit 5b into four bounded UI changes. The remaining re-anchor
+  plan, which splits Commit 5b into four bounded UI changes. The remaining re-anchor
   campaigns then close before the
   [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) gives Commit
   5c its own schema, engine, projection, and UI slices.
@@ -195,8 +194,8 @@ gates. Development uses narrower test lanes:
 ```bash
 npm run test:changed   # tests related to uncommitted source/test changes
 npm run test:ui        # React component and editor fixtures
-npm run test:planner   # planner core, UI, and architecture contracts
-npm run test:contract  # application/workspace boundary fixtures
+npm run test:planner   # intentional planner superset: source, UI, architecture, workspace support
+npm run test:contract  # application architecture plus workspace overlay/closure/support contracts
 npm run test:product   # full browser product loops
 npm run test:engine    # authored model, simulator, and validation
 npm run test:catalog   # declaration and catalog construction

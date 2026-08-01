@@ -91,19 +91,21 @@ changes coherently.
 
 ## Current Implementation Anchors
 
-- `apps/planner/src/projections/structuredWorkspace.ts`
-  - `WorkspaceRailEntry` and `projectBiome` currently flatten every visible
-    workspace node into one rail;
-  - Hub occurrence workbenches are already projected with
-    `railVisibility: "inspectorOnly"`;
-  - `WorkspaceHubDecisionNode.visits` already connects each authored visit to
-    its occurrence-owned `WorkspaceRoomSummary`;
-  - side-room interactions already submit a complete
-    `enteredSlotKeys` sequence to the existing candidate query and
-    `ReplaceSideRoomEntryOrder` command;
-  - H cages and O reward wheels already carry projection-owned `active` flags.
-- `apps/planner/src/ui/editor/biome/BiomeWorkspace.tsx` renders the flat rail
-  and resolves a focused semantic owner to its projected workbench.
+- `apps/planner/src/projections/structured-workspace/`
+  - `contract.ts` declares `WorkspaceRailEntry`, Hub visit products, and the
+    public room-local descriptors;
+  - `presentation/biome-presentation.ts` owns the selective decision-highlight
+    rail and respects `railVisibility: "inspectorOnly"`;
+  - `assembly/hub-assembly.ts` creates Hub room-local workbenches and connects
+    authored Hub visits to their occurrence-owned `WorkspaceRoomSummary`;
+  - `assembly/occurrence-assembly.ts` owns the projected Ephyra entry-order,
+    Fields, and Ship descriptors, including their `active` facts;
+  - `interactions/interaction-binding.ts` binds the complete side-room sequence
+    to its candidate query, while `OccurrenceWorkbench.tsx` dispatches
+    `ReplaceSideRoomEntryOrder`.
+- `apps/planner/src/ui/editor/biome/BiomeWorkspace.tsx` renders the
+  projection-owned selective rail and resolves a focused semantic owner to its
+  projected workbench.
 - `apps/planner/src/ui/editor/biome/HubDecisionWorkbench.tsx` owns the persistent
   N board, open-slot membership, incoming main-room offers, and visit order.
 - `apps/planner/src/ui/editor/biome/OccurrenceWorkbench.tsx` owns Ephyra side
@@ -385,9 +387,10 @@ details`).
 
 Owns Change 1 only.
 
-Likely files:
+Historical delivery files (before the later structured-workspace split):
 
-- `apps/planner/src/projections/structuredWorkspace.ts`;
+- `apps/planner/src/projections/structuredWorkspace.ts` (historical facade;
+  since decomposed under `structured-workspace/`);
 - `apps/planner/src/projections/structuredWorkspace.test.ts`;
 - `apps/planner/src/ui/editor/biome/BiomeWorkspace.tsx`;
 - `apps/planner/src/ui/editor/biome/HubDecisionWorkbench.tsx`;
@@ -413,9 +416,10 @@ Delivered in `4d46957` (`feat(planner): streamline Ephyra side room ordering`).
 
 Owns Change 2 only.
 
-Likely files:
+Historical delivery files (before the later structured-workspace split):
 
-- `apps/planner/src/projections/structuredWorkspace.ts`;
+- `apps/planner/src/projections/structuredWorkspace.ts` (historical facade;
+  since decomposed under `structured-workspace/`);
 - `apps/planner/src/projections/structuredWorkspace.test.ts`;
 - `apps/planner/src/ui/editor/biome/OccurrenceWorkbench.tsx`;
 - focused N interaction and Undo/Redo fixtures;
@@ -474,8 +478,12 @@ Likely files:
 - `apps/planner/src/ui/feedback/EvaluationFeedback.tsx`;
 - `apps/planner/src/projections/evaluationProjection.ts`;
 - `apps/planner/src/projections/contextualOptions.ts`;
-- presentation-ready messages in
-  `apps/planner/src/projections/structuredWorkspace.ts`;
+- `apps/planner/src/projections/structured-workspace/presentation/biome-presentation.ts`
+  for rail and Hub labels;
+- `apps/planner/src/projections/structured-workspace/assembly/decision-assembly.ts`
+  for evidence-backed door and prerequisite messages;
+- `apps/planner/src/projections/structured-workspace/assembly/occurrence-assembly.ts`
+  for room-local summaries and labels;
 - shared biome, decision, Hub, occurrence, and removal-presentation components;
 - focused shell, workspace, feedback, candidate, and product fixtures;
 - `EDITOR_MODEL.md`, README, audit, and progress closure.
