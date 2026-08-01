@@ -13,7 +13,6 @@ import {
   createProjectHistory,
   createShopPurchaseAddress,
   createTargetAddress,
-  ProjectCommandContractError,
   redoProjectHistory,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
@@ -21,92 +20,13 @@ import {
 import {
   fBiome,
   fProject,
-  gBiome,
-  gProject,
   nBiome,
   nProject,
   oBiome,
-  qBiome,
   surfaceProject,
 } from './support/configured-projects';
 
 describe('authored-project commands awaiting focused family migration', () => {
-  it('defaults takeover leaves whose selection contract changes', () => {
-    let takeover = applyProjectCommand(gProject(), catalog, {
-      kind: 'CreateStart',
-      biome: gBiome,
-      occurrenceId: createOccurrenceId('widening-intro'),
-    });
-    const introDecision = createExitDecisionAddress(gBiome, {
-      kind: 'occurrence',
-      occurrenceId: createOccurrenceId('widening-intro'),
-    });
-    takeover = applyProjectCommand(takeover, catalog, {
-      kind: 'CreateBatch',
-      decision: introDecision,
-    });
-    takeover = applyProjectCommand(takeover, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(gBiome, introDecision.source),
-      storeKey: 'RunProgress',
-    });
-    takeover = applyProjectCommand(takeover, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(gBiome, introDecision.source, 'exit1'),
-      occurrenceId: createOccurrenceId('widening-source'),
-      gameName: 'G_MiniBoss02',
-    });
-    const takeoverDecision = createExitDecisionAddress(gBiome, {
-      kind: 'occurrence',
-      occurrenceId: createOccurrenceId('widening-source'),
-    });
-    takeover = applyProjectCommand(takeover, catalog, {
-      kind: 'CreateTakeoverBatch',
-      decision: takeoverDecision,
-      gameName: 'G_PreBoss01',
-      targetOccurrenceIds: { exit1: createOccurrenceId('widening-shop') },
-    });
-    takeover = applyProjectCommand(takeover, catalog, {
-      kind: 'SetShopPurchase',
-      purchase: createShopPurchaseAddress(gBiome, createOccurrenceId('widening-shop'), 'Boon'),
-      purchased: true,
-    });
-    takeover = applyProjectCommand(takeover, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(gBiome, createOccurrenceId('widening-source')),
-      gameName: 'G_Combat02',
-    });
-    takeover = applyProjectCommand(takeover, catalog, {
-      kind: 'ReconcileTakeoverBatch',
-      decision: takeoverDecision,
-      gameName: 'G_PreBoss01',
-      targetOccurrenceIds: {
-        exit1: createOccurrenceId('widening-shop'),
-        exit2: createOccurrenceId('widening-free-2'),
-        exit3: createOccurrenceId('widening-free-3'),
-      },
-    });
-    const widenedTopology = takeover.routes[0]?.biomes[1]?.topology;
-    expect(widenedTopology?.occurrences).toContainEqual(
-      expect.objectContaining({
-        occurrenceId: 'widening-shop',
-        state: { kind: 'shop' },
-      }),
-    );
-    expect(widenedTopology?.occurrences).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          occurrenceId: 'widening-free-2',
-          state: expect.objectContaining({ kind: 'freeReward' }),
-        }),
-        expect.objectContaining({
-          occurrenceId: 'widening-free-3',
-          state: expect.objectContaining({ kind: 'freeReward' }),
-        }),
-      ]),
-    );
-  });
-
   it('records common structural commands as semantic history and preserves compatible takeover state', () => {
     let fHistory = createProjectHistory(fProject());
     const start = {
@@ -210,57 +130,7 @@ describe('authored-project commands awaiting focused family migration', () => {
     expect(nHistory.present).toEqual(hubbed);
   });
 
-  it('keeps staged candidate pools and Ship encounter counts valid after occurrence replacement', () => {
-    let qProject = applyProjectCommand(surfaceProject(4), catalog, {
-      kind: 'CreateStart',
-      biome: qBiome,
-      occurrenceId: createOccurrenceId('q-intro'),
-    });
-    const qIntroDecision = createExitDecisionAddress(qBiome, {
-      kind: 'occurrence',
-      occurrenceId: createOccurrenceId('q-intro'),
-    });
-    qProject = applyProjectCommand(qProject, catalog, {
-      kind: 'CreateBatch',
-      decision: qIntroDecision,
-    });
-    qProject = applyProjectCommand(qProject, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(qBiome, qIntroDecision.source, 'exit1'),
-      occurrenceId: createOccurrenceId('q-foyer'),
-      gameName: 'Q_Combat10',
-    });
-    const qFoyerDecision = createExitDecisionAddress(qBiome, {
-      kind: 'occurrence',
-      occurrenceId: createOccurrenceId('q-foyer'),
-    });
-    qProject = applyProjectCommand(qProject, catalog, {
-      kind: 'CreateBatch',
-      decision: qFoyerDecision,
-    });
-    qProject = applyProjectCommand(qProject, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(qBiome, qFoyerDecision.source, 'exit1'),
-      occurrenceId: createOccurrenceId('q-first-fork'),
-      gameName: 'Q_Combat03',
-    });
-    expect(() =>
-      applyProjectCommand(qProject, catalog, {
-        kind: 'ReplaceOccurrenceRoom',
-        occurrence: createOccurrenceAddress(qBiome, createOccurrenceId('q-first-fork')),
-        gameName: 'Q_Combat02',
-      }),
-    ).toThrow(ProjectCommandContractError);
-    qProject = applyProjectCommand(qProject, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(qBiome, createOccurrenceId('q-first-fork')),
-      gameName: 'Q_Combat05',
-    });
-    expect(
-      qProject.routes.find((route) => route.routeKey === 'Surface')?.biomes[3]?.topology
-        ?.occurrences,
-    ).toContainEqual(expect.objectContaining({ gameName: 'Q_Combat05' }));
-
+  it('keeps Ship encounter counts valid after room-local edits', () => {
     let oProject = applyProjectCommand(surfaceProject(2), catalog, {
       kind: 'CreateStart',
       biome: oBiome,

@@ -109,12 +109,13 @@ export type TopologyCommand =
     }
   | { readonly kind: 'ClearTopology'; readonly biome: BiomeAddress };
 
+export type RoomReplacementCommand = {
+  readonly kind: 'ReplaceOccurrenceRoom';
+  readonly occurrence: OccurrenceAddress;
+  readonly gameName: string;
+};
+
 export type OccurrenceStateCommand =
-  | {
-      readonly kind: 'ReplaceOccurrenceRoom';
-      readonly occurrence: OccurrenceAddress;
-      readonly gameName: string;
-    }
   | {
       readonly kind: 'ReplaceShipEncounterCount';
       readonly occurrence: OccurrenceAddress;
@@ -171,7 +172,8 @@ export type OccurrenceStateCommand =
       readonly purchased: boolean;
     };
 
-export type ProjectCommand = ProjectStateCommand | TopologyCommand | OccurrenceStateCommand;
+export type ProjectCommand =
+  ProjectStateCommand | TopologyCommand | RoomReplacementCommand | OccurrenceStateCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,
