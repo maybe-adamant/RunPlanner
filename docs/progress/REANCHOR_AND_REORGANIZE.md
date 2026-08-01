@@ -68,7 +68,7 @@ permitted project/evaluation identity attestation, and several ordinary
 memoization caches. B1 and B2 are complete: the room-target sidecar originated
 in generation, so its explicit evaluation assembly now runs end to end and has
 removed that sidecar with its room-target consumer; the remaining Linear
-structural families now have their own evaluators. B3 through B5 remain
+structural families now have their own evaluators. B4 and B5 remain
 separate vertical units.
 
 This document is temporary delivery authority. Stable ownership remains with
@@ -1731,6 +1731,26 @@ identity/batching/order behavior with query-identifying order witnesses.
   or reconstructing Hub state in the dispatcher;
 - leave N's suite as the family matrix and remove duplicate session,
   progressive-Hub, or application policy assertions.
+
+##### B3 delivery record (2026-08-01)
+
+B3 moves the complete Hub/local structural family into one Hub-owned candidate
+module: `hubSlot`, `hubVisit`, `sideRoomGeneration`, and
+`sideRoomEntryOrder`. The candidate aggregate now re-exports those contracts
+and dispatches them exhaustively, but retains only B4 and B5 policy while
+those vertical moves remain pending. The Hub evaluator receives only catalog,
+authored project, data-only evaluation, and its addressed query; it does not
+receive an assembly, artifact, or universal candidate context.
+
+Direct physical-board constraints remain with membership. Visit and local
+proposals replay only their relevant persistent Hub region: through the
+addressed visit for a visit or side-generation edit, and through the parent
+visit for local entry order. A blocked side-room repair likewise derives the
+owning visit, bounds the pre-clamp replay to that visit, and verifies the exact
+blocked local-child address before exposing repair support. It cannot expose a
+later Hub visit. N retains the full family matrix, including the exact blocked
+side and later-visit coverage witness; progressive-Hub retains its distinct
+prefix/clamp policy coverage.
 
 #### B4: Explicit reward-producer artifacts
 
