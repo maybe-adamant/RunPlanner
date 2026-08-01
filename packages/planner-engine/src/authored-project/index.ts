@@ -77,7 +77,6 @@ export {
   type DeclaredPhysicalExit,
   type FixedWidthOneTakeoverTransition,
 } from './topology/query';
-export { decodeBiomeTopology } from './topology/codec';
 export {
   applyTopologyRemovalImpact,
   describeClearTopologyImpact,
@@ -86,7 +85,6 @@ export {
   describeTopologyRemovalImpact,
   type TopologyRemovalImpact,
 } from './topologyImpact';
-export { createInitialBatchState, decodeBatchState } from './batchState';
 export {
   applyProjectHistoryCommand,
   canRedoProjectHistory,
@@ -128,4 +126,3 @@ export {
   type ShopOfferState,
   type ShopState,
 } from './model';
-export { createInitialBiomeState, decodeBiomeState } from './biomeState';
