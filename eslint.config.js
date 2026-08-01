@@ -12,10 +12,16 @@ const platformImports = [
   '@reduxjs/*',
   '@tauri-apps/*',
 ];
+const plannerApplicationImportPatterns = [
+  '@run-planner/planner',
+  '@run-planner/planner/**',
+  '@planner',
+  '@planner/**',
+];
 const engineBoundaryImports = [
   ...platformImports,
   '@run-planner/hades2-catalog',
-  '@run-planner/planner',
+  ...plannerApplicationImportPatterns,
 ];
 const catalogSchemaImportPatterns = [
   '../catalog-schema',
@@ -59,6 +65,12 @@ const testSupportSyntaxRestrictions = [
     selector:
       ":matches(ImportDeclaration, ExportNamedDeclaration, ExportAllDeclaration, ImportExpression):matches([source.value=/^@planner-test/], [source.value='@run-planner/test-fixtures'])",
     message: 'Production source must not consume test fixtures or test support.',
+  },
+];
+const purePackageDynamicImportSyntaxRestrictions = [
+  {
+    selector: 'ImportExpression',
+    message: 'Pure package source uses static imports so package boundaries remain enforceable.',
   },
 ];
 const plannerDeepRelativeImportSyntaxRestrictions = [
@@ -107,7 +119,11 @@ export default tseslint.config(
     files: ['packages/*/src/**/*.{ts,tsx}'],
     ignores: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
     rules: {
-      'no-restricted-syntax': ['error', ...testSupportSyntaxRestrictions],
+      'no-restricted-syntax': [
+        'error',
+        ...testSupportSyntaxRestrictions,
+        ...purePackageDynamicImportSyntaxRestrictions,
+      ],
     },
   },
   {
@@ -395,7 +411,7 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          patterns: [...platformImports, '@run-planner/planner'],
+          patterns: [...platformImports, ...plannerApplicationImportPatterns],
         },
       ],
     },
