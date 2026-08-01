@@ -15,41 +15,74 @@ function isPromise<Result>(value: Result | Promise<Result>): value is Promise<Re
   return typeof (value as Promise<Result>)?.then === 'function';
 }
 
-export function useWorkspaceInteraction<Result>(
-  interaction: WorkspaceLoadableInteraction<Result>,
-): {
-  /**
-   * Loads the interaction on demand.  Synchronous interactions return their
-   * result so a native pointer or keyboard action can both validate and apply
-   * its semantic command in one gesture; asynchronous interactions remain a
-   * deliberately non-committing first activation.
-   */
-  readonly activate: () => Result | undefined;
+interface WorkspaceInteractionSnapshot<Result> {
   readonly pending: boolean;
   readonly result: Result | undefined;
+}
+
+/**
+ * The single React-side loader adapter. Dynamic capabilities such as an
+ * activation-scoped Hub opening attempt can be retained by their component
+ * and passed here without calling their loader in feature UI.
+ */
+export function useWorkspaceInteractionController<Result>(): {
+  readonly activate: (interaction: WorkspaceLoadableInteraction<Result>) => Result | undefined;
+  readonly observe: (
+    interaction: WorkspaceLoadableInteraction<Result> | undefined,
+  ) => WorkspaceInteractionSnapshot<Result>;
 } {
   const cacheRef = useRef(new WeakMap<object, Result>());
+  const committedInteractionRef = useRef<WorkspaceLoadableInteraction<Result> | undefined>(
+    undefined,
+  );
+  const renderedInteractionRef = useRef<WorkspaceLoadableInteraction<Result> | undefined>(
+    undefined,
+  );
   const requestIdRef = useRef(0);
   const stateRef = useRef<InteractionState<Result> | undefined>(undefined);
-  const [state, setState] = useState<InteractionState<Result>>();
-  useEffect(() => {
+  const [, setState] = useState<InteractionState<Result>>();
+
+  const registerInteraction = (
+    interaction: WorkspaceLoadableInteraction<Result> | undefined,
+  ): void => {
+    if (committedInteractionRef.current === interaction) return;
+    committedInteractionRef.current = interaction;
     requestIdRef.current += 1;
-  }, [interaction]);
+    if (stateRef.current?.interaction !== interaction) stateRef.current = undefined;
+  };
 
-  const current = state?.interaction === interaction ? state : undefined;
-  if (current?.error !== undefined) {
-    throw current.error;
-  }
+  useEffect(() => {
+    registerInteraction(renderedInteractionRef.current);
+  });
 
-  const activate = (): Result | undefined => {
+  const observe = (
+    interaction: WorkspaceLoadableInteraction<Result> | undefined,
+  ): WorkspaceInteractionSnapshot<Result> => {
+    renderedInteractionRef.current = interaction;
+    const current =
+      interaction !== undefined && stateRef.current?.interaction === interaction
+        ? stateRef.current
+        : undefined;
+    if (current?.error !== undefined) {
+      throw current.error;
+    }
+    return Object.freeze({
+      pending: current?.pending ?? false,
+      result: current?.result,
+    });
+  };
+
+  const activate = (interaction: WorkspaceLoadableInteraction<Result>): Result | undefined => {
+    // Register before loading so the state update caused by this activation
+    // cannot make the next committed render invalidate its own request.
+    renderedInteractionRef.current = interaction;
+    registerInteraction(interaction);
     const existing = stateRef.current;
     if (
       existing?.interaction === interaction &&
       (existing.pending || existing.result !== undefined)
     ) {
-      if (state !== existing) {
-        setState(existing);
-      }
+      setState(existing);
       return existing.result;
     }
     const cached = cacheRef.current.get(interaction);
@@ -109,9 +142,28 @@ export function useWorkspaceInteraction<Result>(
     return undefined;
   };
 
+  return { activate, observe };
+}
+
+export function useWorkspaceInteraction<Result>(
+  interaction: WorkspaceLoadableInteraction<Result>,
+): {
+  /**
+   * Loads the interaction on demand.  Synchronous interactions return their
+   * result so a native pointer or keyboard action can both validate and apply
+   * its semantic command in one gesture; asynchronous interactions remain a
+   * deliberately non-committing first activation.
+   */
+  readonly activate: () => Result | undefined;
+  readonly pending: boolean;
+  readonly result: Result | undefined;
+} {
+  const controller = useWorkspaceInteractionController<Result>();
+  const current = controller.observe(interaction);
+
   return {
-    activate,
-    pending: current?.pending ?? false,
-    result: current?.result,
+    activate: () => controller.activate(interaction),
+    pending: current.pending,
+    result: current.result,
   };
 }

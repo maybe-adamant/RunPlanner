@@ -2,7 +2,6 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createOccurrenceAddress,
-  createOccurrenceId,
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -144,11 +143,9 @@ describe('unified biome performance', () => {
     const hubSlot = createHubSlotAddress(nBiome, 'hub', 'miniBoss02');
     const workspace = application.selectStructuredWorkspace(application.store.getState());
     const hubCandidates = workspace.interactions.hubSlots.get(semanticAddressKey(hubSlot));
-    if (hubCandidates === undefined)
+    if (hubCandidates === undefined || hubCandidates.selected)
       throw new Error('N cold Hub-slot candidate interaction is missing');
-    const candidate = measure(() =>
-      hubCandidates.bind(createOccurrenceId('surface-performance-miniBoss02')).load(),
-    );
+    const candidate = measure(() => hubCandidates.beginOpeningAttempt().load());
     expect(candidate.result).toHaveLength(2);
     expectColdCandidateWork(events, 'Surface cold candidate projection');
 

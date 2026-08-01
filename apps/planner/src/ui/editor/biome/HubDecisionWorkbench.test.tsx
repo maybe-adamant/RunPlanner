@@ -4,6 +4,8 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
+  createHubDecisionAddress,
+  createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
   createLocalChildGroupAddress,
@@ -11,10 +13,14 @@ import {
   createOccurrenceId,
   createProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { PlannerApplication } from '@planner/composition/createApplication';
+import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectUndoRequested,
+} from '@planner/state/projectWorkspaceSlice';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
@@ -98,7 +104,19 @@ describe('HubDecisionWorkbench', () => {
       occurrenceId: nOccurrenceIds.preHub,
     });
     const view = renderHubDecisionWorkbench(project);
+    const historyBeforeBoard =
+      view.application.store.getState().projectWorkspace.history.past.length;
 
+    await view.user.click(screen.getByRole('button', { name: 'Create Hub board' }));
+    await waitFor(() => expect(screen.getAllByLabelText(/Hub slot$/)).toHaveLength(26));
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeBoard + 1,
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createHubDecisionAddress(nBiome, 'hub'),
+    );
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await screen.findByRole('button', { name: 'Create Hub board' });
     await view.user.click(screen.getByRole('button', { name: 'Create Hub board' }));
     await waitFor(() => expect(screen.getAllByLabelText(/Hub slot$/)).toHaveLength(26));
     await view.user.click(screen.getByLabelText('Combat 01 open'));
@@ -109,6 +127,81 @@ describe('HubDecisionWorkbench', () => {
         ),
       ).toBe(true),
     );
+  });
+
+  it('scopes a provisional opening identity to activation, cancellation, and projection replacement', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-opening-attempt-lifecycle',
+        name: 'Hub opening attempt lifecycle',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+    );
+    const allocated: ReturnType<typeof createOccurrenceId>[] = [];
+    const application = createApplication({
+      allocateOccurrenceId: () => {
+        const occurrenceId = createOccurrenceId(`hub-opening-attempt-${allocated.length + 1}`);
+        allocated.push(occurrenceId);
+        return occurrenceId;
+      },
+    });
+    renderHubDecisionWorkbench(project, 'Surface', 'N', application);
+    const opening = screen.getByRole('checkbox', { name: 'Combat 04 open' });
+
+    expect(allocated).toEqual([]);
+    act(() => opening.focus());
+    expect(allocated).toEqual([]);
+    fireEvent.pointerDown(opening);
+    expect(allocated).toEqual([createOccurrenceId('hub-opening-attempt-1')]);
+    expect(opening.closest('label')?.dataset.openingAttempt).toBe('active');
+    act(() =>
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'RenameProject',
+          name: 'Hub opening attempt replacement',
+        }),
+      ),
+    );
+    await waitFor(() => expect(opening.closest('label')?.dataset.openingAttempt).toBeUndefined());
+    fireEvent.pointerDown(opening);
+    expect(allocated).toEqual([
+      createOccurrenceId('hub-opening-attempt-1'),
+      createOccurrenceId('hub-opening-attempt-2'),
+    ]);
+    fireEvent.blur(opening);
+    expect(opening.closest('label')?.dataset.openingAttempt).toBeUndefined();
+
+    fireEvent.pointerDown(opening);
+    expect(allocated).toEqual([
+      createOccurrenceId('hub-opening-attempt-1'),
+      createOccurrenceId('hub-opening-attempt-2'),
+      createOccurrenceId('hub-opening-attempt-3'),
+    ]);
+    const historyBeforeOpen = application.store.getState().projectWorkspace.history.past.length;
+    fireEvent.click(opening);
+    await waitFor(() =>
+      expect(nHubOccurrence(application, 'combat04').occurrenceId).toBe(
+        createOccurrenceId('hub-opening-attempt-3'),
+      ),
+    );
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeOpen + 1,
+    );
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createHubSlotAddress(nBiome, 'hub', 'combat04'),
+    );
+
+    act(() => application.store.dispatch(authoredProjectUndoRequested()));
+    const restored = await screen.findByRole('checkbox', { name: 'Combat 04 open' });
+    expect((restored as HTMLInputElement).checked).toBe(false);
+    fireEvent.pointerDown(restored);
+    expect(allocated).toEqual([
+      createOccurrenceId('hub-opening-attempt-1'),
+      createOccurrenceId('hub-opening-attempt-2'),
+      createOccurrenceId('hub-opening-attempt-3'),
+      createOccurrenceId('hub-opening-attempt-4'),
+    ]);
+    fireEvent.blur(restored);
   });
 
   it('opens, edits, focuses, and closes an unvisited room through its compact card', async () => {
@@ -191,6 +284,17 @@ describe('HubDecisionWorkbench', () => {
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBeforeClose + 1,
     );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createHubSlotAddress(nBiome, 'hub', 'combat04'),
+    );
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(
+        nHubState(view.application).decision.openTargets.some(
+          (target) => target.hubSlotKey === 'combat04',
+        ),
+      ).toBe(true),
+    );
   }, 10_000);
 
   it('appends, replaces, and removes visits through semantic Hub commands', async () => {
@@ -208,6 +312,9 @@ describe('HubDecisionWorkbench', () => {
       kind: 'ReplaceSideRoomEntryOrder',
     });
     const view = renderHubDecisionWorkbench(project);
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    const focusBefore = view.application.store.getState().editorSession.focusedSemanticOwner;
+    const originalVisitOrder = [...nHubState(view.application).decision.visitOrder];
     const preservedSideOrder = orderedNHubSideEntries(view.application, 'combat05');
     expect(preservedSideOrder).toEqual(['sideDoor1', 'sideDoor2']);
     const hubVisitControl = (visitIndex: number): HTMLSelectElement => {
@@ -254,6 +361,12 @@ describe('HubDecisionWorkbench', () => {
         appended,
       ]),
     );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      focusBefore,
+    );
 
     const replacement = await chooseAvailableVisit(
       hubVisitControl(2),
@@ -266,6 +379,12 @@ describe('HubDecisionWorkbench', () => {
         appended,
       ]),
     );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 2,
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      focusBefore,
+    );
 
     const confirmation = vi.spyOn(globalThis, 'confirm');
     await view.user.click(screen.getByRole('button', { name: 'Remove visits from Visit 2' }));
@@ -273,7 +392,22 @@ describe('HubDecisionWorkbench', () => {
     await waitFor(() =>
       expect(nHubState(view.application).decision.visitOrder).toEqual(['combat05']),
     );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 3,
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      focusBefore,
+    );
     expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual(preservedSideOrder);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(nHubState(view.application).decision.visitOrder).toEqual([
+      'combat05',
+      replacement,
+      appended,
+    ]);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(nHubState(view.application).decision.visitOrder).toEqual(originalVisitOrder);
   });
 
   it('removes the completed-Hub handoff when a visit is truncated', async () => {
@@ -290,6 +424,48 @@ describe('HubDecisionWorkbench', () => {
     await view.user.click(screen.getByRole('button', { name: 'Remove visits from Visit 6' }));
     expect(confirmation).not.toHaveBeenCalled();
     await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toHaveLength(5));
+    expect(
+      nHubState(view.application).topology.decisions.some(
+        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+      ),
+    ).toBe(false);
+  });
+
+  it('creates and undoes the completed-Hub handoff through its bound intent', async () => {
+    const project = appendCompleteN(
+      createProjectDocument(catalog, {
+        projectId: 'hub-completed-handoff',
+        name: 'Hub completed handoff',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      { includePreboss: false },
+    );
+    const view = renderHubDecisionWorkbench(project);
+    const handoff = document.querySelector<HTMLElement>(
+      '[data-presentation="completedHubHandoff"]',
+    );
+    if (handoff === null) throw new Error('completed Hub handoff control is missing');
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(within(handoff).getByRole('button'));
+    const owner = createExitDecisionAddress(nBiome, {
+      decisionKey: 'hub',
+      kind: 'hubDecision',
+    });
+    await waitFor(() =>
+      expect(
+        nHubState(view.application).topology.decisions.some(
+          (decision) =>
+            decision.kind === 'exit' &&
+            decision.source.kind === 'hubDecision' &&
+            decision.source.decisionKey === 'hub',
+        ),
+      ).toBe(true),
+    );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(
       nHubState(view.application).topology.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',

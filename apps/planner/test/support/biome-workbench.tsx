@@ -194,18 +194,25 @@ export function renderHubDecisionWorkbench(
   project: ProjectDocument,
   routeKey = 'Surface',
   biomeKey = 'N',
+  application: PlannerApplication = createApplication(),
 ) {
-  return renderProjectedHarness(project, routeKey, biomeKey, (biome, workspace) => {
-    const node = biome.nodes.find((candidate) => candidate.kind === 'hubDecision');
-    if (node?.kind !== 'hubDecision') return <p>No Hub decision workbench</p>;
-    return (
-      <HubDecisionWorkbench
-        frontier={biome.frontier}
-        interactions={workspace.interactions}
-        node={node}
-      />
-    );
-  });
+  return renderProjectedHarness(
+    project,
+    routeKey,
+    biomeKey,
+    (biome, workspace) => {
+      const node = biome.nodes.find((candidate) => candidate.kind === 'hubDecision');
+      if (node?.kind !== 'hubDecision') return <p>No Hub decision workbench</p>;
+      return (
+        <HubDecisionWorkbench
+          frontier={biome.frontier}
+          interactions={workspace.interactions}
+          node={node}
+        />
+      );
+    },
+    application,
+  );
 }
 
 export function renderStaticHubDecisionWorkbench(

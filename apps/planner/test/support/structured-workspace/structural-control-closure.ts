@@ -164,7 +164,8 @@ function assertRenderedNodeControls(
           slot.marker.address,
           `Hub slot ${slot.marker.focusKey}`,
         );
-        if (slot.canClose && interactions.hubSlots.get(slot.marker.focusKey)?.close === undefined) {
+        const interaction = interactions.hubSlots.get(slot.marker.focusKey);
+        if (slot.canClose && (interaction?.selected !== true || interaction.close === undefined)) {
           throw new Error(
             `${slot.marker.focusKey} closable Hub slot has no exact close interaction`,
           );
@@ -172,12 +173,18 @@ function assertRenderedNodeControls(
       }
       for (const visit of node.visits) {
         if (visit.authoring === 'locked') continue;
+        const interaction = interactions.hubVisits.get(visit.marker.focusKey);
         assertExactObservedInteraction(
-          interactions.hubVisits.get(visit.marker.focusKey),
+          interaction,
           visit.marker.focusKey,
           visit.marker.address,
           `Hub visit ${visit.marker.focusKey}`,
         );
+        if (visit.authoring === 'authored' && interaction?.removal === undefined) {
+          throw new Error(
+            `${visit.marker.focusKey} authored Hub visit has no exact removal interaction`,
+          );
+        }
       }
       return;
     case 'completion':

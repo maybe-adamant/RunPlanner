@@ -1082,7 +1082,11 @@ describe('structured workspace overlay contract', () => {
       closable === undefined
         ? undefined
         : projected.interactions.hubSlots.get(closable.marker.focusKey);
-    if (closable === undefined || slotInteraction?.close === undefined) {
+    if (
+      closable === undefined ||
+      slotInteraction?.selected !== true ||
+      slotInteraction.close === undefined
+    ) {
       throw new Error('closable Hub mutation fixture is missing');
     }
     const hubSlots = new Map(projected.interactions.hubSlots);
@@ -1093,5 +1097,28 @@ describe('structured workspace overlay contract', () => {
         routes: projected.routes,
       }),
     ).toThrow(/closable Hub slot has no exact close interaction/);
+
+    const authoredVisit =
+      hub?.kind === 'hubDecision'
+        ? hub.visits.find((visit) => visit.authoring === 'authored')
+        : undefined;
+    const visitInteraction =
+      authoredVisit === undefined
+        ? undefined
+        : projected.interactions.hubVisits.get(authoredVisit.marker.focusKey);
+    if (authoredVisit === undefined || visitInteraction?.removal === undefined) {
+      throw new Error('authored Hub-visit mutation fixture is missing');
+    }
+    const hubVisits = new Map(projected.interactions.hubVisits);
+    hubVisits.set(
+      authoredVisit.marker.focusKey,
+      unsafeOmitWorkspaceProperty(visitInteraction, 'removal'),
+    );
+    expect(() =>
+      assertRenderedWorkspaceStructuralControlClosure({
+        interactions: { ...projected.interactions, hubVisits },
+        routes: projected.routes,
+      }),
+    ).toThrow(/authored Hub visit has no exact removal interaction/);
   });
 });

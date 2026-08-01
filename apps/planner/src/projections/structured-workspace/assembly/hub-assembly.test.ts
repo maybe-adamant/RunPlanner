@@ -132,9 +132,10 @@ describe('structured workspace Hub assembly', () => {
     const unvisited = assembly.node.slots.find((slot) => slot.hubSlotKey === 'combat03');
     expect(visited).toMatchObject({ canClose: false, open: true, visited: true });
     expect(unvisited).toMatchObject({ canClose: true, open: true, visited: false });
-    const close = assembly.hubInteractionRequirements[0]?.slots.find(
+    const closeSlot = assembly.hubInteractionRequirements[0]?.slots.find(
       (slot) => slot.owner.hubSlotKey === 'combat03',
-    )?.close;
+    );
+    const close = closeSlot?.selected ? closeSlot.close : undefined;
     expect(close).toMatchObject({
       command: { kind: 'CloseHubSlot' },
       impact: {
@@ -302,8 +303,16 @@ describe('structured workspace Hub assembly', () => {
       'unassessed',
       'assessed',
     ]);
+    expect(retained.hubInteractionRequirements[0]?.visits[0]).toMatchObject({
+      action: 'replace',
+      owner: createHubVisitAddress(nBiome, retainedKit.descriptor.hubKey, 1),
+      removable: true,
+      selectedHubSlotKey: retainedKit.hub.visitOrder[0],
+    });
     expect(retained.hubInteractionRequirements[0]?.visits.at(-1)).toMatchObject({
+      action: 'append',
       owner: createHubVisitAddress(nBiome, retainedKit.descriptor.hubKey, 4),
+      removable: false,
     });
   });
 
@@ -341,8 +350,10 @@ describe('structured workspace Hub assembly', () => {
     expect(requirement?.slots).toHaveLength(kit.descriptor.slots.length);
     expect(requirement?.visits).toEqual([
       {
+        action: 'append',
         choices: [],
         owner: createHubVisitAddress(nBiome, kit.descriptor.hubKey, 1),
+        removable: false,
       },
     ]);
     expect(assembly.node.visits[0]?.authoring).toBe('locked');
