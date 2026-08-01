@@ -57,7 +57,9 @@ fixtures, independent workspace expectation/observation infrastructure,
 focused projection and closure assertions, and React coverage aligned with the
 existing workbench boundaries. Commit 5b.3 in
 [`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) may now
-resume. Campaign B remains separate.
+resume. A final Campaign A retrospective amended Campaigns B through D around
+vertical producer-to-consumer movement, explicit semantic products, primary
+test ownership, and conditional decomposition. Campaign B remains separate.
 
 This document is temporary delivery authority. Stable ownership remains with
 the documents under `docs/design/`. When the program closes, any durable
@@ -147,20 +149,20 @@ wells merely because they are long. They remain declaration-owned and direct.
 
 ### Gravity Wells and Leaked Responsibilities
 
-| Area                                                 | Current mixed responsibilities                                                                                                                                                                                                     | Required correction                                                                                                                                                                                |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/planner/src/projections/structured-workspace/` | Source lookup, authored/evaluated overlay, room and Hub assembly, candidate interaction construction, rail presentation, focus registration, and several closure audits share one projector and broad mutable context.             | Turn workspace projection into an explicit sequence of immutable products with a thin public service facade.                                                                                       |
-| `MutableProjectionContext` and `projectOccurrence`   | Catalog/evaluation facts, findings, route/biome identity, focus destinations, room controls, and reward controls are accumulated together. A projection function returns a node while also registering products for later phases.  | Pass stage-specific inputs. Each stage returns every product later stages consume. Local builders may mutate privately, but cross-stage products cannot be discovered through prior side effects.  |
-| Workspace interaction binding                        | The former catalog builder combined binding mechanics with the projector, obscuring its input boundary and encouraging more semantic traversal there.                                                                              | Bind every public interaction map from explicit requirements plus catalog/project/evaluation and injected services; verify the transformation in focused tests rather than production self-audits. |
-| `BiomeWorkspace.tsx`                                 | `roomOwnsAddress`, `nodeOwnsAddress`, `nodeForAddress`, and `fallbackSubject` reconstruct semantic containment and default inspection despite the projection already publishing focus information.                                 | Project exact explicit and default inspector destinations. React resolves keys and renders; it does not rediscover semantic ownership.                                                             |
-| `simulation/candidates/index.ts`                     | Public query/result contract, evaluation recovery, progressive repair, every candidate family, and session dispatch share one module.                                                                                              | Separate the public contract, exact session-bound sources, family-specific preparation products, candidate-family evaluators, and a thin dispatcher.                                               |
-| `simulation/rewards/biome.ts`                        | Snapshot indexing, mutable evaluation state, event-family handling, candidate context capture, support recording, and final projection are interleaved in one chronological loop.                                                  | Keep the chronological coordinator visible, but give it an explicit state product, source indexes, and event-family handlers.                                                                      |
-| `simulation/history/fold.ts`                         | Ledger initialization, active lifecycle bookkeeping, event validation, per-event mutation, view capture, and final freezing are interleaved around many loose maps and variables.                                                  | Define one fold-state product and explicit handlers for the closed history-event families. Preserve total event order and strict dispatch.                                                         |
-| `authored-project/roomState.ts`                      | Declaration defaults, room-replacement reconciliation, and persisted decoding occupy one module despite having different callers and failure contracts.                                                                            | Separate default construction, replacement reconciliation, and codec validation behind one authored room-state public boundary.                                                                    |
-| `authored-project/topology.ts`                       | Physical-exit resolution, topology queries, takeover facts, structural validation, and persisted decoding are coupled.                                                                                                             | Separate the authored topology read model from validation and decoding while retaining one public topology contract.                                                                               |
-| `commands/occurrence-state.ts`                       | Room replacement, incoming/local rewards, Fields, Ship wheels, Ephyra side rooms, and Shop changes share lookup and mutation machinery despite having distinct leaf contracts.                                                     | Extract only command families with narrow transition dependencies while retaining one exhaustive occurrence-command dispatcher.                                                                    |
-| `commands/unified-topology.ts`                       | The public exhaustive dispatch is valuable, and its start, batch, takeover, Hub, selection, repair, and removal operations share several atomic topology invariants.                                                               | Extract topology read/transaction primitives first, then split command families only if the dependency audit proves the aggregate is no longer the more cohesive owner.                            |
-| `catalog-schema` and `reward-kernel` types           | `CatalogCollection` is declared by catalog schema, while catalog schema imports reward-kernel types and reward-kernel imports the collection type back. The cycle is type-only today but expresses the wrong conceptual ownership. | Move normalized collection primitives to a neutral engine module below both consumers and add a focused import-direction guard.                                                                    |
+| Area                                                     | Current mixed responsibilities                                                                                                                                                                                                                                                         | Required correction                                                                                                                                                                                                     |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/planner/src/projections/structured-workspace/`     | Source lookup, authored/evaluated overlay, room and Hub assembly, candidate interaction construction, rail presentation, focus registration, and several closure audits share one projector and broad mutable context.                                                                 | Turn workspace projection into an explicit sequence of immutable products with a thin public service facade.                                                                                                            |
+| `MutableProjectionContext` and `projectOccurrence`       | Catalog/evaluation facts, findings, route/biome identity, focus destinations, room controls, and reward controls are accumulated together. A projection function returns a node while also registering products for later phases.                                                      | Pass stage-specific inputs. Each stage returns every product later stages consume. Local builders may mutate privately, but cross-stage products cannot be discovered through prior side effects.                       |
+| Workspace interaction binding                            | The former catalog builder combined binding mechanics with the projector, obscuring its input boundary and encouraging more semantic traversal there.                                                                                                                                  | Bind every public interaction map from explicit requirements plus catalog/project/evaluation and injected services; verify the transformation in focused tests rather than production self-audits.                      |
+| `BiomeWorkspace.tsx`                                     | `roomOwnsAddress`, `nodeOwnsAddress`, `nodeForAddress`, and `fallbackSubject` reconstruct semantic containment and default inspection despite the projection already publishing focus information.                                                                                     | Project exact explicit and default inspector destinations. React resolves keys and renders; it does not rediscover semantic ownership.                                                                                  |
+| `simulation/candidates/index.ts`                         | Public query/result contract, evaluation recovery, progressive repair, every candidate family, and session dispatch share one module. Reward and lifecycle evaluators also discover callable support through reward-simulation sidecars.                                               | Move complete candidate families behind one exact session and thin dispatcher. Make every required producer artifact explicit before extracting its consumer; do not preserve or wrap semantic sidecars.                |
+| `simulation/rewards/biome.ts` and `rewards/frontiers.ts` | Snapshot indexing, mutable evaluation state, event-family handling, candidate capability capture, support recording, and final projection are interleaved in one chronological loop. Required candidate capabilities are registered in `WeakMap`s keyed by the apparent reward result. | Return reward simulation and its in-memory candidate artifacts explicitly at their producer boundary. Then reorganize chronological internals only through complete event-family slices while keeping one visible loop. |
+| `simulation/history/fold.ts`                             | Ledger initialization, active lifecycle bookkeeping, event validation, per-event mutation, view capture, and final freezing are interleaved around one chronological exhaustive fold.                                                                                                  | Audit change neighborhoods before splitting. Retain the cohesive fold if handlers would merely distribute one ordered invariant; otherwise move complete event families with their state and tests.                     |
+| `authored-project/roomState.ts`                          | Declaration defaults, room-replacement reconciliation, and persisted decoding occupy one module despite having different callers and failure contracts.                                                                                                                                | Separate default construction, replacement reconciliation, and codec validation behind one authored room-state public boundary.                                                                                         |
+| `authored-project/topology.ts`                           | Physical-exit resolution, topology queries, takeover facts, structural validation, and persisted decoding are coupled.                                                                                                                                                                 | Separate narrow pure query ownership from validation and decoding while retaining one public topology contract. Do not introduce a comprehensive cached topology mirror without demonstrated consumers.                 |
+| `commands/occurrence-state.ts`                           | Room replacement, incoming/local rewards, Fields, Ship wheels, Ephyra side rooms, and Shop changes share lookup and mutation machinery despite having distinct leaf contracts.                                                                                                         | Extract only command families with narrow transition dependencies while retaining one exhaustive occurrence-command dispatcher.                                                                                         |
+| `commands/unified-topology.ts`                           | The public exhaustive dispatch is valuable, and its start, batch, takeover, Hub, selection, repair, and removal operations share several atomic topology invariants.                                                                                                                   | Reuse narrow topology queries first, then split command families only if the dependency audit proves the aggregate is no longer the more cohesive owner.                                                                |
+| `catalog-schema` and `reward-kernel` types               | `CatalogCollection` is declared by catalog schema, while catalog schema imports reward-kernel types and reward-kernel imports the collection type back. The cycle is type-only today but expresses the wrong conceptual ownership.                                                     | Move normalized collection primitives to a neutral engine module below both consumers and add a focused import-direction guard.                                                                                         |
 
 ### Areas Not Selected for Mechanical Splitting
 
@@ -187,7 +189,7 @@ normalized catalog + authored values
   -> codec validates persisted representation independently
 
 normalized catalog + authored topology
-  -> declared physical-exit and ownership index
+  -> narrow declared-exit, selection, takeover, or ownership query
   -> topology validation
   -> semantic command-family transition
   -> replacement authored topology
@@ -200,33 +202,36 @@ their failure or ownership contracts differ.
 ### Simulation
 
 ```text
-HistoryFoldState + HistoryEvent
-  -> explicit event-family handler
-  -> next HistoryFoldState
+history seed + ordered HistoryEvent stream
+  -> one visible exhaustive fold
+       -> cohesive in-loop transitions, or
+       -> event-family handler when the family owns a narrow state transition
   -> frozen history product
 
-RewardEvaluationSources + RewardEvaluationState + HistoryEvent
-  -> explicit event-family handler
-  -> next RewardEvaluationState
-  -> frozen reward simulation product
+reward snapshot + history
+  -> immutable reward source indexes
+  -> one visible chronological reward fold
+  -> explicit reward evaluation product
+       - immutable reward simulation
+       - in-memory candidate artifacts
 
-catalog + exact authored project/evaluation pair
+catalog + exact authored project/evaluation assembly product
+  - public evaluation
+  - explicit in-memory candidate artifacts
   -> exact session-bound candidate sources
-  -> family-specific preparation
-       - structural candidate context
-       - reward candidate context
-       - lifecycle candidate context
-       - Hub candidate context
   -> matching candidate-family evaluator
   -> candidate result
 ```
 
 The history and reward coordinators retain their chronological loops. Event
-handlers do not subscribe themselves to a registry. Candidate dispatch retains
-an exhaustive query-kind decision. A prepared candidate session remains bound
-to the exact authored project identity and its exact evaluation, but it does
-not package every possible route, biome, progressive, history, reward, and Hub
-fact into one universal context.
+handlers do not subscribe themselves to a registry. The reward simulation may
+remain a data-only public result while an owning evaluation product returns its
+candidate artifacts as a sibling; downstream correctness cannot depend on a
+`WeakMap` or registration side effect. Candidate dispatch retains an exhaustive
+query-kind decision. A prepared candidate session remains bound to the exact
+authored project identity and its exact evaluation, but it does not package
+every possible route, biome, progressive, history, reward, and Hub fact into
+one universal context.
 
 ### Structured Workspace
 
@@ -360,14 +365,13 @@ Moving code is complete only when the new module:
 ## Delivery Strategy
 
 This plan authorizes one small dependency correction and four gated campaigns.
-The original sixteen-to-twenty-commit estimate is superseded by the completed
-review history and the current code audit. Foundation plus twenty-nine Campaign
-A review commits are delivered through A16, including the bounded production
-contraction and test-ownership units. With the later campaign ranges below, the
-truthful program estimate remains forty to forty-three implementation commits,
-not an exact quota. A boundary may merge
-when it would otherwise rewrite the same transition twice, or split when a
-vertical semantic family is too large for truthful review.
+Foundation plus twenty-nine Campaign A review commits are delivered through
+A16, including the bounded production contraction and test-ownership units.
+Campaign A demonstrated that a pre-audit commit estimate can conceal product
+growth, duplicate verification, and later contraction work. Campaigns B through
+D therefore receive no fixed implementation-commit range in advance. Each
+opening audit records the current flow and proposes complete review units before
+production movement begins.
 
 Every intermediate revision remains type-correct, tested, and free of
 temporary compatibility machinery. The sequence below is the default:
@@ -378,30 +382,33 @@ neutral dependency anchor
   -> completed production contraction checkpoint: A12 and A13
   -> completed test-ownership correction: A14, A15.1, A15.2, and A16
   -> checkpoint: Commit 5b.3 and 5b.4 may resume
-  -> Campaign B: candidate evaluation
+  -> Campaign B: candidate capability flow
   -> Campaign C: authored core
-  -> Campaign D: history and reward evaluation
+  -> Campaign D: ordered engine state flows
   -> checkpoint: Commit 5c may begin
 ```
 
 Campaigns B and C may exchange order if their opening audits show a narrower
-dependency path. Neither depends on unfinished UI work. Campaign D stays before
-Commit 5c because exact Shop purchase order changes the chronological reward
-path it owns.
+dependency path. Neither depends on unfinished UI work. Campaign B includes the
+minimal reward-producer correction required to make candidate capabilities
+explicit; Campaign D later reorganizes the chronological reward implementation
+behind that established product. Campaign D stays before Commit 5c because
+exact Shop purchase order changes the chronological reward path it owns.
 
 ### Relative Work and Risk
 
-| Work                            | Review commits | Relative size                     | Primary risk                                                                                 |
-| ------------------------------- | -------------: | --------------------------------- | -------------------------------------------------------------------------------------------- |
-| Neutral dependency anchor       |    1 delivered | Small                             | Unnecessarily changing external import surfaces                                              |
-| Campaign A: workspace and React |   29 delivered | Extra-large                       | Losing authored reachability, focus, lazy interaction behavior, or independent test evidence |
-| Campaign B: candidates          |            3–4 | Extra-large                       | Replacing one large file with a universal context or altered coverage recovery               |
-| Campaign C: authored core       |            4–5 | Extra-large                       | Scattering atomic topology and room-state invariants                                         |
-| Campaign D: history and rewards |            3–4 | Extra-large/highest semantic risk | Moving an event to the wrong chronological state                                             |
+| Work                            | Review units                  | Relative size                     | Primary risk                                                                                               |
+| ------------------------------- | ----------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Neutral dependency anchor       | 1 delivered                   | Small                             | Unnecessarily changing external import surfaces                                                            |
+| Campaign A: workspace and React | 29 delivered                  | Extra-large                       | Losing authored reachability, focus, lazy interaction behavior, or independent test evidence               |
+| Campaign B: candidate flow      | Set by opening audit          | Extra-large                       | Wrapping hidden reward sidecars, creating a universal context, or altering progressive recovery            |
+| Campaign C: authored core       | Set by opening audit          | Extra-large                       | Creating a second topology model or scattering atomic authored invariants                                  |
+| Campaign D: ordered engine flow | Set separately per state flow | Extra-large/highest semantic risk | Moving an event to the wrong chronological state or decomposing a cohesive fold without maintenance payoff |
 
-The range describes review units, not elapsed time. Campaign gates exist so the
-project can reassess value, coupling, and remaining risk before authorizing the
-next broad movement.
+Campaign gates exist so the project can reassess value, coupling, and remaining
+risk before authorizing broad movement. A campaign may close with a documented
+decision to retain a cohesive aggregate; a no-op judgment does not require an
+empty implementation commit.
 
 ### Foundation: Neutral Dependency Anchor
 
@@ -1437,126 +1444,233 @@ following:
 After this gate, Commit 5b.3 and Commit 5b.4 may resume. Campaign B remains
 separate and does not begin as part of the test correction.
 
-### Campaign B: Candidate Evaluation
+### Campaign B: Candidate Capability Flow
 
-#### B1: Public contract and exact session-bound sources
+Campaign B follows the candidate product across its producer and consumer
+boundary. It is not limited to making `simulation/candidates/index.ts` shorter.
+In particular, reward and lifecycle candidate capabilities currently exist only
+in `WeakMap` sidecars registered by reward simulation. Extracting candidate
+consumers around those accessors would preserve the wrong boundary.
 
-- split query/result types from implementation;
-- keep identity assertions, batching, observation, and lazy evaluation at the
-  exact project/evaluation session boundary;
-- expose narrow source accessors for family preparation without assembling a
-  universal candidate context.
+#### Campaign B entry audit (no implementation commit)
 
-#### B2: Structural candidate families
+Before moving production code:
 
-- introduce family-specific contexts for start-room, ordinary/takeover target,
-  Hub slot/visit, side-generation, and side-entry-order evaluation;
-- extract those evaluators without reacquiring project evaluation;
+- inventory every query/result union member, evaluator, progressive-repair
+  branch, unavailable-context owner, and session-dispatch branch;
+- trace the exact authored, project-evaluation, generation, reward, history,
+  Hub, and lifecycle source consumed by each family;
+- inventory all candidate-related sidecars and registration calls, distinguishing
+  semantic artifacts from caches or identity attestations;
+- assign one primary test owner to each family matrix and identify the
+  representative session, application-boundary, and product-loop witnesses to
+  retain;
+- record current candidate source/test movement and the existing lazy query,
+  batching, deterministic-order, render-purity, and evaluation work counts;
+- propose complete vertical review units and their expected deletions. Do not
+  begin with a contract-only, source-interface-only, or context-only commit.
+
+#### B1: Exact session and first structural families
+
+- establish the deliberate query/result surface and exact
+  project/evaluation-bound session while moving at least one complete structural
+  family with it;
+- keep identity attestation, lazy evaluation, batching, observation, and exact
+  result order at the session boundary;
+- move start-room, ordinary/takeover target, and progressive recovery in the
+  smallest complete family slices shown by the audit;
+- pass exact inputs to evaluators rather than a universal candidate context or
+  source service that can answer unrelated queries;
+- move each primary policy matrix and delete its old umbrella assertions in the
+  same slice.
+
+#### B2: Hub and local structural families
+
+- move Hub slot/visit, side-room generation, and side-room entry-order families
+  behind the same session contract;
 - retain progressive repair and typed unavailable-context evidence at their
-  actual semantic owners.
+  actual semantic owners;
+- preserve authored side-room order, Hub visit chronology, and exact owner
+  addresses without reacquiring project evaluation or reconstructing Hub state
+  in the dispatcher.
 
-#### B3: Room-local candidate families and dispatcher
+#### B3: Explicit reward candidate artifacts
 
-- introduce separate reward, lifecycle, and Shop preparation products;
-- extract reward-store, incoming/local reward, Fields, Ship wheel, and Shop
-  evaluators;
-- leave a thin exhaustive session dispatcher over the public query union;
-- preserve query batching, lazy work observation, and exact result ordering.
+- replace reward-producer and room-lifecycle `WeakMap` registration with an
+  explicit internal evaluation assembly product pairing the data-only public
+  evaluation with named in-memory candidate artifacts;
+- keep the durable reward simulation data-only if that remains its healthier
+  public contract; do not add callable closures to persisted or serializable
+  state merely to remove a sidecar;
+- thread the explicit artifact only through the owning project-evaluation
+  assembly and candidate-session construction path. Preserve the deeply equal
+  public `ProjectEvaluation` result unless the entry audit identifies and
+  separately authorizes a real public-contract change;
+- move one complete reward or lifecycle candidate consumer with the new product
+  and delete both superseded registration/access paths in the same review unit;
+- prove that simulation output, candidate results, lazy work counts, and
+  candidate capability lifetime remain identical.
 
-If B2 or B3 is too broad, split it by complete semantic family. Do not create a
-standalone "prepared context" commit or pass unrelated Hub, history, reward, and
-lifecycle facts to every evaluator.
+#### B4: Room-local families and thin dispatcher
 
-Campaign B closes when engine candidate fixtures, application candidate
-architecture tests, deterministic results, performance work counts, typecheck,
-and the complete engine gate pass.
+- move reward-store, incoming/local reward, Fields, Ship wheel, and Shop
+  evaluators in complete semantic-family slices;
+- pass only the authored/evaluated facts or explicit candidate artifact each
+  family consumes; do not introduce reward, lifecycle, Shop, or Hub dependency
+  bags;
+- leave one visible exhaustive session dispatcher over the public query union;
+- retain in session tests only identity, batching, ordering, lazy observation,
+  and representative family handoff. Focused family suites own their complete
+  policy matrices.
+
+Campaign B closes when no candidate semantic fact or capability is discoverable
+only through registration or a result-keyed sidecar; every query kind has one
+explicit evaluator and one primary test owner; no universal candidate context,
+parallel dispatcher, or compatibility barrel remains; engine candidate,
+application boundary, deterministic result, render-purity, and work-count
+fixtures pass; and the complete engine and repository gates pass.
 
 ### Campaign C: Authored Core
+
+#### Campaign C entry audit (no implementation commit)
+
+Before moving production code:
+
+- inventory the callers and failure contracts of default construction,
+  replacement reconciliation, room-state decoding, topology queries, topology
+  decoding/validation, occurrence commands, and unified topology commands;
+- trace every repeated authored traversal and distinguish reusable semantic
+  authority from coincidentally similar loops with different failure contracts;
+- assign primary test ownership across defaults, codec, topology, topology
+  impact, occurrence-command, and topology-command matrices, including the
+  current broad command suite;
+- record the public authored import surface, import directions, source/test
+  movement, and the old modules or test matrices each proposed slice deletes;
+- propose review units only for demonstrated change neighborhoods. The audit
+  does not presume that either command aggregate must split.
 
 #### C1: Authored room-state responsibilities
 
 - separate declaration-owned defaults, room-replacement reconciliation, and
-  persisted decoding;
-- keep one deliberate authored room-state public surface;
+  persisted decoding as complete products with their existing callers and
+  primary tests;
+- keep one deliberate authored room-state public surface without routing engine
+  internals through a convenience barrel;
 - preserve complete declaration defaults, dormant values, invalid-state
-  retention, and current decode failures.
+  retention, and current decode failures;
+- delete the superseded implementation and duplicate umbrella assertions in
+  each slice rather than copying them into the new neighborhood.
 
-#### C2: Authored topology read model
+#### C2: Narrow authored topology queries
 
-- extract declared physical exits, selection queries, fixed-width takeover
-  facts, and other non-mutating topology resolution;
-- define immutable facts consumed by commands, validation, simulation, and
-  workspace projection;
-- prevent consumers from repeating physical-exit or ownership traversal.
+- move declared physical exits, selection queries, fixed-width takeover facts,
+  and other demonstrated non-mutating authorities behind narrow pure functions;
+- return only the fact requested by a consumer. Do not create a comprehensive
+  cached topology read model, second ownership graph, or universal topology
+  context;
+- share a query only where commands, validation, simulation, or projection
+  currently need the same semantic answer. Similar traversal with a different
+  failure or incompleteness contract remains separate;
+- preserve the deliberate authored-project public surface and add import
+  enforcement only where the intended direction is mechanically observable.
 
 #### C3: Authored topology codec and validation
 
-- separate raw decoding from semantic topology validation;
-- make the dependency on the topology read model explicit;
-- preserve current schema rejection and incomplete-state behavior.
+- separate raw decoding from semantic topology validation when their current
+  failure contracts and test matrices support that boundary;
+- consume narrow topology queries explicitly where they own the shared answer;
+  do not materialize a topology mirror solely to reduce traversal;
+- preserve current schema rejection, incomplete-state representation, stable
+  occurrence identity, and authored-order behavior.
 
-#### C4: Occurrence-state command families
+#### Conditional C4: Occurrence-state command families
 
 - retain one exhaustive occurrence-command dispatcher;
-- extract only room replacement, incoming/local reward, Fields, Ship wheel,
-  Ephyra side-room, and Shop transitions whose dependencies are genuinely
-  narrow;
-- share explicit occurrence lookup and reconciliation products rather than a
-  broad command context.
+- extract room replacement, incoming/local reward, Fields, Ship wheel, Ephyra
+  side-room, or Shop transitions only when the entry audit identifies a narrow
+  transition contract and primary test neighborhood;
+- move lookup/reconciliation logic with the first family that owns it or keep it
+  private to the dispatcher; do not create a broad command context or lookup
+  product in advance;
+- split the broad command tests along the same authority boundary and delete
+  displaced umbrella matrices in the same commit.
 
 #### Conditional C5: Topology command families
 
 After C2 and C3, audit the remaining topology-command aggregate:
 
 - if start, batch, takeover, Hub, selection, repair, and removal transitions
-  now have narrow dependencies, move those cohesive families behind the
-  exhaustive dispatcher;
+  have genuinely narrow dependencies, move complete cohesive families with
+  their tests behind the exhaustive dispatcher;
 - if they still share atomic downstream-removal, replacement, handoff, or
   validation invariants, retain the aggregate and record why it remains the
   healthier responsibility boundary;
-- do not create an empty commit when the correct decision is to retain it.
+- do not create an empty implementation commit when retention is the correct
+  result.
 
-Campaign C closes when authored-project, codec, command, topology-impact,
-catalog where affected, import-direction, and deterministic project fixtures
-pass.
+Campaign C closes when defaults, reconciliation, codecs, queries, and any moved
+command families each have one authority and primary test owner; no second
+topology model, broad command context, parallel path, or duplicated test matrix
+remains; authored-project, codec, command, topology-impact, affected catalog,
+import-direction, and deterministic project fixtures pass; and the complete
+repository gate passes.
 
 ### Campaign D: Ordered Engine State Flows
 
-History and reward movement is vertical. No commit merely wraps the current
-loose variables in a state object for a later commit to rewrite again. A state
-product contains mutable state-machine facts only; catalog services and source
-lookups remain separate inputs rather than becoming another dependency bag.
+Campaign D is conditional decomposition behind already explicit public
+products. History and reward movement is vertical. No commit merely wraps loose
+variables in a state object for a later commit to rewrite. A state product
+contains mutable state-machine facts only; catalog services and source lookups
+remain separate inputs rather than becoming another dependency bag.
 
-#### D1: History fold state and event transitions
+#### Campaign D entry audit (no implementation commit)
 
-- introduce typed fold state for ledgers, room views, active lifecycle facts,
-  target generation, biome completion, and transition state;
-- move each closed event family with the state transition that handles it;
-- keep one chronological loop and exhaustive event dispatch visible;
-- isolate initialization and final freezing;
-- preserve deeply identical ordered history products under current fixtures.
+- inventory every history and reward event kind, mutable field, initialization
+  rule, lookup, final projection, and primary test matrix;
+- map each field to the event families that read and write it and identify
+  invariants that require several families to remain together;
+- trace the reward candidate-artifact product established by Campaign B and
+  verify that D can reorganize internals without changing that consumer
+  boundary;
+- record deeply equal history/reward outputs, possibility-branch ordering,
+  lifecycle checkpoints, candidate results, and current work counts;
+- propose complete vertical slices and expected deletions independently for the
+  reward and history flows. File length alone is not evidence to split either
+  coordinator.
 
-#### D2: Reward sources, state, and event transitions
+#### D1: Reward sources, state, and event transitions
 
-- build immutable snapshot/history lookup products before chronological reward
-  processing;
+- build immutable snapshot/history lookup products only where several event
+  families consume the same answer;
 - move target creation/offer processing and lifecycle
-  acquisition/wheel/Shop/completion processing as vertical semantic families;
-- introduce only the reward state required by the event families moved in the
-  same commit;
+  acquisition/wheel/Shop/completion processing as complete vertical families;
+- introduce only the reward state fields required by event families moved in
+  the same commit, and remove their loose predecessor fields and branches;
 - keep one visible chronological loop and exhaustive event dispatch;
-- preserve possibility branching, physical offer order, candidate context
-  capture, and exact lifecycle checkpoints.
+- preserve possibility branching, physical offer order, explicit candidate
+  artifact capture, exact lifecycle checkpoints, and the public reward result.
 
-The opening Campaign D audit decides whether reward work is one vertical commit
-or two complete event-family commits. A state-only extraction is not an
-allowed boundary.
+The opening audit decides whether reward work is one vertical review unit, two
+or more complete event-family units, or retention of a cohesive section. A
+state-only or lookup-only preparation commit is not an allowed boundary.
+
+#### Conditional D2: History fold state and transitions
+
+- first determine whether a representative event-family change currently
+  crosses unrelated initialization, transition, and freezing policy;
+- if it does, move the smallest complete event family with exactly the mutable
+  fold state it owns, its validation, and its primary tests;
+- keep one chronological loop and visible exhaustive dispatch, isolate
+  initialization/final freezing only when that reduces a demonstrated change
+  neighborhood, and preserve deeply identical ordered history products;
+- if the present fold is the more cohesive owner of its ordered invariant,
+  retain it and record that decision without an implementation commit.
 
 #### D3: Program closure
 
 - consolidate, rather than first introduce, import-DAG, composition-root,
-  React-authority, exact project/evaluation, and semantic-reachability
-  evidence;
+  exact project/evaluation, explicit candidate-artifact, ordered-state, and
+  primary-test-ownership evidence;
 - run the complete repository gate and compare performance work counts;
 - absorb stable boundary clarifications into owning design documents;
 - record campaign evidence in `IMPLEMENTATION_PROGRESS.md`;
@@ -1576,6 +1690,11 @@ Every commit must answer these questions in its diff or commit message:
    compatibility bridge?
 8. What is the production-line movement, and does any net growth represent a
    new enforceable boundary rather than duplicated assembly or validation?
+9. Which test owns the complete policy matrix now, and which superseded
+   umbrella assertions were removed?
+10. Can every required semantic fact or capability be reached from the explicit
+    returned product rather than registration, initialization order, or a
+    sidecar?
 
 Movement commits must not contain opportunistic behavior fixes. If the move
 reveals a real defect, preserve it with a focused fixture, complete the
@@ -1592,6 +1711,7 @@ again at closure:
 | Import graph                | Automated import rule or architecture test   | No cycle exists; imports follow the declared package and subsystem direction.                                                                                                                                                  |
 | Dependency injection        | Composition fixture plus review              | Application services are constructed at the composition root; stage dependencies are narrow and explicit.                                                                                                                      |
 | Hidden registration         | Returned-product closure fixture plus review | A later stage does not depend on maps or registries populated only as a side effect of producing an earlier result.                                                                                                            |
+| Semantic sidecars           | Product signatures plus consumer trace       | A cache or identity attestation may verify an explicit product, but no result-keyed sidecar is the sole carrier of semantic facts or callable capabilities.                                                                    |
 | Semantic ownership          | Independent test closure fixtures            | Authored owners, findings, controls, and inspector destinations resolve by stable semantic address without executing a second production model.                                                                                |
 | Duplicate reconstruction    | Boundary rule plus review                    | React and downstream projections do not repeat physical-exit, containment, eligibility, lifecycle, or reward rules.                                                                                                            |
 | Mutation boundary           | Review                                       | Mutable builders are local to one stage and freeze a complete returned product before crossing the boundary.                                                                                                                   |
@@ -1619,6 +1739,8 @@ The final human-readable acceptance statement is:
   pair and preserves identity-based caching.
 - Rendering a workspace performs no candidate evaluation.
 - Candidate evaluation remains lazy and bound to the prepared pair.
+- Candidate evaluators receive explicit producer artifacts; reward and
+  lifecycle capabilities are not discovered through result-keyed registration.
 - Authored topology is projected before optional evaluated overlays.
 - The workspace source index remains an addressed lookup product and does not
   become topology, eligibility, or lifecycle authority.
@@ -1739,8 +1861,8 @@ duplication visible; they are not quotas and test-count reduction is allowed.
 - no authored schema or codec-version change;
 - no new biome, room, lifecycle, reward, or candidate rule;
 - no Shop purchase-order implementation;
-- no Commit 5b.3 or 5b.4 presentation work before the A16 final Campaign A
-  gate;
+- no coupling of resumed Commit 5b.3 or 5b.4 presentation work to Campaigns B
+  through D;
 - no UI redesign, graph library, state-management replacement, or component
   framework;
 - no generic event bus, plugin registry, dependency-injection container, or
@@ -1750,8 +1872,8 @@ duplication visible; they are not quotas and test-count reduction is allowed.
 - no performance optimization without measured evidence;
 - no assertion-count, test-file-count, or test-line-count quota;
 - no production API or component redesign solely to make test movement easier;
-- no broad public API cleanup outside the structured-workspace entry; A13 may
-  remove only unconsumed or audit-only exports from that boundary;
+- no broad public API cleanup outside the product boundary moved by the active
+  vertical slice;
 - no compatibility layer left behind after a moved responsibility.
 
 ## Closure and Retirement
