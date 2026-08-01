@@ -223,21 +223,18 @@ function FieldsWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'fields' }>;
 }) {
+  const activeCages = room.cages.filter((cage) => cage.active);
+  if (activeCages.length === 0) return null;
+
   return (
     <div aria-label="Fields cage rewards" className="local-reward-editor">
-      {room.cages.map((cage) => (
-        <section
-          aria-label={cage.label}
-          className="local-reward-slot"
-          data-active={cage.active}
-          key={cage.key}
-        >
+      {activeCages.map((cage) => (
+        <section aria-label={cage.label} className="local-reward-slot" key={cage.key}>
           <div className="local-reward-heading">
             <div className="owner-markers">
               <h4>{cage.label}</h4>
               <SemanticOwnerMarker address={cage.control.marker.address} />
             </div>
-            <span className="neutral-status">{cage.active ? 'Active' : 'Dormant'}</span>
           </div>
           <RewardControlEditor
             control={cage.control}
@@ -264,6 +261,7 @@ function ShipWorkbench({
     interactions.shipEncounterCounts,
     workspaceInteractionKey(occurrence),
   );
+  const activeWheels = room.wheels.filter((wheel) => wheel.active);
 
   return (
     <div aria-label="Ship combat encounters" className="ship-combat-editor">
@@ -282,7 +280,7 @@ function ShipWorkbench({
         }
       />
       <div className="reward-wheel-list">
-        {room.wheels.map((wheel) => {
+        {activeWheels.map((wheel) => {
           const store = requireWorkspaceInteraction(
             interactions.rewardWheelStores,
             workspaceInteractionKey(wheel.address),
@@ -297,18 +295,12 @@ function ShipWorkbench({
           );
           const idPrefix = `room-${occurrence.occurrenceId}-${wheel.key}`;
           return (
-            <section
-              aria-label={wheel.label}
-              className="reward-wheel"
-              data-active={wheel.active}
-              key={wheel.key}
-            >
+            <section aria-label={wheel.label} className="reward-wheel" key={wheel.key}>
               <div className="local-reward-heading">
                 <div className="owner-markers">
                   <h4>{wheel.label}</h4>
                   <SemanticOwnerMarker address={wheel.marker.address} />
                 </div>
-                <span className="neutral-status">{wheel.active ? 'Active' : 'Dormant'}</span>
               </div>
               <div className="reward-wheel-settings">
                 <CandidateSelect

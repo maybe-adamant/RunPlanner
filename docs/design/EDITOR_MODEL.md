@@ -401,20 +401,25 @@ selection replaces the unresolved state. A special-only batch keeps the
 selector visible because a Max result still affects later rolls, while
 explanatory copy makes clear that the current targets do not consume the Fields
 multi-cage count. Each combat occurrence renders its three room-owned cage
-values; the batch projection marks only the derived active prefix as
-participating and leaves a dormant third value retained. A non-combat target
-renders no cage editor, and deferred
+values in its complete projection product; the batch projection marks only the
+derived active prefix as participating. The editor renders that active prefix
+only, while retaining a dormant third authored value so it reappears unchanged
+when a later Fields result activates it. A non-combat target renders no cage
+editor, and deferred
 `FieldsOptionalRewards` render no controls.
 
 An O ShipCombat occurrence renders one encounter-count selector and both
-declaration-bounded reward wheels. The selected two- or three-phase value marks
-`wheel2` dormant or active without deleting its retained state. Each wheel
-owns its Run/Meta store, active offer count, ordered maximum-capacity offers,
-and one picked active offer. Dormant wheels and offers remain editable and
-visibly dormant; the outgoing decision exposes no duplicate store selector
-because its `sourceOfferPoint` policy derives from the last active wheel. The
-editor dispatches only ship and reward-wheel semantic commands and does not
-encode phase timing.
+declaration-bounded reward wheels in its complete projection product. The
+selected two- or three-phase value marks `wheel2` dormant or active without
+deleting its retained state. The editor renders active wheels only, so a
+dormant wheel reappears unchanged when the third encounter phase is restored.
+Each rendered wheel owns its Run/Meta store, active offer count, ordered
+maximum-capacity offers, and one picked active offer. Inactive offers inside a
+rendered wheel remain visibly dormant; only a whole dormant wheel is hidden.
+The outgoing decision exposes no duplicate store selector because its
+`sourceOfferPoint` policy derives from the last active wheel. The editor
+dispatches only ship and reward-wheel semantic commands and does not encode
+phase timing.
 
 Display labels remain separate from persisted game identifiers:
 

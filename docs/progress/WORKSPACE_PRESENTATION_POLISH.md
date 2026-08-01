@@ -5,11 +5,10 @@
 This is the feature implementation plan for Phase 7 Commit 5b. Commit 5a is
 complete in `44a2b8d`; it removed the remaining browser confirmation prompts
 without introducing a destructive-action abstraction. Commit 5b.1 is complete
-in `e059b7d`, and Commit 5b.2 is complete in `4d46957`. Commit 5b.3 remains the
-feature frontier, followed by Commit 5b.4 closure. The re-anchor program is
-closed, so Commit 5b may resume and remains limited to the four presentation
-changes below. Exact authored Shop purchase order is the separate cross-layer
-Commit 5c defined by
+in `e059b7d`, and Commit 5b.2 is complete in `4d46957`. Commit 5b.3 is
+complete; Commit 5b.4 is the remaining closure. The re-anchor program is
+closed, so Commit 5b remains limited to the four presentation changes below.
+Exact authored Shop purchase order is the separate cross-layer Commit 5c defined by
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md).
 
 The decision-highlight rail follow-up documented below was delivered out of
@@ -34,8 +33,8 @@ Selecting that stop presents all offered rooms, rewards, and picked controls
 together. N retains the four-stage rail and subordinate authored visit
 navigation delivered here. Current authority lives in
 [`STRUCTURED_EDITOR_WORKSPACE.md`](../design/STRUCTURED_EDITOR_WORKSPACE.md);
-5b.1 and 5b.2 below remain historical delivery evidence, while 5b.3 and 5b.4
-remain the planned active slices.
+5b.1 through 5b.3 below remain historical delivery evidence, while 5b.4
+remains the planned active slice.
 
 Focused projection, editor, and product-loop coverage proves decision rail
 navigation, co-located room and reward editing, exact finding focus,
@@ -299,13 +298,16 @@ outside this slice.
 React consumes the projected `active` facts. It does not derive cage count from
 the Fields outcome or wheel presence from `encounterCount`.
 
+No derived active-count caption is added: the rendered cage and wheel cards are
+the current room configuration. Inactive offers inside an active wheel retain
+their existing visibly dormant presentation.
+
 ### Deliverables
 
 - Filter H cage and O wheel rendering by their existing projection-owned
   `active` flags.
 - Remove dormant-card labels and spacing for the hidden sections.
-- Retain compact active-count context where needed to explain the current room
-  configuration.
+- Do not add a derived active-count caption for either room type.
 - Add toggle regressions proving dormant values reappear unchanged.
 
 ### Acceptance
@@ -446,7 +448,7 @@ Gate:
 Review validation ran the root typecheck, `npm run test:planner` (22 files, 185
 tests), lint, format check, and `git diff --check`.
 
-### Commit 5b.3: Hide Dormant Fields and Ship Sections
+### Commit 5b.3: Hide Dormant Fields and Ship Sections — complete
 
 Suggested subject:
 
@@ -454,13 +456,19 @@ Suggested subject:
 feat(editor): hide dormant room reward sections
 ```
 
-Owns Change 3 only.
+Owns Change 3 only. `FieldsWorkbench` and `ShipWorkbench` now consume the
+projection-owned `active` facts to omit inactive cage and wheel cards without
+changing the complete projected product. The zero-active Fields guard removes
+the otherwise empty section. H and O toggle regressions prove retained leaves,
+stores, offer counts, picked values, and reward values reappear unchanged;
+inactive offers inside a rendered wheel remain in scope.
 
 Likely files:
 
 - `apps/planner/src/ui/editor/biome/OccurrenceWorkbench.tsx`;
 - focused H/O interaction fixtures;
 - `apps/planner/src/ui/styles.css`.
+- `docs/design/EDITOR_MODEL.md`.
 
 The projection types and tests should remain unchanged because their complete
 active/dormant products are deliberate.

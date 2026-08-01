@@ -7,7 +7,10 @@ import {
   createExitDecisionAddress,
   createLocalChildAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createProjectDocument,
+  createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
   createTargetAddress,
@@ -23,14 +26,21 @@ import type {
   WorkspaceOccurrenceWorkbenchNode,
 } from '@planner/projections/structured-workspace';
 import {
+  authoredProjectCommandDispatched,
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenHBiome,
+  goldenHStartId,
+} from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
+  oBiome,
   oOccurrenceIds,
   pBiome,
   pOccurrenceIds,
@@ -89,6 +99,39 @@ function emptyFProject(): ProjectDocument {
     name: 'Occurrence workbench empty F',
     configuredBiomeCounts: { Underworld: 1 },
   });
+}
+
+function occurrenceState(
+  project: ProjectDocument,
+  routeKey: string,
+  biomeKey: string,
+  occurrenceId: string,
+) {
+  const state = project.routes
+    .find((route) => route.routeKey === routeKey)
+    ?.biomes.find((biome) => biome.biomeKey === biomeKey)
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)?.state;
+  if (state === undefined) throw new Error(`${occurrenceId} state is missing`);
+  return state;
+}
+
+function hCages(project: ProjectDocument) {
+  const state = occurrenceState(
+    project,
+    'Underworld',
+    'H',
+    createOccurrenceId('golden-h-combat02'),
+  );
+  if (state.kind !== 'fieldsCombat') throw new Error('H Fields state is missing');
+  return state.cages;
+}
+
+function shipWheel2(project: ProjectDocument) {
+  const state = occurrenceState(project, 'Surface', 'O', oOccurrenceIds.combat07);
+  if (state.kind !== 'shipCombat') throw new Error('O Ship state is missing');
+  const wheel = state.wheels.wheel2;
+  if (wheel === undefined) throw new Error('O Ship wheel 2 is missing');
+  return wheel;
 }
 
 function dormantShopProject(): { readonly project: ProjectDocument; readonly shopId: string } {
@@ -261,29 +304,198 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('renders Fields, Ship, and materialized Shop descriptors directly', () => {
-    const underworld = createGoldenFGHIProject();
+  it('renders only active Fields cages and restores the retained third cage', () => {
+    const decision = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenHStartId,
+    });
+    const max = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision,
+      cageOutcome: 'max',
+    });
+    const min = applyProjectCommand(max, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision,
+      cageOutcome: 'min',
+    });
+    const restored = applyProjectCommand(min, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision,
+      cageOutcome: 'max',
+    });
+
+    expect(hCages(restored).cage3).toEqual(hCages(max).cage3);
+
     renderStaticOccurrenceWorkbench(
-      underworld,
+      min,
       'Underworld',
       'H',
       occurrenceById(createOccurrenceId('golden-h-combat02')),
     );
-    expect(screen.getByLabelText('Fields cage rewards')).toBeTruthy();
-    expect(screen.getByText('Cage 1')).toBeTruthy();
+    const minCages = screen.getByLabelText('Fields cage rewards');
+    expect(within(minCages).getByLabelText('Cage 1')).toBeTruthy();
+    expect(within(minCages).getByLabelText('Cage 2')).toBeTruthy();
+    expect(within(minCages).queryByLabelText('Cage 3')).toBeNull();
+    expect(minCages.querySelectorAll('.local-reward-slot')).toHaveLength(2);
     cleanup();
 
-    const surface = createRepresentativeNOPQProject();
     renderStaticOccurrenceWorkbench(
-      surface,
+      restored,
+      'Underworld',
+      'H',
+      occurrenceById(createOccurrenceId('golden-h-combat02')),
+    );
+    const restoredCages = screen.getByLabelText('Fields cage rewards');
+    expect(within(restoredCages).getByLabelText('Cage 1')).toBeTruthy();
+    expect(within(restoredCages).getByLabelText('Cage 2')).toBeTruthy();
+    const restoredCage = within(restoredCages).getByLabelText('Cage 3');
+    expect(restoredCages.querySelectorAll('.local-reward-slot')).toHaveLength(3);
+    expect(within(restoredCage).getByRole('button', { name: 'Reward' }).textContent).toContain(
+      'Hestia',
+    );
+  });
+
+  it('omits the Fields section when its retained cages are all inactive', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    renderOccurrenceWorkbench(createGoldenFGHIProject(), 'Underworld', 'H', (biome) => {
+      const node = occurrenceById(occurrenceId)(biome);
+      if (node?.room.roomLocal.kind !== 'fields') return node;
+      return {
+        ...node,
+        room: {
+          ...node.room,
+          roomLocal: {
+            ...node.room.roomLocal,
+            cages: node.room.roomLocal.cages.map((cage) => ({ ...cage, active: false })),
+          },
+        },
+      };
+    });
+
+    expect(screen.queryByLabelText('Fields cage rewards')).toBeNull();
+    expect(screen.queryByLabelText('Cage 1')).toBeNull();
+  });
+
+  it('hides dormant Ship wheels and restores their authored configuration', async () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel,
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelPicked',
+      wheel,
+      pickedOfferIndex: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      value: { rewardType: 'GiftDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer2'),
+      value: { rewardType: 'MetaCurrencyDrop' },
+    });
+
+    const view = renderOccurrenceWorkbench(
+      project,
       'Surface',
       'O',
-      occurrenceById(oOccurrenceIds.combat04),
+      occurrenceById(oOccurrenceIds.combat07),
     );
-    expect(screen.getByLabelText('Ship combat encounters')).toBeTruthy();
-    expect(screen.getByText('Reward wheel 1')).toBeTruthy();
-    cleanup();
+    const initialWheel = screen.getByLabelText('Reward wheel 2');
+    const ship = screen.getByLabelText('Ship combat encounters');
+    expect(
+      Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
+    ).toEqual(['Reward wheel 1', 'Reward wheel 2']);
+    expect(
+      within(within(screen.getByLabelText('Reward wheel 1')).getByLabelText('Offer 2')).getByText(
+        'Dormant',
+      ),
+    ).toBeTruthy();
+    expect(
+      (within(initialWheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement)
+        .value,
+    ).toBe('MetaProgress');
+    expect(
+      (within(initialWheel).getByRole('combobox', { name: 'Offers' }) as HTMLSelectElement).value,
+    ).toBe('2');
+    expect(
+      (within(initialWheel).getByRole('combobox', { name: 'Picked offer' }) as HTMLSelectElement)
+        .value,
+    ).toBe('2');
 
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceShipEncounterCount',
+          occurrence,
+          encounterCount: 2,
+        }),
+      ),
+    );
+    await waitFor(() => expect(screen.queryByLabelText('Reward wheel 2')).toBeNull());
+    expect(
+      Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
+    ).toEqual(['Reward wheel 1']);
+
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceShipEncounterCount',
+          occurrence,
+          encounterCount: 3,
+        }),
+      ),
+    );
+    await waitFor(() => expect(screen.getByLabelText('Reward wheel 2')).toBeTruthy());
+    expect(
+      Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
+    ).toEqual(['Reward wheel 1', 'Reward wheel 2']);
+
+    const restoredWheel = screen.getByLabelText('Reward wheel 2');
+    expect(
+      (within(restoredWheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement)
+        .value,
+    ).toBe('MetaProgress');
+    expect(
+      (within(restoredWheel).getByRole('combobox', { name: 'Offers' }) as HTMLSelectElement).value,
+    ).toBe('2');
+    expect(
+      (within(restoredWheel).getByRole('combobox', { name: 'Picked offer' }) as HTMLSelectElement)
+        .value,
+    ).toBe('2');
+    expect(
+      within(within(restoredWheel).getByLabelText('Offer 1')).getByRole('button', {
+        name: 'Reward',
+      }).textContent,
+    ).toContain('Nectar');
+    expect(
+      within(within(restoredWheel).getByLabelText('Offer 2')).getByRole('button', {
+        name: 'Reward',
+      }).textContent,
+    ).toContain('Bones');
+    expect(shipWheel2(view.application.store.getState().projectWorkspace.history.present)).toEqual(
+      shipWheel2(project),
+    );
+  });
+
+  it('renders materialized Shop descriptors directly', () => {
+    const surface = createRepresentativeNOPQProject();
     renderStaticOccurrenceWorkbench(
       surface,
       'Surface',
