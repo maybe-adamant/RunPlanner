@@ -1,14 +1,14 @@
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
-import type { ContextualPickerModel } from '../../../projections/contextualPicker';
+import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomPickerControl,
-} from '../../../projections/structured-workspace';
-import { ContextualPicker } from '../../controls/ContextualPicker';
-import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
+} from '@planner/projections/structured-workspace';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 
 interface RoomSelectorProps {
   readonly disabled?: boolean;

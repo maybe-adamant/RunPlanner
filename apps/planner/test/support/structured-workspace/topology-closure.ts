@@ -6,7 +6,7 @@ import type {
   WorkspaceMixedBatchNode,
   WorkspaceOrdinaryBatchNode,
   WorkspaceTakeoverBatchNode,
-} from '../../../src/projections/structured-workspace';
+} from '@planner/projections/structured-workspace';
 import { assertObservedOwner } from './closure-primitives';
 import type { ExpectedWorkspaceTopologyManifest } from './expected-topology';
 import type { ObservedWorkspaceProducts } from './observed-workspace';

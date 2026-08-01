@@ -3,7 +3,7 @@ import type {
   WorkspaceInteractionCatalog,
   WorkspaceNode,
   WorkspaceRoomSummary,
-} from '../../../src/projections/structured-workspace';
+} from '@planner/projections/structured-workspace';
 import {
   assertExactObservedInteraction,
   type ObservedOwnedInteraction,

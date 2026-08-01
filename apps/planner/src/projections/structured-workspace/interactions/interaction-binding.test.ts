@@ -26,10 +26,10 @@ import {
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures';
-import { createCandidateSessionFactory } from '../../candidateProjection';
-import { createContextualOptionResolver } from '../../contextualOptions';
-import { createContextualPickerProjection } from '../../contextualPicker';
-import { createRewardPickerProjection } from '../../rewardPicker';
+import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
+import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
+import { createContextualPickerProjection } from '@planner/projections/contextualPicker';
+import { createRewardPickerProjection } from '@planner/projections/rewardPicker';
 import { assembleWorkspaceBiomeSemantics } from '../assembly/biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 import { bindWorkspaceInteractions } from './interaction-binding';

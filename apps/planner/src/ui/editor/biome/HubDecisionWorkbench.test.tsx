@@ -14,7 +14,7 @@ import {
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { PlannerApplication } from '../../../composition/createApplication';
+import type { PlannerApplication } from '@planner/composition/createApplication';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,

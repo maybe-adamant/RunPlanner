@@ -6,7 +6,7 @@ import type {
   ContextualPickerItem,
   ContextualPickerModel,
   ContextualPickerSection,
-} from '../../projections/contextualPicker';
+} from '@planner/projections/contextualPicker';
 
 interface ContextualPickerProps<T> {
   readonly cancelLabel?: string;

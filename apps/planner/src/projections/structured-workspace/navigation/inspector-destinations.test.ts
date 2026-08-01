@@ -27,7 +27,7 @@ import {
 import {
   createStructuredWorkspaceTestServices,
   requireWorkspaceBiome,
-} from '../../../../test/fixtures/structuredWorkspace';
+} from '@planner-test/fixtures/structuredWorkspace';
 import type {
   StructuredWorkspaceProjection,
   WorkspaceBiome,

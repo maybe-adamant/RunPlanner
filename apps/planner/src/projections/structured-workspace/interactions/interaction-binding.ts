@@ -12,18 +12,18 @@ import type { ProjectEvaluation } from '@run-planner/engine/simulation';
 import type {
   CandidateOptionProjection,
   CandidateProjectionSession,
-} from '../../candidateProjection';
-import type { ContextualPickerModel } from '../../contextualPicker';
-import { explainCandidateEvaluation } from '../../contextualOptions';
+} from '@planner/projections/candidateProjection';
+import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import { explainCandidateEvaluation } from '@planner/projections/contextualOptions';
 import {
   roomCategoryForKind,
   roomSelectorCategories,
   selectRoomsForTargetCategory,
-} from '../../roomSelectorProjection';
+} from '@planner/projections/roomSelectorProjection';
 import {
   createTakeoverBatchCommand,
   type TakeoverBatchCommand,
-} from '../../../workspace/takeoverBatchInteraction';
+} from '@planner/workspace/takeoverBatchInteraction';
 
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import { StructuredWorkspaceProjectionContractError, workspaceInteractionKey } from '../contract';

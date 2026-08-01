@@ -12,15 +12,15 @@ import {
   type WorkspaceHubVisit,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
-} from '../../../projections/structured-workspace';
-import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
-import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
-import { useAppDispatch } from '../../../state/store';
-import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
-import { candidateSupport } from '../../../projections/candidateProjection';
-import { FindingCount, SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
-import { candidateMayBeAuthored } from '../../feedback/candidatePresentation';
-import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
+} from '@planner/projections/structured-workspace';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { useAppDispatch } from '@planner/state/store';
+import { allocateOccurrenceId } from '@planner/workspace/occurrenceIds';
+import { candidateSupport } from '@planner/projections/candidateProjection';
+import { FindingCount, SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { CandidateSelect } from './CandidateSelect';
 import { RewardControlEditor } from './OccurrenceWorkbench';
 

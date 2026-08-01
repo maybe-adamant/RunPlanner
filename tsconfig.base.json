@@ -5,6 +5,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
+      "@planner/*": ["./apps/planner/src/*"],
       "@planner-test/*": ["./apps/planner/test/*"],
       "@run-planner/test-fixtures": ["./test/fixtures/authored-project/index.ts"]
     },

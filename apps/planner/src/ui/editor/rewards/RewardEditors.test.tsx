@@ -20,19 +20,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type {
   CandidateSessionFactoryOptions,
   RewardCandidateOwner,
-} from '../../../projections/candidateProjection';
-import type { WorkspaceInteractionCatalog } from '../../../projections/structured-workspace';
-import type { StructuredWorkspaceProjectionService } from '../../../projections/structured-workspace';
-import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
+} from '@planner/projections/candidateProjection';
+import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
+import type { StructuredWorkspaceProjectionService } from '@planner/projections/structured-workspace';
+import { createStructuredWorkspaceTestServices } from '@planner-test/fixtures/structuredWorkspace';
 import { createRepresentativeNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures';
 import { createGoldenFGHIProject, targetOccurrenceId } from '@run-planner/test-fixtures';
 import {
   authoredProjectCommandDispatched,
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
-} from '../../../state/projectWorkspaceSlice';
-import { profileLoadSucceeded } from '../../../state/profileSessionSlice';
-import { createPlannerStore, useAppSelector, type PlannerStore } from '../../../state/store';
+} from '@planner/state/projectWorkspaceSlice';
+import { profileLoadSucceeded } from '@planner/state/profileSessionSlice';
+import { createPlannerStore, useAppSelector, type PlannerStore } from '@planner/state/store';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 
 const biome = createBiomeAddress('Underworld', 'F');

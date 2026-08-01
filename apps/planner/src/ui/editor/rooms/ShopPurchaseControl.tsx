@@ -1,13 +1,13 @@
 import type { ShopPurchaseAddress } from '@run-planner/engine/authored-project';
-import { candidateSupport } from '../../../projections/candidateProjection';
+import { candidateSupport } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
-} from '../../../projections/structured-workspace';
-import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
-import { candidateMayBeAuthored } from '../../feedback/candidatePresentation';
-import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
+} from '@planner/projections/structured-workspace';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 
 interface ShopPurchaseControlProps {
   readonly address: ShopPurchaseAddress;

@@ -7,8 +7,8 @@ import { createBiomeAddress, createOccurrenceAddress } from '@run-planner/engine
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import { useState } from 'react';
 
-import { presentCandidateLabel } from '../../../projections/candidateProjection';
-import type { ContextualPickerModel } from '../../../projections/contextualPicker';
+import { presentCandidateLabel } from '@planner/projections/candidateProjection';
+import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -29,15 +29,18 @@ import {
   type WorkspaceFixedWidthOneTakeoverInteraction,
   type WorkspaceTakeoverRepairInteraction,
   type WorkspaceTopologyRemovalInteraction,
-} from '../../../projections/structured-workspace';
-import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
-import { authoredProjectCommandDispatched } from '../../../state/projectWorkspaceSlice';
-import { useAppDispatch } from '../../../state/store';
-import { allocateOccurrenceId } from '../../../workspace/occurrenceIds';
-import { ContextualPicker } from '../../controls/ContextualPicker';
-import { useWorkspaceInteraction } from '../../controls/useWorkspaceInteraction';
-import { candidateMayBeAuthored, candidateSelectState } from '../../feedback/candidatePresentation';
-import { SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
+} from '@planner/projections/structured-workspace';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { useAppDispatch } from '@planner/state/store';
+import { allocateOccurrenceId } from '@planner/workspace/occurrenceIds';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  candidateMayBeAuthored,
+  candidateSelectState,
+} from '@planner/ui/feedback/candidatePresentation';
+import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { CandidateSelect } from './CandidateSelect';
 import { RoomOfferEditor } from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';

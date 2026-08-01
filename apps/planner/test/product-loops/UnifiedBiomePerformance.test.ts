@@ -12,12 +12,12 @@ import { describe, expect, it } from 'vitest';
 import {
   createApplication,
   type ApplicationEvaluationEvent,
-} from '../../src/composition/createApplication';
+} from '@planner/composition/createApplication';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
   authoredProjectUndoRequested,
-} from '../../src/state/projectWorkspaceSlice';
+} from '@planner/state/projectWorkspaceSlice';
 import {
   createGoldenFGHIProject,
   goldenGBiome,

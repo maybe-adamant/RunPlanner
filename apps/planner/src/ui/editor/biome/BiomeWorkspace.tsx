@@ -14,10 +14,10 @@ import {
   type WorkspaceNode,
   type WorkspaceRailEntry,
   type WorkspaceAuthoringFrontier,
-} from '../../../projections/structured-workspace';
-import { semanticOwnerFocused } from '../../../state/editorSessionSlice';
-import { useAppDispatch, useAppSelector } from '../../../state/store';
-import { FindingCount, SemanticOwnerMarker } from '../../feedback/EvaluationFeedback';
+} from '@planner/projections/structured-workspace';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { FindingCount, SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import {
   AuthoringFrontier,
   BatchWorkbench,

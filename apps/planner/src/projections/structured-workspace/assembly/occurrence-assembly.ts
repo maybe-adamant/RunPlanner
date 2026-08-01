@@ -18,8 +18,11 @@ import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schem
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CanonicalAuthoredRoom } from '@run-planner/engine/simulation';
 
-import type { CountedRewardCandidateOwner, RewardCandidateOwner } from '../../candidateProjection';
-import { summarizeRewardOffer } from '../../rewardPicker';
+import type {
+  CountedRewardCandidateOwner,
+  RewardCandidateOwner,
+} from '@planner/projections/candidateProjection';
+import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 
 import {
   requireWorkspaceRoom as requireRoom,

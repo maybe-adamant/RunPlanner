@@ -5,15 +5,15 @@ import type {
   ProjectOperation,
   ProjectOperationResult,
   ProjectOperations,
-} from '../../workspace/projectOperations';
-import { authoredProjectCommandDispatched } from '../../state/projectWorkspaceSlice';
+} from '@planner/workspace/projectOperations';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import {
   selectPresentProject,
   selectProfileSession,
   selectProfileStatus,
   useAppDispatch,
   useAppSelector,
-} from '../../state/store';
+} from '@planner/state/store';
 import { SemanticOwnerMarker } from '../feedback/EvaluationFeedback';
 
 const projectAddress = createProjectAddress();

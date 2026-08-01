@@ -18,17 +18,17 @@ import {
   createApplication,
   type ApplicationEvaluationEvent,
   type PlannerApplication,
-} from '../../src/composition/createApplication';
+} from '@planner/composition/createApplication';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
-} from '../../src/persistence/autosaveRecovery';
-import type { ProfileFileAdapter } from '../../src/persistence/profileFile';
+} from '@planner/persistence/autosaveRecovery';
+import type { ProfileFileAdapter } from '@planner/persistence/profileFile';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
-} from '../../src/state/projectWorkspaceSlice';
-import { selectProfileStatus } from '../../src/state/store';
+} from '@planner/state/projectWorkspaceSlice';
+import { selectProfileStatus } from '@planner/state/store';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,

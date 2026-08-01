@@ -54,10 +54,19 @@ const workspacePrivateFamilyImports = {
   inspector: ['**/inspector-defaults', '**/inspector-destinations'],
   markers: ['**/marker-builder', '**/marker-ownership'],
 };
-const testSupportImportPatterns = [
+const testSupportSyntaxRestrictions = [
   {
-    group: ['@planner-test', '@planner-test/**', '@run-planner/test-fixtures'],
-    message: 'Production source must not import test fixtures or test support.',
+    selector:
+      ":matches(ImportDeclaration, ExportNamedDeclaration, ExportAllDeclaration, ImportExpression):matches([source.value=/^@planner-test/], [source.value='@run-planner/test-fixtures'])",
+    message: 'Production source must not consume test fixtures or test support.',
+  },
+];
+const plannerDeepRelativeImportSyntaxRestrictions = [
+  {
+    selector:
+      ':matches(ImportDeclaration, ExportNamedDeclaration, ExportAllDeclaration, ImportExpression)[source.value=/^\\.\\.\\/\\.\\.\\//]',
+    message:
+      'Planner modules may climb one local level; cross-root imports use @planner or @planner-test.',
   },
 ];
 
@@ -95,14 +104,20 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/*/src/**/*.{ts,tsx}', 'packages/*/src/**/*.{ts,tsx}'],
+    files: ['packages/*/src/**/*.{ts,tsx}'],
     ignores: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': [
+      'no-restricted-syntax': ['error', ...testSupportSyntaxRestrictions],
+    },
+  },
+  {
+    files: ['apps/planner/src/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
         'error',
-        {
-          patterns: testSupportImportPatterns,
-        },
+        ...testSupportSyntaxRestrictions,
+        ...plannerDeepRelativeImportSyntaxRestrictions,
       ],
     },
   },
@@ -116,6 +131,16 @@ export default tseslint.config(
           patterns: structuredWorkspaceBoundaryImportPatterns,
         },
       ],
+    },
+  },
+  {
+    files: [
+      'apps/planner/src/**/*.test.{ts,tsx}',
+      'apps/planner/src/**/*.spec.{ts,tsx}',
+      'apps/planner/test/**/*.{ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-syntax': ['error', ...plannerDeepRelativeImportSyntaxRestrictions],
     },
   },
   {

@@ -6,27 +6,30 @@ import {
   presentBiomeFeedbackContext,
   projectFeedbackHierarchy,
   type RouteFeedbackPresentation,
-} from '../../projections/evaluationProjection';
-import { authoredProjectCommandDispatched } from '../../state/projectWorkspaceSlice';
-import type { EditorNavigation, RouteEditorNavigation } from '../../projections/editorNavigation';
+} from '@planner/projections/evaluationProjection';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import type {
+  EditorNavigation,
+  RouteEditorNavigation,
+} from '@planner/projections/editorNavigation';
 import {
   routePanelSelected,
   routeSelected,
   settingsSelected,
-} from '../../state/editorSessionSlice';
+} from '@planner/state/editorSessionSlice';
 import {
   selectPresentProject,
   selectProjectEvaluation,
   useAppDispatch,
   useAppSelector,
-} from '../../state/store';
-import type { ProjectOperations } from '../../workspace/projectOperations';
+} from '@planner/state/store';
+import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type {
   StructuredWorkspaceProjection,
   StructuredWorkspaceProjectionService,
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
-} from '../../projections/structured-workspace';
+} from '@planner/projections/structured-workspace';
 import {
   FindingCount,
   NavigationStatusMarker,

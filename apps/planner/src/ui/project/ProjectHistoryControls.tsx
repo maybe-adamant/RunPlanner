@@ -3,13 +3,13 @@ import { useEffect } from 'react';
 import {
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
-} from '../../state/projectWorkspaceSlice';
+} from '@planner/state/projectWorkspaceSlice';
 import {
   selectCanRedoProject,
   selectCanUndoProject,
   useAppDispatch,
   useAppSelector,
-} from '../../state/store';
+} from '@planner/state/store';
 import { projectHistoryShortcut } from './projectHistoryShortcuts';
 
 export function ProjectHistoryControls() {
