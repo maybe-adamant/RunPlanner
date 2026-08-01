@@ -34,6 +34,70 @@ The UI may dispatch semantic commands and render derived projections. It must
 not implement room eligibility, reward bags, lifecycle counters, or topology
 repair.
 
+## Code Placement and Module Boundaries
+
+- Place code with the semantic authority that owns its policy or product, not
+  with whichever caller first needs it. Prefer the nearest existing feature
+  neighborhood over a new generic `common`, `shared`, `helpers`, or `services`
+  area.
+- Before creating a module boundary, identify its owner, explicit inputs,
+  returned product, consumers, primary tests, and the old code it displaces.
+- Use `index.ts` only for a deliberate supported surface. Do not add barrels
+  merely to shorten imports or hide dependency direction.
+- Use assembly or composition modules for wiring one level of owned products.
+  They must not become semantic policy owners or ambient dependency registries.
+- Cross-package imports use declared package exports. Planner imports follow
+  the aliases and immediate-neighborhood relative-import rules in
+  `docs/design/ARCHITECTURE.md`; aliases identify ownership roots, not public
+  APIs or dependency injection.
+- Put test-only fixtures, harnesses, builders, and observers under test support,
+  never production `src/`. Production code must not import test support.
+
+When a placement or import rule is mechanically observable, enforce it with
+TypeScript, ESLint, or an architecture test in addition to documenting it.
+
+## Construction and Data Flow
+
+- Each stage receives explicit inputs and returns every product later stages
+  consume. Do not communicate semantic facts through hidden registration,
+  module initialization order, or a sidecar map keyed by an apparent result.
+- A cache or identity attestation may memoize or verify an already-complete
+  explicit product. It must not be the sole carrier of semantic facts or
+  callable capabilities required by a consumer.
+- Construct application-wide collaborators at the composition root and inject
+  narrow capabilities. Do not introduce a dependency-injection container,
+  service locator, mutable service table, or catch-all context object.
+- Use parameter objects, interfaces, and factories only for real construction
+  or product boundaries. Do not create them solely to make a long call shorter
+  or to prepare for a later refactor.
+- A mutable builder is acceptable inside one stage. Freeze and return its
+  complete product before crossing the stage boundary.
+- Keep closed semantic dispatch explicit and exhaustive. An orchestrator may
+  remain long when chronological order or one atomic invariant is its coherent
+  responsibility.
+
+## Refactoring Discipline
+
+- Before broad reorganization, inventory current responsibilities,
+  producer/consumer paths, hidden state, test ownership, expected deletions,
+  and relevant work-count baselines.
+- Refactor in complete vertical slices: move one authority with its consumers
+  and primary tests, then remove the superseded path in the same commit. Do not
+  land context-only, interface-only, state-wrapper-only, compatibility, or
+  forwarding commits for later work to repair.
+- Keep behavior-preserving movement separate from product behavior changes. If
+  movement exposes a defect, characterize it and fix it in a focused follow-up.
+- Do not add production shadow models, exhaustive self-audits, or manifests to
+  make a refactor testable. Production validation protects real contact and
+  invariant boundaries; independent closure and mutation auditing belongs in
+  tests.
+- Give each policy and edge-case matrix one primary test owner. Facade,
+  integration, and product-loop suites retain representative boundary witnesses
+  rather than duplicate the complete matrix.
+- Treat line count, file count, test count, and directory size as diagnostic
+  evidence only. The acceptance target is a smaller, explicit change
+  neighborhood with no parallel path or unexplained production growth.
+
 ## Modeling Rules
 
 - Use game-domain language in catalog, authored state, history, and findings.
@@ -108,7 +172,9 @@ Keep tests near their authority:
 - interaction tests at the UI adapter boundary;
 - end-to-end tests only for cross-layer behavior.
 
-Do not test React, Redux Toolkit, or third-party component internals.
+Test helpers may construct inputs and observe outputs, but must not reproduce
+production eligibility, topology, lifecycle, reward, focus, or candidate
+policy. Do not test React, Redux Toolkit, or third-party component internals.
 
 ## Documentation
 
