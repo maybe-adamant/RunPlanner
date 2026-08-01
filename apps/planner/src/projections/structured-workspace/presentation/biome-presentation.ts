@@ -30,16 +30,6 @@ function railMarkerForNode(node: WorkspaceNode): WorkspaceMarker {
   return node.kind === 'occurrenceWorkbench' ? (node.railMarker ?? node.marker) : node.marker;
 }
 
-function pickedTargetSummary(
-  node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode,
-): string | undefined {
-  const picked = node.targets.find((target) => target.selected);
-  if (picked === undefined) return undefined;
-  return picked.room.rewardSummary === undefined
-    ? picked.room.label
-    : `${picked.room.label} · ${picked.room.rewardSummary}`;
-}
-
 function decisionRailMarker(
   node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode,
 ): WorkspaceMarker {
@@ -58,43 +48,19 @@ function nodeRailPresentation(
   node: WorkspaceNode,
   decisionIndex: number | undefined,
   isEntry = false,
-): { readonly label: string; readonly summary?: string } {
+): { readonly label: string } {
   switch (node.kind) {
     case 'occurrenceWorkbench': {
       const entryLabel = isEntry && node.room.kind === 'Opening' ? 'Opening' : node.room.label;
-      const rewardSummary =
-        entryLabel === node.room.label
-          ? node.room.rewardSummary
-          : node.room.rewardSummary === undefined
-            ? node.room.label
-            : `${node.room.label} · ${node.room.rewardSummary}`;
-      return {
-        label: entryLabel,
-        ...(rewardSummary === undefined ? {} : { summary: rewardSummary }),
-      };
+      return { label: entryLabel };
     }
     case 'linkedExit':
-      return {
-        label: node.target.room.label,
-        ...(node.target.room.rewardSummary === undefined
-          ? {}
-          : { summary: node.target.room.rewardSummary }),
-      };
+      return { label: node.target.room.label };
     case 'ordinaryBatch':
-    case 'mixedBatch': {
-      const summary = pickedTargetSummary(node);
-      return {
-        label: `Decision ${decisionIndex ?? 1}`,
-        ...(summary === undefined ? {} : { summary }),
-      };
-    }
-    case 'takeoverBatch': {
-      const summary = pickedTargetSummary(node);
-      return {
-        label: 'Preboss',
-        ...(summary === undefined ? {} : { summary }),
-      };
-    }
+    case 'mixedBatch':
+      return { label: `Decision ${decisionIndex ?? 1}` };
+    case 'takeoverBatch':
+      return { label: 'Preboss' };
     case 'completion':
       return { label: node.label };
     case 'hubDecision':
@@ -247,7 +213,6 @@ export function presentWorkspaceBiome(
           ? decisionRailMarker(node)
           : railMarkerForNode(node),
       node,
-      ...(presentation.summary === undefined ? {} : { summary: presentation.summary }),
     });
   };
   const rail = Object.freeze([

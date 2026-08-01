@@ -322,7 +322,7 @@ describe('DecisionWorkbench', () => {
     if (selectedNode?.kind !== 'ordinaryBatch') throw new Error('P Decision 1 is missing');
     const selectedTarget = selectedNode.targets.find((target) => target.room.label === roomLabel);
     if (selectedTarget === undefined) throw new Error('P selected target is missing');
-    const rewardBefore = selectedTarget.room.rewardSummary;
+    const rewardBefore = selectedTarget.room.rewardControls.map((control) => control.offer);
 
     const selectedOffer = screen.getByRole('article', { name: `${roomLabel} room offer` });
     await view.user.click(within(selectedOffer).getByRole('button', { name: 'Reward' }));
@@ -348,7 +348,7 @@ describe('DecisionWorkbench', () => {
         node?.kind === 'ordinaryBatch'
           ? node.targets.find((candidate) => candidate.room.label === roomLabel)
           : undefined;
-      expect(target?.room.rewardSummary).not.toBe(rewardBefore);
+      expect(target?.room.rewardControls.map((control) => control.offer)).not.toEqual(rewardBefore);
     });
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBeforeReward + 1,
@@ -364,7 +364,7 @@ describe('DecisionWorkbench', () => {
         node?.kind === 'ordinaryBatch'
           ? node.targets.find((candidate) => candidate.room.label === roomLabel)
           : undefined;
-      expect(target?.room.rewardSummary).toBe(rewardBefore);
+      expect(target?.room.rewardControls.map((control) => control.offer)).toEqual(rewardBefore);
     });
   });
 

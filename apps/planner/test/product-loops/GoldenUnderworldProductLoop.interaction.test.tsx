@@ -117,7 +117,7 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(application.store.getState().projectWorkspace.history.present).toBe(beforeShrink);
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
-    expect(screen.getByText(/Opening 02/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Opening/ })).toBeTruthy();
   });
 
   it('uses one projected semantic repair command for retained ordinary and takeover exits', async () => {

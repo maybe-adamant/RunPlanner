@@ -163,9 +163,6 @@ function RailNode({
       <FocusButton marker={marker} selected={selected}>
         <span className="biome-rail-kicker">{nodeKicker(node)}</span>
         <strong>{entry.label}</strong>
-        {entry.summary === undefined ? null : (
-          <span className="biome-rail-summary">{entry.summary}</span>
-        )}
         <span className="biome-rail-status">
           {assessmentLabel(marker)}
           <FindingCount count={marker.findingCount} label="findings" />
