@@ -742,7 +742,7 @@ describe('structured workspace decision assembly', () => {
     });
   });
 
-  it('projects exact repair scope for unavailable authored exits', () => {
+  it('projects an exact repair intent for unavailable authored exits', () => {
     const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       gameName: 'F_Combat01',
       kind: 'ReplaceOccurrenceRoom',
@@ -771,16 +771,13 @@ describe('structured workspace decision assembly', () => {
       ['exit1', 'available'],
       ['exit2', 'unavailable'],
     ]);
-    expect(assembly.batch.repairScope).toEqual({
+    expect(assembly.batch.repairIntent).toEqual({
       command: { kind: 'ReconcileBatchExitCapacity', decision: assembly.batch.owner },
-      commandKind: 'ReconcileBatchExitCapacity',
-      owner: assembly.batch.owner,
-      removedDecisionOwners: [],
-      removedOccurrenceIds: [goldenFOccurrenceId(2, 2)],
+      focus: { owner: assembly.batch.owner, timing: 'before' },
     });
   });
 
-  it('retains repair scopes for physically unavailable ordinary and takeover batches in blocked suffixes', () => {
+  it('retains repair controls for physically unavailable ordinary and takeover batches in blocked suffixes', () => {
     const fOwner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(1, 1),
@@ -810,11 +807,9 @@ describe('structured workspace decision assembly', () => {
     });
     if (f.kind !== 'batch') throw new Error('blocked F ordinary batch is missing');
     expect(f.batch).toMatchObject({
-      repairScope: {
+      repairIntent: {
         command: { kind: 'ReconcileBatchExitCapacity', decision: fOwner },
-        commandKind: 'ReconcileBatchExitCapacity',
-        owner: fOwner,
-        removedOccurrenceIds: [goldenFOccurrenceId(2, 2)],
+        focus: { owner: fOwner, timing: 'before' },
       },
       topologyState: 'retained',
     });
@@ -873,13 +868,9 @@ describe('structured workspace decision assembly', () => {
       .map((target) => target.room.occurrenceId);
     expect(unavailable).not.toHaveLength(0);
     expect(g.batch).toMatchObject({
-      repairScope: {
-        commandKind: 'ReconcileTakeoverBatch',
-        owner: g.batch.owner,
-        removedOccurrenceIds: unavailable,
-      },
       topologyState: 'retained',
     });
+    expect(g.batch.repairIntent).toBeUndefined();
   });
 
   it('keeps a reward-invalid physical peer as an authored target rather than a missing exit', () => {

@@ -8,7 +8,6 @@ import {
   createOccurrenceAddress,
   createTargetAddress,
   declaredPhysicalExits,
-  describeExitDecisionRemovalImpact,
   fixedWidthOneTakeoverForLayout,
   fixedWidthOneTakeoverTransitionForSource,
   type AuthoredBiomePlan,
@@ -180,9 +179,7 @@ export function expectedWorkspaceStructuralControls(
   for (const decision of decisions) {
     const owner = createExitDecisionAddress(biome, decision.source);
     const ownerKey = workspaceTestOwnerKey(owner);
-    if (describeExitDecisionRemovalImpact(topology, decision.source) !== undefined) {
-      add('topologyRemoval', ownerKey, owner);
-    }
+    add('topologyRemoval', ownerKey, owner);
     const takeover =
       decision.normal.kind === 'batch' && batchTakesOverNormalDoors(catalog, plan, decision);
     if (decision.normal.kind === 'batch') {

@@ -18,7 +18,6 @@ import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
-  nOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { assembleWorkspaceHub } from './hub-assembly';
 import {
@@ -138,15 +137,6 @@ describe('structured workspace Hub assembly', () => {
     const close = closeSlot?.selected ? closeSlot.close : undefined;
     expect(close).toMatchObject({
       command: { kind: 'CloseHubSlot' },
-      impact: {
-        removedDecisionOwners: [
-          createExitDecisionAddress(nBiome, {
-            kind: 'hubDecision',
-            decisionKey: kit.descriptor.hubKey,
-          }),
-        ],
-        removedOccurrenceIds: [nOccurrenceId('combat03'), nOccurrenceIds.preboss],
-      },
     });
 
     const incoming = createIncomingRewardAddress(nBiome, nOccurrenceId('combat02'));

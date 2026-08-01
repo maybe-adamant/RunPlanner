@@ -655,7 +655,7 @@ describe('DecisionWorkbench', () => {
     );
   });
 
-  it('reconciles retained, expanded, ordinary, and blocked-suffix repair scopes', async () => {
+  it('reconciles retained, expanded, ordinary, and blocked-suffix repair controls', async () => {
     const complete = createGoldenFGHIProject();
     const takeover = takeoverDecision(complete);
     let retainedProject = applyProjectCommand(complete, catalog, {

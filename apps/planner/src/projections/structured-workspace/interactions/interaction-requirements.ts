@@ -21,9 +21,6 @@ import type {
   WorkspaceEphyraSideRoomEntryOrderControl,
   WorkspaceExitFrontierCapabilities,
   WorkspaceInteractionChoice,
-  WorkspaceTopologyRemovalScope,
-  WorkspaceTopologyRemovalInteraction,
-  WorkspaceTakeoverReplacementImpact,
 } from '../contract';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 
@@ -112,7 +109,6 @@ export interface WorkspaceHubInteractionRequirement {
         readonly choices: readonly WorkspaceInteractionChoice<boolean>[];
         readonly close?: {
           readonly command: Extract<ProjectCommand, { readonly kind: 'CloseHubSlot' }>;
-          readonly impact: WorkspaceTopologyRemovalScope;
         };
         readonly openedOccurrenceId: OccurrenceId;
         readonly owner: HubSlotAddress;
@@ -143,7 +139,14 @@ export interface WorkspaceHubInteractionRequirement {
 export interface WorkspaceTopologyRemovalInteractionRequirement {
   readonly kind: 'topologyRemovals';
   readonly owner: BiomeAddress;
-  readonly removals: readonly WorkspaceTopologyRemovalInteraction[];
+  readonly removals: readonly {
+    readonly command: Extract<
+      ProjectCommand,
+      { readonly kind: 'ClearTopology' | 'RemoveExitDecision' }
+    >;
+    readonly key: string;
+    readonly owner: BiomeAddress | ExitDecisionAddress;
+  }[];
 }
 
 /**
@@ -177,7 +180,6 @@ export type WorkspaceTakeoverInteractionRequirement =
         readonly occurrenceId: OccurrenceId;
       }[];
       readonly gameNames: readonly [string, ...string[]];
-      readonly impact?: WorkspaceTakeoverReplacementImpact;
       readonly kind: 'takeoverBatch';
       readonly owner: ExitDecisionAddress;
       readonly presentation: 'candidate';

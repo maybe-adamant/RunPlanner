@@ -28,7 +28,7 @@ import { requireWorkspaceRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
   workspaceInteractionKey,
-  type WorkspaceBatchRepairScope,
+  type WorkspaceBatchRepairIntent,
   type WorkspaceFieldsBatchContext,
   type WorkspaceLinkedExitNode,
   type WorkspaceMissingPhysicalTarget,
@@ -54,10 +54,7 @@ import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
 import { workspaceRoomRetainsNormalPeers, workspaceRoomTakesOverNormalDoors } from './room-policy';
 import { workspaceRewardStoreLabel } from './reward-labels';
 import type { WorkspaceBiomeSource, WorkspaceEvaluatedBatchOverlay } from '../source-index';
-import {
-  workspaceDeclaredPhysicalExits,
-  workspaceRemovalScopeForRoots,
-} from './topology-presentation';
+import { workspaceDeclaredPhysicalExits } from './topology-presentation';
 
 export type WorkspaceAuthoredBatchDecision = ExitDecision & {
   readonly normal: Extract<ExitDecision['normal'], { readonly kind: 'batch' }>;
@@ -172,22 +169,16 @@ function redirectDecisionFocus(
   markerDestinations.redirect(workspaceDecisionOwnedMarkers(node), node.key);
 }
 
-function batchRepairScopeForRoots(
-  input: WorkspaceDecisionAssemblyBaseInput,
+function batchRepairIntentForUnavailableTargets(
   owner: ExitDecisionAddress,
   kind: 'ordinaryBatch' | 'takeoverBatch' | 'mixedBatch',
   roots: ReadonlySet<OccurrenceId>,
-): WorkspaceBatchRepairScope | undefined {
-  const removal = workspaceRemovalScopeForRoots(input.source.biome, input.source.plan, roots);
-  if (removal === undefined) return undefined;
-  return kind === 'takeoverBatch'
-    ? Object.freeze({ commandKind: 'ReconcileTakeoverBatch' as const, owner, ...removal })
-    : Object.freeze({
-        command: Object.freeze({ kind: 'ReconcileBatchExitCapacity' as const, decision: owner }),
-        commandKind: 'ReconcileBatchExitCapacity' as const,
-        owner,
-        ...removal,
-      });
+): WorkspaceBatchRepairIntent | undefined {
+  if (kind === 'takeoverBatch' || roots.size === 0) return undefined;
+  return Object.freeze({
+    command: Object.freeze({ kind: 'ReconcileBatchExitCapacity' as const, decision: owner }),
+    focus: Object.freeze({ owner, timing: 'before' as const }),
+  });
 }
 
 function missingTargetsForPhysicalExits(
@@ -612,8 +603,7 @@ function assembleBatchDecision(
     targets,
     missingTargets,
   );
-  const repairScope = batchRepairScopeForRoots(
-    input,
+  const repairIntent = batchRepairIntentForUnavailableTargets(
     owner,
     kind,
     new Set(
@@ -640,7 +630,7 @@ function assembleBatchDecision(
     marker: input.markerDestinations.marker(owner),
     missingTargets,
     owner,
-    ...(repairScope === undefined ? {} : { repairScope }),
+    ...(repairIntent === undefined ? {} : { repairIntent }),
     ...(hasEditableAuthoredRewardStore
       ? {
           rewardStore: input.markerDestinations.marker(

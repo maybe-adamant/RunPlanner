@@ -119,7 +119,7 @@ describe('structured workspace topology interaction assembly', () => {
     expect(repair.existingTargets.length).toBeGreaterThan(0);
   });
 
-  it('adapts N removal impacts and its completed-Hub handoff without traversing rendered nodes', () => {
+  it('adapts N removal commands and its completed-Hub handoff without traversing rendered nodes', () => {
     const representative = assemble(createRepresentativeNOPQProject(), 'Surface', 'N');
     const removals = representative.assembly.topologyRemovalInteractionRequirements[0]?.removals;
     const linked = createExitDecisionAddress(nBiome, {
@@ -127,11 +127,11 @@ describe('structured workspace topology interaction assembly', () => {
       occurrenceId: nOccurrenceIds.opening,
     });
 
-    expect(removals?.some((removal) => removal.action === 'clearTopology')).toBe(true);
+    expect(removals?.some((removal) => removal.command.kind === 'ClearTopology')).toBe(true);
     expect(
       removals?.some(
         (removal) =>
-          removal.action === 'removeExitDecision' &&
+          removal.command.kind === 'RemoveExitDecision' &&
           semanticAddressKey(removal.owner) === semanticAddressKey(linked),
       ),
     ).toBe(true);
@@ -155,36 +155,21 @@ describe('structured workspace topology interaction assembly', () => {
     });
   });
 
-  it('publishes exact engine-owned removal and takeover-replacement impacts', () => {
+  it('publishes complete removal and takeover-replacement command requirements', () => {
     const n = assemble(createRepresentativeNOPQProject(), 'Surface', 'N').assembly;
     const removals = n.topologyRemovalInteractionRequirements[0]?.removals;
     const linked = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.opening,
     });
-    const preboss = createExitDecisionAddress(nBiome, {
-      decisionKey: 'hub',
-      kind: 'hubDecision',
-    });
-    expect(removals?.find((removal) => removal.action === 'clearTopology')).toMatchObject({
+    expect(removals?.find((removal) => removal.command.kind === 'ClearTopology')).toMatchObject({
       command: { biome: nBiome, kind: 'ClearTopology' },
-      impact: {
-        removedDecisionOwners: expect.arrayContaining([preboss]),
-        removedHubDecisionKeys: ['hub'],
-      },
       owner: nBiome,
     });
     expect(
       removals?.find((removal) => semanticAddressKey(removal.owner) === semanticAddressKey(linked)),
     ).toMatchObject({
       command: { decision: linked, kind: 'RemoveExitDecision' },
-      impact: {
-        removedHubDecisionKeys: ['hub'],
-        removedOccurrenceIds: expect.arrayContaining([
-          nOccurrenceIds.preHub,
-          nOccurrenceIds.preboss,
-        ]),
-      },
     });
 
     const f = assemble(createGoldenFGHIProject(), 'Underworld', 'F').assembly;
@@ -197,27 +182,9 @@ describe('structured workspace topology interaction assembly', () => {
     );
     expect(replacement).toMatchObject({
       action: 'replace',
-      impact: {
-        command: 'ReplaceWithTakeoverBatch',
-        owner,
-        replacedOccurrenceIds: [goldenFOccurrenceId(1, 1)],
-      },
       owner,
       presentation: 'candidate',
     });
-    if (
-      replacement?.presentation !== 'candidate' ||
-      replacement.action !== 'replace' ||
-      replacement.impact === undefined
-    )
-      throw new Error('F takeover replacement impact is missing');
-    expect(replacement.impact.removedDecisionOwners).toContainEqual(
-      createExitDecisionAddress(goldenFBiome, {
-        kind: 'occurrence',
-        occurrenceId: goldenFOccurrenceId(1, 1),
-      }),
-    );
-    expect(replacement.impact.removedOccurrenceIds).toContain(goldenFOccurrenceId(2, 1));
   });
 
   it.each([

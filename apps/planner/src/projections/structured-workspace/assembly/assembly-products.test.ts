@@ -170,13 +170,7 @@ function topologyRemovalInteractionRequirement(): WorkspaceTopologyRemovalIntera
     owner,
     removals: Object.freeze([
       Object.freeze({
-        action: 'clearTopology' as const,
         command: Object.freeze({ kind: 'ClearTopology' as const, biome: owner }),
-        impact: Object.freeze({
-          removedDecisionOwners: Object.freeze([]),
-          removedHubDecisionKeys: Object.freeze([]),
-          removedOccurrenceIds: Object.freeze([]),
-        }),
         key: semanticAddressKey(owner),
         owner,
       }),

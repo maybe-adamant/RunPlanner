@@ -40,12 +40,7 @@ type InspectorSubject =
 
 function ownsBiome(address: SemanticAddress, biome: WorkspaceBiome): boolean {
   if (!('biomeKey' in address) || !('routeKey' in address)) return false;
-  const biomeAddress = biome.marker.address;
-  return (
-    biomeAddress.kind === 'biome' &&
-    address.routeKey === biomeAddress.routeKey &&
-    address.biomeKey === biomeAddress.biomeKey
-  );
+  return address.routeKey === biome.owner.routeKey && address.biomeKey === biome.owner.biomeKey;
 }
 
 /** React resolves projected keys only; containment and fallback policy stay in projection. */
@@ -424,7 +419,7 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
       ? undefined
       : requireWorkspaceInteraction(
           interactions.topologyRemovals,
-          workspaceInteractionKey(biome.marker.address),
+          workspaceInteractionKey(biome.owner),
         );
 
   return (

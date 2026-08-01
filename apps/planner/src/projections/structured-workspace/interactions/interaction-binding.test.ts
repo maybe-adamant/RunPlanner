@@ -182,6 +182,33 @@ describe('structured workspace interaction binding', () => {
     expect(append.removal).toBeUndefined();
   });
 
+  it('binds topology removals to exact commands with before-focus policy', () => {
+    const { interactions } = bind(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const clear = interactions.topologyRemovals.get(semanticAddressKey(nBiome));
+    const linkedOwner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    const remove = interactions.topologyRemovals.get(semanticAddressKey(linkedOwner));
+
+    expect(clear).toEqual({
+      intent: {
+        command: { biome: nBiome, kind: 'ClearTopology' },
+        focus: { owner: nBiome, timing: 'before' },
+      },
+      key: semanticAddressKey(nBiome),
+      owner: nBiome,
+    });
+    expect(remove).toEqual({
+      intent: {
+        command: { decision: linkedOwner, kind: 'RemoveExitDecision' },
+        focus: { owner: linkedOwner, timing: 'before' },
+      },
+      key: semanticAddressKey(linkedOwner),
+      owner: linkedOwner,
+    });
+  });
+
   it('binds Hub board creation and completed handoff with before-focus intents', () => {
     const opening = createOccurrenceId('bound-hub-board-opening');
     let boardProject = applyProjectCommand(
