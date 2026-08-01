@@ -13,7 +13,7 @@ import {
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { fieldsBatchFacts, simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -33,7 +33,6 @@ import {
   pOccurrenceId,
 } from '@run-planner/test-fixtures';
 import { assembleWorkspaceOccurrence } from './occurrence-assembly';
-import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceBiomeMarkerDestinationBuilder } from '../navigation/marker-builder';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
@@ -50,6 +49,20 @@ function biomeSource(project: ProjectDocument, routeKey: string, biomeKey: strin
   return source;
 }
 
+function fieldsFactsForOccurrence(
+  source: ReturnType<typeof biomeSource>,
+  occurrenceId: OccurrenceId,
+) {
+  const decision = source.exitDecisions.find(
+    (candidate) =>
+      candidate.normal.kind === 'batch' &&
+      candidate.normal.targets.some((target) => target.occurrenceId === occurrenceId),
+  );
+  return decision === undefined
+    ? undefined
+    : fieldsBatchFacts(catalog, source.layout, source.occurrence, decision);
+}
+
 function assemble(
   project: ProjectDocument,
   routeKey: string,
@@ -61,10 +74,7 @@ function assemble(
   if (occurrence === undefined) throw new Error(`${occurrenceId} occurrence is missing`);
   const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source).occurrence(occurrenceId);
   if (facts === undefined) throw new Error(`${occurrenceId} facts are missing`);
-  const fieldsActiveCageCount = createWorkspaceFieldsActiveCageCounts(
-    catalog,
-    source,
-  ).countForOccurrence(occurrenceId);
+  const fieldsFacts = fieldsFactsForOccurrence(source, occurrenceId);
   const markers = createWorkspaceBiomeMarkerDestinationBuilder({
     assessmentFor: (address) =>
       source.evaluation === undefined
@@ -79,7 +89,7 @@ function assemble(
   const assembly = assembleWorkspaceOccurrence({
     biome: source.biome,
     catalog,
-    ...(fieldsActiveCageCount === undefined ? {} : { fieldsActiveCageCount }),
+    ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
     facts,
     markerDestinations: markers.emitter,
     occurrence,
@@ -431,5 +441,4 @@ describe('structured workspace occurrence assembly', () => {
       ),
     ).toBe(true);
   });
-
 });

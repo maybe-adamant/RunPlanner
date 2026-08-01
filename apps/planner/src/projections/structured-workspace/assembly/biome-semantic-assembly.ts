@@ -77,7 +77,6 @@ import {
   type WorkspaceBiomeOccurrenceAssemblyFacts,
   type WorkspaceOccurrenceAssemblyFact,
 } from './occurrence-facts';
-import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import type { WorkspaceDecisionBatchNode } from '../navigation/marker-ownership';
 import type { WorkspaceBiomeSource } from '../source-index';
 import { assembleWorkspaceTopologyInteractions } from './topology-interaction-assembly';
@@ -387,7 +386,6 @@ export function assembleWorkspaceBiomeSemantics(
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
   const occurrenceFacts = createWorkspaceBiomeOccurrenceAssemblyFacts(source);
-  const fieldsActiveCageCounts = createWorkspaceFieldsActiveCageCounts(catalog, source);
   const markerBuilder = createWorkspaceBiomeMarkerDestinationBuilder({
     assessmentFor: (address) => assessmentForSource(source, address),
     biome,
@@ -432,14 +430,13 @@ export function assembleWorkspaceBiomeSemantics(
     }
   }
   const assembleOccurrence: WorkspaceOccurrenceAssembler = (request) => {
-    const fieldsActiveCageCount = fieldsActiveCageCounts.countForOccurrence(
-      request.occurrence.occurrenceId,
-    );
     return assembleWorkspaceOccurrence({
       biome,
       catalog,
       ...(request.evaluatedRoom === undefined ? {} : { evaluatedRoom: request.evaluatedRoom }),
-      ...(fieldsActiveCageCount === undefined ? {} : { fieldsActiveCageCount }),
+      ...(request.fieldsBatchFacts === undefined
+        ? {}
+        : { fieldsBatchFacts: request.fieldsBatchFacts }),
       facts: requireOccurrenceAssemblyFacts(biome, occurrenceFacts, request.occurrence),
       markerDestinations,
       occurrence: request.occurrence,
@@ -495,7 +492,6 @@ export function assembleWorkspaceBiomeSemantics(
               assembleOccurrence,
               catalog,
               decision: decision as WorkspaceAuthoredLinkedExitDecision,
-              fieldsActiveCageCounts,
               kind: 'linkedExit',
               markerDestinations,
               source,
@@ -505,7 +501,6 @@ export function assembleWorkspaceBiomeSemantics(
               catalog,
               decision: decision as WorkspaceAuthoredLinkedExitDecision,
               evaluated,
-              fieldsActiveCageCounts,
               kind: 'linkedExit',
               markerDestinations,
               source,
@@ -518,7 +513,6 @@ export function assembleWorkspaceBiomeSemantics(
               assembleOccurrence,
               catalog,
               decision: decision as WorkspaceAuthoredBatchDecision,
-              fieldsActiveCageCounts,
               kind: 'batch',
               markerDestinations,
               source,
@@ -528,7 +522,6 @@ export function assembleWorkspaceBiomeSemantics(
               catalog,
               decision: decision as WorkspaceAuthoredBatchDecision,
               evaluated,
-              fieldsActiveCageCounts,
               kind: 'batch',
               markerDestinations,
               source,

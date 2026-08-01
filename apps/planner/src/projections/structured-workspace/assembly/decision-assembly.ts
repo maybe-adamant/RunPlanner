@@ -16,6 +16,12 @@ import type {
   CanonicalBatch,
   CanonicalLinkedExit,
   CanonicalTarget,
+  FieldsBatchFacts,
+} from '@run-planner/engine/simulation';
+import {
+  fieldsBatchFacts,
+  fieldsBatchOwnsCageOutcome,
+  targetContinuation,
 } from '@run-planner/engine/simulation';
 
 import { requireWorkspaceRoom } from './catalog-room';
@@ -37,7 +43,6 @@ import type {
   WorkspaceBatchInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
 } from '../interactions/interaction-requirements';
-import type { WorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import {
   workspaceDecisionOwnedMarkers,
   workspaceOccurrenceOwnedMarkers,
@@ -79,8 +84,6 @@ const linkedExitOrdinal = 1;
 interface WorkspaceDecisionAssemblyBaseInput {
   readonly assembleOccurrence: WorkspaceOccurrenceAssembler;
   readonly catalog: Catalog;
-  /** Shared biome-level Fields derivation; this layer must not recompute it. */
-  readonly fieldsActiveCageCounts: WorkspaceFieldsActiveCageCounts;
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly source: WorkspaceBiomeSource;
 }
@@ -249,29 +252,20 @@ function fieldsContextForCanonicalBatch(
 }
 
 function fieldsContextForAuthoredBatch(
-  input: WorkspaceDecisionAssemblyBaseInput,
-  decision: AuthoredBatchDecision,
+  facts: FieldsBatchFacts | undefined,
 ): WorkspaceFieldsBatchContext | undefined {
-  if (decision.normal.batchState === null) return undefined;
-  const doorCageRewardCount = input.fieldsActiveCageCounts.countForDecision(decision);
-  if (doorCageRewardCount === undefined) return undefined;
-  const cageTargetCount = decision.normal.targets.filter((target) => {
-    const occurrence = input.source.occurrence(target.occurrenceId);
-    if (occurrence === undefined) return false;
-    return requireWorkspaceRoom(input.catalog, occurrence.gameName).localChildren.some(
-      (child) => child.kind === 'boundedRewardSlots',
-    );
-  }).length;
+  if (facts === undefined) return undefined;
   return Object.freeze({
-    cageOutcome: decision.normal.batchState.cageOutcome,
-    cageTargetCount,
-    doorCageRewardCount,
+    cageOutcome: facts.cageOutcome,
+    cageTargetCount: facts.cageTargetCount,
+    doorCageRewardCount: facts.doorCageRewardCount,
   });
 }
 
 function missingTargetPrerequisite(
   input: WorkspaceDecisionAssemblyBaseInput,
   decision: ExitDecision,
+  fieldsBatchOwnsOutcome: boolean,
 ): WorkspaceMissingTargetSetupPrerequisite | undefined {
   if (decision.normal.kind !== 'batch') return undefined;
   if (
@@ -283,12 +277,7 @@ function missingTargetPrerequisite(
       message: 'Select the batch reward store first.',
     });
   }
-  const layout = input.source.layout;
-  if (
-    layout.progression.kind === 'generated' &&
-    layout.progression.batchPolicy.kind === 'fields' &&
-    decision.normal.batchState === null
-  ) {
+  if (fieldsBatchOwnsOutcome && decision.normal.batchState === null) {
     return Object.freeze({
       kind: 'awaitingFieldsCageOutcome' as const,
       message: 'Select the Fields cage outcome first.',
@@ -328,6 +317,7 @@ function projectAuthoredTargetWithOverlay(
   input: WorkspaceDecisionAssemblyBaseInput,
   decision: AuthoredBatchDecision,
   target: AuthoredBatchTarget,
+  fieldsFacts: FieldsBatchFacts | undefined,
   physical: readonly DeclaredPhysicalExit[],
   sourceDecisionRemoval: WorkspaceStageDecisionRemoval | undefined,
   evaluatedTarget: CanonicalTarget | undefined,
@@ -368,16 +358,15 @@ function projectAuthoredTargetWithOverlay(
   const physicalState =
     evaluatedTarget?.exit.kind ??
     (declaredExit === undefined ? ('unavailable' as const) : ('available' as const));
-  const fallbackContinuation: WorkspacePhysicalTarget['nextPath'] =
-    requireWorkspaceRoom(input.catalog, occurrence.gameName).kind === 'Preboss'
-      ? 'startsCompletion'
-      : selected
-        ? 'continuesSpine'
-        : 'deadLeaf';
+  const fallbackContinuation: WorkspacePhysicalTarget['nextPath'] = targetContinuation(
+    selected,
+    requireWorkspaceRoom(input.catalog, occurrence.gameName).kind,
+  );
   const markerForTarget = input.markerDestinations.marker(address);
   const occurrenceAssembly = input.assembleOccurrence(
     Object.freeze({
       ...(evaluatedTarget === undefined ? {} : { evaluatedRoom: evaluatedTarget.room }),
+      ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
       occurrence,
     }),
   );
@@ -556,6 +545,16 @@ function assembleBatchDecision(
     evaluatedTargets.set(target.exit.exitKey, target);
   }
   const kind = rawBatchKind(input, decision);
+  const fieldsBatchOwnsOutcome = fieldsBatchOwnsCageOutcome(
+    input.catalog,
+    source.layout,
+    source.occurrence,
+    decision,
+  );
+  const authoredFieldsFacts =
+    evaluated === undefined
+      ? fieldsBatchFacts(input.catalog, source.layout, source.occurrence, decision)
+      : undefined;
   const sourceDecisionRemoval =
     kind === 'takeoverBatch' && decision.source.kind === 'hubDecision'
       ? hubStageDecisionRemoval(input, owner, 'preboss')
@@ -576,6 +575,7 @@ function assembleBatchDecision(
         input,
         decision,
         target,
+        authoredFieldsFacts,
         physical,
         sourceDecisionRemoval,
         overlay,
@@ -592,7 +592,7 @@ function assembleBatchDecision(
     decision.source,
     physical,
     new Set(decision.normal.targets.map((target) => target.exitKey)),
-    missingTargetPrerequisite(input, decision),
+    missingTargetPrerequisite(input, decision, fieldsBatchOwnsOutcome),
   );
   const targetRoomControls = roomControlsForBatch(
     input,
@@ -612,15 +612,12 @@ function assembleBatchDecision(
         .map((target) => target.room.occurrenceId),
     ),
   );
-  const fieldsCageOutcome =
-    kind !== 'takeoverBatch' &&
-    source.layout.progression.kind === 'generated' &&
-    source.layout.progression.batchPolicy.kind === 'fields'
-      ? input.markerDestinations.marker(owner)
-      : undefined;
+  const fieldsCageOutcome = fieldsBatchOwnsOutcome
+    ? input.markerDestinations.marker(owner)
+    : undefined;
   const fields =
     evaluated === undefined
-      ? fieldsContextForAuthoredBatch(input, decision)
+      ? fieldsContextForAuthoredBatch(authoredFieldsFacts)
       : fieldsContextForCanonicalBatch(input, evaluated.batch);
   const hasEditableAuthoredRewardStore =
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
@@ -757,7 +754,9 @@ function assembleLinkedExitDecision(
       physicalState,
       selected: true,
       retained: evaluated === undefined || physicalState === 'unavailable',
-      nextPath: evaluated?.target.continuation ?? ('continuesSpine' as const),
+      nextPath:
+        evaluated?.target.continuation ??
+        targetContinuation(true, requireWorkspaceRoom(input.catalog, occurrence.gameName).kind),
       room: workbench.room,
     }),
   });

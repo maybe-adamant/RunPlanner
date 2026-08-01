@@ -10,6 +10,7 @@ import {
   BiomeMaterializationContractError,
   evaluateBiomeCompleteness,
   materializeBiome,
+  targetContinuation,
 } from '@run-planner/engine/simulation';
 
 import {
@@ -39,6 +40,14 @@ function materialize(project: ProjectDocument) {
 }
 
 describe('F takeover materialization', () => {
+  it.each([
+    [true, 'Combat', 'continuesSpine'],
+    [true, 'Preboss', 'startsCompletion'],
+    [false, 'Preboss', 'deadLeaf'],
+  ] as const)('derives %s/%s target continuation as %s', (picked, roomKind, expected) => {
+    expect(targetContinuation(picked, roomKind)).toBe(expected);
+  });
+
   it('requires complete authored topology at the public materialization boundary', () => {
     const incomplete = evaluateBiomeCompleteness(catalog, fBiome, fPlan(createFProject()));
 
