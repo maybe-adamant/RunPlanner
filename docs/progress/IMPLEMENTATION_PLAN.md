@@ -2156,15 +2156,16 @@ independently reviewable slices:
    boundaries, and owning documentation;
 7. Commit 5a removes browser confirmation while preserving the existing
    immediate semantic-command and project-history behavior;
-8. the neutral dependency correction and workspace/React campaign in
-   `REANCHOR_AND_REORGANIZE.md` make that active product flow,
+8. the completed neutral dependency correction and re-anchor program, recorded
+   in `IMPLEMENTATION_PROGRESS.md`, made the active product flow,
    responsibility, import direction, and dependency injection explicit without
    advancing the feature frontier;
 9. Commit 5b delivers the four bounded changes in
    `WORKSPACE_PRESENTATION_POLISH.md` without changing the closed domain
    contracts;
-10. the remaining candidate, authored-core, history, and reward campaigns in
-    `REANCHOR_AND_REORGANIZE.md` close before the next cross-layer feature; and
+10. the completed Campaign B candidate-artifact and Campaign C authored-core
+    delivery, plus the D history/reward audits, closed before the next
+    cross-layer feature; and
 11. Commit 5c replaces the Shop purchased-set model with exact authored order
     through the three slices in `SHOP_PURCHASE_ORDER.md`.
 

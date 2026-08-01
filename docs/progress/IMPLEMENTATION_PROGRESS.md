@@ -26,32 +26,32 @@ generated-decision parity without changing domain state or simulation.
 The unified biome refactor through Phase 7 Commit 12, Slice 4 is complete.
 Commits 1, 2, 3a, 3b, 3c, and 4 established the unified catalog and authored
 model, migrated the planner engine, projected the common workspace, built its
-shared React surface, closed its
-product/recovery/performance/architecture evidence, and passed the complete
-repository gate. Commit 5a then removed the remaining browser confirmation
-prompts while preserving the existing semantic-command/history flow. Commit
-5b.1 delivered the N rail hierarchy, and Commit 5b.2 delivered direct side-room
-order editing. Commit 5b.3's active-only H/O room-local presentation in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) remains
-the next feature slice, but it is paused while the remaining re-anchor
-campaigns close. The A12/A13 production contraction gate is complete, as is
-the A14–A16 test-ownership correction. The correction canonicalized shared
-route fixtures, separated test infrastructure, re-anchored workspace
-projection/closure assertions, and aligned React coverage with the existing
-workbench owners. Campaign B's entry audit is complete: eighteen query kinds
-resolve through four semantic families; room-target, reward-producer, and
-room-lifecycle capabilities currently cross three result-keyed semantic
-sidecars. B1's exact evaluation-assembly and ordinary-room-target vertical
-slice is next. A1 through A6 established the authored-first workspace
-source/assembly products,
-explicit interaction binding, projection-owned default and exact inspector
-destinations, and React consumption without topology or containment
-reconstruction. They also retained authored-active controls through invalid or
-unassessed evaluation while moving optional dormant Ephyra side details into the
-same withheld policy as Shop inventory. Their A6 checkpoint `npm run check`
-passed with 65 test files and 668 tests, typechecks, lint, formatting, and
-production build; its work-count fixtures retain zero render evaluation/query
-work, lazy cached interactions, and the product-loop edit/Undo budgets.
+shared React surface, and closed its product, recovery, performance, and
+architecture evidence. Commit 5a removed browser confirmations while
+preserving semantic-command/history flow; 5b.1 delivered the N rail hierarchy;
+and 5b.2 delivered direct side-room order editing.
+
+The re-anchor program is closed. Campaign A completed the authored-first
+workspace reorganization, production contraction, and focused test-ownership
+correction. Campaign B replaced result-keyed candidate sidecars with explicit
+exact-evaluation artifacts and a prepared candidate session. Campaign C
+isolated the justified room-state, topology-query, codec, command, replacement,
+and occurrence-leaf authorities. Campaign D audited the ordered history and
+reward flows and retained both chronological coordinators: their shared mutable
+state and final products do not support a smaller complete vertical boundary.
+The retained reward result remains data-only beside explicit producer and
+lifecycle artifacts; no sidecar, state wrapper, or forwarding layer was added.
+The final re-anchor closure gate passed 95 test files and 771 tests, every
+workspace typecheck, lint, formatting, and the production build.
+
+The executable work-count contract remains unchanged: rendering performs no
+evaluation or candidate work; two representative workspaces require two project
+evaluations; cold candidate activation uses its addressed batch (fourteen for
+the cooperative reward family); repeat activation is cached; edits publish one
+evaluation; and cached Undo has none. Commit 5b.3 in
+[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) is now
+the active feature frontier. Commit 5c follows its own
+[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan after Commit 5b closes.
 
 The post-checkpoint comparison against `f69dc709` found that Campaign A's
 contract correction had not completed its internal module reorganization: the
@@ -66,13 +66,13 @@ still made several changes happen twice. A12 and A13 have contracted those
 paths in production. A holistic test read then found that focused owner tests
 had been added without retiring overlapping facade and React assertions. The
 four review units—A14, A15.1, A15.2, and A16—closed that test ownership.
-The current sequencing closes the plan's candidate, authored-core, history,
-and reward campaigns before Commit 5b.3 resumes and before the separate
-[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan: schema 10 authors an
-exact Shop purchase order, simulation validates that exact sequence, and the
-editor exposes the order directly. Commit 5c intentionally replaces the schema
-9 purchased-set contract. These plans supersede the former presentation-only
-Commit 12 and Commit 13 wording in `IMPLEMENTATION_PLAN.md`.
+The completed sequencing closed the candidate, authored-core, history, and
+reward campaigns before Commit 5b.3 resumed. The separate
+[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan then gives Commit 5c
+its schema-10 exact purchase order, simulation validation, and editor surface.
+Commit 5c intentionally replaces the schema-9 purchased-set contract. These
+plans supersede the former presentation-only Commit 12 and Commit 13 wording
+in `IMPLEMENTATION_PLAN.md`.
 
 Campaign A's A1-through-A11 structural delivery is complete. A7 moved the
 private marker and preliminary-destination builder plus all room-local
@@ -105,10 +105,9 @@ Hub rails, hidden Hub scaffolds, visit identity, marker aggregation, default
 selection, and destinations; architecture coverage protects the sibling
 presentation/interaction-binding direction and the thin facade. The A11
 structural checkpoint `npm run check` passed with 76 test files and 695 tests,
-typechecks, lint, formatting, and production build. The final production
-inventory is recorded in `REANCHOR_AND_REORGANIZE.md`; its diagnostics report
-10,758 non-test structured-workspace lines and a 349-line facade, down from the
-A6 6,213-line projector without a parallel assembly path.
+typechecks, lint, formatting, and production build. The then-current production
+inventory was 10,758 non-test structured-workspace lines and a 349-line facade,
+down from the A6 6,213-line projector without a parallel assembly path.
 
 The fresh contraction audit keeps the authored-first source index, family
 assembly products, typed interaction requirements, exact binder, presentation
@@ -140,15 +139,14 @@ missing import-direction assertions for both test expectation families. The
 combined production inventory is 7,463 non-test structured-workspace lines,
 down 3,295 from the A11 baseline; the production `audit/` directory is gone.
 Neither change introduced a replacement registry, development-only runtime
-mode, or compatibility layer. The A13 contraction gate in
-`REANCHOR_AND_REORGANIZE.md` is complete: the final single-flight `npm run check`
-passed 76 test files and 703 tests, all typechecks, lint, formatting,
-and the production build. The post-A13 test baseline is 28,607 lines in test
-files. A15.1 subsequently added 1,673 lines in ten non-test workspace
-expectation/closure support modules and 210 lines in three support self-tests.
-A14, A15.1, A15.2, and A16 completed the active correction; Commit 5b.3 is
-behaviorally unblocked but remains paused by the cleanup sequence recorded
-above.
+mode, or compatibility layer. The A13 contraction gate is complete: the final
+single-flight `npm run check` passed 76 test files and 703 tests, all
+typechecks, lint, formatting, and the production build. The post-A13 test
+baseline is 28,607 lines in test files. A15.1 subsequently added 1,673 lines
+in ten non-test workspace expectation/closure support modules and 210 lines in
+three support self-tests.
+A14, A15.1, A15.2, and A16 completed the active correction; Commit 5b.3 was
+then paused by the cleanup sequence that is now closed.
 
 The A14–A16 test-ownership correction is complete. A14 established the one
 canonical `test/fixtures/authored-project/` builder barrel for all shared
@@ -290,9 +288,8 @@ are covered. Review validation passed the root typecheck,
 `npm run test:planner` (22 files, 185 tests), ESLint, Prettier, and
 `git diff --check`.
 
-The remaining re-anchor campaigns, Commit 5b.3, Commit 5b.4, and the three
-Commit 5c Shop-order slices are the remaining work before the active Phase 7
-frontier advances.
+Commit 5b.3, Commit 5b.4, and the three Commit 5c Shop-order slices are the
+remaining work before the active Phase 7 frontier advances.
 
 For historical context, room-replacement retention closed before the unified
 refactor. The delivered policy uses the
