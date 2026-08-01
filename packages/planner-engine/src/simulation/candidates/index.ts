@@ -3,13 +3,9 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   semanticAddressKey,
-  type IncomingRewardAddress,
-  type LocalRewardAddress,
   type OccurrenceAddress,
   type RewardWheelAddress,
-  type RewardWheelOfferAddress,
   type SemanticAddress,
-  type ShopOfferAddress,
   type ShopPurchaseAddress,
 } from '../../authored-project/addresses';
 import type {
@@ -17,7 +13,6 @@ import type {
   RewardWheelState,
   ShipCombatState,
 } from '../../authored-project/model';
-import type { ResolvedRewardOffer } from '../../reward-kernel';
 import {
   candidateArtifactsForProjectEvaluationAssembly,
   type CompleteBiomeProjectEvaluation,
@@ -29,12 +24,7 @@ import {
   type ProgressiveBiomeEvaluation,
 } from '../progressive/biome';
 import type { SemanticFinding } from '../model';
-import {
-  rewardProducerFrontier,
-  roomLifecycleCandidateContexts,
-  type RoomLifecycleCandidateResult,
-  type RewardProducerCandidateResult,
-} from '../rewards';
+import { roomLifecycleCandidateContexts, type RoomLifecycleCandidateResult } from '../rewards';
 import {
   coverageUnavailable,
   producerUnavailable,
@@ -79,6 +69,18 @@ import {
   type RoomTargetCandidateQuery,
 } from './room-target';
 import {
+  evaluateRewardProducerCandidate,
+  type EvaluatedIncomingRewardCandidate,
+  type EvaluatedLocalRewardCandidate,
+  type EvaluatedRewardWheelOfferCandidate,
+  type EvaluatedShopOfferCandidate,
+  type IncomingRewardCandidateQuery,
+  type LocalRewardCandidateQuery,
+  type RewardWheelOfferCandidateQuery,
+  type ShopOfferCandidateQuery,
+} from './reward-producer';
+import { shipState, wheelState } from './ship-owner';
+import {
   evaluateStartRoomCandidate,
   type EvaluatedStartRoomCandidate,
   type StartRoomCandidateQuery,
@@ -97,6 +99,16 @@ export type {
   CandidateContextUnavailableReason,
 } from './availability';
 export type { EvaluatedRoomTargetCandidate, RoomTargetCandidateQuery } from './room-target';
+export type {
+  EvaluatedIncomingRewardCandidate,
+  EvaluatedLocalRewardCandidate,
+  EvaluatedRewardWheelOfferCandidate,
+  EvaluatedShopOfferCandidate,
+  IncomingRewardCandidateQuery,
+  LocalRewardCandidateQuery,
+  RewardWheelOfferCandidateQuery,
+  ShopOfferCandidateQuery,
+} from './reward-producer';
 export type {
   BatchRewardStoreCandidateQuery,
   BatchRewardStoreCandidateSupport,
@@ -132,18 +144,6 @@ export type {
 } from './takeover-preboss';
 import { CandidateEvaluationContractError } from './contract';
 
-export interface IncomingRewardCandidateQuery {
-  readonly kind: 'incomingReward';
-  readonly reward: IncomingRewardAddress;
-  readonly value: ResolvedRewardOffer;
-}
-
-export interface LocalRewardCandidateQuery {
-  readonly kind: 'localReward';
-  readonly reward: LocalRewardAddress;
-  readonly value: ResolvedRewardOffer;
-}
-
 export interface ShipEncounterCountCandidateQuery {
   readonly kind: 'shipEncounterCount';
   readonly occurrence: OccurrenceAddress;
@@ -162,22 +162,10 @@ export interface RewardWheelStoreCandidateQuery {
   readonly storeKey: string;
 }
 
-export interface RewardWheelOfferCandidateQuery {
-  readonly kind: 'rewardWheelOffer';
-  readonly offer: RewardWheelOfferAddress;
-  readonly value: ResolvedRewardOffer;
-}
-
 export interface RewardWheelPickedCandidateQuery {
   readonly kind: 'rewardWheelPicked';
   readonly wheel: RewardWheelAddress;
   readonly pickedOfferIndex: number;
-}
-
-export interface ShopOfferCandidateQuery {
-  readonly kind: 'shopOffer';
-  readonly offer: ShopOfferAddress;
-  readonly value: ResolvedRewardOffer;
 }
 
 export interface ShopPurchaseCandidateQuery {
@@ -215,16 +203,6 @@ export interface ProjectCandidateSessionOptions {
   readonly observe?: (event: CandidateEvaluationEvent) => void;
 }
 
-export interface EvaluatedIncomingRewardCandidate {
-  readonly kind: 'incomingReward';
-  readonly result: RewardProducerCandidateResult;
-}
-
-export interface EvaluatedLocalRewardCandidate {
-  readonly kind: 'localReward';
-  readonly result: RewardProducerCandidateResult;
-}
-
 export interface ShipEncounterCountCandidateSupport {
   readonly encounterCount: 2 | 3;
   readonly supportEncounterCounts: readonly number[];
@@ -259,19 +237,9 @@ export interface EvaluatedRewardWheelStoreCandidate {
   };
 }
 
-export interface EvaluatedRewardWheelOfferCandidate {
-  readonly kind: 'rewardWheelOffer';
-  readonly result: RewardProducerCandidateResult;
-}
-
 export interface EvaluatedRewardWheelPickedCandidate {
   readonly kind: 'rewardWheelPicked';
   readonly result: RewardWheelLifecycleCandidateSupport & { readonly pickedOfferIndex: number };
-}
-
-export interface EvaluatedShopOfferCandidate {
-  readonly kind: 'shopOffer';
-  readonly result: RewardProducerCandidateResult;
 }
 
 export interface EvaluatedShopPurchaseCandidate {
@@ -371,65 +339,6 @@ function completeLifecycleRepairForOwner(
     : undefined;
 }
 
-function evaluateIncomingReward(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  query: IncomingRewardCandidateQuery,
-): ProjectCandidateEvaluation {
-  const biome = candidateRewards(
-    catalog,
-    project,
-    evaluation,
-    query.reward.routeKey,
-    query.reward.biomeKey,
-    query.reward,
-  );
-  if (biome == null)
-    return unavailableForBiome(
-      evaluation,
-      query.reward.routeKey,
-      query.reward.biomeKey,
-      query.reward,
-      'afterTargetGeneration',
-    );
-  const frontier = rewardProducerFrontier(biome.rewards, query.reward);
-  if (frontier === undefined) return producerUnavailable(query.reward);
-  return Object.freeze({
-    kind: 'incomingReward',
-    result: frontier.evaluateOffer(query.reward, query.value),
-  });
-}
-
-function candidateRewards(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  routeKey: string,
-  biomeKey: string,
-  rewardOwner?: SemanticAddress,
-) {
-  const biome = candidateBiome(catalog, project, evaluation, routeKey, biomeKey);
-  const repair =
-    rewardOwner === undefined || !('routeKey' in rewardOwner) || !('biomeKey' in rewardOwner)
-      ? undefined
-      : repairProgressiveBiomeForOwner(catalog, project, evaluation, rewardOwner);
-  if (
-    repair !== undefined &&
-    rewardOwner !== undefined &&
-    rewardProducerFrontier(repair.rewards, rewardOwner) !== undefined
-  ) {
-    /**
-     * The first invalid producer remains a repair boundary. Its complete
-     * or incomplete pre-clamp evaluation captured the same seed-backed
-     * pre-producer frontier; every later owner remains unavailable through
-     * the progressive clamp.
-     */
-    return repair;
-  }
-  return biome;
-}
-
 /**
  * Room-lifecycle controls consume a context captured before their room's
  * lifecycle, rather than a reward-producer frontier. The exact blocked owner
@@ -449,81 +358,6 @@ function candidateRewardsForLifecycleOwner(
     completeLifecycleRepairForOwner(evaluation, owner) ??
     candidateBiome(catalog, project, evaluation, owner.routeKey, owner.biomeKey)
   );
-}
-
-function evaluateLocalReward(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  query: LocalRewardCandidateQuery,
-): ProjectCandidateEvaluation {
-  const biome = candidateRewards(
-    catalog,
-    project,
-    evaluation,
-    query.reward.routeKey,
-    query.reward.biomeKey,
-    query.reward,
-  );
-  if (biome == null) {
-    return unavailableForBiome(
-      evaluation,
-      query.reward.routeKey,
-      query.reward.biomeKey,
-      query.reward,
-      'afterTargetGeneration',
-    );
-  }
-  const frontier = rewardProducerFrontier(biome.rewards, query.reward);
-  if (frontier === undefined) return producerUnavailable(query.reward);
-  return Object.freeze({
-    kind: 'localReward',
-    result: frontier.evaluateOffer(query.reward, query.value),
-  });
-}
-
-function shipState(catalog: Catalog, project: ProjectDocument, occurrence: OccurrenceAddress) {
-  const plan = planFor(project, occurrence.routeKey, occurrence.biomeKey);
-  const authored = plan.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-  );
-  if (authored?.state.kind !== 'shipCombat') {
-    throw new CandidateEvaluationContractError('candidate owner has no Ship combat state');
-  }
-  const room = catalog.rooms.byKey[authored.gameName];
-  const profile =
-    room === undefined ? undefined : catalog.encounterProfiles.byKey[room.encounterProfileKey];
-  if (room === undefined || profile === undefined) {
-    throw new CandidateEvaluationContractError(
-      'Ship candidate owner has no catalog encounter profile',
-    );
-  }
-  return Object.freeze({ authored, room, profile, state: authored.state });
-}
-
-function wheelState(
-  catalog: Catalog,
-  project: ProjectDocument,
-  address: RewardWheelAddress | RewardWheelOfferAddress,
-) {
-  const owner = createOccurrenceAddress(
-    createBiomeAddress(address.routeKey, address.biomeKey),
-    address.occurrenceId,
-  );
-  const ship = shipState(catalog, project, owner);
-  const descriptor = ship.profile.phases.find(
-    (phase) => phase.offerPoint?.key === address.wheelKey,
-  )?.offerPoint;
-  const wheel = ship.state.wheels[address.wheelKey];
-  if (descriptor === undefined || wheel === undefined) {
-    throw new CandidateEvaluationContractError(`Ship candidate has no ${address.wheelKey} wheel`);
-  }
-  if (address.kind === 'rewardWheelOffer' && !descriptor.offerKeys.includes(address.offerKey)) {
-    throw new CandidateEvaluationContractError(
-      `${address.wheelKey} has no ${address.offerKey} reward-wheel offer`,
-    );
-  }
-  return Object.freeze({ owner, ship, descriptor, wheel });
 }
 
 function replaceWheel(
@@ -716,68 +550,6 @@ function evaluateWheelLifecycle(
   });
 }
 
-function evaluateRewardWheelOffer(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  query: RewardWheelOfferCandidateQuery,
-): ProjectCandidateEvaluation {
-  wheelState(catalog, project, query.offer);
-  const biome = candidateRewards(
-    catalog,
-    project,
-    evaluation,
-    query.offer.routeKey,
-    query.offer.biomeKey,
-    query.offer,
-  );
-  if (biome == null) {
-    return unavailableForBiome(
-      evaluation,
-      query.offer.routeKey,
-      query.offer.biomeKey,
-      query.offer,
-      'afterRoomLifecycle',
-    );
-  }
-  const frontier = rewardProducerFrontier(biome.rewards, query.offer);
-  if (frontier === undefined) return producerUnavailable(query.offer);
-  return Object.freeze({
-    kind: 'rewardWheelOffer',
-    result: frontier.evaluateOffer(query.offer, query.value),
-  });
-}
-
-function evaluateShopOffer(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  query: ShopOfferCandidateQuery,
-): ProjectCandidateEvaluation {
-  const biome = candidateRewards(
-    catalog,
-    project,
-    evaluation,
-    query.offer.routeKey,
-    query.offer.biomeKey,
-    query.offer,
-  );
-  if (biome == null)
-    return unavailableForBiome(
-      evaluation,
-      query.offer.routeKey,
-      query.offer.biomeKey,
-      query.offer,
-      'afterRoomLifecycle',
-    );
-  const frontier = rewardProducerFrontier(biome.rewards, query.offer);
-  if (frontier === undefined) return producerUnavailable(query.offer);
-  return Object.freeze({
-    kind: 'shopOffer',
-    result: frontier.evaluateOffer(query.offer, query.value),
-  });
-}
-
 function evaluateShopPurchase(
   catalog: Catalog,
   evaluation: ProjectEvaluation,
@@ -847,10 +619,21 @@ export function createPreparedProjectCandidateSession(
       return evaluateSideRoomEntryOrderCandidate(catalog, project, evaluation, query);
     if (query.kind === 'batchRewardStore')
       return evaluateBatchRewardStoreCandidate(catalog, project, evaluation, query);
-    if (query.kind === 'incomingReward')
-      return evaluateIncomingReward(catalog, project, evaluation, query);
-    if (query.kind === 'localReward')
-      return evaluateLocalReward(catalog, project, evaluation, query);
+    if (
+      query.kind === 'incomingReward' ||
+      query.kind === 'localReward' ||
+      query.kind === 'rewardWheelOffer' ||
+      query.kind === 'shopOffer'
+    ) {
+      const owner =
+        query.kind === 'incomingReward' || query.kind === 'localReward'
+          ? query.reward
+          : query.offer;
+      const rewardProducers = candidateArtifacts.biomeAt(
+        createBiomeAddress(owner.routeKey, owner.biomeKey),
+      )?.rewardProducers;
+      return evaluateRewardProducerCandidate(catalog, project, evaluation, rewardProducers, query);
+    }
     if (query.kind === 'fieldsCageOutcome')
       return evaluateFieldsCageOutcomeCandidate(catalog, project, evaluation, query);
     if (query.kind === 'shipEncounterCount')
@@ -862,9 +645,6 @@ export function createPreparedProjectCandidateSession(
     ) {
       return evaluateWheelLifecycle(catalog, project, evaluation, query);
     }
-    if (query.kind === 'rewardWheelOffer')
-      return evaluateRewardWheelOffer(catalog, project, evaluation, query);
-    if (query.kind === 'shopOffer') return evaluateShopOffer(catalog, project, evaluation, query);
     if (query.kind === 'shopPurchase')
       return evaluateShopPurchase(catalog, evaluation, project, query);
     if (query.kind === 'roomTarget') {

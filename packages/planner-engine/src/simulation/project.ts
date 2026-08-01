@@ -35,7 +35,8 @@ import {
   evaluateProgressiveBiomeAssembly,
   type BiomeGenerationValidation,
 } from './progressive/biome';
-import { evaluateBiomeRewards, type BiomeRewardSimulation } from './rewards';
+import { evaluateBiomeRewardsAssembly, type BiomeRewardSimulation } from './rewards';
+import type { RewardProducerCandidateArtifacts } from './rewards/producer-frontiers';
 
 export interface BiomeEvaluationBase {
   readonly biomeKey: string;
@@ -283,6 +284,7 @@ function generation(
   history: CanonicalBiomeHistory | BiomeHistoryPrefix,
   enteredBiomeCount: number,
   rewards: BiomeRewardSimulation,
+  rewardProducers: RewardProducerCandidateArtifacts,
 ): BiomeGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssembly(
     catalog,
@@ -304,6 +306,7 @@ function generation(
     candidateArtifacts: createBiomeCandidateArtifacts(
       createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
       ordinary.candidateArtifacts,
+      rewardProducers,
     ),
   });
 }
@@ -435,15 +438,25 @@ function evaluateBiomeAssembly(
   const snapshot = materializeBiome(catalog, origin, completeness);
   const seed: HistoryStateView | undefined = previous?.history.afterTransition;
   const history = composeBiomeHistory(catalog, snapshot, seed);
-  const rewards = evaluateBiomeRewards(
+  const rewards = evaluateBiomeRewardsAssembly(
     catalog,
     snapshot,
     history,
     enteredBiomeCount,
     previous?.rewards.branches,
   );
-  const roomGeneration = generation(catalog, snapshot, history, enteredBiomeCount, rewards);
-  const findings = Object.freeze([...roomGeneration.validation.findings, ...rewards.findings]);
+  const roomGeneration = generation(
+    catalog,
+    snapshot,
+    history,
+    enteredBiomeCount,
+    rewards.simulation,
+    rewards.producerArtifacts,
+  );
+  const findings = Object.freeze([
+    ...roomGeneration.validation.findings,
+    ...rewards.simulation.findings,
+  ]);
   return Object.freeze({
     evaluation: Object.freeze({
       biomeKey: plan.biomeKey,
@@ -451,13 +464,13 @@ function evaluateBiomeAssembly(
       authoring: 'complete',
       coverage: Object.freeze({ kind: 'complete' }),
       validity:
-        roomGeneration.validation.validity === 'valid' && rewards.validity === 'valid'
+        roomGeneration.validation.validity === 'valid' && rewards.simulation.validity === 'valid'
           ? 'valid'
           : 'invalid',
       snapshot,
       history,
       roomGeneration: roomGeneration.validation,
-      rewards,
+      rewards: rewards.simulation,
       findings,
     }),
     candidateArtifacts: roomGeneration.candidateArtifacts,

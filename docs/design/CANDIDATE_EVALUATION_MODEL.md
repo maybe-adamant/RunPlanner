@@ -28,11 +28,11 @@ One semantic edit or profile replacement creates a new immutable
 prior immutable identities and may reuse their cached matching assemblies. Its data-only
 `ProjectEvaluation` remains the public derived-result selector, while the
 assembly carries opaque candidate capabilities produced by the same simulation
-execution for families that have moved to explicit artifacts. Room-target
-preparation binds that one assembly and never acquires another project
-evaluation or resolves its capability from the public evaluation. Reward and
-lifecycle producer capabilities retain their documented transitional delivery
-until their own vertical slices move them into the assembly.
+execution for families that have moved to explicit artifacts. Room-target and
+reward-producer preparation bind that one assembly and never acquire another
+project evaluation or resolve a capability from public evaluation data.
+Lifecycle producer capabilities retain their documented transitional delivery
+until their own vertical slice moves them into the assembly.
 
 Before the candidate refactor, the application expanded control domains into
 independent scalar queries. Reward, shop, room-lifecycle, and Hub alternatives
@@ -297,7 +297,11 @@ pre-decision frontier containing enough state to rerun that producer:
 
 These frontiers are selected-simulation facts, not candidate arrays. Capturing
 frozen branch references during the normal reward walk is preferred to
-replaying history later to rediscover them.
+replaying history later to rediscover them. Reward evaluation returns them as
+an opaque producer capability beside its data-only simulation result, and
+biome/project composition carries that capability through the exact assembly.
+The public reward and project results omit it entirely; a producer evaluator
+can look up only its addressed owner and evaluate its offered value.
 
 The frontier must be captured before processing the selected offer or atomic
 offer group. This preserves repair support when the selected value is invalid

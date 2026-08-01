@@ -1,16 +1,13 @@
 export {
   evaluateBiomeRewards,
+  evaluateBiomeRewardsAssembly,
   rewardStoreCandidateSupport,
   BiomeRewardSimulationContractError,
 } from './biome';
 export {
-  rewardProducerFrontier,
   roomLifecycleCandidateContexts,
   type RoomLifecycleCandidateContextIndex,
   type RoomLifecycleCandidateResult,
-  type RewardProducerCandidateResult,
-  type RewardProducerFrontier,
-  type RewardProducerGenerationPolicy,
   type ShipLifecycleCandidateContext,
   type ShopPurchaseCandidateContext,
 } from './frontiers';

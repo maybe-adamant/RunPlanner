@@ -44,15 +44,18 @@ import type {
 } from './model';
 import { createRewardFacts, createdPeerGameNames } from './facts';
 import {
-  indexRewardProducerFrontier,
   registerRoomLifecycleCandidateContexts,
-  registerRewardProducerFrontiers,
   type RoomLifecycleCandidateResult,
-  type RewardProducerCandidateResult,
-  type RewardProducerFrontier,
   type ShipLifecycleCandidateContext,
   type ShopPurchaseCandidateContext,
 } from './frontiers';
+import {
+  createRewardProducerCandidateArtifacts,
+  indexRewardProducerFrontier,
+  type RewardProducerCandidateArtifacts,
+  type RewardProducerCandidateResult,
+  type RewardProducerFrontier,
+} from './producer-frontiers';
 import {
   addRewardFinding,
   advanceRewardBranches,
@@ -626,13 +629,18 @@ function prepareShipLifecycleCandidateContext(
   });
 }
 
-export function evaluateBiomeRewards(
+export interface BiomeRewardEvaluationAssembly {
+  readonly simulation: BiomeRewardSimulation;
+  readonly producerArtifacts: RewardProducerCandidateArtifacts;
+}
+
+export function evaluateBiomeRewardsAssembly(
   catalog: Catalog,
   snapshot: BiomeRewardSnapshot,
   history: BiomeRewardHistory,
   enteredBiomeCount: number,
   initialBranches?: readonly RewardBranch[],
-): BiomeRewardSimulation {
+): BiomeRewardEvaluationAssembly {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRewardSimulationContractError('reward inputs do not share one biome owner');
   }
@@ -1536,10 +1544,28 @@ export function evaluateBiomeRewards(
     findings: immutableFindings,
     rewardLookups: rewardLookup.public,
   });
-  registerRewardProducerFrontiers(simulation, producerFrontiers);
   registerRoomLifecycleCandidateContexts(simulation, {
     shipsByOwner: shipLifecycleContexts,
     shopsByOwner: shopPurchaseContexts,
   });
-  return simulation;
+  return Object.freeze({
+    simulation,
+    producerArtifacts: createRewardProducerCandidateArtifacts(producerFrontiers),
+  });
+}
+
+export function evaluateBiomeRewards(
+  catalog: Catalog,
+  snapshot: BiomeRewardSnapshot,
+  history: BiomeRewardHistory,
+  enteredBiomeCount: number,
+  initialBranches?: readonly RewardBranch[],
+): BiomeRewardSimulation {
+  return evaluateBiomeRewardsAssembly(
+    catalog,
+    snapshot,
+    history,
+    enteredBiomeCount,
+    initialBranches,
+  ).simulation;
 }

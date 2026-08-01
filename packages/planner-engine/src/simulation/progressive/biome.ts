@@ -32,7 +32,12 @@ import type {
 } from '../materialization';
 import { materializeBiomePrefix } from '../materialization';
 import type { SemanticFinding } from '../model';
-import { evaluateBiomeRewards, type BiomeRewardSimulation, type RewardBranch } from '../rewards';
+import {
+  evaluateBiomeRewardsAssembly,
+  type BiomeRewardSimulation,
+  type RewardBranch,
+} from '../rewards';
+import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
 
 export interface BiomeGenerationValidation {
   readonly validity: 'invalid' | 'valid';
@@ -73,6 +78,7 @@ function generation(
   history: BiomeHistoryPrefix,
   enteredBiomeCount: number,
   rewards: BiomeRewardSimulation,
+  rewardProducers: RewardProducerCandidateArtifacts,
 ): ProgressiveGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssembly(
     catalog,
@@ -94,6 +100,7 @@ function generation(
     candidateArtifacts: createBiomeCandidateArtifacts(
       createBiomeAddress(prefix.routeKey, prefix.biomeKey),
       ordinary.candidateArtifacts,
+      rewardProducers,
     ),
   });
 }
@@ -115,18 +122,25 @@ function products(
   if (history === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
   }
-  const rewards = evaluateBiomeRewards(
+  const rewards = evaluateBiomeRewardsAssembly(
     catalog,
     prefix,
     history,
     enteredBiomeCount,
     seed?.rewardBranches,
   );
-  const roomGeneration = generation(catalog, prefix, history, enteredBiomeCount, rewards);
+  const roomGeneration = generation(
+    catalog,
+    prefix,
+    history,
+    enteredBiomeCount,
+    rewards.simulation,
+    rewards.producerArtifacts,
+  );
   return Object.freeze({
     evaluation: Object.freeze({
       history,
-      rewards,
+      rewards: rewards.simulation,
       roomGeneration: roomGeneration.validation,
       findings: Object.freeze([]),
     }),

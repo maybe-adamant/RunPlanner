@@ -34,6 +34,7 @@ import {
   evaluateProgressiveBiomeAssembly,
   evaluateProgressiveBiomeAssemblyBeforeClamp,
 } from '../../src/simulation/progressive/biome';
+import { candidateArtifactsForProjectEvaluationAssembly } from '../../src/simulation/project';
 import { createUnselectedFTakeoverProject, fBiome, fCombatId } from './support/f-takeover-project';
 import {
   createGoldenFGHProject,
@@ -257,18 +258,32 @@ function partialGWithEarlierInvalidReward() {
 }
 
 describe('progressive biome evaluation', () => {
-  it('carries room-target artifacts from each normal, prefix, clamped, and pre-clamp execution', () => {
+  it('carries exact room-target and reward-producer artifacts through normal, prefix, clamped, and pre-clamp execution', () => {
     const complete = createFGenerationProject();
     const incomplete = createFGenerationProject(undefined, { includeTakeover: false });
     const firstFTarget = fGenerationTargetAddress(fGenerationBaselineBatches, 1, 1);
-    const normalResult = createPreparedProjectCandidateSession(
-      catalog,
-      simulateProjectAssembly(catalog, complete),
-    ).evaluate({ kind: 'roomTarget', target: firstFTarget, gameName: 'F_Combat02' });
-    const prefixResult = createPreparedProjectCandidateSession(
-      catalog,
-      simulateProjectAssembly(catalog, incomplete),
-    ).evaluate({ kind: 'roomTarget', target: firstFTarget, gameName: 'F_Combat02' });
+    const firstFReward = createIncomingRewardAddress(
+      fGenerationBiome,
+      fGenerationOccurrenceId(1, 1),
+    );
+    const normalAssembly = simulateProjectAssembly(catalog, complete);
+    const prefixAssembly = simulateProjectAssembly(catalog, incomplete);
+    const normalResult = createPreparedProjectCandidateSession(catalog, normalAssembly).evaluate({
+      kind: 'roomTarget',
+      target: firstFTarget,
+      gameName: 'F_Combat02',
+    });
+    const prefixResult = createPreparedProjectCandidateSession(catalog, prefixAssembly).evaluate({
+      kind: 'roomTarget',
+      target: firstFTarget,
+      gameName: 'F_Combat02',
+    });
+    const normalProducer = candidateArtifactsForProjectEvaluationAssembly(normalAssembly)
+      .biomeAt(fGenerationBiome)
+      ?.rewardProducers.at(firstFReward);
+    const prefixProducer = candidateArtifactsForProjectEvaluationAssembly(prefixAssembly)
+      .biomeAt(fGenerationBiome)
+      ?.rewardProducers.at(firstFReward);
 
     const fixture = partialGWithInvalidSecondPhysicalTarget();
     const routeEvaluation = simulateProject(catalog, fixture.project).routes.find(
@@ -294,18 +309,67 @@ describe('progressive biome evaluation', () => {
     const invalidSecondGTarget = createTargetAddress(goldenGBiome, source(fixture.source), 'exit2');
     const clampedContext = clamped?.candidateArtifacts.roomTargets.at(firstGTarget);
     const beforeClampContext = beforeClamp?.candidateArtifacts.roomTargets.at(firstGTarget);
+    const firstGReward = createIncomingRewardAddress(goldenGBiome, fixture.firstTarget);
+    const clampedProducer = clamped?.candidateArtifacts.rewardProducers.at(firstGReward);
+    const beforeClampProducer = beforeClamp?.candidateArtifacts.rewardProducers.at(firstGReward);
 
     expect(normalResult).toMatchObject({ kind: 'roomTarget' });
     expect(prefixResult).toMatchObject({ kind: 'roomTarget' });
+    expect(normalProducer).toBeDefined();
+    expect(prefixProducer).toBeDefined();
+    expect(normalProducer).not.toBe(prefixProducer);
+    expect(Object.keys(normalProducer ?? {})).toEqual(['evaluateOffer']);
     expect(clampedContext).toBeDefined();
     expect(beforeClampContext).toBeDefined();
     expect(beforeClampContext).not.toBe(clampedContext);
+    expect(clampedProducer).toBeDefined();
+    expect(beforeClampProducer).toBeDefined();
+    expect(beforeClampProducer).not.toBe(clampedProducer);
     const clampedFrontierContext = clamped?.candidateArtifacts.roomTargets.at(invalidSecondGTarget);
     const beforeClampInvalidContext =
       beforeClamp?.candidateArtifacts.roomTargets.at(invalidSecondGTarget);
     expect(clampedFrontierContext).toBeDefined();
     expect(beforeClampInvalidContext).toBeDefined();
     expect(beforeClampInvalidContext).not.toBe(clampedFrontierContext);
+
+    const blocked = partialGWithEarlierInvalidReward();
+    const blockedRoute = simulateProject(catalog, blocked.project).routes.find(
+      (candidate) => candidate.routeKey === 'Underworld',
+    );
+    const blockedPrevious = blockedRoute?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    const blockedPlan = blocked.project.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'G');
+    if (blockedPrevious?.authoring !== 'complete' || blockedPlan === undefined) {
+      throw new Error('blocked reward artifact fixture has no valid F seed or G plan');
+    }
+    const blockedSeed = {
+      history: blockedPrevious.history,
+      rewardBranches: blockedPrevious.rewards.branches,
+    };
+    const blockedClamped = evaluateProgressiveBiomeAssembly(
+      catalog,
+      goldenGBiome,
+      blockedPlan,
+      2,
+      blockedSeed,
+    );
+    const blockedBeforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(
+      catalog,
+      goldenGBiome,
+      blockedPlan,
+      2,
+      blockedSeed,
+    );
+    const blockedOwner = createIncomingRewardAddress(goldenGBiome, blocked.firstTarget);
+    const foreignOwner = createIncomingRewardAddress(
+      goldenGBiome,
+      createOccurrenceId('not-a-reward-producer'),
+    );
+
+    expect(blockedClamped?.candidateArtifacts.rewardProducers.at(blockedOwner)).toBeUndefined();
+    expect(blockedBeforeClamp?.candidateArtifacts.rewardProducers.at(blockedOwner)).toBeDefined();
+    expect(blockedBeforeClamp?.candidateArtifacts.rewardProducers.at(foreignOwner)).toBeUndefined();
   });
 
   it('requires the Fields outcome before a target can be authored while retaining target eligibility', () => {
@@ -663,6 +727,16 @@ describe('progressive biome evaluation', () => {
         value: { rewardType: 'MetaCurrencyBigDrop' },
       }),
     ).toMatchObject({ kind: 'incomingReward', result: { supported: true } });
+    expect(
+      bindTestCandidateSession(catalog, fixture.project).evaluate({
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(
+          goldenGBiome,
+          createOccurrenceId('progressive-invalid-g-combat10'),
+        ),
+        value: { rewardType: 'MetaCurrencyBigDrop' },
+      }),
+    ).toMatchObject({ kind: 'unavailable' });
     expect(
       bindTestCandidateSession(catalog, fixture.project).evaluate({
         kind: 'roomTarget',
