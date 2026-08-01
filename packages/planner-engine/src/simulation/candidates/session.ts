@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import { createBiomeAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
+import type { ProjectCandidateArtifacts } from '../candidate-artifacts';
 import {
   candidateArtifactsForProjectEvaluationAssembly,
   type ProjectEvaluation,
@@ -139,10 +140,10 @@ function assertNever(value: never): never {
 function evaluateCandidateQuery(
   catalog: Catalog,
   assembly: ProjectEvaluationAssembly,
+  candidateArtifacts: ProjectCandidateArtifacts,
   query: ProjectCandidateQuery,
 ): ProjectCandidateEvaluation {
   const { project, evaluation } = assembly;
-  const candidateArtifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
   switch (query.kind) {
     case 'startRoom':
       return evaluateStartRoomCandidate(catalog, project, query);
@@ -262,7 +263,7 @@ export function createPreparedProjectCandidateSession(
   options: ProjectCandidateSessionOptions = {},
 ): ProjectCandidateSession {
   // Attest the exact assembly at binding time even when no query is loaded.
-  candidateArtifactsForProjectEvaluationAssembly(assembly);
+  const candidateArtifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
   const { project, evaluation } = assembly;
   function evaluate(query: ProjectCandidateQuery): ProjectCandidateEvaluation;
   function evaluate(
@@ -272,11 +273,18 @@ export function createPreparedProjectCandidateSession(
     queryOrQueries: ProjectCandidateQuery | readonly ProjectCandidateQuery[],
   ): ProjectCandidateEvaluation | readonly ProjectCandidateEvaluation[] {
     if (!Array.isArray(queryOrQueries)) {
-      return evaluateCandidateQuery(catalog, assembly, queryOrQueries as ProjectCandidateQuery);
+      return evaluateCandidateQuery(
+        catalog,
+        assembly,
+        candidateArtifacts,
+        queryOrQueries as ProjectCandidateQuery,
+      );
     }
     const queries = queryOrQueries as readonly ProjectCandidateQuery[];
     options.observe?.(Object.freeze({ kind: 'queryBatch', queryCount: queries.length }));
-    return Object.freeze(queries.map((query) => evaluateCandidateQuery(catalog, assembly, query)));
+    return Object.freeze(
+      queries.map((query) => evaluateCandidateQuery(catalog, assembly, candidateArtifacts, query)),
+    );
   }
   return Object.freeze({ project, evaluation, evaluate });
 }
