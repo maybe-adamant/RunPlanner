@@ -2,11 +2,17 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
+  createHubSlotAddress,
+  createHubVisitAddress,
   createIncomingRewardAddress,
+  createLocalChildAddress,
+  createLocalRewardAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
+  createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProject, type SemanticFinding } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -15,7 +21,12 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
 } from '@run-planner/test-fixtures';
-import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
+import {
+  createRepresentativeNProject,
+  createRepresentativeNOPQProject,
+  nBiome,
+  nOccurrenceId,
+} from '@run-planner/test-fixtures';
 import { createWorkspaceProjectSourceIndex } from './source-index';
 
 function biomeSource(
@@ -53,6 +64,82 @@ function reversedFDecisionSerialization() {
           },
     ),
   };
+}
+
+function clampedHubTargetLifecycleEvaluation(
+  project: ReturnType<typeof createRepresentativeNProject>,
+) {
+  const evaluation = simulateProject(catalog, project);
+  const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const biome = route?.biomes.find((candidate) => candidate.biomeKey === 'N');
+  if (
+    route === undefined ||
+    biome === undefined ||
+    biome.authoring !== 'incomplete' ||
+    biome.coverage.kind !== 'prefix' ||
+    !('materializedPrefix' in biome)
+  ) {
+    throw new Error('source-index Hub fixture did not produce an incomplete N prefix');
+  }
+  const hub = biome.materializedPrefix.decisions.find((decision) => decision.kind === 'hub');
+  const target = hub?.board.targets.find((candidate) => candidate.hubSlotKey === 'combat05');
+  if (hub?.kind !== 'hub' || target === undefined) {
+    throw new Error('source-index Hub fixture lost the first target');
+  }
+  const visit = createHubVisitAddress(nBiome, 'hub', 1);
+  const targetReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
+  const finding = Object.freeze({
+    code: 'rewardAcquisitionUnavailable' as const,
+    evidence: Object.freeze({}),
+    origin: targetReward,
+    phase: 'rewardGeneration' as const,
+    severity: 'error' as const,
+  }) satisfies SemanticFinding;
+  const clampedHub = Object.freeze({ ...hub, visits: Object.freeze([]) });
+  const materializedPrefix = Object.freeze({
+    ...biome.materializedPrefix,
+    decisions: Object.freeze(
+      biome.materializedPrefix.decisions.map((decision) =>
+        decision === hub ? clampedHub : decision,
+      ),
+    ),
+    frontier: Object.freeze({
+      enteredLocalRooms: Object.freeze([]),
+      kind: 'hubVisit' as const,
+      localSlots: Object.freeze([]),
+      origin: visit,
+      parentRestores: Object.freeze([]),
+      phase: 'targetLifecycle' as const,
+      target,
+    }),
+  });
+  const clampedBiome = Object.freeze({
+    ...biome,
+    coverage: Object.freeze({
+      kind: 'prefix' as const,
+      through: Object.freeze({ checkpoint: 'beforeTargetGeneration' as const, owner: visit }),
+    }),
+    findings: Object.freeze([...biome.findings, finding]),
+    materializedPrefix,
+  });
+  return Object.freeze({
+    ...evaluation,
+    findings: Object.freeze([...evaluation.findings, finding]),
+    routes: Object.freeze(
+      evaluation.routes.map((candidate) =>
+        candidate !== route
+          ? candidate
+          : Object.freeze({
+              ...candidate,
+              biomes: Object.freeze(
+                candidate.biomes.map((candidateBiome) =>
+                  candidateBiome !== biome ? candidateBiome : clampedBiome,
+                ),
+              ),
+            }),
+      ),
+    ),
+  });
 }
 
 describe('structured workspace source index', () => {
@@ -220,6 +307,145 @@ describe('structured workspace source index', () => {
     expect(source.exitDecision(owner.source)).toBeDefined();
     expect(source.evaluatedBatch(owner)).toBeUndefined();
     expect(source.isAssessed(owner)).toBe(false);
+    expect(
+      source.isAssessed(
+        createExitDecisionAddress(goldenFBiome, {
+          kind: 'occurrence',
+          occurrenceId: goldenFOccurrenceId(2, 1),
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('maps explicit ordinary prefix targets and their room-owned leaves without scanning the snapshot', () => {
+    const complete = createGoldenFGHIProject();
+    const project = {
+      ...complete,
+      routes: complete.routes.map((route) =>
+        route.routeKey !== 'Underworld'
+          ? route
+          : {
+              ...route,
+              biomes: route.biomes.map((plan) =>
+                plan.biomeKey !== 'F' || plan.topology === null
+                  ? plan
+                  : {
+                      ...plan,
+                      topology: {
+                        ...plan.topology,
+                        decisions: plan.topology.decisions.filter(
+                          (decision) =>
+                            decision.kind !== 'exit' ||
+                            decision.source.kind !== 'occurrence' ||
+                            decision.source.occurrenceId !== goldenFOccurrenceId(1, 1),
+                        ),
+                      },
+                    },
+              ),
+            },
+      ),
+    };
+    const decision = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFStartId,
+    });
+    const target = createTargetAddress(goldenFBiome, decision.source, 'exit1');
+    const source = biomeSource(
+      createWorkspaceProjectSourceIndex(catalog, project, simulateProject(catalog, project)),
+      'Underworld',
+      'F',
+    );
+    const targetOccurrence = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const targetReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+
+    expect(source.evaluation).toMatchObject({
+      authoring: 'incomplete',
+      coverage: {
+        kind: 'prefix',
+        through: {
+          checkpoint: 'beforeTargetGeneration',
+          owner: createExitDecisionAddress(goldenFBiome, {
+            kind: 'occurrence',
+            occurrenceId: goldenFOccurrenceId(1, 1),
+          }),
+        },
+      },
+    });
+    expect(source.isAssessed(decision)).toBe(true);
+    expect(source.isAssessed(target)).toBe(true);
+    expect(source.isAssessed(targetOccurrence)).toBe(true);
+    expect(source.isAssessed(targetReward)).toBe(true);
+  });
+
+  it('maps Hub board, visit, and local owners without treating dormant authored details as local coverage', () => {
+    const project = createRepresentativeNOPQProject();
+    const source = biomeSource(
+      createWorkspaceProjectSourceIndex(catalog, project, simulateProject(catalog, project)),
+      'Surface',
+      'N',
+    );
+    const visited = nOccurrenceId('combat05');
+    const dormant = nOccurrenceId('combat10');
+
+    expect(source.isAssessed(createHubSlotAddress(nBiome, 'hub', 'combat05'))).toBe(true);
+    expect(source.isAssessed(createHubVisitAddress(nBiome, 'hub', 1))).toBe(true);
+    expect(source.isAssessed(createOccurrenceAddress(nBiome, visited))).toBe(true);
+    expect(
+      source.isAssessed(createLocalChildAddress(nBiome, visited, 'sideRooms', 'sideDoor1')),
+    ).toBe(true);
+    expect(
+      source.isAssessed(createLocalRewardAddress(nBiome, visited, 'sideRooms', 'sideDoor1')),
+    ).toBe(true);
+    expect(source.isAssessed(createOccurrenceAddress(nBiome, dormant))).toBe(true);
+    expect(source.isAssessed(createIncomingRewardAddress(nBiome, dormant))).toBe(true);
+    expect(
+      source.isAssessed(createLocalChildAddress(nBiome, dormant, 'sideRooms', 'sideDoor1')),
+    ).toBe(false);
+  });
+
+  it('uses the clamped Hub lifecycle frontier rather than nested canonical target shape', () => {
+    const targetOccurrenceId = nOccurrenceId('combat05');
+    const visit = createHubVisitAddress(nBiome, 'hub', 1);
+    const target = createHubSlotAddress(nBiome, 'hub', 'combat05');
+    const targetOccurrence = createOccurrenceAddress(nBiome, targetOccurrenceId);
+    const targetReward = createIncomingRewardAddress(nBiome, targetOccurrenceId);
+    const project = createRepresentativeNProject({ includePreboss: false });
+    const source = biomeSource(
+      createWorkspaceProjectSourceIndex(
+        catalog,
+        project,
+        clampedHubTargetLifecycleEvaluation(project),
+      ),
+      'Surface',
+      'N',
+    );
+
+    expect(source.evaluation).toMatchObject({
+      authoring: 'incomplete',
+      coverage: {
+        kind: 'prefix',
+        through: { checkpoint: 'beforeTargetGeneration', owner: visit },
+      },
+    });
+    expect(source.isAssessed(visit)).toBe(true);
+    expect(source.isAssessed(target)).toBe(false);
+    expect(source.isAssessed(targetOccurrence)).toBe(false);
+    expect(source.isAssessed(targetReward)).toBe(false);
+    expect(
+      source.isAssessed(
+        createLocalChildAddress(nBiome, targetOccurrenceId, 'sideRooms', 'sideDoor1'),
+      ),
+    ).toBe(false);
+    expect(source.isAssessed(createOccurrenceAddress(nBiome, nOccurrenceId('combat10')))).toBe(
+      true,
+    );
+
+    // Findings remain a separate feedback index. Assembly can use this exact
+    // owner for a visible assessed marker without claiming evaluation reached it.
+    expect(source.findingsFor(targetReward)).toHaveLength(1);
+    expect(source.isAssessed(targetReward) || source.findingsFor(targetReward).length > 0).toBe(
+      true,
+    );
   });
 
   it('keeps evaluator products and findings addressed to authored owners', () => {
