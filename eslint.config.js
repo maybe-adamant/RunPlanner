@@ -4,7 +4,14 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-const platformImports = ['react', 'react-dom', 'react-redux', '@reduxjs/*', '@tauri-apps/*'];
+const platformImports = [
+  'react',
+  'react-dom',
+  'react-redux',
+  '@radix-ui/*',
+  '@reduxjs/*',
+  '@tauri-apps/*',
+];
 const engineBoundaryImports = [
   ...platformImports,
   '@run-planner/hades2-catalog',
@@ -37,6 +44,16 @@ const structuredWorkspaceBoundaryImportPatterns = [
       'Structured-workspace contract and construction modules are private; import the public entry point.',
   },
 ];
+const workspacePrivateFamilyImports = {
+  assembly: [
+    '**/occurrence-assembly',
+    '**/decision-assembly',
+    '**/hub-assembly',
+    '**/topology-interaction-assembly',
+  ],
+  inspector: ['**/inspector-defaults', '**/inspector-destinations'],
+  markers: ['**/marker-builder', '**/marker-ownership'],
+};
 
 export default tseslint.config(
   {
@@ -79,6 +96,163 @@ export default tseslint.config(
         'error',
         {
           patterns: structuredWorkspaceBoundaryImportPatterns,
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      'apps/planner/test/support/structured-workspace/expected-*.ts',
+      'apps/planner/test/support/structuredWorkspaceClosure.ts',
+      'apps/planner/test/support/structuredWorkspaceExpectations.ts',
+      'apps/planner/test/support/structuredWorkspaceStructuralControls.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            ...structuredWorkspaceBoundaryImportPatterns,
+            {
+              group: [
+                '**/apps/planner/src/**',
+                '**/src/**',
+                '@run-planner/planner',
+                '@run-planner/planner/**',
+              ],
+              message:
+                'Expected workspace manifests derive only from persisted state, catalog declarations, and direct pure-core authority.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/planner/test/support/structured-workspace/observed-workspace.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            ...structuredWorkspaceBoundaryImportPatterns,
+            {
+              allowTypeImports: true,
+              group: ['**/src/projections/structured-workspace'],
+              message:
+                'Workspace observation may know public contract types but may not invoke the workspace producer.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/planner/src/projections/structured-workspace/presentation/biome-presentation.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/source-index',
+                '**/audit/**',
+                '**/interaction-binding',
+                ...workspacePrivateFamilyImports.assembly,
+                '**/marker-builder',
+              ],
+              message:
+                'Final workspace presentation consumes assembled products, not producer families.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      'apps/planner/src/projections/structured-workspace/assembly/biome-semantic-assembly.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/audit/**',
+                '**/biome-presentation',
+                '**/interaction-binding',
+                ...workspacePrivateFamilyImports.inspector,
+              ],
+              message:
+                'Semantic assembly remains upstream of presentation, binding, and navigation.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      'apps/planner/src/projections/structured-workspace/interactions/interaction-binding.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/biome-presentation', ...workspacePrivateFamilyImports.inspector],
+              message: 'Interaction binding does not depend on final presentation or navigation.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/planner/src/projections/structured-workspace/navigation/marker-ownership.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/source-index',
+                ...workspacePrivateFamilyImports.assembly,
+                '**/biome-semantic-assembly',
+                '**/biome-presentation',
+                '**/marker-builder',
+                '**/audit/**',
+                '**/interaction-binding',
+                ...workspacePrivateFamilyImports.inspector,
+              ],
+              message: 'Marker ownership depends only on the public workspace contract.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/planner/src/projections/structured-workspace/projector.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                ...workspacePrivateFamilyImports.assembly,
+                ...workspacePrivateFamilyImports.markers,
+                ...workspacePrivateFamilyImports.inspector,
+              ],
+              message: 'The workspace facade composes stage products, not private family builders.',
+            },
+          ],
         },
       ],
     },

@@ -7,11 +7,6 @@ import { describe, expect, it } from 'vitest';
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const uiRoot = join(repositoryRoot, 'apps/planner/src/ui');
 const engineRoot = join(repositoryRoot, 'packages/planner-engine/src');
-const structuredWorkspaceRoot = join(
-  repositoryRoot,
-  'apps/planner/src/projections/structured-workspace',
-);
-const workspaceTestSupportRoot = join(repositoryRoot, 'apps/planner/test/support');
 
 function productionSources(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -52,132 +47,12 @@ describe('unified workspace ownership boundary', () => {
       'WorkspaceInteractionCatalog',
       'WorkspaceNode',
     ];
-    const forbiddenImports = [
-      /from\s+['"]@radix-ui\//,
-      /from\s+['"]react(?:\/|['"])/,
-      /from\s+['"]react-redux['"]/,
-    ];
-
     for (const path of productionSources(engineRoot)) {
       const source = readFileSync(path, 'utf8');
       for (const presentationModel of presentationModels) {
         expect(source, `${relative(engineRoot, path)} owns ${presentationModel}`).not.toContain(
           presentationModel,
         );
-      }
-      for (const forbiddenImport of forbiddenImports) {
-        expect(source, `${relative(engineRoot, path)} imports a UI library`).not.toMatch(
-          forbiddenImport,
-        );
-      }
-    }
-  });
-
-  it('keeps test-only authored expectations free of workspace product authorities', () => {
-    const expectedSupportSources = [
-      join(workspaceTestSupportRoot, 'structuredWorkspaceClosure.ts'),
-      join(workspaceTestSupportRoot, 'structuredWorkspaceExpectations.ts'),
-      join(workspaceTestSupportRoot, 'structuredWorkspaceStructuralControls.ts'),
-    ];
-    const forbiddenImports = [
-      /from\s+['"][^'"]*source-index['"]/,
-      /from\s+['"][^'"]*occurrence-assembly['"]/,
-      /from\s+['"][^'"]*occurrence-facts['"]/,
-      /from\s+['"][^'"]*decision-assembly['"]/,
-      /from\s+['"][^'"]*hub-assembly['"]/,
-      /from\s+['"][^'"]*biome-semantic-assembly['"]/,
-      /from\s+['"][^'"]*assembly-products['"]/,
-      /from\s+['"][^'"]*marker-builder['"]/,
-      /from\s+['"][^'"]*marker-ownership['"]/,
-      /from\s+['"][^'"]*biome-presentation['"]/,
-      /from\s+['"][^'"]*topology-presentation['"]/,
-      /from\s+['"][^'"]*room-policy['"]/,
-      /from\s+['"][^'"]*catalog-room['"]/,
-      /from\s+['"][^'"]*inspector-[^'"]*['"]/,
-      /from\s+['"][^'"]*interaction-binding['"]/,
-      /from\s+['"][^'"]*projector['"]/,
-      /from\s+['"][^'"]*projections\/structured-workspace['"]/,
-    ];
-
-    for (const path of expectedSupportSources) {
-      const source = readFileSync(path, 'utf8');
-      for (const forbiddenImport of forbiddenImports) {
-        expect(source, `${relative(repositoryRoot, path)} imports ${forbiddenImport}`).not.toMatch(
-          forbiddenImport,
-        );
-      }
-    }
-  });
-
-  it('keeps final workspace presentation, interaction binding, and facade directional', () => {
-    const presentationPath = join(structuredWorkspaceRoot, 'presentation/biome-presentation.ts');
-    const semanticAssemblyPath = join(
-      structuredWorkspaceRoot,
-      'assembly/biome-semantic-assembly.ts',
-    );
-    const interactionBindingPath = join(
-      structuredWorkspaceRoot,
-      'interactions/interaction-binding.ts',
-    );
-    const markerOwnershipPath = join(structuredWorkspaceRoot, 'navigation/marker-ownership.ts');
-    const projectorPath = join(structuredWorkspaceRoot, 'projector.ts');
-    const forbiddenPresentationImports = [
-      /from\s+['"][^'"]*source-index['"]/,
-      /from\s+['"][^'"]*audit\//,
-      /from\s+['"][^'"]*interaction-binding['"]/,
-      /from\s+['"][^'"]*occurrence-assembly['"]/,
-      /from\s+['"][^'"]*decision-assembly['"]/,
-      /from\s+['"][^'"]*hub-assembly['"]/,
-      /from\s+['"][^'"]*topology-interaction-assembly['"]/,
-      /from\s+['"][^'"]*marker-builder['"]/,
-    ];
-    const forbiddenInteractionBindingImports = [
-      /from\s+['"][^'"]*biome-presentation['"]/,
-      /from\s+['"][^'"]*inspector-defaults['"]/,
-      /from\s+['"][^'"]*inspector-destinations['"]/,
-    ];
-    const forbiddenSemanticAssemblyImports = [
-      /from\s+['"][^'"]*audit\//,
-      /from\s+['"][^'"]*biome-presentation['"]/,
-      /from\s+['"][^'"]*interaction-binding['"]/,
-      /from\s+['"][^'"]*inspector-[^'"]*['"]/,
-    ];
-    const forbiddenMarkerOwnershipImports = [
-      /from\s+['"][^'"]*source-index['"]/,
-      /from\s+['"][^'"]*occurrence-assembly['"]/,
-      /from\s+['"][^'"]*decision-assembly['"]/,
-      /from\s+['"][^'"]*hub-assembly['"]/,
-      /from\s+['"][^'"]*biome-semantic-assembly['"]/,
-      /from\s+['"][^'"]*biome-presentation['"]/,
-      /from\s+['"][^'"]*topology-interaction-assembly['"]/,
-      /from\s+['"][^'"]*marker-builder['"]/,
-      /from\s+['"][^'"]*audit\//,
-      /from\s+['"][^'"]*interaction-binding['"]/,
-      /from\s+['"][^'"]*inspector-[^'"]*['"]/,
-    ];
-    const forbiddenFacadeImports = [
-      /from\s+['"][^'"]*occurrence-assembly['"]/,
-      /from\s+['"][^'"]*decision-assembly['"]/,
-      /from\s+['"][^'"]*hub-assembly['"]/,
-      /from\s+['"][^'"]*topology-interaction-assembly['"]/,
-      /from\s+['"][^'"]*marker-(?:builder|ownership)['"]/,
-      /from\s+['"][^'"]*inspector-defaults['"]/,
-      /from\s+['"][^'"]*inspector-destinations['"]/,
-    ];
-
-    for (const [path, forbiddenImports] of [
-      [presentationPath, forbiddenPresentationImports],
-      [semanticAssemblyPath, forbiddenSemanticAssemblyImports],
-      [interactionBindingPath, forbiddenInteractionBindingImports],
-      [markerOwnershipPath, forbiddenMarkerOwnershipImports],
-      [projectorPath, forbiddenFacadeImports],
-    ] as const) {
-      const source = readFileSync(path, 'utf8');
-      for (const forbiddenImport of forbiddenImports) {
-        expect(
-          source,
-          `${relative(structuredWorkspaceRoot, path)} imports ${forbiddenImport}`,
-        ).not.toMatch(forbiddenImport);
       }
     }
   });
