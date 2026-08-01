@@ -216,7 +216,6 @@ function missingTargetsForPhysicalExits(
         exitKey: exit.exitKey,
         index: exit.index,
         marker: input.markerDestinations.marker(owner),
-        owner,
       }),
     );
     firstMissing ??= exit;
@@ -439,14 +438,25 @@ function roomControlsForBatch(
         Object.freeze({
           address: createTargetAddress(input.source.biome, decision.source, target.exitKey),
           kind: 'targetRoomPicker' as const,
-          selectedGameName: target.room.gameName,
+          target: Object.freeze({
+            kind: 'existing' as const,
+            occurrence: target.room.address,
+            selectedGameName: target.room.gameName,
+          }),
         }),
       );
       continue;
     }
     const missing = missingByExit.get(exit.exitKey);
     if (missing?.authoring.kind === 'ready') {
-      controls.push(Object.freeze({ address: missing.owner, kind: 'targetRoomPicker' as const }));
+      const address = createTargetAddress(input.source.biome, decision.source, missing.exitKey);
+      controls.push(
+        Object.freeze({
+          address,
+          kind: 'targetRoomPicker' as const,
+          target: Object.freeze({ kind: 'missing' as const }),
+        }),
+      );
     }
   }
   return Object.freeze(controls);

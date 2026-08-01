@@ -38,6 +38,7 @@ export type {
   WorkspaceRailEntry,
   WorkspaceRewardControl,
   WorkspaceRoomPickerControl,
+  WorkspaceRoomInteraction,
   WorkspaceRoomSummary,
   WorkspaceRoute,
   WorkspaceTakeoverBatchInteraction,

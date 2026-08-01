@@ -14,6 +14,7 @@ import {
   createRewardWheelAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
+  createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -169,6 +170,98 @@ describe('structured workspace interaction binding', () => {
       `F_Combat01 is outside the declared start domain for ${semanticAddressKey(biome)}`,
     );
     expect(allocations).toBe(0);
+  });
+
+  it('binds existing and missing targets to exact replacement and lazy creation intents', () => {
+    const startId = createOccurrenceId('target-binding-start');
+    const firstCombatId = createOccurrenceId('target-binding-first-combat');
+    const existingId = createOccurrenceId('target-binding-existing');
+    const createdId = createOccurrenceId('target-binding-created');
+    const firstSource = { kind: 'occurrence' as const, occurrenceId: startId };
+    const source = { kind: 'occurrence' as const, occurrenceId: firstCombatId };
+    const decision = createExitDecisionAddress(goldenFBiome, source);
+    const existingTarget = createTargetAddress(goldenFBiome, source, 'exit1');
+    const missingTarget = createTargetAddress(goldenFBiome, source, 'exit2');
+    let project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Underworld: 1 },
+        name: 'Target interaction binding',
+        projectId: 'target-interaction-binding',
+      }),
+      catalog,
+      {
+        biome: goldenFBiome,
+        gameName: 'F_Opening01',
+        kind: 'CreateStart',
+        occurrenceId: startId,
+      },
+    );
+    project = applyProjectCommand(project, catalog, {
+      decision: createExitDecisionAddress(goldenFBiome, firstSource),
+      kind: 'CreateBatch',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, firstSource),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      gameName: 'F_Combat03',
+      kind: 'CreateTarget',
+      occurrenceId: firstCombatId,
+      target: createTargetAddress(goldenFBiome, firstSource, 'exit1'),
+    });
+    project = applyProjectCommand(project, catalog, { decision, kind: 'CreateBatch' });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      gameName: 'F_Combat04',
+      kind: 'CreateTarget',
+      occurrenceId: existingId,
+      target: existingTarget,
+    });
+    let allocations = 0;
+    const interactions = bind(project, 'Underworld', 'F', () => {
+      allocations += 1;
+      return createdId;
+    }).interactions.rooms;
+    const existing = interactions.get(semanticAddressKey(existingTarget));
+    const missing = interactions.get(semanticAddressKey(missingTarget));
+    if (existing?.kind !== 'targetRoom' || missing?.kind !== 'targetRoom') {
+      throw new Error('existing and missing target-room interactions are required');
+    }
+
+    expect(allocations).toBe(0);
+    expect(existing.owner).toEqual(existingTarget);
+    expect(missing.owner).toEqual(missingTarget);
+    existing.load();
+    missing.load();
+    expect(allocations).toBe(0);
+    expect(existing.intentFor('F_Combat05')).toEqual({
+      command: {
+        gameName: 'F_Combat05',
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(goldenFBiome, existingId),
+      },
+    });
+    expect(allocations).toBe(0);
+    expect(() => missing.intentFor('F_Opening01')).toThrow(
+      `F_Opening01 is outside the target-room domain for ${semanticAddressKey(missingTarget)}`,
+    );
+    expect(allocations).toBe(0);
+    expect(missing.intentFor('F_Combat05')).toEqual({
+      command: {
+        gameName: 'F_Combat05',
+        kind: 'CreateTarget',
+        occurrenceId: createdId,
+        target: missingTarget,
+      },
+      focus: { owner: missingTarget, timing: 'after' },
+    });
+    expect(allocations).toBe(1);
   });
 
   it('binds all four reward owners to their exact no-focus replacement intents', () => {

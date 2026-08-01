@@ -208,6 +208,8 @@ describe('DecisionWorkbench', () => {
   it('authors only the next physical target and publishes its room and reward controls', async () => {
     const { owner, project } = fTwoDoorBatchProject();
     const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
+    const targetOwner = createTargetAddress(goldenFBiome, owner.source, 'exit1');
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
     expect(screen.getByRole('button', { name: 'Exit 1 room' })).not.toHaveProperty(
       'disabled',
       true,
@@ -228,11 +230,23 @@ describe('DecisionWorkbench', () => {
         true,
       ),
     );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      targetOwner,
+    );
     const authoredOffer = document.querySelector<HTMLElement>(
       '.biome-target-row:not([data-missing="true"])',
     );
     if (authoredOffer === null) throw new Error('F authored room offer is missing');
     expect(within(authoredOffer).getByRole('button', { name: 'Reward' })).toBeTruthy();
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(screen.getByRole('article', { name: 'Exit 1 unspecified room offer' })).toBeTruthy(),
+    );
+    expect((screen.getByLabelText('Exit 2 room') as HTMLSelectElement).disabled).toBe(true);
   });
 
   it('publishes picked-room and reward edits as separate atomic decision commands', async () => {

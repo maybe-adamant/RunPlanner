@@ -813,6 +813,26 @@ checkpoint requirement.
   and focus reconstruction from React without duplicating owners onto render
   nodes.
 
+**Status — complete (2026-08-01).** Target-room requirements now distinguish an
+existing target, carrying its exact target and occurrence owners, from a
+missing target, carrying only its target owner. Binding validates a requested
+room against the declared target domain before it allocates an identity. It
+returns an unfocused `ReplaceOccurrenceRoom` intent for an existing target and
+a lazy `CreateTarget` intent with after-focus on the missing target. The
+render-only missing-target product no longer duplicates an exact owner.
+
+`DecisionWorkbench` resolves the target-only bound interaction by its marker
+key and dispatches its returned intent. It no longer narrows target markers or
+constructs target commands, occurrence identities, or creation focus. The
+authored-choice start-room replacement remains intentionally outside this
+family.
+
+Interaction-binding tests own both exact target intent shapes and invalid
+choice allocation laziness. The visible target-creation flow retains focus,
+one-history-entry, and Undo witnesses. Focused C2 validation passed 5 files /
+62 tests, typecheck, and the planner lane (43 files / 288 tests). The complete
+repository gate remains the Gate C checkpoint requirement.
+
 #### C3: Structural frontier and takeover commands
 
 - bind ordinary-batch creation, linked-exit creation, and existing takeover

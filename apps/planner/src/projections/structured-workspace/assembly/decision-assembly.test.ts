@@ -191,6 +191,21 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.roomControls.some((control) => control.kind === 'targetRoomPicker')).toBe(true);
     const selected = assembly.batch.targets.find((target) => target.selected);
     if (selected === undefined) throw new Error('selected target is missing');
+    expect(
+      assembly.roomControls.find(
+        (control) =>
+          control.kind === 'targetRoomPicker' &&
+          semanticAddressKey(control.address) === selected.marker.focusKey,
+      ),
+    ).toEqual({
+      address: selected.marker.address,
+      kind: 'targetRoomPicker',
+      target: {
+        kind: 'existing',
+        occurrence: selected.room.address,
+        selectedGameName: selected.room.gameName,
+      },
+    });
     expect(kit.markers.destinations().get(selected.marker.focusKey)?.nodeKey).toBe(
       assembly.batch.key,
     );
@@ -533,7 +548,9 @@ describe('structured workspace decision assembly', () => {
     expect(
       assembly.roomControls.find(
         (control) =>
-          control.kind === 'targetRoomPicker' && control.selectedGameName === 'I_PreBoss02',
+          control.kind === 'targetRoomPicker' &&
+          control.target.kind === 'existing' &&
+          control.target.selectedGameName === 'I_PreBoss02',
       ),
     ).toMatchObject({ kind: 'targetRoomPicker' });
   });
@@ -718,7 +735,11 @@ describe('structured workspace decision assembly', () => {
       { kind: 'ready' },
     ]);
     expect(after.roomControls).toHaveLength(1);
-    expect(after.roomControls[0]?.address).toEqual(after.batch.missingTargets[0]?.owner);
+    expect(after.roomControls[0]).toEqual({
+      address: after.batch.missingTargets[0]?.marker.address,
+      kind: 'targetRoomPicker',
+      target: { kind: 'missing' },
+    });
   });
 
   it('projects exact repair scope for unavailable authored exits', () => {

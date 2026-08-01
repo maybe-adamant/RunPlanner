@@ -566,6 +566,13 @@ export function OccurrenceWorkbench({
 }: OccurrenceWorkbenchProps) {
   const dispatch = useAppDispatch();
   const idPrefix = `occurrence-${room.occurrenceId}`;
+  const roomInteraction =
+    room.roomPicker === undefined
+      ? undefined
+      : requireWorkspaceInteraction(
+          interactions.rooms,
+          workspaceInteractionKey(room.roomPicker.address),
+        );
 
   return (
     <article className="room-card biome-occurrence-workbench">
@@ -579,10 +586,10 @@ export function OccurrenceWorkbench({
           <SemanticOwnerMarker address={room.address} />
         </div>
       </header>
-      {room.roomPicker === undefined ? null : (
+      {roomInteraction === undefined ? null : (
         <RoomSelector
           idPrefix={idPrefix}
-          interactions={interactions}
+          interaction={roomInteraction}
           label="Starting room"
           onSelect={(gameName) =>
             dispatch(
@@ -593,7 +600,6 @@ export function OccurrenceWorkbench({
               }),
             )
           }
-          owner={room.roomPicker.address}
         />
       )}
       <RoomOfferEditor

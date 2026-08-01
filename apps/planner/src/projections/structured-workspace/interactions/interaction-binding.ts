@@ -866,6 +866,12 @@ export function bindWorkspaceInteractions(
   );
   const rooms = new Map<string, WorkspaceRoomInteraction>();
   for (const [key, control] of roomControls) {
+    const selectedGameName =
+      control.kind === 'startRoomPicker'
+        ? control.selectedGameName
+        : control.target.kind === 'existing'
+          ? control.target.selectedGameName
+          : undefined;
     const candidateRooms = (() => {
       if (control.kind === 'startRoomPicker') {
         return Object.freeze(
@@ -882,40 +888,83 @@ export function bindWorkspaceInteractions(
         ...new Map(candidatesForCategories.map((room) => [room.gameName, room])).values(),
       ]);
     })();
+    const targetGameNames = new Set(candidateRooms.map((room) => room.gameName));
     let model: ContextualPickerModel<RoomDeclaration> | undefined;
+    const interaction = {
+      choices: Object.freeze(
+        candidateRooms.map((room) =>
+          Object.freeze({
+            category: roomCategoryForKind(room.kind) ?? room.kind,
+            gameName: room.gameName,
+            label: room.label,
+          }),
+        ),
+      ),
+      key,
+      owner: control.address,
+      load(): ContextualPickerModel<RoomDeclaration> {
+        if (model !== undefined) return model;
+        model = services.contextualPicker.project(
+          control.kind === 'startRoomPicker'
+            ? candidates.startRooms(control.address, candidateRooms)
+            : candidates.roomTargets(control.address, candidateRooms),
+          (option) =>
+            Object.freeze({
+              label: option.value.label,
+              category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
+              selected: option.value.gameName === selectedGameName,
+            }),
+          (room) => room.gameName,
+        );
+        return model;
+      },
+      ...(selectedGameName === undefined
+        ? {}
+        : { selected: requireWorkspaceRoom(catalog, selectedGameName) }),
+    };
+    if (control.kind === 'startRoomPicker') {
+      rooms.set(
+        key,
+        Object.freeze({
+          ...interaction,
+          kind: 'startRoom' as const,
+          owner: control.address,
+        }),
+      );
+      continue;
+    }
     rooms.set(
       key,
       Object.freeze({
-        choices: Object.freeze(
-          candidateRooms.map((room) =>
-            Object.freeze({
-              category: roomCategoryForKind(room.kind) ?? room.kind,
-              gameName: room.gameName,
-              label: room.label,
-            }),
-          ),
-        ),
-        key,
-        owner: control.address,
-        load(): ContextualPickerModel<RoomDeclaration> {
-          if (model !== undefined) return model;
-          model = services.contextualPicker.project(
-            control.kind === 'startRoomPicker'
-              ? candidates.startRooms(control.address, candidateRooms)
-              : candidates.roomTargets(control.address, candidateRooms),
-            (option) =>
-              Object.freeze({
-                label: option.value.label,
-                category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
-                selected: option.value.gameName === control.selectedGameName,
+        ...interaction,
+        intentFor(gameName: string) {
+          if (!targetGameNames.has(gameName)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${gameName} is outside the target-room domain for ${key}`,
+            );
+          }
+          if (control.target.kind === 'existing') {
+            return Object.freeze({
+              command: Object.freeze({
+                gameName,
+                kind: 'ReplaceOccurrenceRoom' as const,
+                occurrence: control.target.occurrence,
               }),
-            (room) => room.gameName,
-          );
-          return model;
+            });
+          }
+          const occurrenceId = allocateOccurrenceId();
+          return Object.freeze({
+            command: Object.freeze({
+              gameName,
+              kind: 'CreateTarget' as const,
+              occurrenceId,
+              target: control.address,
+            }),
+            focus: Object.freeze({ owner: control.address, timing: 'after' as const }),
+          });
         },
-        ...(control.selectedGameName === undefined
-          ? {}
-          : { selected: requireWorkspaceRoom(catalog, control.selectedGameName) }),
+        kind: 'targetRoom' as const,
+        owner: control.address,
       }),
     );
   }
