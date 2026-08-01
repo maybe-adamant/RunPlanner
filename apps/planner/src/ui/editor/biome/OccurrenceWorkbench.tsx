@@ -7,7 +7,6 @@ import {
   type WorkspaceMarker,
   type WorkspaceEphyraSideRoomDescriptor,
   type WorkspaceEphyraSideRoomGroup,
-  type WorkspaceRewardControl,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -16,8 +15,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { CountedRewardEditor, RewardValueEditor } from '../rewards/RewardEditors';
+import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
 import { CandidateSelect } from './CandidateSelect';
 import { RoomSelector } from './RoomSelector';
@@ -28,41 +26,6 @@ interface OccurrenceWorkbenchProps {
   /** Hub visits retain their main offer on the Hub board. */
   readonly presentation: 'full' | 'hubRoomLocal';
   readonly room: WorkspaceRoomSummary;
-}
-
-export function RewardControlEditor({
-  control,
-  idPrefix,
-  interactions,
-}: {
-  readonly control: WorkspaceRewardControl;
-  readonly idPrefix: string;
-  readonly interactions: WorkspaceInteractionCatalog;
-}) {
-  const executeIntent = useCommandIntent();
-  const interaction = requireWorkspaceInteraction(
-    interactions.rewards,
-    workspaceInteractionKey(control.owner.address),
-  );
-  const onReplace = (value: Parameters<typeof interaction.intentFor>[0]): void =>
-    executeIntent(interaction.intentFor(value));
-  return control.kind === 'countedReward' ? (
-    <CountedRewardEditor
-      candidateOwner={control.owner}
-      idPrefix={idPrefix}
-      interactions={interactions}
-      offer={control.offer}
-      onReplace={onReplace}
-    />
-  ) : (
-    <RewardValueEditor
-      candidateOwner={control.owner}
-      idPrefix={idPrefix}
-      interactions={interactions}
-      offer={control.offer}
-      onReplace={onReplace}
-    />
-  );
 }
 
 function EphyraSideRoomEntryOrderSelect({

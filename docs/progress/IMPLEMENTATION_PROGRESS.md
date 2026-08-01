@@ -44,6 +44,17 @@ lifecycle artifacts; no sidecar, state wrapper, or forwarding layer was added.
 The final re-anchor closure gate passed 95 test files and 771 tests, every
 workspace typecheck, lint, formatting, and the production build.
 
+The post-re-anchor React/application boundary correction is complete. It
+removed UI-facing deletion-closure shadows, preserved complete before-focus
+removal and repair command-intent capabilities, gave `WorkspaceBiome` an
+explicit focus-scoping owner, and moved the complete intent-bound reward
+adapter into its own feature neighborhood. Scoped lint now prohibits occurrence
+identity allocation throughout structured-editor React and direct project
+dispatch only in the complete reward and Hub families. Mixed workbenches retain
+their deliberately direct fixed owner-plus-value mappings. The final repository
+gate passed 96 test files and 811 tests, typecheck, lint, formatting, and the
+production build.
+
 The executable work-count contract remains unchanged: rendering performs no
 evaluation or candidate work; two representative workspaces require two project
 evaluations; cold candidate activation uses its addressed batch (fourteen for

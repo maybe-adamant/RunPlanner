@@ -21,7 +21,7 @@ import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentati
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { CandidateSelect } from './CandidateSelect';
-import { RewardControlEditor } from './OccurrenceWorkbench';
+import { RewardControlEditor } from '../rewards/RewardControlEditor';
 
 interface HubDecisionWorkbenchProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
