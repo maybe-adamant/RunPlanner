@@ -5,6 +5,7 @@ import { ProjectDocumentContractError } from '../validation';
 import { locateBiome, projectCommandAddress, ProjectCommandContractError } from './contract';
 import { applyOccurrenceStateCommand } from './occurrence-state';
 import { applyProjectStateCommand } from './project-state';
+import { applyRoomReplacementCommand } from './room-replacement';
 import { applyTopologyCommand } from './topology';
 import type { ProjectCommand } from './types';
 
@@ -44,6 +45,12 @@ function applyUnchecked(
         command,
       );
     case 'ReplaceOccurrenceRoom':
+      return applyRoomReplacementCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
     case 'ReplaceShipEncounterCount':
     case 'ReplaceIncomingReward':
     case 'ReplaceLocalReward':

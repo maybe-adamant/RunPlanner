@@ -2067,6 +2067,28 @@ document-error wrapping path and Fields no-op/rejection cases. The reduced
 broad command suite deliberately retains only C4.2/C4.3 replacement, leaf,
 and history witnesses; no remaining occurrence-state family was moved early.
 
+##### C4.2 completion record (2026-08-01)
+
+`commands/room-replacement.ts` now owns the exact `ReplaceOccurrenceRoom`
+transition: structural owner and role resolution, start/linked/Hub and ordinary
+batch constraints, selected-stage validation, complete default construction,
+compatible room-leaf reconciliation, and outgoing generated reward-store
+reconciliation. `RoomReplacementCommand` is a separate explicit family, and
+the public dispatcher routes it directly while retaining the established
+document decode and command-error wrapping boundary. The only shared mutation
+is the direct internal `occurrence-mutation.ts` operation used by both this
+family and the remaining occurrence leaf family; it replaces one occurrence or
+writes its topology and contains no validation, lookup, or state policy.
+
+The new focused room-replacement suite owns declared start/no-op identity, N
+linked and Hub identity, retained pre-reconciliation topology and compatible
+Shop state, Q staged-pool enforcement, and O source reward-store policy
+changes while targets remain retained. The room-state reconciliation suite
+continues to own its complete compatible-leaf matrix, and topology, codec,
+simulation, and product tests remain boundary witnesses. The broad command
+suite now retains only the C4.3 Ship/history cases; no leaf family moved early
+and no automatic target pruning or capacity repair was introduced.
+
 Handlers receive `document`, `catalog`, `located biome`, and their exact command
 type as needed. They do not receive a command context, service table, topology
 index, or prebuilt lookup bag. A mutation helper moves only after a second real
