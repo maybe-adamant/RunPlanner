@@ -132,6 +132,68 @@ describe('persisted authored room-state codec', () => {
     ).toThrow('$.room.state.sideRooms.sideDoor1.enteredOrdinal: requires a generated side room');
   });
 
+  it.each([
+    {
+      label: 'Ephyra side rooms',
+      gameName: 'N_Combat02',
+      field: 'sideRooms',
+      requiredKey: 'sideDoor1',
+    },
+    {
+      label: 'Fields cages',
+      gameName: 'H_Combat02',
+      field: 'cages',
+      requiredKey: 'cage1',
+    },
+    {
+      label: 'Ship wheels',
+      gameName: 'O_Combat01',
+      field: 'wheels',
+      requiredKey: 'wheel1',
+    },
+  ])(
+    'rejects unknown and missing declaration-owned $label keys',
+    ({ gameName, field, requiredKey }) => {
+      const declaration = room(gameName);
+      const raw = mutable(
+        createDefaultRoomState(catalog, declaration, {
+          role: 'ordinary',
+          entryActive: true,
+        }),
+      );
+      const keyedValues = raw[field] as Record<string, unknown>;
+      keyedValues.unexpected = {};
+
+      expect(() =>
+        decodeRoomState(
+          raw,
+          catalog,
+          declaration,
+          {
+            role: 'ordinary',
+            entryActive: true,
+          },
+          path,
+        ),
+      ).toThrow(`${path}.${field}.unexpected: is not a project document field`);
+
+      delete keyedValues.unexpected;
+      delete keyedValues[requiredKey];
+      expect(() =>
+        decodeRoomState(
+          raw,
+          catalog,
+          declaration,
+          {
+            role: 'ordinary',
+            entryActive: true,
+          },
+          path,
+        ),
+      ).toThrow(`${path}.${field}.${requiredKey}: must be an object`);
+    },
+  );
+
   it('rejects malformed Preboss role state at the exact persisted kind path', () => {
     expect(() =>
       decodeRoomState(
