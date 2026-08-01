@@ -204,23 +204,68 @@ describe('N Hub rewards, validation, and candidates', () => {
       ),
       generation: 'notGenerated',
     });
+    const blockedSideRoom = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat05'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    const laterVisit = createHubVisitAddress(nBiome, 'hub', 3);
+    const laterSideRoom = createLocalChildAddress(
+      nBiome,
+      nOccurrenceId('combat02'),
+      'sideRooms',
+      'sideDoor1',
+    );
+    const withLaterViolation = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: createLocalRewardAddress(nBiome, nOccurrenceId('combat02'), 'sideRooms', 'sideDoor1'),
+      value: { rewardType: 'AirBoost' },
+    });
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    const blockedQuery = {
+      kind: 'sideRoomGeneration' as const,
+      sideRoom: blockedSideRoom,
+      generation: 'notGenerated' as const,
+    };
+    const blockedCandidate = candidates.evaluate(blockedQuery);
+
+    expect(blockedCandidate).toMatchObject({
+      kind: 'sideRoomGeneration',
+      result: { selectedPossible: false, supportOutcomes: ['generated'] },
+    });
     expect(
       createPreparedProjectCandidateSession(
         catalog,
-        simulateProjectAssembly(catalog, project),
-      ).evaluate({
+        simulateProjectAssembly(catalog, withLaterViolation),
+      ).evaluate(blockedQuery),
+    ).toEqual(blockedCandidate);
+    expect(
+      candidates.evaluate({
         kind: 'sideRoomGeneration',
-        sideRoom: createLocalChildAddress(
-          nBiome,
-          nOccurrenceId('combat05'),
-          'sideRooms',
-          'sideDoor1',
-        ),
-        generation: 'notGenerated',
+        sideRoom: laterSideRoom,
+        generation: 'generated',
       }),
     ).toMatchObject({
-      kind: 'sideRoomGeneration',
-      result: { selectedPossible: false, supportOutcomes: ['generated'] },
+      kind: 'unavailable',
+      reason: 'coverageNotReached',
+      evidence: {
+        requiredOwner: laterSideRoom,
+        requiredCheckpoint: 'afterTargetGeneration',
+      },
+    });
+    expect(
+      candidates.evaluate({ kind: 'hubVisit', visit: laterVisit, hubSlotKey: 'combat02' }),
+    ).toMatchObject({
+      kind: 'unavailable',
+      reason: 'coverageNotReached',
+      evidence: {
+        requiredOwner: laterVisit,
+        requiredCheckpoint: 'afterTargetGeneration',
+      },
     });
   });
 
