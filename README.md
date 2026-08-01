@@ -144,14 +144,12 @@ copied elsewhere.
   acceptance gates and
   [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
   active frontier and chronological delivery record. Phase 7 Slice 4
-  reconciliation and Commit 5a prompt removal are complete. The active
-  [re-anchor and reorganization](docs/progress/REANCHOR_AND_REORGANIZE.md)
-  plan has completed its production workspace contraction and bounded
-  test-ownership correction. Campaign B's explicit evaluation-assembly,
-  room-target, Linear structural, Hub/local, reward-producer, and lifecycle
-  units are complete. The behavior-ready
+  reconciliation and Commit 5a prompt removal are complete. The re-anchor
+  program is complete: Campaign B made candidate artifacts explicit,
+  Campaign C separated the justified authored-core authorities, and Campaign D
+  retained the coherent ordered history and reward folds. The behavior-ready
   [workspace presentation polish](docs/progress/WORKSPACE_PRESENTATION_POLISH.md)
-  plan remains paused while the remaining re-anchor campaigns close. The
+  plan is the active frontier. The
   [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) gives Commit
   5c its own schema, engine, projection, and UI slices.
 
