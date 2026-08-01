@@ -10,7 +10,6 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createProjectDocument,
   createRouteAddress,
   createShopOfferAddress,
   createShopPurchaseAddress,
@@ -18,7 +17,6 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  CandidateEvaluationContractError,
   createPreparedProjectCandidateSession,
   ProjectSimulationContractError,
   simulateProjectAssembly,
@@ -33,12 +31,9 @@ import {
   createFStart,
   createUnresolvedFOpeningBatch,
   fBiome,
-  fCombatId,
   fDecision,
   fStartId,
 } from './support/f-takeover-project';
-import { createRepresentativeNProject, nBiome } from '@run-planner/test-fixtures';
-
 const gBiome = createBiomeAddress('Underworld', 'G');
 const gStartId = createOccurrenceId('candidate-g-start');
 
@@ -72,7 +67,7 @@ function withGTarget(project: ProjectDocument) {
 }
 
 describe('candidate session', () => {
-  it('binds one immutable project/evaluation pair and batches direct start and store domains', () => {
+  it('binds one immutable project/evaluation pair and preserves batched result order', () => {
     const project = createCompleteFTakeoverProject();
     const assembly = simulateProjectAssembly(catalog, project);
     const evaluation = assembly.evaluation;
@@ -90,7 +85,7 @@ describe('candidate session', () => {
       {
         kind: 'startRoom',
         owner: createOccurrenceAddress(fBiome, fStartId),
-        gameName: 'F_Combat01',
+        gameName: 'F_Opening01',
       },
       { kind: 'batchRewardStore', rewardStore: store, storeKey: 'MetaProgress' },
       { kind: 'batchRewardStore', rewardStore: store, storeKey: 'RunProgress' },
@@ -100,22 +95,10 @@ describe('candidate session', () => {
     expect(session.evaluation).toBe(evaluation);
     expect(events).toEqual([{ kind: 'queryBatch', queryCount: 4 }]);
     expect(results).toMatchObject([
-      {
-        kind: 'startRoom',
-        result: {
-          supportedGameNames: ['F_Opening01', 'F_Opening02', 'F_Opening03'],
-          selectedPossible: true,
-        },
-      },
-      { kind: 'startRoom', result: { selectedPossible: false } },
-      {
-        kind: 'batchRewardStore',
-        result: { selectedStoreKey: 'MetaProgress', selectedPossible: true },
-      },
-      {
-        kind: 'batchRewardStore',
-        result: { selectedStoreKey: 'RunProgress', selectedPossible: false },
-      },
+      { kind: 'startRoom', result: { gameName: 'F_Opening02' } },
+      { kind: 'startRoom', result: { gameName: 'F_Opening01' } },
+      { kind: 'batchRewardStore', result: { selectedStoreKey: 'MetaProgress' } },
+      { kind: 'batchRewardStore', result: { selectedStoreKey: 'RunProgress' } },
     ]);
   });
 
@@ -195,91 +178,6 @@ describe('candidate session', () => {
     });
   });
 
-  it('evaluates an unresolved batch store from the source prefix and blocks its target', () => {
-    const project = createUnresolvedFOpeningBatch(createFStart());
-    const session = createPreparedProjectCandidateSession(
-      catalog,
-      simulateProjectAssembly(catalog, project),
-    );
-    const rewardStore = createBatchRewardStoreAddress(fBiome, fDecision().source);
-    const target = createTargetAddress(fBiome, fDecision().source, 'exit1');
-
-    const results = session.evaluate([
-      { kind: 'batchRewardStore', rewardStore, storeKey: 'RunProgress' },
-      { kind: 'batchRewardStore', rewardStore, storeKey: 'MetaProgress' },
-      { kind: 'roomTarget', target, gameName: 'F_Combat02' },
-    ]);
-
-    expect(results).toMatchObject([
-      {
-        kind: 'batchRewardStore',
-        result: { selectedStoreKey: 'RunProgress', selectedPossible: false },
-      },
-      {
-        kind: 'batchRewardStore',
-        result: { selectedStoreKey: 'MetaProgress', selectedPossible: true },
-      },
-      {
-        kind: 'unavailable',
-        reason: 'authoredPrerequisiteMissing',
-        evidence: {
-          kind: 'authoredPrerequisiteMissing',
-          prerequisite: { kind: 'batchRewardStore', owner: rewardStore },
-        },
-      },
-    ]);
-  });
-
-  it('evaluates ordinary targets and the takeover Preboss at their distinct semantic owners', () => {
-    const project = createCompleteFTakeoverProject();
-    const session = createPreparedProjectCandidateSession(
-      catalog,
-      simulateProjectAssembly(catalog, project),
-    );
-    const results = session.evaluate([
-      {
-        kind: 'roomTarget',
-        target: createTargetAddress(fBiome, fDecision().source, 'exit1'),
-        gameName: 'F_Combat02',
-      },
-      {
-        kind: 'takeoverPrebossBatch',
-        source: fDecision(fCombatId),
-        gameName: 'F_PreBoss01',
-      },
-    ]);
-
-    expect(results).toMatchObject([
-      {
-        kind: 'roomTarget',
-        result: { pressure: { selectedGameName: 'F_Combat02', selectedPossible: true } },
-      },
-      {
-        kind: 'takeoverPrebossBatch',
-        result: {
-          gameName: 'F_PreBoss01',
-          requiredExitKeys: ['exit1', 'exit2'],
-          requiredTargetCount: 2,
-          selectedPossible: false,
-          pressure: expect.arrayContaining([
-            expect.objectContaining({
-              selectedGameName: 'F_PreBoss01',
-              selectedPossible: false,
-              selectedExclusionReasons: ['forceMinimum', 'eligibilityRequirement'],
-            }),
-          ]),
-        },
-      },
-    ]);
-    expect(() =>
-      session.evaluate({
-        kind: 'roomTarget',
-        target: createTargetAddress(fBiome, fDecision(fCombatId).source, 'exit1'),
-        gameName: 'F_PreBoss01',
-      }),
-    ).toThrow(/source-owned takeover Preboss batch/);
-  });
-
   it('does not expose a Preboss Shop after its invalid selection boundary', () => {
     const project = createCompleteFTakeoverProject();
     const occurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
@@ -325,81 +223,6 @@ describe('candidate session', () => {
         },
       },
     ]);
-  });
-
-  it('rejects an address outside the source room physical exit domain', () => {
-    const project = createCompleteFTakeoverProject();
-    const target = createTargetAddress(fBiome, fDecision().source, 'exit2');
-    const session = createPreparedProjectCandidateSession(
-      catalog,
-      simulateProjectAssembly(catalog, project),
-    );
-
-    expect(() => session.evaluate({ kind: 'roomTarget', target, gameName: 'F_Combat03' })).toThrow(
-      /has no declaration-owned physical exit/,
-    );
-  });
-
-  it('rejects N’s ordinary exit while retaining its completed-Hub takeover domain', () => {
-    const openingId = createOccurrenceId('candidate-n-opening');
-    const project = applyProjectCommand(
-      createProjectDocument(catalog, {
-        projectId: 'candidate-n-opening-domain',
-        name: 'N opening candidate domain',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      catalog,
-      { kind: 'CreateStart', biome: nBiome, occurrenceId: openingId },
-    );
-    const session = createPreparedProjectCandidateSession(
-      catalog,
-      simulateProjectAssembly(catalog, project),
-    );
-
-    expect(() =>
-      session.evaluate({
-        kind: 'takeoverPrebossBatch',
-        source: createExitDecisionAddress(nBiome, {
-          kind: 'occurrence',
-          occurrenceId: openingId,
-        }),
-        gameName: 'N_PreBoss01',
-      }),
-    ).toThrow(CandidateEvaluationContractError);
-    expect(() =>
-      session.evaluate({
-        kind: 'takeoverPrebossBatch',
-        source: createExitDecisionAddress(nBiome, {
-          kind: 'occurrence',
-          occurrenceId: openingId,
-        }),
-        gameName: 'N_PreBoss01',
-      }),
-    ).toThrow(/no declaration-owned takeover Preboss candidate domain/);
-
-    const withoutHandoff = applyProjectCommand(createRepresentativeNProject(), catalog, {
-      kind: 'RemoveExitDecision',
-      decision: createExitDecisionAddress(nBiome, {
-        kind: 'hubDecision',
-        decisionKey: 'hub',
-      }),
-    });
-    expect(
-      createPreparedProjectCandidateSession(
-        catalog,
-        simulateProjectAssembly(catalog, withoutHandoff),
-      ).evaluate({
-        kind: 'takeoverPrebossBatch',
-        source: createExitDecisionAddress(nBiome, {
-          kind: 'hubDecision',
-          decisionKey: 'hub',
-        }),
-        gameName: 'N_PreBoss01',
-      }),
-    ).toMatchObject({
-      kind: 'takeoverPrebossBatch',
-      result: { requiredExitKeys: ['preboss'], selectedPossible: true },
-    });
   });
 
   it('distinguishes an incomplete and invalid upstream biome from local coverage', () => {

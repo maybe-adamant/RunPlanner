@@ -1,13 +1,9 @@
 import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
-  createExitDecisionAddress,
   createHubOpenSetAddress,
   createOccurrenceAddress,
   semanticAddressKey,
-  type BatchRewardStoreAddress,
-  type BiomeAddress,
-  type ExitDecisionAddress,
   type HubSlotAddress,
   type HubVisitAddress,
   type IncomingRewardAddress,
@@ -34,18 +30,13 @@ import type {
 } from '../../authored-project/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import {
-  evaluateTakeoverPrebossBatchCandidate,
-  evaluateTakeoverPrebossBatchCandidateAtFrontier,
-  fieldsCageOutcomeCandidateSupport,
   evaluateHubOpenSetConstraints,
   type HubSideRoomGenerationSupportEntry,
-  type TakeoverPrebossBatchCandidateSupport,
 } from '../generation';
 import type { CanonicalHubDecision } from '../materialization';
 import {
   candidateArtifactsForProjectEvaluationAssembly,
   type CompleteBiomeProjectEvaluation,
-  type PrefixIncompleteBiomeProjectEvaluation,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '../project';
@@ -57,11 +48,9 @@ import {
 import type { SemanticFinding } from '../model';
 import {
   rewardProducerFrontier,
-  rewardStoreCandidateSupport,
   roomLifecycleCandidateContexts,
   type RoomLifecycleCandidateResult,
   type RewardProducerCandidateResult,
-  type RewardStoreCandidateSupport,
 } from '../rewards';
 import {
   coverageUnavailable,
@@ -71,18 +60,39 @@ import {
   type CandidateContextUnavailable,
 } from './availability';
 import {
+  candidateBiome,
+  candidateBlockedAt,
   completeBiome,
   completeBiomeCount,
   planFor,
-  prefixAuthoredRooms,
-  prefixBiome,
   progressiveSeed,
+  type CandidateBiomeEvaluation,
 } from './evaluated-biome';
+import {
+  evaluateBatchRewardStoreCandidate,
+  type BatchRewardStoreCandidateQuery,
+  type EvaluatedBatchRewardStoreCandidate,
+} from './batch-reward-store';
+import {
+  evaluateFieldsCageOutcomeCandidate,
+  type EvaluatedFieldsCageOutcomeCandidate,
+  type FieldsCageOutcomeCandidateQuery,
+} from './fields-cage-outcome';
 import {
   evaluateRoomTargetCandidate,
   type EvaluatedRoomTargetCandidate,
   type RoomTargetCandidateQuery,
 } from './room-target';
+import {
+  evaluateStartRoomCandidate,
+  type EvaluatedStartRoomCandidate,
+  type StartRoomCandidateQuery,
+} from './start-room';
+import {
+  evaluateTakeoverPrebossBatch,
+  type EvaluatedTakeoverPrebossBatchCandidate,
+  type TakeoverPrebossBatchCandidateQuery,
+} from './takeover-preboss';
 
 export { CandidateEvaluationContractError } from './contract';
 export type {
@@ -92,25 +102,26 @@ export type {
   CandidateContextUnavailableReason,
 } from './availability';
 export type { EvaluatedRoomTargetCandidate, RoomTargetCandidateQuery } from './room-target';
+export type {
+  BatchRewardStoreCandidateQuery,
+  BatchRewardStoreCandidateSupport,
+  EvaluatedBatchRewardStoreCandidate,
+} from './batch-reward-store';
+export type {
+  EvaluatedFieldsCageOutcomeCandidate,
+  FieldsCageOutcomeCandidateQuery,
+  FieldsCageOutcomeCandidateSupport,
+} from './fields-cage-outcome';
+export type {
+  EvaluatedStartRoomCandidate,
+  StartRoomCandidateQuery,
+  StartRoomCandidateSupport,
+} from './start-room';
+export type {
+  EvaluatedTakeoverPrebossBatchCandidate,
+  TakeoverPrebossBatchCandidateQuery,
+} from './takeover-preboss';
 import { CandidateEvaluationContractError } from './contract';
-
-export interface TakeoverPrebossBatchCandidateQuery {
-  readonly kind: 'takeoverPrebossBatch';
-  readonly source: ExitDecisionAddress;
-  readonly gameName: string;
-}
-
-export interface StartRoomCandidateQuery {
-  readonly kind: 'startRoom';
-  readonly owner: BiomeAddress | OccurrenceAddress;
-  readonly gameName: string;
-}
-
-export interface BatchRewardStoreCandidateQuery {
-  readonly kind: 'batchRewardStore';
-  readonly rewardStore: BatchRewardStoreAddress;
-  readonly storeKey: string;
-}
 
 export interface IncomingRewardCandidateQuery {
   readonly kind: 'incomingReward';
@@ -122,12 +133,6 @@ export interface LocalRewardCandidateQuery {
   readonly kind: 'localReward';
   readonly reward: LocalRewardAddress;
   readonly value: ResolvedRewardOffer;
-}
-
-export interface FieldsCageOutcomeCandidateQuery {
-  readonly kind: 'fieldsCageOutcome';
-  readonly decision: ExitDecisionAddress;
-  readonly cageOutcome: 'min' | 'max';
 }
 
 export interface ShipEncounterCountCandidateQuery {
@@ -231,33 +236,6 @@ export interface ProjectCandidateSessionOptions {
   readonly observe?: (event: CandidateEvaluationEvent) => void;
 }
 
-export interface EvaluatedTakeoverPrebossBatchCandidate {
-  readonly kind: 'takeoverPrebossBatch';
-  readonly result: TakeoverPrebossBatchCandidateSupport;
-}
-
-export interface StartRoomCandidateSupport {
-  readonly gameName: string;
-  readonly supportedGameNames: readonly string[];
-  readonly selectedPossible: boolean;
-}
-
-export interface EvaluatedStartRoomCandidate {
-  readonly kind: 'startRoom';
-  readonly result: StartRoomCandidateSupport;
-}
-
-export interface BatchRewardStoreCandidateSupport extends RewardStoreCandidateSupport {
-  readonly authoredStoreKey?: string;
-  readonly selectedStoreKey: string;
-  readonly selectedPossible: boolean;
-}
-
-export interface EvaluatedBatchRewardStoreCandidate {
-  readonly kind: 'batchRewardStore';
-  readonly result: BatchRewardStoreCandidateSupport;
-}
-
 export interface EvaluatedIncomingRewardCandidate {
   readonly kind: 'incomingReward';
   readonly result: RewardProducerCandidateResult;
@@ -266,18 +244,6 @@ export interface EvaluatedIncomingRewardCandidate {
 export interface EvaluatedLocalRewardCandidate {
   readonly kind: 'localReward';
   readonly result: RewardProducerCandidateResult;
-}
-
-export interface FieldsCageOutcomeCandidateSupport {
-  readonly cageOutcome: 'min' | 'max';
-  readonly supportOutcomes: readonly ('min' | 'max')[];
-  readonly selectedPossible: boolean;
-  readonly findings: readonly SemanticFinding[];
-}
-
-export interface EvaluatedFieldsCageOutcomeCandidate {
-  readonly kind: 'fieldsCageOutcome';
-  readonly result: FieldsCageOutcomeCandidateSupport;
 }
 
 export interface ShipEncounterCountCandidateSupport {
@@ -418,54 +384,6 @@ export interface ProjectCandidateSession {
     (query: ProjectCandidateQuery): ProjectCandidateEvaluation;
     (queries: readonly ProjectCandidateQuery[]): readonly ProjectCandidateEvaluation[];
   };
-}
-
-type CandidateBiomeEvaluation =
-  | CompleteBiomeProjectEvaluation
-  | PrefixIncompleteBiomeProjectEvaluation
-  | ProgressiveBiomeEvaluation;
-
-/**
- * Candidate queries must never read past a blocked progressive prefix. A
- * complete-invalid biome is rematerialized through that clamp; an
- * incomplete-invalid biome already publishes it. Only the invalid owner and
- * its already-generated prefix remain assessable.
- */
-function candidateBiome(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  routeKey: string,
-  biomeKey: string,
-): CandidateBiomeEvaluation | undefined {
-  const complete = completeBiome(evaluation, routeKey, biomeKey);
-  if (complete?.validity !== 'invalid') {
-    return complete ?? prefixBiome(evaluation, routeKey, biomeKey);
-  }
-  return (
-    evaluateProgressiveBiome(
-      catalog,
-      createBiomeAddress(routeKey, biomeKey),
-      planFor(project, routeKey, biomeKey),
-      completeBiomeCount(evaluation, routeKey, biomeKey),
-      progressiveSeed(evaluation, routeKey, biomeKey),
-    ) ?? undefined
-  );
-}
-
-function candidatePrefix(
-  biome: CandidateBiomeEvaluation | undefined,
-): PrefixIncompleteBiomeProjectEvaluation | ProgressiveBiomeEvaluation | undefined {
-  return biome !== undefined && 'materializedPrefix' in biome ? biome : undefined;
-}
-
-function candidateBlockedAt(
-  biome: CandidateBiomeEvaluation | undefined,
-): SemanticAddress | undefined {
-  if (biome === undefined) return undefined;
-  if ('coverage' in biome)
-    return biome.coverage.kind === 'prefix' ? biome.coverage.blockedAt : undefined;
-  return biome.blockedAt;
 }
 
 type LifecycleRepairOwner = OccurrenceAddress | RewardWheelAddress | ShopPurchaseAddress;
@@ -762,233 +680,6 @@ function progressiveHubLocalGroupReached(
   );
 }
 
-function evaluatePrefixTakeover(
-  catalog: Catalog,
-  evaluation: ProjectEvaluation,
-  query: TakeoverPrebossBatchCandidateQuery,
-  candidate?: CandidateBiomeEvaluation,
-): ProjectCandidateEvaluation | undefined {
-  const biome = candidatePrefix(
-    candidate ?? prefixBiome(evaluation, query.source.routeKey, query.source.biomeKey),
-  );
-  const prefix = biome?.materializedPrefix;
-  const frontier = prefix?.frontier;
-  if (biome === undefined || prefix === undefined || frontier?.kind !== 'exitDecision') {
-    return undefined;
-  }
-  if (semanticAddressKey(frontier.origin) !== semanticAddressKey(query.source)) return undefined;
-  if (frontier.parent.origin.kind === 'hubRoom') {
-    const layout = catalog.biomeLayouts.byKey[prefix.biomeKey];
-    if (layout?.progression.kind !== 'hub') return undefined;
-    const requiredExitKeys = Object.freeze([layout.progression.completedExit.exitKey]);
-    return Object.freeze({
-      kind: 'takeoverPrebossBatch',
-      result: Object.freeze({
-        source: query.source,
-        gameName: query.gameName,
-        requiredExitKeys,
-        requiredTargetCount: requiredExitKeys.length,
-        pressure: Object.freeze([]),
-        selectedPossible: query.gameName === layout.progression.completedExit.roomGameName,
-        findings: Object.freeze([]),
-      }),
-    });
-  }
-  if (frontier.parent.origin.kind !== 'occurrence') return undefined;
-  const owner = prefixAuthoredRooms(prefix).find(
-    (room) => semanticAddressKey(room.origin) === semanticAddressKey(frontier.parent.origin),
-  );
-  const ownerHistory =
-    owner === undefined
-      ? undefined
-      : biome.history.rooms.find(
-          (room) => semanticAddressKey(room.origin) === semanticAddressKey(owner.origin),
-        )?.preOutgoing;
-  if (owner === undefined || ownerHistory === undefined) return undefined;
-  return Object.freeze({
-    kind: 'takeoverPrebossBatch',
-    result: evaluateTakeoverPrebossBatchCandidateAtFrontier(
-      catalog,
-      query.source,
-      owner,
-      ownerHistory,
-      query.gameName,
-      completeBiomeCount(evaluation, query.source.routeKey, query.source.biomeKey),
-    ),
-  });
-}
-
-/**
- * A takeover candidate belongs to the progression-owned source, not merely to
- * any authored exit in the same biome. Generated layouts own occurrence
- * sources; a Hub owns only its completed Hub decision. Keeping that boundary
- * here prevents consumers from advertising a command the authored-project
- * authority would reject.
- */
-function assertTakeoverPrebossBatchDomain(
-  catalog: Catalog,
-  project: ProjectDocument,
-  query: TakeoverPrebossBatchCandidateQuery,
-): void {
-  const plan = planFor(project, query.source.routeKey, query.source.biomeKey);
-  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
-  if (layout === undefined) {
-    throw new CandidateEvaluationContractError(`${plan.biomeKey} has no catalog layout`);
-  }
-  if (layout.progression.kind === 'generated' && query.source.source.kind === 'occurrence') {
-    return;
-  }
-  if (
-    layout.progression.kind === 'hub' &&
-    query.source.source.kind === 'hubDecision' &&
-    query.source.source.decisionKey === layout.progression.hubKey
-  ) {
-    return;
-  }
-  throw new CandidateEvaluationContractError(
-    `${semanticAddressKey(query.source)} has no declaration-owned takeover Preboss candidate domain`,
-  );
-}
-
-function prefixBatchRewardStoreSupport(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  query: BatchRewardStoreCandidateQuery,
-  candidate?: CandidateBiomeEvaluation,
-): BatchRewardStoreCandidateSupport | undefined {
-  const biome = candidatePrefix(
-    candidate ?? prefixBiome(evaluation, query.rewardStore.routeKey, query.rewardStore.biomeKey),
-  );
-  const prefix = biome?.materializedPrefix;
-  const frontier = prefix?.frontier;
-  if (biome === undefined || prefix === undefined || frontier?.kind !== 'exitDecision') {
-    return undefined;
-  }
-  const decision = createExitDecisionAddress(
-    createBiomeAddress(query.rewardStore.routeKey, query.rewardStore.biomeKey),
-    query.rewardStore.source,
-  );
-  if (semanticAddressKey(frontier.origin) !== semanticAddressKey(decision)) return undefined;
-  if (frontier.parent.origin.kind !== 'occurrence') return undefined;
-  const source = prefixAuthoredRooms(prefix).find(
-    (room) => semanticAddressKey(room.origin) === semanticAddressKey(frontier.parent.origin),
-  );
-  const sourceDeclaration = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
-  const sourceHistory =
-    source === undefined
-      ? undefined
-      : biome.history.rooms.find(
-          (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
-        )?.preOutgoing;
-  const plan = planFor(project, query.rewardStore.routeKey, query.rewardStore.biomeKey);
-  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
-  if (
-    source === undefined ||
-    sourceDeclaration === undefined ||
-    sourceHistory === undefined ||
-    layout?.progression.kind !== 'generated'
-  ) {
-    return undefined;
-  }
-  const support = rewardStoreCandidateSupport(
-    layout,
-    query.rewardStore,
-    source,
-    sourceDeclaration,
-    sourceHistory,
-    sourceHistory.sequence + 1,
-  );
-  return Object.freeze({
-    ...support,
-    selectedStoreKey: query.storeKey,
-    selectedPossible: support.supportStoreKeys.includes(query.storeKey),
-  });
-}
-
-function evaluateStartRoom(
-  catalog: Catalog,
-  project: ProjectDocument,
-  query: StartRoomCandidateQuery,
-): EvaluatedStartRoomCandidate {
-  const plan = planFor(project, query.owner.routeKey, query.owner.biomeKey);
-  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
-  if (layout === undefined) {
-    throw new CandidateEvaluationContractError(`${plan.biomeKey} has no catalog layout`);
-  }
-  if (
-    query.owner.kind === 'occurrence' &&
-    plan.topology?.startOccurrenceId !== query.owner.occurrenceId
-  ) {
-    throw new CandidateEvaluationContractError('start-room owner is not the topology start');
-  }
-  const supportedGameNames =
-    layout.start.kind === 'authoredChoice'
-      ? layout.start.roomGameNames
-      : Object.freeze([layout.start.roomGameName]);
-  return Object.freeze({
-    kind: 'startRoom',
-    result: Object.freeze({
-      gameName: query.gameName,
-      supportedGameNames,
-      selectedPossible: supportedGameNames.includes(query.gameName),
-    }),
-  });
-}
-
-function evaluateBatchRewardStore(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  query: BatchRewardStoreCandidateQuery,
-): ProjectCandidateEvaluation {
-  const biome = candidateBiome(
-    catalog,
-    project,
-    evaluation,
-    query.rewardStore.routeKey,
-    query.rewardStore.biomeKey,
-  );
-  if (biome === undefined) {
-    const prefixSupport = prefixBatchRewardStoreSupport(catalog, project, evaluation, query);
-    return prefixSupport === undefined
-      ? unavailableForBiome(
-          evaluation,
-          query.rewardStore.routeKey,
-          query.rewardStore.biomeKey,
-          query.rewardStore,
-          'afterTargetGeneration',
-        )
-      : Object.freeze({ kind: 'batchRewardStore', result: prefixSupport });
-  }
-  const support = biome.rewards.storeSupport.find(
-    (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(query.rewardStore),
-  );
-  if (support === undefined) {
-    const prefixSupport = prefixBatchRewardStoreSupport(catalog, project, evaluation, query, biome);
-    if (prefixSupport !== undefined) {
-      return Object.freeze({ kind: 'batchRewardStore', result: prefixSupport });
-    }
-    return 'snapshot' in biome
-      ? unreachableTarget(query.rewardStore)
-      : unavailableForBiome(
-          evaluation,
-          query.rewardStore.routeKey,
-          query.rewardStore.biomeKey,
-          query.rewardStore,
-          'afterTargetGeneration',
-        );
-  }
-  return Object.freeze({
-    kind: 'batchRewardStore',
-    result: Object.freeze({
-      ...support,
-      selectedStoreKey: query.storeKey,
-      selectedPossible: support.supportStoreKeys.includes(query.storeKey),
-    }),
-  });
-}
-
 function evaluateIncomingReward(
   catalog: Catalog,
   project: ProjectDocument,
@@ -1097,103 +788,6 @@ function evaluateLocalReward(
   return Object.freeze({
     kind: 'localReward',
     result: frontier.evaluateOffer(query.reward, query.value),
-  });
-}
-
-function fieldsOutcomeSupport(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  query: FieldsCageOutcomeCandidateQuery,
-) {
-  const biome = candidateBiome(
-    catalog,
-    project,
-    evaluation,
-    query.decision.routeKey,
-    query.decision.biomeKey,
-  );
-  const selected = biome?.roomGeneration.ordinary.fieldsCageOutcomes.find(
-    (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(query.decision),
-  );
-  if (selected !== undefined) return selected;
-  const prefix = candidatePrefix(biome);
-  if (prefix?.materializedPrefix.frontier?.kind !== 'exitDecision') return undefined;
-  if (
-    semanticAddressKey(prefix.materializedPrefix.frontier.origin) !==
-    semanticAddressKey(query.decision)
-  ) {
-    return undefined;
-  }
-  const parent = prefix.materializedPrefix.frontier.parent;
-  if (parent.origin.kind !== 'occurrence') return undefined;
-  const room = prefixAuthoredRooms(prefix.materializedPrefix).find(
-    (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(parent.origin),
-  );
-  const history =
-    room === undefined
-      ? undefined
-      : prefix.history.rooms.find(
-          (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
-        )?.preOutgoing;
-  const layout =
-    catalog.biomeLayouts.byKey[
-      planFor(project, query.decision.routeKey, query.decision.biomeKey).biomeKey
-    ];
-  if (
-    room === undefined ||
-    history === undefined ||
-    layout?.progression.kind !== 'generated' ||
-    layout.progression.batchPolicy.kind !== 'fields'
-  ) {
-    return undefined;
-  }
-  return fieldsCageOutcomeCandidateSupport(layout.progression.batchPolicy, query.decision, history);
-}
-
-function evaluateFieldsCageOutcome(
-  catalog: Catalog,
-  project: ProjectDocument,
-  evaluation: ProjectEvaluation,
-  query: FieldsCageOutcomeCandidateQuery,
-): ProjectCandidateEvaluation {
-  const support = fieldsOutcomeSupport(catalog, project, evaluation, query);
-  if (support === undefined) {
-    return unavailableForBiome(
-      evaluation,
-      query.decision.routeKey,
-      query.decision.biomeKey,
-      query.decision,
-      'afterTargetGeneration',
-    );
-  }
-  const selectedPossible = support.supportOutcomes.includes(query.cageOutcome);
-  const findings = selectedPossible
-    ? Object.freeze([])
-    : Object.freeze([
-        Object.freeze({
-          code: 'fieldsCageOutcomeUnavailable' as const,
-          severity: 'error' as const,
-          phase: 'roomGeneration' as const,
-          origin: query.decision,
-          evidence: Object.freeze({
-            beforeSequence: support.beforeSequence,
-            biomeDepthCache: support.biomeDepthCache,
-            fieldsMaxDoorsRolled: support.fieldsMaxDoorsRolled,
-            maxDoorCageCeiling: support.maxDoorCageCeiling,
-            selectedOutcome: query.cageOutcome,
-            supportOutcomes: support.supportOutcomes,
-          }),
-        }),
-      ]);
-  return Object.freeze({
-    kind: 'fieldsCageOutcome',
-    result: Object.freeze({
-      cageOutcome: query.cageOutcome,
-      supportOutcomes: support.supportOutcomes,
-      selectedPossible,
-      findings,
-    }),
   });
 }
 
@@ -1953,7 +1547,7 @@ export function createPreparedProjectCandidateSession(
   const { project, evaluation } = assembly;
   const candidateArtifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
   const evaluateOne = (query: ProjectCandidateQuery): ProjectCandidateEvaluation => {
-    if (query.kind === 'startRoom') return evaluateStartRoom(catalog, project, query);
+    if (query.kind === 'startRoom') return evaluateStartRoomCandidate(catalog, project, query);
     if (query.kind === 'hubSlot') return evaluateHubSlot(catalog, project, evaluation, query);
     if (query.kind === 'hubVisit') return evaluateHubVisit(catalog, project, evaluation, query);
     if (query.kind === 'sideRoomGeneration')
@@ -1961,13 +1555,13 @@ export function createPreparedProjectCandidateSession(
     if (query.kind === 'sideRoomEntryOrder')
       return evaluateSideRoomEntryOrder(catalog, project, evaluation, query);
     if (query.kind === 'batchRewardStore')
-      return evaluateBatchRewardStore(catalog, project, evaluation, query);
+      return evaluateBatchRewardStoreCandidate(catalog, project, evaluation, query);
     if (query.kind === 'incomingReward')
       return evaluateIncomingReward(catalog, project, evaluation, query);
     if (query.kind === 'localReward')
       return evaluateLocalReward(catalog, project, evaluation, query);
     if (query.kind === 'fieldsCageOutcome')
-      return evaluateFieldsCageOutcome(catalog, project, evaluation, query);
+      return evaluateFieldsCageOutcomeCandidate(catalog, project, evaluation, query);
     if (query.kind === 'shipEncounterCount')
       return evaluateShipEncounterCount(catalog, project, evaluation, query);
     if (
@@ -1988,37 +1582,7 @@ export function createPreparedProjectCandidateSession(
       )?.roomTargets;
       return evaluateRoomTargetCandidate(catalog, project, evaluation, roomTargets, query);
     }
-    assertTakeoverPrebossBatchDomain(catalog, project, query);
-    const candidate = candidateBiome(
-      catalog,
-      project,
-      evaluation,
-      query.source.routeKey,
-      query.source.biomeKey,
-    );
-    if (candidate === undefined || !('snapshot' in candidate)) {
-      return (
-        evaluatePrefixTakeover(catalog, evaluation, query, candidate) ??
-        unavailableForBiome(
-          evaluation,
-          query.source.routeKey,
-          query.source.biomeKey,
-          query.source,
-          'afterTargetGeneration',
-        )
-      );
-    }
-    return Object.freeze({
-      kind: 'takeoverPrebossBatch' as const,
-      result: evaluateTakeoverPrebossBatchCandidate(
-        catalog,
-        candidate.snapshot,
-        candidate.history,
-        query.source,
-        query.gameName,
-        completeBiomeCount(evaluation, query.source.routeKey, query.source.biomeKey),
-      ),
-    });
+    return evaluateTakeoverPrebossBatch(catalog, project, evaluation, query);
   };
   function evaluate(query: ProjectCandidateQuery): ProjectCandidateEvaluation;
   function evaluate(

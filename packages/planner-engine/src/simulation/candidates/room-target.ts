@@ -5,7 +5,6 @@ import {
   createExitDecisionAddress,
   createTargetAddress,
   semanticAddressKey,
-  type BatchRewardStoreAddress,
   type SemanticAddress,
   type TargetAddress,
 } from '../../authored-project/addresses';
@@ -26,6 +25,7 @@ import {
   unreachableTarget,
   type CandidateContextUnavailable,
 } from './availability';
+import { unresolvedBatchRewardStorePrerequisite } from './batch-reward-store';
 import { CandidateEvaluationContractError } from './contract';
 import {
   completeBiome,
@@ -269,31 +269,6 @@ function evaluateInvalidCompleteRoomTarget(
   return Object.freeze({ kind: 'roomTarget', result: context.evaluateGameName(query.gameName) });
 }
 
-function unresolvedBatchRewardStore(
-  project: ProjectDocument,
-  routeKey: string,
-  biomeKey: string,
-  source: BatchRewardStoreAddress['source'],
-): boolean {
-  const plan = planFor(project, routeKey, biomeKey);
-  const decision = plan.topology?.decisions.find(
-    (candidate) =>
-      candidate.kind === 'exit' &&
-      semanticAddressKey(
-        createExitDecisionAddress(createBiomeAddress(routeKey, biomeKey), candidate.source),
-      ) ===
-        semanticAddressKey(
-          createExitDecisionAddress(createBiomeAddress(routeKey, biomeKey), source),
-        ),
-  );
-  return (
-    decision?.kind === 'exit' &&
-    decision.normal.kind === 'batch' &&
-    decision.normal.rewardStore.kind === 'authoredBaseStore' &&
-    decision.normal.rewardStore.baseRewardStoreKey === null
-  );
-}
-
 function assertRoomTargetDomain(
   catalog: Catalog,
   project: ProjectDocument,
@@ -371,25 +346,14 @@ export function evaluateRoomTargetCandidate(
     );
   }
   if (biome === undefined) {
-    if (
-      unresolvedBatchRewardStore(
-        project,
-        query.target.routeKey,
-        query.target.biomeKey,
+    const storePrerequisite = unresolvedBatchRewardStorePrerequisite(
+      project,
+      createBatchRewardStoreAddress(
+        createBiomeAddress(query.target.routeKey, query.target.biomeKey),
         query.target.source,
-      )
-    ) {
-      return unavailable({
-        kind: 'authoredPrerequisiteMissing',
-        prerequisite: Object.freeze({
-          kind: 'batchRewardStore',
-          owner: createBatchRewardStoreAddress(
-            createBiomeAddress(query.target.routeKey, query.target.biomeKey),
-            query.target.source,
-          ),
-        }),
-      });
-    }
+      ),
+    );
+    if (storePrerequisite !== undefined) return unavailable(storePrerequisite);
     const selectedContext = candidateArtifacts?.at(query.target);
     if (selectedContext !== undefined) {
       return Object.freeze({

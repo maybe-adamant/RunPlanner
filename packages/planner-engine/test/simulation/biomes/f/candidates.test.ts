@@ -15,7 +15,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   CandidateEvaluationContractError,
-  type CandidateEvaluationEvent,
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
   simulateProject,
@@ -360,7 +359,10 @@ describe('F candidate support', () => {
     expect(results).toMatchObject([
       {
         kind: 'startRoom',
-        result: { selectedPossible: true },
+        result: {
+          supportedGameNames: ['F_Opening01', 'F_Opening02', 'F_Opening03'],
+          selectedPossible: true,
+        },
       },
       { kind: 'startRoom', result: { selectedPossible: false } },
       {
@@ -420,7 +422,14 @@ describe('F candidate support', () => {
         kind: 'batchRewardStore',
         result: { selectedStoreKey: 'RunProgress', selectedPossible: false },
       },
-      { kind: 'unavailable', reason: 'authoredPrerequisiteMissing' },
+      {
+        kind: 'unavailable',
+        reason: 'authoredPrerequisiteMissing',
+        evidence: {
+          kind: 'authoredPrerequisiteMissing',
+          prerequisite: { kind: 'batchRewardStore', owner: rewardStore },
+        },
+      },
     ]);
   });
 
@@ -440,6 +449,14 @@ describe('F candidate support', () => {
         gameName: 'F_PreBoss01',
         requiredExitKeys: ['exit1', 'exit2'],
         requiredTargetCount: 2,
+        selectedPossible: false,
+        pressure: expect.arrayContaining([
+          expect.objectContaining({
+            selectedGameName: 'F_PreBoss01',
+            selectedPossible: false,
+            selectedExclusionReasons: ['forceMinimum', 'eligibilityRequirement'],
+          }),
+        ]),
       },
     });
     expect(() =>
@@ -459,31 +476,6 @@ describe('F candidate support', () => {
     expect(() => candidateSession(project).evaluate(query)).toThrow(
       CandidateEvaluationContractError,
     );
-  });
-
-  it('batches F candidate queries against one exact authored project/evaluation pair', () => {
-    const project = createCompleteFTakeoverProject();
-    const assembly = simulateProjectAssembly(catalog, project);
-    const events: CandidateEvaluationEvent[] = [];
-    const session = createPreparedProjectCandidateSession(catalog, assembly, {
-      observe: (event) => events.push(event),
-    });
-
-    expect(session.project).toBe(project);
-    expect(session.evaluation).toBe(assembly.evaluation);
-    session.evaluate([
-      {
-        kind: 'startRoom',
-        owner: createOccurrenceAddress(fBiome, fStartId),
-        gameName: 'F_Opening02',
-      },
-      {
-        kind: 'roomTarget',
-        target: createTargetAddress(fBiome, fDecision().source, 'exit1'),
-        gameName: 'F_Combat02',
-      },
-    ]);
-    expect(events).toEqual([{ kind: 'queryBatch', queryCount: 2 }]);
   });
 
   it('keeps the covered combat reward available while blocking an invalid Preboss Shop', () => {

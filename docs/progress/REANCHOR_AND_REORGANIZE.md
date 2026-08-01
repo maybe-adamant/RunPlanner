@@ -65,10 +65,11 @@ test ownership, and conditional decomposition. Campaign B remains separate.
 Campaign B's entry audit found eighteen query kinds grouped into four coherent
 semantic families and five review units, three semantic `WeakMap` sidecars, one
 permitted project/evaluation identity attestation, and several ordinary
-memoization caches. B1 is complete in the current change set: the room-target
-sidecar originated in generation, so its explicit evaluation assembly now runs
-end to end and has removed that sidecar with its room-target consumer. B2
-through B5 remain separate vertical units.
+memoization caches. B1 and B2 are complete: the room-target sidecar originated
+in generation, so its explicit evaluation assembly now runs end to end and has
+removed that sidecar with its room-target consumer; the remaining Linear
+structural families now have their own evaluators. B3 through B5 remain
+separate vertical units.
 
 This document is temporary delivery authority. Stable ownership remains with
 the documents under `docs/design/`. When the program closes, any durable
@@ -1698,6 +1699,25 @@ lint, formatting, production build, and `git diff --check`.
   selected-invalid repair, and takeover ownership with their family;
 - remove their evaluator branches and displaced policy assertions from the old
   aggregate as each family moves.
+
+##### B2 delivery record (2026-08-01)
+
+B2 moves `startRoom`, `batchRewardStore`, `fieldsCageOutcome`, and
+`takeoverPrebossBatch` into family-owned evaluator modules with their query,
+support, result, domain-validation, progressive-prefix, and unavailable policy.
+For those four families, the candidate aggregate deliberately re-exports their
+contracts and only performs exhaustive discrimination and dispatch; it retains
+the B3 through B5 evaluators pending their own vertical moves. Each B2 family
+receives exact catalog, authored project, data-only evaluation, and query
+inputs; no family receives an assembly, candidate artifact, universal context,
+or session capability.
+
+The shared selected/progressive recovery helpers now live in the internal
+`evaluated-biome` neighborhood. Batch-store owns unresolved-store prerequisite
+evidence, and room-target consumes only its narrow evidence helper rather than
+retaining that policy. F owns the Linear policy matrix, N retains the
+Hub-completed takeover exception, and the session suite retains only
+identity/batching/order behavior with query-identifying order witnesses.
 
 #### B3: Hub and local structural families
 

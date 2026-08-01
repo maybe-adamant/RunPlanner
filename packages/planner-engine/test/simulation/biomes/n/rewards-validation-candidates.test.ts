@@ -39,6 +39,58 @@ function completeN(project = createRepresentativeNProject()) {
 }
 
 describe('N Hub rewards, validation, and candidates', () => {
+  it('owns takeover candidates only at the completed Hub decision', () => {
+    const openingId = nOccurrenceId('candidate-opening-domain');
+    const openingOnly = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'candidate-n-opening-domain',
+        name: 'N opening candidate domain',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+      catalog,
+      { kind: 'CreateStart', biome: nBiome, occurrenceId: openingId },
+    );
+    const openingSession = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, openingOnly),
+    );
+
+    expect(() =>
+      openingSession.evaluate({
+        kind: 'takeoverPrebossBatch',
+        source: createExitDecisionAddress(nBiome, {
+          kind: 'occurrence',
+          occurrenceId: openingId,
+        }),
+        gameName: 'N_PreBoss01',
+      }),
+    ).toThrow(/no declaration-owned takeover Preboss candidate domain/);
+
+    const withoutHandoff = applyProjectCommand(createRepresentativeNProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'hubDecision',
+        decisionKey: 'hub',
+      }),
+    });
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, withoutHandoff),
+      ).evaluate({
+        kind: 'takeoverPrebossBatch',
+        source: createExitDecisionAddress(nBiome, {
+          kind: 'hubDecision',
+          decisionKey: 'hub',
+        }),
+        gameName: 'N_PreBoss01',
+      }),
+    ).toMatchObject({
+      kind: 'takeoverPrebossBatch',
+      result: { requiredExitKeys: ['preboss'], selectedPossible: true },
+    });
+  });
+
   it('consumes the physical board while acquiring only the six visited target rewards', () => {
     const { biome } = completeN();
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');

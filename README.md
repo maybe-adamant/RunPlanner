@@ -147,9 +147,9 @@ copied elsewhere.
   reconciliation and Commit 5a prompt removal are complete. The active
   [re-anchor and reorganization](docs/progress/REANCHOR_AND_REORGANIZE.md)
   plan has completed its production workspace contraction and bounded
-  test-ownership correction. Campaign B's candidate-capability entry audit is
-  complete, and its explicit evaluation-assembly/room-target unit is the next
-  cleanup slice. The behavior-ready
+  test-ownership correction. Campaign B's explicit evaluation-assembly,
+  room-target, and Linear structural units are complete; its Hub/local,
+  reward-producer, and lifecycle units remain. The behavior-ready
   [workspace presentation polish](docs/progress/WORKSPACE_PRESENTATION_POLISH.md)
   plan remains paused while the remaining re-anchor campaigns close. The
   [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) gives Commit
