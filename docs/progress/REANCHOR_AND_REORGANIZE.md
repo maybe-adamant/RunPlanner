@@ -69,11 +69,16 @@ memoization caches. Campaign B is complete: each semantic sidecar now crosses
 its producer-to-consumer boundary as an exact opaque artifact, and its query
 family has one explicit evaluator behind the prepared session.
 
-Campaign C's entry audit is complete. It found a justified room-state split,
-one narrow topology-query product, misplaced codec and command tests, and an
+Campaign C is complete. Its entry audit found a justified room-state split, one
+narrow topology-query product, misplaced codec and command tests, and an
 occurrence-command aggregate with demonstrated leaf-family boundaries. It did
 not find evidence for separate raw-topology decode and semantic-validation
 products or for splitting the atomic topology-command aggregate.
+
+Campaign D's entry audit is complete. It found that the history and reward
+coordinators are each the coherent owner of one ordered state product. The
+audit therefore retains both rather than creating state-wrapper or forwarding
+commits that would make maintenance less local.
 
 This document is temporary delivery authority. Stable ownership remains with
 the documents under `docs/design/`. When the program closes, any durable
@@ -2184,21 +2189,111 @@ remain separate inputs rather than becoming another dependency bag.
   reward and history flows. File length alone is not evidence to split either
   coordinator.
 
-#### D1: Reward sources, state, and event transitions
+#### Campaign D entry-audit record (2026-08-01)
 
-- build immutable snapshot/history lookup products only where several event
-  families consume the same answer;
-- move target creation/offer processing and lifecycle
-  acquisition/wheel/Shop/completion processing as complete vertical families;
-- introduce only the reward state fields required by event families moved in
-  the same commit, and remove their loose predecessor fields and branches;
-- keep one visible chronological loop and exhaustive event dispatch;
-- preserve possibility branching, physical offer order, explicit candidate
-  artifact capture, exact lifecycle checkpoints, and the public reward result.
+The audit ran against clean `7c5873a`, after Campaign C's 95-file, 771-test
+complete gate. The focused engine lane also passed 44 files and 381 tests.
+Those are diagnostic starting points, not size or test-count targets.
 
-The opening audit decides whether reward work is one vertical review unit, two
-or more complete event-family units, or retention of a cohesive section. A
-state-only or lookup-only preparation commit is not an allowed boundary.
+`simulation/rewards/biome.ts` is the chronological reward coordinator. It
+interprets nine history-event families explicitly (`roomPrepared`, target
+creation/generation, outgoing generation, offer-point materialization and
+acquisition, producer-role advancement, encounter completion, and Shop
+purchases), advances every other event, and publishes four reward-event kinds:
+offered reward, concrete acquisition, supported Shop inventory, and supported
+Shop purchases. Its mutable facts are the reward branches (which themselves
+own bags, reward history, emitted events, pending Shop witnesses, and the
+processed sequence), peers, expected target stores, store-support entries,
+target-history checkpoints, pending target-generation metadata, findings,
+producer frontiers, Ship lifecycle contexts, and Shop purchase contexts.
+Initialization either creates a fresh reward history or carries the prior
+biome history into a new biome; finalization freezes the public simulation and
+the two explicit candidate-artifact products.
+
+The audit distinguishes those mutable facts from immutable lookups: generated
+layout, room and target indexes, Hub target and lookup indexes, batch-by-parent
+mapping, materialized history views, and catalog facts. A narrow immutable
+lookup product is justified where several event families consume the same
+answer. A broad mutable context is not: it would hide the existing ordered
+state machine rather than give an event family a smaller owned boundary.
+
+The audit considered two apparent reward families: target/incoming-local offer
+replay and entered lifecycle. Neither is an independent state product. They
+alternate in one ordered history stream; both read and write the authoritative
+reward branches, findings, and producer-frontier index; either can exhaust the
+branches that stop the loop; target-created candidate closures replay later
+lifecycle acquisition; lifecycle contexts snapshot target-produced branch
+state; and the one public result combines target support/checkpoints with both
+families' artifacts. Separating them would require an all-purpose mutable
+reward context, a forwarding merger, or duplicate finalization. That is exactly
+the state-wrapper split Campaign D forbids, and it would not reduce a
+representative change neighborhood.
+
+**D1 decision — retain the reward fold.** `rewards/biome.ts` remains the one
+visible chronological coordinator and final product owner. Its existing
+neighbors already own real lower-level products: `processing.ts` owns pure
+reward-branch transitions, `facts.ts` constructs typed reward facts, and the
+producer/lifecycle artifact modules own opaque candidate capabilities. No
+additional reward-flow unit qualifies for a behavior-preserving extraction at
+this point. The public `BiomeRewardSimulation` stays data-only. Campaign B's
+assembly product remains explicit:
+`evaluateBiomeRewardsAssembly` returns the simulation beside opaque producer
+and lifecycle artifacts; project and progressive composition pass all three to
+biome candidate artifacts. No result-keyed recovery map or sidecar is allowed.
+
+The preserved ordering/checkpoint witnesses are physical target and offer
+order, possibility-branch equivalence, counted-bag consumption at offer time,
+acquisition only at the lifecycle event, target-history checkpoints, Shop
+inventory-before-purchase witnesses, and wheel-materialization-before-picked
+acquisition. The cohesive fold preserves the generated-target-only
+expected-store and current-Shop-name facts; the distinct Hub and local-child
+parent/peer facts; the no-reward entry/layout/Hub advance paths; the Hub,
+linked, and prefix no-batch peer reset paths; and incoming-before-local peer
+append order. The artifact checkpoints are distinct: incoming/local frontiers
+precede their own offer processing, Shop producer frontiers precede inventory
+processing, the Ship context precedes its first wheel, and the Shop context
+follows inventory but precedes purchase processing. Primary tests remain with
+their semantic families: F reward and timing fixtures; N Hub, local-sibling,
+and Preboss Shop fixtures; O Ship and wheel fixtures; progressive and
+candidate-session assembly witnesses. I/Clockwork remains a
+history/materialization witness, not a D1 reward-evaluator matrix. No new
+umbrella movement suite is warranted.
+
+The executable work-count baseline remains unchanged: representative workspace
+rendering emits zero project evaluations and zero candidate batches; constructing
+the Underworld and Surface workspaces emits two project evaluations; cold
+candidate loads emit one addressed batch for every representative family except
+the cooperative rewards family, which emits fourteen; repeated loads emit none;
+and each representative performance fixture has one cold candidate batch, one
+edit evaluation, and zero cached-Undo work.
+
+**D2 decision — retain the history fold.** `history/fold.ts` is one ordered
+interpreter over the full event stream. Its sequence validation, room names and
+views, pending target generation, active encounters and required objects,
+optional biome counters, seed state, closure checks, and final frozen product
+are shared invariants rather than unrelated initialization, transition, and
+freezing policy. The potentially narrow required-object family was evaluated,
+but its spawn/completion state still needs the flat ledgers at every snapshot,
+biome-start counter activation, room-view validation, and final active-set
+closure. Extracting it would export or duplicate a mutable fold context without
+reducing a representative change neighborhood. Therefore D2 has no
+implementation commit; reopen it only when a concrete change demonstrates a
+smaller complete state product. F, N, O, and I history/materialization fixtures
+remain the primary ordered-history witnesses.
+
+#### D1: Reward sources, state, and event transitions (retained)
+
+- retain the complete ordered reward fold because its event families share one
+  branch/finding/frontier state product and one final projection;
+- retain its visible chronological loop and exhaustive dispatch;
+- retain explicit candidate artifacts and the existing lower-level branch,
+  facts, and artifact owners;
+- do not add a state wrapper, lookup-only stage, forwarding layer, or
+  compatibility path merely to split source files.
+
+The opening audit selected no D1 movement unit. A future behavior change may
+reopen this only by demonstrating a smaller complete state product with a
+smaller primary test neighborhood.
 
 #### Conditional D2: History fold state and transitions
 
@@ -2209,8 +2304,9 @@ state-only or lookup-only preparation commit is not an allowed boundary.
 - keep one chronological loop and visible exhaustive dispatch, isolate
   initialization/final freezing only when that reduces a demonstrated change
   neighborhood, and preserve deeply identical ordered history products;
-- if the present fold is the more cohesive owner of its ordered invariant,
-  retain it and record that decision without an implementation commit.
+- the entry audit found the present fold to be the more cohesive owner of its
+  ordered invariant, so retain it and record that decision without an
+  implementation commit.
 
 #### D3: Program closure
 
@@ -2220,7 +2316,8 @@ state-only or lookup-only preparation commit is not an allowed boundary.
 - run the complete repository gate and compare performance work counts;
 - absorb stable boundary clarifications into owning design documents;
 - record campaign evidence in `IMPLEMENTATION_PROGRESS.md`;
-- retire this temporary plan and release Commit 5c.
+- retire this temporary plan and unblock Commit 5b.3/5b.4; Commit 5c follows
+  its own plan after Commit 5b closes.
 
 ## Per-Commit Review Contract
 

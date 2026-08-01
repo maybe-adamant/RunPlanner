@@ -180,6 +180,24 @@ This is one evaluator and one ordered lifecycle authority. Progressive
 evaluation is not a candidate-only simulator and does not publish a second
 history interpretation.
 
+### Ordered State-Flow Ownership
+
+History folding is one chronological authority: it owns sequence validation,
+room and ledger views, paired-event closure, counter transitions, and the
+frozen history product. Reward evaluation is likewise one chronological
+authority for possibility branches, findings, producer-frontier accumulation,
+lifecycle candidate capture, and its final data-only reward result beside
+explicit candidate artifacts. A later stage consumes those returned artifacts;
+it does not recover them from a result-keyed sidecar.
+
+Pure branch transitions, fact construction, and opaque artifact construction
+may have their own focused owners below those coordinators. An event family is
+not split into a separate state-flow merely because it has local maps or a
+large source region: it must be able to return a complete product without
+passing the coordinator's mutable ordered state through a wrapper or remerging
+partial branches, findings, and artifacts. Otherwise the chronological
+coordinator remains the coherent authority.
+
 ### Completion and Coverage Axes
 
 Biome authoring completion and evaluation coverage are separate facts:
