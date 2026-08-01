@@ -266,13 +266,16 @@ Likely 5b.4 production owners:
 - `apps/planner/src/ui/feedback/EvaluationFeedback.tsx`;
 - `apps/planner/src/projections/evaluationProjection.ts`;
 - `apps/planner/src/projections/contextualOptions.ts`;
-- `apps/planner/src/projections/structuredWorkspace.ts` for presentation-ready
-  messages already owned by the projection;
+- `apps/planner/src/projections/structured-workspace/presentation/biome-presentation.ts`
+  for rail and Hub labels;
+- `apps/planner/src/projections/structured-workspace/assembly/decision-assembly.ts`
+  for evidence-dependent door messages;
+- `apps/planner/src/projections/structured-workspace/assembly/occurrence-assembly.ts`
+  for room-local messages;
 - `apps/planner/src/ui/editor/biome/BiomeWorkspace.tsx`;
 - `apps/planner/src/ui/editor/biome/DecisionWorkbench.tsx`;
 - `apps/planner/src/ui/editor/biome/HubDecisionWorkbench.tsx`;
-- `apps/planner/src/ui/editor/biome/OccurrenceWorkbench.tsx`;
-- `apps/planner/src/ui/editor/biome/topologyRemovalPresentation.ts`.
+- `apps/planner/src/ui/editor/biome/OccurrenceWorkbench.tsx`.
 
 Copy may stay in an existing React component when it is purely local
 presentation. A string that depends on engine evidence or projected state

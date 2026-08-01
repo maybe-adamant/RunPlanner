@@ -45,9 +45,18 @@ checked again at the requirement-to-binding and rendered-product boundaries.
 A12 removed the production shadow-authored models and relocated valuable
 independent expectations to tests. A13 removed the remaining post-build
 production self-audits, trimmed the public workspace entry to deliberate
-consumers, and closed the final import matrix. The contraction gate is complete,
-so Commit 5b.3 in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) may
+consumers, and closed the final import matrix. The production contraction gate
+is complete.
+
+A holistic post-A13 test read found that test ownership did not contract with
+production ownership. Focused structured-workspace fixtures were added beside
+the new modules, but the former facade and React integration suites grew and
+continued to assert many of the same semantic families. A14, A15.1, A15.2, and
+A16 completed the bounded test-ownership correction: canonical shared route
+fixtures, independent workspace expectation/observation infrastructure,
+focused projection and closure assertions, and React coverage aligned with the
+existing workbench boundaries. Commit 5b.3 in
+[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) may now
 resume. Campaign B remains separate.
 
 This document is temporary delivery authority. Stable ownership remains with
@@ -160,7 +169,10 @@ wells merely because they are long. They remain declaration-owned and direct.
   if a later slice exposes a concrete dependency violation.
 - catalog declaration modules remain explicit game-data authority.
 - React CSS and test files split only when the production ownership boundary
-  gives them a clearer home.
+  gives them a clearer home. Campaign A's completed workbench and workspace
+  products now provide those homes; A14, A15.1, A15.2, and A16 move assertions
+  to them and delete superseded umbrella coverage rather than splitting
+  mechanically.
 - public barrels are reorganized only to preserve a deliberate import surface;
   export-count reduction is not an objective.
 
@@ -349,11 +361,11 @@ Moving code is complete only when the new module:
 
 This plan authorizes one small dependency correction and four gated campaigns.
 The original sixteen-to-twenty-commit estimate is superseded by the completed
-review history and the current code audit. Foundation plus twenty-five Campaign
-A review commits are delivered through A13, including the final bounded
-contraction units. With the later campaign ranges below, the truthful program
-estimate is thirty-six to thirty-nine implementation commits, not an exact
-quota. A boundary may merge
+review history and the current code audit. Foundation plus twenty-nine Campaign
+A review commits are delivered through A16, including the bounded production
+contraction and test-ownership units. With the later campaign ranges below, the
+truthful program estimate remains forty to forty-three implementation commits,
+not an exact quota. A boundary may merge
 when it would otherwise rewrite the same transition twice, or split when a
 vertical semantic family is too large for truthful review.
 
@@ -363,8 +375,9 @@ temporary compatibility machinery. The sequence below is the default:
 ```text
 neutral dependency anchor
   -> Campaign A: workspace and React
-  -> completed contraction checkpoint: A12 and A13
-  -> active checkpoint: Commit 5b.3 and 5b.4 may resume
+  -> completed production contraction checkpoint: A12 and A13
+  -> completed test-ownership correction: A14, A15.1, A15.2, and A16
+  -> checkpoint: Commit 5b.3 and 5b.4 may resume
   -> Campaign B: candidate evaluation
   -> Campaign C: authored core
   -> Campaign D: history and reward evaluation
@@ -378,13 +391,13 @@ path it owns.
 
 ### Relative Work and Risk
 
-| Work                            | Review commits | Relative size                     | Primary risk                                                                   |
-| ------------------------------- | -------------: | --------------------------------- | ------------------------------------------------------------------------------ |
-| Neutral dependency anchor       |    1 delivered | Small                             | Unnecessarily changing external import surfaces                                |
-| Campaign A: workspace and React |   25 delivered | Extra-large                       | Losing authored reachability, focus, or lazy interaction behavior              |
-| Campaign B: candidates          |            3–4 | Extra-large                       | Replacing one large file with a universal context or altered coverage recovery |
-| Campaign C: authored core       |            4–5 | Extra-large                       | Scattering atomic topology and room-state invariants                           |
-| Campaign D: history and rewards |            3–4 | Extra-large/highest semantic risk | Moving an event to the wrong chronological state                               |
+| Work                            | Review commits | Relative size                     | Primary risk                                                                                 |
+| ------------------------------- | -------------: | --------------------------------- | -------------------------------------------------------------------------------------------- |
+| Neutral dependency anchor       |    1 delivered | Small                             | Unnecessarily changing external import surfaces                                              |
+| Campaign A: workspace and React |   29 delivered | Extra-large                       | Losing authored reachability, focus, lazy interaction behavior, or independent test evidence |
+| Campaign B: candidates          |            3–4 | Extra-large                       | Replacing one large file with a universal context or altered coverage recovery               |
+| Campaign C: authored core       |            4–5 | Extra-large                       | Scattering atomic topology and room-state invariants                                         |
+| Campaign D: history and rewards |            3–4 | Extra-large/highest semantic risk | Moving an event to the wrong chronological state                                             |
 
 The range describes review units, not elapsed time. Campaign gates exist so the
 project can reassess value, coupling, and remaining risk before authorizing the
@@ -406,8 +419,10 @@ next broad movement.
 Campaign A was the prerequisite for Commit 5b.3 to resume. A1 through A6
 established the necessary returned products and consumer boundary; A7 through
 A11 completed the corresponding private ownership boundaries. A12 and A13
-contracted redundant representations around those boundaries and closed the
-campaign. Exact filenames follow returned products, not a file-count target.
+contracted redundant production representations around those boundaries. A14,
+A15.1, A15.2, and A16 completed the same ownership correction in fixtures, test
+support, and React coverage. Exact filenames follow returned products, not a
+file-count target.
 
 #### Campaign A entry characterization
 
@@ -1111,9 +1126,10 @@ rejection, and exact fine-finding destinations. Like A12, it is
 production-net-negative and does not replace the deleted audit with another
 abstraction.
 
-#### Campaign A contraction gate
+#### Campaign A production contraction gate (delivered)
 
-Campaign A is closed: A12 and A13 demonstrate all of the following:
+A12 and A13 close the production contraction. They demonstrate all of the
+following:
 
 1. tests independently close persisted decisions, targets, occurrences, and Hub
    ownership over reachable semantic products;
@@ -1142,10 +1158,284 @@ Campaign A is closed: A12 and A13 demonstrate all of the following:
 10. both contraction commits are net-negative in non-test
     `structured-workspace/` production code and the final inventory records the
     actual deletions and any retained duplication explicitly;
-11. `npm run check` and `git diff --check` pass at the final A13 gate.
+11. `npm run check` and `git diff --check` pass at the A13 production gate.
 
-Commit 5b.3 and Commit 5b.4 may resume. Campaign B remains separate and does
-not begin as part of the contraction.
+The gate proves that production no longer executes the removed shadow models.
+It does not prove that the retained tests have one clear assertion owner. The
+post-A13 audit below supersedes the earlier decision to resume Commit 5b.3.
+
+#### Campaign A test-ownership correction
+
+At the post-A13 checkpoint, the suite passed 76 test files and 703 tests, but
+its organization did not yet reflect the production boundaries it protected.
+Compared with
+`f69dc709a8e36b72ae624855ab043c2a02264b8a`, test files grew from 24,028 to
+28,607 lines. Fourteen focused structured-workspace module tests add 2,551
+lines, while the three pre-existing umbrella suites grew by another 1,566 lines:
+
+- `structuredWorkspace.test.ts`: 2,574 to 3,097 lines;
+- `structuredWorkspace.contract.test.ts`: 435 to 877 lines;
+- `BiomeWorkspace.test.tsx`: 2,033 to 2,634 lines.
+
+A15.1 later added ten non-test workspace expectation/closure support modules
+(1,673 lines) and three support self-tests (210 lines). Those later support
+figures are not part of the post-A13 baseline. All counts are diagnostic
+evidence, not deletion quotas. The maintenance finding is that focused owners
+were added without retiring overlapping facade and React assertions,
+independent expected enumeration and actual-product observation are coupled in
+one large closure helper, and canonical Underworld and Surface project builders
+exist in near-copy engine and application fixture files.
+
+The current execution profile supports the same conclusion. In one full Vitest
+run, `BiomeWorkspace.test.tsx` took approximately 19.1 seconds,
+`structuredWorkspace.test.ts` 10.5 seconds, and
+`structuredWorkspace.contract.test.ts` 4.2 seconds. Elapsed time varies by host
+and is not an acceptance threshold. The actionable issue is repeated full
+application/projection construction in broad suites and the limited scheduling
+granularity those suites impose, not test count by itself. This is not evidence
+for a worker-configuration change; performance tuning remains separately
+measured work.
+
+The correction preserves independent behavioral evidence while enforcing one
+primary assertion owner. It may reduce file, line, and test counts when an
+assertion is genuinely duplicated. Count preservation is not a goal.
+
+One primary assertion owner means one neighborhood owns a behavior's complete
+policy and edge-case matrix. It does not prohibit a representative boundary
+witness elsewhere. Focused workspace tests own family policy and edge matrices;
+the facade owns composition, caching, and sibling handoff; contract tests own
+malformed overlays and independent omission mutations; workbench tests own DOM,
+accessibility, and command dispatch; the parent workspace owns rail, focus, and
+inspector resolution; and product loops own store, persistence, Undo/Redo, and
+cross-layer round trips. An assertion is removed only when another owner covers
+its complete authority, not merely because similar wording appears elsewhere.
+
+#### A14: Canonical authored-project fixtures
+
+- establish `test/fixtures/authored-project/` as the repository-level fixture
+  home for the shared Underworld and Surface route builders currently
+  duplicated under planner and engine tests. The fixture module is test-only,
+  application-neutral, and may import only public engine and catalog APIs;
+- make engine, projection, architecture, UI, and product-loop tests consume
+  those canonical builders, retaining layer-local helpers only when they add a
+  genuinely layer-local operation;
+- define the canonical fixture API before moving consumers: retain every
+  semantically necessary variant (including partial N and G Preboss-source
+  scenarios), settle on truthful option names, remove ignored compatibility
+  parameters such as planner-only catalog arguments, and characterize a matrix
+  of shared scenarios/options before deleting both superseded copies in the
+  same commit;
+- keep fixture-equivalence coverage in an existing discovered application or
+  engine test location unless A14 deliberately extends both Vitest discovery
+  and TypeScript project coverage for the root `test/` tree. A root fixture
+  directory alone is not an executable test or typecheck boundary;
+- preserve deeply equal authored documents for every characterized shared
+  scenario and retain all existing assertions before beginning assertion
+  migration.
+
+A14 is mechanical test infrastructure movement. It must not change production
+exports, authored defaults, simulation behavior, projection products, or React
+behavior. Because shared fixtures affect multiple workspaces, run the complete
+repository gate.
+
+#### A15.1: Separate expectation, observation, and closure infrastructure
+
+- organize structured-workspace test support beneath
+  `apps/planner/test/support/structured-workspace/` by expected products,
+  observed products, closure assertions, and shared test keys while performing
+  the semantic split below. Do not move the current aggregate first and rewrite
+  it in a later commit, and do not reproduce production module names as a
+  parallel tree;
+- separate independent expected enumeration from actual workspace observation:
+  expected topology owners (occurrences, decisions, targets, Hub slots, and
+  Hub visits), leaves, and structural controls consume catalog plus persisted
+  authored state and may call direct pure-core queries over those inputs, such
+  as completeness, physical-exit, and takeover helpers. They may not import a
+  workspace producer, evaluator overlay, candidate session, source index,
+  family assembly, presentation builder, interaction binder, or facade
+  constructor. Of workspace production, a distinct observer may import only
+  public workspace contract types;
+- make closure assertions compare the independently expected manifest with the
+  typed observed manifest. Type-only knowledge of the public result contract is
+  not semantic derivation from the producer and must not force actual-product
+  traversal through `unknown`. Contract mutations may use a narrow, documented
+  test helper to omit or misroute a field after a valid public product is
+  constructed; it must not construct a parallel workspace product or hide
+  ordinary observation behind `unknown`;
+- split topology, editable-leaf, structural-control, destination, and bound
+  interaction closure only where they have distinct expected inputs. Keep one
+  shared observation primitive when splitting it would duplicate node traversal;
+- define and implement exact lane membership around the resulting final paths:
+  `test:contract` runs application architecture plus workspace
+  overlay/closure/support contracts; `test:ui` runs direct component suites;
+  `test:product` runs cross-layer workflows; and `test:planner` is the
+  intentional broad planner superset, including contract and component
+  coverage. Semantic distinction names each lane's primary contract; it does
+  not require disjoint test sets;
+- record the exact commands and member paths after movement, so script names
+  and actual capabilities cannot drift. A15.1 cannot close until the final
+  script definitions and their included paths are recorded as acceptance
+  evidence, not merely inferred from directory globs;
+- move stable import prohibitions into ESLint `no-restricted-imports` rules
+  where the AST can express them. Retain architecture tests for semantic or
+  runtime properties that lint cannot prove, and remove source-token/file-path
+  assertions that merely encode incidental layout;
+- do not expose a new production manifest, audit hook, compatibility export, or
+  test-only runtime path to make the tests easier.
+
+A15.1 closes when expected products remain independent of workspace-producer
+implementation while retaining direct pure-core authority, actual workspace
+observation is typed against the public result contract, the final support
+layout matches those responsibilities, every named lane executes its promised
+contract, and the planner plus contract lanes and complete repository gate pass.
+
+#### A15.2: Re-anchor workspace projection and contract assertions
+
+- create an explicit ownership inventory for every case in
+  `structuredWorkspace.test.ts` and `structuredWorkspace.contract.test.ts`:
+  source lookup, occurrence facts, occurrence assembly, decision assembly,
+  topology-interaction assembly, shared Fields facts, Hub assembly, biome
+  semantic assembly, marker/destination navigation, presentation, interaction
+  binding, facade composition, overlay integrity, or cross-product closure;
+- move a unique assertion to its focused owner when that owner now exists, then
+  delete the umbrella assertion in the same change. Do not copy assertions into
+  smaller files or preserve a broad compatibility suite for confidence; retain
+  a representative boundary witness when it proves composition rather than a
+  second policy matrix;
+- retain in the facade suite only behavior that genuinely crosses several
+  returned products, such as representative route composition, sibling
+  presentation/binding handoff, identity caching, and exact public product
+  assembly;
+- retain contract tests for malformed authored/evaluated overlay rejection,
+  independent semantic reachability, independently required leaves and
+  structural controls, and mutation cases proving that omissions remain
+  observable;
+- do not expose a new production manifest, audit hook, compatibility export, or
+  test-only runtime path to make the tests easier.
+
+A15.2 closes when a workspace-family change has one focused test neighborhood,
+the facade and contract suites contain only boundary behavior, no migrated
+assertion leaves a second complete policy matrix behind, and the planner plus
+contract lanes and complete repository gate pass.
+
+#### A16: Align React coverage with existing workbench ownership
+
+- create an explicit ownership inventory for every current
+  `BiomeWorkspace.test.tsx` case before moving it: parent workspace, decision
+  workbench, Hub workbench, occurrence workbench, projection default, or
+  product loop. Move a child-owned case and delete its parent duplicate in the
+  same change; do not retain an unclassified parent path for confidence;
+- move decision editing, takeover, repair, removal, and authoring-frontier
+  rendering/dispatch assertions beside `DecisionWorkbench.tsx`;
+- move Hub board, slot, visit, side-room, closure, and Hub-local dispatch
+  assertions beside `HubDecisionWorkbench.tsx`;
+- move room/reward, Fields, Ship, Shop, fixed-room, and dormant-detail
+  rendering/dispatch assertions beside `OccurrenceWorkbench.tsx` or an already
+  narrower child when that child owns the complete behavior;
+- keep `BiomeWorkspace.test.tsx` responsible for rail and Hub-visit navigation,
+  explicit and default inspector consumption, semantic focus, keyboard
+  movement, finding navigation, and the parent-to-workbench interaction handoff;
+- test the characterized default-inspector priority matrix at projection
+  ownership. React needs representative consumption fixtures, not a second copy
+  of every priority and retained-state rule;
+- use typed projected-biome and interaction fixtures for component tests. A
+  direct workbench may use a minimal Provider/test store where its hooks or
+  dispatch contract require one; reserve the real application/store for Redux
+  publication, Undo/Redo, autosave, or a cross-component command round trip;
+- retain product-loop tests only for cross-layer workflows and remove any
+  product assertion whose complete authority is already covered in engine,
+  projection, or component tests;
+- extract shared render/application harnesses only when at least two remaining
+  suites consume them. A test helper may simplify construction but may not
+  decide room eligibility, topology, lifecycle, reward, focus, or candidate
+  policy;
+- preserve accessible roles, labels, pointer and keyboard behavior, semantic
+  command identity, Undo/Redo, persistence, finding navigation, lazy candidate
+  work, and zero render-time evaluation.
+
+A16 closes when each existing React workbench has direct coverage for its own
+contract, the parent suite no longer acts as the sole test owner for all child
+behavior, and the UI, planner, product, and complete repository gates pass.
+
+#### A14–A16 delivery record (2026-07-31)
+
+- A14 established the test-only, repository-level
+  `test/fixtures/authored-project/` barrel for the canonical Underworld and
+  Surface builders. It removed both planner and engine copies, removed ignored
+  catalog arguments, retained partial/custom N and G Preboss-source variants,
+  and added SHA-256 full-document characterization for the shared
+  scenario/option matrix.
+- A15.1 replaced the aggregate closure helper with independent expected
+  topology, editable-leaf, and structural-control manifests; one typed public
+  workspace observer; focused topology, leaf, and structural-control closure
+  assertions; shared semantic test keys; and one documented malformed-product
+  omission helper. Expected manifests enumerate occurrences, decisions,
+  targets, Hub slots, and Hub visits from authored state without importing a
+  workspace producer. The observer imports public result-contract types only.
+  ESLint now enforces the statically expressible producer/import boundaries.
+- The exact final lane membership is recorded in `package.json` and is:
+  `test:contract` = `vitest run apps/planner/test/architecture
+apps/planner/test/support/structured-workspace
+apps/planner/src/projections/structuredWorkspace.contract.test.ts`;
+  `test:planner` = `vitest run apps/planner/src
+apps/planner/test/architecture apps/planner/test/support/structured-workspace`;
+  `test:ui` = `vitest run apps/planner/src/ui`; and `test:product` =
+  `vitest run apps/planner/test/product-loops`. Planner is intentionally a
+  broad superset rather than a disjoint capability lane.
+- A15.2 reduced the former 3,097-line facade umbrella to four composition
+  witnesses: public multi-biome envelope, sibling handoff, exact identity
+  caching, and coarse finding routing. Its 46-case ownership inventory moved
+  policy matrices to source-index, occurrence, decision, Hub, topology,
+  Fields, presentation, navigation, and interaction-binding owners. Contract
+  retains malformed overlays and independently derived omission/reachability
+  evidence, including target and Hub sub-owner destinations and all editable
+  leaf and structural-interaction families.
+- A16 classified all 50 former parent React cases. The parent now has 17
+  rail/focus/default/finding/handoff cases; direct Decision, Hub, and
+  Occurrence workbench suites own their 11, 6, and 6 behavior matrices, while
+  the default-priority matrix remains at projection ownership. Static workbench
+  rendering uses a projected public fixture and minimal presentation store;
+  live application composition is limited to command
+  publication/reprojection, Undo/Redo, or cross-component behavior. Review
+  restored the split picked-room/reward atomic-command test plus its parent
+  rail-summary/focus handoff witness, and Hub visit mutation preserves authored
+  side-room order.
+- The final single-flight `npm run check` passed all package typechecks, 82
+  Vitest files / 713 tests, ESLint, Prettier, and the production build; `git diff --check`
+  also passed. The test-count change from the post-A13 703 baseline reflects
+  moved and newly independent fixtures, not a measure of primary policy
+  coverage.
+
+#### Campaign A final gate (delivered)
+
+Campaign A closed after A14, A15.1, A15.2, and A16 demonstrated all of the
+following:
+
+1. shared Underworld and Surface authored-project scenarios have one canonical
+   fixture definition;
+2. every named test lane executes the contract its name promises;
+3. expected authored leaves and structural controls remain independent of
+   workspace producer semantics while retaining direct pure-core authority,
+   and actual-product observation is typed against only the public result
+   contract;
+4. each occurrence, decision, Hub, presentation, navigation, binding, facade,
+   contract, React workbench, parent workspace, and product-loop behavior has
+   one primary complete-matrix assertion owner, with only representative
+   boundary witnesses retained elsewhere;
+5. facade, parent React, and product-loop suites contain only behavior that
+   crosses their owned boundary;
+6. moved assertions leave no duplicate umbrella path, compatibility suite, or
+   copied fixture builder behind;
+7. import direction is enforced through lint when statically expressible and
+   through architecture/runtime fixtures only when it is not;
+8. test helpers construct inputs and observe outputs without becoming a second
+   semantic engine;
+9. the named work-count baselines remain recorded as diagnostics; the complete
+   suite does not regress materially from the recorded diagnostic run without
+   explanation, and `npm run check` plus `git diff --check` pass.
+
+After this gate, Commit 5b.3 and Commit 5b.4 may resume. Campaign B remains
+separate and does not begin as part of the test correction.
 
 ### Campaign B: Candidate Evaluation
 
@@ -1296,21 +1586,21 @@ reorganization commit, and fix it in a separately authorized change.
 The following audits are required at the start of each affected campaign and
 again at closure:
 
-| Audit                       | Evidence                                     | Passing condition                                                                                                                                 |
-| --------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Authority-to-consumer trace | Product signatures plus review               | Every important product has one named producer, explicit inputs, and identifiable consumers.                                                      |
-| Import graph                | Automated import rule or architecture test   | No cycle exists; imports follow the declared package and subsystem direction.                                                                     |
-| Dependency injection        | Composition fixture plus review              | Application services are constructed at the composition root; stage dependencies are narrow and explicit.                                         |
-| Hidden registration         | Returned-product closure fixture plus review | A later stage does not depend on maps or registries populated only as a side effect of producing an earlier result.                               |
-| Semantic ownership          | Independent test closure fixtures            | Authored owners, findings, controls, and inspector destinations resolve by stable semantic address without executing a second production model.   |
-| Duplicate reconstruction    | Boundary rule plus review                    | React and downstream projections do not repeat physical-exit, containment, eligibility, lifecycle, or reward rules.                               |
-| Mutation boundary           | Review                                       | Mutable builders are local to one stage and freeze a complete returned product before crossing the boundary.                                      |
-| Exhaustive dispatch         | Typecheck plus family fixtures               | Closed command, event, and candidate vocabularies retain explicit exhaustive handling.                                                            |
-| Public surface              | Typecheck plus import fixture                | Existing supported imports remain deliberate; temporary compatibility barrels do not survive closure.                                             |
-| Test authority              | Review                                       | Tests live beside the product or boundary they verify and do not assert incidental file layout.                                                   |
-| Facade responsibility       | Import graph plus function-inventory review  | The workspace facade composes stages and caching; it owns no occurrence, decision, Hub, rail, or audit family logic.                              |
-| Change neighborhood         | Product trace plus representative review     | A family change enters its producer, binder where applicable, and focused tests—not a production audit mirror, unrelated families, or the facade. |
-| Movement accounting         | Per-commit diff statistics and review        | Moved code leaves no parallel path; unexplained production growth does not accumulate during decomposition.                                       |
+| Audit                       | Evidence                                     | Passing condition                                                                                                                                                                                                              |
+| --------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Authority-to-consumer trace | Product signatures plus review               | Every important product has one named producer, explicit inputs, and identifiable consumers.                                                                                                                                   |
+| Import graph                | Automated import rule or architecture test   | No cycle exists; imports follow the declared package and subsystem direction.                                                                                                                                                  |
+| Dependency injection        | Composition fixture plus review              | Application services are constructed at the composition root; stage dependencies are narrow and explicit.                                                                                                                      |
+| Hidden registration         | Returned-product closure fixture plus review | A later stage does not depend on maps or registries populated only as a side effect of producing an earlier result.                                                                                                            |
+| Semantic ownership          | Independent test closure fixtures            | Authored owners, findings, controls, and inspector destinations resolve by stable semantic address without executing a second production model.                                                                                |
+| Duplicate reconstruction    | Boundary rule plus review                    | React and downstream projections do not repeat physical-exit, containment, eligibility, lifecycle, or reward rules.                                                                                                            |
+| Mutation boundary           | Review                                       | Mutable builders are local to one stage and freeze a complete returned product before crossing the boundary.                                                                                                                   |
+| Exhaustive dispatch         | Typecheck plus family fixtures               | Closed command, event, and candidate vocabularies retain explicit exhaustive handling.                                                                                                                                         |
+| Public surface              | Typecheck plus import fixture                | Existing supported imports remain deliberate; temporary compatibility barrels do not survive closure.                                                                                                                          |
+| Test authority              | Ownership inventory plus review              | One behavior has one primary complete-matrix assertion owner; representative boundary witnesses remain focused, while facade, React, and product suites match their product boundary and do not assert incidental file layout. |
+| Facade responsibility       | Import graph plus function-inventory review  | The workspace facade composes stages and caching; it owns no occurrence, decision, Hub, rail, or audit family logic.                                                                                                           |
+| Change neighborhood         | Product trace plus representative review     | A family change enters its producer, binder where applicable, and focused tests—not a production audit mirror, unrelated families, or the facade.                                                                              |
+| Movement accounting         | Per-commit diff statistics and review        | Moved code leaves no parallel path; unexplained production growth does not accumulate during decomposition.                                                                                                                    |
 
 Automate a property only when it is observable through imports, types, or
 runtime products. Do not add brittle source-token assertions for architectural
@@ -1410,7 +1700,7 @@ release evidence. It is not a substitute for these executable performance and
 work-count baselines.
 
 The A6 checkpoint passed 65 files and 668 tests and remains the behavioral
-baseline for A7 through A13. Its diagnostic source baseline is 9,848 lines in
+baseline for A7 through A16. Its diagnostic source baseline is 9,848 lines in
 `structured-workspace/`, including a 6,213-line projector, plus 479 lines in
 `BiomeWorkspace.tsx`. These are not quotas. They make movement and unexplained
 growth visible while the responsibility and import audits remain authoritative.
@@ -1431,15 +1721,26 @@ topology, and structural-control closure now lives only in test support and
 does not mirror interaction payloads. The final inventory is 7,463 non-test
 lines across 25 files: a 3,295-line and four-file reduction with no renamed
 shadow audit. The final single-flight `npm run check` passed 76 test files and
-703 tests, all typechecks, lint, formatting, and the production build; `git
-diff --check` also passed.
+703 tests, all typechecks, lint, formatting, and the production build; `git diff --check`
+also passed.
+
+The post-A13 test-ownership baseline is 76 test files, 703 tests, and 28,607
+lines in `*.test.*` and `*.spec.*` files, compared with 60 files and 24,028
+lines at `f69dc709a8e36b72ae624855ab043c2a02264b8a`; it contains no
+structured-workspace expected/closure support. A15.1 subsequently added ten
+non-test support modules (1,673 lines) and three support self-tests (210 lines).
+The fourteen focused structured-workspace module tests total 2,551 lines, while
+the legacy workspace facade, contract, and React parent suites grew by 1,566
+lines. A14, A15.1, A15.2, and A16 used these figures to make retained
+duplication visible; they are not quotas and test-count reduction is allowed.
 
 ## Non-Goals
 
 - no authored schema or codec-version change;
 - no new biome, room, lifecycle, reward, or candidate rule;
 - no Shop purchase-order implementation;
-- no Commit 5b.3 or 5b.4 presentation work before the A13 contraction gate;
+- no Commit 5b.3 or 5b.4 presentation work before the A16 final Campaign A
+  gate;
 - no UI redesign, graph library, state-management replacement, or component
   framework;
 - no generic event bus, plugin registry, dependency-injection container, or
@@ -1447,6 +1748,8 @@ diff --check` also passed.
 - no declaration compression or metaprogramming;
 - no file-size, export-count, or directory-count quota;
 - no performance optimization without measured evidence;
+- no assertion-count, test-file-count, or test-line-count quota;
+- no production API or component redesign solely to make test movement easier;
 - no broad public API cleanup outside the structured-workspace entry; A13 may
   remove only unconsumed or audit-only exports from that boundary;
 - no compatibility layer left behind after a moved responsibility.
@@ -1455,10 +1758,11 @@ diff --check` also passed.
 
 This plan is complete only after the foundation and all four campaigns pass
 their gates, the complete repository gate passes, and the final audit matrix
-has no unresolved ownership or import finding. Campaign A closed at the A13
-contraction gate, rather than the earlier A11 structural checkpoint, and active
-delivery may return to Commit 5b.3/5b.4 while this document continues to own
-the remaining pre-5c campaigns.
+has no unresolved ownership or import finding. A13 closed the production
+contraction, rather than the earlier A11 structural checkpoint. Campaign A
+and its bounded A14/A15.1/A15.2/A16 test-ownership correction are complete;
+active delivery may return to Commit 5b.3/5b.4 while this document continues
+to own the remaining pre-5c campaigns.
 
 Durable results belong in:
 

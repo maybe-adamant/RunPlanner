@@ -32,10 +32,14 @@ repository gate. Commit 5a then removed the remaining browser confirmation
 prompts while preserving the existing semantic-command/history flow. Commit
 5b.1 delivered the N rail hierarchy, and Commit 5b.2 delivered direct side-room
 order editing. Commit 5b.3's active-only H/O room-local presentation in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) is again
-the next feature slice: the A12/A13 workspace/React contraction gate is
-complete. A1 through A6 established the
-authored-first workspace source/assembly products,
+[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) remains
+the next feature slice, but the re-anchor plan had one bounded test-ownership
+correction first. The A12/A13 production contraction gate is complete, as is
+the A14–A16 test-ownership correction. The correction canonicalized shared
+route fixtures, separated test infrastructure, re-anchored workspace
+projection/closure assertions, and aligned React coverage with the existing
+workbench owners. Commit 5b.3 may resume. A1 through A6 established
+the authored-first workspace source/assembly products,
 explicit interaction binding, projection-owned default and exact inspector
 destinations, and React consumption without topology or containment
 reconstruction. They also retained authored-active controls through invalid or
@@ -55,7 +59,10 @@ assembly, independent audits, and presentation out of that facade. The A11
 structural checkpoint is complete, but a fresh post-A11 read found that
 parallel authored expectation models and family-by-family binding self-audits
 still made several changes happen twice. A12 and A13 have contracted those
-paths, so Commit 5b.3 may resume. After Commit 5b closes, the plan's candidate,
+paths in production. A holistic test read then found that focused owner tests
+had been added without retiring overlapping facade and React assertions. The
+four review units—A14, A15.1, A15.2, and A16—closed that test ownership, so
+Commit 5b.3 may resume. After Commit 5b closes, the plan's candidate,
 authored-core, history, and reward campaigns must close before the separate
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan: schema 10 authors an
 exact Shop purchase order, simulation validates that exact sequence, and the
@@ -130,9 +137,35 @@ combined production inventory is 7,463 non-test structured-workspace lines,
 down 3,295 from the A11 baseline; the production `audit/` directory is gone.
 Neither change introduced a replacement registry, development-only runtime
 mode, or compatibility layer. The A13 contraction gate in
-`REANCHOR_AND_REORGANIZE.md` is complete: the final single-flight `npm run
-check` passed 76 test files and 703 tests, all typechecks, lint, formatting,
-and the production build. Commit 5b.3 may resume.
+`REANCHOR_AND_REORGANIZE.md` is complete: the final single-flight `npm run check`
+passed 76 test files and 703 tests, all typechecks, lint, formatting,
+and the production build. The post-A13 test baseline is 28,607 lines in test
+files. A15.1 subsequently added 1,673 lines in ten non-test workspace
+expectation/closure support modules and 210 lines in three support self-tests.
+A14, A15.1, A15.2, and A16 completed the active correction; Commit 5b.3 may
+resume.
+
+The A14–A16 test-ownership correction is complete. A14 established the one
+canonical `test/fixtures/authored-project/` builder barrel for all shared
+Underworld and Surface scenarios, removed the duplicated planner/engine
+builders and ignored catalog arguments, and characterized the retained
+variant matrix by full-document SHA-256. A15.1 split independent expected
+topology/leaf/control manifests from one typed public workspace observer and
+focused closure assertions, including target and Hub sub-owner reachability;
+it moved static import prohibitions into ESLint and made the named test lanes
+truthful. A15.2 reduced the 3,097-line workspace facade umbrella to four
+composition witnesses, moved its 46-case policy inventory to focused owners,
+and retained malformed-overlay plus independent closure/mutation evidence in
+the contract suite. A16 classified all 50 former parent React cases: the parent
+keeps 17 rail/focus/default/finding/handoff cases while direct Decision, Hub,
+and Occurrence suites own their behavior matrices, with the default-priority
+matrix remaining at projection ownership. The review restored the atomic
+picked-room/reward dispatch and parent rail-summary/focus handoff witness, and
+Hub visit mutations retain authored side-room order. The final serial `npm run check`
+passed all package typechecks, 82 test files / 713 tests, ESLint,
+Prettier, and the production build; `git diff --check` passed. The count change
+from the post-A13 703-test baseline reflects moved and newly independent
+fixtures, not a measure of primary policy coverage.
 
 An out-of-sequence decision-highlight rail follow-up is complete without
 advancing that active frontier. Ordinary biome rails now emphasize entry,
