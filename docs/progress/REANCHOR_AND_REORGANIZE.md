@@ -2017,6 +2017,20 @@ commands retain atomic transition witnesses.
 - preserve schema rejection, incomplete/context-invalid authored state,
   occurrence identity, declaration ordering, and exact error paths.
 
+##### C3 completion record (2026-08-01)
+
+The topology codec remains one private, path-aware pipeline from raw topology
+through structural validation and owner construction to room-state decoding;
+no raw-topology, validation, index, or codec-facade product was introduced.
+The public authored barrel now retains only the project document codec and
+deliberate model/query contracts, not the topology, batch-state, or biome-state
+implementation helpers. A dedicated topology-codec suite now owns persisted
+topology ordering, staged traversal, structural-owner, cycle, malformed-state,
+and document round-trip matrices through the public decoder. It preserves one
+project-level inactive/active Shop ownership witness while detailed room-leaf
+policy stays with the room-state codec suite. Command tests retain semantic
+transitions and an exact document-error-to-command-error wrapping witness.
+
 #### C4: Explicit command families (three review units)
 
 The command work proceeds as complete vertical families, with tests moved in

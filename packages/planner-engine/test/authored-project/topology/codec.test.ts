@@ -1,0 +1,719 @@
+import { describe, expect, it } from 'vitest';
+
+import { catalog } from '@run-planner/hades2-catalog';
+import {
+  applyProjectCommand,
+  createBatchRewardStoreAddress,
+  createBiomeAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  createProjectDocument,
+  createRewardWheelOfferAddress,
+  createTargetAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  ProjectDocumentContractError,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+
+import { createCompleteNProject } from '../support/complete-n-project';
+
+const fBiome = createBiomeAddress('Underworld', 'F');
+const hBiome = createBiomeAddress('Underworld', 'H');
+const oBiome = createBiomeAddress('Surface', 'O');
+const qBiome = createBiomeAddress('Surface', 'Q');
+
+interface EncodedTopology {
+  startOccurrenceId: string;
+  occurrences: Array<Record<string, unknown>>;
+  decisions: Array<Record<string, unknown>>;
+}
+
+interface EncodedProject extends Record<string, unknown> {
+  routes: Array<{
+    routeKey: string;
+    biomes: Array<{
+      biomeKey: string;
+      topology: EncodedTopology | null;
+    }>;
+  }>;
+}
+
+function project(
+  projectId: string,
+  configuredBiomeCounts: Partial<Record<'Underworld' | 'Surface', number>>,
+): ProjectDocument {
+  return createProjectDocument(catalog, {
+    projectId,
+    name: projectId,
+    configuredBiomeCounts,
+  });
+}
+
+function encodedProject(document: ProjectDocument): EncodedProject {
+  return JSON.parse(encodeProjectDocument(document)) as EncodedProject;
+}
+
+function encodedTopology(
+  document: ProjectDocument,
+  routeKey: string,
+  biomeKey: string,
+): {
+  readonly document: EncodedProject;
+  readonly topology: EncodedTopology;
+  readonly path: string;
+} {
+  const encoded = encodedProject(document);
+  const routeIndex = encoded.routes.findIndex((route) => route.routeKey === routeKey);
+  const route = encoded.routes[routeIndex];
+  const biomeIndex = route?.biomes.findIndex((biome) => biome.biomeKey === biomeKey) ?? -1;
+  const topology = route?.biomes[biomeIndex]?.topology;
+  if (routeIndex < 0 || biomeIndex < 0 || topology === null || topology === undefined) {
+    throw new Error(`missing encoded ${routeKey}/${biomeKey} topology`);
+  }
+  return {
+    document: encoded,
+    topology,
+    path: `$.routes[${routeIndex}].biomes[${biomeIndex}].topology`,
+  };
+}
+
+function expectDocumentError(
+  value: unknown,
+  expected: { readonly path: string; readonly detail: string },
+): void {
+  try {
+    decodeProjectDocument(value, catalog);
+  } catch (error) {
+    expect(error).toBeInstanceOf(ProjectDocumentContractError);
+    expect(error).toMatchObject(expected);
+    return;
+  }
+  throw new Error(`expected ProjectDocumentContractError at ${expected.path}`);
+}
+
+function createBatchTargets(
+  document: ProjectDocument,
+  input: {
+    readonly biome: ReturnType<typeof createBiomeAddress>;
+    readonly sourceOccurrenceId: string;
+    readonly targets: readonly {
+      readonly exitKey: string;
+      readonly occurrenceId: string;
+      readonly gameName: string;
+    }[];
+    readonly rewardStoreKey?: 'RunProgress' | 'MetaProgress';
+    readonly fieldsCageOutcome?: 'min' | 'max';
+  },
+): ProjectDocument {
+  const decision = createExitDecisionAddress(input.biome, {
+    kind: 'occurrence',
+    occurrenceId: createOccurrenceId(input.sourceOccurrenceId),
+  });
+  let next = applyProjectCommand(document, catalog, { kind: 'CreateBatch', decision });
+  if (input.rewardStoreKey !== undefined) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(input.biome, decision.source),
+      storeKey: input.rewardStoreKey,
+    });
+  }
+  if (input.fieldsCageOutcome !== undefined) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision,
+      cageOutcome: input.fieldsCageOutcome,
+    });
+  }
+  for (const target of input.targets) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(input.biome, decision.source, target.exitKey),
+      occurrenceId: createOccurrenceId(target.occurrenceId),
+      gameName: target.gameName,
+    });
+  }
+  if (input.targets.length > 1) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(input.biome, decision.source),
+      value: { kind: 'normal', exitKey: input.targets[0]!.exitKey },
+    });
+  }
+  return next;
+}
+
+function unresolvedFProject(): ProjectDocument {
+  let document = applyProjectCommand(project('codec-unresolved-f', { Underworld: 1 }), catalog, {
+    kind: 'CreateStart',
+    biome: fBiome,
+    occurrenceId: createOccurrenceId('round-trip-f-start'),
+    gameName: 'F_Opening01',
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('round-trip-f-start'),
+    }),
+  });
+  return document;
+}
+
+function selectedFTakeoverProject(): ProjectDocument {
+  let document = applyProjectCommand(project('codec-selected-f', { Underworld: 1 }), catalog, {
+    kind: 'CreateStart',
+    biome: fBiome,
+    occurrenceId: createOccurrenceId('f-start'),
+    gameName: 'F_Opening01',
+  });
+  document = createBatchTargets(document, {
+    biome: fBiome,
+    sourceOccurrenceId: 'f-start',
+    rewardStoreKey: 'RunProgress',
+    targets: [{ exitKey: 'exit1', occurrenceId: 'f-combat', gameName: 'F_Combat02' }],
+  });
+  const combatDecision = createExitDecisionAddress(fBiome, {
+    kind: 'occurrence',
+    occurrenceId: createOccurrenceId('f-combat'),
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'CreateTakeoverBatch',
+    decision: combatDecision,
+    gameName: 'F_PreBoss01',
+    targetOccurrenceIds: {
+      exit1: createOccurrenceId('f-preboss-shop'),
+      exit2: createOccurrenceId('f-preboss-free'),
+    },
+  });
+  return applyProjectCommand(document, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(fBiome, combatDecision.source),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+}
+
+function completeHProject(): ProjectDocument {
+  let document = applyProjectCommand(project('codec-complete-h', { Underworld: 3 }), catalog, {
+    kind: 'CreateStart',
+    biome: hBiome,
+    occurrenceId: createOccurrenceId('complete-h-start'),
+  });
+  for (const [sourceOccurrenceId, targets] of [
+    ['complete-h-start', [['exit1', 'complete-h-02', 'H_Combat02']]],
+    [
+      'complete-h-02',
+      [
+        ['exit1', 'complete-h-03', 'H_Combat03'],
+        ['exit2', 'complete-h-04', 'H_Combat04'],
+      ],
+    ],
+    [
+      'complete-h-03',
+      [
+        ['exit1', 'complete-h-05', 'H_Combat05'],
+        ['exit2', 'complete-h-06', 'H_Combat06'],
+      ],
+    ],
+    [
+      'complete-h-05',
+      [
+        ['exit1', 'complete-h-07', 'H_Combat07'],
+        ['exit2', 'complete-h-08', 'H_Combat08'],
+      ],
+    ],
+  ] as const) {
+    document = createBatchTargets(document, {
+      biome: hBiome,
+      sourceOccurrenceId,
+      fieldsCageOutcome: 'min',
+      targets: targets.map(([exitKey, occurrenceId, gameName]) => ({
+        exitKey,
+        occurrenceId,
+        gameName,
+      })),
+    });
+  }
+  return applyProjectCommand(document, catalog, {
+    kind: 'CreateTakeoverBatch',
+    decision: createExitDecisionAddress(hBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('complete-h-07'),
+    }),
+    gameName: 'H_PreBoss01',
+    targetOccurrenceIds: {
+      exit1: createOccurrenceId('complete-h-preboss-shop'),
+      exit2: createOccurrenceId('complete-h-preboss-free'),
+    },
+  });
+}
+
+function completeOProject(): ProjectDocument {
+  let document = applyProjectCommand(project('codec-complete-o', { Surface: 2 }), catalog, {
+    kind: 'CreateStart',
+    biome: oBiome,
+    occurrenceId: createOccurrenceId('complete-o-start'),
+  });
+  for (const [index, gameName] of [
+    'O_Combat01',
+    'O_Combat02',
+    'O_Combat03',
+    'O_Combat04',
+    'O_Combat05',
+    'O_Combat06',
+  ].entries()) {
+    document = createBatchTargets(document, {
+      biome: oBiome,
+      sourceOccurrenceId: index === 0 ? 'complete-o-start' : `complete-o-${index}`,
+      ...(index === 0 ? { rewardStoreKey: 'RunProgress' as const } : {}),
+      targets: [
+        {
+          exitKey: 'exit1',
+          occurrenceId: `complete-o-${index + 1}`,
+          gameName,
+        },
+      ],
+    });
+  }
+  return applyProjectCommand(document, catalog, {
+    kind: 'CreateTakeoverBatch',
+    decision: createExitDecisionAddress(oBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('complete-o-6'),
+    }),
+    gameName: 'O_PreBoss01',
+    targetOccurrenceIds: { exit1: createOccurrenceId('complete-o-preboss') },
+  });
+}
+
+function completeQProject(): ProjectDocument {
+  let document = applyProjectCommand(project('codec-complete-q', { Surface: 4 }), catalog, {
+    kind: 'CreateStart',
+    biome: qBiome,
+    occurrenceId: createOccurrenceId('complete-q-start'),
+  });
+  for (const [sourceOccurrenceId, occurrenceId, gameName] of [
+    ['complete-q-start', 'complete-q-foyer', 'Q_Combat10'],
+    ['complete-q-foyer', 'complete-q-first-fork', 'Q_Combat03'],
+    ['complete-q-first-fork', 'complete-q-first-miniboss', 'Q_MiniBoss02'],
+    ['complete-q-first-miniboss', 'complete-q-ordinary', 'Q_Combat01'],
+    ['complete-q-ordinary', 'complete-q-second-fork', 'Q_Combat12'],
+    ['complete-q-second-fork', 'complete-q-second-miniboss', 'Q_MiniBoss03'],
+  ] as const) {
+    document = createBatchTargets(document, {
+      biome: qBiome,
+      sourceOccurrenceId,
+      targets: [{ exitKey: 'exit1', occurrenceId, gameName }],
+    });
+  }
+  return applyProjectCommand(document, catalog, {
+    kind: 'CreateTakeoverBatch',
+    decision: createExitDecisionAddress(qBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('complete-q-second-miniboss'),
+    }),
+    gameName: 'Q_PreBoss01',
+    targetOccurrenceIds: { exit1: createOccurrenceId('complete-q-preboss') },
+  });
+}
+
+function rewardWheelProject(): ProjectDocument {
+  let document = applyProjectCommand(project('codec-wheel-o', { Surface: 2 }), catalog, {
+    kind: 'CreateStart',
+    biome: oBiome,
+    occurrenceId: createOccurrenceId('o-wheel-intro'),
+  });
+  document = createBatchTargets(document, {
+    biome: oBiome,
+    sourceOccurrenceId: 'o-wheel-intro',
+    rewardStoreKey: 'RunProgress',
+    targets: [{ exitKey: 'exit1', occurrenceId: 'o-wheel-combat', gameName: 'O_Combat01' }],
+  });
+  const ship = document.routes[1]?.biomes[1]?.topology?.occurrences.find(
+    (occurrence) => occurrence.occurrenceId === 'o-wheel-combat',
+  );
+  if (ship?.state.kind !== 'shipCombat') throw new Error('missing ShipCombat wheel state');
+  const wheel = ship.state.wheels.wheel1;
+  const [offerKey, offer] = Object.entries(wheel?.offers ?? {})[0] ?? [];
+  if (offerKey === undefined || offer === undefined) throw new Error('missing wheel offer');
+  return applyProjectCommand(document, catalog, {
+    kind: 'ReplaceRewardWheelOffer',
+    offer: createRewardWheelOfferAddress(
+      oBiome,
+      createOccurrenceId('o-wheel-combat'),
+      'wheel1',
+      offerKey,
+    ),
+    value: offer,
+  });
+}
+
+function contextInvalidOverflowProject(): ProjectDocument {
+  let document = applyProjectCommand(project('codec-overflow-f', { Underworld: 1 }), catalog, {
+    kind: 'CreateStart',
+    biome: fBiome,
+    occurrenceId: createOccurrenceId('overflow-opening'),
+    gameName: 'F_Opening01',
+  });
+  document = createBatchTargets(document, {
+    biome: fBiome,
+    sourceOccurrenceId: 'overflow-opening',
+    rewardStoreKey: 'RunProgress',
+    targets: [{ exitKey: 'exit1', occurrenceId: 'overflow-source', gameName: 'F_Combat02' }],
+  });
+  document = createBatchTargets(document, {
+    biome: fBiome,
+    sourceOccurrenceId: 'overflow-source',
+    rewardStoreKey: 'RunProgress',
+    targets: [
+      { exitKey: 'exit1', occurrenceId: 'overflow-exit1', gameName: 'F_Combat01' },
+      { exitKey: 'exit2', occurrenceId: 'overflow-exit2', gameName: 'F_Combat01' },
+    ],
+  });
+  return applyProjectCommand(document, catalog, {
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence: createOccurrenceAddress(fBiome, createOccurrenceId('overflow-source')),
+    gameName: 'F_Combat01',
+  });
+}
+
+describe('persisted authored topology codec', () => {
+  it.each([
+    ['an unresolved authored-store batch', unresolvedFProject],
+    ['derived and selected multi-door takeover batches', selectedFTakeoverProject],
+    ['Fields batch state at its ordinary bounds', completeHProject],
+    ['source-offer-point Ship batches at their ordinary bounds', completeOProject],
+    ['staged no-store batches at their ordinary bounds', completeQProject],
+    ['linked PreHub, Hub, and completed-Hub handoff decisions', createCompleteNProject],
+    ['a command-produced Ship wheel leaf', rewardWheelProject],
+    [
+      'a structurally representable overflow after source replacement',
+      contextInvalidOverflowProject,
+    ],
+  ] as const)(
+    'round trips %s without changing occurrence identity or authored state',
+    (_name, build) => {
+      const document = build();
+      expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
+    },
+  );
+
+  it.each([
+    ['H', completeHProject, 9],
+    ['O', completeOProject, 7],
+    ['Q', completeQProject, 7],
+  ] as const)(
+    'does not count the complete %s takeover against generated progression bounds',
+    (biomeKey, build, expectedTargetCount) => {
+      const document = build();
+      const plan = document.routes
+        .flatMap((route) => route.biomes)
+        .find((biome) => biome.biomeKey === biomeKey);
+      const layout = catalog.biomeLayouts.byKey[biomeKey];
+      if (
+        plan?.topology === null ||
+        plan?.topology === undefined ||
+        layout?.progression.kind !== 'generated'
+      ) {
+        throw new Error(`missing generated ${biomeKey} topology`);
+      }
+      const batches = plan.topology.decisions.filter(
+        (decision) => decision.kind === 'exit' && decision.normal.kind === 'batch',
+      );
+      const targets = batches.flatMap((decision) =>
+        decision.kind === 'exit' && decision.normal.kind === 'batch' ? decision.normal.targets : [],
+      );
+      expect(batches).toHaveLength(layout.progression.bounds.maxBatches + 1);
+      expect(targets).toHaveLength(expectedTargetCount);
+      expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
+    },
+  );
+
+  it('canonicalizes target references in declaration-owned exit order', () => {
+    const encoded = encodedTopology(selectedFTakeoverProject(), 'Underworld', 'F');
+    const takeoverIndex = encoded.topology.decisions.findIndex(
+      (decision) =>
+        decision.kind === 'exit' &&
+        (decision.source as { occurrenceId?: string }).occurrenceId === 'f-combat',
+    );
+    const takeover = encoded.topology.decisions[takeoverIndex];
+    if (takeover === undefined) throw new Error('missing F takeover decision');
+    (takeover.normal as { targets: unknown[] }).targets.reverse();
+
+    const decoded = decodeProjectDocument(encoded.document, catalog);
+    const decodedTakeover = decoded.routes[0]?.biomes[0]?.topology?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === 'f-combat',
+    );
+    expect(decodedTakeover).toMatchObject({
+      normal: {
+        targets: [
+          { exitKey: 'exit1', occurrenceId: 'f-preboss-shop' },
+          { exitKey: 'exit2', occurrenceId: 'f-preboss-free' },
+        ],
+      },
+    });
+  });
+
+  it('derives staged selection from the selected spine rather than decision storage order', () => {
+    let document = applyProjectCommand(project('codec-staged-q', { Surface: 4 }), catalog, {
+      kind: 'CreateStart',
+      biome: qBiome,
+      occurrenceId: createOccurrenceId('q-intro'),
+    });
+    document = createBatchTargets(document, {
+      biome: qBiome,
+      sourceOccurrenceId: 'q-intro',
+      targets: [{ exitKey: 'exit1', occurrenceId: 'q-foyer', gameName: 'Q_Combat10' }],
+    });
+    document = createBatchTargets(document, {
+      biome: qBiome,
+      sourceOccurrenceId: 'q-foyer',
+      targets: [{ exitKey: 'exit1', occurrenceId: 'q-first-fork', gameName: 'Q_Combat03' }],
+    });
+    const reordered = encodedTopology(document, 'Surface', 'Q');
+    reordered.topology.decisions.reverse();
+    expect(() => decodeProjectDocument(reordered.document, catalog)).not.toThrow();
+
+    const firstFork = reordered.topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'q-first-fork',
+    );
+    if (firstFork === undefined) throw new Error('missing first-fork occurrence');
+    firstFork.gameName = 'Q_Combat02';
+    expectDocumentError(reordered.document, {
+      path: reordered.path,
+      detail: 'Q_Combat02 is not available in staged pool firstFork',
+    });
+  });
+
+  it('uses selected topology ownership to require active Shop entry state', () => {
+    let document = applyProjectCommand(project('codec-dormant-shop', { Underworld: 1 }), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: createOccurrenceId('shop-opening'),
+      gameName: 'F_Opening01',
+    });
+    document = createBatchTargets(document, {
+      biome: fBiome,
+      sourceOccurrenceId: 'shop-opening',
+      rewardStoreKey: 'RunProgress',
+      targets: [{ exitKey: 'exit1', occurrenceId: 'shop-source', gameName: 'F_Combat02' }],
+    });
+    const sourceDecision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('shop-source'),
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateBatch',
+      decision: sourceDecision,
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, sourceDecision.source),
+      storeKey: 'RunProgress',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, sourceDecision.source, 'exit1'),
+      occurrenceId: createOccurrenceId('shop-peer'),
+      gameName: 'F_Combat01',
+    });
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, sourceDecision.source, 'exit2'),
+      occurrenceId: createOccurrenceId('ordinary-shop'),
+      gameName: 'F_Shop01',
+    });
+    expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
+
+    const selectedWithoutEntryState = encodedTopology(document, 'Underworld', 'F');
+    const decision = selectedWithoutEntryState.topology.decisions.find(
+      (candidate) =>
+        candidate.kind === 'exit' &&
+        (candidate.source as { occurrenceId?: string }).occurrenceId === 'shop-source',
+    );
+    const shopIndex = selectedWithoutEntryState.topology.occurrences.findIndex(
+      (occurrence) => occurrence.occurrenceId === 'ordinary-shop',
+    );
+    if (decision === undefined || shopIndex < 0) throw new Error('missing dormant Shop topology');
+    decision.selection = { kind: 'normal', exitKey: 'exit2' };
+    expectDocumentError(selectedWithoutEntryState.document, {
+      path: `${selectedWithoutEntryState.path}.occurrences[${shopIndex}].state.shop`,
+      detail: 'is required for an entered shop occurrence',
+    });
+
+    const selected = applyProjectCommand(document, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, sourceDecision.source),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    expect(decodeProjectDocument(encodedProject(selected), catalog)).toEqual(selected);
+  });
+
+  it('accepts Hub decision storage order but rejects malformed linked and Hub-source ownership', () => {
+    const reordered = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    reordered.topology.decisions.reverse();
+    expect(() => decodeProjectDocument(reordered.document, catalog)).not.toThrow();
+
+    const additionalLinkedExit = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    const linkedExit = additionalLinkedExit.topology.decisions.find(
+      (decision) => (decision.normal as { kind?: string }).kind === 'linked',
+    );
+    const preHub = additionalLinkedExit.topology.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'round-trip-n-prehub',
+    );
+    if (linkedExit === undefined || preHub === undefined) throw new Error('missing linked PreHub');
+    additionalLinkedExit.topology.occurrences.push({
+      ...preHub,
+      occurrenceId: 'n-extra-prehub',
+    });
+    additionalLinkedExit.topology.decisions.push({
+      ...linkedExit,
+      source: { kind: 'occurrence', occurrenceId: 'round-trip-n-prehub' },
+      normal: {
+        ...(linkedExit.normal as Record<string, unknown>),
+        occurrenceId: 'n-extra-prehub',
+      },
+    });
+    expectDocumentError(additionalLinkedExit.document, {
+      path: `${additionalLinkedExit.path}.decisions`,
+      detail:
+        'a Hub progression has exactly one linked PreHub exit owned by the declared start occurrence',
+    });
+
+    const staleHubSource = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    const handoffIndex = staleHubSource.topology.decisions.findIndex(
+      (decision) =>
+        decision.kind === 'exit' && (decision.source as { kind?: string }).kind === 'hubDecision',
+    );
+    const handoff = staleHubSource.topology.decisions[handoffIndex];
+    if (handoff === undefined) throw new Error('missing completed-Hub handoff');
+    handoff.source = { kind: 'hub', hubKey: 'hub' };
+    expectDocumentError(staleHubSource.document, {
+      path: `${staleHubSource.path}.decisions[${handoffIndex}].source.kind`,
+      detail: 'unknown exit decision source hub',
+    });
+  });
+
+  it('rejects invalid selection, decision-source, exit-key, reachability, owner, and cycle shapes', () => {
+    const widthOne = encodedTopology(
+      applyProjectCommand(project('codec-width-one', { Underworld: 1 }), catalog, {
+        kind: 'CreateStart',
+        biome: fBiome,
+        occurrenceId: createOccurrenceId('f-width-one'),
+        gameName: 'F_Opening01',
+      }),
+      'Underworld',
+      'F',
+    );
+    widthOne.topology.occurrences.push({
+      occurrenceId: 'f-width-one-target',
+      gameName: 'F_Combat02',
+      state: { kind: 'counted', offer: { rewardType: 'Boon' } },
+    });
+    widthOne.topology.decisions.push({
+      kind: 'exit',
+      source: { kind: 'occurrence', occurrenceId: 'f-width-one' },
+      normal: {
+        kind: 'batch',
+        rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+        batchState: null,
+        targets: [{ exitKey: 'exit1', occurrenceId: 'f-width-one-target' }],
+      },
+      selection: { kind: 'normal', exitKey: 'exit1' },
+    });
+    expectDocumentError(widthOne.document, {
+      path: `${widthOne.path}.decisions[0].selection`,
+      detail: 'a width-one normal exit must use derived selection',
+    });
+
+    const duplicateSource = encodedTopology(selectedFTakeoverProject(), 'Underworld', 'F');
+    duplicateSource.topology.decisions.push({ ...duplicateSource.topology.decisions[0]! });
+    expectDocumentError(duplicateSource.document, {
+      path: `${duplicateSource.path}.decisions[2]`,
+      detail: 'duplicates decision source exit:occurrence:f-start',
+    });
+
+    const inventedExitKey = encodedTopology(selectedFTakeoverProject(), 'Underworld', 'F');
+    const takeover = inventedExitKey.topology.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        (decision.source as { occurrenceId?: string }).occurrenceId === 'f-combat',
+    );
+    if (takeover === undefined) throw new Error('missing F takeover decision');
+    const targets = (takeover.normal as { targets: Array<{ exitKey: string }> }).targets;
+    targets[1]!.exitKey = 'banana';
+    expectDocumentError(inventedExitKey.document, {
+      path: `${inventedExitKey.path}.decisions[1].normal.targets[1].exitKey`,
+      detail: 'banana is not a declaration-owned normal exit key',
+    });
+
+    const deadLeaf = encodedTopology(selectedFTakeoverProject(), 'Underworld', 'F');
+    deadLeaf.topology.decisions.push({
+      kind: 'exit',
+      source: { kind: 'occurrence', occurrenceId: 'f-preboss-free' },
+      normal: {
+        kind: 'batch',
+        rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+        batchState: null,
+        targets: [],
+      },
+      selection: { kind: 'unresolved' },
+    });
+    expectDocumentError(deadLeaf.document, {
+      path: `${deadLeaf.path}.decisions[2].source.occurrenceId`,
+      detail: 'source is not on the selected topology spine',
+    });
+
+    const orphan = encodedTopology(selectedFTakeoverProject(), 'Underworld', 'F');
+    orphan.topology.occurrences.push({
+      occurrenceId: 'orphan',
+      gameName: 'F_Combat02',
+      state: { kind: 'counted', offer: { rewardType: 'Boon' } },
+    });
+    expectDocumentError(orphan.document, {
+      path: `${orphan.path}.occurrences[4]`,
+      detail: 'occurrence orphan has no structural owner',
+    });
+
+    const cycle = encodedTopology(selectedFTakeoverProject(), 'Underworld', 'F');
+    const opening = cycle.topology.decisions[0];
+    if (opening === undefined) throw new Error('missing F opening decision');
+    const openingTargets = (opening.normal as { targets: Array<{ occurrenceId: string }> }).targets;
+    openingTargets[0]!.occurrenceId = 'f-start';
+    expectDocumentError(cycle.document, {
+      path: cycle.path,
+      detail: 'selected topology spine contains a decision cycle',
+    });
+
+    const multiplyOwned = encodedTopology(selectedFTakeoverProject(), 'Underworld', 'F');
+    const multiplyOwnedTakeover = multiplyOwned.topology.decisions[1];
+    if (multiplyOwnedTakeover === undefined) throw new Error('missing F takeover decision');
+    const takeoverTargets = (
+      multiplyOwnedTakeover.normal as { targets: Array<{ occurrenceId: string }> }
+    ).targets;
+    takeoverTargets[1]!.occurrenceId = 'f-preboss-shop';
+    expectDocumentError(multiplyOwned.document, {
+      path: `${multiplyOwned.path}.decisions[1].normal.targets[1].occurrenceId`,
+      detail: 'occurrence f-preboss-shop has multiple structural owners',
+    });
+  });
+
+  it('rejects a Hub target without an occurrence at its exact owner path', () => {
+    const malformedHub = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    const hubIndex = malformedHub.topology.decisions.findIndex(
+      (decision) => decision.kind === 'hub',
+    );
+    const hub = malformedHub.topology.decisions[hubIndex];
+    if (hub === undefined) throw new Error('missing Hub decision');
+    hub.openTargets = [{ hubSlotKey: 'combat01', occurrenceId: 'missing-hub-target' }];
+    expectDocumentError(malformedHub.document, {
+      path: `${malformedHub.path}.decisions[${hubIndex}].openTargets[0].occurrenceId`,
+      detail: 'unknown occurrence missing-hub-target',
+    });
+  });
+});
