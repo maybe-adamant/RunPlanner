@@ -81,6 +81,66 @@ const plannerDeepRelativeImportSyntaxRestrictions = [
       'Planner modules may climb one local level; cross-root imports use @planner or @planner-test.',
   },
 ];
+const uiRestrictedImportOptions = {
+  paths: [
+    {
+      name: '@run-planner/engine/simulation',
+      importNames: ['createPreparedProjectCandidateSession', 'simulateProject'],
+      message:
+        'React consumes published evaluation and workspace interactions; it does not run simulation.',
+    },
+  ],
+  patterns: [
+    {
+      group: ['**/projections/candidateProjection'],
+      importNames: ['createCandidateSessionFactory'],
+      message: 'Candidate-session construction belongs to application composition.',
+    },
+    {
+      group: ['**/projections/contextualOptions'],
+      importNames: ['createContextualOptionResolver'],
+      message: 'Contextual projection authority belongs behind the structured workspace.',
+    },
+    {
+      group: ['**/projections/contextualPicker'],
+      importNames: ['createContextualPickerProjection'],
+      message: 'Contextual projection authority belongs behind the structured workspace.',
+    },
+    {
+      group: ['**/projections/rewardPicker'],
+      importNames: ['createRewardPickerProjection'],
+      message: 'Reward projection authority belongs behind the structured workspace.',
+    },
+    {
+      group: ['**/projections/structured-workspace'],
+      importNames: ['createStructuredWorkspaceProjection'],
+      message: 'Structured-workspace construction belongs to application composition.',
+    },
+    ...structuredWorkspaceBoundaryImportPatterns,
+  ],
+};
+const structuredEditorRestrictedImportOptions = {
+  paths: uiRestrictedImportOptions.paths,
+  patterns: [
+    ...uiRestrictedImportOptions.patterns,
+    {
+      group: ['**/workspace/occurrenceIds'],
+      importNames: ['allocateOccurrenceId'],
+      message: 'Structured-editor React receives activation-scoped identities from interactions.',
+    },
+  ],
+};
+const intentBoundEditorRestrictedImportOptions = {
+  paths: [
+    ...structuredEditorRestrictedImportOptions.paths,
+    {
+      name: '@planner/state/projectWorkspaceSlice',
+      importNames: ['authoredProjectCommandDispatched'],
+      message: 'This migrated editor feature executes complete bound command intents.',
+    },
+  ],
+  patterns: structuredEditorRestrictedImportOptions.patterns,
+};
 
 export default tseslint.config(
   {
@@ -315,47 +375,24 @@ export default tseslint.config(
     files: ['apps/planner/src/ui/**/*.{ts,tsx}'],
     ignores: ['apps/planner/src/ui/**/*.test.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            {
-              name: '@run-planner/engine/simulation',
-              importNames: ['createPreparedProjectCandidateSession', 'simulateProject'],
-              message:
-                'React consumes published evaluation and workspace interactions; it does not run simulation.',
-            },
-          ],
-          patterns: [
-            {
-              group: ['**/projections/candidateProjection'],
-              importNames: ['createCandidateSessionFactory'],
-              message: 'Candidate-session construction belongs to application composition.',
-            },
-            {
-              group: ['**/projections/contextualOptions'],
-              importNames: ['createContextualOptionResolver'],
-              message: 'Contextual projection authority belongs behind the structured workspace.',
-            },
-            {
-              group: ['**/projections/contextualPicker'],
-              importNames: ['createContextualPickerProjection'],
-              message: 'Contextual projection authority belongs behind the structured workspace.',
-            },
-            {
-              group: ['**/projections/rewardPicker'],
-              importNames: ['createRewardPickerProjection'],
-              message: 'Reward projection authority belongs behind the structured workspace.',
-            },
-            {
-              group: ['**/projections/structured-workspace'],
-              importNames: ['createStructuredWorkspaceProjection'],
-              message: 'Structured-workspace construction belongs to application composition.',
-            },
-            ...structuredWorkspaceBoundaryImportPatterns,
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', uiRestrictedImportOptions],
+    },
+  },
+  {
+    files: ['apps/planner/src/ui/editor/**/*.{ts,tsx}'],
+    ignores: ['apps/planner/src/ui/editor/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', structuredEditorRestrictedImportOptions],
+    },
+  },
+  {
+    files: [
+      'apps/planner/src/ui/editor/rewards/**/*.{ts,tsx}',
+      'apps/planner/src/ui/editor/biome/HubDecisionWorkbench.tsx',
+    ],
+    ignores: ['apps/planner/src/ui/editor/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', intentBoundEditorRestrictedImportOptions],
     },
   },
   {

@@ -202,6 +202,14 @@ requirements. Biome presentation and interaction binding are sibling consumers
 of that immutable product. Presentation owns the selective rail, Hub visit
 grouping, default inspector, and final inspector/rail destinations; interaction
 binding owns executable command adapters and does not consume presentation.
+For the policy-bearing families it binds, it returns complete command intents;
+the shared React adapter dispatches only that intent and its declared focus
+timing. React does not allocate occurrence identities or reconstruct creation
+focus. Simple declaration-projected fields and intentionally retained fixed
+owner-plus-value controls remain direct semantic mappings rather than being
+wrapped merely for uniformity. `WorkspaceBiome` carries its typed biome owner
+only because React needs it to scope global semantic focus; generic markers do
+not become a route back to typed control owners.
 Independently derived authored-owner expectations live in test support and
 derive identity and visibility from catalog plus persisted state without
 importing assembly, marker ownership, presentation, binding, or facade
@@ -467,9 +475,10 @@ copy is intentionally absent from the editor until user research identifies a
 specific action that needs it. Commit 5a does not add a new post-edit focus
 rule.
 
-The authored-project core calculates the pure removal impact once, and command
-execution consumes that same result. The application projection carries that
-impact for command behavior, but neither it nor React walks authored
+The authored-project core calculates the pure removal impact when it executes
+the semantic command. The workspace exposes a complete removal or repair
+command-intent capability with its declared before-focus behavior, not a
+projected impact closure. Neither the projection nor React walks authored
 descendants to infer deletion.
 
 For a completed Hub, closing an unvisited slot that crosses the declared
