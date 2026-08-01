@@ -26,10 +26,7 @@ import {
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
 } from '../../../state/projectWorkspaceSlice';
-import {
-  createGoldenFGHIProject,
-  goldenFBiome,
-} from '../../../../../../test/fixtures/authored-project';
+import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,
   nBiome,
@@ -37,8 +34,11 @@ import {
   oOccurrenceIds,
   pBiome,
   pOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
-import { renderOccurrenceWorkbench, renderStaticOccurrenceWorkbench } from './workbenchTestHarness';
+} from '@run-planner/test-fixtures';
+import {
+  renderOccurrenceWorkbench,
+  renderStaticOccurrenceWorkbench,
+} from '@planner-test/support/biome-workbench';
 
 afterEach(() => {
   cleanup();

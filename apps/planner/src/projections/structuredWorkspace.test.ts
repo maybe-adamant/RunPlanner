@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createGoldenFGHIProject,
   createRepresentativeNOPQProject,
-} from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import { createCandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';

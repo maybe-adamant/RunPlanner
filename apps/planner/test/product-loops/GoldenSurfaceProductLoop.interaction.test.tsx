@@ -39,7 +39,7 @@ import {
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
-} from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
 afterEach(() => {

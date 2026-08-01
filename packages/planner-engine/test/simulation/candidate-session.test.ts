@@ -32,7 +32,7 @@ import {
   fDecision,
   fStartId,
 } from './support/f-takeover-project';
-import { createRepresentativeNProject, nBiome } from '../../../../test/fixtures/authored-project';
+import { createRepresentativeNProject, nBiome } from '@run-planner/test-fixtures';
 
 const gBiome = createBiomeAddress('Underworld', 'G');
 const gStartId = createOccurrenceId('candidate-g-start');

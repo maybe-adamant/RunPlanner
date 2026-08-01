@@ -23,10 +23,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
-import {
-  createGoldenFGHProject,
-  goldenHStartId,
-} from '../../../../../../test/fixtures/authored-project';
+import { createGoldenFGHProject, goldenHStartId } from '@run-planner/test-fixtures';
 
 const biome = createBiomeAddress('Underworld', 'H');
 

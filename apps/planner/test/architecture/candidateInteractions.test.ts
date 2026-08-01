@@ -22,12 +22,8 @@ import {
   nBiome,
   oBiome,
   oOccurrenceIds,
-} from '../../../../test/fixtures/authored-project';
-import {
-  createGoldenFGHIProject,
-  goldenFBiome,
-  goldenFStartId,
-} from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
+import { createGoldenFGHIProject, goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures';
 
 type LoadableInteraction = {
   readonly load: () => unknown | Promise<unknown>;

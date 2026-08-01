@@ -22,7 +22,7 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
   goldenHBiome,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,
   nBiome,
@@ -31,7 +31,7 @@ import {
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import { assembleWorkspaceOccurrence } from './occurrence-assembly';
 import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';

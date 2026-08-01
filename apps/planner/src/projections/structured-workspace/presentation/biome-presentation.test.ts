@@ -12,12 +12,8 @@ import {
   createGoldenFGHIProject,
   createRepresentativeNOPQProject,
   nBiome,
-} from '../../../../../../test/fixtures/authored-project';
-import {
-  appendCompleteN,
-  nOccurrenceId,
-  nVisitSlotKeys,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
+import { appendCompleteN, nOccurrenceId, nVisitSlotKeys } from '@run-planner/test-fixtures';
 import type { WorkspaceBiome, WorkspaceRailEntry } from '../contract';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
 import { presentWorkspaceBiome } from './biome-presentation';

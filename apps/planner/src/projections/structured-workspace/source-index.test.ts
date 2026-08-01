@@ -14,12 +14,8 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
-} from '../../../../../test/fixtures/authored-project';
-import {
-  createRepresentativeNOPQProject,
-  nBiome,
-  nOccurrenceId,
-} from '../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
+import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
 import { createWorkspaceProjectSourceIndex } from './source-index';
 
 function biomeSource(

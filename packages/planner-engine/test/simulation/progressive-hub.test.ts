@@ -25,7 +25,7 @@ import {
   nBiome,
   nOccurrenceId,
   nOpenSlotKeys,
-} from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 
 function openHub(slotCount: number, resolvedBoardRewards = false) {
   const opening = createOccurrenceId('progressive-n-opening');

@@ -29,7 +29,7 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
   goldenGBiome,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,
   nBiome,
@@ -41,7 +41,7 @@ import {
   pOccurrenceIds,
   qBiome,
   qOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import {
   renderBiomeClearAction,
   renderDecisionWorkbench,
@@ -49,7 +49,7 @@ import {
   type DecisionWorkbenchNode,
   type DecisionWorkbenchSubject,
   workspaceBiome,
-} from './workbenchTestHarness';
+} from '@planner-test/support/biome-workbench';
 
 afterEach(() => {
   cleanup();

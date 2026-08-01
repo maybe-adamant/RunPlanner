@@ -7,10 +7,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createRepresentativeNProject,
-  nBiome,
-} from '../../../../../test/fixtures/authored-project';
+import { createRepresentativeNProject, nBiome } from '@run-planner/test-fixtures';
 import { expectedWorkspaceTopologyManifest } from './expected-topology';
 
 describe('structured workspace topology expectations', () => {

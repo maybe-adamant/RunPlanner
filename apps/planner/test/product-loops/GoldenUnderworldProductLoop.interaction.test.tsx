@@ -21,8 +21,8 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
-} from '../../../../test/fixtures/authored-project';
-import { createRepresentativeNOPQProject } from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
+import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
 afterEach(() => {

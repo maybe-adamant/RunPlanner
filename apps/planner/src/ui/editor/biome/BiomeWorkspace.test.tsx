@@ -36,15 +36,19 @@ import {
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import { BiomeWorkspace } from './BiomeWorkspace';
-import { renderWorkspace, workspaceBiome, workspaceProjection } from './workbenchTestHarness';
+import {
+  renderWorkspace,
+  workspaceBiome,
+  workspaceProjection,
+} from '@planner-test/support/biome-workbench';
 
 afterEach(() => {
   cleanup();

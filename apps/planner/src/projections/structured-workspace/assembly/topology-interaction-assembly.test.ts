@@ -18,7 +18,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
   goldenHBiome,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
@@ -30,7 +30,7 @@ import {
   pOccurrenceId,
   qBiome,
   qOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
 import { assembleWorkspaceTopologyInteractions } from './topology-interaction-assembly';
 

@@ -20,8 +20,8 @@ import {
   goldenFStartId,
   goldenGBiome,
   goldenIBiome,
-} from '../../../../../../test/fixtures/authored-project';
-import { createRepresentativeNOPQProject } from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
+import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 import {
   assembleWorkspaceDecision,
   type WorkspaceAuthoredBatchDecision,

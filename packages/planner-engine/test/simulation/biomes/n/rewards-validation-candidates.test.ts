@@ -26,7 +26,7 @@ import {
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 
 function completeN(project = createRepresentativeNProject()) {
   const evaluation = simulateProject(catalog, project);
