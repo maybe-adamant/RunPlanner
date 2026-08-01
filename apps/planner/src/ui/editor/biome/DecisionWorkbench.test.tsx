@@ -88,7 +88,10 @@ function subjectForOwner(owner: SemanticAddress) {
 }
 
 function currentFrontier(biome: WorkspaceBiome): DecisionWorkbenchSubject | undefined {
-  return biome.frontier === null ? undefined : { frontier: biome.frontier, kind: 'frontier' };
+  return biome.frontier === null ||
+    (biome.frontier.kind !== 'start' && biome.frontier.kind !== 'exitDecision')
+    ? undefined
+    : { frontier: biome.frontier, kind: 'frontier' };
 }
 
 function firstNodeOfKind(kind: DecisionWorkbenchNode['kind']) {
@@ -203,6 +206,37 @@ describe('DecisionWorkbench', () => {
     );
     expect(screen.queryByText('Create Preboss batch')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Evaluate Preboss batches' })).toBeNull();
+
+    const historyBeforeLinked =
+      view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(screen.getByRole('button', { name: 'Create linked exit' }));
+    let linkedOccurrenceId: ReturnType<typeof createOccurrenceId> | undefined;
+    await waitFor(() => {
+      const updated = view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N');
+      const linked = updated?.topology?.decisions.find(
+        (decision) => decision.kind === 'exit' && decision.normal.kind === 'linked',
+      );
+      linkedOccurrenceId =
+        linked?.kind === 'exit' && linked.normal.kind === 'linked'
+          ? linked.normal.occurrenceId
+          : undefined;
+      expect(linkedOccurrenceId).toBeDefined();
+    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeLinked + 1,
+    );
+    if (linkedOccurrenceId === undefined) throw new Error('N linked occurrence was not authored');
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createOccurrenceAddress(nBiome, linkedOccurrenceId),
+    );
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Create linked exit' })).toBeTruthy(),
+    );
   });
 
   it('authors only the next physical target and publishes its room and reward controls', async () => {
@@ -359,6 +393,11 @@ describe('DecisionWorkbench', () => {
         ? authored.targets.map((target) => target.room.gameName)
         : [],
     ).toEqual(['F_PreBoss01', 'F_PreBoss01']);
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Evaluate Preboss batches' })).toBeTruthy(),
+    );
     cleanup();
 
     const impossibleOwner = createExitDecisionAddress(goldenFBiome, {

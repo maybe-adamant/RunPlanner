@@ -2,7 +2,6 @@ import type {
   BatchRewardStoreAddress,
   ExitSelectionAddress,
 } from '@run-planner/engine/authored-project';
-import { createBiomeAddress, createOccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import { useState } from 'react';
 
@@ -32,7 +31,6 @@ import {
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { allocateOccurrenceId } from '@planner/workspace/occurrenceIds';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -47,13 +45,6 @@ import { RoomSelector } from './RoomSelector';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
-
-function occurrenceAddressFor(
-  owner: { readonly routeKey: string; readonly biomeKey: string },
-  occurrenceId: ReturnType<typeof allocateOccurrenceId>,
-) {
-  return createOccurrenceAddress(createBiomeAddress(owner.routeKey, owner.biomeKey), occurrenceId);
-}
 
 function exitSelectionAddress(marker: WorkspaceMarker): ExitSelectionAddress {
   if (marker.address.kind !== 'exitSelection') {
@@ -318,7 +309,7 @@ function CandidateTakeoverAction({
 }: {
   readonly interaction: WorkspaceCandidateTakeoverBatchInteraction;
 }) {
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const candidates = useWorkspaceInteraction(interaction);
   const [selectionGameName, setSelectionGameName] = useState<string | undefined>(
     interaction.selected?.gameName,
@@ -342,8 +333,7 @@ function CandidateTakeoverAction({
       return;
     }
     if (!selectedCanApply) return;
-    dispatch(semanticOwnerFocused(interaction.owner));
-    dispatch(authoredProjectCommandDispatched(interaction.commandFor(selected.value)));
+    executeIntent(interaction.intentFor(selected.value));
   };
 
   const title =
@@ -421,7 +411,7 @@ function FixedWidthOneTakeoverAction({
 }: {
   readonly interaction: WorkspaceFixedWidthOneTakeoverInteraction;
 }) {
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const [message, setMessage] = useState<string | undefined>();
   return (
     <section
@@ -443,8 +433,7 @@ function FixedWidthOneTakeoverAction({
             setMessage(result.message);
             return;
           }
-          dispatch(semanticOwnerFocused(interaction.owner));
-          dispatch(authoredProjectCommandDispatched(result.command));
+          executeIntent(result.intent);
         }}
         type="button"
       >
@@ -469,7 +458,7 @@ function TakeoverRepairAction({
 }: {
   readonly interaction: WorkspaceTakeoverRepairInteraction;
 }) {
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   return (
     <section
       className="takeover-action"
@@ -485,10 +474,7 @@ function TakeoverRepairAction({
       </p>
       <button
         className="secondary-action"
-        onClick={() => {
-          dispatch(semanticOwnerFocused(interaction.owner));
-          dispatch(authoredProjectCommandDispatched(interaction.execute()));
-        }}
+        onClick={() => executeIntent(interaction.intent())}
         type="button"
       >
         Repair Preboss batch
@@ -798,7 +784,7 @@ function ExitFrontier({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly frontier: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'exitDecision' }>;
 }) {
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const capabilities = interactions.exitFrontierCapabilities.get(frontier.interactionKey);
   const structural =
     capabilities?.structural === undefined
@@ -824,15 +810,7 @@ function ExitFrontier({
         {structural?.action === 'createBatch' ? (
           <button
             className="primary-action"
-            onClick={() => {
-              dispatch(semanticOwnerFocused(structural.owner));
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'CreateBatch',
-                  decision: structural.owner,
-                }),
-              );
-            }}
+            onClick={() => executeIntent(structural.intent)}
             type="button"
           >
             Add normal exits
@@ -841,17 +819,7 @@ function ExitFrontier({
         {structural?.action === 'createLinkedExit' ? (
           <button
             className="primary-action"
-            onClick={() => {
-              const occurrenceId = allocateOccurrenceId();
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'CreateLinkedExit',
-                  decision: structural.owner,
-                  occurrenceId,
-                }),
-              );
-              dispatch(semanticOwnerFocused(occurrenceAddressFor(structural.owner, occurrenceId)));
-            }}
+            onClick={() => executeIntent(structural.intent())}
             type="button"
           >
             Create linked exit

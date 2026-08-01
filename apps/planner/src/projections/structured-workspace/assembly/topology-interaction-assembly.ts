@@ -381,10 +381,7 @@ function frontierInteractionRequirements(
         fixedTransition === undefined
           ? layout.progression.kind === 'hub' &&
             owner.source.occurrenceId === topology.startOccurrenceId
-            ? Object.freeze({
-                action: 'createLinkedExit' as const,
-                targetGameName: layout.progression.linkedExit.roomGameName,
-              })
+            ? Object.freeze({ action: 'createLinkedExit' as const })
             : Object.freeze({ action: 'createBatch' as const })
           : undefined;
       const takeoverRequirement = takeoverRequirementForOwner(takeoverRequirements, owner);

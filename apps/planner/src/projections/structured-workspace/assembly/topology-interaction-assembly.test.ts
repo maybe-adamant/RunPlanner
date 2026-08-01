@@ -76,6 +76,36 @@ describe('structured workspace topology interaction assembly', () => {
     expect(assembly.frontierInteractionRequirements).toHaveLength(0);
   });
 
+  it('publishes linked-exit capability without carrying an unused target room fact', () => {
+    const startId = createOccurrenceId('linked-requirement-start');
+    const project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Surface: 1 },
+        name: 'Linked requirement N',
+        projectId: 'linked-requirement-n',
+      }),
+      catalog,
+      { biome: nBiome, kind: 'CreateStart', occurrenceId: startId },
+    );
+    const owner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: startId,
+    });
+    const { assembly } = assemble(project, 'Surface', 'N');
+    const frontier = assembly.frontierInteractionRequirements.find(
+      (requirement) =>
+        requirement.kind === 'exitFrontier' &&
+        semanticAddressKey(requirement.owner) === semanticAddressKey(owner),
+    );
+
+    expect(frontier).toEqual({
+      capabilities: { structural: 'createLinkedExit' },
+      kind: 'exitFrontier',
+      owner,
+      structural: { action: 'createLinkedExit' },
+    });
+  });
+
   it('preserves generated takeover repair packages alongside their authored physical exits', () => {
     const { assembly } = assemble(createGoldenFGHIProject(), 'Underworld', 'F');
     const repair = assembly.takeoverInteractionRequirements.find(

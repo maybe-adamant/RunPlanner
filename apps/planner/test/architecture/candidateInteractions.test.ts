@@ -281,7 +281,7 @@ describe('workspace candidate interaction families', () => {
     }
     expect(candidate.action).toBe('create');
     expect(typeof candidate.load).toBe('function');
-    expect(typeof candidate.commandFor).toBe('function');
+    expect(typeof candidate.intentFor).toBe('function');
 
     const fixedWidthOneProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
@@ -308,10 +308,13 @@ describe('workspace candidate interaction families', () => {
     expect(typeof fixedWidthOneTakeover.execute).toBe('function');
     expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
     const fixedWidthOneResult = fixedWidthOneTakeover.execute();
-    if (fixedWidthOneResult.kind !== 'command') {
+    if (fixedWidthOneResult.kind !== 'intent') {
       throw new Error('O fixed width-one takeover is unexpectedly unavailable');
     }
-    expect(fixedWidthOneResult.command).toMatchObject({
+    expect(fixedWidthOneResult.intent).toMatchObject({
+      focus: { owner: fixedWidthOneOwner, timing: 'before' },
+    });
+    expect(fixedWidthOneResult.intent.command).toMatchObject({
       kind: 'CreateTakeoverBatch',
       decision: fixedWidthOneOwner,
       gameName: 'O_PreBoss01',
@@ -356,7 +359,7 @@ describe('workspace candidate interaction families', () => {
     }
     expect(repair.action).toBe('reconcile');
     expect('load' in repair).toBe(false);
-    expect(typeof repair.execute).toBe('function');
+    expect(typeof repair.intent).toBe('function');
     expect(repair.owner.biomeKey).toBe(goldenFBiome.biomeKey);
   });
 
@@ -384,6 +387,6 @@ describe('workspace candidate interaction families', () => {
       throw new Error('F opening must expose an impossible takeover result for this guard');
     }
 
-    expect(() => interaction.commandFor(impossible.value)).toThrow(/not currently applicable/);
+    expect(() => interaction.intentFor(impossible.value)).toThrow(/not currently applicable/);
   });
 });

@@ -184,8 +184,7 @@ export type WorkspaceTakeoverInteractionRequirement =
     };
 
 export type WorkspaceExitFrontierStructuralRequirement =
-  | { readonly action: 'createBatch' }
-  | { readonly action: 'createLinkedExit'; readonly targetGameName: string };
+  { readonly action: 'createBatch' } | { readonly action: 'createLinkedExit' };
 
 /**
  * Production requirement for a structural authoring frontier. Exit-frontier
