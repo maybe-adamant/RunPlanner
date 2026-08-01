@@ -176,74 +176,6 @@ function incomingRewardBinding(
   return room.incomingReward;
 }
 
-/**
- * Validate declaration-owned persisted state before any active/dormant surface
- * branch. In particular, unpicked Ephyra rooms with withheld side details are
- * still malformed when their state names an unknown slot or omits a declared
- * one.
- */
-function assertOccurrenceStateCoherence(
-  input: WorkspaceOccurrenceAssemblyInput,
-  room: RoomDeclaration,
-): void {
-  const { occurrence } = input;
-  switch (occurrence.state.kind) {
-    case 'ephyraCombat': {
-      const group = room.localChildren.find((child) => child.kind === 'fixedRoomSlots');
-      if (group === undefined && Object.keys(occurrence.state.sideRooms).length === 0) return;
-      if (group?.kind !== 'fixedRoomSlots') {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${room.gameName} Ephyra state has no fixed side-room declaration`,
-        );
-      }
-      for (const slotKey of Object.keys(occurrence.state.sideRooms)) {
-        if (group.slots.some((slot) => slot.slotKey === slotKey)) continue;
-        throw new StructuredWorkspaceProjectionContractError(
-          `${room.gameName} has no side-room slot ${slotKey}`,
-        );
-      }
-      for (const slot of group.slots) {
-        if (occurrence.state.sideRooms[slot.slotKey] !== undefined) continue;
-        throw new StructuredWorkspaceProjectionContractError(
-          `${room.gameName} Ephyra state is missing side room ${slot.slotKey}`,
-        );
-      }
-      return;
-    }
-    case 'fieldsCombat': {
-      const group = room.localChildren.find((child) => child.kind === 'boundedRewardSlots');
-      if (group?.kind !== 'boundedRewardSlots') {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${room.gameName} Fields state has no bounded cage declaration`,
-        );
-      }
-      return;
-    }
-    case 'shipCombat': {
-      const profile = input.catalog.encounterProfiles.byKey[room.encounterProfileKey];
-      if (profile === undefined) {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${room.gameName} encounter profile is missing`,
-        );
-      }
-      for (const phase of profile.phases) {
-        const wheel = phase.offerPoint;
-        if (wheel === undefined || occurrence.state.wheels[wheel.key] !== undefined) continue;
-        throw new StructuredWorkspaceProjectionContractError(
-          `${room.gameName} Ship state is missing ${wheel.key}`,
-        );
-      }
-      return;
-    }
-    case 'none':
-    case 'fixed':
-    case 'counted':
-    case 'freeReward':
-    case 'shop':
-      return;
-  }
-}
-
 function controlsForOccurrence(
   input: WorkspaceOccurrenceAssemblyInput,
   room: RoomDeclaration,
@@ -875,7 +807,6 @@ export function assembleWorkspaceOccurrence(
       `${semanticAddressKey(address)} received a room picker for ${semanticAddressKey(input.roomPicker.address)}`,
     );
   }
-  assertOccurrenceStateCoherence(input, room);
   const entered = input.evaluatedRoom?.entered ?? false;
   // A dormant Shop is a dead leaf. Its persisted inventory remains available
   // to the command model if the room is picked again, but neither its offer
