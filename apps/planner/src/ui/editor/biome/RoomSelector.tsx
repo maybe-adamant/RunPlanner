@@ -1,12 +1,7 @@
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
-import {
-  requireWorkspaceInteraction,
-  workspaceInteractionKey,
-  type WorkspaceInteractionCatalog,
-  type WorkspaceRoomPickerControl,
-} from '@planner/projections/structured-workspace';
+import type { WorkspaceRoomInteraction } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 
@@ -14,10 +9,9 @@ interface RoomSelectorProps {
   readonly disabled?: boolean;
   readonly disabledPlaceholder?: string;
   readonly idPrefix: string;
-  readonly interactions: WorkspaceInteractionCatalog;
+  readonly interaction: WorkspaceRoomInteraction;
   readonly label?: string;
   readonly onSelect: (gameName: string) => void;
-  readonly owner: WorkspaceRoomPickerControl['address'];
   readonly placeholder?: string;
 }
 
@@ -33,16 +27,11 @@ export function RoomSelector({
   disabled = false,
   disabledPlaceholder = 'Room limit reached',
   idPrefix,
-  interactions,
+  interaction,
   label = 'Room',
   onSelect,
-  owner,
   placeholder = 'Select a room',
 }: RoomSelectorProps) {
-  const interaction = requireWorkspaceInteraction(
-    interactions.rooms,
-    workspaceInteractionKey(owner),
-  );
   const projection = useWorkspaceInteraction(interaction);
   const model = projection.result ?? emptyModel;
 

@@ -69,7 +69,11 @@ function targetRoomControl(): WorkspaceRoomPickerControl {
     { kind: 'occurrence', occurrenceId: createOccurrenceId('duplicate-room-control-source') },
     'exit1',
   );
-  return Object.freeze({ address, kind: 'targetRoomPicker' as const });
+  return Object.freeze({
+    address,
+    kind: 'targetRoomPicker' as const,
+    target: Object.freeze({ kind: 'missing' as const }),
+  });
 }
 
 function redirectedRewardFocusDestination(): WorkspaceInspectorDestination {

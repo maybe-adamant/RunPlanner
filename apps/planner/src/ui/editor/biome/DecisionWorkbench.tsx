@@ -1,7 +1,6 @@
 import type {
   BatchRewardStoreAddress,
   ExitSelectionAddress,
-  TargetAddress,
 } from '@run-planner/engine/authored-project';
 import { createBiomeAddress, createOccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -56,18 +55,37 @@ function occurrenceAddressFor(
   return createOccurrenceAddress(createBiomeAddress(owner.routeKey, owner.biomeKey), occurrenceId);
 }
 
-function targetAddress(target: WorkspacePhysicalTarget): TargetAddress {
-  if (target.marker.address.kind !== 'target') {
-    throw new BiomeWorkspaceContractError('A physical target must own a target semantic address.');
-  }
-  return target.marker.address;
-}
-
 function exitSelectionAddress(marker: WorkspaceMarker): ExitSelectionAddress {
   if (marker.address.kind !== 'exitSelection') {
     throw new BiomeWorkspaceContractError('A batch selection must own an exit-selection address.');
   }
   return marker.address;
+}
+
+function TargetRoomSelector({
+  idPrefix,
+  interactionKey,
+  interactions,
+  label,
+}: {
+  readonly idPrefix: string;
+  readonly interactionKey: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly label: string;
+}) {
+  const interaction = requireWorkspaceInteraction(interactions.rooms, interactionKey);
+  const executeIntent = useCommandIntent();
+  if (interaction.kind !== 'targetRoom') {
+    throw new BiomeWorkspaceContractError(`${interactionKey} is not a target-room interaction.`);
+  }
+  return (
+    <RoomSelector
+      idPrefix={idPrefix}
+      interaction={interaction}
+      label={label}
+      onSelect={(gameName) => executeIntent(interaction.intentFor(gameName))}
+    />
+  );
 }
 
 function batchRewardStoreAddress(marker: WorkspaceMarker): BatchRewardStoreAddress {
@@ -149,7 +167,6 @@ function TargetRow({
   readonly target: WorkspacePhysicalTarget;
 }) {
   const dispatch = useAppDispatch();
-  const address = targetAddress(target);
   const replaceable =
     node.targetInteraction === 'replaceable' && target.physicalState === 'available';
   const selectionInteraction =
@@ -201,7 +218,7 @@ function TargetRow({
             <h4>{target.room.label}</h4>
           </div>
           <div className="owner-markers">
-            <SemanticOwnerMarker address={address} />
+            <SemanticOwnerMarker address={target.marker.address} />
             <SemanticOwnerMarker address={target.room.address} />
             <span className="neutral-status">{roomStatus(target)}</span>
           </div>
@@ -215,20 +232,11 @@ function TargetRow({
               : 'This exit cannot be replaced.'}
           </p>
         ) : (
-          <RoomSelector
+          <TargetRoomSelector
             idPrefix={`target-${target.room.occurrenceId}`}
+            interactionKey={target.marker.focusKey}
             interactions={interactions}
             label={`Exit ${target.index} room`}
-            onSelect={(gameName) =>
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceOccurrenceRoom',
-                  occurrence: target.room.address,
-                  gameName,
-                }),
-              )
-            }
-            owner={address}
           />
         )}
         <RoomOfferEditor
@@ -249,7 +257,6 @@ function MissingTargetRow({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly target: WorkspaceMissingPhysicalTarget;
 }) {
-  const dispatch = useAppDispatch();
   return (
     <article
       aria-label={`Exit ${target.index} unspecified room offer`}
@@ -265,28 +272,16 @@ function MissingTargetRow({
             <h4>Choose room</h4>
           </div>
           <div className="owner-markers">
-            <SemanticOwnerMarker address={target.owner} />
+            <SemanticOwnerMarker address={target.marker.address} />
             <span className="neutral-status">Unspecified</span>
           </div>
         </div>
         {target.authoring.kind === 'ready' ? (
-          <RoomSelector
+          <TargetRoomSelector
             idPrefix={`target-${target.marker.focusKey}`}
+            interactionKey={target.marker.focusKey}
             interactions={interactions}
             label={`Exit ${target.index} room`}
-            onSelect={(gameName) => {
-              const occurrenceId = allocateOccurrenceId();
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'CreateTarget',
-                  target: target.owner,
-                  occurrenceId,
-                  gameName,
-                }),
-              );
-              dispatch(semanticOwnerFocused(target.owner));
-            }}
-            owner={target.owner}
           />
         ) : (
           <label className="field-control" htmlFor={`target-${target.marker.focusKey}-waiting`}>
@@ -723,7 +718,7 @@ export function LinkedExitWorkbench({
         </div>
         <div className="owner-markers">
           <SemanticOwnerMarker address={node.owner} />
-          <SemanticOwnerMarker address={targetAddress(node.target)} />
+          <SemanticOwnerMarker address={node.target.marker.address} />
         </div>
       </header>
       <p className="fixed-room-state">

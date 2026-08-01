@@ -130,7 +130,7 @@ export interface WorkspaceRewardInteraction {
   readonly summary: (offer: ResolvedRewardOffer) => string;
 }
 
-export interface WorkspaceRoomInteraction {
+interface WorkspaceRoomInteractionBase {
   readonly choices: readonly {
     readonly category: string;
     readonly gameName: string;
@@ -141,6 +141,17 @@ export interface WorkspaceRoomInteraction {
   readonly load: () => ContextualPickerModel<RoomDeclaration>;
   readonly selected?: RoomDeclaration;
 }
+
+export type WorkspaceRoomInteraction =
+  | (WorkspaceRoomInteractionBase & {
+      readonly kind: 'startRoom';
+      readonly owner: OccurrenceAddress;
+    })
+  | (WorkspaceRoomInteractionBase & {
+      readonly intentFor: (gameName: string) => WorkspaceTargetRoomCommandIntent;
+      readonly kind: 'targetRoom';
+      readonly owner: TargetAddress;
+    });
 
 /** One complete authored command plus navigation behavior owned by its interaction. */
 export interface WorkspaceCommandIntent<Command extends ProjectCommand = ProjectCommand> {
@@ -166,6 +177,10 @@ type WorkspaceRewardCommandIntent = WorkspaceCommandIntent<
         | 'ReplaceShopOffer';
     }
   >
+>;
+
+type WorkspaceTargetRoomCommandIntent = WorkspaceCommandIntent<
+  Extract<ProjectCommand, { readonly kind: 'CreateTarget' | 'ReplaceOccurrenceRoom' }>
 >;
 
 /** A start remains an authored action even when its declaration fixes the room. */
@@ -371,7 +386,13 @@ export type WorkspaceRoomPickerControl =
   | {
       readonly address: TargetAddress;
       readonly kind: 'targetRoomPicker';
-      readonly selectedGameName?: string;
+      readonly target:
+        | {
+            readonly kind: 'existing';
+            readonly occurrence: OccurrenceAddress;
+            readonly selectedGameName: string;
+          }
+        | { readonly kind: 'missing' };
     }
   | {
       readonly address: OccurrenceAddress;
@@ -581,7 +602,6 @@ export interface WorkspaceMissingPhysicalTarget {
   readonly exitKey: string;
   readonly index: number;
   readonly marker: WorkspaceMarker;
-  readonly owner: TargetAddress;
 }
 
 export interface WorkspaceFieldsBatchContext {
