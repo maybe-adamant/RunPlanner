@@ -8,7 +8,8 @@ import {
   type SemanticAddress,
   type TargetAddress,
 } from '../../authored-project/addresses';
-import type { ExitDecision, ProjectDocument } from '../../authored-project/model';
+import type { ProjectDocument } from '../../authored-project/model';
+import { exitDecisionForSource } from '../../authored-project/topology/query';
 import type { RoomTargetCandidateArtifacts } from '../candidate-artifacts';
 import {
   roomTargetCandidateContextAtFrontier,
@@ -111,12 +112,8 @@ function blockedPhysicalTargetPrecedes(
     }
     if (blockedAt.kind !== 'incomingReward') return undefined;
     const plan = planFor(project, target.routeKey, target.biomeKey);
-    const decision = plan.topology?.decisions.find(
-      (candidate): candidate is ExitDecision =>
-        candidate.kind === 'exit' &&
-        semanticAddressKey(createExitDecisionAddress(biome, candidate.source)) ===
-          semanticAddressKey(queriedDecision),
-    );
+    const decision =
+      plan.topology === null ? undefined : exitDecisionForSource(plan.topology, target.source);
     const exitKey =
       decision?.normal.kind === 'batch'
         ? decision.normal.targets.find(
@@ -276,23 +273,8 @@ function assertRoomTargetDomain(
 ): void {
   const plan = planFor(project, target.routeKey, target.biomeKey);
   const topology = plan.topology;
-  const decision = topology?.decisions.find(
-    (candidate) =>
-      candidate.kind === 'exit' &&
-      semanticAddressKey(
-        createExitDecisionAddress(
-          createBiomeAddress(target.routeKey, target.biomeKey),
-          candidate.source,
-        ),
-      ) ===
-        semanticAddressKey(
-          createExitDecisionAddress(
-            createBiomeAddress(target.routeKey, target.biomeKey),
-            target.source,
-          ),
-        ),
-  );
-  if (decision?.kind === 'exit' && decision.normal.kind === 'batch') {
+  const decision = topology === null ? undefined : exitDecisionForSource(topology, target.source);
+  if (decision?.normal.kind === 'batch') {
     const authored = decision.normal.targets.find(
       (candidate) => candidate.exitKey === target.exitKey,
     );

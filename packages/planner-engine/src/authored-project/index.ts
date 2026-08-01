@@ -70,14 +70,14 @@ export {
 } from './commands/dispatch';
 export {
   declaredPhysicalExits,
-  declaredPhysicalExitKeys,
-  decodeBiomeTopology,
   fixedWidthOneTakeoverForLayout,
-  fixedWidthOneTakeoverForSource,
   fixedWidthOneTakeoverTransitionForSource,
+  selectedExitKey,
+  selectedExitTarget,
   type DeclaredPhysicalExit,
   type FixedWidthOneTakeoverTransition,
-} from './topology';
+} from './topology/query';
+export { decodeBiomeTopology } from './topology/codec';
 export {
   applyTopologyRemovalImpact,
   describeClearTopologyImpact,

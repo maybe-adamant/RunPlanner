@@ -23,7 +23,12 @@ import type {
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { replaceBiomeStateField } from '../biomeState';
-import { declaredPhysicalExitKeys, selectedOrdinaryBatchIndex } from '../topology';
+import {
+  declaredPhysicalExitKeys,
+  exitDecisionForSource,
+  selectedExitKey,
+  selectedOrdinaryBatchIndex,
+} from '../topology/query';
 import {
   failCommand,
   requireOccurrence,
@@ -108,16 +113,6 @@ function initialRewardStore(
   if (policy.kind === 'authoredBaseStore')
     return Object.freeze({ kind: 'authoredBaseStore', baseRewardStoreKey: null });
   return Object.freeze({ kind: policy.kind });
-}
-
-function findExitDecision(
-  topology: BiomeTopology,
-  source: ExitDecisionSourceAddress,
-): ExitDecision | undefined {
-  return topology.decisions.find(
-    (decision): decision is ExitDecision =>
-      decision.kind === 'exit' && sourceEquals(decision.source, source),
-  );
 }
 
 function replaceDecision(
@@ -221,14 +216,6 @@ function prebossFreeRewardStore(
   incomingStore: string | undefined,
 ): string | undefined {
   return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? incomingStore;
-}
-
-function selectedExitKey(
-  selection: ExitSelection,
-  targets: readonly ExitTargetReference[],
-): string | undefined {
-  if (selection.kind === 'derived') return targets[0]?.exitKey;
-  return selection.kind === 'normal' ? selection.exitKey : undefined;
 }
 
 function orderTargetsByPhysicalExit(
@@ -338,7 +325,7 @@ function createLinkedExit(
   ) {
     failCommand(command, 'only the fixed Hub start owns the declared linked PreHub exit');
   }
-  if (findExitDecision(topology, command.decision.source) !== undefined)
+  if (exitDecisionForSource(topology, command.decision.source) !== undefined)
     failCommand(command, 'exit decision already exists');
   const room = requireRoom(
     catalog,
@@ -376,7 +363,7 @@ function createBatch(
   if (command.decision.source.kind === 'hubDecision') {
     failCommand(command, 'the completed Hub emits its declaration-fixed takeover batch');
   }
-  if (findExitDecision(topology, command.decision.source) !== undefined)
+  if (exitDecisionForSource(topology, command.decision.source) !== undefined)
     failCommand(command, 'exit decision already exists');
   const room = sourceRoom(catalog, located, command.decision.source, command);
   if (room?.kind === 'Preboss')
@@ -420,7 +407,7 @@ function createTarget(
   if (command.target.source.kind === 'hubDecision') {
     failCommand(command, 'the completed Hub emits its declaration-fixed takeover batch');
   }
-  const decision = findExitDecision(topology, command.target.source);
+  const decision = exitDecisionForSource(topology, command.target.source);
   if (decision?.normal.kind !== 'batch') failCommand(command, 'normal-door batch does not exist');
   const allowed = exitKeysForSource(catalog, located, command.target.source, command);
   if (!allowed.includes(command.target.exitKey))
@@ -499,8 +486,13 @@ function createTarget(
       : decision.selection.kind === 'normal'
         ? decision.selection
         : Object.freeze({ kind: 'unresolved' });
-  const previouslySelectedExitKey = selectedExitKey(decision.selection, decision.normal.targets);
-  const nextSelectedExitKey = selectedExitKey(selection, targets);
+  const nextDecision: ExitDecision = Object.freeze({
+    ...decision,
+    normal: Object.freeze({ ...decision.normal, targets }),
+    selection,
+  });
+  const previouslySelectedExitKey = selectedExitKey(decision);
+  const nextSelectedExitKey = selectedExitKey(nextDecision);
   if (previouslySelectedExitKey !== nextSelectedExitKey) {
     const previousTarget = decision.normal.targets.find(
       (target) => target.exitKey === previouslySelectedExitKey,
@@ -560,11 +552,7 @@ function createTarget(
   });
   const next = replaceDecision(
     Object.freeze({ ...withTarget, occurrences: Object.freeze(occurrences) }),
-    Object.freeze({
-      ...decision,
-      normal: Object.freeze({ ...decision.normal, targets }),
-      selection,
-    }),
+    nextDecision,
   );
   return updateTopology(document, located, next);
 }
@@ -603,7 +591,7 @@ function replaceTakeoverBatch(
       failCommand(command, 'complete the required Hub visits before creating its Preboss batch');
     }
   }
-  const existing = findExitDecision(topology, command.decision.source);
+  const existing = exitDecisionForSource(topology, command.decision.source);
   if (command.kind === 'CreateTakeoverBatch' && existing !== undefined)
     failCommand(command, 'exit decision already exists');
   if (
@@ -659,40 +647,22 @@ function replaceTakeoverBatch(
       : existing?.selection.kind === 'normal' && exitKeys.includes(existing.selection.exitKey)
         ? existing.selection
         : Object.freeze({ kind: 'unresolved' });
-  const replacements: RoomOccurrence[] = [];
-  const targets: ExitTargetReference[] = [];
-  for (const [index, exitKey] of exitKeys.entries()) {
-    const suppliedOccurrenceId = ids[index] as OccurrenceId;
-    const oldTarget = oldTargetByExitKey.get(exitKey);
-    if (oldTarget !== undefined && suppliedOccurrenceId !== oldTarget.occurrenceId) {
+  const targets = Object.freeze(
+    exitKeys.map((exitKey, index) =>
+      Object.freeze({ exitKey, occurrenceId: ids[index] as OccurrenceId }),
+    ),
+  );
+  for (const target of targets) {
+    const oldTarget = oldTargetByExitKey.get(target.exitKey);
+    if (oldTarget !== undefined && target.occurrenceId !== oldTarget.occurrenceId) {
       failCommand(
         command,
-        `takeover repair must retain ${exitKey} occurrence ${oldTarget.occurrenceId}`,
+        `takeover repair must retain ${target.exitKey} occurrence ${oldTarget.occurrenceId}`,
       );
     }
-    const occurrenceId = oldTarget?.occurrenceId ?? suppliedOccurrenceId;
-    const role = expectedPrebossRole(room, index, command);
-    const old = oldTarget === undefined ? undefined : occurrencesById.get(oldTarget.occurrenceId);
-    if (oldTarget === undefined && occurrencesById.has(occurrenceId))
-      failCommand(command, `occurrence ${occurrenceId} is already structurally owned`);
-    const entryActive =
-      selection.kind === 'derived' ||
-      (selection.kind === 'normal' && selection.exitKey === exitKey);
-    replacements.push(
-      old !== undefined && compatiblePrebossOccurrence(old, room, role, entryActive)
-        ? old
-        : defaultOccurrence(
-            catalog,
-            room,
-            occurrenceId,
-            role,
-            entryActive,
-            role === 'prebossFreeReward'
-              ? prebossFreeRewardStore(room, sourceIncomingStore(topology, command.decision.source))
-              : undefined,
-          ),
-    );
-    targets.push(Object.freeze({ exitKey, occurrenceId }));
+    if (oldTarget === undefined && occurrencesById.has(target.occurrenceId)) {
+      failCommand(command, `occurrence ${target.occurrenceId} is already structurally owned`);
+    }
   }
   const sourceRoomValue = sourceRoom(catalog, located, command.decision.source, command);
   const decision: ExitDecision = Object.freeze({
@@ -702,9 +672,28 @@ function replaceTakeoverBatch(
       kind: 'batch',
       rewardStore: initialRewardStore(located, sourceRoomValue),
       batchState: null,
-      targets: Object.freeze(targets),
+      targets,
     }),
     selection,
+  });
+  const selectedTakeoverExitKey = selectedExitKey(decision);
+  const replacements = targets.map((target, index): RoomOccurrence => {
+    const oldTarget = oldTargetByExitKey.get(target.exitKey);
+    const role = expectedPrebossRole(room, index, command);
+    const old = oldTarget === undefined ? undefined : occurrencesById.get(oldTarget.occurrenceId);
+    const entryActive = target.exitKey === selectedTakeoverExitKey;
+    return old !== undefined && compatiblePrebossOccurrence(old, room, role, entryActive)
+      ? old
+      : defaultOccurrence(
+          catalog,
+          room,
+          target.occurrenceId,
+          role,
+          entryActive,
+          role === 'prebossFreeReward'
+            ? prebossFreeRewardStore(room, sourceIncomingStore(topology, command.decision.source))
+            : undefined,
+        );
   });
   const withoutOld =
     existing === undefined
@@ -741,7 +730,7 @@ function setExitSelection(
   command: Extract<ProjectCommand, { readonly kind: 'SetExitSelection' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  const decision = findExitDecision(topology, command.selection.source);
+  const decision = exitDecisionForSource(topology, command.selection.source);
   if (decision === undefined || decision.normal.kind !== 'batch')
     failCommand(command, 'normal-door batch does not exist');
   const batch = decision.normal;
@@ -754,19 +743,10 @@ function setExitSelection(
     failCommand(command, 'width-one selection is declaration-derived');
   if (command.value.kind === 'normal' && !keys.includes(command.value.exitKey))
     failCommand(command, `${command.value.exitKey} is not a target exit`);
-  const selectedExitKey =
-    command.value.kind === 'derived'
-      ? batch.targets[0]?.exitKey
-      : command.value.kind === 'normal'
-        ? command.value.exitKey
-        : undefined;
-  const previouslySelectedExitKey =
-    decision.selection.kind === 'derived'
-      ? batch.targets[0]?.exitKey
-      : decision.selection.kind === 'normal'
-        ? decision.selection.exitKey
-        : undefined;
-  if (previouslySelectedExitKey !== selectedExitKey) {
+  const nextDecision = Object.freeze({ ...decision, selection: command.value });
+  const nextSelectedExitKey = selectedExitKey(nextDecision);
+  const previouslySelectedExitKey = selectedExitKey(decision);
+  if (previouslySelectedExitKey !== nextSelectedExitKey) {
     const previousTarget = batch.targets.find(
       (target) => target.exitKey === previouslySelectedExitKey,
     );
@@ -796,7 +776,7 @@ function setExitSelection(
           ? 'prebossShop'
           : 'ordinary';
     if (role !== 'prebossShop' && room.kind !== 'Shop') return occurrence;
-    const entryActive = batch.targets[targetIndex]?.exitKey === selectedExitKey;
+    const entryActive = batch.targets[targetIndex]?.exitKey === nextSelectedExitKey;
     const hasInventory = occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined;
     if (hasInventory === entryActive) return occurrence;
     return defaultOccurrence(catalog, room, occurrence.occurrenceId, role, entryActive);
@@ -806,7 +786,7 @@ function setExitSelection(
     located,
     replaceDecision(
       Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) }),
-      Object.freeze({ ...decision, selection: command.value }),
+      nextDecision,
     ),
   );
 }
@@ -818,7 +798,7 @@ function replaceBatchRewardStore(
   command: Extract<ProjectCommand, { readonly kind: 'ReplaceBatchRewardStore' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  const decision = findExitDecision(topology, command.rewardStore.source);
+  const decision = exitDecisionForSource(topology, command.rewardStore.source);
   if (
     decision?.normal.kind !== 'batch' ||
     decision.normal.rewardStore.kind !== 'authoredBaseStore'
@@ -891,7 +871,7 @@ function reconcileBatchExitCapacity(
   command: Extract<ProjectCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  const decision = findExitDecision(topology, command.decision.source);
+  const decision = exitDecisionForSource(topology, command.decision.source);
   if (decision?.normal.kind !== 'batch') failCommand(command, 'normal-door batch does not exist');
   if (
     decision.normal.targets.some(

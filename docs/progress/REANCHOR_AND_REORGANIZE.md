@@ -1991,6 +1991,19 @@ compatibility path, or second topology model was introduced.
 - establish a focused topology-query suite from the query cases currently
   embedded in `commands.test.ts` and delete the displaced assertions there.
 
+##### C2 completion record (2026-08-01)
+
+`topology/query.ts` now owns declared physical exits, exact decision lookup,
+selected exit and target facts, selected-spine indexing, and fixed takeover
+facts. `topology/codec.ts` retains raw decoding, structural validation, owner
+construction, and its path-specific staged, cycle, and reachability failures.
+Commands, completeness, materialization, the three workspace consumers, and
+the three direct candidate source lookups consume the narrow queries without
+introducing a topology index, context, or candidate-system boundary. The
+materializer retains its explicit corrupted derived-target failure. Focused
+query tests now own physical-exit, selection, spine, and takeover matrices;
+commands retain atomic transition witnesses.
+
 #### C3: Codec boundary and test ownership (one review unit)
 
 - retain raw topology decoding, semantic topology validation, structural-owner

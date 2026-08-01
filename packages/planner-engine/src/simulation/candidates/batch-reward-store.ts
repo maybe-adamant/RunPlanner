@@ -6,6 +6,7 @@ import {
   type BatchRewardStoreAddress,
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
+import { exitDecisionForSource } from '../../authored-project/topology/query';
 import { rewardStoreCandidateSupport, type RewardStoreCandidateSupport } from '../rewards';
 import type { ProjectEvaluation } from '../project';
 import {
@@ -56,13 +57,8 @@ export function unresolvedBatchRewardStorePrerequisite(
   rewardStore: BatchRewardStoreAddress,
 ): UnresolvedBatchRewardStorePrerequisiteEvidence | undefined {
   const plan = planFor(project, rewardStore.routeKey, rewardStore.biomeKey);
-  const biome = createBiomeAddress(rewardStore.routeKey, rewardStore.biomeKey);
-  const decision = plan.topology?.decisions.find(
-    (candidate) =>
-      candidate.kind === 'exit' &&
-      semanticAddressKey(createExitDecisionAddress(biome, candidate.source)) ===
-        semanticAddressKey(createExitDecisionAddress(biome, rewardStore.source)),
-  );
+  const decision =
+    plan.topology === null ? undefined : exitDecisionForSource(plan.topology, rewardStore.source);
   if (
     decision?.kind !== 'exit' ||
     decision.normal.kind !== 'batch' ||

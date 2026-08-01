@@ -1,8 +1,8 @@
 import {
   createOccurrenceAddress,
+  selectedExitTarget,
   semanticAddressKey,
   type AuthoredBiomePlan,
-  type ExitDecision,
   type OccurrenceId,
 } from '@run-planner/engine/authored-project';
 
@@ -22,21 +22,6 @@ export interface WorkspaceOccurrenceAssemblyFact {
  */
 export interface WorkspaceBiomeOccurrenceAssemblyFacts {
   readonly occurrence: (occurrenceId: OccurrenceId) => WorkspaceOccurrenceAssemblyFact | undefined;
-}
-
-type AuthoredBatchDecision = ExitDecision & {
-  readonly normal: Extract<ExitDecision['normal'], { readonly kind: 'batch' }>;
-};
-type AuthoredBatchTarget = AuthoredBatchDecision['normal']['targets'][number];
-
-function authoredTargetIsSelected(
-  decision: AuthoredBatchDecision,
-  target: AuthoredBatchTarget,
-): boolean {
-  if (decision.selection.kind === 'normal') return decision.selection.exitKey === target.exitKey;
-  return (
-    decision.selection.kind === 'derived' && decision.normal.targets[0]?.exitKey === target.exitKey
-  );
 }
 
 /**
@@ -61,9 +46,7 @@ function authoredDetailsActiveOccurrenceIds(plan: AuthoredBiomePlan): ReadonlySe
       active.add(decision.normal.occurrenceId);
       continue;
     }
-    const target = decision.normal.targets.find((candidate) =>
-      authoredTargetIsSelected(decision as AuthoredBatchDecision, candidate),
-    );
+    const target = selectedExitTarget(decision);
     if (target !== undefined) active.add(target.occurrenceId);
   }
   return active;

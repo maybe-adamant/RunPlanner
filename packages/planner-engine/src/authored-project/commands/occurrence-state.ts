@@ -10,7 +10,11 @@ import type {
 import type { RoomOccurrenceRole, RoomStateContext } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
-import { selectedOrdinaryBatchIndex } from '../topology';
+import {
+  exitDecisionForSource,
+  selectedExitKey,
+  selectedOrdinaryBatchIndex,
+} from '../topology/query';
 
 import {
   failCommand,
@@ -21,14 +25,6 @@ import {
   type LocatedBiome,
 } from './contract';
 import type { ProjectCommand } from './types';
-
-function sourceEquals(left: ExitDecisionSource, right: ExitDecisionSource): boolean {
-  return left.kind === 'occurrence' && right.kind === 'occurrence'
-    ? left.occurrenceId === right.occurrenceId
-    : left.kind === 'hubDecision' &&
-        right.kind === 'hubDecision' &&
-        left.decisionKey === right.decisionKey;
-}
 
 function sameOffer(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
@@ -51,12 +47,6 @@ function updateTopology(
   topology: BiomeTopology,
 ): ProjectDocument {
   return withBiome(document, located, { ...located.plan, topology });
-}
-
-function selectedExitKey(decision: ExitDecision): string | undefined {
-  if (decision.normal.kind !== 'batch') return decision.normal.exitKey;
-  if (decision.selection.kind === 'derived') return decision.normal.targets[0]?.exitKey;
-  return decision.selection.kind === 'normal' ? decision.selection.exitKey : undefined;
 }
 
 function resolvedBatchStore(
@@ -354,10 +344,7 @@ export function applyOccurrenceStateCommand(
       ) {
         failCommand(command, 'batch does not expose a Fields cage outcome');
       }
-      const decision = current.decisions.find(
-        (candidate): candidate is ExitDecision =>
-          candidate.kind === 'exit' && sourceEquals(candidate.source, command.decision.source),
-      );
+      const decision = exitDecisionForSource(current, command.decision.source);
       if (decision?.normal.kind !== 'batch')
         failCommand(command, 'normal-door batch does not exist');
       if (
