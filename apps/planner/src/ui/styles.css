@@ -1590,10 +1590,6 @@ select {
   background: rgb(126 101 154 / 5%);
 }
 
-.reward-wheel[data-active='false'] {
-  opacity: 0.62;
-}
-
 .reward-wheel-settings {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
