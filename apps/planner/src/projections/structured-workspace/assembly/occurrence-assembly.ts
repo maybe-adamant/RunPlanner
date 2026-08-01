@@ -16,7 +16,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type { CanonicalAuthoredRoom } from '@run-planner/engine/simulation';
+import type { CanonicalAuthoredRoom, FieldsBatchFacts } from '@run-planner/engine/simulation';
 
 import type {
   CountedRewardCandidateOwner,
@@ -61,7 +61,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly catalog: Catalog;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
   /** Shared decision-owned Fields derivation for this target occurrence. */
-  readonly fieldsActiveCageCount?: number;
+  readonly fieldsBatchFacts?: FieldsBatchFacts;
   readonly facts: WorkspaceOccurrenceProjectionFacts;
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly occurrence: RoomOccurrence;
@@ -82,6 +82,8 @@ export interface WorkspaceOccurrenceAssembly {
  */
 export interface WorkspaceOccurrenceAssemblyRequest {
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
+  /** Present only when this occurrence belongs to a configured Fields batch. */
+  readonly fieldsBatchFacts?: FieldsBatchFacts;
   readonly occurrence: RoomOccurrence;
   readonly roomPicker?: WorkspaceRoomPickerControl;
 }
@@ -530,10 +532,10 @@ function roomLocalForOccurrence(
       }
       const active = new Set(
         input.evaluatedRoom?.localRewards?.map((reward) => semanticAddressKey(reward.origin)) ??
-          (input.fieldsActiveCageCount === undefined
+          (input.fieldsBatchFacts === undefined
             ? []
             : group.slotKeys
-                .slice(0, input.fieldsActiveCageCount)
+                .slice(0, input.fieldsBatchFacts.doorCageRewardCount)
                 .map((slotKey) =>
                   semanticAddressKey(
                     createLocalRewardAddress(

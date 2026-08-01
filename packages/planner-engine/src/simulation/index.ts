@@ -166,9 +166,13 @@ export {
   type CanonicalShopOffer,
   type CanonicalTarget,
   type CanonicalTargetContinuation,
+  fieldsBatchFacts,
+  fieldsBatchOwnsCageOutcome,
   type MaterializedBiomePrefix,
   type MaterializedExitDecisionFrontier,
   type MaterializedHubDecisionFrontier,
+  targetContinuation,
+  type FieldsBatchFacts,
 } from './materialization';
 export {
   type CompletenessFindingCode,

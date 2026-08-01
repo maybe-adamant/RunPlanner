@@ -3,6 +3,12 @@ export {
   materializeBiome,
   materializeBiomePrefix,
 } from './biome';
+export {
+  fieldsBatchFacts,
+  fieldsBatchOwnsCageOutcome,
+  targetContinuation,
+  type FieldsBatchFacts,
+} from './decision-facts';
 export { HubMaterializationContractError, materializeHubDecision } from './hub';
 export { materializeShipCombatState, type MaterializedShipCombatState } from './rooms';
 export type {

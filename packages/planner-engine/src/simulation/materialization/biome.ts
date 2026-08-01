@@ -35,6 +35,7 @@ import {
 } from '../../authored-project/topology/query';
 import type { CompleteBiomeCompletenessResult } from '../completeness';
 import { materializeCompletionRooms } from './completion';
+import { batchTakesOverNormalDoors, fieldsBatchFacts, targetContinuation } from './decision-facts';
 import { materializeHubDecision } from './hub';
 import { materializeAuthoredRoom, type AuthoredRoomRole } from './rooms';
 import type {
@@ -199,21 +200,6 @@ function finalSharedBatchStoreKey(
   return storeKey;
 }
 
-function isTakeoverBatch(
-  catalog: Catalog,
-  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
-  decision: ExitDecision,
-): boolean {
-  return (
-    decision.normal.kind === 'batch' &&
-    decision.normal.targets.some((target) => {
-      const occurrence = occurrences.get(target.occurrenceId);
-      const room = occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName];
-      return room?.prebossBatchPolicy?.kind === 'takeOverNormalDoors';
-    })
-  );
-}
-
 interface ClockworkState {
   readonly goalsRemaining: number;
   readonly nonGoalRewardsAcquired: number;
@@ -280,26 +266,16 @@ function materializeBatchState(
   if (decision.normal.kind !== 'batch' || decision.normal.batchState === null) {
     fail(`${layout.biomeKey} Fields batch has no authored cage outcome`);
   }
-  let batchCapacity = policy.maxDoorCageRewards;
-  let cageTargetCount = 0;
-  for (const target of decision.normal.targets) {
-    const occurrence = requireOccurrence(occurrences, target.occurrenceId);
-    const room = requireRoom(catalog, occurrence);
-    if (room.mode.kind !== 'authored' || room.mode.templateKey !== 'FieldsCombat') continue;
-    const cages = room.localChildren[0];
-    if (cages?.kind !== 'boundedRewardSlots' || cages.key !== 'cages') {
-      fail(`${room.gameName} has no Fields cage capacity`);
-    }
-    cageTargetCount += 1;
-    batchCapacity = Math.min(batchCapacity, cages.maxActiveSlots);
-  }
-  const cageOutcome = decision.normal.batchState.cageOutcome;
+  const fields = fieldsBatchFacts(
+    catalog,
+    layout,
+    (occurrenceId) => occurrences.get(occurrenceId),
+    decision,
+  );
+  if (fields === undefined) fail(`${layout.biomeKey} Fields batch has no authored cage outcome`);
   return Object.freeze({
     kind: 'fields',
-    cageOutcome,
-    batchCapacity,
-    cageTargetCount,
-    doorCageRewardCount: cageOutcome === 'min' ? policy.minDoorCageRewards : batchCapacity,
+    ...fields,
   });
 }
 
@@ -332,12 +308,7 @@ function materializeTarget(
     origin: createTargetAddress(biome, source, target.exitKey),
     exit: physicalExit ?? canonicalExit(sourceRoom, target.exitKey),
     picked,
-    continuation:
-      picked && room.kind === 'Preboss'
-        ? 'startsCompletion'
-        : picked
-          ? 'continuesSpine'
-          : 'deadLeaf',
+    continuation: targetContinuation(picked, room.kind),
     room: materializeAuthoredRoom({
       catalog,
       biome,
@@ -370,7 +341,11 @@ function materializeBatch(
   if (decision.normal.kind !== 'batch') fail('batch materialization requires normal-door targets');
   const normal = decision.normal;
   const source = sourceAddress(decision.source);
-  const takeover = isTakeoverBatch(catalog, occurrences, decision);
+  const takeover = batchTakesOverNormalDoors(
+    catalog,
+    (occurrenceId) => occurrences.get(occurrenceId),
+    decision,
+  );
   const batchState = materializeBatchState(
     catalog,
     layout,
@@ -473,7 +448,7 @@ function materializeLinkedExit(
       origin: createTargetAddress(biome, source, decision.normal.exitKey),
       exit: canonicalExit(sourceRoom, decision.normal.exitKey),
       picked: true,
-      continuation: room.kind === 'Preboss' ? 'startsCompletion' : 'continuesSpine',
+      continuation: targetContinuation(true, room.kind),
       room: materializeAuthoredRoom({
         catalog,
         biome,
@@ -577,7 +552,11 @@ function isCompleteBatch(
   if (decision.normal.kind !== 'batch') return true;
   if (decision.selection.kind === 'unresolved') return false;
   const normal = decision.normal;
-  const takeover = isTakeoverBatch(catalog, occurrences, decision);
+  const takeover = batchTakesOverNormalDoors(
+    catalog,
+    (occurrenceId) => occurrences.get(occurrenceId),
+    decision,
+  );
   const allPhysicalTargets =
     sourceRoom === undefined
       ? normal.targets.length === 1
@@ -613,7 +592,11 @@ function materializeContiguousBatchPrefix(
   clockwork: ClockworkState | undefined,
 ): CanonicalBatch | undefined {
   if (decision?.normal.kind !== 'batch' || sourceRoom === undefined) return undefined;
-  const takeover = isTakeoverBatch(catalog, occurrences, decision);
+  const takeover = batchTakesOverNormalDoors(
+    catalog,
+    (occurrenceId) => occurrences.get(occurrenceId),
+    decision,
+  );
   if (
     !takeover &&
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&

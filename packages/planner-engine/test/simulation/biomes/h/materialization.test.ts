@@ -10,13 +10,18 @@ import {
   createTargetAddress,
   encodeProjectDocument,
   semanticAddressKey,
+  type ExitDecision,
   type OccurrenceId,
   type ProjectDocument,
+  type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
+import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
   evaluateBiomeCompleteness,
+  fieldsBatchFacts,
+  fieldsBatchOwnsCageOutcome,
   materializeBiome,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -33,6 +38,56 @@ function plan(project: ProjectDocument) {
     ?.biomes.find((candidate) => candidate.biomeKey === 'H');
   if (result === undefined) throw new Error('fixture has no H plan');
   return result;
+}
+
+function hLayout() {
+  const layout = catalog.biomeLayouts.byKey.H;
+  if (layout === undefined) throw new Error('catalog has no H layout');
+  return layout;
+}
+
+function batchAt(project: ProjectDocument, sourceOccurrenceId: OccurrenceId) {
+  const topology = plan(project).topology;
+  if (topology === null) throw new Error(`H batch from ${sourceOccurrenceId} is missing`);
+  const decision = topology.decisions.find(
+    (
+      candidate,
+    ): candidate is ExitDecision & {
+      readonly normal: Extract<ExitDecision['normal'], { readonly kind: 'batch' }>;
+    } =>
+      candidate.kind === 'exit' &&
+      candidate.normal.kind === 'batch' &&
+      candidate.source.kind === 'occurrence' &&
+      candidate.source.occurrenceId === sourceOccurrenceId,
+  );
+  if (decision === undefined) {
+    throw new Error(`H batch from ${sourceOccurrenceId} is missing`);
+  }
+  return { decision, topology };
+}
+
+function occurrenceLookup(occurrences: readonly RoomOccurrence[]) {
+  return (occurrenceId: OccurrenceId) =>
+    occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
+}
+
+function catalogWithNonFieldsBoundedRoom(gameName: string): Catalog {
+  const room = catalog.rooms.byKey[gameName];
+  if (room === undefined) throw new Error(`catalog has no ${gameName}`);
+  const replacement: RoomDeclaration = {
+    ...room,
+    mode: { kind: 'authored', templateKey: 'StandardCombat' },
+  };
+  return {
+    ...catalog,
+    rooms: {
+      ...catalog.rooms,
+      byKey: { ...catalog.rooms.byKey, [gameName]: replacement },
+      values: catalog.rooms.values.map((candidate) =>
+        candidate.gameName === gameName ? replacement : candidate,
+      ),
+    },
+  };
 }
 
 function appendBatch(
@@ -369,6 +424,43 @@ describe('H Fields materialization', () => {
       cageTargetCount: 1,
       doorCageRewardCount: 3,
     });
+  });
+
+  it('derives configured Fields facts from the template and any takeover target', () => {
+    const project = completeProject();
+    const { decision, topology } = batchAt(project, createOccurrenceId('h-materialized-combat02'));
+    const lookup = occurrenceLookup(topology.occurrences);
+
+    expect(fieldsBatchFacts(catalog, hLayout(), lookup, decision)).toEqual({
+      cageOutcome: 'max',
+      batchCapacity: 2,
+      cageTargetCount: 2,
+      doorCageRewardCount: 2,
+    });
+
+    const awaitingOutcome = {
+      ...decision,
+      normal: { ...decision.normal, batchState: null },
+    };
+    expect(fieldsBatchOwnsCageOutcome(catalog, hLayout(), lookup, awaitingOutcome)).toBe(true);
+    expect(fieldsBatchFacts(catalog, hLayout(), lookup, awaitingOutcome)).toBeUndefined();
+
+    const nonFieldsCatalog = catalogWithNonFieldsBoundedRoom('H_Combat09');
+    expect(fieldsBatchFacts(nonFieldsCatalog, hLayout(), lookup, decision)).toEqual({
+      cageOutcome: 'max',
+      batchCapacity: 3,
+      cageTargetCount: 1,
+      doorCageRewardCount: 3,
+    });
+
+    const mixedOccurrences = topology.occurrences.map((occurrence) =>
+      occurrence.occurrenceId === createOccurrenceId('h-materialized-combat03')
+        ? { ...occurrence, gameName: 'H_PreBoss01' }
+        : occurrence,
+    );
+    const mixedLookup = occurrenceLookup(mixedOccurrences);
+    expect(fieldsBatchOwnsCageOutcome(catalog, hLayout(), mixedLookup, decision)).toBe(false);
+    expect(fieldsBatchFacts(catalog, hLayout(), mixedLookup, decision)).toBeUndefined();
   });
 
   it('materializes the entry, selected Preboss batch, and H completion tail exactly once', () => {

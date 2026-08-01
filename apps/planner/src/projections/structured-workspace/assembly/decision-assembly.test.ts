@@ -19,9 +19,11 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
   goldenGBiome,
+  goldenHBiome,
   goldenIBiome,
 } from '@run-planner/test-fixtures';
 import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
+import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
   assembleWorkspaceDecision,
   type WorkspaceAuthoredBatchDecision,
@@ -31,10 +33,13 @@ import {
   assembleWorkspaceOccurrence,
   type WorkspaceOccurrenceAssemblyRequest,
 } from './occurrence-assembly';
-import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceBiomeMarkerDestinationBuilder } from '../navigation/marker-builder';
-import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
+import {
+  createWorkspaceProjectSourceIndex,
+  type WorkspaceBiomeSource,
+  type WorkspaceEvaluatedBatchOverlay,
+} from '../source-index';
 
 function biomeSource(
   project: ProjectDocument,
@@ -54,7 +59,6 @@ function biomeSource(
 
 function decisionKit(source: WorkspaceBiomeSource) {
   const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source);
-  const fieldsActiveCageCounts = createWorkspaceFieldsActiveCageCounts(catalog, source);
   const markers = createWorkspaceBiomeMarkerDestinationBuilder({
     assessmentFor: (address) =>
       source.evaluation === undefined
@@ -68,9 +72,6 @@ function decisionKit(source: WorkspaceBiomeSource) {
   });
   const assembleOccurrence = (input: WorkspaceOccurrenceAssemblyRequest) => {
     const occurrenceFacts = facts.occurrence(input.occurrence.occurrenceId);
-    const fieldsActiveCageCount = fieldsActiveCageCounts.countForOccurrence(
-      input.occurrence.occurrenceId,
-    );
     if (occurrenceFacts === undefined) {
       throw new Error(`${input.occurrence.occurrenceId} occurrence facts are missing`);
     }
@@ -78,13 +79,13 @@ function decisionKit(source: WorkspaceBiomeSource) {
       biome: source.biome,
       catalog,
       ...(input.evaluatedRoom === undefined ? {} : { evaluatedRoom: input.evaluatedRoom }),
-      ...(fieldsActiveCageCount === undefined ? {} : { fieldsActiveCageCount }),
+      ...(input.fieldsBatchFacts === undefined ? {} : { fieldsBatchFacts: input.fieldsBatchFacts }),
       facts: occurrenceFacts,
       markerDestinations: markers.emitter,
       occurrence: input.occurrence,
     });
   };
-  return { assembleOccurrence, fieldsActiveCageCounts, markers };
+  return { assembleOccurrence, markers };
 }
 
 function batchDecision(source: WorkspaceBiomeSource): WorkspaceAuthoredBatchDecision {
@@ -113,6 +114,25 @@ function linkedDecision(source: WorkspaceBiomeSource): WorkspaceAuthoredLinkedEx
   const decision = source.exitDecisions.find((candidate) => candidate.normal.kind === 'linked');
   if (decision?.normal.kind !== 'linked') throw new Error('authored linked exit is missing');
   return decision as WorkspaceAuthoredLinkedExitDecision;
+}
+
+function catalogWithNonFieldsBoundedRoom(gameName: string): Catalog {
+  const room = catalog.rooms.byKey[gameName];
+  if (room === undefined) throw new Error(`catalog has no ${gameName}`);
+  const replacement: RoomDeclaration = {
+    ...room,
+    mode: { kind: 'authored', templateKey: 'StandardCombat' },
+  };
+  return {
+    ...catalog,
+    rooms: {
+      ...catalog.rooms,
+      byKey: { ...catalog.rooms.byKey, [gameName]: replacement },
+      values: catalog.rooms.values.map((candidate) =>
+        candidate.gameName === gameName ? replacement : candidate,
+      ),
+    },
+  };
 }
 
 function withUnresolvedFOpening(project: ProjectDocument): ProjectDocument {
@@ -157,7 +177,6 @@ describe('structured workspace decision assembly', () => {
       catalog,
       decision,
       ...(evaluated === undefined ? {} : { evaluated }),
-      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
@@ -187,7 +206,6 @@ describe('structured workspace decision assembly', () => {
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: batchDecision(source),
-      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
@@ -198,6 +216,222 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.workbenches.map((workbench) => workbench.room.occurrenceId)).toEqual(
       assembly.batch.targets.map((target) => target.room.occurrenceId),
     );
+  });
+
+  it('keeps an unavailable canonical target continuation ahead of the fallback', () => {
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'F');
+    const decision = batchDecision(source);
+    const owner = createExitDecisionAddress(source.biome, decision.source);
+    const evaluated = source.evaluatedBatch(owner);
+    if (evaluated === undefined) throw new Error('F evaluated batch is missing');
+    const selected = evaluated.batch.targets.find((target) => target.picked);
+    if (selected === undefined) throw new Error('F selected target is missing');
+    const unavailable: WorkspaceEvaluatedBatchOverlay = {
+      ...evaluated,
+      batch: {
+        ...evaluated.batch,
+        targets: evaluated.batch.targets.map((target) =>
+          target.exit.exitKey === selected.exit.exitKey
+            ? {
+                ...target,
+                continuation: 'startsCompletion',
+                exit: {
+                  kind: 'unavailable',
+                  exitKey: target.exit.exitKey,
+                  index: target.exit.index,
+                },
+              }
+            : target,
+        ),
+      },
+    };
+    const kit = decisionKit(source);
+    const assembly = assembleWorkspaceDecision({
+      assembleOccurrence: kit.assembleOccurrence,
+      catalog,
+      decision,
+      evaluated: unavailable,
+      kind: 'batch',
+      markerDestinations: kit.markers.emitter,
+      source,
+    });
+    if (assembly.kind !== 'batch') throw new Error('F unavailable target is not a batch');
+    const target = assembly.batch.targets.find((candidate) => candidate.selected);
+
+    expect(target).toMatchObject({
+      physicalState: 'unavailable',
+      nextPath: 'startsCompletion',
+    });
+  });
+
+  it('maps retained Fields facts into the decision summary and cage surface', () => {
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'H');
+    const decision = source.exitDecisions.find(
+      (candidate) =>
+        candidate.normal.kind === 'batch' &&
+        candidate.normal.targets.some(
+          (target) => source.occurrence(target.occurrenceId)?.state.kind === 'fieldsCombat',
+        ),
+    );
+    if (decision?.normal.kind !== 'batch') throw new Error('H Fields decision is missing');
+    const kit = decisionKit(source);
+    const assembly = assembleWorkspaceDecision({
+      assembleOccurrence: kit.assembleOccurrence,
+      catalog,
+      decision: decision as WorkspaceAuthoredBatchDecision,
+      kind: 'batch',
+      markerDestinations: kit.markers.emitter,
+      source,
+    });
+    if (assembly.kind !== 'batch') throw new Error('H Fields decision is not a batch');
+    const fieldsWorkbench = assembly.workbenches.find(
+      (workbench) => workbench.room.roomLocal.kind === 'fields',
+    );
+    if (fieldsWorkbench?.room.roomLocal.kind !== 'fields') {
+      throw new Error('H Fields workbench is missing');
+    }
+
+    expect(assembly.batch.fieldsCageOutcome).toBeDefined();
+    expect(assembly.batch.fields).toMatchObject({
+      cageOutcome: 'min',
+      cageTargetCount: 1,
+      doorCageRewardCount: 2,
+    });
+    expect(fieldsWorkbench.room.roomLocal.cages.map((cage) => cage.active)).toEqual([
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it('keeps the Fields outcome control available while a retained batch awaits its outcome', () => {
+    const start = createOccurrenceId('retained-fields-awaiting-start');
+    let project = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Underworld: 3 },
+      name: 'Retained Fields awaiting outcome',
+      projectId: 'retained-fields-awaiting-outcome',
+    });
+    project = applyProjectCommand(project, catalog, {
+      biome: goldenHBiome,
+      kind: 'CreateStart',
+      occurrenceId: start,
+    });
+    const owner = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: start,
+    });
+    project = applyProjectCommand(project, catalog, { decision: owner, kind: 'CreateBatch' });
+    const source = biomeSource(project, 'Underworld', 'H');
+    const kit = decisionKit(source);
+    const assembly = assembleWorkspaceDecision({
+      assembleOccurrence: kit.assembleOccurrence,
+      catalog,
+      decision: batchDecisionAt(source, start),
+      kind: 'batch',
+      markerDestinations: kit.markers.emitter,
+      source,
+    });
+    if (assembly.kind !== 'batch') throw new Error('awaiting H decision is not a batch');
+
+    expect(assembly.batch.fieldsCageOutcome).toBeDefined();
+    expect(assembly.batch.fields).toBeUndefined();
+    expect(assembly.batch.missingTargets.map((target) => target.authoring.kind)).toEqual([
+      'awaitingFieldsCageOutcome',
+    ]);
+  });
+
+  it('keeps Fields policy facts while excluding a non-Fields bounded target from capacity', () => {
+    const initialProject = createGoldenFGHIProject();
+    const initialSource = biomeSource(initialProject, 'Underworld', 'H');
+    const initialDecision = initialSource.exitDecisions.find(
+      (candidate) =>
+        candidate.normal.kind === 'batch' &&
+        candidate.normal.targets.some(
+          (target) => initialSource.occurrence(target.occurrenceId)?.gameName === 'H_Combat09',
+        ),
+    );
+    if (initialDecision?.normal.kind !== 'batch') {
+      throw new Error('H bounded-target batch is missing');
+    }
+    const project = applyProjectCommand(initialProject, catalog, {
+      cageOutcome: 'max',
+      decision: createExitDecisionAddress(initialSource.biome, initialDecision.source),
+      kind: 'ReplaceFieldsCageOutcome',
+    });
+    const source = biomeSource(project, 'Underworld', 'H');
+    const decision = source.exitDecisions.find(
+      (candidate) =>
+        candidate.normal.kind === 'batch' &&
+        candidate.normal.targets.some(
+          (target) => source.occurrence(target.occurrenceId)?.gameName === 'H_Combat09',
+        ),
+    );
+    if (decision?.normal.kind !== 'batch')
+      throw new Error('configured H bounded-target batch is missing');
+    const kit = decisionKit(source);
+    const assembly = assembleWorkspaceDecision({
+      assembleOccurrence: kit.assembleOccurrence,
+      catalog: catalogWithNonFieldsBoundedRoom('H_Combat09'),
+      decision: decision as WorkspaceAuthoredBatchDecision,
+      kind: 'batch',
+      markerDestinations: kit.markers.emitter,
+      source,
+    });
+    if (assembly.kind !== 'batch') throw new Error('H bounded-target decision is not a batch');
+
+    expect(assembly.batch.fieldsCageOutcome).toBeDefined();
+    expect(assembly.batch.fields).toMatchObject({
+      cageOutcome: 'max',
+      cageTargetCount: 1,
+      doorCageRewardCount: 3,
+    });
+  });
+
+  it('withholds Fields controls and facts from a retained mixed takeover batch', () => {
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'H');
+    const decision = source.exitDecisions.find(
+      (candidate) => candidate.normal.kind === 'batch' && candidate.normal.targets.length > 1,
+    );
+    if (decision?.normal.kind !== 'batch') throw new Error('multi-target H batch is missing');
+    const fieldsTarget = decision.normal.targets.find(
+      (target) => source.occurrence(target.occurrenceId)?.state.kind === 'fieldsCombat',
+    );
+    const takeoverTarget = decision.normal.targets.find(
+      (target) => target.occurrenceId !== fieldsTarget?.occurrenceId,
+    );
+    const preboss = source.plan.topology?.occurrences.find(
+      (occurrence) => occurrence.gameName === 'H_PreBoss01',
+    );
+    if (fieldsTarget === undefined || takeoverTarget === undefined || preboss === undefined) {
+      throw new Error('H mixed takeover fixture is missing');
+    }
+    const mixedSource: WorkspaceBiomeSource = {
+      ...source,
+      occurrence: (occurrenceId) =>
+        occurrenceId === takeoverTarget.occurrenceId
+          ? { ...preboss, occurrenceId }
+          : source.occurrence(occurrenceId),
+    };
+    const kit = decisionKit(mixedSource);
+    const assembly = assembleWorkspaceDecision({
+      assembleOccurrence: kit.assembleOccurrence,
+      catalog,
+      decision: decision as WorkspaceAuthoredBatchDecision,
+      kind: 'batch',
+      markerDestinations: kit.markers.emitter,
+      source: mixedSource,
+    });
+    if (assembly.kind !== 'batch') throw new Error('mixed H decision is not a batch');
+    const fieldsWorkbench = assembly.workbenches.find(
+      (workbench) => workbench.room.occurrenceId === fieldsTarget.occurrenceId,
+    );
+    if (fieldsWorkbench?.room.roomLocal.kind !== 'fields') {
+      throw new Error('mixed H batch lost its Fields workbench');
+    }
+
+    expect(assembly.batch.fieldsCageOutcome).toBeUndefined();
+    expect(assembly.batch.fields).toBeUndefined();
+    expect(fieldsWorkbench.room.roomLocal.cages.every((cage) => !cage.active)).toBe(true);
   });
 
   it('keeps a retained authored suffix and its focus destinations after an unresolved prefix', () => {
@@ -213,7 +447,6 @@ describe('structured workspace decision assembly', () => {
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
-      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
@@ -258,7 +491,6 @@ describe('structured workspace decision assembly', () => {
       catalog,
       decision: decision as WorkspaceAuthoredBatchDecision,
       ...(evaluated === undefined ? {} : { evaluated }),
-      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
@@ -289,7 +521,6 @@ describe('structured workspace decision assembly', () => {
       catalog,
       decision: decision as WorkspaceAuthoredBatchDecision,
       ...(evaluated === undefined ? {} : { evaluated }),
-      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
@@ -337,7 +568,6 @@ describe('structured workspace decision assembly', () => {
         catalog,
         decision: decision as WorkspaceAuthoredBatchDecision,
         ...(evaluated === undefined ? {} : { evaluated }),
-        fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
         kind: 'batch',
         markerDestinations: kit.markers.emitter,
         source,
@@ -362,7 +592,6 @@ describe('structured workspace decision assembly', () => {
       catalog,
       decision,
       ...(evaluated === undefined ? {} : { evaluated }),
-      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'linkedExit',
       markerDestinations: kit.markers.emitter,
       source,
@@ -376,6 +605,61 @@ describe('structured workspace decision assembly', () => {
       assembly.workbench.key,
     );
     expect(semanticAddressKey(assembly.node.owner)).toBe(semanticAddressKey(owner));
+  });
+
+  it('uses the engine continuation fallback for unpicked and linked Preboss targets', () => {
+    const fSource = biomeSource(createGoldenFGHIProject(), 'Underworld', 'F');
+    const fDecision = fSource.exitDecisions.find(
+      (candidate) =>
+        candidate.normal.kind === 'batch' &&
+        candidate.normal.targets.some(
+          (target) => fSource.occurrence(target.occurrenceId)?.gameName === 'F_PreBoss01',
+        ),
+    );
+    if (fDecision?.normal.kind !== 'batch') throw new Error('F Preboss batch is missing');
+    const fKit = decisionKit(fSource);
+    const fAssembly = assembleWorkspaceDecision({
+      assembleOccurrence: fKit.assembleOccurrence,
+      catalog,
+      decision: fDecision as WorkspaceAuthoredBatchDecision,
+      kind: 'batch',
+      markerDestinations: fKit.markers.emitter,
+      source: fSource,
+    });
+    if (fAssembly.kind !== 'batch') throw new Error('F Preboss decision is not a batch');
+    expect(
+      fAssembly.batch.targets.find(
+        (target) => !target.selected && target.room.gameName === 'F_PreBoss01',
+      )?.nextPath,
+    ).toBe('deadLeaf');
+
+    const nSource = biomeSource(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const nDecision = linkedDecision(nSource);
+    const linkedTarget = nSource.occurrence(nDecision.normal.occurrenceId);
+    const preboss = nSource.plan.topology?.occurrences.find(
+      (occurrence) => occurrence.gameName === 'N_PreBoss01',
+    );
+    if (linkedTarget === undefined || preboss === undefined) {
+      throw new Error('N linked Preboss fixture is missing');
+    }
+    const linkedPrebossSource: WorkspaceBiomeSource = {
+      ...nSource,
+      occurrence: (occurrenceId) =>
+        occurrenceId === linkedTarget.occurrenceId
+          ? { ...preboss, occurrenceId }
+          : nSource.occurrence(occurrenceId),
+    };
+    const nKit = decisionKit(linkedPrebossSource);
+    const nAssembly = assembleWorkspaceDecision({
+      assembleOccurrence: nKit.assembleOccurrence,
+      catalog,
+      decision: nDecision,
+      kind: 'linkedExit',
+      markerDestinations: nKit.markers.emitter,
+      source: linkedPrebossSource,
+    });
+    if (nAssembly.kind !== 'linkedExit') throw new Error('N Preboss target is not linked');
+    expect(nAssembly.node.target.nextPath).toBe('startsCompletion');
   });
 
   it('publishes only the next physical target after declaration-owned batch setup', () => {
@@ -402,7 +686,6 @@ describe('structured workspace decision assembly', () => {
       assembleOccurrence: beforeKit.assembleOccurrence,
       catalog,
       decision: batchDecisionAt(beforeSetup, startId),
-      fieldsActiveCageCounts: beforeKit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: beforeKit.markers.emitter,
       source: beforeSetup,
@@ -426,7 +709,6 @@ describe('structured workspace decision assembly', () => {
       assembleOccurrence: afterKit.assembleOccurrence,
       catalog,
       decision: batchDecisionAt(afterSetup, startId),
-      fieldsActiveCageCounts: afterKit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: afterKit.markers.emitter,
       source: afterSetup,
@@ -458,7 +740,6 @@ describe('structured workspace decision assembly', () => {
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: decision as WorkspaceAuthoredBatchDecision,
-      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
@@ -502,7 +783,6 @@ describe('structured workspace decision assembly', () => {
       assembleOccurrence: fKit.assembleOccurrence,
       catalog,
       decision: batchDecisionAt(fSource, goldenFOccurrenceId(1, 1)),
-      fieldsActiveCageCounts: fKit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: fKit.markers.emitter,
       source: fSource,
@@ -560,7 +840,6 @@ describe('structured workspace decision assembly', () => {
       assembleOccurrence: gKit.assembleOccurrence,
       catalog,
       decision: gDecision as WorkspaceAuthoredBatchDecision,
-      fieldsActiveCageCounts: gKit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: gKit.markers.emitter,
       source: gSource,
@@ -609,7 +888,6 @@ describe('structured workspace decision assembly', () => {
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision: decision as WorkspaceAuthoredBatchDecision,
-      fieldsActiveCageCounts: kit.fieldsActiveCageCounts,
       kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
