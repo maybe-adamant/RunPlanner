@@ -9,6 +9,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRewardWheelAddress,
   createRouteAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -370,6 +371,55 @@ describe('progressive biome evaluation', () => {
     expect(blockedClamped?.candidateArtifacts.rewardProducers.at(blockedOwner)).toBeUndefined();
     expect(blockedBeforeClamp?.candidateArtifacts.rewardProducers.at(blockedOwner)).toBeDefined();
     expect(blockedBeforeClamp?.candidateArtifacts.rewardProducers.at(foreignOwner)).toBeUndefined();
+  });
+
+  it('carries opaque lifecycle artifacts through normal, prefix, clamped, and pre-clamp execution', () => {
+    const surface = createRepresentativeNOPQProject();
+    const prefixProject = incompleteAtMissingDecision(surface, oBiome, oOccurrenceIds.combat02);
+    const owner = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
+    const normalAssembly = simulateProjectAssembly(catalog, surface);
+    const prefixAssembly = simulateProjectAssembly(catalog, prefixProject);
+    const normalLifecycle = candidateArtifactsForProjectEvaluationAssembly(normalAssembly)
+      .biomeAt(oBiome)
+      ?.roomLifecycles.shipAt(owner);
+    const prefixLifecycle = candidateArtifactsForProjectEvaluationAssembly(prefixAssembly)
+      .biomeAt(oBiome)
+      ?.roomLifecycles.shipAt(owner);
+
+    expect(normalLifecycle).toBeDefined();
+    expect(prefixLifecycle).toBeDefined();
+    expect(normalLifecycle).not.toBe(prefixLifecycle);
+    expect(Object.keys(normalLifecycle ?? {})).toEqual(['activeWheelKeys', 'evaluateState']);
+
+    const invalid = applyProjectCommand(surface, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
+      storeKey: 'MetaProgress',
+    });
+    const routeEvaluation = simulateProject(catalog, invalid).routes.find(
+      (candidate) => candidate.routeKey === 'Surface',
+    );
+    const previous = routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    const plan = invalid.routes
+      .find((candidate) => candidate.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (previous?.authoring !== 'complete' || plan === undefined) {
+      throw new Error('lifecycle artifact fixture has no valid N seed or O plan');
+    }
+    const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
+    const clamped = evaluateProgressiveBiomeAssembly(catalog, oBiome, plan, 2, seed);
+    const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, oBiome, plan, 2, seed);
+    const clampedLifecycle = clamped?.candidateArtifacts.roomLifecycles.shipAt(owner);
+    const beforeClampLifecycle = beforeClamp?.candidateArtifacts.roomLifecycles.shipAt(owner);
+
+    expect(clamped?.evaluation.blockedAt).toMatchObject({
+      kind: 'rewardWheelOffer',
+      occurrenceId: oOccurrenceIds.combat04,
+      wheelKey: 'wheel1',
+    });
+    expect(clampedLifecycle).toBeUndefined();
+    expect(beforeClampLifecycle).toBeDefined();
+    expect(beforeClampLifecycle).not.toBe(clampedLifecycle);
   });
 
   it('requires the Fields outcome before a target can be authored while retaining target eligibility', () => {

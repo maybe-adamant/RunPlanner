@@ -3,7 +3,7 @@ import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RewardHistoryState, RewardKernelFacts } from '../../reward-kernel';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
-import type { ShopPurchaseCandidateContext } from './frontiers';
+import type { ShopPurchaseCandidateContext } from './lifecycle-artifacts';
 import { processShopPurchases, type RewardBranchState } from './processing';
 
 interface ShopPurchaseCandidateContextOptions {

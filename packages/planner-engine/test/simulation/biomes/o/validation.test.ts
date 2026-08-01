@@ -179,6 +179,16 @@ describe('selected O validation', () => {
         findings: [],
       },
     });
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
+        kind: 'shipEncounterCount',
+        occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+        encounterCount: 2,
+      }),
+    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
   });
 
   it('evaluates a supported opening target through the prepared selected O prefix', () => {
@@ -256,6 +266,67 @@ describe('selected O validation', () => {
       { kind: 'rewardWheelOffer', result: { supported: true, findings: [] } },
       { kind: 'rewardWheelPicked', result: { selectedPossible: true, findings: [] } },
     ]);
+  });
+
+  it('evaluates dormant wheel2 when a supported encounter-count candidate activates it', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer2'),
+      value: { rewardType: 'SpellDrop' },
+    });
+
+    const evaluation = simulateProject(catalog, project);
+    expect(evaluation.status).toBe('valid');
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({ kind: 'shipEncounterCount', occurrence, encounterCount: 3 }),
+    ).toMatchObject({
+      kind: 'shipEncounterCount',
+      result: {
+        encounterCount: 3,
+        supportEncounterCounts: [2, 3],
+        selectedPossible: false,
+        findings: [
+          expect.objectContaining({
+            code: 'rewardBagEntryUnavailable',
+            origin: expect.objectContaining({
+              kind: 'rewardWheelOffer',
+              occurrenceId: oOccurrenceIds.combat07,
+              wheelKey: 'wheel2',
+            }),
+          }),
+        ],
+      },
+    });
+
+    const activeProject = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, activeProject),
+      ).evaluate({ kind: 'rewardWheelOfferCount', wheel, offerCount: 1 }),
+    ).toMatchObject({
+      kind: 'rewardWheelOfferCount',
+      result: { offerCount: 1, selectedPossible: true, findings: [] },
+    });
   });
 
   it('uses the source-offer policy on Ship continuation and the explicit base store on Devotion', () => {

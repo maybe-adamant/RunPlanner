@@ -38,6 +38,7 @@ import {
   type RewardBranch,
 } from '../rewards';
 import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
+import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 
 export interface BiomeGenerationValidation {
   readonly validity: 'invalid' | 'valid';
@@ -79,6 +80,7 @@ function generation(
   enteredBiomeCount: number,
   rewards: BiomeRewardSimulation,
   rewardProducers: RewardProducerCandidateArtifacts,
+  roomLifecycles: RoomLifecycleCandidateArtifacts,
 ): ProgressiveGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssembly(
     catalog,
@@ -101,6 +103,7 @@ function generation(
       createBiomeAddress(prefix.routeKey, prefix.biomeKey),
       ordinary.candidateArtifacts,
       rewardProducers,
+      roomLifecycles,
     ),
   });
 }
@@ -136,6 +139,7 @@ function products(
     enteredBiomeCount,
     rewards.simulation,
     rewards.producerArtifacts,
+    rewards.lifecycleArtifacts,
   );
   return Object.freeze({
     evaluation: Object.freeze({

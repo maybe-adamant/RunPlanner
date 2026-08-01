@@ -148,8 +148,8 @@ copied elsewhere.
   [re-anchor and reorganization](docs/progress/REANCHOR_AND_REORGANIZE.md)
   plan has completed its production workspace contraction and bounded
   test-ownership correction. Campaign B's explicit evaluation-assembly,
-  room-target, Linear structural, Hub/local, and reward-producer units are
-  complete; its lifecycle unit remains. The behavior-ready
+  room-target, Linear structural, Hub/local, reward-producer, and lifecycle
+  units are complete. The behavior-ready
   [workspace presentation polish](docs/progress/WORKSPACE_PRESENTATION_POLISH.md)
   plan remains paused while the remaining re-anchor campaigns close. The
   [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) gives Commit

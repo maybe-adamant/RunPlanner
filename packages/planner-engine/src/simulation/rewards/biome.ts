@@ -44,11 +44,12 @@ import type {
 } from './model';
 import { createRewardFacts, createdPeerGameNames } from './facts';
 import {
-  registerRoomLifecycleCandidateContexts,
+  createRoomLifecycleCandidateArtifacts,
+  type RoomLifecycleCandidateArtifacts,
   type RoomLifecycleCandidateResult,
   type ShipLifecycleCandidateContext,
   type ShopPurchaseCandidateContext,
-} from './frontiers';
+} from './lifecycle-artifacts';
 import {
   createRewardProducerCandidateArtifacts,
   indexRewardProducerFrontier,
@@ -632,6 +633,7 @@ function prepareShipLifecycleCandidateContext(
 export interface BiomeRewardEvaluationAssembly {
   readonly simulation: BiomeRewardSimulation;
   readonly producerArtifacts: RewardProducerCandidateArtifacts;
+  readonly lifecycleArtifacts: RoomLifecycleCandidateArtifacts;
 }
 
 export function evaluateBiomeRewardsAssembly(
@@ -1544,13 +1546,13 @@ export function evaluateBiomeRewardsAssembly(
     findings: immutableFindings,
     rewardLookups: rewardLookup.public,
   });
-  registerRoomLifecycleCandidateContexts(simulation, {
-    shipsByOwner: shipLifecycleContexts,
-    shopsByOwner: shopPurchaseContexts,
-  });
   return Object.freeze({
     simulation,
     producerArtifacts: createRewardProducerCandidateArtifacts(producerFrontiers),
+    lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(
+      shipLifecycleContexts,
+      shopPurchaseContexts,
+    ),
   });
 }
 

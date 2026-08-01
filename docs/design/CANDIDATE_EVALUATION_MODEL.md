@@ -28,11 +28,9 @@ One semantic edit or profile replacement creates a new immutable
 prior immutable identities and may reuse their cached matching assemblies. Its data-only
 `ProjectEvaluation` remains the public derived-result selector, while the
 assembly carries opaque candidate capabilities produced by the same simulation
-execution for families that have moved to explicit artifacts. Room-target and
-reward-producer preparation bind that one assembly and never acquire another
-project evaluation or resolve a capability from public evaluation data.
-Lifecycle producer capabilities retain their documented transitional delivery
-until their own vertical slice moves them into the assembly.
+execution. Room-target, reward-producer, and lifecycle preparation bind that
+one assembly and never acquire another project evaluation or resolve a
+capability from public evaluation data.
 
 Before the candidate refactor, the application expanded control domains into
 independent scalar queries. Reward, shop, room-lifecycle, and Hub alternatives
@@ -44,7 +42,7 @@ Production now prepares one semantic context per contacted owner:
 
 - room targets use their selected-simulation generation context;
 - rewards use typed producer frontiers;
-- O lifecycle controls use occurrence-local contexts;
+- O lifecycle controls use opaque occurrence-local lifecycle capabilities;
 - N controls use joint-board, ordered-visit, or parent-local regions;
 - shops use joint inventory or ordered purchase contexts;
 - batch-level controls consume their typed selected-simulation contexts.
@@ -162,7 +160,7 @@ artifacts. A session may cache:
 - route, biome, occurrence, target, and semantic-owner indexes;
 - prepared generation views;
 - prepared reward-producer frontiers;
-- scoped lifecycle-region inputs;
+- opaque lifecycle capabilities and scoped lifecycle-region inputs;
 - evaluated domains keyed by semantic owner and exact domain identity.
 
 No cache crosses an exact assembly or `ProjectDocument` identity. A semantic

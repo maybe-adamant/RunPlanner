@@ -4,13 +4,6 @@ export {
   rewardStoreCandidateSupport,
   BiomeRewardSimulationContractError,
 } from './biome';
-export {
-  roomLifecycleCandidateContexts,
-  type RoomLifecycleCandidateContextIndex,
-  type RoomLifecycleCandidateResult,
-  type ShipLifecycleCandidateContext,
-  type ShopPurchaseCandidateContext,
-} from './frontiers';
 export type {
   BiomeRewardSimulation,
   RewardBranch,

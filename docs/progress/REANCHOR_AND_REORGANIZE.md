@@ -65,11 +65,15 @@ test ownership, and conditional decomposition. Campaign B remains separate.
 Campaign B's entry audit found eighteen query kinds grouped into four coherent
 semantic families and five review units, three semantic `WeakMap` sidecars, one
 permitted project/evaluation identity attestation, and several ordinary
-memoization caches. B1 and B2 are complete: the room-target sidecar originated
-in generation, so its explicit evaluation assembly now runs end to end and has
-removed that sidecar with its room-target consumer; the remaining Linear
-structural families now have their own evaluators. B5 remains
-separate vertical units.
+memoization caches. Campaign B is complete: each semantic sidecar now crosses
+its producer-to-consumer boundary as an exact opaque artifact, and its query
+family has one explicit evaluator behind the prepared session.
+
+Campaign C's entry audit is complete. It found a justified room-state split,
+one narrow topology-query product, misplaced codec and command tests, and an
+occurrence-command aggregate with demonstrated leaf-family boundaries. It did
+not find evidence for separate raw-topology decode and semantic-validation
+products or for splitting the atomic topology-command aggregate.
 
 This document is temporary delivery authority. Stable ownership remains with
 the documents under `docs/design/`. When the program closes, any durable
@@ -412,7 +416,7 @@ exact Shop purchase order changes the chronological reward path it owns.
 | Neutral dependency anchor       | 1 delivered                   | Small                             | Unnecessarily changing external import surfaces                                                            |
 | Campaign A: workspace and React | 29 delivered                  | Extra-large                       | Losing authored reachability, focus, lazy interaction behavior, or independent test evidence               |
 | Campaign B: candidate flow      | 5 audited                     | Extra-large                       | Wrapping hidden reward sidecars, creating a universal context, or altering progressive recovery            |
-| Campaign C: authored core       | Set by opening audit          | Extra-large                       | Creating a second topology model or scattering atomic authored invariants                                  |
+| Campaign C: authored core       | 6 planned                     | Large                             | Creating a second topology model or scattering atomic authored invariants                                  |
 | Campaign D: ordered engine flow | Set separately per state flow | Extra-large/highest semantic risk | Moving an event to the wrong chronological state or decomposing a cohesive fold without maintenance payoff |
 
 Campaign gates exist so the project can reassess value, coupling, and remaining
@@ -1774,9 +1778,10 @@ then the exact project assembly. Public reward and project outputs remain
 data-only and deeply equal to their prior facade results.
 
 The `frontiersBySimulation` sidecar, its producer registration and lookup
-accessors, and their public simulation exports are gone. The lifecycle-context
-sidecar remains intentionally isolated for B5. The reward producer evaluator
-now owns `incomingReward`, `localReward`, `rewardWheelOffer`, and `shopOffer`;
+accessors, and their public simulation exports are gone. B4 deliberately left
+the lifecycle-context sidecar isolated for B5, which subsequently removes it.
+The reward producer evaluator now owns `incomingReward`, `localReward`,
+`rewardWheelOffer`, and `shopOffer`;
 the session extracts and passes only the addressed producer capability, never a
 biome artifact or assembly. Exact first-blocking producer repair obtains only
 the exact pre-clamp producer artifact, while later owners remain unavailable.
@@ -1803,6 +1808,30 @@ runtime opacity, foreign-owner exclusion, and blocked-owner repair.
 - retain in session tests only exact assembly identity, batching, ordering,
   lazy observation, unavailable taxonomy, and representative family handoff.
 
+##### B5 delivery record (2026-08-01)
+
+B5 returns opaque Ship and Shop lifecycle capabilities beside the data-only
+reward simulation. The exact normal project evaluation, incomplete prefix,
+clamped replay, and pre-clamp replay carry the lifecycle capability produced by
+that execution through the biome artifact and exact project assembly. The
+private construction maps and closures remain unreachable from public reward
+or project data.
+
+The lifecycle family now owns `shipEncounterCount`, the three wheel controls,
+and `shopPurchase`. It projects only its addressed lifecycle capability from a
+selected, exact pre-clamp, or complete-invalid sole-owner source; it never
+receives a whole biome artifact or evaluation assembly. The former
+result-keyed lifecycle registration/accessor path and public exports are gone.
+The candidate entry is now a deliberate public barrel, while one session
+module owns the exact-session contract, batching, observation, and an explicit
+exhaustive dispatcher over all eighteen query kinds.
+
+O fixtures prove selected encounter support, dormant wheel activation, exact
+wheel repair, and later-owner denial. P proves the complete-invalid
+sole-owner Shop fallback and its pre-purchase timing. Session and progressive
+fixtures prove binding laziness, public-data opacity, and exact normal/prefix/
+clamped/pre-clamp artifact threading.
+
 Campaign B closes when no candidate semantic fact or capability is discoverable
 only through registration or a result-keyed sidecar; every query kind has one
 explicit evaluator and one primary test owner; no universal candidate context,
@@ -1810,90 +1839,213 @@ parallel dispatcher, or compatibility barrel remains; engine candidate,
 application boundary, deterministic result, render-purity, and work-count
 fixtures pass; and the complete engine and repository gates pass.
 
+##### Campaign B closure record (2026-08-01)
+
+Campaign B is closed. Its three semantic capability sidecars have been
+replaced by explicit exact artifacts, while the project/evaluation identity
+attestation and ordinary reproducible caches remain as permitted. Every
+candidate query has one family evaluator and the prepared session has one
+exhaustive dispatcher; no compatibility aggregate, universal candidate context,
+or public capability leak remains. `npm run check` passed with 82 test files
+and 716 tests, together with typecheck, lint, formatting, and the production
+build.
+
 ### Campaign C: Authored Core
 
-#### Campaign C entry audit (no implementation commit)
+#### Campaign C entry audit (completed 2026-08-01)
 
-Before moving production code:
+The authored-core baseline is committed B4 at `7ffb525` plus the B5 worktree as
+observed during the audit. B5's production and test delta was confined to
+simulation/candidate code; `git diff` reported no authored-project source or
+test delta. The audit deliberately did not modify or test through the live B5
+production path.
 
-- inventory the callers and failure contracts of default construction,
-  replacement reconciliation, room-state decoding, topology queries, topology
-  decoding/validation, occurrence commands, and unified topology commands;
-- trace every repeated authored traversal and distinguish reusable semantic
-  authority from coincidentally similar loops with different failure contracts;
-- assign primary test ownership across defaults, codec, topology, topology
-  impact, occurrence-command, and topology-command matrices, including the
-  current broad command suite;
-- record the public authored import surface, import directions, source/test
-  movement, and the old modules or test matrices each proposed slice deletes;
-- propose review units only for demonstrated change neighborhoods. The audit
-  does not presume that either command aggregate must split.
+The current authored core contains 18 production files and 6,043 lines. Its
+focused test neighborhood contains five files and 2,889 lines. These counts are
+diagnostic only; the review-unit decisions below follow caller, failure, and
+test change neighborhoods.
 
-#### C1: Authored room-state responsibilities
+| Responsibility                            | Current producer and consumers                                                            | Failure or incompleteness contract                                                                                                                      | Audit decision                                                         |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| declaration-owned room defaults           | `roomState.ts`; topology creation and occurrence replacement                              | returns one complete state; catalog/declaration contradictions fail through `ProjectDocumentContractError`                                              | move to a dedicated default-construction owner                         |
+| replacement reconciliation                | `roomState.ts`; `ReplaceOccurrenceRoom` only                                              | preserves only declaration-compatible leaves; otherwise uses the supplied complete default; internal missing-default checks are impossible-state errors | move beside defaults but keep a separate transition product            |
+| persisted room-state decoding             | `roomState.ts`; topology codec only                                                       | path-aware `ProjectDocumentContractError`; preserves dormant Shop state and rejects malformed persisted leaves                                          | move to a codec owner, not a public room-state facade                  |
+| topology queries                          | `topology.ts`; authored commands, simulation, workspace projection, and test expectations | pure facts return a value, `undefined`, or an intentional empty exit set; they do not repair or throw command failures                                  | extract only demonstrated query facts                                  |
+| topology decoding and semantic validation | `topology.ts`; project codec only                                                         | one path-aware decode product over raw occurrences, structural owners, selected reachability, and normalized room states                                | retain as one codec pipeline after query extraction                    |
+| occurrence and leaf commands              | `commands/occurrence-state.ts`; delegated through the topology command default branch     | command failures use `ProjectCommandContractError`; changed proposals are re-decoded and document failures are wrapped at the public command boundary   | extract demonstrated families and make dispatch typed and exhaustive   |
+| topology commands                         | `commands/unified-topology.ts`; public command dispatcher                                 | atomic creation, replacement, selection, downstream removal, repair, and Hub handoff invariants                                                         | retain one topology transition owner; remove unrelated routing from it |
+| topology removal impact                   | `topologyImpact.ts`; commands and workspace structural controls                           | pure, explicit removal description and application                                                                                                      | retain unchanged as an already coherent authority                      |
 
-- separate declaration-owned defaults, room-replacement reconciliation, and
-  persisted decoding as complete products with their existing callers and
-  primary tests;
-- keep one deliberate authored room-state public surface without routing engine
-  internals through a convenience barrel;
-- preserve complete declaration defaults, dormant values, invalid-state
-  retention, and current decode failures;
-- delete the superseded implementation and duplicate umbrella assertions in
-  each slice rather than copying them into the new neighborhood.
+`applyProjectCommand` re-decodes every changed proposal and translates document
+contract failures into command contract failures. That is the established
+authored invariant boundary, not a refactor audit or shadow model; Campaign C
+preserves it unless a separate design and performance decision changes the
+authored command contract.
 
-#### C2: Narrow authored topology queries
+##### Repeated-traversal findings
 
-- move declared physical exits, selection queries, fixed-width takeover facts,
-  and other demonstrated non-mutating authorities behind narrow pure functions;
-- return only the fact requested by a consumer. Do not create a comprehensive
-  cached topology read model, second ownership graph, or universal topology
-  context;
-- share a query only where commands, validation, simulation, or projection
-  currently need the same semantic answer. Similar traversal with a different
-  failure or incompleteness contract remains separate;
-- preserve the deliberate authored-project public surface and add import
-  enforcement only where the intended direction is mechanically observable.
+- declaration-owned physical exits and fixed-width takeover transitions are
+  already shared semantic facts, but they are buried in the codec module;
+- selected-exit resolution is independently reconstructed in authored
+  commands, completeness, materialization, and workspace projection. It is one
+  exact authored fact and belongs in the narrow query product;
+- selected-spine indexing, staged-selection validation, cycle validation, and
+  codec reachability look superficially similar but have different inputs,
+  stopping rules, and failure behavior. They remain separate; Campaign C does
+  not create a generic traversal engine;
+- owner construction in the codec intentionally retains raw room state until
+  structural role and entry activity are known. Moving it across a validation
+  boundary would require a second raw topology product with no consumer;
+- repeated `find` calls for an occurrence are not enough evidence for an index
+  or topology read model. A narrow decision-by-source query is allowed only
+  where current consumers need the same optional answer.
 
-#### C3: Authored topology codec and validation
+##### Public surface and dependency findings
 
-- separate raw decoding from semantic topology validation when their current
-  failure contracts and test matrices support that boundary;
-- consume narrow topology queries explicitly where they own the shared answer;
-  do not materialize a topology mirror solely to reduce traversal;
-- preserve current schema rejection, incomplete-state representation, stable
-  occurrence identity, and authored-order behavior.
+The declared `@run-planner/engine/authored-project` export is used by 123 source
+and test files, and cross-package consumers use that declared package surface
+rather than internal authored paths. The dependency direction is healthy and
+there is no module-level semantic registry, `WeakMap`, or sidecar in the
+authored core.
 
-#### Conditional C4: Occurrence-state command families
+The barrel nevertheless exports implementation details with no production
+consumer outside the authored core: room default/reconciliation/decoder
+functions and their context types, `decodeBiomeTopology`,
+`declaredPhysicalExitKeys`, `fixedWidthOneTakeoverForSource`, and the batch/biome
+helper codecs and constructors. Campaign C removes these from the package
+surface as their owning slices move. The application-consumed physical-exit and
+fixed-transition queries, topology impacts, addresses, commands, document
+codec, history, and persisted models remain deliberate.
 
-- retain one exhaustive occurrence-command dispatcher;
-- extract room replacement, incoming/local reward, Fields, Ship wheel, Ephyra
-  side-room, or Shop transitions only when the entry audit identifies a narrow
-  transition contract and primary test neighborhood;
-- move lookup/reconciliation logic with the first family that owns it or keep it
-  private to the dispatcher; do not create a broad command context or lookup
-  product in advance;
-- split the broad command tests along the same authority boundary and delete
-  displaced umbrella matrices in the same commit.
+##### Test-ownership and executable baseline
 
-#### Conditional C5: Topology command families
+The focused lane passes:
 
-After C2 and C3, audit the remaining topology-command aggregate:
+```text
+npx vitest run packages/planner-engine/test/authored-project --reporter=dot
+Test Files  5 passed (5)
+Tests       98 passed (98)
+```
 
-- if start, batch, takeover, Hub, selection, repair, and removal transitions
-  have genuinely narrow dependencies, move complete cohesive families with
-  their tests behind the exhaustive dispatcher;
-- if they still share atomic downstream-removal, replacement, handoff, or
-  validation invariants, retain the aggregate and record why it remains the
-  healthier responsibility boundary;
-- do not create an empty implementation commit when retention is the correct
-  result.
+The per-file baseline is 30 address, 16 codec, 30 command, 16 default, and six
+topology-impact tests. `commands.test.ts` is 2,161 lines, including roughly 458
+lines of setup and several codec/query matrices. Eight of the thirteen commands
+currently delegated to `occurrence-state.ts` have no primary authored-command
+test: incoming reward, local reward, wheel offer count, wheel store, wheel picked
+index, Ephyra generation, Ephyra entry order, and Shop offer replacement. Their
+existing simulation and React witnesses remain boundary tests, not substitutes
+for transition ownership.
 
-Campaign C closes when defaults, reconciliation, codecs, queries, and any moved
-command families each have one authority and primary test owner; no second
-topology model, broad command context, parallel path, or duplicated test matrix
-remains; authored-project, codec, command, topology-impact, affected catalog,
-import-direction, and deterministic project fixtures pass; and the complete
-repository gate passes.
+Codec rejection and round-trip cases move to `codec.test.ts`; pure topology
+facts move to a topology-query suite; project-state, topology-transition,
+room-replacement, and occurrence-leaf cases move with their production owners.
+Shared test builders may construct command sequences under authored test
+support, but they must not reproduce eligibility, reconciliation, topology, or
+default policy. The broad command suite is deleted by the final command unit,
+not copied into several new umbrella suites.
+
+The full engine and repository gates were intentionally not run during the
+entry audit because B5 had live uncommitted simulation changes. They run after
+B5 is committed and at Campaign C closure; the focused 5-file/98-test lane is
+the executable authored baseline for these review units.
+
+#### C1: Authored room-state owners (one review unit)
+
+- replace `roomState.ts` with direct internal
+  `room-state/declaration.ts`, `room-state/defaults.ts`,
+  `room-state/replacement.ts`, and `room-state/codec.ts` modules;
+- keep role/context and declaration-descriptor checks with the smallest shared
+  room-state contract. Do not add an `index.ts` barrel or a room-state service;
+- move focused default and reconciliation tests with the products and move
+  persisted rejection cases to the codec owner;
+- remove room-state implementation exports from the public authored barrel and
+  delete `roomState.ts` in the same commit;
+- preserve complete defaults, declaration-compatible leaf retention, dormant
+  Shop inventory, Ephyra side-room ownership, and exact decode paths/errors.
+
+#### C2: Narrow topology queries (one review unit)
+
+- replace the mixed `topology.ts` location with a codec module and a query
+  module; the authored public barrel remains the only deliberate package
+  surface, so no topology convenience barrel is added;
+- move declared physical exits, selected exit/target resolution, selected
+  ordinary-batch index, decision-by-source lookup where demonstrated, and
+  fixed-width takeover facts as narrow pure functions;
+- migrate the exact selected-exit fact across authored commands, completeness,
+  materialization, and workspace projection in this unit, deleting each local
+  reconstruction rather than forwarding it;
+- keep raw-codec traversal and differently failing staged/cycle/reachability
+  loops private to the codec;
+- establish a focused topology-query suite from the query cases currently
+  embedded in `commands.test.ts` and delete the displaced assertions there.
+
+#### C3: Codec boundary and test ownership (one review unit)
+
+- retain raw topology decoding, semantic topology validation, structural-owner
+  construction, and room-state decode orchestration as one path-aware codec
+  product; there is no raw-topology or validation product to expose;
+- move malformed topology, owner, cycle, staged, dormant-leaf, and command-
+  produced round-trip matrices from the broad command suite to codec tests,
+  retaining only representative command-boundary wrapping evidence elsewhere;
+- remove codec-only topology, batch-state, and biome-state helpers from the
+  public authored barrel while keeping the project document codec public;
+- preserve schema rejection, incomplete/context-invalid authored state,
+  occurrence identity, declaration ordering, and exact error paths.
+
+#### C4: Explicit command families (three review units)
+
+The command work proceeds as complete vertical families, with tests moved in
+the same commit:
+
+1. Replace `commands/history.ts` with `commands/project-state.ts`, keep project
+   metadata there, move biome-field state there from the topology owner, define
+   explicit command-family unions, rename the remaining unified module to its
+   topology responsibility, and replace default-fallthrough delegation with
+   visible exhaustive routing. `ReplaceFieldsCageOutcome` remains with
+   topology/batch state because it edits a decision, not a room occurrence.
+2. Move room replacement with its occurrence-role lookup, source reward-store
+   reconciliation, default construction, compatible-leaf reconciliation, and
+   focused replacement matrix.
+3. Move incoming/local reward, Ship encounter/wheel, Ephyra generation/order,
+   and Shop offer/purchase transitions into cohesive leaf handlers behind one
+   exhaustive occurrence dispatcher. Add primary command tests for all thirteen
+   kinds currently handled by `occurrence-state.ts`: the Fields case in the
+   topology-command suite and the remaining twelve in room-replacement or
+   occurrence-leaf suites. Retain only representative downstream UI and
+   simulation witnesses, and delete `commands/occurrence-state.ts` plus the
+   superseded broad `commands.test.ts` path.
+
+Handlers receive `document`, `catalog`, `located biome`, and their exact command
+type as needed. They do not receive a command context, service table, topology
+index, or prebuilt lookup bag. A mutation helper moves only after a second real
+family consumes the same operation; no helper-only preparation commit is
+allowed.
+
+#### C5: Topology-command retention decision (no separate commit)
+
+The entry audit rejects the tentative topology-family split. Start, ordinary
+batch, takeover, selection, capacity repair, downstream removal, linked/Hub
+construction, Hub closure, and completed-Hub handoff all mutate one persisted
+graph and share atomic invariants. Splitting them now would either duplicate
+those invariants or introduce a broad topology transition context.
+
+C4's first unit removes biome-field and occurrence routing and gives the
+aggregate an accurate topology name, but keeps its transition implementation
+together. Reopen this decision only if a later representative topology change
+demonstrates a smaller independent dependency and test neighborhood; file
+length alone is not that evidence.
+
+Campaign C closes after six review units when room defaults, reconciliation,
+room decoding, topology queries, codec validation, project-state commands,
+topology transitions, room replacement, and occurrence leaves each have one
+authority and primary test owner. `roomState.ts`, mixed `topology.ts`,
+`commands/history.ts`, `commands/occurrence-state.ts`,
+`commands/unified-topology.ts`, and the broad `commands.test.ts` no longer
+exist; no second topology model, broad command context, parallel path,
+unnecessary public implementation export, production self-audit, or duplicated
+test matrix remains. The focused authored lane, affected simulation/planner
+lanes, import-direction checks, deterministic project fixtures, and complete
+repository gate pass.
 
 ### Campaign D: Ordered Engine State Flows
 

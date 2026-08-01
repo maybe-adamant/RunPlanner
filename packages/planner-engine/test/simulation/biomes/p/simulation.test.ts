@@ -22,6 +22,8 @@ import {
   pOccurrenceId,
   pOccurrenceIds,
 } from '@run-planner/test-fixtures';
+import { evaluateProgressiveBiomeAssembly } from '../../../../src/simulation/progressive/biome';
+import { candidateArtifactsForProjectEvaluationAssembly } from '../../../../src/simulation/project';
 
 function completeP() {
   const evaluation = simulateProject(catalog, createRepresentativeNOPProject());
@@ -152,7 +154,7 @@ describe('P core loop', () => {
     ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
   });
 
-  it('keeps an invalid selected Blind Box purchase assessable for repair', () => {
+  it('uses the complete-invalid sole-owner lifecycle artifact when the prefix cannot reach the Shop', () => {
     const purchase = createShopPurchaseAddress(pBiome, pOccurrenceIds.prebossShop, 'Boon');
     let project = createRepresentativeNOPProject();
     project = applyProjectCommand(project, catalog, {
@@ -168,7 +170,8 @@ describe('P core loop', () => {
       purchase,
       purchased: true,
     });
-    const evaluation = simulateProject(catalog, project);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const evaluation = assembly.evaluation;
     const surface = evaluation.routes.find((route) => route.routeKey === 'Surface');
     const p = surface?.biomes.find((biome) => biome.biomeKey === 'P');
 
@@ -176,11 +179,28 @@ describe('P core loop', () => {
       expect.objectContaining({ code: 'shopPurchaseUnavailable', origin: purchase }),
     );
     expect(p).toMatchObject({ authoring: 'complete', validity: 'invalid' });
+    const previous = surface?.biomes.find((biome) => biome.biomeKey === 'O');
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    const progressive =
+      previous?.authoring === 'complete' && plan !== undefined
+        ? evaluateProgressiveBiomeAssembly(catalog, pBiome, plan, 3, {
+            history: previous.history,
+            rewardBranches: previous.rewards.branches,
+          })
+        : null;
+    const shopOwner = createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop);
+    expect(progressive).not.toBeNull();
+    expect(progressive?.evaluation.blockedAt).toBeUndefined();
+    expect(progressive?.candidateArtifacts.roomLifecycles.shopAt(shopOwner)).toBeUndefined();
     expect(
-      createPreparedProjectCandidateSession(
-        catalog,
-        simulateProjectAssembly(catalog, project),
-      ).evaluate({
+      candidateArtifactsForProjectEvaluationAssembly(assembly)
+        .biomeAt(pBiome)
+        ?.roomLifecycles.shopAt(shopOwner),
+    ).toBeDefined();
+    expect(
+      createPreparedProjectCandidateSession(catalog, assembly).evaluate({
         kind: 'shopPurchase',
         purchase,
         purchased: false,

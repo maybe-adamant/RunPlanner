@@ -8,6 +8,10 @@ import {
   createEmptyRewardProducerCandidateArtifacts,
   type RewardProducerCandidateArtifacts,
 } from './rewards/producer-frontiers';
+import {
+  createEmptyRoomLifecycleCandidateArtifacts,
+  type RoomLifecycleCandidateArtifacts,
+} from './rewards/lifecycle-artifacts';
 
 /**
  * The room-target capability produced while one biome is evaluated.
@@ -23,6 +27,7 @@ export interface BiomeCandidateArtifacts {
   readonly origin: BiomeAddress;
   readonly roomTargets: RoomTargetCandidateArtifacts;
   readonly rewardProducers: RewardProducerCandidateArtifacts;
+  readonly roomLifecycles: RoomLifecycleCandidateArtifacts;
 }
 
 /** Candidate capabilities produced by the exact project simulation execution. */
@@ -50,8 +55,9 @@ export function createBiomeCandidateArtifacts(
   origin: BiomeAddress,
   roomTargets: RoomTargetCandidateArtifacts,
   rewardProducers: RewardProducerCandidateArtifacts,
+  roomLifecycles: RoomLifecycleCandidateArtifacts,
 ): BiomeCandidateArtifacts {
-  return Object.freeze({ origin, roomTargets, rewardProducers });
+  return Object.freeze({ origin, roomTargets, rewardProducers, roomLifecycles });
 }
 
 export function createEmptyBiomeCandidateArtifacts(origin: BiomeAddress): BiomeCandidateArtifacts {
@@ -59,6 +65,7 @@ export function createEmptyBiomeCandidateArtifacts(origin: BiomeAddress): BiomeC
     origin,
     createRoomTargetCandidateArtifacts(new Map()),
     createEmptyRewardProducerCandidateArtifacts(),
+    createEmptyRoomLifecycleCandidateArtifacts(),
   );
 }
 

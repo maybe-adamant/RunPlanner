@@ -75,6 +75,7 @@ describe('candidate session', () => {
     const session = createPreparedProjectCandidateSession(catalog, assembly, {
       observe: (event) => events.push(event),
     });
+    expect(events).toEqual([]);
     const store = createBatchRewardStoreAddress(fBiome, fDecision().source);
     const results = session.evaluate([
       {
@@ -154,12 +155,16 @@ describe('candidate session', () => {
     expect('candidateArtifacts' in assembly.evaluation).toBe(false);
     expect('candidateArtifactsForProjectEvaluationAssembly' in simulationPublic).toBe(false);
     expect('rewardProducerFrontier' in simulationPublic).toBe(false);
+    expect('roomLifecycleCandidateContexts' in simulationPublic).toBe(false);
+    expect('RoomLifecycleCandidateArtifacts' in simulationPublic).toBe(false);
     const publicBiome = assembly.evaluation.routes[0]?.biomes[0];
     if (publicBiome === undefined || !('rewards' in publicBiome)) {
       throw new Error('complete F assembly lost its public reward result');
     }
     expect('producerArtifacts' in publicBiome.rewards).toBe(false);
     expect('producerFrontiers' in publicBiome.rewards).toBe(false);
+    expect('lifecycleArtifacts' in publicBiome.rewards).toBe(false);
+    expect('lifecycleContexts' in publicBiome.rewards).toBe(false);
   });
 
   it('evaluates an authored incoming reward from its captured producer frontier', () => {
