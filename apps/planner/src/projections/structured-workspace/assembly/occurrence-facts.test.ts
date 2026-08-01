@@ -3,14 +3,8 @@ import { createOccurrenceId, type ProjectDocument } from '@run-planner/engine/au
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createGoldenFGHIProject,
-  goldenFOccurrenceId,
-} from '../../../../../../test/fixtures/authored-project';
-import {
-  createRepresentativeNOPQProject,
-  nOccurrenceId,
-} from '../../../../../../test/fixtures/authored-project';
+import { createGoldenFGHIProject, goldenFOccurrenceId } from '@run-planner/test-fixtures';
+import { createRepresentativeNOPQProject, nOccurrenceId } from '@run-planner/test-fixtures';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 

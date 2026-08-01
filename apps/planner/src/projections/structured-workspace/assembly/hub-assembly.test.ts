@@ -19,7 +19,7 @@ import {
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import { assembleWorkspaceHub } from './hub-assembly';
 import {
   assembleWorkspaceOccurrence,

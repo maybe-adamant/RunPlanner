@@ -15,11 +15,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createRepresentativeNOProject,
-  oBiome,
-  oOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
+import { createRepresentativeNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures';
 
 function evaluateO(project = createRepresentativeNOProject()) {
   const evaluation = simulateProject(catalog, project);

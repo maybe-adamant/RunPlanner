@@ -10,10 +10,7 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createGoldenFGHIProject,
-  goldenHBiome,
-} from '../../../../../../test/fixtures/authored-project';
+import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures';
 import { createWorkspaceFieldsActiveCageCounts } from './fields-cage-counts';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 

@@ -8,11 +8,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createRepresentativeNOPQProject,
-  nBiome,
-  nOccurrenceId,
-} from '../../../../../test/fixtures/authored-project';
+import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
 import { expectedWorkspaceLeafRequirements } from './expected-leaves';
 
 describe('structured workspace test expectations', () => {

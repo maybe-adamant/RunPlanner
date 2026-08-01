@@ -33,7 +33,7 @@ import {
   goldenGOccurrenceId,
   goldenHBiome,
   goldenIBiome,
-} from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,
   oBiome,
@@ -42,7 +42,7 @@ import {
   pOccurrenceId,
   qBiome,
   qOccurrenceIds,
-} from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 
 function source(occurrenceId: OccurrenceId) {
   return { kind: 'occurrence' as const, occurrenceId };

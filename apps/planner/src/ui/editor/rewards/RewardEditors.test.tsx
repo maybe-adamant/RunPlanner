@@ -24,15 +24,8 @@ import type {
 import type { WorkspaceInteractionCatalog } from '../../../projections/structured-workspace';
 import type { StructuredWorkspaceProjectionService } from '../../../projections/structured-workspace';
 import { createStructuredWorkspaceTestServices } from '../../../../test/fixtures/structuredWorkspace';
-import {
-  createRepresentativeNOProject,
-  oBiome,
-  oOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
-import {
-  createGoldenFGHIProject,
-  targetOccurrenceId,
-} from '../../../../../../test/fixtures/authored-project';
+import { createRepresentativeNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures';
+import { createGoldenFGHIProject, targetOccurrenceId } from '@run-planner/test-fixtures';
 import {
   authoredProjectCommandDispatched,
   authoredProjectRedoRequested,

@@ -19,7 +19,7 @@ import {
   nOccurrenceIds,
   pBiome,
   pOccurrenceId,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import { assembleWorkspaceBiomeSemantics } from './biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
 

@@ -10,10 +10,7 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createRepresentativeNProject,
-  nOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
+import { createRepresentativeNProject, nOccurrenceIds } from '@run-planner/test-fixtures';
 
 function completeN() {
   const project = createRepresentativeNProject();

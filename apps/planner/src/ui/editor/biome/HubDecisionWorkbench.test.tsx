@@ -21,11 +21,11 @@ import {
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import {
   renderHubDecisionWorkbench,
   renderStaticHubDecisionWorkbench,
-} from './workbenchTestHarness';
+} from '@planner-test/support/biome-workbench';
 
 afterEach(() => {
   cleanup();

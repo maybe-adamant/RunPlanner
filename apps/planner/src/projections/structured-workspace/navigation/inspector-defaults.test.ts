@@ -18,13 +18,13 @@ import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import {
   createStructuredWorkspaceTestServices,
   requireWorkspaceBiome,

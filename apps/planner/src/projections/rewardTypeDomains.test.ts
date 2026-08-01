@@ -12,7 +12,7 @@ import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/eng
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject } from '../../../../test/fixtures/authored-project';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,
   nBiome,
@@ -21,7 +21,7 @@ import {
   oOccurrenceIds,
   pBiome,
   qBiome,
-} from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import { createCandidateSessionFactory } from './candidateProjection';
 
 function plan(project: ProjectDocument, routeKey: string, biomeKey: string): AuthoredBiomePlan {

@@ -20,7 +20,7 @@ import {
   createRepresentativeNProject,
   nBiome,
   nOccurrenceId,
-} from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 import {
   createCompleteFGProject,
   createGoldenFGHIProject,
@@ -31,7 +31,7 @@ import {
   goldenGOccurrenceId,
   goldenGStartId,
   goldenIBiome,
-} from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 
 function route(project: ProjectDocument, routeKey: string) {
   const result = simulateProject(catalog, project);

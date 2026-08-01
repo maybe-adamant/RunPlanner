@@ -1,5 +1,4 @@
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
-/* eslint-disable react-refresh/only-export-components -- Test harnesses intentionally export render helpers beside their private projection component. */
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configureStore } from '@reduxjs/toolkit';
@@ -7,7 +6,10 @@ import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { createApplication, type PlannerApplication } from '../../../composition/createApplication';
+import {
+  createApplication,
+  type PlannerApplication,
+} from '../../src/composition/createApplication';
 import type {
   StructuredWorkspaceProjection,
   WorkspaceAuthoringFrontier,
@@ -17,20 +19,20 @@ import type {
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOrdinaryBatchNode,
   WorkspaceTakeoverBatchNode,
-} from '../../../projections/structured-workspace';
-import { createEditorSessionReducer } from '../../../state/editorSessionSlice';
-import { authoredProjectReplaced } from '../../../state/projectWorkspaceSlice';
-import { useAppSelector } from '../../../state/store';
-import { projectStructuredWorkspaceFixture } from '../../../../test/fixtures/structuredWorkspace';
-import { BiomeWorkspace } from './BiomeWorkspace';
+} from '../../src/projections/structured-workspace';
+import { createEditorSessionReducer } from '../../src/state/editorSessionSlice';
+import { authoredProjectReplaced } from '../../src/state/projectWorkspaceSlice';
+import { useAppSelector } from '../../src/state/store';
+import { BiomeWorkspace } from '../../src/ui/editor/biome/BiomeWorkspace';
 import {
   AuthoringFrontier,
   BatchWorkbench,
   LinkedExitWorkbench,
   TopologyRemovalAction,
-} from './DecisionWorkbench';
-import { HubDecisionWorkbench } from './HubDecisionWorkbench';
-import { OccurrenceWorkbench } from './OccurrenceWorkbench';
+} from '../../src/ui/editor/biome/DecisionWorkbench';
+import { HubDecisionWorkbench } from '../../src/ui/editor/biome/HubDecisionWorkbench';
+import { OccurrenceWorkbench } from '../../src/ui/editor/biome/OccurrenceWorkbench';
+import { projectStructuredWorkspaceFixture } from '../fixtures/structuredWorkspace';
 
 interface ProjectedHarnessProps {
   readonly application: PlannerApplication;

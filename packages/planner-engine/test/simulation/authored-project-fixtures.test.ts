@@ -15,7 +15,7 @@ import {
   nFixedOccurrenceIds,
   nOccurrenceIds,
   nVisitSlotKeys,
-} from '../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 
 function authoredDocumentDigest(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');

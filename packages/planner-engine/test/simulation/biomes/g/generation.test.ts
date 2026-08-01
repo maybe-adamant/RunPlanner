@@ -21,7 +21,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
   goldenGStartId,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 
 function completeG(project = createCompleteFGProject()) {
   const result = simulateProject(catalog, project);

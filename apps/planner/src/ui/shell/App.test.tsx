@@ -23,7 +23,7 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '../../state/projectWorkspaceSlice';
-import { createRepresentativeNOPQProject } from '../../../../../test/fixtures/authored-project';
+import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 import { App } from './App';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
 

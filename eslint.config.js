@@ -54,6 +54,12 @@ const workspacePrivateFamilyImports = {
   inspector: ['**/inspector-defaults', '**/inspector-destinations'],
   markers: ['**/marker-builder', '**/marker-ownership'],
 };
+const testSupportImportPatterns = [
+  {
+    group: ['@planner-test', '@planner-test/**', '@run-planner/test-fixtures'],
+    message: 'Production source must not import test fixtures or test support.',
+  },
+];
 
 export default tseslint.config(
   {
@@ -86,6 +92,18 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.flat.recommended.rules,
       ...reactRefresh.configs.vite.rules,
+    },
+  },
+  {
+    files: ['apps/*/src/**/*.{ts,tsx}', 'packages/*/src/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: testSupportImportPatterns,
+        },
+      ],
     },
   },
   {

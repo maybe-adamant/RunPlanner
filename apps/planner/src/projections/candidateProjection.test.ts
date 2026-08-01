@@ -13,7 +13,7 @@ import {
 import { simulateProject, type ProjectCandidateEvaluation } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createGoldenFGHIProject } from '../../../../test/fixtures/authored-project';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures';
 import { candidateSupport, createCandidateSessionFactory } from './candidateProjection';
 
 const candidateTarget = createTargetAddress(

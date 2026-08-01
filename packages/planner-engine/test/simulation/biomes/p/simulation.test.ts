@@ -20,7 +20,7 @@ import {
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
-} from '../../../../../../test/fixtures/authored-project';
+} from '@run-planner/test-fixtures';
 
 function completeP() {
   const evaluation = simulateProject(catalog, createRepresentativeNOPProject());
