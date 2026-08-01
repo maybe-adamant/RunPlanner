@@ -8,7 +8,7 @@ export type {
   StructuredWorkspaceProjection,
   StructuredWorkspaceProjectionService,
   WorkspaceAuthoringFrontier,
-  WorkspaceBatchRepairScope,
+  WorkspaceBatchRepairIntent,
   WorkspaceBiome,
   WorkspaceBiomeField,
   WorkspaceCandidateInteraction,

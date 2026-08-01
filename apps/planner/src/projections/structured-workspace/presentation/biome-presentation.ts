@@ -282,6 +282,7 @@ export function presentWorkspaceBiome(
     label: semantic.label,
     marker: semantic.marker,
     nodes: semantic.nodes,
+    owner: semantic.biome,
     rail,
     source: semantic.source,
     status: semantic.status,

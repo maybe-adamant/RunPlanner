@@ -454,7 +454,6 @@ function bindHubInteractions(
                 (loaded ??= candidates.hubSlots(slot.owner, slot.openedOccurrenceId, values));
               return Object.freeze({
                 choices: slot.choices,
-                impact: closeRequirement.impact,
                 intentFor: (open: false) => {
                   assertCandidateMayBeAuthored(load(), open, `Hub slot ${key} closure`);
                   return Object.freeze({
@@ -534,7 +533,17 @@ function bindTopologyRemovalInteractions(
           `${removal.key} has multiple bound topology-removal interactions`,
         );
       }
-      topologyRemovals.set(removal.key, removal);
+      topologyRemovals.set(
+        removal.key,
+        Object.freeze({
+          intent: Object.freeze({
+            command: removal.command,
+            focus: Object.freeze({ owner: removal.owner, timing: 'before' as const }),
+          }),
+          key: removal.key,
+          owner: removal.owner,
+        }),
+      );
     }
   }
   return topologyRemovals;
@@ -699,7 +708,6 @@ function bindTakeoverBatchInteractions(
                 focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
               });
             },
-            ...(requirement.impact === undefined ? {} : { impact: requirement.impact }),
             key,
             load,
             owner: requirement.owner,

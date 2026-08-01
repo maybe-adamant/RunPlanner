@@ -237,27 +237,13 @@ export interface WorkspaceExitFrontierCapabilities {
   readonly takeover?: true;
 }
 
-export interface WorkspaceTopologyRemovalScope {
-  readonly removedDecisionOwners: readonly ExitDecisionAddress[];
-  readonly removedHubDecisionKeys: readonly string[];
-  readonly removedOccurrenceIds: readonly OccurrenceId[];
+export interface WorkspaceTopologyRemovalInteraction {
+  readonly intent: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ClearTopology' | 'RemoveExitDecision' }>
+  >;
+  readonly key: string;
+  readonly owner: BiomeAddress | ExitDecisionAddress;
 }
-
-export type WorkspaceTopologyRemovalInteraction =
-  | {
-      readonly action: 'clearTopology';
-      readonly command: Extract<ProjectCommand, { readonly kind: 'ClearTopology' }>;
-      readonly impact: WorkspaceTopologyRemovalScope;
-      readonly key: string;
-      readonly owner: BiomeAddress;
-    }
-  | {
-      readonly action: 'removeExitDecision';
-      readonly command: Extract<ProjectCommand, { readonly kind: 'RemoveExitDecision' }>;
-      readonly impact: WorkspaceTopologyRemovalScope;
-      readonly key: string;
-      readonly owner: ExitDecisionAddress;
-    };
 
 /** A visible stage can carry removal for its hidden source decision. */
 export interface WorkspaceStageDecisionRemoval {
@@ -280,7 +266,6 @@ export interface WorkspaceHubSlotOpeningAttempt extends WorkspaceCandidateIntera
 }
 
 export interface WorkspaceHubSlotCloseInteraction extends WorkspaceCandidateInteraction<boolean> {
-  readonly impact: WorkspaceTopologyRemovalScope;
   readonly intentFor: (
     open: false,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'CloseHubSlot' }>>;
@@ -313,7 +298,6 @@ export type WorkspaceHubVisitInteraction = WorkspaceCandidateInteraction<string>
 
 interface WorkspaceTakeoverBatchInteractionBase {
   readonly action: 'create' | 'replace' | 'reconcile';
-  readonly impact?: WorkspaceTakeoverReplacementImpact;
   readonly key: string;
   readonly owner: ExitDecisionAddress;
 }
@@ -618,20 +602,9 @@ export type WorkspaceMissingTargetAuthoring =
       readonly message: string;
     };
 
-interface WorkspaceBatchRepairScopeBase {
-  readonly owner: ExitDecisionAddress;
-  readonly removedDecisionOwners: readonly ExitDecisionAddress[];
-  readonly removedOccurrenceIds: readonly OccurrenceId[];
-}
-
-export type WorkspaceBatchRepairScope =
-  | (WorkspaceBatchRepairScopeBase & {
-      readonly command: Extract<ProjectCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>;
-      readonly commandKind: 'ReconcileBatchExitCapacity';
-    })
-  | (WorkspaceBatchRepairScopeBase & {
-      readonly commandKind: 'ReconcileTakeoverBatch';
-    });
+export type WorkspaceBatchRepairIntent = WorkspaceCommandIntent<
+  Extract<ProjectCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>
+>;
 
 export interface WorkspaceMissingPhysicalTarget {
   readonly authoring: WorkspaceMissingTargetAuthoring;
@@ -648,14 +621,6 @@ export interface WorkspaceFieldsBatchContext {
     readonly fieldsMaxDoorsRolled: number;
     readonly maxDoorCageCeiling: number;
   };
-}
-
-export interface WorkspaceTakeoverReplacementImpact {
-  readonly command: 'ReplaceWithTakeoverBatch';
-  readonly owner: ExitDecisionAddress;
-  readonly removedDecisionOwners: readonly ExitDecisionAddress[];
-  readonly removedOccurrenceIds: readonly OccurrenceId[];
-  readonly replacedOccurrenceIds: readonly OccurrenceId[];
 }
 
 export interface WorkspaceLinkedExitNode {
@@ -675,7 +640,7 @@ interface WorkspaceBatchNodeBase {
   readonly marker: WorkspaceMarker;
   readonly missingTargets: readonly WorkspaceMissingPhysicalTarget[];
   readonly owner: ExitDecisionAddress;
-  readonly repairScope?: WorkspaceBatchRepairScope;
+  readonly repairIntent?: WorkspaceBatchRepairIntent;
   readonly rewardStore?: WorkspaceMarker;
   readonly selection: WorkspaceMarker;
   readonly source: ExitDecisionSourceAddress;
@@ -876,6 +841,7 @@ export interface WorkspaceBiome {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly nodes: readonly WorkspaceNode[];
+  readonly owner: BiomeAddress;
   readonly rail: readonly WorkspaceRailEntry[];
   readonly source: WorkspaceProjectionSource;
   readonly status: WorkspaceStatus;

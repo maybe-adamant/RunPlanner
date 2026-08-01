@@ -11,7 +11,7 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
-  type WorkspaceBatchRepairScope,
+  type WorkspaceBatchRepairIntent,
   type WorkspaceExitSelectionInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceLinkedExitNode,
@@ -98,21 +98,13 @@ function roomStatus(target: WorkspacePhysicalTarget): string {
   return target.nextPath === 'startsCompletion' ? 'Preboss route' : 'Generated offer';
 }
 
-function ExactRepairScope({ scope }: { readonly scope: WorkspaceBatchRepairScope }) {
-  const dispatch = useAppDispatch();
-  if (scope.commandKind === 'ReconcileTakeoverBatch') {
-    return null;
-  }
+function ExactRepairAction({ intent }: { readonly intent: WorkspaceBatchRepairIntent }) {
+  const executeIntent = useCommandIntent();
   return (
     <button
       className="secondary-action"
-      data-command={scope.commandKind}
-      onClick={() =>
-        (() => {
-          dispatch(semanticOwnerFocused(scope.owner));
-          dispatch(authoredProjectCommandDispatched(scope.command));
-        })()
-      }
+      data-command={intent.command.kind}
+      onClick={() => executeIntent(intent)}
       type="button"
     >
       Reconcile unavailable exits
@@ -121,8 +113,8 @@ function ExactRepairScope({ scope }: { readonly scope: WorkspaceBatchRepairScope
 }
 
 /**
- * The domain owns removal impact and supplies the semantic command. This
- * renderer dispatches that command without deriving descendant scope itself.
+ * The interaction supplies one complete removal intent. This renderer keeps
+ * danger presentation while deriving no descendant scope or focus policy.
  */
 export function TopologyRemovalAction({
   interaction,
@@ -131,15 +123,12 @@ export function TopologyRemovalAction({
   readonly interaction: WorkspaceTopologyRemovalInteraction;
   readonly label: string;
 }) {
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   return (
-    <div className="topology-removal-action" data-command={interaction.command.kind}>
+    <div className="topology-removal-action" data-command={interaction.intent.command.kind}>
       <button
         className="danger-action"
-        onClick={() => {
-          dispatch(semanticOwnerFocused(interaction.owner));
-          dispatch(authoredProjectCommandDispatched(interaction.command));
-        }}
+        onClick={() => executeIntent(interaction.intent)}
         type="button"
       >
         {label}
@@ -219,7 +208,7 @@ function TargetRow({
         ) : !replaceable ? (
           <p className="fixed-room-state">
             {target.physicalState === 'unavailable'
-              ? 'This retained exit is unavailable. Reconcile the projected repair scope first.'
+              ? 'This retained exit is unavailable. Reconcile unavailable exits first.'
               : 'This exit cannot be replaced.'}
           </p>
         ) : (
@@ -609,7 +598,7 @@ export function BatchWorkbench({
       : interactions.takeoverBatches.get(workspaceInteractionKey(node.owner));
   const takeover =
     projectedTakeover?.presentation === 'repair' &&
-    node.repairScope === undefined &&
+    node.targets.every((target) => target.physicalState !== 'unavailable') &&
     node.missingTargets.length === 0
       ? undefined
       : projectedTakeover;
@@ -668,7 +657,7 @@ export function BatchWorkbench({
           ))
         )}
       </div>
-      {node.repairScope === undefined ? null : <ExactRepairScope scope={node.repairScope} />}
+      {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
       <TopologyRemovalAction interaction={removal} label="Remove decision" />
       {nextFrontier === undefined ? null : (

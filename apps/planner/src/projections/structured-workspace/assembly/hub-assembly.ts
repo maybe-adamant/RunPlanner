@@ -4,7 +4,6 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createOccurrenceAddress,
-  describeHubSlotClosureImpact,
   semanticAddressKey,
   type BiomeAddress,
   type BiomeTopology,
@@ -33,7 +32,6 @@ import type {
 import { workspaceHubMainRewardMarker } from '../navigation/marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
-import { workspaceTopologyRemovalScope } from './topology-presentation';
 
 /**
  * The Hub board owns its slots, visits, room-local workbenches, and the
@@ -113,22 +111,12 @@ function projectHubNode(
     const target = targets.get(slot.slotKey);
     const occurrence = target === undefined ? undefined : occurrences.get(target.occurrenceId);
     const address = createHubSlotAddress(biome, descriptor.hubKey, slot.slotKey);
-    const closeImpact =
-      boardAuthored && target !== undefined && topology !== null
-        ? describeHubSlotClosureImpact(
-            topology,
-            descriptor.hubKey,
-            slot.slotKey,
-            descriptor.openCount.min,
-          )
-        : undefined;
     const close =
-      closeImpact === undefined
-        ? undefined
-        : Object.freeze({
+      boardAuthored && target !== undefined
+        ? Object.freeze({
             command: Object.freeze({ kind: 'CloseHubSlot' as const, slot: address }),
-            impact: workspaceTopologyRemovalScope(biome, closeImpact),
-          });
+          })
+        : undefined;
     const slotMarker = markerDestinations.marker(address);
     const occurrenceAssembly =
       occurrence === undefined

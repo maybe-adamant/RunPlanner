@@ -1,7 +1,5 @@
 import {
   createExitDecisionAddress,
-  describeClearTopologyImpact,
-  describeExitDecisionRemovalImpact,
   fixedWidthOneTakeoverForLayout,
   fixedWidthOneTakeoverTransitionForSource,
   semanticAddressKey,
@@ -13,11 +11,7 @@ import {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { evaluateBiomeCompleteness } from '@run-planner/engine/simulation';
 
-import {
-  StructuredWorkspaceProjectionContractError,
-  type WorkspaceTakeoverReplacementImpact,
-  type WorkspaceTopologyRemovalInteraction,
-} from '../contract';
+import { StructuredWorkspaceProjectionContractError } from '../contract';
 import {
   workspaceTakeoverInteractionRequirementKey,
   type WorkspaceFrontierInteractionRequirement,
@@ -27,11 +21,7 @@ import {
 } from '../interactions/interaction-requirements';
 import { workspaceRoomTakesOverNormalDoors } from './room-policy';
 import type { WorkspaceBiomeSource } from '../source-index';
-import {
-  workspaceDeclaredPhysicalExitKeys,
-  workspaceRemovalScopeForRoots,
-  workspaceTopologyRemovalScope,
-} from './topology-presentation';
+import { workspaceDeclaredPhysicalExitKeys } from './topology-presentation';
 
 /**
  * All topology-owned workspace products for one biome. It intentionally keeps
@@ -76,11 +66,9 @@ function topologyRemovalInteractionRequirements(
   const { biome, plan } = input.source;
   const topology = plan.topology;
   if (topology === null) return Object.freeze([]);
-  const removals: WorkspaceTopologyRemovalInteraction[] = [
+  const removals: WorkspaceTopologyRemovalInteractionRequirement['removals'][number][] = [
     Object.freeze({
-      action: 'clearTopology' as const,
       command: Object.freeze({ kind: 'ClearTopology' as const, biome }),
-      impact: workspaceTopologyRemovalScope(biome, describeClearTopologyImpact(topology)),
       key: semanticAddressKey(biome),
       owner: biome,
     }),
@@ -88,13 +76,9 @@ function topologyRemovalInteractionRequirements(
   for (const decision of topology.decisions) {
     if (decision.kind === 'hub') continue;
     const owner = createExitDecisionAddress(biome, decision.source);
-    const impact = describeExitDecisionRemovalImpact(topology, decision.source);
-    if (impact === undefined) continue;
     removals.push(
       Object.freeze({
-        action: 'removeExitDecision' as const,
         command: Object.freeze({ kind: 'RemoveExitDecision' as const, decision: owner }),
-        impact: workspaceTopologyRemovalScope(biome, impact),
         key: semanticAddressKey(owner),
         owner,
       }),
@@ -194,29 +178,6 @@ function declaredTakeoverExitKeys(
   return workspaceDeclaredPhysicalExitKeys(catalog, source.layout, source.plan, decisionSource);
 }
 
-function takeoverReplacementImpact(
-  source: WorkspaceBiomeSource,
-  decision: ExitDecision,
-): WorkspaceTakeoverReplacementImpact | undefined {
-  if (decision.normal.kind !== 'batch') return undefined;
-  const replacedOccurrenceIds = new Set(
-    decision.normal.targets.map((target) => target.occurrenceId),
-  );
-  const removal = workspaceRemovalScopeForRoots(source.biome, source.plan, replacedOccurrenceIds);
-  if (removal === undefined) return undefined;
-  return Object.freeze({
-    command: 'ReplaceWithTakeoverBatch',
-    owner: createExitDecisionAddress(source.biome, decision.source),
-    removedDecisionOwners: removal.removedDecisionOwners,
-    removedOccurrenceIds: removal.removedOccurrenceIds,
-    replacedOccurrenceIds: Object.freeze(
-      source.plan.topology?.occurrences
-        .filter((occurrence) => replacedOccurrenceIds.has(occurrence.occurrenceId))
-        .map((occurrence) => occurrence.occurrenceId) ?? [],
-    ),
-  });
-}
-
 function takeoverRequirementForOwner(
   requirements: ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement>,
   owner: ExitDecisionAddress,
@@ -282,14 +243,11 @@ function takeoverInteractionRequirements(
     }
     if (layout.progression.kind !== 'generated' || fixedWidthOneTakeover !== undefined) continue;
     if (candidateGameNames === undefined) continue;
-    const impact =
-      decision.normal.kind === 'batch' ? takeoverReplacementImpact(source, decision) : undefined;
     add(
       Object.freeze({
         action: decision.normal.kind === 'batch' ? ('replace' as const) : ('create' as const),
         existingTargets,
         gameNames: candidateGameNames,
-        ...(impact === undefined ? {} : { impact }),
         kind: 'takeoverBatch' as const,
         owner,
         presentation: 'candidate' as const,
