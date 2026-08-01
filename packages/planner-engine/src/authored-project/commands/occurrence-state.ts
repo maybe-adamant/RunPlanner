@@ -7,12 +7,9 @@ import type {
   ProjectDocument,
   RoomOccurrence,
 } from '../model';
-import {
-  createDefaultRoomState,
-  reconcileReplacementRoomState,
-  type RoomOccurrenceRole,
-  type RoomStateContext,
-} from '../roomState';
+import type { RoomOccurrenceRole, RoomStateContext } from '../room-state/declaration';
+import { createDefaultRoomState } from '../room-state/defaults';
+import { reconcileReplacementRoomState } from '../room-state/replacement';
 import { selectedOrdinaryBatchIndex } from '../topology';
 
 import {

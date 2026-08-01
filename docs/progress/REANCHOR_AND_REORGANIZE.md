@@ -1963,6 +1963,18 @@ the executable authored baseline for these review units.
 - preserve complete defaults, declaration-compatible leaf retention, dormant
   Shop inventory, Ephyra side-room ownership, and exact decode paths/errors.
 
+##### C1 completion record (2026-08-01)
+
+`roomState.ts` has been replaced by four direct internal owners: the shared
+declaration contract, complete default construction, replacement
+reconciliation, and the path-aware persisted codec. The only three authored
+consumers import those owners directly, and the authored public barrel no
+longer exposes their implementation symbols or context types. Focused owner
+suites now hold the complete defaults, compatible-replacement, dormant-Shop,
+Ephyra, and exact malformed-leaf matrices; command tests retain only their
+topology-command boundary witnesses. No room-state barrel, facade,
+compatibility path, or second topology model was introduced.
+
 #### C2: Narrow topology queries (one review unit)
 
 - replace the mixed `topology.ts` location with a codec module and a query

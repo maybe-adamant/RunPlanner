@@ -129,10 +129,3 @@ export {
   type ShopState,
 } from './model';
 export { createInitialBiomeState, decodeBiomeState } from './biomeState';
-export {
-  createDefaultRoomState,
-  decodeRoomState,
-  reconcileReplacementRoomState,
-  type RoomOccurrenceRole,
-  type RoomStateContext,
-} from './roomState';

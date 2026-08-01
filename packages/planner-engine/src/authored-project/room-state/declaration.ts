@@ -1,0 +1,98 @@
+import type {
+  Catalog,
+  LocalChildDescriptor,
+  RewardWheelOfferPoint,
+  RoomDeclaration,
+} from '../../catalog-schema';
+import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
+import { failProjectDocument } from '../validation';
+
+export type RoomOccurrenceRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
+
+export interface RoomStateContext {
+  readonly role: RoomOccurrenceRole;
+  readonly resolvedStoreKey?: string;
+  readonly entryActive: boolean;
+}
+
+export function authoredTemplateKey(room: RoomDeclaration, path: string) {
+  if (room.mode.kind !== 'authored') {
+    failProjectDocument(path, `${room.gameName} is layout-derived and owns no authored room state`);
+  }
+  return room.mode.templateKey;
+}
+
+export function requireOrdinaryRole(
+  role: RoomOccurrenceRole,
+  room: RoomDeclaration,
+  path: string,
+): void {
+  if (role !== 'ordinary') {
+    failProjectDocument(
+      path,
+      `${authoredTemplateKey(room, path)} cannot use preboss offer role ${role}`,
+    );
+  }
+}
+
+export function requireCountedBinding(room: RoomDeclaration, path: string): CountedRewardBinding {
+  if (room.incomingReward.kind !== 'countedChoice') {
+    failProjectDocument(
+      path,
+      `${authoredTemplateKey(room, path)} requires a counted reward binding`,
+    );
+  }
+  return room.incomingReward;
+}
+
+export function requireShopBinding(room: RoomDeclaration, path: string): ShopRewardBinding {
+  if (room.incomingReward.kind !== 'shop') {
+    failProjectDocument(path, `${authoredTemplateKey(room, path)} requires a shop binding`);
+  }
+  return room.incomingReward;
+}
+
+export function requireFieldsCages(
+  room: RoomDeclaration,
+  path: string,
+): LocalChildDescriptor & {
+  readonly kind: 'boundedRewardSlots';
+} {
+  const cages = room.localChildren.find((child) => child.key === 'cages');
+  if (cages?.kind !== 'boundedRewardSlots') {
+    failProjectDocument(path, 'FieldsCombat requires bounded cages');
+  }
+  return cages;
+}
+
+export function requireShipCombatWheels(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  path: string,
+): readonly RewardWheelOfferPoint[] {
+  const profile = catalog.encounterProfiles.byKey[room.encounterProfileKey];
+  if (profile === undefined) {
+    failProjectDocument(path, `unknown encounter profile ${room.encounterProfileKey}`);
+  }
+  const wheels = profile.phases.flatMap((phase) =>
+    phase.offerPoint === undefined ? [] : [phase.offerPoint],
+  );
+  if (wheels.length !== 2 || wheels[0]?.key !== 'wheel1' || wheels[1]?.key !== 'wheel2') {
+    failProjectDocument(path, 'ShipCombat requires wheel1 and wheel2 offer points');
+  }
+  return wheels;
+}
+
+export function requireEphyraSideRooms(
+  room: RoomDeclaration,
+  path: string,
+): Extract<LocalChildDescriptor, { readonly kind: 'fixedRoomSlots' }> | undefined {
+  const descriptor = room.localChildren[0];
+  if (descriptor === undefined) {
+    return undefined;
+  }
+  if (room.localChildren.length !== 1 || descriptor.kind !== 'fixedRoomSlots') {
+    failProjectDocument(path, 'EphyraCombat requires at most one fixed-room side group');
+  }
+  return descriptor;
+}

@@ -20,7 +20,8 @@ import type {
   ProjectDocument,
   RoomOccurrence,
 } from '../model';
-import { createDefaultRoomState, type RoomOccurrenceRole } from '../roomState';
+import type { RoomOccurrenceRole } from '../room-state/declaration';
+import { createDefaultRoomState } from '../room-state/defaults';
 import { replaceBiomeStateField } from '../biomeState';
 import { declaredPhysicalExitKeys, selectedOrdinaryBatchIndex } from '../topology';
 import {
