@@ -3,12 +3,12 @@ import { createProjectDocument, type ProjectDocument } from '@run-planner/engine
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject } from '../../../../test/fixtures/underworldProject';
+import { createGoldenFGHIProject } from '../../../../../../test/fixtures/authored-project';
 import {
   appendCompleteN,
   nOccurrenceId,
   nVisitSlotKeys,
-} from '../../../../test/fixtures/surfaceProject';
+} from '../../../../../../test/fixtures/authored-project';
 import type { WorkspaceBiome, WorkspaceRailEntry } from '../contract';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
 import { presentWorkspaceBiome } from './biome-presentation';
@@ -115,7 +115,7 @@ describe('structured workspace biome presentation', () => {
   });
 
   it('uses the generated semantic rail policy for ordinary decisions and exact destinations', () => {
-    const { assembly, presentation } = present(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const { assembly, presentation } = present(createGoldenFGHIProject(), 'Underworld', 'F');
     const decision = presentation.biome.nodes.find(
       (
         node,

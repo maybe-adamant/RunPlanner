@@ -28,11 +28,11 @@ import {
   createRepresentativeNOProject,
   oBiome,
   oOccurrenceIds,
-} from '../../../../test/fixtures/surfaceProject';
+} from '../../../../../../test/fixtures/authored-project';
 import {
   createGoldenFGHIProject,
   targetOccurrenceId,
-} from '../../../../test/fixtures/underworldProject';
+} from '../../../../../../test/fixtures/authored-project';
 import {
   authoredProjectCommandDispatched,
   authoredProjectRedoRequested,
@@ -144,7 +144,7 @@ function renderStoreReward(
 
 describe('reward editor projections', () => {
   it('renders one compact summary without leaking game source names', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const markup = renderToStaticMarkup(
       <RewardValueEditor
         candidateOwner={{ kind: 'incomingReward', address: firstReward }}
@@ -169,7 +169,7 @@ describe('reward editor projections', () => {
   });
 
   it('renders the producer-resolved reward domain instead of the binding union', async () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const room = catalog.rooms.byKey.F_Combat03;
     if (room?.incomingReward.kind !== 'countedChoice') {
       throw new Error('F_Combat03 counted reward binding is missing');
@@ -196,7 +196,7 @@ describe('reward editor projections', () => {
 
   it('renders the typed explanation for a selected-invalid reward', async () => {
     const maxHealth = { rewardType: 'MaxHealthDrop' } as const;
-    let project = createGoldenFGHIProject(catalog);
+    let project = createGoldenFGHIProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: firstReward,
@@ -222,7 +222,7 @@ describe('reward editor projections', () => {
   });
 
   it('keeps a pending interaction open and exposes an explicit cancel action', async () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const pending = deferredHostYield();
     const user = userEvent.setup();
     renderReward({
@@ -240,7 +240,7 @@ describe('reward editor projections', () => {
   });
 
   it('commits a payload-free reward immediately after its type is chosen', async () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const maxHealth = { rewardType: 'MaxHealthDrop' } as const;
     const onReplace = vi.fn();
     const user = userEvent.setup();
@@ -262,7 +262,7 @@ describe('reward editor projections', () => {
   });
 
   it('commits one complete Boon through keyboard-focused compound steps', async () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const apollo = {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
@@ -296,7 +296,7 @@ describe('reward editor projections', () => {
   });
 
   it('ignores a stale projection failure after the project identity changes', async () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const pending = deferredHostYield();
     const selected = { rewardType: 'MaxHealthDrop' } as const;
     const renderEditor = (interactions: WorkspaceInteractionCatalog) => (
@@ -329,7 +329,7 @@ describe('reward editor projections', () => {
   });
 
   it('ignores a stale projection failure after the producer context changes', async () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const pending = deferredHostYield();
     const staleInteractions = interactionsFor(project, {
       yieldToHost: () => pending.promise,
@@ -357,7 +357,7 @@ describe('reward editor projections', () => {
   });
 
   it('does not resurrect a completed stale interaction when its context returns', async () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const pending = deferredHostYield();
     const selected = { rewardType: 'MaxHealthDrop' } as const;
     const staleInteractions = interactionsFor(project, {
@@ -388,7 +388,7 @@ describe('reward editor projections', () => {
   });
 
   it('rejects stale reward work across edit, undo, redo, and profile replacement', async () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const pending = deferredHostYield();
     const { structuredWorkspace } = createStructuredWorkspaceTestServices({
       yieldToHost: () => pending.promise,
@@ -442,7 +442,7 @@ describe('reward editor projections', () => {
   });
 
   it('labels a Blind Box source as an eventual result', async () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const blindBox = {
       rewardType: 'BlindBoxLoot',
       payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },

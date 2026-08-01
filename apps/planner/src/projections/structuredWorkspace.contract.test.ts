@@ -26,12 +26,12 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createGoldenFGHIProject, goldenFBiome } from '../../test/fixtures/underworldProject';
+import { createGoldenFGHIProject, goldenFBiome } from '../../../../test/fixtures/authored-project';
 import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
-} from '../../test/fixtures/surfaceProject';
+} from '../../../../test/fixtures/authored-project';
 import {
   assertAuthoredWorkspaceTopologyClosure,
   assertExpectedWorkspaceLeafClosure,
@@ -154,7 +154,7 @@ function nHub(snapshot: CanonicalBiome): CanonicalHubDecision {
 
 describe('structured workspace overlay contract', () => {
   it('rejects duplicate authored topology identities before materialization', () => {
-    const fProject = createGoldenFGHIProject(catalog);
+    const fProject = createGoldenFGHIProject();
     const fEvaluation = simulateProject(catalog, fProject);
     const duplicateOccurrence = withMalformedAuthoredBiome(fProject, 'Underworld', 'F', (plan) => {
       const topology = plan.topology;
@@ -215,7 +215,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('rejects an evaluator-only decision instead of rendering it as authored UI', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const evaluation = simulateProject(catalog, project);
     const malformed = withMalformedFSnapshot(evaluation, (snapshot) => {
       const batch = fBatch(snapshot);
@@ -243,7 +243,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('rejects an evaluator-only target instead of adding an extra editable room', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const evaluation = simulateProject(catalog, project);
     const malformed = withMalformedFSnapshot(evaluation, (snapshot) => {
       const batch = fBatch(snapshot);
@@ -310,7 +310,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('rejects a fine-grained finding without an exact workspace destination', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const evaluation = simulateProject(catalog, project);
     const finding = {
       code: 'shopPurchaseUnavailable',
@@ -438,7 +438,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('independently closes persisted decisions, targets, occurrences, and Hub ownership', () => {
-    for (const project of [createGoldenFGHIProject(catalog), createRepresentativeNOPQProject()]) {
+    for (const project of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
       const projected = projection().project(project, simulateProject(catalog, project));
       for (const route of project.routes) {
         for (const plan of route.biomes) {
@@ -459,7 +459,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('closes structural occurrence packages without requiring standalone workbench nodes', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const projected = projection().project(project, simulateProject(catalog, project));
     const plan = project.routes
       .find((route) => route.routeKey === 'Underworld')
@@ -536,7 +536,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('makes target and authored Hub sub-owner markers and exact destinations observable', () => {
-    const fProject = createGoldenFGHIProject(catalog);
+    const fProject = createGoldenFGHIProject();
     const fProjected = projection().project(fProject, simulateProject(catalog, fProject));
     const fPlan = fProject.routes
       .find((route) => route.routeKey === 'Underworld')
@@ -763,7 +763,7 @@ describe('structured workspace overlay contract', () => {
       occurrenceId: nOccurrenceId('preHub'),
     });
     for (const project of [
-      createGoldenFGHIProject(catalog),
+      createGoldenFGHIProject(),
       createRepresentativeNOPQProject(),
       emptyN,
       fFrontier,

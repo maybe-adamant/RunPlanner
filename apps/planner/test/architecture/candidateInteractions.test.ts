@@ -22,12 +22,12 @@ import {
   nBiome,
   oBiome,
   oOccurrenceIds,
-} from '../fixtures/surfaceProject';
+} from '../../../../test/fixtures/authored-project';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFStartId,
-} from '../fixtures/underworldProject';
+} from '../../../../test/fixtures/authored-project';
 
 type LoadableInteraction = {
   readonly load: () => unknown | Promise<unknown>;
@@ -215,7 +215,7 @@ describe('workspace candidate interaction families', () => {
       observeCandidateEvaluation: (event) => events.push(event),
       yieldToHost: () => Promise.resolve(),
     });
-    const underworld = createGoldenFGHIProject(catalog);
+    const underworld = createGoldenFGHIProject();
     const surface = createRepresentativeNOPQProject();
     const workspaces = [
       services.structuredWorkspace.project(underworld, evaluate(underworld)).interactions,
@@ -351,7 +351,7 @@ describe('workspace candidate interaction families', () => {
     expect('load' in hubHandoff).toBe(false);
     expect(typeof hubHandoff.execute).toBe('function');
 
-    const repairProject = createGoldenFGHIProject(catalog);
+    const repairProject = createGoldenFGHIProject();
     const repairInteractions = services.structuredWorkspace.project(
       repairProject,
       simulateProject(catalog, repairProject),
@@ -370,7 +370,7 @@ describe('workspace candidate interaction families', () => {
 
   it('does not construct a takeover command for an impossible candidate value', () => {
     const services = createStructuredWorkspaceTestServices();
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,

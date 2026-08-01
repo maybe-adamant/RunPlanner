@@ -18,13 +18,13 @@ import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
-} from '../../../../test/fixtures/underworldProject';
+} from '../../../../../../test/fixtures/authored-project';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceIds,
-} from '../../../../test/fixtures/surfaceProject';
+} from '../../../../../../test/fixtures/authored-project';
 import {
   createStructuredWorkspaceTestServices,
   requireWorkspaceBiome,
@@ -165,7 +165,7 @@ describe('workspace inspector defaults', () => {
   });
 
   it('keeps ordinary default priority in final projection order', () => {
-    const complete = createGoldenFGHIProject(catalog);
+    const complete = createGoldenFGHIProject();
     for (const biomeKey of ['F', 'G', 'H', 'I'] as const) {
       const value = biome(complete, biomeKey);
       expect(value.defaultInspectorDestination?.kind).toBe('node');
@@ -185,7 +185,7 @@ describe('workspace inspector defaults', () => {
     }
 
     const partial = biome(
-      withUnresolvedFSelections(createGoldenFGHIProject(catalog), [
+      withUnresolvedFSelections(createGoldenFGHIProject(), [
         goldenFOccurrenceId(1, 1),
         goldenFOccurrenceId(2, 1),
       ]),
@@ -205,7 +205,7 @@ describe('workspace inspector defaults', () => {
     expectNode(partial.defaultInspectorDestination, latestIncomplete.key);
 
     const retained = biome(
-      applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+      applyProjectCommand(createGoldenFGHIProject(), catalog, {
         kind: 'ReplaceOccurrenceRoom',
         occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
         gameName: 'F_Combat01',
@@ -220,7 +220,7 @@ describe('workspace inspector defaults', () => {
     );
 
     const blocked = biome(
-      withUnresolvedFSelections(createGoldenFGHIProject(catalog), [goldenFOccurrenceId(1, 1)]),
+      withUnresolvedFSelections(createGoldenFGHIProject(), [goldenFOccurrenceId(1, 1)]),
       'G',
     );
     expect(blocked.status).toBe('blocked');
@@ -338,7 +338,7 @@ describe('workspace inspector defaults', () => {
       matchingDecision.key,
     );
 
-    const complete = biome(createGoldenFGHIProject(catalog), 'F');
+    const complete = biome(createGoldenFGHIProject(), 'F');
     const entry = complete.entry;
     if (entry === undefined) throw new Error('complete F entry is missing');
     expectNode(

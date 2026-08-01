@@ -60,7 +60,7 @@ import {
   pOccurrenceIds,
   qBiome,
   qOccurrenceIds,
-} from '../../../../test/fixtures/surfaceProject';
+} from '../../../../../../test/fixtures/authored-project';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -69,7 +69,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
   goldenHBiome,
-} from '../../../../test/fixtures/underworldProject';
+} from '../../../../../../test/fixtures/authored-project';
 import { BiomeWorkspace } from './BiomeWorkspace';
 
 afterEach(() => {
@@ -808,7 +808,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('renders ordinary rails in semantic decision order and defaults to a decision inspector', () => {
-    const underworld = createGoldenFGHIProject(catalog);
+    const underworld = createGoldenFGHIProject();
     const surface = createRepresentativeNOPQProject();
     const cases = [
       [underworld, 'Underworld', 'F'],
@@ -911,7 +911,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('keeps a stale explicit biome owner on the projected default without selecting the rail', () => {
-    const view = renderWorkspace(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     const projected = workspaceBiome(view.application, 'Underworld', 'F');
     expect(projected.defaultInspectorDestination?.kind).toBe('node');
 
@@ -932,7 +932,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('uses the last incomplete decision and the last active ordinary detail by projection order', () => {
-    const multiIncomplete = withUnresolvedFSelections(createGoldenFGHIProject(catalog), [
+    const multiIncomplete = withUnresolvedFSelections(createGoldenFGHIProject(), [
       goldenFOccurrenceId(1, 1),
       goldenFOccurrenceId(2, 1),
     ]);
@@ -981,7 +981,7 @@ describe('BiomeWorkspace', () => {
     ).not.toBeNull();
     cleanup();
 
-    const complete = renderWorkspace(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const complete = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     const completeBiome = workspaceBiome(complete.application, 'Underworld', 'F');
     const finalTakeover = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
@@ -1010,7 +1010,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('keeps default ordinary destinations stable through retained-invalid and blocked suffixes', () => {
-    const retainedProject = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    const retainedProject = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
       gameName: 'F_Combat01',
@@ -1049,7 +1049,7 @@ describe('BiomeWorkspace', () => {
     ).not.toBeNull();
     cleanup();
 
-    const blockedProject = withUnresolvedFSelections(createGoldenFGHIProject(catalog), [
+    const blockedProject = withUnresolvedFSelections(createGoldenFGHIProject(), [
       goldenFOccurrenceId(1, 1),
     ]);
     const blocked = renderWorkspace(blockedProject, 'Underworld', 'G');
@@ -1435,7 +1435,7 @@ describe('BiomeWorkspace', () => {
     decisionApplication.dispose();
 
     const fApplication = createApplication();
-    const fProject = createGoldenFGHIProject(catalog);
+    const fProject = createGoldenFGHIProject();
     fApplication.store.dispatch(authoredProjectReplaced(fProject));
     const fBiome = workspaceBiome(fApplication, 'Underworld', 'F');
     const entry = fBiome.entry;
@@ -1614,7 +1614,7 @@ describe('BiomeWorkspace', () => {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(10, 1),
     });
-    const project = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: owner,
     });
@@ -1660,7 +1660,7 @@ describe('BiomeWorkspace', () => {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
-    const view = renderWorkspace(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
     const before = view.application.store.getState().projectWorkspace.history.past.length;
 
@@ -1683,7 +1683,7 @@ describe('BiomeWorkspace', () => {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
-    const project = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: first,
     });
@@ -1705,7 +1705,7 @@ describe('BiomeWorkspace', () => {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
-    const view = renderWorkspace(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
 
     await view.user.click(screen.getByLabelText('Reward pool'));
@@ -1721,7 +1721,7 @@ describe('BiomeWorkspace', () => {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
-    const removal = renderWorkspace(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const removal = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     act(() => removal.application.store.dispatch(semanticOwnerFocused(owner)));
     const beforeRemoval = removal.application.store.getState().projectWorkspace.history.past.length;
     const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
@@ -1749,7 +1749,7 @@ describe('BiomeWorkspace', () => {
     );
 
     cleanup();
-    const clearing = renderWorkspace(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const clearing = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
     const beforeClear = clearing.application.store.getState().projectWorkspace.history.past.length;
     await clearing.user.click(screen.getByRole('button', { name: 'Clear Erebus' }));
     await waitFor(() =>
@@ -1893,7 +1893,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('focuses retained downstream room rewards inside their decision workbench', () => {
-    const project = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
       gameName: 'F_Combat01',
@@ -1922,7 +1922,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('labels an authored-selected retained route without claiming it was entered', () => {
-    const base = createGoldenFGHIProject(catalog);
+    const base = createGoldenFGHIProject();
     const blocked = {
       ...base,
       routes: base.routes.map((route) =>
@@ -2240,7 +2240,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('reconciles a retained takeover through its semantic command', async () => {
-    const complete = createGoldenFGHIProject(catalog);
+    const complete = createGoldenFGHIProject();
     const gPlan = complete.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'G');
@@ -2291,7 +2291,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('reconciles an expanded takeover by allocating its newly declared exit', async () => {
-    const complete = createGoldenFGHIProject(catalog);
+    const complete = createGoldenFGHIProject();
     const gPlan = complete.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'G');
@@ -2341,7 +2341,7 @@ describe('BiomeWorkspace', () => {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(1, 1),
     });
-    const project = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
       gameName: 'F_Combat01',
@@ -2377,7 +2377,7 @@ describe('BiomeWorkspace', () => {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(1, 1),
     });
-    let fProject = applyProjectCommand(createGoldenFGHIProject(catalog), catalog, {
+    let fProject = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
       gameName: 'F_Combat01',
@@ -2400,7 +2400,7 @@ describe('BiomeWorkspace', () => {
     );
     cleanup();
 
-    const base = createGoldenFGHIProject(catalog);
+    const base = createGoldenFGHIProject();
     const gPlan = base.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'G');
@@ -2442,7 +2442,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('renders Fields, Ship, Shop, mixed Preboss, and completion workbenches from room-local descriptors', async () => {
-    const underworld = createGoldenFGHIProject(catalog);
+    const underworld = createGoldenFGHIProject();
     const h = renderWorkspace(underworld, 'Underworld', 'H');
     act(() =>
       h.application.store.dispatch(
@@ -2526,7 +2526,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('moves keyboard focus through semantic owners without authoring a change', async () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const view = renderWorkspace(project, 'Underworld', 'F');
     const structure = screen.getByRole('region', { name: /structure$/ });
     const railButtons = within(structure).getAllByRole('button');

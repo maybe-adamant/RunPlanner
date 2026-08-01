@@ -7,8 +7,8 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject } from '../../../../test/fixtures/underworldProject';
-import { createRepresentativeNOPQProject } from '../../../../test/fixtures/surfaceProject';
+import { createGoldenFGHIProject } from '../../../../../../test/fixtures/authored-project';
+import { createRepresentativeNOPQProject } from '../../../../../../test/fixtures/authored-project';
 import {
   assembleWorkspaceDecision,
   type WorkspaceAuthoredBatchDecision,
@@ -90,7 +90,7 @@ function linkedDecision(source: WorkspaceBiomeSource): WorkspaceAuthoredLinkedEx
 
 describe('structured workspace decision assembly', () => {
   it('returns authored physical targets, workbenches, controls, and decision focus redirects', () => {
-    const source = biomeSource(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'F');
     const decision = batchDecision(source);
     const owner = createExitDecisionAddress(source.biome, decision.source);
     const evaluated = source.evaluatedBatch(owner);
@@ -124,7 +124,7 @@ describe('structured workspace decision assembly', () => {
   });
 
   it('retains authored batch membership when no evaluated overlay is supplied', () => {
-    const source = biomeSource(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'F');
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
       assembleOccurrence: kit.assembleOccurrence,

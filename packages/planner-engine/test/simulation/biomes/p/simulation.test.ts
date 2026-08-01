@@ -20,7 +20,7 @@ import {
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
-} from '../../support/surface-valid-project';
+} from '../../../../../../test/fixtures/authored-project';
 
 function completeP() {
   const evaluation = simulateProject(catalog, createRepresentativeNOPProject());

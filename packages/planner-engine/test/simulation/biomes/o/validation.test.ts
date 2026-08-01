@@ -19,7 +19,7 @@ import {
   createRepresentativeNOProject,
   oBiome,
   oOccurrenceIds,
-} from '../../support/surface-valid-project';
+} from '../../../../../../test/fixtures/authored-project';
 
 function evaluateO(project = createRepresentativeNOProject()) {
   const evaluation = simulateProject(catalog, project);

@@ -21,8 +21,8 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
-} from '../fixtures/underworldProject';
-import { createRepresentativeNOPQProject } from '../fixtures/surfaceProject';
+} from '../../../../test/fixtures/authored-project';
+import { createRepresentativeNOPQProject } from '../../../../test/fixtures/authored-project';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
 afterEach(() => {
@@ -33,9 +33,7 @@ afterEach(() => {
 describe('underworld product loop', () => {
   it('renders F through I through one shared biome workspace surface', async () => {
     const application = createApplication();
-    application.store.dispatch(
-      authoredProjectReplaced(createGoldenFGHIProject(application.catalog)),
-    );
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
@@ -121,7 +119,7 @@ describe('underworld product loop', () => {
     });
     const ordinaryApplication = createApplication();
     const ordinaryProject = applyProjectCommand(
-      createGoldenFGHIProject(ordinaryApplication.catalog),
+      createGoldenFGHIProject(),
       ordinaryApplication.catalog,
       {
         kind: 'ReplaceOccurrenceRoom',
@@ -173,7 +171,7 @@ describe('underworld product loop', () => {
     ordinaryApplication.dispose();
 
     const baseApplication = createApplication();
-    const complete = createGoldenFGHIProject(baseApplication.catalog);
+    const complete = createGoldenFGHIProject();
     const gPlan = complete.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'G');
@@ -245,9 +243,7 @@ describe('underworld product loop', () => {
 
   it('keeps pointer and keyboard workflows available across decisions, fixed stages, Hub, and completion landmarks', async () => {
     const application = createApplication();
-    application.store.dispatch(
-      authoredProjectReplaced(createGoldenFGHIProject(application.catalog)),
-    );
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));

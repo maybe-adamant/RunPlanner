@@ -12,7 +12,7 @@ import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/eng
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject } from '../../test/fixtures/underworldProject';
+import { createGoldenFGHIProject } from '../../../../test/fixtures/authored-project';
 import {
   createRepresentativeNOPQProject,
   nBiome,
@@ -21,7 +21,7 @@ import {
   oOccurrenceIds,
   pBiome,
   qBiome,
-} from '../../test/fixtures/surfaceProject';
+} from '../../../../test/fixtures/authored-project';
 import { createCandidateSessionFactory } from './candidateProjection';
 
 function plan(project: ProjectDocument, routeKey: string, biomeKey: string): AuthoredBiomePlan {
@@ -59,7 +59,7 @@ function incomingOffer(value: RoomOccurrence): ResolvedRewardOffer {
 
 describe('producer-resolved reward type domains', () => {
   it('uses the materialized declaration-owned store for F through I', () => {
-    const project = createGoldenFGHIProject(catalog);
+    const project = createGoldenFGHIProject();
     const session = createCandidateSessionFactory(catalog).bind(
       project,
       simulateProject(catalog, project),

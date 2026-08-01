@@ -8,13 +8,13 @@ import {
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject } from '../../../../test/fixtures/underworldProject';
+import { createGoldenFGHIProject } from '../../../../../../test/fixtures/authored-project';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceIds,
-} from '../../../../test/fixtures/surfaceProject';
+} from '../../../../../../test/fixtures/authored-project';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
 import { assembleWorkspaceTopologyInteractions } from './topology-interaction-assembly';
 
@@ -61,7 +61,7 @@ describe('structured workspace topology interaction assembly', () => {
   });
 
   it('preserves generated takeover repair packages alongside their authored physical exits', () => {
-    const { assembly } = assemble(createGoldenFGHIProject(catalog), 'Underworld', 'F');
+    const { assembly } = assemble(createGoldenFGHIProject(), 'Underworld', 'F');
     const repair = assembly.takeoverInteractionRequirements.find(
       (requirement) => requirement.presentation === 'repair',
     );
