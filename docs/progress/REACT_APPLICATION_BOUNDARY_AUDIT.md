@@ -690,15 +690,22 @@ forged invalid `ProjectDocument` is no longer independently revalidated by the
 workspace projector, while supported application inputs and visible behavior
 remain unchanged.
 
-#### Gate A checkpoint
+#### Gate A checkpoint — passed 2026-08-01
 
-Stop after A1-A4. Record, for each unit, the production paths added, the old
-paths deleted, whether behavior changed, and the focused work-count result.
-Gate A passes only if A2 and A3 displace the matching application algorithms,
-A1 remains a coverage mapping rather than a second workspace read model, and A4
-deletes redundant validation without replacing it. Command-boundary work does
-not become part of an unfinished Gate A unit merely because it touches the same
-file later.
+The four units landed as independent commits. They keep command-boundary work
+out of this gate and meet the intended authority split:
+
+| Unit         | Production addition and deletion                                                                                                                                                                                                                                           | Behavioral status                                                                                                                                                                      | Primary validation                                                                                                      |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| A1 `f3b22bc` | `source-index.ts` now maps canonical and prefix owners explicitly; it deletes reflective address recognition and object walking.                                                                                                                                           | Corrects the clamped Hub `targetLifecycle` false positive without creating a second workspace read model.                                                                              | `source-index.test.ts`: 7 tests.                                                                                        |
+| A2 `e879dc9` | Reward kernel now enumerates locally valid complete offers; the exact-assembly simulation facade and rewards resolver own counted store/type domains. It deletes the application snapshot walk, store precedence, payload enumeration, and the redundant app store matrix. | Preserves selected locally valid out-of-store types in the application; corrects retained, Hub, wheel, source-offer, and physical-batch fallback domains without candidate evaluation. | Focused kernel, engine, and app suite: 4 files / 39 tests; engine: 45 files / 394 tests; planner: 42 files / 279 tests. |
+| A3 `12e9b89` | `decision-facts.ts` now supplies shared `FieldsBatchFacts` and target continuation; it deletes the workspace Fields-cage table and duplicated continuation policy.                                                                                                         | Intentionally aligns retained workspace facts with canonical Fields and continuation semantics.                                                                                        | Focused materialization and workspace suite: 5 files / 51 tests.                                                        |
+| A4 `81132b8` | It deletes occurrence assembly's exhaustive `assertOccurrenceStateCoherence` preflight and moves its primary malformed-state witnesses to engine codec tests.                                                                                                              | A forged invalid document is no longer separately revalidated by the projector; supported input behavior is unchanged.                                                                 | Engine lane: 44 files / 384 tests.                                                                                      |
+
+The complete repository gate passed after the four commits: `npm run check`
+completed typecheck, 94 test files / 788 tests, lint, formatting, and the
+production build. Gate A therefore closes here; later command-boundary work is
+not implied by this checkpoint.
 
 ### Gate B: Command-intent pilot
 

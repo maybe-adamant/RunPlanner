@@ -259,12 +259,14 @@ candidate support, or evaluation coverage. Optional picked-room details may
 depend on authored `detailsActive`, while evaluated `entered` remains a
 separate fact.
 
-Occurrence assembly consumes narrow authored activation facts. The Fields
-active-cage count is one shared decision-derived input for both occurrence and
+Occurrence assembly consumes narrow authored activation facts.
+`FieldsBatchFacts` is one shared engine-derived input for both occurrence and
 decision assembly, rather than a room-local lifecycle table or duplicated
-calculation. Declaration/state coherence is checked before room-local
-publication policy, including for dormant optional detail: malformed Ephyra
-side-room slots are rejected even when their controls are withheld.
+calculation. Persisted room-state schema coherence belongs to engine codec,
+default, and semantic-command boundaries; the workspace projector deliberately
+does not preflight a complete document. It retains only exact declaration and
+product-contact assertions needed to publish a concrete control, including
+dormant optional detail.
 
 ### Projection Integrity and Independent Test Closure
 
