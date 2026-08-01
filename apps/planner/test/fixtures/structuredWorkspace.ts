@@ -1,4 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
+import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import { simulateProject } from '@run-planner/engine/simulation';
 
 import {
   createCandidateSessionFactory,
@@ -40,4 +42,13 @@ export function createStructuredWorkspaceTestServices(
       rewardPicker,
     }),
   });
+}
+
+export function projectStructuredWorkspaceFixture(project: ProjectDocument) {
+  const evaluation = simulateProject(catalog, project);
+  const workspace = createStructuredWorkspaceTestServices().structuredWorkspace.project(
+    project,
+    evaluation,
+  );
+  return Object.freeze({ evaluation, workspace });
 }
