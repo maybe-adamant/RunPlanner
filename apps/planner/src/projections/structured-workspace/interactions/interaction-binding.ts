@@ -1,4 +1,5 @@
 import {
+  createOccurrenceAddress,
   semanticAddressKey,
   type ExitDecisionAddress,
   type OccurrenceId,
@@ -23,6 +24,7 @@ import {
   createTakeoverBatchCommand,
   type TakeoverBatchCommand,
 } from '@planner/workspace/takeoverBatchInteraction';
+import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import { StructuredWorkspaceProjectionContractError, workspaceInteractionKey } from '../contract';
@@ -56,6 +58,7 @@ import type {
 } from './interaction-requirements';
 
 export interface WorkspaceInteractionBindingInput {
+  readonly allocateOccurrenceId: OccurrenceIdFactory;
   readonly assembly: ProjectEvaluationAssembly;
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly catalog: Catalog;
@@ -427,6 +430,7 @@ function bindTopologyRemovalInteractions(
 }
 
 function bindStartInteractions(
+  allocateOccurrenceId: OccurrenceIdFactory,
   catalog: Catalog,
   candidates: CandidateProjectionSession,
   services: StructuredWorkspaceContextualServices,
@@ -462,12 +466,27 @@ function bindStartInteractions(
       );
       return model;
     };
+    const intentFor = (gameName?: string) => {
+      const occurrenceId = allocateOccurrenceId();
+      return Object.freeze({
+        command: Object.freeze({
+          biome: requirement.owner,
+          ...(gameName === undefined ? {} : { gameName }),
+          kind: 'CreateStart' as const,
+          occurrenceId,
+        }),
+        focus: Object.freeze({
+          owner: createOccurrenceAddress(requirement.owner, occurrenceId),
+          timing: 'after' as const,
+        }),
+      });
+    };
     if (requirement.start.kind === 'fixed') {
       starts.set(
         key,
         Object.freeze({
-          fixedGameName: requirement.start.gameName,
           fixedLabel: requireWorkspaceRoom(catalog, requirement.start.gameName).label,
+          intent: () => intentFor(),
           key,
           kind: 'fixed' as const,
           load,
@@ -478,6 +497,14 @@ function bindStartInteractions(
       starts.set(
         key,
         Object.freeze({
+          intentFor: (room: RoomDeclaration) => {
+            if (!gameNames.includes(room.gameName)) {
+              throw new StructuredWorkspaceProjectionContractError(
+                `${room.gameName} is outside the declared start domain for ${key}`,
+              );
+            }
+            return intentFor(room.gameName);
+          },
           key,
           kind: 'choice' as const,
           load,
@@ -760,6 +787,7 @@ export function bindWorkspaceInteractions(
   input: WorkspaceInteractionBindingInput,
 ): WorkspaceInteractionCatalog {
   const {
+    allocateOccurrenceId,
     assembly,
     batchInteractionRequirements,
     catalog,
@@ -796,6 +824,7 @@ export function bindWorkspaceInteractions(
     topologyRemovalInteractionRequirements.values(),
   );
   const starts = bindStartInteractions(
+    allocateOccurrenceId,
     catalog,
     candidates,
     services,

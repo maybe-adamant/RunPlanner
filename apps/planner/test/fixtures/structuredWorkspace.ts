@@ -1,5 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import { createOccurrenceId, type ProjectDocument } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 
 import {
@@ -29,6 +29,9 @@ export function requireWorkspaceBiome(
 export function createStructuredWorkspaceTestServices(
   options: CandidateSessionFactoryOptions = {},
 ) {
+  let nextOccurrence = 1;
+  const allocateOccurrenceId = () =>
+    createOccurrenceId(`structured-workspace-test-${nextOccurrence++}`);
   const candidateSessions = createCandidateSessionFactory(catalog, options);
   const contextualPicker = createContextualPickerProjection(
     createContextualOptionResolver(catalog),
@@ -36,11 +39,15 @@ export function createStructuredWorkspaceTestServices(
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
   return Object.freeze({
     candidateSessions,
-    structuredWorkspace: createStructuredWorkspaceProjection(catalog, {
-      candidateSessions,
-      contextualPicker,
-      rewardPicker,
-    }),
+    structuredWorkspace: createStructuredWorkspaceProjection(
+      catalog,
+      {
+        candidateSessions,
+        contextualPicker,
+        rewardPicker,
+      },
+      allocateOccurrenceId,
+    ),
   });
 }
 

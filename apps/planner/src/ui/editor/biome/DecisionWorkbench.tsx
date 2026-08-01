@@ -35,6 +35,7 @@ import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspac
 import { useAppDispatch } from '@planner/state/store';
 import { allocateOccurrenceId } from '@planner/workspace/occurrenceIds';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import {
   candidateMayBeAuthored,
@@ -746,7 +747,7 @@ function StartFrontier({
   readonly interaction: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'start' }>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const start = requireWorkspaceInteraction(interactions.starts, interaction.interactionKey);
   const candidates = useWorkspaceInteraction(start);
   const empty: ContextualPickerModel<RoomDeclaration> = Object.freeze({
@@ -763,17 +764,7 @@ function StartFrontier({
         <SemanticOwnerMarker address={start.owner} />
         <button
           className="primary-action"
-          onClick={() => {
-            const occurrenceId = allocateOccurrenceId();
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'CreateStart',
-                biome: start.owner,
-                occurrenceId,
-              }),
-            );
-            dispatch(semanticOwnerFocused(occurrenceAddressFor(start.owner, occurrenceId)));
-          }}
+          onClick={() => executeIntent(start.intent())}
           type="button"
         >
           Start biome
@@ -797,16 +788,7 @@ function StartFrontier({
           if (open) candidates.activate();
         }}
         onSelect={(room) => {
-          const occurrenceId = allocateOccurrenceId();
-          dispatch(
-            authoredProjectCommandDispatched({
-              kind: 'CreateStart',
-              biome: start.owner,
-              occurrenceId,
-              gameName: room.gameName,
-            }),
-          );
-          dispatch(semanticOwnerFocused(occurrenceAddressFor(start.owner, occurrenceId)));
+          executeIntent(start.intentFor(room));
         }}
         placeholder="Select a room"
       />

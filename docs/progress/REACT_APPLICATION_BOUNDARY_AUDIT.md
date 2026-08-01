@@ -742,6 +742,29 @@ duplicate command-shape matrix. If the result is only more wrappers around the
 same literal, stop the command migration and retain the direct mappings outside
 the pilot.
 
+**Result — passed (2026-08-01).** B1 adds one binding-produced
+`WorkspaceCommandIntent`, one direct `OccurrenceIdFactory` collaborator, and a
+small React dispatch adapter. It deletes both start-specific `CreateStart`
+literals, start-ID allocation, and occurrence-address reconstruction from
+`StartFrontier`; React now invokes the complete bound intent only. The factory
+does not join `StructuredWorkspaceContextualServices`, and the adapter only
+orders the existing command and focus Redux actions; it neither reads
+`focusByOwner` nor claims to know whether a command transitioned state.
+
+The ownership reduction is real despite the pilot's wiring footprint: the exact
+fixed/choice command-and-focus matrix has one owner in interaction binding,
+rather than separate React branches. Binding tests cover lazy allocation and
+the exact intent shapes; the adapter test covers before/after/none ordering and
+the deliberately unconditional after-focus case; a product-loop witness proves
+one visible start is one undoable authored edit. No assembly stage, command
+bus, generic dispatcher, or alternate action vocabulary was introduced.
+
+The full repository gate passed after the pilot: typecheck, 95 test files /
+794 tests, lint, formatting, and the production build.
+
+Gate B therefore closes with a positive pilot result. Gate C remains an
+explicit follow-on decision rather than an automatic continuation.
+
 ### Gate C: Policy-bearing interaction migration
 
 Gate C is authorized only after the pilot passes. It moves the cases where

@@ -20,6 +20,7 @@ import {
 import { createEditorNavigation } from '../projections/editorNavigation';
 import { createInitialProject } from './projectBootstrap';
 import { createProjectOperations } from '../workspace/projectOperations';
+import { allocateOccurrenceId } from '../workspace/occurrenceIds';
 import {
   createUnavailableProfileFileAdapter,
   type ProfileFileAdapter,
@@ -71,11 +72,15 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const contextualOptions = createContextualOptionResolver(catalog);
   const contextualPicker = createContextualPickerProjection(contextualOptions);
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
-  const structuredWorkspace = createStructuredWorkspaceProjection(catalog, {
-    candidateSessions,
-    contextualPicker,
-    rewardPicker,
-  });
+  const structuredWorkspace = createStructuredWorkspaceProjection(
+    catalog,
+    {
+      candidateSessions,
+      contextualPicker,
+      rewardPicker,
+    },
+    allocateOccurrenceId,
+  );
   const store = createPlannerStore({
     catalog,
     assembleProjectEvaluation,

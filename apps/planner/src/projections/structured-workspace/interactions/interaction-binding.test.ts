@@ -1,10 +1,13 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBiomeAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
+  createProjectDocument,
   createRewardWheelAddress,
   createShopPurchaseAddress,
   semanticAddressKey,
@@ -41,7 +44,12 @@ const services = {
   rewardPicker: createRewardPickerProjection(catalog, contextualPicker),
 };
 
-function bind(project: ProjectDocument, routeKey: string, biomeKey: string) {
+function bind(
+  project: ProjectDocument,
+  routeKey: string,
+  biomeKey: string,
+  allocateOccurrenceId = () => createOccurrenceId('interaction-binding-start'),
+) {
   const projectAssembly = simulateProjectAssembly(catalog, project);
   const evaluation = projectAssembly.evaluation;
   const source = createWorkspaceProjectSourceIndex(catalog, project, evaluation)
@@ -52,6 +60,7 @@ function bind(project: ProjectDocument, routeKey: string, biomeKey: string) {
   return {
     assembly,
     interactions: bindWorkspaceInteractions({
+      allocateOccurrenceId,
       assembly: projectAssembly,
       batchInteractionRequirements: assembly.batchInteractionRequirements,
       catalog,
@@ -69,6 +78,71 @@ function bind(project: ProjectDocument, routeKey: string, biomeKey: string) {
 }
 
 describe('structured workspace interaction binding', () => {
+  it('lazily binds the fixed start to one complete command and after-focus intent', () => {
+    const project = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Surface: 1 },
+      name: 'Fixed start binding',
+      projectId: 'fixed-start-binding',
+    });
+    const occurrenceId = createOccurrenceId('bound-fixed-start');
+    let allocations = 0;
+    const interaction = bind(project, 'Surface', 'N', () => {
+      allocations += 1;
+      return occurrenceId;
+    }).interactions.starts.get(semanticAddressKey(nBiome));
+    if (interaction?.kind !== 'fixed') throw new Error('N fixed start interaction is missing');
+
+    expect(allocations).toBe(0);
+    interaction.load();
+    expect(allocations).toBe(0);
+    expect(interaction).not.toHaveProperty('fixedGameName');
+    expect(interaction.intent()).toEqual({
+      command: { biome: nBiome, kind: 'CreateStart', occurrenceId },
+      focus: {
+        owner: createOccurrenceAddress(nBiome, occurrenceId),
+        timing: 'after',
+      },
+    });
+    expect(allocations).toBe(1);
+  });
+
+  it('lazily binds an authored start choice to one complete command and after-focus intent', () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const project = createProjectDocument(catalog, {
+      configuredBiomeCounts: { Underworld: 1 },
+      name: 'Choice start binding',
+      projectId: 'choice-start-binding',
+    });
+    const occurrenceId = createOccurrenceId('bound-choice-start');
+    let allocations = 0;
+    const interaction = bind(project, 'Underworld', 'F', () => {
+      allocations += 1;
+      return occurrenceId;
+    }).interactions.starts.get(semanticAddressKey(biome));
+    if (interaction?.kind !== 'choice') throw new Error('F choice start interaction is missing');
+
+    expect(allocations).toBe(0);
+    const room = interaction
+      .load()
+      .sections.flatMap((section) => section.items)
+      .find((item) => item.value.gameName === 'F_Opening02')?.value;
+    if (room === undefined) throw new Error('F Opening 02 start choice is missing');
+    expect(allocations).toBe(0);
+    expect(interaction.intentFor(room)).toEqual({
+      command: {
+        biome,
+        gameName: 'F_Opening02',
+        kind: 'CreateStart',
+        occurrenceId,
+      },
+      focus: {
+        owner: createOccurrenceAddress(biome, occurrenceId),
+        timing: 'after',
+      },
+    });
+    expect(allocations).toBe(1);
+  });
+
   it('binds candidate takeovers to declaration labels and their exact create command', () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',

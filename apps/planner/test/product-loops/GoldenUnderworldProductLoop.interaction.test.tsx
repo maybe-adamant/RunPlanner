@@ -78,6 +78,14 @@ describe('underworld product loop', () => {
       .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'G');
     expect(g?.topology).not.toBeNull();
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start biome' })).toBeTruthy());
+    const undone = application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    expect(undone?.topology).toBeNull();
   });
 
   it('shrinks a route prefix immediately and preserves existing undo behavior', async () => {
