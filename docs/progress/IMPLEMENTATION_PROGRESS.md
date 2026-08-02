@@ -59,10 +59,11 @@ The executable work-count contract remains unchanged: rendering performs no
 evaluation or candidate work; two representative workspaces require two project
 evaluations; cold candidate activation uses its addressed batch (fourteen for
 the cooperative reward family); repeat activation is cached; edits publish one
-evaluation; and cached Undo has none. Commit 5b.3 in
-[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) is now
-the active feature frontier. Commit 5c follows its own
-[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan after Commit 5b closes.
+evaluation; and cached Undo has none. The four Commit 5b presentation slices in
+[`WORKSPACE_PRESENTATION_POLISH.md`](WORKSPACE_PRESENTATION_POLISH.md) are
+implemented. Commit 5b.4's desktop and narrow visual verification is the
+active feature frontier; Commit 5c follows its own
+[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan after that closure.
 
 The post-checkpoint comparison against `f69dc709` found that Campaign A's
 contract correction had not completed its internal module reorganization: the
@@ -299,8 +300,13 @@ are covered. Review validation passed the root typecheck,
 `npm run test:planner` (22 files, 185 tests), ESLint, Prettier, and
 `git diff --check`.
 
-Commit 5b.3, Commit 5b.4, and the three Commit 5c Shop-order slices are the
-remaining work before the active Phase 7 frontier advances.
+Commit 5b.4's implementation uses player-facing route, room, door, reward,
+Preboss, and Hub language across the shell, workspace, feedback, candidate
+explanations, and accessible names; it preserves the projection boundary and
+the deferred Shop purchase-order wording. Its automated gate passed all package
+typechecks, 96 test files / 822 tests, lint, formatting, and the production
+build. The required desktop and narrow visual review remains before it closes
+Commit 5b; the three Commit 5c Shop-order slices follow that verification.
 
 For historical context, room-replacement retention closed before the unified
 refactor. The delivered policy uses the

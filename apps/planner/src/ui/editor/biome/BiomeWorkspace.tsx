@@ -77,11 +77,11 @@ function assessmentLabel(marker: WorkspaceMarker): string {
     return `${marker.findingCount} finding${marker.findingCount === 1 ? '' : 's'}`;
   switch (marker.assessment) {
     case 'assessed':
-      return 'Assessed';
+      return 'Evaluated';
     case 'blocked':
       return 'Blocked';
     case 'unassessed':
-      return 'Unassessed';
+      return 'Not evaluated';
   }
 }
 
@@ -90,17 +90,17 @@ function nodeLabel(node: WorkspaceNode): string {
     case 'occurrenceWorkbench':
       return node.room.label;
     case 'linkedExit':
-      return `Linked exit · ${node.target.room.label}`;
+      return `Fixed next room · ${node.target.room.label}`;
     case 'ordinaryBatch':
-      return 'Normal exits';
+      return 'Doors';
     case 'mixedBatch':
-      return 'Mixed normal exits';
+      return 'Doors';
     case 'takeoverBatch':
-      return 'Preboss batch';
+      return 'Preboss doors';
     case 'completion':
       return node.label;
     case 'hubDecision':
-      return 'Ephyra Hub';
+      return 'Hub';
   }
 }
 
@@ -112,22 +112,24 @@ function nodeKicker(node: WorkspaceNode): string {
       return 'Biome stage';
     case 'ordinaryBatch':
     case 'mixedBatch':
-      return 'Decision point';
+      return 'Door choice';
     case 'takeoverBatch':
       return 'Biome stage';
     case 'completion':
       return node.role === 'postboss' ? 'Postboss' : 'Boss';
     case 'hubDecision':
-      return 'Hub decision';
+      return 'Hub';
   }
 }
 
 function FocusButton({
+  accessibleLabel,
   children,
   marker,
   presentationMarker = marker,
   selected,
 }: {
+  readonly accessibleLabel?: string;
   readonly children: ReactNode;
   readonly marker: WorkspaceMarker;
   /** May retain a distinct staged-owner assessment while focus stays on a room. */
@@ -137,6 +139,7 @@ function FocusButton({
   const dispatch = useAppDispatch();
   return (
     <button
+      aria-label={accessibleLabel}
       aria-pressed={selected}
       className="biome-rail-node"
       data-assessment={presentationMarker.assessment}
@@ -202,21 +205,31 @@ function RailNode({
 
 function RailFrontier({
   frontier,
+  interactions,
   selectedRailKey,
 }: {
   readonly frontier: Extract<
     WorkspaceAuthoringFrontier,
     { readonly kind: 'start' | 'exitDecision' }
   >;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly selectedRailKey: string | undefined;
 }) {
+  const start =
+    frontier.kind !== 'start'
+      ? undefined
+      : requireWorkspaceInteraction(interactions.starts, frontier.interactionKey);
+  const label =
+    frontier.kind === 'start'
+      ? start?.kind === 'fixed'
+        ? `Start with ${start.fixedLabel}`
+        : 'Choose the first room'
+      : 'Continue route';
   return (
     <div className="biome-rail-stop biome-frontier-stop">
       <FocusButton marker={frontier.marker} selected={selectedRailKey === frontier.marker.focusKey}>
-        <span className="biome-rail-kicker">Coverage frontier</span>
-        <strong>
-          {frontier.kind === 'start' ? 'Start biome here' : 'Continue authoring here'}
-        </strong>
+        <span className="biome-rail-kicker">Next step</span>
+        <strong>{label}</strong>
         <span className="biome-rail-status">{assessmentLabel(frontier.marker)}</span>
       </FocusButton>
     </div>
@@ -253,16 +266,20 @@ function HubRailGroup({
   readonly selectedRailKey: string | undefined;
 }) {
   const selected = selectedRailKey === entry.marker.focusKey;
+  const assessment = assessmentLabel(entry.marker);
   return (
     <div className="biome-rail-stop biome-hub-rail-group" data-kind="hubDecision">
-      <FocusButton marker={entry.marker} selected={selected}>
-        <span className="biome-rail-kicker">Persistent board</span>
+      <FocusButton
+        accessibleLabel={`Hub, ${entry.visits.length} of ${entry.node.requiredVisitCount} visits, ${assessment}`}
+        marker={entry.marker}
+        selected={selected}
+      >
         <strong>Hub</strong>
         <span className="biome-rail-summary">
           {entry.visits.length} of {entry.node.requiredVisitCount} visits
         </span>
         <span className="biome-rail-status">
-          {assessmentLabel(entry.marker)}
+          {assessment}
           <FindingCount count={entry.marker.findingCount} label="findings" />
         </span>
       </FocusButton>
@@ -279,9 +296,11 @@ function HubRailGroup({
 
 function RailEntry({
   entry,
+  interactions,
   selectedRailKey,
 }: {
   readonly entry: WorkspaceRailEntry;
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly selectedRailKey: string | undefined;
 }) {
   switch (entry.kind) {
@@ -290,7 +309,13 @@ function RailEntry({
     case 'hubGroup':
       return <HubRailGroup entry={entry} selectedRailKey={selectedRailKey} />;
     case 'frontier':
-      return <RailFrontier frontier={entry.frontier} selectedRailKey={selectedRailKey} />;
+      return (
+        <RailFrontier
+          frontier={entry.frontier}
+          interactions={interactions}
+          selectedRailKey={selectedRailKey}
+        />
+      );
   }
 }
 
@@ -300,9 +325,7 @@ function CompletionWorkbench({ node }: { readonly node: WorkspaceCompletionNode 
       <p className="card-kicker">{node.role === 'postboss' ? 'Postboss' : 'Boss'}</p>
       <h3>{node.label}</h3>
       <SemanticOwnerMarker address={node.marker.address} />
-      <p>
-        This completion room is derived from the biome layout and is not an authored occurrence.
-      </p>
+      <p>This room is added automatically after the biome.</p>
     </article>
   );
 }
@@ -425,7 +448,7 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
       : explicitDestination?.selectedRailKey;
   const inspectorTitle =
     subject?.kind === 'frontier'
-      ? 'Active frontier'
+      ? 'Next step'
       : subject?.kind === 'node'
         ? structureLabelForNode(biome, subject.node)
         : biome.label;
@@ -450,36 +473,40 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
   return (
     <div className="biome-workspace">
       <section
-        aria-label={`${biome.label} structure`}
+        aria-label={`${biome.label} route structure`}
         className="biome-structure-region"
         data-source={biome.source}
         data-status={biome.status}
       >
         <header className="biome-structure-heading">
           <div>
-            <p className="eyebrow">Biome structure</p>
+            <p className="eyebrow">Route structure</p>
             <h2>{biome.label}</h2>
           </div>
-          <span className="neutral-status">{biome.source}</span>
         </header>
         {clearTopology === undefined ? null : (
           <TopologyRemovalAction interaction={clearTopology} label={`Clear ${biome.label}`} />
         )}
         <div className="biome-rail">
           {biome.rail.map((entry) => (
-            <RailEntry entry={entry} key={entry.key} selectedRailKey={selectedRailKey} />
+            <RailEntry
+              entry={entry}
+              interactions={interactions}
+              key={entry.key}
+              selectedRailKey={selectedRailKey}
+            />
           ))}
         </div>
         <CompletionOutline completion={biome.completionOutline} />
       </section>
-      <aside aria-label="Focused inspector" className="biome-inspector">
+      <aside aria-label="Details" className="biome-inspector">
         <header className="biome-inspector-heading">
-          <p className="eyebrow">Focused inspector</p>
+          <p className="eyebrow">Details</p>
           <h2>{inspectorTitle}</h2>
         </header>
         {biome.entry === undefined ? null : <BiomeFieldControls fields={biome.fields} />}
         {subject === undefined ? (
-          <p className="fixed-room-state">No authored structure is available yet.</p>
+          <p className="fixed-room-state">Choose the first room to start this biome.</p>
         ) : subject.kind === 'frontier' ? (
           biome.frontier?.kind === 'start' || biome.frontier?.kind === 'exitDecision' ? (
             <AuthoringFrontier frontier={biome.frontier} interactions={interactions} />

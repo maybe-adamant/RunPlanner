@@ -37,7 +37,7 @@ the ImGui prototype:
 - one horizontal tab per catalog route, followed by Settings;
 - route-local biome navigation;
 - a route settings panel;
-- one shared biome structure workspace;
+- one shared route-structure workspace;
 - a route status and findings surface;
 - one focused semantic inspector.
 
@@ -53,6 +53,23 @@ tabs, labels, valid biome panels, and initial route come from the normalized
 catalog. A semantic finding selects its owning route and biome through the same
 generic session action; route- and project-owned findings select the route
 overview or retain the current top-level location respectively.
+
+## Product Language Boundary
+
+Product-language policy belongs at the presentation boundary. React owns the
+static labels and accessible names that describe its components; projection
+presentation functions own evidence-dependent route feedback, finding
+destinations, and candidate explanations. Together they use routes, biomes,
+rooms, doors, rewards, reward pools, Shops, Preboss, Hub rooms, findings, and
+evaluation status. Internal model terms such as `occurrence`, `batch`,
+`frontier`, `topology`, `canonical`, and `progressive` remain valid
+implementation vocabulary but do not become unexplained product copy.
+
+Authored selection and evaluated entry remain distinct in both the model and
+the UI: a selected continuation is a `Room selected`; only an evaluated entry
+is a `Door taken`. The projection presents evidence-dependent explanations in
+the same language. React renders that projected evidence rather than translating
+semantic evidence, topology state, or candidate support locally.
 
 ## Workspace Projection
 
@@ -291,8 +308,8 @@ it does not reinterpret takeover, mixed, declaration-fixed width-one, or
 completed-Hub Preboss semantics.
 
 When a selected authored entry or decision directly precedes the current
-continuation frontier, its structural actions may also expose `Move to Next
-Decision`. This navigation-only action focuses the existing frontier address;
+continuation frontier, its structural actions may also expose `Go to next
+step`. This navigation-only action focuses the existing frontier address;
 it does not create or replace topology, enter history, or trigger evaluation.
 The frontier itself continues to own its declaration-projected creation action.
 There is no separate completion-navigation path.

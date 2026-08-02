@@ -1,5 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createBiomeFieldAddress,
   createBiomeAddress,
   createExitDecisionAddress,
   createOccurrenceId,
@@ -13,7 +14,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 
 import type { CandidateOptionProjection } from './candidateProjection';
-import { createContextualOptionResolver } from './contextualOptions';
+import { createContextualOptionResolver, explainCandidateEvaluation } from './contextualOptions';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const source = { kind: 'occurrence' as const, occurrenceId: createOccurrenceId('context-source') };
@@ -83,8 +84,77 @@ describe('contextual option projection', () => {
     }));
 
     expect(resolved.map((option) => option.state)).toEqual(['forced', 'possible', 'impossible']);
-    expect(resolved[0]?.explanation).toMatchObject({ kind: 'forced' });
-    expect(resolved[2]?.explanation).toMatchObject({ kind: 'unsupported' });
+    expect(resolved[0]?.explanation).toEqual({
+      kind: 'forced',
+      message: 'This option must be included here.',
+    });
+    expect(resolved[2]?.explanation).toEqual({
+      kind: 'unsupported',
+      message: 'This option is not available with the current route.',
+    });
+  });
+
+  it('uses door and room language for room-candidate evidence', () => {
+    const evaluations = [
+      roomTarget([{ kind: 'notCandidate' }]),
+      roomTarget([{ kind: 'physicalExitUnavailable', exitIndex: 2 }]),
+      roomTarget([
+        {
+          kind: 'exitIncompatible',
+          compatibilityPolicyKey: 'test',
+          sourceGameName: 'F_Opening01',
+          candidateGameName: 'F_Combat01',
+        },
+      ]),
+      roomTarget([{ kind: 'maxCreationsThisRun', actual: 3, maximum: 3 }]),
+      roomTarget([{ kind: 'maxCreationsPerRoom', actual: 2, maximum: 2 }]),
+      roomTarget([{ kind: 'maxAppearancesThisBiome', actual: 4, maximum: 4 }]),
+      roomTarget([{ kind: 'forcedPool', requiredRoomGameNames: ['F_Opening01'] }]),
+      roomTarget([
+        {
+          kind: 'eligibilityRequirement',
+          evaluation: { kind: 'minExits', satisfied: false, actual: 2, minimum: 3 },
+        },
+      ]),
+      roomTarget([
+        {
+          kind: 'eligibilityRequirement',
+          evaluation: {
+            kind: 'currentBatchTargetCount',
+            satisfied: false,
+            actual: 2,
+            expected: { min: 3 },
+          },
+        },
+      ]),
+      roomTarget([
+        {
+          kind: 'eligibilityRequirement',
+          evaluation: {
+            kind: 'currentBatchRoomCount',
+            satisfied: false,
+            roomGameNames: ['F_Combat01'],
+            actual: 2,
+            expected: { max: 1 },
+          },
+        },
+      ]),
+    ];
+
+    expect(
+      evaluations.map((evaluation) => explainCandidateEvaluation(catalog, evaluation)?.message),
+    ).toEqual([
+      'This room is not available for this door.',
+      'Door 2 is unavailable here.',
+      'Combat 01 is incompatible with this door.',
+      'This room can appear at most 3 times on this route.',
+      'This room can appear at most 2 times among these doors.',
+      'This room can appear at most 4 times in this biome.',
+      'This room must be included here: Opening 01.',
+      'This room has 2 doors; this room requires at least 3.',
+      "These doors contain 2 rooms, outside the room's supported range.",
+      "These doors contain 2 matching rooms, outside the room's supported range.",
+    ]);
   });
 
   it('retains exact unavailable prerequisite, coverage, producer, target, and upstream evidence', () => {
@@ -102,6 +172,17 @@ describe('contextual option projection', () => {
       },
       {
         kind: 'unavailable',
+        reason: 'authoredPrerequisiteMissing',
+        evidence: {
+          kind: 'authoredPrerequisiteMissing',
+          prerequisite: {
+            kind: 'biomeField',
+            owner: createBiomeFieldAddress(biome, 'field'),
+          },
+        },
+      },
+      {
+        kind: 'unavailable',
         reason: 'coverageNotReached',
         evidence: {
           kind: 'coverageNotReached',
@@ -109,6 +190,21 @@ describe('contextual option projection', () => {
           requiredCheckpoint: 'afterTargetGeneration',
           coverage: { kind: 'none', reason: 'notEvaluated' },
         },
+      },
+      {
+        kind: 'unavailable',
+        reason: 'producerFrontierUnavailable',
+        evidence: { kind: 'producerFrontierUnavailable', producer: target },
+      },
+      {
+        kind: 'unavailable',
+        reason: 'targetNotReachable',
+        evidence: { kind: 'targetNotReachable', target },
+      },
+      {
+        kind: 'unavailable',
+        reason: 'upstreamIncomplete',
+        evidence: { kind: 'upstreamIncomplete', upstreamBiomeKey: 'F' },
       },
       {
         kind: 'unavailable',
@@ -126,11 +222,110 @@ describe('contextual option projection', () => {
       'unassessed',
       'unassessed',
       'unassessed',
+      'unassessed',
+      'unassessed',
+      'unassessed',
+      'unassessed',
     ]);
     expect(resolved.map((option) => option.explanation?.kind)).toEqual([
       'authoredPrerequisiteMissing',
+      'authoredPrerequisiteMissing',
       'coverageNotReached',
+      'producerFrontierUnavailable',
+      'targetNotReachable',
+      'upstreamIncomplete',
       'upstreamInvalid',
+    ]);
+    expect(resolved.map((option) => option.explanation?.message)).toEqual([
+      'Choose the required reward pool before evaluating this option.',
+      'Choose the required biome setting before evaluating this option.',
+      'This part of the route has not been evaluated yet.',
+      'The current route does not reach this reward yet.',
+      'This door is not reachable in the current route.',
+      'Finish Erebus before choices here can be evaluated.',
+      'Fix Erebus before choices here can be evaluated.',
+    ]);
+  });
+
+  it('uses player-facing copy for finding-backed candidate explanations', () => {
+    const explanations = [
+      invalidReward({
+        code: 'targetRoomSupportEmpty',
+        severity: 'error',
+        phase: 'roomGeneration',
+        origin: target,
+        evidence: {},
+      }),
+      invalidReward({
+        code: 'targetRoomUnavailable',
+        severity: 'error',
+        phase: 'roomGeneration',
+        origin: target,
+        evidence: {},
+      }),
+      invalidReward({
+        code: 'sideRoomGenerationUnavailable',
+        severity: 'error',
+        phase: 'roomGeneration',
+        origin: target,
+        evidence: {},
+      }),
+      invalidReward({
+        code: 'rewardAcquisitionUnavailable',
+        severity: 'error',
+        phase: 'rewardGeneration',
+        origin: target,
+        evidence: {},
+      }),
+      invalidReward({
+        code: 'rewardBagSupportEmpty',
+        severity: 'error',
+        phase: 'rewardGeneration',
+        origin: target,
+        evidence: {},
+      }),
+      invalidReward({
+        code: 'rewardPayloadInvalid',
+        severity: 'error',
+        phase: 'rewardGeneration',
+        origin: target,
+        evidence: {},
+      }),
+      invalidReward({
+        code: 'shopOfferUnavailable',
+        severity: 'error',
+        phase: 'rewardGeneration',
+        origin: target,
+        evidence: {},
+      }),
+      invalidReward({
+        code: 'targetMissing',
+        severity: 'error',
+        phase: 'completeness',
+        origin: target,
+        evidence: {},
+      }),
+      invalidReward({
+        code: 'shopPurchaseUnavailable',
+        severity: 'error',
+        phase: 'rewardGeneration',
+        origin: target,
+        evidence: {},
+      }),
+    ];
+
+    expect(
+      explanations.map((evaluation) => explainCandidateEvaluation(catalog, evaluation)?.message),
+    ).toEqual([
+      'No room can be offered when this door appears.',
+      'This room is not among the rooms that can be offered for this door.',
+      'This side-room setup is not available with the selected Hub rooms.',
+      'This reward cannot be acquired here.',
+      'No available reward pool can offer this reward.',
+      'These reward details are not valid.',
+      'These Shop offers cannot appear together.',
+      'Finish the required earlier route steps before this option can be evaluated.',
+      'This purchase cannot be completed with the current shop configuration.',
     ]);
   });
 
@@ -239,7 +434,7 @@ describe('contextual option projection', () => {
     ]);
     expect(resolved[0]?.explanation?.message).toContain('Biome depth is 1');
     expect(resolved[1]?.explanation?.message).toBe(
-      'This reward conflicts with the offer on Exit 1.',
+      'This reward conflicts with the offer on Door 1.',
     );
     expect(resolved[2]?.explanation?.message).toBe(
       'This reward is unavailable from the selected reward pool.',
@@ -248,7 +443,7 @@ describe('contextual option projection', () => {
       'This reward is outside the selected reward pool.',
     );
     expect(resolved[4]?.explanation?.message).toBe(
-      'This reward conflicts with the offer on Exit 2.',
+      'This reward conflicts with the offer on Door 2.',
     );
     expect(resolved[5]?.explanation?.message).toBe('This Devotion pair is not supported here.');
     expect(resolved[6]?.explanation?.message).toBe('This God cannot be offered at this point.');

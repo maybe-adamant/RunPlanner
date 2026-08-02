@@ -208,7 +208,7 @@ describe('reward editor projections', () => {
     await user.click(screen.getByLabelText('Reward'));
 
     expect(
-      await screen.findAllByText('This reward conflicts with the offer on Exit 1.'),
+      await screen.findAllByText('This reward conflicts with the offer on Door 1.'),
     ).toHaveLength(2);
   });
 

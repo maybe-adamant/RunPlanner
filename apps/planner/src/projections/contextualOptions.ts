@@ -80,11 +80,11 @@ function requirementMessage(evidence: RequirementEvaluationEvidence): string {
     case 'recentEncounterPhaseCount':
       return 'Recent encounter history does not satisfy this room.';
     case 'minExits':
-      return `The parent has ${evidence.actual} exits; this room requires at least ${evidence.minimum}.`;
+      return `This room has ${evidence.actual} doors; this room requires at least ${evidence.minimum}.`;
     case 'currentBatchTargetCount':
-      return `This batch has ${evidence.actual} targets, outside the room's supported range.`;
+      return `These doors contain ${evidence.actual} rooms, outside the room's supported range.`;
     case 'currentBatchRoomCount':
-      return `This batch contains ${evidence.actual} matching rooms, outside the supported range.`;
+      return `These doors contain ${evidence.actual} matching rooms, outside the room's supported range.`;
     case 'clockworkGoalsRemaining':
       return `${evidence.actual} Clockwork goals remain; this room is not valid at that point.`;
     case 'clockworkNonGoalCapacity':
@@ -104,13 +104,13 @@ function roomExclusionExplanation(
 ): CandidateExplanation {
   switch (exclusion.kind) {
     case 'notCandidate':
-      return { kind: 'declaration', message: 'This room is not in the authored candidate set.' };
+      return { kind: 'declaration', message: 'This room is not available for this door.' };
     case 'physicalExitUnavailable':
-      return { kind: 'exit', message: `Exit ${exclusion.exitIndex} is unavailable here.` };
+      return { kind: 'exit', message: `Door ${exclusion.exitIndex} is unavailable here.` };
     case 'exitIncompatible':
       return {
         kind: 'compatibility',
-        message: `${roomName(catalog, exclusion.candidateGameName)} is incompatible with this exit.`,
+        message: `${roomName(catalog, exclusion.candidateGameName)} is incompatible with this door.`,
       };
     case 'currentRoomRepeat':
       return { kind: 'repeat', message: 'The current room cannot immediately repeat.' };
@@ -124,23 +124,26 @@ function roomExclusionExplanation(
     case 'maxCreationsThisRun':
       return {
         kind: 'cap',
-        message: `This room has reached its run creation cap (${exclusion.actual}/${exclusion.maximum}).`,
+        message: `This room can appear at most ${exclusion.maximum} times on this route.`,
       };
     case 'maxCreationsPerRoom':
       return {
         kind: 'cap',
-        message: `This parent has reached the room's creation cap (${exclusion.actual}/${exclusion.maximum}).`,
+        message: `This room can appear at most ${exclusion.maximum} times among these doors.`,
       };
     case 'maxAppearancesThisBiome':
       return {
         kind: 'cap',
-        message: `This room has reached its biome appearance cap (${exclusion.actual}/${exclusion.maximum}).`,
+        message: `This room can appear at most ${exclusion.maximum} times in this biome.`,
       };
-    case 'forcedPool':
+    case 'forcedPool': {
+      const rooms = exclusion.requiredRoomGameNames.map((name) => roomName(catalog, name));
+      const subject = rooms.length === 1 ? 'This room must' : 'These rooms must';
       return {
         kind: 'force',
-        message: `A forced room must be selected: ${exclusion.requiredRoomGameNames.map((name) => roomName(catalog, name)).join(', ')}.`,
+        message: `${subject} be included here: ${rooms.join(', ')}.`,
       };
+    }
   }
 }
 
@@ -162,7 +165,7 @@ function rewardPeerLabel(catalog: Catalog, value: FindingEvidenceValue | undefin
   switch (origin.kind) {
     case 'target':
       return typeof origin.exitKey === 'string'
-        ? numberedLabel(origin.exitKey, 'Exit')
+        ? numberedLabel(origin.exitKey, 'Door')
         : 'another offer';
     case 'rewardWheelOffer':
       return typeof origin.offerKey === 'string'
@@ -207,11 +210,11 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
   if (sibling !== undefined) return sibling;
   switch (finding.code) {
     case 'targetRoomSupportEmpty':
-      return { kind: 'room', message: 'No room is eligible for this exit at this point.' };
+      return { kind: 'room', message: 'No room can be offered when this door appears.' };
     case 'targetRoomUnavailable':
       return {
         kind: 'room',
-        message: 'This room is outside the possible room set for this exit.',
+        message: 'This room is not among the rooms that can be offered for this door.',
       };
     case 'encounterCountUnavailable':
       return {
@@ -225,31 +228,31 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'sideRoomGenerationUnavailable':
       return {
         kind: 'sideRoom',
-        message: 'This side-room outcome conflicts with Hub generation pressure.',
+        message: 'This side-room setup is not available with the selected Hub rooms.',
       };
     case 'baseRewardStoreUnavailable':
       return { kind: 'store', message: 'This reward is outside the selected reward pool.' };
     case 'rewardAcquisitionUnavailable':
       return {
         kind: 'acquisition',
-        message: 'This reward cannot be acquired at this lifecycle point.',
+        message: 'This reward cannot be acquired here.',
       };
     case 'rewardBagSupportEmpty':
       return {
         kind: 'bag',
-        message: 'No reachable reward-pool state supports this reward.',
+        message: 'No available reward pool can offer this reward.',
       };
     case 'rewardBagEntryUnavailable':
       return { kind: 'bag', message: 'This reward is unavailable from the selected reward pool.' };
     case 'rewardPayloadInvalid':
-      return { kind: 'payload', message: 'This reward payload is not valid.' };
+      return { kind: 'payload', message: 'These reward details are not valid.' };
     case 'rewardSourceUnavailable':
       return typeof finding.evidence.chosenSource === 'string' &&
         typeof finding.evidence.spurnedSource === 'string'
         ? { kind: 'devotionPair', message: 'This Devotion pair is not supported here.' }
         : { kind: 'boonSource', message: 'This God cannot be offered at this point.' };
     case 'shopOfferUnavailable':
-      return { kind: 'shop', message: 'This shop configuration is not supported.' };
+      return { kind: 'shop', message: 'These Shop offers cannot appear together.' };
     case 'shopPurchaseUnavailable':
       return {
         kind: 'shop',
@@ -267,7 +270,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'targetMissing':
       return {
         kind: 'structure',
-        message: 'Complete the required authored structure before evaluating this option.',
+        message: 'Finish the required earlier route steps before this option can be evaluated.',
       };
   }
 }
@@ -289,7 +292,7 @@ function unavailableExplanation(
           ? 'reward pool'
           : evaluation.evidence.prerequisite.kind === 'fieldsCageOutcome'
             ? 'Fields door roll'
-            : 'biome outcome';
+            : 'biome setting';
       return {
         kind: evaluation.evidence.kind,
         message: `Choose the required ${label} before evaluating this option.`,
@@ -298,27 +301,27 @@ function unavailableExplanation(
     case 'coverageNotReached':
       return {
         kind: evaluation.evidence.kind,
-        message: 'This owner has not been reached by the current evaluated prefix.',
+        message: 'This part of the route has not been evaluated yet.',
       };
     case 'producerFrontierUnavailable':
       return {
         kind: evaluation.evidence.kind,
-        message: 'The current simulation does not reach this reward producer.',
+        message: 'The current route does not reach this reward yet.',
       };
     case 'targetNotReachable':
       return {
         kind: evaluation.evidence.kind,
-        message: 'This physical exit is not reachable in the current authored prefix.',
+        message: 'This door is not reachable in the current route.',
       };
     case 'upstreamIncomplete':
       return {
         kind: evaluation.evidence.kind,
-        message: `Complete ${biomeName(catalog, evaluation.evidence.upstreamBiomeKey)} before editing this biome contextually.`,
+        message: `Finish ${biomeName(catalog, evaluation.evidence.upstreamBiomeKey)} before choices here can be evaluated.`,
       };
     case 'upstreamInvalid':
       return {
         kind: evaluation.evidence.kind,
-        message: `Repair ${biomeName(catalog, evaluation.evidence.upstreamBiomeKey)} before editing this biome contextually.`,
+        message: `Fix ${biomeName(catalog, evaluation.evidence.upstreamBiomeKey)} before choices here can be evaluated.`,
       };
   }
 }
@@ -332,7 +335,7 @@ export function explainCandidateEvaluation(
   if (support === 'forced') {
     return {
       kind: 'forced',
-      message: 'This option is part of the required choice set at this decision.',
+      message: 'This option must be included here.',
     };
   }
   if (support !== 'impossible') return undefined;
@@ -344,7 +347,7 @@ export function explainCandidateEvaluation(
   if (finding !== undefined) return findingExplanation(catalog, finding);
   return {
     kind: 'unsupported',
-    message: 'This option is not supported by the current route state.',
+    message: 'This option is not available with the current route.',
   };
 }
 

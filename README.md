@@ -147,11 +147,11 @@ copied elsewhere.
   reconciliation and Commit 5a prompt removal are complete. The re-anchor
   program is complete: Campaign B made candidate artifacts explicit,
   Campaign C separated the justified authored-core authorities, and Campaign D
-  retained the coherent ordered history and reward folds. The behavior-ready
+  retained the coherent ordered history and reward folds. The final
   [workspace presentation polish](docs/progress/WORKSPACE_PRESENTATION_POLISH.md)
-  plan is the active frontier. The
-  [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) gives Commit
-  5c its own schema, engine, projection, and UI slices.
+  visual verification is the active frontier. The
+  [Shop purchase-order plan](docs/progress/SHOP_PURCHASE_ORDER.md) follows with
+  Commit 5c's own schema, engine, projection, and UI slices.
 
 ## Source Evidence
 

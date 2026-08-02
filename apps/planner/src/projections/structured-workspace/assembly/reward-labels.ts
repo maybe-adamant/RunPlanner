@@ -2,9 +2,9 @@
 export function workspaceRewardStoreLabel(storeKey: string): string {
   switch (storeKey) {
     case 'RunProgress':
-      return 'Run Progress';
+      return 'Major Reward';
     case 'MetaProgress':
-      return 'Meta Progress';
+      return 'Minor Reward';
     default:
       return storeKey;
   }

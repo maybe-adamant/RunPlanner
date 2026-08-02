@@ -78,8 +78,9 @@ describe('HubDecisionWorkbench', () => {
   it('renders the declaration-owned board and complete visit timeline', () => {
     renderStaticHubDecisionWorkbench(createRepresentativeNOPQProject());
 
+    expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Open Ephyra rooms' })).toBeTruthy();
-    expect(screen.getAllByLabelText(/Hub slot$/)).toHaveLength(26);
+    expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26);
     expect(document.querySelectorAll('.hub-visit-row')).toHaveLength(6);
     expect(screen.getByText('Pylon visit order')).toBeTruthy();
   });
@@ -107,8 +108,8 @@ describe('HubDecisionWorkbench', () => {
     const historyBeforeBoard =
       view.application.store.getState().projectWorkspace.history.past.length;
 
-    await view.user.click(screen.getByRole('button', { name: 'Create Hub board' }));
-    await waitFor(() => expect(screen.getAllByLabelText(/Hub slot$/)).toHaveLength(26));
+    await view.user.click(screen.getByRole('button', { name: 'Set up Hub rooms' }));
+    await waitFor(() => expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26));
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBeforeBoard + 1,
     );
@@ -116,9 +117,9 @@ describe('HubDecisionWorkbench', () => {
       createHubDecisionAddress(nBiome, 'hub'),
     );
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    await screen.findByRole('button', { name: 'Create Hub board' });
-    await view.user.click(screen.getByRole('button', { name: 'Create Hub board' }));
-    await waitFor(() => expect(screen.getAllByLabelText(/Hub slot$/)).toHaveLength(26));
+    await screen.findByRole('button', { name: 'Set up Hub rooms' });
+    await view.user.click(screen.getByRole('button', { name: 'Set up Hub rooms' }));
+    await waitFor(() => expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26));
     await view.user.click(screen.getByLabelText('Combat 01 open'));
     await waitFor(() =>
       expect(
@@ -213,7 +214,7 @@ describe('HubDecisionWorkbench', () => {
       }),
     );
     const view = renderHubDecisionWorkbench(project);
-    const closedCard = screen.getByRole('article', { name: 'Combat 04 Hub slot' });
+    const closedCard = screen.getByRole('article', { name: 'Combat 04 Hub room' });
     const open = within(closedCard).getByRole('checkbox', { name: 'Combat 04 open' });
     expect(closedCard.querySelector('[data-assessment]')?.getAttribute('data-assessment')).toBe(
       'assessed',
@@ -228,7 +229,7 @@ describe('HubDecisionWorkbench', () => {
       ).toBe(true),
     );
 
-    const openedCard = screen.getByRole('article', { name: 'Combat 04 Hub slot' });
+    const openedCard = screen.getByRole('article', { name: 'Combat 04 Hub room' });
     expect(within(openedCard).queryByText(/Closing this slot removes/)).toBeNull();
     const beforeReward = nHubOccurrence(view.application, 'combat04').state;
     await view.user.click(within(openedCard).getByLabelText('Reward'));
@@ -266,7 +267,7 @@ describe('HubDecisionWorkbench', () => {
       createOccurrenceAddress(nBiome, openedOccurrenceId),
     );
 
-    const close = within(screen.getByRole('article', { name: 'Combat 04 Hub slot' })).getByRole(
+    const close = within(screen.getByRole('article', { name: 'Combat 04 Hub room' })).getByRole(
       'checkbox',
       { name: 'Combat 04 open' },
     );
@@ -485,7 +486,7 @@ describe('HubDecisionWorkbench', () => {
     });
     const view = renderHubDecisionWorkbench(project);
 
-    expect(screen.getAllByLabelText(/Hub slot$/)).toHaveLength(26);
+    expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26);
     const rows = document.querySelectorAll<HTMLElement>('.hub-visit-row');
     expect(rows).toHaveLength(6);
     expect(rows[3]?.dataset.authoring).toBe('next');

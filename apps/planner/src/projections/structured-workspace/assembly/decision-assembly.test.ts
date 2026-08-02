@@ -350,8 +350,11 @@ describe('structured workspace decision assembly', () => {
 
     expect(assembly.batch.fieldsCageOutcome).toBeDefined();
     expect(assembly.batch.fields).toBeUndefined();
-    expect(assembly.batch.missingTargets.map((target) => target.authoring.kind)).toEqual([
-      'awaitingFieldsCageOutcome',
+    expect(assembly.batch.missingTargets.map((target) => target.authoring)).toEqual([
+      {
+        kind: 'awaitingFieldsCageOutcome',
+        message: 'Choose the Fields door roll first.',
+      },
     ]);
   });
 
@@ -708,6 +711,10 @@ describe('structured workspace decision assembly', () => {
       source: beforeSetup,
     });
     if (before.kind !== 'batch') throw new Error('F setup decision is not a batch');
+    expect(before.batch.missingTargets[0]?.authoring).toEqual({
+      kind: 'awaitingBatchRewardStore',
+      message: 'Choose the reward pool first.',
+    });
     expect(
       before.batch.missingTargets.every(
         (target) => target.authoring.kind === 'awaitingBatchRewardStore',

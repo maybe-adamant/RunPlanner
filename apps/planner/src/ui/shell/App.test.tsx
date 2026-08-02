@@ -69,12 +69,63 @@ describe('App', () => {
     expect(markup).toContain('Settings');
     expect(markup).toContain('Erebus');
     expect(markup).toContain('Route settings');
-    expect(markup).toContain('0 configured');
+    expect(markup).toContain('Configure route up to');
+    expect(markup).toContain('No biomes');
+    expect(markup).toContain('No biomes configured.');
     expect(markup).toContain('Project editor');
     expect(markup).toContain('Empty project');
     expect(markup).toContain('Findings');
     expect(markup).toContain('Configure a biome in this route to begin simulation.');
     expect(markup).toContain('data-editor-layout="overview"');
+  });
+
+  it('presents the configured route extent and included biomes', () => {
+    const application = createApplication();
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        configuredBiomeCount: 1,
+        route: createRouteAddress('Underworld'),
+      }),
+    );
+
+    expect(appMarkup(application)).toContain('Through Erebus');
+    expect(appMarkup(application)).toContain('Configuring Erebus.');
+
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        configuredBiomeCount: 2,
+        route: createRouteAddress('Underworld'),
+      }),
+    );
+
+    expect(appMarkup(application)).toContain('Through Oceanus');
+    expect(appMarkup(application)).toContain('Configuring Erebus and Oceanus.');
+
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        configuredBiomeCount: 3,
+        route: createRouteAddress('Underworld'),
+      }),
+    );
+
+    const markup = appMarkup(application);
+    expect(markup).toContain('Through Fields');
+    expect(markup).toContain('Configuring Erebus, Oceanus, and Fields.');
+    expect(markup).not.toContain('contiguous route prefix');
+
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        configuredBiomeCount: 4,
+        route: createRouteAddress('Underworld'),
+      }),
+    );
+
+    expect(appMarkup(application)).toContain('Through Tartarus');
+    expect(appMarkup(application)).toContain('Configuring Erebus, Oceanus, Fields, and Tartarus.');
   });
 
   it('shows Findings only for the selected route, not Settings', () => {
@@ -121,11 +172,11 @@ describe('App', () => {
     );
 
     const markup = appMarkup(application);
-    expect(markup).toContain('Biome structure');
+    expect(markup).toContain('Route structure');
     expect(markup).toContain('<strong>Opening</strong>');
     expect(markup).not.toContain('Opening 01');
-    expect(markup).toContain('Focused inspector');
-    expect(markup).toContain('Continue authoring here');
+    expect(markup).toContain('Details');
+    expect(markup).toContain('Continue route');
     expect(markup).toContain('data-editor-layout="biome"');
   });
 
@@ -224,7 +275,7 @@ describe('App', () => {
     expect(appMarkup(application)).toContain('Route settings');
 
     application.store.dispatch(routeSelected('Surface'));
-    expect(appMarkup(application)).toContain('0 configured');
+    expect(appMarkup(application)).toContain('No biomes configured.');
     expect(application.store.getState().projectWorkspace.history.past).toEqual([]);
   });
 });

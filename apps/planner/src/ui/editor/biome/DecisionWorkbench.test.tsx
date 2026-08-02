@@ -202,14 +202,14 @@ describe('DecisionWorkbench', () => {
       createOccurrenceAddress(nBiome, openingId),
     );
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Create linked exit' })).toBeTruthy(),
+      expect(screen.getByRole('button', { name: 'Add fixed next room' })).toBeTruthy(),
     );
-    expect(screen.queryByText('Create Preboss batch')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Evaluate Preboss batches' })).toBeNull();
+    expect(screen.queryByText('Add Preboss doors')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
 
     const historyBeforeLinked =
       view.application.store.getState().projectWorkspace.history.past.length;
-    await view.user.click(screen.getByRole('button', { name: 'Create linked exit' }));
+    await view.user.click(screen.getByRole('button', { name: 'Add fixed next room' }));
     let linkedOccurrenceId: ReturnType<typeof createOccurrenceId> | undefined;
     await waitFor(() => {
       const updated = view.application.store
@@ -235,31 +235,32 @@ describe('DecisionWorkbench', () => {
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Create linked exit' })).toBeTruthy(),
+      expect(screen.getByRole('button', { name: 'Add fixed next room' })).toBeTruthy(),
     );
   });
 
   it('authors only the next physical target and publishes its room and reward controls', async () => {
     const { owner, project } = fTwoDoorBatchProject();
     const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
+    expect(screen.queryByText('partial')).toBeNull();
     const targetOwner = createTargetAddress(goldenFBiome, owner.source, 'exit1');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
-    expect(screen.getByRole('button', { name: 'Exit 1 room' })).not.toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Door 1 room' })).not.toHaveProperty(
       'disabled',
       true,
     );
-    const later = screen.getByLabelText('Exit 2 room') as HTMLSelectElement;
+    const later = screen.getByLabelText('Door 2 room') as HTMLSelectElement;
     expect(later.disabled).toBe(true);
-    expect(later.textContent).toContain('Choose Exit 1 first.');
+    expect(later.textContent).toContain('Choose Door 1 first.');
 
-    await view.user.click(screen.getByRole('button', { name: 'Exit 1 room' }));
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const possible = within(screen.getByRole('listbox'))
       .getAllByRole('option')
       .find((option) => option.getAttribute('data-candidate-state') !== 'impossible');
     if (possible === undefined) throw new Error('F Exit 1 has no selectable projected room');
     await view.user.click(possible);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Exit 2 room' })).not.toHaveProperty(
+      expect(screen.getByRole('button', { name: 'Door 2 room' })).not.toHaveProperty(
         'disabled',
         true,
       ),
@@ -278,9 +279,9 @@ describe('DecisionWorkbench', () => {
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
-      expect(screen.getByRole('article', { name: 'Exit 1 unspecified room offer' })).toBeTruthy(),
+      expect(screen.getByRole('article', { name: 'Door 1 unspecified room offer' })).toBeTruthy(),
     );
-    expect((screen.getByLabelText('Exit 2 room') as HTMLSelectElement).disabled).toBe(true);
+    expect((screen.getByLabelText('Door 2 room') as HTMLSelectElement).disabled).toBe(true);
   });
 
   it('publishes picked-room and reward edits as separate atomic decision commands', async () => {
@@ -379,9 +380,9 @@ describe('DecisionWorkbench', () => {
     });
     const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
     const before = view.application.store.getState().projectWorkspace.history.past.length;
-    await view.user.click(screen.getByRole('button', { name: 'Evaluate Preboss batches' }));
-    await view.user.selectOptions(screen.getByLabelText('Preboss declaration'), 'F_PreBoss01');
-    await view.user.click(screen.getByRole('button', { name: 'Create Preboss batch' }));
+    await view.user.click(screen.getByRole('button', { name: 'Check Preboss rooms' }));
+    await view.user.selectOptions(screen.getByLabelText('Preboss room'), 'F_PreBoss01');
+    await view.user.click(screen.getByRole('button', { name: 'Add Preboss doors' }));
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       before + 1,
     );
@@ -396,7 +397,7 @@ describe('DecisionWorkbench', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Evaluate Preboss batches' })).toBeTruthy(),
+      expect(screen.getByRole('button', { name: 'Check Preboss rooms' })).toBeTruthy(),
     );
     cleanup();
 
@@ -412,10 +413,10 @@ describe('DecisionWorkbench', () => {
     );
     const impossibleBefore =
       impossible.application.store.getState().projectWorkspace.history.past.length;
-    await impossible.user.click(screen.getByRole('button', { name: 'Evaluate Preboss batches' }));
-    const selector = screen.getByLabelText('Preboss declaration') as HTMLSelectElement;
+    await impossible.user.click(screen.getByRole('button', { name: 'Check Preboss rooms' }));
+    const selector = screen.getByLabelText('Preboss room') as HTMLSelectElement;
     expect(Array.from(selector.options).map((option) => option.value)).not.toContain('F_PreBoss01');
-    const action = screen.getByRole('button', { name: 'Replace with Preboss batch' });
+    const action = screen.getByRole('button', { name: 'Replace doors with Preboss' });
     expect(action).toHaveProperty('disabled', true);
     await impossible.user.click(action);
     expect(impossible.application.store.getState().projectWorkspace.history.past).toHaveLength(
@@ -488,8 +489,8 @@ describe('DecisionWorkbench', () => {
     const offer = selectedControl?.closest<HTMLElement>('article');
     if (offer === undefined || offer === null)
       throw new Error('selected retained offer is missing');
-    expect(within(offer).getByText('Selected route')).toBeTruthy();
-    expect(within(offer).queryByText('Entered route')).toBeNull();
+    expect(within(offer).getByText('Room selected')).toBeTruthy();
+    expect(within(offer).queryByText('Door taken')).toBeNull();
   });
 
   it('executes fixed width-one O and reordered-Q takeovers without a declaration selector', async () => {
@@ -549,7 +550,7 @@ describe('DecisionWorkbench', () => {
         createApplication({ observeEvaluationWork: (event) => work.push(event) }),
       );
       work.length = 0;
-      expect(screen.queryByLabelText('Preboss declaration')).toBeNull();
+      expect(screen.queryByLabelText('Preboss room')).toBeNull();
       await view.user.click(screen.getByRole('button', { name: 'Go to Preboss' }));
       expect(work.filter((event) => event.kind === 'queryBatch')).toHaveLength(1);
       expect(
@@ -590,7 +591,7 @@ describe('DecisionWorkbench', () => {
     await view.user.click(screen.getByRole('button', { name: 'Go to Preboss' }));
     expect(work.filter((event) => event.kind === 'queryBatch')).toHaveLength(1);
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(before);
-    expect(screen.getByText(/before editing this biome contextually\./)).toBeTruthy();
+    expect(screen.getByText('Finish Thessaly before choices here can be evaluated.')).toBeTruthy();
     expect(screen.queryByText(/upstreamIncomplete|coverageNotReached/)).toBeNull();
   });
 
@@ -606,7 +607,7 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(owner),
     );
     const confirmation = vi.spyOn(globalThis, 'confirm');
-    await decision.user.click(screen.getByRole('button', { name: 'Remove decision' }));
+    await decision.user.click(screen.getByRole('button', { name: 'Remove these doors' }));
     expect(confirmation).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(
@@ -632,7 +633,7 @@ describe('DecisionWorkbench', () => {
       'N',
       subjectForOwner(linkedOwner),
     );
-    await linked.user.click(screen.getByRole('button', { name: 'Remove decision' }));
+    await linked.user.click(screen.getByRole('button', { name: 'Remove these doors' }));
     await waitFor(() =>
       expect(
         linked.application.store
@@ -678,7 +679,7 @@ describe('DecisionWorkbench', () => {
       'G',
       subjectForOwner(retainedOwner),
     );
-    await retained.user.click(screen.getByRole('button', { name: 'Repair Preboss batch' }));
+    await retained.user.click(screen.getByRole('button', { name: 'Fix Preboss doors' }));
     expect(
       workspaceBiome(retained.application, 'Underworld', 'G').nodes.find(
         (node) => node.kind === 'takeoverBatch' && ownerMatches(node, retainedOwner),
@@ -697,8 +698,8 @@ describe('DecisionWorkbench', () => {
       'G',
       subjectForOwner(retainedOwner),
     );
-    expect(screen.getByText(/Missing Preboss exits are repaired atomically/)).toBeTruthy();
-    await expanded.user.click(screen.getByRole('button', { name: 'Repair Preboss batch' }));
+    expect(screen.getByText('Fix Preboss doors to restore the missing doors.')).toBeTruthy();
+    await expanded.user.click(screen.getByRole('button', { name: 'Fix Preboss doors' }));
     expect(
       workspaceBiome(expanded.application, 'Underworld', 'G').nodes.find(
         (node) => node.kind === 'takeoverBatch' && ownerMatches(node, retainedOwner),
@@ -733,7 +734,7 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(ordinaryOwner),
     );
     expect(document.querySelector('[data-command="ReconcileBatchExitCapacity"]')).not.toBeNull();
-    await ordinary.user.click(screen.getByRole('button', { name: 'Reconcile unavailable exits' }));
+    await ordinary.user.click(screen.getByRole('button', { name: 'Remove unavailable doors' }));
     expect(
       workspaceBiome(ordinary.application, 'Underworld', 'F').nodes.find(
         (node) => node.kind === 'ordinaryBatch' && ownerMatches(node, ordinaryOwner),
@@ -752,11 +753,11 @@ describe('DecisionWorkbench', () => {
     expect(
       screen.getByRole('heading', { level: 3, name: 'Choose a room and reward' }),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Exit 1 room' })).not.toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Door 1 room' })).not.toHaveProperty(
       'disabled',
       true,
     );
-    expect(screen.getByRole('button', { name: 'Exit 2 room' })).not.toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Door 2 room' })).not.toHaveProperty(
       'disabled',
       true,
     );

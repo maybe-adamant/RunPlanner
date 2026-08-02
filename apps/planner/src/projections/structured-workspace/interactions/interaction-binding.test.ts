@@ -743,6 +743,7 @@ describe('structured workspace interaction binding', () => {
       throw new Error('O fixed width-one takeover interaction is missing');
     }
 
+    expect(interaction.summary).toBe('Go to Preboss. The World Shop is entered automatically.');
     expect(allocations).toBe(0);
     const result = interaction.execute();
     if (result.kind !== 'intent') {
