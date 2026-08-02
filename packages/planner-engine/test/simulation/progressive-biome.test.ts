@@ -433,10 +433,7 @@ describe('progressive biome evaluation', () => {
     expect(evaluation).toMatchObject({
       authoring: 'incomplete',
       coverage: { kind: 'prefix' },
-      frontier: createExitDecisionAddress(
-        goldenHBiome,
-        source(createOccurrenceId('progressive-h-start')),
-      ),
+      frontier: fixture.target,
     });
     expect(
       bindTestCandidateSession(catalog, fixture.project).evaluate({

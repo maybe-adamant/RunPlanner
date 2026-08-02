@@ -404,6 +404,14 @@ function evaluateBatchCompleteness(
   const findings: SemanticFinding[] = [];
   const source = sourceAddress(decision.source);
   const takeover = isTakeoverBatch(decision, occurrences, catalog);
+  const emptyOrdinaryEnvelope = !takeover && decision.normal.targets.length === 0;
+  // The first physical door is the authoring frontier of an empty envelope.
+  // Setup remains a finding and still blocks ordinary target creation, but it
+  // must not hide the decision's Room choice or reclassify the envelope as an
+  // invalid extra batch.
+  if (emptyOrdinaryEnvelope && room !== undefined) {
+    findMissingTargets(findings, biome, decision, room);
+  }
   if (
     !takeover &&
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
@@ -428,6 +436,8 @@ function evaluateBatchCompleteness(
       }),
     );
   }
-  if (room !== undefined) findMissingTargets(findings, biome, decision, room);
+  if (!emptyOrdinaryEnvelope && room !== undefined) {
+    findMissingTargets(findings, biome, decision, room);
+  }
   return Object.freeze(findings);
 }
