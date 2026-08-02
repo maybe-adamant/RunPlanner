@@ -4,6 +4,7 @@ import {
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -317,6 +318,62 @@ describe('structured workspace decision assembly', () => {
       true,
       false,
     ]);
+  });
+
+  it('keeps authored-active Fields cages reachable beyond a clamped target overlay', () => {
+    const sourceOccurrenceId = createOccurrenceId('golden-h-combat02');
+    const retainedOccurrenceId = createOccurrenceId('golden-h-combat03');
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'H');
+    const decision = batchDecisionAt(source, sourceOccurrenceId);
+    const owner = createExitDecisionAddress(goldenHBiome, decision.source);
+    const evaluated = source.evaluatedBatch(owner);
+    if (evaluated === undefined || evaluated.batch.targets.length !== 2) {
+      throw new Error('H two-door evaluated Fields batch is missing');
+    }
+    const clamped: WorkspaceEvaluatedBatchOverlay = Object.freeze({
+      batch: Object.freeze({
+        ...evaluated.batch,
+        targets: Object.freeze(evaluated.batch.targets.slice(0, 1)),
+      }),
+      partial: true,
+    });
+    const kit = decisionKit(source);
+    const assembly = assembleWorkspaceDecision({
+      assembleOccurrence: kit.assembleOccurrence,
+      catalog,
+      decision,
+      evaluated: clamped,
+      kind: 'batch',
+      markerDestinations: kit.markers.emitter,
+      source,
+    });
+    if (assembly.kind !== 'batch') throw new Error('H clamped Fields decision is not a batch');
+    const retainedWorkbench = assembly.workbenches.find(
+      (workbench) => workbench.room.occurrenceId === retainedOccurrenceId,
+    );
+    if (retainedWorkbench?.room.roomLocal.kind !== 'fields') {
+      throw new Error('H retained Fields workbench is missing');
+    }
+
+    expect(retainedWorkbench.room.entered).toBe(false);
+    expect(retainedWorkbench.room.roomLocal.cages.map((cage) => cage.active)).toEqual([
+      true,
+      true,
+      false,
+    ]);
+    const repairOwner = createLocalRewardAddress(
+      goldenHBiome,
+      retainedOccurrenceId,
+      'cages',
+      'cage2',
+    );
+    expect(retainedWorkbench.room.roomLocal.cages[1]).toMatchObject({
+      active: true,
+      control: {
+        marker: { address: repairOwner },
+        owner: { address: repairOwner },
+      },
+    });
   });
 
   it('keeps the Fields outcome control available while a retained batch awaits its outcome', () => {
