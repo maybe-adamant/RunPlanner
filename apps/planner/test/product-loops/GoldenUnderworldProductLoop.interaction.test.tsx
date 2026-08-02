@@ -91,6 +91,87 @@ describe('underworld product loop', () => {
     expect(undone?.topology).toBeNull();
   });
 
+  it('authors a terminal Preboss through the direct decision flow and undoes to its envelope', async () => {
+    const application = createApplication();
+    const sourceOccurrenceId = goldenFOccurrenceId(10, 1);
+    const owner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: sourceOccurrenceId,
+    });
+    const project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+      decision: owner,
+      kind: 'RemoveExitDecision',
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const dispatch = vi.spyOn(application.store, 'dispatch');
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    act(() =>
+      application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, sourceOccurrenceId)),
+      ),
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Add next decision' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
+
+    const topology = () =>
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F')?.topology;
+    const terminalDecision = () =>
+      topology()?.decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === sourceOccurrenceId,
+      );
+    expect(terminalDecision()).toMatchObject({
+      kind: 'exit',
+      normal: { kind: 'batch', targets: [] },
+    });
+
+    const historyBeforeTakeover = application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+    const preboss = within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .find((option) => option.getAttribute('data-candidate-state') === 'forced');
+    if (preboss === undefined) throw new Error('terminal F decision has no forced Preboss choice');
+    dispatch.mockClear();
+
+    await view.user.click(preboss);
+
+    expect(
+      dispatch.mock.calls
+        .map(([action]) => action)
+        .filter(authoredProjectCommandDispatched.match)
+        .map((action) => action.payload.kind),
+    ).toEqual(['ReplaceWithTakeoverBatch']);
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeTakeover + 1,
+    );
+    const authored = terminalDecision();
+    expect(
+      authored?.kind === 'exit' && authored.normal.kind === 'batch'
+        ? authored.normal.targets.map(
+            (target) =>
+              topology()?.occurrences.find(
+                (occurrence) => occurrence.occurrenceId === target.occurrenceId,
+              )?.gameName,
+          )
+        : [],
+    ).toEqual(['F_PreBoss01', 'F_PreBoss01']);
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
+    expect(terminalDecision()).toMatchObject({
+      kind: 'exit',
+      normal: { kind: 'batch', targets: [] },
+    });
+  });
+
   it('shrinks a route prefix immediately and preserves existing undo behavior', async () => {
     const application = createApplication();
     application.store.dispatch(

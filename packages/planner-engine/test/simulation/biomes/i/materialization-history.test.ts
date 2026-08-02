@@ -303,6 +303,44 @@ function batches(snapshot: ReturnType<typeof materializeBiome>) {
 }
 
 describe('canonical I Clockwork materialization and history', () => {
+  it('folds the selected Clockwork reward before an empty outgoing frontier', () => {
+    const sourceOccurrenceId = occurrence('combat08');
+    const decision = createExitDecisionAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: sourceOccurrenceId,
+    });
+    let project = applyProjectCommand(completeProject(), catalog, {
+      decision,
+      kind: 'RemoveExitDecision',
+    });
+    project = applyProjectCommand(project, catalog, { decision, kind: 'CreateBatch' });
+    const snapshot = materializeBiomePrefix(catalog, biome, plan(project));
+    if (snapshot?.entryRoom === undefined) {
+      throw new Error('empty I decision fixture did not materialize a prefix');
+    }
+    const history = composeBiomeHistoryPrefix(
+      catalog,
+      Object.freeze({ ...snapshot, entryRoom: snapshot.entryRoom }),
+      carriedHHistory().afterTransition,
+    );
+    if (history === null) throw new Error('empty I decision fixture has no history');
+    const source = history.rooms.find(
+      (room) =>
+        room.origin.kind === 'occurrence' && room.origin.occurrenceId === sourceOccurrenceId,
+    );
+
+    expect(
+      history.events.filter(
+        (event) =>
+          event.kind === 'clockworkNonGoalRewardSpawned' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === sourceOccurrenceId,
+      ),
+    ).toHaveLength(1);
+    expect(source?.preOutgoing?.ledgers.counters.clockworkGoalsRemaining).toBe(0);
+    expect(source?.preOutgoing?.ledgers.counters.clockworkNonGoalRewardsAcquired).toBe(4);
+  });
+
   it('derives physical Goal and NonGoal offers before each generated batch', () => {
     const project = completeProject();
     const encodedBefore = encodeProjectDocument(project);

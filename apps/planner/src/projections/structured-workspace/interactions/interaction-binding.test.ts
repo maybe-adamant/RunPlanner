@@ -32,6 +32,7 @@ import {
   goldenFStartId,
   goldenGBiome,
   goldenHBiome,
+  goldenIBiome,
   createRepresentativeNOPQProject,
   appendCompleteN,
   nBiome,
@@ -700,6 +701,56 @@ describe('structured workspace interaction binding', () => {
     expect(ordinary).toMatchObject({ disabled: true, state: 'possible' });
     expect(() => interaction.intentFor('H_Combat02')).toThrow(/not currently authorable/);
     expect(allocations).toBe(0);
+  });
+
+  it('binds I’s empty-decision Preboss through the ordinary target path', () => {
+    let project = createGoldenFGHIProject();
+    const iPlan = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'I');
+    const prebossOccurrenceId = iPlan?.topology?.occurrences.find(
+      (occurrence) => occurrence.gameName === 'I_PreBoss02',
+    )?.occurrenceId;
+    const prebossDecision = iPlan?.topology?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.normal.kind === 'batch' &&
+        decision.normal.targets.some((target) => target.occurrenceId === prebossOccurrenceId),
+    );
+    if (prebossOccurrenceId === undefined || prebossDecision?.kind !== 'exit') {
+      throw new Error('I mixed Preboss decision fixture is missing');
+    }
+    const owner = createExitDecisionAddress(goldenIBiome, prebossDecision.source);
+    project = applyProjectCommand(project, catalog, {
+      decision: owner,
+      kind: 'RemoveExitDecision',
+    });
+    project = applyProjectCommand(project, catalog, { decision: owner, kind: 'CreateBatch' });
+    const target = createTargetAddress(goldenIBiome, owner.source, 'exit1');
+    const occurrenceId = createOccurrenceId('bound-i-ordinary-preboss');
+    const interaction = bind(project, 'Underworld', 'I', () => occurrenceId).interactions.rooms.get(
+      semanticAddressKey(target),
+    );
+    if (interaction?.kind !== 'decisionEntryRoom') {
+      throw new Error('I ordinary Preboss decision-entry interaction is missing');
+    }
+
+    const preboss = interaction
+      .load()
+      .sections.flatMap((section) => section.items)
+      .find((item) => item.value.gameName === 'I_PreBoss02');
+    if (preboss === undefined) throw new Error('I ordinary Preboss choice is missing');
+    expect(preboss.disabled).toBe(false);
+    expect(interaction.choices.some((choice) => choice.gameName !== 'I_PreBoss02')).toBe(true);
+    expect(interaction.intentFor('I_PreBoss02')).toEqual({
+      command: {
+        gameName: 'I_PreBoss02',
+        kind: 'CreateTarget',
+        occurrenceId,
+        target,
+      },
+      focus: { owner: target, timing: 'after' },
+    });
   });
 
   it('binds O’s fixed terminal Preboss through Door 1 rather than a standalone action', () => {

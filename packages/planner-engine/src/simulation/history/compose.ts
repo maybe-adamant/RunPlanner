@@ -347,11 +347,22 @@ function appendHubDecision(
   return selectedTarget(handoff).room;
 }
 
-function appendRoomWithBatch(
+interface ClockworkAwareLifecycleOptions {
+  readonly outgoing?: (writer: HistorySegmentWriter) => void;
+  readonly stopAfterOutgoing?: boolean;
+}
+
+/**
+ * Clockwork Goal/NonGoal acquisition belongs to the entered source room and
+ * therefore precedes its outgoing generation checkpoint. Complete decisions
+ * and progressive frontiers must replay that same lifecycle even when the
+ * outgoing batch has no targets yet.
+ */
+function appendClockworkAwareRoomLifecycle(
   writer: HistorySegmentWriter,
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
-  batch: CanonicalBatch,
+  options: ClockworkAwareLifecycleOptions = {},
 ): void {
   let emitted = false;
   const emitClockworkReward = (eventWriter: HistorySegmentWriter): void => {
@@ -364,10 +375,10 @@ function appendRoomWithBatch(
     emitted = true;
   };
   appendCanonicalRoomLifecycle(writer, catalog, room, fail, {
-    outgoing(outgoingWriter) {
-      appendBatchState(outgoingWriter, batch);
-      appendGeneratedTargets(outgoingWriter, room.origin, batch.targets);
-    },
+    ...(options.outgoing === undefined ? {} : { outgoing: options.outgoing }),
+    ...(options.stopAfterOutgoing === undefined
+      ? {}
+      : { stopAfterOutgoing: options.stopAfterOutgoing }),
     beforeEvent(beforeWriter, event) {
       if (
         room.clockworkReward === 'nonGoal' &&
@@ -395,47 +406,26 @@ function appendRoomWithBatch(
   }
 }
 
+function appendRoomWithBatch(
+  writer: HistorySegmentWriter,
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  batch: CanonicalBatch,
+): void {
+  appendClockworkAwareRoomLifecycle(writer, catalog, room, {
+    outgoing(outgoingWriter) {
+      appendBatchState(outgoingWriter, batch);
+      appendGeneratedTargets(outgoingWriter, room.origin, batch.targets);
+    },
+  });
+}
+
 function appendEnteredPreboss(
   writer: HistorySegmentWriter,
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
 ): void {
-  let emitted = false;
-  const emitClockworkReward = (eventWriter: HistorySegmentWriter): void => {
-    if (emitted) fail(`${room.gameName} has multiple Clockwork reward points`);
-    eventWriter.append(
-      room.clockworkReward === 'goal'
-        ? { kind: 'clockworkGoalAcquired', origin: room.origin }
-        : { kind: 'clockworkNonGoalRewardSpawned', origin: room.origin },
-    );
-    emitted = true;
-  };
-  appendCanonicalRoomLifecycle(writer, catalog, room, fail, {
-    beforeEvent(beforeWriter, event) {
-      if (
-        room.clockworkReward === 'nonGoal' &&
-        room.incomingReward?.offer.rewardType === 'Devotion' &&
-        event.kind === 'producerRoleAdvanced' &&
-        event.lifecyclePoint === 'beforeCombat'
-      ) {
-        emitClockworkReward(beforeWriter);
-      }
-    },
-    afterEvent(afterWriter, event) {
-      if (room.clockworkReward === undefined) return;
-      if (
-        (room.clockworkReward === 'goal' && event.kind === 'roomEntered') ||
-        (room.clockworkReward === 'nonGoal' &&
-          room.incomingReward?.offer.rewardType !== 'Devotion' &&
-          event.kind === 'encounterCompleted')
-      ) {
-        emitClockworkReward(afterWriter);
-      }
-    },
-  });
-  if (room.clockworkReward !== undefined && !emitted) {
-    fail(`${room.gameName} has no Clockwork reward point`);
-  }
+  appendClockworkAwareRoomLifecycle(writer, catalog, room);
 }
 
 function initialCounters(
@@ -626,9 +616,11 @@ export function composeBiomeHistoryPrefix(
           fail('ordinary decision frontier does not follow an authored room');
         }
         if (frontier.targets.length === 0) {
-          appendCanonicalRoomLifecycle(writer, catalog, current, fail, { stopAfterOutgoing: true });
+          appendClockworkAwareRoomLifecycle(writer, catalog, current, {
+            stopAfterOutgoing: true,
+          });
         } else {
-          appendCanonicalRoomLifecycle(writer, catalog, current, fail, {
+          appendClockworkAwareRoomLifecycle(writer, catalog, current, {
             outgoing(outgoingWriter) {
               if (frontier.batchState !== undefined) {
                 appendBatchState(outgoingWriter, {
