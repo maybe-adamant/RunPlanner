@@ -531,6 +531,7 @@ describe('authored-project commands and topology', () => {
       ),
     ).toMatchObject({
       normal: {
+        rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
         targets: [
           { exitKey: 'exit1', occurrenceId: existingId },
           { exitKey: 'exit2', occurrenceId: peerId },
