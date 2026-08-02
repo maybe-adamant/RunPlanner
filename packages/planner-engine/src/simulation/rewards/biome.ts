@@ -706,6 +706,35 @@ export function evaluateBiomeRewardsAssembly(
     );
   }
 
+  function recordBlankFrontierTargetHistory(): void {
+    const frontier = snapshot.kind === 'biomePrefix' ? snapshot.frontier : undefined;
+    if (frontier?.kind !== 'exitDecision' || frontier.parent.origin.kind !== 'occurrence') {
+      return;
+    }
+    const source = rooms.get(semanticAddressKey(frontier.parent.origin));
+    const declaration = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
+    if (source === undefined || declaration === undefined) {
+      throw new BiomeRewardSimulationContractError(
+        `${semanticAddressKey(frontier.origin)} has no reward-history frontier source`,
+      );
+    }
+    const nextExit = [...declaration.exits].sort((left, right) => left.index - right.index)[
+      frontier.targets.length
+    ];
+    const historySequence = history.events.at(-1)?.sequence;
+    if (nextExit === undefined || historySequence === undefined) {
+      return;
+    }
+    const origin = createTargetAddress(
+      createBiomeAddress(frontier.origin.routeKey, frontier.origin.biomeKey),
+      frontier.origin.source,
+      `exit${nextExit.index}`,
+    );
+    if (!targetHistoryByOrigin.has(semanticAddressKey(origin))) {
+      recordTargetSlotHistory(origin, historySequence);
+    }
+  }
+
   for (const event of history.events) {
     if (branches.length === 0) {
       break;
@@ -1541,6 +1570,7 @@ export function evaluateBiomeRewardsAssembly(
     }
   }
 
+  recordBlankFrontierTargetHistory();
   const immutableFindings = Object.freeze([...findings.values()]);
   const simulation: BiomeRewardSimulation = Object.freeze({
     biomeKey: snapshot.biomeKey,

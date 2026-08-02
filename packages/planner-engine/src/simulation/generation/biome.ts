@@ -1172,6 +1172,7 @@ function firstTargetGenerationSupport(
   exit: CanonicalPhysicalExit,
   before: HistoryStateView,
   enteredBiomeCount: number,
+  rewardHistory?: RewardHistoryState,
 ): FirstTargetGenerationSupport {
   const layout = catalog.biomeLayouts.byKey[biomeKey];
   if (layout?.progression.kind !== 'generated') {
@@ -1188,6 +1189,7 @@ function firstTargetGenerationSupport(
     sourceDeclaration,
     before,
     enteredBiomeCount,
+    rewardHistory,
   );
   const counts = roomGenerationCounts(before, source.origin);
   const domain = firstTargetCandidateDomain(catalog, layout, ordinaryBatchIndex);
@@ -1241,6 +1243,7 @@ function firstTargetRoomCandidateContext(
   exit: CanonicalPhysicalExit,
   before: HistoryStateView,
   enteredBiomeCount: number,
+  rewardHistory?: RewardHistoryState,
 ): RoomTargetCandidateContext {
   const support = firstTargetGenerationSupport(
     catalog,
@@ -1250,6 +1253,7 @@ function firstTargetRoomCandidateContext(
     exit,
     before,
     enteredBiomeCount,
+    rewardHistory,
   );
   return targetCandidateContext(
     source,
@@ -1279,6 +1283,7 @@ export function roomTargetCandidateContextAtFrontier(
   before: HistoryStateView,
   enteredBiomeCount: number,
   includeTakeoverSupport = false,
+  rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
 ): RoomTargetCandidateContext {
   const layout = catalog.biomeLayouts.byKey[biomeKey];
   if (layout?.progression.kind !== 'generated') {
@@ -1286,6 +1291,9 @@ export function roomTargetCandidateContextAtFrontier(
       `${biomeKey} has no ordinary target candidate domain`,
     );
   }
+  const rewardHistory = targetRewardHistories(rewardHistoryCheckpoints).get(
+    semanticAddressKey(targetOrigin),
+  );
   if (includeTakeoverSupport) {
     return firstTargetRoomCandidateContext(
       catalog,
@@ -1296,6 +1304,7 @@ export function roomTargetCandidateContextAtFrontier(
       exit,
       before,
       enteredBiomeCount,
+      rewardHistory,
     );
   }
   return prepareTargetGameNameContext(
@@ -1306,7 +1315,7 @@ export function roomTargetCandidateContextAtFrontier(
     exit,
     before,
     enteredBiomeCount,
-    undefined,
+    rewardHistory,
   );
 }
 

@@ -27,6 +27,22 @@ function evaluateO(project = createRepresentativeNOProject()) {
   return { project, evaluation, biome };
 }
 
+function createEmptyTrialDecision(sourceProject = createRepresentativeNOProject()) {
+  const decision = createExitDecisionAddress(oBiome, {
+    kind: 'occurrence',
+    occurrenceId: oOccurrenceIds.combat01,
+  });
+  let project = applyProjectCommand(sourceProject, catalog, {
+    kind: 'RemoveExitDecision',
+    decision,
+  });
+  project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+  return {
+    project,
+    target: createTargetAddress(oBiome, decision.source, 'exit1'),
+  };
+}
+
 describe('selected O validation', () => {
   it('validates the complete N/O prefix with exact Ship support and forced Preboss pressure', () => {
     const { evaluation, biome: o } = evaluateO();
@@ -215,6 +231,36 @@ describe('selected O validation', () => {
           selectedPossible: true,
           selectedExclusionReasons: [],
         },
+      },
+    });
+  });
+
+  it('uses acquired reward history for an uncommitted Trial target', () => {
+    const { project, target } = createEmptyTrialDecision();
+    const assembly = simulateProjectAssembly(catalog, project);
+    const o = assembly.evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    if (o === undefined || !('rewards' in o)) {
+      throw new Error('O prefix did not publish reward checkpoints');
+    }
+
+    expect(o.rewards.targetHistory).toContainEqual(expect.objectContaining({ origin: target }));
+
+    expect(
+      createPreparedProjectCandidateSession(catalog, assembly).evaluate({
+        kind: 'roomTarget',
+        target,
+        gameName: 'O_Devotion01',
+      }),
+    ).toMatchObject({
+      kind: 'roomTarget',
+      result: {
+        pressure: {
+          selectedPossible: true,
+          selectedExclusionReasons: [],
+        },
+        findings: [],
       },
     });
   });
