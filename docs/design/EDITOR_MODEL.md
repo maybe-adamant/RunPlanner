@@ -435,8 +435,11 @@ selected two- or three-phase value marks `wheel2` dormant or active without
 deleting its retained state. The editor renders active wheels only, so a
 dormant wheel reappears unchanged when the third encounter phase is restored.
 Each rendered wheel owns its Run/Meta store, active offer count, ordered
-maximum-capacity offers, and one picked active offer. Inactive offers inside a
-rendered wheel remain visibly dormant; only a whole dormant wheel is hidden.
+maximum-capacity offers, and one picked active offer. The editor renders only
+offers marked active by that complete projection product. Reducing the active
+offer count hides the surplus offer editors without deleting their authored
+values; restoring the count reveals those values again. The picked index
+remains constrained to an active offer.
 The outgoing decision exposes no duplicate store selector because its
 `sourceOfferPoint` policy derives from the last active wheel. The editor
 dispatches only ship and reward-wheel semantic commands and does not encode
