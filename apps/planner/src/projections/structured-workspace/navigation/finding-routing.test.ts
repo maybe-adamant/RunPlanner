@@ -6,10 +6,14 @@ import {
   createOccurrenceId,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
+import type { SemanticFinding } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import type { WorkspaceInspectorDestination, WorkspaceRoute } from '../contract';
-import { assertFineGrainedFindingDestination } from './finding-routing';
+import {
+  assertFineGrainedFindingDestination,
+  registerWorkspaceFindingDestinations,
+} from './finding-routing';
 
 const biome = createBiomeAddress('Surface', 'N');
 const owner = createLocalChildAddress(
@@ -83,5 +87,44 @@ describe('fine-grained finding routing', () => {
         routes,
       ),
     ).toThrow(/finding has no exact workspace inspector destination/);
+  });
+
+  it('treats a live fine-grained finding without its exact destination as a projection contract failure', () => {
+    const finding = {
+      code: 'rewardBagEntryUnavailable',
+      evidence: {},
+      origin: owner,
+      phase: 'rewardGeneration',
+      severity: 'error',
+    } as const satisfies SemanticFinding;
+
+    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), routes)).toThrow(
+      /finding has no exact workspace destination/,
+    );
+  });
+
+  it('requires every live coarse finding to receive an exact fallback destination', () => {
+    const hub = createHubDecisionAddress(biome, 'hub');
+    const finding = {
+      code: 'hubOpenSetIncomplete',
+      evidence: {},
+      origin: hub,
+      phase: 'completeness',
+      severity: 'error',
+    } as const satisfies SemanticFinding;
+
+    expect(() => registerWorkspaceFindingDestinations([finding], new Map(), routes)).toThrow(
+      /finding has no exact workspace destination/,
+    );
+
+    const fallback = destination({
+      focusAddress: biome,
+      focusKey: semanticAddressKey(biome),
+      ownerAddress: biome,
+    });
+    const focusByOwner = new Map([[semanticAddressKey(biome), fallback]]);
+    registerWorkspaceFindingDestinations([finding], focusByOwner, routes);
+
+    expect(focusByOwner.get(semanticAddressKey(hub))?.ownerAddress).toEqual(hub);
   });
 });

@@ -1689,6 +1689,10 @@ select {
   font-size: 0.82rem;
 }
 
+.hub-decision-workbench {
+  container-type: inline-size;
+}
+
 .hub-board,
 .hub-visit-timeline {
   margin-top: 16px;
@@ -1698,32 +1702,136 @@ select {
   overflow: hidden;
 }
 
+.hub-closed-room-disclosure,
+.hub-outline-room-disclosure {
+  border: 1px solid #3a3b45;
+  border-radius: 12px;
+  background: rgb(13 14 18 / 32%);
+  overflow: visible;
+}
+
+.hub-closed-room-disclosure {
+  margin: 16px 6px 6px;
+}
+
+/* The board clips its card background at the rounded edge; leave room around
+ * this nested disclosure so the summary's keyboard focus outline remains
+ * visible at every edge. */
+.hub-outline-room-disclosure {
+  margin: 0 12px 12px;
+}
+
+.hub-closed-room-disclosure > summary,
+.hub-outline-room-disclosure > summary {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: #ded9d0;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.hub-closed-room-disclosure > summary::-webkit-details-marker,
+.hub-outline-room-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.hub-closed-room-disclosure > summary::before,
+.hub-outline-room-disclosure > summary::before {
+  content: '›';
+  color: #e2b971;
+  font-size: 1.15rem;
+  line-height: 1;
+  transition: transform 120ms ease;
+}
+
+.hub-closed-room-disclosure[open] > summary::before,
+.hub-outline-room-disclosure[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.hub-closed-room-disclosure > summary:hover,
+.hub-outline-room-disclosure > summary:hover {
+  color: #fffaf2;
+  background: rgb(255 255 255 / 3%);
+}
+
+.hub-closed-room-disclosure > summary:focus-visible,
+.hub-outline-room-disclosure > summary:focus-visible {
+  outline: 2px solid #e2b971;
+  outline-offset: 3px;
+}
+
 .hub-board-action {
   padding: 12px 14px 0;
 }
 
-.hub-slot-grid {
+.hub-open-room-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   padding: 12px;
 }
 
-.hub-slot-card {
+.hub-open-room-grid[tabindex='-1']:focus {
+  outline: 2px solid #e2b971;
+  outline-offset: 3px;
+}
+
+.hub-closed-room-grid,
+.hub-outline-room-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  padding: 0 12px 12px;
+}
+
+.hub-outline-room-list {
+  margin: 0;
+  list-style: none;
+}
+
+.hub-open-room-card {
+  display: grid;
+  align-content: start;
   min-width: 0;
   padding: 12px;
   border: 1px solid #34353e;
   border-radius: 10px;
   background: rgb(255 255 255 / 2%);
+  scroll-margin-block: 24px;
 }
 
-.hub-slot-card[data-open='false'] {
+.hub-open-room-card[data-focused-main-reward='true'] {
+  border-color: rgb(174 152 202 / 72%);
+  box-shadow: 0 0 0 2px rgb(174 152 202 / 14%);
+}
+
+.hub-closed-room-option,
+.hub-outline-room-option {
+  display: grid;
+  min-width: 0;
+  align-items: start;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid #34353e;
+  border-radius: 9px;
   color: #8e8b95;
   background: rgb(10 11 14 / 35%);
 }
 
-.hub-slot-heading,
-.hub-slot-meta {
+.hub-closed-room-option {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hub-outline-room-option {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hub-slot-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1738,11 +1846,68 @@ select {
   margin: 0;
   color: #f2ede5;
   font-size: 0.96rem;
+  overflow-wrap: anywhere;
+}
+
+.hub-slot-heading > .owner-markers {
+  min-width: 0;
 }
 
 .hub-slot-meta {
-  justify-content: flex-start;
+  display: grid;
+  min-block-size: 28px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
   margin-top: 7px;
+}
+
+.hub-slot-state {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hub-slot-meta > .semantic-focus-link {
+  justify-self: end;
+}
+
+.hub-owner-assessment {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: #aaa7af;
+  font-size: 0.75rem;
+}
+
+.hub-owner-assessment[data-assessment='blocked'] {
+  color: #d0c8d7;
+}
+
+.hub-owner-assessment[data-assessment='unassessed'] {
+  color: #d3bd94;
+}
+
+.hub-main-reward {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #353640;
+}
+
+.hub-main-reward[data-focused-main-reward='true'] {
+  margin-inline: -4px;
+  padding: 12px 4px 4px;
+  border-radius: 8px;
+  background: rgb(174 152 202 / 10%);
+}
+
+.hub-main-reward > .fixed-room-state {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .hub-membership-control {
@@ -1760,6 +1925,18 @@ select {
   accent-color: #e2b971;
 }
 
+.hub-membership-control:focus-within {
+  border-color: #e2b971;
+}
+
+.hub-board-status {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
 .hub-visit-list {
   display: grid;
   gap: 0;
@@ -1771,7 +1948,7 @@ select {
 .hub-visit-row {
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: start;
   gap: 10px;
   padding: 9px 12px;
   border-top: 1px solid #30313a;
@@ -1792,12 +1969,74 @@ select {
   min-width: 0;
 }
 
-.hub-slot-card > .semantic-focus-link {
-  margin-top: 8px;
+.hub-empty-visit-state {
+  margin: 0;
+  padding: 12px;
+  color: #aaa7af;
+  font-size: 0.9rem;
+}
+
+.hub-visit-reward {
+  margin: 4px 0 0;
+  color: #bdb7ae;
+  font-size: 0.82rem;
+}
+
+.hub-reward-context {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 0 0 12px;
+  padding: 9px 10px;
+  border: 1px solid #393a45;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 2%);
+}
+
+.hub-reward-context-label {
+  color: #aaa7af;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hub-reward-summary {
+  min-width: 0;
+  color: #e6dfd5;
+  font-size: 0.9rem;
+}
+
+.hub-reward-context > .quiet-action {
+  margin-inline-start: auto;
 }
 
 .hub-visit-row > .danger-action {
+  align-self: center;
   justify-self: end;
+}
+
+@container (max-width: 760px) {
+  .hub-open-room-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hub-closed-room-grid,
+  .hub-outline-room-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 500px) {
+  .hub-open-room-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hub-closed-room-grid,
+  .hub-outline-room-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .ephyra-side-editor {
@@ -2093,7 +2332,9 @@ select {
   .fields-batch-editor,
   .fields-batch-summary,
   .reward-wheel-settings,
-  .hub-slot-grid {
+  .hub-open-room-grid,
+  .hub-closed-room-grid,
+  .hub-outline-room-list {
     grid-template-columns: 1fr;
   }
 

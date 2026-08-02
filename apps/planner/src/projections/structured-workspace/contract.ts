@@ -811,6 +811,8 @@ export type WorkspaceNode =
 export interface WorkspaceHubVisitRailEntry {
   readonly key: string;
   readonly label: string;
+  /** The visited room's one primary reward, never an aggregate of local detail rewards. */
+  readonly mainReward?: WorkspaceRailReward;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOccurrenceWorkbenchNode;
   readonly visitMarker: WorkspaceMarker;
@@ -826,9 +828,10 @@ export interface WorkspaceHubRailEntry {
 }
 
 /**
- * A resolved reward retained as a presentation-ready token rather than a
- * rail-specific text summary. The current rail renders `label`; a later
- * compact token can render `offer` without changing workspace policy.
+ * One resolved primary room reward retained as a presentation-ready token.
+ * The current rail renders `label`; a later compact token can render `offer`
+ * without changing workspace policy. It never represents an aggregate of
+ * room-local child rewards.
  */
 export interface WorkspaceRailReward {
   readonly label: string;
@@ -849,6 +852,8 @@ export interface WorkspaceDecisionRailEntry {
   readonly kind: 'node';
   readonly key: string;
   readonly label: string;
+  /** Only direct room stages and Hub visits expose primary-reward context. */
+  readonly mainReward?: never;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode;
   readonly selectedTarget?: WorkspaceRailSelectedTarget;
@@ -858,6 +863,8 @@ export interface WorkspaceStageRailEntry {
   readonly kind: 'node';
   readonly key: string;
   readonly label: string;
+  /** Optional primary reward context for a directly rendered room stage. */
+  readonly mainReward?: WorkspaceRailReward;
   readonly marker: WorkspaceMarker;
   readonly node: Exclude<WorkspaceNode, WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode>;
   /** Only numbered decision rail entries may expose selected-target context. */

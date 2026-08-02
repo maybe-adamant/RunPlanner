@@ -205,9 +205,9 @@ or interaction binding. Presentation owns the selective rail, Hub visit
 grouping, default inspector, and final inspector/rail destinations; interaction
 binding owns executable command adapters and does not consume presentation.
 For the policy-bearing families it binds, it returns complete command intents;
-the shared React adapter dispatches only that intent and its declared focus
-timing. React does not allocate occurrence identities or reconstruct creation
-focus. Simple declaration-projected fields and intentionally retained fixed
+the shared React adapter dispatches only that intent and, when declared, its
+focus timing. React does not allocate occurrence identities or reconstruct
+creation focus. Simple declaration-projected fields and intentionally retained fixed
 owner-plus-value controls remain direct semantic mappings rather than being
 wrapped merely for uniformity. `WorkspaceBiome` carries its typed biome owner
 only because React needs it to scope global semantic focus; generic markers do
@@ -290,10 +290,12 @@ dormant optional detail.
 Production enforces invariants where products are constructed: exact
 project/evaluation provenance, declaration lookup, impossible evaluated-overlay
 rejection, duplicate semantic-key rejection, and required exact lookups. A
-fine-grained finding must resolve to an existing exact inspector subject when
-its destination is registered; it may not be converted into a default-inspector
-or biome-shell fallback. These are local production contracts, not a second
-traversal that reconstructs an expected workspace after the product is built.
+live finding must publish an exact owner destination; a coarse finding may
+inherit its biome shell, while a fine-grained finding must resolve to an
+existing exact inspector subject and may not be converted into a default-
+inspector or biome-shell fallback. These are local production contracts, not a
+second traversal that reconstructs an expected workspace after the product is
+built.
 
 Test support independently enumerates the semantic owners, declaration-required
 editable leaves, and structural controls implied by catalog plus persisted
@@ -368,10 +370,11 @@ and physical availability never suppress this authored-selection context.
 The rail product retains the resolved reward offer plus its current text
 fallback. React currently renders the fallback, while a later compact icon or
 token renderer can consume the same structured offer without recreating reward
-or selection policy. Fields, Ship, Shop, and Ephyra local surfaces do not infer
-a token merely by counting nested controls; they may opt in only when their own
-compact representation is clear. Target, occurrence, reward, and finding focus
-continue to resolve to the exact control inside the decision.
+or selection policy. Fields, Ship, and Shop surfaces do not infer a token by
+counting nested controls. Ephyra opts in only through its explicit incoming
+main reward; its side-room offers never become an aggregate rail token. Target,
+occurrence, reward, and finding focus continue to resolve to the exact control
+inside the decision.
 
 Picked and unpicked targets use the same occurrence identity and semantic
 addresses. Visual grouping does not change ownership.
@@ -417,10 +420,27 @@ The board remains a joint generation region. Rendered board order must not
 pretend to be a simulation prefix. Open-set membership and visit order remain
 separate semantic controls.
 
+The N rail gives its fixed Opening and PreHub stages and each authored Hub
+visit one read-only primary-reward token when the room projects one. This is
+the same resolved token product used by ordinary selected-room context: fixed,
+incoming, and Ephyra incoming rewards are eligible, while side-room offers are
+not. The token neither changes focus nor creates another edit path; the Hub
+board remains the sole editable main-reward surface.
+
 Compact board cells may focus their room and reward state in the inspector, but
 N never acquires arbitrary room replacement merely to reuse an ordinary room
 picker. Membership, visits, and the completed-Hub handoff remain Hub-owned
 semantic interactions.
+
+Hub membership changes are batch composition rather than navigation. Their
+bound `OpenHubSlot` and `CloseHubSlot` intents have no semantic-focus product:
+opening or closing a room must not select the moved slot or jump the inspector
+to its room configuration. Pointer and touch changes preserve the current
+viewport. Keyboard changes use transient React-local continuity to move to the
+nearest enabled membership control in the source region (then its documented
+local fallback), never the card that just moved. This focus continuity is not
+persisted or stored in Redux. Explicit Room details, reward, and finding
+actions continue to use their exact semantic owner destinations.
 
 ## Progressive Coverage and Findings
 
@@ -510,8 +530,10 @@ Retained-overflow and Preboss-handoff repairs remain explicit:
 Existing action labels invoke semantic commands; they do not calculate
 deletion scope or repair the project themselves. Persistent deletion-scope
 copy is intentionally absent from the editor until user research identifies a
-specific action that needs it. Commit 5a does not add a new post-edit focus
-rule.
+specific action that needs it. Commit 5a does not add a command-specific
+post-edit focus rule. The application-wide session liveness reconciliation may
+clear a deleted finding or focus reference after a new workspace publication,
+but never rehomes it or supplies command focus.
 
 The authored-project core calculates the pure removal impact when it executes
 the semantic command. The workspace exposes a complete removal or repair

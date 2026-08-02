@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createEditorSessionReducer,
+  editorSessionReconciled,
   findingSelected,
   routePanelSelected,
   routeSelected,
@@ -126,6 +127,26 @@ describe('editor session navigation', () => {
     expect(focused.focusedSemanticOwner).toEqual(owner);
     expect(focused.selectedFinding).toBeNull();
     expect(navigated.focusedSemanticOwner).toBeNull();
+  });
+
+  it('prunes only invalidated navigation references without changing editor location or revision', () => {
+    const owner = createBiomeAddress('Underworld', 'F');
+    const selected = reducer(
+      undefined,
+      findingSelected({ key: 'selected-finding', origin: owner }),
+    );
+    const reconciled = reducer(
+      selected,
+      editorSessionReconciled({ clearFocusedSemanticOwner: true, clearSelectedFinding: true }),
+    );
+
+    expect(reconciled).toMatchObject({
+      activeBiomeKeyByRoute: selected.activeBiomeKeyByRoute,
+      activeRouteKey: 'Underworld',
+      findingNavigationRevision: 1,
+      focusedSemanticOwner: null,
+      selectedFinding: null,
+    });
   });
 
   it('rejects session addresses outside the declared route structure', () => {

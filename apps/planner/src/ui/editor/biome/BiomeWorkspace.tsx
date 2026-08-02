@@ -146,6 +146,15 @@ function RailReward({ reward }: { readonly reward: WorkspaceRailReward }) {
   return <span className="biome-rail-reward">{reward.label}</span>;
 }
 
+function RailMainReward({ reward }: { readonly reward: WorkspaceRailReward }) {
+  return (
+    <span className="biome-rail-selection">
+      <span className="visually-hidden">Main reward: </span>
+      <RailReward reward={reward} />
+    </span>
+  );
+}
+
 function RailSelectedTarget({
   selectedTarget,
 }: {
@@ -186,6 +195,7 @@ function RailNode({
         {entry.selectedTarget === undefined ? null : (
           <RailSelectedTarget selectedTarget={entry.selectedTarget} />
         )}
+        {entry.mainReward === undefined ? null : <RailMainReward reward={entry.mainReward} />}
       </FocusButton>
     </div>
   );
@@ -235,12 +245,14 @@ function HubRailVisit({
   return (
     <li className="biome-hub-rail-visit">
       <FocusButton marker={visit.marker} presentationMarker={visit.visitMarker} selected={selected}>
-        <span className="biome-rail-kicker">Hub visit</span>
-        <strong>{visit.label}</strong>
-        <span className="biome-rail-status">
-          {assessmentLabel(visit.visitMarker)}
-          <FindingCount count={visit.visitMarker.findingCount} label="findings" />
+        <span className="biome-rail-heading">
+          <strong>{visit.label}</strong>
+          <span className="biome-rail-status">
+            {assessmentLabel(visit.visitMarker)}
+            <FindingCount count={visit.visitMarker.findingCount} label="findings" />
+          </span>
         </span>
+        {visit.mainReward === undefined ? null : <RailMainReward reward={visit.mainReward} />}
       </FocusButton>
     </li>
   );
@@ -262,13 +274,15 @@ function HubRailGroup({
         marker={entry.marker}
         selected={selected}
       >
-        <strong>Hub</strong>
+        <span className="biome-rail-heading">
+          <strong>Hub</strong>
+          <span className="biome-rail-status">
+            {assessment}
+            <FindingCount count={entry.marker.findingCount} label="findings" />
+          </span>
+        </span>
         <span className="biome-rail-summary">
           {entry.visits.length} of {entry.node.requiredVisitCount} visits
-        </span>
-        <span className="biome-rail-status">
-          {assessment}
-          <FindingCount count={entry.marker.findingCount} label="findings" />
         </span>
       </FocusButton>
       {entry.visits.length === 0 ? null : (

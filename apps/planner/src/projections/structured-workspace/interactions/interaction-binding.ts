@@ -421,7 +421,6 @@ function bindHubInteractions(
                       occurrenceId: proposedOccurrenceId,
                       slot: slot.owner,
                     }),
-                    focus: Object.freeze({ owner: slot.owner, timing: 'before' as const }),
                   });
                 },
                 key: `${key}:opening:${proposedOccurrenceId}`,
@@ -451,7 +450,6 @@ function bindHubInteractions(
                   assertCandidateMayBeAuthored(load(), open, `Hub slot ${key} closure`);
                   return Object.freeze({
                     command: closeRequirement.command,
-                    focus: Object.freeze({ owner: slot.owner, timing: 'before' as const }),
                   });
                 },
                 key: `${key}:close`,

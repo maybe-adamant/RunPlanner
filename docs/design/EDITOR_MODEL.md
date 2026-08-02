@@ -184,7 +184,10 @@ with room selection, reward selection, and picked state together.
 Generated unpicked targets remain fully inspectable in that decision surface;
 their rewards still participate in sibling, bag, source, and possibility
 evaluation. For N, the center region remains the fixed Hub board plus ordered
-visit timeline rather than a false ordinary spine.
+visit timeline rather than a false ordinary spine. Its fixed Opening and
+PreHub stages and authored Hub visits may each show the same read-only primary
+reward token when their room declares one; Ephyra side-room offers never become
+an aggregate rail reward.
 
 Rail inclusion controls visual prominence and navigation only. It does not
 control whether a semantic owner, authored value, finding, or editor exists.
@@ -561,6 +564,16 @@ Session state may include:
 - zoom or viewport if a graph projection is introduced;
 
 Session state must never be required to reconstruct the authored project.
+
+After every effective authored-project publication, application coordination
+reconciles transient semantic navigation against that publication's findings
+and exact workspace destinations. A finding selection whose exact finding no
+longer exists clears independently from a semantic focus whose owner no longer
+has a destination. Reconciliation never chooses a replacement owner, changes
+the current route or panel, or enters authored history. A finding that remains
+live without an exact workspace destination is a workspace-projection contract
+failure, not ordinary stale session state. Native keyboard focus remains a
+local React concern and is not reconstructed from this session cleanup.
 
 ## Profile Files, Autosave, and Dirty State
 

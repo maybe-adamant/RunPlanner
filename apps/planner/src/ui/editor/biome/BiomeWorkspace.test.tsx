@@ -192,6 +192,22 @@ describe('BiomeWorkspace', () => {
     expect(view.container.querySelector('.biome-rail')?.textContent).not.toContain('Biome stage');
   });
 
+  it('uses the same compact title-and-status row for the Hub and its visits', () => {
+    renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+
+    const hub = hubRailButton();
+    const hubHeading = hub.querySelector('.biome-rail-heading');
+    expect(hubHeading?.querySelector('strong')?.textContent).toBe('Hub');
+    expect(hubHeading?.querySelector('.biome-rail-status')?.textContent).toContain('Evaluated');
+    expect(hub.querySelector('.biome-rail-kicker')).toBeNull();
+
+    const visit = screen.getByRole('button', { name: /Visit 3 · Combat 02/ });
+    const visitHeading = visit.querySelector('.biome-rail-heading');
+    expect(visitHeading?.querySelector('strong')?.textContent).toBe('Visit 3 · Combat 02');
+    expect(visitHeading?.querySelector('.biome-rail-status')?.textContent).toContain('Evaluated');
+    expect(visit.querySelector('.biome-rail-kicker')).toBeNull();
+  });
+
   it('keeps the compact clear action on the biome title row', () => {
     renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
 
@@ -199,6 +215,55 @@ describe('BiomeWorkspace', () => {
     expect(clear.textContent).toBe('Clear biome');
     expect(clear.classList.contains('action-compact')).toBe(true);
     expect(clear.closest('.biome-structure-title-row')).not.toBeNull();
+  });
+
+  it('renders Ephyra primary rewards on fixed stages and authored Hub visits', () => {
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const biome = workspaceBiome(view.application, 'Surface', 'N');
+    const opening = biome.rail.find(
+      (entry) =>
+        entry.kind === 'node' &&
+        entry.node.kind === 'occurrenceWorkbench' &&
+        entry.node.room.gameName === 'N_Opening01',
+    );
+    const preHub = biome.rail.find(
+      (entry) =>
+        entry.kind === 'node' &&
+        entry.node.kind === 'occurrenceWorkbench' &&
+        entry.node.room.gameName === 'N_PreHub01',
+    );
+    const hub = biome.rail.find(
+      (entry): entry is Extract<(typeof biome.rail)[number], { readonly kind: 'hubGroup' }> =>
+        entry.kind === 'hubGroup',
+    );
+    const firstVisit = hub?.visits[0];
+    if (
+      opening?.kind !== 'node' ||
+      opening.node.kind !== 'occurrenceWorkbench' ||
+      opening.mainReward === undefined ||
+      preHub?.kind !== 'node' ||
+      preHub.node.kind !== 'occurrenceWorkbench' ||
+      preHub.mainReward === undefined ||
+      firstVisit?.mainReward === undefined
+    ) {
+      throw new Error('Ephyra rail primary-reward entries are missing');
+    }
+
+    expect(
+      railButtonForMarker(view.container, opening.marker.focusKey).querySelector(
+        '.biome-rail-selection',
+      )?.textContent,
+    ).toContain(opening.mainReward.label);
+    expect(
+      railButtonForMarker(view.container, preHub.marker.focusKey).querySelector(
+        '.biome-rail-selection',
+      )?.textContent,
+    ).toContain(preHub.mainReward.label);
+    expect(
+      railButtonForMarker(view.container, firstVisit.marker.focusKey).querySelector(
+        '.biome-rail-selection',
+      )?.textContent,
+    ).toContain(firstVisit.mainReward.label);
   });
 
   it('routes a keyboard-selected Hub rail visit to its occurrence-owned local detail workbench', async () => {
@@ -221,6 +286,36 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(within(inspector).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
+  });
+
+  it('returns from local Hub reward context to the exact closed board picker without authoring', async () => {
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    await view.user.click(hubRailButton());
+    await view.user.click(screen.getByRole('button', { name: /Visit 3 · Combat 02/ }));
+
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    const context = within(inspector).getByRole('region', { name: 'Hub reward' });
+    expect(within(context).getByText('Big Max Magick')).toBeTruthy();
+    const edit = within(context).getByRole('button', { name: 'Edit Hub reward' });
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(edit);
+
+    const rewardOwner = createIncomingRewardAddress(nBiome, nOccurrenceId('combat02'));
+    await waitFor(() => {
+      const card = screen.getByRole('article', { name: 'Combat 02 Hub room' });
+      const trigger = within(card).getByRole('button', { name: 'Reward' });
+      expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+        rewardOwner,
+      );
+      expect(card.dataset.focusedMainReward).toBe('true');
+      expect(document.activeElement).toBe(trigger);
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    });
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore,
+    );
   });
 
   it('keeps Hub timeline and board focus represented by the nested rail', async () => {

@@ -110,8 +110,45 @@ describe('structured workspace biome presentation', () => {
       true,
     );
 
+    const opening = biome.rail.find(
+      (entry) =>
+        entry.kind === 'node' &&
+        entry.node.kind === 'occurrenceWorkbench' &&
+        entry.node.room.gameName === 'N_Opening01',
+    );
+    const preHub = biome.rail.find(
+      (entry) =>
+        entry.kind === 'node' &&
+        entry.node.kind === 'occurrenceWorkbench' &&
+        entry.node.room.gameName === 'N_PreHub01',
+    );
+    if (
+      opening?.kind !== 'node' ||
+      opening.node.kind !== 'occurrenceWorkbench' ||
+      opening.node.room.roomLocal.kind !== 'incomingReward' ||
+      preHub?.kind !== 'node' ||
+      preHub.node.kind !== 'occurrenceWorkbench' ||
+      preHub.node.room.roomLocal.kind !== 'incomingReward'
+    ) {
+      throw new Error('N Opening and PreHub primary rewards are missing');
+    }
+    expect(opening.mainReward).toEqual({
+      label: summarizeRewardOffer(catalog, opening.node.room.roomLocal.control.offer),
+      offer: opening.node.room.roomLocal.control.offer,
+    });
+    expect(preHub.mainReward).toEqual({
+      label: summarizeRewardOffer(catalog, preHub.node.room.roomLocal.control.offer),
+      offer: preHub.node.room.roomLocal.control.offer,
+    });
+
     const firstVisit = hub.visits[0];
-    if (firstVisit === undefined) throw new Error('first Hub visit is missing');
+    if (firstVisit === undefined || firstVisit.node.room.roomLocal.kind !== 'ephyra') {
+      throw new Error('first Hub visit is missing its Ephyra main reward');
+    }
+    expect(firstVisit.mainReward).toEqual({
+      label: summarizeRewardOffer(catalog, firstVisit.node.room.roomLocal.incomingReward.offer),
+      offer: firstVisit.node.room.roomLocal.incomingReward.offer,
+    });
     expect(
       completePresentation.presentation.focusDestinations.get(firstVisit.node.room.marker.focusKey),
     ).toMatchObject({

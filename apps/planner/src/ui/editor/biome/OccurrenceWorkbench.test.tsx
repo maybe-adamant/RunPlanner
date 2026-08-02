@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
+  createIncomingRewardAddress,
   createLocalChildAddress,
   createOccurrenceId,
   createOccurrenceAddress,
@@ -37,6 +38,7 @@ import {
   goldenHStartId,
 } from '@run-planner/test-fixtures';
 import {
+  createRepresentativeNProject,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
@@ -190,6 +192,58 @@ function dormantShopProject(): { readonly project: ProjectDocument; readonly sho
 }
 
 describe('OccurrenceWorkbench', () => {
+  it('shows a Hub room main reward read-only and focuses its board owner without authoring', async () => {
+    const view = renderOccurrenceWorkbench(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'N',
+      occurrenceById(nOccurrenceId('combat02')),
+    );
+    const context = screen.getByLabelText('Hub reward');
+    expect(within(context).getByText('Big Max Magick')).toBeTruthy();
+    expect(within(context).queryByRole('button', { name: 'Reward' })).toBeNull();
+    const edit = within(context).getByRole('button', { name: 'Edit Hub reward' });
+    expect(edit.classList.contains('quiet-action')).toBe(true);
+    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(edit);
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createIncomingRewardAddress(nBiome, nOccurrenceId('combat02')),
+    );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength,
+    );
+  });
+
+  it('shows a fixed Hub reward context without an edit action', () => {
+    const project = createRepresentativeNProject({
+      openSlotKeys: [
+        'combat11',
+        'combat10',
+        'combat09',
+        'combat05',
+        'combat03',
+        'combat02',
+        'combat01',
+        'miniBoss01',
+        'story',
+      ],
+      visitSlotKeys: ['story', 'combat05', 'miniBoss01', 'combat02', 'combat11', 'combat09'],
+    });
+    renderStaticOccurrenceWorkbench(
+      project,
+      'Surface',
+      'N',
+      occurrenceById(nOccurrenceId('story')),
+    );
+
+    const context = screen.getByLabelText('Hub reward');
+    expect(within(context).getByText('Story')).toBeTruthy();
+    expect(within(context).queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
+    expect(within(context).queryByRole('button', { name: 'Reward' })).toBeNull();
+  });
+
   it('withholds dormant Ephyra side controls and renders rooms without local detail plainly', () => {
     renderStaticOccurrenceWorkbench(
       createRepresentativeNOPQProject(),

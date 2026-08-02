@@ -10,6 +10,7 @@ import {
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
@@ -18,6 +19,10 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
 import { CandidateSelect } from './CandidateSelect';
+import {
+  hasMeaningfulRoomLocalDetail,
+  hubMainRewardPresentation,
+} from './hubMainRewardPresentation';
 import { RoomSelector } from './RoomSelector';
 
 interface OccurrenceWorkbenchProps {
@@ -25,9 +30,37 @@ interface OccurrenceWorkbenchProps {
   readonly nextDecisionIntent?: WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
   >;
-  /** Hub visits retain their main offer on the Hub board. */
+  /** Hub visits retain their editable main offer on the Hub board. */
   readonly presentation: 'full' | 'hubRoomLocal';
   readonly room: WorkspaceRoomSummary;
+}
+
+function HubRewardContext({
+  interactions,
+  room,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly room: WorkspaceRoomSummary;
+}) {
+  const dispatch = useAppDispatch();
+  const context = hubMainRewardPresentation(room, interactions);
+  if (context === undefined) return null;
+
+  return (
+    <section aria-label="Hub reward" className="hub-reward-context">
+      <span className="hub-reward-context-label">Hub reward</span>
+      <span className="hub-reward-summary">{context.summary}</span>
+      {context.control === undefined ? null : (
+        <button
+          className="quiet-action action-compact"
+          onClick={() => dispatch(semanticOwnerFocused(context.marker.address))}
+          type="button"
+        >
+          Edit Hub reward
+        </button>
+      )}
+    </section>
+  );
 }
 
 function EphyraSideRoomEntryOrderSelect({
@@ -440,14 +473,13 @@ export function RoomOfferEditor({
 }) {
   const state = room.roomLocal;
   const showMainReward = presentation === 'full';
-  const hasRoomLocalDetail =
-    state.kind === 'ephyra' ||
-    state.kind === 'fields' ||
-    state.kind === 'ship' ||
-    state.kind === 'shop';
+  const hasRoomLocalDetail = hasMeaningfulRoomLocalDetail(room);
 
   return (
     <>
+      {presentation === 'hubRoomLocal' ? (
+        <HubRewardContext interactions={interactions} room={room} />
+      ) : null}
       {!showMainReward && !hasRoomLocalDetail ? (
         <p className="fixed-room-state">No additional room details.</p>
       ) : null}

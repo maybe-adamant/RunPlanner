@@ -127,6 +127,17 @@ components:
 `HubSlotMembership` remains shared and retains its lazy candidate interaction,
 provisional opening identity, and complete semantic command intent.
 
+Changing membership is batch composition, not navigation. `OpenHubSlot` and
+`CloseHubSlot` intents deliberately omit semantic focus: they must not switch
+the rail or inspector to the room that moved between board regions. A pointer
+or touch change preserves the viewport. A keyboard change continues to the
+nearest enabled membership control in the source region, preferring declaration
+order after the moved slot and then before it. At the maximum open count, the
+closed disclosure summary is the source fallback; if no other open close control
+is usable, the named open-board group is the fallback. This UI-local continuity
+does not enter Redux or authored history. Explicit `Room details`, reward, and
+finding actions retain their semantic-focus behavior.
+
 #### Open room card
 
 An open card contains:
@@ -153,6 +164,12 @@ condition: `slot.visited` represents authored details activation, which can be
 true while evaluation has not entered the room. The button's accessible name
 remains room-specific (for example, `Open details for Combat 02`) even though
 its visible text is simply `Room details`.
+
+`Room details` occupies the same reserved metadata/action row as the room kind
+and authored `Visited` state. It is right-aligned when available, but the row
+retains its interactive height before the visit activates details. A visit
+therefore never adds a second control row beneath the reward editor or changes
+the card's normal control geometry.
 
 For the current N Hub, this excludes fixed/miniboss/story cards that would only
 lead to `No additional room details`; a visited combat room with Ephyra
@@ -189,6 +206,18 @@ and the projected fixed summary for fixed offers. Do not introduce a second
 offer formatter, projection field, or duplicate reward ownership model merely
 for this read-only context.
 
+#### Read-only primary reward in the Ephyra rail
+
+The Ephyra rail also shows one compact, read-only primary-reward token for the
+fixed Opening and PreHub stages and for each authored Hub visit. It uses the
+same structured offer token as ordinary selected-room context, so a later icon
+renderer can replace its text without changing reward policy. Eligible values
+are a fixed reward, a direct incoming reward, or an Ephyra room's explicit
+incoming main reward. Side-room offers never aggregate into this token. The
+token is part of the existing rail focus button only; it neither redirects
+focus nor adds an editor or command path. The Hub board remains the sole
+editable main-reward surface.
+
 #### Closed room option
 
 A closed room is a compact membership option rather than a reward-sized card.
@@ -222,11 +251,11 @@ custom accordion abstraction.
 
 The closed default must not hide a semantic navigation destination. The local
 presentation state may expand the disclosure when the focused semantic owner or
-selected finding belongs to a closed slot or one of its descendants, including
-after a successful close action. It must otherwise preserve the user's native
-open/closed choice. This is transient reveal behavior, not persisted or Redux
-state. Slot markers remain mounted inside their compact option so exact owner
-and finding addressing is retained.
+selected finding belongs to a closed slot or one of its descendants. Ordinary
+membership changes do not supply semantic focus and therefore preserve the
+user's native open/closed choice. This is transient reveal behavior, not
+persisted or Redux state. Slot markers remain mounted inside their compact
+option so exact owner and finding addressing is retained.
 
 At the maximum open count, closed-room opening controls retain their projected
 disabled/candidate behavior. At the minimum open count, open-room closing
@@ -386,6 +415,7 @@ Primary files:
 
 - `apps/planner/src/ui/editor/biome/HubDecisionWorkbench.tsx`;
 - `apps/planner/src/ui/editor/biome/HubDecisionWorkbench.test.tsx`;
+- `apps/planner/src/projections/structured-workspace/interactions/interaction-binding.ts`;
 - `apps/planner/src/ui/editor/biome/OccurrenceWorkbench.tsx`;
 - `apps/planner/src/ui/editor/biome/OccurrenceWorkbench.test.tsx`; and
 - `apps/planner/src/ui/styles.css`.
@@ -428,9 +458,14 @@ details`, including when details are active but evaluated entry is false;
     editor, and a board edit updates that summary without changing visit order;
     and
 15. a detail workbench shows the same main-reward context, while `Edit Hub
-reward` returns to and visibly identifies the exact Hub card without
+   reward` returns to and visibly identifies the exact Hub card without
     opening the picker or changing authored history. Fixed non-editable rewards
     show no false edit action.
+16. Opening, PreHub, and authored Hub-visit rail entries render their one
+    primary-reward token, while side-room rewards remain local detail only.
+17. Hub membership intent has no semantic focus; pointer changes leave the
+    focused owner and moved-card focus unchanged, while keyboard changes stay
+    in the source batch or use its documented local fallback.
 
 Existing integration witnesses must continue proving:
 
