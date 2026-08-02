@@ -608,10 +608,14 @@ function assembleBatchDecision(
     source.occurrence,
     decision,
   );
-  const authoredFieldsFacts =
-    evaluated === undefined
-      ? fieldsBatchFacts(input.catalog, source.layout, source.occurrence, decision)
-      : undefined;
+  // Evaluation may clamp away the target whose cage needs repair. Activation
+  // remains a fact of the complete authored batch, not overlay membership.
+  const authoredFieldsFacts = fieldsBatchFacts(
+    input.catalog,
+    source.layout,
+    source.occurrence,
+    decision,
+  );
   const sourceDecisionRemoval =
     kind === 'takeoverBatch' && decision.source.kind === 'hubDecision'
       ? hubStageDecisionRemoval(input, owner, 'preboss')

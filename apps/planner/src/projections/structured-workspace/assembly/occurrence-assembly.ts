@@ -494,21 +494,20 @@ function roomLocalForOccurrence(
         );
       }
       const active = new Set(
-        input.evaluatedRoom?.localRewards?.map((reward) => semanticAddressKey(reward.origin)) ??
-          (input.fieldsBatchFacts === undefined
-            ? []
-            : group.slotKeys
-                .slice(0, input.fieldsBatchFacts.doorCageRewardCount)
-                .map((slotKey) =>
-                  semanticAddressKey(
-                    createLocalRewardAddress(
-                      input.biome,
-                      occurrence.occurrenceId,
-                      group.key,
-                      slotKey,
-                    ),
+        input.fieldsBatchFacts === undefined
+          ? []
+          : group.slotKeys
+              .slice(0, input.fieldsBatchFacts.doorCageRewardCount)
+              .map((slotKey) =>
+                semanticAddressKey(
+                  createLocalRewardAddress(
+                    input.biome,
+                    occurrence.occurrenceId,
+                    group.key,
+                    slotKey,
                   ),
-                )),
+                ),
+              ),
       );
       const cages = group.slotKeys.map((slotKey, index) => {
         const address = createLocalRewardAddress(
