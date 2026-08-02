@@ -18,7 +18,7 @@ P uses the common generated biome envelope:
 
 - `P_Intro` is the fixed authored start and exposes two physical exits.
 - Generated batches use the P eligibility and force declarations, with at
-  most eight batches and sixteen target occurrences.
+  most eight realized ordinary batches and sixteen ordinary target occurrences.
 - Each target is a distinct Room Occurrence and retains its declaration-owned
   incoming offer even when it is not selected.
 - `P_PreBoss01` is an atomic takeover Preboss. It replaces every normal exit
@@ -31,6 +31,12 @@ P uses the common generated biome envelope:
 occurrence. Two-door predecessors create the Shop plus one free-reward peer.
 The occurrence IDs and offer owners remain attached to their physical exit
 keys through takeover reconciliation.
+
+After P's eight realized ordinary batches, the declaration-admitted terminal
+source may own one zero-target normal decision envelope. It resolves to the
+required atomic `P_PreBoss01` takeover rather than a ninth ordinary batch or
+target. Takeover support validates every normal exit and the aggregate cap
+before it can become required.
 
 ## Physical and eligibility facts
 

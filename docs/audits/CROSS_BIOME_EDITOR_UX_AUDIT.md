@@ -38,16 +38,16 @@ second editor surface.
 
 ## Biome Interaction Matrix
 
-| Biome | Progression and ordinary decisions                                                                  | Reward/local surface                                                       | Preboss and completion form                                                         | Current authoring interaction                                       |
-| ----- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| F     | Eligibility-driven standard batches; source rooms expose one or two exits                           | Authored Run/Meta batch store and target incoming rewards                  | Takeover Preboss batch; Shop plus at most one free reward                           | Create another batch or a supported takeover Preboss batch          |
-| G     | Eligibility-driven standard batches; source rooms expose one to three exits                         | Authored Run/Meta batch store and target incoming rewards                  | Takeover Preboss batch; Shop plus at most two free rewards                          | Create another batch or a supported takeover Preboss batch          |
-| H     | Exactly four Fields batches; each batch owns Min/Max and one or two physical targets                | No base batch store; combat targets own two or three active cage rewards   | Takeover Preboss batch after the fourth Fields batch                                | Create through four Fields batches, then the takeover Preboss batch |
-| I     | Eligibility-driven Clockwork batches with one or two exits; Goal/NonGoal is derived                 | No base batch store; combat targets retain dormant-capable NonGoal rewards | Preboss is a generated peer after Goals complete and closes the biome when selected | Create the next ordinary decision only                              |
-| N     | Fixed Opening/PreHub, 26 fixed Hub slots, nine or ten open members, and six ordered visits          | Joint Hub rewards, parent-local side rooms, and fixed WorldShop            | Completed-Hub handoff creates fixed width-one Preboss Shop                          | Hub membership and visit order; create the handoff after six visits |
-| O     | Exactly six one-exit decisions; ShipCombat rooms own two/three encounters and one/two active wheels | Outgoing store may derive from the final active wheel                      | Declaration-fixed width-one Preboss batch after the sixth decision                  | Create through six decisions, then the width-one Preboss batch      |
-| P     | Eligibility-driven standard batches with source-sensitive compatibility                             | Authored Run/Meta batch store and target incoming rewards                  | Takeover Preboss batch; Shop plus at most one free reward                           | Create another batch or a supported takeover Preboss batch          |
-| Q     | Six declaration-owned stages; ordinary stages have one exit and miniboss stages have two            | No ordinary base store; miniboss targets own counted rewards               | Declaration-fixed width-one Preboss batch after the sixth stage                     | Create the next declared stage, then the width-one Preboss batch    |
+| Biome | Progression and ordinary decisions                                                                  | Reward/local surface                                                       | Preboss and completion form                                                         | Current authoring interaction                                                        |
+| ----- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| F     | Eligibility-driven standard batches; source rooms expose one or two exits                           | Authored Run/Meta batch store and target incoming rewards                  | Takeover Preboss batch; Shop plus at most one free reward                           | Add next decision; Door 1 chooses an ordinary room or supported takeover Preboss     |
+| G     | Eligibility-driven standard batches; source rooms expose one to three exits                         | Authored Run/Meta batch store and target incoming rewards                  | Takeover Preboss batch; Shop plus at most two free rewards                          | Add next decision; Door 1 chooses an ordinary room or supported takeover Preboss     |
+| H     | Exactly four Fields batches; each batch owns Min/Max and one or two physical targets                | No base batch store; combat targets own two or three active cage rewards   | Takeover Preboss batch after the fourth Fields batch                                | Add next decision; only the required takeover is authorable at terminal Door 1       |
+| I     | Eligibility-driven Clockwork batches with one or two exits; Goal/NonGoal is derived                 | No base batch store; combat targets retain dormant-capable NonGoal rewards | Preboss is a generated peer after Goals complete and closes the biome when selected | Add next decision; Door 1 uses the ordinary target path, including the Preboss peer  |
+| N     | Fixed Opening/PreHub, 26 fixed Hub slots, nine or ten open members, and six ordered visits          | Joint Hub rewards, parent-local side rooms, and fixed WorldShop            | Completed-Hub handoff creates fixed width-one Preboss Shop                          | Hub membership and visit order; create the handoff after six visits                  |
+| O     | Exactly six one-exit decisions; ShipCombat rooms own two/three encounters and one/two active wheels | Outgoing store may derive from the final active wheel                      | Declaration-fixed width-one Preboss batch after the sixth decision                  | Add next decision; only the fixed width-one Preboss is authorable at terminal Door 1 |
+| P     | Eligibility-driven standard batches with source-sensitive compatibility                             | Authored Run/Meta batch store and target incoming rewards                  | Takeover Preboss batch; Shop plus at most one free reward                           | Add next decision; Door 1 chooses an ordinary room or supported takeover Preboss     |
+| Q     | Six declaration-owned stages; ordinary stages have one exit and miniboss stages have two            | No ordinary base store; miniboss targets own counted rewards               | Declaration-fixed width-one Preboss batch after the sixth stage                     | Add next decision; only the fixed width-one Preboss is authorable at terminal Door 1 |
 
 ## Contextual Coverage Shapes
 
@@ -140,29 +140,32 @@ states remain reachable.
 
 ## Frontier Decision Record
 
-The editors justify one shared frontier presentation container with:
+The editors justify one shared direct-continuation presentation with:
 
 - semantic owner and evaluation-coverage state;
 - current predecessor or structural region;
-- supported structural actions;
-- an explanation when an action is not yet available;
+- a bound `Add next decision` intent for generated continuation;
+- an empty decision workbench whose Door 1 picker combines authoritative
+  ordinary and takeover results where the source admits both;
 - explicit destructive repair actions for existing downstream structure.
 
-They do not justify one shared authoring action:
+F/G/H/I/O/P/Q share that direct surface, but not one engine mutation owner:
 
-- F/G/P choose between another ordinary decision and a takeover Preboss batch;
-- H permits those forms at different fixed-count boundaries;
-- I has only an ordinary generated decision whose selected target may itself
-  close the biome;
-- O/Q have declaration-required width-one Preboss batches after bounded
-  progression;
-- N has no ordinary continuation frontier: its completed-Hub handoff belongs
-  to the Hub workbench.
+- F/G/H/P Door 1 can dispatch either target-owned ordinary creation or a
+  decision-owned atomic normal-door takeover; the terminal result is required
+  once the complete source shape is supported.
+- I uses only the ordinary target path: its selected Preboss peer may itself
+  close the biome.
+- O/Q use the same empty-decision surface, but their terminal Preboss is a
+  declaration-fixed width-one takeover with no ordinary target authoring or
+  executable domain.
+- N has no generated continuation: its completed-Hub handoff belongs to the
+  Hub workbench.
 
-Phase 7 may share labels or command components only when at least two concrete
-consumers retain identical semantics. It must not turn I's generated Preboss,
-N's completed-Hub handoff, or O/Q's declaration-fixed width-one Preboss batch into cosmetic variants
-of the F/G/P takeover batch.
+The application may share the visual entry surface and bind complete intents,
+but it must not turn I's generated Preboss, N's completed-Hub handoff, or O/Q's
+declaration-fixed width-one Preboss batch into cosmetic variants of an F/G/P
+target takeover.
 
 ## Retained-Invalid and Repair Policy
 

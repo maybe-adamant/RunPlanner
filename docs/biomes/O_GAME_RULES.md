@@ -14,7 +14,8 @@ encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
 ## Authored shape
 
 - `O_Intro` is the fixed authored start.
-- Six generated normal-door batches and six target occurrences are supported.
+- Six realized ordinary normal-door batches and six ordinary target occurrences
+  are supported.
   Every supported normal source has one `ShipsExitDoor`, so selection is
   declaration-derived rather than an authored fork.
 - ShipCombat occurrences own encounter count, both reward wheels, active offer
@@ -27,6 +28,11 @@ encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
 The final ordinary source reaches the preboss frontier at the declared depth.
 No second physical exit exists there, so no peer or synthetic free reward is
 created.
+
+After six realized ordinary one-door batches, O admits one terminal zero-target
+normal decision envelope. Its only authorable result is the fixed width-one
+`O_PreBoss01` takeover; a seventh ordinary Ship target is not structurally
+authorable.
 
 ## Reward and lifecycle facts
 

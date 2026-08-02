@@ -77,6 +77,14 @@ Ordinary progression bounds count only ordinary batches and their ordinary
 targets. A takeover batch is the declaration-owned completion shape, not one
 more unit of generated progression, so it never consumes H, O, or Q capacity.
 
+An empty occurrence-sourced batch is an uncommitted decision envelope, not an
+ordinary progression unit. It can be created at the next ordinary slot, and a
+single extra envelope is admitted at the bound only when the exact selected
+source has a declaration-admitted terminal takeover shape. The engine rejects
+that exception for layouts such as I whose Preboss remains an ordinary peer.
+The first ordinary target realizes the ordinary unit and checks its bounds;
+selecting takeover replaces the envelope and leaves ordinary counts unchanged.
+
 ## Preboss batches
 
 A `takeOverNormalDoors` Preboss is an atomic replacement of every normal exit
@@ -102,6 +110,27 @@ A `retainNormalPeers` Preboss is different: it is an ordinary target beside
 ordinary peers. Its selected declaration starts completion; unselected peers
 remain normal topology leaves. Neither form introduces a separate completion
 decision family.
+
+### Shared source support
+
+For a generated source that admits `takeOverNormalDoors`, the engine evaluates
+ordinary declarations and the takeover declaration from one source-owned
+generation support set. Ordinary candidates and takeover candidates therefore
+observe the same eligibility, creation/appearance caps, compatibility, and
+forced-pool decision. A required supported takeover excludes ordinary choices;
+an unsupported whole takeover shape is impossible rather than required.
+
+Takeover support is reduced by the engine only after it has checked every
+declaration-owned normal exit and the aggregate cap. Its published source-level
+classification is `impossible`, `possible`, or `required`; per-exit pressure
+is diagnostic evidence, not a UI rule. F/G/H/P can become required through
+this policy. O/Q's declaration-fixed width-one terminal takeovers are required
+by their fixed identity. I remains outside this family because its Preboss is
+an ordinary target.
+
+Takeover concerns normal exits only. A future additional special exit belongs
+to the enclosing decision but is not replaced, counted, or selected by the
+current takeover policy.
 
 ## Reward stores and leaves
 

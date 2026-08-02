@@ -24,10 +24,15 @@ Ephyra map data, encounter data, `RunLogic.lua`, `RoomLogic.lua`, and
   open slots are visited in authored order. A target occurrence remains owned
   by its slot while its incoming reward, side rooms, and local entry order
   remain occurrence-owned leaves.
-- Completing the six-visit predicate enables the completed-Hub normal exit.
+- Completing the six-visit predicate enables the declaration-fixed
+  completed-Hub exit.
   Its persisted source is `{ kind: 'hubDecision', decisionKey: 'hub' }` and
   it creates the fixed width-one `N_PreBoss01` Shop occurrence.
 - Selecting that Preboss starts the `N_Boss01`, `N_PostBoss01` completion tail.
+
+This is a completed-Hub handoff, not a generated empty decision envelope or a
+Door 1 room choice. The Hub's completion predicate remains the sole authority
+for creating it.
 
 ## Hub and side-room facts
 

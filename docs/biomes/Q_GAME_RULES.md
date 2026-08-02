@@ -28,6 +28,11 @@ The width-one rule is physical: Q does not create an unpicked peer and does
 not need a second offer owner. The Preboss occurrence is real authored state
 and its shop inventory materializes on entry.
 
+The six declared stages are six realized ordinary units. After the second
+miniboss stage, one terminal zero-target normal decision envelope is admitted
+solely for the fixed width-one `Q_PreBoss01` takeover; it has no seventh
+ordinary stage or ordinary target domain.
+
 ## Staged candidates and repair
 
 Staged eligibility is structural. A target may be replaced only with a room

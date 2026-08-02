@@ -34,9 +34,10 @@ planner needs to validate.
 The current authored topology has:
 
 - one start occurrence;
-- `ExitDecision` for linked exits and normal-door batches;
+- `ExitDecision` for linked exits and a normal lane, including a zero-target
+  generated envelope before its first ordinary target or takeover resolves it;
 - `HubDecision` for Ephyra;
-- one selection among the normal targets of an `ExitDecision`;
+- one selection among the normal targets of a realized `ExitDecision`;
 - derived biome completion after a selected Preboss.
 
 `ExitDecision.normal` deliberately owns only normal exits. There is no Chaos
@@ -46,6 +47,10 @@ contract.
 
 This is the correct baseline. Detours should extend the decision envelope; they
 should not become room-local checkboxes or a second biome-plan family.
+
+A zero-target generated envelope is current normal-lane authoring state, not a
+missing edge, special-exit placeholder, or detour. Its eventual ordinary target
+and any atomic normal-door takeover remain in that normal lane.
 
 ## Game Findings
 
@@ -73,6 +78,16 @@ continuation beside them.
 `BaseChaos` has `UsePreviousRoomSet = true`, so its outgoing generation resumes
 the prior room set. It also has `PauseBiomeState = true`, a forced `Secrets`
 reward store, and the `Empty_Chaos` encounter.
+
+The focused Preboss probe establishes three boundary facts for future work:
+
+- Chaos is a separately offered special exit beside the source's normal exits;
+  an atomic Preboss takeover controls the normal exits only.
+- Taking Chaos can leave an offered normal-door Preboss batch unentered. A
+  later normal generation creates a fresh Preboss batch and fresh reward draws;
+  the earlier unentered batch is not resumed or reused.
+- Natural Chaos is suppressed by a Chaos occurrence among the prior ten rooms,
+  not merely by the immediately preceding room.
 
 `PauseBiomeState` must not be translated as "pause all counters." Its observed
 game implementation removes and later restores biome-state traits. The exact
@@ -175,7 +190,8 @@ list detached from reachability.
 
 For an additional exit:
 
-- the source decision retains its normal exit or normal-door batch;
+- the source decision retains its normal lane, whether it is an empty envelope,
+  a realized ordinary batch, or a complete takeover batch;
 - the detour target is a real offered occurrence;
 - the enclosing selection chooses one normal or detour continuation;
 - an unpicked detour remains a real dead leaf, like an unpicked normal target.
@@ -207,8 +223,16 @@ biome-state, or acquisition effect must be declared and emitted.
 
 Normal-door takeover remains normal-door takeover. A generated Preboss can
 take over normal doors without consuming or rewriting a separately declared
-special exit. Exact coexistence rules are declaration-owned and require game
-evidence; the topology engine must not infer them from rendered door order.
+special exit. The Chaos probe confirms that the two can coexist and that an
+unentered Preboss batch is not a reusable continuation. Exact source-map and
+runtime configuration remain declaration-owned; the topology engine must not
+infer them from rendered door order.
+
+A `takeOverNormalDoors` Preboss is atomic across its complete declared
+normal-exit set, even though the current editor enters the choice at the first
+normal target. Engine evaluation validates every normal exit and the aggregate
+creation cap before takeover is possible or required. A future special exit is
+neither replaced, counted, nor selected by that policy.
 
 ### Validation and editing
 
@@ -274,8 +298,9 @@ exit implementation.
 - Which current room declarations contain a usable `SecretPoint`, and is that
   map capability stable enough to normalize in the catalog?
 - What exact counters and caches change in Chaos, Anomaly, and `C_Boss01`?
-- Does every additional special exit coexist with a generated Preboss door in
-  every supported biome, including the future Chaos-before-Preboss case?
+- Which source-map and runtime configurations can host each additional special
+  exit beside a particular normal-door shape, beyond the confirmed
+  Chaos/Preboss behavior?
 - Which external save/profile predicates require explicit modeled inputs
   before natural eligibility can be validated?
 - Is a detour's resumed outgoing reward store based on the host source, the

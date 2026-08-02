@@ -112,22 +112,21 @@ useful status labels. The nearby context explains what the player can do.
 
 ### P1 — Rail, Inspector, and Room Surface
 
-| Live copy                                                                                  | Target copy                                                                                         | Owner                                              |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| Visible raw source: `authored`, `canonical`, or `progressive`                              | Omit. These are projection provenance, not player status.                                           | `ui/editor/biome/BiomeWorkspace.tsx`               |
-| `Assessed` / `Unassessed`                                                                  | `Evaluated` / `Not evaluated`                                                                       | `BiomeWorkspace.tsx`, `HubDecisionWorkbench.tsx`   |
-| `Coverage frontier` / `Active frontier`                                                    | `Next step`                                                                                         | `BiomeWorkspace.tsx`, `DecisionWorkbench.tsx`      |
-| `Decision point`                                                                           | `Door choice`                                                                                       | `BiomeWorkspace.tsx`                               |
-| `Start biome here`                                                                         | `Choose the first room` for a selectable start; `Start with <Room>` remains right for a fixed start | `BiomeWorkspace.tsx`                               |
-| `Continue authoring here`                                                                  | `Continue route`                                                                                    | `BiomeWorkspace.tsx`                               |
-| `Biome structure`                                                                          | `Route structure`                                                                                   | `BiomeWorkspace.tsx`                               |
-| `Focused inspector`                                                                        | `Details`                                                                                           | `BiomeWorkspace.tsx`                               |
-| `No authored structure is available yet.`                                                  | `Choose the first room to start this biome.`                                                        | `BiomeWorkspace.tsx`                               |
-| Raw topology state: `complete`, `partial`, or `retained`                                   | Omit. Existing findings and product status convey actionable state.                                 | `ui/editor/biome/DecisionWorkbench.tsx`            |
-| `Move to Next Decision`                                                                    | `Go to next step`                                                                                   | `DecisionWorkbench.tsx`, `OccurrenceWorkbench.tsx` |
-| `This completion room is derived from the biome layout and is not an authored occurrence.` | `This room is added automatically after the biome.`                                                 | `BiomeWorkspace.tsx`                               |
-| `No room-local reward.`                                                                    | `No room reward.`                                                                                   | `OccurrenceWorkbench.tsx`                          |
-| `Shop inventory materializes when this room is picked.`                                    | `Shop inventory appears when you select this room.`                                                 | `OccurrenceWorkbench.tsx`                          |
+| Live copy                                                                                  | Target copy                                                                                         | Owner                                            |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Visible raw source: `authored`, `canonical`, or `progressive`                              | Omit. These are projection provenance, not player status.                                           | `ui/editor/biome/BiomeWorkspace.tsx`             |
+| `Assessed` / `Unassessed`                                                                  | `Evaluated` / `Not evaluated`                                                                       | `BiomeWorkspace.tsx`, `HubDecisionWorkbench.tsx` |
+| `Coverage frontier` / `Active frontier`                                                    | `Next step`                                                                                         | `BiomeWorkspace.tsx`, `DecisionWorkbench.tsx`    |
+| `Decision point`                                                                           | `Door choice`                                                                                       | `BiomeWorkspace.tsx`                             |
+| `Start biome here`                                                                         | `Choose the first room` for a selectable start; `Start with <Room>` remains right for a fixed start | `BiomeWorkspace.tsx`                             |
+| `Continue authoring here`                                                                  | `Continue route`                                                                                    | `BiomeWorkspace.tsx`                             |
+| `Biome structure`                                                                          | `Route structure`                                                                                   | `BiomeWorkspace.tsx`                             |
+| `Focused inspector`                                                                        | `Details`                                                                                           | `BiomeWorkspace.tsx`                             |
+| `No authored structure is available yet.`                                                  | `Choose the first room to start this biome.`                                                        | `BiomeWorkspace.tsx`                             |
+| Raw topology state: `complete`, `partial`, or `retained`                                   | Omit. Existing findings and product status convey actionable state.                                 | `ui/editor/biome/DecisionWorkbench.tsx`          |
+| `This completion room is derived from the biome layout and is not an authored occurrence.` | `This room is added automatically after the biome.`                                                 | `BiomeWorkspace.tsx`                             |
+| `No room-local reward.`                                                                    | `No room reward.`                                                                                   | `OccurrenceWorkbench.tsx`                        |
+| `Shop inventory materializes when this room is picked.`                                    | `Shop inventory appears when you select this room.`                                                 | `OccurrenceWorkbench.tsx`                        |
 
 The raw source and topology-state chips are the highest-confidence visible
 leaks in this group. Do not confuse them with the intentionally excluded data
@@ -158,10 +157,8 @@ attributes that carry the same internal values.
 | `The selected room is fixed by this decision.`                                                        | `The game fixes which room is selected here.`                               | `DecisionWorkbench.tsx`                                    |
 | `This decision awaits its declaration-owned selection.`                                               | `Choose which door is taken.`                                               | `DecisionWorkbench.tsx`                                    |
 | `This start room is declaration-fixed.`                                                               | `The game fixes the first room.`                                            | `DecisionWorkbench.tsx`                                    |
-| `Preboss batch` / `Create Preboss batch` / `Repair Preboss batch`                                     | `Preboss doors` / `Add Preboss doors` / `Fix Preboss doors`                 | `DecisionWorkbench.tsx`                                    |
-| `Replace with Preboss batch`                                                                          | `Replace doors with Preboss`                                                | `DecisionWorkbench.tsx`                                    |
-| `Preboss declaration` / `Select Preboss batch`                                                        | `Preboss room` / `Choose Preboss room`                                      | `DecisionWorkbench.tsx`                                    |
-| `Evaluate Preboss batches`                                                                            | `Check Preboss rooms`                                                       | `DecisionWorkbench.tsx`                                    |
+| `Preboss batch` / `Repair Preboss batch`                                                              | `Preboss doors` / `Fix Preboss doors`                                       | `DecisionWorkbench.tsx`                                    |
+| Separate generated Preboss action or selector                                                         | Choose `Preboss` from the shared `Door 1 room` picker                       | `DecisionWorkbench.tsx`                                    |
 | `This Preboss batch is authored atomically.`                                                          | `These Preboss doors are changed together.`                                 | `DecisionWorkbench.tsx`                                    |
 | `Reconcile <label> against the current declaration-owned exits.`                                      | `Fix <label> to restore the missing doors.`                                 | `DecisionWorkbench.tsx`                                    |
 | `Missing Preboss exits are repaired atomically through the projected Preboss action.`                 | `Fix Preboss doors to restore the missing doors.`                           | `DecisionWorkbench.tsx`                                    |
@@ -221,7 +218,8 @@ rewriting their descriptions:
 
 - `Choose the batch outcome` becomes `Finish setting up these doors`.
 - `Add the next exit decision or select a declaration-owned Preboss batch.`
-  becomes `Add the next doors or go to Preboss.`
+  becomes neutral `Continue this route` copy. Generated continuation is
+  `Add next decision`, and any supported Preboss is chosen from `Door 1 room`.
 - `Complete the open Hub set` becomes `Choose open Hub rooms`, with `Choose
 nine or ten Ephyra rooms to keep open in the Hub.`
 - `Complete the Hub visit order` becomes `Choose all six Hub visits`.

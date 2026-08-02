@@ -70,9 +70,15 @@ force window, and one-step room-history contribution are exact catalog facts.
 The legacy exact-depth intro predicate is rejected because it did not match
 the game.
 
-The authored bound is seven ordinary continuation batches and twenty-one
+The authored bound is seven realized ordinary continuation batches and twenty-one
 ordinary target occurrences. The takeover Preboss batch is separate from those
 ordinary progression bounds.
+
+After the seventh realized ordinary batch, the terminal selected source may
+own one zero-target normal decision envelope. It resolves only through the
+atomic `G_PreBoss01` takeover, not an eighth ordinary continuation batch or
+target. Takeover support validates every normal exit and the aggregate cap
+before it can become required.
 
 ## Physical Exits
 

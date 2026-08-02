@@ -24,6 +24,11 @@ data, encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
   physical exits or create a synthetic free-reward peer.
 - The selected I Preboss begins the `I_Boss01`, `I_PostBoss01` completion tail.
 
+I has no over-bound terminal takeover envelope. Its Preboss remains an
+ordinary per-target retained peer, evaluated with ordinary candidates and
+selected through the normal target path, so the normal batch and target bounds
+continue to apply without a takeover exception.
+
 The I Preboss is a Shop occurrence with declaration-owned `I_WorldShop` state.
 Its shop inventory is entry-time state. An unselected peer retains its
 occurrence and no inventory; selecting it materializes the declaration's
