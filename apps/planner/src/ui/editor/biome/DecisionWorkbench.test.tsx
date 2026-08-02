@@ -12,6 +12,7 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   semanticAddressKey,
+  type BiomeAddress,
   type ProjectDocument,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -30,6 +31,7 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
   goldenGBiome,
+  goldenHBiome,
 } from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,
@@ -184,6 +186,36 @@ function takeoverDecision(project: ProjectDocument) {
   };
 }
 
+function requiredTakeoverOwner(
+  project: ProjectDocument,
+  routeKey: 'Surface' | 'Underworld',
+  biome: BiomeAddress,
+  gameName: string,
+): { readonly owner: ReturnType<typeof createExitDecisionAddress>; readonly targetCount: number } {
+  const plan = project.routes
+    .find((route) => route.routeKey === routeKey)
+    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
+  const decision = plan?.topology?.decisions.find(
+    (candidate) =>
+      candidate.kind === 'exit' &&
+      candidate.normal.kind === 'batch' &&
+      candidate.normal.targets.length > 0 &&
+      candidate.normal.targets.every(
+        (target) =>
+          plan.topology?.occurrences.find(
+            (occurrence) => occurrence.occurrenceId === target.occurrenceId,
+          )?.gameName === gameName,
+      ),
+  );
+  if (decision?.kind !== 'exit' || decision.normal.kind !== 'batch') {
+    throw new Error(`${biome.biomeKey} required takeover is missing`);
+  }
+  return {
+    owner: createExitDecisionAddress(biome, decision.source),
+    targetCount: decision.normal.targets.length,
+  };
+}
+
 describe('DecisionWorkbench', () => {
   it('authors the fixed N start and exposes only its linked-exit frontier', async () => {
     const view = renderDecisionWorkbench(emptyProject('Surface'), 'Surface', 'N', currentFrontier);
@@ -256,7 +288,7 @@ describe('DecisionWorkbench', () => {
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const possible = within(screen.getByRole('listbox'))
       .getAllByRole('option')
-      .find((option) => option.getAttribute('data-candidate-state') !== 'impossible');
+      .find((option) => option.getAttribute('aria-disabled') !== 'true');
     if (possible === undefined) throw new Error('F Exit 1 has no selectable projected room');
     await view.user.click(possible);
     await waitFor(() =>
@@ -369,20 +401,29 @@ describe('DecisionWorkbench', () => {
     });
   });
 
-  it('creates a candidate takeover atomically and hides impossible unselected declarations', async () => {
+  it('authors terminal Preboss through the empty decision Door 1 picker', async () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(10, 1),
     });
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const withoutDecision = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: owner,
     });
+    const project = applyProjectCommand(withoutDecision, catalog, {
+      decision: owner,
+      kind: 'CreateBatch',
+    });
     const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
     const before = view.application.store.getState().projectWorkspace.history.past.length;
-    await view.user.click(screen.getByRole('button', { name: 'Check Preboss rooms' }));
-    await view.user.selectOptions(screen.getByLabelText('Preboss room'), 'F_PreBoss01');
-    await view.user.click(screen.getByRole('button', { name: 'Add Preboss doors' }));
+    expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+    const preboss = within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .find((option) => option.getAttribute('data-candidate-state') === 'forced');
+    if (preboss === undefined) throw new Error('F terminal Door 1 has no forced Preboss choice');
+    await view.user.click(preboss);
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       before + 1,
     );
@@ -396,32 +437,121 @@ describe('DecisionWorkbench', () => {
     ).toEqual(['F_PreBoss01', 'F_PreBoss01']);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Check Preboss rooms' })).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
     cleanup();
 
-    const impossibleOwner = createExitDecisionAddress(goldenFBiome, {
+    const ordinaryOwner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
-    const impossible = renderDecisionWorkbench(
+    renderDecisionWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
       'F',
-      subjectForOwner(impossibleOwner),
+      subjectForOwner(ordinaryOwner),
     );
-    const impossibleBefore =
-      impossible.application.store.getState().projectWorkspace.history.past.length;
-    await impossible.user.click(screen.getByRole('button', { name: 'Check Preboss rooms' }));
-    const selector = screen.getByLabelText('Preboss room') as HTMLSelectElement;
-    expect(Array.from(selector.options).map((option) => option.value)).not.toContain('F_PreBoss01');
-    const action = screen.getByRole('button', { name: 'Replace doors with Preboss' });
-    expect(action).toHaveProperty('disabled', true);
-    await impossible.user.click(action);
-    expect(impossible.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      impossibleBefore,
+    expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Replace doors with Preboss' })).toBeNull();
+  });
+
+  it('keeps terminal Door 1 visible through an unresolved Fields roll and allows Preboss', async () => {
+    const owner = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('golden-h-combat05'),
+    });
+    const withoutTakeover = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      decision: owner,
+      kind: 'RemoveExitDecision',
+    });
+    const project = applyProjectCommand(withoutTakeover, catalog, {
+      decision: owner,
+      kind: 'CreateBatch',
+    });
+    const view = renderDecisionWorkbench(project, 'Underworld', 'H', subjectForOwner(owner));
+
+    expect(screen.getByText('Fields door roll')).toBeTruthy();
+    expect(screen.getAllByText('Choose the Fields door roll first.')).not.toHaveLength(0);
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+    const options = within(screen.getByRole('listbox')).getAllByRole('option');
+    const preboss = options.find(
+      (option) => option.getAttribute('data-candidate-state') === 'forced',
     );
+    if (preboss === undefined) throw new Error('H terminal Door 1 has no forced Preboss choice');
+    expect(preboss.getAttribute('aria-disabled')).not.toBe('true');
+
+    await view.user.click(preboss);
+    await waitFor(() =>
+      expect(
+        workspaceBiome(view.application, 'Underworld', 'H').nodes.some(
+          (node) => node.kind === 'takeoverBatch' && ownerMatches(node, owner),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it('authors multi-door G and P Prebosses through their required Door 1 choices', async () => {
+    const fixtures = [
+      {
+        biome: goldenGBiome,
+        biomeKey: 'G',
+        gameName: 'G_PreBoss01',
+        project: createGoldenFGHIProject(),
+        routeKey: 'Underworld',
+      },
+      {
+        biome: pBiome,
+        biomeKey: 'P',
+        gameName: 'P_PreBoss01',
+        project: createRepresentativeNOPQProject(),
+        routeKey: 'Surface',
+      },
+    ] as const;
+
+    for (const fixture of fixtures) {
+      const takeover = requiredTakeoverOwner(
+        fixture.project,
+        fixture.routeKey,
+        fixture.biome,
+        fixture.gameName,
+      );
+      const withoutTakeover = applyProjectCommand(fixture.project, catalog, {
+        decision: takeover.owner,
+        kind: 'RemoveExitDecision',
+      });
+      const project = applyProjectCommand(withoutTakeover, catalog, {
+        decision: takeover.owner,
+        kind: 'CreateBatch',
+      });
+      const view = renderDecisionWorkbench(
+        project,
+        fixture.routeKey,
+        fixture.biomeKey,
+        subjectForOwner(takeover.owner),
+      );
+
+      await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+      const preboss = within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .find((option) => option.getAttribute('data-candidate-state') === 'forced');
+      if (preboss === undefined) {
+        throw new Error(`${fixture.biomeKey} terminal Door 1 has no forced Preboss choice`);
+      }
+      await view.user.click(preboss);
+      await waitFor(() => {
+        const node = workspaceBiome(
+          view.application,
+          fixture.routeKey,
+          fixture.biomeKey,
+        ).nodes.find(
+          (candidate) =>
+            candidate.kind === 'takeoverBatch' && ownerMatches(candidate, takeover.owner),
+        );
+        expect(node?.kind === 'takeoverBatch' ? node.targets : []).toHaveLength(
+          takeover.targetCount,
+        );
+      });
+      cleanup();
+    }
   });
 
   it('omits an impossible unselected batch reward pool', async () => {
@@ -493,7 +623,7 @@ describe('DecisionWorkbench', () => {
     expect(within(offer).queryByText('Door taken')).toBeNull();
   });
 
-  it('executes fixed width-one O and reordered-Q takeovers without a declaration selector', async () => {
+  it('executes fixed width-one O and reordered-Q takeovers through Door 1', async () => {
     const cases: Array<{
       readonly biomeKey: 'O' | 'Q';
       readonly owner: ReturnType<typeof createExitDecisionAddress>;
@@ -542,17 +672,26 @@ describe('DecisionWorkbench', () => {
 
     for (const fixture of cases) {
       const work: ApplicationEvaluationEvent[] = [];
+      const directProject = applyProjectCommand(fixture.project, catalog, {
+        decision: fixture.owner,
+        kind: 'CreateBatch',
+      });
       const view = renderDecisionWorkbench(
-        fixture.project,
+        directProject,
         fixture.routeKey,
         fixture.biomeKey,
         subjectForOwner(fixture.owner),
         createApplication({ observeEvaluationWork: (event) => work.push(event) }),
       );
       work.length = 0;
-      expect(screen.queryByLabelText('Preboss room')).toBeNull();
-      await view.user.click(screen.getByRole('button', { name: 'Go to Preboss' }));
-      expect(work.filter((event) => event.kind === 'queryBatch')).toHaveLength(1);
+      await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+      const preboss = within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .find((option) => option.getAttribute('data-candidate-state') === 'forced');
+      if (preboss === undefined)
+        throw new Error(`${fixture.biomeKey} has no forced Preboss choice`);
+      await view.user.click(preboss);
+      expect(work.filter((event) => event.kind === 'queryBatch')).toHaveLength(2);
       expect(
         workspaceBiome(view.application, fixture.routeKey, fixture.biomeKey).nodes.some(
           (node) => node.kind === 'takeoverBatch' && ownerMatches(node, fixture.owner),
@@ -562,7 +701,7 @@ describe('DecisionWorkbench', () => {
     }
   });
 
-  it('explains an unavailable fixed takeover without committing', async () => {
+  it('keeps an unavailable direct Preboss choice disabled without committing', async () => {
     const qOwner = createExitDecisionAddress(qBiome, {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,
@@ -578,6 +717,7 @@ describe('DecisionWorkbench', () => {
       kind: 'RemoveExitDecision',
       decision: qOwner,
     });
+    project = applyProjectCommand(project, catalog, { decision: qOwner, kind: 'CreateBatch' });
     const work: ApplicationEvaluationEvent[] = [];
     const view = renderDecisionWorkbench(
       project,
@@ -588,11 +728,18 @@ describe('DecisionWorkbench', () => {
     );
     work.length = 0;
     const before = view.application.store.getState().projectWorkspace.history.past.length;
-    await view.user.click(screen.getByRole('button', { name: 'Go to Preboss' }));
-    expect(work.filter((event) => event.kind === 'queryBatch')).toHaveLength(1);
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+    const unavailable = within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .find(
+        (option) =>
+          option.getAttribute('data-candidate-state') === 'unassessed' &&
+          option.textContent?.includes('Preboss'),
+      );
+    if (unavailable === undefined) throw new Error('Q unavailable Door 1 choice is missing');
+    expect(unavailable.getAttribute('aria-disabled')).toBe('true');
+    expect(work.filter((event) => event.kind === 'queryBatch')).toHaveLength(2);
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(before);
-    expect(screen.getByText('Finish Thessaly before choices here can be evaluated.')).toBeTruthy();
-    expect(screen.queryByText(/upstreamIncomplete|coverageNotReached/)).toBeNull();
   });
 
   it('dispatches immediate decision, linked-stage, and biome removals without confirmation', async () => {

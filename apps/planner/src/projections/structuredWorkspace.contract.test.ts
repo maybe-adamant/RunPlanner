@@ -40,6 +40,7 @@ import {
 import { expectedWorkspaceTopologyManifest } from '@planner-test/support/structured-workspace/expected-topology';
 import { assertExpectedWorkspaceLeafClosure } from '@planner-test/support/structured-workspace/leaf-closure';
 import { observeWorkspaceProducts } from '@planner-test/support/structured-workspace/observed-workspace';
+import { assertObservedOwner } from '@planner-test/support/structured-workspace/closure-primitives';
 import {
   assertExpectedWorkspaceStructuralControlClosure,
   assertRenderedWorkspaceStructuralControlClosure,
@@ -229,6 +230,8 @@ function withoutStructuralInteraction(
   switch (expected.kind) {
     case 'batchRewardStore':
       return { ...interactions, batchRewardStores: without(interactions.batchRewardStores) };
+    case 'decisionEntryRoomPicker':
+      return { ...interactions, rooms: without(interactions.rooms) };
     case 'exitFrontierCapability':
       return {
         ...interactions,
@@ -945,6 +948,13 @@ describe('structured workspace overlay contract', () => {
       kind: 'CreateStart',
       occurrenceId: createOccurrenceId('structural-oracle-f-opening'),
     });
+    const fEmptyDecision = applyProjectCommand(fFrontier, catalog, {
+      decision: createExitDecisionAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('structural-oracle-f-opening'),
+      }),
+      kind: 'CreateBatch',
+    });
     const nStarted = applyProjectCommand(emptyN, catalog, {
       biome: nBiome,
       kind: 'CreateStart',
@@ -963,6 +973,7 @@ describe('structured workspace overlay contract', () => {
       createRepresentativeNOPQProject(),
       emptyN,
       fFrontier,
+      fEmptyDecision,
       nHubFrontier,
     ]) {
       const projected = projectWorkspace(project);
@@ -1002,6 +1013,13 @@ describe('structured workspace overlay contract', () => {
       kind: 'CreateStart',
       occurrenceId: createOccurrenceId('structural-mutation-f-opening'),
     });
+    const fEmptyDecision = applyProjectCommand(fFrontier, catalog, {
+      decision: createExitDecisionAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('structural-mutation-f-opening'),
+      }),
+      kind: 'CreateBatch',
+    });
     const nStarted = applyProjectCommand(emptyN, catalog, {
       biome: nBiome,
       kind: 'CreateStart',
@@ -1027,6 +1045,7 @@ describe('structured workspace overlay contract', () => {
       createRepresentativeNOPQProject(),
       emptyN,
       fFrontier,
+      fEmptyDecision,
       nHubFrontier,
     ]) {
       const projected = projectWorkspace(project);
@@ -1048,6 +1067,7 @@ describe('structured workspace overlay contract', () => {
     expect([...examples.keys()].sort()).toEqual(
       [
         'batchRewardStore',
+        'decisionEntryRoomPicker',
         'exitFrontierCapability',
         'exitSelection',
         'fieldsCageOutcome',
@@ -1120,5 +1140,94 @@ describe('structured workspace overlay contract', () => {
         routes: projected.routes,
       }),
     ).toThrow(/authored Hub visit has no exact removal interaction/);
+  });
+
+  it('independently closes Door 1 and decision-owner routes for an empty decision entry', () => {
+    const startId = createOccurrenceId('decision-entry-closure-start');
+    const decision = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: startId,
+    });
+    const started = applyProjectCommand(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Underworld: 1 },
+        name: 'Decision entry closure',
+        projectId: 'decision-entry-closure',
+      }),
+      catalog,
+      { biome: goldenFBiome, gameName: 'F_Opening01', kind: 'CreateStart', occurrenceId: startId },
+    );
+    const project = applyProjectCommand(started, catalog, { decision, kind: 'CreateBatch' });
+    const projected = projectWorkspace(project);
+    const f = projected.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (f === undefined) throw new Error('empty F decision entry biome is missing');
+    const workbench = f.nodes.find(
+      (node): node is Extract<(typeof f.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        semanticAddressKey(node.owner) === semanticAddressKey(decision),
+    );
+    const target = workbench?.missingTargets[0];
+    if (workbench === undefined || target === undefined) {
+      throw new Error('empty F decision entry fixture is missing');
+    }
+    const interaction = projected.interactions.rooms.get(target.marker.focusKey);
+    if (interaction?.kind !== 'decisionEntryRoom') {
+      throw new Error('empty F Door 1 decision-entry room interaction is missing');
+    }
+    expect(interaction.owner).toEqual(target.marker.address);
+    expect(interaction.decisionOwner).toEqual(decision);
+
+    const observe = (
+      focusByOwner: typeof projected.focusByOwner,
+      nodes: typeof f.nodes = f.nodes,
+    ) =>
+      observeWorkspaceProducts({
+        focusByOwner,
+        interactions: projected.interactions,
+        nodes,
+      });
+    const assertRoutes = (
+      focusByOwner: typeof projected.focusByOwner,
+      nodes: typeof f.nodes = f.nodes,
+    ) => {
+      const observed = observe(focusByOwner, nodes);
+      assertObservedOwner(target.marker.address, observed, 'Door 1 target', true);
+      assertObservedOwner(decision, observed, 'decision-owned takeover route', true);
+    };
+
+    expect(() => assertRoutes(projected.focusByOwner)).not.toThrow();
+    const withoutDoorOne = new Map(projected.focusByOwner);
+    withoutDoorOne.delete(semanticAddressKey(target.marker.address));
+    expect(() => assertRoutes(withoutDoorOne)).toThrow(/Door 1 target .*destination is missing/);
+    const withoutDecision = new Map(projected.focusByOwner);
+    withoutDecision.delete(semanticAddressKey(decision));
+    expect(() => assertRoutes(withoutDecision)).toThrow(
+      /decision-owned takeover route .*destination is missing/,
+    );
+    const withoutDoorOneMarker = f.nodes.map((node) =>
+      node !== workbench
+        ? node
+        : Object.freeze({
+            ...node,
+            missingTargets: Object.freeze(
+              node.missingTargets.map((candidate) =>
+                candidate.exitKey === target.exitKey
+                  ? unsafeOmitWorkspaceProperty(candidate, 'marker')
+                  : candidate,
+              ),
+            ),
+          }),
+    );
+    expect(() => assertRoutes(projected.focusByOwner, withoutDoorOneMarker)).toThrow(
+      /Door 1 target has no workspace marker/,
+    );
+    const withoutDecisionMarker = f.nodes.map((node) =>
+      node !== workbench ? node : unsafeOmitWorkspaceProperty(node, 'marker'),
+    );
+    expect(() => assertRoutes(projected.focusByOwner, withoutDecisionMarker)).toThrow(
+      /decision-owned takeover route has no workspace marker/,
+    );
   });
 });

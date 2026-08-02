@@ -5,6 +5,7 @@ import {
   createExitDecisionAddress,
   createOccurrenceId,
   createProjectDocument,
+  createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -20,8 +21,6 @@ import {
   appendCompleteN,
   createRepresentativeNOPQProject,
   nBiome,
-  oBiome,
-  oOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { createGoldenFGHIProject, goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures';
 
@@ -119,7 +118,7 @@ describe('workspace candidate interaction families', () => {
     expect(events).toEqual([]);
   });
 
-  it('binds frontier takeover candidates lazily from their source decision', () => {
+  it('binds Door 1 candidates lazily from their target and decision owners', () => {
     const events: CandidateEvaluationEvent[] = [];
     const services = createStructuredWorkspaceTestServices({
       observeCandidateEvaluation: (event) => events.push(event),
@@ -141,33 +140,40 @@ describe('workspace candidate interaction families', () => {
       },
     );
     const owner = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start });
+    const directProject = applyProjectCommand(project, catalog, {
+      decision: owner,
+      kind: 'CreateBatch',
+    });
+    const target = createTargetAddress(biome, owner.source, 'exit1');
     const interactions = services.structuredWorkspace.project(
-      simulateProjectAssembly(catalog, project),
+      simulateProjectAssembly(catalog, directProject),
     ).interactions;
-    const interaction = interactions.takeoverBatches.get(semanticAddressKey(owner));
-    if (interaction?.presentation !== 'candidate') {
-      throw new Error('F authored takeover candidate interaction is missing');
+    const interaction = interactions.rooms.get(semanticAddressKey(target));
+    if (interaction?.kind !== 'decisionEntryRoom') {
+      throw new Error('F Door 1 decision-entry interaction is missing');
     }
 
-    expect(interactions.exitFrontierCapabilities.get(semanticAddressKey(owner))).toEqual({
-      structural: 'createBatch',
-      takeover: true,
-    });
+    expect(interaction.owner).toEqual(target);
+    expect(interaction.decisionOwner).toEqual(owner);
+    expect(interactions.takeoverBatches.get(semanticAddressKey(owner))).toBeUndefined();
+    expect(interactions.exitFrontierCapabilities.has(semanticAddressKey(owner))).toBe(false);
 
     expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
 
-    const candidates = interaction.load();
+    const model = interaction.load();
     const queryBatches = events.filter((event) => event.kind === 'queryBatch');
-    expect(queryBatches).toHaveLength(1);
-    expect(queryBatches[0]?.queryCount).toBeGreaterThan(0);
-    expect(candidates.map((candidate) => candidate.value.gameName)).toEqual(['F_PreBoss01']);
+    expect(queryBatches).toHaveLength(2);
+    expect(queryBatches.every((event) => event.queryCount > 0)).toBe(true);
+    expect(
+      model.sections.flatMap((section) => section.items.map((item) => item.value.gameName)),
+    ).toContain('F_PreBoss01');
 
     events.length = 0;
-    expect(interaction.load()).toBe(candidates);
+    expect(interaction.load()).toBe(model);
     expect(events).toEqual([]);
   });
 
-  it('does not advertise an existing decision takeover as an active frontier capability', () => {
+  it('does not publish takeover controls for an existing normal decision', () => {
     const services = createStructuredWorkspaceTestServices();
     const biome = createBiomeAddress('Underworld', 'F');
     const occurrenceId = createOccurrenceId('candidate-interaction-existing-takeover-start');
@@ -192,7 +198,7 @@ describe('workspace candidate interaction families', () => {
     ).interactions;
     const takeover = interactions.takeoverBatches.get(semanticAddressKey(owner));
 
-    expect(takeover).toMatchObject({ action: 'replace', owner, presentation: 'candidate' });
+    expect(takeover).toBeUndefined();
     expect(interactions.exitFrontierCapabilities.has(semanticAddressKey(owner))).toBe(false);
     expect(interactions.structural.has(semanticAddressKey(owner))).toBe(false);
   });
@@ -249,81 +255,8 @@ describe('workspace candidate interaction families', () => {
     }
   });
 
-  it('keeps source-owned takeover actions as explicit semantic capabilities', () => {
-    const events: CandidateEvaluationEvent[] = [];
-    const services = createStructuredWorkspaceTestServices({
-      observeCandidateEvaluation: (event) => events.push(event),
-    });
-    const fBiome = createBiomeAddress('Underworld', 'F');
-    const start = createOccurrenceId('candidate-interaction-f-start');
-    const candidateProject = applyProjectCommand(
-      createProjectDocument(catalog, {
-        projectId: 'candidate-interaction-f',
-        name: 'Candidate interaction F',
-        configuredBiomeCounts: { Underworld: 1 },
-      }),
-      catalog,
-      {
-        kind: 'CreateStart',
-        biome: fBiome,
-        occurrenceId: start,
-        gameName: 'F_Opening01',
-      },
-    );
-    const candidateOwner = createExitDecisionAddress(fBiome, {
-      kind: 'occurrence',
-      occurrenceId: start,
-    });
-    const candidateInteractions = services.structuredWorkspace.project(
-      simulateProjectAssembly(catalog, candidateProject),
-    ).interactions;
-    const candidate = candidateInteractions.takeoverBatches.get(semanticAddressKey(candidateOwner));
-    if (candidate?.presentation !== 'candidate') {
-      throw new Error('F source-owned takeover candidate capability is missing');
-    }
-    expect(candidate.action).toBe('create');
-    expect(typeof candidate.load).toBe('function');
-    expect(typeof candidate.intentFor).toBe('function');
-
-    const fixedWidthOneProject = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'RemoveExitDecision',
-      decision: createExitDecisionAddress(oBiome, {
-        kind: 'occurrence',
-        occurrenceId: oOccurrenceIds.combat02,
-      }),
-    });
-    const fixedWidthOneInteractions = services.structuredWorkspace.project(
-      simulateProjectAssembly(catalog, fixedWidthOneProject),
-    ).interactions;
-    const fixedWidthOneOwner = createExitDecisionAddress(oBiome, {
-      kind: 'occurrence',
-      occurrenceId: oOccurrenceIds.combat02,
-    });
-    const fixedWidthOneTakeover = fixedWidthOneInteractions.takeoverBatches.get(
-      semanticAddressKey(fixedWidthOneOwner),
-    );
-    if (fixedWidthOneTakeover?.presentation !== 'fixedWidthOneTakeover') {
-      throw new Error('O fixed width-one takeover capability is missing');
-    }
-    expect(fixedWidthOneTakeover.action).toBe('create');
-    expect('load' in fixedWidthOneTakeover).toBe(false);
-    expect(typeof fixedWidthOneTakeover.execute).toBe('function');
-    expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
-    const fixedWidthOneResult = fixedWidthOneTakeover.execute();
-    if (fixedWidthOneResult.kind !== 'intent') {
-      throw new Error('O fixed width-one takeover is unexpectedly unavailable');
-    }
-    expect(fixedWidthOneResult.intent).toMatchObject({
-      focus: { owner: fixedWidthOneOwner, timing: 'before' },
-    });
-    expect(fixedWidthOneResult.intent.command).toMatchObject({
-      kind: 'CreateTakeoverBatch',
-      decision: fixedWidthOneOwner,
-      gameName: 'O_PreBoss01',
-      targetOccurrenceIds: { exit1: expect.any(String) },
-    });
-    expect(events.filter((event) => event.kind === 'queryBatch')).toHaveLength(1);
-
+  it('retains only completed-Hub handoff and authored takeover repair as standalone actions', () => {
+    const services = createStructuredWorkspaceTestServices();
     const hubHandoffProject = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'candidate-interaction-n-handoff',
@@ -365,30 +298,46 @@ describe('workspace candidate interaction families', () => {
     expect(repair.owner.biomeKey).toBe(goldenFBiome.biomeKey);
   });
 
-  it('does not construct a takeover command for an impossible candidate value', () => {
+  it('does not construct a command for an unavailable direct takeover choice', () => {
     const services = createStructuredWorkspaceTestServices();
-    const project = createGoldenFGHIProject();
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
+    const started = applyProjectCommand(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Underworld: 1 },
+        name: 'Candidate interaction unavailable direct entry',
+        projectId: 'candidate-interaction-unavailable-direct-entry',
+      }),
+      catalog,
+      {
+        biome: goldenFBiome,
+        gameName: 'F_Opening01',
+        kind: 'CreateStart',
+        occurrenceId: goldenFStartId,
+      },
+    );
+    const project = applyProjectCommand(started, catalog, { decision: owner, kind: 'CreateBatch' });
     const interaction = services.structuredWorkspace
       .project(simulateProjectAssembly(catalog, project))
-      .interactions.takeoverBatches.get(semanticAddressKey(owner));
-    if (interaction?.presentation !== 'candidate') {
-      throw new Error('F opening takeover candidate capability is missing');
-    }
-    const impossible = interaction
-      .load()
-      .find(
-        (option) =>
-          option.evaluation.kind === 'takeoverPrebossBatch' &&
-          !option.evaluation.result.selectedPossible,
+      .interactions.rooms.get(
+        semanticAddressKey(createTargetAddress(goldenFBiome, owner.source, 'exit1')),
       );
-    if (impossible === undefined) {
-      throw new Error('F opening must expose an impossible takeover result for this guard');
+    if (interaction?.kind !== 'decisionEntryRoom') {
+      throw new Error('F unavailable direct-entry interaction is missing');
+    }
+    const unavailableTakeover = interaction
+      .load()
+      .sections.flatMap((section) => section.items)
+      .find((item) => item.value.gameName === 'F_PreBoss01');
+    if (unavailableTakeover === undefined) {
+      throw new Error('F direct entry has no unavailable takeover for this guard');
     }
 
-    expect(() => interaction.intentFor(impossible.value)).toThrow(/not currently applicable/);
+    expect(unavailableTakeover).toMatchObject({ disabled: true, state: 'impossible' });
+    expect(() => interaction.intentFor(unavailableTakeover.value.gameName)).toThrow(
+      /not currently authorable/,
+    );
   });
 });

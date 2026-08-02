@@ -1,17 +1,17 @@
 import type {
   BatchRewardStoreAddress,
   ExitSelectionAddress,
+  ProjectCommand,
 } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
-import { useState } from 'react';
 
-import { presentCandidateLabel } from '@planner/projections/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
   type WorkspaceBatchRepairIntent,
+  type WorkspaceCommandIntent,
   type WorkspaceExitSelectionInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceLinkedExitNode,
@@ -22,22 +22,15 @@ import {
   type WorkspaceTakeoverBatchNode,
   type WorkspaceOrdinaryBatchNode,
   type WorkspaceMixedBatchNode,
-  type WorkspaceCandidateTakeoverBatchInteraction,
   type WorkspaceCompletedHubHandoffInteraction,
-  type WorkspaceFixedWidthOneTakeoverInteraction,
   type WorkspaceTakeoverRepairInteraction,
   type WorkspaceTopologyRemovalInteraction,
 } from '@planner/projections/structured-workspace';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import {
-  candidateMayBeAuthored,
-  candidateSelectState,
-} from '@planner/ui/feedback/candidatePresentation';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { CandidateSelect } from './CandidateSelect';
 import { RoomOfferEditor } from './OccurrenceWorkbench';
@@ -66,7 +59,7 @@ function TargetRoomSelector({
 }) {
   const interaction = requireWorkspaceInteraction(interactions.rooms, interactionKey);
   const executeIntent = useCommandIntent();
-  if (interaction.kind !== 'targetRoom') {
+  if (interaction.kind !== 'targetRoom' && interaction.kind !== 'decisionEntryRoom') {
     throw new BiomeWorkspaceContractError(`${interactionKey} is not a target-room interaction.`);
   }
   return (
@@ -237,6 +230,8 @@ function MissingTargetRow({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly target: WorkspaceMissingPhysicalTarget;
 }) {
+  const interaction = interactions.rooms.get(target.marker.focusKey);
+  const canEnterDecision = interaction?.kind === 'decisionEntryRoom';
   return (
     <article
       aria-label={`Door ${target.index} unspecified room offer`}
@@ -256,13 +251,18 @@ function MissingTargetRow({
             <span className="neutral-status">Unspecified</span>
           </div>
         </div>
-        {target.authoring.kind === 'ready' ? (
-          <TargetRoomSelector
-            idPrefix={`target-${target.marker.focusKey}`}
-            interactionKey={target.marker.focusKey}
-            interactions={interactions}
-            label={`Door ${target.index} room`}
-          />
+        {target.authoring.kind === 'ready' || canEnterDecision ? (
+          <>
+            <TargetRoomSelector
+              idPrefix={`target-${target.marker.focusKey}`}
+              interactionKey={target.marker.focusKey}
+              interactions={interactions}
+              label={`Door ${target.index} room`}
+            />
+            {target.authoring.kind === 'ready' ? null : (
+              <p className="fixed-room-state">{target.authoring.message}</p>
+            )}
+          </>
         ) : (
           <label className="field-control" htmlFor={`target-${target.marker.focusKey}-waiting`}>
             <span>{`Door ${target.index} room`}</span>
@@ -290,145 +290,6 @@ function BatchSelectionStatus({
         ? 'The game fixes which room is selected here.'
         : 'Choose which door is taken.'}
     </p>
-  );
-}
-
-function CandidateTakeoverAction({
-  interaction,
-}: {
-  readonly interaction: WorkspaceCandidateTakeoverBatchInteraction;
-}) {
-  const executeIntent = useCommandIntent();
-  const candidates = useWorkspaceInteraction(interaction);
-  const [selectionGameName, setSelectionGameName] = useState<string | undefined>(
-    interaction.selected?.gameName,
-  );
-  const selectedGameName = selectionGameName ?? interaction.selected?.gameName;
-  const selected = candidates.result?.find(
-    (candidate) => candidate.value.gameName === selectedGameName,
-  );
-  const selectedIsLoaded =
-    interaction.selected !== undefined &&
-    candidates.result?.some(
-      (candidate) => candidate.value.gameName === interaction.selected?.gameName,
-    );
-  const selectedCanApply =
-    selected?.evaluation.kind === 'takeoverPrebossBatch' &&
-    selected.evaluation.result.selectedPossible;
-
-  const apply = (): void => {
-    if (candidates.result === undefined) {
-      candidates.activate();
-      return;
-    }
-    if (!selectedCanApply) return;
-    executeIntent(interaction.intentFor(selected.value));
-  };
-
-  const title =
-    interaction.action === 'create'
-      ? 'Add Preboss doors'
-      : interaction.action === 'replace'
-        ? 'Replace doors with Preboss'
-        : 'Fix Preboss doors';
-
-  return (
-    <section
-      className="takeover-action"
-      data-action={interaction.action}
-      data-presentation={interaction.presentation}
-    >
-      <div className="owner-markers">
-        <h4>{title}</h4>
-        <SemanticOwnerMarker address={interaction.owner} />
-      </div>
-      <label className="field-control" htmlFor={`${interaction.key}-takeover`}>
-        <span>Preboss room</span>
-        <select
-          {...candidateSelectState(selected)}
-          aria-busy={candidates.pending || undefined}
-          id={`${interaction.key}-takeover`}
-          onChange={(event) => {
-            const choice = candidates.result?.find(
-              (candidate) => candidate.value.gameName === event.target.value,
-            );
-            if (choice !== undefined && candidateMayBeAuthored(choice)) {
-              setSelectionGameName(choice.value.gameName);
-            }
-          }}
-          onFocus={candidates.activate}
-          onPointerDown={candidates.activate}
-          value={selectedGameName ?? ''}
-        >
-          <option disabled value="">
-            Choose Preboss room
-          </option>
-          {interaction.selected === undefined || selectedIsLoaded ? null : (
-            <option value={interaction.selected.gameName}>{interaction.selected.label}</option>
-          )}
-          {candidates.result?.map((candidate) => {
-            const retainsImpossibleValue =
-              selectedGameName === candidate.value.gameName && !candidateMayBeAuthored(candidate);
-            if (!candidateMayBeAuthored(candidate) && !retainsImpossibleValue) return null;
-            return (
-              <option
-                disabled={retainsImpossibleValue}
-                key={candidate.value.gameName}
-                value={candidate.value.gameName}
-                {...candidateSelectState(candidate)}
-              >
-                {presentCandidateLabel(candidate.value.label, candidate)}
-              </option>
-            );
-          })}
-        </select>
-      </label>
-      <button
-        className="secondary-action"
-        disabled={candidates.result !== undefined && !selectedCanApply}
-        onClick={apply}
-        type="button"
-      >
-        {candidates.result === undefined ? 'Check Preboss rooms' : title}
-      </button>
-    </section>
-  );
-}
-
-function FixedWidthOneTakeoverAction({
-  interaction,
-}: {
-  readonly interaction: WorkspaceFixedWidthOneTakeoverInteraction;
-}) {
-  const executeIntent = useCommandIntent();
-  const [message, setMessage] = useState<string | undefined>();
-  return (
-    <section
-      className="takeover-action"
-      data-action={interaction.action}
-      data-presentation={interaction.presentation}
-    >
-      <div className="owner-markers">
-        <h4>Go to Preboss</h4>
-        <SemanticOwnerMarker address={interaction.owner} />
-      </div>
-      <p className="fixed-room-state">{interaction.summary}</p>
-      {message === undefined ? null : <p className="candidate-explanation">{message}</p>}
-      <button
-        className="secondary-action"
-        onClick={() => {
-          const result = interaction.execute();
-          if (result.kind === 'unavailable') {
-            setMessage(result.message);
-            return;
-          }
-          executeIntent(result.intent);
-        }}
-        type="button"
-      >
-        Go to Preboss
-      </button>
-    </section>
   );
 }
 
@@ -476,13 +337,6 @@ function TakeoverAction({
   readonly interaction: WorkspaceTakeoverBatchInteraction;
 }) {
   switch (interaction.presentation) {
-    case 'candidate':
-      // A tentative declaration belongs to this decision only.  Re-keying the
-      // chooser prevents a selection made for one ordinary batch from being
-      // carried to another batch when the focused inspector changes.
-      return <CandidateTakeoverAction interaction={interaction} key={interaction.key} />;
-    case 'fixedWidthOneTakeover':
-      return <FixedWidthOneTakeoverAction interaction={interaction} />;
     case 'completedHubHandoff':
       return <CompletedHubHandoffAction interaction={interaction} />;
     case 'repair':
@@ -581,19 +435,21 @@ function BatchSettings({
 export function BatchWorkbench({
   interactions,
   label,
-  nextFrontier,
+  nextDecisionIntent,
   node,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
-  readonly nextFrontier?: WorkspaceMarker;
+  readonly nextDecisionIntent?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
+  >;
   readonly node: BatchNode;
 }) {
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const projectedTakeover =
     node.kind === 'takeoverBatch'
       ? requireWorkspaceInteraction(interactions.takeoverBatches, node.takeoverInteractionKey)
-      : interactions.takeoverBatches.get(workspaceInteractionKey(node.owner));
+      : undefined;
   const takeover =
     projectedTakeover?.presentation === 'repair' &&
     node.targets.every((target) => target.physicalState !== 'unavailable') &&
@@ -655,13 +511,14 @@ export function BatchWorkbench({
       {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
       <TopologyRemovalAction interaction={removal} label="Remove these doors" />
-      {nextFrontier === undefined ? null : (
+      {nextDecisionIntent === undefined ? null : (
         <button
           className="secondary-action decision-next-action"
-          onClick={() => dispatch(semanticOwnerFocused(nextFrontier.address))}
+          data-command={nextDecisionIntent.command.kind}
+          onClick={() => executeIntent(nextDecisionIntent)}
           type="button"
         >
-          Go to next step
+          Add next decision
         </button>
       )}
     </section>
@@ -772,10 +629,6 @@ function ExitFrontier({
     capabilities?.structural === undefined
       ? undefined
       : requireWorkspaceInteraction(interactions.structural, frontier.interactionKey);
-  const takeover =
-    capabilities?.takeover !== true
-      ? undefined
-      : requireWorkspaceInteraction(interactions.takeoverBatches, frontier.interactionKey);
   if (structural !== undefined && structural.action !== capabilities?.structural) {
     throw new BiomeWorkspaceContractError(
       'An exit frontier structural interaction must match its projected capability.',
@@ -795,7 +648,7 @@ function ExitFrontier({
             onClick={() => executeIntent(structural.intent)}
             type="button"
           >
-            Add doors
+            Add next decision
           </button>
         ) : null}
         {structural?.action === 'createLinkedExit' ? (
@@ -807,7 +660,6 @@ function ExitFrontier({
             Add fixed next room
           </button>
         ) : null}
-        {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
       </div>
     </section>
   );

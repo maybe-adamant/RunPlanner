@@ -15,7 +15,7 @@ export type TakeoverBatchCommand = Extract<
   }
 >;
 
-interface CreateTakeoverBatchCommandInput {
+interface TakeoverBatchCommandInput {
   readonly action: TakeoverBatchAction;
   readonly allocateOccurrenceId: OccurrenceIdFactory;
   readonly decision: ExitDecisionAddress;
@@ -24,12 +24,34 @@ interface CreateTakeoverBatchCommandInput {
   readonly requiredExitKeys: readonly string[];
 }
 
+type CreateTakeoverBatchCommand = Extract<
+  TakeoverBatchCommand,
+  { readonly kind: 'CreateTakeoverBatch' }
+>;
+type ReplaceWithTakeoverBatchCommand = Extract<
+  TakeoverBatchCommand,
+  { readonly kind: 'ReplaceWithTakeoverBatch' }
+>;
+type ReconcileTakeoverBatchCommand = Extract<
+  TakeoverBatchCommand,
+  { readonly kind: 'ReconcileTakeoverBatch' }
+>;
+
 /**
  * The application interaction adapter is the only UI-facing layer that
  * translates engine-owned takeover evidence into an atomic authored command.
  * React receives the resulting command capability, never a target-count or
  * occurrence-identity construction rule.
  */
+export function createTakeoverBatchCommand(
+  input: TakeoverBatchCommandInput & { readonly action: 'create' },
+): CreateTakeoverBatchCommand;
+export function createTakeoverBatchCommand(
+  input: TakeoverBatchCommandInput & { readonly action: 'replace' },
+): ReplaceWithTakeoverBatchCommand;
+export function createTakeoverBatchCommand(
+  input: TakeoverBatchCommandInput & { readonly action: 'reconcile' },
+): ReconcileTakeoverBatchCommand;
 export function createTakeoverBatchCommand({
   action,
   allocateOccurrenceId,
@@ -37,7 +59,7 @@ export function createTakeoverBatchCommand({
   existingTargetOccurrenceIds,
   gameName,
   requiredExitKeys,
-}: CreateTakeoverBatchCommandInput): TakeoverBatchCommand {
+}: TakeoverBatchCommandInput): TakeoverBatchCommand {
   if (requiredExitKeys.length === 0) {
     throw new Error('A takeover batch must declare at least one physical exit.');
   }

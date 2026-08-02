@@ -22,6 +22,8 @@ function expectedStructuralInteraction(
   switch (kind) {
     case 'batchRewardStore':
       return interactions.batchRewardStores.get(key);
+    case 'decisionEntryRoomPicker':
+      return interactions.rooms.get(key);
     case 'exitSelection':
       return interactions.exitSelections.get(key);
     case 'fieldsCageOutcome':
@@ -55,12 +57,30 @@ export function assertExpectedWorkspaceStructuralControlClosure(input: {
       }
       continue;
     }
+    const interaction = expectedStructuralInteraction(
+      input.interactions,
+      control.kind,
+      control.key,
+    );
     assertExactObservedInteraction(
-      expectedStructuralInteraction(input.interactions, control.kind, control.key),
+      interaction,
       control.key,
       control.owner,
       `${control.kind} ${control.key}`,
     );
+    if (control.kind === 'decisionEntryRoomPicker') {
+      const decisionEntry = input.interactions.rooms.get(control.key);
+      if (decisionEntry?.kind !== 'decisionEntryRoom') {
+        throw new Error(`${control.kind} ${control.key} has no decision-entry room interaction`);
+      }
+      if (
+        control.decisionOwner === undefined ||
+        workspaceTestOwnerKey(decisionEntry.decisionOwner) !==
+          workspaceTestOwnerKey(control.decisionOwner)
+      ) {
+        throw new Error(`${control.kind} ${control.key} has a conflicting decision owner`);
+      }
+    }
   }
 }
 
@@ -153,6 +173,21 @@ function assertRenderedNodeControls(
         `decision topology removal ${ownerKey}`,
       );
       for (const target of node.targets) assertRenderedRoomControls(target.room, interactions);
+      for (const target of node.missingTargets) {
+        const interaction = interactions.rooms.get(target.marker.focusKey);
+        if (interaction?.kind !== 'decisionEntryRoom') continue;
+        assertExactObservedInteraction(
+          interaction,
+          target.marker.focusKey,
+          target.marker.address,
+          `decision-entry room ${target.marker.focusKey}`,
+        );
+        if (workspaceTestOwnerKey(interaction.decisionOwner) !== ownerKey) {
+          throw new Error(
+            `decision-entry room ${target.marker.focusKey} has a conflicting decision owner`,
+          );
+        }
+      }
       return;
     }
     case 'hubDecision':
@@ -239,14 +274,6 @@ export function assertRenderedWorkspaceStructuralControlClosure(input: {
               frontier.interactionKey,
               frontier.owner,
               `exit frontier structural action ${frontier.interactionKey}`,
-            );
-          }
-          if (capability?.takeover === true) {
-            assertExactObservedInteraction(
-              input.interactions.takeoverBatches.get(frontier.interactionKey),
-              frontier.interactionKey,
-              frontier.owner,
-              `exit frontier takeover action ${frontier.interactionKey}`,
             );
           }
           break;

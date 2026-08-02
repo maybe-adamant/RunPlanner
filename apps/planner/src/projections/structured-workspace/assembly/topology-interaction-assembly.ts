@@ -1,6 +1,5 @@
 import {
   createExitDecisionAddress,
-  fixedWidthOneTakeoverForLayout,
   fixedWidthOneTakeoverTransitionForSource,
   semanticAddressKey,
   type ExitDecision,
@@ -128,19 +127,6 @@ function startInteractionRequirements(
   ]);
 }
 
-function takeoverCandidateGameNames(
-  catalog: Catalog,
-  biomeKey: string,
-): readonly [string, ...string[]] | undefined {
-  const gameNames = catalog.rooms.values
-    .filter((room) => room.biomeKey === biomeKey && workspaceRoomTakesOverNormalDoors(room))
-    .map((room) => room.gameName);
-  const [firstGameName, ...laterGameNames] = gameNames;
-  return firstGameName === undefined
-    ? undefined
-    : (Object.freeze([firstGameName, ...laterGameNames]) as readonly [string, ...string[]]);
-}
-
 function takeoverExistingTargets(
   decision: ExitDecision,
 ): readonly { readonly exitKey: string; readonly occurrenceId: OccurrenceId }[] {
@@ -178,27 +164,10 @@ function declaredTakeoverExitKeys(
   return workspaceDeclaredPhysicalExitKeys(catalog, source.layout, source.plan, decisionSource);
 }
 
-function takeoverRequirementForOwner(
-  requirements: ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement>,
-  owner: ExitDecisionAddress,
-): WorkspaceTakeoverInteractionRequirement | undefined {
-  const key = `takeoverBatch:${semanticAddressKey(owner)}`;
-  const requirement = requirements.get(key);
-  if (
-    requirement !== undefined &&
-    semanticAddressKey(requirement.owner) !== semanticAddressKey(owner)
-  ) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${key} takeover interaction requirement has a conflicting semantic owner`,
-    );
-  }
-  return requirement;
-}
-
 /**
- * Takeover controls are authored topology and declaration-policy facts. Emit
- * the complete family before binding so retained decisions and an incomplete
- * frontier do not depend on a second raw-project traversal in the binder.
+ * Topology retains only already-authored takeover repair and the completed-Hub
+ * handoff. Generated Preboss selection belongs to the empty decision's Door 1
+ * Room control, where the ordinary and takeover candidate families meet.
  */
 function takeoverInteractionRequirements(
   input: WorkspaceTopologyInteractionAssemblyInput,
@@ -218,8 +187,6 @@ function takeoverInteractionRequirements(
     requirementsByOwner.set(key, requirement);
   };
   const authoredDecisions = authoredExitDecisionsByOwner(source);
-  const candidateGameNames = takeoverCandidateGameNames(catalog, plan.biomeKey);
-  const fixedWidthOneTakeover = fixedWidthOneTakeoverForLayout(catalog, layout);
   for (const decision of authoredDecisions.values()) {
     const owner = createExitDecisionAddress(biome, decision.source);
     const existingTargets = takeoverExistingTargets(decision);
@@ -241,25 +208,12 @@ function takeoverInteractionRequirements(
       }
       continue;
     }
-    if (layout.progression.kind !== 'generated' || fixedWidthOneTakeover !== undefined) continue;
-    if (candidateGameNames === undefined) continue;
-    add(
-      Object.freeze({
-        action: decision.normal.kind === 'batch' ? ('replace' as const) : ('create' as const),
-        existingTargets,
-        gameNames: candidateGameNames,
-        kind: 'takeoverBatch' as const,
-        owner,
-        presentation: 'candidate' as const,
-      }),
-    );
   }
   const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
   if (completeness.completion !== 'incomplete' || completeness.frontier.kind !== 'exitDecision') {
     return Object.freeze([...requirementsByOwner.values()]);
   }
   const owner = completeness.frontier;
-  const ownerKey = `takeoverBatch:${semanticAddressKey(owner)}`;
   const existing = authoredDecisions.get(semanticAddressKey(owner));
   const fixedTransition = fixedWidthOneTakeoverTransitionForSource(
     catalog,
@@ -271,35 +225,19 @@ function takeoverInteractionRequirements(
     fixedTransition === undefined
       ? undefined
       : declaredTakeoverExitKeys(catalog, source, owner.source);
-  if (fixedTransition !== undefined && existing === undefined && requiredExitKeys !== undefined) {
+  if (
+    fixedTransition?.kind === 'completedHubHandoff' &&
+    existing === undefined &&
+    requiredExitKeys !== undefined
+  ) {
     add(
       Object.freeze({
         action: 'create' as const,
         gameName: fixedTransition.room.gameName,
         kind: 'takeoverBatch' as const,
         owner,
-        presentation:
-          fixedTransition.kind === 'completedHubHandoff'
-            ? ('completedHubHandoff' as const)
-            : ('fixedWidthOneTakeover' as const),
+        presentation: 'completedHubHandoff' as const,
         requiredExitKeys,
-      }),
-    );
-  } else if (
-    layout.progression.kind === 'generated' &&
-    fixedWidthOneTakeover === undefined &&
-    candidateGameNames !== undefined &&
-    !requirementsByOwner.has(ownerKey)
-  ) {
-    add(
-      Object.freeze({
-        action: existing?.normal.kind === 'batch' ? ('replace' as const) : ('create' as const),
-        existingTargets:
-          existing?.normal.kind === 'batch' ? takeoverExistingTargets(existing) : Object.freeze([]),
-        gameNames: candidateGameNames,
-        kind: 'takeoverBatch' as const,
-        owner,
-        presentation: 'candidate' as const,
       }),
     );
   }
@@ -307,15 +245,12 @@ function takeoverInteractionRequirements(
 }
 
 /**
- * Frontier capability and structural creation are one presentation contract:
- * an exit capability authorizes the UI lookup of its exact structural or
- * takeover action. Takeover requirements are already assembled from the same
- * authored plan, so this package can advertise a frontier action without
- * re-deriving candidate policy or consulting bound interactions.
+ * A generated frontier exposes one bound continuation: create the next
+ * decision envelope. Door 1 then owns the room choice, including any atomic
+ * normal-door takeover Preboss selection.
  */
 function frontierInteractionRequirements(
   input: WorkspaceTopologyInteractionAssemblyInput,
-  takeoverRequirements: ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement>,
 ): readonly WorkspaceFrontierInteractionRequirement[] {
   const { catalog, source } = input;
   const { biome, layout, plan } = source;
@@ -327,38 +262,20 @@ function frontierInteractionRequirements(
     case 'exitDecision': {
       const owner = completeness.frontier;
       const existing = source.exitDecision(owner.source);
-      const fixedTransition = fixedWidthOneTakeoverTransitionForSource(
-        catalog,
-        layout,
-        topology,
-        owner.source,
-      );
       const structural =
-        existing === undefined &&
-        owner.source.kind === 'occurrence' &&
-        fixedTransition === undefined
+        existing === undefined && owner.source.kind === 'occurrence'
           ? layout.progression.kind === 'hub' &&
             owner.source.occurrenceId === topology.startOccurrenceId
             ? Object.freeze({ action: 'createLinkedExit' as const })
             : Object.freeze({ action: 'createBatch' as const })
           : undefined;
-      const takeoverRequirement = takeoverRequirementForOwner(takeoverRequirements, owner);
-      const takeover = existing === undefined && takeoverRequirement !== undefined;
-      if (takeover && takeoverRequirement.action !== 'create') {
-        throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(owner)} active frontier takeover must create rather than ${takeoverRequirement.action}`,
-        );
-      }
-      if (structural === undefined && !takeover) return Object.freeze([]);
+      if (structural === undefined) return Object.freeze([]);
       return Object.freeze([
         Object.freeze({
-          capabilities: Object.freeze({
-            ...(structural === undefined ? {} : { structural: structural.action }),
-            ...(takeover ? { takeover: true as const } : {}),
-          }),
+          capabilities: Object.freeze({ structural: structural.action }),
           kind: 'exitFrontier' as const,
           owner,
-          ...(structural === undefined ? {} : { structural }),
+          structural,
         }),
       ]);
     }
@@ -381,14 +298,8 @@ export function assembleWorkspaceTopologyInteractions(
   input: WorkspaceTopologyInteractionAssemblyInput,
 ): WorkspaceTopologyInteractionAssembly {
   const takeover = takeoverInteractionRequirements(input);
-  const takeoverByOwner = new Map(
-    takeover.map((requirement) => [
-      workspaceTakeoverInteractionRequirementKey(requirement),
-      requirement,
-    ]),
-  );
   return Object.freeze({
-    frontierInteractionRequirements: frontierInteractionRequirements(input, takeoverByOwner),
+    frontierInteractionRequirements: frontierInteractionRequirements(input),
     startInteractionRequirements: startInteractionRequirements(input.source),
     takeoverInteractionRequirements: takeover,
     topologyRemovalInteractionRequirements: topologyRemovalInteractionRequirements(input),

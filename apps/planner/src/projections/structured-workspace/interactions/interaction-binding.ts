@@ -2,10 +2,10 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   semanticAddressKey,
-  type ExitDecisionAddress,
   type OccurrenceId,
   type SemanticAddress,
   type SideRoomGeneration,
+  type TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
@@ -16,12 +16,7 @@ import {
   type CandidateOptionProjection,
   type CandidateProjectionSession,
 } from '@planner/projections/candidateProjection';
-/*
- * Candidate support is interpreted here, at the binding boundary that owns
- * semantic applicability. React consumes the already-bound capability.
- */
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
-import { explainCandidateEvaluation } from '@planner/projections/contextualOptions';
 import {
   roomCategoryForKind,
   roomSelectorCategories,
@@ -37,7 +32,6 @@ import type {
   WorkspaceCandidateInteraction,
   WorkspaceExitFrontierCapabilities,
   WorkspaceExitSelectionInteraction,
-  WorkspaceFixedWidthOneTakeoverActionResult,
   WorkspaceHubSlotInteraction,
   WorkspaceHubVisitInteraction,
   WorkspaceInteractionCatalog,
@@ -49,7 +43,6 @@ import type {
   WorkspaceStartInteraction,
   WorkspaceStructuralInteraction,
   WorkspaceTakeoverBatchInteraction,
-  WorkspaceTakeoverCandidate,
   WorkspaceTopologyRemovalInteraction,
 } from '../contract';
 import type {
@@ -639,25 +632,8 @@ function bindStartInteractions(
 function bindTakeoverBatchInteractions(
   allocateOccurrenceId: OccurrenceIdFactory,
   catalog: Catalog,
-  candidates: CandidateProjectionSession,
   requirements: Iterable<WorkspaceTakeoverInteractionRequirement>,
 ): ReadonlyMap<string, WorkspaceTakeoverBatchInteraction> {
-  const takeoverCandidate = (gameName: string): WorkspaceTakeoverCandidate => {
-    const room = requireWorkspaceRoom(catalog, gameName);
-    return Object.freeze({ gameName: room.gameName, label: room.label });
-  };
-  const takeoverCandidates = (
-    owner: ExitDecisionAddress,
-    gameNames: readonly string[],
-  ): readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[] =>
-    Object.freeze(
-      candidates.takeoverPrebossBatches(owner, gameNames).map((candidate) =>
-        Object.freeze({
-          evaluation: candidate.evaluation,
-          value: takeoverCandidate(candidate.value),
-        }),
-      ),
-    );
   const targetOccurrences = (
     targets: readonly { readonly exitKey: string; readonly occurrenceId: OccurrenceId }[],
   ): ReadonlyMap<string, OccurrenceId> =>
@@ -671,53 +647,7 @@ function bindTakeoverBatchInteractions(
       );
     }
     switch (requirement.presentation) {
-      case 'candidate': {
-        const existingTargetOccurrenceIds = targetOccurrences(requirement.existingTargets);
-        let loaded: readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[] | undefined;
-        const load = (): readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[] => {
-          if (loaded === undefined) {
-            loaded = takeoverCandidates(requirement.owner, requirement.gameNames);
-          }
-          return loaded;
-        };
-        takeoverBatches.set(
-          key,
-          Object.freeze({
-            action: requirement.action,
-            intentFor(selection: WorkspaceTakeoverCandidate) {
-              const candidate = load().find(
-                (option) => option.value.gameName === selection.gameName,
-              );
-              if (
-                candidate?.evaluation.kind !== 'takeoverPrebossBatch' ||
-                !candidate.evaluation.result.selectedPossible
-              ) {
-                throw new StructuredWorkspaceProjectionContractError(
-                  `Takeover candidate ${selection.gameName} is not currently applicable.`,
-                );
-              }
-              return Object.freeze({
-                command: createTakeoverBatchCommand({
-                  action: requirement.action,
-                  allocateOccurrenceId,
-                  decision: requirement.owner,
-                  existingTargetOccurrenceIds,
-                  gameName: selection.gameName,
-                  requiredExitKeys: candidate.evaluation.result.requiredExitKeys,
-                }),
-                focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
-              });
-            },
-            key,
-            load,
-            owner: requirement.owner,
-            presentation: 'candidate' as const,
-          }),
-        );
-        break;
-      }
       case 'repair': {
-        const candidate = takeoverCandidate(requirement.gameName);
         const existingTargetOccurrenceIds = targetOccurrences(requirement.existingTargets);
         takeoverBatches.set(
           key,
@@ -736,67 +666,9 @@ function bindTakeoverBatchInteractions(
                 focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
               }),
             key,
-            label: candidate.label,
+            label: requireWorkspaceRoom(catalog, requirement.gameName).label,
             owner: requirement.owner,
             presentation: 'repair' as const,
-          }),
-        );
-        break;
-      }
-      case 'fixedWidthOneTakeover': {
-        const candidate = takeoverCandidate(requirement.gameName);
-        const room = requireWorkspaceRoom(catalog, requirement.gameName);
-        const summary =
-          room.incomingReward.kind === 'shop'
-            ? `Go to ${candidate.label}. The World Shop is entered automatically.`
-            : `Go to ${candidate.label}.`;
-        takeoverBatches.set(
-          key,
-          Object.freeze({
-            action: 'create' as const,
-            execute: (): WorkspaceFixedWidthOneTakeoverActionResult => {
-              // This fixed declaration still receives the engine's contextual
-              // validation only when the player takes it. React never loads or
-              // interprets a candidate result.
-              const evaluated = takeoverCandidates(
-                requirement.owner,
-                Object.freeze([requirement.gameName]),
-              )[0];
-              if (
-                evaluated?.evaluation.kind !== 'takeoverPrebossBatch' ||
-                !evaluated.evaluation.result.selectedPossible
-              ) {
-                const explanation =
-                  evaluated === undefined
-                    ? undefined
-                    : explainCandidateEvaluation(catalog, evaluated.evaluation);
-                return Object.freeze({
-                  kind: 'unavailable' as const,
-                  message:
-                    explanation?.message ??
-                    'This Preboss route is not available with the current plan.',
-                });
-              }
-              return Object.freeze({
-                kind: 'intent' as const,
-                intent: Object.freeze({
-                  command: createTakeoverBatchCommand({
-                    action: 'create',
-                    allocateOccurrenceId,
-                    decision: requirement.owner,
-                    existingTargetOccurrenceIds: new Map(),
-                    gameName: requirement.gameName,
-                    requiredExitKeys: requirement.requiredExitKeys,
-                  }),
-                  focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
-                }),
-              });
-            },
-            key,
-            label: candidate.label,
-            owner: requirement.owner,
-            presentation: 'fixedWidthOneTakeover' as const,
-            summary,
           }),
         );
         break;
@@ -819,7 +691,7 @@ function bindTakeoverBatchInteractions(
                 focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
               }),
             key,
-            label: takeoverCandidate(requirement.gameName).label,
+            label: requireWorkspaceRoom(catalog, requirement.gameName).label,
             owner: requirement.owner,
             presentation: 'completedHubHandoff' as const,
           }),
@@ -838,7 +710,6 @@ interface WorkspaceFrontierInteractionCatalog {
 function bindFrontierInteractions(
   allocateOccurrenceId: OccurrenceIdFactory,
   requirements: Iterable<WorkspaceFrontierInteractionRequirement>,
-  takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>,
 ): WorkspaceFrontierInteractionCatalog {
   const exitFrontierCapabilities = new Map<string, WorkspaceExitFrontierCapabilities>();
   const structural = new Map<string, WorkspaceStructuralInteraction>();
@@ -860,7 +731,7 @@ function bindFrontierInteractions(
             `${key} frontier structural capability disagrees with its requirement`,
           );
         }
-        if (capabilities.structural === undefined && capabilities.takeover !== true) {
+        if (capabilities.structural === undefined) {
           throw new StructuredWorkspaceProjectionContractError(
             `${key} frontier interaction requirement has no authoring capability`,
           );
@@ -871,11 +742,6 @@ function bindFrontierInteractions(
           );
         }
         exitFrontierCapabilities.set(key, capabilities);
-        if (capabilities.takeover === true && !takeoverBatches.has(key)) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${key} exit frontier takeover capability was not bound`,
-          );
-        }
         switch (requirement.structural?.action) {
           case undefined:
             break;
@@ -945,6 +811,97 @@ function bindFrontierInteractions(
   return Object.freeze({ exitFrontierCapabilities, structural });
 }
 
+function candidateHasExecutableSupport(candidate: CandidateOptionProjection<unknown>): boolean {
+  const support = candidateSupport(candidate);
+  return support === 'forced' || support === 'possible';
+}
+
+function distinctRooms(rooms: readonly RoomDeclaration[]): readonly RoomDeclaration[] {
+  return Object.freeze([...new Map(rooms.map((room) => [room.gameName, room])).values()]);
+}
+
+function targetCandidateRooms(
+  catalog: Catalog,
+  project: ProjectEvaluationAssembly['project'],
+  target: TargetAddress,
+): readonly RoomDeclaration[] {
+  return distinctRooms(
+    roomSelectorCategories(catalog, target.biomeKey).flatMap((category) =>
+      selectRoomsForTargetCategory(catalog, project, target, category),
+    ),
+  );
+}
+
+type WorkspaceDecisionEntryCandidate =
+  | {
+      readonly candidate: CandidateOptionProjection<RoomDeclaration>;
+      readonly kind: 'ordinary';
+      readonly room: RoomDeclaration;
+    }
+  | {
+      readonly candidate: CandidateOptionProjection<string>;
+      readonly kind: 'takeover';
+      readonly room: RoomDeclaration;
+    };
+
+type WorkspaceDecisionEntryRoomControl = Extract<
+  WorkspaceRoomPickerControl,
+  { readonly kind: 'decisionEntryRoomPicker' }
+>;
+
+/**
+ * Candidate availability and authored mutation readiness answer different
+ * questions. An ordinary Door 1 choice remains authorable behind a retained
+ * or incomplete prefix just like any other target picker when the engine's
+ * exact static command domain admits it. Setup owned by this exact decision
+ * can still block ordinary mutation. A takeover requires evaluated whole-batch
+ * support because it needs the engine's required-exit product.
+ */
+function decisionEntryCandidateMayBeAuthored(
+  entry: WorkspaceDecisionEntryCandidate,
+  ordinaryTargetAuthoring: WorkspaceDecisionEntryRoomControl['ordinaryTargetAuthoring'],
+  ordinaryTargetGameNames: WorkspaceDecisionEntryRoomControl['ordinaryTargetGameNames'],
+): boolean {
+  if (entry.kind === 'takeover') return candidateHasExecutableSupport(entry.candidate);
+  if (ordinaryTargetAuthoring.kind !== 'ready') return false;
+  if (!ordinaryTargetGameNames.includes(entry.room.gameName)) return false;
+  return candidateSupport(entry.candidate) !== 'impossible';
+}
+
+function disableUnavailableDecisionEntryCandidates(
+  model: ContextualPickerModel<RoomDeclaration>,
+  candidates: readonly WorkspaceDecisionEntryCandidate[],
+  ordinaryTargetAuthoring: WorkspaceDecisionEntryRoomControl['ordinaryTargetAuthoring'],
+  ordinaryTargetGameNames: WorkspaceDecisionEntryRoomControl['ordinaryTargetGameNames'],
+): ContextualPickerModel<RoomDeclaration> {
+  const candidatesByGameName = new Map(
+    candidates.map((candidate) => [candidate.room.gameName, candidate] as const),
+  );
+  let changed = false;
+  const sections = model.sections.map((section) => {
+    let sectionChanged = false;
+    const items = section.items.map((item) => {
+      const candidate = candidatesByGameName.get(item.value.gameName);
+      if (
+        item.disabled ||
+        candidate === undefined ||
+        decisionEntryCandidateMayBeAuthored(
+          candidate,
+          ordinaryTargetAuthoring,
+          ordinaryTargetGameNames,
+        )
+      ) {
+        return item;
+      }
+      changed = true;
+      sectionChanged = true;
+      return Object.freeze({ ...item, disabled: true });
+    });
+    return sectionChanged ? Object.freeze({ ...section, items: Object.freeze(items) }) : section;
+  });
+  return changed ? Object.freeze({ ...model, sections: Object.freeze(sections) }) : model;
+}
+
 /**
  * Bind every public interaction map from completed requirement products and
  * the exact contextual services for one project-evaluation assembly. This module
@@ -1001,87 +958,198 @@ export function bindWorkspaceInteractions(
   const takeoverBatches = bindTakeoverBatchInteractions(
     allocateOccurrenceId,
     catalog,
-    candidates,
     takeoverInteractionRequirements.values(),
   );
   const { exitFrontierCapabilities, structural } = bindFrontierInteractions(
     allocateOccurrenceId,
     frontierInteractionRequirements.values(),
-    takeoverBatches,
   );
   const rooms = new Map<string, WorkspaceRoomInteraction>();
   for (const [key, control] of roomControls) {
-    const selectedGameName =
-      control.kind === 'startRoomPicker'
-        ? control.selectedGameName
-        : control.target.kind === 'existing'
-          ? control.target.selectedGameName
-          : undefined;
-    const candidateRooms = (() => {
-      if (control.kind === 'startRoomPicker') {
-        return Object.freeze(
-          control.candidateGameNames.map((gameName) => requireWorkspaceRoom(catalog, gameName)),
-        );
-      }
-      const candidatesForCategories = roomSelectorCategories(
-        catalog,
-        control.address.biomeKey,
-      ).flatMap((category) =>
-        selectRoomsForTargetCategory(catalog, project, control.address, category),
-      );
-      return Object.freeze([
-        ...new Map(candidatesForCategories.map((room) => [room.gameName, room])).values(),
-      ]);
-    })();
-    const targetGameNames = new Set(candidateRooms.map((room) => room.gameName));
-    let model: ContextualPickerModel<RoomDeclaration> | undefined;
-    const interaction = {
-      choices: Object.freeze(
-        candidateRooms.map((room) =>
-          Object.freeze({
-            category: roomCategoryForKind(room.kind) ?? room.kind,
-            gameName: room.gameName,
-            label: room.label,
-          }),
-        ),
-      ),
-      key,
-      owner: control.address,
-      load(): ContextualPickerModel<RoomDeclaration> {
-        if (model !== undefined) return model;
-        model = services.contextualPicker.project(
-          control.kind === 'startRoomPicker'
-            ? candidates.startRooms(control.address, candidateRooms)
-            : candidates.roomTargets(control.address, candidateRooms),
-          (option) =>
-            Object.freeze({
-              label: option.value.label,
-              category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
-              selected: option.value.gameName === selectedGameName,
-            }),
-          (room) => room.gameName,
-        );
-        return model;
-      },
-      ...(selectedGameName === undefined
-        ? {}
-        : { selected: requireWorkspaceRoom(catalog, selectedGameName) }),
-    };
     if (control.kind === 'startRoomPicker') {
+      const candidateRooms = Object.freeze(
+        control.candidateGameNames.map((gameName) => requireWorkspaceRoom(catalog, gameName)),
+      );
+      let model: ContextualPickerModel<RoomDeclaration> | undefined;
       rooms.set(
         key,
         Object.freeze({
-          ...interaction,
+          choices: Object.freeze(
+            candidateRooms.map((room) =>
+              Object.freeze({
+                category: roomCategoryForKind(room.kind) ?? room.kind,
+                gameName: room.gameName,
+                label: room.label,
+              }),
+            ),
+          ),
           kind: 'startRoom' as const,
+          key,
+          load(): ContextualPickerModel<RoomDeclaration> {
+            if (model !== undefined) return model;
+            model = services.contextualPicker.project(
+              candidates.startRooms(control.address, candidateRooms),
+              (option) =>
+                Object.freeze({
+                  category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
+                  label: option.value.label,
+                  selected: option.value.gameName === control.selectedGameName,
+                }),
+              (room) => room.gameName,
+            );
+            return model;
+          },
+          owner: control.address,
+          selected: requireWorkspaceRoom(catalog, control.selectedGameName),
+        }),
+      );
+      continue;
+    }
+
+    const ordinaryRooms = targetCandidateRooms(catalog, project, control.address);
+    if (control.kind === 'decisionEntryRoomPicker') {
+      const takeoverRooms = Object.freeze(
+        control.takeoverGameNames.map((gameName) => requireWorkspaceRoom(catalog, gameName)),
+      );
+      const takeoverGameNames = new Set(takeoverRooms.map((room) => room.gameName));
+      const ordinaryGameNames = new Set(ordinaryRooms.map((room) => room.gameName));
+      const overlappingGameName = [...ordinaryGameNames].find((gameName) =>
+        takeoverGameNames.has(gameName),
+      );
+      if (overlappingGameName !== undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${overlappingGameName} has ambiguous ordinary and takeover decision-entry semantics for ${key}`,
+        );
+      }
+      const candidateRooms = Object.freeze([...ordinaryRooms, ...takeoverRooms]);
+      let loadedCandidates: readonly WorkspaceDecisionEntryCandidate[] | undefined;
+      let model: ContextualPickerModel<RoomDeclaration> | undefined;
+      const loadCandidates = (): readonly WorkspaceDecisionEntryCandidate[] =>
+        (loadedCandidates ??= Object.freeze([
+          ...candidates
+            .roomTargets(control.address, ordinaryRooms)
+            .map((candidate) =>
+              Object.freeze({ candidate, kind: 'ordinary' as const, room: candidate.value }),
+            ),
+          ...candidates
+            .takeoverPrebossBatches(control.decisionOwner, control.takeoverGameNames)
+            .map((candidate) =>
+              Object.freeze({
+                candidate,
+                kind: 'takeover' as const,
+                room: requireWorkspaceRoom(catalog, candidate.value),
+              }),
+            ),
+        ]));
+      rooms.set(
+        key,
+        Object.freeze({
+          choices: Object.freeze(
+            candidateRooms.map((room) =>
+              Object.freeze({
+                category: roomCategoryForKind(room.kind) ?? room.kind,
+                gameName: room.gameName,
+                label: room.label,
+              }),
+            ),
+          ),
+          decisionOwner: control.decisionOwner,
+          intentFor(gameName: string) {
+            const entry = loadCandidates().find(
+              (candidate) => candidate.room.gameName === gameName,
+            );
+            if (entry === undefined) {
+              throw new StructuredWorkspaceProjectionContractError(
+                `${gameName} is outside the decision-entry room domain for ${key}`,
+              );
+            }
+            if (
+              !decisionEntryCandidateMayBeAuthored(
+                entry,
+                control.ordinaryTargetAuthoring,
+                control.ordinaryTargetGameNames,
+              )
+            ) {
+              throw new StructuredWorkspaceProjectionContractError(
+                `${gameName} is not currently authorable for ${key}`,
+              );
+            }
+            if (entry.kind === 'ordinary') {
+              const occurrenceId = allocateOccurrenceId();
+              return Object.freeze({
+                command: Object.freeze({
+                  gameName,
+                  kind: 'CreateTarget' as const,
+                  occurrenceId,
+                  target: control.address,
+                }),
+                focus: Object.freeze({ owner: control.address, timing: 'after' as const }),
+              });
+            }
+            if (entry.candidate.evaluation.kind !== 'takeoverPrebossBatch') {
+              throw new StructuredWorkspaceProjectionContractError(
+                `${gameName} has no evaluated takeover evidence for ${key}`,
+              );
+            }
+            const command = createTakeoverBatchCommand({
+              action: 'replace',
+              allocateOccurrenceId,
+              decision: control.decisionOwner,
+              existingTargetOccurrenceIds: new Map(),
+              gameName,
+              requiredExitKeys: entry.candidate.evaluation.result.requiredExitKeys,
+            });
+            return Object.freeze({
+              command,
+              focus: Object.freeze({ owner: control.decisionOwner, timing: 'before' as const }),
+            });
+          },
+          key,
+          kind: 'decisionEntryRoom' as const,
+          load(): ContextualPickerModel<RoomDeclaration> {
+            if (model !== undefined) return model;
+            const projected = services.contextualPicker.project(
+              loadCandidates().map((entry) =>
+                Object.freeze({ evaluation: entry.candidate.evaluation, value: entry.room }),
+              ),
+              (option) =>
+                Object.freeze({
+                  category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
+                  label: option.value.label,
+                  selected: false,
+                }),
+              (room) => room.gameName,
+            );
+            model = disableUnavailableDecisionEntryCandidates(
+              projected,
+              loadCandidates(),
+              control.ordinaryTargetAuthoring,
+              control.ordinaryTargetGameNames,
+            );
+            return model;
+          },
           owner: control.address,
         }),
       );
       continue;
     }
+
+    const selectedGameName =
+      control.target.kind === 'existing' ? control.target.selectedGameName : undefined;
+    const targetGameNames = new Set(ordinaryRooms.map((room) => room.gameName));
+    let model: ContextualPickerModel<RoomDeclaration> | undefined;
     rooms.set(
       key,
       Object.freeze({
-        ...interaction,
+        choices: Object.freeze(
+          ordinaryRooms.map((room) =>
+            Object.freeze({
+              category: roomCategoryForKind(room.kind) ?? room.kind,
+              gameName: room.gameName,
+              label: room.label,
+            }),
+          ),
+        ),
         intentFor(gameName: string) {
           if (!targetGameNames.has(gameName)) {
             throw new StructuredWorkspaceProjectionContractError(
@@ -1109,7 +1177,25 @@ export function bindWorkspaceInteractions(
           });
         },
         kind: 'targetRoom' as const,
+        key,
+        load(): ContextualPickerModel<RoomDeclaration> {
+          if (model !== undefined) return model;
+          model = services.contextualPicker.project(
+            candidates.roomTargets(control.address, ordinaryRooms),
+            (option) =>
+              Object.freeze({
+                category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
+                label: option.value.label,
+                selected: option.value.gameName === selectedGameName,
+              }),
+            (room) => room.gameName,
+          );
+          return model;
+        },
         owner: control.address,
+        ...(selectedGameName === undefined
+          ? {}
+          : { selected: requireWorkspaceRoom(catalog, selectedGameName) }),
       }),
     );
   }

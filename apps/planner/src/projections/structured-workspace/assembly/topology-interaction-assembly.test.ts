@@ -155,7 +155,7 @@ describe('structured workspace topology interaction assembly', () => {
     });
   });
 
-  it('publishes complete removal and takeover-replacement command requirements', () => {
+  it('publishes complete removal requirements without normal-batch takeover replacement', () => {
     const n = assemble(createRepresentativeNOPQProject(), 'Surface', 'N').assembly;
     const removals = n.topologyRemovalInteractionRequirements[0]?.removals;
     const linked = createExitDecisionAddress(nBiome, {
@@ -177,14 +177,10 @@ describe('structured workspace topology interaction assembly', () => {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
-    const replacement = f.takeoverInteractionRequirements.find(
+    const takeover = f.takeoverInteractionRequirements.find(
       (requirement) => semanticAddressKey(requirement.owner) === semanticAddressKey(owner),
     );
-    expect(replacement).toMatchObject({
-      action: 'replace',
-      owner,
-      presentation: 'candidate',
-    });
+    expect(takeover).toBeUndefined();
   });
 
   it.each([
@@ -270,8 +266,8 @@ describe('structured workspace topology interaction assembly', () => {
     [oBiome, oOccurrenceIds.combat02, 'O_PreBoss01'],
     [qBiome, qOccurrenceIds.secondMiniboss1, 'Q_PreBoss01'],
   ] as const)(
-    'classifies %s fixed-width-one Preboss creation at its final frontier only',
-    (biome, parent, gameName) => {
+    'creates an empty %s decision at its final frontier without a standalone Preboss action',
+    (biome, parent, _gameName) => {
       const owner = createExitDecisionAddress(biome, {
         kind: 'occurrence',
         occurrenceId: parent,
@@ -290,22 +286,16 @@ describe('structured workspace topology interaction assembly', () => {
           semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
       );
 
-      expect(requirement).toMatchObject({
-        action: 'create',
-        gameName,
-        kind: 'takeoverBatch',
-        owner,
-        presentation: 'fixedWidthOneTakeover',
-      });
+      expect(requirement).toBeUndefined();
       expect(frontier).toMatchObject({
-        capabilities: { takeover: true },
+        capabilities: { structural: 'createBatch' },
         kind: 'exitFrontier',
         owner,
+        structural: { action: 'createBatch' },
       });
       if (frontier?.kind !== 'exitFrontier') {
-        throw new Error(biome.biomeKey + ' final fixed-width-one frontier is missing');
+        throw new Error(biome.biomeKey + ' final decision frontier is missing');
       }
-      expect(frontier.structural).toBeUndefined();
     },
   );
 
@@ -336,24 +326,4 @@ describe('structured workspace topology interaction assembly', () => {
       structural: { action: 'createBatch' },
     });
   });
-
-  it.each([
-    ['F', createGoldenFGHIProject, 'Underworld'],
-    ['G', createGoldenFGHIProject, 'Underworld'],
-    ['H', createGoldenFGHIProject, 'Underworld'],
-    ['I', createGoldenFGHIProject, 'Underworld'],
-    ['N', createRepresentativeNOPQProject, 'Surface'],
-    ['P', createRepresentativeNOPQProject, 'Surface'],
-  ] as const)(
-    'does not misclassify %s as a fixed-width-one takeover',
-    (biomeKey, project, routeKey) => {
-      const { assembly } = assemble(project(), routeKey, biomeKey);
-
-      expect(
-        assembly.takeoverInteractionRequirements.some(
-          (requirement) => requirement.presentation === 'fixedWidthOneTakeover',
-        ),
-      ).toBe(false);
-    },
-  );
 });

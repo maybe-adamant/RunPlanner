@@ -168,22 +168,11 @@ export interface WorkspaceStartInteractionRequirement {
 }
 
 /**
- * Production requirement for one authored or frontier takeover batch. It
- * carries topology-owned command facts while binding supplies catalog labels
- * and the exact session-bound candidate evaluator.
+ * Production requirement for an authored takeover repair or the completed
+ * Hub handoff. Generated Preboss selection is bound by the empty decision's
+ * explicit Door 1 Room control instead.
  */
 export type WorkspaceTakeoverInteractionRequirement =
-  | {
-      readonly action: 'create' | 'replace';
-      readonly existingTargets: readonly {
-        readonly exitKey: string;
-        readonly occurrenceId: OccurrenceId;
-      }[];
-      readonly gameNames: readonly [string, ...string[]];
-      readonly kind: 'takeoverBatch';
-      readonly owner: ExitDecisionAddress;
-      readonly presentation: 'candidate';
-    }
   | {
       readonly action: 'reconcile';
       readonly existingTargets: readonly {
@@ -201,7 +190,7 @@ export type WorkspaceTakeoverInteractionRequirement =
       readonly gameName: string;
       readonly kind: 'takeoverBatch';
       readonly owner: ExitDecisionAddress;
-      readonly presentation: 'fixedWidthOneTakeover' | 'completedHubHandoff';
+      readonly presentation: 'completedHubHandoff';
       readonly requiredExitKeys: readonly string[];
     };
 

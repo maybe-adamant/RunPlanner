@@ -347,6 +347,62 @@ describe('BiomeWorkspace', () => {
     expect(decisionRail.dataset.selected).toBe('true');
   });
 
+  it('authors and enters the next generated decision from its predecessor', async () => {
+    const occurrenceId = createOccurrenceId('direct-next-decision-f-start');
+    const source = { kind: 'occurrence' as const, occurrenceId };
+    const owner = createExitDecisionAddress(goldenFBiome, source);
+    const project = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+      biome: goldenFBiome,
+      gameName: 'F_Opening01',
+      kind: 'CreateStart',
+      occurrenceId,
+    });
+    const view = renderWorkspace(project, 'Underworld', 'F');
+
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, occurrenceId)),
+      ),
+    );
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
+    expect(within(inspector).queryByText('Continue from this room')).toBeNull();
+    const before = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(within(inspector).getByRole('button', { name: 'Add next decision' }));
+
+    await waitFor(() => {
+      expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
+      expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
+    });
+    const authoredDecision = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          semanticAddressKey(createExitDecisionAddress(goldenFBiome, decision.source)) ===
+            semanticAddressKey(owner),
+      );
+    if (authoredDecision?.kind !== 'exit') {
+      throw new Error('direct continuation did not create its F decision');
+    }
+    expect(authoredDecision.normal).toMatchObject({ kind: 'batch', targets: [] });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      before + 1,
+    );
+    expect(screen.queryByText('Continue from this room')).toBeNull();
+
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, occurrenceId)),
+      ),
+    );
+    expect(screen.getByRole('complementary', { name: 'Details' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add next decision' })).toBeNull();
+  });
+
   it('renders N’s entry frontiers before its future Hub outline', () => {
     const emptyProjectDocument = emptyProject('Surface', 1);
     const emptyView = renderWorkspace(emptyProjectDocument, 'Surface', 'N');
@@ -562,7 +618,7 @@ describe('BiomeWorkspace', () => {
     ).toBe(true);
   });
 
-  it('keeps a tentative takeover declaration scoped to its focused ordinary batch', async () => {
+  it('keeps direct Preboss choice inside Door 1 and out of ordinary batches', async () => {
     const first = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(10, 1),
@@ -571,19 +627,27 @@ describe('BiomeWorkspace', () => {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const withoutDecision = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: first,
+    });
+    const project = applyProjectCommand(withoutDecision, catalog, {
+      decision: first,
+      kind: 'CreateBatch',
     });
     const view = renderWorkspace(project, 'Underworld', 'F');
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(first)));
-    await view.user.click(screen.getByRole('button', { name: 'Check Preboss rooms' }));
-    await view.user.selectOptions(screen.getByLabelText('Preboss room'), 'F_PreBoss01');
-    expect((screen.getByLabelText('Preboss room') as HTMLSelectElement).value).toBe('F_PreBoss01');
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+    expect(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .some((option) => option.getAttribute('data-candidate-state') === 'forced'),
+    ).toBe(true);
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(second)));
-    expect((screen.getByLabelText('Preboss room') as HTMLSelectElement).value).toBe('');
+    expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
+    expect(screen.queryByText('Add Preboss doors')).toBeNull();
   });
 
   it('keeps N completed-Hub handoff removal reachable from the visible Preboss stage', async () => {
