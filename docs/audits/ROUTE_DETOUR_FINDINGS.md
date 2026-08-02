@@ -86,8 +86,8 @@ The focused Preboss probe establishes three boundary facts for future work:
 - Taking Chaos can leave an offered normal-door Preboss batch unentered. A
   later normal generation creates a fresh Preboss batch and fresh reward draws;
   the earlier unentered batch is not resumed or reused.
-- Natural Chaos is suppressed by a Chaos occurrence among the prior ten rooms,
-  not merely by the immediately preceding room.
+- Natural Chaos is suppressed when any of the prior ten host rooms spawned or
+  offered a Chaos door, even when that door was not entered.
 
 `PauseBiomeState` must not be translated as "pause all counters." Its observed
 game implementation removes and later restores biome-state traits. The exact

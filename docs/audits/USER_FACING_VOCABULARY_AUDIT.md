@@ -162,7 +162,6 @@ attributes that carry the same internal values.
 | `This Preboss batch is authored atomically.`                                                          | `These Preboss doors are changed together.`                                 | `DecisionWorkbench.tsx`                                    |
 | `Reconcile <label> against the current declaration-owned exits.`                                      | `Fix <label> to restore the missing doors.`                                 | `DecisionWorkbench.tsx`                                    |
 | `Missing Preboss exits are repaired atomically through the projected Preboss action.`                 | `Fix Preboss doors to restore the missing doors.`                           | `DecisionWorkbench.tsx`                                    |
-| `This fixed Preboss takeover is not supported by the current route state.`                            | `This Preboss route is not available with the current plan.`                | `structured-workspace/interactions/interaction-binding.ts` |
 
 Translate the visible action and explanation only. The underlying all-at-once
 Preboss command remains one semantic operation.
