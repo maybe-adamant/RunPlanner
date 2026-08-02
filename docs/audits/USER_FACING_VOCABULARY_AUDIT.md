@@ -2,308 +2,305 @@
 
 ## Status
 
-This is the implementation inventory for Phase 7 Commit 5b.4. It audits the
-current standalone editor after the unified-biome migration and defines the
-player-facing translations that
-[`WORKSPACE_PRESENTATION_POLISH.md`](../progress/WORKSPACE_PRESENTATION_POLISH.md)
-will deliver.
+This is the refreshed implementation inventory for Phase 7 Commit 5b.4. It
+supersedes the 2026-07-27 inventory and was checked against the production
+application under `apps/planner/src` on 2026-08-01.
 
-The audit is based on the production application under `apps/planner/src` as of
-2026-07-27. Internal identifiers remain governed by the authored-project,
-simulation, candidate, and structured-workspace authorities. This document
-does not rename those contracts.
+The intervening work materially changed the surface this audit governs:
 
-## Problem
+- Findings are scoped to the selected route; Settings deliberately has no
+  Findings panel.
+- The rail now keeps a narrow, progressive selected-decision context: one
+  selected room is shown, and a direct single reward may follow as a structured
+  token. This is not the removed generic reward summary.
+- Generic reward footer/Hub-summary copy and removal-impact warnings have been
+  deliberately removed. The vocabulary pass must not recreate either.
+- Authored selection and evaluated entry are distinct. Copy must preserve that
+  distinction even where a downstream selected room has not yet been entered by
+  the evaluated route.
 
-The engine and application projection need exact terms such as `prefix`,
-`frontier`, `occurrence`, `batch`, `takeover`, `canonical`, and `progressive`.
-Several of those terms currently pass through to visible copy, accessible
-names, or status text. The result describes how the planner is implemented
-instead of what the player is configuring.
-
-The product boundary is:
-
-```text
-internal model and projection vocabulary
-  -> explicit presentation translation
-  -> player intent, rooms, doors, rewards, and route progress
-```
-
-The translation changes copy only. It does not weaken or replace the internal
-model.
+Commit 5b.4 remains a presentation-only change. It translates visible copy,
+accessible names, finding destinations, and evidence-dependent explanations;
+it does not rename domain contracts, change candidate support, alter topology,
+or make React calculate simulation or removal facts.
 
 ## Audit Boundary
 
 Included:
 
-- rendered headings, labels, buttons, descriptions, banners, findings, status
-  text, removal impact, candidate explanations, tooltips, and accessible names;
-- route settings and project feedback;
+- rendered headings, labels, buttons, descriptions, findings, status text,
+  candidate explanations, tooltips, and accessible names;
+- route settings and route-scoped feedback;
 - the shared biome rail, inspector, door workbenches, completion cards, Hub
-  workbench, and room-local explanatory copy;
-- presentation strings projected by application code and consumed by React.
+  workbench, and room-local explanatory copy; and
+- application presentation strings consumed by React.
 
 Excluded:
 
 - TypeScript type, enum, property, function, command, event, and test-fixture
   names;
-- semantic addresses, persisted keys, game names, data attributes, CSS classes,
-  cache keys, and developer-only contract errors;
-- design documents that intentionally explain the internal architecture;
-- catalog labels and genuine game terms;
-- a localization framework, copy registry, or generic terminology adapter.
+- semantic addresses, persisted keys, catalog game names, CSS classes, cache
+  keys, and developer-only contract errors;
+- data attributes such as `data-projection-source` and
+  `data-feedback-context`; and
+- a localization framework, copy registry, generic terminology adapter, or
+  repository-wide forbidden-word scan.
 
-A word is not forbidden globally. The question is whether the rendered use
-describes a player-visible game or planning concept. Focused UI tests should
-assert the intended copy; the repository should not gain a brittle
-forbidden-word scan.
+The acceptance condition is that raw terms do not reach visible copy,
+accessible names, or tooltips. Their presence in a data attribute is not a
+product-language regression.
 
-## Player-Facing Vocabulary
+## Product Language and Deliberate Terms
 
-The editor may use these concepts directly:
+The editor may use rooms, doors, offered rooms, selected rooms, entered rooms,
+rewards, reward pools, Shop inventory, side rooms, Hub rooms, route progress,
+findings, complete/incomplete/valid/invalid/blocked, and `Not evaluated`.
 
-- route and biome labels such as Underworld, Erebus, Oceanus, Fields, Ephyra,
-  and Rift of Thessaly;
-- room labels and room roles such as Opening, PreHub, Hub, Preboss, Boss,
-  Postboss, Combat, Miniboss, Story, Fountain, and Shop;
-- door, offered room, generated room, entered room, and door taken;
-- reward, reward pool, offer, source, Shop inventory, cage, reward wheel, and
-  side room;
-- complete, incomplete, valid, invalid, blocked, not evaluated, unavailable,
-  findings, Undo, and Redo;
-- game-specific choices such as Fields Minimum/Maximum and Ship encounter
-  count.
+Some terms are deliberately retained rather than translated mechanically:
 
-`Normal door` is valid game vocabulary when it must be distinguished from a
-future Chaos or other special door. Until that distinction is visible, plain
-`Door` is clearer.
+- `Decision N` is a stable rail landmark. Translate generic `decision` and
+  `batch` in action, repair, and finding prose, but do not replace the numbered
+  rail label.
+- `Biome stage` is a current explanatory rail kicker, not leaked model-state
+  value.
+- `Pylon visit order` is a genuine Ephyra game concept.
+- `Dormant` describes a visible but inactive H/O reward offer and remains the
+  current H/O presentation decision.
+- `Eventual God` and `(eventual)` remain the intentional Blind Box planning
+  concepts documented in `docs/design/EDITOR_MODEL.md`.
+- `Findings`, `Empty project`, `Not configured`, `Project editor`, and the
+  picker states `Required`, `Not evaluated`, and `Unavailable` are already
+  understandable product copy.
 
-## Route and Evaluation Translation
+Use `Room selected` for authored selection and `Door taken` for an evaluated
+entry. Do not describe an authored selected room as entered merely because it
+is retained in a downstream route suffix.
 
-| Internal or current copy                                    | Player-facing translation                                                              | Surface                      |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------- |
-| `Configured biomes`                                         | `Configure route up to`                                                                | Route setting label          |
-| `None`                                                      | `No biomes`                                                                            | Route setting empty option   |
-| `3 configured`                                              | `Through Fields`                                                                       | Route setting summary badge  |
-| `Configured biomes form one contiguous route prefix...`     | `Configuring Erebus, Oceanus, and Fields.`                                             | Route setting description    |
-| Empty configured route                                      | `No biomes configured.`                                                                | Route setting description    |
-| `route prefix`                                              | `configured biomes`, `evaluated biomes`, or `earlier biomes`, according to context     | Route and feedback copy      |
-| `has no evaluated route prefix yet`                         | `<Biome> is not evaluated yet. You can still edit it.`                                 | Biome context banner         |
-| `blocked until <Biome> is complete and valid`               | `Finish and fix <Biome> before <Biome> can be evaluated. You can still edit it.`       | Biome context banner         |
-| `blocked by an earlier route biome`                         | `Finish the earlier biomes before this biome can be evaluated. You can still edit it.` | Biome context banner         |
-| `No findings in the evaluated route prefix`                 | `No findings in the evaluated biomes.`                                                 | Findings empty state         |
-| `authored`, `canonical`, or `progressive` projection source | Omit. These raw source values are never product status.                                | Biome heading and navigation |
-| `Assessed` / `Unassessed`                                   | `Evaluated` / `Not evaluated`                                                          | Rail and Hub status          |
-| `Blocked`                                                   | Keep `Blocked`; the nearby banner names what must be finished or fixed                 | Rail and navigation status   |
+## Resolved or Intentionally Out of Scope
 
-### Route Settings Target
+| Surface                        | Current, verified behavior                                                                                                                                              | 5b.4 disposition                                                                                        |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Findings scope                 | `App.tsx` passes only the selected route's findings to `ProjectFindings`; Settings renders no findings surface. The empty state is already `No findings in this route.` | Keep. Do not restore the old evaluated-prefix wording or add Settings findings.                         |
+| Selected-decision rail context | `biome-presentation.ts` projects the selected room and, only for a direct single reward, a structured reward token.                                                     | Keep. Do not restore generic inspector, Hub-card, or footer reward summaries.                           |
+| Removal impact                 | The UI now exposes danger actions without `This removes …` scope paragraphs.                                                                                            | Keep the danger treatment and translate only visible action labels. Do not add warning/scope copy back. |
+| Shop purchase wording          | `Purchased` and `shopPurchaseUnavailable` still represent the old boolean purchase model.                                                                               | Defer to Commit 5c, whose ordered authored purchase contract changes the meaning.                       |
+| Candidate picker states        | The shared picker already says `Required`, `Not evaluated`, `Current · unavailable`, and `Unavailable`; unavailable options use `— unavailable`.                        | Keep.                                                                                                   |
 
-For an Underworld route configured through Fields:
+The old audit's proposed Shop text was also incorrect: Shop details activate
+when a room is selected in authored state, not only after evaluated entry. The
+target copy is therefore `Shop inventory appears when you select this room.`
 
-```text
-Route settings
-Underworld                         Through Fields
+## Open Inventory
 
-Configure route up to
-[ Fields ]
+### P1 — Route Settings and Evaluation Context
 
-Configuring Erebus, Oceanus, and Fields.
-```
+| Live copy                                                                                                                                                  | Target copy                                                                                                                                        | Owner                                 |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `<n> configured`                                                                                                                                           | `Through <last configured biome>`; use `No biomes` when none are configured                                                                        | `ui/shell/App.tsx`                    |
+| `Configured biomes`                                                                                                                                        | `Configure route up to`                                                                                                                            | `ui/shell/App.tsx`                    |
+| `None`                                                                                                                                                     | `No biomes`                                                                                                                                        | `ui/shell/App.tsx`                    |
+| `Configured biomes form one contiguous route prefix. Removing a biome also removes every authored room beneath it; Undo restores the exact prior project.` | An exact included-biome sentence such as `Configuring Erebus, Oceanus, and Fields.`, or `No biomes configured.` Do not restate deletion mechanics. | `ui/shell/App.tsx`                    |
+| `<Biome> has no evaluated route prefix yet. Its choices remain editable and are marked Not evaluated.`                                                     | `<Biome> is not evaluated yet. You can still edit it.`                                                                                             | `projections/evaluationProjection.ts` |
+| `<Biome> is blocked by an earlier route biome. Its authored values remain editable but are not evaluated.`                                                 | `Finish the earlier biomes before this biome can be evaluated. You can still edit it.`                                                             | `projections/evaluationProjection.ts` |
+| `<Biome> is blocked until <Blocker> is complete and valid. Its authored values remain editable but are not evaluated.`                                     | `Finish and fix <Blocker> before <Biome> can be evaluated. You can still edit it.`                                                                 | `projections/evaluationProjection.ts` |
 
-For an empty route:
+`Blocked`, `Incomplete`, `Complete · Valid`, and `Complete · Invalid` remain
+useful status labels. The nearby context explains what the player can do.
 
-```text
-Configure route up to
-[ No biomes ]
+### P1 — Rail, Inspector, and Room Surface
 
-No biomes configured.
-```
+| Live copy                                                                                  | Target copy                                                                                         | Owner                                              |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Visible raw source: `authored`, `canonical`, or `progressive`                              | Omit. These are projection provenance, not player status.                                           | `ui/editor/biome/BiomeWorkspace.tsx`               |
+| `Assessed` / `Unassessed`                                                                  | `Evaluated` / `Not evaluated`                                                                       | `BiomeWorkspace.tsx`, `HubDecisionWorkbench.tsx`   |
+| `Coverage frontier` / `Active frontier`                                                    | `Next step`                                                                                         | `BiomeWorkspace.tsx`, `DecisionWorkbench.tsx`      |
+| `Decision point`                                                                           | `Door choice`                                                                                       | `BiomeWorkspace.tsx`                               |
+| `Start biome here`                                                                         | `Choose the first room` for a selectable start; `Start with <Room>` remains right for a fixed start | `BiomeWorkspace.tsx`                               |
+| `Continue authoring here`                                                                  | `Continue route`                                                                                    | `BiomeWorkspace.tsx`                               |
+| `Biome structure`                                                                          | `Route structure`                                                                                   | `BiomeWorkspace.tsx`                               |
+| `Focused inspector`                                                                        | `Details`                                                                                           | `BiomeWorkspace.tsx`                               |
+| `No authored structure is available yet.`                                                  | `Choose the first room to start this biome.`                                                        | `BiomeWorkspace.tsx`                               |
+| Raw topology state: `complete`, `partial`, or `retained`                                   | Omit. Existing findings and product status convey actionable state.                                 | `ui/editor/biome/DecisionWorkbench.tsx`            |
+| `Move to Next Decision`                                                                    | `Go to next step`                                                                                   | `DecisionWorkbench.tsx`, `OccurrenceWorkbench.tsx` |
+| `This completion room is derived from the biome layout and is not an authored occurrence.` | `This room is added automatically after the biome.`                                                 | `BiomeWorkspace.tsx`                               |
+| `No room-local reward.`                                                                    | `No room reward.`                                                                                   | `OccurrenceWorkbench.tsx`                          |
+| `Shop inventory materializes when this room is picked.`                                    | `Shop inventory appears when you select this room.`                                                 | `OccurrenceWorkbench.tsx`                          |
 
-The current technical destruction paragraph is removed. Choosing an earlier
-biome visibly shortens the configured list, and the existing Undo/Redo history
-owns recovery.
+The raw source and topology-state chips are the highest-confidence visible
+leaks in this group. Do not confuse them with the intentionally excluded data
+attributes that carry the same internal values.
 
-## Structure and Navigation Translation
+### P1 — Doors, Fixed Rooms, and Preboss
 
-| Internal or current copy                                | Player-facing translation                                                              | Surface                      |
-| ------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------- |
-| `Coverage frontier` / `Active frontier`                 | `Next step`                                                                            | Rail and focused inspector   |
-| `Start biome here`                                      | `Choose the first room` for selectable starts, or `Start with <Room>` for fixed starts | Rail                         |
-| `Continue authoring here`                               | `Continue route`                                                                       | Rail                         |
-| `Active frontier` inspector title                       | `Next step`                                                                            | Inspector                    |
-| `Move to Next Decision`                                 | `Go to next step`                                                                      | Room workbench               |
-| `occurrence` / `room occurrence`                        | `room`                                                                                 | Explanatory and removal copy |
-| `topology` / `authored topology`                        | `route structure`, or omit when the surrounding action already makes the meaning clear | Empty and removal copy       |
-| `No authored structure is available yet`                | `Choose the first room to start this biome.`                                           | Empty inspector              |
-| `decision` / `exit decision`                            | `door choice`, `later choice`, or `next step`, according to context                    | Actions and removal scope    |
-| Raw `complete`, `partial`, or `retained` topology state | Omit. Findings and human status already explain whether work is needed.                | Door workbench status        |
-| `completion room`                                       | `Boss` or `Postboss`                                                                   | Completion card              |
-| `terminal` / `fixed terminal`                           | Name the concrete `Preboss`, `Boss`, `Postboss`, or final room instead                 | Any future product copy      |
-| `derived from the biome layout`                         | `This room is added automatically after the biome.`                                    | Completion card              |
-| `not an authored occurrence`                            | Omit                                                                                   | Completion card              |
-| `declaration-fixed` / `declaration-owned`               | `fixed by the game`, `added automatically`, or omit                                    | Fixed-room and door copy     |
-| `materializes when this room is picked`                 | `appears after this room is entered`                                                   | Shop copy                    |
+| Live copy                                                                                             | Target copy                                                                 | Owner                                                      |
+| ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `Exit <n>` / `exit` / `physical exit`                                                                 | `Door <n>` / `door`                                                         | `DecisionWorkbench.tsx`, evidence presentation             |
+| Accessible `Pick … from Exit <n>`, `Exit <n> unspecified room offer`, and `Exit <n> room`             | The corresponding `Door <n>` labels                                         | `DecisionWorkbench.tsx`                                    |
+| `Normal exits` / `Mixed normal exits`                                                                 | `Doors`                                                                     | `BiomeWorkspace.tsx`                                       |
+| `Linked exit`                                                                                         | `Fixed next room`                                                           | `BiomeWorkspace.tsx`, `DecisionWorkbench.tsx`              |
+| `Create linked exit`                                                                                  | `Add fixed next room`                                                       | `DecisionWorkbench.tsx`                                    |
+| `This declaration-owned exit is linked to its fixed room; there is no room selector.`                 | `The game fixes the next room here.`                                        | `DecisionWorkbench.tsx`                                    |
+| `Enter <Room> through this declaration-owned transition.`                                             | `Go to <Room>.`                                                             | `structured-workspace/interactions/interaction-binding.ts` |
+| `Enter <World Shop>. This declaration-owned transition creates one automatically entered World Shop.` | `Go to <World Shop>. The World Shop is entered automatically.`              | `structured-workspace/interactions/interaction-binding.ts` |
+| `Selected route`                                                                                      | `Room selected`                                                             | `DecisionWorkbench.tsx`                                    |
+| `Entered route`                                                                                       | `Door taken`                                                                | `DecisionWorkbench.tsx`                                    |
+| `Unavailable retained offer` / `Retained authored offer` / `Generated offer`                          | `Unavailable saved room` / `Saved room` / `Offered room`                    | `DecisionWorkbench.tsx`                                    |
+| `Choose Exit <n> first.`                                                                              | `Choose Door <n> first.`                                                    | `structured-workspace/assembly/decision-assembly.ts`       |
+| `Select the batch reward store first.`                                                                | `Choose the reward pool first.`                                             | `structured-workspace/assembly/decision-assembly.ts`       |
+| `Select the Fields cage outcome first.`                                                               | `Choose the Fields door roll first.`                                        | `structured-workspace/assembly/decision-assembly.ts`       |
+| `Reconcile unavailable exits`                                                                         | `Remove unavailable doors`                                                  | `DecisionWorkbench.tsx`                                    |
+| `Remove decision`                                                                                     | `Remove these doors`                                                        | `DecisionWorkbench.tsx`                                    |
+| `This retained exit is unavailable. Reconcile unavailable exits first.`                               | `This saved door is no longer available here. Fix the earlier route first.` | `DecisionWorkbench.tsx`                                    |
+| `This exit cannot be replaced.`                                                                       | `This door cannot be changed.`                                              | `DecisionWorkbench.tsx`                                    |
+| `The selected room is fixed by this decision.`                                                        | `The game fixes which room is selected here.`                               | `DecisionWorkbench.tsx`                                    |
+| `This decision awaits its declaration-owned selection.`                                               | `Choose which door is taken.`                                               | `DecisionWorkbench.tsx`                                    |
+| `This start room is declaration-fixed.`                                                               | `The game fixes the first room.`                                            | `DecisionWorkbench.tsx`                                    |
+| `Preboss batch` / `Create Preboss batch` / `Repair Preboss batch`                                     | `Preboss doors` / `Add Preboss doors` / `Fix Preboss doors`                 | `DecisionWorkbench.tsx`                                    |
+| `Replace with Preboss batch`                                                                          | `Replace doors with Preboss`                                                | `DecisionWorkbench.tsx`                                    |
+| `Preboss declaration` / `Select Preboss batch`                                                        | `Preboss room` / `Choose Preboss room`                                      | `DecisionWorkbench.tsx`                                    |
+| `Evaluate Preboss batches`                                                                            | `Check Preboss rooms`                                                       | `DecisionWorkbench.tsx`                                    |
+| `This Preboss batch is authored atomically.`                                                          | `These Preboss doors are changed together.`                                 | `DecisionWorkbench.tsx`                                    |
+| `Reconcile <label> against the current declaration-owned exits.`                                      | `Fix <label> to restore the missing doors.`                                 | `DecisionWorkbench.tsx`                                    |
+| `Missing Preboss exits are repaired atomically through the projected Preboss action.`                 | `Fix Preboss doors to restore the missing doors.`                           | `DecisionWorkbench.tsx`                                    |
+| `This fixed Preboss takeover is not supported by the current route state.`                            | `This Preboss route is not available with the current plan.`                | `structured-workspace/interactions/interaction-binding.ts` |
 
-Internal `frontier`, `occurrence`, `topology`, and completion-node identities
-remain unchanged. Only their presentation changes.
+Translate the visible action and explanation only. The underlying all-at-once
+Preboss command remains one semantic operation.
 
-## Door and Preboss Translation
+### P1 — Hub Surface
 
-| Internal or current copy                                 | Player-facing translation                                                         | Surface                           |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------- |
-| `Exit <n>`                                               | `Door <n>`                                                                        | Door row                          |
-| `physical exit` / `physical target`                      | `door`                                                                            | Findings, repair, and impact copy |
-| `Normal exits` / `Normal batch`                          | `Doors`                                                                           | Rail and door workbench           |
-| `Mixed normal exits` / `Mixed batch`                     | `Doors`                                                                           | Rail and door workbench           |
-| `Generated exits`                                        | `Offered doors`                                                                   | Door workbench heading            |
-| `Configure physical exits`                               | `Choose rooms for these doors`                                                    | Door workbench heading            |
-| `Entered exit`                                           | `Door taken`                                                                      | Door selection                    |
-| `The entered exit is derived by this batch`              | `The game fixes which door is taken here.`                                        | Fixed selection copy              |
-| `This batch awaits its declaration-owned selection`      | `Choose which door is taken.`                                                     | Missing selection copy            |
-| `Choose Exit <n> first`                                  | `Choose Door <n> first.`                                                          | Door prerequisite                 |
-| `Select the batch reward store first`                    | `Choose the reward pool first.`                                                   | Door prerequisite                 |
-| `Select the Fields cage outcome first`                   | `Choose the Fields door roll first.`                                              | Door prerequisite                 |
-| `Linked exit` / `Linked decision`                        | `Fixed next room`                                                                 | Rail and linked-room workbench    |
-| `Create linked exit`                                     | `Add fixed next room`                                                             | Next-step action                  |
-| `This declaration-owned exit is linked...`               | `The game fixes the next room here.`                                              | Linked-room explanation           |
-| `Enter <Room> through this declaration-owned transition` | `Go to <Room>.`                                                                   | Fixed next-room action            |
-| `...creates one automatically entered World Shop`        | `Go to <Room>. The World Shop is entered automatically.`                          | Fixed World Shop action           |
-| `Preboss batch` / `Atomic Preboss batch`                 | `Preboss doors`                                                                   | Rail and door workbench           |
-| `Atomic takeover` / `takeover`                           | `Preboss doors`, `Go to Preboss`, or `Fix Preboss doors`, according to the action | Kicker, creation, and repair      |
-| `Create Preboss batch`                                   | `Add Preboss doors`                                                               | Preboss action                    |
-| `Replace with Preboss batch`                             | `Replace doors with Preboss`                                                      | Preboss action                    |
-| `Repair Preboss batch` / `Reconcile takeover`            | `Fix Preboss doors`                                                               | Repair action                     |
-| `Preboss declaration`                                    | `Preboss room`                                                                    | Preboss selector                  |
-| `Evaluate Preboss batches`                               | `Check Preboss rooms`                                                             | Lazy candidate action             |
-| `This Preboss batch is authored atomically`              | `These Preboss doors are changed together.`                                       | Read-only target copy             |
-| `Missing Preboss exits are repaired atomically...`       | `Fix Preboss doors to restore the missing doors.`                                 | Repair copy                       |
-| `fixed Preboss takeover is not supported...`             | `This Preboss route is not available with the current plan.`                      | Fixed Preboss action              |
-| `retained authored offer` / `unavailable retained offer` | `Saved` / `Unavailable`                                                           | Door status                       |
-| `This retained exit is unavailable...`                   | `This saved door is no longer available here. Fix the earlier route first.`       | Door explanation                  |
-| `Generated offer`                                        | `Offered`                                                                         | Door status                       |
-| `Entered route`                                          | `Door taken`                                                                      | Door status                       |
+| Live copy                                     | Target copy                   | Owner                                            |
+| --------------------------------------------- | ----------------------------- | ------------------------------------------------ |
+| `Persistent board` / `Persistent offer board` | `Hub` / `Open Hub rooms`      | `BiomeWorkspace.tsx`, `HubDecisionWorkbench.tsx` |
+| `Ephyra Hub decision` (accessible name)       | `Ephyra Hub`                  | `HubDecisionWorkbench.tsx`                       |
+| `<Room> Hub slot` (accessible name)           | `<Room> Hub room`             | `HubDecisionWorkbench.tsx`                       |
+| `Hub decision`                                | `Hub`                         | `BiomeWorkspace.tsx`, finding destinations       |
+| `Create board first`                          | `Set up Hub rooms first`      | `HubDecisionWorkbench.tsx`                       |
+| `Closed board slot.`                          | `This room is closed.`        | `HubDecisionWorkbench.tsx`                       |
+| `Create Hub board`                            | `Set up Hub rooms`            | `HubDecisionWorkbench.tsx`                       |
+| `Assessed` / `Unassessed`                     | `Evaluated` / `Not evaluated` | `HubDecisionWorkbench.tsx`                       |
 
-`Batch`, `takeover`, `atomic`, `linked`, `physical`, and `target` remain valid
-internal words. The player sees the resulting doors and actions.
+`Open Ephyra rooms`, `Visited`, `Choose next room`, `Player traversal`,
+`Pylon visit order`, and `Continue to Preboss` are already suitable.
 
-## Removal and Repair Translation
+### P1 — Findings and Candidate Explanations
 
-| Internal or current copy                                        | Player-facing translation                       | Surface                    |
-| --------------------------------------------------------------- | ----------------------------------------------- | -------------------------- |
-| `<n> room occurrences`                                          | `<n> rooms`                                     | Removal scope              |
-| `<n> exit decisions` / `<n> downstream decisions`               | `<n> later choices`                             | Removal scope              |
-| `no authored topology` / `No authored descendants`              | `nothing later in the route`                    | Removal scope              |
-| `Repair will reconcile...through the projected takeover action` | `Fixing the Preboss doors will update <scope>.` | Repair scope               |
-| `Reconcile unavailable exits`                                   | `Remove unavailable doors`                      | Repair action              |
-| `This replacement removes...and resets physical targets`        | `This replaces <n> doors and removes <scope>.`  | Preboss replacement impact |
-| `Remove decision`                                               | `Remove these doors`                            | Door-group removal         |
-| `projected repair scope`                                        | `changes listed above` or omit                  | Retained-door explanation  |
+Evidence-dependent copy stays in the current projection owner. React must not
+inspect evidence to decide which player-facing phrase to use.
 
-Counts and removal ownership still come from engine-projected impact. Copy
-translation must not make React traverse topology or calculate descendants.
+| Live technical phrase or pattern                                                                                   | Player-facing target                                                                                     | Owner                                             |
+| ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `generated reward pool` / `generated batch outcome`                                                                | `reward pool` / `door setup`                                                                             | `evaluationProjection.ts`                         |
+| `biome outcome` / `biome-wide outcome`                                                                             | `biome setting`                                                                                          | `evaluationProjection.ts`, `contextualOptions.ts` |
+| `declaration-owned Preboss batch`                                                                                  | `Preboss` or `Preboss doors`, according to the action                                                    | `evaluationProjection.ts`                         |
+| `fixed Ephyra slots` / `persistent Hub board` / `persistent Hub open set`                                          | `Ephyra rooms to keep open in the Hub`                                                                   | `evaluationProjection.ts`                         |
+| `Choose six distinct open pylon rooms in player entry order.`                                                      | `Choose six different open Hub rooms in the order you enter them.`                                       | `evaluationProjection.ts`                         |
+| `entered exit` / `physical exit`                                                                                   | `door taken` / `door`                                                                                    | `evaluationProjection.ts`, `contextualOptions.ts` |
+| `generation point` / `possible room set`                                                                           | `when this door appears` / `rooms that can be offered for this door`                                     | `evaluationProjection.ts`, `contextualOptions.ts` |
+| `possible store outcomes` / `counted reward pool` / `reward-pool state`                                            | `available reward pools` / `reward pool`                                                                 | `evaluationProjection.ts`, `contextualOptions.ts` |
+| `resolve at its acquisition point` / `lifecycle point`                                                             | `be acquired here` / `this point in the route`                                                           | `evaluationProjection.ts`, `contextualOptions.ts` |
+| `reward payload`                                                                                                   | `reward details`                                                                                         | `evaluationProjection.ts`, `contextualOptions.ts` |
+| `shop configuration` / `inventory cannot be generated together at room entry`                                      | `Shop setup` / `These Shop offers cannot appear together.`                                               | `evaluationProjection.ts`, `contextualOptions.ts` |
+| `required authored structure` / `owner has not been reached by the current evaluated prefix`                       | `required earlier route steps` / `This part of the route has not been evaluated yet.`                    | `contextualOptions.ts`                            |
+| `simulation does not reach this reward producer` / `physical exit is not reachable in the current authored prefix` | `The current route does not reach this reward yet.` / `This door is not reachable in the current route.` | `contextualOptions.ts`                            |
+| `before editing this biome contextually`                                                                           | `before choices here can be evaluated`                                                                   | `contextualOptions.ts`                            |
+| `not supported by the current route state`                                                                         | `not available with the current route`                                                                   | `contextualOptions.ts`                            |
+| `This batch has <n> targets` / `This batch contains <n> matching rooms`                                            | `These doors contain <n> rooms` / `These doors contain <n> matching rooms`                               | `contextualOptions.ts`                            |
+| `The parent has <n> exits`                                                                                         | `This room has <n> doors`                                                                                | `contextualOptions.ts`                            |
+| `This room is not in the authored candidate set`                                                                   | `This room is not available for this door`                                                               | `contextualOptions.ts`                            |
+| `Exit <n> is unavailable here` / `incompatible with this exit`                                                     | `Door <n> is unavailable here` / `incompatible with this door`                                           | `contextualOptions.ts`                            |
+| `run creation cap` / `parent ... creation cap`                                                                     | `This room can appear at most <n> times on this route` / `among these doors`                             | `contextualOptions.ts`                            |
+| `A forced room must be selected` / `required choice set at this decision`                                          | `This room must be included here` / `This option must be included here`                                  | `contextualOptions.ts`                            |
+| `side-room outcome conflicts with Hub generation pressure`                                                         | `This side-room setup is not available with the selected Hub rooms.`                                     | `contextualOptions.ts`                            |
 
-## Findings and Candidate Explanation Translation
+The following finding rows should use the same vocabulary rather than only
+rewriting their descriptions:
 
-| Internal or current copy                                                 | Player-facing translation                                              | Owner |
-| ------------------------------------------------------------------------ | ---------------------------------------------------------------------- | ----- |
-| `Choose the batch outcome`                                               | `Finish setting up these doors`                                        | 5b.4  |
-| `generated batch outcome`                                                | `door setup`                                                           | 5b.4  |
-| `Add the next exit decision or select a declaration-owned Preboss batch` | `Add the next doors or go to Preboss.`                                 | 5b.4  |
-| `Complete the open Hub set`                                              | `Choose the open Hub rooms`                                            | 5b.4  |
-| `persistent Hub open set`                                                | `open Hub rooms`                                                       | 5b.4  |
-| `Choose an entered exit`                                                 | `Choose the door taken`                                                | 5b.4  |
-| `Complete the missing offer for this physical exit`                      | `Choose a room for this door.`                                         | 5b.4  |
-| `Configure the entered shop`                                             | `Finish setting up this Shop`                                          | 5b.4  |
-| `generation point`                                                       | `when this door appears`                                               | 5b.4  |
-| `possible store outcomes`                                                | `available reward pools`                                               | 5b.4  |
-| `resolve at its acquisition point`                                       | `be acquired here`                                                     | 5b.4  |
-| `shop inventory cannot be generated together at room entry`              | `These Shop offers cannot appear together.`                            | 5b.4  |
-| `currentBatchTargetCount` explanation using `batch`/`targets`            | `These doors contain <n> rooms, outside the supported range.`          | 5b.4  |
-| `currentBatchRoomCount` explanation                                      | `These doors contain <n> matching rooms, outside the supported range.` | 5b.4  |
-| `The parent has <n> exits`                                               | `This room has <n> doors.`                                             | 5b.4  |
-| `This room is not in the authored candidate set`                         | `This room is not available for this door.`                            | 5b.4  |
-| `Exit <n> is unavailable here`                                           | `Door <n> is unavailable here.`                                        | 5b.4  |
-| `possible room set for this exit`                                        | `rooms that can be offered for this door`                              | 5b.4  |
-| `side-room outcome conflicts with Hub generation pressure`               | `This side-room setup is not available with the selected Hub rooms.`   | 5b.4  |
-| `required authored structure`                                            | `required earlier route steps`                                         | 5b.4  |
-| `owner has not been reached by the current evaluated prefix`             | `This part of the route has not been evaluated yet.`                   | 5b.4  |
-| `simulation does not reach this reward producer`                         | `The current route does not reach this reward yet.`                    | 5b.4  |
-| `physical exit is not reachable in the current authored prefix`          | `This door is not reachable in the current route.`                     | 5b.4  |
-| `before editing this biome contextually`                                 | `before choices here can be evaluated`                                 | 5b.4  |
-| `lifecycle point`                                                        | `this point in the route`                                              | 5b.4  |
-| `counted reward pool`                                                    | `reward pool`                                                          | 5b.4  |
-| `reward-pool state`                                                      | `reward pool`                                                          | 5b.4  |
-| `reward payload`                                                         | `reward details`                                                       | 5b.4  |
-| `required choice set at this decision`                                   | `This option must be included here.`                                   | 5b.4  |
-| `not supported by the current route state`                               | `not available with the current route`                                 | 5b.4  |
-| `selected purchases cannot be acquired in any valid purchase order`      | `The selected purchase order cannot be completed.`                     | 5c    |
+- `Choose the batch outcome` becomes `Finish setting up these doors`.
+- `Add the next exit decision or select a declaration-owned Preboss batch.`
+  becomes `Add the next doors or go to Preboss.`
+- `Complete the open Hub set` becomes `Choose open Hub rooms`, with `Choose
+nine or ten Ephyra rooms to keep open in the Hub.`
+- `Complete the Hub visit order` becomes `Choose all six Hub visits`.
+- `Choose an entered exit` becomes `Choose the door taken`.
+- `Specify every exit` becomes `Choose a room for every door`.
+- `Configure the entered shop` becomes `Finish setting up this Shop`.
 
-Finding codes, candidate evidence, support states, and semantic owners do not
-change. Only `FindingPresentation` and `CandidateExplanation` copy changes.
-The Shop purchase message is listed for completeness but remains owned by
-Commit 5c because its meaning changes with the ordered authored contract.
+`shopPurchaseUnavailable` remains explicitly deferred to 5c.
 
-## Hub Translation
+### P1 — Finding Destinations
 
-| Internal or current copy            | Player-facing translation            |
-| ----------------------------------- | ------------------------------------ |
-| `Hub decision`                      | `Hub`                                |
-| `open set` / `persistent Hub board` | `open Hub rooms` / `Hub`             |
-| `Complete the Hub visit order`      | `Choose all six Hub visits`          |
-| `completed Hub handoff`             | `Go to Preboss`                      |
-| `Closing this slot removes <scope>` | `Closing this room removes <scope>.` |
-| raw Hub `Assessed` / `Unassessed`   | `Evaluated` / `Not evaluated`        |
+`findingDestinationLabel` is rendered in the route-scoped Findings panel and
+needs its own inventory; the prior audit missed this surface.
 
-Commit 5b.1 owns the hierarchical N rail. Commit 5b.4 applies this vocabulary
-to its final rendered surface and does not reopen Hub topology or workbench
-ownership.
+| Live destination segment              | Target segment                                                         | Owner                                 |
+| ------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------- |
+| `Simulated outcome`                   | `Biome setting`                                                        | `projections/evaluationProjection.ts` |
+| `Decision`                            | `Door choice`                                                          | `evaluationProjection.ts`             |
+| `Selected exit`                       | `Door selection`                                                       | `evaluationProjection.ts`             |
+| `Exit <n>`                            | `Door <n>`                                                             | `evaluationProjection.ts`             |
+| `Local reward <n>`                    | `Cage <n> reward` or `Side room <n> reward`, based on the owning group | `evaluationProjection.ts`             |
+| `Local room <n>` / `Local room order` | `Side room <n>` / `Side room order`                                    | `evaluationProjection.ts`             |
+| `Hub decision`                        | `Hub`                                                                  | `evaluationProjection.ts`             |
 
-## Implementation Ownership
+Existing destinations such as `Room reward`, `Reward pool`, `Reward wheel`,
+`Shop offer`, `Shop purchase`, `Open Hub rooms`, and `Boss` are already clear.
+
+## Implementation Ownership and Test Witnesses
 
 Likely 5b.4 production owners:
 
-- `apps/planner/src/ui/shell/App.tsx`;
-- `apps/planner/src/ui/feedback/EvaluationFeedback.tsx`;
-- `apps/planner/src/projections/evaluationProjection.ts`;
-- `apps/planner/src/projections/contextualOptions.ts`;
-- `apps/planner/src/projections/structured-workspace/presentation/biome-presentation.ts`
-  for rail and Hub labels;
+- `apps/planner/src/ui/shell/App.tsx` for route-setting copy and scoped empty
+  findings text;
+- `apps/planner/src/projections/evaluationProjection.ts` for route feedback,
+  findings, and finding destinations;
+- `apps/planner/src/projections/contextualOptions.ts` for candidate evidence
+  explanations;
 - `apps/planner/src/projections/structured-workspace/assembly/decision-assembly.ts`
-  for evidence-dependent door messages;
-- `apps/planner/src/projections/structured-workspace/assembly/occurrence-assembly.ts`
-  for room-local messages;
-- `apps/planner/src/ui/editor/biome/BiomeWorkspace.tsx`;
-- `apps/planner/src/ui/editor/biome/DecisionWorkbench.tsx`;
-- `apps/planner/src/ui/editor/biome/HubDecisionWorkbench.tsx`;
-- `apps/planner/src/ui/editor/biome/OccurrenceWorkbench.tsx`.
+  for evidence-backed door and prerequisite messages;
+- `apps/planner/src/projections/structured-workspace/interactions/interaction-binding.ts`
+  for fixed-next-room and Preboss interaction copy;
+- `apps/planner/src/ui/editor/biome/BiomeWorkspace.tsx` for rail, inspector,
+  raw-source removal, and completion copy;
+- `apps/planner/src/ui/editor/biome/DecisionWorkbench.tsx` for door, fixed
+  room, Preboss, repair, and raw-topology-state presentation;
+- `apps/planner/src/ui/editor/biome/HubDecisionWorkbench.tsx` for Hub copy;
+  and
+- `apps/planner/src/ui/editor/biome/OccurrenceWorkbench.tsx` for room-local
+  and Shop activation text.
 
-Copy may stay in an existing React component when it is purely local
-presentation. A string that depends on engine evidence or projected state
-belongs in the existing application presentation function that already
-interprets that evidence. Do not move game rules into React merely to avoid an
-internal word.
+The main focused witnesses are `App.interaction.test.tsx`,
+`evaluationProjection.test.ts`, `contextualOptions.test.ts`,
+`BiomeWorkspace.test.tsx`, `DecisionWorkbench.test.tsx`,
+`HubDecisionWorkbench.test.tsx`, and `OccurrenceWorkbench.test.tsx`. Update
+only the tests that own the changed surface; no test should reproduce
+simulation, candidate, topology, or removal policy merely to assert copy.
 
-## Acceptance Inventory
+## Updated 5b.4 Acceptance Inventory
 
 Commit 5b.4 should demonstrate:
 
-- empty, partially configured, and fully configured route settings use
-  `Configure route up to`, the selected biome label, and the exact included
-  biome labels;
-- unassessed and blocked downstream biomes explain their status without
-  `prefix`, `assessed`, or application-pipeline vocabulary;
-- representative F/G/P ordinary and Preboss doors, H Fields doors, I mixed
-  doors, N fixed entry/Hub/Preboss, and O/Q width-one Preboss paths use the
-  translations above;
-- no representative render exposes raw `authored`, `canonical`, or
-  `progressive` projection sources or raw topology-state chips; legitimate
-  product status such as `Complete · Valid` remains;
-- removal and repair copy names rooms, doors, later choices, and the exact
-  projected impact without asking React to derive scope;
-- findings and candidate explanations use player-facing route language while
-  retaining the same code, evidence, and support result;
-- visible labels and accessible names agree;
-- internal types, commands, persisted state, simulation, candidates, semantic
-  addresses, and data attributes remain unchanged; and
-- focused tests assert intended copy by surface rather than enforcing a global
-  forbidden-word list.
+- empty, partial, and full route settings use `Configure route up to`, a
+  player-facing route extent, and the exact included-biome sentence;
+- Findings remain selected-route-only, Settings has none, and the current
+  `No findings in this route.` empty state remains intact;
+- rail and Hub assessment copy says `Evaluated` or `Not evaluated`, while the
+  selected-decision room/reward context remains narrow and progressive;
+- no representative render, accessible name, or tooltip exposes raw
+  `authored`, `canonical`, `progressive`, or topology-state `complete`,
+  `partial`, and `retained` values;
+- representative ordinary, Fields, mixed, fixed-next-room, Hub, Preboss,
+  retained, repair, and completion surfaces use the applicable player-facing
+  vocabulary without changing their commands or topology ownership;
+- `Room selected` and `Door taken` retain authored-selection versus
+  evaluated-entry meaning;
+- finding titles, descriptions, candidate explanations, and destinations use
+  the same route/door/reward language while retaining the exact same finding
+  code, evidence, and support result;
+- danger actions retain their red treatment with player-facing labels, but no
+  removal-impact warnings or generic reward summaries return; and
+- internal types, commands, persisted state, simulation, candidate support,
+  semantic addresses, and data attributes remain unchanged.
+
+The active 5b.4 plan consequently requires player-facing removal action labels,
+not removal summaries that the product deliberately no longer emits.
