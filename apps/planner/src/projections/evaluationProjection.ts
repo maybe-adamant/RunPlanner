@@ -49,15 +49,15 @@ export type BiomeStatusEvaluation =
 const findingCopy = {
   batchRewardStoreMissing: {
     title: 'Choose a reward pool',
-    description: 'Select the generated reward pool before choosing rooms for this decision.',
+    description: 'Choose the reward pool before choosing rooms for these doors.',
   },
   batchStateMissing: {
-    title: 'Choose the batch outcome',
-    description: 'Select the generated batch outcome before choosing rooms for this decision.',
+    title: 'Finish setting up these doors',
+    description: 'Choose the door setup before choosing rooms for these doors.',
   },
   biomeFieldMissing: {
-    title: 'Choose the biome outcome',
-    description: 'Select the required biome-wide outcome before building its decisions.',
+    title: 'Choose the biome setting',
+    description: 'Choose the required biome setting before building its doors.',
   },
   fieldsCageOutcomeUnavailable: {
     title: 'Fields door roll cannot occur here',
@@ -69,39 +69,39 @@ const findingCopy = {
   },
   continuationMissing: {
     title: 'Continue this route',
-    description: 'Add the next exit decision or select a declaration-owned Preboss batch.',
+    description: 'Add the next doors or go to Preboss.',
   },
   hubOpenSetIncomplete: {
-    title: 'Complete the open Hub set',
-    description: 'Select nine or ten fixed Ephyra slots for the persistent Hub board.',
+    title: 'Choose open Hub rooms',
+    description: 'Choose nine or ten Ephyra rooms to keep open in the Hub.',
   },
   hubVisitOrderIncomplete: {
-    title: 'Complete the Hub visit order',
-    description: 'Choose six distinct open pylon rooms in player entry order.',
+    title: 'Choose all six Hub visits',
+    description: 'Choose six different open Hub rooms in the order you enter them.',
   },
   hubOpenSlotUnavailable: {
     title: 'Hub room cannot be open together',
-    description: 'This fixed Ephyra room conflicts with the selected persistent Hub open set.',
+    description: 'This Ephyra room cannot stay open with the selected Hub rooms.',
   },
   pickedShopStateMissing: {
-    title: 'Configure the entered shop',
-    description: 'The selected shop needs its complete inventory before simulation can continue.',
+    title: 'Finish setting up this Shop',
+    description: 'Choose every Shop offer before continuing.',
   },
   pickedTargetMissing: {
-    title: 'Choose an entered exit',
-    description: 'Select the one exit the player enters from this decision.',
+    title: 'Choose the door taken',
+    description: 'Choose the one door taken from these doors.',
   },
   targetMissing: {
-    title: 'Specify every exit',
-    description: 'Complete the missing offer for this physical exit.',
+    title: 'Choose a room for every door',
+    description: 'Choose a room for this door.',
   },
   targetRoomSupportEmpty: {
     title: 'No room can appear here',
-    description: 'The game has no eligible room for this exit at its generation point.',
+    description: 'The game has no room to offer when this door appears.',
   },
   targetRoomUnavailable: {
     title: 'Room cannot appear here',
-    description: 'The selected room is outside the possible room set for this exit.',
+    description: 'The selected room is not among the rooms that can be offered for this door.',
   },
   encounterCountUnavailable: {
     title: 'Encounter count cannot occur here',
@@ -109,24 +109,24 @@ const findingCopy = {
   },
   sideRoomGenerationUnavailable: {
     title: 'Side room generation cannot occur here',
-    description: 'The selected side-room outcome conflicts with Ephyra generation pressure.',
+    description: 'This side-room setup is not available with the selected Hub rooms.',
   },
   baseRewardStoreUnavailable: {
     title: 'Reward pool cannot appear here',
     description:
-      'The selected reward pool is outside the possible store outcomes for this decision.',
+      'The selected reward pool is not one of the available reward pools for these doors.',
   },
   rewardAcquisitionUnavailable: {
     title: 'Reward cannot be acquired',
-    description: 'The selected reward cannot resolve at its acquisition point.',
+    description: 'The selected reward cannot be acquired here.',
   },
   rewardBagSupportEmpty: {
     title: 'Reward pool has no possible offer',
-    description: 'The counted reward pool cannot produce any supported offer at this point.',
+    description: 'This reward pool cannot offer a reward here.',
   },
   rewardBagEntryUnavailable: {
     title: 'Reward is unavailable from this pool',
-    description: 'The selected reward is not available from the counted pool at this point.',
+    description: 'The selected reward is not available from this reward pool.',
   },
   rewardPayloadInvalid: {
     title: 'Reward details are invalid',
@@ -134,11 +134,11 @@ const findingCopy = {
   },
   rewardSourceUnavailable: {
     title: 'Reward source is unavailable',
-    description: 'The configured reward source cannot be offered at this point in the route.',
+    description: 'The selected reward source cannot be offered at this point in the route.',
   },
   shopOfferUnavailable: {
     title: 'Shop offer is unavailable',
-    description: 'The configured shop inventory cannot be generated together at room entry.',
+    description: 'These Shop offers cannot appear together.',
   },
   shopPurchaseUnavailable: {
     title: 'Shop purchase is unavailable',
@@ -297,7 +297,7 @@ export function presentBiomeFeedbackContext(
     throw new Error(`Feedback references unknown biome ${feedback.biomeKey}`);
   }
   if (feedback.context === 'unassessed') {
-    return `${biome.label} has no evaluated route prefix yet. Its choices remain editable and are marked Not evaluated.`;
+    return `${biome.label} is not evaluated yet. You can still edit it.`;
   }
   if (feedback.context !== 'blocked') {
     return undefined;
@@ -310,8 +310,24 @@ export function presentBiomeFeedbackContext(
     throw new Error(`Feedback references unknown blocking biome ${feedback.blockedByBiomeKey}`);
   }
   return blocker === undefined
-    ? `${biome.label} is blocked by an earlier route biome. Its authored values remain editable but are not evaluated.`
-    : `${biome.label} is blocked until ${blocker.label} is complete and valid. Its authored values remain editable but are not evaluated.`;
+    ? 'Finish the earlier biomes before this biome can be evaluated. You can still edit it.'
+    : `Finish and fix ${blocker.label} before ${biome.label} can be evaluated. You can still edit it.`;
+}
+
+function numberedDestinationLabel(prefix: string, key: string): string {
+  const suffix = key.match(/(\d+)$/)?.[1];
+  return suffix === undefined ? prefix : `${prefix} ${Number(suffix)}`;
+}
+
+function localRewardDestinationLabel(groupKey: string, slotKey: string): string {
+  switch (groupKey) {
+    case 'cages':
+      return `${numberedDestinationLabel('Cage', slotKey)} reward`;
+    case 'sideRooms':
+      return `${numberedDestinationLabel('Side room', slotKey)} reward`;
+    default:
+      return numberedDestinationLabel('Room reward', slotKey);
+  }
 }
 
 export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddress): string {
@@ -334,25 +350,25 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
     case 'biome':
       return biomeLabel;
     case 'biomeField':
-      return `${biomeLabel} · Simulated outcome`;
+      return `${biomeLabel} · Biome setting`;
     case 'exitDecision':
-      return `${biomeLabel} · Decision`;
+      return `${biomeLabel} · Door choice`;
     case 'exitSelection':
-      return `${biomeLabel} · Selected exit`;
+      return `${biomeLabel} · Door selection`;
     case 'batchRewardStore':
       return `${biomeLabel} · Reward pool`;
     case 'target': {
       const physicalIndex = /^exit(\d+)$/.exec(origin.exitKey)?.[1];
-      return `${biomeLabel} · Exit ${physicalIndex ?? origin.exitKey}`;
+      return `${biomeLabel} · Door ${physicalIndex === undefined ? origin.exitKey : Number(physicalIndex)}`;
     }
     case 'incomingReward':
       return `${biomeLabel} · Room reward`;
     case 'localReward':
-      return `${biomeLabel} · Local reward ${origin.slotKey}`;
+      return `${biomeLabel} · ${localRewardDestinationLabel(origin.groupKey, origin.slotKey)}`;
     case 'localChild':
-      return `${biomeLabel} · Local room ${origin.slotKey}`;
+      return `${biomeLabel} · ${numberedDestinationLabel('Side room', origin.slotKey)}`;
     case 'localChildGroup':
-      return `${biomeLabel} · Local room order`;
+      return `${biomeLabel} · Side room order`;
     case 'rewardWheel':
       return `${biomeLabel} · Reward wheel`;
     case 'rewardWheelOffer':
@@ -360,7 +376,7 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
     case 'hubOpenSet':
       return `${biomeLabel} · Open Hub rooms`;
     case 'hubDecision':
-      return `${biomeLabel} · Hub decision`;
+      return `${biomeLabel} · Hub`;
     case 'hubRoom':
       return `${biomeLabel} · Hub`;
     case 'hubSlot':

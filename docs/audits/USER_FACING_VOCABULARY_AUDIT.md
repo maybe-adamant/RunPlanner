@@ -4,7 +4,9 @@
 
 This is the refreshed implementation inventory for Phase 7 Commit 5b.4. It
 supersedes the 2026-07-27 inventory and was checked against the production
-application under `apps/planner/src` on 2026-08-01.
+application under `apps/planner/src` on 2026-08-01. Commit 5b.4 implements its
+P1 rows as a presentation-only change; the tables below remain the reviewable
+pre-change inventory and target record.
 
 The intervening work materially changed the surface this audit governs:
 
@@ -19,10 +21,11 @@ The intervening work materially changed the surface this audit governs:
   distinction even where a downstream selected room has not yet been entered by
   the evaluated route.
 
-Commit 5b.4 remains a presentation-only change. It translates visible copy,
+Commit 5b.4 is a presentation-only change. It translates visible copy,
 accessible names, finding destinations, and evidence-dependent explanations;
 it does not rename domain contracts, change candidate support, alter topology,
-or make React calculate simulation or removal facts.
+or make React calculate simulation or removal facts. The
+`shopPurchaseUnavailable` wording remains deferred to Commit 5c.
 
 ## Audit Boundary
 

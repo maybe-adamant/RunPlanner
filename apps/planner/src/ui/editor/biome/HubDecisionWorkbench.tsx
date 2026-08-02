@@ -36,11 +36,11 @@ function domId(value: string): string {
 function assessmentLabel(marker: WorkspaceMarker): string {
   switch (marker.assessment) {
     case 'assessed':
-      return 'Assessed';
+      return 'Evaluated';
     case 'blocked':
       return 'Blocked';
     case 'unassessed':
-      return 'Unassessed';
+      return 'Not evaluated';
   }
 }
 
@@ -214,7 +214,7 @@ function HubSlotCard({
 
   return (
     <article
-      aria-label={`${slot.label} Hub slot`}
+      aria-label={`${slot.label} Hub room`}
       className="hub-slot-card"
       data-open={slot.open}
       data-visited={slot.visited}
@@ -228,7 +228,7 @@ function HubSlotCard({
           </div>
         </div>
         {interaction === undefined ? (
-          <span className="neutral-status">Create board first</span>
+          <span className="neutral-status">Set up Hub rooms first</span>
         ) : (
           <HubSlotMembership interaction={interaction} slot={slot} />
         )}
@@ -248,7 +248,7 @@ function HubSlotCard({
           Inspect room
         </button>
       )}
-      {!slot.open ? <p className="fixed-room-state">Closed board slot.</p> : null}
+      {!slot.open ? <p className="fixed-room-state">This room is closed.</p> : null}
       {!slot.open || editableControl === undefined ? null : (
         <div className="room-state-with-marker">
           <SemanticOwnerMarker address={editableControl.marker.address} />
@@ -383,12 +383,12 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
   const titleId = `hub-${domId(node.marker.focusKey)}`;
 
   return (
-    <section className="hub-decision-workbench" aria-label="Ephyra Hub decision">
+    <section className="hub-decision-workbench" aria-label="Ephyra Hub">
       <section className="hub-board" aria-labelledby={`${titleId}-board-title`}>
         <header className="decision-heading">
           <div>
             <div className="owner-markers">
-              <p className="card-kicker">Persistent offer board</p>
+              <p className="card-kicker">Open Hub rooms</p>
               <SemanticOwnerMarker address={node.owner} />
               <SemanticOwnerMarker address={node.openSet.address} />
             </div>
@@ -408,7 +408,7 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
               onClick={() => executeIntent(creation.intent)}
               type="button"
             >
-              Create Hub board
+              Set up Hub rooms
             </button>
           </div>
         )}

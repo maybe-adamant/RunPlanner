@@ -201,7 +201,7 @@ function missingTargetsForPhysicalExits(
             ? Object.freeze({ kind: 'ready' as const })
             : Object.freeze({
                 kind: 'awaitingPriorExit' as const,
-                message: `Choose Exit ${firstMissing.index} first.`,
+                message: `Choose Door ${firstMissing.index} first.`,
                 prerequisiteExitKey: firstMissing.exitKey,
               })),
         exitKey: exit.exitKey,
@@ -264,13 +264,13 @@ function missingTargetPrerequisite(
   ) {
     return Object.freeze({
       kind: 'awaitingBatchRewardStore' as const,
-      message: 'Select the batch reward store first.',
+      message: 'Choose the reward pool first.',
     });
   }
   if (fieldsBatchOwnsOutcome && decision.normal.batchState === null) {
     return Object.freeze({
       kind: 'awaitingFieldsCageOutcome' as const,
-      message: 'Select the Fields cage outcome first.',
+      message: 'Choose the Fields door roll first.',
     });
   }
   return undefined;

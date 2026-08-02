@@ -67,11 +67,11 @@ The primary authoring surface uses three conceptual regions:
 
 ```text
 +----------------+-----------------------------+---------------------------+
-| Route rail     | Biome structure             | Focused inspector         |
+| Route rail     | Route structure             | Details                   |
 |                |                             |                           |
-| route status   | decision points / Hub board | selected decision, room,  |
-| biome status   | decision labels / coverage  | reward, finding, or       |
-| navigation     | active frontier             | repair surface            |
+| route status   | door choices / Hub          | selected decision, room,  |
+| biome status   | decision labels / status    | reward, finding, or       |
+| navigation     | next step                   | repair surface            |
 +----------------+-----------------------------+---------------------------+
 ```
 
@@ -83,7 +83,7 @@ narrow widths.
 
 At desktop widths, an active biome workspace fills the editor height remaining
 after findings and any route-context message. The workspace shell itself is
-not a vertical scrollport. Its Biome structure and Focused inspector regions
+not a vertical scrollport. Its Route structure and Details regions
 are independently sized vertical scrollports, so scrolling one never moves the
 other. A short structure rail does not advertise overflow merely because its
 connector decoration extends beyond a terminal stop.
@@ -231,7 +231,7 @@ they reveal a new authoring frontier.
 The newly revealed frontier remains visible in the rail without stealing
 inspector focus. The workspace may attach that exact frontier marker only to
 its direct predecessor entry or decision; that selected workbench exposes
-`Move to Next Decision`. The nearby action and rail frontier dispatch the
+`Go to next step`. The nearby action and rail frontier dispatch the
 same semantic focus address. It is navigation only: it creates no authored
 edit, history entry, evaluation, or candidate work. There is no separate
 completion-navigation action; the frontier retains its declaration-owned

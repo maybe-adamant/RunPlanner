@@ -29,7 +29,7 @@ describe('planner history interaction', () => {
     expect(undo).toHaveProperty('disabled', true);
     expect(redo).toHaveProperty('disabled', true);
 
-    await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
 
     expect(configuredBiomeCount(application)).toBe(1);
     expect(application.store.getState().projectWorkspace.history.past).toHaveLength(1);
@@ -51,7 +51,7 @@ describe('planner history interaction', () => {
 
   it('supports Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, and Ctrl+Y', async () => {
     const { application, user } = renderPlannerForInteraction();
-    await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
 
     expect(fireEvent.keyDown(window, { ctrlKey: true, key: 'z' })).toBe(false);
     expect(configuredBiomeCount(application)).toBe(0);
@@ -88,7 +88,7 @@ describe('planner history interaction', () => {
         </>
       ),
     });
-    await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
 
     const input = screen.getByRole('textbox', { name: 'Project name draft' });
     expect(fireEvent.keyDown(input, { ctrlKey: true, key: 'z' })).toBe(true);
@@ -121,7 +121,7 @@ describe('planner history interaction', () => {
     const underworld = screen.getByRole('button', { name: 'Underworld' });
     underworld.focus();
     await user.keyboard(' ');
-    await user.selectOptions(screen.getByLabelText('Configured biomes'), '4');
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '4');
 
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
     oceanus.focus();
@@ -145,7 +145,7 @@ describe('planner history interaction', () => {
   it('keeps blocked and cross-route biome pages visible and editable', async () => {
     const { user } = renderPlannerForInteraction();
 
-    await user.selectOptions(screen.getByLabelText('Configured biomes'), '4');
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '4');
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
     expect(within(oceanus).getByTitle('Blocked')).toBeTruthy();
     expect(
@@ -155,13 +155,15 @@ describe('planner history interaction', () => {
     ).toBe('Blocked');
 
     await user.click(oceanus);
-    const blockedBanner = screen.getByText(/Oceanus is blocked until Erebus is complete and valid/);
+    const blockedBanner = screen.getByText(
+      'Finish and fix Erebus before Oceanus can be evaluated. You can still edit it.',
+    );
     expect(blockedBanner.getAttribute('role')).toBeNull();
     expect(blockedBanner.closest('.editor-panel')?.getAttribute('aria-live')).toBe('polite');
     expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
 
     await user.click(screen.getByRole('button', { name: 'Surface' }));
-    await user.selectOptions(screen.getByLabelText('Configured biomes'), '4');
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '4');
     // Route composition blocks the complete suffix at the first incomplete
     // biome. O/P/Q therefore retain their own structural frontiers while
     // each names N/Ephyra as the shared upstream semantic blocker.
@@ -175,7 +177,7 @@ describe('planner history interaction', () => {
       await user.click(blockedSurfaceBiome);
       expect(
         screen.getByText(
-          new RegExp(`${label} is blocked until ${predecessor} is complete and valid`),
+          new RegExp(`Finish and fix ${predecessor} before ${label} can be evaluated`),
         ),
       ).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
@@ -185,7 +187,7 @@ describe('planner history interaction', () => {
     expect(within(ephyra).getByTitle('Incomplete')).toBeTruthy();
 
     await user.click(ephyra);
-    expect(screen.getByText(/Ephyra has no evaluated route prefix yet/)).toBeTruthy();
+    expect(screen.getByText('Ephyra is not evaluated yet. You can still edit it.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
   });
 });
@@ -221,7 +223,7 @@ describe('project profile interaction', () => {
     const { user } = renderPlannerForInteraction({ application });
 
     expect(screen.getByText('Unsaved')).toBeTruthy();
-    await user.selectOptions(screen.getByLabelText('Configured biomes'), '1');
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
     const savedEvaluation = application.store.getState().projectWorkspace.assembly.evaluation;
     await user.click(screen.getByRole('button', { name: 'Save Profile' }));
     expect(await screen.findByText('Saved the profile.')).toBeTruthy();

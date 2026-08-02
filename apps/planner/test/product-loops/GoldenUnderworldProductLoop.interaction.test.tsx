@@ -38,10 +38,10 @@ describe('underworld product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     for (const [label, structure] of [
-      ['Erebus', 'Erebus structure'],
-      ['Oceanus', 'Oceanus structure'],
-      ['Fields', 'Fields structure'],
-      ['Tartarus', 'Tartarus structure'],
+      ['Erebus', 'Erebus route structure'],
+      ['Oceanus', 'Oceanus route structure'],
+      ['Fields', 'Fields route structure'],
+      ['Tartarus', 'Tartarus route structure'],
     ] as const) {
       await view.user.click(screen.getByRole('button', { name: label }));
       expect(screen.getByRole('region', { name: structure })).toBeTruthy();
@@ -62,17 +62,19 @@ describe('underworld product loop', () => {
     const application = createApplication();
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.selectOptions(screen.getByLabelText('Configured biomes'), '2');
+    await view.user.selectOptions(screen.getByLabelText('Configure route up to'), '2');
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
-    expect(screen.getByText(/Oceanus is blocked until Erebus is complete and valid/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Finish and fix Erebus before Oceanus can be evaluated. You can still edit it.',
+      ),
+    ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Start biome' })).toBeTruthy();
 
     await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
-    const structure = screen.getByRole('region', { name: 'Oceanus structure' });
-    await view.user.click(
-      within(structure).getByRole('button', { name: /Continue authoring here/ }),
-    );
-    expect(screen.getByRole('button', { name: 'Add normal exits' })).toBeTruthy();
+    const structure = screen.getByRole('region', { name: 'Oceanus route structure' });
+    await view.user.click(within(structure).getByRole('button', { name: /Continue route/ }));
+    expect(screen.getByRole('button', { name: 'Add doors' })).toBeTruthy();
     const g = application.store
       .getState()
       .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
@@ -110,7 +112,7 @@ describe('underworld product loop', () => {
     const confirmation = vi.spyOn(globalThis, 'confirm');
 
     await view.user.click(screen.getByRole('button', { name: 'Route' }));
-    await view.user.selectOptions(screen.getByLabelText('Configured biomes'), '0');
+    await view.user.selectOptions(screen.getByLabelText('Configure route up to'), '0');
     expect(application.store.getState().projectWorkspace.assembly.evaluation.status).toBe('empty');
     expect(confirmation).not.toHaveBeenCalled();
 
@@ -148,9 +150,7 @@ describe('underworld product loop', () => {
       ordinaryApplication.store.getState().projectWorkspace.history.past.length;
     ordinaryDispatch.mockClear();
 
-    await ordinaryView.user.click(
-      screen.getByRole('button', { name: 'Reconcile unavailable exits' }),
-    );
+    await ordinaryView.user.click(screen.getByRole('button', { name: 'Remove unavailable doors' }));
 
     expect(ordinaryApplication.store.getState().projectWorkspace.history.past).toHaveLength(
       ordinaryHistoryBefore + 1,
@@ -217,7 +217,7 @@ describe('underworld product loop', () => {
       takeoverApplication.store.getState().projectWorkspace.history.past.length;
     takeoverDispatch.mockClear();
 
-    await takeoverView.user.click(screen.getByRole('button', { name: 'Repair Preboss batch' }));
+    await takeoverView.user.click(screen.getByRole('button', { name: 'Fix Preboss doors' }));
 
     expect(takeoverApplication.store.getState().projectWorkspace.history.past).toHaveLength(
       takeoverHistoryBefore + 1,
@@ -256,7 +256,7 @@ describe('underworld product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
-    const fStructure = screen.getByRole('region', { name: 'Erebus structure' });
+    const fStructure = screen.getByRole('region', { name: 'Erebus route structure' });
     const ordinary = fStructure.querySelector<HTMLButtonElement>(
       '[data-kind="ordinaryBatch"] button',
     );
@@ -268,7 +268,7 @@ describe('underworld product loop', () => {
     ).toBeTruthy();
 
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
-    const gStructure = screen.getByRole('region', { name: 'Oceanus structure' });
+    const gStructure = screen.getByRole('region', { name: 'Oceanus route structure' });
     const takeover = gStructure.querySelector<HTMLButtonElement>(
       '[data-kind="takeoverBatch"] button',
     );
@@ -277,7 +277,7 @@ describe('underworld product loop', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Preboss' })).toBeTruthy();
 
     await view.user.click(screen.getByRole('button', { name: 'Tartarus' }));
-    const iStructure = screen.getByRole('region', { name: 'Tartarus structure' });
+    const iStructure = screen.getByRole('region', { name: 'Tartarus route structure' });
     const mixed = iStructure.querySelector<HTMLButtonElement>('[data-kind="mixedBatch"] button');
     if (mixed === null) throw new Error('I mixed batch rail node is missing');
     await view.user.click(mixed);
@@ -290,7 +290,7 @@ describe('underworld product loop', () => {
     );
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
-    const nStructure = screen.getByRole('region', { name: 'Ephyra structure' });
+    const nStructure = screen.getByRole('region', { name: 'Ephyra route structure' });
     const preHub = Array.from(
       nStructure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
     ).find((button) => button.textContent?.includes('Pre-Hub'));
@@ -307,7 +307,7 @@ describe('underworld product loop', () => {
     await waitFor(() => expect(hubSlot.checked).toBe(true));
 
     await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
-    const pStructure = screen.getByRole('region', { name: 'Olympus structure' });
+    const pStructure = screen.getByRole('region', { name: 'Olympus route structure' });
     expect(pStructure.querySelector('[data-kind="completion"]')).toBeNull();
     const completion = within(pStructure).getByRole('region', { name: 'Biome completion' });
     expect(within(completion).getByText('Prometheus')).toBeTruthy();

@@ -161,10 +161,26 @@ function withoutWorkspaceEntry({ entry, ...biome }: WorkspaceBiome): Omit<Worksp
 }
 
 describe('BiomeWorkspace', () => {
+  it('keeps the fixed N start room in the rail next step', () => {
+    renderWorkspace(emptyProject('Surface', 1), 'Surface', 'N');
+
+    const start = screen.getByRole('button', { name: /Start with Opening/ });
+    expect(start.textContent).toContain('Next step');
+    expect(start.textContent).not.toContain('Choose the first room');
+  });
+
+  it('uses one concise player-facing name for the Hub rail stop', () => {
+    renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+
+    expect(screen.getByRole('button', { name: 'Hub, 6 of 6 visits, Evaluated' })).toBe(
+      hubRailButton(),
+    );
+  });
+
   it('routes a keyboard-selected Hub rail visit to its occurrence-owned local detail workbench', async () => {
     const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
-    const boardCard = screen.getByRole('article', { name: 'Combat 02 Hub slot' });
+    const boardCard = screen.getByRole('article', { name: 'Combat 02 Hub room' });
     expect(within(boardCard).getByRole('button', { name: 'Reward' })).toBeTruthy();
 
     const visit = screen.getByRole('button', { name: /Visit 3 · Combat 02/ });
@@ -179,7 +195,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('heading', { name: 'Side rooms' })).toBeTruthy();
     expect(screen.getByText('Door 558353')).toBeTruthy();
     expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
-    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(within(inspector).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
   });
 
@@ -232,11 +248,12 @@ describe('BiomeWorkspace', () => {
       const view = renderWorkspace(project, routeKey, biomeKey);
       const projected = workspaceBiome(view.application, routeKey, biomeKey);
       expect(view.container.querySelector('.biome-workspace')).not.toBeNull();
-      expect(screen.getByRole('region', { name: /structure$/ })).toBeTruthy();
+      expect(screen.getByRole('region', { name: /route structure$/ })).toBeTruthy();
+      expect(screen.queryByText(projected.source)).toBeNull();
       expect(railMarkerKeys(view.container)).toEqual(
         projected.rail.map((entry) => entry.marker.focusKey),
       );
-      const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+      const inspector = screen.getByRole('complementary', { name: 'Details' });
       expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
       expect(inspector.querySelector('.biome-occurrence-workbench')).toBeNull();
       cleanup();
@@ -259,7 +276,7 @@ describe('BiomeWorkspace', () => {
     expect(selectedRailMarkerKeys(view.container)).toEqual([]);
     expect(
       screen
-        .getByRole('complementary', { name: 'Focused inspector' })
+        .getByRole('complementary', { name: 'Details' })
         .querySelector('.biome-batch-workbench'),
     ).not.toBeNull();
   });
@@ -280,7 +297,7 @@ describe('BiomeWorkspace', () => {
     const railDecision = railButtonForMarker(view.container, semanticAddressKey(owner));
     await view.user.click(railDecision);
 
-    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
     const selected = within(inspector)
       .getAllByRole('radio')
       .find((radio) => (radio as HTMLInputElement).checked);
@@ -312,7 +329,7 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(project, 'Underworld', 'F');
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
 
-    await view.user.click(screen.getByRole('button', { name: 'Exit 1 room' }));
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const possible = within(screen.getByRole('listbox'))
       .getAllByRole('option')
       .find((option) => option.getAttribute('data-candidate-state') !== 'impossible');
@@ -322,7 +339,7 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       createTargetAddress(goldenFBiome, owner.source, 'exit1'),
     );
-    const structure = screen.getByRole('region', { name: /structure$/ });
+    const structure = screen.getByRole('region', { name: /route structure$/ });
     const decisionRail = Array.from(
       structure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
     ).find((button) => button.dataset.workspaceNode === semanticAddressKey(owner));
@@ -408,7 +425,7 @@ describe('BiomeWorkspace', () => {
     );
     expect(
       screen
-        .getByRole('complementary', { name: 'Focused inspector' })
+        .getByRole('complementary', { name: 'Details' })
         .querySelector('.biome-batch-workbench'),
     ).not.toBeNull();
     cleanup();
@@ -437,7 +454,7 @@ describe('BiomeWorkspace', () => {
     expectDefaultRailSelection(fApplication, entryView.container, entry.marker.focusKey);
     expect(
       screen
-        .getByRole('complementary', { name: 'Focused inspector' })
+        .getByRole('complementary', { name: 'Details' })
         .querySelector('.biome-occurrence-workbench'),
     ).not.toBeNull();
     cleanup();
@@ -454,15 +471,13 @@ describe('BiomeWorkspace', () => {
       rail: [],
     };
     const firstNodeView = renderProjectedBiome(fApplication, firstNodeDefault);
-    const firstNodeInspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const firstNodeInspector = screen.getByRole('complementary', { name: 'Details' });
     expect(selectedRailMarkerKeys(firstNodeView.container)).toEqual([]);
     expect(
       within(firstNodeInspector).getByRole('heading', { level: 2, name: first.label }),
     ).toBeTruthy();
     expect(
-      within(firstNodeInspector).getByText(
-        'This completion room is derived from the biome layout and is not an authored occurrence.',
-      ),
+      within(firstNodeInspector).getByText('This room is added automatically after the biome.'),
     ).toBeTruthy();
     cleanup();
 
@@ -474,8 +489,8 @@ describe('BiomeWorkspace', () => {
     const noSubjectView = renderProjectedBiome(fApplication, noSubjectDefault);
     expect(selectedRailMarkerKeys(noSubjectView.container)).toEqual([]);
     expect(
-      within(screen.getByRole('complementary', { name: 'Focused inspector' })).getByText(
-        'No authored structure is available yet.',
+      within(screen.getByRole('complementary', { name: 'Details' })).getByText(
+        'Choose the first room to start this biome.',
       ),
     ).toBeTruthy();
     cleanup();
@@ -505,13 +520,10 @@ describe('BiomeWorkspace', () => {
     const hubDetailView = renderProjectedBiome(nApplication, hubDetailDefault);
     expectDefaultRailSelection(nApplication, hubDetailView.container, hub.marker.focusKey);
     expect(
-      within(screen.getByRole('complementary', { name: 'Focused inspector' })).getByRole(
-        'heading',
-        {
-          level: 3,
-          name: 'Open Ephyra rooms',
-        },
-      ),
+      within(screen.getByRole('complementary', { name: 'Details' })).getByRole('heading', {
+        level: 3,
+        name: 'Open Ephyra rooms',
+      }),
     ).toBeTruthy();
     nApplication.dispose();
   });
@@ -566,14 +578,12 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(project, 'Underworld', 'F');
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(first)));
-    await view.user.click(screen.getByRole('button', { name: 'Evaluate Preboss batches' }));
-    await view.user.selectOptions(screen.getByLabelText('Preboss declaration'), 'F_PreBoss01');
-    expect((screen.getByLabelText('Preboss declaration') as HTMLSelectElement).value).toBe(
-      'F_PreBoss01',
-    );
+    await view.user.click(screen.getByRole('button', { name: 'Check Preboss rooms' }));
+    await view.user.selectOptions(screen.getByLabelText('Preboss room'), 'F_PreBoss01');
+    expect((screen.getByLabelText('Preboss room') as HTMLSelectElement).value).toBe('F_PreBoss01');
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(second)));
-    expect((screen.getByLabelText('Preboss declaration') as HTMLSelectElement).value).toBe('');
+    expect((screen.getByLabelText('Preboss room') as HTMLSelectElement).value).toBe('');
   });
 
   it('keeps N completed-Hub handoff removal reachable from the visible Preboss stage', async () => {
@@ -582,7 +592,7 @@ describe('BiomeWorkspace', () => {
       decisionKey: 'hub',
     });
     const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
-    const structure = screen.getByRole('region', { name: 'Ephyra structure' });
+    const structure = screen.getByRole('region', { name: 'Ephyra route structure' });
     expect(structure.querySelector('[data-kind="takeoverBatch"]')).toBeNull();
     await view.user.click(
       railButtonForMarker(
@@ -590,7 +600,7 @@ describe('BiomeWorkspace', () => {
         semanticAddressKey(createTargetAddress(nBiome, handoff.source, 'preboss')),
       ),
     );
-    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(within(inspector).queryByText(/This removes/)).toBeNull();
     const removal = within(inspector).getByRole('button', { name: 'Remove Preboss' });
 
@@ -636,7 +646,7 @@ describe('BiomeWorkspace', () => {
       gameName: 'P_Combat02',
     });
     const view = renderWorkspace(project, 'Surface', 'P');
-    const structure = screen.getByRole('region', { name: /Olympus structure/ });
+    const structure = screen.getByRole('region', { name: /Olympus route structure/ });
     const decision = createExitDecisionAddress(pBiome, {
       kind: 'occurrence',
       occurrenceId: pOccurrenceIds.intro,
@@ -653,7 +663,7 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
 
     await view.user.click(railDecision);
-    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
   });
@@ -680,7 +690,7 @@ describe('BiomeWorkspace', () => {
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(reward.marker.address)));
 
-    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
     expect(
       within(inspector).getAllByRole('article', { name: `${target.room.label} room offer` }),
@@ -703,7 +713,7 @@ describe('BiomeWorkspace', () => {
       ),
     );
 
-    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
     const workbench = inspector.querySelector<HTMLElement>('.biome-batch-workbench');
     if (workbench === null) throw new Error('P Story decision inspector is missing');
     const offer = within(workbench).getByRole('article', {
@@ -715,7 +725,7 @@ describe('BiomeWorkspace', () => {
   it('moves keyboard focus through semantic owners without authoring a change', async () => {
     const project = createGoldenFGHIProject();
     const view = renderWorkspace(project, 'Underworld', 'F');
-    const structure = screen.getByRole('region', { name: /structure$/ });
+    const structure = screen.getByRole('region', { name: /route structure$/ });
     const railButtons = within(structure).getAllByRole('button');
     const target = railButtons.find((button) => button.textContent?.includes('Decision 1'));
     if (target === undefined) throw new Error('F normal batch rail node is missing');
@@ -760,7 +770,7 @@ describe('BiomeWorkspace', () => {
     );
 
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(sideRoom);
-    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(within(inspector).getByRole('heading', { level: 3, name: 'Combat 05' })).toBeTruthy();
     expect(within(inspector).getByRole('heading', { name: 'Side rooms' })).toBeTruthy();
     const visit = Array.from(
@@ -802,7 +812,7 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       createOccurrenceAddress(pBiome, pOccurrenceIds.intro),
     );
-    const beforeInspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const beforeInspector = screen.getByRole('complementary', { name: 'Details' });
     expect(
       within(beforeInspector).getByRole('heading', { level: 3, name: 'Entrance' }),
     ).toBeTruthy();
@@ -813,7 +823,7 @@ describe('BiomeWorkspace', () => {
       ),
     );
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);
-    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
     const workbench = inspector.querySelector<HTMLElement>('.biome-batch-workbench');
     if (workbench === null) throw new Error('P target finding decision is missing');
     expect(within(workbench).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();

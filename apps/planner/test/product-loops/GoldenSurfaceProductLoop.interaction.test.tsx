@@ -111,7 +111,7 @@ function currentProject(application: PlannerApplication) {
 }
 
 function hubRailButton(): HTMLElement {
-  return screen.getByRole('button', { name: /Persistent board.*Hub/ });
+  return screen.getByRole('button', { name: /Hub.*visits/ });
 }
 
 describe('surface product loop', () => {
@@ -147,9 +147,9 @@ describe('surface product loop', () => {
     expect(document.body.textContent).not.toContain('N_Combat');
 
     for (const [label, structure] of [
-      ['Thessaly', 'Thessaly structure'],
-      ['Olympus', 'Olympus structure'],
-      ['Summit', 'Summit structure'],
+      ['Thessaly', 'Thessaly route structure'],
+      ['Olympus', 'Olympus route structure'],
+      ['Summit', 'Summit route structure'],
     ] as const) {
       await view.user.click(screen.getByRole('button', { name: label }));
       expect(screen.getByRole('region', { name: structure }).className).toContain(
@@ -272,7 +272,7 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
 
-    const card = screen.getByRole('article', { name: 'Combat 03 Hub slot' });
+    const card = screen.getByRole('article', { name: 'Combat 03 Hub room' });
     const checkbox = within(card).getByRole('checkbox', {
       name: 'Combat 03 open',
     }) as HTMLInputElement;
@@ -358,7 +358,7 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
 
-    const card = screen.getByRole('article', { name: 'Combat 04 Hub slot' });
+    const card = screen.getByRole('article', { name: 'Combat 04 Hub room' });
     const checkbox = within(card).getByRole('checkbox', {
       name: 'Combat 04 open',
     }) as HTMLInputElement;
@@ -474,7 +474,7 @@ describe('surface product loop', () => {
     expect(application.store.getState().editorSession.activeRouteKey).toBe('Surface');
     expect(application.store.getState().editorSession.activeBiomeKeyByRoute.Surface).toBe('P');
     expect(application.store.getState().projectWorkspace.history).toBe(historyBefore);
-    const inspector = screen.getByRole('complementary', { name: 'Focused inspector' });
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
@@ -493,7 +493,7 @@ describe('surface product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Thessaly' }));
-    const structure = screen.getByRole('region', { name: 'Thessaly structure' });
+    const structure = screen.getByRole('region', { name: 'Thessaly route structure' });
     const decisionOwner = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
       occurrenceId: oOccurrenceIds.intro,

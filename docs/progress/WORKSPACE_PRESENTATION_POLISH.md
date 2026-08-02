@@ -6,14 +6,16 @@ This is the feature implementation plan for Phase 7 Commit 5b. Commit 5a is
 complete in `44a2b8d`; it removed the remaining browser confirmation prompts
 without introducing a destructive-action abstraction. Commit 5b.1 is complete
 in `e059b7d`, Commit 5b.2 is complete in `4d46957`, and Commit 5b.3 is
-complete in `bf90787`. Commit 5b.4 is the remaining closure. The re-anchor
-program is closed, so Commit 5b remains limited to the four presentation
-changes below. Exact authored Shop purchase order is the separate cross-layer
-Commit 5c defined by [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md).
+complete in `bf90787`. Commit 5b.4 implementation is complete and awaits its
+required desktop and narrow visual review before it closes Commit 5b. The
+re-anchor program is closed, and Commit 5b remains limited to the four
+presentation changes below. Exact authored Shop purchase order is the separate
+cross-layer Commit 5c defined by
+[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md), which follows that closure.
 
 The decision-highlight rail follow-up documented below was delivered out of
 sequence and does not complete, renumber, or replace completed Commit 5b.3 or
-the still-active Commit 5b.4 slice.
+the still-active Commit 5b.4 verification slice.
 
 Stable ownership remains with
 [`STRUCTURED_EDITOR_WORKSPACE.md`](../design/STRUCTURED_EDITOR_WORKSPACE.md),
@@ -33,8 +35,8 @@ Selecting that stop presents all offered rooms, rewards, and picked controls
 together. N retains the four-stage rail and subordinate authored visit
 navigation delivered here. Current authority lives in
 [`STRUCTURED_EDITOR_WORKSPACE.md`](../design/STRUCTURED_EDITOR_WORKSPACE.md);
-5b.1 through 5b.3 below remain historical delivery evidence, while 5b.4
-remains the planned active slice.
+5b.1 through 5b.3 below remain historical delivery evidence, while 5b.4 is
+the final verification slice.
 
 Focused projection, editor, and product-loop coverage proves decision rail
 navigation, co-located room and reward editing, exact finding focus,
@@ -492,7 +494,7 @@ Gate:
 - desktop and narrow visual review of H and O;
 - lint, format check, and `git diff --check`.
 
-### Commit 5b.4: Translate Product Vocabulary and Close 5b
+### Commit 5b.4: Translate Product Vocabulary and Close 5b — implementation complete
 
 Suggested subject:
 
@@ -503,6 +505,21 @@ feat(editor): use player-facing route language
 Owns Change 4 plus final Commit 5b documentation and gate evidence. It audits
 the final surfaces produced by 5b.1 through 5b.3 but does not reopen their
 structure or interaction ownership.
+
+It translates route configuration, route feedback, rail and inspector labels,
+door and fixed-room controls, Preboss and Hub workbenches, findings,
+destinations, and candidate explanations without changing authored state,
+commands, simulation, or candidate support. The product omits raw projection
+source and topology-state chips while retaining the allowed data attributes.
+`shopPurchaseUnavailable` remains unchanged for Commit 5c. A concise Hub rail
+accessible name and empty through full route-setting witnesses close the
+cross-surface polish review.
+
+The automated gate passes `npm run test:ui`, `npm run test:planner`,
+`npm run test:product`, and `npm run check` (96 test files and 822 tests), with
+typechecking, linting, formatting, and the production build. Desktop and narrow
+visual review remain the final acceptance evidence before this slice closes
+Commit 5b and advances the active frontier to Commit 5c.
 
 Likely files:
 

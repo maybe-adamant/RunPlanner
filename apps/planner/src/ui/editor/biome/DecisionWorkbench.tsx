@@ -89,13 +89,13 @@ function batchRewardStoreAddress(marker: WorkspaceMarker): BatchRewardStoreAddre
 }
 
 function roomStatus(target: WorkspacePhysicalTarget): string {
-  if (target.room.entered) return 'Entered route';
-  if (target.selected) return 'Selected route';
-  if (target.physicalState === 'unavailable') return 'Unavailable retained offer';
-  if (target.retained) return 'Retained authored offer';
+  if (target.room.entered) return 'Door taken';
+  if (target.selected) return 'Room selected';
+  if (target.physicalState === 'unavailable') return 'Unavailable saved room';
+  if (target.retained) return 'Saved room';
   if (target.clockworkReward === 'goal') return 'Clockwork Goal';
   if (target.clockworkReward === 'nonGoal') return 'Clockwork NonGoal';
-  return target.nextPath === 'startsCompletion' ? 'Preboss route' : 'Generated offer';
+  return target.nextPath === 'startsCompletion' ? 'Preboss route' : 'Offered room';
 }
 
 function ExactRepairAction({ intent }: { readonly intent: WorkspaceBatchRepairIntent }) {
@@ -107,7 +107,7 @@ function ExactRepairAction({ intent }: { readonly intent: WorkspaceBatchRepairIn
       onClick={() => executeIntent(intent)}
       type="button"
     >
-      Reconcile unavailable exits
+      Remove unavailable doors
     </button>
   );
 }
@@ -172,9 +172,9 @@ function TargetRow({
         <div className="exit-marker" aria-hidden="true" />
       ) : (
         <label className="picked-control">
-          <span className="visually-hidden">{`Pick ${target.room.label} from Exit ${target.index}`}</span>
+          <span className="visually-hidden">{`Pick ${target.room.label} from Door ${target.index}`}</span>
           <input
-            aria-label={`Pick ${target.room.label} from Exit ${target.index}`}
+            aria-label={`Pick ${target.room.label} from Door ${target.index}`}
             checked={selectionInteraction?.selectedExitKey === target.exitKey}
             disabled={target.physicalState === 'unavailable'}
             name={`selection-${node.key}`}
@@ -194,7 +194,7 @@ function TargetRow({
       <div className="exit-content">
         <div className="exit-heading">
           <div>
-            <p className="card-kicker">Exit {target.index}</p>
+            <p className="card-kicker">Door {target.index}</p>
             <h4>{target.room.label}</h4>
           </div>
           <div className="owner-markers">
@@ -204,19 +204,19 @@ function TargetRow({
           </div>
         </div>
         {node.targetInteraction === 'readOnly' ? (
-          <p className="fixed-room-state">This Preboss batch is authored atomically.</p>
+          <p className="fixed-room-state">These Preboss doors are changed together.</p>
         ) : !replaceable ? (
           <p className="fixed-room-state">
             {target.physicalState === 'unavailable'
-              ? 'This retained exit is unavailable. Reconcile unavailable exits first.'
-              : 'This exit cannot be replaced.'}
+              ? 'This saved door is no longer available here. Fix the earlier route first.'
+              : 'This door cannot be changed.'}
           </p>
         ) : (
           <TargetRoomSelector
             idPrefix={`target-${target.room.occurrenceId}`}
             interactionKey={target.marker.focusKey}
             interactions={interactions}
-            label={`Exit ${target.index} room`}
+            label={`Door ${target.index} room`}
           />
         )}
         <RoomOfferEditor
@@ -239,7 +239,7 @@ function MissingTargetRow({
 }) {
   return (
     <article
-      aria-label={`Exit ${target.index} unspecified room offer`}
+      aria-label={`Door ${target.index} unspecified room offer`}
       className="exit-row biome-target-row"
       data-available="true"
       data-missing="true"
@@ -248,7 +248,7 @@ function MissingTargetRow({
       <div className="exit-content">
         <div className="exit-heading">
           <div>
-            <p className="card-kicker">Exit {target.index}</p>
+            <p className="card-kicker">Door {target.index}</p>
             <h4>Choose room</h4>
           </div>
           <div className="owner-markers">
@@ -261,11 +261,11 @@ function MissingTargetRow({
             idPrefix={`target-${target.marker.focusKey}`}
             interactionKey={target.marker.focusKey}
             interactions={interactions}
-            label={`Exit ${target.index} room`}
+            label={`Door ${target.index} room`}
           />
         ) : (
           <label className="field-control" htmlFor={`target-${target.marker.focusKey}-waiting`}>
-            <span>{`Exit ${target.index} room`}</span>
+            <span>{`Door ${target.index} room`}</span>
             <select disabled id={`target-${target.marker.focusKey}-waiting`} value="">
               <option value="">{target.authoring.message}</option>
             </select>
@@ -287,8 +287,8 @@ function BatchSelectionStatus({
   return (
     <p className="fixed-room-state">
       {node.targets.some((target) => target.selected)
-        ? 'The selected room is fixed by this decision.'
-        : 'This decision awaits its declaration-owned selection.'}
+        ? 'The game fixes which room is selected here.'
+        : 'Choose which door is taken.'}
     </p>
   );
 }
@@ -327,10 +327,10 @@ function CandidateTakeoverAction({
 
   const title =
     interaction.action === 'create'
-      ? 'Create Preboss batch'
+      ? 'Add Preboss doors'
       : interaction.action === 'replace'
-        ? 'Replace with Preboss batch'
-        : 'Repair Preboss batch';
+        ? 'Replace doors with Preboss'
+        : 'Fix Preboss doors';
 
   return (
     <section
@@ -343,7 +343,7 @@ function CandidateTakeoverAction({
         <SemanticOwnerMarker address={interaction.owner} />
       </div>
       <label className="field-control" htmlFor={`${interaction.key}-takeover`}>
-        <span>Preboss declaration</span>
+        <span>Preboss room</span>
         <select
           {...candidateSelectState(selected)}
           aria-busy={candidates.pending || undefined}
@@ -361,7 +361,7 @@ function CandidateTakeoverAction({
           value={selectedGameName ?? ''}
         >
           <option disabled value="">
-            Select Preboss batch
+            Choose Preboss room
           </option>
           {interaction.selected === undefined || selectedIsLoaded ? null : (
             <option value={interaction.selected.gameName}>{interaction.selected.label}</option>
@@ -389,7 +389,7 @@ function CandidateTakeoverAction({
         onClick={apply}
         type="button"
       >
-        {candidates.result === undefined ? 'Evaluate Preboss batches' : title}
+        {candidates.result === undefined ? 'Check Preboss rooms' : title}
       </button>
     </section>
   );
@@ -455,18 +455,16 @@ function TakeoverRepairAction({
       data-presentation={interaction.presentation}
     >
       <div className="owner-markers">
-        <h4>Repair Preboss batch</h4>
+        <h4>Fix Preboss doors</h4>
         <SemanticOwnerMarker address={interaction.owner} />
       </div>
-      <p className="fixed-room-state">
-        Reconcile {interaction.label} against the current declaration-owned exits.
-      </p>
+      <p className="fixed-room-state">Fix {interaction.label} to restore the missing doors.</p>
       <button
         className="secondary-action"
         onClick={() => executeIntent(interaction.intent())}
         type="button"
       >
-        Repair Preboss batch
+        Fix Preboss doors
       </button>
     </section>
   );
@@ -628,7 +626,6 @@ export function BatchWorkbench({
         </div>
         <div className="owner-markers">
           <SemanticOwnerMarker address={node.owner} />
-          <span className="neutral-status">{node.topologyState}</span>
         </div>
       </header>
       <BatchSettings interactions={interactions} node={node} />
@@ -647,9 +644,7 @@ export function BatchWorkbench({
         ))}
         {node.kind === 'takeoverBatch' ? (
           node.missingTargets.length === 0 ? null : (
-            <p className="fixed-room-state">
-              Missing Preboss exits are repaired atomically through the projected Preboss action.
-            </p>
+            <p className="fixed-room-state">Fix Preboss doors to restore the missing doors.</p>
           )
         ) : (
           node.missingTargets.map((target) => (
@@ -659,14 +654,14 @@ export function BatchWorkbench({
       </div>
       {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
-      <TopologyRemovalAction interaction={removal} label="Remove decision" />
+      <TopologyRemovalAction interaction={removal} label="Remove these doors" />
       {nextFrontier === undefined ? null : (
         <button
           className="secondary-action decision-next-action"
           onClick={() => dispatch(semanticOwnerFocused(nextFrontier.address))}
           type="button"
         >
-          Move to Next Decision
+          Go to next step
         </button>
       )}
     </section>
@@ -688,7 +683,7 @@ export function LinkedExitWorkbench({
     <section className="decision-card linked-exit-workbench">
       <header className="decision-heading">
         <div>
-          <p className="card-kicker">Linked exit</p>
+          <p className="card-kicker">Fixed next room</p>
           <h3>{node.target.room.label}</h3>
         </div>
         <div className="owner-markers">
@@ -696,16 +691,14 @@ export function LinkedExitWorkbench({
           <SemanticOwnerMarker address={node.target.marker.address} />
         </div>
       </header>
-      <p className="fixed-room-state">
-        This declaration-owned exit is linked to its fixed room; there is no room selector.
-      </p>
+      <p className="fixed-room-state">The game fixes the next room here.</p>
       <RoomOfferEditor
         idPrefix={`linked-${node.target.room.occurrenceId}-reward`}
         interactions={interactions}
         presentation="full"
         room={node.target.room}
       />
-      <TopologyRemovalAction interaction={removal} label="Remove decision" />
+      <TopologyRemovalAction interaction={removal} label="Remove these doors" />
     </section>
   );
 }
@@ -727,9 +720,9 @@ function StartFrontier({
     return (
       <section className="frontier-actions biome-start-frontier">
         <div>
-          <p className="card-kicker">Active frontier</p>
+          <p className="card-kicker">Next step</p>
           <h3>Start with {start.fixedLabel}</h3>
-          <p>This start room is declaration-fixed.</p>
+          <p>The game fixes the first room.</p>
         </div>
         <SemanticOwnerMarker address={start.owner} />
         <button
@@ -745,7 +738,7 @@ function StartFrontier({
   return (
     <section className="frontier-actions biome-start-frontier">
       <div>
-        <p className="card-kicker">Active frontier</p>
+        <p className="card-kicker">Next step</p>
         <h3>Choose starting room</h3>
         <SemanticOwnerMarker address={start.owner} />
       </div>
@@ -791,7 +784,7 @@ function ExitFrontier({
   return (
     <section className="frontier-actions biome-exit-frontier">
       <div>
-        <p className="card-kicker">Active frontier</p>
+        <p className="card-kicker">Next step</p>
         <h3>Continue from this room</h3>
         <SemanticOwnerMarker address={frontier.owner} />
       </div>
@@ -802,7 +795,7 @@ function ExitFrontier({
             onClick={() => executeIntent(structural.intent)}
             type="button"
           >
-            Add normal exits
+            Add doors
           </button>
         ) : null}
         {structural?.action === 'createLinkedExit' ? (
@@ -811,7 +804,7 @@ function ExitFrontier({
             onClick={() => executeIntent(structural.intent())}
             type="button"
           >
-            Create linked exit
+            Add fixed next room
           </button>
         ) : null}
         {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}

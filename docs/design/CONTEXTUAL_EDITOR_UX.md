@@ -348,7 +348,7 @@ Examples include:
   sibling is evaluated.
 
 The explanation identifies the conflicting semantic sibling in player-facing
-language, such as `Already offered on Exit 1`. It does not expose occurrence
+language, such as `Already offered on Door 1`. It does not expose occurrence
 IDs or finding codes.
 
 Changing an earlier sibling may invalidate a retained later reward. The later
@@ -373,7 +373,7 @@ bag states. The ordinary UI therefore must not invent a deterministic
 A safe compact summary is based on candidate support, for example:
 
 ```text
-Run Progress · 6 reward types currently supported
+Major Reward · 6 reward types currently supported
 ```
 
 An optional diagnostic disclosure may explain unavailable entries and whether

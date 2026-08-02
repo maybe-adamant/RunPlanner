@@ -510,7 +510,7 @@ describe('OccurrenceWorkbench', () => {
     const { project, shopId } = dormantShopProject();
     renderStaticOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(shopId));
 
-    expect(screen.getByText('Shop inventory materializes when this room is picked.')).toBeTruthy();
+    expect(screen.getByText('Shop inventory appears when you select this room.')).toBeTruthy();
     expect(screen.queryByText('Purchased')).toBeNull();
   });
 

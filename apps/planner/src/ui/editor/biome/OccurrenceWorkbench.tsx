@@ -386,9 +386,7 @@ function ShopWorkbench({
 }) {
   const dispatch = useAppDispatch();
   if (!room.materialized) {
-    return (
-      <p className="fixed-room-state">Shop inventory materializes when this room is picked.</p>
-    );
+    return <p className="fixed-room-state">Shop inventory appears when you select this room.</p>;
   }
   return (
     <div className="shop-editor">
@@ -456,7 +454,7 @@ export function RoomOfferEditor({
         <p className="fixed-room-state">No additional room details.</p>
       ) : null}
       {showMainReward && state.kind === 'none' ? (
-        <p className="fixed-room-state">No room-local reward.</p>
+        <p className="fixed-room-state">No room reward.</p>
       ) : null}
       {showMainReward && state.kind === 'fixed' ? (
         <div className="room-state-with-marker">
@@ -566,7 +564,7 @@ export function OccurrenceWorkbench({
           onClick={() => dispatch(semanticOwnerFocused(nextFrontier.address))}
           type="button"
         >
-          Move to Next Decision
+          Go to next step
         </button>
       )}
     </article>

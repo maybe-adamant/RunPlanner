@@ -49,6 +49,14 @@ interface AppProps {
   readonly selectStructuredWorkspace: (state: RootState) => StructuredWorkspaceProjection;
 }
 
+function presentBiomeList(labels: readonly string[]): string {
+  if (labels.length === 0) return '';
+  if (labels.length === 1) return labels[0]!;
+  const last = labels[labels.length - 1]!;
+  if (labels.length === 2) return `${labels[0]} and ${last}`;
+  return `${labels.slice(0, -1).join(', ')}, and ${last}`;
+}
+
 function RouteOverview({
   label,
   navigation,
@@ -62,6 +70,16 @@ function RouteOverview({
 }) {
   const dispatch = useAppDispatch();
   const configuredBiomeCount = workspaceRoute.biomes.length;
+  const configuredBiomeLabels = navigation.biomePanels
+    .slice(0, configuredBiomeCount)
+    .map((biome) => biome.label);
+  const lastConfiguredBiome = configuredBiomeLabels[configuredBiomeLabels.length - 1];
+  const routeExtent =
+    lastConfiguredBiome === undefined ? 'No biomes' : `Through ${lastConfiguredBiome}`;
+  const routeDescription =
+    configuredBiomeLabels.length === 0
+      ? 'No biomes configured.'
+      : `Configuring ${presentBiomeList(configuredBiomeLabels)}.`;
   return (
     <section className="route-overview">
       <header className="panel-heading">
@@ -73,11 +91,11 @@ function RouteOverview({
           <SemanticOwnerMarker address={workspaceRoute.marker.address} />
           <StatusBadge status={feedback.status} />
           <FindingCount count={feedback.findingCount} label={`${label} findings`} />
-          <span className="neutral-status">{configuredBiomeCount} configured</span>
+          <span className="neutral-status">{routeExtent}</span>
         </div>
       </header>
       <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-configured-prefix`}>
-        <span>Configured biomes</span>
+        <span>Configure route up to</span>
         <select
           disabled={navigation.biomePanels.length === 0 && configuredBiomeCount === 0}
           id={`${workspaceRoute.routeKey}-configured-prefix`}
@@ -93,7 +111,7 @@ function RouteOverview({
           }}
           value={configuredBiomeCount}
         >
-          <option value={0}>None</option>
+          <option value={0}>No biomes</option>
           {navigation.biomePanels.map((biome, index) => (
             <option key={biome.biomeKey} value={index + 1}>
               {biome.label}
@@ -101,10 +119,7 @@ function RouteOverview({
           ))}
         </select>
       </label>
-      <p className="panel-description">
-        Configured biomes form one contiguous route prefix. Removing a biome also removes every
-        authored room beneath it; Undo restores the exact prior project.
-      </p>
+      <p className="panel-description">{routeDescription}</p>
     </section>
   );
 }

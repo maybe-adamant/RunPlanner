@@ -748,8 +748,8 @@ function bindTakeoverBatchInteractions(
         const room = requireWorkspaceRoom(catalog, requirement.gameName);
         const summary =
           room.incomingReward.kind === 'shop'
-            ? `Enter ${candidate.label}. This declaration-owned transition creates one automatically entered World Shop.`
-            : `Enter ${candidate.label} through this declaration-owned transition.`;
+            ? `Go to ${candidate.label}. The World Shop is entered automatically.`
+            : `Go to ${candidate.label}.`;
         takeoverBatches.set(
           key,
           Object.freeze({
@@ -774,7 +774,7 @@ function bindTakeoverBatchInteractions(
                   kind: 'unavailable' as const,
                   message:
                     explanation?.message ??
-                    'This fixed Preboss takeover is not supported by the current route state.',
+                    'This Preboss route is not available with the current plan.',
                 });
               }
               return Object.freeze({
