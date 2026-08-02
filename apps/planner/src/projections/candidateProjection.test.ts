@@ -57,6 +57,27 @@ function roomTargetCandidate(
   };
 }
 
+function takeoverCandidate(
+  support: 'impossible' | 'possible' | 'required',
+): ProjectCandidateEvaluation {
+  return {
+    kind: 'takeoverPrebossBatch',
+    result: {
+      source: createExitDecisionAddress(
+        createBiomeAddress('Underworld', 'F'),
+        candidateTarget.source,
+      ),
+      gameName: 'F_PreBoss01',
+      requiredExitKeys: ['exit1'],
+      requiredTargetCount: 1,
+      support,
+      pressure: [],
+      selectedPossible: support !== 'impossible',
+      findings: [],
+    },
+  };
+}
+
 function fPlan(project: ReturnType<typeof createGoldenFGHIProject>) {
   const plan = project.routes
     .find((route) => route.routeKey === 'Underworld')
@@ -150,7 +171,7 @@ describe('candidate projection', () => {
     const candidate = session.takeoverPrebossBatches(owner, ['F_PreBoss01'])[0];
 
     expect(candidate?.evaluation.kind).toBe('takeoverPrebossBatch');
-    expect(candidateSupport(candidate)).toBe('possible');
+    expect(candidateSupport(candidate)).toBe('forced');
   });
 
   it('returns typed unavailable evidence when a target lies behind an incomplete upstream biome', () => {
@@ -215,5 +236,17 @@ describe('candidate projection', () => {
     expect(candidateSupport({ value: 'F_Combat01', evaluation: multiMemberRequiredForce })).toBe(
       'forced',
     );
+  });
+
+  it('presents takeover force from the engine batch support rather than per-exit pressure', () => {
+    expect(
+      candidateSupport({ value: 'F_PreBoss01', evaluation: takeoverCandidate('required') }),
+    ).toBe('forced');
+    expect(
+      candidateSupport({ value: 'F_PreBoss01', evaluation: takeoverCandidate('possible') }),
+    ).toBe('possible');
+    expect(
+      candidateSupport({ value: 'F_PreBoss01', evaluation: takeoverCandidate('impossible') }),
+    ).toBe('impossible');
   });
 });

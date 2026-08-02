@@ -30,9 +30,11 @@ import {
   fDecision,
   fStartId,
 } from '../../support/f-takeover-project';
+import { createCompleteFGProject } from '@run-planner/test-fixtures';
 import {
   createFGenerationProject,
   fGenerationBaselineBatches,
+  fGenerationBiome,
   fGenerationOccurrenceId,
   fGenerationTargetAddress,
   type FGenerationBatchSpec,
@@ -140,6 +142,81 @@ function roomCandidate(
 }
 
 describe('F candidate support', () => {
+  it('keeps ordinary Door 1 choices possible before the takeover is eligible', () => {
+    const project = createFOpeningBatch();
+    const target = createTargetAddress(fBiome, fDecision().source, 'exit1');
+    const [ordinary, takeover] = candidateSession(project).evaluate([
+      { kind: 'roomTarget', target, gameName: 'F_Combat02' },
+      { kind: 'takeoverPrebossBatch', source: fDecision(), gameName: 'F_PreBoss01' },
+    ]);
+
+    expect(ordinary).toMatchObject({
+      kind: 'roomTarget',
+      result: { pressure: { selectedPossible: true } },
+    });
+    expect(takeover).toMatchObject({
+      kind: 'takeoverPrebossBatch',
+      result: { support: 'impossible', selectedPossible: false },
+    });
+  });
+
+  it('shares terminal empty-decision force support between Door 1 and the takeover batch', () => {
+    let project = createCompleteFGProject();
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (plan?.topology === null || plan === undefined) throw new Error('F topology is missing');
+    const takeoverDecision = plan.topology.decisions.find(
+      (candidate) =>
+        candidate.kind === 'exit' &&
+        candidate.normal.kind === 'batch' &&
+        candidate.normal.targets.some(
+          (target) =>
+            plan.topology?.occurrences.find(
+              (occurrence) => occurrence.occurrenceId === target.occurrenceId,
+            )?.gameName === 'F_PreBoss01',
+        ),
+    );
+    if (takeoverDecision === undefined || takeoverDecision.kind !== 'exit') {
+      throw new Error('F takeover decision is missing');
+    }
+    const decision = createExitDecisionAddress(fGenerationBiome, takeoverDecision.source);
+    const target = createTargetAddress(fGenerationBiome, takeoverDecision.source, 'exit1');
+    project = applyProjectCommand(project, catalog, { kind: 'RemoveExitDecision', decision });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fGenerationBiome, target.source),
+      storeKey: 'RunProgress',
+    });
+
+    const [ordinary, takeoverCandidate] = candidateSession(project).evaluate([
+      { kind: 'roomTarget', target, gameName: 'F_Combat20' },
+      { kind: 'takeoverPrebossBatch', source: decision, gameName: 'F_PreBoss01' },
+    ]);
+
+    expect(ordinary).toMatchObject({
+      kind: 'roomTarget',
+      result: {
+        pressure: {
+          selectedGameName: 'F_Combat20',
+          selectedPossible: false,
+          requiredForcedRoomGameNames: ['F_PreBoss01'],
+          selectedExclusionReasons: expect.arrayContaining(['forcedPool']),
+        },
+      },
+    });
+    expect(takeoverCandidate).toMatchObject({
+      kind: 'takeoverPrebossBatch',
+      result: {
+        gameName: 'F_PreBoss01',
+        support: 'required',
+        selectedPossible: true,
+        requiredExitKeys: ['exit1', 'exit2'],
+      },
+    });
+  });
+
   it('keeps a reward-valid selected prefix live at its next ordinary target frontier', () => {
     const project = validPrefixProject();
     const evaluation = simulateProject(catalog, project);

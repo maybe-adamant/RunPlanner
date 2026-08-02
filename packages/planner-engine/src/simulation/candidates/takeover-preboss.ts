@@ -7,6 +7,7 @@ import {
   type TakeoverPrebossBatchCandidateSupport,
 } from '../generation';
 import type { ProjectEvaluation } from '../project';
+import type { CanonicalDecision } from '../materialization';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 import { CandidateEvaluationContractError } from './contract';
 import {
@@ -33,6 +34,19 @@ export interface EvaluatedTakeoverPrebossBatchCandidate {
 export type TakeoverPrebossBatchCandidateEvaluation =
   CandidateContextUnavailable | EvaluatedTakeoverPrebossBatchCandidate;
 
+function ordinaryBatchCount(catalog: Catalog, decisions: readonly CanonicalDecision[]): number {
+  return decisions.filter(
+    (decision) =>
+      decision.kind === 'batch' &&
+      decision.parent.origin.kind === 'occurrence' &&
+      !decision.targets.some(
+        (target) =>
+          catalog.rooms.byKey[target.room.gameName]?.prebossBatchPolicy?.kind ===
+          'takeOverNormalDoors',
+      ),
+  ).length;
+}
+
 function evaluatePrefixTakeover(
   catalog: Catalog,
   evaluation: ProjectEvaluation,
@@ -47,6 +61,9 @@ function evaluatePrefixTakeover(
   if (biome === undefined || prefix === undefined || frontier?.kind !== 'exitDecision') {
     return undefined;
   }
+  if (frontier.targets.length > 0) {
+    return undefined;
+  }
   if (semanticAddressKey(frontier.origin) !== semanticAddressKey(query.source)) return undefined;
   if (frontier.parent.origin.kind === 'hubRoom') {
     const layout = catalog.biomeLayouts.byKey[prefix.biomeKey];
@@ -59,6 +76,10 @@ function evaluatePrefixTakeover(
         gameName: query.gameName,
         requiredExitKeys,
         requiredTargetCount: requiredExitKeys.length,
+        support:
+          query.gameName === layout.progression.completedExit.roomGameName
+            ? ('required' as const)
+            : ('impossible' as const),
         pressure: Object.freeze([]),
         selectedPossible: query.gameName === layout.progression.completedExit.roomGameName,
         findings: Object.freeze([]),
@@ -85,6 +106,7 @@ function evaluatePrefixTakeover(
       ownerHistory,
       query.gameName,
       completeBiomeCount(evaluation, query.source.routeKey, query.source.biomeKey),
+      ordinaryBatchCount(catalog, prefix.decisions),
     ),
   });
 }
