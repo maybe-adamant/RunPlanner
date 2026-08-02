@@ -225,6 +225,33 @@ describe('structured workspace biome presentation', () => {
     });
   });
 
+  it('does not present a Clockwork Goal room dormant concrete reward on the rail', () => {
+    const biome = present(createGoldenFGHIProject(), 'Underworld', 'I').presentation.biome;
+    const goalDecision = biome.nodes.find(
+      (node): node is Extract<(typeof biome.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        node.targets.length === 1 &&
+        node.targets[0]?.selected === true &&
+        node.targets[0].clockworkReward === 'goal',
+    );
+    if (goalDecision === undefined) {
+      throw new Error('I one-room Clockwork Goal decision is missing');
+    }
+    const goalTarget = goalDecision.targets[0];
+    if (goalTarget?.room.roomLocal.kind !== 'incomingReward') {
+      throw new Error('I Clockwork Goal target lost its dormant counted reward');
+    }
+    const rail = biome.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' && entry.node.key === goalDecision.key,
+    );
+    if (rail === undefined) throw new Error('I Clockwork Goal decision rail entry is missing');
+
+    expect(goalTarget.room.roomLocal.control.offer.rewardType).toBe('RoomMoneyTripleDrop');
+    expect(goalDecision.missingTargets).toEqual([]);
+    expect(rail.selectedTarget).toEqual({ roomLabel: goalTarget.room.label });
+  });
+
   it('presents every generated biome as entry, numbered decision stops, and bounded Preboss', () => {
     const underworld = createGoldenFGHIProject();
     const surface = createRepresentativeNOPQProject();
