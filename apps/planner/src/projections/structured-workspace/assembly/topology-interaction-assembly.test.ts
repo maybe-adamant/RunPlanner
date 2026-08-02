@@ -263,11 +263,11 @@ describe('structured workspace topology interaction assembly', () => {
   );
 
   it.each([
-    [oBiome, oOccurrenceIds.combat02, 'O_PreBoss01'],
-    [qBiome, qOccurrenceIds.secondMiniboss1, 'Q_PreBoss01'],
+    [oBiome, oOccurrenceIds.combat02],
+    [qBiome, qOccurrenceIds.secondMiniboss1],
   ] as const)(
     'creates an empty %s decision at its final frontier without a standalone Preboss action',
-    (biome, parent, _gameName) => {
+    (biome, parent) => {
       const owner = createExitDecisionAddress(biome, {
         kind: 'occurrence',
         occurrenceId: parent,
