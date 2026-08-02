@@ -691,7 +691,10 @@ function replaceTakeoverBatch(
     source: sourceFromAddress(command.decision.source),
     normal: Object.freeze({
       kind: 'batch',
-      rewardStore: initialRewardStore(located, sourceRoomValue),
+      rewardStore:
+        existing?.normal.kind === 'batch'
+          ? existing.normal.rewardStore
+          : initialRewardStore(located, sourceRoomValue),
       batchState: null,
       targets,
     }),

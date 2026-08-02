@@ -68,6 +68,60 @@ describe('selected O validation', () => {
     expect(o.rewards.targetHistory).toHaveLength(7);
   });
 
+  it('preserves a non-Ship terminal base store through the Preboss takeover and completion tail', () => {
+    const terminalDecision = createExitDecisionAddress(oBiome, {
+      kind: 'occurrence',
+      occurrenceId: oOccurrenceIds.combat02,
+    });
+    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: terminalDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
+      gameName: 'O_Combat02',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat02),
+      gameName: 'O_Devotion01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: terminalDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(oBiome, terminalDecision.source),
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceWithTakeoverBatch',
+      decision: terminalDecision,
+      gameName: 'O_PreBoss01',
+      targetOccurrenceIds: { exit1: oOccurrenceIds.preboss },
+    });
+
+    const { biome } = evaluateO(project);
+    expect(biome.snapshot.decisions.at(-1)).toMatchObject({
+      kind: 'batch',
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
+      targets: [
+        {
+          room: {
+            gameName: 'O_PreBoss01',
+            incomingReward: { resolvedStoreKey: 'MetaProgress' },
+          },
+        },
+      ],
+    });
+    expect(biome.snapshot.completionRooms[0]).toMatchObject({
+      gameName: 'O_Boss01',
+      enteredRewardStoreKey: 'MetaProgress',
+    });
+  });
+
   it('addresses an unavailable first-room Combat2 count at its room occurrence', () => {
     const project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
