@@ -99,7 +99,7 @@ describe('evaluation presentation', () => {
         'Choose the biome setting',
         'Choose the required biome setting before building its doors.',
       ],
-      ['continuationMissing', 'Continue this route', 'Add the next doors or go to Preboss.'],
+      ['continuationMissing', 'Continue this route', 'Continue from here to complete this route.'],
       [
         'hubOpenSetIncomplete',
         'Choose open Hub rooms',
