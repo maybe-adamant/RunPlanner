@@ -5,15 +5,15 @@
 This is the feature implementation plan for Phase 7 Commit 5b. Commit 5a is
 complete in `44a2b8d`; it removed the remaining browser confirmation prompts
 without introducing a destructive-action abstraction. Commit 5b.1 is complete
-in `e059b7d`, and Commit 5b.2 is complete in `4d46957`. Commit 5b.3 is
-complete; Commit 5b.4 is the remaining closure. The re-anchor program is
-closed, so Commit 5b remains limited to the four presentation changes below.
-Exact authored Shop purchase order is the separate cross-layer Commit 5c defined by
-[`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md).
+in `e059b7d`, Commit 5b.2 is complete in `4d46957`, and Commit 5b.3 is
+complete in `bf90787`. Commit 5b.4 is the remaining closure. The re-anchor
+program is closed, so Commit 5b remains limited to the four presentation
+changes below. Exact authored Shop purchase order is the separate cross-layer
+Commit 5c defined by [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md).
 
 The decision-highlight rail follow-up documented below was delivered out of
-sequence and does not complete, renumber, or replace the still-active 5b.3 and
-5b.4 slices.
+sequence and does not complete, renumber, or replace completed Commit 5b.3 or
+the still-active Commit 5b.4 slice.
 
 Stable ownership remains with
 [`STRUCTURED_EDITOR_WORKSPACE.md`](../design/STRUCTURED_EDITOR_WORKSPACE.md),
@@ -337,9 +337,10 @@ their existing visibly dormant presentation.
 [`USER_FACING_VOCABULARY_AUDIT.md`](../audits/USER_FACING_VOCABULARY_AUDIT.md)
 is the concrete copy inventory for this change. Production-visible text,
 accessible names, tooltips, statuses, findings, candidate explanations, and
-removal impact use player intent and game concepts. Internal model and
-projection terms remain unchanged in types, commands, semantic addresses,
-data attributes, developer errors, and tests that exercise those contracts.
+removal and repair action labels use player intent and game concepts. Internal
+model and projection terms remain unchanged in types, commands, semantic
+addresses, data attributes, developer errors, and tests that exercise those
+contracts.
 
 The route setting becomes:
 
@@ -366,8 +367,8 @@ Across the shared workspace:
   are omitted rather than translated into a second status system;
 - evidence-dependent findings and candidate explanations are translated in
   their existing application presentation functions; and
-- React continues to consume projected impact and support rather than deriving
-  topology, eligibility, or repair scope.
+- React continues to consume projected interactions and support rather than
+  deriving topology, eligibility, or repair scope.
 
 ### Deliverables
 
@@ -375,7 +376,7 @@ Across the shared workspace:
 - Replace route-prefix configuration copy with the exact route-up-to control,
   compact through-biome status, and included-biome sentence.
 - Translate rail, inspector, door, fixed-room, Preboss, completion, Hub,
-  removal, repair, finding, and candidate-explanation copy.
+  removal and repair action labels, finding, and candidate-explanation copy.
 - Remove raw projection-source and topology-state enum values from rendered and
   accessible UI.
 - Keep visible labels, accessible names, and finding destinations consistent.
@@ -394,7 +395,8 @@ Across the shared workspace:
 - No representative render exposes raw `authored`, `canonical`, or
   `progressive` projection sources or raw topology-state chips; legitimate
   product status such as `Complete · Valid` remains.
-- Removal summaries remain exact while naming rooms, doors, and later choices.
+- Danger actions retain player-facing labels without restoring removed
+  removal-summary or confirmation copy.
 - Internal types, commands, semantic addresses, persistence, simulation,
   candidate support, and data attributes are unchanged.
 - Tests assert intended surface copy; no repository-wide forbidden-word test,
@@ -505,16 +507,14 @@ structure or interaction ownership.
 Likely files:
 
 - `apps/planner/src/ui/shell/App.tsx`;
-- `apps/planner/src/ui/feedback/EvaluationFeedback.tsx`;
 - `apps/planner/src/projections/evaluationProjection.ts`;
 - `apps/planner/src/projections/contextualOptions.ts`;
-- `apps/planner/src/projections/structured-workspace/presentation/biome-presentation.ts`
-  for rail and Hub labels;
 - `apps/planner/src/projections/structured-workspace/assembly/decision-assembly.ts`
   for evidence-backed door and prerequisite messages;
-- `apps/planner/src/projections/structured-workspace/assembly/occurrence-assembly.ts`
-  for room-local summaries and labels;
-- shared biome, decision, Hub, occurrence, and removal-presentation components;
+- `apps/planner/src/projections/structured-workspace/interactions/interaction-binding.ts`
+  for fixed-next-room and Preboss interaction copy;
+- shared biome, decision, Hub, occurrence, and removal-action presentation
+  components;
 - focused shell, workspace, feedback, candidate, and product fixtures;
 - `EDITOR_MODEL.md`, README, audit, and progress closure.
 
