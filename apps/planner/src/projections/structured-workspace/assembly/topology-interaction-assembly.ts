@@ -3,7 +3,6 @@ import {
   fixedWidthOneTakeoverTransitionForSource,
   semanticAddressKey,
   type ExitDecision,
-  type ExitDecisionAddress,
   type ExitDecisionSourceAddress,
   type OccurrenceId,
 } from '@run-planner/engine/authored-project';
