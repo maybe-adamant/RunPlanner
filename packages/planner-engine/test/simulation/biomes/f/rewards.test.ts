@@ -542,6 +542,11 @@ describe('F reward-history simulation', () => {
     if (batch?.kind !== 'batch') throw new Error('ratio fixture lost its third batch');
 
     expect(result.rewards.validity).toBe('valid');
+    expect(batch.rewardStore).toMatchObject({
+      baseRewardStoreKey: 'MetaProgress',
+      kind: 'authoredBaseStore',
+    });
+    expect(batch.resolvedSharedRewardStoreKey).toBe('RunProgress');
     expect(batch.targets.map((target) => target.room.incomingReward?.resolvedStoreKey)).toEqual([
       'RunProgress',
       'RunProgress',

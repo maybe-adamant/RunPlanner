@@ -211,6 +211,8 @@ export interface CanonicalBatch {
   readonly source: ExitDecisionSourceAddress;
   readonly parent: CanonicalDecisionParent;
   readonly rewardStore: CanonicalBatchRewardStore;
+  /** Final shared store after declaration-owned forced stores run in physical order. */
+  readonly resolvedSharedRewardStoreKey?: string;
   readonly batchState: CanonicalBatchState;
   readonly targets: readonly CanonicalTarget[];
   /**

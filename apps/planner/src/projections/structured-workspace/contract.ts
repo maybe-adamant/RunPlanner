@@ -632,6 +632,11 @@ export interface WorkspaceFieldsBatchContext {
   };
 }
 
+export interface WorkspaceEffectiveRewardStore {
+  readonly label: string;
+  readonly storeKey: string;
+}
+
 export interface WorkspaceLinkedExitNode {
   readonly kind: 'linkedExit';
   readonly key: string;
@@ -643,6 +648,8 @@ export interface WorkspaceLinkedExitNode {
 
 interface WorkspaceBatchNodeBase {
   readonly batchState: CanonicalBatch['batchState'] | AuthoredBatchState;
+  /** Present only when a forced room changes an evaluated authored base store. */
+  readonly effectiveRewardStore?: WorkspaceEffectiveRewardStore;
   readonly fields?: WorkspaceFieldsBatchContext;
   readonly fieldsCageOutcome?: WorkspaceMarker;
   readonly key: string;

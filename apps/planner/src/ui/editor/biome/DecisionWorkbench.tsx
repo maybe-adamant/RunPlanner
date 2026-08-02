@@ -372,7 +372,7 @@ function BatchSettings({
         <CandidateSelect
           id={`${node.key}-reward-store`}
           interaction={store}
-          label="Reward pool"
+          label="Base reward pool"
           onReplace={(storeKey) => {
             const rewardStore = batchRewardStoreAddress(node.rewardStore!);
             dispatch(
@@ -385,6 +385,13 @@ function BatchSettings({
           }}
           placeholder="Select pool"
         />
+      )}
+      {node.effectiveRewardStore === undefined ? null : (
+        <div className="effective-reward-store" role="status">
+          <span>Effective reward pool</span>
+          <strong>{node.effectiveRewardStore.label}</strong>
+          <p>A forced room in this decision overrides the base pool.</p>
+        </div>
       )}
       {fields === undefined ? null : (
         <CandidateSelect

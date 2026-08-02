@@ -853,7 +853,8 @@ owns the base store only under the authored-base-store policy; a
 source-offer-point policy reads the room-owned store without moving its
 authority. Each room occurrence owns only its concrete authored reward.
 Canonical materialization
-records the resolved `{ storeKey, reward }` offer for every rewarding target,
+publishes the final shared store on the batch and records the resolved
+`{ storeKey, reward }` offer for every rewarding target,
 including fixed producers whose resolved store still contributes to later
 entered-room store-ratio history. A target with no producer and no resolved
 store emits no reward offer.

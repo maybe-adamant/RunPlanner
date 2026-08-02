@@ -308,6 +308,7 @@ describe('structured workspace decision assembly', () => {
     }
 
     expect(assembly.batch.fieldsCageOutcome).toBeDefined();
+    expect(assembly.batch.effectiveRewardStore).toBeUndefined();
     expect(assembly.batch.fields).toMatchObject({
       cageOutcome: 'min',
       cageTargetCount: 1,
@@ -318,6 +319,43 @@ describe('structured workspace decision assembly', () => {
       true,
       false,
     ]);
+  });
+
+  it('projects a forced final shared store separately from the authored base store', () => {
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'F');
+    const decision = batchDecisionAt(source, goldenFOccurrenceId(4, 1));
+    if (
+      decision.normal.rewardStore.kind !== 'authoredBaseStore' ||
+      decision.normal.rewardStore.baseRewardStoreKey !== 'MetaProgress'
+    ) {
+      throw new Error('F reward-store fixture lost its authored Minor Reward batch');
+    }
+    const owner = createExitDecisionAddress(goldenFBiome, decision.source);
+    const evaluated = source.evaluatedBatch(owner);
+    if (evaluated === undefined) throw new Error('F reward-store fixture is not evaluated');
+    const overridden: WorkspaceEvaluatedBatchOverlay = Object.freeze({
+      ...evaluated,
+      batch: Object.freeze({
+        ...evaluated.batch,
+        resolvedSharedRewardStoreKey: 'RunProgress',
+      }),
+    });
+    const kit = decisionKit(source);
+    const assembly = assembleWorkspaceDecision({
+      assembleOccurrence: kit.assembleOccurrence,
+      catalog,
+      decision,
+      evaluated: overridden,
+      kind: 'batch',
+      markerDestinations: kit.markers.emitter,
+      source,
+    });
+    if (assembly.kind !== 'batch') throw new Error('F reward-store decision is not a batch');
+
+    expect(assembly.batch.effectiveRewardStore).toEqual({
+      label: 'Major Reward',
+      storeKey: 'RunProgress',
+    });
   });
 
   it('keeps authored-active Fields cages reachable beyond a clamped target overlay', () => {

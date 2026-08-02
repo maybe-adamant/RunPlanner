@@ -349,6 +349,10 @@ because the room and incoming reward jointly describe the offered door.
 Single-choice controls live on those cards, and the picked card receives the
 strongest emphasis because it is the authored selected route. Evaluated entry
 is shown separately when materialization has actually reached that room.
+For an authored RunProgress/MetaProgress decision, the batch control is labeled
+as the base reward pool. When a declaration-owned forced room changes the
+evaluated final shared pool, the decision also presents that effective pool and
+briefly identifies the forced-room override; React does not derive the result.
 
 Unpicked targets remain fully visible in the decision workbench because they
 still affect reward bags, sibling conflicts, source support, and possibility
