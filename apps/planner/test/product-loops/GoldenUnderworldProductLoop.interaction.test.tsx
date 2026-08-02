@@ -386,7 +386,11 @@ describe('underworld product loop', () => {
     const hubSlot = screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement;
     act(() => hubSlot.focus());
     await view.user.keyboard('[Space]');
-    await waitFor(() => expect(hubSlot.checked).toBe(true));
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement).checked,
+      ).toBe(true),
+    );
 
     await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
     const pStructure = screen.getByRole('region', { name: 'Olympus route structure' });

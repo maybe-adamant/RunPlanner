@@ -284,7 +284,11 @@ describe('surface product loop', () => {
     act(() => checkbox.focus());
     await view.user.keyboard('[Space]');
 
-    await waitFor(() => expect(checkbox.checked).toBe(false));
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('checkbox', { name: 'Combat 03 open' }) as HTMLInputElement).checked,
+      ).toBe(false),
+    );
     const topology = currentProject(application)
       .routes.find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
@@ -363,8 +367,16 @@ describe('surface product loop', () => {
       name: 'Combat 04 open',
     }) as HTMLInputElement;
     await view.user.pointer({ keys: '[MouseLeft]', target: checkbox });
-    await waitFor(() => expect(checkbox.checked).toBe(true));
-    expect(within(card).queryByText(/Closing this slot removes/)).toBeNull();
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement).checked,
+      ).toBe(true),
+    );
+    expect(
+      within(screen.getByRole('article', { name: 'Combat 04 Hub room' })).queryByText(
+        /Closing this slot removes/,
+      ),
+    ).toBeNull();
     const hub = application.store
       .getState()
       .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
@@ -384,10 +396,16 @@ describe('surface product loop', () => {
 
     const historyBeforeClose = application.store.getState().projectWorkspace.history.past.length;
     dispatch.mockClear();
-    act(() => checkbox.focus());
+    act(() =>
+      (screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement).focus(),
+    );
     await view.user.keyboard('[Space]');
 
-    await waitFor(() => expect(checkbox.checked).toBe(false));
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement).checked,
+      ).toBe(false),
+    );
     expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBeforeClose + 1,
     );

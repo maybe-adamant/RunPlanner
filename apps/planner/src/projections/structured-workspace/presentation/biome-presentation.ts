@@ -74,12 +74,11 @@ function nodeRailPresentation(
 }
 
 /**
- * The rail describes an authored target even when evaluation has not reached
- * it. Only direct one-reward room surfaces opt into the compact reward token;
- * other room-local products retain their selected-room context without an
- * ambiguous rail summary.
+ * The rail describes authored primary-room context even when evaluation has
+ * not reached it. Ephyra's incoming reward is one explicit main reward;
+ * side-room offers remain local detail and never become an aggregate token.
  */
-function railRewardForRoom(
+function mainRailRewardForRoom(
   catalog: Catalog,
   room: WorkspaceRoomSummary,
 ): WorkspaceRailReward | undefined {
@@ -95,8 +94,12 @@ function railRewardForRoom(
         label: summarizeRewardOffer(catalog, room.roomLocal.control.offer),
         offer: room.roomLocal.control.offer,
       });
-    case 'none':
     case 'ephyra':
+      return Object.freeze({
+        label: summarizeRewardOffer(catalog, room.roomLocal.incomingReward.offer),
+        offer: room.roomLocal.incomingReward.offer,
+      });
+    case 'none':
     case 'fields':
     case 'ship':
     case 'shop':
@@ -116,7 +119,7 @@ function selectedTargetRailPresentation(
       `${node.key} has no selected target after cardinality check`,
     );
   }
-  const reward = railRewardForRoom(catalog, target.room);
+  const reward = mainRailRewardForRoom(catalog, target.room);
   return Object.freeze({
     ...(reward === undefined ? {} : { reward }),
     roomLabel: target.room.label,
@@ -129,6 +132,7 @@ function selectedTargetRailPresentation(
  * React join visits to occurrences or infer which Hub rooms are shown.
  */
 function projectHubRailEntry(
+  catalog: Catalog,
   node: WorkspaceHubDecisionNode,
   structuralNodes: readonly WorkspaceNode[],
 ): WorkspaceHubRailEntry {
@@ -159,10 +163,12 @@ function projectHubRailEntry(
         `Hub visit ${visit.visitIndex} must use a room-local workbench presentation`,
       );
     }
+    const mainReward = mainRailRewardForRoom(catalog, workbench.room);
     visits.push(
       Object.freeze({
         key: `${node.key}:visit:${visit.visitIndex}`,
         label: `Visit ${visit.visitIndex} · ${visit.room.label}`,
+        ...(mainReward === undefined ? {} : { mainReward }),
         marker: workbench.room.marker,
         node: workbench,
         visitIndex: visit.visitIndex,
@@ -254,7 +260,7 @@ export function presentWorkspaceBiome(
       : undefined;
   let decisionIndex = 0;
   const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry => {
-    if (node.kind === 'hubDecision') return projectHubRailEntry(node, structuralNodes);
+    if (node.kind === 'hubDecision') return projectHubRailEntry(catalog, node, structuralNodes);
     if (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') {
       decisionIndex += 1;
       const presentation = nodeRailPresentation(node, decisionIndex, node.key === entry?.key);
@@ -269,10 +275,15 @@ export function presentWorkspaceBiome(
       });
     }
     const presentation = nodeRailPresentation(node, undefined, node.key === entry?.key);
+    const mainReward =
+      semantic.progressionKind === 'hub' && node.kind === 'occurrenceWorkbench'
+        ? mainRailRewardForRoom(catalog, node.room)
+        : undefined;
     return Object.freeze({
       kind: 'node' as const,
       key: node.key,
       label: presentation.label,
+      ...(mainReward === undefined ? {} : { mainReward }),
       marker: node.kind === 'takeoverBatch' ? decisionRailMarker(node) : railMarkerForNode(node),
       node,
     });

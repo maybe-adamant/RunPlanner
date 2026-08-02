@@ -74,10 +74,23 @@ export function assertFineGrainedFindingDestination(
   }
 }
 
+function assertFindingDestination(
+  origin: SemanticAddress,
+  destination: WorkspaceInspectorDestination | undefined,
+): void {
+  const key = semanticAddressKey(origin);
+  if (destination === undefined || semanticAddressKey(destination.ownerAddress) !== key) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${key} finding has no exact workspace destination`,
+    );
+  }
+}
+
 /**
  * Findings are routed only after every route has published its final inspector
- * destinations. Coarse owners intentionally inherit their biome shell;
- * fine-grained owners are verified above and never acquire that fallback.
+ * destinations. Every live finding must retain an exact destination;
+ * coarse owners may inherit their biome shell while fine-grained owners are
+ * verified above and never acquire that fallback.
  */
 export function registerWorkspaceFindingDestinations(
   findings: readonly SemanticFinding[],
@@ -91,28 +104,38 @@ export function registerWorkspaceFindingDestinations(
       assertFineGrainedFindingDestination(finding.origin, existing, routes);
       continue;
     }
-    if (existing !== undefined) continue;
-    if (!('routeKey' in finding.origin) || !('biomeKey' in finding.origin)) continue;
+    if (existing !== undefined) {
+      assertFindingDestination(finding.origin, existing);
+      continue;
+    }
+    if (!('routeKey' in finding.origin) || !('biomeKey' in finding.origin)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} finding has no exact workspace destination`,
+      );
+    }
     const biome = createBiomeAddress(finding.origin.routeKey, finding.origin.biomeKey);
     const fallback = focusByOwner.get(semanticAddressKey(biome));
-    if (fallback === undefined) continue;
+    if (fallback === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} finding has no exact workspace destination`,
+      );
+    }
     // A coarse finding uses the biome's inspector fallback, but it is still an
     // explicit owner. Do not inherit a no-focus rail selection from the biome
     // shell (notably its active start frontier).
-    focusByOwner.set(
-      key,
-      Object.freeze({
-        ...(fallback.biomeKey === undefined ? {} : { biomeKey: fallback.biomeKey }),
-        focusAddress: fallback.focusAddress,
-        focusKey: fallback.focusKey,
-        ...(fallback.inspectorSubject === undefined
-          ? {}
-          : { inspectorSubject: fallback.inspectorSubject }),
-        nodeKey: fallback.nodeKey,
-        ownerAddress: finding.origin,
-        region: fallback.region,
-        ...(fallback.routeKey === undefined ? {} : { routeKey: fallback.routeKey }),
-      }),
-    );
+    const destination = Object.freeze({
+      ...(fallback.biomeKey === undefined ? {} : { biomeKey: fallback.biomeKey }),
+      focusAddress: fallback.focusAddress,
+      focusKey: fallback.focusKey,
+      ...(fallback.inspectorSubject === undefined
+        ? {}
+        : { inspectorSubject: fallback.inspectorSubject }),
+      nodeKey: fallback.nodeKey,
+      ownerAddress: finding.origin,
+      region: fallback.region,
+      ...(fallback.routeKey === undefined ? {} : { routeKey: fallback.routeKey }),
+    });
+    focusByOwner.set(key, destination);
+    assertFindingDestination(finding.origin, destination);
   }
 }

@@ -4,6 +4,7 @@ import { createApplication } from '@planner/composition/createApplication';
 import type { WorkspaceCommandIntent } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { createRouteAddress } from '@run-planner/engine/authored-project';
 
 import { dispatchCommandIntent } from './useCommandIntent';
 
@@ -15,7 +16,7 @@ describe('command-intent dispatch adapter', () => {
   ])('dispatches declared $timing focus in exact order', ({ expected, timing }) => {
     const application = createApplication();
     const dispatch = vi.spyOn(application.store, 'dispatch');
-    const owner = { kind: 'project' as const };
+    const owner = createRouteAddress('Underworld');
     const intent: WorkspaceCommandIntent = Object.freeze({
       command: Object.freeze({
         kind: 'RenameProject' as const,
@@ -40,7 +41,7 @@ describe('command-intent dispatch adapter', () => {
     const application = createApplication();
     const before = application.store.getState().projectWorkspace.history;
     const dispatch = vi.spyOn(application.store, 'dispatch');
-    const owner = { kind: 'project' as const };
+    const owner = createRouteAddress('Underworld');
 
     dispatchCommandIntent(application.store.dispatch, {
       command: { kind: 'RenameProject', name: before.present.name },

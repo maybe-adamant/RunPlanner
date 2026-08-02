@@ -19,6 +19,7 @@ import {
 } from '../persistence/autosaveRecovery';
 import { createEditorNavigation } from '../projections/editorNavigation';
 import { createInitialProject } from './projectBootstrap';
+import { createEditorSessionReconciliationCoordinator } from '../workspace/editorSessionReconciliation';
 import { createProjectOperations } from '../workspace/projectOperations';
 import { allocateOccurrenceId, type OccurrenceIdFactory } from '../workspace/occurrenceIds';
 import {
@@ -88,6 +89,10 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     initialProfileSession: startup.profileSession,
     initialProject: startup.project,
   });
+  const editorSessionReconciliation = createEditorSessionReconciliationCoordinator({
+    store,
+    structuredWorkspace,
+  });
   const projectOperations = createProjectOperations({
     ...(options.autosaveRecovery === undefined
       ? {}
@@ -117,6 +122,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     selectStructuredWorkspace,
     structuredWorkspace,
     dispose(): void {
+      editorSessionReconciliation.dispose();
       autosaveCoordinator?.dispose();
     },
   };

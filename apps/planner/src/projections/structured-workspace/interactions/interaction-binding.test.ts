@@ -119,7 +119,6 @@ describe('structured workspace interaction binding', () => {
         occurrenceId: createOccurrenceId('bound-hub-opening-1'),
         slot: slot.owner,
       },
-      focus: { owner: slot.owner, timing: 'before' },
     });
     expect(allocated).toHaveLength(1);
 
@@ -148,7 +147,6 @@ describe('structured workspace interaction binding', () => {
     if (closeCandidate === undefined) throw new Error('Hub closure candidate is missing');
     expect(opened.close.intentFor(false)).toEqual({
       command: { kind: 'CloseHubSlot', slot: opened.owner },
-      focus: { owner: opened.owner, timing: 'before' },
     });
 
     const replace = [...interactions.hubVisits.values()].find(

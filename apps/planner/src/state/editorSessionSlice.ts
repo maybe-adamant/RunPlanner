@@ -7,6 +7,12 @@ export interface FindingSelection {
   readonly origin: SemanticAddress;
 }
 
+/** Transient navigation references invalidated by one workspace publication. */
+export interface EditorSessionReconciliation {
+  readonly clearFocusedSemanticOwner: boolean;
+  readonly clearSelectedFinding: boolean;
+}
+
 export interface RoutePanelSelection {
   readonly routeKey: string;
   readonly biomeKey: string | null;
@@ -68,10 +74,19 @@ const editorSessionSlice = createSlice({
       state.activeRouteKey = route;
       state.activeBiomeKeyByRoute[route] = biomeKey(action.payload.origin);
     },
+    editorSessionReconciled(state, action: PayloadAction<EditorSessionReconciliation>) {
+      if (action.payload.clearFocusedSemanticOwner) {
+        state.focusedSemanticOwner = null;
+      }
+      if (action.payload.clearSelectedFinding) {
+        state.selectedFinding = null;
+      }
+    },
   },
 });
 
 export const {
+  editorSessionReconciled,
   findingSelected,
   routePanelSelected,
   routeSelected,
