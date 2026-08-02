@@ -8,6 +8,9 @@ import type {
   OccurrenceId,
 } from '../model';
 
+/** The selected-spine queries need no occurrence-local state. */
+export type SelectedSpineTopology = Pick<BiomeTopology, 'startOccurrenceId' | 'decisions'>;
+
 /**
  * One declaration-owned physical exit resolved for an authored decision
  * source. The semantic kind keeps linked and completed-Hub endpoints from
@@ -96,7 +99,7 @@ function sameSource(left: ExitDecisionSource, right: ExitDecisionSource): boolea
 
 /** Returns the optional authored exit decision owned by one exact source. */
 export function exitDecisionForSource(
-  topology: BiomeTopology,
+  topology: Pick<BiomeTopology, 'decisions'>,
   source: ExitDecisionSource,
 ): ExitDecision | undefined {
   return topology.decisions.find(
@@ -126,7 +129,7 @@ export function selectedExitTarget(
  * instead advances through the selected ordinary-batch spine from the start.
  */
 export function selectedOrdinaryBatchIndex(
-  topology: BiomeTopology,
+  topology: SelectedSpineTopology,
   sourceOccurrenceId: OccurrenceId,
 ): number | undefined {
   let currentOccurrenceId = topology.startOccurrenceId;
@@ -150,6 +153,49 @@ export function selectedOrdinaryBatchIndex(
     currentOccurrenceId = target.occurrenceId;
   }
   return undefined;
+}
+
+/**
+ * Fixed and staged declarations own their terminal ordinary ordinal directly;
+ * eligibility-driven layouts use their declared generated capacity.  This is
+ * intentionally separate from the persisted zero-target envelope shape.
+ */
+export function ordinaryProgressionBatchLimit(layout: BiomeLayout): number | undefined {
+  if (layout.progression.kind !== 'generated') return undefined;
+  const policy = layout.progression.progressionPolicy;
+  if (policy.kind === 'fixedCount') return policy.continuationCount;
+  if (policy.kind === 'staged') return policy.stages.length;
+  return layout.progression.bounds.maxBatches;
+}
+
+/**
+ * A generated decision with no targets is normally just the next uncommitted
+ * ordinary batch.  Once the ordinary bound is already realized, the catalog
+ * may still admit one such selected-spine envelope so a declaration-owned
+ * normal-door takeover Preboss can replace it atomically.  The zero-target
+ * shape itself is not a progression unit.
+ */
+export function admitsTerminalTakeoverEnvelope(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: SelectedSpineTopology,
+  source: ExitDecisionSource,
+): boolean {
+  if (layout.progression.kind !== 'generated' || source.kind !== 'occurrence') return false;
+  const terminalOrdinal = ordinaryProgressionBatchLimit(layout);
+  if (
+    terminalOrdinal === undefined ||
+    selectedOrdinaryBatchIndex(topology, source.occurrenceId) !== terminalOrdinal
+  ) {
+    return false;
+  }
+  return catalog.rooms.values.some(
+    (room) =>
+      room.biomeKey === layout.biomeKey &&
+      room.mode.kind === 'authored' &&
+      room.kind === 'Preboss' &&
+      room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
+  );
 }
 
 /**

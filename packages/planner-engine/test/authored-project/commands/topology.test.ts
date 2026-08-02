@@ -433,6 +433,138 @@ describe('authored-project commands and topology', () => {
     ).toThrow(ProjectCommandContractError);
   });
 
+  it('replaces a normal batch with a takeover while retaining physical doors and pruning its subtree', () => {
+    const openingId = createOccurrenceId('replace-preboss-opening');
+    const sourceId = createOccurrenceId('replace-preboss-source');
+    const existingId = createOccurrenceId('replace-preboss-existing');
+    const peerId = createOccurrenceId('replace-preboss-peer');
+    const descendantId = createOccurrenceId('replace-preboss-descendant');
+    let project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: openingId,
+      gameName: 'F_Opening01',
+    });
+    const openingDecision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: openingId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: openingDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, openingDecision.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, openingDecision.source, 'exit1'),
+      occurrenceId: sourceId,
+      gameName: 'F_Combat02',
+    });
+    const sourceDecision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: sourceId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: sourceDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, sourceDecision.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, sourceDecision.source, 'exit1'),
+      occurrenceId: existingId,
+      gameName: 'F_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, sourceDecision.source, 'exit2'),
+      occurrenceId: peerId,
+      gameName: 'F_Combat03',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, sourceDecision.source),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    const descendantDecision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: existingId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: descendantDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, descendantDecision.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, descendantDecision.source, 'exit1'),
+      occurrenceId: descendantId,
+      gameName: 'F_Combat03',
+    });
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceWithTakeoverBatch',
+      decision: sourceDecision,
+      gameName: 'F_PreBoss01',
+      targetOccurrenceIds: { exit1: existingId, exit2: peerId },
+    });
+
+    const topology = fTopology(project);
+    expect(
+      topology.decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === sourceId,
+      ),
+    ).toMatchObject({
+      normal: {
+        targets: [
+          { exitKey: 'exit1', occurrenceId: existingId },
+          { exitKey: 'exit2', occurrenceId: peerId },
+        ],
+      },
+      selection: { kind: 'normal', exitKey: 'exit1' },
+    });
+    expect(topology.occurrences).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          gameName: 'F_PreBoss01',
+          occurrenceId: existingId,
+          state: expect.objectContaining({ kind: 'shop', shop: expect.any(Object) }),
+        }),
+        expect.objectContaining({
+          gameName: 'F_PreBoss01',
+          occurrenceId: peerId,
+          state: expect.objectContaining({ kind: 'freeReward' }),
+        }),
+      ]),
+    );
+    expect(
+      topology.decisions.some(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === existingId,
+      ),
+    ).toBe(false);
+    expect(
+      topology.occurrences.some((occurrence) => occurrence.occurrenceId === descendantId),
+    ).toBe(false);
+  });
+
   it('derives N fixed start identity and progressively creates linked PreHub, Hub, and its width-one exit', () => {
     expect(() =>
       applyProjectCommand(nProject(), catalog, {

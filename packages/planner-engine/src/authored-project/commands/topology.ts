@@ -23,8 +23,10 @@ import type {
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import {
+  admitsTerminalTakeoverEnvelope,
   declaredPhysicalExitKeys,
   exitDecisionForSource,
+  ordinaryProgressionBatchLimit,
   selectedExitKey,
   selectedOrdinaryBatchIndex,
 } from '../topology/query';
@@ -53,6 +55,47 @@ function sourceFromAddress(source: ExitDecisionSourceAddress): ExitDecisionSourc
   return source.kind === 'occurrence'
     ? Object.freeze({ kind: 'occurrence', occurrenceId: source.occurrenceId })
     : Object.freeze({ kind: 'hubDecision', decisionKey: source.decisionKey });
+}
+
+function batchTakesOverNormalDoors(
+  catalog: Catalog,
+  topology: BiomeTopology,
+  decision: ExitDecision,
+): boolean {
+  return (
+    decision.normal.kind === 'batch' &&
+    decision.normal.targets.some((target) => {
+      const occurrence = topology.occurrences.find(
+        (candidate) => candidate.occurrenceId === target.occurrenceId,
+      );
+      return (
+        occurrence !== undefined &&
+        catalog.rooms.byKey[occurrence.gameName]?.prebossBatchPolicy?.kind === 'takeOverNormalDoors'
+      );
+    })
+  );
+}
+
+function realizedOrdinaryBatchCount(catalog: Catalog, topology: BiomeTopology): number {
+  return topology.decisions.filter(
+    (decision): decision is ExitDecision =>
+      decision.kind === 'exit' &&
+      decision.normal.kind === 'batch' &&
+      decision.normal.targets.length > 0 &&
+      !batchTakesOverNormalDoors(catalog, topology, decision),
+  ).length;
+}
+
+function realizedOrdinaryTargetCount(catalog: Catalog, topology: BiomeTopology): number {
+  return topology.decisions.reduce(
+    (count, decision) =>
+      decision.kind === 'exit' &&
+      decision.normal.kind === 'batch' &&
+      !batchTakesOverNormalDoors(catalog, topology, decision)
+        ? count + decision.normal.targets.length
+        : count,
+    0,
+  );
 }
 
 function exitKeysForSource(
@@ -366,11 +409,18 @@ function createBatch(
   const room = sourceRoom(catalog, located, command.decision.source, command);
   if (room?.kind === 'Preboss')
     failCommand(command, 'a selected Preboss closes editable traversal');
+  const ordinaryBatchLimit = ordinaryProgressionBatchLimit(located.layout);
+  if (ordinaryBatchLimit === undefined) {
+    failCommand(command, 'ordinary normal-door batches require generated progression');
+  }
   if (
-    located.layout.progression.kind === 'generated' &&
-    topology.decisions.filter(
-      (decision) => decision.kind === 'exit' && decision.normal.kind === 'batch',
-    ).length >= located.layout.progression.bounds.maxBatches
+    realizedOrdinaryBatchCount(catalog, topology) >= ordinaryBatchLimit &&
+    !admitsTerminalTakeoverEnvelope(
+      catalog,
+      located.layout,
+      topology,
+      sourceFromAddress(command.decision.source),
+    )
   ) {
     failCommand(command, 'generated progression has reached its declaration-owned batch bound');
   }
@@ -407,6 +457,9 @@ function createTarget(
   }
   const decision = exitDecisionForSource(topology, command.target.source);
   if (decision?.normal.kind !== 'batch') failCommand(command, 'normal-door batch does not exist');
+  if (batchTakesOverNormalDoors(catalog, topology, decision)) {
+    failCommand(command, 'takeover Preboss batches cannot receive ordinary targets');
+  }
   const allowed = exitKeysForSource(catalog, located, command.target.source, command);
   if (!allowed.includes(command.target.exitKey))
     failCommand(command, `${command.target.exitKey} is not declared by this source`);
@@ -430,15 +483,16 @@ function createTarget(
   ) {
     failCommand(command, `${room.gameName} may appear only once in one normal-door batch`);
   }
+  const ordinaryBatchLimit = ordinaryProgressionBatchLimit(located.layout);
   if (
-    located.layout.progression.kind === 'generated' &&
-    topology.decisions.reduce(
-      (count, candidate) =>
-        candidate.kind === 'exit' && candidate.normal.kind === 'batch'
-          ? count + candidate.normal.targets.length
-          : count,
-      0,
-    ) >= located.layout.progression.bounds.maxTargets
+    ordinaryBatchLimit === undefined ||
+    (decision.normal.targets.length === 0 &&
+      realizedOrdinaryBatchCount(catalog, topology) >= ordinaryBatchLimit)
+  ) {
+    failCommand(command, 'generated progression has reached its declaration-owned batch bound');
+  }
+  if (
+    realizedOrdinaryTargetCount(catalog, topology) >= located.layout.progression.bounds.maxTargets
   ) {
     failCommand(command, 'generated progression has reached its declaration-owned target bound');
   }

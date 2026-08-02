@@ -16,7 +16,12 @@ import type {
 } from '../model';
 import { decodeRoomState } from '../room-state/codec';
 import type { RoomOccurrenceRole } from '../room-state/declaration';
-import { selectedExitKey } from './query';
+import {
+  admitsTerminalTakeoverEnvelope,
+  ordinaryProgressionBatchLimit,
+  selectedExitKey,
+  selectedOrdinaryBatchIndex,
+} from './query';
 import {
   expectArray,
   expectExactKeys,
@@ -319,6 +324,10 @@ function validateStagedSelections(
       continue;
     }
     if (isTakeoverBatch(decision, occurrences, catalog, layout.biomeKey)) return;
+    // An empty decision is an authored envelope, not an ordinary stage. It
+    // remains the active frontier until its first ordinary target exists (or a
+    // takeover atomically replaces it).
+    if (decision.normal.targets.length === 0) return;
     const stage = layout.progression.progressionPolicy.stages[batchIndex];
     if (stage === undefined) {
       failProjectDocument(path, 'exceeds the declared staged normal-door progression');
@@ -340,6 +349,58 @@ function validateStagedSelections(
     sourceOccurrenceId = decision.normal.targets.find(
       (target) => target.exitKey === selected,
     )?.occurrenceId;
+  }
+}
+
+function validateGeneratedProgressionBounds(
+  decisions: readonly NextRoomDecision[],
+  occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
+  catalog: Catalog,
+  layout: BiomeLayout,
+  startOccurrenceId: OccurrenceId,
+  path: string,
+): void {
+  if (layout.progression.kind !== 'generated') return;
+  const selectedSpine = Object.freeze({
+    startOccurrenceId,
+    decisions: Object.freeze([...decisions]),
+  });
+  const ordinaryBatchLimit = ordinaryProgressionBatchLimit(layout);
+  if (ordinaryBatchLimit === undefined) return;
+  const ordinaryBatches = decisions.filter(
+    (decision): decision is ExitDecision =>
+      decision.kind === 'exit' &&
+      decision.normal.kind === 'batch' &&
+      decision.normal.targets.length > 0 &&
+      !isTakeoverBatch(decision, occurrences, catalog, layout.biomeKey),
+  );
+  const ordinaryTargetCount = ordinaryBatches.reduce(
+    (count, decision) =>
+      count + (decision.normal.kind === 'batch' ? decision.normal.targets.length : 0),
+    0,
+  );
+  if (ordinaryBatches.length > ordinaryBatchLimit) {
+    failProjectDocument(`${path}.decisions`, `exceeds ${ordinaryBatchLimit} generated batches`);
+  }
+  if (ordinaryTargetCount > layout.progression.bounds.maxTargets) {
+    failProjectDocument(
+      `${path}.decisions`,
+      `exceeds ${layout.progression.bounds.maxTargets} generated targets`,
+    );
+  }
+  for (const decision of decisions) {
+    if (
+      decision.kind !== 'exit' ||
+      decision.normal.kind !== 'batch' ||
+      decision.normal.targets.length !== 0 ||
+      decision.source.kind !== 'occurrence'
+    ) {
+      continue;
+    }
+    const ordinal = selectedOrdinaryBatchIndex(selectedSpine, decision.source.occurrenceId);
+    if (ordinal === undefined || ordinal < ordinaryBatchLimit) continue;
+    if (admitsTerminalTakeoverEnvelope(catalog, layout, selectedSpine, decision.source)) continue;
+    failProjectDocument(`${path}.decisions`, `exceeds ${ordinaryBatchLimit} generated batches`);
   }
 }
 
@@ -730,36 +791,14 @@ export function decodeBiomeTopology(
     decisionSources.add(identity);
     decisions.push(decision);
   }
-  if (layout.progression.kind === 'generated') {
-    const batches = decisions.filter(
-      (decision) =>
-        decision.kind === 'exit' &&
-        decision.normal.kind === 'batch' &&
-        !isTakeoverBatch(decision, occurrences, catalog, layout.biomeKey),
-    );
-    const targetCount = decisions.reduce(
-      (count, decision) =>
-        decision.kind === 'exit' &&
-        decision.normal.kind === 'batch' &&
-        !isTakeoverBatch(decision, occurrences, catalog, layout.biomeKey)
-          ? count + decision.normal.targets.length
-          : count,
-      0,
-    );
-    if (batches.length > layout.progression.bounds.maxBatches) {
-      failProjectDocument(
-        `${path}.decisions`,
-        `exceeds ${layout.progression.bounds.maxBatches} generated batches`,
-      );
-    }
-    if (targetCount > layout.progression.bounds.maxTargets) {
-      failProjectDocument(
-        `${path}.decisions`,
-        `exceeds ${layout.progression.bounds.maxTargets} generated targets`,
-      );
-    }
-  }
-
+  validateGeneratedProgressionBounds(
+    decisions,
+    occurrences,
+    catalog,
+    layout,
+    startOccurrenceId,
+    path,
+  );
   validateStagedSelections(decisions, occurrences, catalog, layout, startOccurrenceId, path);
   validateSelectedDecisionCycles(decisions, startOccurrenceId, path);
 

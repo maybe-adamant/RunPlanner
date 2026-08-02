@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
@@ -10,18 +11,25 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createProjectHistory,
   createRewardWheelOfferAddress,
   createTargetAddress,
+  semanticAddressKey,
   decodeProjectDocument,
   encodeProjectDocument,
   ProjectDocumentContractError,
+  redoProjectHistory,
   type ProjectDocument,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
+import { composeBiomeHistoryPrefix, materializeBiomePrefix } from '@run-planner/engine/simulation';
+import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 
 import { createCompleteNProject } from '../support/complete-n-project';
 
 const fBiome = createBiomeAddress('Underworld', 'F');
 const hBiome = createBiomeAddress('Underworld', 'H');
+const iBiome = createBiomeAddress('Underworld', 'I');
 const oBiome = createBiomeAddress('Surface', 'O');
 const qBiome = createBiomeAddress('Surface', 'Q');
 
@@ -78,6 +86,59 @@ function encodedTopology(
     topology,
     path: `$.routes[${routeIndex}].biomes[${biomeIndex}].topology`,
   };
+}
+
+function planFor(document: ProjectDocument, routeKey: 'Underworld' | 'Surface', biomeKey: string) {
+  const plan = document.routes
+    .find((route) => route.routeKey === routeKey)
+    ?.biomes.find((biome) => biome.biomeKey === biomeKey);
+  if (plan === undefined) throw new Error(`missing ${routeKey}/${biomeKey} plan`);
+  return plan;
+}
+
+function terminalEnvelope(
+  document: ProjectDocument,
+  biome: ReturnType<typeof createBiomeAddress>,
+  sourceOccurrenceId: string,
+): ProjectDocument {
+  const decision = createExitDecisionAddress(biome, {
+    kind: 'occurrence',
+    occurrenceId: createOccurrenceId(sourceOccurrenceId),
+  });
+  const withoutTakeover = applyProjectCommand(document, catalog, {
+    kind: 'RemoveExitDecision',
+    decision,
+  });
+  return applyProjectCommand(withoutTakeover, catalog, { kind: 'CreateBatch', decision });
+}
+
+function iAtOrdinaryBatchLimit(): {
+  readonly document: ProjectDocument;
+  readonly terminalSourceId: ReturnType<typeof createOccurrenceId>;
+} {
+  const startId = createOccurrenceId('codec-i-bound-start');
+  let document = applyProjectCommand(project('codec-i-bound', { Underworld: 4 }), catalog, {
+    kind: 'CreateStart',
+    biome: iBiome,
+    occurrenceId: startId,
+  });
+  let sourceId = startId;
+  for (let index = 1; index <= 13; index += 1) {
+    const decision = createExitDecisionAddress(iBiome, {
+      kind: 'occurrence',
+      occurrenceId: sourceId,
+    });
+    document = applyProjectCommand(document, catalog, { kind: 'CreateBatch', decision });
+    const targetId = createOccurrenceId(`codec-i-bound-${index}`);
+    document = applyProjectCommand(document, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(iBiome, decision.source, 'exit1'),
+      occurrenceId: targetId,
+      gameName: 'I_Combat01',
+    });
+    sourceId = targetId;
+  }
+  return Object.freeze({ document, terminalSourceId: sourceId });
 }
 
 function expectDocumentError(
@@ -457,6 +518,147 @@ describe('persisted authored topology codec', () => {
         ],
       },
     });
+  });
+
+  it.each([
+    ['H', 'Underworld', hBiome, completeHProject, 'complete-h-07', 'H_Combat02'],
+    ['O', 'Surface', oBiome, completeOProject, 'complete-o-6', 'O_Combat01'],
+    [
+      'Q',
+      'Surface',
+      qBiome,
+      createRepresentativeNOPQProject,
+      'surface-q-second-miniboss-1',
+      'Q_Combat10',
+    ],
+  ] as const)(
+    'retains the declaration-admitted terminal %s envelope outside realized ordinary progression',
+    (biomeKey, routeKey, biome, build, sourceOccurrenceId, ordinaryGameName) => {
+      const document = terminalEnvelope(build(), biome, sourceOccurrenceId);
+      const plan = planFor(document, routeKey, biomeKey);
+      const layout = catalog.biomeLayouts.byKey[biomeKey];
+      if (plan.topology === null || layout?.progression.kind !== 'generated') {
+        throw new Error(`missing generated ${biomeKey} terminal envelope`);
+      }
+      const decision = createExitDecisionAddress(biome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId(sourceOccurrenceId),
+      });
+      const envelope = plan.topology.decisions.find(
+        (candidate) =>
+          candidate.kind === 'exit' &&
+          semanticAddressKey(createExitDecisionAddress(biome, candidate.source)) ===
+            semanticAddressKey(decision),
+      );
+      const prefix = materializeBiomePrefix(catalog, biome, plan);
+      if (prefix === null) throw new Error(`missing ${biomeKey} terminal prefix`);
+      const history = composeBiomeHistoryPrefix(catalog, prefix);
+
+      expect(envelope).toMatchObject({
+        normal: { kind: 'batch', targets: [] },
+        selection: { kind: 'unresolved' },
+      });
+      expect(decodeProjectDocument(encodedProject(document), catalog)).toEqual(document);
+      expect(prefix.decisions.filter((candidate) => candidate.kind === 'batch')).toHaveLength(
+        layout.progression.bounds.maxBatches,
+      );
+      expect(prefix.frontier).toMatchObject({
+        kind: 'exitDecision',
+        origin: decision,
+        targets: [],
+      });
+      expect(prefix.frontier).not.toHaveProperty('partialBatch');
+      expect(
+        history?.events.some(
+          (event) => semanticAddressKey(event.origin) === semanticAddressKey(decision),
+        ),
+      ).toBe(false);
+      expect(() =>
+        applyProjectCommand(document, catalog, {
+          kind: 'CreateTarget',
+          target: createTargetAddress(biome, decision.source, 'exit1'),
+          occurrenceId: createOccurrenceId(`over-bound-${biomeKey.toLowerCase()}-ordinary`),
+          gameName: ordinaryGameName,
+        }),
+      ).toThrowError(
+        expect.objectContaining({
+          detail: 'generated progression has reached its declaration-owned batch bound',
+        }),
+      );
+    },
+  );
+
+  it('rejects a raw over-bound I envelope although it has no realized target', () => {
+    const { document, terminalSourceId } = iAtOrdinaryBatchLimit();
+    const terminalDecision = createExitDecisionAddress(iBiome, {
+      kind: 'occurrence',
+      occurrenceId: terminalSourceId,
+    });
+    expect(() =>
+      applyProjectCommand(document, catalog, {
+        kind: 'CreateBatch',
+        decision: terminalDecision,
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        detail: 'generated progression has reached its declaration-owned batch bound',
+      }),
+    );
+
+    const encoded = encodedTopology(document, 'Underworld', 'I');
+    const template = encoded.topology.decisions.at(-1);
+    if (template === undefined) throw new Error('missing final I batch');
+    const normal = template.normal as Record<string, unknown>;
+    encoded.topology.decisions.push({
+      kind: 'exit',
+      source: { kind: 'occurrence', occurrenceId: terminalSourceId },
+      normal: {
+        kind: 'batch',
+        rewardStore: normal.rewardStore,
+        batchState: normal.batchState,
+        targets: [],
+      },
+      selection: { kind: 'unresolved' },
+    });
+
+    expectDocumentError(encoded.document, {
+      path: `${encoded.path}.decisions`,
+      detail: 'exceeds 13 generated batches',
+    });
+  });
+
+  it('records and removes an H terminal envelope as one ordinary semantic edit', () => {
+    const decision = createExitDecisionAddress(hBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('complete-h-07'),
+    });
+    const withoutTakeover = applyProjectCommand(completeHProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision,
+    });
+    const initial = createProjectHistory(withoutTakeover);
+    const created = applyProjectHistoryCommand(initial, catalog, {
+      kind: 'CreateBatch',
+      decision,
+    });
+    const undone = undoProjectHistory(created);
+    const redone = redoProjectHistory(undone);
+
+    expect(created.present).toEqual(terminalEnvelope(completeHProject(), hBiome, 'complete-h-07'));
+    expect(undone.present).toEqual(withoutTakeover);
+    expect(redone.present).toEqual(created.present);
+    const removed = applyProjectCommand(redone.present, catalog, {
+      kind: 'RemoveExitDecision',
+      decision,
+    });
+    expect(
+      planFor(removed, 'Underworld', 'H').topology?.decisions.some(
+        (candidate) =>
+          candidate.kind === 'exit' &&
+          semanticAddressKey(createExitDecisionAddress(hBiome, candidate.source)) ===
+            semanticAddressKey(decision),
+      ),
+    ).toBe(false);
   });
 
   it('derives staged selection from the selected spine rather than decision storage order', () => {
