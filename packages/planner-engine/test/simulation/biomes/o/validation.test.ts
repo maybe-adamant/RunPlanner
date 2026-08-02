@@ -363,4 +363,26 @@ describe('selected O validation', () => {
       }),
     ).toMatchObject({ kind: 'takeoverPrebossBatch', result: { requiredExitKeys: ['exit1'] } });
   });
+
+  it('keeps the declaration-fixed terminal takeover assessable from its empty envelope', () => {
+    const decision = createExitDecisionAddress(oBiome, {
+      kind: 'occurrence',
+      occurrenceId: oOccurrenceIds.combat02,
+    });
+    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({ kind: 'takeoverPrebossBatch', source: decision, gameName: 'O_PreBoss01' }),
+    ).toMatchObject({
+      kind: 'takeoverPrebossBatch',
+      result: { support: 'required', selectedPossible: true, requiredExitKeys: ['exit1'] },
+    });
+  });
 });

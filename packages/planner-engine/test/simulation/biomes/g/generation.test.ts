@@ -10,6 +10,7 @@ import {
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
+import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
@@ -24,6 +25,21 @@ import {
   goldenGStartId,
 } from '@run-planner/test-fixtures';
 
+function catalogWithRoom(room: RoomDeclaration): Catalog {
+  return Object.freeze({
+    ...catalog,
+    rooms: Object.freeze({
+      ...catalog.rooms,
+      values: Object.freeze(
+        catalog.rooms.values.map((candidate) =>
+          candidate.gameName === room.gameName ? room : candidate,
+        ),
+      ),
+      byKey: Object.freeze({ ...catalog.rooms.byKey, [room.gameName]: room }),
+    }),
+  });
+}
+
 function completeG(project = createCompleteFGProject()) {
   const result = simulateProject(catalog, project);
   const g = result.routes
@@ -34,6 +50,84 @@ function completeG(project = createCompleteFGProject()) {
 }
 
 describe('G generation and takeover', () => {
+  it('does not let an aggregate-invalid three-door takeover suppress ordinary Door 1 support', () => {
+    let project = createCompleteFGProject();
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    if (plan?.topology === null || plan === undefined) throw new Error('G topology is missing');
+    const takeover = plan.topology.decisions.find(
+      (candidate) =>
+        candidate.kind === 'exit' &&
+        candidate.normal.kind === 'batch' &&
+        candidate.normal.targets.some(
+          (target) =>
+            plan.topology?.occurrences.find(
+              (occurrence) => occurrence.occurrenceId === target.occurrenceId,
+            )?.gameName === 'G_PreBoss01',
+        ),
+    );
+    if (takeover?.kind !== 'exit') throw new Error('G takeover decision is missing');
+    const decision = createExitDecisionAddress(goldenGBiome, takeover.source);
+    const target = createTargetAddress(goldenGBiome, takeover.source, 'exit1');
+    project = applyProjectCommand(project, catalog, { kind: 'RemoveExitDecision', decision });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenGBiome, takeover.source),
+      storeKey: 'RunProgress',
+    });
+
+    const preboss = catalog.rooms.byKey.G_PreBoss01;
+    if (preboss === undefined) throw new Error('G Preboss declaration is missing');
+    const cappedCatalog = catalogWithRoom(
+      Object.freeze({
+        ...preboss,
+        caps: Object.freeze({ ...preboss.caps, maxCreationsThisRun: 1 }),
+      }),
+    );
+    const session = createPreparedProjectCandidateSession(
+      cappedCatalog,
+      simulateProjectAssembly(cappedCatalog, project),
+    );
+    const ordinaryGameNames = cappedCatalog.rooms.values
+      .filter(
+        (room) =>
+          room.biomeKey === 'G' &&
+          room.mode.kind === 'authored' &&
+          room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors',
+      )
+      .map((room) => room.gameName);
+    const [takeoverCandidate, ...ordinaryCandidates] = session.evaluate([
+      { kind: 'takeoverPrebossBatch' as const, source: decision, gameName: 'G_PreBoss01' },
+      ...ordinaryGameNames.map((gameName) =>
+        Object.freeze({ kind: 'roomTarget' as const, target, gameName }),
+      ),
+    ]);
+
+    expect(takeoverCandidate).toMatchObject({
+      kind: 'takeoverPrebossBatch',
+      result: {
+        support: 'impossible',
+        selectedPossible: false,
+        pressure: expect.arrayContaining([
+          expect.objectContaining({
+            selectedExclusionReasons: expect.arrayContaining(['maxCreationsThisRun']),
+          }),
+        ]),
+      },
+    });
+    expect(
+      ordinaryCandidates.some(
+        (candidate) =>
+          candidate.kind === 'roomTarget' &&
+          candidate.result.pressure.selectedPossible &&
+          !candidate.result.pressure.requiredForcedRoomGameNames.includes('G_PreBoss01'),
+      ),
+      JSON.stringify(ordinaryCandidates),
+    ).toBe(true);
+  });
+
   it('carries the validated F prefix through G’s fixed intro, ordinary spine, and completion', () => {
     const { result, g } = completeG();
     const f = result.routes[0]?.biomes[0];
@@ -85,6 +179,7 @@ describe('G generation and takeover', () => {
       ),
     ).toMatchObject({
       gameName: 'G_PreBoss01',
+      support: 'required',
       selectedPossible: true,
       pressure: expect.arrayContaining([
         expect.objectContaining({ biomeDepthCache: 8, selectedPossible: true }),

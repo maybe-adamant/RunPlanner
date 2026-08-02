@@ -186,6 +186,12 @@ export interface TakeoverPrebossBatchCandidateSupport {
   readonly gameName: string;
   readonly requiredExitKeys: readonly string[];
   readonly requiredTargetCount: number;
+  /**
+   * The source-owned result after the complete normal-door takeover shape has
+   * participated in the same force arbitration as ordinary room choices.
+   * Pressure remains diagnostic; consumers must not reduce it themselves.
+   */
+  readonly support: 'impossible' | 'possible' | 'required';
   readonly pressure: readonly ForcePressureLedgerEntry[];
   readonly selectedPossible: boolean;
   readonly findings: readonly SemanticFinding[];

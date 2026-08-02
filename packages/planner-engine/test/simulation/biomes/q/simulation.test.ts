@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createTargetAddress,
@@ -109,6 +110,28 @@ describe('Q simulation', () => {
     ).toMatchObject({
       kind: 'roomTarget',
       result: { pressure: { selectedPossible: true } },
+    });
+  });
+
+  it('keeps the staged terminal takeover assessable from its empty envelope', () => {
+    const decision = createExitDecisionAddress(qBiome, {
+      kind: 'occurrence',
+      occurrenceId: qOccurrenceIds.secondMiniboss1,
+    });
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({ kind: 'takeoverPrebossBatch', source: decision, gameName: 'Q_PreBoss01' }),
+    ).toMatchObject({
+      kind: 'takeoverPrebossBatch',
+      result: { support: 'required', selectedPossible: true, requiredExitKeys: ['exit1'] },
     });
   });
 

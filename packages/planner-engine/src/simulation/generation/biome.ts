@@ -17,6 +17,10 @@ import {
   semanticAddressKey,
   type ExitDecisionAddress,
 } from '../../authored-project/addresses';
+import {
+  fixedWidthOneTakeoverForLayout,
+  ordinaryProgressionBatchLimit,
+} from '../../authored-project/topology/query';
 import type { RewardHistoryState } from '../../reward-kernel';
 import type {
   BiomeHistoryPrefix,
@@ -70,6 +74,40 @@ interface CandidateEvaluation {
   readonly reasons: readonly RoomGenerationExclusionReason[];
   readonly exclusions: readonly RoomGenerationExclusionEvidence[];
   readonly forceSupport: ForceSupport;
+}
+
+interface SourceForceCandidate {
+  readonly eligible: boolean;
+  readonly forceSupport: ForceSupport;
+  readonly gameName: string;
+}
+
+interface SourceGenerationSupport {
+  readonly eligibleGameNames: readonly string[];
+  readonly optionalForcedGameNames: readonly string[];
+  readonly requiredForcedGameNames: readonly string[];
+  readonly supportGameNames: ReadonlySet<string>;
+  readonly supportRoomGameNames: readonly string[];
+}
+
+interface TakeoverShapeEvaluation {
+  readonly candidate: RoomDeclaration;
+  readonly entries: readonly CandidateEvaluation[];
+  readonly forceSupport: ForceSupport;
+}
+
+interface FirstTargetGenerationSupport {
+  readonly context: RequirementEvaluationContext;
+  readonly counts: RoomGenerationCounts;
+  readonly ordinaryCandidates: ReadonlyMap<string, CandidateEvaluation>;
+  readonly sourceSupport: SourceGenerationSupport;
+  readonly takeoverCandidates: ReadonlyMap<string, TakeoverShapeEvaluation>;
+}
+
+interface FirstTargetCandidateDomain {
+  readonly ordinary: readonly RoomDeclaration[];
+  readonly takeover: readonly RoomDeclaration[];
+  readonly fixedTakeover: RoomDeclaration | undefined;
 }
 
 interface RoomGenerationCounts {
@@ -564,9 +602,11 @@ function stagedCandidatePool(
   }
   const stage = policy.stages[batchIndex];
   if (stage === undefined) {
-    throw new BiomeRoomGenerationContractError(
-      `${layout.biomeKey} has no candidate stage ${batchIndex + 1}`,
-    );
+    // An empty terminal decision envelope has no ordinary staged domain. The
+    // topology codec and command boundary still reject any persisted ordinary
+    // target beyond the final stage; generation must be able to evaluate the
+    // declaration-owned fixed takeover choice without asking for stage N + 1.
+    return Object.freeze([]);
   }
   return Object.freeze(
     stage.roomGameNames.map((gameName) => {
@@ -579,6 +619,53 @@ function stagedCandidatePool(
       return room;
     }),
   );
+}
+
+function firstTargetCandidateDomain(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  ordinaryBatchIndex: number,
+): FirstTargetCandidateDomain {
+  const fixedForLayout = fixedWidthOneTakeoverForLayout(catalog, layout);
+  const fixedTakeover =
+    ordinaryBatchIndex === ordinaryProgressionBatchLimit(layout) ? fixedForLayout : undefined;
+  if (fixedTakeover !== undefined) {
+    return Object.freeze({
+      ordinary: Object.freeze([]),
+      takeover: Object.freeze([fixedTakeover]),
+      fixedTakeover,
+    });
+  }
+  return Object.freeze({
+    ordinary: stagedCandidatePool(catalog, layout, ordinaryBatchIndex),
+    // O/Q's declaration-owned width-one room is a terminal transition, never
+    // an ordinary early-batch option. The topology query owns its identity
+    // and shape, including malformed declaration rejection.
+    takeover:
+      fixedForLayout === undefined
+        ? takeoverCandidatePool(catalog, layout.biomeKey)
+        : Object.freeze([]),
+    fixedTakeover: undefined,
+  });
+}
+
+function sourceGenerationSupport(
+  candidates: readonly SourceForceCandidate[],
+): SourceGenerationSupport {
+  const eligible = candidates.filter((candidate) => candidate.eligible);
+  const optional = eligible.filter((candidate) => candidate.forceSupport === 'optional');
+  const required = eligible.filter((candidate) => candidate.forceSupport === 'required');
+  const support =
+    required.length === 0
+      ? eligible
+      : eligible.filter((candidate) => candidate.forceSupport !== 'none');
+  return Object.freeze({
+    eligibleGameNames: Object.freeze(eligible.map((candidate) => candidate.gameName)),
+    optionalForcedGameNames: Object.freeze(optional.map((candidate) => candidate.gameName)),
+    requiredForcedGameNames: Object.freeze(required.map((candidate) => candidate.gameName)),
+    supportGameNames: new Set(support.map((candidate) => candidate.gameName)),
+    supportRoomGameNames: Object.freeze(support.map((candidate) => candidate.gameName)),
+  });
 }
 
 function targetGenerationViews(
@@ -851,6 +938,95 @@ function assertTargetHistoryMatches(
   }
 }
 
+function candidatePressure(
+  source: CanonicalGenerationSource,
+  targetOrigin: CanonicalTarget['origin'],
+  exit: CanonicalPhysicalExit,
+  before: HistoryStateView,
+  context: RequirementEvaluationContext,
+  counts: RoomGenerationCounts,
+  selectedGameName: string,
+  selected: CandidateEvaluation | undefined,
+  support: SourceGenerationSupport,
+): ForcePressureLedgerEntry {
+  const reasons = [...(selected?.reasons ?? ['notCandidate'])] as RoomGenerationExclusionReason[];
+  const exclusions: RoomGenerationExclusionEvidence[] = [
+    ...(selected?.exclusions ?? [{ kind: 'notCandidate' as const }]),
+  ];
+  if (
+    selected !== undefined &&
+    selected.reasons.length === 0 &&
+    !support.supportGameNames.has(selectedGameName)
+  ) {
+    reasons.push('forcedPool');
+    exclusions.push({
+      kind: 'forcedPool',
+      requiredRoomGameNames: support.requiredForcedGameNames,
+    });
+  }
+  return Object.freeze({
+    targetOrigin,
+    beforeSequence: before.sequence,
+    sourceGameName: source.gameName,
+    selectedGameName,
+    exitIndex: exit.index,
+    biomeDepthCache: context.counters.biomeDepthCache,
+    biomeEncounterDepth: context.counters.biomeEncounterDepth,
+    selectedCreationCount: counts.creationsByGameName[selectedGameName] ?? 0,
+    selectedAppearanceCount: counts.appearancesByGameName[selectedGameName] ?? 0,
+    selectedParentCreationCount: counts.parentCreationsByGameName[selectedGameName] ?? 0,
+    eligibleRoomGameNames: support.eligibleGameNames,
+    optionalForcedRoomGameNames: support.optionalForcedGameNames,
+    requiredForcedRoomGameNames: support.requiredForcedGameNames,
+    supportRoomGameNames: support.supportRoomGameNames,
+    selectedPossible:
+      selected !== undefined &&
+      selected.reasons.length === 0 &&
+      support.supportGameNames.has(selectedGameName),
+    selectedExclusionReasons: Object.freeze(reasons),
+    selectedExclusions: Object.freeze(exclusions),
+  });
+}
+
+function targetCandidateContext(
+  source: CanonicalGenerationSource,
+  targetOrigin: CanonicalTarget['origin'],
+  exit: CanonicalPhysicalExit,
+  before: HistoryStateView,
+  context: RequirementEvaluationContext,
+  counts: RoomGenerationCounts,
+  candidates: readonly CandidateEvaluation[],
+  support: SourceGenerationSupport,
+): RoomTargetCandidateContext {
+  const candidatesByGameName = new Map(
+    candidates.map((candidate) => [candidate.room.gameName, candidate] as const),
+  );
+  return Object.freeze({
+    targetOrigin,
+    evaluateGameName: (selectedGameName: string): RoomTargetCandidateValidation => {
+      const pressure = candidatePressure(
+        source,
+        targetOrigin,
+        exit,
+        before,
+        context,
+        counts,
+        selectedGameName,
+        candidatesByGameName.get(selectedGameName),
+        support,
+      );
+      const findings: SemanticFinding[] = [];
+      if (support.supportGameNames.size === 0) {
+        findings.push(finding('targetRoomSupportEmpty', targetOrigin, selectedEvidence(pressure)));
+      }
+      if (!pressure.selectedPossible) {
+        findings.push(finding('targetRoomUnavailable', targetOrigin, selectedEvidence(pressure)));
+      }
+      return Object.freeze({ pressure, findings: Object.freeze(findings) });
+    },
+  });
+}
+
 function prepareTargetGameNameContext(
   catalog: Catalog,
   pool: readonly RoomDeclaration[],
@@ -876,74 +1052,215 @@ function prepareTargetGameNameContext(
   const candidates = pool.map((room) =>
     evaluateCandidate(catalog, source, sourceDeclaration, exit, counts, room, context),
   );
-  const eligible = candidates.filter((candidate) => candidate.reasons.length === 0);
-  const optional = eligible.filter((candidate) => candidate.forceSupport === 'optional');
-  const required = eligible.filter((candidate) => candidate.forceSupport === 'required');
-  const support =
-    required.length === 0
-      ? eligible
-      : eligible.filter((candidate) => candidate.forceSupport !== 'none');
-  const candidatesByGameName = new Map(
-    candidates.map((candidate) => [candidate.room.gameName, candidate]),
-  );
-  const supportGameNames = new Set(support.map((candidate) => candidate.room.gameName));
-  const requiredRoomGameNames = Object.freeze(required.map((candidate) => candidate.room.gameName));
-  const sharedPressure = Object.freeze({
+  return targetCandidateContext(
+    source,
     targetOrigin,
-    beforeSequence: before.sequence,
-    sourceGameName: source.gameName,
-    exitIndex: exit.index,
-    biomeDepthCache: context.counters.biomeDepthCache,
-    biomeEncounterDepth: context.counters.biomeEncounterDepth,
-    eligibleRoomGameNames: Object.freeze(eligible.map((candidate) => candidate.room.gameName)),
-    optionalForcedRoomGameNames: Object.freeze(
-      optional.map((candidate) => candidate.room.gameName),
+    exit,
+    before,
+    context,
+    counts,
+    candidates,
+    sourceGenerationSupport(
+      candidates.map((candidate) =>
+        Object.freeze({
+          eligible: candidate.reasons.length === 0,
+          forceSupport: candidate.forceSupport,
+          gameName: candidate.room.gameName,
+        }),
+      ),
     ),
-    requiredForcedRoomGameNames: requiredRoomGameNames,
-    supportRoomGameNames: Object.freeze(support.map((candidate) => candidate.room.gameName)),
-  });
+  );
+}
+
+function withCandidateExclusion(
+  candidate: CandidateEvaluation,
+  reason: Extract<RoomGenerationExclusionReason, 'maxCreationsPerRoom' | 'maxCreationsThisRun'>,
+  actual: number,
+  maximum: number,
+): CandidateEvaluation {
+  if (candidate.reasons.includes(reason)) return candidate;
   return Object.freeze({
-    targetOrigin,
-    evaluateGameName: (selectedGameName: string): RoomTargetCandidateValidation => {
-      const selected = candidatesByGameName.get(selectedGameName);
-      const reasons = [
-        ...(selected?.reasons ?? ['notCandidate']),
-      ] as RoomGenerationExclusionReason[];
-      const exclusions: RoomGenerationExclusionEvidence[] = [
-        ...(selected?.exclusions ?? [{ kind: 'notCandidate' as const }]),
-      ];
-      if (
-        selected !== undefined &&
-        selected.reasons.length === 0 &&
-        !supportGameNames.has(selectedGameName)
-      ) {
-        reasons.push('forcedPool');
-        exclusions.push({
-          kind: 'forcedPool',
-          requiredRoomGameNames,
-        });
-      }
-      const selectedPossible = selected !== undefined && supportGameNames.has(selectedGameName);
-      const pressure: ForcePressureLedgerEntry = Object.freeze({
-        ...sharedPressure,
-        selectedGameName,
-        selectedCreationCount: counts.creationsByGameName[selectedGameName] ?? 0,
-        selectedAppearanceCount: counts.appearancesByGameName[selectedGameName] ?? 0,
-        selectedParentCreationCount: counts.parentCreationsByGameName[selectedGameName] ?? 0,
-        selectedPossible,
-        selectedExclusionReasons: Object.freeze(reasons),
-        selectedExclusions: Object.freeze(exclusions),
-      });
-      const findings: SemanticFinding[] = [];
-      if (support.length === 0) {
-        findings.push(finding('targetRoomSupportEmpty', targetOrigin, selectedEvidence(pressure)));
-      }
-      if (!selectedPossible) {
-        findings.push(finding('targetRoomUnavailable', targetOrigin, selectedEvidence(pressure)));
-      }
-      return Object.freeze({ pressure, findings: Object.freeze(findings) });
-    },
+    ...candidate,
+    reasons: Object.freeze([...candidate.reasons, reason]),
+    exclusions: Object.freeze([
+      ...candidate.exclusions,
+      Object.freeze({ kind: reason, actual, maximum }),
+    ]),
+    forceSupport: 'none' as const,
   });
+}
+
+function applyAggregateTakeoverCreationCaps(
+  entries: readonly CandidateEvaluation[],
+  candidate: RoomDeclaration,
+  counts: RoomGenerationCounts,
+): readonly CandidateEvaluation[] {
+  let capped = entries;
+  const apply = (
+    maximum: number | undefined,
+    actualBefore: number,
+    reason: Extract<RoomGenerationExclusionReason, 'maxCreationsPerRoom' | 'maxCreationsThisRun'>,
+  ): void => {
+    if (maximum === undefined || actualBefore + capped.length <= maximum) return;
+    const firstUnavailable = Math.max(0, maximum - actualBefore);
+    capped = Object.freeze(
+      capped.map((entry, index) =>
+        index < firstUnavailable
+          ? entry
+          : withCandidateExclusion(entry, reason, actualBefore + index, maximum),
+      ),
+    );
+  };
+  apply(
+    candidate.caps.maxCreationsThisRun,
+    counts.creationsByGameName[candidate.gameName] ?? 0,
+    'maxCreationsThisRun',
+  );
+  apply(
+    candidate.caps.maxCreationsPerRoom,
+    counts.parentCreationsByGameName[candidate.gameName] ?? 0,
+    'maxCreationsPerRoom',
+  );
+  return capped;
+}
+
+function evaluateTakeoverShape(
+  catalog: Catalog,
+  source: CanonicalGenerationSource,
+  sourceDeclaration: RoomDeclaration,
+  context: RequirementEvaluationContext,
+  counts: RoomGenerationCounts,
+  candidate: RoomDeclaration,
+): TakeoverShapeEvaluation {
+  const entries = applyAggregateTakeoverCreationCaps(
+    ownerNormalExits(sourceDeclaration).map((exit) =>
+      evaluateCandidate(catalog, source, sourceDeclaration, exit, counts, candidate, context),
+    ),
+    candidate,
+    counts,
+  );
+  return Object.freeze({
+    candidate,
+    entries,
+    forceSupport: entries.every((entry) => entry.reasons.length === 0)
+      ? (entries[0]?.forceSupport ?? 'none')
+      : 'none',
+  });
+}
+
+function ownerNormalExits(ownerDeclaration: RoomDeclaration): readonly CanonicalPhysicalExit[] {
+  return Object.freeze(
+    [...ownerDeclaration.exits]
+      .sort((left, right) => left.index - right.index)
+      .map((exit) =>
+        Object.freeze({
+          kind: 'available' as const,
+          exitKey: `exit${exit.index}`,
+          index: exit.index,
+          type: exit.type,
+          compatibilityPolicyKey: exit.compatibilityPolicyKey,
+        }),
+      ),
+  );
+}
+
+function firstTargetGenerationSupport(
+  catalog: Catalog,
+  biomeKey: string,
+  ordinaryBatchIndex: number,
+  source: CanonicalAuthoredRoom,
+  exit: CanonicalPhysicalExit,
+  before: HistoryStateView,
+  enteredBiomeCount: number,
+): FirstTargetGenerationSupport {
+  const layout = catalog.biomeLayouts.byKey[biomeKey];
+  if (layout?.progression.kind !== 'generated') {
+    throw new BiomeRoomGenerationContractError(
+      `${biomeKey} has no generated first-target candidate domain`,
+    );
+  }
+  const sourceDeclaration = catalog.rooms.byKey[source.gameName];
+  if (sourceDeclaration === undefined) {
+    throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
+  }
+  const context = projectRoomGenerationRequirementContext(
+    source,
+    sourceDeclaration,
+    before,
+    enteredBiomeCount,
+  );
+  const counts = roomGenerationCounts(before, source.origin);
+  const domain = firstTargetCandidateDomain(catalog, layout, ordinaryBatchIndex);
+  const ordinary = domain.ordinary.map((room) =>
+    evaluateCandidate(catalog, source, sourceDeclaration, exit, counts, room, context),
+  );
+  const takeovers = domain.takeover.map((room) =>
+    evaluateTakeoverShape(catalog, source, sourceDeclaration, context, counts, room),
+  );
+  const support = sourceGenerationSupport(
+    Object.freeze([
+      ...ordinary.map((candidate) =>
+        Object.freeze({
+          eligible: candidate.reasons.length === 0,
+          forceSupport: candidate.forceSupport,
+          gameName: candidate.room.gameName,
+        }),
+      ),
+      ...takeovers.map((candidate) =>
+        Object.freeze({
+          eligible: candidate.entries.every((entry) => entry.reasons.length === 0),
+          forceSupport:
+            candidate.candidate.gameName === domain.fixedTakeover?.gameName &&
+            candidate.entries.every((entry) => entry.reasons.length === 0)
+              ? ('required' as const)
+              : candidate.forceSupport,
+          gameName: candidate.candidate.gameName,
+        }),
+      ),
+    ]),
+  );
+  return Object.freeze({
+    context,
+    counts,
+    ordinaryCandidates: new Map(
+      ordinary.map((candidate) => [candidate.room.gameName, candidate] as const),
+    ),
+    sourceSupport: support,
+    takeoverCandidates: new Map(
+      takeovers.map((candidate) => [candidate.candidate.gameName, candidate] as const),
+    ),
+  });
+}
+
+function firstTargetRoomCandidateContext(
+  catalog: Catalog,
+  biomeKey: string,
+  ordinaryBatchIndex: number,
+  source: CanonicalAuthoredRoom,
+  targetOrigin: CanonicalTarget['origin'],
+  exit: CanonicalPhysicalExit,
+  before: HistoryStateView,
+  enteredBiomeCount: number,
+): RoomTargetCandidateContext {
+  const support = firstTargetGenerationSupport(
+    catalog,
+    biomeKey,
+    ordinaryBatchIndex,
+    source,
+    exit,
+    before,
+    enteredBiomeCount,
+  );
+  return targetCandidateContext(
+    source,
+    targetOrigin,
+    exit,
+    before,
+    support.context,
+    support.counts,
+    [...support.ordinaryCandidates.values()],
+    support.sourceSupport,
+  );
 }
 
 /**
@@ -961,11 +1278,24 @@ export function roomTargetCandidateContextAtFrontier(
   exit: CanonicalPhysicalExit,
   before: HistoryStateView,
   enteredBiomeCount: number,
+  includeTakeoverSupport = false,
 ): RoomTargetCandidateContext {
   const layout = catalog.biomeLayouts.byKey[biomeKey];
   if (layout?.progression.kind !== 'generated') {
     throw new BiomeRoomGenerationContractError(
       `${biomeKey} has no ordinary target candidate domain`,
+    );
+  }
+  if (includeTakeoverSupport) {
+    return firstTargetRoomCandidateContext(
+      catalog,
+      biomeKey,
+      ordinaryBatchIndex,
+      source,
+      targetOrigin,
+      exit,
+      before,
+      enteredBiomeCount,
     );
   }
   return prepareTargetGameNameContext(
@@ -1121,12 +1451,10 @@ function evaluateTakeoverAgainstSource(
   ownerHistory: HistoryStateView,
   gameName: string,
   enteredBiomeCount: number,
+  ordinaryBatchIndex: number,
 ): TakeoverPrebossBatchCandidateSupport {
-  const requiredExitKeys = Object.freeze(
-    [...ownerDeclaration.exits]
-      .sort((left, right) => left.index - right.index)
-      .map((exit) => `exit${exit.index}`),
-  );
+  const exits = ownerNormalExits(ownerDeclaration);
+  const requiredExitKeys = Object.freeze(exits.map((exit) => exit.exitKey));
   const candidate = catalog.rooms.byKey[gameName];
   if (candidate?.prebossBatchPolicy?.kind !== 'takeOverNormalDoors') {
     return Object.freeze({
@@ -1134,84 +1462,86 @@ function evaluateTakeoverAgainstSource(
       gameName,
       requiredExitKeys,
       requiredTargetCount: requiredExitKeys.length,
+      support: 'impossible' as const,
       pressure: Object.freeze([]),
       selectedPossible: false,
       findings: Object.freeze([]),
     });
   }
-  const pool = takeoverCandidatePool(catalog, source.biomeKey);
-  let pressure: readonly ForcePressureLedgerEntry[] = [];
-  const findings: SemanticFinding[] = [];
-  for (const exit of [...ownerDeclaration.exits].sort((left, right) => left.index - right.index)) {
-    const target = createTargetAddress(
-      createBiomeAddress(source.routeKey, source.biomeKey),
-      source.source,
-      `exit${exit.index}`,
-    );
-    const result = prepareTargetGameNameContext(
-      catalog,
-      pool,
-      owner,
-      target,
-      Object.freeze({
-        kind: 'available',
-        exitKey: `exit${exit.index}`,
-        index: exit.index,
-        type: exit.type,
-        compatibilityPolicyKey: exit.compatibilityPolicyKey,
-      }),
-      ownerHistory,
-      enteredBiomeCount,
-      undefined,
-    ).evaluateGameName(gameName);
-    pressure = [...pressure, result.pressure];
-    findings.push(...result.findings);
+  const firstExit = exits[0];
+  if (firstExit === undefined) {
+    return Object.freeze({
+      source,
+      gameName,
+      requiredExitKeys,
+      requiredTargetCount: 0,
+      support: 'impossible' as const,
+      pressure: Object.freeze([]),
+      selectedPossible: false,
+      findings: Object.freeze([]),
+    });
   }
-  const existingCreations = ownerHistory.ledgers.roomCreations.filter(
-    (creation) => creation.gameName === gameName,
-  ).length;
-  const maximum = candidate.caps.maxCreationsThisRun;
-  const capPossible = maximum === undefined || existingCreations + pressure.length <= maximum;
-  if (!capPossible && maximum !== undefined) {
-    const firstCapFailure = Math.max(0, maximum - existingCreations);
-    pressure = Object.freeze(
-      pressure.map((entry, index) => {
-        if (index < firstCapFailure) return entry;
-        const actual = existingCreations + index;
-        const selectedExclusionReasons: RoomGenerationExclusionReason[] = [
-          ...entry.selectedExclusionReasons,
-          'maxCreationsThisRun',
-        ];
-        const selectedExclusions: RoomGenerationExclusionEvidence[] = [
-          ...entry.selectedExclusions,
-          { kind: 'maxCreationsThisRun', actual, maximum },
-        ];
-        return Object.freeze({
-          ...entry,
-          selectedPossible: false,
-          selectedExclusionReasons: Object.freeze(selectedExclusionReasons),
-          selectedExclusions: Object.freeze(selectedExclusions),
-        });
-      }),
-    );
-    const firstUnavailable = pressure[firstCapFailure];
-    if (firstUnavailable !== undefined) {
-      findings.push(
-        finding(
-          'targetRoomUnavailable',
-          firstUnavailable.targetOrigin,
-          selectedEvidence(firstUnavailable),
+  const support = firstTargetGenerationSupport(
+    catalog,
+    source.biomeKey,
+    ordinaryBatchIndex,
+    owner,
+    firstExit,
+    ownerHistory,
+    enteredBiomeCount,
+  );
+  const shape = support.takeoverCandidates.get(gameName);
+  const pressure = Object.freeze(
+    (shape?.entries ?? []).map((entry, index) => {
+      const exit = exits[index];
+      if (exit === undefined) {
+        throw new BiomeRoomGenerationContractError(
+          `${semanticAddressKey(source)} takeover shape lost normal exit ${index + 1}`,
+        );
+      }
+      return candidatePressure(
+        owner,
+        createTargetAddress(
+          createBiomeAddress(source.routeKey, source.biomeKey),
+          source.source,
+          exit.exitKey,
         ),
+        exit,
+        ownerHistory,
+        support.context,
+        support.counts,
+        gameName,
+        entry,
+        support.sourceSupport,
       );
+    }),
+  );
+  const findings: SemanticFinding[] = [];
+  for (const entry of pressure) {
+    if (support.sourceSupport.supportGameNames.size === 0) {
+      findings.push(finding('targetRoomSupportEmpty', entry.targetOrigin, selectedEvidence(entry)));
+    }
+    if (!entry.selectedPossible) {
+      findings.push(finding('targetRoomUnavailable', entry.targetOrigin, selectedEvidence(entry)));
     }
   }
+  const selectedPossible =
+    shape !== undefined &&
+    shape.entries.length === exits.length &&
+    pressure.every((entry) => entry.selectedPossible);
+  const batchSupport = !selectedPossible
+    ? ('impossible' as const)
+    : support.sourceSupport.requiredForcedGameNames.includes(gameName)
+      ? ('required' as const)
+      : ('possible' as const);
   return Object.freeze({
     source,
     gameName,
     requiredExitKeys,
     requiredTargetCount: requiredExitKeys.length,
-    pressure: Object.freeze(pressure),
-    selectedPossible: capPossible && pressure.every((entry) => entry.selectedPossible),
+    support: batchSupport,
+    pressure,
+    selectedPossible,
     findings: Object.freeze(findings),
   });
 }
@@ -1224,6 +1554,7 @@ export function evaluateTakeoverPrebossBatchCandidateAtFrontier(
   ownerHistory: HistoryStateView,
   gameName: string,
   enteredBiomeCount: number,
+  ordinaryBatchIndex: number,
 ): TakeoverPrebossBatchCandidateSupport {
   const ownerDeclaration = catalog.rooms.byKey[owner.gameName];
   if (ownerDeclaration === undefined) {
@@ -1239,6 +1570,34 @@ export function evaluateTakeoverPrebossBatchCandidateAtFrontier(
     ownerHistory,
     gameName,
     enteredBiomeCount,
+    ordinaryBatchIndex,
+  );
+}
+
+function ordinaryBatchIndexBeforeSource(
+  catalog: Catalog,
+  snapshot: BiomeGenerationSnapshot,
+  source: ExitDecisionAddress,
+): number {
+  let ordinaryBatchIndex = 0;
+  for (const decision of generationDecisions(snapshot)) {
+    if (semanticAddressKey(decision.origin) === semanticAddressKey(source)) {
+      return ordinaryBatchIndex;
+    }
+    if (
+      decision.kind === 'batch' &&
+      decision.parent.origin.kind === 'occurrence' &&
+      !decision.targets.some(
+        (target) =>
+          catalog.rooms.byKey[target.room.gameName]?.prebossBatchPolicy?.kind ===
+          'takeOverNormalDoors',
+      )
+    ) {
+      ordinaryBatchIndex += 1;
+    }
+  }
+  throw new BiomeRoomGenerationContractError(
+    `${semanticAddressKey(source)} is absent from the generated decision spine`,
   );
 }
 
@@ -1267,6 +1626,10 @@ export function evaluateTakeoverPrebossBatchCandidate(
       gameName,
       requiredExitKeys,
       requiredTargetCount: requiredExitKeys.length,
+      support:
+        gameName === batch.targets[0]?.room.gameName
+          ? ('required' as const)
+          : ('impossible' as const),
       pressure: Object.freeze([]),
       selectedPossible: gameName === batch.targets[0]?.room.gameName,
       findings: Object.freeze([]),
@@ -1291,6 +1654,7 @@ export function evaluateTakeoverPrebossBatchCandidate(
     ownerHistory,
     gameName,
     enteredBiomeCount,
+    ordinaryBatchIndexBeforeSource(catalog, snapshot, source),
   );
 }
 

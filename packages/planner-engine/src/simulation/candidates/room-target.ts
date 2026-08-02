@@ -186,6 +186,7 @@ function evaluatePrefixRoomTarget(
     }),
     sourceHistory,
     completeBiomeCount(evaluation, query.target.routeKey, query.target.biomeKey),
+    frontier.targets.length === 0,
   );
   return Object.freeze({
     kind: 'roomTarget',
@@ -262,6 +263,7 @@ function evaluateInvalidCompleteRoomTarget(
     }),
     sourceHistory,
     completeBiomeCount(evaluation, query.target.routeKey, query.target.biomeKey),
+    frontier.targets.length === 0,
   );
   return Object.freeze({ kind: 'roomTarget', result: context.evaluateGameName(query.gameName) });
 }

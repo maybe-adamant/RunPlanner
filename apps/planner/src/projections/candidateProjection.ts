@@ -563,6 +563,8 @@ function candidateSelectedPossible(evaluation: ProjectCandidateEvaluation): bool
     case 'shopOffer':
     case 'shopPurchase':
       return evaluation.result.supported;
+    case 'takeoverPrebossBatch':
+      return evaluation.result.support !== 'impossible';
     default:
       return evaluation.result.selectedPossible;
   }
@@ -606,8 +608,9 @@ function candidateForced(
     case 'rewardWheelOffer':
     case 'shopOffer':
     case 'shopPurchase':
-    case 'takeoverPrebossBatch':
       return false;
+    case 'takeoverPrebossBatch':
+      return evaluation.result.support === 'required';
   }
 }
 

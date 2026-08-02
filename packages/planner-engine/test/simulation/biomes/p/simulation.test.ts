@@ -65,6 +65,26 @@ describe('P core loop', () => {
       biomeEncounterDepth: 0,
     });
 
+    const preboss = batches.at(-1);
+    if (preboss?.kind !== 'batch') throw new Error('P takeover batch is missing');
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, createRepresentativeNOPProject()),
+      ).evaluate({
+        kind: 'takeoverPrebossBatch',
+        source: preboss.origin,
+        gameName: 'P_PreBoss01',
+      }),
+    ).toMatchObject({
+      kind: 'takeoverPrebossBatch',
+      result: {
+        support: 'required',
+        selectedPossible: true,
+        requiredExitKeys: ['exit1', 'exit2'],
+      },
+    });
+
     const roomHistory = (gameName: string) => {
       const room = batches
         .flatMap((batch) => batch.targets)
