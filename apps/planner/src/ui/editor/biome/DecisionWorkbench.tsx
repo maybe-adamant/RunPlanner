@@ -367,74 +367,80 @@ function BatchSettings({
           workspaceInteractionKey(node.fieldsCageOutcome.address),
         );
   return (
-    <div className="batch-controls">
-      {store === undefined ? null : (
-        <CandidateSelect
-          id={`${node.key}-reward-store`}
-          interaction={store}
-          label="Base reward pool"
-          onReplace={(storeKey) => {
-            const rewardStore = batchRewardStoreAddress(node.rewardStore!);
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceBatchRewardStore',
-                rewardStore,
-                storeKey,
-              }),
-            );
-          }}
-          placeholder="Select pool"
-        />
-      )}
-      {node.effectiveRewardStore === undefined ? null : (
-        <div className="effective-reward-store" role="status">
-          <span>Effective reward pool</span>
-          <strong>{node.effectiveRewardStore.label}</strong>
-          <p>A forced room in this decision overrides the base pool.</p>
+    <>
+      <div className="batch-controls">
+        {store === undefined ? null : (
+          <CandidateSelect
+            id={`${node.key}-reward-store`}
+            interaction={store}
+            label="Base reward pool"
+            onReplace={(storeKey) => {
+              const rewardStore = batchRewardStoreAddress(node.rewardStore!);
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceBatchRewardStore',
+                  rewardStore,
+                  storeKey,
+                }),
+              );
+            }}
+            placeholder="Select pool"
+          />
+        )}
+        {node.effectiveRewardStore === undefined ? null : (
+          <div className="effective-reward-store" role="status">
+            <span>Effective reward pool</span>
+            <strong>{node.effectiveRewardStore.label}</strong>
+            <p>A forced room in this decision overrides the base pool.</p>
+          </div>
+        )}
+      </div>
+      {fields === undefined && node.fields === undefined ? null : (
+        <div className="fields-batch-editor">
+          {fields === undefined ? null : (
+            <CandidateSelect
+              id={`${node.key}-fields-roll`}
+              interaction={fields}
+              label="Fields door roll"
+              onReplace={(cageOutcome) =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceFieldsCageOutcome',
+                    decision: node.owner,
+                    cageOutcome,
+                  }),
+                )
+              }
+              placeholder="Select roll"
+            />
+          )}
+          {node.fields === undefined ? null : (
+            <>
+              <dl className="fields-batch-summary">
+                <div>
+                  <dt>Cages per combat room</dt>
+                  <dd>{node.fields.doorCageRewardCount}</dd>
+                </div>
+                <div>
+                  <dt>Prior Max outcomes</dt>
+                  <dd>
+                    {node.fields.priorMaxOutcomes === undefined
+                      ? 'Unavailable'
+                      : `${node.fields.priorMaxOutcomes.fieldsMaxDoorsRolled} / ${node.fields.priorMaxOutcomes.maxDoorCageCeiling}`}
+                  </dd>
+                </div>
+              </dl>
+              {node.fields.cageTargetCount === 0 ? (
+                <p className="fields-batch-note">
+                  No offered room uses the Fields multi-cage count; Max still affects later Fields
+                  rolls.
+                </p>
+              ) : null}
+            </>
+          )}
         </div>
       )}
-      {fields === undefined ? null : (
-        <CandidateSelect
-          id={`${node.key}-fields-roll`}
-          interaction={fields}
-          label="Fields door roll"
-          onReplace={(cageOutcome) =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceFieldsCageOutcome',
-                decision: node.owner,
-                cageOutcome,
-              }),
-            )
-          }
-          placeholder="Select roll"
-        />
-      )}
-      {node.fields === undefined ? null : (
-        <>
-          <dl className="fields-batch-summary">
-            <div>
-              <dt>Cages per combat room</dt>
-              <dd>{node.fields.doorCageRewardCount}</dd>
-            </div>
-            <div>
-              <dt>Prior Max outcomes</dt>
-              <dd>
-                {node.fields.priorMaxOutcomes === undefined
-                  ? 'Unavailable'
-                  : `${node.fields.priorMaxOutcomes.fieldsMaxDoorsRolled} / ${node.fields.priorMaxOutcomes.maxDoorCageCeiling}`}
-              </dd>
-            </div>
-          </dl>
-          {node.fields.cageTargetCount === 0 ? (
-            <p className="fields-batch-note">
-              No offered room uses the Fields multi-cage count; Max still affects later Fields
-              rolls.
-            </p>
-          ) : null}
-        </>
-      )}
-    </div>
+    </>
   );
 }
 

@@ -489,6 +489,22 @@ describe('DecisionWorkbench', () => {
     );
   });
 
+  it('groups the Fields rule and resolved facts in their dedicated batch section', () => {
+    renderStaticDecisionWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      firstNodeOfKind('ordinaryBatch'),
+    );
+
+    const selector = screen.getByLabelText('Fields door roll');
+    const fieldsEditor = selector.closest('.fields-batch-editor');
+    expect(fieldsEditor).not.toBeNull();
+    expect(selector.closest('.batch-controls')).toBeNull();
+    expect(within(fieldsEditor as HTMLElement).getByText('Cages per combat room')).toBeTruthy();
+    expect(within(fieldsEditor as HTMLElement).getByText('Prior Max outcomes')).toBeTruthy();
+  });
+
   it('authors multi-door G and P Prebosses through their required Door 1 choices', async () => {
     const fixtures = [
       {
