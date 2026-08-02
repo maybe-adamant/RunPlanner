@@ -43,19 +43,29 @@ Hub/visit behavior.
 The complete repository gate passes with 59 test files and 618 tests, followed
 by all package typechecks, lint, formatting, production build, and diff checks.
 
-## Pre-5b.3 Summary Cleanup
+## Pre-5b.3 Summary Cleanup and Decision Context
 
 The workspace no longer projects a generic room reward summary. The same
 redundant text previously appeared below room editors, in Hub slot cards, and
 as secondary ordinary-rail captions; each location either duplicated the
-editable reward controls or exposed dormant authored values. Ordinary rail
-stops now carry only their decision label and semantic assessment. The Hub's
-structural visit-count caption and fixed-room text remain distinct products.
+editable reward controls or exposed dormant authored values. The cleanup does
+not remove the useful selected-route context from a numbered decision stop:
+exactly one selected target adds its room label, and one direct compact reward
+adds a structured reward token with a text fallback. These two steps are
+progressive rather than jointly gated. The Hub's structural visit-count caption
+and fixed-room text remain distinct products.
 
-This is a standalone cleanup before 5b.3, not a fifth 5b presentation change:
-it removes a presentation product without changing catalog, authored state,
-commands, simulation, candidates, findings, or persistence. Commit 5b.3 keeps
-its existing active/dormant cage and wheel scope.
+This narrow rail product is neither a generic `WorkspaceRoomSummary` reward
+summary nor inspector/footer copy. It retains the resolved offer so a later
+compact icon renderer can replace the fallback text without changing decision,
+reward, or validity policy. Multi-surface rooms retain their room context but
+do not infer a compact reward from a raw nested-control count.
+
+This is a standalone follow-up correction to the cleanup that preceded 5b.3,
+not a fifth 5b presentation change: it removes the generic presentation product
+and restores one decision-rail-specific projection without changing catalog,
+authored state, commands, simulation, candidates, findings, or persistence.
+Commit 5b.3 keeps its existing active/dormant cage and wheel scope.
 
 ## Goal
 

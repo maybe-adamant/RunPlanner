@@ -16,6 +16,7 @@ import {
 import { appendCompleteN, nOccurrenceId, nVisitSlotKeys } from '@run-planner/test-fixtures';
 import type { WorkspaceBiome, WorkspaceRailEntry } from '../contract';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
+import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 import { presentWorkspaceBiome } from './biome-presentation';
 import { assembleWorkspaceBiomeSemantics } from '../assembly/biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
@@ -41,7 +42,7 @@ function present(project: ProjectDocument, routeKey: 'Surface' | 'Underworld', b
     catalog,
     biomeSource(project, routeKey, biomeKey),
   );
-  return { assembly, presentation: presentWorkspaceBiome(assembly) };
+  return { assembly, presentation: presentWorkspaceBiome(catalog, assembly) };
 }
 
 function railShape(biome: WorkspaceBiome): readonly string[] {
@@ -147,6 +148,80 @@ describe('structured workspace biome presentation', () => {
     expect(presentation.focusDestinations.get(decision.selection.focusKey)).toMatchObject({
       inspectorSubject: { kind: 'node', nodeKey: decision.key },
       selectedRailKey: rail.marker.focusKey,
+    });
+  });
+
+  it('progressively presents one selected room and its direct reward token', () => {
+    const direct = present(createGoldenFGHIProject(), 'Underworld', 'F').presentation.biome;
+    const directDecision = direct.nodes.find(
+      (node): node is Extract<(typeof direct.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        node.targets.some(
+          (target) => target.selected && target.room.roomLocal.kind === 'incomingReward',
+        ),
+    );
+    if (directDecision === undefined) throw new Error('F direct-reward decision is missing');
+    const directTarget = directDecision.targets.find(
+      (target) => target.selected && target.room.roomLocal.kind === 'incomingReward',
+    );
+    if (directTarget === undefined || directTarget.room.roomLocal.kind !== 'incomingReward') {
+      throw new Error('F direct selected target is missing');
+    }
+    const directRail = direct.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' && entry.node.key === directDecision.key,
+    );
+    if (directRail === undefined) throw new Error('F direct decision rail entry is missing');
+    expect(directRail.selectedTarget).toEqual({
+      roomLabel: directTarget.room.label,
+      reward: {
+        label: summarizeRewardOffer(catalog, directTarget.room.roomLocal.control.offer),
+        offer: directTarget.room.roomLocal.control.offer,
+      },
+    });
+
+    const fields = present(createGoldenFGHIProject(), 'Underworld', 'H').presentation.biome;
+    const fieldsDecision = fields.nodes.find(
+      (node): node is Extract<(typeof fields.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        node.targets.some((target) => target.selected && target.room.roomLocal.kind === 'fields'),
+    );
+    if (fieldsDecision === undefined) throw new Error('H Fields decision is missing');
+    const fieldsTarget = fieldsDecision.targets.find(
+      (target) => target.selected && target.room.roomLocal.kind === 'fields',
+    );
+    if (fieldsTarget === undefined) throw new Error('H selected Fields target is missing');
+    const fieldsRail = fields.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' && entry.node.key === fieldsDecision.key,
+    );
+    if (fieldsRail === undefined) throw new Error('H Fields decision rail entry is missing');
+    expect(fieldsRail.selectedTarget).toEqual({ roomLabel: fieldsTarget.room.label });
+
+    const fixed = present(createRepresentativeNOPQProject(), 'Surface', 'O').presentation.biome;
+    const fixedDecision = fixed.nodes.find(
+      (node): node is Extract<(typeof fixed.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        node.targets.some((target) => target.selected && target.room.roomLocal.kind === 'fixed'),
+    );
+    if (fixedDecision === undefined) throw new Error('O fixed-reward decision is missing');
+    const fixedTarget = fixedDecision.targets.find(
+      (target) => target.selected && target.room.roomLocal.kind === 'fixed',
+    );
+    if (fixedTarget === undefined || fixedTarget.room.roomLocal.kind !== 'fixed') {
+      throw new Error('O fixed selected target is missing');
+    }
+    const fixedRail = fixed.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' && entry.node.key === fixedDecision.key,
+    );
+    if (fixedRail === undefined) throw new Error('O fixed decision rail entry is missing');
+    expect(fixedRail.selectedTarget).toEqual({
+      roomLabel: fixedTarget.room.label,
+      reward: {
+        label: fixedTarget.room.roomLocal.summary,
+        offer: fixedTarget.room.roomLocal.offer,
+      },
     });
   });
 

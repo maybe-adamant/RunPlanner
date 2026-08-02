@@ -408,6 +408,14 @@ describe('structured workspace occurrence assembly', () => {
 
     expect(devotion.roomLocal.kind).toBe('fixed');
     if (devotion.roomLocal.kind !== 'fixed') throw new Error('Devotion fixed payload is missing');
+    expect(devotion.roomLocal.offer).toEqual({
+      rewardType: 'Devotion',
+      payload: {
+        kind: 'DevotionPair',
+        chosenSource: 'AresUpgrade',
+        spurnedSource: 'HephaestusUpgrade',
+      },
+    });
     expect(devotion.roomLocal.control).toMatchObject({
       kind: 'explicitReward',
       owner: { address: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion) },

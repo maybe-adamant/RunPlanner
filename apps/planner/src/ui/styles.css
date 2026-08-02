@@ -665,6 +665,7 @@ button:disabled {
 
 .biome-rail-kicker,
 .biome-rail-summary,
+.biome-rail-selection,
 .biome-rail-status {
   color: #8f8c95;
   font-size: 0.7rem;
@@ -679,7 +680,8 @@ button:disabled {
   white-space: nowrap;
 }
 
-.biome-rail-summary {
+.biome-rail-summary,
+.biome-rail-selection {
   color: #c3a86f;
   overflow: hidden;
   text-overflow: ellipsis;

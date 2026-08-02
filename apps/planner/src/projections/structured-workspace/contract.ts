@@ -529,6 +529,7 @@ export type WorkspaceRoomLocal =
   | {
       readonly kind: 'fixed';
       readonly marker: WorkspaceMarker;
+      readonly offer: ResolvedRewardOffer;
       readonly summary: string;
       readonly control?: WorkspaceExplicitRewardControl;
     }
@@ -808,14 +809,48 @@ export interface WorkspaceHubRailEntry {
   readonly visits: readonly WorkspaceHubVisitRailEntry[];
 }
 
+/**
+ * A resolved reward retained as a presentation-ready token rather than a
+ * rail-specific text summary. The current rail renders `label`; a later
+ * compact token can render `offer` without changing workspace policy.
+ */
+export interface WorkspaceRailReward {
+  readonly label: string;
+  readonly offer: ResolvedRewardOffer;
+}
+
+/**
+ * Progressive authored context for one numbered decision. A selected room is
+ * useful independently of whether its reward surface can be represented as
+ * one unambiguous compact reward.
+ */
+export interface WorkspaceRailSelectedTarget {
+  readonly reward?: WorkspaceRailReward;
+  readonly roomLabel: string;
+}
+
+export interface WorkspaceDecisionRailEntry {
+  readonly kind: 'node';
+  readonly key: string;
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+  readonly node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode;
+  readonly selectedTarget?: WorkspaceRailSelectedTarget;
+}
+
+export interface WorkspaceStageRailEntry {
+  readonly kind: 'node';
+  readonly key: string;
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+  readonly node: Exclude<WorkspaceNode, WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode>;
+  /** Only numbered decision rail entries may expose selected-target context. */
+  readonly selectedTarget?: never;
+}
+
 export type WorkspaceRailEntry =
-  | {
-      readonly kind: 'node';
-      readonly key: string;
-      readonly label: string;
-      readonly marker: WorkspaceMarker;
-      readonly node: WorkspaceNode;
-    }
+  | WorkspaceDecisionRailEntry
+  | WorkspaceStageRailEntry
   | WorkspaceHubRailEntry
   | {
       readonly kind: 'frontier';
