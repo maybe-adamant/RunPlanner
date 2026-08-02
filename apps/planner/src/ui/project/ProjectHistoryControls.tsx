@@ -36,6 +36,7 @@ export function ProjectHistoryControls() {
     <div aria-label="Project history" className="history-controls" role="group">
       <button
         aria-keyshortcuts="Control+Z Meta+Z"
+        className="quiet-action action-compact"
         disabled={!canUndo}
         onClick={() => dispatch(authoredProjectUndoRequested())}
         title="Undo project edit (Ctrl/Cmd+Z)"
@@ -45,6 +46,7 @@ export function ProjectHistoryControls() {
       </button>
       <button
         aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
+        className="quiet-action action-compact"
         disabled={!canRedo}
         onClick={() => dispatch(authoredProjectRedoRequested())}
         title="Redo project edit (Ctrl/Cmd+Shift+Z or Ctrl+Y)"

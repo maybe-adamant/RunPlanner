@@ -41,6 +41,7 @@ function ProjectNameControl({ projectName }: { readonly projectName: string }) {
         value={nameDraft}
       />
       <button
+        className="secondary-action action-compact"
         disabled={nameDraft.trim().length === 0 || nameDraft.trim() === projectName}
         type="submit"
       >
@@ -85,10 +86,15 @@ export function ProjectFileControls({ operations }: { readonly operations: Proje
         {profileStatus}
       </span>
       <div className="project-file-actions">
-        <button onClick={() => setResult(operations.createNew())} type="button">
+        <button
+          className="danger-action action-compact"
+          onClick={() => setResult(operations.createNew())}
+          type="button"
+        >
           New
         </button>
         <button
+          className="secondary-action action-compact"
           disabled={pendingOperation !== null}
           onClick={() => void runProfileOperation('saveProfile', () => operations.saveProfile())}
           type="button"
@@ -96,6 +102,7 @@ export function ProjectFileControls({ operations }: { readonly operations: Proje
           {pendingOperation === 'saveProfile' ? 'Saving…' : 'Save Profile'}
         </button>
         <button
+          className="danger-action action-compact"
           disabled={pendingOperation !== null}
           onClick={() => void runProfileOperation('loadProfile', () => operations.loadProfile())}
           type="button"
@@ -103,7 +110,11 @@ export function ProjectFileControls({ operations }: { readonly operations: Proje
           {pendingOperation === 'loadProfile' ? 'Loading…' : 'Load Profile'}
         </button>
         {profileSession.recoveryStatus === 'blocked' && (
-          <button onClick={() => setResult(operations.discardAutosaveRecovery())} type="button">
+          <button
+            className="danger-action action-compact"
+            onClick={() => setResult(operations.discardAutosaveRecovery())}
+            type="button"
+          >
             Discard Autosave
           </button>
         )}

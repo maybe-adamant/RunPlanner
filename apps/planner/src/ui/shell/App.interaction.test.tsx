@@ -26,6 +26,8 @@ describe('planner history interaction', () => {
     const undo = screen.getByRole('button', { name: 'Undo' });
     const redo = screen.getByRole('button', { name: 'Redo' });
 
+    expect(undo.classList.contains('quiet-action')).toBe(true);
+    expect(redo.classList.contains('quiet-action')).toBe(true);
     expect(undo).toHaveProperty('disabled', true);
     expect(redo).toHaveProperty('disabled', true);
 
@@ -222,6 +224,15 @@ describe('project profile interaction', () => {
     const application = createApplication({ profileFile });
     const { user } = renderPlannerForInteraction({ application });
 
+    expect(screen.getByRole('button', { name: 'New' }).classList.contains('danger-action')).toBe(
+      true,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Save Profile' }).classList.contains('secondary-action'),
+    ).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Load Profile' }).classList.contains('danger-action'),
+    ).toBe(true);
     expect(screen.getByText('Unsaved')).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
     const savedEvaluation = application.store.getState().projectWorkspace.assembly.evaluation;
@@ -292,7 +303,9 @@ describe('project profile interaction', () => {
       'Autosave recovery failed: $: must be valid JSON',
     );
     expect(screen.getByText('Unsaved')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Discard Autosave' }));
+    const discard = screen.getByRole('button', { name: 'Discard Autosave' });
+    expect(discard.classList.contains('danger-action')).toBe(true);
+    await user.click(discard);
 
     expect(recoveryJson).toBeNull();
     expect(screen.queryByText('Autosave recovery failed: $: must be valid JSON')).toBeNull();

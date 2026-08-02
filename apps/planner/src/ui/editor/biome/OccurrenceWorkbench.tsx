@@ -558,14 +558,16 @@ export function OccurrenceWorkbench({
         room={room}
       />
       {nextDecisionIntent === undefined ? null : (
-        <button
-          className="secondary-action"
-          data-command={nextDecisionIntent.command.kind}
-          onClick={() => executeIntent(nextDecisionIntent)}
-          type="button"
-        >
-          Add next decision
-        </button>
+        <div className="workbench-action-row">
+          <button
+            className="primary-action"
+            data-command={nextDecisionIntent.command.kind}
+            onClick={() => executeIntent(nextDecisionIntent)}
+            type="button"
+          >
+            Add next decision
+          </button>
+        </div>
       )}
     </article>
   );

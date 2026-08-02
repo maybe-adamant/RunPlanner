@@ -108,7 +108,9 @@ describe('HubDecisionWorkbench', () => {
     const historyBeforeBoard =
       view.application.store.getState().projectWorkspace.history.past.length;
 
-    await view.user.click(screen.getByRole('button', { name: 'Set up Hub rooms' }));
+    const setUpHub = screen.getByRole('button', { name: 'Set up Hub rooms' });
+    expect(setUpHub.classList.contains('primary-action')).toBe(true);
+    await view.user.click(setUpHub);
     await waitFor(() => expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26));
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBeforeBoard + 1,
@@ -422,7 +424,10 @@ describe('HubDecisionWorkbench', () => {
     const view = renderHubDecisionWorkbench(project);
 
     const confirmation = vi.spyOn(globalThis, 'confirm');
-    await view.user.click(screen.getByRole('button', { name: 'Remove visits from Visit 6' }));
+    const removal = screen.getByRole('button', { name: 'Remove visits from Visit 6' });
+    expect(removal.classList.contains('danger-action')).toBe(true);
+    expect(removal.classList.contains('action-compact')).toBe(true);
+    await view.user.click(removal);
     expect(confirmation).not.toHaveBeenCalled();
     await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toHaveLength(5));
     expect(

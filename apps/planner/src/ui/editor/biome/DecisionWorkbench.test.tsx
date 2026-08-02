@@ -754,7 +754,10 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(owner),
     );
     const confirmation = vi.spyOn(globalThis, 'confirm');
-    await decision.user.click(screen.getByRole('button', { name: 'Remove these doors' }));
+    const removal = screen.getByRole('button', { name: 'Remove these doors' });
+    expect(removal.classList.contains('danger-action')).toBe(true);
+    expect(removal.closest('.workbench-action-row')).not.toBeNull();
+    await decision.user.click(removal);
     expect(confirmation).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(
@@ -881,7 +884,9 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(ordinaryOwner),
     );
     expect(document.querySelector('[data-command="ReconcileBatchExitCapacity"]')).not.toBeNull();
-    await ordinary.user.click(screen.getByRole('button', { name: 'Remove unavailable doors' }));
+    const repair = screen.getByRole('button', { name: 'Remove unavailable doors' });
+    expect(repair.classList.contains('danger-action')).toBe(true);
+    await ordinary.user.click(repair);
     expect(
       workspaceBiome(ordinary.application, 'Underworld', 'F').nodes.find(
         (node) => node.kind === 'ordinaryBatch' && ownerMatches(node, ordinaryOwner),
