@@ -95,7 +95,7 @@ function ExactRepairAction({ intent }: { readonly intent: WorkspaceBatchRepairIn
   const executeIntent = useCommandIntent();
   return (
     <button
-      className="secondary-action"
+      className="danger-action"
       data-command={intent.command.kind}
       onClick={() => executeIntent(intent)}
       type="button"
@@ -508,19 +508,21 @@ export function BatchWorkbench({
           ))
         )}
       </div>
-      {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
-      <TopologyRemovalAction interaction={removal} label="Remove these doors" />
-      {nextDecisionIntent === undefined ? null : (
-        <button
-          className="secondary-action decision-next-action"
-          data-command={nextDecisionIntent.command.kind}
-          onClick={() => executeIntent(nextDecisionIntent)}
-          type="button"
-        >
-          Add next decision
-        </button>
-      )}
+      <div className="workbench-action-row">
+        {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
+        <TopologyRemovalAction interaction={removal} label="Remove these doors" />
+        {nextDecisionIntent === undefined ? null : (
+          <button
+            className="primary-action"
+            data-command={nextDecisionIntent.command.kind}
+            onClick={() => executeIntent(nextDecisionIntent)}
+            type="button"
+          >
+            Add next decision
+          </button>
+        )}
+      </div>
     </section>
   );
 }
@@ -555,7 +557,9 @@ export function LinkedExitWorkbench({
         presentation="full"
         room={node.target.room}
       />
-      <TopologyRemovalAction interaction={removal} label="Remove these doors" />
+      <div className="workbench-action-row">
+        <TopologyRemovalAction interaction={removal} label="Remove these doors" />
+      </div>
     </section>
   );
 }

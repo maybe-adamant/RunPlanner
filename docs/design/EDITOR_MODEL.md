@@ -350,6 +350,16 @@ removing all create one semantic-command history entry and share Undo/Redo
 recovery. The UI does not persistently display projected deletion scope. The
 command layer, not React, defines the actual deletion scope.
 
+Semantic action styling is an explicit React/CSS convention rather than a
+generic button abstraction. Primary controls advance authoring, secondary
+controls make restorative repairs or project edits, and danger controls
+remove authored structure or replace/discard a project or recovery snapshot.
+Compact quiet controls serve Undo/Redo; contextual navigation and picker
+controls retain their own interaction treatments. Shared action rows only
+arrange co-located controls (danger actions before a right-aligned primary
+continuation on wide screens, in the same DOM order on narrow screens); they do
+not alter the command, history, recovery, or confirmation contract.
+
 ## Room and Reward Editors
 
 Room editors are selected by room template and receive:

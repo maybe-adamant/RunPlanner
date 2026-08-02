@@ -367,9 +367,12 @@ describe('BiomeWorkspace', () => {
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
     expect(within(inspector).queryByText('Continue from this room')).toBeNull();
+    const continuation = within(inspector).getByRole('button', { name: 'Add next decision' });
+    expect(continuation.classList.contains('primary-action')).toBe(true);
+    expect(continuation.closest('.workbench-action-row')).not.toBeNull();
     const before = view.application.store.getState().projectWorkspace.history.past.length;
 
-    await view.user.click(within(inspector).getByRole('button', { name: 'Add next decision' }));
+    await view.user.click(continuation);
 
     await waitFor(() => {
       expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);

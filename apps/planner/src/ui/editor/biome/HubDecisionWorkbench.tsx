@@ -324,7 +324,7 @@ function HubVisitRow({
       {interaction?.removal === undefined ? null : (
         <button
           aria-label={`Remove visits from Visit ${visit.visitIndex}`}
-          className="danger-action"
+          className="danger-action action-compact"
           onClick={() => executeIntent(interaction.removal!)}
           type="button"
         >
