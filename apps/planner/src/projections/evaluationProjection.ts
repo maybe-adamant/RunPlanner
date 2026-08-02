@@ -69,7 +69,7 @@ const findingCopy = {
   },
   continuationMissing: {
     title: 'Continue this route',
-    description: 'Add the next doors or go to Preboss.',
+    description: 'Continue from here to complete this route.',
   },
   hubOpenSetIncomplete: {
     title: 'Choose open Hub rooms',
