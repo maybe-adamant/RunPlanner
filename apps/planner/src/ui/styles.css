@@ -1553,10 +1553,6 @@ select {
   background: rgb(255 255 255 / 2%);
 }
 
-.local-reward-slot[data-active='false'] {
-  opacity: 0.62;
-}
-
 .local-reward-heading {
   display: flex;
   align-items: center;

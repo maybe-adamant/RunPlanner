@@ -126,12 +126,16 @@ function hCages(project: ProjectDocument) {
   return state.cages;
 }
 
-function shipWheel2(project: ProjectDocument) {
+function shipWheel(project: ProjectDocument, wheelKey: 'wheel1' | 'wheel2') {
   const state = occurrenceState(project, 'Surface', 'O', oOccurrenceIds.combat07);
   if (state.kind !== 'shipCombat') throw new Error('O Ship state is missing');
-  const wheel = state.wheels.wheel2;
-  if (wheel === undefined) throw new Error('O Ship wheel 2 is missing');
+  const wheel = state.wheels[wheelKey];
+  if (wheel === undefined) throw new Error(`O Ship ${wheelKey} is missing`);
   return wheel;
+}
+
+function shipWheel2(project: ProjectDocument) {
+  return shipWheel(project, 'wheel2');
 }
 
 function dormantShopProject(): { readonly project: ProjectDocument; readonly shopId: string } {
@@ -422,11 +426,7 @@ describe('OccurrenceWorkbench', () => {
     expect(
       Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
     ).toEqual(['Reward wheel 1', 'Reward wheel 2']);
-    expect(
-      within(within(screen.getByLabelText('Reward wheel 1')).getByLabelText('Offer 2')).getByText(
-        'Dormant',
-      ),
-    ).toBeTruthy();
+    expect(within(screen.getByLabelText('Reward wheel 1')).queryByLabelText('Offer 2')).toBeNull();
     expect(
       (within(initialWheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement)
         .value,
@@ -492,6 +492,92 @@ describe('OccurrenceWorkbench', () => {
     expect(shipWheel2(view.application.store.getState().projectWorkspace.history.present)).toEqual(
       shipWheel2(project),
     );
+  });
+
+  it('hides dormant Ship wheel offers while retaining their authored reward', async () => {
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
+    const offer = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat07,
+      'wheel1',
+      'offer2',
+    );
+    const view = renderOccurrenceWorkbench(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.combat07),
+    );
+
+    const rewardWheel = screen.getByLabelText('Reward wheel 1');
+    expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull();
+
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceRewardWheelOfferCount',
+          wheel,
+          offerCount: 2,
+        }),
+      ),
+    );
+    await waitFor(() => expect(within(rewardWheel).getByLabelText('Offer 2')).toBeTruthy());
+
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceRewardWheelOffer',
+          offer,
+          value: { rewardType: 'MetaCurrencyDrop' },
+        }),
+      ),
+    );
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceRewardWheelPicked',
+          wheel,
+          pickedOfferIndex: 2,
+        }),
+      ),
+    );
+
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceRewardWheelOfferCount',
+          wheel,
+          offerCount: 1,
+        }),
+      ),
+    );
+    await waitFor(() => expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull());
+    expect(
+      (within(rewardWheel).getByRole('combobox', { name: 'Picked offer' }) as HTMLSelectElement)
+        .value,
+    ).toBe('1');
+    expect(
+      shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1').offers
+        .offer2,
+    ).toEqual({ rewardType: 'MetaCurrencyDrop' });
+
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceRewardWheelOfferCount',
+          wheel,
+          offerCount: 2,
+        }),
+      ),
+    );
+    const restoredOffer = await within(rewardWheel).findByLabelText('Offer 2');
+    expect(within(restoredOffer).getByRole('button', { name: 'Reward' }).textContent).toContain(
+      'Bones',
+    );
+    expect(
+      (within(rewardWheel).getByRole('combobox', { name: 'Picked offer' }) as HTMLSelectElement)
+        .value,
+    ).toBe('1');
   });
 
   it('renders materialized Shop descriptors directly', () => {

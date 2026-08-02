@@ -347,27 +347,23 @@ function ShipWorkbench({
                 />
               </div>
               <div className="reward-wheel-offers">
-                {wheel.offers.map((offer) => (
-                  <section
-                    aria-label={offer.label}
-                    className="local-reward-slot"
-                    data-active={offer.active}
-                    key={offer.key}
-                  >
-                    <div className="local-reward-heading">
-                      <div className="owner-markers">
-                        <h5>{offer.label}</h5>
-                        <SemanticOwnerMarker address={offer.control.marker.address} />
+                {wheel.offers
+                  .filter((offer) => offer.active)
+                  .map((offer) => (
+                    <section aria-label={offer.label} className="local-reward-slot" key={offer.key}>
+                      <div className="local-reward-heading">
+                        <div className="owner-markers">
+                          <h5>{offer.label}</h5>
+                          <SemanticOwnerMarker address={offer.control.marker.address} />
+                        </div>
                       </div>
-                      <span className="neutral-status">{offer.active ? 'Active' : 'Dormant'}</span>
-                    </div>
-                    <RewardControlEditor
-                      control={offer.control}
-                      idPrefix={`${idPrefix}-${offer.key}`}
-                      interactions={interactions}
-                    />
-                  </section>
-                ))}
+                      <RewardControlEditor
+                        control={offer.control}
+                        idPrefix={`${idPrefix}-${offer.key}`}
+                        interactions={interactions}
+                      />
+                    </section>
+                  ))}
               </div>
             </section>
           );

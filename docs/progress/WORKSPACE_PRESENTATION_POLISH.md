@@ -13,6 +13,10 @@ presentation changes below. Exact authored Shop purchase order is the separate
 cross-layer Commit 5c defined by
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md), which follows that closure.
 
+The small O offer-lifecycle correction below follows the completed 5b.3 section
+slice. It applies the already projected offer `active` fact inside an active
+wheel; it does not reopen the core model or add a fifth presentation change.
+
 The decision-highlight rail follow-up documented below was delivered out of
 sequence and does not complete, renumber, or replace completed Commit 5b.3 or
 the still-active Commit 5b.4 verification slice.
@@ -288,6 +292,9 @@ scalar `CandidateSelect`.
 
 ## Change 3: Hide Dormant H and O Reward Sections
 
+This section records Commit 5b.3's delivered whole-section scope. The separate
+post-5b.3 correction below expands only O's in-wheel presentation.
+
 ### H Policy
 
 `WorkspaceRoomLocal.kind === "fields"` continues to project every declared cage
@@ -303,21 +310,20 @@ authored `Intro + 1 combat` room shows Reward Wheel 1; `Intro + 2 combats`
 shows Reward Wheels 1 and 2. The dormant second wheel remains authored and
 reappears unchanged when the third encounter phase is restored.
 
-This change does not alter offer-count presentation inside an active wheel.
-Inactive offers governed by the wheel's existing `offerCount` control remain
-outside this slice.
+This delivered change does not alter offer-count presentation inside an active
+wheel. Inactive offers governed by the wheel's existing `offerCount` control
+remain visibly dormant.
 
 React consumes the projected `active` facts. It does not derive cage count from
 the Fields outcome or wheel presence from `encounterCount`.
 
 No derived active-count caption is added: the rendered cage and wheel cards are
-the current room configuration. Inactive offers inside an active wheel retain
-their existing visibly dormant presentation.
+the current room configuration.
 
 ### Deliverables
 
-- Filter H cage and O wheel rendering by their existing projection-owned
-  `active` flags.
+- Filter H cages and O wheels by their existing projection-owned `active`
+  flags.
 - Remove dormant-card labels and spacing for the hidden sections.
 - Do not add a derived active-count caption for either room type.
 - Add toggle regressions proving dormant values reappear unchanged.
@@ -471,11 +477,12 @@ feat(editor): hide dormant room reward sections
 ```
 
 Owns Change 3 only. `FieldsWorkbench` and `ShipWorkbench` now consume the
-projection-owned `active` facts to omit inactive cage and wheel cards without
-changing the complete projected product. The zero-active Fields guard removes
-the otherwise empty section. H and O toggle regressions prove retained leaves,
-stores, offer counts, picked values, and reward values reappear unchanged;
-inactive offers inside a rendered wheel remain in scope.
+projection-owned `active` facts to omit inactive cage and whole-wheel cards
+without changing the complete projected product. The zero-active Fields guard
+removes the otherwise empty section. H and O toggle regressions prove retained
+leaves, stores, offer counts, picked values, and reward values reappear
+unchanged when a cage or whole wheel returns. The delivered slice deliberately
+left dormant offers inside an active wheel visible.
 
 Likely files:
 
@@ -486,6 +493,42 @@ Likely files:
 
 The projection types and tests should remain unchanged because their complete
 active/dormant products are deliberate.
+
+### Post-5b.3 O Offer-Lifecycle Correction — implementation follow-up
+
+The later O correction applies the same existing projection-owned `active` fact
+to offers inside an already active wheel. Each active wheel continues to
+project its complete maximum-capacity offer product, but `ShipWorkbench` now
+renders only the offers marked active. A wheel with one active offer therefore
+shows one editor; when its count returns to two, the second editor returns with
+its retained authored reward.
+
+This filters only presentation: the full offer product, semantic identity,
+interaction binding, and authored capacity stay intact. Reducing `offerCount`
+does not delete a hidden reward value; the existing semantic command clamps a
+picked offer that is no longer active. This is not a change to offer
+eligibility, findings, candidate support, materialization, or focus policy.
+
+Deliverables:
+
+- Filter O wheel offers by their existing projection-owned `active` flag.
+- Remove the dormant offer status and spacing from hidden cards.
+- Add a toggle regression for retained reward value and picked-index clamping.
+
+Acceptance:
+
+- An active O wheel with one offer renders one editor; its second editor returns
+  with its authored reward when the count returns to two.
+- Reducing an O offer count preserves its hidden reward value and clamps its
+  picked index to the active range.
+- No projection, authored model, materialization, candidate, or finding
+  behavior changes.
+
+The O workbench regression exercises `1 → 2 → 1 → 2`: the dormant second
+editor disappears, its authored reward returns when reactivated, and the
+existing command clamps a no-longer-active picked offer to the active range.
+This correction supersedes only the visible-dormant-offer detail of the
+historical 5b.3 record above.
 
 Gate:
 

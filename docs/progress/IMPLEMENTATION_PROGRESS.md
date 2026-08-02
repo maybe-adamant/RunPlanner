@@ -65,6 +65,14 @@ implemented. Commit 5b.4's desktop and narrow visual verification is the
 active feature frontier; Commit 5c follows its own
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan after that closure.
 
+The narrow O offer-lifecycle follow-up completes the intended Change 3 policy:
+an active Ship reward wheel renders only its projection-active offers, while
+the complete authored/projection capacity remains available for persistence,
+semantic identity, and restoration. Reducing an offer count retains the hidden
+reward value and uses the existing semantic command to clamp the picked offer
+to the active range; it does not derive lifecycle from findings or evaluated
+validity.
+
 The post-checkpoint comparison against `f69dc709` found that Campaign A's
 contract correction had not completed its internal module reorganization: the
 structured-workspace production area grew from 5,781 to 9,848 lines and the
