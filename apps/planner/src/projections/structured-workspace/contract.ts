@@ -148,6 +148,18 @@ export type WorkspaceRoomInteraction =
       readonly owner: OccurrenceAddress;
     })
   | (WorkspaceRoomInteractionBase & {
+      /**
+       * Door 1 of an authored empty generated decision can author either its
+       * ordinary target or the decision-owned atomic takeover batch. The
+       * visible control remains target-addressed; the takeover evidence and
+       * bound mutation retain the exact decision owner.
+       */
+      readonly decisionOwner: ExitDecisionAddress;
+      readonly intentFor: (gameName: string) => WorkspaceDecisionEntryRoomCommandIntent;
+      readonly kind: 'decisionEntryRoom';
+      readonly owner: TargetAddress;
+    })
+  | (WorkspaceRoomInteractionBase & {
       readonly intentFor: (gameName: string) => WorkspaceTargetRoomCommandIntent;
       readonly kind: 'targetRoom';
       readonly owner: TargetAddress;
@@ -181,6 +193,10 @@ type WorkspaceRewardCommandIntent = WorkspaceCommandIntent<
 
 type WorkspaceTargetRoomCommandIntent = WorkspaceCommandIntent<
   Extract<ProjectCommand, { readonly kind: 'CreateTarget' | 'ReplaceOccurrenceRoom' }>
+>;
+
+type WorkspaceDecisionEntryRoomCommandIntent = WorkspaceCommandIntent<
+  Extract<ProjectCommand, { readonly kind: 'CreateTarget' | 'ReplaceWithTakeoverBatch' }>
 >;
 
 /** A start remains an authored action even when its declaration fixes the room. */
@@ -228,13 +244,12 @@ export type WorkspaceStructuralInteraction =
       readonly owner: HubDecisionAddress;
     };
 
-/** Visible exit frontiers can expose independent structural and takeover actions. */
+/** Visible exit frontiers expose their complete structural continuation action. */
 export interface WorkspaceExitFrontierCapabilities {
   readonly structural?: Extract<
     WorkspaceStructuralInteraction,
     { readonly owner: ExitDecisionAddress }
   >['action'];
-  readonly takeover?: true;
 }
 
 export interface WorkspaceTopologyRemovalInteraction {
@@ -297,28 +312,8 @@ export type WorkspaceHubVisitInteraction = WorkspaceCandidateInteraction<string>
 };
 
 interface WorkspaceTakeoverBatchInteractionBase {
-  readonly action: 'create' | 'replace' | 'reconcile';
   readonly key: string;
   readonly owner: ExitDecisionAddress;
-}
-
-export interface WorkspaceCandidateTakeoverBatchInteraction extends WorkspaceTakeoverBatchInteractionBase {
-  readonly presentation: 'candidate';
-  readonly intentFor: (candidate: WorkspaceTakeoverCandidate) => WorkspaceTakeoverCommandIntent;
-  readonly selected?: WorkspaceTakeoverCandidate;
-  readonly load: () => readonly CandidateOptionProjection<WorkspaceTakeoverCandidate>[];
-}
-
-export type WorkspaceFixedWidthOneTakeoverActionResult =
-  | { readonly kind: 'intent'; readonly intent: WorkspaceTakeoverCommandIntent }
-  | { readonly kind: 'unavailable'; readonly message: string };
-
-export interface WorkspaceFixedWidthOneTakeoverInteraction extends WorkspaceTakeoverBatchInteractionBase {
-  readonly action: 'create';
-  readonly execute: () => WorkspaceFixedWidthOneTakeoverActionResult;
-  readonly label: string;
-  readonly presentation: 'fixedWidthOneTakeover';
-  readonly summary: string;
 }
 
 export interface WorkspaceCompletedHubHandoffInteraction extends WorkspaceTakeoverBatchInteractionBase {
@@ -336,17 +331,9 @@ export interface WorkspaceTakeoverRepairInteraction extends WorkspaceTakeoverBat
 }
 
 export type WorkspaceTakeoverBatchInteraction =
-  | WorkspaceCandidateTakeoverBatchInteraction
-  | WorkspaceFixedWidthOneTakeoverInteraction
-  | WorkspaceCompletedHubHandoffInteraction
-  | WorkspaceTakeoverRepairInteraction;
+  WorkspaceCompletedHubHandoffInteraction | WorkspaceTakeoverRepairInteraction;
 
 type WorkspaceTakeoverCommandIntent = WorkspaceCommandIntent<TakeoverBatchCommand>;
-
-export interface WorkspaceTakeoverCandidate {
-  readonly gameName: string;
-  readonly label: string;
-}
 
 export interface WorkspaceInteractionCatalog {
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
@@ -413,6 +400,28 @@ export type WorkspaceRoomPickerControl =
             readonly selectedGameName: string;
           }
         | { readonly kind: 'missing' };
+    }
+  | {
+      /**
+       * The first physical target remains the visible, marker-owning control,
+       * while takeover candidates and commands retain their decision owner.
+       */
+      readonly address: TargetAddress;
+      readonly decisionOwner: ExitDecisionAddress;
+      readonly kind: 'decisionEntryRoomPicker';
+      /**
+       * The decision assembly, rather than candidate availability, owns whether
+       * an ordinary first target is locally ready to mutate.
+       */
+      readonly ordinaryTargetAuthoring: WorkspaceMissingTargetAuthoring;
+      /**
+       * The engine-owned static `CreateTarget` domain for this exact target.
+       * It remains independent of evaluated candidate reachability, so an
+       * incomplete retained prefix can be editable without allowing a room
+       * beyond a terminal or staged progression bound.
+       */
+      readonly ordinaryTargetGameNames: readonly string[];
+      readonly takeoverGameNames: readonly string[];
     }
   | {
       readonly address: OccurrenceAddress;

@@ -74,7 +74,8 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
     const structure = screen.getByRole('region', { name: 'Oceanus route structure' });
     await view.user.click(within(structure).getByRole('button', { name: /Continue route/ }));
-    expect(screen.getByRole('button', { name: 'Add doors' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add next decision' })).toBeTruthy();
+    expect(screen.queryByText('Add doors')).toBeNull();
     const g = application.store
       .getState()
       .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')

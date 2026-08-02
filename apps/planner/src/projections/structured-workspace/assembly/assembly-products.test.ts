@@ -195,12 +195,13 @@ function takeoverInteractionRequirement(): WorkspaceTakeoverInteractionRequireme
     occurrenceId: createOccurrenceId('duplicate-takeover-interaction'),
   });
   return Object.freeze({
-    action: 'create' as const,
+    action: 'reconcile' as const,
     existingTargets: Object.freeze([]),
-    gameNames: Object.freeze(['F_PreBoss01']) as readonly [string, ...string[]],
+    gameName: 'F_PreBoss01',
     kind: 'takeoverBatch' as const,
     owner,
-    presentation: 'candidate' as const,
+    presentation: 'repair' as const,
+    requiredExitKeys: Object.freeze(['exit1']),
   });
 }
 
@@ -210,7 +211,7 @@ function frontierInteractionRequirement(): WorkspaceFrontierInteractionRequireme
     occurrenceId: createOccurrenceId('duplicate-frontier-interaction'),
   });
   return Object.freeze({
-    capabilities: Object.freeze({ structural: 'createBatch' as const, takeover: true as const }),
+    capabilities: Object.freeze({ structural: 'createBatch' as const }),
     kind: 'exitFrontier' as const,
     owner,
     structural: Object.freeze({ action: 'createBatch' as const }),

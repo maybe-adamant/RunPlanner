@@ -1,19 +1,19 @@
-import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
+import type { OccurrenceAddress, ProjectCommand } from '@run-planner/engine/authored-project';
 import { candidateSupport, presentCandidateLabel } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
+  type WorkspaceCommandIntent,
   type WorkspaceInteractionCatalog,
-  type WorkspaceMarker,
   type WorkspaceEphyraSideRoomDescriptor,
   type WorkspaceEphyraSideRoomGroup,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { ShopPurchaseControl } from '../rooms/ShopPurchaseControl';
@@ -22,7 +22,9 @@ import { RoomSelector } from './RoomSelector';
 
 interface OccurrenceWorkbenchProps {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly nextFrontier?: WorkspaceMarker;
+  readonly nextDecisionIntent?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
+  >;
   /** Hub visits retain their main offer on the Hub board. */
   readonly presentation: 'full' | 'hubRoomLocal';
   readonly room: WorkspaceRoomSummary;
@@ -506,11 +508,12 @@ export function RoomOfferEditor({
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
   interactions,
-  nextFrontier,
+  nextDecisionIntent,
   presentation,
   room,
 }: OccurrenceWorkbenchProps) {
   const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const idPrefix = `occurrence-${room.occurrenceId}`;
   const roomInteraction =
     room.roomPicker === undefined
@@ -554,13 +557,14 @@ export function OccurrenceWorkbench({
         presentation={presentation}
         room={room}
       />
-      {nextFrontier === undefined ? null : (
+      {nextDecisionIntent === undefined ? null : (
         <button
           className="secondary-action"
-          onClick={() => dispatch(semanticOwnerFocused(nextFrontier.address))}
+          data-command={nextDecisionIntent.command.kind}
+          onClick={() => executeIntent(nextDecisionIntent)}
           type="button"
         >
-          Go to next step
+          Add next decision
         </button>
       )}
     </article>

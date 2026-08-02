@@ -119,6 +119,7 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
         appendMarker(markers, target.marker);
         markers.push(...roomMarkers(target.room));
       }
+      for (const target of node.missingTargets) appendMarker(markers, target.marker);
       break;
     case 'hubDecision':
       appendMarker(markers, node.openSet);

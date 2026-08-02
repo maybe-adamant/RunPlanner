@@ -1,4 +1,8 @@
-import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
+import {
+  semanticAddressKey,
+  type ProjectCommand,
+  type SemanticAddress,
+} from '@run-planner/engine/authored-project';
 import type { ReactNode } from 'react';
 
 import {
@@ -7,6 +11,7 @@ import {
   type StructuredWorkspaceProjection,
   type WorkspaceBiome,
   type WorkspaceCompletionNode,
+  type WorkspaceCommandIntent,
   type WorkspaceDefaultInspectorDestination,
   type WorkspaceInspectorDestination,
   type WorkspaceInteractionCatalog,
@@ -334,13 +339,15 @@ function InspectorNode({
   frontier,
   interactions,
   label,
-  nextFrontier,
+  nextDecisionIntent,
   node,
 }: {
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
-  readonly nextFrontier?: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'exitDecision' }>;
+  readonly nextDecisionIntent?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
+  >;
   readonly node: WorkspaceNode;
 }) {
   switch (node.kind) {
@@ -357,7 +364,7 @@ function InspectorNode({
         <>
           <OccurrenceWorkbench
             interactions={interactions}
-            {...(nextFrontier === undefined ? {} : { nextFrontier: nextFrontier.marker })}
+            {...(nextDecisionIntent === undefined ? {} : { nextDecisionIntent })}
             presentation={node.inspectorPresentation}
             room={node.room}
           />
@@ -376,7 +383,7 @@ function InspectorNode({
         <BatchWorkbench
           interactions={interactions}
           label={label}
-          {...(nextFrontier === undefined ? {} : { nextFrontier: nextFrontier.marker })}
+          {...(nextDecisionIntent === undefined ? {} : { nextDecisionIntent })}
           node={node}
         />
       );
@@ -462,6 +469,13 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
     subject.node.key === exitFrontier.predecessorNodeKey
       ? exitFrontier
       : undefined;
+  const nextDecisionIntent =
+    nearbyFrontier === undefined
+      ? undefined
+      : (() => {
+          const structural = interactions.structural.get(nearbyFrontier.interactionKey);
+          return structural?.action === 'createBatch' ? structural.intent : undefined;
+        })();
   const clearTopology =
     biome.entry === undefined
       ? undefined
@@ -516,7 +530,7 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
             frontier={biome.frontier}
             interactions={interactions}
             label={inspectorTitle}
-            {...(nearbyFrontier === undefined ? {} : { nextFrontier: nearbyFrontier })}
+            {...(nextDecisionIntent === undefined ? {} : { nextDecisionIntent })}
             node={subject.node}
           />
         )}

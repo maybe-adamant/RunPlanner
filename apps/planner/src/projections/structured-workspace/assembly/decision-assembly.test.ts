@@ -356,6 +356,19 @@ describe('structured workspace decision assembly', () => {
         message: 'Choose the Fields door roll first.',
       },
     ]);
+    expect(assembly.roomControls).toMatchObject([
+      {
+        address: assembly.batch.missingTargets[0]?.marker.address,
+        decisionOwner: owner,
+        kind: 'decisionEntryRoomPicker',
+        ordinaryTargetAuthoring: {
+          kind: 'awaitingFieldsCageOutcome',
+          message: 'Choose the Fields door roll first.',
+        },
+        ordinaryTargetGameNames: expect.arrayContaining(['H_Combat02']),
+        takeoverGameNames: ['H_PreBoss01'],
+      },
+    ]);
   });
 
   it('keeps Fields policy facts while excluding a non-Fields bounded target from capacity', () => {
@@ -720,7 +733,26 @@ describe('structured workspace decision assembly', () => {
         (target) => target.authoring.kind === 'awaitingBatchRewardStore',
       ),
     ).toBe(true);
-    expect(before.roomControls).toEqual([]);
+    expect(before.roomControls).toMatchObject([
+      {
+        address: before.batch.missingTargets[0]?.marker.address,
+        decisionOwner: owner,
+        kind: 'decisionEntryRoomPicker',
+        ordinaryTargetAuthoring: {
+          kind: 'awaitingBatchRewardStore',
+          message: 'Choose the reward pool first.',
+        },
+        ordinaryTargetGameNames: expect.arrayContaining(['F_Combat01']),
+        takeoverGameNames: ['F_PreBoss01'],
+      },
+    ]);
+    expect(beforeKit.markers.destinations().get(semanticAddressKey(owner))?.nodeKey).toBe(
+      before.batch.key,
+    );
+    expect(
+      beforeKit.markers.destinations().get(before.batch.missingTargets[0]?.marker.focusKey ?? '')
+        ?.nodeKey,
+    ).toBe(before.batch.key);
 
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceBatchRewardStore',
@@ -742,10 +774,13 @@ describe('structured workspace decision assembly', () => {
       { kind: 'ready' },
     ]);
     expect(after.roomControls).toHaveLength(1);
-    expect(after.roomControls[0]).toEqual({
+    expect(after.roomControls[0]).toMatchObject({
       address: after.batch.missingTargets[0]?.marker.address,
-      kind: 'targetRoomPicker',
-      target: { kind: 'missing' },
+      decisionOwner: owner,
+      kind: 'decisionEntryRoomPicker',
+      ordinaryTargetAuthoring: { kind: 'ready' },
+      ordinaryTargetGameNames: expect.arrayContaining(['F_Combat01']),
+      takeoverGameNames: ['F_PreBoss01'],
     });
   });
 

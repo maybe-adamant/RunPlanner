@@ -89,7 +89,7 @@ function biome(workspace: StructuredWorkspaceProjection, biomeKey: string): Work
  * 38 target identity/takeover commands -> interaction binding
  * 39 command-owned removal intent -> topology-interaction assembly + interaction binding
  * 40 unavailable-batch repair intent -> decision assembly
- * 41 takeover replacement command -> topology-interaction assembly + interaction binding
+ * 41 takeover creation/repair command -> topology-interaction assembly + interaction binding
  * 42 incomplete/blocked start frontier -> biome-semantic assembly
  * 43 partial versus complete-invalid state -> biome-semantic assembly
  * 44 retained decisions after incomplete prefix -> source index + decision assembly

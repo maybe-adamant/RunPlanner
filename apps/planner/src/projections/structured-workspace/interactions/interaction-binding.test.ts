@@ -12,6 +12,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteAddress,
   createRewardWheelOfferAddress,
   createRewardWheelAddress,
   createShopOfferAddress,
@@ -25,10 +26,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
+  createCompleteFGProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
   goldenGBiome,
+  goldenHBiome,
   createRepresentativeNOPQProject,
   appendCompleteN,
   nBiome,
@@ -38,6 +41,8 @@ import {
   oOccurrenceIds,
   pBiome,
   pOccurrenceIds,
+  qBiome,
+  qOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
 import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
@@ -46,7 +51,6 @@ import { createRewardPickerProjection } from '@planner/projections/rewardPicker'
 import { assembleWorkspaceBiomeSemantics } from '../assembly/biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 import { bindWorkspaceInteractions } from './interaction-binding';
-import type { WorkspaceTakeoverInteractionRequirement } from './interaction-requirements';
 
 const contextualPicker = createContextualPickerProjection(createContextualOptionResolver(catalog));
 const services = {
@@ -60,10 +64,6 @@ function bind(
   routeKey: string,
   biomeKey: string,
   allocateOccurrenceId = () => createOccurrenceId('interaction-binding-start'),
-  transformTakeoverRequirements: (
-    requirements: ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement>,
-  ) => ReadonlyMap<string, WorkspaceTakeoverInteractionRequirement> = (requirements) =>
-    requirements,
 ) {
   const projectAssembly = simulateProjectAssembly(catalog, project);
   const evaluation = projectAssembly.evaluation;
@@ -86,9 +86,7 @@ function bind(
       roomControls: assembly.roomControls,
       services,
       startInteractionRequirements: assembly.startInteractionRequirements,
-      takeoverInteractionRequirements: transformTakeoverRequirements(
-        assembly.takeoverInteractionRequirements,
-      ),
+      takeoverInteractionRequirements: assembly.takeoverInteractionRequirements,
       topologyRemovalInteractionRequirements: assembly.topologyRemovalInteractionRequirements,
     }),
   };
@@ -569,196 +567,281 @@ describe('structured workspace interaction binding', () => {
     });
   });
 
-  it('binds candidate takeovers to declaration labels and their exact create command', () => {
+  it('binds a terminal Door 1 takeover choice to its exact replacement command', () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(10, 1),
     });
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const withoutDecision = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       decision: owner,
       kind: 'RemoveExitDecision',
     });
+    const project = applyProjectCommand(withoutDecision, catalog, {
+      decision: owner,
+      kind: 'CreateBatch',
+    });
+    const target = createTargetAddress(goldenFBiome, owner.source, 'exit1');
     const allocated: ReturnType<typeof createOccurrenceId>[] = [];
     const interaction = bind(project, 'Underworld', 'F', () => {
       const occurrenceId = createOccurrenceId(`bound-takeover-${allocated.length + 1}`);
       allocated.push(occurrenceId);
       return occurrenceId;
-    }).interactions.takeoverBatches.get(semanticAddressKey(owner));
-    if (interaction?.presentation !== 'candidate') {
-      throw new Error('F candidate takeover interaction is missing');
+    }).interactions.rooms.get(semanticAddressKey(target));
+    if (interaction?.kind !== 'decisionEntryRoom') {
+      throw new Error('F terminal Door 1 decision-entry interaction is missing');
     }
     expect(allocated).toEqual([]);
-    const candidates = interaction.load();
+    expect(interaction.owner).toEqual(target);
+    expect(interaction.decisionOwner).toEqual(owner);
+    const model = interaction.load();
     expect(allocated).toEqual([]);
-    const selected = candidates.find(
-      (candidate) =>
-        candidate.evaluation.kind === 'takeoverPrebossBatch' &&
-        candidate.evaluation.result.selectedPossible,
+    const items = model.sections.flatMap((section) => section.items);
+    const preboss = items.find((item) => item.value.gameName === 'F_PreBoss01');
+    if (preboss === undefined) throw new Error('F terminal Preboss choice is missing');
+    expect(preboss).toMatchObject({ disabled: false, state: 'forced' });
+    const ordinary = items.find((item) => item.value.gameName !== 'F_PreBoss01');
+    if (ordinary === undefined) throw new Error('F terminal ordinary candidate is missing');
+    expect(ordinary.disabled).toBe(true);
+    expect(() => interaction.intentFor(ordinary.value.gameName)).toThrow(
+      /not currently authorable/,
     );
-    if (selected === undefined || selected.evaluation.kind !== 'takeoverPrebossBatch') {
-      throw new Error('F candidate takeover has no currently applicable declaration');
-    }
+    expect(allocated).toEqual([]);
 
-    expect(candidates).not.toHaveLength(0);
-    expect(candidates.every((candidate) => candidate.value.gameName.startsWith('F_'))).toBe(true);
-    expect(selected.value).toEqual({
-      gameName: selected.value.gameName,
-      label: catalog.rooms.byKey[selected.value.gameName]?.label,
-    });
-    const intent = interaction.intentFor(selected.value);
+    const intent = interaction.intentFor('F_PreBoss01');
     expect(intent.focus).toEqual({ owner, timing: 'before' });
     const command = intent.command;
+    if (command.kind !== 'ReplaceWithTakeoverBatch') {
+      throw new Error('F terminal Preboss selection did not bind a takeover replacement');
+    }
     expect(command).toMatchObject({
       decision: owner,
-      gameName: selected.value.gameName,
-      kind: 'CreateTakeoverBatch',
-    });
-    expect(Object.keys(command.targetOccurrenceIds)).toEqual(
-      selected.evaluation.result.requiredExitKeys,
-    );
-    expect(Object.values(command.targetOccurrenceIds)).toEqual(allocated);
-    expect(allocated).toHaveLength(selected.evaluation.result.requiredExitKeys.length);
-  });
-
-  it('binds takeover replacement while preserving existing targets and injecting missing IDs', () => {
-    const owner = createExitDecisionAddress(goldenFBiome, {
-      kind: 'occurrence',
-      occurrenceId: goldenFOccurrenceId(10, 1),
-    });
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      decision: owner,
-      kind: 'RemoveExitDecision',
-    });
-    const existingOccurrenceId = createOccurrenceId('bound-replacement-existing');
-    const allocated: ReturnType<typeof createOccurrenceId>[] = [];
-    const { interactions } = bind(
-      project,
-      'Underworld',
-      'F',
-      () => {
-        const occurrenceId = createOccurrenceId(`bound-replacement-${allocated.length + 1}`);
-        allocated.push(occurrenceId);
-        return occurrenceId;
-      },
-      (requirements) =>
-        new Map(
-          [...requirements].map(([key, requirement]) =>
-            semanticAddressKey(requirement.owner) !== semanticAddressKey(owner) ||
-            requirement.presentation !== 'candidate'
-              ? [key, requirement]
-              : [
-                  key,
-                  Object.freeze({
-                    ...requirement,
-                    action: 'replace' as const,
-                    existingTargets: Object.freeze([
-                      Object.freeze({ exitKey: 'exit1', occurrenceId: existingOccurrenceId }),
-                    ]),
-                  }),
-                ],
-          ),
-        ),
-    );
-    const interaction = interactions.takeoverBatches.get(semanticAddressKey(owner));
-    if (interaction?.presentation !== 'candidate') {
-      throw new Error('F takeover replacement interaction is missing');
-    }
-    expect(interaction.action).toBe('replace');
-
-    expect(allocated).toEqual([]);
-    const selected = interaction
-      .load()
-      .find(
-        (candidate) =>
-          candidate.evaluation.kind === 'takeoverPrebossBatch' &&
-          candidate.evaluation.result.selectedPossible,
-      );
-    if (selected === undefined || selected.evaluation.kind !== 'takeoverPrebossBatch') {
-      throw new Error('F takeover replacement has no applicable candidate');
-    }
-    expect(allocated).toEqual([]);
-    const intent = interaction.intentFor(selected.value);
-    expect(intent.command).toMatchObject({
-      decision: interaction.owner,
-      gameName: selected.value.gameName,
+      gameName: 'F_PreBoss01',
       kind: 'ReplaceWithTakeoverBatch',
     });
-    expect(intent.focus).toEqual({ owner: interaction.owner, timing: 'before' });
-    const existingByExit = new Map([['exit1', existingOccurrenceId]]);
-    const requiredExitKeys = selected.evaluation.result.requiredExitKeys;
-    let allocatedIndex = 0;
-    for (const exitKey of requiredExitKeys) {
-      const occurrenceId = intent.command.targetOccurrenceIds[exitKey];
-      const existing = existingByExit.get(exitKey);
-      expect(occurrenceId).toBe(existing ?? allocated[allocatedIndex++]);
-    }
-    expect(allocated).toHaveLength(
-      requiredExitKeys.filter((exitKey) => !existingByExit.has(exitKey)).length,
-    );
+    expect(Object.values(command.targetOccurrenceIds)).toEqual(allocated);
+    expect(allocated).not.toHaveLength(0);
+    expect(Object.keys(command.targetOccurrenceIds)).toHaveLength(allocated.length);
   });
 
-  it('rejects an impossible takeover candidate before allocating an occurrence', () => {
+  it('keeps unresolved ordinary decision entry choices visible but non-executable', () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
     });
+    const started = applyProjectCommand(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Underworld: 1 },
+        name: 'Unresolved direct F entry',
+        projectId: 'unresolved-direct-f-entry',
+      }),
+      catalog,
+      {
+        biome: goldenFBiome,
+        gameName: 'F_Opening01',
+        kind: 'CreateStart',
+        occurrenceId: goldenFStartId,
+      },
+    );
+    const project = applyProjectCommand(started, catalog, { decision: owner, kind: 'CreateBatch' });
+    const target = createTargetAddress(goldenFBiome, owner.source, 'exit1');
     let allocations = 0;
-    const interaction = bind(createGoldenFGHIProject(), 'Underworld', 'F', () => {
+    const interaction = bind(project, 'Underworld', 'F', () => {
       allocations += 1;
       return createOccurrenceId('impossible-takeover-allocation');
-    }).interactions.takeoverBatches.get(semanticAddressKey(owner));
-    if (interaction?.presentation !== 'candidate') {
-      throw new Error('F opening takeover candidate interaction is missing');
+    }).interactions.rooms.get(semanticAddressKey(target));
+    if (interaction?.kind !== 'decisionEntryRoom') {
+      throw new Error('F unresolved Door 1 decision-entry interaction is missing');
     }
-    const impossible = interaction
+    const ordinary = interaction
       .load()
-      .find(
-        (candidate) =>
-          candidate.evaluation.kind === 'takeoverPrebossBatch' &&
-          !candidate.evaluation.result.selectedPossible,
-      );
-    if (impossible === undefined) throw new Error('F opening has no impossible takeover candidate');
-
+      .sections.flatMap((section) => section.items)
+      .find((item) => item.value.gameName !== 'F_PreBoss01');
+    if (ordinary === undefined) throw new Error('F unresolved ordinary choice is missing');
+    expect(ordinary).toMatchObject({ disabled: true, state: 'unassessed' });
     expect(allocations).toBe(0);
-    expect(() => interaction.intentFor(impossible.value)).toThrow(/not currently applicable/);
+    expect(() => interaction.intentFor(ordinary.value.gameName)).toThrow(
+      /not currently authorable/,
+    );
     expect(allocations).toBe(0);
   });
 
-  it('binds fixed width-one takeover creation to a lazy injected identity and before focus', () => {
+  it('blocks a locally unresolved Fields Door 1 even when its ordinary room stays eligible', () => {
+    const occurrenceId = createOccurrenceId('binding-h-fields-start');
+    const owner = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId,
+    });
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      configuredBiomeCount: 3,
+      kind: 'ConfigureRoutePrefix',
+      route: createRouteAddress('Underworld'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      biome: goldenHBiome,
+      kind: 'CreateStart',
+      occurrenceId,
+    });
+    project = applyProjectCommand(project, catalog, { decision: owner, kind: 'CreateBatch' });
+    const target = createTargetAddress(goldenHBiome, owner.source, 'exit1');
+    let allocations = 0;
+    const interaction = bind(project, 'Underworld', 'H', () => {
+      allocations += 1;
+      return createOccurrenceId(`binding-h-fields-allocation-${allocations}`);
+    }).interactions.rooms.get(semanticAddressKey(target));
+    if (interaction?.kind !== 'decisionEntryRoom') {
+      throw new Error('H Fields Door 1 decision-entry interaction is missing');
+    }
+
+    const ordinary = interaction
+      .load()
+      .sections.flatMap((section) => section.items)
+      .find((item) => item.value.gameName === 'H_Combat02');
+    if (ordinary === undefined) throw new Error('H eligible ordinary Door 1 choice is missing');
+    expect(ordinary).toMatchObject({ disabled: true, state: 'possible' });
+    expect(() => interaction.intentFor('H_Combat02')).toThrow(/not currently authorable/);
+    expect(allocations).toBe(0);
+  });
+
+  it('binds O’s fixed terminal Preboss through Door 1 rather than a standalone action', () => {
     const owner = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
       occurrenceId: oOccurrenceIds.combat02,
     });
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const withoutDecision = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       decision: owner,
       kind: 'RemoveExitDecision',
     });
+    const project = applyProjectCommand(withoutDecision, catalog, {
+      decision: owner,
+      kind: 'CreateBatch',
+    });
+    const target = createTargetAddress(oBiome, owner.source, 'exit1');
     const occurrenceId = createOccurrenceId('bound-fixed-takeover');
     let allocations = 0;
     const interaction = bind(project, 'Surface', 'O', () => {
       allocations += 1;
       return occurrenceId;
-    }).interactions.takeoverBatches.get(semanticAddressKey(owner));
-    if (interaction?.presentation !== 'fixedWidthOneTakeover') {
-      throw new Error('O fixed width-one takeover interaction is missing');
+    }).interactions.rooms.get(semanticAddressKey(target));
+    if (interaction?.kind !== 'decisionEntryRoom') {
+      throw new Error('O terminal Door 1 decision-entry interaction is missing');
     }
-
-    expect(interaction.summary).toBe('Go to Preboss. The World Shop is entered automatically.');
+    const preboss = interaction
+      .load()
+      .sections.flatMap((section) => section.items)
+      .find((item) => item.value.gameName === 'O_PreBoss01');
+    expect(preboss).toMatchObject({ disabled: false, state: 'forced' });
     expect(allocations).toBe(0);
-    const result = interaction.execute();
-    if (result.kind !== 'intent') {
-      throw new Error(`O fixed width-one takeover is unavailable: ${result.message}`);
-    }
-    expect(result.intent).toEqual({
+    expect(interaction.intentFor('O_PreBoss01')).toEqual({
       command: {
         decision: owner,
         gameName: 'O_PreBoss01',
-        kind: 'CreateTakeoverBatch',
+        kind: 'ReplaceWithTakeoverBatch',
         targetOccurrenceIds: { exit1: occurrenceId },
       },
       focus: { owner, timing: 'before' },
     });
     expect(allocations).toBe(1);
+  });
+
+  it('rejects an unassessed ordinary room beyond Q’s terminal decision envelope', () => {
+    const owner = createExitDecisionAddress(qBiome, {
+      kind: 'occurrence',
+      occurrenceId: qOccurrenceIds.secondMiniboss1,
+    });
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      decision: createExitDecisionAddress(oBiome, {
+        kind: 'occurrence',
+        occurrenceId: oOccurrenceIds.combat02,
+      }),
+      kind: 'RemoveExitDecision',
+    });
+    project = applyProjectCommand(project, catalog, {
+      decision: owner,
+      kind: 'RemoveExitDecision',
+    });
+    project = applyProjectCommand(project, catalog, { decision: owner, kind: 'CreateBatch' });
+    const target = createTargetAddress(qBiome, owner.source, 'exit1');
+    let allocations = 0;
+    const interaction = bind(project, 'Surface', 'Q', () => {
+      allocations += 1;
+      return createOccurrenceId(`q-terminal-ordinary-${allocations}`);
+    }).interactions.rooms.get(semanticAddressKey(target));
+    if (interaction?.kind !== 'decisionEntryRoom') {
+      throw new Error('Q terminal Door 1 decision-entry interaction is missing');
+    }
+    const ordinary = interaction
+      .load()
+      .sections.flatMap((section) => section.items)
+      .find((item) => item.value.gameName !== 'Q_PreBoss01');
+    if (ordinary === undefined) throw new Error('Q terminal ordinary choice is missing');
+    expect(ordinary).toMatchObject({ disabled: true, state: 'unassessed' });
+    expect(() => interaction.intentFor(ordinary.value.gameName)).toThrow(
+      /not currently authorable/,
+    );
+    expect(allocations).toBe(0);
+  });
+
+  it('keeps a structurally valid unassessed ordinary Door 1 authorable behind a retained prefix', () => {
+    const start = createOccurrenceId('retained-prefix-direct-start');
+    const firstTarget = createOccurrenceId('retained-prefix-direct-first-target');
+    const startOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: start,
+    });
+    let project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Underworld: 1 },
+        name: 'Retained prefix direct entry',
+        projectId: 'retained-prefix-direct-entry',
+      }),
+      catalog,
+      {
+        biome: goldenFBiome,
+        gameName: 'F_Opening01',
+        kind: 'CreateStart',
+        occurrenceId: start,
+      },
+    );
+    project = applyProjectCommand(project, catalog, { decision: startOwner, kind: 'CreateBatch' });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, startOwner.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      gameName: 'F_Combat03',
+      kind: 'CreateTarget',
+      occurrenceId: firstTarget,
+      target: createTargetAddress(goldenFBiome, startOwner.source, 'exit1'),
+    });
+    const owner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: firstTarget,
+    });
+    project = applyProjectCommand(project, catalog, { decision: owner, kind: 'CreateBatch' });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, owner.source),
+      storeKey: 'RunProgress',
+    });
+    const target = createTargetAddress(goldenFBiome, owner.source, 'exit1');
+    const interaction = bind(project, 'Underworld', 'F').interactions.rooms.get(
+      semanticAddressKey(target),
+    );
+    if (interaction?.kind !== 'decisionEntryRoom') {
+      throw new Error('retained-prefix Door 1 decision-entry interaction is missing');
+    }
+    const ordinary = interaction
+      .load()
+      .sections.flatMap((section) => section.items)
+      .find((item) => item.value.gameName === 'F_Combat02');
+    if (ordinary === undefined) throw new Error('retained-prefix ordinary choice is missing');
+    expect(ordinary).toMatchObject({ disabled: false, state: 'unassessed' });
+    expect(interaction.intentFor('F_Combat02').command).toMatchObject({
+      gameName: 'F_Combat02',
+      kind: 'CreateTarget',
+      target,
+    });
   });
 
   it('binds selected exit choices in canonical physical order after authored serialization reorders', () => {

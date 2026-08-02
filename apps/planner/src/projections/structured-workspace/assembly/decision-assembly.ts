@@ -4,12 +4,14 @@ import {
   createExitSelectionAddress,
   createOccurrenceAddress,
   createTargetAddress,
+  ordinaryTargetAuthoringEligibility,
   selectedExitTarget,
   semanticAddressKey,
   type DeclaredPhysicalExit,
   type ExitDecision,
   type ExitDecisionAddress,
   type OccurrenceId,
+  type TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
@@ -276,6 +278,33 @@ function missingTargetPrerequisite(
   return undefined;
 }
 
+/**
+ * Candidate evaluation can be unavailable behind a retained prefix. This
+ * engine-owned static domain keeps that authored-first allowance precise: it
+ * permits only ordinary rooms whose exact `CreateTarget` command can succeed
+ * at this physical target, without consulting evaluation coverage.
+ */
+function ordinaryTargetGameNames(
+  input: WorkspaceDecisionAssemblyBaseInput,
+  target: TargetAddress,
+): readonly string[] {
+  const topology = input.source.plan.topology;
+  if (topology === null) return Object.freeze([]);
+  return Object.freeze(
+    input.catalog.rooms.values.flatMap((room) =>
+      ordinaryTargetAuthoringEligibility(
+        input.catalog,
+        input.source.layout,
+        topology,
+        target,
+        room.gameName,
+      ).kind === 'authorable'
+        ? [room.gameName]
+        : [],
+    ),
+  );
+}
+
 function rawBatchKind(
   input: WorkspaceDecisionAssemblyBaseInput,
   decision: AuthoredBatchDecision,
@@ -301,6 +330,14 @@ function rawBatchTopologyState(
     semanticAddressKey(evaluation.frontier) === semanticAddressKey(owner)
     ? 'partial'
     : 'retained';
+}
+
+function takeoverGameNames(catalog: Catalog, biomeKey: string): readonly string[] {
+  return Object.freeze(
+    catalog.rooms.values
+      .filter((room) => room.biomeKey === biomeKey && workspaceRoomTakesOverNormalDoors(room))
+      .map((room) => room.gameName),
+  );
 }
 
 function projectAuthoredTargetWithOverlay(
@@ -419,10 +456,15 @@ function roomControlsForBatch(
   if (kind === 'takeoverBatch' || decision.source.kind !== 'occurrence') {
     return Object.freeze([]);
   }
+  const decisionOwner = createExitDecisionAddress(input.source.biome, decision.source);
+  const emptyGeneratedDecision =
+    decision.normal.targets.length === 0 && input.source.layout.progression.kind === 'generated';
   const targetsByExit = new Map(targets.map((target) => [target.exitKey, target] as const));
   const missingByExit = new Map(missingTargets.map((target) => [target.exitKey, target] as const));
   const controls: WorkspaceRoomPickerControl[] = [];
-  for (const exit of [...physical].sort((left, right) => left.index - right.index)) {
+  const orderedPhysical = [...physical].sort((left, right) => left.index - right.index);
+  const firstPhysicalExitKey = orderedPhysical[0]?.exitKey;
+  for (const exit of orderedPhysical) {
     const target = targetsByExit.get(exit.exitKey);
     if (target !== undefined) {
       controls.push(
@@ -439,6 +481,20 @@ function roomControlsForBatch(
       continue;
     }
     const missing = missingByExit.get(exit.exitKey);
+    if (emptyGeneratedDecision && exit.exitKey === firstPhysicalExitKey && missing !== undefined) {
+      const address = createTargetAddress(input.source.biome, decision.source, missing.exitKey);
+      controls.push(
+        Object.freeze({
+          address,
+          decisionOwner,
+          kind: 'decisionEntryRoomPicker' as const,
+          ordinaryTargetAuthoring: missing.authoring,
+          ordinaryTargetGameNames: ordinaryTargetGameNames(input, address),
+          takeoverGameNames: takeoverGameNames(input.catalog, input.source.plan.biomeKey),
+        }),
+      );
+      continue;
+    }
     if (missing?.authoring.kind === 'ready') {
       const address = createTargetAddress(input.source.biome, decision.source, missing.exitKey);
       controls.push(

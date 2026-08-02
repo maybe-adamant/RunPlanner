@@ -8,7 +8,6 @@ import {
   createOccurrenceAddress,
   createTargetAddress,
   declaredPhysicalExits,
-  fixedWidthOneTakeoverForLayout,
   fixedWidthOneTakeoverTransitionForSource,
   type AuthoredBiomePlan,
   type BiomeAddress,
@@ -30,6 +29,7 @@ import { workspaceExpectedControlIdentity, workspaceTestOwnerKey } from './test-
  */
 export type ExpectedWorkspaceStructuralControlKind =
   | 'batchRewardStore'
+  | 'decisionEntryRoomPicker'
   | 'exitFrontierCapability'
   | 'exitSelection'
   | 'fieldsCageOutcome'
@@ -42,6 +42,8 @@ export type ExpectedWorkspaceStructuralControlKind =
   | 'topologyRemoval';
 
 export interface ExpectedWorkspaceStructuralControl {
+  /** Present only when Door 1 embeds a decision-owned takeover option. */
+  readonly decisionOwner?: ExitDecisionAddress;
   readonly key: string;
   readonly kind: ExpectedWorkspaceStructuralControlKind;
   readonly owner: SemanticAddress;
@@ -105,12 +107,6 @@ function batchTakesOverNormalDoors(
   return rooms.length > 0 && rooms.every(takesOverNormalDoors);
 }
 
-function hasTakeoverCandidate(catalog: Catalog, biomeKey: string): boolean {
-  return catalog.rooms.values.some(
-    (room) => room.biomeKey === biomeKey && takesOverNormalDoors(room),
-  );
-}
-
 function missingTargetsAreAuthorable(layout: BiomeLayout, decision: ExitDecision): boolean {
   if (decision.normal.kind !== 'batch') return false;
   if (
@@ -142,10 +138,19 @@ export function expectedWorkspaceStructuralControls(
     kind: ExpectedWorkspaceStructuralControlKind,
     key: string,
     owner: SemanticAddress,
+    decisionOwner?: ExitDecisionAddress,
   ): void => {
     const identity = workspaceExpectedControlIdentity(kind, key);
     if (controls.has(identity)) throw new Error(`${identity} has multiple expected controls`);
-    controls.set(identity, Object.freeze({ key, kind, owner }));
+    controls.set(
+      identity,
+      Object.freeze({
+        ...(decisionOwner === undefined ? {} : { decisionOwner }),
+        key,
+        kind,
+        owner,
+      }),
+    );
   };
   const topology = plan.topology;
   if (topology === null) {
@@ -155,8 +160,6 @@ export function expectedWorkspaceStructuralControls(
 
   const decisions = authoredExitDecisions(plan);
   const decisionsByOwner = authoredDecisionIndex(biome, decisions);
-  const fixedWidthOneTakeover = fixedWidthOneTakeoverForLayout(catalog, layout);
-  const takeoverCandidates = hasTakeoverCandidate(catalog, plan.biomeKey);
   const takeoverOwners = new Set<string>();
   const addTakeover = (owner: ExitDecisionAddress): void => {
     const key = workspaceTestOwnerKey(owner);
@@ -215,6 +218,8 @@ export function expectedWorkspaceStructuralControls(
         const physical = declaredPhysicalExits(catalog, layout, topology, decision.source);
         if (physical !== undefined) {
           const targets = new Set(decision.normal.targets.map((target) => target.exitKey));
+          const isEmptyGeneratedDecision =
+            layout.progression.kind === 'generated' && decision.normal.targets.length === 0;
           let firstMissingSeen = false;
           for (const exit of [...physical].sort((left, right) => left.index - right.index)) {
             const target = decision.normal.targets.find(
@@ -225,25 +230,22 @@ export function expectedWorkspaceStructuralControls(
               add('roomPicker', workspaceTestOwnerKey(targetOwner), targetOwner);
               continue;
             }
-            if (
-              !firstMissingSeen &&
-              !targets.has(exit.exitKey) &&
-              missingTargetsAreAuthorable(layout, decision)
-            ) {
-              add('roomPicker', workspaceTestOwnerKey(targetOwner), targetOwner);
+            if (!firstMissingSeen && !targets.has(exit.exitKey)) {
+              if (isEmptyGeneratedDecision) {
+                add(
+                  'decisionEntryRoomPicker',
+                  workspaceTestOwnerKey(targetOwner),
+                  targetOwner,
+                  owner,
+                );
+              } else if (missingTargetsAreAuthorable(layout, decision)) {
+                add('roomPicker', workspaceTestOwnerKey(targetOwner), targetOwner);
+              }
             }
             firstMissingSeen = true;
           }
         }
       }
-    }
-    if (
-      !takeover &&
-      layout.progression.kind === 'generated' &&
-      fixedWidthOneTakeover === undefined &&
-      takeoverCandidates
-    ) {
-      addTakeover(owner);
     }
   }
 
@@ -281,26 +283,15 @@ export function expectedWorkspaceStructuralControls(
       );
       if (
         existing === undefined &&
-        fixedTransition !== undefined &&
+        fixedTransition?.kind === 'completedHubHandoff' &&
         declaredPhysicalExits(catalog, layout, topology, owner.source) !== undefined
       ) {
         addTakeover(owner);
-      } else if (
-        existing === undefined &&
-        layout.progression.kind === 'generated' &&
-        fixedWidthOneTakeover === undefined &&
-        takeoverCandidates
-      ) {
-        addTakeover(owner);
       }
-      const structural =
-        existing === undefined &&
-        owner.source.kind === 'occurrence' &&
-        fixedTransition === undefined;
-      const takeover = existing === undefined && takeoverOwners.has(ownerKey);
-      if (!structural && !takeover) break;
+      const structural = existing === undefined && owner.source.kind === 'occurrence';
+      if (!structural) break;
       add('exitFrontierCapability', ownerKey, owner);
-      if (structural) add('structural', ownerKey, owner);
+      add('structural', ownerKey, owner);
       break;
     }
     case 'hubDecision': {
