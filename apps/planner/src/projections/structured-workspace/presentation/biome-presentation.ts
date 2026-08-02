@@ -90,6 +90,7 @@ function railRewardForRoom(
         offer: room.roomLocal.offer,
       });
     case 'incomingReward':
+      if (room.roomLocal.clockworkReward === 'goal') return undefined;
       return Object.freeze({
         label: summarizeRewardOffer(catalog, room.roomLocal.control.offer),
         offer: room.roomLocal.control.offer,
