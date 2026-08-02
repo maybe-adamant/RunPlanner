@@ -109,9 +109,13 @@ function ExactRepairAction({ intent }: { readonly intent: WorkspaceBatchRepairIn
  * danger presentation while deriving no descendant scope or focus policy.
  */
 export function TopologyRemovalAction({
+  accessibleLabel,
+  compact = false,
   interaction,
   label,
 }: {
+  readonly accessibleLabel?: string;
+  readonly compact?: boolean;
   readonly interaction: WorkspaceTopologyRemovalInteraction;
   readonly label: string;
 }) {
@@ -119,7 +123,8 @@ export function TopologyRemovalAction({
   return (
     <div className="topology-removal-action" data-command={interaction.intent.command.kind}>
       <button
-        className="danger-action"
+        aria-label={accessibleLabel}
+        className={`danger-action${compact ? ' action-compact' : ''}`}
         onClick={() => executeIntent(interaction.intent)}
         type="button"
       >

@@ -177,6 +177,30 @@ describe('BiomeWorkspace', () => {
     );
   });
 
+  it('keeps node assessment beside its title without redundant structural kickers', () => {
+    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+    const decision = view.container.querySelector<HTMLButtonElement>(
+      '.biome-rail-stop[data-kind="ordinaryBatch"] > .biome-rail-node',
+    );
+    if (decision === null) throw new Error('F decision rail stop is missing');
+
+    const heading = decision.querySelector('.biome-rail-heading');
+    expect(heading?.querySelector('strong')?.textContent).toMatch(/^Decision /);
+    expect(heading?.querySelector('.biome-rail-status')?.textContent).toContain('Evaluated');
+    expect(decision.querySelector('.biome-rail-kicker')).toBeNull();
+    expect(view.container.querySelector('.biome-rail')?.textContent).not.toContain('Door choice');
+    expect(view.container.querySelector('.biome-rail')?.textContent).not.toContain('Biome stage');
+  });
+
+  it('keeps the compact clear action on the biome title row', () => {
+    renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+
+    const clear = screen.getByRole('button', { name: 'Clear Erebus' });
+    expect(clear.textContent).toBe('Clear biome');
+    expect(clear.classList.contains('action-compact')).toBe(true);
+    expect(clear.closest('.biome-structure-title-row')).not.toBeNull();
+  });
+
   it('routes a keyboard-selected Hub rail visit to its occurrence-owned local detail workbench', async () => {
     const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
