@@ -645,6 +645,11 @@ describe('progressive biome evaluation', () => {
         origin: createTargetAddress(goldenGBiome, source(fixture.source), 'exit1'),
       }),
     );
+    expect(evaluation.rewards.targetHistory).toContainEqual(
+      expect.objectContaining({
+        origin: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
+      }),
+    );
     expect(evaluation.findings).toContainEqual(
       expect.objectContaining({
         code: 'targetMissing',
