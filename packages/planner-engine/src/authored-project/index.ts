@@ -72,10 +72,12 @@ export {
   declaredPhysicalExits,
   fixedWidthOneTakeoverForLayout,
   fixedWidthOneTakeoverTransitionForSource,
+  ordinaryTargetAuthoringEligibility,
   selectedExitKey,
   selectedExitTarget,
   type DeclaredPhysicalExit,
   type FixedWidthOneTakeoverTransition,
+  type OrdinaryTargetAuthoringEligibility,
 } from './topology/query';
 export {
   applyTopologyRemovalImpact,

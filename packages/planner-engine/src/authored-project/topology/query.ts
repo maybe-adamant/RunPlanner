@@ -1,4 +1,5 @@
 import type { BiomeLayout, Catalog, RoomDeclaration, RoomExit } from '../../catalog-schema';
+import type { TargetAddress } from '../addresses';
 import type {
   BiomeTopology,
   ExitDecision,
@@ -10,6 +11,41 @@ import type {
 
 /** The selected-spine queries need no occurrence-local state. */
 export type SelectedSpineTopology = Pick<BiomeTopology, 'startOccurrenceId' | 'decisions'>;
+
+/**
+ * Static command eligibility for one authored ordinary normal-door target.
+ *
+ * This deliberately does not inspect simulation coverage, requirements, or
+ * candidate availability. It answers only whether the persisted topology and
+ * declarations can accept `CreateTarget`; an incomplete retained prefix can
+ * therefore remain authorable even when it has no evaluated candidate result.
+ */
+export type OrdinaryTargetAuthoringEligibility =
+  | { readonly kind: 'authorable'; readonly room: RoomDeclaration }
+  | {
+      readonly kind: 'unavailable';
+      readonly stageKey?: string;
+      readonly reason:
+        | 'batchBound'
+        | 'duplicateRetainPeer'
+        | 'missingBatch'
+        | 'notGenerated'
+        | 'notOrdinaryRoom'
+        | 'sourceIsHub'
+        | 'stage'
+        | 'targetAlreadyAuthored'
+        | 'targetBound'
+        | 'targetIsNotDeclared'
+        | 'takeoverBatch'
+        | 'takeoverRoom'
+        | 'unknownOrForeignRoom';
+    };
+
+/** The authored ordinary-batch capacity before a new empty envelope is added. */
+export type OrdinaryBatchCreationEligibility =
+  | { readonly kind: 'withinOrdinaryBatchLimit' }
+  | { readonly kind: 'ordinaryBatchLimitReached' }
+  | { readonly kind: 'notGenerated' };
 
 /**
  * One declaration-owned physical exit resolved for an authored decision
@@ -87,6 +123,147 @@ export function declaredPhysicalExitKeys(
 ): readonly string[] | undefined {
   const exits = declaredPhysicalExits(catalog, layout, topology, source);
   return exits === undefined ? undefined : Object.freeze(exits.map((exit) => exit.exitKey));
+}
+
+function batchTakesOverNormalDoors(
+  catalog: Catalog,
+  topology: BiomeTopology,
+  decision: ExitDecision,
+): boolean {
+  return (
+    decision.normal.kind === 'batch' &&
+    decision.normal.targets.some((target) => {
+      const occurrence = topology.occurrences.find(
+        (candidate) => candidate.occurrenceId === target.occurrenceId,
+      );
+      return (
+        occurrence !== undefined &&
+        catalog.rooms.byKey[occurrence.gameName]?.prebossBatchPolicy?.kind === 'takeOverNormalDoors'
+      );
+    })
+  );
+}
+
+function realizedOrdinaryBatchCount(catalog: Catalog, topology: BiomeTopology): number {
+  return topology.decisions.filter(
+    (decision): decision is ExitDecision =>
+      decision.kind === 'exit' &&
+      decision.normal.kind === 'batch' &&
+      decision.normal.targets.length > 0 &&
+      !batchTakesOverNormalDoors(catalog, topology, decision),
+  ).length;
+}
+
+function realizedOrdinaryTargetCount(catalog: Catalog, topology: BiomeTopology): number {
+  return topology.decisions.reduce(
+    (count, decision) =>
+      decision.kind === 'exit' &&
+      decision.normal.kind === 'batch' &&
+      !batchTakesOverNormalDoors(catalog, topology, decision)
+        ? count + decision.normal.targets.length
+        : count,
+    0,
+  );
+}
+
+/**
+ * Centralizes the realized ordinary-batch boundary shared by creating an
+ * envelope and committing its first ordinary target. A terminal takeover
+ * envelope is a caller-owned exception layered over `ordinaryBatchLimitReached`.
+ */
+export function ordinaryBatchCreationEligibility(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+): OrdinaryBatchCreationEligibility {
+  const ordinaryBatchLimit = ordinaryProgressionBatchLimit(layout);
+  if (ordinaryBatchLimit === undefined) return Object.freeze({ kind: 'notGenerated' });
+  return realizedOrdinaryBatchCount(catalog, topology) >= ordinaryBatchLimit
+    ? Object.freeze({ kind: 'ordinaryBatchLimitReached' })
+    : Object.freeze({ kind: 'withinOrdinaryBatchLimit' });
+}
+
+/**
+ * Determines whether an authored room can be created at one exact normal
+ * target without relying on evaluated reachability. Commands and editor
+ * projections share this policy so a retained or incomplete prefix cannot
+ * make a structurally invalid target look authorable, or hide a valid one.
+ *
+ * Batch reward-store and Fields setup are intentionally outside this query:
+ * they are local editable leaves owned by the decision assembly.
+ */
+export function ordinaryTargetAuthoringEligibility(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  target: TargetAddress,
+  gameName: string,
+): OrdinaryTargetAuthoringEligibility {
+  if (layout.progression.kind !== 'generated') {
+    return Object.freeze({ kind: 'unavailable', reason: 'notGenerated' });
+  }
+  if (target.source.kind === 'hubDecision') {
+    return Object.freeze({ kind: 'unavailable', reason: 'sourceIsHub' });
+  }
+  const decision = exitDecisionForSource(topology, target.source);
+  if (decision?.normal.kind !== 'batch') {
+    return Object.freeze({ kind: 'unavailable', reason: 'missingBatch' });
+  }
+  if (decision.source.kind !== 'occurrence') {
+    return Object.freeze({ kind: 'unavailable', reason: 'sourceIsHub' });
+  }
+  if (batchTakesOverNormalDoors(catalog, topology, decision)) {
+    return Object.freeze({ kind: 'unavailable', reason: 'takeoverBatch' });
+  }
+  const exits = declaredPhysicalExits(catalog, layout, topology, target.source);
+  if (!exits?.some((exit) => exit.kind === 'normal' && exit.exitKey === target.exitKey)) {
+    return Object.freeze({ kind: 'unavailable', reason: 'targetIsNotDeclared' });
+  }
+  if (decision.normal.targets.some((candidate) => candidate.exitKey === target.exitKey)) {
+    return Object.freeze({ kind: 'unavailable', reason: 'targetAlreadyAuthored' });
+  }
+  const room = catalog.rooms.byKey[gameName];
+  if (room === undefined || room.biomeKey !== layout.biomeKey || room.mode.kind !== 'authored') {
+    return Object.freeze({ kind: 'unavailable', reason: 'unknownOrForeignRoom' });
+  }
+  if (room.kind === 'Intro' || room.kind === 'Opening' || room.kind === 'PreHub') {
+    return Object.freeze({ kind: 'unavailable', reason: 'notOrdinaryRoom' });
+  }
+  if (room.prebossBatchPolicy?.kind === 'takeOverNormalDoors') {
+    return Object.freeze({ kind: 'unavailable', reason: 'takeoverRoom' });
+  }
+  if (
+    room.prebossBatchPolicy?.kind === 'retainNormalPeers' &&
+    decision.normal.targets.some(
+      (candidate) =>
+        topology.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === candidate.occurrenceId,
+        )?.gameName === room.gameName,
+    )
+  ) {
+    return Object.freeze({ kind: 'unavailable', reason: 'duplicateRetainPeer' });
+  }
+  const batchEligibility = ordinaryBatchCreationEligibility(catalog, layout, topology);
+  if (
+    batchEligibility.kind !== 'withinOrdinaryBatchLimit' &&
+    decision.normal.targets.length === 0
+  ) {
+    return Object.freeze({ kind: 'unavailable', reason: 'batchBound' });
+  }
+  if (realizedOrdinaryTargetCount(catalog, topology) >= layout.progression.bounds.maxTargets) {
+    return Object.freeze({ kind: 'unavailable', reason: 'targetBound' });
+  }
+  if (layout.progression.progressionPolicy.kind === 'staged') {
+    const batchIndex = selectedOrdinaryBatchIndex(topology, decision.source.occurrenceId);
+    const stage =
+      batchIndex === undefined
+        ? undefined
+        : layout.progression.progressionPolicy.stages[batchIndex];
+    if (stage === undefined || !stage.roomGameNames.includes(room.gameName)) {
+      return Object.freeze({ kind: 'unavailable', reason: 'stage', stageKey: stage?.key ?? '?' });
+    }
+  }
+  return Object.freeze({ kind: 'authorable', room });
 }
 
 function sameSource(left: ExitDecisionSource, right: ExitDecisionSource): boolean {
