@@ -222,20 +222,27 @@ families itself.
 
 Creation establishes explicit transient semantic focus through the existing
 semantic-owner action. Every authored start selects its created Room Occurrence.
-Creating an ordinary target selects its target owner while remaining in the
-owning decision workbench. Creating an ordinary batch, a takeover Preboss
-batch, or a completed-Hub handoff from the visible frontier first selects that
-frontier's owning workbench. Later edits retain that resolvable owner even when
-they reveal a new authoring frontier.
+An ordinary target selects its target owner while remaining in the owning
+decision workbench. The direct predecessor of a generated continuation exposes
+`Add next decision`: its complete bound `CreateBatch` intent creates the empty
+decision envelope and focuses that decision owner before publication. React
+only dispatches that intent; it neither reconstructs a command nor treats
+frontier navigation as an alternate edit.
 
-The newly revealed frontier remains visible in the rail without stealing
-inspector focus. The workspace may attach that exact frontier marker only to
-its direct predecessor entry or decision; that selected workbench exposes
-`Go to next step`. The nearby action and rail frontier dispatch the
-same semantic focus address. It is navigation only: it creates no authored
-edit, history entry, evaluation, or candidate work. There is no separate
-completion-navigation action; the frontier retains its declaration-owned
-ordinary, Preboss, or Hub controls.
+An empty generated decision publishes one Door 1 room control inside its own
+workbench. The control is target-addressed, but its picker can contain both
+target-owned ordinary candidates and decision-owned takeover Preboss evidence.
+Binding returns the chosen, complete `CreateTarget` or
+`ReplaceWithTakeoverBatch` intent lazily, allocating takeover occurrence IDs
+only on activation. Both the target route and the decision-owned takeover route
+resolve independently to the same containing decision inspector. Later doors
+remain ordinary sequential target controls; a populated ordinary decision
+never publishes a retroactive takeover control.
+
+The rail may retain a truthful continuation marker without stealing inspector
+focus, but generated continuation has no navigation-only `Go to next step`
+action or separate `Add Preboss doors` control. A completed-Hub handoff and
+repair of an already-authored takeover remain distinct declared interactions.
 
 Incomplete-biome structure is an authored-topology projection enriched by
 progressive evaluation. It must not be described as canonical topology.
@@ -322,6 +329,18 @@ For F/G/H/I/O/P/Q, the center region presents a concise decision-point rail:
 The rail is not a freeform graph. Its visual position is derived from semantic
 topology and never persisted.
 
+### Empty Decision Entry
+
+The empty decision is already a decision workbench, not an intermediate mode
+card. It shows declared batch setup when present, the Door 1 Room picker, and
+later physical doors waiting for sequential generation. A required reward pool
+or Fields roll can disable ordinary mutation locally, but it cannot hide a
+supported takeover option in that same Door 1 picker. Selecting an ordinary
+room reveals its mandatory room/reward leaves; selecting takeover replaces the
+envelope atomically with the declaration's Shop/free-offer shape. Findings
+decorate those controls and never decide whether the structural control is
+projected.
+
 ### Decision Offers and Picked State
 
 Selecting a decision shows all of its physical offers together. Every authored
@@ -359,18 +378,20 @@ room-local, or finding products.
 
 ### Variant-Owned Structure
 
-- F/G/P retain ordinary generated decisions and declaration-owned takeover
-  Preboss batches.
-- H retains exactly four Fields decisions before its takeover Preboss batch.
-- I retains one generated-decision frontier; its Preboss is a generated peer
-  after Goal completion and closes the biome only when picked.
-- O retains six one-exit decisions and a declaration-fixed width-one Preboss
-  batch.
-- Q retains six declaration-owned stages and a declaration-fixed width-one
-  Preboss batch.
+- F/G/P use the same Door 1 flow for ordinary rooms and their required atomic
+  normal-door takeover at the declaration-admitted terminal source.
+- H retains four realized Fields decisions; its fifth empty decision can only
+  resolve to the required takeover, even if its ordinary Fields setup is still
+  unresolved.
+- I's Preboss remains a generated ordinary peer after Goal completion; it has
+  no over-bound terminal envelope and closes the biome only when picked.
+- O and Q each add a terminal empty decision after their six ordinary units;
+  only the declaration-fixed width-one Preboss is authorable there. The
+  ordinary declaration domain may remain visible as disabled options rather
+  than being hidden by terminal invalidity.
 
-The shared rail and inspector do not invent one universal authoring frontier or
-Preboss action.
+The shared rail and inspector share a direct room-choice surface, not a
+universal ownership model or a separate Preboss action.
 
 ## Hub Decision Workspace
 

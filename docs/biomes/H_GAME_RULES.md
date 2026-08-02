@@ -13,7 +13,7 @@ data, encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
 ## Authored shape
 
 - `H_Intro` is the fixed authored start.
-- H has at most four generated normal-door batches and seven target
+- H has at most four realized ordinary Fields batches and seven ordinary target
   occurrences. Each Fields batch has explicit `cageOutcome` state (`min` or
   `max`) before targets can be authored.
 - A FieldsCombat occurrence owns its declaration-bounded cage offers. Active
@@ -30,6 +30,13 @@ The Preboss batch follows the predecessor's declaration-owned normal exits.
 It is not a separate room family, and it cannot be edited one target at a
 time. Reconciliation retains state only at the same exit key and allocates a
 new occurrence ID only for a newly required key.
+
+After four realized ordinary Fields batches, H admits one terminal zero-target
+normal decision envelope. It resolves only to the required `H_PreBoss01`
+normal-door takeover; a fifth ordinary Fields target remains out of bounds. An
+unresolved Fields cage outcome is ordinary setup for that envelope and does
+not remove the supported Preboss resolution; takeover discards that
+ordinary-only setup.
 
 ## Fields constraints
 

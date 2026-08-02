@@ -226,6 +226,15 @@ and exposes the next slot's frontier. A later blank exit remains unassessed
 until every preceding physical exit is concrete; the engine does not invent
 hypothetical earlier siblings to assess it.
 
+Candidate evaluation is not the complete authoring domain. For an empty
+decision's first target, the engine also exposes static ordinary-target
+authorability: the source, physical exit, declared game-name domain, batch and
+target bounds, and ordinary topology must admit `CreateTarget`. The application
+uses that result with any local setup prerequisite to keep a valid unassessed
+ordinary choice authorable, while disabling a statically invalid terminal or
+staged choice. It does not infer those bounds from UI position or treat missing
+evaluation coverage as a blanket prohibition.
+
 An already-authored target uses the same slot frontier for replacement.
 Replacing an earlier target retains later authorship but may change its
 subsequent support, following the ordinary visible-invalid repair contract.
@@ -256,6 +265,15 @@ result. A Preboss declaration is excluded from the ordinary `roomTarget`
 domain for a takeover source; I remains an ordinary per-target choice because
 its Preboss policy does not take over normal doors. Candidate evaluation never
 creates a partial mixed batch to discover that result.
+
+The ordinary and takeover evaluators consume one source-owned generation
+support set. The takeover result publishes engine-reduced batch support
+(`impossible`, `possible`, or `required`) only after validating its complete
+normal-exit shape; its per-exit pressure remains evidence. The application may
+place the two result families in Door 1's one picker, but it consumes that
+batch classification directly rather than reducing exit pressure itself. An
+ordinary option stays target-owned; a takeover option stays decision-owned,
+even when they share the same visual control.
 
 For a reward domain, the session prepares the producer frontier described
 below. Every complete offer is evaluated from the same frontier.

@@ -292,27 +292,38 @@ reward remains dormant in authored state. When an upstream edit makes that
 same occurrence NonGoal, the editor exposes the retained reward value; it does
 not install a new default or ask the user to author Goal versus NonGoal.
 
-The active frontier offers declaration-admitted structural actions rather
-than a persistent `Next Step` field:
+Generated continuation is direct rather than a persistent `Next Step` mode.
+When a selected room directly precedes the next generated decision, `Add next
+decision` dispatches its already-bound `CreateBatch` intent and focuses the
+new decision workbench. This semantic edit is independently undoable; React
+does not reconstruct a command from a frontier address.
 
-- create the next ordinary decision where progression permits it;
-- create a candidate, takeover, or declaration-fixed width-one Preboss batch
-  where its declaration permits it;
-- create the fixed completed-Hub handoff only after the sixth authored visit;
-- remove from this decision;
-- clear biome through an explicit removal action.
+The empty decision uses the ordinary decision layout immediately. Its Door 1
+Room picker offers the declaration-supported ordinary room choices and, where
+the source admits it, a takeover Preboss choice. Selecting an ordinary room
+(including I's `retainNormalPeers` Preboss) creates one target. Selecting a
+`takeOverNormalDoors` Preboss dispatches the decision-owned atomic replacement
+that creates all normal-door targets. The shared picker does not flatten their
+ownership: Door 1 remains target-addressed, while takeover evidence and its
+intent remain decision-addressed.
 
-The shared frontier presentation and variant-owned action sets are recorded in
+An empty envelope may be the declaration-admitted terminal decision after the
+ordinary progression bound. That still presents the same Door 1 picker; it is
+not a separate Preboss authoring card. Ordinary setup can explain why an
+ordinary room is unavailable, but neither setup nor findings hide a supported
+takeover option. Fixed linked transitions and N's completed-Hub handoff remain
+their own declaration-owned controls.
+
+There is no generated `Add doors`, `Add Preboss doors`, `Check Preboss rooms`,
+or navigation-only `Go to next step` action. An existing populated ordinary
+batch does not expose retroactive conversion to Preboss. An authored takeover
+batch continues to expose its exact reconciliation action when it needs
+repair.
+
+The shared decision presentation and variant-owned action sets are recorded in
 `../audits/CROSS_BIOME_EDITOR_UX_AUDIT.md`. React may share the container, but
 it does not reinterpret takeover, mixed, declaration-fixed width-one, or
 completed-Hub Preboss semantics.
-
-When a selected authored entry or decision directly precedes the current
-continuation frontier, its structural actions may also expose `Go to next
-step`. This navigation-only action focuses the existing frontier address;
-it does not create or replace topology, enter history, or trigger evaluation.
-The frontier itself continues to own its declaration-projected creation action.
-There is no separate completion-navigation path.
 
 ## Downstream Editing
 

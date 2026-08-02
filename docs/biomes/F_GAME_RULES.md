@@ -60,6 +60,13 @@ Openings are start-only and cannot appear as ordinary later targets. F then
 uses standard generated batches and terminates through `F_PreBoss01`, forced at
 `biomeDepthCache = 10`.
 
+At that terminal selected source, one zero-target normal decision envelope is
+admitted after the ordinary body. It is not an extra ordinary batch or target.
+`F_PreBoss01` evaluates across the complete declared normal-exit set and
+atomically replaces the envelope when required. An unresolved ordinary base
+reward pool blocks ordinary target creation but neither supplies nor hides the
+takeover result.
+
 ## Progressed-Save Encounter Projection
 
 The game has progression-controlled opening alternatives. The supported

@@ -169,6 +169,31 @@ derive a reward store from the active Ship wheel. I remains a normal Clockwork
 batch: `I_PreBoss02` may coexist with normal peers but its one-creation-per-
 source policy is declaration-owned.
 
+### Empty generated decision envelopes
+
+An occurrence-sourced normal batch with zero targets is an authored,
+uncommitted decision envelope. It has a stable decision address, remains on
+the selected spine, may retain declaration-owned ordinary setup (such as a
+reward-pool choice or H's Fields result), and is removable and undoable. It
+does not add a persisted mode, discriminator, or schema variant.
+
+The envelope is not a realized ordinary generated batch. It consumes neither
+ordinary batch/target progression nor a staged ordinal until its first
+ordinary target is created. `CreateBatch` can create the next envelope while
+an ordinary slot remains. At the ordinary bound it can create one further
+empty envelope only when the selected source and layout admit the declared
+terminal Preboss shape. That exception belongs to the engine's
+declaration-derived topology rule, not to every generated layout: F/G/H/O/P/Q
+have it; I does not because its Preboss is an ordinary retained peer.
+
+The first Door 1 choice resolves the envelope. An ordinary or
+`retainNormalPeers` choice realizes an ordinary batch and must satisfy the
+ordinary bounds at that point. A `takeOverNormalDoors` Preboss replaces the
+empty envelope with its atomic batch, discarding ordinary-only setup and
+initializing declaration-owned Preboss defaults. Undo restores the exact
+empty envelope and any provisional setup; a takeover batch never consumes an
+ordinary progression slot.
+
 Takeover Preboss declarations F/G/H/O/P/Q own an atomic batch policy. A
 takeover command receives one occurrence ID for every declared normal exit and
 creates or repairs the whole batch in declaration order. The first target is a
