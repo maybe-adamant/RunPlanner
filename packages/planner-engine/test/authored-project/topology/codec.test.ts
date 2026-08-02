@@ -15,6 +15,7 @@ import {
   createRewardWheelOfferAddress,
   createTargetAddress,
   semanticAddressKey,
+  ordinaryTargetAuthoringEligibility,
   decodeProjectDocument,
   encodeProjectDocument,
   ProjectDocumentContractError,
@@ -573,6 +574,15 @@ describe('persisted authored topology codec', () => {
           (event) => semanticAddressKey(event.origin) === semanticAddressKey(decision),
         ),
       ).toBe(false);
+      expect(
+        ordinaryTargetAuthoringEligibility(
+          catalog,
+          layout,
+          plan.topology,
+          createTargetAddress(biome, decision.source, 'exit1'),
+          ordinaryGameName,
+        ),
+      ).toMatchObject({ kind: 'unavailable', reason: 'batchBound' });
       expect(() =>
         applyProjectCommand(document, catalog, {
           kind: 'CreateTarget',
