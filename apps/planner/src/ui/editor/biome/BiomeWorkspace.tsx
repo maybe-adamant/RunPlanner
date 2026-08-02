@@ -109,24 +109,6 @@ function nodeLabel(node: WorkspaceNode): string {
   }
 }
 
-function nodeKicker(node: WorkspaceNode): string {
-  switch (node.kind) {
-    case 'occurrenceWorkbench':
-      return 'Biome stage';
-    case 'linkedExit':
-      return 'Biome stage';
-    case 'ordinaryBatch':
-    case 'mixedBatch':
-      return 'Door choice';
-    case 'takeoverBatch':
-      return 'Biome stage';
-    case 'completion':
-      return node.role === 'postboss' ? 'Postboss' : 'Boss';
-    case 'hubDecision':
-      return 'Hub';
-  }
-}
-
 function FocusButton({
   accessibleLabel,
   children,
@@ -194,15 +176,16 @@ function RailNode({
   return (
     <div className="biome-rail-stop" data-kind={node.kind}>
       <FocusButton marker={marker} selected={selected}>
-        <span className="biome-rail-kicker">{nodeKicker(node)}</span>
-        <strong>{entry.label}</strong>
+        <span className="biome-rail-heading">
+          <strong>{entry.label}</strong>
+          <span className="biome-rail-status">
+            {assessmentLabel(marker)}
+            <FindingCount count={marker.findingCount} label="findings" />
+          </span>
+        </span>
         {entry.selectedTarget === undefined ? null : (
           <RailSelectedTarget selectedTarget={entry.selectedTarget} />
         )}
-        <span className="biome-rail-status">
-          {assessmentLabel(marker)}
-          <FindingCount count={marker.findingCount} label="findings" />
-        </span>
       </FocusButton>
     </div>
   );
@@ -493,14 +476,21 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
         data-status={biome.status}
       >
         <header className="biome-structure-heading">
-          <div>
+          <div className="biome-structure-title">
             <p className="eyebrow">Route structure</p>
-            <h2>{biome.label}</h2>
+            <div className="biome-structure-title-row">
+              <h2>{biome.label}</h2>
+              {clearTopology === undefined ? null : (
+                <TopologyRemovalAction
+                  accessibleLabel={`Clear ${biome.label}`}
+                  compact
+                  interaction={clearTopology}
+                  label="Clear biome"
+                />
+              )}
+            </div>
           </div>
         </header>
-        {clearTopology === undefined ? null : (
-          <TopologyRemovalAction interaction={clearTopology} label={`Clear ${biome.label}`} />
-        )}
         <div className="biome-rail">
           {biome.rail.map((entry) => (
             <RailEntry

@@ -621,6 +621,24 @@ button:disabled {
   letter-spacing: -0.02em;
 }
 
+.biome-structure-title {
+  min-width: 0;
+  width: 100%;
+}
+
+.biome-structure-title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.biome-structure-title-row > .topology-removal-action {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
 .biome-rail {
   display: grid;
   gap: 7px;
@@ -749,6 +767,21 @@ button:disabled {
   white-space: nowrap;
 }
 
+.biome-rail-heading {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.biome-rail-heading > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .biome-rail-summary,
 .biome-rail-selection {
   color: #c3a86f;
@@ -759,8 +792,10 @@ button:disabled {
 
 .biome-rail-status {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 7px;
+  white-space: nowrap;
 }
 
 .biome-completion-outline {
@@ -837,10 +872,6 @@ button:disabled {
 
 .topology-removal-action {
   margin: 12px 14px 14px;
-}
-
-.biome-structure-region > .topology-removal-action {
-  margin: 12px 0 0;
 }
 
 .exit-selection-control {
