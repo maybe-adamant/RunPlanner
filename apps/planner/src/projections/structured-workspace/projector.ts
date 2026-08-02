@@ -73,7 +73,7 @@ function projectBiome(
   >;
 } {
   const semantic = assembleWorkspaceBiomeSemantics(catalog, source);
-  const presentation = presentWorkspaceBiome(semantic);
+  const presentation = presentWorkspaceBiome(catalog, semantic);
   return Object.freeze({
     batchInteractionRequirements: semantic.batchInteractionRequirements,
     biome: presentation.biome,

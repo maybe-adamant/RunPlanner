@@ -264,7 +264,7 @@ describe('BiomeWorkspace', () => {
     ).not.toBeNull();
   });
 
-  it('keeps semantic focus after an inspector reward edit without a rail reward summary', async () => {
+  it('keeps semantic focus after an inspector reward edit and updates direct rail context', async () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: createExitDecisionAddress(pBiome, {
@@ -286,7 +286,9 @@ describe('BiomeWorkspace', () => {
       .find((radio) => (radio as HTMLInputElement).checked);
     const offer = selected?.closest<HTMLElement>('.biome-target-row');
     if (offer === null || offer === undefined) throw new Error('P selected room offer is missing');
-    expect(railDecision.querySelector('.biome-rail-summary')).toBeNull();
+    const before = railDecision.querySelector<HTMLElement>('.biome-rail-selection');
+    if (before === null) throw new Error('P selected room rail context is missing');
+    const beforeText = before.textContent;
     await view.user.click(within(offer).getByRole('button', { name: 'Reward' }));
     const replacement = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
@@ -299,7 +301,9 @@ describe('BiomeWorkspace', () => {
     if (replacement === undefined) throw new Error('P picked room has no replacement reward');
     await view.user.click(replacement);
 
-    expect(railDecision.querySelector('.biome-rail-summary')).toBeNull();
+    const after = railDecision.querySelector<HTMLElement>('.biome-rail-selection');
+    if (after === null) throw new Error('P updated room rail context is missing');
+    expect(after.textContent).not.toBe(beforeText);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
   });
 
@@ -644,7 +648,8 @@ describe('BiomeWorkspace', () => {
 
     expect(railDecision.dataset.findings).toBe('true');
     expect(railDecision.textContent).toContain('1 finding');
-    expect(railDecision.textContent).not.toContain('Combat 02');
+    expect(railDecision.querySelector('.biome-rail-selection')?.textContent).toContain('Combat 02');
+    expect(railDecision.querySelector('.biome-rail-summary')).toBeNull();
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
 
     await view.user.click(railDecision);

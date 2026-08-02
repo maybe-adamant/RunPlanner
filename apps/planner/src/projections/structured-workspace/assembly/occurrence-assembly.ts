@@ -393,6 +393,7 @@ function roomLocalForOccurrence(
       return Object.freeze({
         kind: 'fixed' as const,
         marker: input.markerDestinations.marker(incoming),
+        offer,
         summary: summarizeRewardOffer(input.catalog, offer),
         ...(control === undefined ? {} : { control }),
       });

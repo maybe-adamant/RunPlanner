@@ -1,4 +1,5 @@
 import type { OccurrenceId } from '@run-planner/engine/authored-project';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import {
   StructuredWorkspaceProjectionContractError,
@@ -13,14 +14,18 @@ import {
   type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceOrdinaryBatchNode,
   type WorkspaceRailEntry,
+  type WorkspaceRailReward,
+  type WorkspaceRailSelectedTarget,
+  type WorkspaceRoomSummary,
   type WorkspaceTakeoverBatchNode,
 } from '../contract';
 import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
+import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 import type { WorkspaceBiomeSemanticAssembly } from '../assembly/biome-semantic-assembly';
 
-/** Final biome products derived only from one completed semantic assembly. */
+/** Final biome products derived from completed semantics and immutable catalog display metadata. */
 export interface WorkspaceBiomePresentation {
   readonly biome: WorkspaceBiome;
   readonly focusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
@@ -66,6 +71,55 @@ function nodeRailPresentation(
     case 'hubDecision':
       return { label: 'Hub' };
   }
+}
+
+/**
+ * The rail describes an authored target even when evaluation has not reached
+ * it. Only direct one-reward room surfaces opt into the compact reward token;
+ * other room-local products retain their selected-room context without an
+ * ambiguous rail summary.
+ */
+function railRewardForRoom(
+  catalog: Catalog,
+  room: WorkspaceRoomSummary,
+): WorkspaceRailReward | undefined {
+  switch (room.roomLocal.kind) {
+    case 'fixed':
+      return Object.freeze({
+        label: room.roomLocal.summary,
+        offer: room.roomLocal.offer,
+      });
+    case 'incomingReward':
+      return Object.freeze({
+        label: summarizeRewardOffer(catalog, room.roomLocal.control.offer),
+        offer: room.roomLocal.control.offer,
+      });
+    case 'none':
+    case 'ephyra':
+    case 'fields':
+    case 'ship':
+    case 'shop':
+      return undefined;
+  }
+}
+
+function selectedTargetRailPresentation(
+  catalog: Catalog,
+  node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode,
+): WorkspaceRailSelectedTarget | undefined {
+  const selectedTargets = node.targets.filter((target) => target.selected);
+  if (selectedTargets.length !== 1) return undefined;
+  const [target] = selectedTargets;
+  if (target === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${node.key} has no selected target after cardinality check`,
+    );
+  }
+  const reward = railRewardForRoom(catalog, target.room);
+  return Object.freeze({
+    ...(reward === undefined ? {} : { reward }),
+    roomLabel: target.room.label,
+  });
 }
 
 /**
@@ -151,9 +205,11 @@ function isHubRailScaffoldWithRenderedTarget(
 
 /**
  * Transforms complete biome semantics into rail, default-inspector, and exact
- * destination products. It neither reads source indexes nor bound interactions.
+ * destination products. It uses the immutable catalog only for resolved reward
+ * display labels; it never reads source indexes or bound interactions.
  */
 export function presentWorkspaceBiome(
+  catalog: Catalog,
   semantic: WorkspaceBiomeSemanticAssembly,
 ): WorkspaceBiomePresentation {
   const { entry, frontier, structuralNodes } = semantic;
@@ -198,20 +254,25 @@ export function presentWorkspaceBiome(
   let decisionIndex = 0;
   const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry => {
     if (node.kind === 'hubDecision') return projectHubRailEntry(node, structuralNodes);
-    if (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') decisionIndex += 1;
-    const presentation = nodeRailPresentation(
-      node,
-      node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch' ? decisionIndex : undefined,
-      node.key === entry?.key,
-    );
+    if (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') {
+      decisionIndex += 1;
+      const presentation = nodeRailPresentation(node, decisionIndex, node.key === entry?.key);
+      const selectedTarget = selectedTargetRailPresentation(catalog, node);
+      return Object.freeze({
+        kind: 'node' as const,
+        key: node.key,
+        label: presentation.label,
+        marker: decisionRailMarker(node),
+        node,
+        ...(selectedTarget === undefined ? {} : { selectedTarget }),
+      });
+    }
+    const presentation = nodeRailPresentation(node, undefined, node.key === entry?.key);
     return Object.freeze({
       kind: 'node' as const,
       key: node.key,
       label: presentation.label,
-      marker:
-        node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch' || node.kind === 'takeoverBatch'
-          ? decisionRailMarker(node)
-          : railMarkerForNode(node),
+      marker: node.kind === 'takeoverBatch' ? decisionRailMarker(node) : railMarkerForNode(node),
       node,
     });
   };

@@ -199,7 +199,9 @@ production workspace products + expectations
 The semantic assembly owns complete biome facts: authored structural nodes,
 room-local products, controls, preliminary destinations, and interaction
 requirements. Biome presentation and interaction binding are sibling consumers
-of that immutable product. Presentation owns the selective rail, Hub visit
+of that immutable product. Presentation may also read immutable catalog display
+metadata for an already-resolved reward token; it never revisits authored source
+or interaction binding. Presentation owns the selective rail, Hub visit
 grouping, default inspector, and final inspector/rail destinations; interaction
 binding owns executable command adapters and does not consume presentation.
 For the policy-bearing families it binds, it returns complete command intents;
@@ -331,10 +333,22 @@ is shown separately when materialization has actually reached that room.
 
 Unpicked targets remain fully visible in the decision workbench because they
 still affect reward bags, sibling conflicts, source support, and possibility
-evaluation. They do not become equal-weight stops on the biome rail. The rail
-shows only the decision identity and semantic assessment, while target,
-occurrence, reward, and finding focus all resolve to the exact control inside
-the decision.
+evaluation. They do not become equal-weight stops on the biome rail. A numbered
+decision stop always shows its decision identity and semantic assessment. When
+exactly one target is authored as selected, it may progressively add that room
+label; if its room-local surface has exactly one direct compact reward, it may
+add a structured reward token. The selected room remains useful context when
+the reward surface is multiple or not compactly representable, so room and
+reward cardinality are deliberately independent. Findings, evaluated entry,
+and physical availability never suppress this authored-selection context.
+
+The rail product retains the resolved reward offer plus its current text
+fallback. React currently renders the fallback, while a later compact icon or
+token renderer can consume the same structured offer without recreating reward
+or selection policy. Fields, Ship, Shop, and Ephyra local surfaces do not infer
+a token merely by counting nested controls; they may opt in only when their own
+compact representation is clear. Target, occurrence, reward, and finding focus
+continue to resolve to the exact control inside the decision.
 
 Picked and unpicked targets use the same occurrence identity and semantic
 addresses. Visual grouping does not change ownership.

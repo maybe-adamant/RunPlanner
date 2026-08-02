@@ -13,6 +13,8 @@ import {
   type WorkspaceMarker,
   type WorkspaceNode,
   type WorkspaceRailEntry,
+  type WorkspaceRailReward,
+  type WorkspaceRailSelectedTarget,
   type WorkspaceAuthoringFrontier,
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -149,6 +151,29 @@ function FocusButton({
   );
 }
 
+/** Keeps the current text fallback isolated from a future compact reward token. */
+function RailReward({ reward }: { readonly reward: WorkspaceRailReward }) {
+  return <span className="biome-rail-reward">{reward.label}</span>;
+}
+
+function RailSelectedTarget({
+  selectedTarget,
+}: {
+  readonly selectedTarget: WorkspaceRailSelectedTarget;
+}) {
+  return (
+    <span className="biome-rail-selection">
+      {selectedTarget.roomLabel}
+      {selectedTarget.reward === undefined ? null : (
+        <>
+          {' · '}
+          <RailReward reward={selectedTarget.reward} />
+        </>
+      )}
+    </span>
+  );
+}
+
 function RailNode({
   entry,
   selectedRailKey,
@@ -163,6 +188,9 @@ function RailNode({
       <FocusButton marker={marker} selected={selected}>
         <span className="biome-rail-kicker">{nodeKicker(node)}</span>
         <strong>{entry.label}</strong>
+        {entry.selectedTarget === undefined ? null : (
+          <RailSelectedTarget selectedTarget={entry.selectedTarget} />
+        )}
         <span className="biome-rail-status">
           {assessmentLabel(marker)}
           <FindingCount count={marker.findingCount} label="findings" />
