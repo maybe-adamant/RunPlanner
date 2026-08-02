@@ -565,12 +565,33 @@ describe('DecisionWorkbench', () => {
       'F',
       subjectForOwner(owner),
     );
-    await view.user.click(screen.getByLabelText('Reward pool'));
+    await view.user.click(screen.getByLabelText('Base reward pool'));
     const values = Array.from(
-      (screen.getByLabelText('Reward pool') as HTMLSelectElement).options,
+      (screen.getByLabelText('Base reward pool') as HTMLSelectElement).options,
     ).map((option) => option.value);
     expect(values).toContain('MetaProgress');
     expect(values).not.toContain('RunProgress');
+  });
+
+  it('distinguishes a forced effective reward pool from the authored base pool', () => {
+    const owner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(4, 1),
+    });
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      gameName: 'F_Combat01',
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 2)),
+    });
+    renderStaticDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
+
+    expect(screen.getByLabelText('Base reward pool')).toBeTruthy();
+    const effectivePool = screen.getByRole('status');
+    expect(within(effectivePool).getByText('Effective reward pool')).toBeTruthy();
+    expect(within(effectivePool).getByText('Major Reward')).toBeTruthy();
+    expect(
+      within(effectivePool).getByText('A forced room in this decision overrides the base pool.'),
+    ).toBeTruthy();
   });
 
   it('labels authored-selected retained rooms without claiming evaluated entry', () => {

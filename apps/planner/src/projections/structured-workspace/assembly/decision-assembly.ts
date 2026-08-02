@@ -31,6 +31,7 @@ import {
   StructuredWorkspaceProjectionContractError,
   workspaceInteractionKey,
   type WorkspaceBatchRepairIntent,
+  type WorkspaceEffectiveRewardStore,
   type WorkspaceFieldsBatchContext,
   type WorkspaceLinkedExitNode,
   type WorkspaceMissingPhysicalTarget,
@@ -251,6 +252,29 @@ function fieldsContextForAuthoredBatch(
     cageOutcome: facts.cageOutcome,
     cageTargetCount: facts.cageTargetCount,
     doorCageRewardCount: facts.doorCageRewardCount,
+  });
+}
+
+function effectiveRewardStoreForBatch(
+  decision: AuthoredBatchDecision,
+  evaluated: WorkspaceEvaluatedBatchOverlay | undefined,
+): WorkspaceEffectiveRewardStore | undefined {
+  if (
+    decision.normal.rewardStore.kind !== 'authoredBaseStore' ||
+    decision.normal.rewardStore.baseRewardStoreKey === null
+  ) {
+    return undefined;
+  }
+  const resolvedStoreKey = evaluated?.batch.resolvedSharedRewardStoreKey;
+  if (
+    resolvedStoreKey === undefined ||
+    resolvedStoreKey === decision.normal.rewardStore.baseRewardStoreKey
+  ) {
+    return undefined;
+  }
+  return Object.freeze({
+    label: workspaceRewardStoreLabel(resolvedStoreKey),
+    storeKey: resolvedStoreKey,
   });
 }
 
@@ -682,8 +706,10 @@ function assembleBatchDecision(
   const hasEditableAuthoredRewardStore =
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
     (kind !== 'takeoverBatch' || decision.normal.rewardStore.baseRewardStoreKey !== null);
+  const effectiveRewardStore = effectiveRewardStoreForBatch(decision, evaluated);
   const base = {
     batchState: decision.normal.batchState,
+    ...(effectiveRewardStore === undefined ? {} : { effectiveRewardStore }),
     ...(fieldsCageOutcome === undefined ? {} : { fieldsCageOutcome }),
     ...(fields === undefined ? {} : { fields }),
     key: `batch:${semanticAddressKey(owner)}`,

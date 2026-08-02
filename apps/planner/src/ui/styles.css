@@ -1387,6 +1387,35 @@ select {
   display: none;
 }
 
+.effective-reward-store {
+  padding: 8px 10px;
+  border: 1px solid #554866;
+  border-radius: 8px;
+  background: rgb(126 101 154 / 9%);
+}
+
+.effective-reward-store > span {
+  display: block;
+  color: #aaa5af;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.effective-reward-store > strong {
+  display: block;
+  margin-top: 4px;
+  color: #eee7dc;
+  font-weight: 600;
+}
+
+.effective-reward-store > p {
+  margin: 5px 0 0;
+  color: #aaa5af;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .decision-heading h3,
 .frontier-actions h3 {
   margin: 0;

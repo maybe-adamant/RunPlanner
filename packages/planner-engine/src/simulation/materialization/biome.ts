@@ -410,6 +410,9 @@ function materializeBatch(
       source,
       parent,
       rewardStore: canonicalRewardStore(biome, source, normal.rewardStore, takeover),
+      ...(sharedBatchStoreKey === undefined
+        ? {}
+        : { resolvedSharedRewardStoreKey: sharedBatchStoreKey }),
       batchState,
       targets,
       selectedExitKey: selected ?? null,
