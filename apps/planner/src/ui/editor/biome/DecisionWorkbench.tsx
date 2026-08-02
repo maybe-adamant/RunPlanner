@@ -12,7 +12,6 @@ import {
   type WorkspaceAuthoringFrontier,
   type WorkspaceBatchRepairIntent,
   type WorkspaceCommandIntent,
-  type WorkspaceExitSelectionInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceLinkedExitNode,
   type WorkspaceMarker,
@@ -276,23 +275,6 @@ function MissingTargetRow({
   );
 }
 
-function BatchSelectionStatus({
-  interaction,
-  node,
-}: {
-  readonly interaction: WorkspaceExitSelectionInteraction | undefined;
-  readonly node: BatchNode;
-}) {
-  if (interaction !== undefined) return null;
-  return (
-    <p className="fixed-room-state">
-      {node.targets.some((target) => target.selected)
-        ? 'The game fixes which room is selected here.'
-        : 'Choose which door is taken.'}
-    </p>
-  );
-}
-
 function CompletedHubHandoffAction({
   interaction,
 }: {
@@ -498,7 +480,6 @@ export function BatchWorkbench({
         </div>
       </header>
       <BatchSettings interactions={interactions} node={node} />
-      <BatchSelectionStatus interaction={exitSelection} node={node} />
       <div className="decision-selection-heading">
         <span>Room selection</span>
         <SemanticOwnerMarker address={exitSelectionAddress(node.selection)} />
