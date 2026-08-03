@@ -714,6 +714,7 @@ describe('HubDecisionWorkbench', () => {
     const removal = screen.getByRole('button', { name: 'Remove visits from Visit 6' });
     expect(removal.classList.contains('danger-action')).toBe(true);
     expect(removal.classList.contains('action-compact')).toBe(true);
+    expect(removal.closest('.hub-visit-heading')).not.toBeNull();
     await view.user.click(removal);
     expect(confirmation).not.toHaveBeenCalled();
     await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toHaveLength(5));
