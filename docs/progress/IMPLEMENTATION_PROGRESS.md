@@ -65,6 +65,16 @@ implemented. Commit 5b.4's desktop and narrow visual verification is the
 active feature frontier; Commit 5c follows its own
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan after that closure.
 
+N's depth-gated Hub normalization is complete. Schema 10 replaces the linked
+Opening-to-PreHub product with one bounded width-one normal decision, gives
+PreHub an exact terminal Hub envelope, and persists the selected PreHub source
+on the Hub decision. The completed-Hub Preboss handoff remains separate. The
+linked model and its canonical/workspace/UI branches are deleted; focused
+follow-up validation also requires the Hub and terminal decision addresses in
+`ReplaceWithHubDecision` to name the same route and biome. The complete gate
+passed 100 test files and 884 tests, all package typechecks, lint, formatting,
+and the production build.
+
 The narrow O offer-lifecycle follow-up completes the intended Change 3 policy:
 an active Ship reward wheel renders only its projection-active offers, while
 the complete authored/projection capacity remains available for persistence,
@@ -89,8 +99,8 @@ four review units—A14, A15.1, A15.2, and A16—closed that test ownership.
 The completed sequencing closed the candidate, authored-core, history, and
 reward campaigns before Commit 5b.3 resumed. The separate
 [`SHOP_PURCHASE_ORDER.md`](SHOP_PURCHASE_ORDER.md) plan then gives Commit 5c
-its schema-10 exact purchase order, simulation validation, and editor surface.
-Commit 5c intentionally replaces the schema-9 purchased-set contract. These
+its schema-11 exact purchase order, simulation validation, and editor surface.
+Commit 5c intentionally replaces the schema-10 purchased-set contract. These
 plans supersede the former presentation-only Commit 12 and Commit 13 wording
 in `IMPLEMENTATION_PLAN.md`.
 

@@ -26,8 +26,9 @@ The batch-level projection follows the locked all-biome project contract.
 F/G/P author an ordinary batch Reward Pool, H authors its Fields outcome, I
 authors one biome-wide Clockwork limit without a base store, O may derive its
 outgoing store from a source wheel, and Q owns no ordinary base store. N
-projects its fixed Hub board rather than an ordinary batch. All variants use the
-same semantic command and finding ownership rules.
+first projects its bounded PreHub decision and terminal Hub action, then its
+fixed Hub board. All variants use the same semantic command and finding
+ownership rules.
 
 ## Application Shell
 
@@ -74,11 +75,11 @@ semantic evidence, topology state, or candidate support locally.
 ## Workspace Projection
 
 The application projects every configured biome into one `WorkspaceBiome`
-envelope. The envelope has an exhaustive node union for starts, linked exits,
-ordinary batches, takeover Preboss batches, mixed batches, the Hub decision,
-occurrence workbenches, and completion. React renders that projection through
-one `BiomeWorkspace`; it does not choose a layout-specific editor by layout type or
-read authored decision arrays to reconstruct topology.
+envelope. The envelope has an exhaustive node union for starts, ordinary
+batches, takeover Preboss batches, mixed batches, the Hub decision, occurrence
+workbenches, and completion. React renders that projection through one
+`BiomeWorkspace`; it does not choose a layout-specific editor by layout type
+or read authored decision arrays to reconstruct topology.
 
 Ordinary decision nodes project:
 
@@ -93,7 +94,7 @@ Ordinary decision nodes project:
 
 The one Hub decision node projects:
 
-- fixed Opening and PreHub occurrence workbenches;
+- its exact PreHub occurrence source and derived Hub room;
 - the 26 declaration-fixed Hub slots, of which nine or ten may be open;
 - one complete target room and incoming reward for every open slot;
 - the ordered six-visit pylon sequence;
@@ -114,6 +115,12 @@ Membership controls create or remove the one authored occurrence owned by a
 fixed slot; visited slots cannot be closed until their visit references are
 replaced or explicitly removed. Candidate work remains lazy on control intent
 so rendering the 26-slot board does not replay every alternative.
+
+Before that node exists, the exact PreHub terminal decision projects one Hub
+takeover control. The application binds its engine-evaluated support and the
+complete `ReplaceWithHubDecision` intent; React neither derives depth nor
+constructs the command. Selecting it replaces the terminal decision card with
+the existing Hub workbench, while removal and Undo restore the same card.
 
 For each active side slot, generation and entry may project as simple toggles;
 an entered slot additionally owns a unique ordinal (`1` when it is the only

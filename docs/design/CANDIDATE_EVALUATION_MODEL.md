@@ -275,6 +275,27 @@ batch classification directly rather than reducing exit pressure itself. An
 ordinary option stays target-owned; a takeover option stays decision-owned,
 even when they share the same visual control.
 
+### Terminal Hub Takeover
+
+N's bounded entry publishes one closed candidate after the selected PreHub
+occurrence reaches its exact empty terminal envelope:
+
+```ts
+interface HubTerminalTakeoverCandidateQuery {
+  kind: 'hubTerminalTakeover';
+  source: ExitDecisionAddress;
+}
+```
+
+Structural topology resolves the one declared Hub key and room; the candidate
+evaluator does not accept an arbitrary game name. It evaluates the terminal's
+depth requirement against PreHub's committed post-room history and returns
+`required` or `impossible`. The application projects that result as the
+affordance for one complete `ReplaceWithHubDecision` intent. Findings or
+unavailable candidate coverage may disable the action, but they never remove
+the authored terminal control. The completed-Hub Preboss remains in the
+separate takeover-Preboss domain owned by the Hub-sourced handoff.
+
 For a reward domain, the session prepares the producer frontier described
 below. Every complete offer is evaluated from the same frontier.
 

@@ -4,8 +4,8 @@
 
 This document is the game-rule authority for Ephyra (`N`) under the
 progressed-save, NPC-free baseline. It distinguishes the game's literal route
-mechanism, the accepted planner normalization, and the currently running
-schema-9 implementation. Shared occurrence, reward, and completion rules are
+mechanism from the implemented schema-10 planner normalization. Shared
+occurrence, reward, and completion rules are
 defined by
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md). N
 declarations own the fixed Opening and PreHub rooms, Hub slots, side-room
@@ -45,9 +45,9 @@ The game's fixed links are source evidence. They do not require the planner to
 persist a distinct linked-exit family when another authored representation
 preserves every supported lifecycle and structural outcome.
 
-## Accepted planner normalization
+## Implemented planner normalization
 
-The accepted target model is:
+The implemented model is:
 
 ```text
 fixed N_Opening01
@@ -71,10 +71,9 @@ derived room, persistent board, open slots, visits, side rooms, restores, and
 reward lookup.
 
 This normalization intentionally replaces the literal linked-room mechanism
-with planner-observable depth, candidate, source, and lifecycle facts. Its
-implementation is accepted only if executable fixtures preserve Opening,
-PreHub, Hub entry, board generation, visits, rewards, history, completion, and
-removal/undo behavior.
+with planner-observable depth, candidate, source, and lifecycle facts.
+Executable fixtures preserve Opening, PreHub, Hub entry, board generation,
+visits, rewards, history, completion, and removal/undo behavior.
 
 ### Completed-Hub Preboss remains separate
 
@@ -94,27 +93,17 @@ An incomplete Hub exposes no Preboss handoff, while a complete Hub exposes
 exactly that one fixed target. The Preboss batch does not replace the Hub node
 or make `N_PreBoss01` an occurrence-sourced candidate.
 
-## Current implementation status
+## Authored shape
 
-The running schema-9 implementation still persists Opening -> PreHub as
-`normal.kind === 'linked'` and creates a source-less `HubDecision` after finding
-that start-owned link. Canonical materialization, history, workspace, and UI
-still publish a distinct linked-exit product. The selected depth-gated model is
-not current behavior until the implementation plan's equivalence, schema,
-engine, workspace, and deletion gates pass.
-
-Cross-cutting design documents continue to describe the running implementation
-until their owning code changes. This document records the accepted N-specific
-normalization in advance so the implementation does not silently change game
-facts or the intended abstraction boundary.
-
-## Current implemented authored shape
-
-- `N_Opening01` is the fixed authored start. Its linked `prehub` exit creates
-  the fixed `N_PreHub01` occurrence.
-- The PreHub occurrence owns one persistent Hub decision identified by the
-  semantic key `hub`. The Hub decision owns its open slot membership and the
-  ordered visit list; it does not own room-local target state.
+- `N_Opening01` is the fixed authored start. Its width-one normal decision owns
+  the stable `prehub` exit and the selected `N_PreHub01` occurrence.
+- The PreHub occurrence owns one exact zero-target terminal envelope. The
+  required Hub action atomically replaces it with the persistent Hub decision
+  identified by the semantic key `hub`; removing the Hub restores the exact
+  envelope.
+- The Hub decision records the PreHub occurrence as its source and owns its
+  open slot membership and ordered visit list; it does not own room-local
+  target state.
 - Nine or ten declaration-fixed Hub slots may be open. Exactly six distinct
   open slots are visited in authored order. A target occurrence remains owned
   by its slot while its incoming reward, side rooms, and local entry order
@@ -125,7 +114,7 @@ facts or the intended abstraction boundary.
   it creates the fixed width-one `N_PreBoss01` Shop occurrence.
 - Selecting that Preboss starts the `N_Boss01`, `N_PostBoss01` completion tail.
 
-This is a completed-Hub handoff, not a generated empty decision envelope or a
+This is a completed-Hub handoff, not the PreHub-owned terminal envelope or a
 Door 1 room choice. The Hub's completion predicate remains the sole authority
 for creating it.
 

@@ -112,13 +112,14 @@ editable when blocked, but its contextual state remains unassessed.
 
 Every configured biome renders through one `BiomeWorkspace` composition over a
 `WorkspaceBiome` projection. Its exhaustive workspace-node union retains
-ordinary decisions, linked exits, takeover and mixed Preboss batches,
-completion, occurrence-local workbenches, and the Hub decision without React
-inspecting authored topology. The projected rail deliberately exposes only
-player-facing biome stages and decision points; exhaustive node ownership does
-not imply one rail stop per node. `HubDecisionWorkbench` is the one N-specific
-workbench and is nested inside that shared workspace; it does not create a
-second editor surface.
+ordinary decisions, takeover and mixed Preboss batches, completion,
+occurrence-local workbenches, and the Hub decision without React inspecting
+authored topology. N's exact terminal decision carries a projected Hub
+takeover control rather than another node family. The projected rail
+deliberately exposes only player-facing biome stages and decision points;
+exhaustive node ownership does not imply one rail stop per node.
+`HubDecisionWorkbench` is the one N-specific workbench and is nested inside
+that shared workspace; it does not create a second editor surface.
 
 The rail is a selective decision-highlight and navigation projection, not
 workspace authority. Omitting a semantic owner from the rail changes neither

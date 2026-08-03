@@ -7,12 +7,12 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 9 Boundary
+## Schema 10 Boundary
 
-Schema 9 is the sole persisted authored-project contract. The codec rejects
-schema 8 and earlier documents rather than inventing unified decisions, N Hub
-state, or a Preboss selection for a stale document. Catalog versions must match
-exactly.
+Schema 10 is the sole persisted authored-project contract. The codec rejects
+schema 9 and earlier documents rather than manufacturing N's normalized PreHub
+decision, terminal Hub envelope, source-bearing Hub, or another missing
+authored choice for a stale document. Catalog versions must match exactly.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -68,8 +68,8 @@ complete declaration defaults.
 one biome. It owns an opaque `occurrenceId`, selected `gameName`, and complete
 occurrence-local room state. Several occurrences may use the same declaration.
 
-`Exit Decision` owns one ordinary next-room source, its linked normal exit or
-normal-door batch, and the selection among its normal exits.
+`Exit Decision` owns one ordinary next-room source, its normal-door batch, and
+the selection among its normal exits.
 
 `Normal-door batch` owns batch reward-store state, batch-specific state such
 as H cage outcome, and target references. Its target keys are declaration-owned
@@ -113,14 +113,8 @@ type ExitSelection =
 interface ExitDecision {
   kind: 'exit';
   source: ExitDecisionSource;
-  normal: LinkedNormalExit | NormalDoorBatch;
+  normal: NormalDoorBatch;
   selection: ExitSelection;
-}
-
-interface LinkedNormalExit {
-  kind: 'linked';
-  exitKey: string;
-  occurrenceId: OccurrenceId;
 }
 
 interface NormalDoorBatch {
@@ -133,20 +127,21 @@ interface NormalDoorBatch {
 interface HubDecision {
   kind: 'hub';
   hubKey: string;
+  source: { kind: 'occurrence'; occurrenceId: OccurrenceId };
   openTargets: readonly HubTargetReference[];
   visitOrder: readonly string[];
 }
 ```
 
-An `ExitDecision` has at most one semantic source. A linked normal exit is N's
-declaration-fixed Opening-to-PreHub handoff. Occurrence-sourced batches belong
-only to generated progression; N's one batch is sourced by the completed Hub.
+An `ExitDecision` has at most one semantic source. Occurrence-sourced batches
+belong to a layout's normal-decision policy, including N's bounded entry;
+Hub-sourced batches belong only to N's completed-Hub Preboss handoff.
 
-Selection belongs to the enclosing decision: a linked exit and a width-one
-batch use `derived`; a multi-target batch begins `unresolved`; and `normal`
-selects one declared target key in a multi-target batch. The codec rejects a
-derived selection with other than one target, unresolved or normal selection
-for one target, and a normal key outside the batch.
+Selection belongs to the enclosing decision: a width-one batch uses `derived`;
+a multi-target batch begins `unresolved`; and `normal` selects one declared
+target key in a multi-target batch. The codec rejects a derived selection with
+other than one target, unresolved or normal selection for one target, and a
+normal key outside the batch.
 
 Decision-array order is not reachability authority. Decoding follows semantic
 sources and selected targets to determine the selected spine. An unpicked
@@ -169,7 +164,7 @@ derive a reward store from the active Ship wheel. I remains a normal Clockwork
 batch: `I_PreBoss02` may coexist with normal peers but its one-creation-per-
 source policy is declaration-owned.
 
-### Empty generated decision envelopes
+### Empty decision envelopes
 
 An occurrence-sourced normal batch with zero targets is an authored,
 uncommitted decision envelope. It has a stable decision address, remains on
@@ -181,10 +176,11 @@ The envelope is not a realized ordinary generated batch. It consumes neither
 ordinary batch/target progression nor a staged ordinal until its first
 ordinary target is created. `CreateBatch` can create the next envelope while
 an ordinary slot remains. At the ordinary bound it can create one further
-empty envelope only when the selected source and layout admit the declared
-terminal Preboss shape. That exception belongs to the engine's
-declaration-derived topology rule, not to every generated layout: F/G/H/O/P/Q
-have it; I does not because its Preboss is an ordinary retained peer.
+empty envelope only when the selected source and layout admit a declared
+terminal resolution. F/G/H/O/P/Q admit a takeover Preboss; N admits its
+required Hub takeover after the bounded PreHub stage; I admits neither because
+its Preboss is an ordinary retained peer. These exceptions belong to
+declaration-derived topology rules rather than the empty shape itself.
 
 The first Door 1 choice resolves the envelope. An ordinary or
 `retainNormalPeers` choice realizes an ordinary batch and must satisfy the
@@ -211,17 +207,23 @@ N is authored progressively:
 
 ```text
 N_Opening01
-  -> linked exit prehub -> N_PreHub01
-  -> Hub decision hub
+  -> width-one normal exit prehub -> N_PreHub01
+  -> exact empty terminal envelope
+  -> source-bearing Hub decision hub
   -> completed-Hub exit preboss -> width-one N_PreBoss01 batch
   -> derived Boss and Postboss completion
 ```
 
-`CreateHubDecision` requires the linked PreHub exit. The Hub declaration owns
-the fixed physical slot-to-room mapping, opening bounds and constraints, six
-distinct ordered visits, side-room policy, restores, and the dedicated
-completed-Hub handoff. An open slot creates one occurrence; its room identity
-is not replaceable. Open unvisited slots remain real offered leaves.
+The catalog bounds N's normal entry to one `prehub` physical exit and one
+staged `N_PreHub01` target at biome depth 1. After PreHub reaches depth 2,
+`CreateBatch` may create the exact zero-target terminal envelope.
+`ReplaceWithHubDecision` atomically replaces that envelope with a Hub carrying
+the PreHub occurrence as its source; `RemoveHubDecision` removes Hub-owned
+state and restores the exact envelope. The Hub declaration owns the fixed
+physical slot-to-room mapping, opening bounds and constraints, six distinct
+ordered visits, side-room policy, restores, and the dedicated completed-Hub
+handoff. An open slot creates one occurrence; its room identity is not
+replaceable. Open unvisited slots remain real offered leaves.
 
 The completed-Hub batch is permitted only after the declared open-set and
 six-visit predicate holds. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
@@ -242,8 +244,8 @@ keeps its complete resolved offer regardless of selection.
 `ReplaceOccurrenceRoom` preserves occurrence identity and reconciles only
 declaration-compatible leaves. It never moves state to another occurrence or
 guesses a reward. It resets incompatible state to complete defaults and cannot
-bypass a staged candidate pool, fixed start/linked/Hub identity, or atomic
-takeover rule.
+bypass a staged candidate pool, fixed start/Hub identity, or atomic takeover
+rule.
 
 Room-local commands address an occurrence and declaration-owned leaf key.
 They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
@@ -269,7 +271,7 @@ canonical projection for maps and markers, not another identity source.
 | derived completion                | `CompletionRoomAddress`                      |
 
 `ContinuationAddress`, `PickedAddress`, fixed-entry addresses, parent-only
-batch-store identity, and rendered target indexes are not schema-9 addresses.
+batch-store identity, and rendered target indexes are not schema-10 addresses.
 
 ## Commands
 
@@ -277,15 +279,16 @@ Commands are semantic immutable transitions. Every successful proposal passes
 through the project decoder before publication. A structural failure reports
 its semantic owner and never leaves partial topology.
 
-The command language includes project and route commands; start, linked-exit,
-batch, target, takeover, selection, removal, and clear-topology commands; Hub
-board and visit commands; and occurrence-local state commands. The current
-union is defined by `packages/planner-engine/src/authored-project/commands/types.ts`.
+The command language includes project and route commands; start, batch, target,
+takeover, selection, removal, and clear-topology commands; terminal Hub
+replacement, Hub board and visit commands; and occurrence-local state
+commands. The current union is defined by
+`packages/planner-engine/src/authored-project/commands/types.ts`.
 
 `RemoveExitDecision` explicitly removes its targets and downstream selected
-subtree. Removing N's linked Opening exit also removes the Hub board and any
-completed-Hub batch. Navigation and focus are not commands and do not enter
-authored history.
+subtree. Removing N's Opening decision therefore removes PreHub, its
+source-bearing Hub, and any completed-Hub batch through persisted ownership.
+Navigation and focus are not commands and do not enter authored history.
 
 ## Persistence and Validation
 
@@ -294,7 +297,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 9;
+  schemaVersion: 10;
   projectId: string;
   name: string;
   catalogVersion: string;
