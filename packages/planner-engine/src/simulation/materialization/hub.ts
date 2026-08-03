@@ -12,6 +12,7 @@ import {
   createHubVisitAddress,
   createLocalChildAddress,
   createLocalRewardAddress,
+  createOccurrenceAddress,
   type BiomeAddress,
 } from '../../authored-project/addresses';
 import type {
@@ -103,7 +104,7 @@ function materializeHubRoom(
   biome: BiomeAddress,
   descriptor: HubDecisionDescriptor,
 ): CanonicalHubRoom {
-  const room = requireRoom(catalog, descriptor.roomGameName);
+  const room = requireRoom(catalog, descriptor.terminal.roomGameName);
   if (
     room.mode.kind !== 'derived' ||
     room.mode.classification !== 'hub' ||
@@ -133,6 +134,19 @@ function authoredRoomReference(room: CanonicalAuthoredRoom): CanonicalRoomRefere
     origin: room.origin,
     occurrenceId: room.occurrenceId,
     gameName: room.gameName,
+  });
+}
+
+function hubSourceReference(
+  biome: BiomeAddress,
+  decision: HubDecision,
+  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+): CanonicalRoomReference {
+  const occurrence = requireOccurrence(occurrences, decision.source.occurrenceId);
+  return Object.freeze({
+    origin: createOccurrenceAddress(biome, occurrence.occurrenceId),
+    occurrenceId: occurrence.occurrenceId,
+    gameName: occurrence.gameName,
   });
 }
 
@@ -329,6 +343,7 @@ export function materializeHubDecision(
   return Object.freeze({
     kind: 'hub',
     origin: createHubDecisionAddress(biome, descriptor.hubKey),
+    source: hubSourceReference(biome, decision, occurrences),
     room,
     board,
     visits: materializeVisits(catalog, biome, descriptor, decision, occurrences, board),

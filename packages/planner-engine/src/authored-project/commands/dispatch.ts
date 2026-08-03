@@ -20,14 +20,14 @@ function applyUnchecked(
     case 'ReplaceBiomeField':
       return applyProjectStateCommand(document, catalog, command);
     case 'CreateStart':
-    case 'CreateLinkedExit':
     case 'CreateBatch':
     case 'CreateTarget':
     case 'CreateTakeoverBatch':
     case 'ReplaceWithTakeoverBatch':
     case 'ReconcileTakeoverBatch':
     case 'ReconcileBatchExitCapacity':
-    case 'CreateHubDecision':
+    case 'ReplaceWithHubDecision':
+    case 'RemoveHubDecision':
     case 'OpenHubSlot':
     case 'CloseHubSlot':
     case 'AppendHubVisit':

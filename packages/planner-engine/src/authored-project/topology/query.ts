@@ -1,11 +1,18 @@
-import type { BiomeLayout, Catalog, RoomDeclaration, RoomExit } from '../../catalog-schema';
+import type {
+  BiomeLayout,
+  Catalog,
+  HubDecisionDescriptor,
+  NormalDecisionProgressionDescriptor,
+  RoomDeclaration,
+  RoomExit,
+} from '../../catalog-schema';
 import type { TargetAddress } from '../addresses';
 import type {
   BiomeTopology,
   ExitDecision,
   ExitDecisionSource,
   ExitTargetReference,
-  LinkedNormalExit,
+  HubDecision,
   OccurrenceId,
 } from '../model';
 
@@ -56,8 +63,23 @@ export interface DeclaredPhysicalExit {
   readonly compatibilityPolicyKey: string;
   readonly exitKey: string;
   readonly index: number;
-  readonly kind: 'normal' | 'linked' | 'completedHub';
+  readonly kind: 'normal' | 'completedHub';
   readonly type: string;
+}
+
+/**
+ * Resolves the one shared normal-decision policy supplied by a layout. Hub
+ * layouts carry a bounded entry policy; they do not create a second broad
+ * normal-progression family for every consumer to special-case.
+ */
+export function normalDecisionProgressionForLayout(
+  layout: BiomeLayout,
+): NormalDecisionProgressionDescriptor | undefined {
+  return layout.progression.kind === 'generated'
+    ? layout.progression
+    : layout.progression.kind === 'hub'
+      ? layout.progression.entry
+      : undefined;
 }
 
 function physicalExit(
@@ -75,6 +97,40 @@ function physicalExit(
 }
 
 /**
+ * Resolves declared physical exits from a source room already known by the
+ * caller. The codec uses this without reconstructing an N-specific key from
+ * raw topology; the topology wrapper below performs the room lookup for
+ * command and projection callers.
+ */
+export function declaredPhysicalExitsForSourceRoom(
+  layout: BiomeLayout,
+  startOccurrenceId: OccurrenceId,
+  source: ExitDecisionSource,
+  sourceRoom: RoomDeclaration | undefined,
+): readonly DeclaredPhysicalExit[] | undefined {
+  if (source.kind === 'hubDecision') {
+    if (layout.progression.kind !== 'hub' || source.decisionKey !== layout.progression.hubKey) {
+      return undefined;
+    }
+    const completed = layout.progression.completedExit;
+    return Object.freeze([physicalExit('completedHub', completed.exitKey, completed.physicalExit)]);
+  }
+  if (sourceRoom === undefined || sourceRoom.biomeKey !== layout.biomeKey) return undefined;
+  if (layout.progression.kind === 'hub') {
+    // The current bounded Hub data has one normal entry decision. Every later
+    // occurrence source is the declaration-owned terminal envelope, which has
+    // no ordinary physical target. Eligibility is evaluated separately.
+    if (source.occurrenceId !== startOccurrenceId) return Object.freeze([]);
+    const sourceExit = sourceRoom.exits[0];
+    if (sourceRoom.exits.length !== 1 || sourceExit === undefined) return undefined;
+    return Object.freeze([physicalExit('normal', layout.progression.entry.exitKey, sourceExit)]);
+  }
+  return Object.freeze(
+    sourceRoom.exits.map((exit) => physicalExit('normal', `exit${exit.index}`, exit)),
+  );
+}
+
+/**
  * Resolves ordered, declaration-owned physical exits for one structural
  * source. This is shared by commands and projections so neither needs to
  * reconstruct linked or completed-Hub physical metadata from layout pieces.
@@ -85,29 +141,13 @@ export function declaredPhysicalExits(
   topology: BiomeTopology,
   source: ExitDecisionSource,
 ): readonly DeclaredPhysicalExit[] | undefined {
-  if (source.kind === 'hubDecision') {
-    if (layout.progression.kind !== 'hub' || source.decisionKey !== layout.progression.hubKey) {
-      return undefined;
-    }
-    const completed = layout.progression.completedExit;
-    return Object.freeze([physicalExit('completedHub', completed.exitKey, completed.physicalExit)]);
-  }
-  const occurrence = topology.occurrences.find(
-    (candidate) => candidate.occurrenceId === source.occurrenceId,
-  );
+  const occurrence =
+    source.kind === 'occurrence'
+      ? topology.occurrences.find((candidate) => candidate.occurrenceId === source.occurrenceId)
+      : undefined;
   const room = occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName];
-  if (room === undefined || room.biomeKey !== layout.biomeKey || room.mode.kind !== 'authored') {
-    return undefined;
-  }
-  if (layout.progression.kind === 'hub') {
-    if (source.occurrenceId !== topology.startOccurrenceId) return Object.freeze([]);
-    const sourceExit = room.exits[0];
-    if (room.exits.length !== 1 || sourceExit === undefined) return undefined;
-    return Object.freeze([
-      physicalExit('linked', layout.progression.linkedExit.exitKey, sourceExit),
-    ]);
-  }
-  return Object.freeze(room.exits.map((exit) => physicalExit('normal', `exit${exit.index}`, exit)));
+  if (room !== undefined && room.mode.kind !== 'authored') return undefined;
+  return declaredPhysicalExitsForSourceRoom(layout, topology.startOccurrenceId, source, room);
 }
 
 /**
@@ -123,6 +163,27 @@ export function declaredPhysicalExitKeys(
 ): readonly string[] | undefined {
   const exits = declaredPhysicalExits(catalog, layout, topology, source);
   return exits === undefined ? undefined : Object.freeze(exits.map((exit) => exit.exitKey));
+}
+
+/**
+ * A generated source replacement can retain an already-authored target whose
+ * current source declaration no longer exposes that physical door. The codec
+ * and materializer share this biome-local structural vocabulary so they can
+ * preserve only declaration-owned normal `exitN` keys while rejecting an
+ * invented persisted key. Bounded Hub exits deliberately do not participate.
+ */
+export function possibleGeneratedNormalExitKeys(
+  catalog: Catalog,
+  layout: BiomeLayout,
+): readonly string[] {
+  if (layout.progression.kind !== 'generated') return Object.freeze([]);
+  return Object.freeze([
+    ...new Set(
+      Object.values(catalog.rooms.byKey)
+        .filter((room) => room.biomeKey === layout.biomeKey && room.mode.kind === 'authored')
+        .flatMap((room) => room.exits.map((exit) => `exit${exit.index}`)),
+    ),
+  ]);
 }
 
 function batchTakesOverNormalDoors(
@@ -199,7 +260,8 @@ export function ordinaryTargetAuthoringEligibility(
   target: TargetAddress,
   gameName: string,
 ): OrdinaryTargetAuthoringEligibility {
-  if (layout.progression.kind !== 'generated') {
+  const progression = normalDecisionProgressionForLayout(layout);
+  if (progression === undefined) {
     return Object.freeze({ kind: 'unavailable', reason: 'notGenerated' });
   }
   if (target.source.kind === 'hubDecision') {
@@ -226,7 +288,7 @@ export function ordinaryTargetAuthoringEligibility(
   if (room === undefined || room.biomeKey !== layout.biomeKey || room.mode.kind !== 'authored') {
     return Object.freeze({ kind: 'unavailable', reason: 'unknownOrForeignRoom' });
   }
-  if (room.kind === 'Intro' || room.kind === 'Opening' || room.kind === 'PreHub') {
+  if (room.kind === 'Intro' || room.kind === 'Opening') {
     return Object.freeze({ kind: 'unavailable', reason: 'notOrdinaryRoom' });
   }
   if (room.prebossBatchPolicy?.kind === 'takeOverNormalDoors') {
@@ -250,18 +312,23 @@ export function ordinaryTargetAuthoringEligibility(
   ) {
     return Object.freeze({ kind: 'unavailable', reason: 'batchBound' });
   }
-  if (realizedOrdinaryTargetCount(catalog, topology) >= layout.progression.bounds.maxTargets) {
+  if (realizedOrdinaryTargetCount(catalog, topology) >= progression.bounds.maxTargets) {
     return Object.freeze({ kind: 'unavailable', reason: 'targetBound' });
   }
-  if (layout.progression.progressionPolicy.kind === 'staged') {
+  if (progression.progressionPolicy.kind === 'staged') {
     const batchIndex = selectedOrdinaryBatchIndex(topology, decision.source.occurrenceId);
     const stage =
-      batchIndex === undefined
-        ? undefined
-        : layout.progression.progressionPolicy.stages[batchIndex];
+      batchIndex === undefined ? undefined : progression.progressionPolicy.stages[batchIndex];
     if (stage === undefined || !stage.roomGameNames.includes(room.gameName)) {
       return Object.freeze({ kind: 'unavailable', reason: 'stage', stageKey: stage?.key ?? '?' });
     }
+  }
+  // PreHub is not a generic ordinary room. The catalog compiler permits it
+  // only in the bounded Hub entry stage; keeping the check here defends the
+  // command boundary if a future declaration accidentally weakens that
+  // compiler contract.
+  if (room.kind === 'PreHub' && layout.progression.kind !== 'hub') {
+    return Object.freeze({ kind: 'unavailable', reason: 'notOrdinaryRoom' });
   }
   return Object.freeze({ kind: 'authorable', room });
 }
@@ -287,16 +354,12 @@ export function exitDecisionForSource(
 
 /** Resolves the selected physical exit key without repairing incomplete state. */
 export function selectedExitKey(decision: ExitDecision): string | undefined {
-  if (decision.normal.kind === 'linked') return decision.normal.exitKey;
   if (decision.selection.kind === 'derived') return decision.normal.targets[0]?.exitKey;
   return decision.selection.kind === 'normal' ? decision.selection.exitKey : undefined;
 }
 
 /** Resolves the selected authored target without repairing incomplete state. */
-export function selectedExitTarget(
-  decision: ExitDecision,
-): LinkedNormalExit | ExitTargetReference | undefined {
-  if (decision.normal.kind === 'linked') return decision.normal;
+export function selectedExitTarget(decision: ExitDecision): ExitTargetReference | undefined {
   const selected = selectedExitKey(decision);
   return decision.normal.targets.find((target) => target.exitKey === selected);
 }
@@ -326,7 +389,7 @@ export function selectedOrdinaryBatchIndex(
     if (decision === undefined) return undefined;
     const target = selectedExitTarget(decision);
     if (target === undefined) return undefined;
-    if (decision.normal.kind === 'batch') batchIndex += 1;
+    batchIndex += 1;
     currentOccurrenceId = target.occurrenceId;
   }
   return undefined;
@@ -338,11 +401,119 @@ export function selectedOrdinaryBatchIndex(
  * intentionally separate from the persisted zero-target envelope shape.
  */
 export function ordinaryProgressionBatchLimit(layout: BiomeLayout): number | undefined {
-  if (layout.progression.kind !== 'generated') return undefined;
-  const policy = layout.progression.progressionPolicy;
+  const progression = normalDecisionProgressionForLayout(layout);
+  if (progression === undefined) return undefined;
+  const policy = progression.progressionPolicy;
   if (policy.kind === 'fixedCount') return policy.continuationCount;
   if (policy.kind === 'staged') return policy.stages.length;
-  return layout.progression.bounds.maxBatches;
+  return progression.bounds.maxBatches;
+}
+
+export interface HubTerminalTakeoverForSource {
+  readonly kind: 'hubTakeover';
+  readonly hubKey: string;
+  readonly room: RoomDeclaration;
+  readonly force: 'required';
+}
+
+/**
+ * The completed-Hub Preboss handoff is structurally available only after the
+ * persisted board satisfies the declaration's open-set bound and visit
+ * count.  This deliberately does not inspect reward or generation validity:
+ * those findings may remain editable without hiding the Hub-owned handoff.
+ */
+export type HubDecisionHandoffReadiness =
+  | { readonly kind: 'missing' }
+  | {
+      readonly kind: 'openSetIncomplete';
+      readonly actualCount: number;
+      readonly minimumCount: number;
+      readonly maximumCount: number;
+    }
+  | {
+      readonly kind: 'visitOrderIncomplete';
+      readonly actualCount: number;
+      readonly requiredCount: number;
+    }
+  | { readonly kind: 'ready' };
+
+/**
+ * One shared structural gate for a bounded Hub's completed-Hub handoff.
+ * Commands, materialization, completeness, and candidate evaluation all use
+ * this result so an intentionally retained undersized board cannot publish a
+ * Preboss transition that its command boundary would reject.
+ */
+export function hubDecisionHandoffReadiness(
+  descriptor: HubDecisionDescriptor,
+  decision: HubDecision | undefined,
+): HubDecisionHandoffReadiness {
+  if (decision === undefined || decision.hubKey !== descriptor.hubKey) {
+    return Object.freeze({ kind: 'missing' });
+  }
+  if (
+    decision.openTargets.length < descriptor.openCount.min ||
+    decision.openTargets.length > descriptor.openCount.max
+  ) {
+    return Object.freeze({
+      kind: 'openSetIncomplete',
+      actualCount: decision.openTargets.length,
+      minimumCount: descriptor.openCount.min,
+      maximumCount: descriptor.openCount.max,
+    });
+  }
+  if (decision.visitOrder.length !== descriptor.requiredVisits) {
+    return Object.freeze({
+      kind: 'visitOrderIncomplete',
+      actualCount: decision.visitOrder.length,
+      requiredCount: descriptor.requiredVisits,
+    });
+  }
+  return Object.freeze({ kind: 'ready' });
+}
+
+/**
+ * Terminal selection is represented by one exact, no-choice persisted batch
+ * envelope. Its shape is shared by Hub replacement, codec closure, and
+ * candidate evaluation; callers must still establish the declaration-owned
+ * terminal source separately.
+ */
+export function isExactTerminalTakeoverEnvelope(decision: ExitDecision): boolean {
+  return (
+    decision.normal.rewardStore.kind === 'none' &&
+    decision.normal.batchState === null &&
+    decision.normal.targets.length === 0 &&
+    decision.selection.kind === 'unresolved'
+  );
+}
+
+/**
+ * Resolves the closed Hub terminal only at the selected-spine ordinal after
+ * its bounded normal entry. This is structural authority, not an evaluated
+ * requirement result: commands preserve invalid-but-representable authored
+ * state while candidate evaluation applies the terminal's depth requirement.
+ */
+export function hubTerminalTakeoverForSource(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: SelectedSpineTopology,
+  source: ExitDecisionSource,
+): HubTerminalTakeoverForSource | undefined {
+  if (layout.progression.kind !== 'hub' || source.kind !== 'occurrence') return undefined;
+  const terminalOrdinal = ordinaryProgressionBatchLimit(layout);
+  if (
+    terminalOrdinal === undefined ||
+    selectedOrdinaryBatchIndex(topology, source.occurrenceId) !== terminalOrdinal
+  ) {
+    return undefined;
+  }
+  const room = catalog.rooms.byKey[layout.progression.terminal.roomGameName];
+  if (room === undefined) return undefined;
+  return Object.freeze({
+    kind: 'hubTakeover',
+    hubKey: layout.progression.hubKey,
+    room,
+    force: layout.progression.terminal.force,
+  });
 }
 
 /**
@@ -358,6 +529,7 @@ export function admitsTerminalTakeoverEnvelope(
   topology: SelectedSpineTopology,
   source: ExitDecisionSource,
 ): boolean {
+  if (hubTerminalTakeoverForSource(catalog, layout, topology, source) !== undefined) return true;
   if (layout.progression.kind !== 'generated' || source.kind !== 'occurrence') return false;
   const terminalOrdinal = ordinaryProgressionBatchLimit(layout);
   if (
@@ -433,8 +605,9 @@ export function fixedWidthOneTakeoverForSource(
  * A fixed width-one takeover is declared by its progression source, not
  * inferred by the application from a room name or a candidate domain. The
  * bounded-spine transition still needs contextual candidate validation; the
- * completed Hub handoff has already established its six-visit prerequisite
- * structurally and therefore creates its one fixed target directly.
+ * completed Hub handoff exists only after its declaration-owned board and
+ * visit prerequisites are structurally ready, then creates its one fixed
+ * target directly.
  */
 export type FixedWidthOneTakeoverTransition =
   | { readonly kind: 'completedHubHandoff'; readonly room: RoomDeclaration }
@@ -447,10 +620,18 @@ export function fixedWidthOneTakeoverTransitionForSource(
   source: ExitDecisionSource,
 ): FixedWidthOneTakeoverTransition | undefined {
   if (source.kind === 'hubDecision') {
-    if (layout.progression.kind !== 'hub' || source.decisionKey !== layout.progression.hubKey) {
+    const progression = layout.progression;
+    if (progression.kind !== 'hub' || source.decisionKey !== progression.hubKey) {
       return undefined;
     }
-    const room = catalog.rooms.byKey[layout.progression.completedExit.roomGameName];
+    const hub = topology.decisions.find(
+      (decision): decision is HubDecision =>
+        decision.kind === 'hub' && decision.hubKey === progression.hubKey,
+    );
+    if (hubDecisionHandoffReadiness(progression, hub).kind !== 'ready') {
+      return undefined;
+    }
+    const room = catalog.rooms.byKey[progression.completedExit.roomGameName];
     return room === undefined
       ? undefined
       : Object.freeze({ kind: 'completedHubHandoff' as const, room });

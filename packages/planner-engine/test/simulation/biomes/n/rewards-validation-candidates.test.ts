@@ -758,13 +758,20 @@ describe('N Hub rewards, validation, and candidates', () => {
   it('preserves the fixed opening and PreHub reward surfaces as normal authored occurrences', () => {
     const { biome } = completeN();
     const opening = biome.snapshot.entryRoom;
-    const linked = biome.snapshot.decisions.find((decision) => decision.kind === 'linkedExit');
-    if (linked?.kind !== 'linkedExit') throw new Error('fixture lost PreHub link');
+    const openingBatch = biome.snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === nOccurrenceIds.opening,
+    );
+    if (openingBatch?.kind !== 'batch') throw new Error('fixture lost PreHub batch');
+    const preHub = openingBatch.targets.find((target) => target.exit.exitKey === 'prehub');
+    if (preHub === undefined) throw new Error('fixture lost PreHub target');
 
     expect(opening.incomingReward?.origin).toEqual(
       createIncomingRewardAddress(nBiome, nOccurrenceIds.opening),
     );
-    expect(linked.target.room.incomingReward?.origin).toEqual(
+    expect(preHub.room.incomingReward?.origin).toEqual(
       createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub),
     );
     expect(

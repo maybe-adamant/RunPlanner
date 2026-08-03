@@ -3,14 +3,21 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createExitDecisionAddress,
+  createHubDecisionAddress,
+  createOccurrenceAddress,
   createProjectDocument,
   encodeProjectDocument,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { materializeBiomePrefix, simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createRepresentativeNProject, nOccurrenceIds } from '@run-planner/test-fixtures';
+import {
+  appendNEntry,
+  createRepresentativeNProject,
+  nBiome,
+  nOccurrenceIds,
+} from '@run-planner/test-fixtures';
 
 function completeN() {
   const project = createRepresentativeNProject();
@@ -40,6 +47,63 @@ describe('canonical N Hub materialization', () => {
     });
   });
 
+  it('marks the exact empty bounded entry for full Opening lifecycle without widening ordinary frontiers', () => {
+    let project = createProjectDocument(catalog, {
+      projectId: 'n-empty-entry-lifecycle',
+      name: 'N empty entry lifecycle',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    const openingDecision = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: openingDecision,
+    });
+
+    const biome = simulateProject(catalog, project)
+      .routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (
+      biome?.authoring !== 'incomplete' ||
+      !('materializedPrefix' in biome) ||
+      !('history' in biome)
+    ) {
+      throw new Error('N empty entry did not publish a materialized history prefix');
+    }
+    const openingHistory = biome.history.rooms.find(
+      (room) =>
+        semanticAddressKey(room.origin) ===
+        semanticAddressKey(createOccurrenceAddress(nBiome, nOccurrenceIds.opening)),
+    );
+
+    expect(biome.materializedPrefix.frontier).toMatchObject({
+      kind: 'exitDecision',
+      origin: openingDecision,
+      hubContinuation: { kind: 'boundedEntry', hubKey: 'hub' },
+    });
+    expect(openingHistory?.postCommit?.ledgers.counters).toMatchObject({
+      biomeDepthCache: 1,
+      roomHistoryOrdinal: 1,
+    });
+    expect(openingHistory?.exit?.ledgers.counters).toMatchObject({
+      biomeDepthCache: 1,
+      roomHistoryOrdinal: 1,
+    });
+    expect(biome.history.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'emptyOutgoingGenerationCompleted',
+        origin: createOccurrenceAddress(nBiome, nOccurrenceIds.opening),
+      }),
+    );
+  });
+
   it('separates declaration-owned board order from authored visit order and reuses targets', () => {
     const { project, biome } = completeN();
     const encodedBefore = encodeProjectDocument(project);
@@ -53,8 +117,14 @@ describe('canonical N Hub materialization', () => {
       incomingReward: { resolvedStoreKey: 'RunProgress' },
     });
     expect(biome.snapshot.decisions[0]).toMatchObject({
-      kind: 'linkedExit',
-      target: { room: { occurrenceId: nOccurrenceIds.preHub, gameName: 'N_PreHub01' } },
+      kind: 'batch',
+      selectedExitKey: 'prehub',
+      targets: [
+        {
+          exit: { kind: 'available', exitKey: 'prehub', index: 1 },
+          room: { occurrenceId: nOccurrenceIds.preHub, gameName: 'N_PreHub01' },
+        },
+      ],
     });
     expect(hub.board.targets.map((target) => target.hubSlotKey)).toEqual([
       'combat01',
@@ -89,6 +159,99 @@ describe('canonical N Hub materialization', () => {
     expect(encodeProjectDocument(project)).toBe(encodedBefore);
     expect(Object.isFrozen(biome.snapshot)).toBe(true);
     expect(Object.isFrozen(hub.board.targets)).toBe(true);
+  });
+
+  it('keeps the selected PreHub terminal envelope explicit until its source-bearing Hub takeover', () => {
+    const project = appendNEntry(
+      createProjectDocument(catalog, {
+        projectId: 'n-terminal-envelope',
+        name: 'N terminal envelope',
+        configuredBiomeCounts: { Surface: 1 },
+      }),
+    );
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    if (plan === undefined) throw new Error('N terminal-envelope fixture lost its biome plan');
+    const prefix = materializeBiomePrefix(catalog, nBiome, plan);
+    if (prefix === null) {
+      throw new Error('N terminal envelope did not materialize its selected prefix');
+    }
+
+    expect(prefix.decisions).toMatchObject([
+      {
+        kind: 'batch',
+        selectedExitKey: 'prehub',
+        targets: [{ room: { occurrenceId: nOccurrenceIds.preHub } }],
+      },
+    ]);
+    expect(prefix.frontier?.origin).toEqual(
+      createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceIds.preHub,
+      }),
+    );
+    expect(prefix.frontier).toMatchObject({
+      kind: 'exitDecision',
+      hubContinuation: { kind: 'terminalTakeover', hubKey: 'hub' },
+    });
+
+    const evaluation = simulateProject(catalog, project);
+    const biome = evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (biome?.authoring !== 'incomplete' || !('history' in biome)) {
+      throw new Error('N terminal envelope did not publish a history prefix');
+    }
+    const preHubHistory = biome.history.rooms.find(
+      (room) =>
+        semanticAddressKey(room.origin) ===
+        semanticAddressKey(createOccurrenceAddress(nBiome, nOccurrenceIds.preHub)),
+    );
+    expect(preHubHistory?.postCommit?.ledgers.counters).toMatchObject({
+      biomeDepthCache: 2,
+      roomHistoryOrdinal: 2,
+    });
+    expect(preHubHistory?.exit?.ledgers.counters).toMatchObject({
+      biomeDepthCache: 2,
+      roomHistoryOrdinal: 2,
+    });
+  });
+
+  it('materializes the Hub from its persisted predecessor rather than a room-name inference', () => {
+    const project = applyProjectCommand(
+      appendNEntry(
+        createProjectDocument(catalog, {
+          projectId: 'n-hub-source',
+          name: 'N Hub source',
+          configuredBiomeCounts: { Surface: 1 },
+        }),
+      ),
+      catalog,
+      {
+        kind: 'ReplaceWithHubDecision',
+        decision: createExitDecisionAddress(nBiome, {
+          kind: 'occurrence',
+          occurrenceId: nOccurrenceIds.preHub,
+        }),
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+      },
+    );
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    if (plan === undefined) throw new Error('N Hub-source fixture lost its biome plan');
+    const prefix = materializeBiomePrefix(catalog, nBiome, plan);
+    if (prefix === null) throw new Error('N Hub-source fixture did not materialize');
+    const hub = prefix.decisions.find((decision) => decision.kind === 'hub');
+    if (hub?.kind !== 'hub') throw new Error('N Hub-source fixture lost its Hub decision');
+
+    expect(prefix.decisions.map((decision) => decision.kind)).toEqual(['batch', 'hub']);
+    expect(hub.source).toMatchObject({
+      occurrenceId: nOccurrenceIds.preHub,
+      gameName: 'N_PreHub01',
+    });
+    expect(prefix.frontier).toMatchObject({ kind: 'hubBoard' });
   });
 
   it('projects complete local slots, entered order, and parent restores', () => {

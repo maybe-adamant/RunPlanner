@@ -72,6 +72,11 @@ import {
   type EvaluatedTakeoverPrebossBatchCandidate,
   type TakeoverPrebossBatchCandidateQuery,
 } from './takeover-preboss';
+import {
+  evaluateHubTerminalTakeover,
+  type EvaluatedHubTerminalTakeoverCandidate,
+  type HubTerminalTakeoverCandidateQuery,
+} from './takeover-hub';
 import type { CandidateContextUnavailable } from './availability';
 
 export type ProjectCandidateQuery =
@@ -92,7 +97,8 @@ export type ProjectCandidateQuery =
   | SideRoomEntryOrderCandidateQuery
   | SideRoomGenerationCandidateQuery
   | StartRoomCandidateQuery
-  | TakeoverPrebossBatchCandidateQuery;
+  | TakeoverPrebossBatchCandidateQuery
+  | HubTerminalTakeoverCandidateQuery;
 
 export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
@@ -113,7 +119,8 @@ export type ProjectCandidateEvaluation =
   | EvaluatedSideRoomEntryOrderCandidate
   | EvaluatedSideRoomGenerationCandidate
   | EvaluatedStartRoomCandidate
-  | EvaluatedTakeoverPrebossBatchCandidate;
+  | EvaluatedTakeoverPrebossBatchCandidate
+  | EvaluatedHubTerminalTakeoverCandidate;
 
 export type CandidateEvaluationEvent = {
   readonly kind: 'queryBatch';
@@ -158,6 +165,8 @@ function evaluateCandidateQuery(
       );
     case 'takeoverPrebossBatch':
       return evaluateTakeoverPrebossBatch(catalog, project, evaluation, query);
+    case 'hubTerminalTakeover':
+      return evaluateHubTerminalTakeover(catalog, project, evaluation, query);
     case 'batchRewardStore':
       return evaluateBatchRewardStoreCandidate(catalog, project, evaluation, query);
     case 'fieldsCageOutcome':

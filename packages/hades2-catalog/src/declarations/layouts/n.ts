@@ -7,8 +7,26 @@ export const nBiomeLayout = {
   progression: {
     kind: 'hub',
     hubKey: 'hub',
-    linkedExit: { kind: 'linked', exitKey: 'prehub', roomGameName: 'N_PreHub01' },
-    roomGameName: 'N_Hub',
+    entry: {
+      exitKey: 'prehub',
+      progressionPolicy: {
+        kind: 'staged',
+        stages: [{ key: 'entry', roomGameNames: ['N_PreHub01'] }],
+      },
+      batchPolicy: { kind: 'standard', fields: [] },
+      rewardStorePolicy: { kind: 'none' },
+      rewardStoreOverrides: [],
+      bounds: { maxBatches: 1, maxTargets: 1 },
+    },
+    terminal: {
+      roomGameName: 'N_Hub',
+      eligibility: {
+        kind: 'counterRange',
+        axis: 'biomeDepthCache',
+        range: { min: 2, max: 2 },
+      },
+      force: 'required',
+    },
     slots: [
       { slotKey: 'combat01', roomGameName: 'N_Combat01', physicalDoorId: 617113 },
       { slotKey: 'combat02', roomGameName: 'N_Combat02', physicalDoorId: 560725 },
@@ -55,7 +73,6 @@ export const nBiomeLayout = {
     },
     fields: [],
     completedExit: {
-      kind: 'linked',
       exitKey: 'preboss',
       roomGameName: 'N_PreBoss01',
       physicalExit: { index: 1, type: 'EphyraExitBossDoor' },

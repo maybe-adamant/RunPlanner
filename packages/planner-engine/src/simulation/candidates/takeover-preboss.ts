@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import { semanticAddressKey, type ExitDecisionAddress } from '../../authored-project/addresses';
-import type { ProjectDocument } from '../../authored-project/model';
+import type { HubDecision, ProjectDocument } from '../../authored-project/model';
+import { hubDecisionHandoffReadiness } from '../../authored-project/topology/query';
 import {
   evaluateTakeoverPrebossBatchCandidate,
   evaluateTakeoverPrebossBatchCandidateAtFrontier,
@@ -49,6 +50,7 @@ function ordinaryBatchCount(catalog: Catalog, decisions: readonly CanonicalDecis
 
 function evaluatePrefixTakeover(
   catalog: Catalog,
+  project: ProjectDocument,
   evaluation: ProjectEvaluation,
   query: TakeoverPrebossBatchCandidateQuery,
   candidate?: CandidateBiomeEvaluation,
@@ -66,6 +68,7 @@ function evaluatePrefixTakeover(
   }
   if (semanticAddressKey(frontier.origin) !== semanticAddressKey(query.source)) return undefined;
   if (frontier.parent.origin.kind === 'hubRoom') {
+    if (!hubHandoffIsReady(catalog, project, query)) return undefined;
     const layout = catalog.biomeLayouts.byKey[prefix.biomeKey];
     if (layout?.progression.kind !== 'hub') return undefined;
     const requiredExitKeys = Object.freeze([layout.progression.completedExit.exitKey]);
@@ -140,6 +143,28 @@ function assertTakeoverPrebossBatchDomain(
   );
 }
 
+/**
+ * A Hub source is a declaration-owned candidate domain before it becomes an
+ * evaluated candidate.  Its Preboss handoff itself remains unavailable until
+ * the shared persisted-board gate is ready; invalid reward/generation
+ * findings intentionally do not participate in this structural check.
+ */
+function hubHandoffIsReady(
+  catalog: Catalog,
+  project: ProjectDocument,
+  query: TakeoverPrebossBatchCandidateQuery,
+): boolean {
+  if (query.source.source.kind !== 'hubDecision') return true;
+  const hubKey = query.source.source.decisionKey;
+  const plan = planFor(project, query.source.routeKey, query.source.biomeKey);
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  if (layout?.progression.kind !== 'hub') return false;
+  const hub = plan.topology?.decisions.find(
+    (decision): decision is HubDecision => decision.kind === 'hub' && decision.hubKey === hubKey,
+  );
+  return hubDecisionHandoffReadiness(layout.progression, hub).kind === 'ready';
+}
+
 export function evaluateTakeoverPrebossBatch(
   catalog: Catalog,
   project: ProjectDocument,
@@ -156,7 +181,7 @@ export function evaluateTakeoverPrebossBatch(
   );
   if (candidate === undefined || !('snapshot' in candidate)) {
     return (
-      evaluatePrefixTakeover(catalog, evaluation, query, candidate) ??
+      evaluatePrefixTakeover(catalog, project, evaluation, query, candidate) ??
       unavailableForBiome(
         evaluation,
         query.source.routeKey,

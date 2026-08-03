@@ -8,9 +8,11 @@ import type {
   ExitCompatibilityPolicy,
   GeneratedProgressionDescriptor,
   GeneratedProgressionPolicy,
+  HubEntryNormalDecisionDescriptor,
   HubDecisionDescriptor,
-  LinkedNormalExitDescriptor,
+  HubTerminalTakeoverDescriptor,
   NormalDoorBatchPolicy,
+  NormalDecisionProgressionDescriptor,
   ProgressionDescriptor,
   RewardStorePolicy,
   RoomDeclaration,
@@ -316,24 +318,6 @@ function normalizeStart(
   return Object.freeze({ kind: 'fixedAuthored', roomGameName: room.gameName });
 }
 
-function normalizeLinkedExit(
-  rawExit: LinkedNormalExitDescriptor,
-  biomeKey: string,
-  rooms: CatalogCollection<RoomDeclaration>,
-  expectedKind: 'PreHub' | 'Preboss',
-  path: string,
-): LinkedNormalExitDescriptor {
-  if (rawExit.kind !== 'linked') {
-    fail(`${path}.kind`, `unknown linked normal exit ${String(rawExit.kind)}`);
-  }
-  const exitKey = requireNonEmpty(rawExit.exitKey, `${path}.exitKey`);
-  const room = requireRoom(rawExit.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
-  if (room.mode.kind !== 'authored' || room.kind !== expectedKind) {
-    fail(`${path}.roomGameName`, `${room.gameName} must be an authored ${expectedKind}`);
-  }
-  return Object.freeze({ kind: 'linked', exitKey, roomGameName: room.gameName });
-}
-
 function normalizeCompletedHubExit(
   rawExit: Extract<
     RawBiomeLayoutDeclaration['progression'],
@@ -344,7 +328,11 @@ function normalizeCompletedHubExit(
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
   path: string,
 ): CompletedHubExitDescriptor {
-  const linked = normalizeLinkedExit(rawExit, biomeKey, rooms, 'Preboss', path);
+  const exitKey = requireNonEmpty(rawExit.exitKey, `${path}.exitKey`);
+  const room = requireRoom(rawExit.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
+  if (room.mode.kind !== 'authored' || room.kind !== 'Preboss') {
+    fail(`${path}.roomGameName`, `${room.gameName} must be an authored Preboss`);
+  }
   const index = requirePositiveInteger(rawExit.physicalExit.index, `${path}.physicalExit.index`);
   const type = requireNonEmpty(rawExit.physicalExit.type, `${path}.physicalExit.type`);
   const exitType = exitTypes.byKey[type];
@@ -352,7 +340,8 @@ function normalizeCompletedHubExit(
     fail(`${path}.physicalExit.type`, `unknown exit type ${type}`);
   }
   return Object.freeze({
-    ...linked,
+    exitKey,
+    roomGameName: room.gameName,
     physicalExit: Object.freeze({
       index,
       type: exitType.key,
@@ -417,19 +406,24 @@ function normalizeCompletion(
   });
 }
 
-function normalizeGeneratedProgression(
-  raw: Extract<RawBiomeLayoutDeclaration['progression'], { readonly kind: 'generated' }>,
+type RawNormalDecisionProgression = {
+  readonly batchPolicy: NormalDoorBatchPolicy;
+  readonly rewardStorePolicy: RewardStorePolicy;
+  readonly rewardStoreOverrides?: readonly SourceRewardStorePolicyOverride[];
+  readonly bounds: {
+    readonly maxBatches: number;
+    readonly maxTargets: number;
+  };
+};
+
+function normalizeNormalDecisionProgression(
+  raw: RawNormalDecisionProgression,
+  progressionPolicy: GeneratedProgressionPolicy,
   biomeKey: string,
   rooms: CatalogCollection<RoomDeclaration>,
   rewardStores: CatalogCollection<RewardStoreDeclaration>,
   path: string,
-): GeneratedProgressionDescriptor {
-  const progressionPolicy = normalizeProgressionPolicy(
-    raw.progressionPolicy,
-    biomeKey,
-    rooms,
-    `${path}.progressionPolicy`,
-  );
+): NormalDecisionProgressionDescriptor {
   const batchPolicy = normalizeBatchPolicy(raw.batchPolicy, `${path}.batchPolicy`);
   if (batchPolicy.kind === 'fields') {
     for (const room of rooms.values) {
@@ -465,7 +459,6 @@ function normalizeGeneratedProgression(
     fail(`${path}.bounds.maxBatches`, 'must cover every declared normal-door batch');
   }
   return Object.freeze({
-    kind: 'generated',
     progressionPolicy,
     batchPolicy,
     rewardStorePolicy: normalizeRewardStorePolicy(
@@ -484,6 +477,160 @@ function normalizeGeneratedProgression(
   });
 }
 
+function isExactBiomeDepthRequirement(
+  requirement: RequirementExpression | undefined,
+  depth: number,
+): boolean {
+  return (
+    requirement?.kind === 'counterRange' &&
+    requirement.axis === 'biomeDepthCache' &&
+    requirement.range.min === depth &&
+    requirement.range.max === depth
+  );
+}
+
+function normalizeExactBiomeDepthRequirement(
+  requirement: RequirementExpression,
+  depth: number,
+  path: string,
+): RequirementExpression {
+  if (!isExactBiomeDepthRequirement(requirement, depth)) {
+    fail(path, `must be biomeDepthCache exactly ${depth}`);
+  }
+  return Object.freeze({
+    kind: 'counterRange' as const,
+    axis: 'biomeDepthCache' as const,
+    range: Object.freeze({ min: depth, max: depth }),
+  });
+}
+
+function normalizeHubEntryProgressionPolicy(
+  rawPolicy: GeneratedProgressionPolicy,
+  biomeKey: string,
+  rooms: CatalogCollection<RoomDeclaration>,
+  path: string,
+): Extract<GeneratedProgressionPolicy, { readonly kind: 'staged' }> {
+  if (rawPolicy.kind !== 'staged') {
+    fail(`${path}.kind`, 'must be staged');
+  }
+  if (rawPolicy.stages.length !== 1) {
+    fail(`${path}.stages`, 'must declare exactly one entry stage');
+  }
+  const stage = rawPolicy.stages[0];
+  if (stage === undefined) {
+    fail(`${path}.stages`, 'must declare exactly one entry stage');
+  }
+  const key = requireNonEmpty(stage.key, `${path}.stages[0].key`);
+  if (key !== 'entry') {
+    fail(`${path}.stages[0].key`, 'must be entry');
+  }
+  const roomGameNames = freezeUniqueStrings(stage.roomGameNames, `${path}.stages[0].roomGameNames`);
+  if (roomGameNames.length !== 1) {
+    fail(`${path}.stages[0].roomGameNames`, 'must contain exactly one PreHub room');
+  }
+  const room = requireRoom(
+    roomGameNames[0] as string,
+    biomeKey,
+    rooms,
+    `${path}.stages[0].roomGameNames[0]`,
+  );
+  if (room.mode.kind !== 'authored' || room.kind !== 'PreHub') {
+    fail(`${path}.stages[0].roomGameNames[0]`, `${room.gameName} must be an authored PreHub`);
+  }
+  if (!isExactBiomeDepthRequirement(room.eligibility, 1)) {
+    fail(`${path}.stages[0].roomGameNames[0]`, `${room.gameName} must be eligible at depth 1`);
+  }
+  return Object.freeze({
+    kind: 'staged',
+    stages: Object.freeze([Object.freeze({ key, roomGameNames })]),
+  });
+}
+
+function normalizeHubEntry(
+  raw: Extract<RawBiomeLayoutDeclaration['progression'], { readonly kind: 'hub' }>['entry'],
+  biomeKey: string,
+  rooms: CatalogCollection<RoomDeclaration>,
+  rewardStores: CatalogCollection<RewardStoreDeclaration>,
+  path: string,
+): HubEntryNormalDecisionDescriptor {
+  const exitKey = requireNonEmpty(raw.exitKey, `${path}.exitKey`);
+  if (exitKey !== 'prehub') {
+    fail(`${path}.exitKey`, 'must be prehub');
+  }
+  const entry = normalizeNormalDecisionProgression(
+    raw,
+    normalizeHubEntryProgressionPolicy(
+      raw.progressionPolicy,
+      biomeKey,
+      rooms,
+      `${path}.progressionPolicy`,
+    ),
+    biomeKey,
+    rooms,
+    rewardStores,
+    path,
+  );
+  if (entry.batchPolicy.kind !== 'standard') {
+    fail(`${path}.batchPolicy.kind`, 'must be standard');
+  }
+  if (entry.rewardStorePolicy.kind !== 'none') {
+    fail(`${path}.rewardStorePolicy.kind`, 'must be none');
+  }
+  if (entry.rewardStoreOverrides.length !== 0) {
+    fail(`${path}.rewardStoreOverrides`, 'must be empty');
+  }
+  if (entry.bounds.maxBatches !== 1 || entry.bounds.maxTargets !== 1) {
+    fail(`${path}.bounds`, 'must bound the entry decision to one batch and one target');
+  }
+  return Object.freeze({ exitKey, ...entry });
+}
+
+function normalizeHubTerminal(
+  raw: Extract<RawBiomeLayoutDeclaration['progression'], { readonly kind: 'hub' }>['terminal'],
+  biomeKey: string,
+  rooms: CatalogCollection<RoomDeclaration>,
+  path: string,
+): HubTerminalTakeoverDescriptor {
+  const room = requireRoom(raw.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
+  if (room.kind !== 'Hub' || room.mode.kind !== 'derived' || room.mode.classification !== 'hub') {
+    fail(`${path}.roomGameName`, `${room.gameName} must be a derived Hub room`);
+  }
+  if (raw.force !== 'required') {
+    fail(`${path}.force`, 'must be required');
+  }
+  return Object.freeze({
+    roomGameName: room.gameName,
+    eligibility: normalizeExactBiomeDepthRequirement(raw.eligibility, 2, `${path}.eligibility`),
+    force: 'required',
+  });
+}
+
+function normalizeGeneratedProgression(
+  raw: Extract<RawBiomeLayoutDeclaration['progression'], { readonly kind: 'generated' }>,
+  biomeKey: string,
+  rooms: CatalogCollection<RoomDeclaration>,
+  rewardStores: CatalogCollection<RewardStoreDeclaration>,
+  path: string,
+): GeneratedProgressionDescriptor {
+  const progressionPolicy = normalizeProgressionPolicy(
+    raw.progressionPolicy,
+    biomeKey,
+    rooms,
+    `${path}.progressionPolicy`,
+  );
+  return Object.freeze({
+    kind: 'generated',
+    ...normalizeNormalDecisionProgression(
+      raw,
+      progressionPolicy,
+      biomeKey,
+      rooms,
+      rewardStores,
+      path,
+    ),
+  });
+}
+
 function normalizeHubDecision(
   raw: Extract<RawBiomeLayoutDeclaration['progression'], { readonly kind: 'hub' }>,
   biomeKey: string,
@@ -492,24 +639,9 @@ function normalizeHubDecision(
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
   path: string,
 ): HubDecisionDescriptor {
-  const linkedExit = normalizeLinkedExit(
-    raw.linkedExit,
-    biomeKey,
-    rooms,
-    'PreHub',
-    `${path}.linkedExit`,
-  );
-  if (linkedExit.exitKey !== 'prehub') {
-    fail(`${path}.linkedExit.exitKey`, 'must be prehub');
-  }
-  const hubRoom = requireRoom(raw.roomGameName, biomeKey, rooms, `${path}.roomGameName`);
-  if (
-    hubRoom.kind !== 'Hub' ||
-    hubRoom.mode.kind !== 'derived' ||
-    hubRoom.mode.classification !== 'hub'
-  ) {
-    fail(`${path}.roomGameName`, `${hubRoom.gameName} must be a derived Hub room`);
-  }
+  const entry = normalizeHubEntry(raw.entry, biomeKey, rooms, rewardStores, `${path}.entry`);
+  const terminal = normalizeHubTerminal(raw.terminal, biomeKey, rooms, `${path}.terminal`);
+  const hubRoom = rooms.byKey[terminal.roomGameName] as RoomDeclaration;
   const restoreRoom = requireRoom(
     raw.restoreRoomGameName,
     biomeKey,
@@ -641,8 +773,8 @@ function normalizeHubDecision(
   return Object.freeze({
     kind: 'hub',
     hubKey: requireNonEmpty(raw.hubKey, `${path}.hubKey`),
-    linkedExit,
-    roomGameName: hubRoom.gameName,
+    entry,
+    terminal,
     slots: Object.freeze(slots),
     openCount: Object.freeze({ min, max }),
     openSlotConstraints: Object.freeze(openSlotConstraints),
@@ -789,6 +921,28 @@ export function validatePrebossBatchPolicies(
   }
 }
 
+function validateHubEntryStart(
+  start: StartDescriptor,
+  progression: HubDecisionDescriptor,
+  biomeKey: string,
+  rooms: CatalogCollection<RoomDeclaration>,
+  path: string,
+): void {
+  if (start.kind !== 'fixedAuthored') {
+    fail(`${path}.start`, 'a bounded Hub entry requires one fixed authored Opening');
+  }
+  const room = requireRoom(start.roomGameName, biomeKey, rooms, `${path}.start.roomGameName`);
+  if (room.mode.kind !== 'authored' || room.kind !== 'Opening') {
+    fail(`${path}.start.roomGameName`, `${room.gameName} must be an authored Opening`);
+  }
+  if (room.exits.length !== 1) {
+    fail(`${path}.start.roomGameName`, `${room.gameName} must have exactly one normal exit`);
+  }
+  if (progression.entry.bounds.maxTargets !== room.exits.length) {
+    fail(`${path}.progression.entry.bounds.maxTargets`, 'must cover the fixed Opening exit count');
+  }
+}
+
 export function normalizeBiomeLayouts(
   rawLayouts: readonly RawBiomeLayoutDeclaration[],
   biomes: CatalogCollection<BiomeDeclaration>,
@@ -802,6 +956,7 @@ export function normalizeBiomeLayouts(
     if (biomes.byKey[layout.biomeKey] === undefined) {
       fail(`${path}.biomeKey`, `unknown biome ${layout.biomeKey}`);
     }
+    const start = normalizeStart(layout.start, layout.biomeKey, rooms, `${path}.start`);
     const progression: ProgressionDescriptor =
       layout.progression.kind === 'generated'
         ? normalizeGeneratedProgression(
@@ -824,6 +979,9 @@ export function normalizeBiomeLayouts(
               `${path}.progression.kind`,
               `unknown progression ${String((layout.progression as { kind?: unknown }).kind)}`,
             );
+    if (progression.kind === 'hub') {
+      validateHubEntryStart(start, progression, layout.biomeKey, rooms, path);
+    }
     return Object.freeze({
       biomeKey: layout.biomeKey,
       initialCounters: Object.freeze({
@@ -836,7 +994,7 @@ export function normalizeBiomeLayouts(
           `${path}.initialCounters.biomeEncounterDepth`,
         ),
       }),
-      start: normalizeStart(layout.start, layout.biomeKey, rooms, `${path}.start`),
+      start,
       progression,
       completion: normalizeCompletion(
         layout.completion,
@@ -865,7 +1023,7 @@ export function validateDerivedRoomOwnership(
   for (const layout of layouts.values) {
     const path = `biomeLayouts.${layout.biomeKey}`;
     if (layout.progression.kind === 'hub') {
-      register(layout.progression.roomGameName, `${path}.progression`);
+      register(layout.progression.terminal.roomGameName, `${path}.progression.terminal`);
     }
     layout.completion.rooms.forEach((completion, index) =>
       register(completion.roomGameName, `${path}.completion.rooms[${index}]`),

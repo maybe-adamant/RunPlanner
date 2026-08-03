@@ -71,3 +71,7 @@ export type {
   EvaluatedTakeoverPrebossBatchCandidate,
   TakeoverPrebossBatchCandidateQuery,
 } from './takeover-preboss';
+export type {
+  EvaluatedHubTerminalTakeoverCandidate,
+  HubTerminalTakeoverCandidateQuery,
+} from './takeover-hub';

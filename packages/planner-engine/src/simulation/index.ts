@@ -32,6 +32,7 @@ export {
   type EvaluatedShopOfferCandidate,
   type EvaluatedShopPurchaseCandidate,
   type EvaluatedStartRoomCandidate,
+  type EvaluatedHubTerminalTakeoverCandidate,
   type EvaluatedTakeoverPrebossBatchCandidate,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
@@ -58,6 +59,7 @@ export {
   type SideRoomGenerationCandidateSupport,
   type StartRoomCandidateQuery,
   type StartRoomCandidateSupport,
+  type HubTerminalTakeoverCandidateQuery,
   type TakeoverPrebossBatchCandidateQuery,
 } from './candidates';
 export {
@@ -98,6 +100,7 @@ export {
 } from './history';
 export {
   evaluateBiomeRoomGeneration,
+  hubTerminalTakeoverCandidateSupportAtFrontier,
   evaluateTakeoverPrebossBatchCandidate,
   evaluateTakeoverPrebossBatchCandidateAtFrontier,
   evaluateHubDecisionGeneration,
@@ -112,6 +115,7 @@ export {
   type ForcePressureLedgerEntry,
   type GeneratedRoomGenerationValidation,
   type HubOpenSlotConstraintSupportEntry,
+  type HubTerminalTakeoverCandidateSupport,
   type HubRoomGenerationValidation,
   type HubSideRoomGenerationSupportEntry,
   type RequirementEvaluationEvidence,
@@ -156,7 +160,6 @@ export {
   type CanonicalHubRoomReference,
   type CanonicalHubTarget,
   type CanonicalHubVisit,
-  type CanonicalLinkedExit,
   type CanonicalLocalChildRoom,
   type CanonicalLocalReward,
   type CanonicalPhysicalExit,

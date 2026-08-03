@@ -219,25 +219,43 @@ export interface CompleteNFixtureOptions {
   readonly visitSlotKeys?: readonly string[];
 }
 
+/**
+ * The normalized N entry: an ordinary width-one PreHub decision followed by
+ * its explicit zero-target Hub terminal envelope.
+ */
+export function appendNEntry(project: ProjectDocument): ProjectDocument {
+  let next = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: nBiome,
+    occurrenceId: nOccurrenceIds.opening,
+  });
+  const openingDecision = decision(nBiome, nOccurrenceIds.opening);
+  next = applyProjectCommand(next, catalog, {
+    kind: 'CreateBatch',
+    decision: openingDecision,
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(nBiome, openingDecision.source, 'prehub'),
+    occurrenceId: nOccurrenceIds.preHub,
+    gameName: 'N_PreHub01',
+  });
+  return applyProjectCommand(next, catalog, {
+    kind: 'CreateBatch',
+    decision: decision(nBiome, nOccurrenceIds.preHub),
+  });
+}
+
 export function appendCompleteN(
   project: ProjectDocument,
   options: CompleteNFixtureOptions = {},
 ): ProjectDocument {
   const openSlotKeys = options.openSlotKeys ?? nOpenSlotKeys;
   const visitSlotKeys = options.visitSlotKeys ?? nVisitSlotKeys;
-  let next = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome: nBiome,
-    occurrenceId: nOccurrenceIds.opening,
-  });
-  const opening = decision(nBiome, nOccurrenceIds.opening);
+  let next = appendNEntry(project);
   next = applyProjectCommand(next, catalog, {
-    kind: 'CreateLinkedExit',
-    decision: opening,
-    occurrenceId: nOccurrenceIds.preHub,
-  });
-  next = applyProjectCommand(next, catalog, {
-    kind: 'CreateHubDecision',
+    kind: 'ReplaceWithHubDecision',
+    decision: decision(nBiome, nOccurrenceIds.preHub),
     hub: createHubDecisionAddress(nBiome, 'hub'),
   });
   for (const hubSlotKey of openSlotKeys) {

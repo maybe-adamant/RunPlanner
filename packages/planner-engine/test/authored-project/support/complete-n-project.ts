@@ -8,6 +8,7 @@ import {
   createHubVisitAddress,
   createOccurrenceId,
   createProjectDocument,
+  createTargetAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 
@@ -32,12 +33,26 @@ export function createCompleteNProject(): ProjectDocument {
     occurrenceId: createOccurrenceId('round-trip-n-opening'),
   });
   document = applyProjectCommand(document, catalog, {
-    kind: 'CreateLinkedExit',
+    kind: 'CreateBatch',
     decision: openingDecision,
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(nBiome, openingDecision.source, 'prehub'),
+    occurrenceId: createOccurrenceId('round-trip-n-prehub'),
+    gameName: 'N_PreHub01',
+  });
+  const preHubDecision = createExitDecisionAddress(nBiome, {
+    kind: 'occurrence',
     occurrenceId: createOccurrenceId('round-trip-n-prehub'),
   });
   document = applyProjectCommand(document, catalog, {
-    kind: 'CreateHubDecision',
+    kind: 'CreateBatch',
+    decision: preHubDecision,
+  });
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceWithHubDecision',
+    decision: preHubDecision,
     hub: createHubDecisionAddress(nBiome, 'hub'),
   });
   for (let index = 1; index <= 9; index += 1) {

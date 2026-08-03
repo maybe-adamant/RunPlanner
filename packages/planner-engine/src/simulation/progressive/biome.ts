@@ -1,7 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
-  createExitSelectionAddress,
   semanticAddressKey,
   type BiomeAddress,
   type SemanticAddress,
@@ -179,12 +178,6 @@ function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean 
 function decisionOwnsFinding(decision: CanonicalDecision, finding: SemanticFinding): boolean {
   const origin = finding.origin;
   if (semanticAddressKey(decision.origin) === semanticAddressKey(origin)) return true;
-  if (decision.kind === 'linkedExit') {
-    return (
-      semanticAddressKey(decision.target.origin) === semanticAddressKey(origin) ||
-      ownsOccurrence(origin, decision.target.room.occurrenceId)
-    );
-  }
   if (decision.kind === 'batch') {
     return (
       semanticAddressKey(decision.selectedOrigin) === semanticAddressKey(origin) ||
@@ -450,33 +443,21 @@ function firstUnsupportedFinding(
 }
 
 function exitFrontier(
-  decision: Extract<CanonicalDecision, { readonly kind: 'batch' | 'linkedExit' }>,
+  decision: Extract<CanonicalDecision, { readonly kind: 'batch' }>,
   targets: readonly CanonicalTarget[] = [],
 ): MaterializedExitDecisionFrontier {
-  const parent = decision.kind === 'batch' ? decision.parent : decision.source;
-  const selectedOrigin =
-    decision.kind === 'batch'
-      ? decision.selectedOrigin
-      : createExitSelectionAddress(
-          {
-            routeKey: decision.origin.routeKey,
-            biomeKey: decision.origin.biomeKey,
-            kind: 'biome',
-          },
-          { kind: 'occurrence', occurrenceId: decision.source.occurrenceId },
-        );
   const partialBatch =
-    decision.kind === 'batch' && targets.length > 0
+    targets.length > 0
       ? Object.freeze({ ...decision, targets: Object.freeze([...targets]) })
       : undefined;
   return Object.freeze({
     kind: 'exitDecision',
     origin: decision.origin,
-    parent,
+    parent: decision.parent,
     targets: Object.freeze([...targets]),
     ...(partialBatch === undefined ? {} : { partialBatch, batchState: partialBatch.batchState }),
-    selectedExitKey: decision.kind === 'batch' ? decision.selectedExitKey : null,
-    selectedOrigin,
+    selectedExitKey: decision.selectedExitKey,
+    selectedOrigin: decision.selectedOrigin,
   });
 }
 
@@ -541,9 +522,9 @@ function clampPrefix(
     });
   }
   const retainedTargets =
-    decision.kind === 'batch' && located.targetIndex !== undefined
-      ? decision.targets.slice(0, located.targetIndex)
-      : Object.freeze([]);
+    located.targetIndex === undefined
+      ? Object.freeze([])
+      : decision.targets.slice(0, located.targetIndex);
   return Object.freeze({
     ...prefix,
     decisions: Object.freeze(

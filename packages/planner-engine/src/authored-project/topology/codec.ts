@@ -18,7 +18,13 @@ import { decodeRoomState } from '../room-state/codec';
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import {
   admitsTerminalTakeoverEnvelope,
+  declaredPhysicalExitsForSourceRoom,
+  hubDecisionHandoffReadiness,
+  hubTerminalTakeoverForSource,
+  isExactTerminalTakeoverEnvelope,
+  normalDecisionProgressionForLayout,
   ordinaryProgressionBatchLimit,
+  possibleGeneratedNormalExitKeys,
   selectedExitKey,
   selectedOrdinaryBatchIndex,
 } from './query';
@@ -132,28 +138,6 @@ function decodeSelection(
   return Object.freeze({ kind, exitKey });
 }
 
-function normalExitKeys(room: RoomDeclaration): readonly string[] {
-  return room.exits.map((exit) => `exit${exit.index}`);
-}
-
-/**
- * A room replacement may leave a batch with target keys that its new source
- * declaration no longer exposes.  Those targets are deliberately retained
- * until an explicit capacity-repair command removes them.  The codec still
- * has to reject invented keys, so its structural domain is the declaration
- * owned normal-exit vocabulary for this biome rather than the current source
- * width alone.
- */
-function possibleNormalExitKeys(catalog: Catalog, biomeKey: string): readonly string[] {
-  return Object.freeze([
-    ...new Set(
-      Object.values(catalog.rooms.byKey)
-        .filter((room) => room.biomeKey === biomeKey && room.mode.kind === 'authored')
-        .flatMap((room) => normalExitKeys(room)),
-    ),
-  ]);
-}
-
 function rewardStoreFor(
   layout: BiomeLayout,
   source: ExitDecisionSource,
@@ -161,11 +145,12 @@ function rewardStoreFor(
   raw: unknown,
   path: string,
 ): BatchRewardStoreState {
+  const progression = normalDecisionProgressionForLayout(layout);
   const policy =
-    layout.progression.kind === 'generated' && sourceRoom !== undefined
-      ? (layout.progression.rewardStoreOverrides.find(
+    source.kind === 'occurrence' && sourceRoom !== undefined && progression !== undefined
+      ? (progression.rewardStoreOverrides.find(
           (override) => override.sourceEncounterProfileKey === sourceRoom.encounterProfileKey,
-        )?.policy ?? layout.progression.rewardStorePolicy)
+        )?.policy ?? progression.rewardStorePolicy)
       : { kind: 'none' as const };
   const value = expectRecord(raw, path);
   const kind = expectString(value.kind, `${path}.kind`);
@@ -239,7 +224,6 @@ function isTakeoverBatch(
 ): boolean {
   return (
     decision.kind === 'exit' &&
-    decision.normal.kind === 'batch' &&
     decision.normal.targets.some((target) => {
       const occurrence = occurrences.get(target.occurrenceId);
       return (
@@ -272,15 +256,10 @@ function validateSelectedDecisionCycles(
     visiting.add(occurrenceId);
     const decision = decisionsBySource.get(occurrenceId);
     if (decision !== undefined) {
-      const targets =
-        decision.normal.kind === 'linked'
-          ? [decision.normal.occurrenceId]
-          : (() => {
-              const selected = selectedExitKey(decision);
-              return decision.normal.targets
-                .filter((target) => target.exitKey === selected)
-                .map((target) => target.occurrenceId);
-            })();
+      const selected = selectedExitKey(decision);
+      const targets = decision.normal.targets
+        .filter((target) => target.exitKey === selected)
+        .map((target) => target.occurrenceId);
       for (const target of targets) visit(target);
     }
     visiting.delete(occurrenceId);
@@ -297,10 +276,8 @@ function validateStagedSelections(
   startOccurrenceId: OccurrenceId,
   path: string,
 ): void {
-  if (
-    layout.progression.kind !== 'generated' ||
-    layout.progression.progressionPolicy.kind !== 'staged'
-  ) {
+  const progression = normalDecisionProgressionForLayout(layout);
+  if (progression?.progressionPolicy.kind !== 'staged') {
     return;
   }
   const decisionsBySource = new Map<OccurrenceId, ExitDecision>();
@@ -319,16 +296,12 @@ function validateStagedSelections(
     traversedSources.add(sourceOccurrenceId);
     const decision = decisionsBySource.get(sourceOccurrenceId);
     if (decision === undefined) return;
-    if (decision.normal.kind === 'linked') {
-      sourceOccurrenceId = decision.normal.occurrenceId;
-      continue;
-    }
     if (isTakeoverBatch(decision, occurrences, catalog, layout.biomeKey)) return;
     // An empty decision is an authored envelope, not an ordinary stage. It
     // remains the active frontier until its first ordinary target exists (or a
     // takeover atomically replaces it).
     if (decision.normal.targets.length === 0) return;
-    const stage = layout.progression.progressionPolicy.stages[batchIndex];
+    const stage = progression.progressionPolicy.stages[batchIndex];
     if (stage === undefined) {
       failProjectDocument(path, 'exceeds the declared staged normal-door progression');
     }
@@ -352,7 +325,7 @@ function validateStagedSelections(
   }
 }
 
-function validateGeneratedProgressionBounds(
+function validateNormalDecisionProgressionBounds(
   decisions: readonly NextRoomDecision[],
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
   catalog: Catalog,
@@ -360,7 +333,8 @@ function validateGeneratedProgressionBounds(
   startOccurrenceId: OccurrenceId,
   path: string,
 ): void {
-  if (layout.progression.kind !== 'generated') return;
+  const progression = normalDecisionProgressionForLayout(layout);
+  if (progression === undefined) return;
   const selectedSpine = Object.freeze({
     startOccurrenceId,
     decisions: Object.freeze([...decisions]),
@@ -370,28 +344,26 @@ function validateGeneratedProgressionBounds(
   const ordinaryBatches = decisions.filter(
     (decision): decision is ExitDecision =>
       decision.kind === 'exit' &&
-      decision.normal.kind === 'batch' &&
+      decision.source.kind === 'occurrence' &&
       decision.normal.targets.length > 0 &&
       !isTakeoverBatch(decision, occurrences, catalog, layout.biomeKey),
   );
   const ordinaryTargetCount = ordinaryBatches.reduce(
-    (count, decision) =>
-      count + (decision.normal.kind === 'batch' ? decision.normal.targets.length : 0),
+    (count, decision) => count + decision.normal.targets.length,
     0,
   );
   if (ordinaryBatches.length > ordinaryBatchLimit) {
-    failProjectDocument(`${path}.decisions`, `exceeds ${ordinaryBatchLimit} generated batches`);
+    failProjectDocument(`${path}.decisions`, `exceeds ${ordinaryBatchLimit} normal batches`);
   }
-  if (ordinaryTargetCount > layout.progression.bounds.maxTargets) {
+  if (ordinaryTargetCount > progression.bounds.maxTargets) {
     failProjectDocument(
       `${path}.decisions`,
-      `exceeds ${layout.progression.bounds.maxTargets} generated targets`,
+      `exceeds ${progression.bounds.maxTargets} normal targets`,
     );
   }
   for (const decision of decisions) {
     if (
       decision.kind !== 'exit' ||
-      decision.normal.kind !== 'batch' ||
       decision.normal.targets.length !== 0 ||
       decision.source.kind !== 'occurrence'
     ) {
@@ -399,8 +371,21 @@ function validateGeneratedProgressionBounds(
     }
     const ordinal = selectedOrdinaryBatchIndex(selectedSpine, decision.source.occurrenceId);
     if (ordinal === undefined || ordinal < ordinaryBatchLimit) continue;
-    if (admitsTerminalTakeoverEnvelope(catalog, layout, selectedSpine, decision.source)) continue;
-    failProjectDocument(`${path}.decisions`, `exceeds ${ordinaryBatchLimit} generated batches`);
+    if (
+      hubTerminalTakeoverForSource(catalog, layout, selectedSpine, decision.source) !== undefined
+    ) {
+      if (!isExactTerminalTakeoverEnvelope(decision)) {
+        failProjectDocument(
+          `${path}.decisions`,
+          'terminal Hub takeover envelope must use the exact no-choice batch state',
+        );
+      }
+      continue;
+    }
+    if (admitsTerminalTakeoverEnvelope(catalog, layout, selectedSpine, decision.source)) {
+      continue;
+    }
+    failProjectDocument(`${path}.decisions`, `exceeds ${ordinaryBatchLimit} normal batches`);
   }
 }
 
@@ -480,10 +465,12 @@ function decodeExitDecision(
   layout: BiomeLayout,
   catalog: Catalog,
   occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
+  startOccurrenceId: OccurrenceId,
 ): ExitDecision {
   const value = raw.value;
   expectExactKeys(value, ['kind', 'source', 'normal', 'selection'], raw.path);
   const source = decodeSource(value.source, `${raw.path}.source`);
+  const progression = normalDecisionProgressionForLayout(layout);
   let sourceRoom: RoomDeclaration | undefined;
   if (source.kind === 'occurrence') {
     const occurrence = occurrences.get(source.occurrenceId);
@@ -505,39 +492,6 @@ function decodeExitDecision(
   }
   const normal = expectRecord(value.normal, `${raw.path}.normal`);
   const normalKind = expectString(normal.kind, `${raw.path}.normal.kind`);
-  if (normalKind === 'linked') {
-    expectExactKeys(normal, ['kind', 'exitKey', 'occurrenceId'], `${raw.path}.normal`);
-    if (layout.progression.kind !== 'hub' || source.kind !== 'occurrence') {
-      failProjectDocument(
-        `${raw.path}.normal`,
-        'linked exits are only declared by a Hub progression',
-      );
-    }
-    const exitKey = expectNonBlankString(normal.exitKey, `${raw.path}.normal.exitKey`);
-    if (exitKey !== layout.progression.linkedExit.exitKey) {
-      failProjectDocument(
-        `${raw.path}.normal.exitKey`,
-        `expected ${layout.progression.linkedExit.exitKey}`,
-      );
-    }
-    const targetId = occurrenceId(normal.occurrenceId, `${raw.path}.normal.occurrenceId`);
-    const target = occurrences.get(targetId);
-    if (target === undefined)
-      failProjectDocument(`${raw.path}.normal.occurrenceId`, `unknown occurrence ${targetId}`);
-    if (target.gameName !== layout.progression.linkedExit.roomGameName) {
-      failProjectDocument(
-        `${target.path}.gameName`,
-        `linked exit requires ${layout.progression.linkedExit.roomGameName}`,
-      );
-    }
-    const selection = decodeSelection(value.selection, [exitKey], `${raw.path}.selection`);
-    return Object.freeze({
-      kind: 'exit',
-      source,
-      normal: Object.freeze({ kind: 'linked', exitKey, occurrenceId: targetId }),
-      selection,
-    });
-  }
   if (normalKind !== 'batch') {
     failProjectDocument(`${raw.path}.normal.kind`, `unknown normal exit form ${normalKind}`);
   }
@@ -545,31 +499,38 @@ function decodeExitDecision(
   if (source.kind === 'hubDecision' && layout.progression.kind !== 'hub') {
     failProjectDocument(raw.path, 'Hub source requires Hub progression');
   }
-  if (source.kind === 'occurrence' && layout.progression.kind !== 'generated') {
+  if (source.kind === 'occurrence' && progression === undefined) {
     failProjectDocument(
       raw.path,
-      'occurrence-sourced normal batches require generated progression',
+      'occurrence-sourced normal batches require a normal decision progression',
     );
   }
-  const declarationExitKeys =
-    source.kind === 'hubDecision'
-      ? [
-          layout.progression.kind === 'hub'
-            ? layout.progression.completedExit.exitKey
-            : failProjectDocument(raw.path, 'Hub source requires Hub progression'),
-        ]
-      : sourceRoom === undefined
-        ? failProjectDocument(raw.path, 'occurrence source requires a Room Declaration')
-        : normalExitKeys(sourceRoom);
-  const allowedExitKeys =
-    source.kind === 'hubDecision'
-      ? declarationExitKeys
-      : Object.freeze([
-          ...declarationExitKeys,
-          ...possibleNormalExitKeys(catalog, layout.biomeKey).filter(
-            (exitKey) => !declarationExitKeys.includes(exitKey),
-          ),
-        ]);
+  const declarationExits = declaredPhysicalExitsForSourceRoom(
+    layout,
+    startOccurrenceId,
+    source,
+    sourceRoom,
+  );
+  if (declarationExits === undefined) {
+    failProjectDocument(raw.path, 'source has no declaration-owned normal exits');
+  }
+  const declarationExitKeys = declarationExits.map((exit) => exit.exitKey);
+  // Generated sources may retain an incompatible declaration-owned key after
+  // explicit room replacement until capacity repair. The bounded Hub entry is
+  // fixed to `prehub`, while its later terminal source has no ordinary key;
+  // neither accepts a retained ordinary target outside that exact declaration.
+  const retainsAlternativeExitKeys =
+    source.kind === 'occurrence' &&
+    declarationExitKeys.length > 0 &&
+    layout.progression.kind !== 'hub';
+  const allowedExitKeys = retainsAlternativeExitKeys
+    ? Object.freeze([
+        ...declarationExitKeys,
+        ...possibleGeneratedNormalExitKeys(catalog, layout).filter(
+          (exitKey) => !declarationExitKeys.includes(exitKey),
+        ),
+      ])
+    : declarationExitKeys;
   const targets = decodeTargets(
     normal.targets,
     occurrences,
@@ -622,10 +583,10 @@ function decodeExitDecision(
         { kind: 'standard', fields: [] },
         `${raw.path}.normal.batchState`,
       )
-    : layout.progression.kind === 'generated'
+    : source.kind === 'occurrence' && progression !== undefined
       ? decodeBatchState(
           normal.batchState,
-          layout.progression.batchPolicy,
+          progression.batchPolicy,
           `${raw.path}.normal.batchState`,
         )
       : decodeBatchState(
@@ -663,9 +624,21 @@ function decodeHubDecision(
   }
   const hub = layout.progression;
   const value = raw.value;
-  expectExactKeys(value, ['kind', 'hubKey', 'openTargets', 'visitOrder'], raw.path);
+  expectExactKeys(value, ['kind', 'hubKey', 'source', 'openTargets', 'visitOrder'], raw.path);
   const hubKey = expectNonBlankString(value.hubKey, `${raw.path}.hubKey`);
   if (hubKey !== hub.hubKey) failProjectDocument(`${raw.path}.hubKey`, `expected ${hub.hubKey}`);
+  const source = decodeSource(value.source, `${raw.path}.source`);
+  if (source.kind !== 'occurrence') {
+    failProjectDocument(`${raw.path}.source`, 'Hub decision source must be an occurrence');
+  }
+  const sourceOccurrence = occurrences.get(source.occurrenceId);
+  if (sourceOccurrence === undefined) {
+    failProjectDocument(
+      `${raw.path}.source.occurrenceId`,
+      `unknown occurrence ${source.occurrenceId}`,
+    );
+  }
+  requireRoom(sourceOccurrence, catalog, layout.biomeKey);
   const rawTargets = expectArray(value.openTargets, `${raw.path}.openTargets`);
   if (rawTargets.length > hub.openCount.max)
     failProjectDocument(`${raw.path}.openTargets`, `exceeds ${hub.openCount.max} Hub slots`);
@@ -718,6 +691,7 @@ function decodeHubDecision(
   return Object.freeze({
     kind: 'hub',
     hubKey,
+    source,
     openTargets: Object.freeze(openTargets),
     visitOrder: Object.freeze(visitOrder),
   });
@@ -778,7 +752,7 @@ export function decodeBiomeTopology(
     const kind = expectString(raw.value.kind, `${raw.path}.kind`);
     const decision =
       kind === 'exit'
-        ? decodeExitDecision(raw, layout, catalog, occurrences)
+        ? decodeExitDecision(raw, layout, catalog, occurrences, startOccurrenceId)
         : kind === 'hub'
           ? decodeHubDecision(raw, layout, catalog, occurrences)
           : failProjectDocument(`${raw.path}.kind`, `unknown decision ${kind}`);
@@ -791,7 +765,7 @@ export function decodeBiomeTopology(
     decisionSources.add(identity);
     decisions.push(decision);
   }
-  validateGeneratedProgressionBounds(
+  validateNormalDecisionProgressionBounds(
     decisions,
     occurrences,
     catalog,
@@ -805,29 +779,6 @@ export function decodeBiomeTopology(
   const hubDecision = decisions.find(
     (decision): decision is HubDecision => decision.kind === 'hub',
   );
-  const linkedDecisions = decisions.filter(
-    (decision): decision is ExitDecision =>
-      decision.kind === 'exit' && decision.normal.kind === 'linked',
-  );
-  const linkedDecision = linkedDecisions[0];
-  const hasSoleStartOwnedLinkedExit =
-    linkedDecisions.length === 1 &&
-    linkedDecision?.source.kind === 'occurrence' &&
-    linkedDecision.source.occurrenceId === startOccurrenceId;
-  if (linkedDecisions.length > 0 && !hasSoleStartOwnedLinkedExit) {
-    failProjectDocument(
-      `${path}.decisions`,
-      'a Hub progression has exactly one linked PreHub exit owned by the declared start occurrence',
-    );
-  }
-  if (hubDecision !== undefined) {
-    if (!hasSoleStartOwnedLinkedExit) {
-      failProjectDocument(
-        `${path}.decisions`,
-        'Hub decision is detached from its linked PreHub exit',
-      );
-    }
-  }
   const selectedSources = new Set<OccurrenceId>([startOccurrenceId]);
   let addedSelectedSource = true;
   while (addedSelectedSource) {
@@ -835,15 +786,10 @@ export function decodeBiomeTopology(
     for (const decision of decisions) {
       if (decision.kind !== 'exit' || decision.source.kind !== 'occurrence') continue;
       if (!selectedSources.has(decision.source.occurrenceId)) continue;
-      const targets =
-        decision.normal.kind === 'linked'
-          ? [decision.normal.occurrenceId]
-          : (() => {
-              const selected = selectedExitKey(decision);
-              return decision.normal.targets
-                .filter((target) => target.exitKey === selected)
-                .map((target) => target.occurrenceId);
-            })();
+      const selected = selectedExitKey(decision);
+      const targets = decision.normal.targets
+        .filter((target) => target.exitKey === selected)
+        .map((target) => target.occurrenceId);
       for (const target of targets) {
         if (!selectedSources.has(target)) {
           selectedSources.add(target);
@@ -852,9 +798,46 @@ export function decodeBiomeTopology(
       }
     }
   }
+  const selectedSpine = Object.freeze({
+    startOccurrenceId,
+    decisions: Object.freeze([...decisions]),
+  });
   for (const [index, decision] of decisions.entries()) {
     const decisionPath = rawDecisions[index]?.path ?? path;
-    if (decision.kind !== 'exit') continue;
+    if (decision.kind === 'hub') {
+      if (!selectedSources.has(decision.source.occurrenceId)) {
+        failProjectDocument(
+          `${decisionPath}.source.occurrenceId`,
+          'Hub source is not on the selected topology spine',
+        );
+      }
+      if (
+        decisions.some(
+          (candidate): candidate is ExitDecision =>
+            candidate.kind === 'exit' &&
+            candidate.source.kind === 'occurrence' &&
+            candidate.source.occurrenceId === decision.source.occurrenceId,
+        )
+      ) {
+        failProjectDocument(
+          `${decisionPath}.source`,
+          'Hub decision cannot coexist with an exit decision at its source',
+        );
+      }
+      const terminal = hubTerminalTakeoverForSource(
+        catalog,
+        layout,
+        selectedSpine,
+        decision.source,
+      );
+      if (terminal === undefined || terminal.hubKey !== decision.hubKey) {
+        failProjectDocument(
+          `${decisionPath}.source`,
+          'Hub source does not resolve the declared terminal Hub takeover',
+        );
+      }
+      continue;
+    }
     if (
       decision.source.kind === 'occurrence' &&
       !selectedSources.has(decision.source.occurrenceId)
@@ -873,8 +856,7 @@ export function decodeBiomeTopology(
       }
       if (
         layout.progression.kind !== 'hub' ||
-        hubDecision.openTargets.length < layout.progression.openCount.min ||
-        hubDecision.visitOrder.length !== layout.progression.requiredVisits
+        hubDecisionHandoffReadiness(layout.progression, hubDecision).kind !== 'ready'
       ) {
         failProjectDocument(`${decisionPath}.source`, 'completed-Hub exit requires a complete Hub');
       }
@@ -922,16 +904,6 @@ export function decodeBiomeTopology(
           path: `${decisionPath}.openTargets`,
         });
       }
-      continue;
-    }
-    if (decision.normal.kind === 'linked') {
-      own(decision.normal.occurrenceId, {
-        gameName:
-          layout.progression.kind === 'hub' ? layout.progression.linkedExit.roomGameName : '',
-        role: 'ordinary',
-        entryActive: true,
-        path: `${decisionPath}.normal.occurrenceId`,
-      });
       continue;
     }
     const selected = selectedExitKey(decision);

@@ -36,7 +36,13 @@ import {
   evaluateProgressiveBiomeAssemblyBeforeClamp,
 } from '../../src/simulation/progressive/biome';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../src/simulation/project';
-import { createUnselectedFTakeoverProject, fBiome, fCombatId } from './support/f-takeover-project';
+import {
+  createFOpeningBatch,
+  createUnselectedFTakeoverProject,
+  fBiome,
+  fCombatId,
+  fStartId,
+} from './support/f-takeover-project';
 import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
@@ -676,6 +682,25 @@ describe('progressive biome evaluation', () => {
         value: { rewardType: 'MetaCurrencyBigDrop' },
       }),
     ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
+  });
+
+  it('keeps an ordinary empty frontier at its outgoing checkpoint', () => {
+    const { evaluation } = prefix(createFOpeningBatch(), 'Underworld', 'F');
+    const frontier = evaluation.materializedPrefix.frontier;
+    const openingHistory = evaluation.history.rooms.find(
+      (room) =>
+        semanticAddressKey(room.origin) ===
+        semanticAddressKey(createOccurrenceAddress(fBiome, fStartId)),
+    );
+
+    expect(frontier).toMatchObject({
+      kind: 'exitDecision',
+      origin: createExitDecisionAddress(fBiome, source(fStartId)),
+    });
+    if (frontier?.kind !== 'exitDecision') throw new Error('F lost its empty decision frontier');
+    expect(frontier.hubContinuation).toBeUndefined();
+    expect(openingHistory?.postCommit).toBeUndefined();
+    expect(openingHistory?.exit).toBeUndefined();
   });
 
   it('retains the first physical target when the second selected target is invalid', () => {

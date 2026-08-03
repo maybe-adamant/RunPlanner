@@ -1,7 +1,6 @@
 import type {
   BiomeLayout,
   Catalog,
-  CompletedHubExitDescriptor,
   GeneratedProgressionDescriptor,
   HubDecisionDescriptor,
   RoomDeclaration,
@@ -29,7 +28,12 @@ import type {
   RoomOccurrence,
 } from '../../authored-project/model';
 import {
+  declaredPhysicalExits,
   exitDecisionForSource,
+  hubDecisionHandoffReadiness,
+  hubTerminalTakeoverForSource,
+  isExactTerminalTakeoverEnvelope,
+  possibleGeneratedNormalExitKeys,
   selectedExitKey,
   selectedExitTarget,
 } from '../../authored-project/topology/query';
@@ -47,12 +51,12 @@ import type {
   CanonicalBiomeState,
   CanonicalDecision,
   CanonicalDecisionParent,
-  CanonicalLinkedExit,
   CanonicalPhysicalExit,
   CanonicalRoomReference,
   CanonicalTarget,
   MaterializedBiomePrefix,
   MaterializedExitDecisionFrontier,
+  MaterializedHubContinuationFrontier,
   MaterializedHubDecisionFrontier,
 } from './model';
 
@@ -123,17 +127,60 @@ function exitIndex(exitKey: string): number {
   return match === null ? 1 : Number(match[1]);
 }
 
-function canonicalExit(room: RoomDeclaration | undefined, exitKey: string): CanonicalPhysicalExit {
-  const index = exitIndex(exitKey);
-  const exit = room?.exits.find((candidate) => candidate.index === index);
-  if (exit === undefined) return Object.freeze({ kind: 'unavailable', exitKey, index });
-  return Object.freeze({
-    kind: 'available',
-    exitKey,
-    index,
-    type: exit.type,
-    compatibilityPolicyKey: exit.compatibilityPolicyKey,
-  });
+/**
+ * The topology query owns non-default physical identities such as N's
+ * `prehub` exit key. Materialization preserves that key while still exposing
+ * the declaration's physical exit facts through the ordinary batch product.
+ */
+function canonicalPhysicalExits(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  source: ExitDecisionSource,
+): ReadonlyMap<string, CanonicalPhysicalExit> {
+  const exits = declaredPhysicalExits(catalog, layout, topology, source);
+  if (exits === undefined) {
+    fail(`${layout.biomeKey} source has no declaration-owned physical exits`);
+  }
+  return new Map(
+    exits.map((exit) => [
+      exit.exitKey,
+      Object.freeze({
+        kind: 'available' as const,
+        exitKey: exit.exitKey,
+        index: exit.index,
+        type: exit.type,
+        compatibilityPolicyKey: exit.compatibilityPolicyKey,
+      }),
+    ]),
+  );
+}
+
+/**
+ * Replacing a generated source room can narrow its physical door set while
+ * retaining an already-authored target until an explicit capacity repair.
+ * The topology codec admits only this biome's declaration-owned `exitN`
+ * vocabulary, so materialization preserves such a target as semantically
+ * unavailable. Invented keys and every bounded-Hub source remain structural
+ * contract failures instead of being quietly converted into an unavailable
+ * door.
+ */
+function retainedUnavailablePhysicalExit(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  decision: ExitDecision,
+  exitKey: string,
+): CanonicalPhysicalExit | undefined {
+  if (layout.progression.kind !== 'generated' || decision.source.kind !== 'occurrence') {
+    return undefined;
+  }
+  if (!possibleGeneratedNormalExitKeys(catalog, layout).includes(exitKey)) {
+    return undefined;
+  }
+  const match = /^exit(\d+)$/.exec(exitKey);
+  if (match === null) return undefined;
+  const index = Number(match[1]);
+  return Object.freeze({ kind: 'unavailable', exitKey, index });
 }
 
 export function orderedTargets(
@@ -265,7 +312,7 @@ function materializeBatchState(
     if (clockwork === undefined) fail(`${layout.biomeKey} Clockwork state is unavailable`);
     return Object.freeze({ kind: 'clockwork', ...clockwork });
   }
-  if (decision.normal.kind !== 'batch' || decision.normal.batchState === null) {
+  if (decision.normal.batchState === null) {
     fail(`${layout.biomeKey} Fields batch has no authored cage outcome`);
   }
   const fields = fieldsBatchFacts(
@@ -294,21 +341,20 @@ function materializeTarget(
   biome: BiomeAddress,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   source: ExitDecisionSourceAddress,
-  sourceRoom: RoomDeclaration | undefined,
   target: ExitTargetReference,
   targetIndex: number,
   selectedExitKey: string | undefined,
   batchStore: string | undefined,
   batchState: CanonicalBatchState,
   clockworkRewardValue: 'goal' | 'nonGoal' | undefined,
-  physicalExit?: CanonicalPhysicalExit,
+  physicalExit: CanonicalPhysicalExit,
 ): CanonicalTarget {
   const occurrence = requireOccurrence(occurrences, target.occurrenceId);
   const room = requireRoom(catalog, occurrence);
   const picked = target.exitKey === selectedExitKey;
   return Object.freeze({
     origin: createTargetAddress(biome, source, target.exitKey),
-    exit: physicalExit ?? canonicalExit(sourceRoom, target.exitKey),
+    exit: physicalExit,
     picked,
     continuation: targetContinuation(picked, room.kind),
     room: materializeAuthoredRoom({
@@ -332,15 +378,13 @@ function materializeBatch(
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   decision: ExitDecision,
   parent: CanonicalDecisionParent,
-  sourceRoom: RoomDeclaration | undefined,
   sourceAuthoredRoom: CanonicalAuthoredRoom | undefined,
   clockwork: ClockworkState | undefined,
   options: {
     readonly allowUnselected?: boolean;
-    readonly physicalExit?: CanonicalPhysicalExit;
-  } = {},
+    readonly physicalExits: ReadonlyMap<string, CanonicalPhysicalExit>;
+  },
 ): { readonly batch: CanonicalBatch; readonly nextClockwork: ClockworkState | undefined } {
-  if (decision.normal.kind !== 'batch') fail('batch materialization requires normal-door targets');
   const normal = decision.normal;
   const source = sourceAddress(decision.source);
   const takeover = batchTakesOverNormalDoors(
@@ -378,22 +422,27 @@ function materializeBatch(
     }
   }
   const targets = Object.freeze(
-    ordered.map((target, index) =>
-      materializeTarget(
+    ordered.map((target, index) => {
+      const physicalExit =
+        options.physicalExits.get(target.exitKey) ??
+        retainedUnavailablePhysicalExit(catalog, layout, decision, target.exitKey);
+      if (physicalExit === undefined) {
+        fail(`${target.exitKey} has no declaration-owned physical exit`);
+      }
+      return materializeTarget(
         catalog,
         biome,
         occurrences,
         source,
-        sourceRoom,
         target,
         index,
         selected,
         sharedBatchStoreKey,
         batchState,
         rewards.get(target.exitKey),
-        options.physicalExit,
-      ),
-    ),
+        physicalExit,
+      );
+    }),
   );
   const selectedTarget = targets.find((target) => target.picked);
   if (selectedTarget === undefined && options.allowUnselected !== true) {
@@ -422,57 +471,17 @@ function materializeBatch(
   });
 }
 
-function completedHubExit(exit: CompletedHubExitDescriptor): CanonicalPhysicalExit {
-  return Object.freeze({
-    kind: 'available',
-    exitKey: exit.exitKey,
-    index: exit.physicalExit.index,
-    type: exit.physicalExit.type,
-    compatibilityPolicyKey: exit.physicalExit.compatibilityPolicyKey,
-  });
-}
-
-function materializeLinkedExit(
-  catalog: Catalog,
-  biome: BiomeAddress,
-  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
-  decision: ExitDecision,
-  sourceRoom: RoomDeclaration,
-  parent: CanonicalAuthoredRoom,
-): CanonicalLinkedExit {
-  if (decision.normal.kind !== 'linked')
-    fail('linked materialization requires a linked normal exit');
-  const source = sourceAddress(decision.source);
-  const occurrence = requireOccurrence(occurrences, decision.normal.occurrenceId);
-  const room = requireRoom(catalog, occurrence);
-  return Object.freeze({
-    kind: 'linkedExit',
-    origin: createExitDecisionAddress(biome, source),
-    source: roomReference(parent),
-    target: Object.freeze({
-      origin: createTargetAddress(biome, source, decision.normal.exitKey),
-      exit: canonicalExit(sourceRoom, decision.normal.exitKey),
-      picked: true,
-      continuation: targetContinuation(true, room.kind),
-      room: materializeAuthoredRoom({
-        catalog,
-        biome,
-        room,
-        occurrence,
-        role: prebossRole(room, 0),
-        entered: true,
-      }),
-    }),
-  });
-}
-
-function hubDecision(
+function hubDecisionForSource(
   topology: BiomeTopology,
   descriptor: HubDecisionDescriptor,
+  source: ExitDecisionSource,
 ): HubDecision | undefined {
+  if (source.kind !== 'occurrence') return undefined;
   return topology.decisions.find(
     (candidate): candidate is HubDecision =>
-      candidate.kind === 'hub' && candidate.hubKey === descriptor.hubKey,
+      candidate.kind === 'hub' &&
+      candidate.hubKey === descriptor.hubKey &&
+      candidate.source.occurrenceId === source.occurrenceId,
   );
 }
 
@@ -525,12 +534,44 @@ function prefix(
   });
 }
 
+/**
+ * N's bounded Hub progression has two deliberately narrow empty envelopes.
+ * They still complete the entered source-room lifecycle against an empty
+ * outgoing projection: Opening exposes its depth-one entry picker, and the
+ * selected PreHub exposes the depth-two terminal Hub takeover. Ordinary empty
+ * decisions intentionally do not acquire this continuation behavior.
+ */
+function hubContinuationFrontier(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  source: ExitDecisionSource,
+  decision: ExitDecision | undefined,
+): MaterializedHubContinuationFrontier | undefined {
+  if (
+    layout.progression.kind !== 'hub' ||
+    source.kind !== 'occurrence' ||
+    decision === undefined ||
+    !isExactTerminalTakeoverEnvelope(decision)
+  ) {
+    return undefined;
+  }
+  if (source.occurrenceId === topology.startOccurrenceId) {
+    return Object.freeze({ kind: 'boundedEntry', hubKey: layout.progression.hubKey });
+  }
+  const terminal = hubTerminalTakeoverForSource(catalog, layout, topology, source);
+  return terminal === undefined
+    ? undefined
+    : Object.freeze({ kind: 'terminalTakeover', hubKey: terminal.hubKey });
+}
+
 function decisionFrontier(
   biome: BiomeAddress,
   decision: ExitDecision | undefined,
   source: ExitDecisionSource,
   parent: CanonicalDecisionParent,
   partial?: CanonicalBatch,
+  hubContinuation?: MaterializedHubContinuationFrontier,
 ): MaterializedExitDecisionFrontier {
   const address = sourceAddress(source);
   const pickedExitKey = decision === undefined ? null : selectedExitKey(decision);
@@ -545,16 +586,17 @@ function decisionFrontier(
     ...(partial === undefined ? {} : { partialBatch: partial, batchState: partial.batchState }),
     selectedExitKey: pickedExitKey ?? null,
     selectedOrigin: createExitSelectionAddress(biome, address),
+    ...(hubContinuation === undefined ? {} : { hubContinuation }),
   });
 }
 
 function isCompleteBatch(
   catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
-  sourceRoom: RoomDeclaration | undefined,
   decision: ExitDecision,
 ): boolean {
-  if (decision.normal.kind !== 'batch') return true;
   if (decision.selection.kind === 'unresolved') return false;
   const normal = decision.normal;
   const takeover = batchTakesOverNormalDoors(
@@ -562,12 +604,10 @@ function isCompleteBatch(
     (occurrenceId) => occurrences.get(occurrenceId),
     decision,
   );
-  const allPhysicalTargets =
-    sourceRoom === undefined
-      ? normal.targets.length === 1
-      : sourceRoom.exits.every((exit) =>
-          normal.targets.some((target) => target.exitKey === `exit${exit.index}`),
-        );
+  const physicalExits = canonicalPhysicalExits(catalog, layout, topology, decision.source);
+  const allPhysicalTargets = [...physicalExits.keys()].every((exitKey) =>
+    normal.targets.some((target) => target.exitKey === exitKey),
+  );
   const hasStore =
     takeover ||
     normal.rewardStore.kind !== 'authoredBaseStore' ||
@@ -589,6 +629,7 @@ function materializeContiguousBatchPrefix(
   catalog: Catalog,
   biome: BiomeAddress,
   layout: BiomeLayout,
+  topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   decision: ExitDecision | undefined,
   parent: CanonicalDecisionParent,
@@ -596,7 +637,7 @@ function materializeContiguousBatchPrefix(
   sourceAuthoredRoom: CanonicalAuthoredRoom | undefined,
   clockwork: ClockworkState | undefined,
 ): CanonicalBatch | undefined {
-  if (decision?.normal.kind !== 'batch' || sourceRoom === undefined) return undefined;
+  if (decision === undefined || sourceRoom === undefined) return undefined;
   const takeover = batchTakesOverNormalDoors(
     catalog,
     (occurrenceId) => occurrences.get(occurrenceId),
@@ -612,9 +653,10 @@ function materializeContiguousBatchPrefix(
   const targetsByExit = new Map(
     decision.normal.targets.map((target) => [target.exitKey, target] as const),
   );
+  const physicalExits = canonicalPhysicalExits(catalog, layout, topology, decision.source);
   const contiguous: ExitTargetReference[] = [];
-  for (const exit of sourceRoom.exits) {
-    const target = targetsByExit.get(`exit${exit.index}`);
+  for (const exitKey of physicalExits.keys()) {
+    const target = targetsByExit.get(exitKey);
     if (target === undefined) break;
     contiguous.push(target);
   }
@@ -630,10 +672,9 @@ function materializeContiguousBatchPrefix(
     occurrences,
     partialDecision,
     parent,
-    sourceRoom,
     sourceAuthoredRoom,
     clockwork,
-    { allowUnselected: true },
+    { allowUnselected: true, physicalExits },
   ).batch;
 }
 
@@ -671,12 +712,21 @@ export function materializeBiomePrefix(
     const decision = exitDecisionForSource(topology, source);
     const sourceRoom = requireRoom(catalog, requireOccurrence(occurrences, current.occurrenceId));
     if (decision === undefined) {
-      if (
-        layout.progression.kind === 'hub' &&
-        sourceRoom.gameName === layout.progression.linkedExit.roomGameName
-      ) {
-        const authoredHub = hubDecision(topology, layout.progression);
-        if (authoredHub === undefined) {
+      const authoredHub =
+        layout.progression.kind === 'hub'
+          ? hubDecisionForSource(topology, layout.progression, source)
+          : undefined;
+      if (authoredHub !== undefined && layout.progression.kind === 'hub') {
+        const hub = materializeHubDecision(
+          catalog,
+          biome,
+          layout.progression,
+          authoredHub,
+          occurrences,
+        );
+        decisions.push(hub);
+        const hubReadiness = hubDecisionHandoffReadiness(layout.progression, authoredHub);
+        if (hubReadiness.kind === 'openSetIncomplete') {
           return prefix(
             biome,
             biomeState,
@@ -688,15 +738,7 @@ export function materializeBiomePrefix(
             }),
           );
         }
-        const hub = materializeHubDecision(
-          catalog,
-          biome,
-          layout.progression,
-          authoredHub,
-          occurrences,
-        );
-        decisions.push(hub);
-        if (hub.visits.length < layout.progression.requiredVisits) {
+        if (hubReadiness.kind === 'visitOrderIncomplete') {
           return prefix(
             biome,
             biomeState,
@@ -707,10 +749,13 @@ export function materializeBiomePrefix(
               origin: createHubVisitAddress(
                 biome,
                 layout.progression.hubKey,
-                hub.visits.length + 1,
+                hubReadiness.actualCount + 1,
               ),
             }),
           );
+        }
+        if (hubReadiness.kind !== 'ready') {
+          fail(`${layout.progression.hubKey} Hub handoff lost its authored decision`);
         }
         const handoffSource: ExitDecisionSource = Object.freeze({
           kind: 'hubDecision',
@@ -718,7 +763,10 @@ export function materializeBiomePrefix(
         });
         const handoff = exitDecisionForSource(topology, handoffSource);
         const parent = Object.freeze({ origin: hub.room.origin, gameName: hub.room.gameName });
-        if (handoff === undefined || !isCompleteBatch(catalog, occurrences, undefined, handoff)) {
+        if (
+          handoff === undefined ||
+          !isCompleteBatch(catalog, layout, topology, occurrences, handoff)
+        ) {
           return prefix(
             biome,
             biomeState,
@@ -736,8 +784,7 @@ export function materializeBiomePrefix(
           parent,
           undefined,
           undefined,
-          undefined,
-          { physicalExit: completedHubExit(layout.progression.completedExit) },
+          { physicalExits: canonicalPhysicalExits(catalog, layout, topology, handoff.source) },
         );
         decisions.push(materialized.batch);
         return prefix(biome, biomeState, entryRoom, decisions);
@@ -750,11 +797,13 @@ export function materializeBiomePrefix(
         decisionFrontier(biome, undefined, source, roomReference(current)),
       );
     }
-    if (!isCompleteBatch(catalog, occurrences, sourceRoom, decision)) {
+    if (!isCompleteBatch(catalog, layout, topology, occurrences, decision)) {
+      const hubContinuation = hubContinuationFrontier(catalog, layout, topology, source, decision);
       const partial = materializeContiguousBatchPrefix(
         catalog,
         biome,
         layout,
+        topology,
         occurrences,
         decision,
         roomReference(current),
@@ -767,24 +816,8 @@ export function materializeBiomePrefix(
         biomeState,
         entryRoom,
         decisions,
-        decisionFrontier(biome, decision, source, roomReference(current), partial),
+        decisionFrontier(biome, decision, source, roomReference(current), partial, hubContinuation),
       );
-    }
-    if (decision.normal.kind === 'linked') {
-      const linked = materializeLinkedExit(
-        catalog,
-        biome,
-        occurrences,
-        decision,
-        sourceRoom,
-        current,
-      );
-      decisions.push(linked);
-      if (linked.target.continuation === 'startsCompletion') {
-        return prefix(biome, biomeState, entryRoom, decisions);
-      }
-      current = linked.target.room;
-      continue;
     }
     const materialized = materializeBatch(
       catalog,
@@ -793,9 +826,9 @@ export function materializeBiomePrefix(
       occurrences,
       decision,
       roomReference(current),
-      sourceRoom,
       current,
       clockwork,
+      { physicalExits: canonicalPhysicalExits(catalog, layout, topology, decision.source) },
     );
     decisions.push(materialized.batch);
     clockwork = materialized.nextClockwork;
@@ -836,15 +869,12 @@ export function materializeBiome(
       occurrenceId: currentRoom.occurrenceId,
     });
     const decision = exitDecisionForSource(topology, source);
-    const sourceOccurrence = requireOccurrence(occurrences, currentRoom.occurrenceId);
-    const sourceRoom = requireRoom(catalog, sourceOccurrence);
     if (decision === undefined) {
-      if (
-        layout.progression.kind === 'hub' &&
-        sourceRoom.gameName === layout.progression.linkedExit.roomGameName
-      ) {
-        const authoredHub = hubDecision(topology, layout.progression);
-        if (authoredHub === undefined) fail(`${layout.progression.hubKey} Hub decision is missing`);
+      const authoredHub =
+        layout.progression.kind === 'hub'
+          ? hubDecisionForSource(topology, layout.progression, source)
+          : undefined;
+      if (authoredHub !== undefined && layout.progression.kind === 'hub') {
         const hub = materializeHubDecision(
           catalog,
           biome,
@@ -863,31 +893,13 @@ export function materializeBiome(
           Object.freeze({ origin: hub.room.origin, gameName: hub.room.gameName }),
           undefined,
           undefined,
-          undefined,
-          { physicalExit: completedHubExit(layout.progression.completedExit) },
+          { physicalExits: canonicalPhysicalExits(catalog, layout, topology, handoff.source) },
         );
         decisions.push(materialized.batch);
         enteredPreboss = materialized.batch.targets.find((target) => target.picked)?.room;
         break;
       }
       fail(`${currentRoom.gameName} has no selected-spine exit decision`);
-    }
-    if (decision.normal.kind === 'linked') {
-      const linked = materializeLinkedExit(
-        catalog,
-        biome,
-        occurrences,
-        decision,
-        sourceRoom,
-        currentRoom,
-      );
-      decisions.push(linked);
-      if (linked.target.continuation === 'startsCompletion') {
-        enteredPreboss = linked.target.room;
-        break;
-      }
-      currentRoom = linked.target.room;
-      continue;
     }
     const materialized = materializeBatch(
       catalog,
@@ -896,9 +908,9 @@ export function materializeBiome(
       occurrences,
       decision,
       roomReference(currentRoom),
-      sourceRoom,
       currentRoom,
       clockwork,
+      { physicalExits: canonicalPhysicalExits(catalog, layout, topology, decision.source) },
     );
     decisions.push(materialized.batch);
     clockwork = materialized.nextClockwork;

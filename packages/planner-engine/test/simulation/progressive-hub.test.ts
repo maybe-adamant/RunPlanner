@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
@@ -11,6 +12,7 @@ import {
   createLocalRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createTargetAddress,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
@@ -30,6 +32,7 @@ import {
 
 function openHub(slotCount: number, resolvedBoardRewards = false) {
   const opening = createOccurrenceId('progressive-n-opening');
+  const preHub = createOccurrenceId('progressive-n-prehub');
   let project = createProjectDocument(catalog, {
     projectId: `progressive-n-${slotCount}`,
     name: 'Progressive N',
@@ -40,18 +43,31 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
     biome: nBiome,
     occurrenceId: opening,
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateLinkedExit',
-    decision: {
-      kind: 'exitDecision',
-      routeKey: 'Surface',
-      biomeKey: 'N',
-      source: { kind: 'occurrence', occurrenceId: opening },
-    },
-    occurrenceId: createOccurrenceId('progressive-n-prehub'),
+  const openingDecision = createExitDecisionAddress(nBiome, {
+    kind: 'occurrence',
+    occurrenceId: opening,
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'CreateHubDecision',
+    kind: 'CreateBatch',
+    decision: openingDecision,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(nBiome, openingDecision.source, 'prehub'),
+    occurrenceId: preHub,
+    gameName: 'N_PreHub01',
+  });
+  const preHubDecision = createExitDecisionAddress(nBiome, {
+    kind: 'occurrence',
+    occurrenceId: preHub,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: preHubDecision,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceWithHubDecision',
+    decision: preHubDecision,
     hub: createHubDecisionAddress(nBiome, 'hub'),
   });
   for (const slotKey of nOpenSlotKeys.slice(0, slotCount)) {
@@ -141,7 +157,7 @@ describe('Hub progressive biome evaluation', () => {
     });
     expect(biome.materializedPrefix.entryRoom?.gameName).toBe('N_Opening01');
     expect(biome.materializedPrefix.decisions.map((decision) => decision.kind)).toEqual([
-      'linkedExit',
+      'batch',
       'hub',
     ]);
     expect(

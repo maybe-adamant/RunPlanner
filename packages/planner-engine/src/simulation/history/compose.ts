@@ -324,6 +324,7 @@ function appendHubDecision(
   decision: CanonicalHubDecision,
   handoff?: CanonicalBatch,
 ): CanonicalLifecycleRoom {
+  requireParent(preHub, decision.source.origin, 'Hub decision');
   appendCanonicalRoomLifecycle(writer, catalog, preHub, fail, {
     outgoing(outgoingWriter) {
       appendHubCreated(outgoingWriter, preHub, decision);
@@ -463,16 +464,6 @@ function appendCompletedDecision(
   decision: CanonicalBiome['decisions'][number],
   current: CanonicalLifecycleRoom,
 ): CanonicalLifecycleRoom {
-  if (decision.kind === 'linkedExit') {
-    requireParent(current, decision.source.origin, 'linked exit');
-    if (current.kind !== 'authored') fail('linked exit source must be authored');
-    appendCanonicalRoomLifecycle(writer, catalog, current, fail, {
-      outgoing(outgoingWriter) {
-        appendGeneratedTargets(outgoingWriter, current.origin, [decision.target]);
-      },
-    });
-    return decision.target.room;
-  }
   if (decision.kind === 'hub') {
     if (current.kind !== 'authored') fail('Hub decision must follow an authored PreHub room');
     return appendHubDecision(writer, catalog, current, decision);
@@ -512,17 +503,6 @@ export function composeBiomeHistory(
       let current: CanonicalLifecycleRoom = entry;
       for (let decisionIndex = 0; decisionIndex < snapshot.decisions.length; decisionIndex += 1) {
         const decision = snapshot.decisions[decisionIndex]!;
-        if (decision.kind === 'linkedExit') {
-          requireParent(current, decision.source.origin, 'linked exit');
-          if (current.kind !== 'authored') fail('linked exit source must be authored');
-          appendCanonicalRoomLifecycle(writer, catalog, current, fail, {
-            outgoing(outgoingWriter) {
-              appendGeneratedTargets(outgoingWriter, current.origin, [decision.target]);
-            },
-          });
-          current = decision.target.room;
-          continue;
-        }
         if (decision.kind === 'hub') {
           if (current.kind !== 'authored') fail('Hub decision must follow an authored PreHub room');
           const candidateHandoff = snapshot.decisions[decisionIndex + 1];
@@ -616,9 +596,26 @@ export function composeBiomeHistoryPrefix(
           fail('ordinary decision frontier does not follow an authored room');
         }
         if (frontier.targets.length === 0) {
-          appendClockworkAwareRoomLifecycle(writer, catalog, current, {
-            stopAfterOutgoing: true,
-          });
+          if (frontier.hubContinuation !== undefined) {
+            // The materializer has already established one of N's two closed
+            // bounded-Hub empty envelopes. It is not an ordinary missing
+            // decision: complete this source lifecycle through commit/exit so
+            // its declaration-owned depth checkpoint is available to the
+            // entry or terminal candidate. The empty projection preserves the
+            // normal outgoing-generation closure without inventing a target.
+            appendClockworkAwareRoomLifecycle(writer, catalog, current, {
+              outgoing(outgoingWriter) {
+                outgoingWriter.append({
+                  kind: 'emptyOutgoingGenerationCompleted',
+                  origin: current.origin,
+                });
+              },
+            });
+          } else {
+            appendClockworkAwareRoomLifecycle(writer, catalog, current, {
+              stopAfterOutgoing: true,
+            });
+          }
         } else {
           appendClockworkAwareRoomLifecycle(writer, catalog, current, {
             outgoing(outgoingWriter) {

@@ -481,12 +481,27 @@ function selectedNProject() {
     occurrenceId: openingId,
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'CreateLinkedExit',
+    kind: 'CreateBatch',
     decision: opening,
-    occurrenceId: createOccurrenceId('n-prehub'),
+  });
+  const preHubId = createOccurrenceId('n-prehub');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, opening.source, 'prehub'),
+    occurrenceId: preHubId,
+    gameName: 'N_PreHub01',
+  });
+  const preHub = createExitDecisionAddress(biome, {
+    kind: 'occurrence',
+    occurrenceId: preHubId,
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'CreateHubDecision',
+    kind: 'CreateBatch',
+    decision: preHub,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceWithHubDecision',
+    decision: preHub,
     hub: createHubDecisionAddress(biome, 'hub'),
   });
   for (let index = 1; index <= 9; index += 1) {
@@ -768,7 +783,7 @@ describe('unified biome simulation', () => {
     if (biome?.authoring !== 'complete') throw new Error('N should be complete');
     expect(biome.validity).toBe('invalid');
     expect(biome.snapshot.decisions.map((decision) => decision.kind)).toEqual([
-      'linkedExit',
+      'batch',
       'hub',
       'batch',
     ]);

@@ -18,7 +18,9 @@ import {
   type ExitDecisionAddress,
 } from '../../authored-project/addresses';
 import {
+  declaredPhysicalExitsForSourceRoom,
   fixedWidthOneTakeoverForLayout,
+  normalDecisionProgressionForLayout,
   ordinaryProgressionBatchLimit,
 } from '../../authored-project/topology/query';
 import type { RewardHistoryState } from '../../reward-kernel';
@@ -26,6 +28,7 @@ import type {
   BiomeHistoryPrefix,
   CanonicalBiomeHistory,
   HistoryStateView,
+  ProgressiveRoomHistoryViews,
   TargetGenerationView,
 } from '../history';
 import { projectRecentEncounterPhases } from '../history';
@@ -47,6 +50,7 @@ import type {
   FieldsCageOutcomeSupportEntry,
   ForcePressureLedgerEntry,
   GeneratedRoomGenerationValidation,
+  HubTerminalTakeoverCandidateSupport,
   RoomTargetCandidateContext,
   RoomTargetCandidateValidation,
   RequirementEvaluationEvidence,
@@ -274,6 +278,28 @@ function projectRoomGenerationRequirementContext(
       : undefined,
     flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
   });
+}
+
+/**
+ * Most normal-door generation is evaluated at the source's outgoing
+ * checkpoint. The bounded N entry is the one current exception: its
+ * declaration means the Opening's committed depth-one state admits PreHub.
+ * This preserves the real lifecycle event order while giving the normalized
+ * ordinary candidate its game-equivalent counter context.
+ */
+export function normalTargetCandidateHistory(
+  layout: BiomeLayout,
+  source: CanonicalAuthoredRoom,
+  views: ProgressiveRoomHistoryViews,
+): HistoryStateView | undefined {
+  if (
+    layout.progression.kind === 'hub' &&
+    layout.start.kind === 'fixedAuthored' &&
+    source.gameName === layout.start.roomGameName
+  ) {
+    return views.postCommit;
+  }
+  return views.preOutgoing;
 }
 
 function compatible(
@@ -563,11 +589,11 @@ function evaluateCandidate(
   });
 }
 
-function generatedCandidatePool(catalog: Catalog, biomeKey: string): readonly RoomDeclaration[] {
-  const layout = catalog.biomeLayouts.byKey[biomeKey];
-  if (layout?.progression.kind !== 'generated') {
+function normalCandidatePool(catalog: Catalog, layout: BiomeLayout): readonly RoomDeclaration[] {
+  const progression = normalDecisionProgressionForLayout(layout);
+  if (progression === undefined) {
     throw new BiomeRoomGenerationContractError(
-      `catalog does not provide ${biomeKey} candidate structure`,
+      `catalog does not provide ${layout.biomeKey} normal candidate structure`,
     );
   }
   const startNames = new Set(
@@ -578,7 +604,7 @@ function generatedCandidatePool(catalog: Catalog, biomeKey: string): readonly Ro
   return Object.freeze(
     catalog.rooms.values.filter(
       (room) =>
-        room.biomeKey === biomeKey &&
+        room.biomeKey === layout.biomeKey &&
         room.mode.kind === 'authored' &&
         room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors' &&
         !startNames.has(room.gameName),
@@ -591,14 +617,13 @@ function stagedCandidatePool(
   layout: BiomeLayout,
   batchIndex: number,
 ): readonly RoomDeclaration[] {
-  if (layout.progression.kind !== 'generated') {
-    throw new BiomeRoomGenerationContractError(
-      `${layout.biomeKey} has no generated candidate policy`,
-    );
+  const progression = normalDecisionProgressionForLayout(layout);
+  if (progression === undefined) {
+    throw new BiomeRoomGenerationContractError(`${layout.biomeKey} has no normal candidate policy`);
   }
-  const policy = layout.progression.progressionPolicy;
+  const policy = progression.progressionPolicy;
   if (policy.kind !== 'staged') {
-    return generatedCandidatePool(catalog, layout.biomeKey);
+    return normalCandidatePool(catalog, layout);
   }
   const stage = policy.stages[batchIndex];
   if (stage === undefined) {
@@ -642,7 +667,7 @@ function firstTargetCandidateDomain(
     // an ordinary early-batch option. The topology query owns its identity
     // and shape, including malformed declaration rejection.
     takeover:
-      fixedForLayout === undefined
+      layout.progression.kind === 'generated' && fixedForLayout === undefined
         ? takeoverCandidatePool(catalog, layout.biomeKey)
         : Object.freeze([]),
     fixedTakeover: undefined,
@@ -715,11 +740,7 @@ function generationRooms(
   const rooms = [
     snapshot.entryRoom,
     ...generationDecisions(snapshot).flatMap((decision) =>
-      decision.kind === 'batch'
-        ? decision.targets.map((target) => target.room)
-        : decision.kind === 'linkedExit'
-          ? [decision.target.room]
-          : [],
+      decision.kind === 'batch' ? decision.targets.map((target) => target.room) : [],
     ),
   ];
   return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
@@ -1175,9 +1196,9 @@ function firstTargetGenerationSupport(
   rewardHistory?: RewardHistoryState,
 ): FirstTargetGenerationSupport {
   const layout = catalog.biomeLayouts.byKey[biomeKey];
-  if (layout?.progression.kind !== 'generated') {
+  if (layout === undefined || normalDecisionProgressionForLayout(layout) === undefined) {
     throw new BiomeRoomGenerationContractError(
-      `${biomeKey} has no generated first-target candidate domain`,
+      `${biomeKey} has no normal first-target candidate domain`,
     );
   }
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
@@ -1269,9 +1290,10 @@ function firstTargetRoomCandidateContext(
 
 /**
  * Builds the candidate domain at an uncommitted ordinary decision frontier.
- * It uses the source's pre-generation history, not a speculative target, so
- * callers can evaluate an empty or partially authored batch without changing
- * its persisted topology.
+ * It consumes the declaration-selected source checkpoint rather than a
+ * speculative target, so callers can evaluate an empty or partially authored
+ * batch without changing its persisted topology. Ordinary layouts use the
+ * outgoing checkpoint; the bounded N entry uses its committed checkpoint.
  */
 export function roomTargetCandidateContextAtFrontier(
   catalog: Catalog,
@@ -1286,10 +1308,8 @@ export function roomTargetCandidateContextAtFrontier(
   rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
 ): RoomTargetCandidateContext {
   const layout = catalog.biomeLayouts.byKey[biomeKey];
-  if (layout?.progression.kind !== 'generated') {
-    throw new BiomeRoomGenerationContractError(
-      `${biomeKey} has no ordinary target candidate domain`,
-    );
+  if (layout === undefined || normalDecisionProgressionForLayout(layout) === undefined) {
+    throw new BiomeRoomGenerationContractError(`${biomeKey} has no normal target candidate domain`);
   }
   const rewardHistory = targetRewardHistories(rewardHistoryCheckpoints).get(
     semanticAddressKey(targetOrigin),
@@ -1332,12 +1352,53 @@ function requireSource(
   return room;
 }
 
+/**
+ * A normal decision's semantic exit keys are declared by its layout, not
+ * reconstructed from `exit${n}`.  N's bounded Opening entry deliberately
+ * uses the stable physical key `prehub`; the later PreHub terminal envelope
+ * deliberately has no ordinary physical target at all.
+ */
+function normalPhysicalExitsForSource(
+  layout: BiomeLayout,
+  startOccurrenceId: CanonicalAuthoredRoom['occurrenceId'],
+  source: ExitDecisionAddress['source'],
+  sourceDeclaration: RoomDeclaration,
+): readonly CanonicalPhysicalExit[] {
+  const declared = declaredPhysicalExitsForSourceRoom(
+    layout,
+    startOccurrenceId,
+    source,
+    sourceDeclaration,
+  );
+  if (declared === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `${layout.biomeKey} has no declared physical exits for ${source.kind}`,
+    );
+  }
+  return Object.freeze(
+    declared.flatMap((exit) =>
+      exit.kind === 'normal'
+        ? [
+            Object.freeze({
+              kind: 'available' as const,
+              exitKey: exit.exitKey,
+              index: exit.index,
+              type: exit.type,
+              compatibilityPolicyKey: exit.compatibilityPolicyKey,
+            }),
+          ]
+        : [],
+    ),
+  );
+}
+
 function evaluateTargetSlots(
   catalog: Catalog,
   pool: readonly RoomDeclaration[],
   source: CanonicalGenerationSource,
   sourceBeforeGeneration: HistoryStateView,
   generationOrigin: ExitDecisionAddress,
+  physicalExits: readonly CanonicalPhysicalExit[],
   targets: readonly CanonicalTarget[],
   views: ReadonlyMap<string, TargetGenerationView>,
   candidateContexts: Map<string, RoomTargetCandidateContext>,
@@ -1352,7 +1413,6 @@ function evaluateTargetSlots(
     throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
   const biome = createBiomeAddress(generationOrigin.routeKey, generationOrigin.biomeKey);
-  const exits = [...sourceDeclaration.exits].sort((left, right) => left.index - right.index);
   const evaluateConcreteTarget = (target: CanonicalTarget): HistoryStateView => {
     const targetKey = semanticAddressKey(target.origin);
     const rewardHistory = rewardHistories.get(targetKey);
@@ -1369,7 +1429,7 @@ function evaluateTargetSlots(
       source,
       target.origin,
       target.exit,
-      view.before,
+      before,
       enteredBiomeCount,
       rewardHistory,
     );
@@ -1406,10 +1466,10 @@ function evaluateTargetSlots(
     return view.after;
   };
   let before = sourceBeforeGeneration;
-  for (const exit of exits) {
-    const target = targets.find((candidate) => candidate.exit.index === exit.index);
+  for (const exit of physicalExits) {
+    const target = targets.find((candidate) => candidate.exit.exitKey === exit.exitKey);
     const targetOrigin =
-      target?.origin ?? createTargetAddress(biome, generationOrigin.source, `exit${exit.index}`);
+      target?.origin ?? createTargetAddress(biome, generationOrigin.source, exit.exitKey);
     const rewardHistory = rewardHistories.get(semanticAddressKey(targetOrigin));
     if (target === undefined) {
       candidateContexts.set(
@@ -1419,13 +1479,7 @@ function evaluateTargetSlots(
           pool,
           source,
           targetOrigin,
-          Object.freeze({
-            kind: 'available' as const,
-            exitKey: `exit${exit.index}`,
-            index: exit.index,
-            type: exit.type,
-            compatibilityPolicyKey: exit.compatibilityPolicyKey,
-          }),
+          exit,
           before,
           enteredBiomeCount,
           rewardHistory,
@@ -1435,9 +1489,9 @@ function evaluateTargetSlots(
     }
     before = evaluateConcreteTarget(target);
   }
-  const availableExitIndexes = new Set(exits.map((exit) => exit.index));
+  const availableExitKeys = new Set(physicalExits.map((exit) => exit.exitKey));
   for (const target of targets) {
-    if (!availableExitIndexes.has(target.exit.index)) {
+    if (!availableExitKeys.has(target.exit.exitKey)) {
       evaluateConcreteTarget(target);
     }
   }
@@ -1583,6 +1637,58 @@ export function evaluateTakeoverPrebossBatchCandidateAtFrontier(
   );
 }
 
+/**
+ * Evaluates the single declaration-owned terminal after a bounded Hub entry.
+ * The caller establishes structural reachability and the exact empty-envelope
+ * shape; this generation authority evaluates only the terminal's current-run
+ * requirement and its required force against the predecessor's committed
+ * post-room history.
+ */
+export function hubTerminalTakeoverCandidateSupportAtFrontier(
+  catalog: Catalog,
+  source: ExitDecisionAddress,
+  owner: CanonicalAuthoredRoom,
+  ownerHistory: HistoryStateView,
+  enteredBiomeCount: number,
+): HubTerminalTakeoverCandidateSupport {
+  if (source.source.kind !== 'occurrence' || source.source.occurrenceId !== owner.occurrenceId) {
+    throw new BiomeRoomGenerationContractError(
+      `${semanticAddressKey(source)} does not own its Hub terminal predecessor`,
+    );
+  }
+  const layout = catalog.biomeLayouts.byKey[source.biomeKey];
+  if (layout?.progression.kind !== 'hub') {
+    throw new BiomeRoomGenerationContractError(
+      `${source.biomeKey} has no declaration-owned Hub terminal`,
+    );
+  }
+  const sourceDeclaration = catalog.rooms.byKey[owner.gameName];
+  if (sourceDeclaration === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `${semanticAddressKey(source)} lost predecessor declaration ${owner.gameName}`,
+    );
+  }
+  const terminal = layout.progression.terminal;
+  assertGenerationRequirement(terminal.eligibility);
+  const context = projectRoomGenerationRequirementContext(
+    owner,
+    sourceDeclaration,
+    ownerHistory,
+    enteredBiomeCount,
+  );
+  const eligibility = requirementEvidence(terminal.eligibility, context);
+  const selectedPossible = eligibility.satisfied;
+  return Object.freeze({
+    source,
+    hubKey: layout.progression.hubKey,
+    gameName: terminal.roomGameName,
+    eligibility,
+    force: terminal.force,
+    support: selectedPossible ? ('required' as const) : ('impossible' as const),
+    selectedPossible,
+  });
+}
+
 function ordinaryBatchIndexBeforeSource(
   catalog: Catalog,
   snapshot: BiomeGenerationSnapshot,
@@ -1698,19 +1804,11 @@ export function evaluateBiomeRoomGenerationAssembly(
       `catalog does not provide ${snapshot.biomeKey} progression policy`,
     );
   }
-  if (layout.progression.kind === 'hub') {
-    const validation: GeneratedRoomGenerationValidation = Object.freeze({
-      biomeKey: snapshot.biomeKey,
-      validity: 'valid',
-      forcePressure: Object.freeze([]),
-      encounterCounts: Object.freeze([]),
-      fieldsCageOutcomes: Object.freeze([]),
-      findings: Object.freeze([]),
-    });
-    return Object.freeze({
-      validation,
-      candidateArtifacts: createRoomTargetCandidateArtifacts(new Map()),
-    });
+  const normalProgression = normalDecisionProgressionForLayout(layout);
+  if (normalProgression === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `${snapshot.biomeKey} has no normal decision progression`,
+    );
   }
 
   let ordinaryBatchIndex = 0;
@@ -1756,17 +1854,31 @@ export function evaluateBiomeRoomGenerationAssembly(
       continue;
     }
     const source = requireSource(rooms, batch.parent.origin);
-    const sourceBeforeGeneration = history.rooms.find(
+    const sourceViews = history.rooms.find(
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
-    )?.preOutgoing;
+    );
+    const sourceBeforeGeneration =
+      sourceViews === undefined
+        ? undefined
+        : normalTargetCandidateHistory(layout, source, sourceViews);
     if (sourceBeforeGeneration === undefined) {
       throw new BiomeRoomGenerationContractError(
         `source ${semanticAddressKey(source.origin)} has no pre-generation view`,
       );
     }
-    if (layout.progression.batchPolicy.kind === 'fields') {
+    const sourceDeclaration = catalog.rooms.byKey[source.gameName];
+    if (sourceDeclaration === undefined) {
+      throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
+    }
+    const physicalExits = normalPhysicalExitsForSource(
+      layout,
+      snapshot.entryRoom.occurrenceId,
+      batch.source,
+      sourceDeclaration,
+    );
+    if (normalProgression.batchPolicy.kind === 'fields') {
       const support = evaluateFieldsCageOutcome(
-        layout.progression.batchPolicy,
+        normalProgression.batchPolicy,
         batch,
         sourceBeforeGeneration,
       );
@@ -1787,6 +1899,7 @@ export function evaluateBiomeRoomGenerationAssembly(
       source,
       sourceBeforeGeneration,
       batch.origin,
+      physicalExits,
       batch.targets,
       views,
       candidateContexts,

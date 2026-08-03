@@ -394,9 +394,6 @@ function prefixCoveragePoint(prefix: MaterializedBiomePrefix): BiomeEvaluationPo
   if (last.kind === 'batch') {
     return Object.freeze({ owner: last.selectedOrigin, checkpoint: 'afterTargetGeneration' });
   }
-  if (last.kind === 'linkedExit') {
-    return Object.freeze({ owner: last.target.origin, checkpoint: 'afterTargetGeneration' });
-  }
   return Object.freeze({ owner: last.origin, checkpoint: 'afterTargetGeneration' });
 }
 
