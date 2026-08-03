@@ -9,4 +9,10 @@ export default defineConfig({
       '@planner': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    strictPort: true,
+    watch: {
+      ignored: ['**/src-tauri/**'],
+    },
+  },
 });

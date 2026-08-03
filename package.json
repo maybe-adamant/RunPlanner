@@ -13,6 +13,8 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @run-planner/planner",
+    "desktop:dev": "npm run desktop:dev --workspace @run-planner/planner",
+    "desktop:build": "npm run desktop:build --workspace @run-planner/planner",
     "build": "npm run build --workspace @run-planner/planner",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
