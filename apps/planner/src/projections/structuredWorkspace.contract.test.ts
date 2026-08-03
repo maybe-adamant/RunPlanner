@@ -28,7 +28,12 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures';
-import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
+import {
+  appendNEntry,
+  createRepresentativeNOPQProject,
+  nBiome,
+  nOccurrenceId,
+} from '@run-planner/test-fixtures';
 import {
   expectedWorkspaceLeafRequirements,
   type ExpectedWorkspaceLeafInteraction,
@@ -241,6 +246,8 @@ function withoutStructuralInteraction(
       return { ...interactions, exitSelections: without(interactions.exitSelections) };
     case 'fieldsCageOutcome':
       return { ...interactions, fieldsCageOutcomes: without(interactions.fieldsCageOutcomes) };
+    case 'hubTakeover':
+      return { ...interactions, hubTakeovers: without(interactions.hubTakeovers) };
     case 'hubSlot':
       return { ...interactions, hubSlots: without(interactions.hubSlots) };
     case 'hubVisit':
@@ -955,26 +962,14 @@ describe('structured workspace overlay contract', () => {
       }),
       kind: 'CreateBatch',
     });
-    const nStarted = applyProjectCommand(emptyN, catalog, {
-      biome: nBiome,
-      kind: 'CreateStart',
-      occurrenceId: nOccurrenceId('opening'),
-    });
-    const nHubFrontier = applyProjectCommand(nStarted, catalog, {
-      decision: createExitDecisionAddress(nBiome, {
-        kind: 'occurrence',
-        occurrenceId: nOccurrenceId('opening'),
-      }),
-      kind: 'CreateLinkedExit',
-      occurrenceId: nOccurrenceId('preHub'),
-    });
+    const nTerminal = appendNEntry(emptyN);
     for (const project of [
       createGoldenFGHIProject(),
       createRepresentativeNOPQProject(),
       emptyN,
       fFrontier,
       fEmptyDecision,
-      nHubFrontier,
+      nTerminal,
     ]) {
       const projected = projectWorkspace(project);
       assertRenderedWorkspaceStructuralControlClosure({
@@ -1020,19 +1015,7 @@ describe('structured workspace overlay contract', () => {
       }),
       kind: 'CreateBatch',
     });
-    const nStarted = applyProjectCommand(emptyN, catalog, {
-      biome: nBiome,
-      kind: 'CreateStart',
-      occurrenceId: nOccurrenceId('opening'),
-    });
-    const nHubFrontier = applyProjectCommand(nStarted, catalog, {
-      decision: createExitDecisionAddress(nBiome, {
-        kind: 'occurrence',
-        occurrenceId: nOccurrenceId('opening'),
-      }),
-      kind: 'CreateLinkedExit',
-      occurrenceId: nOccurrenceId('preHub'),
-    });
+    const nTerminal = appendNEntry(emptyN);
     const examples = new Map<
       ExpectedWorkspaceStructuralControl['kind'],
       {
@@ -1046,7 +1029,7 @@ describe('structured workspace overlay contract', () => {
       emptyN,
       fFrontier,
       fEmptyDecision,
-      nHubFrontier,
+      nTerminal,
     ]) {
       const projected = projectWorkspace(project);
       for (const route of project.routes) {
@@ -1071,6 +1054,7 @@ describe('structured workspace overlay contract', () => {
         'exitFrontierCapability',
         'exitSelection',
         'fieldsCageOutcome',
+        'hubTakeover',
         'hubSlot',
         'hubVisit',
         'roomPicker',

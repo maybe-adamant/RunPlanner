@@ -112,18 +112,13 @@ function nodeOwnedFocusKeys(node: WorkspaceNode): readonly string[] {
         ...(node.railMarker === undefined ? [] : [node.railMarker.focusKey]),
         ...roomOwnedFocusKeys(node.room),
       ]);
-    case 'linkedExit':
-      return Object.freeze([
-        node.marker.focusKey,
-        node.target.marker.focusKey,
-        ...roomOwnedFocusKeys(node.target.room),
-      ]);
     case 'ordinaryBatch':
     case 'mixedBatch':
     case 'takeoverBatch':
       return Object.freeze([
         node.marker.focusKey,
         node.selection.focusKey,
+        ...(node.hubTakeover === undefined ? [] : [node.hubTakeover.marker.focusKey]),
         ...(node.rewardStore === undefined ? [] : [node.rewardStore.focusKey]),
         ...node.targets.flatMap((target) => [
           target.marker.focusKey,

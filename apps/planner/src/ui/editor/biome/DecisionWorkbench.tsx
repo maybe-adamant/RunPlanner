@@ -12,8 +12,8 @@ import {
   type WorkspaceAuthoringFrontier,
   type WorkspaceBatchRepairIntent,
   type WorkspaceCommandIntent,
+  type WorkspaceHubTakeoverInteraction,
   type WorkspaceInteractionCatalog,
-  type WorkspaceLinkedExitNode,
   type WorkspaceMarker,
   type WorkspaceMissingPhysicalTarget,
   type WorkspacePhysicalTarget,
@@ -31,6 +31,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { candidateSupport } from '@planner/projections/candidateProjection';
 import { CandidateSelect } from './CandidateSelect';
 import { RoomOfferEditor } from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';
@@ -331,6 +332,54 @@ function TakeoverAction({
   }
 }
 
+/**
+ * The terminal Hub control remains projected for every exact authored
+ * envelope. Lazy candidate evidence affects only its affordance, while the
+ * complete replacement command and post-publication focus remain bound by the
+ * workspace interaction.
+ */
+function HubTakeoverAction({
+  interaction,
+}: {
+  readonly interaction: WorkspaceHubTakeoverInteraction;
+}) {
+  const executeIntent = useCommandIntent();
+  const candidates = useWorkspaceInteraction(interaction);
+  const candidate = candidates.result;
+  const support = candidateSupport(candidate);
+  const disabled = candidate !== undefined && support !== 'forced' && support !== 'possible';
+  const activate = (): void => {
+    const loaded = candidates.result ?? candidates.activate();
+    const loadedSupport = candidateSupport(loaded);
+    if (loadedSupport !== 'forced' && loadedSupport !== 'possible') return;
+    executeIntent(interaction.intent());
+  };
+  return (
+    <section
+      className="takeover-action hub-takeover-action"
+      data-candidate-support={support}
+      data-presentation="hubTakeover"
+    >
+      <div className="owner-markers">
+        <h4>Continue to Hub</h4>
+        <SemanticOwnerMarker address={interaction.hub} />
+      </div>
+      <p className="fixed-room-state">The next room is fixed by this route.</p>
+      <button
+        aria-busy={candidates.pending || undefined}
+        className="primary-action"
+        disabled={disabled}
+        onClick={activate}
+        onFocus={candidates.activate}
+        onPointerDown={candidates.activate}
+        type="button"
+      >
+        {interaction.label}
+      </button>
+    </section>
+  );
+}
+
 function BatchSettings({
   interactions,
   node,
@@ -456,6 +505,10 @@ export function BatchWorkbench({
     node.missingTargets.length === 0
       ? undefined
       : projectedTakeover;
+  const hubTakeover =
+    node.hubTakeover === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.hubTakeovers, node.hubTakeover.interactionKey);
   const removal = requireWorkspaceInteraction(
     interactions.topologyRemovals,
     workspaceInteractionKey(node.owner),
@@ -477,7 +530,11 @@ export function BatchWorkbench({
         <div>
           <p className="card-kicker">{label}</p>
           <h3>
-            {node.targets.length === 0 ? 'Configure room offers' : 'Choose a room and reward'}
+            {hubTakeover !== undefined
+              ? 'Continue to Hub'
+              : node.targets.length === 0
+                ? 'Configure room offers'
+                : 'Choose a room and reward'}
           </h3>
         </div>
         <div className="owner-markers">
@@ -485,28 +542,43 @@ export function BatchWorkbench({
         </div>
       </header>
       <BatchSettings interactions={interactions} node={node} />
-      <div className="decision-selection-heading">
-        <span>Room selection</span>
-        <SemanticOwnerMarker address={exitSelectionAddress(node.selection)} />
-      </div>
-      <div
-        aria-label={`${label} room offers`}
-        className="exit-list"
-        role={exitSelection === undefined ? 'group' : 'radiogroup'}
-      >
-        {node.targets.map((target) => (
-          <TargetRow interactions={interactions} key={target.exitKey} node={node} target={target} />
-        ))}
-        {node.kind === 'takeoverBatch' ? (
-          node.missingTargets.length === 0 ? null : (
-            <p className="fixed-room-state">Fix Preboss doors to restore the missing doors.</p>
-          )
-        ) : (
-          node.missingTargets.map((target) => (
-            <MissingTargetRow interactions={interactions} key={target.exitKey} target={target} />
-          ))
-        )}
-      </div>
+      {hubTakeover === undefined ? (
+        <>
+          <div className="decision-selection-heading">
+            <span>Room selection</span>
+            <SemanticOwnerMarker address={exitSelectionAddress(node.selection)} />
+          </div>
+          <div
+            aria-label={`${label} room offers`}
+            className="exit-list"
+            role={exitSelection === undefined ? 'group' : 'radiogroup'}
+          >
+            {node.targets.map((target) => (
+              <TargetRow
+                interactions={interactions}
+                key={target.exitKey}
+                node={node}
+                target={target}
+              />
+            ))}
+            {node.kind === 'takeoverBatch' ? (
+              node.missingTargets.length === 0 ? null : (
+                <p className="fixed-room-state">Fix Preboss doors to restore the missing doors.</p>
+              )
+            ) : (
+              node.missingTargets.map((target) => (
+                <MissingTargetRow
+                  interactions={interactions}
+                  key={target.exitKey}
+                  target={target}
+                />
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <HubTakeoverAction interaction={hubTakeover} />
+      )}
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
       <div className="workbench-action-row">
         {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
@@ -521,43 +593,6 @@ export function BatchWorkbench({
             Add next decision
           </button>
         )}
-      </div>
-    </section>
-  );
-}
-
-export function LinkedExitWorkbench({
-  interactions,
-  node,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly node: WorkspaceLinkedExitNode;
-}) {
-  const removal = requireWorkspaceInteraction(
-    interactions.topologyRemovals,
-    workspaceInteractionKey(node.owner),
-  );
-  return (
-    <section className="decision-card linked-exit-workbench">
-      <header className="decision-heading">
-        <div>
-          <p className="card-kicker">Fixed next room</p>
-          <h3>{node.target.room.label}</h3>
-        </div>
-        <div className="owner-markers">
-          <SemanticOwnerMarker address={node.owner} />
-          <SemanticOwnerMarker address={node.target.marker.address} />
-        </div>
-      </header>
-      <p className="fixed-room-state">The game fixes the next room here.</p>
-      <RoomOfferEditor
-        idPrefix={`linked-${node.target.room.occurrenceId}-reward`}
-        interactions={interactions}
-        presentation="full"
-        room={node.target.room}
-      />
-      <div className="workbench-action-row">
-        <TopologyRemovalAction interaction={removal} label="Remove these doors" />
       </div>
     </section>
   );
@@ -654,15 +689,6 @@ function ExitFrontier({
             Add next decision
           </button>
         ) : null}
-        {structural?.action === 'createLinkedExit' ? (
-          <button
-            className="primary-action"
-            onClick={() => executeIntent(structural.intent())}
-            type="button"
-          >
-            Add fixed next room
-          </button>
-        ) : null}
       </div>
     </section>
   );
@@ -680,7 +706,6 @@ export function AuthoringFrontier({
       return <StartFrontier interaction={frontier} interactions={interactions} />;
     case 'exitDecision':
       return <ExitFrontier frontier={frontier} interactions={interactions} />;
-    case 'hubDecision':
     case 'hubVisit':
     case 'hubOpenSet':
       throw new BiomeWorkspaceContractError(

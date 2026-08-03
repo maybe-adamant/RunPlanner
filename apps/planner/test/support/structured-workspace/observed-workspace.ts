@@ -105,14 +105,11 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
   const markers: WorkspaceMarker[] = [];
   appendMarker(markers, node.marker);
   switch (node.kind) {
-    case 'linkedExit':
-      appendMarker(markers, node.target.marker);
-      markers.push(...roomMarkers(node.target.room));
-      break;
     case 'ordinaryBatch':
     case 'mixedBatch':
     case 'takeoverBatch':
       appendMarker(markers, node.selection);
+      appendMarker(markers, node.hubTakeover?.marker);
       if (node.rewardStore !== undefined) appendMarker(markers, node.rewardStore);
       if (node.fieldsCageOutcome !== undefined) appendMarker(markers, node.fieldsCageOutcome);
       for (const target of node.targets) {
@@ -151,8 +148,6 @@ function roomPackagesForNode(node: WorkspaceNode): readonly ObservedWorkspaceRoo
   switch (node.kind) {
     case 'occurrenceWorkbench':
       return Object.freeze([packageFor(node.room)]);
-    case 'linkedExit':
-      return Object.freeze([packageFor(node.target.room)]);
     case 'ordinaryBatch':
     case 'mixedBatch':
     case 'takeoverBatch':

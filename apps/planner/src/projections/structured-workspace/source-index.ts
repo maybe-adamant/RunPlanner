@@ -29,7 +29,6 @@ import type {
   CanonicalHubDecision,
   CanonicalHubTarget,
   CanonicalHubVisit,
-  CanonicalLinkedExit,
   CanonicalLocalChildRoom,
   CanonicalTarget,
   MaterializedBiomePrefix,
@@ -58,7 +57,6 @@ export interface WorkspaceBiomeSource {
     owner: ExitDecisionAddress,
   ) => WorkspaceEvaluatedBatchOverlay | undefined;
   readonly evaluatedHub: (owner: HubDecisionAddress) => CanonicalHubDecision | undefined;
-  readonly evaluatedLinkedExit: (owner: ExitDecisionAddress) => CanonicalLinkedExit | undefined;
   readonly exitDecision: (source: ExitDecisionSourceAddress) => ExitDecision | undefined;
   readonly findingsFor: (owner: SemanticAddress) => readonly SemanticFinding[];
   readonly hubDecision: (hubKey: string) => HubDecision | undefined;
@@ -131,12 +129,6 @@ function appendBatchOwners(keys: Set<string>, batch: CanonicalBatch): void {
   for (const target of batch.targets) appendTargetOwners(keys, target);
 }
 
-function appendLinkedExitOwners(keys: Set<string>, exit: CanonicalLinkedExit): void {
-  appendOwner(keys, exit.origin);
-  appendOwner(keys, exit.source.origin);
-  appendTargetOwners(keys, exit.target);
-}
-
 function appendHubTargetOwners(keys: Set<string>, target: CanonicalHubTarget): void {
   appendOwner(keys, target.origin);
   appendAuthoredRoomOwners(keys, target.room);
@@ -178,9 +170,6 @@ function appendDecisionOwners(
   switch (decision.kind) {
     case 'batch':
       appendBatchOwners(keys, decision);
-      return;
-    case 'linkedExit':
-      appendLinkedExitOwners(keys, decision);
       return;
     case 'hub':
       appendHubOwners(keys, decision, omittedHubBoardTargetKey);
@@ -304,14 +293,12 @@ interface EvaluatedBiomeOverlay {
   readonly batches: ReadonlyMap<string, WorkspaceEvaluatedBatchOverlay>;
   readonly entryRoom?: CanonicalAuthoredRoom;
   readonly hubs: ReadonlyMap<string, CanonicalHubDecision>;
-  readonly linkedExits: ReadonlyMap<string, CanonicalLinkedExit>;
 }
 
 function evaluatedBiomeOverlay(
   snapshot: CanonicalBiome | MaterializedBiomePrefix | undefined,
 ): EvaluatedBiomeOverlay {
   const batches = new Map<string, WorkspaceEvaluatedBatchOverlay>();
-  const linkedExits = new Map<string, CanonicalLinkedExit>();
   const hubs = new Map<string, CanonicalHubDecision>();
   const insert = <T>(map: Map<string, T>, key: string, value: T, label: string): void => {
     if (map.has(key)) {
@@ -326,9 +313,6 @@ function evaluatedBiomeOverlay(
     switch (decision.kind) {
       case 'batch':
         insert(batches, key, Object.freeze({ batch: decision, partial: false }), 'batch');
-        break;
-      case 'linkedExit':
-        insert(linkedExits, key, decision, 'linked exit');
         break;
       case 'hub':
         insert(hubs, key, decision, 'Hub');
@@ -349,7 +333,6 @@ function evaluatedBiomeOverlay(
     batches,
     ...(snapshot?.entryRoom === undefined ? {} : { entryRoom: snapshot.entryRoom }),
     hubs,
-    linkedExits,
   });
 }
 
@@ -381,10 +364,6 @@ function authoredExitDecisionsInTopologyOrder(
     if (decision === undefined) return;
     visited.add(key);
     ordered.push(decision);
-    if (decision.normal.kind === 'linked') {
-      visit({ kind: 'occurrence', occurrenceId: decision.normal.occurrenceId });
-      return;
-    }
     const rank = new Map(
       physicalExitsForSource(catalog, layout, plan, decision.source).map(
         (exit) => [exit.exitKey, exit.index] as const,
@@ -470,13 +449,6 @@ function createWorkspaceBiomeSource(
       );
     }
   }
-  for (const key of overlay.linkedExits.keys()) {
-    if (exitDecisionsByOwner.get(key)?.normal.kind !== 'linked') {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} has an evaluated linked exit without an authored linked decision`,
-      );
-    }
-  }
   for (const key of overlay.hubs.keys()) {
     if (!hubDecisionsByKey.has(key)) {
       throw new StructuredWorkspaceProjectionContractError(
@@ -492,8 +464,6 @@ function createWorkspaceBiomeSource(
     evaluation,
     evaluatedBatch: (owner: ExitDecisionAddress) => overlay.batches.get(semanticAddressKey(owner)),
     evaluatedHub: (owner: HubDecisionAddress) => overlay.hubs.get(semanticAddressKey(owner)),
-    evaluatedLinkedExit: (owner: ExitDecisionAddress) =>
-      overlay.linkedExits.get(semanticAddressKey(owner)),
     exitDecision: (source: ExitDecisionSourceAddress) =>
       exitDecisionsByOwner.get(semanticAddressKey(createExitDecisionAddress(biome, source))),
     exitDecisions,

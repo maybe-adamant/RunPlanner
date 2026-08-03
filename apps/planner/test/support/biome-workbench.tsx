@@ -11,7 +11,6 @@ import type {
   StructuredWorkspaceProjection,
   WorkspaceAuthoringFrontier,
   WorkspaceBiome,
-  WorkspaceLinkedExitNode,
   WorkspaceMixedBatchNode,
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOrdinaryBatchNode,
@@ -24,7 +23,6 @@ import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import {
   AuthoringFrontier,
   BatchWorkbench,
-  LinkedExitWorkbench,
   TopologyRemovalAction,
 } from '@planner/ui/editor/biome/DecisionWorkbench';
 import { HubDecisionWorkbench } from '@planner/ui/editor/biome/HubDecisionWorkbench';
@@ -148,10 +146,7 @@ export function renderWorkspace(
 }
 
 export type DecisionWorkbenchNode =
-  | WorkspaceLinkedExitNode
-  | WorkspaceMixedBatchNode
-  | WorkspaceOrdinaryBatchNode
-  | WorkspaceTakeoverBatchNode;
+  WorkspaceMixedBatchNode | WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode;
 
 export type DecisionWorkbenchSubject =
   | { readonly kind: 'frontier'; readonly frontier: WorkspaceAuthoringFrontier }
@@ -176,9 +171,7 @@ export function renderDecisionWorkbench(
           <AuthoringFrontier frontier={subject.frontier} interactions={workspace.interactions} />
         );
       }
-      return subject.node.kind === 'linkedExit' ? (
-        <LinkedExitWorkbench interactions={workspace.interactions} node={subject.node} />
-      ) : (
+      return (
         <BatchWorkbench
           interactions={workspace.interactions}
           label={biome.label}
@@ -288,8 +281,6 @@ export function renderStaticDecisionWorkbench(
   const workbench =
     subject.kind === 'frontier' ? (
       <AuthoringFrontier frontier={subject.frontier} interactions={workspace.interactions} />
-    ) : subject.node.kind === 'linkedExit' ? (
-      <LinkedExitWorkbench interactions={workspace.interactions} node={subject.node} />
     ) : (
       <BatchWorkbench
         interactions={workspace.interactions}

@@ -22,13 +22,13 @@ import {
   goldenGBiome,
   goldenHBiome,
   goldenIBiome,
+  nOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
   assembleWorkspaceDecision,
   type WorkspaceAuthoredBatchDecision,
-  type WorkspaceAuthoredLinkedExitDecision,
 } from './decision-assembly';
 import {
   assembleWorkspaceOccurrence,
@@ -111,12 +111,6 @@ function batchDecisionAt(
   return decision as WorkspaceAuthoredBatchDecision;
 }
 
-function linkedDecision(source: WorkspaceBiomeSource): WorkspaceAuthoredLinkedExitDecision {
-  const decision = source.exitDecisions.find((candidate) => candidate.normal.kind === 'linked');
-  if (decision?.normal.kind !== 'linked') throw new Error('authored linked exit is missing');
-  return decision as WorkspaceAuthoredLinkedExitDecision;
-}
-
 function catalogWithNonFieldsBoundedRoom(gameName: string): Catalog {
   const room = catalog.rooms.byKey[gameName];
   if (room === undefined) throw new Error(`catalog has no ${gameName}`);
@@ -183,7 +177,8 @@ describe('structured workspace decision assembly', () => {
       source,
     });
 
-    if (assembly.kind !== 'batch') throw new Error('batch produced a linked-exit assembly');
+    if (assembly.kind !== 'batch')
+      throw new Error('decision did not produce an ordinary batch assembly');
     expect(assembly.batch.targets.map((target) => target.index)).toEqual(
       [...assembly.batch.targets].map((target) => target.index).sort((left, right) => left - right),
     );
@@ -227,7 +222,8 @@ describe('structured workspace decision assembly', () => {
       source,
     });
 
-    if (assembly.kind !== 'batch') throw new Error('batch produced a linked-exit assembly');
+    if (assembly.kind !== 'batch')
+      throw new Error('decision did not produce an ordinary batch assembly');
     expect(assembly.batch.targets.every((target) => target.retained)).toBe(true);
     expect(assembly.workbenches.map((workbench) => workbench.room.occurrenceId)).toEqual(
       assembly.batch.targets.map((target) => target.room.occurrenceId),
@@ -709,33 +705,36 @@ describe('structured workspace decision assembly', () => {
     },
   );
 
-  it('keeps the linked PreHub workbench as the exact staged-removal focus destination', () => {
+  it('keeps the ordinary PreHub target inside its opening decision package', () => {
     const source = biomeSource(createRepresentativeNOPQProject(), 'Surface', 'N');
-    const decision = linkedDecision(source);
+    const decision = batchDecisionAt(source, nOccurrenceIds.opening);
     const owner = createExitDecisionAddress(source.biome, decision.source);
-    const evaluated = source.evaluatedLinkedExit(owner);
+    const evaluated = source.evaluatedBatch(owner);
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
       ...(evaluated === undefined ? {} : { evaluated }),
-      kind: 'linkedExit',
+      kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
     });
 
-    if (assembly.kind !== 'linkedExit') throw new Error('linked exit produced a batch assembly');
-    expect(assembly.workbench.sourceDecisionRemoval?.label).toBe('Remove PreHub');
-    expect(assembly.node.target.selected).toBe(true);
-    expect(assembly.node.target.retained).toBe(false);
-    expect(kit.markers.destinations().get(assembly.node.target.marker.focusKey)?.nodeKey).toBe(
-      assembly.workbench.key,
+    if (assembly.kind !== 'batch') throw new Error('PreHub decision did not produce a batch');
+    const target = assembly.batch.targets.find(
+      (candidate) => candidate.room.occurrenceId === nOccurrenceIds.preHub,
     );
-    expect(semanticAddressKey(assembly.node.owner)).toBe(semanticAddressKey(owner));
+    if (target === undefined) throw new Error('PreHub target is missing');
+    expect(target.selected).toBe(true);
+    expect(target.retained).toBe(false);
+    expect(kit.markers.destinations().get(target.marker.focusKey)?.nodeKey).toBe(
+      assembly.batch.key,
+    );
+    expect(semanticAddressKey(assembly.batch.owner)).toBe(semanticAddressKey(owner));
   });
 
-  it('uses the engine continuation fallback for unpicked and linked Preboss targets', () => {
+  it('uses the engine continuation fallback for unpicked Preboss targets', () => {
     const fSource = biomeSource(createGoldenFGHIProject(), 'Underworld', 'F');
     const fDecision = fSource.exitDecisions.find(
       (candidate) =>
@@ -760,34 +759,6 @@ describe('structured workspace decision assembly', () => {
         (target) => !target.selected && target.room.gameName === 'F_PreBoss01',
       )?.nextPath,
     ).toBe('deadLeaf');
-
-    const nSource = biomeSource(createRepresentativeNOPQProject(), 'Surface', 'N');
-    const nDecision = linkedDecision(nSource);
-    const linkedTarget = nSource.occurrence(nDecision.normal.occurrenceId);
-    const preboss = nSource.plan.topology?.occurrences.find(
-      (occurrence) => occurrence.gameName === 'N_PreBoss01',
-    );
-    if (linkedTarget === undefined || preboss === undefined) {
-      throw new Error('N linked Preboss fixture is missing');
-    }
-    const linkedPrebossSource: WorkspaceBiomeSource = {
-      ...nSource,
-      occurrence: (occurrenceId) =>
-        occurrenceId === linkedTarget.occurrenceId
-          ? { ...preboss, occurrenceId }
-          : nSource.occurrence(occurrenceId),
-    };
-    const nKit = decisionKit(linkedPrebossSource);
-    const nAssembly = assembleWorkspaceDecision({
-      assembleOccurrence: nKit.assembleOccurrence,
-      catalog,
-      decision: nDecision,
-      kind: 'linkedExit',
-      markerDestinations: nKit.markers.emitter,
-      source: linkedPrebossSource,
-    });
-    if (nAssembly.kind !== 'linkedExit') throw new Error('N Preboss target is not linked');
-    expect(nAssembly.node.target.nextPath).toBe('startsCompletion');
   });
 
   it('publishes only the next physical target after declaration-owned batch setup', () => {

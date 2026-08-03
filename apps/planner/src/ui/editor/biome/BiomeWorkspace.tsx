@@ -25,12 +25,7 @@ import {
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { FindingCount, SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
-import {
-  AuthoringFrontier,
-  BatchWorkbench,
-  LinkedExitWorkbench,
-  TopologyRemovalAction,
-} from './DecisionWorkbench';
+import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './DecisionWorkbench';
 import { BiomeFieldControls } from './BiomeFieldControls';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
@@ -94,8 +89,6 @@ function nodeLabel(node: WorkspaceNode): string {
   switch (node.kind) {
     case 'occurrenceWorkbench':
       return node.room.label;
-    case 'linkedExit':
-      return `Fixed next room · ${node.target.room.label}`;
     case 'ordinaryBatch':
       return 'Doors';
     case 'mixedBatch':
@@ -371,8 +364,6 @@ function InspectorNode({
         </>
       );
     }
-    case 'linkedExit':
-      return <LinkedExitWorkbench interactions={interactions} node={node} />;
     case 'ordinaryBatch':
     case 'mixedBatch':
     case 'takeoverBatch':

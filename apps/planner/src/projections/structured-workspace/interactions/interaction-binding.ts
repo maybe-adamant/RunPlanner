@@ -1,5 +1,4 @@
 import {
-  createBiomeAddress,
   createOccurrenceAddress,
   semanticAddressKey,
   type OccurrenceId,
@@ -33,6 +32,7 @@ import type {
   WorkspaceExitFrontierCapabilities,
   WorkspaceExitSelectionInteraction,
   WorkspaceHubSlotInteraction,
+  WorkspaceHubTakeoverInteraction,
   WorkspaceHubVisitInteraction,
   WorkspaceInteractionCatalog,
   WorkspaceInteractionChoice,
@@ -49,6 +49,7 @@ import type {
   WorkspaceBatchInteractionRequirement,
   WorkspaceFrontierInteractionRequirement,
   WorkspaceHubInteractionRequirement,
+  WorkspaceHubTakeoverInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
   WorkspaceStartInteractionRequirement,
   WorkspaceTakeoverInteractionRequirement,
@@ -89,6 +90,10 @@ export interface WorkspaceInteractionBindingInput {
     WorkspaceFrontierInteractionRequirement
   >;
   readonly hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>;
+  readonly hubTakeoverInteractionRequirements: ReadonlyMap<
+    string,
+    WorkspaceHubTakeoverInteractionRequirement
+  >;
   readonly occurrenceInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceOccurrenceInteractionRequirement
@@ -513,6 +518,69 @@ function bindHubInteractions(
   return Object.freeze({ hubSlots, hubVisits });
 }
 
+/**
+ * Binds the one terminal Hub result without rediscovering its source, depth,
+ * or room. The requirement is structural; the lazy candidate is only the
+ * affordance authority.
+ */
+function bindHubTakeoverInteractions(
+  candidates: CandidateProjectionSession,
+  catalog: Catalog,
+  requirements: Iterable<WorkspaceHubTakeoverInteractionRequirement>,
+): ReadonlyMap<string, WorkspaceHubTakeoverInteraction> {
+  const hubTakeovers = new Map<string, WorkspaceHubTakeoverInteraction>();
+  for (const requirement of requirements) {
+    const key = semanticAddressKey(requirement.owner);
+    if (hubTakeovers.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple bound Hub takeover interactions`,
+      );
+    }
+    let loaded: CandidateOptionProjection<WorkspaceHubTakeoverInteraction['owner']> | undefined;
+    const load = (): CandidateOptionProjection<WorkspaceHubTakeoverInteraction['owner']> =>
+      (loaded ??= candidates.hubTerminalTakeover(requirement.owner));
+    hubTakeovers.set(
+      key,
+      Object.freeze({
+        hub: requirement.hub,
+        intent: () => {
+          const candidate = load();
+          const support = candidateSupport(candidate);
+          if (support !== 'forced' && support !== 'possible') {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${requirement.gameName} is not currently authorable for ${key}`,
+            );
+          }
+          if (candidate.evaluation.kind !== 'unavailable') {
+            if (
+              candidate.evaluation.kind !== 'hubTerminalTakeover' ||
+              candidate.evaluation.result.gameName !== requirement.gameName ||
+              candidate.evaluation.result.hubKey !== requirement.hub.hubKey
+            ) {
+              throw new StructuredWorkspaceProjectionContractError(
+                `${key} Hub takeover candidate disagrees with its declared terminal`,
+              );
+            }
+          }
+          return Object.freeze({
+            command: Object.freeze({
+              decision: requirement.owner,
+              hub: requirement.hub,
+              kind: 'ReplaceWithHubDecision' as const,
+            }),
+            focus: Object.freeze({ owner: requirement.hub, timing: 'after' as const }),
+          });
+        },
+        key,
+        label: requireWorkspaceRoom(catalog, requirement.gameName).label,
+        load,
+        owner: requirement.owner,
+      }),
+    );
+  }
+  return hubTakeovers;
+}
+
 function bindTopologyRemovalInteractions(
   requirements: Iterable<WorkspaceTopologyRemovalInteractionRequirement>,
 ): ReadonlyMap<string, WorkspaceTopologyRemovalInteraction> {
@@ -706,7 +774,6 @@ interface WorkspaceFrontierInteractionCatalog {
 }
 
 function bindFrontierInteractions(
-  allocateOccurrenceId: OccurrenceIdFactory,
   requirements: Iterable<WorkspaceFrontierInteractionRequirement>,
 ): WorkspaceFrontierInteractionCatalog {
   const exitFrontierCapabilities = new Map<string, WorkspaceExitFrontierCapabilities>();
@@ -759,51 +826,9 @@ function bindFrontierInteractions(
               }),
             );
             break;
-          case 'createLinkedExit':
-            bindStructural(
-              Object.freeze({
-                action: 'createLinkedExit' as const,
-                intent: () => {
-                  const occurrenceId = allocateOccurrenceId();
-                  return Object.freeze({
-                    command: Object.freeze({
-                      decision: requirement.owner,
-                      kind: 'CreateLinkedExit' as const,
-                      occurrenceId,
-                    }),
-                    focus: Object.freeze({
-                      owner: createOccurrenceAddress(
-                        createBiomeAddress(requirement.owner.routeKey, requirement.owner.biomeKey),
-                        occurrenceId,
-                      ),
-                      timing: 'after' as const,
-                    }),
-                  });
-                },
-                key,
-                owner: requirement.owner,
-              }),
-            );
-            break;
         }
         break;
       }
-      case 'hubDecisionFrontier':
-        bindStructural(
-          Object.freeze({
-            action: 'createHubDecision' as const,
-            intent: Object.freeze({
-              command: Object.freeze({
-                kind: 'CreateHubDecision' as const,
-                hub: requirement.owner,
-              }),
-              focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
-            }),
-            key,
-            owner: requirement.owner,
-          }),
-        );
-        break;
     }
   }
   return Object.freeze({ exitFrontierCapabilities, structural });
@@ -915,6 +940,7 @@ export function bindWorkspaceInteractions(
     catalog,
     frontierInteractionRequirements,
     hubInteractionRequirements,
+    hubTakeoverInteractionRequirements,
     occurrenceInteractionRequirements,
     rewardControls,
     roomControls,
@@ -943,6 +969,11 @@ export function bindWorkspaceInteractions(
     candidates,
     hubInteractionRequirements.values(),
   );
+  const hubTakeovers = bindHubTakeoverInteractions(
+    candidates,
+    catalog,
+    hubTakeoverInteractionRequirements.values(),
+  );
   const topologyRemovals = bindTopologyRemovalInteractions(
     topologyRemovalInteractionRequirements.values(),
   );
@@ -959,7 +990,6 @@ export function bindWorkspaceInteractions(
     takeoverInteractionRequirements.values(),
   );
   const { exitFrontierCapabilities, structural } = bindFrontierInteractions(
-    allocateOccurrenceId,
     frontierInteractionRequirements.values(),
   );
   const rooms = new Map<string, WorkspaceRoomInteraction>();
@@ -1004,7 +1034,14 @@ export function bindWorkspaceInteractions(
       continue;
     }
 
-    const ordinaryRooms = targetCandidateRooms(catalog, project, control.address);
+    const ordinaryRooms =
+      control.kind === 'decisionEntryRoomPicker'
+        ? Object.freeze(
+            control.ordinaryTargetGameNames.map((gameName) =>
+              requireWorkspaceRoom(catalog, gameName),
+            ),
+          )
+        : targetCandidateRooms(catalog, project, control.address);
     if (control.kind === 'decisionEntryRoomPicker') {
       const takeoverRooms = Object.freeze(
         control.takeoverGameNames.map((gameName) => requireWorkspaceRoom(catalog, gameName)),
@@ -1225,6 +1262,7 @@ export function bindWorkspaceInteractions(
     exitFrontierCapabilities,
     exitSelections,
     fieldsCageOutcomes,
+    hubTakeovers,
     hubSlots,
     hubVisits,
     rewards,

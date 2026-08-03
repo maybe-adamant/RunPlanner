@@ -378,7 +378,7 @@ describe('underworld product loop', () => {
     ).find((button) => button.textContent?.includes('Pre-Hub'));
     if (preHub === undefined) throw new Error('N PreHub rail stage is missing');
     await view.user.click(preHub);
-    expect(screen.getAllByRole('heading', { name: 'Pre-Hub' })).toHaveLength(2);
+    expect(screen.getAllByRole('heading', { name: 'Pre-Hub' })).toHaveLength(1);
 
     const hub = nStructure.querySelector<HTMLButtonElement>('[data-kind="hubDecision"] button');
     if (hub === null) throw new Error('N Hub rail node is missing');

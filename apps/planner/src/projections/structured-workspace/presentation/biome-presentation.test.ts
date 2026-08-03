@@ -65,7 +65,7 @@ function hubRailEntry(rail: readonly WorkspaceRailEntry[]) {
 }
 
 describe('structured workspace biome presentation', () => {
-  it('presents the Hub outline after its frontier, then nests only authored visit workbenches', () => {
+  it('presents the Hub only after it is authored, then nests only authored visit workbenches', () => {
     const empty = createProjectDocument(catalog, {
       configuredBiomeCounts: { Surface: 1 },
       name: 'Empty N presentation',
@@ -74,7 +74,7 @@ describe('structured workspace biome presentation', () => {
     const emptyPresentation = present(empty, 'Surface', 'N');
 
     expect(emptyPresentation.assembly.progressionKind).toBe('hub');
-    expect(railShape(emptyPresentation.presentation.biome)).toEqual(['frontier:start', 'hub']);
+    expect(railShape(emptyPresentation.presentation.biome)).toEqual(['frontier:start']);
     expect(emptyPresentation.presentation.biome.defaultInspectorDestination).toMatchObject({
       kind: 'frontier',
       frontierFocusKey: emptyPresentation.presentation.biome.frontier?.marker.focusKey,
@@ -86,13 +86,10 @@ describe('structured workspace biome presentation', () => {
 
     expect(railShape(biome)).toEqual([
       'room:N_Opening01',
-      'room:N_PreHub01',
+      'ordinaryBatch',
       'hub',
       'room:N_PreBoss01',
     ]);
-    expect(
-      biome.rail.some((entry) => entry.kind === 'node' && entry.node.kind === 'linkedExit'),
-    ).toBe(false);
     expect(
       biome.rail.some(
         (entry) =>
@@ -116,29 +113,41 @@ describe('structured workspace biome presentation', () => {
         entry.node.kind === 'occurrenceWorkbench' &&
         entry.node.room.gameName === 'N_Opening01',
     );
-    const preHub = biome.rail.find(
+    const preHubDecision = biome.rail.find(
       (entry) =>
         entry.kind === 'node' &&
-        entry.node.kind === 'occurrenceWorkbench' &&
-        entry.node.room.gameName === 'N_PreHub01',
+        (entry.node.kind === 'ordinaryBatch' || entry.node.kind === 'mixedBatch') &&
+        entry.node.targets.some((target) => target.room.gameName === 'N_PreHub01'),
     );
+    const preHubDecisionNode =
+      preHubDecision?.kind === 'node' &&
+      (preHubDecision.node.kind === 'ordinaryBatch' || preHubDecision.node.kind === 'mixedBatch')
+        ? preHubDecision.node
+        : undefined;
+    const preHubSelectedTarget =
+      preHubDecision?.kind === 'node' ? preHubDecision.selectedTarget : undefined;
     if (
       opening?.kind !== 'node' ||
       opening.node.kind !== 'occurrenceWorkbench' ||
       opening.node.room.roomLocal.kind !== 'incomingReward' ||
-      preHub?.kind !== 'node' ||
-      preHub.node.kind !== 'occurrenceWorkbench' ||
-      preHub.node.room.roomLocal.kind !== 'incomingReward'
+      preHubDecisionNode === undefined ||
+      preHubSelectedTarget?.reward === undefined
     ) {
-      throw new Error('N Opening and PreHub primary rewards are missing');
+      throw new Error('N Opening and selected PreHub primary rewards are missing');
     }
     expect(opening.mainReward).toEqual({
       label: summarizeRewardOffer(catalog, opening.node.room.roomLocal.control.offer),
       offer: opening.node.room.roomLocal.control.offer,
     });
-    expect(preHub.mainReward).toEqual({
-      label: summarizeRewardOffer(catalog, preHub.node.room.roomLocal.control.offer),
-      offer: preHub.node.room.roomLocal.control.offer,
+    const preHub = preHubDecisionNode.targets.find(
+      (target) => target.room.gameName === 'N_PreHub01',
+    );
+    if (preHub?.room.roomLocal.kind !== 'incomingReward') {
+      throw new Error('N PreHub incoming reward is missing');
+    }
+    expect(preHubSelectedTarget.reward).toEqual({
+      label: summarizeRewardOffer(catalog, preHub.room.roomLocal.control.offer),
+      offer: preHub.room.roomLocal.control.offer,
     });
 
     const firstVisit = hub.visits[0];

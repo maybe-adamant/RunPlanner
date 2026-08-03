@@ -91,10 +91,6 @@ export function expectedWorkspaceDetailsActiveOccurrenceIds(
       }
       continue;
     }
-    if (decision.normal.kind === 'linked') {
-      active.add(decision.normal.occurrenceId);
-      continue;
-    }
     const target = decision.normal.targets.find((candidate) =>
       authoredTargetIsSelected(decision as AuthoredBatchDecision, candidate),
     );

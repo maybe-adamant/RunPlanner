@@ -57,16 +57,11 @@ interface WorkspaceHubAssemblyBaseInput {
   readonly topology: BiomeTopology | null;
 }
 
-/** Closed authored/outline Hub variants with their matching optional overlay. */
-export type WorkspaceHubAssemblyInput =
-  | (WorkspaceHubAssemblyBaseInput & {
-      readonly evaluated?: undefined;
-      readonly hub?: undefined;
-    })
-  | (WorkspaceHubAssemblyBaseInput & {
-      readonly evaluated?: CanonicalHubDecision;
-      readonly hub: HubDecision;
-    });
+/** An authored Hub board and its optional evaluator overlay. */
+export type WorkspaceHubAssemblyInput = WorkspaceHubAssemblyBaseInput & {
+  readonly evaluated?: CanonicalHubDecision;
+  readonly hub: HubDecision;
+};
 
 interface ProjectedHubTarget {
   readonly canonical?: CanonicalAuthoredRoom;
@@ -95,7 +90,6 @@ function projectHubNode(
   owner: HubDecisionAddress,
   targets: ReadonlyMap<string, ProjectedHubTarget>,
   visitOrder: readonly string[],
-  boardAuthored: boolean,
 ): WorkspaceHubAssembly {
   const { biome, catalog, descriptor, markerDestinations, topology } = input;
   const hubMarker = markerDestinations.marker(owner);
@@ -112,7 +106,7 @@ function projectHubNode(
     const occurrence = target === undefined ? undefined : occurrences.get(target.occurrenceId);
     const address = createHubSlotAddress(biome, descriptor.hubKey, slot.slotKey);
     const close =
-      boardAuthored && target !== undefined
+      target !== undefined
         ? Object.freeze({
             command: Object.freeze({ kind: 'CloseHubSlot' as const, slot: address }),
           })
@@ -148,32 +142,30 @@ function projectHubNode(
         redirectHubMainRewardFocus(markerDestinations, hubMarker, mainReward);
       }
     }
-    if (boardAuthored) {
-      slotRequirements.push(
-        target === undefined
-          ? Object.freeze({
-              choices: Object.freeze([
-                Object.freeze({ label: 'Closed', value: false }),
-                Object.freeze({ label: 'Open', value: true }),
-              ]),
-              owner: address,
-              selected: false as const,
-            })
-          : Object.freeze({
-              choices: Object.freeze([
-                Object.freeze({ label: 'Closed', value: false }),
-                Object.freeze({ label: 'Open', value: true }),
-              ]),
-              ...(close === undefined ? {} : { close }),
-              openedOccurrenceId: target.occurrenceId,
-              owner: address,
-              selected: true as const,
-            }),
-      );
-    }
+    slotRequirements.push(
+      target === undefined
+        ? Object.freeze({
+            choices: Object.freeze([
+              Object.freeze({ label: 'Closed', value: false }),
+              Object.freeze({ label: 'Open', value: true }),
+            ]),
+            owner: address,
+            selected: false as const,
+          })
+        : Object.freeze({
+            choices: Object.freeze([
+              Object.freeze({ label: 'Closed', value: false }),
+              Object.freeze({ label: 'Open', value: true }),
+            ]),
+            ...(close === undefined ? {} : { close }),
+            openedOccurrenceId: target.occurrenceId,
+            owner: address,
+            selected: true as const,
+          }),
+    );
     return Object.freeze({
-      canClose: boardAuthored && target !== undefined && !detailsActive,
-      canOpen: boardAuthored && target === undefined && targets.size < descriptor.openCount.max,
+      canClose: target !== undefined && !detailsActive,
+      canOpen: target === undefined && targets.size < descriptor.openCount.max,
       hubSlotKey: slot.slotKey,
       label: requireWorkspaceRoom(catalog, slot.roomGameName).label,
       marker: slotMarker,
@@ -193,33 +185,30 @@ function projectHubNode(
       }),
     ),
   );
-  const visitRequirements = boardAuthored
-    ? Object.freeze(
-        Array.from(
-          { length: Math.min(descriptor.requiredVisits, visitOrder.length + 1) },
-          (_, index) => {
-            const visitIndex = index + 1;
-            const selectedHubSlotKey = visitOrder[index];
-            const choices = Object.freeze(
-              hubVisitChoices.filter(
-                (choice) =>
-                  choice.value === selectedHubSlotKey || !visitOrder.includes(choice.value),
-              ),
-            );
-            const owner = createHubVisitAddress(biome, descriptor.hubKey, visitIndex);
-            return selectedHubSlotKey === undefined
-              ? Object.freeze({ action: 'append' as const, choices, owner, removable: false })
-              : Object.freeze({
-                  action: 'replace' as const,
-                  choices,
-                  owner,
-                  removable: true,
-                  selectedHubSlotKey,
-                });
-          },
-        ),
-      )
-    : Object.freeze([]);
+  const visitRequirements = Object.freeze(
+    Array.from(
+      { length: Math.min(descriptor.requiredVisits, visitOrder.length + 1) },
+      (_, index) => {
+        const visitIndex = index + 1;
+        const selectedHubSlotKey = visitOrder[index];
+        const choices = Object.freeze(
+          hubVisitChoices.filter(
+            (choice) => choice.value === selectedHubSlotKey || !visitOrder.includes(choice.value),
+          ),
+        );
+        const owner = createHubVisitAddress(biome, descriptor.hubKey, visitIndex);
+        return selectedHubSlotKey === undefined
+          ? Object.freeze({ action: 'append' as const, choices, owner, removable: false })
+          : Object.freeze({
+              action: 'replace' as const,
+              choices,
+              owner,
+              removable: true,
+              selectedHubSlotKey,
+            });
+      },
+    ),
+  );
   const visits = Array.from({ length: descriptor.requiredVisits }, (_, index) => {
     const visitIndex = index + 1;
     const hubSlotKey = visitOrder[index];
@@ -242,7 +231,7 @@ function projectHubNode(
     });
   });
   const node = Object.freeze({
-    authoring: boardAuthored ? ('authored' as const) : ('outline' as const),
+    authoring: 'authored' as const,
     kind: 'hubDecision' as const,
     key: `hub:${semanticAddressKey(owner)}`,
     hubKey: descriptor.hubKey,
@@ -267,16 +256,14 @@ function projectHubNode(
     ]),
     node.key,
   );
-  if (boardAuthored) {
-    hubInteractionRequirements.push(
-      Object.freeze({
-        kind: 'hubControls' as const,
-        owner,
-        slots: Object.freeze(slotRequirements),
-        visits: visitRequirements,
-      }),
-    );
-  }
+  hubInteractionRequirements.push(
+    Object.freeze({
+      kind: 'hubControls' as const,
+      owner,
+      slots: Object.freeze(slotRequirements),
+      visits: visitRequirements,
+    }),
+  );
   return Object.freeze({
     hubInteractionRequirements: Object.freeze(hubInteractionRequirements),
     node,
@@ -370,19 +357,10 @@ function projectAuthoredHubWithOverlay(
       );
     }
   }
-  return projectHubNode(input, owner, targets, hub.visitOrder, true);
+  return projectHubNode(input, owner, targets, hub.visitOrder);
 }
 
-/** Assemble either the declaration-owned Hub outline or its authored board. */
+/** Assemble the authored persistent Hub board. */
 export function assembleWorkspaceHub(input: WorkspaceHubAssemblyInput): WorkspaceHubAssembly {
-  if (input.hub === undefined) {
-    return projectHubNode(
-      input,
-      createHubDecisionAddress(input.biome, input.descriptor.hubKey),
-      new Map(),
-      Object.freeze([]),
-      false,
-    );
-  }
   return projectAuthoredHubWithOverlay(input);
 }

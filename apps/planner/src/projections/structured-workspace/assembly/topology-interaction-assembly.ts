@@ -1,6 +1,9 @@
 import {
   createExitDecisionAddress,
+  createHubDecisionAddress,
   fixedWidthOneTakeoverTransitionForSource,
+  hubTerminalTakeoverForSource,
+  isExactTerminalTakeoverEnvelope,
   semanticAddressKey,
   type ExitDecision,
   type ExitDecisionSourceAddress,
@@ -13,6 +16,7 @@ import { StructuredWorkspaceProjectionContractError } from '../contract';
 import {
   workspaceTakeoverInteractionRequirementKey,
   type WorkspaceFrontierInteractionRequirement,
+  type WorkspaceHubTakeoverInteractionRequirement,
   type WorkspaceStartInteractionRequirement,
   type WorkspaceTakeoverInteractionRequirement,
   type WorkspaceTopologyRemovalInteractionRequirement,
@@ -27,6 +31,7 @@ import { workspaceDeclaredPhysicalExitKeys } from './topology-presentation';
  */
 export interface WorkspaceTopologyInteractionAssembly {
   readonly frontierInteractionRequirements: readonly WorkspaceFrontierInteractionRequirement[];
+  readonly hubTakeoverInteractionRequirements: readonly WorkspaceHubTakeoverInteractionRequirement[];
   readonly startInteractionRequirements: readonly WorkspaceStartInteractionRequirement[];
   readonly takeoverInteractionRequirements: readonly WorkspaceTakeoverInteractionRequirement[];
   readonly topologyRemovalInteractionRequirements: readonly WorkspaceTopologyRemovalInteractionRequirement[];
@@ -72,15 +77,25 @@ function topologyRemovalInteractionRequirements(
     }),
   ];
   for (const decision of topology.decisions) {
-    if (decision.kind === 'hub') continue;
-    const owner = createExitDecisionAddress(biome, decision.source);
-    removals.push(
-      Object.freeze({
-        command: Object.freeze({ kind: 'RemoveExitDecision' as const, decision: owner }),
-        key: semanticAddressKey(owner),
-        owner,
-      }),
-    );
+    if (decision.kind === 'hub') {
+      const owner = createHubDecisionAddress(biome, decision.hubKey);
+      removals.push(
+        Object.freeze({
+          command: Object.freeze({ kind: 'RemoveHubDecision' as const, hub: owner }),
+          key: semanticAddressKey(owner),
+          owner,
+        }),
+      );
+    } else {
+      const owner = createExitDecisionAddress(biome, decision.source);
+      removals.push(
+        Object.freeze({
+          command: Object.freeze({ kind: 'RemoveExitDecision' as const, decision: owner }),
+          key: semanticAddressKey(owner),
+          owner,
+        }),
+      );
+    }
   }
   return Object.freeze([
     Object.freeze({
@@ -244,6 +259,41 @@ function takeoverInteractionRequirements(
 }
 
 /**
+ * A persisted exact terminal envelope is enough to publish the Hub action.
+ * Candidate support is intentionally loaded later by binding; findings and
+ * incomplete evaluation must not erase this authored control.
+ */
+function hubTakeoverInteractionRequirements(
+  input: WorkspaceTopologyInteractionAssemblyInput,
+): readonly WorkspaceHubTakeoverInteractionRequirement[] {
+  const { catalog, source } = input;
+  const { biome, layout, plan } = source;
+  const topology = plan.topology;
+  if (topology === null) return Object.freeze([]);
+  const requirements = new Map<string, WorkspaceHubTakeoverInteractionRequirement>();
+  for (const decision of topology.decisions) {
+    if (decision.kind !== 'exit' || !isExactTerminalTakeoverEnvelope(decision)) continue;
+    const terminal = hubTerminalTakeoverForSource(catalog, layout, topology, decision.source);
+    if (terminal === undefined) continue;
+    const owner = createExitDecisionAddress(biome, decision.source);
+    const requirement: WorkspaceHubTakeoverInteractionRequirement = Object.freeze({
+      gameName: terminal.room.gameName,
+      hub: createHubDecisionAddress(biome, terminal.hubKey),
+      kind: 'hubTakeover' as const,
+      owner,
+    });
+    const key = semanticAddressKey(owner);
+    if (requirements.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} has multiple projected Hub takeover requirements`,
+      );
+    }
+    requirements.set(key, requirement);
+  }
+  return Object.freeze([...requirements.values()]);
+}
+
+/**
  * A generated frontier exposes one bound continuation: create the next
  * decision envelope. Door 1 then owns the room choice, including any atomic
  * normal-door takeover Preboss selection.
@@ -252,7 +302,7 @@ function frontierInteractionRequirements(
   input: WorkspaceTopologyInteractionAssemblyInput,
 ): readonly WorkspaceFrontierInteractionRequirement[] {
   const { catalog, source } = input;
-  const { biome, layout, plan } = source;
+  const { biome, plan } = source;
   const topology = plan.topology;
   if (topology === null) return Object.freeze([]);
   const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
@@ -263,10 +313,7 @@ function frontierInteractionRequirements(
       const existing = source.exitDecision(owner.source);
       const structural =
         existing === undefined && owner.source.kind === 'occurrence'
-          ? layout.progression.kind === 'hub' &&
-            owner.source.occurrenceId === topology.startOccurrenceId
-            ? Object.freeze({ action: 'createLinkedExit' as const })
-            : Object.freeze({ action: 'createBatch' as const })
+          ? Object.freeze({ action: 'createBatch' as const })
           : undefined;
       if (structural === undefined) return Object.freeze([]);
       return Object.freeze([
@@ -279,13 +326,7 @@ function frontierInteractionRequirements(
       ]);
     }
     case 'hubDecision':
-      return Object.freeze([
-        Object.freeze({
-          kind: 'hubDecisionFrontier' as const,
-          owner: completeness.frontier,
-          structural: Object.freeze({ action: 'createHubDecision' as const }),
-        }),
-      ]);
+      return Object.freeze([]);
     case 'hubOpenSet':
     case 'hubVisit':
       return Object.freeze([]);
@@ -299,6 +340,7 @@ export function assembleWorkspaceTopologyInteractions(
   const takeover = takeoverInteractionRequirements(input);
   return Object.freeze({
     frontierInteractionRequirements: frontierInteractionRequirements(input),
+    hubTakeoverInteractionRequirements: hubTakeoverInteractionRequirements(input),
     startInteractionRequirements: startInteractionRequirements(input.source),
     takeoverInteractionRequirements: takeover,
     topologyRemovalInteractionRequirements: topologyRemovalInteractionRequirements(input),

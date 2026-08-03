@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
+  createHubDecisionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
@@ -19,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures';
 import {
   appendCompleteN,
+  appendNEntry,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
@@ -163,6 +165,29 @@ describe('workspace inspector destinations', () => {
     }
   });
 
+  it('routes the terminal Hub owner to its persisted PreHub decision before the board exists', () => {
+    const terminal = project(appendNEntry(emptyProject('Surface', 1)));
+    const n = biome(terminal, 'N');
+    const owner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.preHub,
+    });
+    const batch = n.nodes.find(
+      (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>
+        node.kind === 'ordinaryBatch' &&
+        semanticAddressKey(node.owner) === semanticAddressKey(owner),
+    );
+    if (batch === undefined || batch.hubTakeover === undefined) {
+      throw new Error('terminal N Hub takeover batch is missing');
+    }
+    expect(n.nodes.some((node) => node.kind === 'hubDecision')).toBe(false);
+    const railKey = railKeyForNode(n, batch.key);
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+
+    expect(batch.hubTakeover.marker.address).toEqual(hub);
+    expectNodeRailDestination(terminal, hub, batch.key, railKey);
+  });
+
   it('binds Hub board, visit, handoff, and fixed-stage presentation without React ownership scans', () => {
     const complete = project(createRepresentativeNOPQProject());
     const n = biome(complete, 'N');
@@ -176,27 +201,40 @@ describe('workspace inspector destinations', () => {
     );
     if (hub === undefined || hubRail === undefined) throw new Error('complete N Hub is missing');
 
-    const linked = n.nodes.find(
-      (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'linkedExit' }> =>
-        node.kind === 'linkedExit',
+    const preHubDecision = n.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof n.nodes)[number],
+        { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
+      > =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.source.kind === 'occurrence' &&
+        node.source.occurrenceId === nOccurrenceIds.opening,
     );
-    if (linked === undefined) throw new Error('complete N linked exit is missing');
-    const linkedWorkbench = n.nodes.find(
+    if (preHubDecision === undefined) throw new Error('complete N PreHub decision is missing');
+    const preHubTarget = preHubDecision.targets.find(
+      (target) => target.room.occurrenceId === nOccurrenceIds.preHub,
+    );
+    if (preHubTarget === undefined) throw new Error('complete N PreHub target is missing');
+    const preHubWorkbench = n.nodes.find(
       (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'occurrenceWorkbench' }> =>
         node.kind === 'occurrenceWorkbench' &&
-        node.room.occurrenceId === linked.target.room.occurrenceId,
+        node.room.occurrenceId === preHubTarget.room.occurrenceId,
     );
-    if (linkedWorkbench === undefined) throw new Error('complete N linked workbench is missing');
-    const linkedSource = destination(complete, linked.marker.address);
-    expect(linkedSource.inspectorSubject).toEqual({ kind: 'node', nodeKey: linkedWorkbench.key });
-    expect(linkedSource.selectedRailKey).toBeUndefined();
-    const linkedRailKey = railKeyForNode(n, linkedWorkbench.key);
+    if (preHubWorkbench === undefined) throw new Error('complete N PreHub workbench is missing');
+    const preHubSource = destination(complete, preHubDecision.marker.address);
+    const preHubRailKey = railKeyForNode(n, preHubDecision.key);
+    expect(preHubSource.inspectorSubject).toEqual({ kind: 'node', nodeKey: preHubDecision.key });
+    expect(preHubSource.selectedRailKey).toBe(preHubRailKey);
     for (const owner of [
-      linked.target.marker.address,
-      linked.target.room.marker.address,
-      ...linked.target.room.rewardControls.map((control) => control.marker.address),
+      preHubTarget.marker.address,
+      preHubTarget.room.marker.address,
+      ...preHubTarget.room.rewardControls.map((control) => control.marker.address),
     ]) {
-      expectNodeRailDestination(complete, owner, linkedWorkbench.key, linkedRailKey);
+      expectNodeRailDestination(complete, owner, preHubDecision.key, preHubRailKey);
     }
 
     const visit = hubRail.visits.find((candidate) => candidate.visitIndex === 3);

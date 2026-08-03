@@ -5,18 +5,19 @@ import {
   createOccurrenceAddress,
   createTargetAddress,
   ordinaryTargetAuthoringEligibility,
+  normalDecisionProgressionForLayout,
   selectedExitTarget,
   semanticAddressKey,
   type DeclaredPhysicalExit,
   type ExitDecision,
   type ExitDecisionAddress,
+  type HubDecisionAddress,
   type OccurrenceId,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
   CanonicalBatch,
-  CanonicalLinkedExit,
   CanonicalTarget,
   FieldsBatchFacts,
 } from '@run-planner/engine/simulation';
@@ -33,7 +34,6 @@ import {
   type WorkspaceBatchRepairIntent,
   type WorkspaceEffectiveRewardStore,
   type WorkspaceFieldsBatchContext,
-  type WorkspaceLinkedExitNode,
   type WorkspaceMissingPhysicalTarget,
   type WorkspaceMissingTargetAuthoring,
   type WorkspaceOccurrenceWorkbenchNode,
@@ -48,7 +48,6 @@ import type {
 } from '../interactions/interaction-requirements';
 import {
   workspaceDecisionOwnedMarkers,
-  workspaceOccurrenceOwnedMarkers,
   type WorkspaceDecisionBatchNode,
 } from '../navigation/marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
@@ -62,20 +61,13 @@ import { workspaceDeclaredPhysicalExits } from './topology-presentation';
 export type WorkspaceAuthoredBatchDecision = ExitDecision & {
   readonly normal: Extract<ExitDecision['normal'], { readonly kind: 'batch' }>;
 };
-export type WorkspaceAuthoredLinkedExitDecision = ExitDecision & {
-  readonly normal: Extract<ExitDecision['normal'], { readonly kind: 'linked' }>;
-};
 type AuthoredBatchDecision = WorkspaceAuthoredBatchDecision;
-type AuthoredLinkedExitDecision = WorkspaceAuthoredLinkedExitDecision;
 type AuthoredBatchTarget = WorkspaceAuthoredBatchDecision['normal']['targets'][number];
 
 type WorkspaceMissingTargetSetupPrerequisite = Extract<
   WorkspaceMissingTargetAuthoring,
   { readonly kind: 'awaitingBatchRewardStore' | 'awaitingFieldsCageOutcome' }
 >;
-
-/** A linked exit is validated by the core as the source room's sole normal door. */
-const linkedExitOrdinal = 1;
 
 /**
  * The decision layer can assemble room-local products, but cannot inspect the
@@ -84,22 +76,21 @@ const linkedExitOrdinal = 1;
 interface WorkspaceDecisionAssemblyBaseInput {
   readonly assembleOccurrence: WorkspaceOccurrenceAssembler;
   readonly catalog: Catalog;
+  /** A separately assembled terminal-Hub requirement for this exact decision. */
+  readonly hubTakeover?: {
+    readonly interactionKey: string;
+    readonly owner: HubDecisionAddress;
+  };
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly source: WorkspaceBiomeSource;
 }
 
-/** Closed input variants for one authored decision and its matching overlay. */
-export type WorkspaceDecisionAssemblyInput =
-  | (WorkspaceDecisionAssemblyBaseInput & {
-      readonly decision: AuthoredBatchDecision;
-      readonly evaluated?: WorkspaceEvaluatedBatchOverlay;
-      readonly kind: 'batch';
-    })
-  | (WorkspaceDecisionAssemblyBaseInput & {
-      readonly decision: AuthoredLinkedExitDecision;
-      readonly evaluated?: CanonicalLinkedExit;
-      readonly kind: 'linkedExit';
-    });
+/** One authored normal-door batch and its optional evaluator overlay. */
+export type WorkspaceDecisionAssemblyInput = WorkspaceDecisionAssemblyBaseInput & {
+  readonly decision: AuthoredBatchDecision;
+  readonly evaluated?: WorkspaceEvaluatedBatchOverlay;
+  readonly kind: 'batch';
+};
 
 export interface WorkspaceBatchDecisionAssembly {
   readonly batch: WorkspaceDecisionBatchNode;
@@ -111,52 +102,22 @@ export interface WorkspaceBatchDecisionAssembly {
   readonly workbenches: readonly WorkspaceOccurrenceWorkbenchNode[];
 }
 
-export interface WorkspaceLinkedExitDecisionAssembly {
-  readonly kind: 'linkedExit';
-  readonly node: WorkspaceLinkedExitNode;
-  readonly occurrenceInteractionRequirements: readonly WorkspaceOccurrenceInteractionRequirement[];
-  readonly roomControls: readonly WorkspaceRoomPickerControl[];
-  readonly rewardControls: readonly WorkspaceRewardControl[];
-  readonly workbench: WorkspaceOccurrenceWorkbenchNode;
-}
-
-export type WorkspaceDecisionAssembly =
-  WorkspaceBatchDecisionAssembly | WorkspaceLinkedExitDecisionAssembly;
+export type WorkspaceDecisionAssembly = WorkspaceBatchDecisionAssembly;
 
 function hubStageDecisionRemoval(
   input: WorkspaceDecisionAssemblyBaseInput,
   owner: ExitDecisionAddress,
-  stage: 'preHub' | 'preboss',
 ): WorkspaceStageDecisionRemoval | undefined {
   const { source } = input;
   const layout = source.layout;
   if (layout.progression.kind !== 'hub') return undefined;
   const isExpectedSource =
-    stage === 'preHub'
-      ? layout.start.kind === 'fixedAuthored' &&
-        owner.source.kind === 'occurrence' &&
-        source.occurrence(owner.source.occurrenceId)?.gameName === layout.start.roomGameName
-      : owner.source.kind === 'hubDecision' &&
-        owner.source.decisionKey === layout.progression.hubKey;
+    owner.source.kind === 'hubDecision' && owner.source.decisionKey === layout.progression.hubKey;
   if (!isExpectedSource) return undefined;
   return Object.freeze({
     interactionKey: workspaceInteractionKey(owner),
-    label: stage === 'preHub' ? 'Remove PreHub' : 'Remove Preboss',
+    label: 'Remove Preboss',
   });
-}
-
-function redirectLinkedFocus(
-  markerDestinations: WorkspaceMarkerDestinationEmitter,
-  node: WorkspaceLinkedExitNode,
-): void {
-  markerDestinations.redirect(
-    Object.freeze([
-      node.marker,
-      node.target.marker,
-      ...workspaceOccurrenceOwnedMarkers(node.target.room),
-    ]),
-    node.key,
-  );
 }
 
 /**
@@ -481,8 +442,9 @@ function roomControlsForBatch(
     return Object.freeze([]);
   }
   const decisionOwner = createExitDecisionAddress(input.source.biome, decision.source);
-  const emptyGeneratedDecision =
-    decision.normal.targets.length === 0 && input.source.layout.progression.kind === 'generated';
+  const emptyNormalDecision =
+    decision.normal.targets.length === 0 &&
+    normalDecisionProgressionForLayout(input.source.layout) !== undefined;
   const targetsByExit = new Map(targets.map((target) => [target.exitKey, target] as const));
   const missingByExit = new Map(missingTargets.map((target) => [target.exitKey, target] as const));
   const controls: WorkspaceRoomPickerControl[] = [];
@@ -505,7 +467,7 @@ function roomControlsForBatch(
       continue;
     }
     const missing = missingByExit.get(exit.exitKey);
-    if (emptyGeneratedDecision && exit.exitKey === firstPhysicalExitKey && missing !== undefined) {
+    if (emptyNormalDecision && exit.exitKey === firstPhysicalExitKey && missing !== undefined) {
       const address = createTargetAddress(input.source.biome, decision.source, missing.exitKey);
       controls.push(
         Object.freeze({
@@ -514,7 +476,10 @@ function roomControlsForBatch(
           kind: 'decisionEntryRoomPicker' as const,
           ordinaryTargetAuthoring: missing.authoring,
           ordinaryTargetGameNames: ordinaryTargetGameNames(input, address),
-          takeoverGameNames: takeoverGameNames(input.catalog, input.source.plan.biomeKey),
+          takeoverGameNames:
+            input.source.layout.progression.kind === 'generated'
+              ? takeoverGameNames(input.catalog, input.source.plan.biomeKey)
+              : Object.freeze([]),
         }),
       );
       continue;
@@ -642,7 +607,7 @@ function assembleBatchDecision(
   );
   const sourceDecisionRemoval =
     kind === 'takeoverBatch' && decision.source.kind === 'hubDecision'
-      ? hubStageDecisionRemoval(input, owner, 'preboss')
+      ? hubStageDecisionRemoval(input, owner)
       : undefined;
   const physical = workspaceDeclaredPhysicalExits(
     input.catalog,
@@ -712,6 +677,14 @@ function assembleBatchDecision(
     ...(effectiveRewardStore === undefined ? {} : { effectiveRewardStore }),
     ...(fieldsCageOutcome === undefined ? {} : { fieldsCageOutcome }),
     ...(fields === undefined ? {} : { fields }),
+    ...(input.hubTakeover === undefined
+      ? {}
+      : {
+          hubTakeover: Object.freeze({
+            interactionKey: input.hubTakeover.interactionKey,
+            marker: input.markerDestinations.marker(input.hubTakeover.owner),
+          }),
+        }),
     key: `batch:${semanticAddressKey(owner)}`,
     marker: input.markerDestinations.marker(owner),
     missingTargets,
@@ -776,100 +749,8 @@ function assembleBatchDecision(
   });
 }
 
-function assembleLinkedExitDecision(
-  input: Extract<WorkspaceDecisionAssemblyInput, { readonly kind: 'linkedExit' }>,
-): WorkspaceLinkedExitDecisionAssembly {
-  const { decision, evaluated, source } = input;
-  const owner = createExitDecisionAddress(source.biome, decision.source);
-  const occurrence = source.occurrence(decision.normal.occurrenceId);
-  if (occurrence === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${source.plan.biomeKey} linked target ${decision.normal.occurrenceId} is absent from authored occurrences`,
-    );
-  }
-  const address = createTargetAddress(source.biome, decision.source, decision.normal.exitKey);
-  if (evaluated !== undefined) {
-    const occurrenceAddress = createOccurrenceAddress(source.biome, occurrence.occurrenceId);
-    if (
-      semanticAddressKey(evaluated.origin) !== semanticAddressKey(owner) ||
-      semanticAddressKey(evaluated.target.origin) !== semanticAddressKey(address) ||
-      evaluated.target.room.occurrenceId !== occurrence.occurrenceId ||
-      evaluated.target.room.gameName !== occurrence.gameName ||
-      semanticAddressKey(evaluated.target.room.origin) !== semanticAddressKey(occurrenceAddress)
-    ) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${semanticAddressKey(owner)} evaluated linked exit does not match authored topology`,
-      );
-    }
-  }
-  const sourceDecisionRemoval = hubStageDecisionRemoval(input, owner, 'preHub');
-  const markerForTarget = input.markerDestinations.marker(address);
-  const physical = workspaceDeclaredPhysicalExits(
-    input.catalog,
-    source.layout,
-    source.plan,
-    decision.source,
-  ).find((exit) => exit.exitKey === decision.normal.exitKey);
-  const physicalState =
-    evaluated?.target.exit.kind ??
-    (physical === undefined ? ('unavailable' as const) : ('available' as const));
-  const occurrenceAssembly = input.assembleOccurrence(
-    Object.freeze({
-      ...(evaluated === undefined ? {} : { evaluatedRoom: evaluated.target.room }),
-      occurrence,
-    }),
-  );
-  const workbench = Object.freeze({
-    ...occurrenceAssembly.node,
-    ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
-    railMarker: markerForTarget,
-  });
-  const node = Object.freeze({
-    kind: 'linkedExit' as const,
-    key: `linked:${semanticAddressKey(owner)}`,
-    marker: input.markerDestinations.marker(owner),
-    owner,
-    source: decision.source,
-    target: Object.freeze({
-      ...(evaluated?.target.room.clockworkReward === undefined
-        ? {}
-        : { clockworkReward: evaluated.target.room.clockworkReward }),
-      exitKey: decision.normal.exitKey,
-      index: evaluated?.target.exit.index ?? physical?.index ?? linkedExitOrdinal,
-      marker: markerForTarget,
-      physicalState,
-      selected: true,
-      retained: evaluated === undefined || physicalState === 'unavailable',
-      nextPath:
-        evaluated?.target.continuation ??
-        targetContinuation(true, requireWorkspaceRoom(input.catalog, occurrence.gameName).kind),
-      room: workbench.room,
-    }),
-  });
-  if (sourceDecisionRemoval === undefined) {
-    redirectLinkedFocus(input.markerDestinations, node);
-  } else {
-    input.markerDestinations.redirect(
-      Object.freeze([
-        node.marker,
-        node.target.marker,
-        ...workspaceOccurrenceOwnedMarkers(node.target.room),
-      ]),
-      workbench.key,
-    );
-  }
-  return Object.freeze({
-    kind: 'linkedExit' as const,
-    node,
-    occurrenceInteractionRequirements: occurrenceAssembly.occurrenceInteractionRequirements,
-    roomControls: occurrenceAssembly.roomControls,
-    rewardControls: occurrenceAssembly.rewardControls,
-    workbench,
-  });
-}
-
 export function assembleWorkspaceDecision(
   input: WorkspaceDecisionAssemblyInput,
 ): WorkspaceDecisionAssembly {
-  return input.kind === 'batch' ? assembleBatchDecision(input) : assembleLinkedExitDecision(input);
+  return assembleBatchDecision(input);
 }
