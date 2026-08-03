@@ -56,10 +56,8 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
     case 'OpenHubSlot':
     case 'CloseHubSlot':
       return command.slot;
-    case 'AppendHubVisit':
-    case 'ReplaceHubVisit':
-    case 'RemoveHubVisitsFrom':
-      return command.visit;
+    case 'ReplaceHubVisitOrder':
+      return command.hub;
     case 'ReplaceSideRoomGeneration':
       return command.sideRoom;
     case 'ReplaceSideRoomEntryOrder':

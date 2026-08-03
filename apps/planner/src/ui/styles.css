@@ -1755,8 +1755,7 @@ select {
   container-type: inline-size;
 }
 
-.hub-board,
-.hub-visit-timeline {
+.hub-board {
   margin-top: 16px;
   border: 1px solid #3a3b45;
   border-radius: 12px;
@@ -1813,34 +1812,175 @@ select {
   outline-offset: 3px;
 }
 
-.hub-open-room-grid {
+.hub-ranked-room-board {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  position: relative;
+  gap: 10px;
   padding: 12px;
 }
 
-.hub-open-room-grid[tabindex='-1']:focus {
+.hub-ranked-visit-prefix,
+.hub-ranked-tail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.hub-ranked-room-board[tabindex='-1']:focus {
   outline: 2px solid #e2b971;
   outline-offset: 3px;
 }
 
+.hub-open-room-card[data-drop-before]::before,
+.hub-open-room-card[data-drop-after]::after {
+  position: absolute;
+  z-index: 2;
+  right: 6px;
+  left: 46px;
+  border-top: 1px dashed rgb(143 139 148 / 60%);
+  content: '';
+  pointer-events: none;
+}
+
+.hub-open-room-card[data-drop-before]::before {
+  top: -4px;
+}
+
+.hub-open-room-card[data-drop-after]::after {
+  bottom: -4px;
+}
+
+.hub-open-room-card[data-drop-before='available']::before,
+.hub-open-room-card[data-drop-after='available']::after {
+  border-color: #e2b971;
+  border-style: solid;
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgb(226 185 113 / 12%);
+}
+
+.hub-open-room-card[data-drop-before='unavailable']::before,
+.hub-open-room-card[data-drop-after='unavailable']::after {
+  border-color: #8a7478;
+}
+
+.hub-next-visit-target {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px dashed #4a4b56;
+  border-radius: 9px;
+  color: #b6b0a8;
+  background: rgb(255 255 255 / 1.5%);
+  font-size: 0.8rem;
+}
+
+.hub-next-visit-target[data-active='true'][data-available='true'] {
+  border-color: #e2b971;
+  background: rgb(226 185 113 / 8%);
+  box-shadow: 0 0 0 2px rgb(226 185 113 / 12%);
+}
+
+.hub-next-visit-target[data-active='true']:not([data-available='true']) {
+  border-color: #8a7478;
+}
+
+.hub-next-visit-copy {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 9px;
+}
+
+.hub-next-visit-copy > :first-child {
+  color: #e2b971;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.hub-next-visit-copy > :nth-child(2) {
+  color: #aaa7af;
+}
+
+.hub-next-visit-owner-markers {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex: 1 1 190px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.hub-next-visit-owner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  border: 1px solid #3d3e48;
+  border-radius: 999px;
+  color: #aaa7af;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.hub-next-visit-owner-label {
+  color: #d8d0c4;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.hub-next-visit-owner-assessment[data-assessment='unassessed'] {
+  color: #d3bd94;
+}
+
+.hub-next-visit-owner-assessment[data-assessment='blocked'] {
+  color: #d0c8d7;
+}
+
+.hub-visit-boundary {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 2px;
+  border-block: 1px solid rgb(226 185 113 / 26%);
+  color: #d8c39d;
+  font-size: 0.8rem;
+}
+
+.hub-visit-boundary > :last-child {
+  color: #aaa7af;
+  text-align: end;
+}
+
 .hub-closed-room-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
   padding: 0 12px 12px;
 }
 
 .hub-open-room-card {
   display: grid;
+  position: relative;
   align-content: start;
   min-width: 0;
-  padding: 12px;
+  padding: 10px 12px;
   border: 1px solid #34353e;
-  border-radius: 10px;
+  border-radius: 8px;
   background: rgb(255 255 255 / 2%);
   scroll-margin-block: 24px;
+}
+
+.hub-open-room-card[data-dragging='true'] {
+  border-style: dashed;
+  opacity: 0.42;
 }
 
 .hub-open-room-card[data-focused-main-reward='true'] {
@@ -1883,6 +2023,58 @@ select {
   min-width: 0;
 }
 
+.hub-roster-primary {
+  display: grid;
+  grid-template-columns: 28px 26px minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: 8px;
+}
+
+.hub-roster-drag-handle {
+  display: grid;
+  min-inline-size: 28px;
+  min-block-size: 32px;
+  place-items: center;
+  color: #8f8b94;
+  cursor: grab;
+  font-size: 1.05rem;
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+}
+
+.hub-roster-drag-handle[data-dragging='true'] {
+  cursor: grabbing;
+}
+
+.hub-roster-rank {
+  display: grid;
+  min-block-size: 32px;
+  place-items: center;
+  color: #e2b971;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.hub-roster-identity {
+  display: flex;
+  min-width: 0;
+  min-block-size: 32px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.hub-roster-identity > .hub-slot-heading,
+.hub-roster-identity > .hub-slot-heading > .owner-markers,
+.hub-roster-identity > .hub-slot-meta {
+  display: contents;
+}
+
+.hub-roster-identity .hub-slot-heading h3 {
+  min-width: 0;
+}
+
 .hub-slot-meta {
   display: grid;
   min-block-size: 28px;
@@ -1900,8 +2092,32 @@ select {
   gap: 8px;
 }
 
+.hub-roster-identity .hub-slot-state {
+  gap: 5px;
+}
+
 .hub-slot-meta > .semantic-focus-link {
   justify-self: end;
+}
+
+.hub-roster-identity .hub-slot-meta > .semantic-focus-link {
+  justify-self: auto;
+}
+
+.hub-rank-actions {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin: 0;
+}
+
+.hub-rank-action {
+  min-height: 30px;
+  min-width: 30px;
+  padding: 4px;
+  font-size: 0.95rem;
 }
 
 .hub-owner-assessment {
@@ -1922,13 +2138,13 @@ select {
 }
 
 .hub-main-reward {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin: 8px 0 0;
+  padding-top: 8px;
   border-top: 1px solid #353640;
 }
 
 .hub-main-reward[data-focused-main-reward='true'] {
-  margin-inline: -4px;
+  margin: 8px -4px 0;
   padding: 12px 4px 4px;
   border-radius: 8px;
   background: rgb(174 152 202 / 10%);
@@ -1938,6 +2154,27 @@ select {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
+}
+
+.hub-main-reward .contextual-picker {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.hub-main-reward .contextual-picker > label {
+  white-space: nowrap;
+}
+
+.hub-main-reward .contextual-picker-trigger > :first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hub-main-reward .contextual-picker-selected-explanation {
+  grid-column: 1 / -1;
 }
 
 .hub-membership-control {
@@ -1965,67 +2202,6 @@ select {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 7px;
-}
-
-.hub-visit-list {
-  display: grid;
-  gap: 0;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.hub-visit-row {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  align-items: start;
-  gap: 10px;
-  padding: 9px 12px;
-  border-top: 1px solid #30313a;
-}
-
-.hub-visit-index {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border: 1px solid #4a4b56;
-  border-radius: 50%;
-  color: #e2b971;
-  font-variant-numeric: tabular-nums;
-}
-
-.hub-visit-content {
-  min-width: 0;
-}
-
-.hub-visit-heading {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 8px;
-}
-
-.hub-visit-heading > .owner-markers {
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-.hub-visit-heading > .danger-action {
-  justify-self: end;
-}
-
-.hub-empty-visit-state {
-  margin: 0;
-  padding: 12px;
-  color: #aaa7af;
-  font-size: 0.9rem;
-}
-
-.hub-visit-reward {
-  margin: 4px 0 0;
-  color: #bdb7ae;
-  font-size: 0.82rem;
 }
 
 .hub-reward-context {
@@ -2058,35 +2234,86 @@ select {
   margin-inline-start: auto;
 }
 
-@container (max-width: 760px) {
-  .hub-open-room-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.hub-roster-drag-preview {
+  display: flex;
+  position: fixed;
+  z-index: 20;
+  top: 0;
+  left: 0;
+  min-width: 150px;
+  max-width: min(280px, calc(100vw - 28px));
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e2b971;
+  border-radius: 8px;
+  color: #f3ede4;
+  background: #23232a;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+  font-size: 0.84rem;
+  pointer-events: none;
+}
+
+.hub-roster-drag-preview > :first-child {
+  color: #e2b971;
+  font-size: 1rem;
+}
+
+@container (max-width: 620px) {
+  .hub-roster-primary {
+    grid-template-columns: 28px 24px minmax(0, 1fr) auto;
   }
 
-  .hub-closed-room-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .hub-roster-primary > .hub-membership-action {
+    grid-column: 4;
+    grid-row: 1;
+  }
+
+  .hub-roster-primary > .hub-rank-actions {
+    grid-column: 3 / -1;
+    grid-row: 2;
+    justify-self: start;
   }
 }
 
 @container (max-width: 500px) {
-  .hub-open-room-grid {
-    grid-template-columns: 1fr;
-  }
-
   .hub-closed-room-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
   }
 
-  .hub-visit-row {
-    grid-template-columns: 32px minmax(0, 1fr);
+  .hub-closed-room-option {
+    gap: 6px;
+    padding: 7px;
   }
 
-  .hub-visit-heading {
-    grid-template-columns: minmax(0, 1fr);
+  .hub-closed-room-option .hub-slot-heading {
+    align-items: stretch;
+    flex-direction: column;
   }
 
-  .hub-visit-heading > .danger-action {
-    justify-self: start;
+  .hub-closed-room-option .hub-membership-action {
+    align-self: start;
+  }
+
+  .hub-closed-room-option .hub-membership-control {
+    min-inline-size: 28px;
+    min-block-size: 28px;
+    justify-content: center;
+    gap: 0;
+    padding: 4px;
+  }
+
+  .hub-closed-room-option .hub-membership-control-label {
+    display: none;
+  }
+
+  .hub-visit-boundary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hub-visit-boundary > :last-child {
+    text-align: start;
   }
 }
 
@@ -2390,9 +2617,7 @@ select {
   .room-selector,
   .fields-batch-editor,
   .fields-batch-summary,
-  .reward-wheel-settings,
-  .hub-open-room-grid,
-  .hub-closed-room-grid {
+  .reward-wheel-settings {
     grid-template-columns: 1fr;
   }
 

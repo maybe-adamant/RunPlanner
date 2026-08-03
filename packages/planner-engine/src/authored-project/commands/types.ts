@@ -7,7 +7,6 @@ import type {
   ExitSelectionAddress,
   HubDecisionAddress,
   HubSlotAddress,
-  HubVisitAddress,
   IncomingRewardAddress,
   LocalChildAddress,
   LocalChildGroupAddress,
@@ -80,16 +79,10 @@ export type TopologyCommand =
     }
   | { readonly kind: 'CloseHubSlot'; readonly slot: HubSlotAddress }
   | {
-      readonly kind: 'AppendHubVisit';
-      readonly visit: HubVisitAddress;
-      readonly hubSlotKey: string;
+      readonly kind: 'ReplaceHubVisitOrder';
+      readonly hub: HubDecisionAddress;
+      readonly hubSlotKeys: readonly string[];
     }
-  | {
-      readonly kind: 'ReplaceHubVisit';
-      readonly visit: HubVisitAddress;
-      readonly hubSlotKey: string;
-    }
-  | { readonly kind: 'RemoveHubVisitsFrom'; readonly visit: HubVisitAddress }
   | {
       readonly kind: 'SetExitSelection';
       readonly selection: ExitSelectionAddress;

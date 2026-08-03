@@ -5,7 +5,6 @@ import {
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
-  createHubVisitAddress,
   createOccurrenceId,
   createProjectDocument,
   createTargetAddress,
@@ -63,13 +62,11 @@ export function createCompleteNProject(): ProjectDocument {
       occurrenceId: createOccurrenceId(`round-trip-n-${slotKey}`),
     });
   }
-  for (let index = 1; index <= 6; index += 1) {
-    document = applyProjectCommand(document, catalog, {
-      kind: 'AppendHubVisit',
-      visit: createHubVisitAddress(nBiome, 'hub', index),
-      hubSlotKey: `combat${String(index).padStart(2, '0')}`,
-    });
-  }
+  document = applyProjectCommand(document, catalog, {
+    kind: 'ReplaceHubVisitOrder',
+    hub: createHubDecisionAddress(nBiome, 'hub'),
+    hubSlotKeys: ['combat01', 'combat02', 'combat03', 'combat04', 'combat05', 'combat06'],
+  });
   return applyProjectCommand(document, catalog, {
     kind: 'CreateTakeoverBatch',
     decision: createExitDecisionAddress(nBiome, {

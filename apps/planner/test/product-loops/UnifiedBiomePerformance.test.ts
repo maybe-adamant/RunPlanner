@@ -1,6 +1,6 @@
 import {
+  createHubDecisionAddress,
   createHubSlotAddress,
-  createHubVisitAddress,
   createOccurrenceAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -153,9 +153,9 @@ describe('unified biome performance', () => {
     const edit = measure(() =>
       application.store.dispatch(
         authoredProjectCommandDispatched({
-          kind: 'ReplaceHubVisit',
-          hubSlotKey: 'combat01',
-          visit: createHubVisitAddress(nBiome, 'hub', 1),
+          hub: createHubDecisionAddress(nBiome, 'hub'),
+          hubSlotKeys: ['combat02', 'combat01', 'combat03', 'combat05', 'combat09', 'combat10'],
+          kind: 'ReplaceHubVisitOrder',
         }),
       ),
     );

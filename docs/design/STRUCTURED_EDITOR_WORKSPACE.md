@@ -411,15 +411,34 @@ language, but its center is not an ordinary decision spine. The
 - the persistent board over 26 declaration-fixed Hub slots, with nine or ten
   open members;
 - one complete room and incoming reward for each open slot;
-- the ordered six-visit pylon timeline;
+- one ranked open-room board: the exact dense authored visit prefix (through
+  six positions), one compact next-position target for every remaining visit
+  owner when incomplete, and a presentation-only unvisited tail;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
 - the fixed completed-Hub handoff to the width-one Preboss Shop and its derived
   completion sequence.
 
-The board remains a joint generation region. Rendered board order must not
-pretend to be a simulation prefix. Open-set membership and visit order remain
-separate semantic controls.
+The board remains a joint generation region. Its authored prefix is the only
+traversal order; its unvisited tail is React-local presentation state and is
+not persisted, evaluated, or placed in Undo history. A visible boundary keeps
+that distinction explicit. Open-set membership and visit order remain separate
+semantic controls.
+
+One Hub-decision-owned interaction supplies complete visit-prefix proposals.
+It never replaces the exact `HubVisitAddress` markers, inspector destinations,
+or positional assessment products: those remain reachable for both authored
+and unplanned visit positions. Tail-only moves are presentation changes;
+any prefix change dispatches one aggregate semantic command after the bound
+candidate interaction has evaluated the complete proposed prefix.
+
+Open Hub slots render as one ranked roster rather than a multi-column grid.
+The row's ordering and membership controls occupy its first line; its existing
+main-reward control occupies a second line so room-local detail can expand
+without changing a peer row's height. A visible pointer drag grip is an
+optional direct-manipulation surface, with named arrow controls retained for
+keyboard operation. Closed slots remain in their compact three-column
+disclosure grid.
 
 The N rail gives its fixed Opening and PreHub stages and each authored Hub
 visit one read-only primary-reward token when the room projects one. This is
@@ -568,8 +587,8 @@ The structured workspace is complete when:
 - ordinary-decision biomes show one labeled rail stop per decision, active
   frontier, Preboss structure, coverage, and findings without adding every
   room offer to the rail;
-- N shows its board and visit timeline through `HubDecisionWorkbench` without
-  acquiring ordinary-decision semantics;
+- N shows one ranked board with an explicit visit-prefix cutoff through
+  `HubDecisionWorkbench` without acquiring ordinary-decision semantics;
 - every ordinary decision exposes room, reward, and picked state together while
   preserving unpicked reward and finding state;
 - finding navigation focuses the exact semantic owner inside its owning

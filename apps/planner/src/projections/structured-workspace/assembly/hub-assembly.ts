@@ -164,7 +164,11 @@ function projectHubNode(
           }),
     );
     return Object.freeze({
-      canClose: target !== undefined && !detailsActive,
+      // Closing is structurally blocked by authored traversal membership, not
+      // by whether the evaluator happened to enter the room. An invalid or
+      // blocked authored visit must stay visibly unclosable until the user
+      // moves it out of the exact visit order.
+      canClose: target !== undefined && !visitOrder.includes(slot.slotKey),
       canOpen: target === undefined && targets.size < descriptor.openCount.max,
       hubSlotKey: slot.slotKey,
       label: requireWorkspaceRoom(catalog, slot.roomGameName).label,
@@ -176,39 +180,6 @@ function projectHubNode(
       visited: detailsActive,
     });
   });
-  const hubVisitSlots = Object.freeze(descriptor.slots.filter((slot) => targets.has(slot.slotKey)));
-  const hubVisitChoices = Object.freeze(
-    hubVisitSlots.map((slot) =>
-      Object.freeze({
-        label: requireWorkspaceRoom(catalog, slot.roomGameName).label,
-        value: slot.slotKey,
-      }),
-    ),
-  );
-  const visitRequirements = Object.freeze(
-    Array.from(
-      { length: Math.min(descriptor.requiredVisits, visitOrder.length + 1) },
-      (_, index) => {
-        const visitIndex = index + 1;
-        const selectedHubSlotKey = visitOrder[index];
-        const choices = Object.freeze(
-          hubVisitChoices.filter(
-            (choice) => choice.value === selectedHubSlotKey || !visitOrder.includes(choice.value),
-          ),
-        );
-        const owner = createHubVisitAddress(biome, descriptor.hubKey, visitIndex);
-        return selectedHubSlotKey === undefined
-          ? Object.freeze({ action: 'append' as const, choices, owner, removable: false })
-          : Object.freeze({
-              action: 'replace' as const,
-              choices,
-              owner,
-              removable: true,
-              selectedHubSlotKey,
-            });
-      },
-    ),
-  );
   const visits = Array.from({ length: descriptor.requiredVisits }, (_, index) => {
     const visitIndex = index + 1;
     const hubSlotKey = visitOrder[index];
@@ -261,7 +232,7 @@ function projectHubNode(
       kind: 'hubControls' as const,
       owner,
       slots: Object.freeze(slotRequirements),
-      visits: visitRequirements,
+      visitOrder: Object.freeze([...visitOrder]),
     }),
   );
   return Object.freeze({

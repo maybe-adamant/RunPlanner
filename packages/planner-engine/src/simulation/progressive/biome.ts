@@ -538,8 +538,11 @@ function clampPrefix(
 
 /**
  * Evaluates the materializable prefix before applying its first-invalid clamp.
- * This is an engine-internal repair product: callers may consult only the
- * exact blocked owner’s pre-decision frontier, never later owners.
+ * This is an engine-internal diagnostic product. Repair callers may consult
+ * only the exact blocked owner’s pre-decision frontier, never later owners.
+ * A bounded aggregate candidate may inspect findings across its complete
+ * proposed region, but it must not publish the resulting downstream lifecycle
+ * as selected simulation output.
  */
 export function evaluateProgressiveBiomeBeforeClamp(
   catalog: Catalog,

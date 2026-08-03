@@ -1,7 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createHubVisitAddress,
+  createHubDecisionAddress,
   createProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -387,9 +387,9 @@ describe('structured workspace biome presentation', () => {
       'Visit 3 · Combat 02',
     ]);
     const replaced = applyProjectCommand(initial, catalog, {
-      hubSlotKey: 'combat10',
-      kind: 'ReplaceHubVisit',
-      visit: createHubVisitAddress(nBiome, 'hub', 2),
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: [nVisitSlotKeys[0], 'combat10', nVisitSlotKeys[2]],
+      kind: 'ReplaceHubVisitOrder',
     });
     expect(labels(replaced)).toEqual([
       'Visit 1 · Combat 05',
@@ -397,8 +397,9 @@ describe('structured workspace biome presentation', () => {
       'Visit 3 · Combat 02',
     ]);
     const truncated = applyProjectCommand(replaced, catalog, {
-      kind: 'RemoveHubVisitsFrom',
-      visit: createHubVisitAddress(nBiome, 'hub', 2),
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: nVisitSlotKeys.slice(0, 1),
+      kind: 'ReplaceHubVisitOrder',
     });
     expect(labels(truncated)).toEqual(['Visit 1 · Combat 05']);
   });

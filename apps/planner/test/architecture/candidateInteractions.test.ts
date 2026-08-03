@@ -17,7 +17,10 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceHubVisitOrderInteraction,
+  WorkspaceInteractionCatalog,
+} from '@planner/projections/structured-workspace';
 import { createStructuredWorkspaceTestServices } from '../fixtures/structuredWorkspace';
 import {
   appendCompleteN,
@@ -37,7 +40,7 @@ const families = [
   'batchRewardStores',
   'fieldsCageOutcomes',
   'hubSlots',
-  'hubVisits',
+  'hubVisitOrders',
   'rewards',
   'rewardWheelOfferCounts',
   'rewardWheelPicks',
@@ -60,7 +63,7 @@ const expectedColdQueryBatchCounts: Readonly<Record<InteractionFamily, number>> 
   batchRewardStores: 1,
   fieldsCageOutcomes: 1,
   hubSlots: 1,
-  hubVisits: 1,
+  hubVisitOrders: 1,
   rewards: 14,
   rewardWheelOfferCounts: 1,
   rewardWheelPicks: 1,
@@ -241,7 +244,11 @@ describe('workspace candidate interaction families', () => {
               if (hubSlot === undefined) throw new Error('closed Hub-slot interaction is missing');
               return hubSlot.beginOpeningAttempt();
             })()
-          : (interaction as LoadableInteraction);
+          : family === 'hubVisitOrders'
+            ? (interaction as WorkspaceHubVisitOrderInteraction).proposalFor(
+                (interaction as WorkspaceHubVisitOrderInteraction).selectedHubSlotKeys,
+              )
+            : (interaction as LoadableInteraction);
       await loadable.load();
 
       const queryBatches = events.filter((event) => event.kind === 'queryBatch');

@@ -5,6 +5,7 @@ import {
   applyProjectHistoryCommand,
   canRedoProjectHistory,
   canUndoProjectHistory,
+  createHubDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectHistory,
@@ -70,5 +71,18 @@ describe('authored project history', () => {
     const undone = undoProjectHistory(ordered);
     expect(undone.present).toBe(initial.present);
     expect(redoProjectHistory(undone).present).toBe(ordered.present);
+  });
+
+  it('records one aggregate Hub order replacement as one undoable topology edit', () => {
+    const initial = createProjectHistory(createCompleteNProject());
+    const ordered = applyProjectHistoryCommand(initial, catalog, {
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: ['combat06', 'combat05', 'combat04', 'combat03', 'combat02', 'combat01'],
+    });
+
+    expect(ordered.past).toEqual([initial.present]);
+    expect(undoProjectHistory(ordered).present).toBe(initial.present);
+    expect(redoProjectHistory(undoProjectHistory(ordered)).present).toBe(ordered.present);
   });
 });

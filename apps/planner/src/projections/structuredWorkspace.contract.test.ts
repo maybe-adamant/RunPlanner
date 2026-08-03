@@ -253,8 +253,8 @@ function withoutStructuralInteraction(
       return { ...interactions, hubTakeovers: without(interactions.hubTakeovers) };
     case 'hubSlot':
       return { ...interactions, hubSlots: without(interactions.hubSlots) };
-    case 'hubVisit':
-      return { ...interactions, hubVisits: without(interactions.hubVisits) };
+    case 'hubVisitOrder':
+      return { ...interactions, hubVisitOrders: without(interactions.hubVisitOrders) };
     case 'roomPicker':
       return { ...interactions, rooms: without(interactions.rooms) };
     case 'start':
@@ -1086,7 +1086,7 @@ describe('structured workspace overlay contract', () => {
         'fieldsCageOutcome',
         'hubTakeover',
         'hubSlot',
-        'hubVisit',
+        'hubVisitOrder',
         'roomPicker',
         'start',
         'structural',
@@ -1132,28 +1132,21 @@ describe('structured workspace overlay contract', () => {
       }),
     ).toThrow(/closable Hub slot has no exact close interaction/);
 
-    const authoredVisit =
+    const visitOrderInteraction =
       hub?.kind === 'hubDecision'
-        ? hub.visits.find((visit) => visit.authoring === 'authored')
+        ? projected.interactions.hubVisitOrders.get(hub.marker.focusKey)
         : undefined;
-    const visitInteraction =
-      authoredVisit === undefined
-        ? undefined
-        : projected.interactions.hubVisits.get(authoredVisit.marker.focusKey);
-    if (authoredVisit === undefined || visitInteraction?.removal === undefined) {
-      throw new Error('authored Hub-visit mutation fixture is missing');
+    if (hub?.kind !== 'hubDecision' || visitOrderInteraction === undefined) {
+      throw new Error('Hub visit-order mutation fixture is missing');
     }
-    const hubVisits = new Map(projected.interactions.hubVisits);
-    hubVisits.set(
-      authoredVisit.marker.focusKey,
-      unsafeOmitWorkspaceProperty(visitInteraction, 'removal'),
-    );
+    const hubVisitOrders = new Map(projected.interactions.hubVisitOrders);
+    hubVisitOrders.delete(hub.marker.focusKey);
     expect(() =>
       assertRenderedWorkspaceStructuralControlClosure({
-        interactions: { ...projected.interactions, hubVisits },
+        interactions: { ...projected.interactions, hubVisitOrders },
         routes: projected.routes,
       }),
-    ).toThrow(/authored Hub visit has no exact removal interaction/);
+    ).toThrow(/Hub visit order .* has no exact workspace interaction/);
   });
 
   it('independently closes Door 1 and decision-owner routes for an empty decision entry', () => {

@@ -5,7 +5,6 @@ import {
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
-  createHubVisitAddress,
   createIncomingRewardAddress,
   createLocalChildAddress,
   createLocalRewardAddress,
@@ -40,6 +39,7 @@ import {
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
+  nVisitSlotKeys,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -99,8 +99,9 @@ function bind(
 describe('structured workspace interaction binding', () => {
   it('binds one provisional Hub-slot identity per explicit opening attempt', () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'RemoveHubVisitsFrom',
-      visit: createHubVisitAddress(nBiome, 'hub', 6),
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: nVisitSlotKeys.slice(0, 5),
+      kind: 'ReplaceHubVisitOrder',
     });
     const allocated: ReturnType<typeof createOccurrenceId>[] = [];
     const { interactions } = bind(project, 'Surface', 'N', () => {
@@ -134,10 +135,11 @@ describe('structured workspace interaction binding', () => {
     expect(secondAttempt.key).toContain('bound-hub-opening-2');
   });
 
-  it('binds Hub closure, visit edits, and visit removal to exact commands and focus policy', () => {
+  it('binds Hub closure and complete visit-order proposals to exact commands', () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'RemoveHubVisitsFrom',
-      visit: createHubVisitAddress(nBiome, 'hub', 6),
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: nVisitSlotKeys.slice(0, 5),
+      kind: 'ReplaceHubVisitOrder',
     });
     const { interactions } = bind(project, 'Surface', 'N');
     const opened = [...interactions.hubSlots.values()].find(
@@ -152,34 +154,35 @@ describe('structured workspace interaction binding', () => {
       command: { kind: 'CloseHubSlot', slot: opened.owner },
     });
 
-    const replace = [...interactions.hubVisits.values()].find(
-      (interaction) => interaction.removal !== undefined,
-    );
-    const append = [...interactions.hubVisits.values()].find(
-      (interaction) => interaction.removal === undefined,
-    );
-    if (replace === undefined || append === undefined) {
-      throw new Error('Hub append/replace interactions are missing');
-    }
-    const replacement = replace.load().find((candidate) => candidate.value !== replace.selected);
-    const appended = append.load()[0];
-    if (replacement === undefined || appended === undefined) {
-      throw new Error('Hub visit candidates are missing');
-    }
-    expect(replace.intentFor(replacement.value)).toEqual({
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const visitOrder = interactions.hubVisitOrders.get(semanticAddressKey(hub));
+    if (visitOrder === undefined) throw new Error('Hub visit-order interaction is missing');
+    expect(interactions.hubVisitOrders).toHaveLength(1);
+    const reordered = [
+      visitOrder.selectedHubSlotKeys[0]!,
+      visitOrder.selectedHubSlotKeys[2]!,
+      visitOrder.selectedHubSlotKeys[1]!,
+      ...visitOrder.selectedHubSlotKeys.slice(3),
+    ];
+    const replacement = visitOrder.proposalFor(reordered);
+
+    expect(visitOrder.proposalFor(reordered)).toBe(replacement);
+    expect(replacement.selected).toEqual(reordered);
+    expect(replacement.intent()).toEqual({
       command: {
-        hubSlotKey: replacement.value,
-        kind: 'ReplaceHubVisit',
-        visit: replace.owner,
+        hub,
+        hubSlotKeys: reordered,
+        kind: 'ReplaceHubVisitOrder',
       },
     });
-    expect(replace.removal).toEqual({
-      command: { kind: 'RemoveHubVisitsFrom', visit: replace.owner },
+    const shortened = visitOrder.proposalFor(visitOrder.selectedHubSlotKeys.slice(0, 3));
+    expect(shortened.intent()).toEqual({
+      command: {
+        hub,
+        hubSlotKeys: visitOrder.selectedHubSlotKeys.slice(0, 3),
+        kind: 'ReplaceHubVisitOrder',
+      },
     });
-    expect(append.intentFor(appended.value)).toEqual({
-      command: { hubSlotKey: appended.value, kind: 'AppendHubVisit', visit: append.owner },
-    });
-    expect(append.removal).toBeUndefined();
   });
 
   it('binds topology removals to exact commands with before-focus policy', () => {

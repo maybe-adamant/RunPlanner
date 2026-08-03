@@ -159,7 +159,7 @@ function hubInteractionRequirement(): WorkspaceHubInteractionRequirement {
         selected: false as const,
       }),
     ]),
-    visits: Object.freeze([]),
+    visitOrder: Object.freeze([]),
   });
 }
 

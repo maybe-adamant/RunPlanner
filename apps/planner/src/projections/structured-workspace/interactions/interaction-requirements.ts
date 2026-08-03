@@ -6,7 +6,6 @@ import {
   type ExitSelectionAddress,
   type HubDecisionAddress,
   type HubSlotAddress,
-  type HubVisitAddress,
   type LocalChildAddress,
   type LocalChildGroupAddress,
   type OccurrenceAddress,
@@ -115,21 +114,8 @@ export interface WorkspaceHubInteractionRequirement {
         readonly selected: true;
       }
   )[];
-  readonly visits: readonly (
-    | {
-        readonly action: 'append';
-        readonly choices: readonly WorkspaceInteractionChoice<string>[];
-        readonly owner: HubVisitAddress;
-        readonly removable: false;
-      }
-    | {
-        readonly action: 'replace';
-        readonly choices: readonly WorkspaceInteractionChoice<string>[];
-        readonly owner: HubVisitAddress;
-        readonly removable: true;
-        readonly selectedHubSlotKey: string;
-      }
-  )[];
+  /** The exact authored prefix; per-visit markers remain separately projected. */
+  readonly visitOrder: readonly string[];
 }
 
 /**

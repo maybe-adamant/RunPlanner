@@ -30,9 +30,7 @@ function applyUnchecked(
     case 'RemoveHubDecision':
     case 'OpenHubSlot':
     case 'CloseHubSlot':
-    case 'AppendHubVisit':
-    case 'ReplaceHubVisit':
-    case 'RemoveHubVisitsFrom':
+    case 'ReplaceHubVisitOrder':
     case 'SetExitSelection':
     case 'RemoveExitDecision':
     case 'ReplaceBatchRewardStore':

@@ -3,7 +3,6 @@ import {
   applyProjectCommand,
   createExitDecisionAddress,
   createHubDecisionAddress,
-  createHubVisitAddress,
   createIncomingRewardAddress,
   createProjectDocument,
   semanticAddressKey,
@@ -124,9 +123,7 @@ describe('structured workspace Hub assembly', () => {
     );
     expect(assembly.hubInteractionRequirements).toHaveLength(1);
     expect(assembly.hubInteractionRequirements[0]?.slots).toHaveLength(kit.descriptor.slots.length);
-    expect(assembly.hubInteractionRequirements[0]?.visits).toHaveLength(
-      kit.descriptor.requiredVisits,
-    );
+    expect(assembly.hubInteractionRequirements[0]?.visitOrder).toEqual(kit.hub.visitOrder);
 
     const visited = assembly.node.slots.find((slot) => slot.hubSlotKey === 'combat02');
     const unvisited = assembly.node.slots.find((slot) => slot.hubSlotKey === 'combat03');
@@ -223,8 +220,9 @@ describe('structured workspace Hub assembly', () => {
     ).toBe(1);
 
     const retainedProject = applyProjectCommand(invalidBoard, catalog, {
-      kind: 'RemoveHubVisitsFrom',
-      visit: createHubVisitAddress(nBiome, kit.descriptor.hubKey, 4),
+      hub: kit.owner,
+      hubSlotKeys: kit.hub.visitOrder.slice(0, 3),
+      kind: 'ReplaceHubVisitOrder',
     });
     const retainedSource = biomeSource(retainedProject);
     const retainedKit = hubKit(retainedSource);
@@ -270,17 +268,7 @@ describe('structured workspace Hub assembly', () => {
       'unassessed',
       'assessed',
     ]);
-    expect(retained.hubInteractionRequirements[0]?.visits[0]).toMatchObject({
-      action: 'replace',
-      owner: createHubVisitAddress(nBiome, retainedKit.descriptor.hubKey, 1),
-      removable: true,
-      selectedHubSlotKey: retainedKit.hub.visitOrder[0],
-    });
-    expect(retained.hubInteractionRequirements[0]?.visits.at(-1)).toMatchObject({
-      action: 'append',
-      owner: createHubVisitAddress(nBiome, retainedKit.descriptor.hubKey, 4),
-      removable: false,
-    });
+    expect(retained.hubInteractionRequirements[0]?.visitOrder).toEqual(retainedKit.hub.visitOrder);
   });
 
   it('publishes authored Hub controls and the structural first visit before evaluation enters it', () => {
@@ -309,14 +297,7 @@ describe('structured workspace Hub assembly', () => {
 
     expect(assembly.node.authoring).toBe('authored');
     expect(requirement?.slots).toHaveLength(kit.descriptor.slots.length);
-    expect(requirement?.visits).toEqual([
-      {
-        action: 'append',
-        choices: [],
-        owner: createHubVisitAddress(nBiome, kit.descriptor.hubKey, 1),
-        removable: false,
-      },
-    ]);
+    expect(requirement?.visitOrder).toEqual([]);
     expect(assembly.node.visits[0]?.authoring).toBe('locked');
   });
 });

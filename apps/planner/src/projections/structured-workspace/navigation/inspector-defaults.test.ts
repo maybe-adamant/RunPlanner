@@ -3,7 +3,6 @@ import {
   applyProjectCommand,
   createExitDecisionAddress,
   createHubDecisionAddress,
-  createHubVisitAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -25,6 +24,7 @@ import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceIds,
+  nVisitSlotKeys,
 } from '@run-planner/test-fixtures';
 import {
   createStructuredWorkspaceTestServices,
@@ -249,8 +249,9 @@ describe('workspace inspector defaults', () => {
 
     const truncated = biome(
       applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-        kind: 'RemoveHubVisitsFrom',
-        visit: createHubVisitAddress(nBiome, 'hub', 4),
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        hubSlotKeys: nVisitSlotKeys.slice(0, 3),
+        kind: 'ReplaceHubVisitOrder',
       }),
       'N',
     );

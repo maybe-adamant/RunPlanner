@@ -286,16 +286,26 @@ export type WorkspaceHubSlotInteraction =
       readonly selected: true;
     };
 
-export type WorkspaceHubVisitInteraction = WorkspaceCandidateInteraction<string> & {
-  readonly intentFor: (
-    hubSlotKey: string,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'AppendHubVisit' | 'ReplaceHubVisit' }>
+/** One lazily-evaluated complete Hub traversal proposal. */
+export interface WorkspaceHubVisitOrderProposal extends WorkspaceCandidateInteraction<
+  readonly string[]
+> {
+  readonly intent: () => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceHubVisitOrder' }>
   >;
-  readonly removal?: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'RemoveHubVisitsFrom' }>
-  >;
-};
+}
+
+/**
+ * The Hub decision owns one aggregate traversal interaction. Room cards may
+ * request a complete proposed prefix, but individual rendered positions never
+ * become command owners.
+ */
+export interface WorkspaceHubVisitOrderInteraction {
+  readonly key: string;
+  readonly owner: HubDecisionAddress;
+  readonly proposalFor: (hubSlotKeys: readonly string[]) => WorkspaceHubVisitOrderProposal;
+  readonly selectedHubSlotKeys: readonly string[];
+}
 
 interface WorkspaceTakeoverBatchInteractionBase {
   readonly key: string;
@@ -345,7 +355,7 @@ export interface WorkspaceInteractionCatalog {
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
   readonly hubTakeovers: ReadonlyMap<string, WorkspaceHubTakeoverInteraction>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
-  readonly hubVisits: ReadonlyMap<string, WorkspaceHubVisitInteraction>;
+  readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
