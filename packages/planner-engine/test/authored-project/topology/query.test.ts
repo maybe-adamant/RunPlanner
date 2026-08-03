@@ -50,7 +50,17 @@ describe('authored topology queries', () => {
         kind: 'occurrence',
         occurrenceId: nOccurrenceIds.opening,
       }),
-    ).toMatchObject({ kind: 'exit', normal: { kind: 'linked' } });
+    ).toMatchObject({
+      kind: 'exit',
+      normal: {
+        kind: 'batch',
+        targets: [{ exitKey: 'prehub', occurrenceId: nOccurrenceIds.preHub }],
+      },
+    });
+    expect(topology.decisions.find((decision) => decision.kind === 'hub')).toMatchObject({
+      kind: 'hub',
+      source: { kind: 'occurrence', occurrenceId: nOccurrenceIds.preHub },
+    });
     expect(
       exitDecisionForSource(topology, { kind: 'hubDecision', decisionKey: 'hub' }),
     ).toMatchObject({ kind: 'exit', source: { kind: 'hubDecision' } });
@@ -59,12 +69,12 @@ describe('authored topology queries', () => {
     ).toBeUndefined();
   });
 
-  it('resolves linked, derived, explicit, and unresolved selections without repairing state', () => {
+  it('resolves normal, derived, explicit, and unresolved selections without repairing state', () => {
     const surface = createRepresentativeNOPQProject();
     const nTopology = topologyFor(surface, 'N');
     const oTopology = topologyFor(surface, 'O');
     const qTopology = topologyFor(surface, 'Q');
-    const linked = requireExitDecision(nTopology, nOccurrenceIds.opening);
+    const normal = requireExitDecision(nTopology, nOccurrenceIds.opening);
     const derived = requireExitDecision(oTopology, oOccurrenceIds.intro);
     const explicit = requireExitDecision(qTopology, qOccurrenceIds.firstFork);
     const unresolved = Object.freeze({
@@ -72,9 +82,9 @@ describe('authored topology queries', () => {
       selection: Object.freeze({ kind: 'unresolved' as const }),
     });
 
-    expect(selectedExitKey(linked)).toBe('prehub');
-    expect(selectedExitTarget(linked)).toMatchObject({
-      kind: 'linked',
+    expect(selectedExitKey(normal)).toBe('prehub');
+    expect(selectedExitTarget(normal)).toEqual({
+      exitKey: 'prehub',
       occurrenceId: nOccurrenceIds.preHub,
     });
     expect(selectedExitKey(derived)).toBe('exit1');
@@ -155,7 +165,7 @@ describe('authored topology queries', () => {
       }),
     ).toEqual([
       {
-        kind: 'linked',
+        kind: 'normal',
         exitKey: 'prehub',
         index: 1,
         type: 'N_OpeningDoor',

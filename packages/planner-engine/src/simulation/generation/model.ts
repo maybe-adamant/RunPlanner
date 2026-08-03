@@ -197,6 +197,21 @@ export interface TakeoverPrebossBatchCandidateSupport {
   readonly findings: readonly SemanticFinding[];
 }
 
+/**
+ * The one closed terminal published by a bounded Hub entry. Unlike a
+ * Preboss takeover, this result creates no normal-door targets: it replaces
+ * the exact empty envelope with the persistent Hub board.
+ */
+export interface HubTerminalTakeoverCandidateSupport {
+  readonly source: ExitDecisionAddress;
+  readonly hubKey: string;
+  readonly gameName: string;
+  readonly eligibility: RequirementEvaluationEvidence;
+  readonly force: 'required';
+  readonly support: 'impossible' | 'required';
+  readonly selectedPossible: boolean;
+}
+
 export interface HubOpenSlotConstraintSupportEntry {
   readonly origin: HubOpenSetAddress;
   readonly constraintIndex: number;

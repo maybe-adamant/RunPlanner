@@ -566,7 +566,7 @@ describe('authored-project commands and topology', () => {
     ).toBe(false);
   });
 
-  it('derives N fixed start identity and progressively creates linked PreHub, Hub, and its width-one exit', () => {
+  it('derives N fixed start identity through a normal PreHub decision, source-bearing Hub, and width-one handoff', () => {
     expect(() =>
       applyProjectCommand(nProject(), catalog, {
         kind: 'CreateStart',
@@ -575,58 +575,35 @@ describe('authored-project commands and topology', () => {
         gameName: 'N_Combat01',
       }),
     ).toThrow(ProjectCommandContractError);
-    let project = applyProjectCommand(nProject(), catalog, {
-      kind: 'CreateStart',
-      biome: nBiome,
-      occurrenceId: createOccurrenceId('n-opening'),
-    });
+    let project = createCompleteNProject();
     const openingDecision = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
-      occurrenceId: createOccurrenceId('n-opening'),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateLinkedExit',
-      decision: openingDecision,
-      occurrenceId: createOccurrenceId('n-prehub'),
-    });
-    const hub = createHubDecisionAddress(nBiome, 'hub');
-    project = applyProjectCommand(project, catalog, { kind: 'CreateHubDecision', hub });
-    for (let index = 1; index <= 9; index += 1) {
-      const slotKey = `combat${String(index).padStart(2, '0')}`;
-      project = applyProjectCommand(project, catalog, {
-        kind: 'OpenHubSlot',
-        slot: createHubSlotAddress(nBiome, 'hub', slotKey),
-        occurrenceId: createOccurrenceId(`n-${slotKey}`),
-      });
-    }
-    for (let index = 1; index <= 6; index += 1) {
-      const slotKey = `combat${String(index).padStart(2, '0')}`;
-      project = applyProjectCommand(project, catalog, {
-        kind: 'AppendHubVisit',
-        visit: createHubVisitAddress(nBiome, 'hub', index),
-        hubSlotKey: slotKey,
-      });
-    }
-    const handoff = createExitDecisionAddress(nBiome, {
-      kind: 'hubDecision',
-      decisionKey: 'hub',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateTakeoverBatch',
-      decision: handoff,
-      gameName: 'N_PreBoss01',
-      targetOccurrenceIds: { preboss: createOccurrenceId('n-preboss') },
+      occurrenceId: createOccurrenceId('round-trip-n-opening'),
     });
     const plan = project.routes.find((route) => route.routeKey === 'Surface')?.biomes[0];
     expect(plan?.topology).toMatchObject({
-      startOccurrenceId: 'n-opening',
+      startOccurrenceId: 'round-trip-n-opening',
       occurrences: expect.arrayContaining([
-        expect.objectContaining({ occurrenceId: 'n-opening', gameName: 'N_Opening01' }),
-        expect.objectContaining({ occurrenceId: 'n-prehub', gameName: 'N_PreHub01' }),
+        expect.objectContaining({ occurrenceId: 'round-trip-n-opening', gameName: 'N_Opening01' }),
+        expect.objectContaining({ occurrenceId: 'round-trip-n-prehub', gameName: 'N_PreHub01' }),
         expect.objectContaining({
-          occurrenceId: 'n-preboss',
+          occurrenceId: 'round-trip-n-preboss',
           gameName: 'N_PreBoss01',
           state: expect.objectContaining({ kind: 'shop' }),
+        }),
+      ]),
+      decisions: expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'exit',
+          source: openingDecision.source,
+          normal: expect.objectContaining({
+            targets: [{ exitKey: 'prehub', occurrenceId: 'round-trip-n-prehub' }],
+          }),
+        }),
+        expect.objectContaining({
+          kind: 'hub',
+          hubKey: 'hub',
+          source: { kind: 'occurrence', occurrenceId: 'round-trip-n-prehub' },
         }),
       ]),
     });
@@ -637,12 +614,12 @@ describe('authored-project commands and topology', () => {
     expect(
       project.routes.find((route) => route.routeKey === 'Surface')?.biomes[0]?.topology,
     ).toMatchObject({
-      occurrences: [{ occurrenceId: 'n-opening' }],
+      occurrences: [{ occurrenceId: 'round-trip-n-opening' }],
       decisions: [],
     });
   });
 
-  it('reports an N PreHub normal-batch attempt through the exact command contract', () => {
+  it('admits only an exact empty N terminal envelope for Hub replacement and restores it on removal', () => {
     let project = applyProjectCommand(nProject(), catalog, {
       kind: 'CreateStart',
       biome: nBiome,
@@ -653,31 +630,52 @@ describe('authored-project commands and topology', () => {
       occurrenceId: createOccurrenceId('wrapper-n-opening'),
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'CreateLinkedExit',
+      kind: 'CreateBatch',
       decision: openingDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(nBiome, openingDecision.source, 'prehub'),
+      occurrenceId: createOccurrenceId('wrapper-n-prehub'),
+      gameName: 'N_PreHub01',
+    });
+    const preHubDecision = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
       occurrenceId: createOccurrenceId('wrapper-n-prehub'),
     });
-    const command = {
-      kind: 'CreateBatch' as const,
-      decision: createExitDecisionAddress(nBiome, {
-        kind: 'occurrence',
-        occurrenceId: createOccurrenceId('wrapper-n-prehub'),
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: preHubDecision,
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(nBiome, preHubDecision.source, 'exit1'),
+        occurrenceId: createOccurrenceId('unexpected-preboss'),
+        gameName: 'N_PreBoss01',
       }),
-    };
-
-    try {
-      applyProjectCommand(project, catalog, command);
-    } catch (error) {
-      expect(error).toBeInstanceOf(ProjectCommandContractError);
-      expect(error).toMatchObject({
-        commandKind: 'CreateBatch',
-        addressKey:
-          '["exitDecision","Surface","N",{"kind":"occurrence","occurrenceId":"wrapper-n-prehub"}]',
-        detail: 'ordinary normal-door batches require generated progression',
-      });
-      return;
-    }
-    throw new Error('expected the N PreHub batch command to fail');
+    ).toThrow(ProjectCommandContractError);
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceWithHubDecision',
+      decision: preHubDecision,
+      hub,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'RemoveHubDecision', hub });
+    const topology = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    expect(topology?.decisions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'exit',
+          source: preHubDecision.source,
+          normal: { kind: 'batch', rewardStore: { kind: 'none' }, batchState: null, targets: [] },
+          selection: { kind: 'unresolved' },
+        }),
+      ]),
+    );
+    expect(topology?.decisions.some((decision) => decision.kind === 'hub')).toBe(false);
   });
 
   it('clears every persisted N topology member through the shared clear impact', () => {

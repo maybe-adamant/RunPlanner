@@ -198,13 +198,6 @@ export type CanonicalBatchState =
       readonly doorCageRewardCount: number;
     };
 
-export interface CanonicalLinkedExit {
-  readonly kind: 'linkedExit';
-  readonly origin: ExitDecisionAddress;
-  readonly source: CanonicalRoomReference;
-  readonly target: CanonicalTarget;
-}
-
 export interface CanonicalBatch {
   readonly kind: 'batch';
   readonly origin: ExitDecisionAddress;
@@ -255,12 +248,14 @@ export interface CanonicalHubVisit {
 export interface CanonicalHubDecision {
   readonly kind: 'hub';
   readonly origin: HubDecisionAddress;
+  /** Exact authored occurrence replaced by this persistent Hub decision. */
+  readonly source: CanonicalRoomReference;
   readonly room: CanonicalHubRoom;
   readonly board: CanonicalHubBoard;
   readonly visits: readonly CanonicalHubVisit[];
 }
 
-export type CanonicalDecision = CanonicalLinkedExit | CanonicalBatch | CanonicalHubDecision;
+export type CanonicalDecision = CanonicalBatch | CanonicalHubDecision;
 
 export type CanonicalBiomeState = Readonly<Record<string, boolean | number | string>>;
 
@@ -293,7 +288,18 @@ export interface MaterializedExitDecisionFrontier {
   readonly batchState?: CanonicalBatchState;
   readonly selectedExitKey: string | null;
   readonly selectedOrigin: ExitSelectionAddress;
+  /**
+   * The current bounded Hub data has two exact empty envelopes whose source
+   * room still completes its lifecycle despite the absent ordinary target:
+   * the Opening entry picker and the PreHub terminal takeover. This is a
+   * closed N progression fact, not a generic resume or host capability.
+   */
+  readonly hubContinuation?: MaterializedHubContinuationFrontier;
 }
+
+export type MaterializedHubContinuationFrontier =
+  | { readonly kind: 'boundedEntry'; readonly hubKey: string }
+  | { readonly kind: 'terminalTakeover'; readonly hubKey: string };
 
 /**
  * A blocked Hub visit has reached one of three distinct lifecycle phases.

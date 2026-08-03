@@ -367,22 +367,11 @@ export type NormalDoorBatchPolicy =
       readonly fields: readonly AuthoredFieldDescriptor[];
     };
 
-export interface LinkedNormalExitDescriptor {
-  readonly kind: 'linked';
-  readonly exitKey: string;
-  readonly roomGameName: string;
-}
-
 /**
- * A completed Hub has no authored room declaration as its source, so its
- * width-one exit carries the same normalized physical metadata as a room exit.
+ * The declaration-owned policy for a normal exit decision. A Hub can carry a
+ * bounded entry decision without becoming a second general progression family.
  */
-export interface CompletedHubExitDescriptor extends LinkedNormalExitDescriptor {
-  readonly physicalExit: RoomExit;
-}
-
-export interface GeneratedProgressionDescriptor {
-  readonly kind: 'generated';
+export interface NormalDecisionProgressionDescriptor {
   readonly progressionPolicy: GeneratedProgressionPolicy;
   readonly batchPolicy: NormalDoorBatchPolicy;
   readonly rewardStorePolicy: RewardStorePolicy;
@@ -391,6 +380,36 @@ export interface GeneratedProgressionDescriptor {
     readonly maxBatches: number;
     readonly maxTargets: number;
   };
+}
+
+export interface GeneratedProgressionDescriptor extends NormalDecisionProgressionDescriptor {
+  readonly kind: 'generated';
+}
+
+export interface HubEntryNormalDecisionDescriptor extends NormalDecisionProgressionDescriptor {
+  /** Stable physical identity for the bounded normal exit from the Opening. */
+  readonly exitKey: string;
+}
+
+/**
+ * The only terminal resolution admitted after a bounded Hub entry. It is
+ * deliberately closed: the terminal belongs to this Hub progression rather
+ * than to a generic source rule.
+ */
+export interface HubTerminalTakeoverDescriptor {
+  readonly roomGameName: string;
+  readonly eligibility: RequirementExpression;
+  readonly force: 'required';
+}
+
+/**
+ * A completed Hub has no authored room declaration as its source, so its
+ * width-one exit carries its own fixed target and normalized physical metadata.
+ */
+export interface CompletedHubExitDescriptor {
+  readonly exitKey: string;
+  readonly roomGameName: string;
+  readonly physicalExit: RoomExit;
 }
 
 export interface CompletionRoomDescriptor {
@@ -446,8 +465,8 @@ export interface HubSideRoomGenerationPolicy {
 export interface HubDecisionDescriptor {
   readonly kind: 'hub';
   readonly hubKey: string;
-  readonly linkedExit: LinkedNormalExitDescriptor;
-  readonly roomGameName: string;
+  readonly entry: HubEntryNormalDecisionDescriptor;
+  readonly terminal: HubTerminalTakeoverDescriptor;
   readonly slots: readonly HubSlotDescriptor[];
   readonly openCount: { readonly min: number; readonly max: number };
   readonly openSlotConstraints: readonly HubOpenSlotConstraint[];

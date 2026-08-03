@@ -4,6 +4,7 @@ import {
   applyTopologyRemovalImpact,
   describeClearTopologyImpact,
   describeExitDecisionRemovalImpact,
+  describeHubDecisionRemovalImpact,
   describeHubSlotClosureImpact,
   describeTopologyRemovalImpact,
 } from '../topologyImpact';
@@ -26,6 +27,10 @@ import {
   admitsTerminalTakeoverEnvelope,
   declaredPhysicalExitKeys,
   exitDecisionForSource,
+  hubDecisionHandoffReadiness,
+  hubTerminalTakeoverForSource,
+  isExactTerminalTakeoverEnvelope,
+  normalDecisionProgressionForLayout,
   ordinaryBatchCreationEligibility,
   ordinaryTargetAuthoringEligibility,
   selectedExitKey,
@@ -64,25 +69,12 @@ function exitKeysForSource(
   command: TopologyCommand,
 ): readonly string[] {
   const topology = located.plan.topology;
-  if (topology !== null) {
-    const declared = declaredPhysicalExitKeys(catalog, located.layout, topology, source);
-    if (declared !== undefined) return declared;
+  if (topology === null) failCommand(command, 'normal-door source requires topology');
+  const declared = declaredPhysicalExitKeys(catalog, located.layout, topology, source);
+  if (declared === undefined) {
+    failCommand(command, `${source.kind} source has no declaration-owned physical exits`);
   }
-  if (source.kind === 'hubDecision') {
-    if (
-      located.layout.progression.kind !== 'hub' ||
-      source.decisionKey !== located.layout.progression.hubKey
-    ) {
-      failCommand(
-        command,
-        `${source.decisionKey} is not a Hub decision in ${located.layout.biomeKey}`,
-      );
-    }
-    return [located.layout.progression.completedExit.exitKey];
-  }
-  const occurrence = requireOccurrence(located.plan, source.occurrenceId, command);
-  const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
-  return room.exits.map((exit) => `exit${exit.index}`);
+  return declared;
 }
 
 function sourceRoom(
@@ -104,11 +96,12 @@ function initialRewardStore(
   located: LocatedBiome,
   sourceRoom: RoomDeclaration | undefined,
 ): BatchRewardStoreState {
+  const progression = normalDecisionProgressionForLayout(located.layout);
   const policy =
-    located.layout.progression.kind === 'generated' && sourceRoom !== undefined
-      ? (located.layout.progression.rewardStoreOverrides.find(
+    progression !== undefined && sourceRoom !== undefined
+      ? (progression.rewardStoreOverrides.find(
           (override) => override.sourceEncounterProfileKey === sourceRoom.encounterProfileKey,
-        )?.policy ?? located.layout.progression.rewardStorePolicy)
+        )?.policy ?? progression.rewardStorePolicy)
       : { kind: 'none' as const };
   if (policy.kind === 'authoredBaseStore')
     return Object.freeze({ kind: 'authoredBaseStore', baseRewardStoreKey: null });
@@ -311,45 +304,6 @@ function createStart(
   });
 }
 
-function createLinkedExit(
-  document: ProjectDocument,
-  catalog: Catalog,
-  located: LocatedBiome,
-  command: Extract<TopologyCommand, { readonly kind: 'CreateLinkedExit' }>,
-): ProjectDocument {
-  const topology = requireTopology(located.plan, command);
-  if (
-    located.layout.progression.kind !== 'hub' ||
-    command.decision.source.kind !== 'occurrence' ||
-    command.decision.source.occurrenceId !== topology.startOccurrenceId
-  ) {
-    failCommand(command, 'only the fixed Hub start owns the declared linked PreHub exit');
-  }
-  if (exitDecisionForSource(topology, command.decision.source) !== undefined)
-    failCommand(command, 'exit decision already exists');
-  const room = requireRoom(
-    catalog,
-    located.layout.progression.linkedExit.roomGameName,
-    located.layout.biomeKey,
-    command,
-  );
-  const occurrence = defaultOccurrence(catalog, room, command.occurrenceId, 'ordinary', true);
-  const next = appendDecision(
-    appendOccurrence(topology, occurrence, command),
-    Object.freeze({
-      kind: 'exit',
-      source: sourceFromAddress(command.decision.source),
-      normal: Object.freeze({
-        kind: 'linked',
-        exitKey: located.layout.progression.linkedExit.exitKey,
-        occurrenceId: command.occurrenceId,
-      }),
-      selection: Object.freeze({ kind: 'derived' }),
-    }),
-  );
-  return updateTopology(document, located, next);
-}
-
 function createBatch(
   document: ProjectDocument,
   catalog: Catalog,
@@ -357,9 +311,8 @@ function createBatch(
   command: Extract<TopologyCommand, { readonly kind: 'CreateBatch' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  if (located.layout.progression.kind !== 'generated') {
-    failCommand(command, 'ordinary normal-door batches require generated progression');
-  }
+  const progression = normalDecisionProgressionForLayout(located.layout);
+  if (progression === undefined) failCommand(command, 'layout has no normal-door decision policy');
   if (command.decision.source.kind === 'hubDecision') {
     failCommand(command, 'the completed Hub emits its declaration-fixed takeover batch');
   }
@@ -370,7 +323,7 @@ function createBatch(
     failCommand(command, 'a selected Preboss closes editable traversal');
   const batchEligibility = ordinaryBatchCreationEligibility(catalog, located.layout, topology);
   if (batchEligibility.kind === 'notGenerated') {
-    failCommand(command, 'ordinary normal-door batches require generated progression');
+    failCommand(command, 'layout has no normal-door decision policy');
   }
   if (
     batchEligibility.kind === 'ordinaryBatchLimitReached' &&
@@ -381,12 +334,9 @@ function createBatch(
       sourceFromAddress(command.decision.source),
     )
   ) {
-    failCommand(command, 'generated progression has reached its declaration-owned batch bound');
+    failCommand(command, 'normal progression has reached its declaration-owned batch bound');
   }
-  const batchState =
-    located.layout.progression.kind === 'generated'
-      ? createInitialBatchState(located.layout.progression.batchPolicy)
-      : null;
+  const batchState = createInitialBatchState(progression.batchPolicy);
   const decision: ExitDecision = Object.freeze({
     kind: 'exit',
     source: sourceFromAddress(command.decision.source),
@@ -410,7 +360,7 @@ function failUnavailableOrdinaryTarget(
 ): never {
   switch (eligibility.reason) {
     case 'notGenerated':
-      return failCommand(command, 'ordinary normal-door targets require generated progression');
+      return failCommand(command, 'layout has no normal-door target policy');
     case 'sourceIsHub':
       return failCommand(command, 'the completed Hub emits its declaration-fixed takeover batch');
     case 'missingBatch':
@@ -436,12 +386,12 @@ function failUnavailableOrdinaryTarget(
     case 'batchBound':
       return failCommand(
         command,
-        'generated progression has reached its declaration-owned batch bound',
+        'normal progression has reached its declaration-owned batch bound',
       );
     case 'targetBound':
       return failCommand(
         command,
-        'generated progression has reached its declaration-owned target bound',
+        'normal progression has reached its declaration-owned target bound',
       );
     case 'stage':
       return failCommand(
@@ -487,11 +437,8 @@ function createTarget(
   ) {
     failCommand(command, 'select the batch reward store before authoring targets');
   }
-  if (
-    located.layout.progression.kind === 'generated' &&
-    located.layout.progression.batchPolicy.kind === 'fields' &&
-    decision.normal.batchState === null
-  ) {
+  const progression = normalDecisionProgressionForLayout(located.layout);
+  if (progression?.batchPolicy.kind === 'fields' && decision.normal.batchState === null) {
     failCommand(command, 'select the Fields cage outcome before authoring targets');
   }
   const targets = orderTargetsByPhysicalExit(
@@ -604,12 +551,11 @@ function replaceTakeoverBatch(
       (decision): decision is HubDecision =>
         decision.kind === 'hub' && decision.hubKey === hubSource.decisionKey,
     );
-    if (
-      hub === undefined ||
-      hub.openTargets.length < located.layout.progression.openCount.min ||
-      hub.visitOrder.length !== located.layout.progression.requiredVisits
-    ) {
-      failCommand(command, 'complete the required Hub visits before creating its Preboss batch');
+    if (hubDecisionHandoffReadiness(located.layout.progression, hub).kind !== 'ready') {
+      failCommand(
+        command,
+        'complete the declared Hub board and required visits before creating its Preboss batch',
+      );
     }
   }
   const existing = exitDecisionForSource(topology, command.decision.source);
@@ -830,11 +776,12 @@ function replaceBatchRewardStore(
     failCommand(command, 'normal-door batch does not expose an authored base reward store');
   }
   const source = sourceRoom(catalog, located, command.rewardStore.source, command);
+  const progression = normalDecisionProgressionForLayout(located.layout);
   const policy =
-    located.layout.progression.kind === 'generated' && source !== undefined
-      ? (located.layout.progression.rewardStoreOverrides.find(
+    progression !== undefined && source !== undefined
+      ? (progression.rewardStoreOverrides.find(
           (override) => override.sourceEncounterProfileKey === source.encounterProfileKey,
-        )?.policy ?? located.layout.progression.rewardStorePolicy)
+        )?.policy ?? progression.rewardStorePolicy)
       : undefined;
   if (policy?.kind !== 'authoredBaseStore' || !policy.storeKeys.includes(command.storeKey)) {
     failCommand(command, `${command.storeKey} is not available from this batch policy`);
@@ -866,10 +813,8 @@ function replaceFieldsCageOutcome(
   command: Extract<TopologyCommand, { readonly kind: 'ReplaceFieldsCageOutcome' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  if (
-    located.layout.progression.kind !== 'generated' ||
-    located.layout.progression.batchPolicy.kind !== 'fields'
-  ) {
+  const progression = normalDecisionProgressionForLayout(located.layout);
+  if (progression === undefined || progression.batchPolicy.kind !== 'fields') {
     failCommand(command, 'batch does not expose a Fields cage outcome');
   }
   const decision = exitDecisionForSource(topology, command.decision.source);
@@ -999,10 +944,25 @@ function reconcileBatchExitCapacity(
   );
 }
 
-function createHubDecision(
+function terminalHubEnvelope(source: ExitDecisionSource): ExitDecision {
+  return Object.freeze({
+    kind: 'exit',
+    source,
+    normal: Object.freeze({
+      kind: 'batch',
+      rewardStore: Object.freeze({ kind: 'none' }),
+      batchState: null,
+      targets: Object.freeze([]),
+    }),
+    selection: Object.freeze({ kind: 'unresolved' }),
+  });
+}
+
+function replaceWithHubDecision(
   document: ProjectDocument,
+  catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<TopologyCommand, { readonly kind: 'CreateHubDecision' }>,
+  command: Extract<TopologyCommand, { readonly kind: 'ReplaceWithHubDecision' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   if (
@@ -1010,29 +970,69 @@ function createHubDecision(
     command.hub.hubKey !== located.layout.progression.hubKey
   )
     failCommand(command, 'unknown Hub decision');
+  if (command.decision.source.kind !== 'occurrence') {
+    failCommand(command, 'Hub takeover requires an occurrence-owned terminal envelope');
+  }
   if (topology.decisions.some((decision) => decision.kind === 'hub'))
     failCommand(command, 'Hub decision already exists');
-  const linked = topology.decisions.find(
-    (decision): decision is ExitDecision =>
-      decision.kind === 'exit' &&
-      decision.source.kind === 'occurrence' &&
-      decision.source.occurrenceId === topology.startOccurrenceId &&
-      decision.normal.kind === 'linked',
-  );
-  if (linked === undefined)
-    failCommand(command, 'Hub decision requires the selected linked PreHub exit');
+  const source = Object.freeze({
+    kind: 'occurrence' as const,
+    occurrenceId: command.decision.source.occurrenceId,
+  });
+  const terminal = hubTerminalTakeoverForSource(catalog, located.layout, topology, source);
+  if (terminal === undefined || terminal.hubKey !== command.hub.hubKey) {
+    failCommand(command, 'Hub takeover is not declared at this terminal envelope');
+  }
+  const envelope = exitDecisionForSource(topology, command.decision.source);
+  if (envelope === undefined || !isExactTerminalTakeoverEnvelope(envelope)) {
+    failCommand(command, 'Hub takeover requires the exact empty terminal envelope');
+  }
+  const impact = describeExitDecisionRemovalImpact(topology, source);
+  if (impact === undefined) throw new Error('terminal Hub envelope disappeared during replacement');
   return updateTopology(
     document,
     located,
     appendDecision(
-      topology,
+      applyTopologyRemovalImpact(topology, impact),
       Object.freeze({
         kind: 'hub',
         hubKey: command.hub.hubKey,
+        source,
         openTargets: Object.freeze([]),
         visitOrder: Object.freeze([]),
       }),
     ),
+  );
+}
+
+function removeHubDecision(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: Extract<TopologyCommand, { readonly kind: 'RemoveHubDecision' }>,
+): ProjectDocument {
+  const topology = requireTopology(located.plan, command);
+  if (
+    located.layout.progression.kind !== 'hub' ||
+    command.hub.hubKey !== located.layout.progression.hubKey
+  ) {
+    failCommand(command, 'unknown Hub decision');
+  }
+  const hub = topology.decisions.find(
+    (decision): decision is HubDecision =>
+      decision.kind === 'hub' && decision.hubKey === command.hub.hubKey,
+  );
+  if (hub === undefined) return document;
+  const terminal = hubTerminalTakeoverForSource(catalog, located.layout, topology, hub.source);
+  if (terminal === undefined || terminal.hubKey !== hub.hubKey) {
+    failCommand(command, 'Hub decision has no declared terminal source to restore');
+  }
+  const impact = describeHubDecisionRemovalImpact(topology, hub.hubKey);
+  if (impact === undefined) throw new Error('Hub decision disappeared during removal');
+  return updateTopology(
+    document,
+    located,
+    appendDecision(applyTopologyRemovalImpact(topology, impact), terminalHubEnvelope(hub.source)),
   );
 }
 
@@ -1176,8 +1176,6 @@ export function applyTopologyCommand(
   switch (command.kind) {
     case 'CreateStart':
       return createStart(document, catalog, located, command);
-    case 'CreateLinkedExit':
-      return createLinkedExit(document, catalog, located, command);
     case 'CreateBatch':
       return createBatch(document, catalog, located, command);
     case 'CreateTarget':
@@ -1196,8 +1194,10 @@ export function applyTopologyCommand(
       return setExitSelection(document, catalog, located, command);
     case 'RemoveExitDecision':
       return removeExitDecision(document, located, command);
-    case 'CreateHubDecision':
-      return createHubDecision(document, located, command);
+    case 'ReplaceWithHubDecision':
+      return replaceWithHubDecision(document, catalog, located, command);
+    case 'RemoveHubDecision':
+      return removeHubDecision(document, catalog, located, command);
     case 'OpenHubSlot':
     case 'CloseHubSlot':
     case 'AppendHubVisit':

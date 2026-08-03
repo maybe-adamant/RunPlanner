@@ -70,7 +70,7 @@ function requireHubDecision(
   }
   if (
     decision.origin.hubKey !== layout.progression.hubKey ||
-    decision.room.gameName !== layout.progression.roomGameName
+    decision.room.gameName !== layout.progression.terminal.roomGameName
   ) {
     fail(`${snapshot.biomeKey} Hub decision does not match its catalog declaration`);
   }

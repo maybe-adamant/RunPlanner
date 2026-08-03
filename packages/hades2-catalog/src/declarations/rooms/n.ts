@@ -48,6 +48,11 @@ export const nRooms = [
     encounterProfileKey: 'N_PreHub',
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
+    eligibility: {
+      kind: 'counterRange',
+      axis: 'biomeDepthCache',
+      range: { min: 1, max: 1 },
+    },
   },
   {
     gameName: 'N_Hub',

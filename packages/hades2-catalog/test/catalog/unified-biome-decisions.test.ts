@@ -166,16 +166,34 @@ describe('unified biome decisions catalog', () => {
     ]);
   });
 
-  it('models N as fixed Opening, linked PreHub, Hub decision, then fixed width-one Preboss handoff', () => {
+  it('models N as a bounded PreHub entry, depth-two Hub takeover, then fixed width-one Preboss handoff', () => {
     const n = createCatalog(declarations).biomeLayouts.byKey.N;
     expect(n).toMatchObject({
       start: { kind: 'fixedAuthored', roomGameName: 'N_Opening01' },
       progression: {
         kind: 'hub',
         hubKey: 'hub',
-        linkedExit: { kind: 'linked', exitKey: 'prehub', roomGameName: 'N_PreHub01' },
+        entry: {
+          exitKey: 'prehub',
+          progressionPolicy: {
+            kind: 'staged',
+            stages: [{ key: 'entry', roomGameNames: ['N_PreHub01'] }],
+          },
+          batchPolicy: { kind: 'standard', fields: [] },
+          rewardStorePolicy: { kind: 'none' },
+          rewardStoreOverrides: [],
+          bounds: { maxBatches: 1, maxTargets: 1 },
+        },
+        terminal: {
+          roomGameName: 'N_Hub',
+          eligibility: {
+            kind: 'counterRange',
+            axis: 'biomeDepthCache',
+            range: { min: 2, max: 2 },
+          },
+          force: 'required',
+        },
         completedExit: {
-          kind: 'linked',
           exitKey: 'preboss',
           roomGameName: 'N_PreBoss01',
           physicalExit: {
@@ -186,6 +204,57 @@ describe('unified biome decisions catalog', () => {
         },
       },
     });
+  });
+
+  it('rejects N Hub entry or terminal declarations outside the bounded depth-gated contract', () => {
+    const widened = input();
+    const widenedLayout = widened.biomeLayouts.find((layout) => layout.biomeKey === 'N');
+    if (widenedLayout === undefined) throw new Error('missing N layout fixture');
+    (
+      widenedLayout.progression as unknown as {
+        entry: { bounds: { maxTargets: number } };
+      }
+    ).entry.bounds.maxTargets = 2;
+    expect(() => createCatalog(widened)).toThrow(CatalogContractError);
+
+    const widenedOpening = input();
+    const opening = widenedOpening.rooms.find((room) => room.gameName === 'N_Opening01');
+    if (opening === undefined) throw new Error('missing N Opening fixture');
+    (opening as unknown as { exits: { index: number; type: string }[] }).exits.push({
+      index: 2,
+      type: 'N_OpeningDoor',
+    });
+    expect(() => createCatalog(widenedOpening)).toThrow(CatalogContractError);
+
+    const incorrectTerminal = input();
+    const terminalLayout = incorrectTerminal.biomeLayouts.find((layout) => layout.biomeKey === 'N');
+    if (terminalLayout === undefined) throw new Error('missing N layout fixture');
+    (
+      terminalLayout.progression as unknown as {
+        terminal: {
+          eligibility: {
+            kind: 'counterRange';
+            axis: 'biomeDepthCache';
+            range: { min: number; max: number };
+          };
+        };
+      }
+    ).terminal.eligibility.range.max = 3;
+    expect(() => createCatalog(incorrectTerminal)).toThrow(CatalogContractError);
+
+    const incorrectPreHub = input();
+    const preHub = incorrectPreHub.rooms.find((room) => room.gameName === 'N_PreHub01');
+    if (preHub === undefined) throw new Error('missing N PreHub fixture');
+    (
+      preHub as unknown as {
+        eligibility: {
+          kind: 'counterRange';
+          axis: 'biomeDepthCache';
+          range: { min: number; max: number };
+        };
+      }
+    ).eligibility.range.max = 2;
+    expect(() => createCatalog(incorrectPreHub)).toThrow(CatalogContractError);
   });
 
   it('rejects a missing Preboss policy and policy on a non-Preboss room', () => {

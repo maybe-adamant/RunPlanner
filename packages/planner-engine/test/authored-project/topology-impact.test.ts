@@ -3,8 +3,10 @@ import {
   createOccurrenceId,
   describeClearTopologyImpact,
   describeExitDecisionRemovalImpact,
+  describeHubDecisionRemovalImpact,
   describeHubSlotClosureImpact,
   describeTopologyRemovalImpact,
+  type OccurrenceId,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
@@ -12,6 +14,17 @@ const root = createOccurrenceId('impact-root');
 const retained = createOccurrenceId('impact-retained');
 const child = createOccurrenceId('impact-child');
 const grandchild = createOccurrenceId('impact-grandchild');
+
+function normalBatch(
+  targets: readonly { readonly exitKey: string; readonly occurrenceId: OccurrenceId }[],
+) {
+  return {
+    kind: 'batch' as const,
+    rewardStore: { kind: 'none' as const },
+    batchState: null,
+    targets,
+  };
+}
 
 describe('topology removal impact', () => {
   it('owns the complete removed occurrence subtree and its exit-decision sources', () => {
@@ -26,25 +39,16 @@ describe('topology removal impact', () => {
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: root },
-          normal: {
-            kind: 'batch' as const,
-            rewardStore: { kind: 'none' as const },
-            batchState: null,
-            targets: [
-              { exitKey: 'exit1', occurrenceId: retained },
-              { exitKey: 'exit2', occurrenceId: child },
-            ],
-          },
+          normal: normalBatch([
+            { exitKey: 'exit1', occurrenceId: retained },
+            { exitKey: 'exit2', occurrenceId: child },
+          ]),
           selection: { kind: 'normal' as const, exitKey: 'exit1' },
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: child },
-          normal: {
-            kind: 'linked' as const,
-            exitKey: 'exit1',
-            occurrenceId: grandchild,
-          },
+          normal: normalBatch([{ exitKey: 'exit1', occurrenceId: grandchild }]),
           selection: { kind: 'derived' as const },
         },
       ],
@@ -69,25 +73,16 @@ describe('topology removal impact', () => {
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: root },
-          normal: {
-            kind: 'batch' as const,
-            rewardStore: { kind: 'none' as const },
-            batchState: null,
-            targets: [
-              { exitKey: 'exit1', occurrenceId: retained },
-              { exitKey: 'exit2', occurrenceId: child },
-            ],
-          },
+          normal: normalBatch([
+            { exitKey: 'exit1', occurrenceId: retained },
+            { exitKey: 'exit2', occurrenceId: child },
+          ]),
           selection: { kind: 'normal' as const, exitKey: 'exit1' },
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: child },
-          normal: {
-            kind: 'linked' as const,
-            exitKey: 'exit1',
-            occurrenceId: grandchild,
-          },
+          normal: normalBatch([{ exitKey: 'exit1', occurrenceId: grandchild }]),
           selection: { kind: 'derived' as const },
         },
       ],
@@ -114,7 +109,7 @@ describe('topology removal impact', () => {
     });
   });
 
-  it('removes N linked-PreHub topology with its Hub board and completed handoff', () => {
+  it('removes a Hub through its persisted PreHub source, not a linked-entry special case', () => {
     const opening = createOccurrenceId('n-opening');
     const preHub = createOccurrenceId('n-prehub');
     const hubSlot = createOccurrenceId('n-combat01');
@@ -131,48 +126,44 @@ describe('topology removal impact', () => {
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: opening },
-          normal: {
-            kind: 'linked' as const,
-            exitKey: 'exit1',
-            occurrenceId: preHub,
-          },
-          selection: { kind: 'derived' as const },
+          normal: normalBatch([{ exitKey: 'prehub', occurrenceId: preHub }]),
+          selection: { kind: 'normal' as const, exitKey: 'prehub' },
         },
         {
           kind: 'hub' as const,
           hubKey: 'hub',
+          source: { kind: 'occurrence' as const, occurrenceId: preHub },
           openTargets: [{ hubSlotKey: 'combat01', occurrenceId: hubSlot }],
           visitOrder: [],
         },
         {
           kind: 'exit' as const,
           source: { kind: 'hubDecision' as const, decisionKey: 'hub' },
-          normal: {
-            kind: 'batch' as const,
-            rewardStore: { kind: 'none' as const },
-            batchState: null,
-            targets: [{ exitKey: 'preboss', occurrenceId: preboss }],
-          },
+          normal: normalBatch([{ exitKey: 'preboss', occurrenceId: preboss }]),
           selection: { kind: 'derived' as const },
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: preboss },
-          normal: {
-            kind: 'linked' as const,
-            exitKey: 'exit1',
-            occurrenceId: postPreboss,
-          },
+          normal: normalBatch([{ exitKey: 'exit1', occurrenceId: postPreboss }]),
           selection: { kind: 'derived' as const },
         },
       ],
     };
 
+    expect(describeTopologyRemovalImpact(topology, new Set([preHub]))).toEqual({
+      removedExitDecisionSources: [
+        { kind: 'hubDecision', decisionKey: 'hub' },
+        { kind: 'occurrence', occurrenceId: preboss },
+      ],
+      removedHubDecisionKeys: ['hub'],
+      removedOccurrenceIds: [preHub, hubSlot, preboss, postPreboss],
+    });
+
     const impact = describeExitDecisionRemovalImpact(topology, {
       kind: 'occurrence',
       occurrenceId: opening,
     });
-
     expect(impact).toEqual({
       removedExitDecisionSources: [
         { kind: 'occurrence', occurrenceId: opening },
@@ -182,7 +173,7 @@ describe('topology removal impact', () => {
       removedHubDecisionKeys: ['hub'],
       removedOccurrenceIds: [preHub, hubSlot, preboss, postPreboss],
     });
-    if (impact === undefined) throw new Error('linked PreHub exit is required');
+    if (impact === undefined) throw new Error('opening exit is required');
     expect(applyTopologyRemovalImpact(topology, impact)).toEqual({
       startOccurrenceId: opening,
       occurrences: [{ occurrenceId: opening, gameName: 'TestRoom', state: { kind: 'none' } }],
@@ -193,7 +184,7 @@ describe('topology removal impact', () => {
       kind: 'hubDecision',
       decisionKey: 'hub',
     });
-    expect(handoffImpact).toMatchObject({
+    expect(handoffImpact).toEqual({
       removedExitDecisionSources: [
         { kind: 'hubDecision', decisionKey: 'hub' },
         { kind: 'occurrence', occurrenceId: preboss },
@@ -202,13 +193,31 @@ describe('topology removal impact', () => {
       removedOccurrenceIds: [preboss, postPreboss],
     });
     if (handoffImpact === undefined) throw new Error('completed-Hub handoff is required');
-    const withoutHandoff = applyTopologyRemovalImpact(topology, handoffImpact);
-    expect(withoutHandoff.occurrences.map((occurrence) => occurrence.occurrenceId)).toEqual([
-      opening,
-      preHub,
-      hubSlot,
-    ]);
-    expect(withoutHandoff.decisions).toEqual([topology.decisions[0], topology.decisions[1]]);
+    expect(
+      applyTopologyRemovalImpact(topology, handoffImpact).occurrences.map(
+        (occurrence) => occurrence.occurrenceId,
+      ),
+    ).toEqual([opening, preHub, hubSlot]);
+
+    const hubImpact = describeHubDecisionRemovalImpact(topology, 'hub');
+    expect(hubImpact).toEqual({
+      removedExitDecisionSources: [
+        { kind: 'hubDecision', decisionKey: 'hub' },
+        { kind: 'occurrence', occurrenceId: preboss },
+      ],
+      removedHubDecisionKeys: ['hub'],
+      removedOccurrenceIds: [hubSlot, preboss, postPreboss],
+    });
+    if (hubImpact === undefined) throw new Error('Hub decision is required');
+    expect(applyTopologyRemovalImpact(topology, hubImpact)).toEqual({
+      startOccurrenceId: opening,
+      occurrences: [opening, preHub].map((occurrenceId) => ({
+        occurrenceId,
+        gameName: 'TestRoom',
+        state: { kind: 'none' },
+      })),
+      decisions: [topology.decisions[0]],
+    });
   });
 
   it('owns the detached physical subtree when closing an unvisited Hub slot', () => {
@@ -225,17 +234,14 @@ describe('topology removal impact', () => {
         {
           kind: 'hub' as const,
           hubKey: 'hub',
+          source: { kind: 'occurrence' as const, occurrenceId: root },
           openTargets: [{ hubSlotKey: 'combat01', occurrenceId: hubSlot }],
           visitOrder: [],
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: hubSlot },
-          normal: {
-            kind: 'linked' as const,
-            exitKey: 'exit1',
-            occurrenceId: hubChild,
-          },
+          normal: normalBatch([{ exitKey: 'exit1', occurrenceId: hubChild }]),
           selection: { kind: 'derived' as const },
         },
       ],
@@ -265,6 +271,7 @@ describe('topology removal impact', () => {
         {
           kind: 'hub' as const,
           hubKey: 'hub',
+          source: { kind: 'occurrence' as const, occurrenceId: root },
           openTargets: [
             { hubSlotKey: 'combat01', occurrenceId: hubSlot },
             { hubSlotKey: 'combat02', occurrenceId: retainedSlot },
@@ -274,22 +281,13 @@ describe('topology removal impact', () => {
         {
           kind: 'exit' as const,
           source: { kind: 'hubDecision' as const, decisionKey: 'hub' },
-          normal: {
-            kind: 'batch' as const,
-            rewardStore: { kind: 'none' as const },
-            batchState: null,
-            targets: [{ exitKey: 'preboss', occurrenceId: preboss }],
-          },
+          normal: normalBatch([{ exitKey: 'preboss', occurrenceId: preboss }]),
           selection: { kind: 'derived' as const },
         },
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: preboss },
-          normal: {
-            kind: 'linked' as const,
-            exitKey: 'exit1',
-            occurrenceId: completionChild,
-          },
+          normal: normalBatch([{ exitKey: 'exit1', occurrenceId: completionChild }]),
           selection: { kind: 'derived' as const },
         },
       ],
@@ -310,7 +308,7 @@ describe('topology removal impact', () => {
       occurrences: [root, retainedSlot].map((occurrenceId) => ({
         occurrenceId,
         gameName: 'TestRoom',
-        state: { kind: 'none' as const },
+        state: { kind: 'none' },
       })),
       decisions: [topology.decisions[0]],
     });
@@ -333,28 +331,20 @@ describe('topology removal impact', () => {
         {
           kind: 'exit' as const,
           source: { kind: 'occurrence' as const, occurrenceId: root },
-          normal: {
-            kind: 'linked' as const,
-            exitKey: 'exit1',
-            occurrenceId: child,
-          },
+          normal: normalBatch([{ exitKey: 'exit1', occurrenceId: child }]),
           selection: { kind: 'derived' as const },
         },
         {
           kind: 'hub' as const,
           hubKey: 'hub',
+          source: { kind: 'occurrence' as const, occurrenceId: child },
           openTargets: [],
           visitOrder: [],
         },
         {
           kind: 'exit' as const,
           source: { kind: 'hubDecision' as const, decisionKey: 'hub' },
-          normal: {
-            kind: 'batch' as const,
-            rewardStore: { kind: 'none' as const },
-            batchState: null,
-            targets: [],
-          },
+          normal: normalBatch([]),
           selection: { kind: 'unresolved' as const },
         },
       ],

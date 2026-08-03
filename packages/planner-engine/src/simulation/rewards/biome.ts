@@ -31,6 +31,7 @@ import type {
   CanonicalRewardWheel,
   CanonicalTarget,
   MaterializedBiomePrefix,
+  MaterializedHubVisitFrontier,
 } from '../materialization';
 import type { CanonicalDecision } from '../materialization/model';
 import { materializeShipCombatState } from '../materialization';
@@ -126,7 +127,7 @@ function rewardFacts(
     fail,
   });
 }
-function requireGeneratedLayout(catalog: Catalog, snapshot: BiomeRewardSnapshot): BiomeLayout {
+function requireRewardLayout(catalog: Catalog, snapshot: BiomeRewardSnapshot): BiomeLayout {
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   const supportedPolicy =
     layout !== undefined &&
@@ -165,22 +166,36 @@ function batches(snapshot: BiomeRewardSnapshot): readonly CanonicalBatch[] {
   );
 }
 
+function hasHubVisitDetails(
+  frontier: MaterializedBiomePrefix['frontier'] | undefined,
+): frontier is MaterializedHubVisitFrontier {
+  return frontier?.kind === 'hubVisit' && 'phase' in frontier;
+}
+
+function hubVisitFrontier(snapshot: BiomeRewardSnapshot): MaterializedHubVisitFrontier | undefined {
+  const frontier = snapshot.kind === 'biomePrefix' ? snapshot.frontier : undefined;
+  return hasHubVisitDetails(frontier) ? frontier : undefined;
+}
+
+function hubFrontierRooms(snapshot: BiomeRewardSnapshot): readonly CanonicalRewardSource[] {
+  const frontier = hubVisitFrontier(snapshot);
+  if (frontier === undefined) return Object.freeze([]);
+  return Object.freeze([frontier.target.room, ...frontier.localSlots]);
+}
+
 function rewardRooms(snapshot: BiomeRewardSnapshot): ReadonlyMap<string, CanonicalRewardSource> {
   const rooms = [
     snapshot.entryRoom,
     ...rewardDecisions(snapshot).flatMap((decision) =>
       decision.kind === 'batch'
         ? decision.targets.map((target) => target.room)
-        : decision.kind === 'linkedExit'
-          ? [decision.target.room]
-          : decision.kind === 'hub'
-            ? [
-                decision.room,
-                ...decision.board.targets.map((target) => target.room),
-                ...decision.visits.flatMap((visit) => visit.localSlots),
-              ]
-            : [],
+        : [
+            decision.room,
+            ...decision.board.targets.map((target) => target.room),
+            ...decision.visits.flatMap((visit) => visit.localSlots),
+          ],
     ),
+    ...hubFrontierRooms(snapshot),
   ];
   return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
 }
@@ -244,13 +259,7 @@ function roomViews(history: BiomeRewardHistory): ReadonlyMap<string, Progressive
 function canonicalTargets(snapshot: BiomeRewardSnapshot): ReadonlyMap<string, CanonicalTarget> {
   return new Map(
     rewardDecisions(snapshot)
-      .flatMap((decision) =>
-        decision.kind === 'batch'
-          ? decision.targets
-          : decision.kind === 'linkedExit'
-            ? [decision.target]
-            : [],
-      )
+      .flatMap((decision) => (decision.kind === 'batch' ? decision.targets : []))
       .map((target) => [semanticAddressKey(target.origin), target]),
   );
 }
@@ -646,7 +655,7 @@ export function evaluateBiomeRewardsAssembly(
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRewardSimulationContractError('reward inputs do not share one biome owner');
   }
-  const layout = requireGeneratedLayout(catalog, snapshot);
+  const layout = requireRewardLayout(catalog, snapshot);
   const rewardLookup = hubRewardLookups(catalog, snapshot);
   const rooms = rewardRooms(snapshot);
   const views = roomViews(history);
@@ -655,22 +664,40 @@ export function evaluateBiomeRewardsAssembly(
   const batchesByParent = new Map(
     batches(snapshot).map((batch) => [semanticAddressKey(batch.parent.origin), batch]),
   );
-  const linkedSources = new Set(
+  // A Hub replaces its source's zero-target terminal envelope. Its source
+  // still reaches an outgoing lifecycle checkpoint, but that checkpoint
+  // creates the Hub rather than a normal reward batch.
+  const hubTakeoverSources = new Set(
     snapshot.decisions
       .filter(
-        (decision): decision is Extract<CanonicalDecision, { readonly kind: 'linkedExit' }> =>
-          decision.kind === 'linkedExit',
+        (decision): decision is Extract<CanonicalDecision, { readonly kind: 'hub' }> =>
+          decision.kind === 'hub',
       )
       .map((decision) => semanticAddressKey(decision.source.origin)),
   );
-  const linkedTargetSources = new Set(
-    snapshot.decisions
+  // Hub visit targets and their entered local children restore to an existing
+  // parent rather than generating another ordinary decision. Their outgoing
+  // checkpoints must still advance reward history without inventing a batch.
+  const activeHubVisit = hubVisitFrontier(snapshot);
+  const hubRestoringSources = new Set([
+    ...snapshot.decisions
       .filter(
-        (decision): decision is Extract<CanonicalDecision, { readonly kind: 'linkedExit' }> =>
-          decision.kind === 'linkedExit',
+        (decision): decision is Extract<CanonicalDecision, { readonly kind: 'hub' }> =>
+          decision.kind === 'hub',
       )
-      .map((decision) => semanticAddressKey(decision.target.room.origin)),
-  );
+      .flatMap((decision) =>
+        decision.visits.flatMap((visit) => [
+          semanticAddressKey(visit.target.room.origin),
+          ...visit.enteredLocalRooms.map((room) => semanticAddressKey(room.origin)),
+        ]),
+      ),
+    ...(activeHubVisit === undefined
+      ? []
+      : [
+          semanticAddressKey(activeHubVisit.target.room.origin),
+          ...activeHubVisit.enteredLocalRooms.map((room) => semanticAddressKey(room.origin)),
+        ]),
+  ]);
   const frontierSource =
     snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
       ? semanticAddressKey(snapshot.frontier.parent.origin)
@@ -718,17 +745,26 @@ export function evaluateBiomeRewardsAssembly(
         `${semanticAddressKey(frontier.origin)} has no reward-history frontier source`,
       );
     }
-    const nextExit = [...declaration.exits].sort((left, right) => left.index - right.index)[
-      frontier.targets.length
-    ];
+    const exitKeys =
+      layout.progression.kind === 'hub'
+        ? semanticAddressKey(frontier.parent.origin) ===
+          semanticAddressKey(snapshot.entryRoom.origin)
+          ? Object.freeze([layout.progression.entry.exitKey])
+          : Object.freeze([])
+        : Object.freeze(
+            [...declaration.exits]
+              .sort((left, right) => left.index - right.index)
+              .map((exit) => `exit${exit.index}`),
+          );
+    const nextExitKey = exitKeys[frontier.targets.length];
     const historySequence = history.events.at(-1)?.sequence;
-    if (nextExit === undefined || historySequence === undefined) {
+    if (nextExitKey === undefined || historySequence === undefined) {
       return;
     }
     const origin = createTargetAddress(
       createBiomeAddress(frontier.origin.routeKey, frontier.origin.biomeKey),
       frontier.origin.source,
-      `exit${nextExit.index}`,
+      nextExitKey,
     );
     if (!targetHistoryByOrigin.has(semanticAddressKey(origin))) {
       recordTargetSlotHistory(origin, historySequence);
@@ -1078,11 +1114,6 @@ export function evaluateBiomeRewardsAssembly(
           branches = advanceRewardBranches(branches, event.sequence);
           break;
         }
-        if (layout.progression.kind === 'hub') {
-          peers = Object.freeze([]);
-          branches = advanceRewardBranches(branches, event.sequence);
-          break;
-        }
         const source = rooms.get(semanticAddressKey(event.origin));
         const sourceViews = views.get(semanticAddressKey(event.origin));
         const declaration = source && catalog.rooms.byKey[source.gameName];
@@ -1095,8 +1126,8 @@ export function evaluateBiomeRewardsAssembly(
         const targetSet = batch?.targets;
         if (targetSet === undefined) {
           if (
-            linkedSources.has(semanticAddressKey(event.origin)) ||
-            linkedTargetSources.has(semanticAddressKey(event.origin)) ||
+            hubTakeoverSources.has(semanticAddressKey(event.origin)) ||
+            hubRestoringSources.has(semanticAddressKey(event.origin)) ||
             semanticAddressKey(event.origin) === frontierSource
           ) {
             peers = Object.freeze([]);

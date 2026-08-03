@@ -67,7 +67,7 @@ const codecRejections: readonly {
 }[] = [
   { name: 'a null root', mutate: () => null },
   { name: 'an array root', mutate: () => [] },
-  { name: 'a stale schema version', mutate: (document) => ({ ...document, schemaVersion: 8 }) },
+  { name: 'a schema-9 document', mutate: (document) => ({ ...document, schemaVersion: 9 }) },
   { name: 'a blank project ID', mutate: (document) => ({ ...document, projectId: ' ' }) },
   { name: 'a blank project name', mutate: (document) => ({ ...document, name: ' ' }) },
   {

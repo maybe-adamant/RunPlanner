@@ -1,6 +1,6 @@
 import type { ResolvedRewardOffer, RewardPayload } from '../reward-kernel/model';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 9 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 10 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -95,12 +95,6 @@ export type ExitSelection =
   | { readonly kind: 'unresolved' }
   | { readonly kind: 'normal'; readonly exitKey: string };
 
-export interface LinkedNormalExit {
-  readonly kind: 'linked';
-  readonly exitKey: string;
-  readonly occurrenceId: OccurrenceId;
-}
-
 export interface NormalDoorBatch {
   readonly kind: 'batch';
   readonly rewardStore: BatchRewardStoreState;
@@ -111,7 +105,7 @@ export interface NormalDoorBatch {
 export interface ExitDecision {
   readonly kind: 'exit';
   readonly source: ExitDecisionSource;
-  readonly normal: LinkedNormalExit | NormalDoorBatch;
+  readonly normal: NormalDoorBatch;
   readonly selection: ExitSelection;
 }
 
@@ -123,6 +117,7 @@ export interface HubTargetReference {
 export interface HubDecision {
   readonly kind: 'hub';
   readonly hubKey: string;
+  readonly source: Extract<ExitDecisionSource, { readonly kind: 'occurrence' }>;
   readonly openTargets: readonly HubTargetReference[];
   readonly visitOrder: readonly string[];
 }

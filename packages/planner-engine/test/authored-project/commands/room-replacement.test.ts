@@ -77,7 +77,7 @@ describe('authored-project room replacement commands', () => {
     );
   });
 
-  it('retains declaration-fixed linked and Hub target identities', () => {
+  it('retains bounded PreHub-stage and Hub target identities', () => {
     const openingId = createOccurrenceId('replacement-n-opening');
     const prehubId = createOccurrenceId('replacement-n-prehub');
     let project = applyProjectCommand(nProject(), catalog, {
@@ -90,9 +90,14 @@ describe('authored-project room replacement commands', () => {
       occurrenceId: openingId,
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'CreateLinkedExit',
+      kind: 'CreateBatch',
       decision: openingDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(nBiome, openingDecision.source, 'prehub'),
       occurrenceId: prehubId,
+      gameName: 'N_PreHub01',
     });
 
     expect(() =>
@@ -104,12 +109,21 @@ describe('authored-project room replacement commands', () => {
     ).toThrowError(
       expect.objectContaining({
         commandKind: 'ReplaceOccurrenceRoom',
-        detail: 'linked target identity is declaration-fixed',
+        detail: 'N_Combat01 is not available in stage entry',
       }),
     );
 
+    const preHubDecision = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: prehubId,
+    });
     project = applyProjectCommand(project, catalog, {
-      kind: 'CreateHubDecision',
+      kind: 'CreateBatch',
+      decision: preHubDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceWithHubDecision',
+      decision: preHubDecision,
       hub: createHubDecisionAddress(nBiome, 'hub'),
     });
     const slotId = createOccurrenceId('replacement-n-combat01');

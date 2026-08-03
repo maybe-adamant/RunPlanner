@@ -10,7 +10,11 @@ import type {
 import type { RoomOccurrenceRole, RoomStateContext } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
-import { selectedExitKey, selectedOrdinaryBatchIndex } from '../topology/query';
+import {
+  normalDecisionProgressionForLayout,
+  selectedExitKey,
+  selectedOrdinaryBatchIndex,
+} from '../topology/query';
 
 import {
   failCommand,
@@ -109,10 +113,6 @@ function occurrenceContext(
       }
       continue;
     }
-    if (decision.normal.kind === 'linked' && decision.normal.occurrenceId === occurrenceId) {
-      return Object.freeze({ role: 'ordinary', entryActive: true, owner: decision });
-    }
-    if (decision.normal.kind !== 'batch') continue;
     const targetIndex = decision.normal.targets.findIndex(
       (target) => target.occurrenceId === occurrenceId,
     );
@@ -180,28 +180,23 @@ function requireOrdinaryBatchTarget(
       'takeover Preboss targets can only change through their atomic batch command',
     );
   }
-  if (
-    replacement.kind === 'Intro' ||
-    replacement.kind === 'Opening' ||
-    replacement.kind === 'PreHub'
-  ) {
+  if (replacement.kind === 'Intro' || replacement.kind === 'Opening') {
+    failCommand(command, `${replacement.gameName} is not an ordinary normal-door target`);
+  }
+  if (replacement.kind === 'PreHub' && located.layout.progression.kind !== 'hub') {
     failCommand(command, `${replacement.gameName} is not an ordinary normal-door target`);
   }
   if (replacement.prebossBatchPolicy?.kind === 'takeOverNormalDoors') {
     failCommand(command, 'takeover Preboss targets require an atomic takeover batch command');
   }
-  if (
-    located.layout.progression.kind === 'generated' &&
-    located.layout.progression.progressionPolicy.kind === 'staged'
-  ) {
+  const progression = normalDecisionProgressionForLayout(located.layout);
+  if (progression?.progressionPolicy.kind === 'staged') {
     const batchIndex =
       context.owner.source.kind === 'occurrence'
         ? selectedOrdinaryBatchIndex(topology, context.owner.source.occurrenceId)
         : undefined;
     const stage =
-      batchIndex === undefined
-        ? undefined
-        : located.layout.progression.progressionPolicy.stages[batchIndex];
+      batchIndex === undefined ? undefined : progression.progressionPolicy.stages[batchIndex];
     if (stage === undefined || !stage.roomGameNames.includes(replacement.gameName)) {
       failCommand(
         command,
@@ -217,11 +212,12 @@ function reconcileSourceRewardStore(
   occurrenceId: OccurrenceId,
   replacementRoom: RoomDeclaration,
 ): BiomeTopology {
-  if (located.layout.progression.kind !== 'generated') return topology;
+  const progression = normalDecisionProgressionForLayout(located.layout);
+  if (progression === undefined) return topology;
   const policy =
-    located.layout.progression.rewardStoreOverrides.find(
+    progression.rewardStoreOverrides.find(
       (override) => override.sourceEncounterProfileKey === replacementRoom.encounterProfileKey,
-    )?.policy ?? located.layout.progression.rewardStorePolicy;
+    )?.policy ?? progression.rewardStorePolicy;
   return Object.freeze({
     ...topology,
     decisions: Object.freeze(
@@ -229,8 +225,7 @@ function reconcileSourceRewardStore(
         if (
           decision.kind !== 'exit' ||
           decision.source.kind !== 'occurrence' ||
-          decision.source.occurrenceId !== occurrenceId ||
-          decision.normal.kind !== 'batch'
+          decision.source.occurrenceId !== occurrenceId
         ) {
           return decision;
         }
@@ -272,21 +267,6 @@ export function applyRoomReplacementCommand(
         : [located.layout.start.roomGameName];
     if (!allowed.includes(replacementRoom.gameName)) {
       failCommand(command, `${replacementRoom.gameName} is not a declared start room`);
-    }
-  }
-  const linked = current.decisions.find(
-    (decision): decision is ExitDecision =>
-      decision.kind === 'exit' &&
-      decision.normal.kind === 'linked' &&
-      decision.normal.occurrenceId === occurrence.occurrenceId,
-  );
-  if (linked !== undefined) {
-    const expected =
-      located.layout.progression.kind === 'hub'
-        ? located.layout.progression.linkedExit.roomGameName
-        : undefined;
-    if (replacementRoom.gameName !== expected) {
-      failCommand(command, 'linked target identity is declaration-fixed');
     }
   }
   const hubTarget = current.decisions.find(

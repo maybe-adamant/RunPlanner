@@ -9,14 +9,22 @@ import {
   type TargetAddress,
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
-import { exitDecisionForSource } from '../../authored-project/topology/query';
+import {
+  declaredPhysicalExits,
+  exitDecisionForSource,
+} from '../../authored-project/topology/query';
 import type { RoomTargetCandidateArtifacts } from '../candidate-artifacts';
 import {
+  normalTargetCandidateHistory,
   roomTargetCandidateContextAtFrontier,
   type RoomTargetCandidateValidation,
 } from '../generation';
-import type { ProgressiveRoomHistoryViews } from '../history';
-import type { CanonicalDecision } from '../materialization';
+import type { HistoryStateView, ProgressiveRoomHistoryViews } from '../history';
+import type {
+  CanonicalAuthoredRoom,
+  CanonicalDecision,
+  CanonicalPhysicalExit,
+} from '../materialization';
 import type { ProjectEvaluation } from '../project';
 import { evaluateProgressiveBiomeAssembly } from '../progressive/biome';
 import {
@@ -64,15 +72,81 @@ function ordinaryBatchCount(catalog: Catalog, decisions: readonly CanonicalDecis
   ).length;
 }
 
+/**
+ * Normal target keys are declaration-owned. Most biomes spell those keys as
+ * `exit${n}`, but N's bounded Opening entry uses the stable physical key
+ * `prehub`. Candidate ordering and prefix history must consume that shared
+ * topology product rather than parse a UI-shaped key.
+ */
+function physicalExitsForTarget(
+  catalog: Catalog,
+  project: ProjectDocument,
+  target: TargetAddress,
+): readonly CanonicalPhysicalExit[] | undefined {
+  const plan = planFor(project, target.routeKey, target.biomeKey);
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  if (layout === undefined || plan.topology === null) return undefined;
+  const exits = declaredPhysicalExits(catalog, layout, plan.topology, target.source);
+  if (exits === undefined) return undefined;
+  return Object.freeze(
+    exits.flatMap((exit) =>
+      exit.kind === 'normal'
+        ? [
+            Object.freeze({
+              kind: 'available' as const,
+              exitKey: exit.exitKey,
+              index: exit.index,
+              type: exit.type,
+              compatibilityPolicyKey: exit.compatibilityPolicyKey,
+            }),
+          ]
+        : [],
+    ),
+  );
+}
+
+function physicalExitForTarget(
+  catalog: Catalog,
+  project: ProjectDocument,
+  target: TargetAddress,
+): CanonicalPhysicalExit | undefined {
+  return physicalExitsForTarget(catalog, project, target)?.find(
+    (exit) => exit.exitKey === target.exitKey,
+  );
+}
+
+function physicalExitIndex(
+  catalog: Catalog,
+  project: ProjectDocument,
+  target: TargetAddress,
+): number | undefined {
+  return physicalExitForTarget(catalog, project, target)?.index;
+}
+
+function sourceCandidateHistory(
+  catalog: Catalog,
+  project: ProjectDocument,
+  target: TargetAddress,
+  source: CanonicalAuthoredRoom,
+  views: ProgressiveRoomHistoryViews,
+): HistoryStateView | undefined {
+  const plan = planFor(project, target.routeKey, target.biomeKey);
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  return layout === undefined
+    ? views.preOutgoing
+    : normalTargetCandidateHistory(layout, source, views);
+}
+
 function historyBeforePhysicalTarget(
   source: ProgressiveRoomHistoryViews,
-  sourceDeclaration: NonNullable<Catalog['rooms']['byKey'][string]>,
+  physicalExits: readonly CanonicalPhysicalExit[],
   target: TargetAddress,
+  firstTargetHistory: HistoryStateView | undefined = source.preOutgoing,
 ): ProgressiveRoomHistoryViews['preOutgoing'] {
-  const exits = [...sourceDeclaration.exits].sort((left, right) => left.index - right.index);
-  const targetIndex = exits.findIndex((exit) => `exit${exit.index}` === target.exitKey);
+  const exits = [...physicalExits].sort((left, right) => left.index - right.index);
+  const targetIndex = exits.findIndex((exit) => exit.exitKey === target.exitKey);
   if (targetIndex < 0) return undefined;
-  if (targetIndex === 0) return source.preOutgoing;
+  if (targetIndex === 0) return firstTargetHistory;
   const precedingExit = exits[targetIndex - 1];
   if (precedingExit === undefined) return undefined;
   return source.targetGenerations.find(
@@ -82,32 +156,33 @@ function historyBeforePhysicalTarget(
         createTargetAddress(
           createBiomeAddress(target.routeKey, target.biomeKey),
           target.source,
-          `exit${precedingExit.index}`,
+          precedingExit.exitKey,
         ),
       ),
   )?.after;
 }
 
 function blockedPhysicalTargetPrecedes(
+  catalog: Catalog,
   project: ProjectDocument,
   blockedAt: SemanticAddress | undefined,
   target: TargetAddress,
 ): boolean {
   const biome = createBiomeAddress(target.routeKey, target.biomeKey);
   const queriedDecision = createExitDecisionAddress(biome, target.source);
-  const queriedIndex = /^exit(\d+)$/.exec(target.exitKey)?.[1];
+  const queriedIndex = physicalExitIndex(catalog, project, target);
   if (blockedAt === undefined || queriedIndex === undefined) return false;
   const blockedIndex = (() => {
     if (blockedAt.kind === 'target') {
       const blockedDecision = createExitDecisionAddress(biome, blockedAt.source);
       return semanticAddressKey(blockedDecision) === semanticAddressKey(queriedDecision)
-        ? /^exit(\d+)$/.exec(blockedAt.exitKey)?.[1]
+        ? physicalExitIndex(catalog, project, blockedAt)
         : undefined;
     }
     if (blockedAt.kind === 'batchRewardStore') {
       const blockedDecision = createExitDecisionAddress(biome, blockedAt.source);
       return semanticAddressKey(blockedDecision) === semanticAddressKey(queriedDecision)
-        ? '0'
+        ? 0
         : undefined;
     }
     if (blockedAt.kind !== 'incomingReward') return undefined;
@@ -120,9 +195,11 @@ function blockedPhysicalTargetPrecedes(
             (candidate) => candidate.occurrenceId === blockedAt.occurrenceId,
           )?.exitKey
         : undefined;
-    return exitKey === undefined ? undefined : /^exit(\d+)$/.exec(exitKey)?.[1];
+    return exitKey === undefined
+      ? undefined
+      : physicalExitIndex(catalog, project, Object.freeze({ ...target, exitKey }));
   })();
-  return blockedIndex !== undefined && Number(blockedIndex) < Number(queriedIndex);
+  return blockedIndex !== undefined && blockedIndex < queriedIndex;
 }
 
 function evaluatePrefixRoomTarget(
@@ -139,7 +216,7 @@ function evaluatePrefixRoomTarget(
   }
   if (
     biome.coverage.kind === 'prefix' &&
-    blockedPhysicalTargetPrecedes(project, biome.coverage.blockedAt, query.target)
+    blockedPhysicalTargetPrecedes(catalog, project, biome.coverage.blockedAt, query.target)
   ) {
     return undefined;
   }
@@ -152,22 +229,22 @@ function evaluatePrefixRoomTarget(
   const source = prefixAuthoredRooms(prefix).find(
     (room) => semanticAddressKey(room.origin) === semanticAddressKey(frontier.parent.origin),
   );
-  const sourceDeclaration = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
-  const exitIndex = /^exit(\d+)$/.exec(query.target.exitKey)?.[1];
-  const physicalExit =
-    exitIndex === undefined
-      ? undefined
-      : sourceDeclaration?.exits.find((exit) => exit.index === Number(exitIndex));
+  const physicalExits = physicalExitsForTarget(catalog, project, query.target);
+  const physicalExit = physicalExits?.find((exit) => exit.exitKey === query.target.exitKey);
   const sourceViews =
     source === undefined
       ? undefined
       : biome.history.rooms.find(
           (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
         );
-  const sourceHistory =
-    sourceDeclaration === undefined || sourceViews === undefined
+  const firstTargetHistory =
+    source === undefined || sourceViews === undefined
       ? undefined
-      : historyBeforePhysicalTarget(sourceViews, sourceDeclaration, query.target);
+      : sourceCandidateHistory(catalog, project, query.target, source, sourceViews);
+  const sourceHistory =
+    physicalExits === undefined || sourceViews === undefined || firstTargetHistory === undefined
+      ? undefined
+      : historyBeforePhysicalTarget(sourceViews, physicalExits, query.target, firstTargetHistory);
   if (source === undefined || physicalExit === undefined || sourceHistory === undefined) {
     return undefined;
   }
@@ -177,13 +254,7 @@ function evaluatePrefixRoomTarget(
     ordinaryBatchCount(catalog, prefix.decisions),
     source,
     query.target,
-    Object.freeze({
-      kind: 'available',
-      exitKey: query.target.exitKey,
-      index: physicalExit.index,
-      type: physicalExit.type,
-      compatibilityPolicyKey: physicalExit.compatibilityPolicyKey,
-    }),
+    physicalExit,
     sourceHistory,
     completeBiomeCount(evaluation, query.target.routeKey, query.target.biomeKey),
     frontier.targets.length === 0,
@@ -215,7 +286,9 @@ function evaluateInvalidCompleteRoomTarget(
   if (covered !== undefined) {
     return Object.freeze({ kind: 'roomTarget', result: covered.evaluateGameName(query.gameName) });
   }
-  if (blockedPhysicalTargetPrecedes(project, progressive.evaluation.blockedAt, query.target)) {
+  if (
+    blockedPhysicalTargetPrecedes(catalog, project, progressive.evaluation.blockedAt, query.target)
+  ) {
     return undefined;
   }
   const prefix = progressive.evaluation.materializedPrefix;
@@ -230,22 +303,22 @@ function evaluateInvalidCompleteRoomTarget(
   const source = prefixAuthoredRooms(prefix).find(
     (room) => semanticAddressKey(room.origin) === semanticAddressKey(frontier.parent.origin),
   );
-  const sourceDeclaration = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
-  const exitIndex = /^exit(\d+)$/.exec(query.target.exitKey)?.[1];
-  const physicalExit =
-    exitIndex === undefined
-      ? undefined
-      : sourceDeclaration?.exits.find((exit) => exit.index === Number(exitIndex));
+  const physicalExits = physicalExitsForTarget(catalog, project, query.target);
+  const physicalExit = physicalExits?.find((exit) => exit.exitKey === query.target.exitKey);
   const sourceViews =
     source === undefined
       ? undefined
       : progressive.evaluation.history.rooms.find(
           (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
         );
-  const sourceHistory =
-    sourceDeclaration === undefined || sourceViews === undefined
+  const firstTargetHistory =
+    source === undefined || sourceViews === undefined
       ? undefined
-      : historyBeforePhysicalTarget(sourceViews, sourceDeclaration, query.target);
+      : sourceCandidateHistory(catalog, project, query.target, source, sourceViews);
+  const sourceHistory =
+    physicalExits === undefined || sourceViews === undefined || firstTargetHistory === undefined
+      ? undefined
+      : historyBeforePhysicalTarget(sourceViews, physicalExits, query.target, firstTargetHistory);
   if (source === undefined || physicalExit === undefined || sourceHistory === undefined) {
     return undefined;
   }
@@ -255,13 +328,7 @@ function evaluateInvalidCompleteRoomTarget(
     ordinaryBatchCount(catalog, prefix.decisions),
     source,
     query.target,
-    Object.freeze({
-      kind: 'available',
-      exitKey: query.target.exitKey,
-      index: physicalExit.index,
-      type: physicalExit.type,
-      compatibilityPolicyKey: physicalExit.compatibilityPolicyKey,
-    }),
+    physicalExit,
     sourceHistory,
     completeBiomeCount(evaluation, query.target.routeKey, query.target.biomeKey),
     frontier.targets.length === 0,
@@ -301,15 +368,12 @@ function assertRoomTargetDomain(
       `${semanticAddressKey(target)} has no authored ordinary target domain`,
     );
   }
-  const sourceOccurrenceId = target.source.occurrenceId;
-  const source = topology?.occurrences.find(
-    (occurrence) => occurrence.occurrenceId === sourceOccurrenceId,
-  );
-  const declaration = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
-  if (
-    declaration === undefined ||
-    !declaration.exits.some((exit) => `exit${exit.index}` === target.exitKey)
-  ) {
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  const exits =
+    topology === null || layout === undefined
+      ? undefined
+      : declaredPhysicalExits(catalog, layout, topology, target.source);
+  if (!exits?.some((exit) => exit.kind === 'normal' && exit.exitKey === target.exitKey)) {
     throw new CandidateEvaluationContractError(
       `${semanticAddressKey(target)} has no declaration-owned physical exit`,
     );

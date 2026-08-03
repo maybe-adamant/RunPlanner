@@ -130,8 +130,6 @@ export function prefixAuthoredRooms(
       switch (decision.kind) {
         case 'batch':
           return decision.targets.map((target) => target.room);
-        case 'linkedExit':
-          return [decision.target.room];
         case 'hub':
           return decision.board.targets.map((target) => target.room);
       }

@@ -24,36 +24,112 @@ function sourceKey(source: ExitDecisionSource): string {
 }
 
 function targetsForDecision(decision: ExitDecision): readonly OccurrenceId[] {
-  return decision.normal.kind === 'linked'
-    ? [decision.normal.occurrenceId]
-    : decision.normal.targets.map((target) => target.occurrenceId);
+  return decision.normal.targets.map((target) => target.occurrenceId);
 }
 
-function collectOccurrenceDescendants(
+function exitSourceIsRemoved(
+  source: ExitDecisionSource,
+  removedOccurrences: ReadonlySet<OccurrenceId>,
+  removedSourceKeys: ReadonlySet<string>,
+  removedHubDecisionKeys: ReadonlySet<string>,
+): boolean {
+  return (
+    removedSourceKeys.has(sourceKey(source)) ||
+    (source.kind === 'occurrence' && removedOccurrences.has(source.occurrenceId)) ||
+    (source.kind === 'hubDecision' && removedHubDecisionKeys.has(source.decisionKey))
+  );
+}
+
+function hubSourceIsRemoved(
+  source: ExitDecisionSource,
+  removedOccurrences: ReadonlySet<OccurrenceId>,
+  removedHubDecisionKeys: ReadonlySet<string>,
+): boolean {
+  return (
+    (source.kind === 'occurrence' && removedOccurrences.has(source.occurrenceId)) ||
+    (source.kind === 'hubDecision' && removedHubDecisionKeys.has(source.decisionKey))
+  );
+}
+
+interface TopologyRemovalRoots {
+  readonly occurrenceIds?: ReadonlySet<OccurrenceId>;
+  readonly exitDecisionSources?: ReadonlySet<string>;
+  readonly hubDecisionKeys?: ReadonlySet<string>;
+}
+
+/**
+ * Follows the persisted ownership graph while a command removes topology.
+ * Exit decisions own their targets, and a Hub decision owns both its open
+ * slots and its completed-Hub handoff. A Hub source is an ordinary structural
+ * owner, so deleting that source removes the whole Hub-owned branch without
+ * relying on a biome-specific predecessor shape.
+ */
+function collectTopologyRemovalClosure(
   topology: BiomeTopology,
-  roots: ReadonlySet<OccurrenceId>,
-): ReadonlySet<OccurrenceId> {
-  const removed = new Set(roots);
+  roots: TopologyRemovalRoots,
+): {
+  readonly removedOccurrences: ReadonlySet<OccurrenceId>;
+  readonly removedSourceKeys: ReadonlySet<string>;
+  readonly removedHubDecisionKeys: ReadonlySet<string>;
+} {
+  const removedOccurrences = new Set(roots.occurrenceIds);
+  const removedSourceKeys = new Set(roots.exitDecisionSources);
+  const removedHubDecisionKeys = new Set(roots.hubDecisionKeys);
   let changed = true;
+
   while (changed) {
     changed = false;
+
     for (const decision of topology.decisions) {
+      if (decision.kind !== 'exit') continue;
       if (
-        decision.kind !== 'exit' ||
-        decision.source.kind !== 'occurrence' ||
-        !removed.has(decision.source.occurrenceId)
+        !exitSourceIsRemoved(
+          decision.source,
+          removedOccurrences,
+          removedSourceKeys,
+          removedHubDecisionKeys,
+        )
       ) {
         continue;
       }
+      if (!removedSourceKeys.has(sourceKey(decision.source))) {
+        removedSourceKeys.add(sourceKey(decision.source));
+        changed = true;
+      }
       for (const occurrenceId of targetsForDecision(decision)) {
-        if (!removed.has(occurrenceId)) {
-          removed.add(occurrenceId);
+        if (!removedOccurrences.has(occurrenceId)) {
+          removedOccurrences.add(occurrenceId);
+          changed = true;
+        }
+      }
+    }
+
+    for (const decision of topology.decisions) {
+      if (decision.kind !== 'hub') continue;
+      if (
+        !removedHubDecisionKeys.has(decision.hubKey) &&
+        !hubSourceIsRemoved(decision.source, removedOccurrences, removedHubDecisionKeys)
+      ) {
+        continue;
+      }
+      if (!removedHubDecisionKeys.has(decision.hubKey)) {
+        removedHubDecisionKeys.add(decision.hubKey);
+        changed = true;
+      }
+      for (const target of decision.openTargets) {
+        if (!removedOccurrences.has(target.occurrenceId)) {
+          removedOccurrences.add(target.occurrenceId);
           changed = true;
         }
       }
     }
   }
-  return removed;
+
+  return Object.freeze({
+    removedOccurrences,
+    removedSourceKeys,
+    removedHubDecisionKeys,
+  });
 }
 
 function impactFor(
@@ -90,24 +166,22 @@ function impactFor(
 
 /**
  * Returns the complete occurrence subtree and every exit decision that owns
- * part of it. Hub decisions are not occurrence descendants and remain owned
- * by their explicit Hub commands.
+ * part of it, plus any Hub decision whose persisted source is in that
+ * subtree. Explicit Hub removal starts from the Hub decision instead.
  */
 export function describeTopologyRemovalImpact(
   topology: BiomeTopology,
   rootOccurrenceIds: ReadonlySet<OccurrenceId>,
 ): TopologyRemovalImpact {
-  const removedOccurrences = collectOccurrenceDescendants(topology, rootOccurrenceIds);
-  const removedSourceKeys = new Set(
-    topology.decisions.flatMap((decision) =>
-      decision.kind === 'exit' &&
-      decision.source.kind === 'occurrence' &&
-      removedOccurrences.has(decision.source.occurrenceId)
-        ? [sourceKey(decision.source)]
-        : [],
-    ),
+  const closure = collectTopologyRemovalClosure(topology, {
+    occurrenceIds: rootOccurrenceIds,
+  });
+  return impactFor(
+    topology,
+    closure.removedOccurrences,
+    closure.removedSourceKeys,
+    closure.removedHubDecisionKeys,
   );
-  return impactFor(topology, removedOccurrences, removedSourceKeys, new Set());
 }
 
 /**
@@ -128,11 +202,10 @@ export function describeHubSlotClosureImpact(
   const target = hub?.openTargets.find((candidate) => candidate.hubSlotKey === hubSlotKey);
   if (hub === undefined || target === undefined) return undefined;
 
-  const roots = new Set<OccurrenceId>([target.occurrenceId]);
-  const removedSourceKeys = new Set<string>();
   // An undersized Hub remains an intentionally incomplete authored board, but
   // it can no longer own its completed-Hub exit.  Remove that handoff and its
   // selected subtree in the same CloseHubSlot impact as the detached slot.
+  const removedExitDecisionSources = new Set<string>();
   if (hub.openTargets.length - 1 < minimumOpenCount) {
     const handoff = topology.decisions.find(
       (decision): decision is ExitDecision =>
@@ -141,22 +214,19 @@ export function describeHubSlotClosureImpact(
         decision.source.decisionKey === hubKey,
     );
     if (handoff !== undefined) {
-      removedSourceKeys.add(sourceKey(handoff.source));
-      targetsForDecision(handoff).forEach((occurrenceId) => roots.add(occurrenceId));
+      removedExitDecisionSources.add(sourceKey(handoff.source));
     }
   }
-
-  const removedOccurrences = collectOccurrenceDescendants(topology, roots);
-  for (const decision of topology.decisions) {
-    if (
-      decision.kind === 'exit' &&
-      decision.source.kind === 'occurrence' &&
-      removedOccurrences.has(decision.source.occurrenceId)
-    ) {
-      removedSourceKeys.add(sourceKey(decision.source));
-    }
-  }
-  return impactFor(topology, removedOccurrences, removedSourceKeys, new Set());
+  const closure = collectTopologyRemovalClosure(topology, {
+    occurrenceIds: new Set([target.occurrenceId]),
+    exitDecisionSources: removedExitDecisionSources,
+  });
+  return impactFor(
+    topology,
+    closure.removedOccurrences,
+    closure.removedSourceKeys,
+    closure.removedHubDecisionKeys,
+  );
 }
 
 /**
@@ -181,10 +251,11 @@ export function describeClearTopologyImpact(topology: BiomeTopology): TopologyRe
 }
 
 /**
- * Describes the semantic effect of RemoveExitDecision. Removing N's fixed
- * linked Opening -> PreHub exit also detaches its Hub board, every open Hub
- * occurrence, and the completed-Hub Preboss handoff. Removing a completed-Hub
- * exit itself does not remove the still-authored Hub board.
+ * Describes the semantic effect of RemoveExitDecision. If its removed targets
+ * include a Hub source, the Hub board, every open Hub occurrence, and the
+ * completed-Hub handoff are removed through that persisted ownership edge.
+ * Removing a completed-Hub exit itself does not remove the still-authored
+ * Hub board.
  */
 export function describeExitDecisionRemovalImpact(
   topology: BiomeTopology,
@@ -196,44 +267,42 @@ export function describeExitDecisionRemovalImpact(
   );
   if (root === undefined) return undefined;
 
-  const roots = new Set(targetsForDecision(root));
-  const removedHubDecisionKeys = new Set<string>();
-  const removedSourceKeys = new Set([sourceKey(root.source)]);
-  const removesLinkedHubPrerequisite =
-    root.normal.kind === 'linked' &&
-    root.source.kind === 'occurrence' &&
-    root.source.occurrenceId === topology.startOccurrenceId;
+  const closure = collectTopologyRemovalClosure(topology, {
+    exitDecisionSources: new Set([sourceKey(root.source)]),
+  });
+  return impactFor(
+    topology,
+    closure.removedOccurrences,
+    closure.removedSourceKeys,
+    closure.removedHubDecisionKeys,
+  );
+}
 
-  if (removesLinkedHubPrerequisite) {
-    for (const decision of topology.decisions) {
-      if (decision.kind !== 'hub') continue;
-      removedHubDecisionKeys.add(decision.hubKey);
-      decision.openTargets.forEach((target) => roots.add(target.occurrenceId));
-    }
-    for (const decision of topology.decisions) {
-      if (
-        decision.kind !== 'exit' ||
-        decision.source.kind !== 'hubDecision' ||
-        !removedHubDecisionKeys.has(decision.source.decisionKey)
-      ) {
-        continue;
-      }
-      removedSourceKeys.add(sourceKey(decision.source));
-      targetsForDecision(decision).forEach((occurrenceId) => roots.add(occurrenceId));
-    }
+/**
+ * Describes the authored topology exclusively owned by one Hub decision.
+ * Its source occurrence is intentionally retained: RemoveHubDecision uses it
+ * to restore the exact terminal envelope after this impact is applied.
+ */
+export function describeHubDecisionRemovalImpact(
+  topology: BiomeTopology,
+  hubKey: string,
+): TopologyRemovalImpact | undefined {
+  if (
+    !topology.decisions.some(
+      (decision): decision is HubDecision => decision.kind === 'hub' && decision.hubKey === hubKey,
+    )
+  ) {
+    return undefined;
   }
-
-  const removedOccurrences = collectOccurrenceDescendants(topology, roots);
-  for (const decision of topology.decisions) {
-    if (
-      decision.kind === 'exit' &&
-      decision.source.kind === 'occurrence' &&
-      removedOccurrences.has(decision.source.occurrenceId)
-    ) {
-      removedSourceKeys.add(sourceKey(decision.source));
-    }
-  }
-  return impactFor(topology, removedOccurrences, removedSourceKeys, removedHubDecisionKeys);
+  const closure = collectTopologyRemovalClosure(topology, {
+    hubDecisionKeys: new Set([hubKey]),
+  });
+  return impactFor(
+    topology,
+    closure.removedOccurrences,
+    closure.removedSourceKeys,
+    closure.removedHubDecisionKeys,
+  );
 }
 
 export function topologyRemovalSourceKeys(

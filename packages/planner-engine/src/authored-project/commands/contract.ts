@@ -41,17 +41,17 @@ export function projectCommandAddress(command: ProjectCommand): SemanticAddress 
     case 'CreateStart':
     case 'ClearTopology':
       return command.biome;
-    case 'CreateLinkedExit':
     case 'CreateBatch':
     case 'CreateTakeoverBatch':
     case 'ReplaceWithTakeoverBatch':
     case 'ReconcileTakeoverBatch':
     case 'ReconcileBatchExitCapacity':
     case 'RemoveExitDecision':
+    case 'ReplaceWithHubDecision':
       return command.decision;
     case 'CreateTarget':
       return command.target;
-    case 'CreateHubDecision':
+    case 'RemoveHubDecision':
       return command.hub;
     case 'OpenHubSlot':
     case 'CloseHubSlot':

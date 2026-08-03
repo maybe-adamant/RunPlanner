@@ -448,7 +448,10 @@ describe('persisted authored topology codec', () => {
     ['Fields batch state at its ordinary bounds', completeHProject],
     ['source-offer-point Ship batches at their ordinary bounds', completeOProject],
     ['staged no-store batches at their ordinary bounds', completeQProject],
-    ['linked PreHub, Hub, and completed-Hub handoff decisions', createCompleteNProject],
+    [
+      'normal PreHub, source-bearing Hub, and completed-Hub handoff decisions',
+      createCompleteNProject,
+    ],
     ['a command-produced Ship wheel leaf', rewardWheelProject],
     [
       'a structurally representable overflow after source replacement',
@@ -592,7 +595,7 @@ describe('persisted authored topology codec', () => {
         }),
       ).toThrowError(
         expect.objectContaining({
-          detail: 'generated progression has reached its declaration-owned batch bound',
+          detail: 'normal progression has reached its declaration-owned batch bound',
         }),
       );
     },
@@ -611,7 +614,7 @@ describe('persisted authored topology codec', () => {
       }),
     ).toThrowError(
       expect.objectContaining({
-        detail: 'generated progression has reached its declaration-owned batch bound',
+        detail: 'normal progression has reached its declaration-owned batch bound',
       }),
     );
 
@@ -633,7 +636,7 @@ describe('persisted authored topology codec', () => {
 
     expectDocumentError(encoded.document, {
       path: `${encoded.path}.decisions`,
-      detail: 'exceeds 13 generated batches',
+      detail: 'exceeds 13 normal batches',
     });
   });
 
@@ -766,48 +769,93 @@ describe('persisted authored topology codec', () => {
     expect(decodeProjectDocument(encodedProject(selected), catalog)).toEqual(selected);
   });
 
-  it('accepts Hub decision storage order but rejects malformed linked and Hub-source ownership', () => {
+  it('accepts Hub decision storage order but rejects malformed Hub source and linked normal ownership', () => {
     const reordered = encodedTopology(createCompleteNProject(), 'Surface', 'N');
     reordered.topology.decisions.reverse();
     expect(() => decodeProjectDocument(reordered.document, catalog)).not.toThrow();
 
-    const additionalLinkedExit = encodedTopology(createCompleteNProject(), 'Surface', 'N');
-    const linkedExit = additionalLinkedExit.topology.decisions.find(
-      (decision) => (decision.normal as { kind?: string }).kind === 'linked',
+    const unsupportedLinkedNormal = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    const opening = unsupportedLinkedNormal.topology.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        (decision.source as { occurrenceId?: string }).occurrenceId === 'round-trip-n-opening',
     );
-    const preHub = additionalLinkedExit.topology.occurrences.find(
-      (occurrence) => occurrence.occurrenceId === 'round-trip-n-prehub',
-    );
-    if (linkedExit === undefined || preHub === undefined) throw new Error('missing linked PreHub');
-    additionalLinkedExit.topology.occurrences.push({
-      ...preHub,
-      occurrenceId: 'n-extra-prehub',
-    });
-    additionalLinkedExit.topology.decisions.push({
-      ...linkedExit,
-      source: { kind: 'occurrence', occurrenceId: 'round-trip-n-prehub' },
-      normal: {
-        ...(linkedExit.normal as Record<string, unknown>),
-        occurrenceId: 'n-extra-prehub',
-      },
-    });
-    expectDocumentError(additionalLinkedExit.document, {
-      path: `${additionalLinkedExit.path}.decisions`,
-      detail:
-        'a Hub progression has exactly one linked PreHub exit owned by the declared start occurrence',
+    if (opening === undefined) throw new Error('missing normal PreHub entry');
+    opening.normal = {
+      kind: 'linked',
+      exitKey: 'prehub',
+      occurrenceId: 'round-trip-n-prehub',
+    };
+    expectDocumentError(unsupportedLinkedNormal.document, {
+      path: `${unsupportedLinkedNormal.path}.decisions[0].normal.kind`,
+      detail: 'unknown normal exit form linked',
     });
 
-    const staleHubSource = encodedTopology(createCompleteNProject(), 'Surface', 'N');
-    const handoffIndex = staleHubSource.topology.decisions.findIndex(
-      (decision) =>
-        decision.kind === 'exit' && (decision.source as { kind?: string }).kind === 'hubDecision',
+    const unsupportedHubSource = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    const hubIndex = unsupportedHubSource.topology.decisions.findIndex(
+      (decision) => decision.kind === 'hub',
     );
-    const handoff = staleHubSource.topology.decisions[handoffIndex];
-    if (handoff === undefined) throw new Error('missing completed-Hub handoff');
-    handoff.source = { kind: 'hub', hubKey: 'hub' };
-    expectDocumentError(staleHubSource.document, {
-      path: `${staleHubSource.path}.decisions[${handoffIndex}].source.kind`,
-      detail: 'unknown exit decision source hub',
+    const hub = unsupportedHubSource.topology.decisions[hubIndex];
+    if (hub === undefined) throw new Error('missing Hub decision');
+    hub.source = { kind: 'hubDecision', decisionKey: 'hub' };
+    expectDocumentError(unsupportedHubSource.document, {
+      path: `${unsupportedHubSource.path}.decisions[${hubIndex}].source`,
+      detail: 'Hub decision source must be an occurrence',
+    });
+
+    const unknownHubSource = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    const unknownHubIndex = unknownHubSource.topology.decisions.findIndex(
+      (decision) => decision.kind === 'hub',
+    );
+    const unknownHub = unknownHubSource.topology.decisions[unknownHubIndex];
+    if (unknownHub === undefined) throw new Error('missing Hub decision');
+    unknownHub.source = { kind: 'occurrence', occurrenceId: 'missing-prehub' };
+    expectDocumentError(unknownHubSource.document, {
+      path: `${unknownHubSource.path}.decisions[${unknownHubIndex}].source.occurrenceId`,
+      detail: 'unknown occurrence missing-prehub',
+    });
+
+    const competingHubOwner = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    const competingHubIndex = competingHubOwner.topology.decisions.findIndex(
+      (decision) => decision.kind === 'hub',
+    );
+    if (competingHubIndex < 0) throw new Error('missing Hub decision');
+    competingHubOwner.topology.decisions.push({
+      kind: 'exit',
+      source: { kind: 'occurrence', occurrenceId: 'round-trip-n-prehub' },
+      normal: {
+        kind: 'batch',
+        rewardStore: { kind: 'none' },
+        batchState: null,
+        targets: [],
+      },
+      selection: { kind: 'unresolved' },
+    });
+    expectDocumentError(competingHubOwner.document, {
+      path: `${competingHubOwner.path}.decisions[${competingHubIndex}].source`,
+      detail: 'Hub decision cannot coexist with an exit decision at its source',
+    });
+
+    const nonTerminalHubSource = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    const nonTerminalHubIndex = nonTerminalHubSource.topology.decisions.findIndex(
+      (decision) => decision.kind === 'hub',
+    );
+    const nonTerminalHub = nonTerminalHubSource.topology.decisions[nonTerminalHubIndex];
+    if (nonTerminalHub === undefined) throw new Error('missing Hub decision');
+    nonTerminalHub.source = { kind: 'occurrence', occurrenceId: 'round-trip-n-opening' };
+    nonTerminalHubSource.topology.decisions = nonTerminalHubSource.topology.decisions.filter(
+      (decision) =>
+        !(
+          decision.kind === 'exit' &&
+          (decision.source as { occurrenceId?: string }).occurrenceId === 'round-trip-n-opening'
+        ),
+    );
+    const nonTerminalHubAfterRemovalIndex = nonTerminalHubSource.topology.decisions.findIndex(
+      (decision) => decision.kind === 'hub',
+    );
+    expectDocumentError(nonTerminalHubSource.document, {
+      path: `${nonTerminalHubSource.path}.decisions[${nonTerminalHubAfterRemovalIndex}].source`,
+      detail: 'Hub source does not resolve the declared terminal Hub takeover',
     });
   });
 

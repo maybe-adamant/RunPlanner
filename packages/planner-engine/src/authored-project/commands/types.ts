@@ -42,11 +42,6 @@ export type TopologyCommand =
       readonly occurrenceId: OccurrenceId;
       readonly gameName?: string;
     }
-  | {
-      readonly kind: 'CreateLinkedExit';
-      readonly decision: ExitDecisionAddress;
-      readonly occurrenceId: OccurrenceId;
-    }
   | { readonly kind: 'CreateBatch'; readonly decision: ExitDecisionAddress }
   | {
       readonly kind: 'CreateTarget';
@@ -73,7 +68,12 @@ export type TopologyCommand =
       readonly targetOccurrenceIds: Readonly<Record<string, OccurrenceId>>;
     }
   | { readonly kind: 'ReconcileBatchExitCapacity'; readonly decision: ExitDecisionAddress }
-  | { readonly kind: 'CreateHubDecision'; readonly hub: HubDecisionAddress }
+  | {
+      readonly kind: 'ReplaceWithHubDecision';
+      readonly decision: ExitDecisionAddress;
+      readonly hub: HubDecisionAddress;
+    }
+  | { readonly kind: 'RemoveHubDecision'; readonly hub: HubDecisionAddress }
   | {
       readonly kind: 'OpenHubSlot';
       readonly slot: HubSlotAddress;
