@@ -21,6 +21,7 @@ import {
 } from '@run-planner/test-fixtures';
 import {
   appendCompleteN,
+  appendNEntry,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceIds,
@@ -58,20 +59,7 @@ function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): Projec
 }
 
 function nOpeningPreHubProject(): ProjectDocument {
-  let projectDocument = emptyProject('Surface', 1);
-  projectDocument = applyProjectCommand(projectDocument, catalog, {
-    kind: 'CreateStart',
-    biome: nBiome,
-    occurrenceId: nOccurrenceIds.opening,
-  });
-  return applyProjectCommand(projectDocument, catalog, {
-    kind: 'CreateLinkedExit',
-    decision: createExitDecisionAddress(nBiome, {
-      kind: 'occurrence',
-      occurrenceId: nOccurrenceIds.opening,
-    }),
-    occurrenceId: nOccurrenceIds.preHub,
-  });
+  return appendNEntry(emptyProject('Surface', 1));
 }
 
 function withUnresolvedFSelections(
@@ -231,19 +219,26 @@ describe('workspace inspector defaults', () => {
     );
   });
 
-  it('routes Hub frontiers to the board and a fixed Preboss detail to its workbench', () => {
+  it('routes the terminal Hub action, authored board, and fixed Preboss detail to stable defaults', () => {
     const pending = biome(nOpeningPreHubProject(), 'N');
-    if (pending.frontier?.kind !== 'hubDecision') throw new Error('N Hub frontier is missing');
-    expect(pending.defaultInspectorDestination?.kind).toBe('node');
-    if (pending.defaultInspectorDestination?.kind !== 'node') return;
-    expect(nodeByKey(pending, pending.defaultInspectorDestination.nodeKey).kind).toBe(
-      'hubDecision',
+    const terminal = pending.nodes.find(
+      (node) =>
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
+        node.hubTakeover !== undefined,
     );
+    if (terminal === undefined) throw new Error('N terminal Hub decision is missing');
+    expectNode(pending.defaultInspectorDestination, terminal.key);
 
     const fresh = biome(
       applyProjectCommand(nOpeningPreHubProject(), catalog, {
-        kind: 'CreateHubDecision',
+        decision: createExitDecisionAddress(nBiome, {
+          kind: 'occurrence',
+          occurrenceId: nOccurrenceIds.preHub,
+        }),
         hub: createHubDecisionAddress(nBiome, 'hub'),
+        kind: 'ReplaceWithHubDecision',
       }),
       'N',
     );

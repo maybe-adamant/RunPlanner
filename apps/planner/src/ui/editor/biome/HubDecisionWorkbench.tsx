@@ -258,24 +258,19 @@ function HubSlotMembership({
 }
 
 function HubSlotMembershipControl({
-  authoring,
   interactions,
   onMembershipTransition,
   slot,
 }: {
-  readonly authoring: WorkspaceHubDecisionNode['authoring'];
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
   readonly slot: WorkspaceHubSlot;
 }) {
-  const interaction =
-    authoring === 'authored'
-      ? requireWorkspaceInteraction(
-          interactions.hubSlots,
-          workspaceInteractionKey(slot.marker.address),
-        )
-      : undefined;
-  return interaction === undefined ? null : (
+  const interaction = requireWorkspaceInteraction(
+    interactions.hubSlots,
+    workspaceInteractionKey(slot.marker.address),
+  );
+  return (
     <HubSlotMembership
       interaction={interaction}
       onMembershipTransition={onMembershipTransition}
@@ -285,13 +280,11 @@ function HubSlotMembershipControl({
 }
 
 function OpenHubRoomCard({
-  authoring,
   focusedRewardOwnerKey,
   interactions,
   onMembershipTransition,
   slot,
 }: {
-  readonly authoring: WorkspaceHubDecisionNode['authoring'];
   readonly focusedRewardOwnerKey: string | undefined;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
@@ -335,7 +328,6 @@ function OpenHubRoomCard({
           <SemanticOwnerMarker address={slot.marker.address} />
         </div>
         <HubSlotMembershipControl
-          authoring={authoring}
           interactions={interactions}
           onMembershipTransition={onMembershipTransition}
           slot={slot}
@@ -381,12 +373,10 @@ function OpenHubRoomCard({
 }
 
 function ClosedHubRoomOption({
-  authoring,
   interactions,
   onMembershipTransition,
   slot,
 }: {
-  readonly authoring: WorkspaceHubDecisionNode['authoring'];
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
   readonly slot: WorkspaceHubSlot;
@@ -404,7 +394,6 @@ function ClosedHubRoomOption({
           <SemanticOwnerMarker address={slot.marker.address} />
         </div>
         <HubSlotMembershipControl
-          authoring={authoring}
           interactions={interactions}
           onMembershipTransition={onMembershipTransition}
           slot={slot}
@@ -417,18 +406,6 @@ function ClosedHubRoomOption({
         </div>
       </div>
     </article>
-  );
-}
-
-function HubOutlineRoomOption({ slot }: { readonly slot: WorkspaceHubSlot }) {
-  return (
-    <li className="hub-outline-room-option">
-      <div className="owner-markers">
-        <span>{slot.label}</span>
-        <SemanticOwnerMarker address={slot.marker.address} />
-      </div>
-      <span className="room-kind">{slot.roomKind}</span>
-    </li>
   );
 }
 
@@ -542,17 +519,10 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
   const findingNavigationRevision = useAppSelector(
     (state) => state.editorSession.findingNavigationRevision,
   );
-  const creation =
-    frontier?.kind === 'hubDecision'
-      ? requireWorkspaceInteraction(interactions.structural, frontier.interactionKey)
-      : undefined;
   const handoff =
     frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision'
       ? requireWorkspaceInteraction(interactions.takeoverBatches, frontier.interactionKey)
       : undefined;
-  if (creation !== undefined && creation.action !== 'createHubDecision') {
-    throw new Error('The Hub creation frontier must expose a CreateHubDecision interaction.');
-  }
   if (handoff !== undefined && handoff.presentation !== 'completedHubHandoff') {
     throw new Error('The completed Hub frontier must expose its fixed Preboss handoff.');
   }
@@ -560,6 +530,10 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
   const openSlots = node.slots.filter((slot) => slot.open);
   const closedSlots = node.slots.filter((slot) => !slot.open);
   const authoredVisitCount = node.visits.filter((visit) => visit.authoring === 'authored').length;
+  const removal = requireWorkspaceInteraction(
+    interactions.topologyRemovals,
+    workspaceInteractionKey(node.owner),
+  );
   const closedSlotOwnerKeys = new Set(
     closedSlots.map((slot) => semanticAddressKey(slot.marker.address)),
   );
@@ -573,7 +547,7 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
         ? focusedOwnerKey
         : undefined;
   const closedRevealSignal =
-    node.authoring !== 'authored' || revealedClosedOwnerKey === undefined
+    revealedClosedOwnerKey === undefined
       ? undefined
       : selectedFindingOwnerKey === revealedClosedOwnerKey
         ? `${revealedClosedOwnerKey}:${findingNavigationRevision}`
@@ -653,53 +627,29 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
           </div>
           <div className="hub-board-status">
             <span className="neutral-status">
-              {node.authoring === 'authored'
-                ? `${node.openSlotCount.current} open · ${node.openSlotCount.min}–${node.openSlotCount.max} required`
-                : `${node.slots.length} possible`}
+              {node.openSlotCount.current} open · {node.openSlotCount.min}–{node.openSlotCount.max}{' '}
+              required
             </span>
             <MarkerAssessment marker={node.openSet} />
           </div>
         </header>
-        {creation === undefined ? null : (
-          <div className="hub-board-action">
-            <button
-              className="primary-action"
-              onClick={() => executeIntent(creation.intent)}
-              type="button"
-            >
-              Set up Hub rooms
-            </button>
-          </div>
-        )}
-        {node.authoring === 'authored' ? (
-          <div
-            aria-label="Open Ephyra rooms"
-            className="hub-open-room-grid"
-            ref={openMembershipRegion}
-            role="group"
-            tabIndex={-1}
-          >
-            {openSlots.map((slot) => (
-              <OpenHubRoomCard
-                authoring={node.authoring}
-                focusedRewardOwnerKey={focusedOwnerKey}
-                interactions={interactions}
-                key={slot.hubSlotKey}
-                onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                slot={slot}
-              />
-            ))}
-          </div>
-        ) : (
-          <details className="hub-outline-room-disclosure">
-            <summary>Possible Hub rooms ({node.slots.length})</summary>
-            <ul className="hub-outline-room-list">
-              {node.slots.map((slot) => (
-                <HubOutlineRoomOption key={slot.hubSlotKey} slot={slot} />
-              ))}
-            </ul>
-          </details>
-        )}
+        <div
+          aria-label="Open Ephyra rooms"
+          className="hub-open-room-grid"
+          ref={openMembershipRegion}
+          role="group"
+          tabIndex={-1}
+        >
+          {openSlots.map((slot) => (
+            <OpenHubRoomCard
+              focusedRewardOwnerKey={focusedOwnerKey}
+              interactions={interactions}
+              key={slot.hubSlotKey}
+              onMembershipTransition={continueKeyboardMembershipAfterTransition}
+              slot={slot}
+            />
+          ))}
+        </div>
       </section>
       <section className="hub-visit-timeline" aria-labelledby={`${titleId}-visits-title`}>
         <header className="decision-heading">
@@ -711,28 +661,19 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
             {authoredVisitCount} of {node.requiredVisitCount} planned
           </span>
         </header>
-        {node.authoring === 'authored' ? (
-          <ol className="hub-visit-list">
-            {node.visits.map((visit) => (
-              <HubVisitRow interactions={interactions} key={visit.visitIndex} visit={visit} />
-            ))}
-          </ol>
-        ) : (
-          <p className="hub-empty-visit-state">
-            {creation === undefined
-              ? 'Hub visits become available when the route reaches the Hub.'
-              : 'Set up Hub rooms to plan six Pylon visits.'}
-          </p>
-        )}
+        <ol className="hub-visit-list">
+          {node.visits.map((visit) => (
+            <HubVisitRow interactions={interactions} key={visit.visitIndex} visit={visit} />
+          ))}
+        </ol>
       </section>
       {handoff === undefined ? null : <CompletedHubHandoff interaction={handoff} />}
-      {node.authoring !== 'authored' || closedSlots.length === 0 ? null : (
+      {closedSlots.length === 0 ? null : (
         <details className="hub-closed-room-disclosure" ref={closedDisclosure}>
           <summary>Closed rooms ({closedSlots.length})</summary>
           <div className="hub-closed-room-grid">
             {closedSlots.map((slot) => (
               <ClosedHubRoomOption
-                authoring={node.authoring}
                 interactions={interactions}
                 key={slot.hubSlotKey}
                 onMembershipTransition={continueKeyboardMembershipAfterTransition}
@@ -742,6 +683,16 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
           </div>
         </details>
       )}
+      <div className="workbench-action-row">
+        <button
+          className="danger-action"
+          data-command={removal.intent.command.kind}
+          onClick={() => executeIntent(removal.intent)}
+          type="button"
+        >
+          Remove Hub
+        </button>
+      </div>
     </section>
   );
 }

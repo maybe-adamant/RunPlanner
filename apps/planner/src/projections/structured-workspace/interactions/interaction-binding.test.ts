@@ -35,6 +35,7 @@ import {
   goldenIBiome,
   createRepresentativeNOPQProject,
   appendCompleteN,
+  appendNEntry,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
@@ -82,6 +83,7 @@ function bind(
       catalog,
       frontierInteractionRequirements: assembly.frontierInteractionRequirements,
       hubInteractionRequirements: assembly.hubInteractionRequirements,
+      hubTakeoverInteractionRequirements: assembly.hubTakeoverInteractionRequirements,
       occurrenceInteractionRequirements: assembly.occurrenceInteractionRequirements,
       rewardControls: assembly.rewardControls,
       roomControls: assembly.roomControls,
@@ -182,11 +184,13 @@ describe('structured workspace interaction binding', () => {
   it('binds topology removals to exact commands with before-focus policy', () => {
     const { interactions } = bind(createRepresentativeNOPQProject(), 'Surface', 'N');
     const clear = interactions.topologyRemovals.get(semanticAddressKey(nBiome));
-    const linkedOwner = createExitDecisionAddress(nBiome, {
+    const openingOwner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.opening,
     });
-    const remove = interactions.topologyRemovals.get(semanticAddressKey(linkedOwner));
+    const remove = interactions.topologyRemovals.get(semanticAddressKey(openingOwner));
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const removeHub = interactions.topologyRemovals.get(semanticAddressKey(hub));
 
     expect(clear).toEqual({
       intent: {
@@ -198,43 +202,45 @@ describe('structured workspace interaction binding', () => {
     });
     expect(remove).toEqual({
       intent: {
-        command: { decision: linkedOwner, kind: 'RemoveExitDecision' },
-        focus: { owner: linkedOwner, timing: 'before' },
+        command: { decision: openingOwner, kind: 'RemoveExitDecision' },
+        focus: { owner: openingOwner, timing: 'before' },
       },
-      key: semanticAddressKey(linkedOwner),
-      owner: linkedOwner,
+      key: semanticAddressKey(openingOwner),
+      owner: openingOwner,
+    });
+    expect(removeHub).toEqual({
+      intent: {
+        command: { hub, kind: 'RemoveHubDecision' },
+        focus: { owner: hub, timing: 'before' },
+      },
+      key: semanticAddressKey(hub),
+      owner: hub,
     });
   });
 
-  it('binds Hub board creation and completed handoff with before-focus intents', () => {
-    const opening = createOccurrenceId('bound-hub-board-opening');
-    let boardProject = applyProjectCommand(
+  it('binds the terminal Hub takeover and completed handoff to exact commands', () => {
+    const boardProject = appendNEntry(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Surface: 1 },
         name: 'Bound Hub board',
         projectId: 'bound-hub-board',
       }),
-      catalog,
-      { biome: nBiome, kind: 'CreateStart', occurrenceId: opening },
     );
-    boardProject = applyProjectCommand(boardProject, catalog, {
-      decision: createExitDecisionAddress(nBiome, {
-        kind: 'occurrence',
-        occurrenceId: opening,
-      }),
-      kind: 'CreateLinkedExit',
-      occurrenceId: createOccurrenceId('bound-hub-board-prehub'),
-    });
     const hub = createHubDecisionAddress(nBiome, 'hub');
-    const creation = bind(boardProject, 'Surface', 'N').interactions.structural.get(
-      semanticAddressKey(hub),
+    const terminalOwner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.preHub,
+    });
+    const takeover = bind(boardProject, 'Surface', 'N').interactions.hubTakeovers.get(
+      semanticAddressKey(terminalOwner),
     );
-    if (creation?.action !== 'createHubDecision') {
-      throw new Error('Hub board creation interaction is missing');
-    }
-    expect(creation.intent).toEqual({
-      command: { hub, kind: 'CreateHubDecision' },
-      focus: { owner: hub, timing: 'before' },
+    if (takeover === undefined) throw new Error('terminal Hub takeover interaction is missing');
+    expect(takeover.owner).toEqual(terminalOwner);
+    expect(takeover.hub).toEqual(hub);
+    expect(takeover.load().evaluation).toMatchObject({ kind: 'hubTerminalTakeover' });
+    expect(takeover.intent()).toEqual({
+      command: { decision: terminalOwner, hub, kind: 'ReplaceWithHubDecision' },
+      focus: { owner: hub, timing: 'after' },
     });
 
     const handoffProject = appendCompleteN(
@@ -395,40 +401,6 @@ describe('structured workspace interaction binding', () => {
     expect(allocations).toBe(0);
   });
 
-  it('binds linked-exit creation to a lazy identity and exact after-focus intent', () => {
-    const startId = createOccurrenceId('structural-linked-start');
-    const linkedId = createOccurrenceId('structural-linked-created');
-    const owner = createExitDecisionAddress(nBiome, {
-      kind: 'occurrence',
-      occurrenceId: startId,
-    });
-    const project = applyProjectCommand(
-      createProjectDocument(catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        name: 'Structural linked binding',
-        projectId: 'structural-linked-binding',
-      }),
-      catalog,
-      { biome: nBiome, kind: 'CreateStart', occurrenceId: startId },
-    );
-    let allocations = 0;
-    const structural = bind(project, 'Surface', 'N', () => {
-      allocations += 1;
-      return linkedId;
-    }).interactions.structural.get(semanticAddressKey(owner));
-    if (structural?.action !== 'createLinkedExit') {
-      throw new Error('N linked-exit structural interaction is missing');
-    }
-
-    expect(allocations).toBe(0);
-    expect(structural).not.toHaveProperty('targetGameName');
-    expect(structural.intent()).toEqual({
-      command: { decision: owner, kind: 'CreateLinkedExit', occurrenceId: linkedId },
-      focus: { owner: createOccurrenceAddress(nBiome, linkedId), timing: 'after' },
-    });
-    expect(allocations).toBe(1);
-  });
-
   it('binds existing and missing targets to exact replacement and lazy creation intents', () => {
     const startId = createOccurrenceId('target-binding-start');
     const firstCombatId = createOccurrenceId('target-binding-first-combat');
@@ -566,7 +538,7 @@ describe('structured workspace interaction binding', () => {
     });
   });
 
-  it('binds a terminal Door 1 takeover choice to its exact replacement command', () => {
+  it('binds the only terminal Door 1 takeover choice to its exact replacement command', () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(10, 1),
@@ -598,11 +570,9 @@ describe('structured workspace interaction binding', () => {
     const preboss = items.find((item) => item.value.gameName === 'F_PreBoss01');
     if (preboss === undefined) throw new Error('F terminal Preboss choice is missing');
     expect(preboss).toMatchObject({ disabled: false, state: 'forced' });
-    const ordinary = items.find((item) => item.value.gameName !== 'F_PreBoss01');
-    if (ordinary === undefined) throw new Error('F terminal ordinary candidate is missing');
-    expect(ordinary.disabled).toBe(true);
-    expect(() => interaction.intentFor(ordinary.value.gameName)).toThrow(
-      /not currently authorable/,
+    expect(items.map((item) => item.value.gameName)).toEqual(['F_PreBoss01']);
+    expect(() => interaction.intentFor('F_Combat01')).toThrow(
+      /outside the decision-entry room domain/,
     );
     expect(allocated).toEqual([]);
 
@@ -792,7 +762,7 @@ describe('structured workspace interaction binding', () => {
     expect(allocations).toBe(1);
   });
 
-  it('rejects an unassessed ordinary room beyond Q’s terminal decision envelope', () => {
+  it('does not publish ordinary room candidates beyond Q’s terminal decision envelope', () => {
     const owner = createExitDecisionAddress(qBiome, {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,
@@ -818,14 +788,10 @@ describe('structured workspace interaction binding', () => {
     if (interaction?.kind !== 'decisionEntryRoom') {
       throw new Error('Q terminal Door 1 decision-entry interaction is missing');
     }
-    const ordinary = interaction
-      .load()
-      .sections.flatMap((section) => section.items)
-      .find((item) => item.value.gameName !== 'Q_PreBoss01');
-    if (ordinary === undefined) throw new Error('Q terminal ordinary choice is missing');
-    expect(ordinary).toMatchObject({ disabled: true, state: 'unassessed' });
-    expect(() => interaction.intentFor(ordinary.value.gameName)).toThrow(
-      /not currently authorable/,
+    const items = interaction.load().sections.flatMap((section) => section.items);
+    expect(items.map((item) => item.value.gameName)).toEqual(['Q_PreBoss01']);
+    expect(() => interaction.intentFor('Q_Combat01')).toThrow(
+      /outside the decision-entry room domain/,
     );
     expect(allocations).toBe(0);
   });

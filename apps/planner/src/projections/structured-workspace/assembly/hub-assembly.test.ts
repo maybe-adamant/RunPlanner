@@ -5,7 +5,6 @@ import {
   createHubDecisionAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
-  createOccurrenceId,
   createProjectDocument,
   semanticAddressKey,
   type ProjectDocument,
@@ -15,9 +14,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   appendCompleteN,
+  appendNEntry,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
+  nOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { assembleWorkspaceHub } from './hub-assembly';
 import {
@@ -145,30 +146,6 @@ describe('structured workspace Hub assembly', () => {
       nodeKey: assembly.node.key,
       ownerAddress: incoming,
     });
-  });
-
-  it('returns a non-interactive declaration-owned outline before the Hub is authored', () => {
-    const source = biomeSource(emptyNProject());
-    const kit = hubKit(source);
-    const assembly = assembleWorkspaceHub({
-      assembleOccurrence: kit.assembleOccurrence,
-      biome: source.biome,
-      catalog,
-      descriptor: kit.descriptor,
-      markerDestinations: kit.markers.emitter,
-      topology: source.plan.topology,
-    });
-
-    expect(assembly.node.authoring).toBe('outline');
-    expect(assembly.node.slots.every((slot) => !slot.open)).toBe(true);
-    expect(assembly.node.visits.map((visit) => visit.authoring)).toEqual(
-      Array.from({ length: kit.descriptor.requiredVisits }, () => 'locked'),
-    );
-    expect(assembly.hubInteractionRequirements).toEqual([]);
-    expect(assembly.occurrenceInteractionRequirements).toEqual([]);
-    expect(assembly.roomControls).toEqual([]);
-    expect(assembly.rewardControls).toEqual([]);
-    expect(assembly.workbenches).toEqual([]);
   });
 
   it('retains the authored Hub board and its room-local controls without an evaluator overlay', () => {
@@ -307,20 +284,14 @@ describe('structured workspace Hub assembly', () => {
   });
 
   it('publishes authored Hub controls and the structural first visit before evaluation enters it', () => {
-    const opening = createOccurrenceId('hub-assembly-authored-opening');
-    let project = applyProjectCommand(emptyNProject(), catalog, {
-      biome: nBiome,
-      kind: 'CreateStart',
-      occurrenceId: opening,
-    });
+    let project = appendNEntry(emptyNProject());
     project = applyProjectCommand(project, catalog, {
-      decision: createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId: opening }),
-      kind: 'CreateLinkedExit',
-      occurrenceId: createOccurrenceId('hub-assembly-authored-prehub'),
-    });
-    project = applyProjectCommand(project, catalog, {
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceIds.preHub,
+      }),
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      kind: 'CreateHubDecision',
+      kind: 'ReplaceWithHubDecision',
     });
     const source = biomeSource(project);
     const kit = hubKit(source);

@@ -84,6 +84,7 @@ function incompleteDecision(
         isDecisionNode(node) &&
         node.source.kind !== 'hubDecision' &&
         (node.topologyState === 'partial' ||
+          node.hubTakeover !== undefined ||
           node.missingTargets.length > 0 ||
           (node.targets.length > 0 && !node.targets.some((target) => target.selected))),
     )
@@ -115,11 +116,7 @@ export function defaultInspectorDestination(
     }
     return frontierDestination(frontier);
   }
-  if (
-    frontier?.kind === 'hubDecision' ||
-    frontier?.kind === 'hubVisit' ||
-    frontier?.kind === 'hubOpenSet'
-  ) {
+  if (frontier?.kind === 'hubVisit' || frontier?.kind === 'hubOpenSet') {
     const hub = hubNode(input);
     if (hub !== undefined) return nodeDestination(input, hub);
   }

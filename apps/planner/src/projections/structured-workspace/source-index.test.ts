@@ -470,8 +470,8 @@ describe('structured workspace source index', () => {
     });
 
     expect(source.findingsFor(reward)).toHaveLength(1);
-    expect(source.evaluatedLinkedExit(firstOwner)).toBeDefined();
-    expect(source.evaluatedLinkedExit(missingOwner)).toBeUndefined();
+    expect(source.evaluatedBatch(firstOwner)).toBeDefined();
+    expect(source.evaluatedBatch(missingOwner)).toBeUndefined();
     expect(source.occurrence(combat)?.gameName).toBe('N_Combat10');
   });
 });

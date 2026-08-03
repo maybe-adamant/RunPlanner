@@ -9,6 +9,9 @@ import {
   createTargetAddress,
   declaredPhysicalExits,
   fixedWidthOneTakeoverTransitionForSource,
+  hubTerminalTakeoverForSource,
+  isExactTerminalTakeoverEnvelope,
+  normalDecisionProgressionForLayout,
   type AuthoredBiomePlan,
   type BiomeAddress,
   type ExitDecision,
@@ -33,6 +36,7 @@ export type ExpectedWorkspaceStructuralControlKind =
   | 'exitFrontierCapability'
   | 'exitSelection'
   | 'fieldsCageOutcome'
+  | 'hubTakeover'
   | 'hubSlot'
   | 'hubVisit'
   | 'roomPicker'
@@ -91,7 +95,6 @@ function batchTakesOverNormalDoors(
   plan: AuthoredBiomePlan,
   decision: ExitDecision,
 ): boolean {
-  if (decision.normal.kind !== 'batch') return false;
   const occurrences = new Map(
     (plan.topology?.occurrences ?? []).map(
       (occurrence) => [occurrence.occurrenceId, occurrence] as const,
@@ -108,7 +111,6 @@ function batchTakesOverNormalDoors(
 }
 
 function missingTargetsAreAuthorable(layout: BiomeLayout, decision: ExitDecision): boolean {
-  if (decision.normal.kind !== 'batch') return false;
   if (
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
     decision.normal.rewardStore.baseRewardStoreKey === null
@@ -183,69 +185,73 @@ export function expectedWorkspaceStructuralControls(
     const owner = createExitDecisionAddress(biome, decision.source);
     const ownerKey = workspaceTestOwnerKey(owner);
     add('topologyRemoval', ownerKey, owner);
-    const takeover =
-      decision.normal.kind === 'batch' && batchTakesOverNormalDoors(catalog, plan, decision);
-    if (decision.normal.kind === 'batch') {
-      if (decision.selection.kind !== 'derived') {
-        add(
-          'exitSelection',
-          workspaceTestOwnerKey(createExitSelectionAddress(biome, decision.source)),
-          owner,
-        );
+    const takeover = batchTakesOverNormalDoors(catalog, plan, decision);
+    if (decision.selection.kind !== 'derived') {
+      add(
+        'exitSelection',
+        workspaceTestOwnerKey(createExitSelectionAddress(biome, decision.source)),
+        owner,
+      );
+    }
+    const rewardStorePolicy =
+      layout.progression.kind === 'generated' ? layout.progression.rewardStorePolicy : undefined;
+    if (
+      decision.normal.rewardStore.kind === 'authoredBaseStore' &&
+      (!takeover || decision.normal.rewardStore.baseRewardStoreKey !== null) &&
+      rewardStorePolicy?.kind === 'authoredBaseStore'
+    ) {
+      const rewardStore = createBatchRewardStoreAddress(biome, decision.source);
+      add('batchRewardStore', workspaceTestOwnerKey(rewardStore), rewardStore);
+    }
+    if (
+      !takeover &&
+      layout.progression.kind === 'generated' &&
+      layout.progression.batchPolicy.kind === 'fields'
+    ) {
+      add('fieldsCageOutcome', ownerKey, owner);
+    }
+    if (takeover) {
+      if (declaredPhysicalExits(catalog, layout, topology, decision.source) !== undefined) {
+        addTakeover(owner);
       }
-      const rewardStorePolicy =
-        layout.progression.kind === 'generated' ? layout.progression.rewardStorePolicy : undefined;
-      if (
-        decision.normal.rewardStore.kind === 'authoredBaseStore' &&
-        (!takeover || decision.normal.rewardStore.baseRewardStoreKey !== null) &&
-        rewardStorePolicy?.kind === 'authoredBaseStore'
-      ) {
-        const rewardStore = createBatchRewardStoreAddress(biome, decision.source);
-        add('batchRewardStore', workspaceTestOwnerKey(rewardStore), rewardStore);
-      }
-      if (
-        !takeover &&
-        layout.progression.kind === 'generated' &&
-        layout.progression.batchPolicy.kind === 'fields'
-      ) {
-        add('fieldsCageOutcome', ownerKey, owner);
-      }
-      if (takeover) {
-        if (declaredPhysicalExits(catalog, layout, topology, decision.source) !== undefined) {
-          addTakeover(owner);
-        }
-      } else if (decision.source.kind === 'occurrence') {
-        const physical = declaredPhysicalExits(catalog, layout, topology, decision.source);
-        if (physical !== undefined) {
-          const targets = new Set(decision.normal.targets.map((target) => target.exitKey));
-          const isEmptyGeneratedDecision =
-            layout.progression.kind === 'generated' && decision.normal.targets.length === 0;
-          let firstMissingSeen = false;
-          for (const exit of [...physical].sort((left, right) => left.index - right.index)) {
-            const target = decision.normal.targets.find(
-              (candidate) => candidate.exitKey === exit.exitKey,
-            );
-            const targetOwner = createTargetAddress(biome, decision.source, exit.exitKey);
-            if (target !== undefined) {
-              add('roomPicker', workspaceTestOwnerKey(targetOwner), targetOwner);
-              continue;
-            }
-            if (!firstMissingSeen && !targets.has(exit.exitKey)) {
-              if (isEmptyGeneratedDecision) {
-                add(
-                  'decisionEntryRoomPicker',
-                  workspaceTestOwnerKey(targetOwner),
-                  targetOwner,
-                  owner,
-                );
-              } else if (missingTargetsAreAuthorable(layout, decision)) {
-                add('roomPicker', workspaceTestOwnerKey(targetOwner), targetOwner);
-              }
-            }
-            firstMissingSeen = true;
+    } else if (decision.source.kind === 'occurrence') {
+      const physical = declaredPhysicalExits(catalog, layout, topology, decision.source);
+      if (physical !== undefined) {
+        const targets = new Set(decision.normal.targets.map((target) => target.exitKey));
+        const isEmptyNormalDecision =
+          normalDecisionProgressionForLayout(layout) !== undefined &&
+          decision.normal.targets.length === 0;
+        let firstMissingSeen = false;
+        for (const exit of [...physical].sort((left, right) => left.index - right.index)) {
+          const target = decision.normal.targets.find(
+            (candidate) => candidate.exitKey === exit.exitKey,
+          );
+          const targetOwner = createTargetAddress(biome, decision.source, exit.exitKey);
+          if (target !== undefined) {
+            add('roomPicker', workspaceTestOwnerKey(targetOwner), targetOwner);
+            continue;
           }
+          if (!firstMissingSeen && !targets.has(exit.exitKey)) {
+            if (isEmptyNormalDecision) {
+              add(
+                'decisionEntryRoomPicker',
+                workspaceTestOwnerKey(targetOwner),
+                targetOwner,
+                owner,
+              );
+            } else if (missingTargetsAreAuthorable(layout, decision)) {
+              add('roomPicker', workspaceTestOwnerKey(targetOwner), targetOwner);
+            }
+          }
+          firstMissingSeen = true;
         }
       }
+    }
+    if (
+      isExactTerminalTakeoverEnvelope(decision) &&
+      hubTerminalTakeoverForSource(catalog, layout, topology, decision.source) !== undefined
+    ) {
+      add('hubTakeover', ownerKey, owner);
     }
   }
 
@@ -256,6 +262,8 @@ export function expectedWorkspaceStructuralControls(
         decision.kind === 'hub' && decision.hubKey === descriptor.hubKey,
     );
     if (hub !== undefined) {
+      const hubOwner = createHubDecisionAddress(biome, descriptor.hubKey);
+      add('topologyRemoval', workspaceTestOwnerKey(hubOwner), hubOwner);
       for (const slot of descriptor.slots) {
         const owner = createHubSlotAddress(biome, descriptor.hubKey, slot.slotKey);
         add('hubSlot', workspaceTestOwnerKey(owner), owner);
@@ -294,11 +302,8 @@ export function expectedWorkspaceStructuralControls(
       add('structural', ownerKey, owner);
       break;
     }
-    case 'hubDecision': {
-      const owner = createHubDecisionAddress(biome, completeness.frontier.hubKey);
-      add('structural', workspaceTestOwnerKey(owner), owner);
+    case 'hubDecision':
       break;
-    }
     case 'hubOpenSet':
     case 'hubVisit':
       break;

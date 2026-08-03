@@ -26,6 +26,7 @@ import {
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   appendCompleteN,
+  appendNEntry,
   createRepresentativeNProject,
   createRepresentativeNOPQProject,
   nBiome,
@@ -169,78 +170,27 @@ describe('HubDecisionWorkbench', () => {
       'hub-visit-timeline',
       'takeover-action',
       'hub-closed-room-disclosure',
+      'workbench-action-row',
     ]);
   });
 
-  it('keeps the outline compact until the Hub is set up', () => {
-    let project = applyProjectCommand(
+  it('keeps keyboard membership selection in its source batch after the Hub is authored', async () => {
+    let project = appendNEntry(
       createProjectDocument(catalog, {
-        projectId: 'hub-outline-presentation',
-        name: 'Hub outline presentation',
+        projectId: 'hub-workbench-membership',
+        name: 'Hub workbench membership',
         configuredBiomeCounts: { Surface: 1 },
       }),
-      catalog,
-      {
-        kind: 'CreateStart',
-        biome: nBiome,
-        occurrenceId: createOccurrenceId('hub-outline-opening'),
-      },
     );
     project = applyProjectCommand(project, catalog, {
-      kind: 'CreateLinkedExit',
       decision: createExitDecisionAddress(nBiome, {
         kind: 'occurrence',
-        occurrenceId: createOccurrenceId('hub-outline-opening'),
+        occurrenceId: nOccurrenceIds.preHub,
       }),
-      occurrenceId: nOccurrenceIds.preHub,
-    });
-    renderStaticHubDecisionWorkbench(project);
-
-    const disclosure = document.querySelector<HTMLDetailsElement>('.hub-outline-room-disclosure');
-    expect(screen.getByText('Possible Hub rooms (26)')).toBeTruthy();
-    expect(document.querySelectorAll('.hub-outline-room-option')).toHaveLength(26);
-    expect(disclosure?.open).toBe(false);
-    expect(document.querySelectorAll('.hub-visit-row')).toHaveLength(0);
-    expect(screen.queryByRole('checkbox')).toBeNull();
-    expect(screen.getByText('Set up Hub rooms to plan six Pylon visits.')).toBeTruthy();
-  });
-
-  it('creates the board from its Hub frontier and keeps keyboard membership selection in its batch', async () => {
-    const opening = createOccurrenceId('hub-workbench-opening');
-    let project = applyProjectCommand(
-      createProjectDocument(catalog, {
-        projectId: 'hub-workbench-creation',
-        name: 'Hub workbench creation',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      catalog,
-      { kind: 'CreateStart', biome: nBiome, occurrenceId: opening },
-    );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateLinkedExit',
-      decision: createExitDecisionAddress(nBiome, {
-        kind: 'occurrence',
-        occurrenceId: opening,
-      }),
-      occurrenceId: nOccurrenceIds.preHub,
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      kind: 'ReplaceWithHubDecision',
     });
     const view = renderHubDecisionWorkbench(project);
-    const historyBeforeBoard =
-      view.application.store.getState().projectWorkspace.history.past.length;
-
-    const setUpHub = screen.getByRole('button', { name: 'Set up Hub rooms' });
-    expect(setUpHub.classList.contains('primary-action')).toBe(true);
-    await view.user.click(setUpHub);
-    await waitFor(() => expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBeforeBoard + 1,
-    );
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      createHubDecisionAddress(nBiome, 'hub'),
-    );
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    await screen.findByRole('button', { name: 'Set up Hub rooms' });
-    await view.user.click(screen.getByRole('button', { name: 'Set up Hub rooms' }));
     await waitFor(() => expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26));
     const disclosure = document.querySelector<HTMLDetailsElement>('.hub-closed-room-disclosure');
     const summary = disclosure?.querySelector<HTMLElement>('summary');
@@ -257,9 +207,6 @@ describe('HubDecisionWorkbench', () => {
           (target) => target.hubSlotKey === 'combat01',
         ),
       ).toBe(true),
-    );
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      createHubDecisionAddress(nBiome, 'hub'),
     );
     expect(document.activeElement).toBe(screen.getByLabelText('Combat 02 open'));
   });

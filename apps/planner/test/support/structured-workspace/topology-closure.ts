@@ -2,7 +2,6 @@ import type { SemanticAddress } from '@run-planner/engine/authored-project';
 
 import type {
   WorkspaceHubDecisionNode,
-  WorkspaceLinkedExitNode,
   WorkspaceMixedBatchNode,
   WorkspaceOrdinaryBatchNode,
   WorkspaceTakeoverBatchNode,
@@ -13,10 +12,7 @@ import type { ObservedWorkspaceProducts } from './observed-workspace';
 import { workspaceTestOwnerKey } from './test-keys';
 
 type ObservedExitDecisionNode =
-  | WorkspaceLinkedExitNode
-  | WorkspaceMixedBatchNode
-  | WorkspaceOrdinaryBatchNode
-  | WorkspaceTakeoverBatchNode;
+  WorkspaceMixedBatchNode | WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode;
 
 function exactlyOne<T>(values: readonly T[], detail: string): T {
   if (values.length !== 1) {
@@ -36,8 +32,7 @@ function observedExitDecision(
   return exactlyOne(
     observed.nodes.filter(
       (node): node is ObservedExitDecisionNode =>
-        (node.kind === 'linkedExit' ||
-          node.kind === 'ordinaryBatch' ||
+        (node.kind === 'ordinaryBatch' ||
           node.kind === 'mixedBatch' ||
           node.kind === 'takeoverBatch') &&
         addressMatches(node.owner, address),
@@ -88,15 +83,7 @@ export function assertExpectedWorkspaceTopologyClosure(input: {
   }
 
   for (const decision of input.expected.exitDecisions) {
-    const node = observedExitDecision(input.observed, decision.address);
-    if (
-      (decision.decision.normal.kind === 'linked' && node.kind !== 'linkedExit') ||
-      (decision.decision.normal.kind === 'batch' && node.kind === 'linkedExit')
-    ) {
-      throw new Error(
-        `${workspaceTestOwnerKey(decision.address)} projects the wrong decision kind`,
-      );
-    }
+    observedExitDecision(input.observed, decision.address);
     assertObservedOwner(
       decision.address,
       input.observed,
@@ -106,31 +93,14 @@ export function assertExpectedWorkspaceTopologyClosure(input: {
 
   for (const target of input.expected.targets) {
     const node = observedExitDecision(input.observed, target.decisionAddress);
-    if (target.sourceKind === 'linked') {
-      if (
-        node.kind !== 'linkedExit' ||
-        node.target.exitKey !== target.exitKey ||
-        node.target.room.occurrenceId !== target.occurrenceId
-      ) {
-        throw new Error(
-          `${workspaceTestOwnerKey(target.decisionAddress)} omits its authored linked target`,
-        );
-      }
-    } else {
-      if (node.kind === 'linkedExit') {
-        throw new Error(
-          `${workspaceTestOwnerKey(target.decisionAddress)} projects a linked exit for an authored batch`,
-        );
-      }
-      const projectedTarget = exactlyOne(
-        node.targets.filter((candidate) => candidate.exitKey === target.exitKey),
-        `${workspaceTestOwnerKey(target.decisionAddress)} target ${target.exitKey}`,
+    const projectedTarget = exactlyOne(
+      node.targets.filter((candidate) => candidate.exitKey === target.exitKey),
+      `${workspaceTestOwnerKey(target.decisionAddress)} target ${target.exitKey}`,
+    );
+    if (projectedTarget.room.occurrenceId !== target.occurrenceId) {
+      throw new Error(
+        `${workspaceTestOwnerKey(target.decisionAddress)} target ${target.exitKey} omits its authored occurrence`,
       );
-      if (projectedTarget.room.occurrenceId !== target.occurrenceId) {
-        throw new Error(
-          `${workspaceTestOwnerKey(target.decisionAddress)} target ${target.exitKey} omits its authored occurrence`,
-        );
-      }
     }
     assertObservedOwner(
       target.address,

@@ -42,10 +42,6 @@ function authoredDetailsActiveOccurrenceIds(plan: AuthoredBiomePlan): ReadonlySe
       }
       continue;
     }
-    if (decision.normal.kind === 'linked') {
-      active.add(decision.normal.occurrenceId);
-      continue;
-    }
     const target = selectedExitTarget(decision);
     if (target !== undefined) active.add(target.occurrenceId);
   }

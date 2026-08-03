@@ -61,8 +61,8 @@ function biome(workspace: StructuredWorkspaceProjection, biomeKey: string): Work
  * 10 dormant Ephyra withholding -> occurrence facts + expected-leaf closure
  * 11 invalid active Ephyra publication -> occurrence assembly
  * 12 Hub visit replacement/truncation -> biome presentation
- * 13 Hub outline before fixed start -> Hub assembly
- * 14 Hub outline entry-frontier placement -> biome presentation
+ * 13 unauthored Hub absence -> Hub assembly
+ * 14 terminal Hub decision rail placement -> biome presentation
  * 15 completed-Hub handoff -> topology-interaction assembly
  * 16 invalid Hub/retained visit suffix -> Hub assembly
  * 17 creation frontiers -> topology-interaction assembly + interaction binding
@@ -100,7 +100,6 @@ function biome(workspace: StructuredWorkspaceProjection, biomeKey: string): Work
 const workspaceNodeKinds: Readonly<Record<WorkspaceNode['kind'], true>> = Object.freeze({
   completion: true,
   hubDecision: true,
-  linkedExit: true,
   mixedBatch: true,
   occurrenceWorkbench: true,
   ordinaryBatch: true,

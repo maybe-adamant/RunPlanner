@@ -218,31 +218,14 @@ export type WorkspaceStartInteraction =
     };
 
 /** Structural creation supplies the exact catalog-owned command facts React needs. */
-export type WorkspaceStructuralInteraction =
-  | {
-      readonly action: 'createBatch';
-      readonly intent: WorkspaceCommandIntent<
-        Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
-      >;
-      readonly key: string;
-      readonly owner: ExitDecisionAddress;
-    }
-  | {
-      readonly action: 'createLinkedExit';
-      readonly intent: () => WorkspaceCommandIntent<
-        Extract<ProjectCommand, { readonly kind: 'CreateLinkedExit' }>
-      >;
-      readonly key: string;
-      readonly owner: ExitDecisionAddress;
-    }
-  | {
-      readonly action: 'createHubDecision';
-      readonly intent: WorkspaceCommandIntent<
-        Extract<ProjectCommand, { readonly kind: 'CreateHubDecision' }>
-      >;
-      readonly key: string;
-      readonly owner: HubDecisionAddress;
-    };
+export type WorkspaceStructuralInteraction = {
+  readonly action: 'createBatch';
+  readonly intent: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
+  >;
+  readonly key: string;
+  readonly owner: ExitDecisionAddress;
+};
 
 /** Visible exit frontiers expose their complete structural continuation action. */
 export interface WorkspaceExitFrontierCapabilities {
@@ -254,10 +237,13 @@ export interface WorkspaceExitFrontierCapabilities {
 
 export interface WorkspaceTopologyRemovalInteraction {
   readonly intent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ClearTopology' | 'RemoveExitDecision' }>
+    Extract<
+      ProjectCommand,
+      { readonly kind: 'ClearTopology' | 'RemoveExitDecision' | 'RemoveHubDecision' }
+    >
   >;
   readonly key: string;
-  readonly owner: BiomeAddress | ExitDecisionAddress;
+  readonly owner: BiomeAddress | ExitDecisionAddress | HubDecisionAddress;
 }
 
 /** A visible stage can carry removal for its hidden source decision. */
@@ -335,11 +321,29 @@ export type WorkspaceTakeoverBatchInteraction =
 
 type WorkspaceTakeoverCommandIntent = WorkspaceCommandIntent<TakeoverBatchCommand>;
 
+/**
+ * The bounded N terminal preserves its empty authored decision until this
+ * single engine-evaluated interaction replaces it with the persistent Hub.
+ * Its candidate result controls affordance state, never whether the control is
+ * projected at all.
+ */
+export interface WorkspaceHubTakeoverInteraction {
+  readonly hub: HubDecisionAddress;
+  readonly intent: () => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceWithHubDecision' }>
+  >;
+  readonly key: string;
+  readonly label: string;
+  readonly load: () => CandidateOptionProjection<ExitDecisionAddress>;
+  readonly owner: ExitDecisionAddress;
+}
+
 export interface WorkspaceInteractionCatalog {
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly exitFrontierCapabilities: ReadonlyMap<string, WorkspaceExitFrontierCapabilities>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
+  readonly hubTakeovers: ReadonlyMap<string, WorkspaceHubTakeoverInteraction>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
   readonly hubVisits: ReadonlyMap<string, WorkspaceHubVisitInteraction>;
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
@@ -637,13 +641,10 @@ export interface WorkspaceEffectiveRewardStore {
   readonly storeKey: string;
 }
 
-export interface WorkspaceLinkedExitNode {
-  readonly kind: 'linkedExit';
-  readonly key: string;
+/** The declared Hub continuation is owned by a terminal batch without a separate Hub node. */
+export interface WorkspaceHubTakeoverControl {
+  readonly interactionKey: string;
   readonly marker: WorkspaceMarker;
-  readonly owner: ExitDecisionAddress;
-  readonly source: ExitDecisionSourceAddress;
-  readonly target: WorkspacePhysicalTarget;
 }
 
 interface WorkspaceBatchNodeBase {
@@ -652,6 +653,8 @@ interface WorkspaceBatchNodeBase {
   readonly effectiveRewardStore?: WorkspaceEffectiveRewardStore;
   readonly fields?: WorkspaceFieldsBatchContext;
   readonly fieldsCageOutcome?: WorkspaceMarker;
+  /** Present only for the declared exact terminal Hub envelope. */
+  readonly hubTakeover?: WorkspaceHubTakeoverControl;
   readonly key: string;
   readonly marker: WorkspaceMarker;
   readonly missingTargets: readonly WorkspaceMissingPhysicalTarget[];
@@ -677,12 +680,6 @@ export type WorkspaceAuthoringFrontier =
       readonly marker: WorkspaceMarker;
       readonly owner: ExitDecisionAddress;
       readonly predecessorNodeKey?: string;
-    }
-  | {
-      readonly kind: 'hubDecision';
-      readonly interactionKey: string;
-      readonly marker: WorkspaceMarker;
-      readonly owner: HubDecisionAddress;
     }
   | {
       readonly kind: 'hubVisit';
@@ -736,7 +733,7 @@ export interface WorkspaceHubVisit {
 }
 
 export interface WorkspaceHubDecisionNode {
-  readonly authoring: 'authored' | 'outline';
+  readonly authoring: 'authored';
   readonly kind: 'hubDecision';
   readonly key: string;
   readonly hubKey: string;
@@ -800,7 +797,6 @@ export type WorkspaceBiomeField =
     };
 
 export type WorkspaceNode =
-  | WorkspaceLinkedExitNode
   | WorkspaceOrdinaryBatchNode
   | WorkspaceTakeoverBatchNode
   | WorkspaceMixedBatchNode

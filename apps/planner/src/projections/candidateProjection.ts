@@ -93,6 +93,10 @@ export interface CandidateProjectionSession {
     source: ExitDecisionAddress,
     gameNames: readonly string[],
   ) => readonly CandidateOptionProjection<string>[];
+  /** One declaration-owned terminal Hub result for an exact authored envelope. */
+  readonly hubTerminalTakeover: (
+    source: ExitDecisionAddress,
+  ) => CandidateOptionProjection<ExitDecisionAddress>;
   readonly shipEncounterCounts: (
     occurrence: OccurrenceAddress,
     values: readonly (2 | 3)[],
@@ -542,6 +546,21 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
+      hubTerminalTakeover: (source: ExitDecisionAddress) => {
+        const [candidate] = projectOptions(
+          cache,
+          assembly,
+          `hub-takeover:${semanticAddressKey(source)}`,
+          Object.freeze([source]),
+          Object.freeze([{ kind: 'hubTerminalTakeover' as const, source }]),
+          catalog,
+          options,
+        );
+        if (candidate === undefined) {
+          throw new Error(`Hub terminal candidate ${semanticAddressKey(source)} is missing`);
+        }
+        return candidate;
+      },
     });
     boundSessionCache.set(assembly, session);
     return session;
@@ -564,6 +583,8 @@ function candidateSelectedPossible(evaluation: ProjectCandidateEvaluation): bool
     case 'shopPurchase':
       return evaluation.result.supported;
     case 'takeoverPrebossBatch':
+      return evaluation.result.support !== 'impossible';
+    case 'hubTerminalTakeover':
       return evaluation.result.support !== 'impossible';
     default:
       return evaluation.result.selectedPossible;
@@ -610,6 +631,8 @@ function candidateForced(
     case 'shopPurchase':
       return false;
     case 'takeoverPrebossBatch':
+      return evaluation.result.support === 'required';
+    case 'hubTerminalTakeover':
       return evaluation.result.support === 'required';
   }
 }

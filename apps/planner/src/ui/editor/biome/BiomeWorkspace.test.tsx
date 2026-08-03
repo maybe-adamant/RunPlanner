@@ -26,9 +26,14 @@ import { createApplication, type PlannerApplication } from '@planner/composition
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import type { WorkspaceBiome, WorkspaceNode } from '@planner/projections/structured-workspace';
 import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectRedoRequested,
+  authoredProjectReplaced,
+  authoredProjectUndoRequested,
+} from '@planner/state/projectWorkspaceSlice';
 import {
   appendCompleteN,
+  appendNEntry,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
@@ -217,7 +222,7 @@ describe('BiomeWorkspace', () => {
     expect(clear.closest('.biome-structure-title-row')).not.toBeNull();
   });
 
-  it('renders Ephyra primary rewards on fixed stages and authored Hub visits', () => {
+  it('renders Ephyra primary rewards on fixed stages, decision selections, and authored Hub visits', () => {
     const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
     const biome = workspaceBiome(view.application, 'Surface', 'N');
     const opening = biome.rail.find(
@@ -226,11 +231,11 @@ describe('BiomeWorkspace', () => {
         entry.node.kind === 'occurrenceWorkbench' &&
         entry.node.room.gameName === 'N_Opening01',
     );
-    const preHub = biome.rail.find(
+    const preHubDecision = biome.rail.find(
       (entry) =>
         entry.kind === 'node' &&
-        entry.node.kind === 'occurrenceWorkbench' &&
-        entry.node.room.gameName === 'N_PreHub01',
+        (entry.node.kind === 'ordinaryBatch' || entry.node.kind === 'mixedBatch') &&
+        entry.node.targets.some((target) => target.room.gameName === 'N_PreHub01'),
     );
     const hub = biome.rail.find(
       (entry): entry is Extract<(typeof biome.rail)[number], { readonly kind: 'hubGroup' }> =>
@@ -241,9 +246,8 @@ describe('BiomeWorkspace', () => {
       opening?.kind !== 'node' ||
       opening.node.kind !== 'occurrenceWorkbench' ||
       opening.mainReward === undefined ||
-      preHub?.kind !== 'node' ||
-      preHub.node.kind !== 'occurrenceWorkbench' ||
-      preHub.mainReward === undefined ||
+      preHubDecision?.kind !== 'node' ||
+      preHubDecision.selectedTarget?.reward === undefined ||
       firstVisit?.mainReward === undefined
     ) {
       throw new Error('Ephyra rail primary-reward entries are missing');
@@ -255,10 +259,10 @@ describe('BiomeWorkspace', () => {
       )?.textContent,
     ).toContain(opening.mainReward.label);
     expect(
-      railButtonForMarker(view.container, preHub.marker.focusKey).querySelector(
+      railButtonForMarker(view.container, preHubDecision.marker.focusKey).querySelector(
         '.biome-rail-selection',
       )?.textContent,
-    ).toContain(preHub.mainReward.label);
+    ).toContain(preHubDecision.selectedTarget.reward.label);
     expect(
       railButtonForMarker(view.container, firstVisit.marker.focusKey).querySelector(
         '.biome-rail-selection',
@@ -525,7 +529,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.queryByRole('button', { name: 'Add next decision' })).toBeNull();
   });
 
-  it('renders N’s entry frontiers before its future Hub outline', () => {
+  it('renders N’s entry frontiers without an unauthored Hub rail stop', () => {
     const emptyProjectDocument = emptyProject('Surface', 1);
     const emptyView = renderWorkspace(emptyProjectDocument, 'Surface', 'N');
     const emptyRail = railMarkerKeys(emptyView.container);
@@ -533,10 +537,7 @@ describe('BiomeWorkspace', () => {
     if (emptyWorkspace.frontier?.kind !== 'start') {
       throw new Error('empty N start frontier is missing');
     }
-    expect(emptyRail).toEqual([
-      emptyWorkspace.frontier?.marker.focusKey,
-      semanticAddressKey(createHubDecisionAddress(nBiome, 'hub')),
-    ]);
+    expect(emptyRail).toEqual([emptyWorkspace.frontier?.marker.focusKey]);
     const completion = screen.getByRole('region', { name: 'Biome completion' });
     expect(within(completion).getByText('Polyphemus')).toBeTruthy();
     expect(within(completion).getAllByText('Postboss')).toHaveLength(1);
@@ -556,8 +557,101 @@ describe('BiomeWorkspace', () => {
     expect(openingRail).toEqual([
       semanticAddressKey(createOccurrenceAddress(nBiome, nOccurrenceIds.opening)),
       openingWorkspace.frontier?.marker.focusKey,
-      semanticAddressKey(createHubDecisionAddress(nBiome, 'hub')),
     ]);
+  });
+
+  it('replaces the terminal PreHub decision with Hub and restores it through undo and redo', async () => {
+    const terminalProject = appendNEntry(emptyProject('Surface', 1));
+    const terminalOwner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.preHub,
+    });
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const view = renderWorkspace(terminalProject, 'Surface', 'N');
+    act(() => view.application.store.dispatch(semanticOwnerFocused(terminalOwner)));
+
+    const action = await screen.findByRole('button', { name: 'Ephyra Hub' });
+    expect(screen.getAllByText('Continue to Hub')).toHaveLength(2);
+    expect(action.closest('.hub-takeover-action')?.getAttribute('data-candidate-support')).toBe(
+      'unavailable',
+    );
+    expect(
+      workspaceBiome(view.application, 'Surface', 'N').nodes.some(
+        (node) => node.kind === 'hubDecision',
+      ),
+    ).toBe(false);
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(action);
+
+    await waitFor(() => {
+      expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(hub);
+      expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
+    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() => {
+      const restored = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
+        (node) =>
+          node.kind === 'ordinaryBatch' &&
+          semanticAddressKey(node.owner) === semanticAddressKey(terminalOwner),
+      );
+      expect(restored?.kind === 'ordinaryBatch' ? restored.hubTakeover : undefined).toBeDefined();
+    });
+    act(() => view.application.store.dispatch(semanticOwnerFocused(terminalOwner)));
+    expect(await screen.findByRole('button', { name: 'Ephyra Hub' })).toBeTruthy();
+
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy());
+  });
+
+  it('keeps the terminal Hub control visible when an invalid PreHub reward blocks evaluation', async () => {
+    const preHubReward = createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub);
+    const invalidPrefix = applyProjectCommand(appendNEntry(emptyProject('Surface', 1)), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: preHubReward,
+      value: { rewardType: 'TalentDrop' },
+    });
+    const terminalOwner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.preHub,
+    });
+    const view = renderWorkspace(invalidPrefix, 'Surface', 'N');
+    const terminal = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
+      (node) =>
+        node.kind === 'ordinaryBatch' &&
+        semanticAddressKey(node.owner) === semanticAddressKey(terminalOwner),
+    );
+
+    expect(
+      view.application.store.getState().projectWorkspace.assembly.evaluation.findings,
+    ).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardBagEntryUnavailable',
+        origin: preHubReward,
+      }),
+    );
+    expect(terminal?.kind === 'ordinaryBatch' ? terminal.hubTakeover : undefined).toBeDefined();
+
+    act(() => view.application.store.dispatch(semanticOwnerFocused(terminalOwner)));
+    const action = (await screen.findByRole('button', { name: 'Ephyra Hub' })) as HTMLButtonElement;
+    await view.user.click(action);
+
+    await waitFor(() => {
+      expect(action.disabled).toBe(true);
+      expect(action.closest('.hub-takeover-action')?.getAttribute('data-candidate-support')).toBe(
+        'unavailable',
+      );
+    });
+    expect(screen.getByRole('button', { name: 'Ephyra Hub' })).toBe(action);
+    expect(
+      workspaceBiome(view.application, 'Surface', 'N').nodes.some(
+        (node) => node.kind === 'hubDecision',
+      ),
+    ).toBe(false);
   });
 
   it('resolves defensive projected defaults outside current authored projection inputs', () => {

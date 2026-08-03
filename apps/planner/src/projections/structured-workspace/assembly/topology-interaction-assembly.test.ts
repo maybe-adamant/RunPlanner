@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
+  createHubDecisionAddress,
   createOccurrenceId,
   createProjectDocument,
   semanticAddressKey,
@@ -21,6 +22,7 @@ import {
 } from '@run-planner/test-fixtures';
 import {
   appendCompleteN,
+  appendNEntry,
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceIds,
@@ -76,33 +78,30 @@ describe('structured workspace topology interaction assembly', () => {
     expect(assembly.frontierInteractionRequirements).toHaveLength(0);
   });
 
-  it('publishes linked-exit capability without carrying an unused target room fact', () => {
-    const startId = createOccurrenceId('linked-requirement-start');
-    const project = applyProjectCommand(
+  it('publishes the exact terminal Hub takeover from the persisted PreHub envelope', () => {
+    const project = appendNEntry(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Surface: 1 },
-        name: 'Linked requirement N',
-        projectId: 'linked-requirement-n',
+        name: 'Terminal Hub takeover N',
+        projectId: 'terminal-hub-takeover-n',
       }),
-      catalog,
-      { biome: nBiome, kind: 'CreateStart', occurrenceId: startId },
     );
     const owner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
-      occurrenceId: startId,
+      occurrenceId: nOccurrenceIds.preHub,
     });
     const { assembly } = assemble(project, 'Surface', 'N');
-    const frontier = assembly.frontierInteractionRequirements.find(
+    const takeover = assembly.hubTakeoverInteractionRequirements.find(
       (requirement) =>
-        requirement.kind === 'exitFrontier' &&
+        requirement.kind === 'hubTakeover' &&
         semanticAddressKey(requirement.owner) === semanticAddressKey(owner),
     );
 
-    expect(frontier).toEqual({
-      capabilities: { structural: 'createLinkedExit' },
-      kind: 'exitFrontier',
+    expect(takeover).toEqual({
+      gameName: 'N_Hub',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      kind: 'hubTakeover',
       owner,
-      structural: { action: 'createLinkedExit' },
     });
   });
 
@@ -122,7 +121,7 @@ describe('structured workspace topology interaction assembly', () => {
   it('adapts N removal commands and its completed-Hub handoff without traversing rendered nodes', () => {
     const representative = assemble(createRepresentativeNOPQProject(), 'Surface', 'N');
     const removals = representative.assembly.topologyRemovalInteractionRequirements[0]?.removals;
-    const linked = createExitDecisionAddress(nBiome, {
+    const openingDecision = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.opening,
     });
@@ -132,7 +131,7 @@ describe('structured workspace topology interaction assembly', () => {
       removals?.some(
         (removal) =>
           removal.command.kind === 'RemoveExitDecision' &&
-          semanticAddressKey(removal.owner) === semanticAddressKey(linked),
+          semanticAddressKey(removal.owner) === semanticAddressKey(openingDecision),
       ),
     ).toBe(true);
 
@@ -158,7 +157,7 @@ describe('structured workspace topology interaction assembly', () => {
   it('publishes complete removal requirements without normal-batch takeover replacement', () => {
     const n = assemble(createRepresentativeNOPQProject(), 'Surface', 'N').assembly;
     const removals = n.topologyRemovalInteractionRequirements[0]?.removals;
-    const linked = createExitDecisionAddress(nBiome, {
+    const openingDecision = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.opening,
     });
@@ -167,9 +166,11 @@ describe('structured workspace topology interaction assembly', () => {
       owner: nBiome,
     });
     expect(
-      removals?.find((removal) => semanticAddressKey(removal.owner) === semanticAddressKey(linked)),
+      removals?.find(
+        (removal) => semanticAddressKey(removal.owner) === semanticAddressKey(openingDecision),
+      ),
     ).toMatchObject({
-      command: { decision: linked, kind: 'RemoveExitDecision' },
+      command: { decision: openingDecision, kind: 'RemoveExitDecision' },
     });
 
     const f = assemble(createGoldenFGHIProject(), 'Underworld', 'F').assembly;

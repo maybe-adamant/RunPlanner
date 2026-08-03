@@ -28,6 +28,8 @@ function expectedStructuralInteraction(
       return interactions.exitSelections.get(key);
     case 'fieldsCageOutcome':
       return interactions.fieldsCageOutcomes.get(key);
+    case 'hubTakeover':
+      return interactions.hubTakeovers.get(key);
     case 'hubSlot':
       return interactions.hubSlots.get(key);
     case 'hubVisit':
@@ -120,16 +122,6 @@ function assertRenderedNodeControls(
         );
       }
       return;
-    case 'linkedExit': {
-      const key = workspaceTestOwnerKey(node.owner);
-      assertExactObservedInteraction(
-        interactions.topologyRemovals.get(key),
-        key,
-        node.owner,
-        `linked-exit topology removal ${key}`,
-      );
-      return;
-    }
     case 'ordinaryBatch':
     case 'mixedBatch':
     case 'takeoverBatch': {
@@ -166,6 +158,14 @@ function assertRenderedNodeControls(
           `takeover batch ${node.takeoverInteractionKey}`,
         );
       }
+      if (node.hubTakeover !== undefined) {
+        assertExactObservedInteraction(
+          interactions.hubTakeovers.get(node.hubTakeover.interactionKey),
+          node.hubTakeover.interactionKey,
+          node.owner,
+          `Hub takeover ${node.hubTakeover.interactionKey}`,
+        );
+      }
       assertExactObservedInteraction(
         interactions.topologyRemovals.get(ownerKey),
         ownerKey,
@@ -191,7 +191,12 @@ function assertRenderedNodeControls(
       return;
     }
     case 'hubDecision':
-      if (node.authoring !== 'authored') return;
+      assertExactObservedInteraction(
+        interactions.topologyRemovals.get(workspaceTestOwnerKey(node.owner)),
+        workspaceTestOwnerKey(node.owner),
+        node.owner,
+        `Hub topology removal ${workspaceTestOwnerKey(node.owner)}`,
+      );
       for (const slot of node.slots) {
         assertExactObservedInteraction(
           interactions.hubSlots.get(slot.marker.focusKey),
@@ -254,14 +259,6 @@ export function assertRenderedWorkspaceStructuralControlClosure(input: {
             frontier.interactionKey,
             frontier.owner,
             `start frontier ${frontier.interactionKey}`,
-          );
-          break;
-        case 'hubDecision':
-          assertExactObservedInteraction(
-            input.interactions.structural.get(frontier.interactionKey),
-            frontier.interactionKey,
-            frontier.owner,
-            `Hub creation frontier ${frontier.interactionKey}`,
           );
           break;
         case 'exitDecision': {

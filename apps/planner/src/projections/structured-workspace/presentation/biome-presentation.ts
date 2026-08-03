@@ -59,8 +59,6 @@ function nodeRailPresentation(
       const entryLabel = isEntry && node.room.kind === 'Opening' ? 'Opening' : node.room.label;
       return { label: entryLabel };
     }
-    case 'linkedExit':
-      return { label: node.target.room.label };
     case 'ordinaryBatch':
     case 'mixedBatch':
       return { label: `Decision ${decisionIndex ?? 1}` };
@@ -186,17 +184,14 @@ function projectHubRailEntry(
 }
 
 /**
- * A fixed N transition remains inspectable, but once its target room exists
- * the room is the player-facing rail stage. The source command and finding
- * destination remain in the exhaustive semantic node product.
+ * Completed-Hub Preboss remains a fixed handoff, but once its target room
+ * exists the room is the player-facing rail stage. The source command and
+ * finding destination remain in the exhaustive semantic node product.
  */
-function isHubRailScaffoldWithRenderedTarget(
+function isHubHandoffRailScaffoldWithRenderedTarget(
   node: WorkspaceNode,
   renderedOccurrenceIds: ReadonlySet<OccurrenceId>,
 ): boolean {
-  if (node.kind === 'linkedExit') {
-    return renderedOccurrenceIds.has(node.target.room.occurrenceId);
-  }
   if (
     node.kind !== 'ordinaryBatch' &&
     node.kind !== 'mixedBatch' &&
@@ -220,6 +215,20 @@ export function presentWorkspaceBiome(
   semantic: WorkspaceBiomeSemanticAssembly,
 ): WorkspaceBiomePresentation {
   const { entry, frontier, structuralNodes } = semantic;
+  // A normal decision is itself a rail stop, so its authored target rooms stay
+  // inside that decision card. A Hub-owned completed handoff is deliberately
+  // different: its decision scaffold is suppressed in favor of the target
+  // room's structural rail stage.
+  const normalDecisionTargetOccurrenceIds = new Set(
+    structuralNodes.flatMap((node) =>
+      (node.kind === 'ordinaryBatch' ||
+        node.kind === 'mixedBatch' ||
+        node.kind === 'takeoverBatch') &&
+      node.source.kind !== 'hubDecision'
+        ? node.targets.map((target) => target.room.occurrenceId)
+        : [],
+    ),
+  );
   const renderedOccurrenceIds = new Set(
     structuralNodes
       .filter(
@@ -231,28 +240,17 @@ export function presentWorkspaceBiome(
     .filter((node) => {
       if (node.kind !== 'occurrenceWorkbench') return true;
       if (node.railVisibility === 'inspectorOnly') return false;
-      // Ordinary room offers belong inside their owning decision workbench.
-      // N's fixed Opening, PreHub, and Preboss occurrences remain structural
-      // stages, while an ordinary biome keeps only its authored entry.
+      // Ordinary room offers belong inside their owning decision workbench,
+      // including N's normalized PreHub target. Fixed entry and Hub-handoff
+      // stages remain standalone rail context.
+      if (normalDecisionTargetOccurrenceIds.has(node.room.occurrenceId)) return false;
       return semantic.progressionKind === 'hub' || node.key === entry?.key;
     })
     .filter(
       (node) =>
         semantic.progressionKind !== 'hub' ||
-        !isHubRailScaffoldWithRenderedTarget(node, renderedOccurrenceIds),
+        !isHubHandoffRailScaffoldWithRenderedTarget(node, renderedOccurrenceIds),
     );
-  // The N board is declaration-owned outline structure until the fixed
-  // Opening -> PreHub path has reached it. Keep that read-only preview after
-  // the active entry frontier; otherwise it would claim a position in the
-  // rail before the action that makes it reachable. Persisted Hub decisions
-  // and retained authored structure stay in their topology order.
-  const hubOutlines = railNodes.filter(
-    (node): node is WorkspaceHubDecisionNode =>
-      node.kind === 'hubDecision' && node.authoring === 'outline',
-  );
-  const reachableRailNodes = railNodes.filter(
-    (node) => !(node.kind === 'hubDecision' && node.authoring === 'outline'),
-  );
   const railFrontier =
     frontier?.kind === 'start' ||
     (frontier?.kind === 'exitDecision' && frontier.owner.source.kind !== 'hubDecision')
@@ -289,7 +287,7 @@ export function presentWorkspaceBiome(
     });
   };
   const rail = Object.freeze([
-    ...reachableRailNodes.map(railEntryForNode),
+    ...railNodes.map(railEntryForNode),
     ...(railFrontier === undefined
       ? []
       : [
@@ -300,7 +298,6 @@ export function presentWorkspaceBiome(
             marker: railFrontier.marker,
           }),
         ]),
-    ...hubOutlines.map(railEntryForNode),
   ]);
   const inspectorDefaults = Object.freeze({
     ...(entry === undefined ? {} : { entry }),

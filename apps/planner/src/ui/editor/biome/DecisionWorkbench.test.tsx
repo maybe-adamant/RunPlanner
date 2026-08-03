@@ -35,6 +35,7 @@ import {
 } from '@run-planner/test-fixtures';
 import {
   createRepresentativeNOPQProject,
+  appendNEntry,
   nBiome,
   nOccurrenceIds,
   oBiome,
@@ -75,8 +76,7 @@ function subjectForOwner(owner: SemanticAddress) {
   return (biome: WorkspaceBiome): DecisionWorkbenchSubject | undefined => {
     const node = biome.nodes.find(
       (candidate): candidate is DecisionWorkbenchNode =>
-        (candidate.kind === 'linkedExit' ||
-          candidate.kind === 'ordinaryBatch' ||
+        (candidate.kind === 'ordinaryBatch' ||
           candidate.kind === 'mixedBatch' ||
           candidate.kind === 'takeoverBatch') &&
         ownerMatches(candidate, owner),
@@ -147,18 +147,21 @@ function fTwoDoorBatchProject(): {
 }
 
 function nOpeningPreHubProject(): ProjectDocument {
+  return appendNEntry(emptyProject('Surface'));
+}
+
+function nOpeningDecisionProject(): ProjectDocument {
   const project = applyProjectCommand(emptyProject('Surface'), catalog, {
     kind: 'CreateStart',
     biome: nBiome,
     occurrenceId: nOccurrenceIds.opening,
   });
   return applyProjectCommand(project, catalog, {
-    kind: 'CreateLinkedExit',
+    kind: 'CreateBatch',
     decision: createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.opening,
     }),
-    occurrenceId: nOccurrenceIds.preHub,
   });
 }
 
@@ -217,7 +220,7 @@ function requiredTakeoverOwner(
 }
 
 describe('DecisionWorkbench', () => {
-  it('authors the fixed N start and exposes only its linked-exit frontier', async () => {
+  it('authors the fixed N start through the ordinary batch frontier', async () => {
     const view = renderDecisionWorkbench(emptyProject('Surface'), 'Surface', 'N', currentFrontier);
     expect(screen.getByText('Start with Opening')).toBeTruthy();
     expect(screen.queryByText('N_Opening01')).toBeNull();
@@ -234,40 +237,41 @@ describe('DecisionWorkbench', () => {
       createOccurrenceAddress(nBiome, openingId),
     );
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Add fixed next room' })).toBeTruthy(),
+      expect(screen.getByRole('button', { name: 'Add next decision' })).toBeTruthy(),
     );
     expect(screen.queryByText('Add Preboss doors')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
 
-    const historyBeforeLinked =
-      view.application.store.getState().projectWorkspace.history.past.length;
-    await view.user.click(screen.getByRole('button', { name: 'Add fixed next room' }));
-    let linkedOccurrenceId: ReturnType<typeof createOccurrenceId> | undefined;
-    await waitFor(() => {
-      const updated = view.application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N');
-      const linked = updated?.topology?.decisions.find(
-        (decision) => decision.kind === 'exit' && decision.normal.kind === 'linked',
-      );
-      linkedOccurrenceId =
-        linked?.kind === 'exit' && linked.normal.kind === 'linked'
-          ? linked.normal.occurrenceId
-          : undefined;
-      expect(linkedOccurrenceId).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Add fixed next room' })).toBeNull();
+  });
+
+  it('offers only engine-declared PreHub through N Opening’s ordinary picker', async () => {
+    const owner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.opening,
     });
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBeforeLinked + 1,
-    );
-    if (linkedOccurrenceId === undefined) throw new Error('N linked occurrence was not authored');
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      createOccurrenceAddress(nBiome, linkedOccurrenceId),
+    const view = renderDecisionWorkbench(
+      nOpeningDecisionProject(),
+      'Surface',
+      'N',
+      subjectForOwner(owner),
     );
 
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+    const options = within(screen.getByRole('listbox')).getAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual(['Pre-Hub']);
+    expect(options[0]?.getAttribute('aria-disabled')).not.toBe('true');
+    expect(screen.queryByText(/Preboss/)).toBeNull();
+
+    await view.user.click(options[0]!);
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Add fixed next room' })).toBeTruthy(),
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+          ?.biomes.find((biome) => biome.biomeKey === 'N')
+          ?.topology?.occurrences.some((occurrence) => occurrence.gameName === 'N_PreHub01'),
+      ).toBe(true),
     );
   });
 
@@ -779,7 +783,7 @@ describe('DecisionWorkbench', () => {
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(before);
   });
 
-  it('dispatches immediate decision, linked-stage, and biome removals without confirmation', async () => {
+  it('dispatches immediate decision, staged, and biome removals without confirmation', async () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
@@ -800,8 +804,7 @@ describe('DecisionWorkbench', () => {
       expect(
         workspaceBiome(decision.application, 'Underworld', 'F').nodes.some(
           (node) =>
-            (node.kind === 'linkedExit' ||
-              node.kind === 'ordinaryBatch' ||
+            (node.kind === 'ordinaryBatch' ||
               node.kind === 'mixedBatch' ||
               node.kind === 'takeoverBatch') &&
             ownerMatches(node, owner),
@@ -810,20 +813,20 @@ describe('DecisionWorkbench', () => {
     );
     cleanup();
 
-    const linkedOwner = createExitDecisionAddress(nBiome, {
+    const openingOwner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.opening,
     });
-    const linked = renderDecisionWorkbench(
+    const opening = renderDecisionWorkbench(
       nOpeningPreHubProject(),
       'Surface',
       'N',
-      subjectForOwner(linkedOwner),
+      subjectForOwner(openingOwner),
     );
-    await linked.user.click(screen.getByRole('button', { name: 'Remove these doors' }));
+    await opening.user.click(screen.getByRole('button', { name: 'Remove these doors' }));
     await waitFor(() =>
       expect(
-        linked.application.store
+        opening.application.store
           .getState()
           .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
           ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology?.decisions,

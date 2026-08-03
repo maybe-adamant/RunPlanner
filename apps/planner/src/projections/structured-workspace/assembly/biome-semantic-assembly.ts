@@ -44,7 +44,6 @@ import {
 import {
   assembleWorkspaceDecision,
   type WorkspaceAuthoredBatchDecision,
-  type WorkspaceAuthoredLinkedExitDecision,
   type WorkspaceDecisionAssembly,
 } from './decision-assembly';
 import { assembleWorkspaceHub } from './hub-assembly';
@@ -52,6 +51,7 @@ import {
   appendUniqueBatchInteractionRequirements,
   appendUniqueFrontierInteractionRequirements,
   appendUniqueHubInteractionRequirements,
+  appendUniqueHubTakeoverInteractionRequirements,
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueStartInteractionRequirements,
   appendUniqueTakeoverInteractionRequirements,
@@ -59,6 +59,7 @@ import {
   type WorkspaceBatchInteractionRequirement,
   type WorkspaceFrontierInteractionRequirement,
   type WorkspaceHubInteractionRequirement,
+  type WorkspaceHubTakeoverInteractionRequirement,
   type WorkspaceOccurrenceInteractionRequirement,
   type WorkspaceStartInteractionRequirement,
   type WorkspaceTakeoverInteractionRequirement,
@@ -100,6 +101,10 @@ export interface WorkspaceBiomeSemanticAssembly {
     WorkspaceFrontierInteractionRequirement
   >;
   readonly hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>;
+  readonly hubTakeoverInteractionRequirements: ReadonlyMap<
+    string,
+    WorkspaceHubTakeoverInteractionRequirement
+  >;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly nodes: readonly WorkspaceNode[];
@@ -267,12 +272,9 @@ function authoringFrontier(
       });
     }
     case 'hubDecision':
-      return Object.freeze({
-        kind: 'hubDecision' as const,
-        interactionKey: semanticAddressKey(frontier),
-        marker: marker.marker(frontier),
-        owner: frontier,
-      });
+      // The Hub terminal replaces its exact decision envelope, so this
+      // impossible legacy-shaped frontier has no workspace presentation.
+      return null;
     case 'hubVisit':
       return Object.freeze({
         kind: 'hubVisit' as const,
@@ -312,16 +314,6 @@ function appendDecisionAssembly(
   roomControls: Map<string, WorkspaceRoomPickerControl>,
   rewardControls: Map<string, WorkspaceRewardControl>,
 ): void {
-  if (assembly.kind === 'linkedExit') {
-    appendUniqueOccurrenceInteractionRequirements(
-      occurrenceInteractionRequirements,
-      assembly.occurrenceInteractionRequirements,
-    );
-    appendUniqueRoomControls(roomControls, assembly.roomControls);
-    appendUniqueRewardControls(rewardControls, assembly.rewardControls);
-    appendUniqueWorkspaceNodes(nodes, [assembly.node, assembly.workbench]);
-    return;
-  }
   appendUniqueBatchInteractionRequirements(
     batchInteractionRequirements,
     assembly.batchInteractionRequirements,
@@ -399,6 +391,10 @@ export function assembleWorkspaceBiomeSemantics(
   >();
   const batchInteractionRequirements = new Map<string, WorkspaceBatchInteractionRequirement>();
   const hubInteractionRequirements = new Map<string, WorkspaceHubInteractionRequirement>();
+  const hubTakeoverInteractionRequirements = new Map<
+    string,
+    WorkspaceHubTakeoverInteractionRequirement
+  >();
   const topologyRemovalInteractionRequirements = new Map<
     string,
     WorkspaceTopologyRemovalInteractionRequirement
@@ -481,52 +477,50 @@ export function assembleWorkspaceBiomeSemantics(
       `${plan.biomeKey} has an evaluated entry without an authored start`,
     );
   }
+  const hubTakeoverRequirementByOwner = new Map(
+    topologyInteractions.hubTakeoverInteractionRequirements.map(
+      (requirement) => [semanticAddressKey(requirement.owner), requirement] as const,
+    ),
+  );
   const projectAuthoredExitDecision = (decision: ExitDecision): void => {
     const owner = createExitDecisionAddress(biome, decision.source);
-    let assembly: WorkspaceDecisionAssembly;
-    if (decision.normal.kind === 'linked') {
-      const evaluated = source.evaluatedLinkedExit(owner);
-      assembly =
-        evaluated === undefined
-          ? assembleWorkspaceDecision({
-              assembleOccurrence,
-              catalog,
-              decision: decision as WorkspaceAuthoredLinkedExitDecision,
-              kind: 'linkedExit',
-              markerDestinations,
-              source,
-            })
-          : assembleWorkspaceDecision({
-              assembleOccurrence,
-              catalog,
-              decision: decision as WorkspaceAuthoredLinkedExitDecision,
-              evaluated,
-              kind: 'linkedExit',
-              markerDestinations,
-              source,
-            });
-    } else {
-      const evaluated = source.evaluatedBatch(owner);
-      assembly =
-        evaluated === undefined
-          ? assembleWorkspaceDecision({
-              assembleOccurrence,
-              catalog,
-              decision: decision as WorkspaceAuthoredBatchDecision,
-              kind: 'batch',
-              markerDestinations,
-              source,
-            })
-          : assembleWorkspaceDecision({
-              assembleOccurrence,
-              catalog,
-              decision: decision as WorkspaceAuthoredBatchDecision,
-              evaluated,
-              kind: 'batch',
-              markerDestinations,
-              source,
-            });
-    }
+    const evaluated = source.evaluatedBatch(owner);
+    const hubTakeover = hubTakeoverRequirementByOwner.get(semanticAddressKey(owner));
+    const assembly: WorkspaceDecisionAssembly =
+      evaluated === undefined
+        ? assembleWorkspaceDecision({
+            assembleOccurrence,
+            catalog,
+            decision: decision as WorkspaceAuthoredBatchDecision,
+            ...(hubTakeover === undefined
+              ? {}
+              : {
+                  hubTakeover: Object.freeze({
+                    interactionKey: semanticAddressKey(hubTakeover.owner),
+                    owner: hubTakeover.hub,
+                  }),
+                }),
+            kind: 'batch',
+            markerDestinations,
+            source,
+          })
+        : assembleWorkspaceDecision({
+            assembleOccurrence,
+            catalog,
+            decision: decision as WorkspaceAuthoredBatchDecision,
+            evaluated,
+            ...(hubTakeover === undefined
+              ? {}
+              : {
+                  hubTakeover: Object.freeze({
+                    interactionKey: semanticAddressKey(hubTakeover.owner),
+                    owner: hubTakeover.hub,
+                  }),
+                }),
+            kind: 'batch',
+            markerDestinations,
+            source,
+          });
     appendDecisionAssembly(
       assembly,
       nodes,
@@ -555,21 +549,21 @@ export function assembleWorkspaceBiomeSemantics(
       ...(nextHubVisitIndex === undefined ? {} : { nextVisitIndex: nextHubVisitIndex }),
       topology: plan.topology,
     };
-    const evaluated = hub === undefined ? undefined : source.evaluatedHub(owner);
-    const assembly =
-      hub === undefined
-        ? assembleWorkspaceHub(sharedHubInput)
-        : evaluated === undefined
+    if (hub !== undefined) {
+      const evaluated = source.evaluatedHub(owner);
+      const assembly =
+        evaluated === undefined
           ? assembleWorkspaceHub({ ...sharedHubInput, hub })
           : assembleWorkspaceHub({ ...sharedHubInput, evaluated, hub });
-    appendHubAssembly(
-      assembly,
-      nodes,
-      hubInteractionRequirements,
-      occurrenceInteractionRequirements,
-      roomControls,
-      rewardControls,
-    );
+      appendHubAssembly(
+        assembly,
+        nodes,
+        hubInteractionRequirements,
+        occurrenceInteractionRequirements,
+        roomControls,
+        rewardControls,
+      );
+    }
   }
   for (const decision of source.exitDecisions) {
     if (decision.source.kind !== 'hubDecision') continue;
@@ -606,6 +600,10 @@ export function assembleWorkspaceBiomeSemantics(
     takeoverInteractionRequirements,
     topologyInteractions.takeoverInteractionRequirements,
   );
+  appendUniqueHubTakeoverInteractionRequirements(
+    hubTakeoverInteractionRequirements,
+    topologyInteractions.hubTakeoverInteractionRequirements,
+  );
   appendUniqueFrontierInteractionRequirements(
     frontierInteractionRequirements,
     topologyInteractions.frontierInteractionRequirements,
@@ -623,6 +621,7 @@ export function assembleWorkspaceBiomeSemantics(
     frontier,
     frontierInteractionRequirements,
     hubInteractionRequirements,
+    hubTakeoverInteractionRequirements,
     label: catalog.biomes.byKey[plan.biomeKey]?.label ?? plan.biomeKey,
     marker: biomeMarker,
     nodes: completedNodes,

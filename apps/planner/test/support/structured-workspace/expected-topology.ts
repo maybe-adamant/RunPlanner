@@ -33,7 +33,6 @@ export interface ExpectedWorkspaceTargetOwner {
   readonly decisionAddress: ExitDecisionAddress;
   readonly exitKey: string;
   readonly occurrenceId: OccurrenceId;
-  readonly sourceKind: 'batch' | 'linked';
 }
 
 export interface ExpectedWorkspaceHubDecisionOwner {
@@ -153,22 +152,6 @@ export function expectedWorkspaceTopologyManifest(
 
     const decisionAddress = createExitDecisionAddress(biome, decision.source);
     exitDecisions.push(Object.freeze({ address: decisionAddress, decision }));
-    if (decision.normal.kind === 'linked') {
-      ownOccurrence(
-        decision.normal.occurrenceId,
-        `${plan.biomeKey} linked target ${decision.normal.exitKey}`,
-      );
-      targets.push(
-        Object.freeze({
-          address: createTargetAddress(biome, decision.source, decision.normal.exitKey),
-          decisionAddress,
-          exitKey: decision.normal.exitKey,
-          occurrenceId: decision.normal.occurrenceId,
-          sourceKind: 'linked',
-        }),
-      );
-      continue;
-    }
     for (const target of decision.normal.targets) {
       ownOccurrence(target.occurrenceId, `${plan.biomeKey} target ${target.exitKey}`);
       targets.push(
@@ -177,7 +160,6 @@ export function expectedWorkspaceTopologyManifest(
           decisionAddress,
           exitKey: target.exitKey,
           occurrenceId: target.occurrenceId,
-          sourceKind: 'batch',
         }),
       );
     }

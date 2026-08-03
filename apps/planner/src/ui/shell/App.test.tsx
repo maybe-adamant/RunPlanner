@@ -7,6 +7,7 @@ import {
   createHubOpenSetAddress,
   createOccurrenceId,
   createRouteAddress,
+  createTargetAddress,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
@@ -224,6 +225,7 @@ describe('App', () => {
     const application = createApplication();
     const biome = createBiomeAddress('Surface', 'N');
     const opening = createOccurrenceId('app-n-open-set-opening');
+    const preHub = createOccurrenceId('app-n-open-set-prehub');
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ConfigureRoutePrefix',
@@ -236,15 +238,30 @@ describe('App', () => {
     );
     application.store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'CreateLinkedExit',
+        kind: 'CreateBatch',
         decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: opening }),
-        occurrenceId: createOccurrenceId('app-n-open-set-prehub'),
       }),
     );
     application.store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'CreateHubDecision',
+        gameName: 'N_PreHub01',
+        kind: 'CreateTarget',
+        occurrenceId: preHub,
+        target: createTargetAddress(biome, { kind: 'occurrence', occurrenceId: opening }, 'prehub'),
+      }),
+    );
+    const preHubDecision = createExitDecisionAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: preHub,
+    });
+    application.store.dispatch(
+      authoredProjectCommandDispatched({ kind: 'CreateBatch', decision: preHubDecision }),
+    );
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        decision: preHubDecision,
         hub: createHubDecisionAddress(biome, 'hub'),
+        kind: 'ReplaceWithHubDecision',
       }),
     );
     const finding = application.store

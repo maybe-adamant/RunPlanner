@@ -47,8 +47,8 @@ export function workspaceLocalDetailMarkers(
 }
 
 /**
- * Exact occurrence owners may be nested in a decision or linked-exit
- * workbench, but they retain one shared marker package for containment routing.
+ * Exact occurrence owners may be nested in a decision workbench, but they
+ * retain one shared marker package for containment routing.
  */
 export function workspaceOccurrenceOwnedMarkers(
   room: WorkspaceRoomSummary,
@@ -68,6 +68,7 @@ export function workspaceDecisionOwnedMarkers(
   return Object.freeze([
     node.marker,
     node.selection,
+    ...(node.hubTakeover === undefined ? [] : [node.hubTakeover.marker]),
     ...(node.rewardStore === undefined ? [] : [node.rewardStore]),
     ...node.targets.flatMap((target) => [
       target.marker,

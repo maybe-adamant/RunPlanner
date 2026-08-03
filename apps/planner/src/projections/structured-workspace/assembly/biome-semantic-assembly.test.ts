@@ -71,10 +71,12 @@ describe('structured workspace biome semantic assembly', () => {
     const preHubDecision = indexOfNode(
       assembly,
       (node) =>
-        node.kind === 'linkedExit' &&
+        (node.kind === 'ordinaryBatch' ||
+          node.kind === 'mixedBatch' ||
+          node.kind === 'takeoverBatch') &&
         node.source.kind === 'occurrence' &&
         node.source.occurrenceId === nOccurrenceIds.opening,
-      'N PreHub linked decision is missing',
+      'N PreHub decision is missing',
     );
     const preHub = indexOfNode(
       assembly,
@@ -145,12 +147,12 @@ describe('structured workspace biome semantic assembly', () => {
     expect(assembly.preliminaryFocusDestinations.has(assembly.marker.focusKey)).toBe(true);
   });
 
-  it('keeps the empty N start frontier and declaration-owned Hub outline semantic but non-interactive', () => {
+  it('keeps the empty N start frontier without publishing an unauthored Hub board', () => {
     const assembly = assembleWorkspaceBiomeSemantics(catalog, biomeSource(emptyNProject()));
     const hub = assembly.structuralNodes.find((node) => node.kind === 'hubDecision');
 
     expect(assembly.frontier).toMatchObject({ kind: 'start', owner: nBiome });
-    expect(hub).toMatchObject({ authoring: 'outline', kind: 'hubDecision' });
+    expect(hub).toBeUndefined();
     expect(assembly.hubInteractionRequirements.size).toBe(0);
     expect(assembly.roomControls.size).toBe(0);
     expect(assembly.rewardControls.size).toBe(0);
