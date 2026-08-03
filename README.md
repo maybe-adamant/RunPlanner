@@ -198,9 +198,13 @@ npm run desktop:build
 
 `desktop:build` creates an unbundled native executable. The Windows release
 workflow runs the complete repository gate, builds and launch-smokes that
-executable, then publishes a no-install ZIP and SHA-256 checksum. A manual
-workflow run retains the archive as a workflow artifact; pushing a version tag
-matching `apps/planner/package.json` also creates or updates its GitHub release.
+executable, then publishes a no-install ZIP and SHA-256 checksum. Trigger the
+workflow manually with a stable version such as `0.1.0`. The workflow injects
+that version into its temporary Tauri build configuration; it does not edit or
+commit package metadata. After the build, smoke test, and artifact upload pass,
+the same run creates `v0.1.0` on the exact tested commit and creates or resumes
+its GitHub release. Re-running the same version is safe only from that same
+commit; an existing tag on another commit is rejected.
 
 The complete `test` and `check` commands remain the phase, push, and release
 gates. Development uses narrower test lanes:
