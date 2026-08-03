@@ -2,15 +2,17 @@ name: Windows portable
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
+    inputs:
+      version:
+        description: 'Stable release version without the v prefix (for example, 0.1.0)'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-release
   cancel-in-progress: false
 
 jobs:
@@ -20,10 +22,51 @@ jobs:
     timeout-minutes: 60
     outputs:
       artifact_name: ${{ steps.package.outputs.artifact_name }}
+      release_sha: ${{ steps.release.outputs.release_sha }}
+      release_tag: ${{ steps.release.outputs.release_tag }}
+      release_version: ${{ steps.release.outputs.release_version }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Prepare release metadata
+        id: release
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:RELEASE_VERSION -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
+            throw "Release version must be a stable SemVer value such as 0.1.0."
+          }
+
+          $version = $env:RELEASE_VERSION
+          $tag = "v$version"
+          $tagLines = @(git ls-remote --tags origin "refs/tags/$tag" "refs/tags/$tag^{}")
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to inspect the existing release tag $tag."
+          }
+          if ($tagLines.Count -gt 0) {
+            $peeledLine = $tagLines | Where-Object { $_.EndsWith('^{}') } | Select-Object -First 1
+            $resolvedLine = if ($null -ne $peeledLine) { $peeledLine } else { $tagLines[0] }
+            $tagSha = ($resolvedLine -split '\s+')[0]
+            if ($tagSha -ne $env:GITHUB_SHA) {
+              throw "Release tag $tag already points to $tagSha instead of $env:GITHUB_SHA."
+            }
+          }
+
+          $configPath = Join-Path $env:RUNNER_TEMP 'tauri.release.conf.json'
+          $config = @{ version = $version } | ConvertTo-Json -Compress
+          [System.IO.File]::WriteAllText(
+            $configPath,
+            $config,
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+          "release_version=$version" >> $env:GITHUB_OUTPUT
+          "release_tag=$tag" >> $env:GITHUB_OUTPUT
+          "release_sha=$env:GITHUB_SHA" >> $env:GITHUB_OUTPUT
+          "tauri_config=$configPath" >> $env:GITHUB_OUTPUT
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -34,16 +77,6 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
-      - name: Validate release tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: pwsh
-        run: |
-          $version = node -p "require('./apps/planner/package.json').version"
-          $expectedTag = "v$version"
-          if ($env:GITHUB_REF_NAME -ne $expectedTag) {
-            throw "Release tag $env:GITHUB_REF_NAME does not match planner version $version."
-          }
-
       - name: Run repository gate
         run: npm run check
 
@@ -51,7 +84,11 @@ jobs:
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable 2026-08-03
 
       - name: Build portable desktop executable
-        run: npm run desktop:build
+        shell: pwsh
+        env:
+          TAURI_RELEASE_CONFIG: ${{ steps.release.outputs.tauri_config }}
+        run: |
+          npm exec --workspace @run-planner/planner -- tauri build --no-bundle --config "$env:TAURI_RELEASE_CONFIG" -- --locked
 
       - name: Smoke-test desktop launch
         shell: pwsh
@@ -72,9 +109,10 @@ jobs:
       - name: Create portable archive
         id: package
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
         run: |
-          $version = node -p "require('./apps/planner/package.json').version"
-          $artifactName = "RunPlanner-$version-windows-x64-portable"
+          $artifactName = "RunPlanner-$env:RELEASE_VERSION-windows-x64-portable"
           $staging = Join-Path $env:RUNNER_TEMP $artifactName
           $archive = Join-Path $env:RUNNER_TEMP "$artifactName.zip"
           $checksum = "$archive.sha256"
@@ -103,7 +141,6 @@ jobs:
 
   release:
     name: Publish tagged release
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -117,15 +154,37 @@ jobs:
           name: ${{ needs.build.outputs.artifact_name }}
           path: release
 
-      - name: Publish GitHub release
+      - name: Create release tag
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ needs.build.outputs.release_sha }}
+          RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
         run: |
-          tag="${GITHUB_REF_NAME}"
-          if ! gh release view "${tag}" >/dev/null 2>&1; then
-            gh release create "${tag}" --verify-tag --generate-notes --title "Run Planner ${tag}"
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_TAG}" --jq .sha)"
+            if [ "${existing_sha}" != "${RELEASE_SHA}" ]; then
+              echo "Release tag ${RELEASE_TAG} points to ${existing_sha}, not ${RELEASE_SHA}." >&2
+              exit 1
+            fi
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="refs/tags/${RELEASE_TAG}" \
+              -f sha="${RELEASE_SHA}" >/dev/null
           fi
-          gh release upload "${tag}" \
+
+      - name: Publish GitHub release
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
+        run: |
+          if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release create "${RELEASE_TAG}" \
+              --verify-tag \
+              --generate-notes \
+              --title "Run Planner ${RELEASE_TAG}"
+          fi
+          gh release upload "${RELEASE_TAG}" \
             "release/${{ needs.build.outputs.artifact_name }}.zip" \
             "release/${{ needs.build.outputs.artifact_name }}.zip.sha256" \
             --clobber
