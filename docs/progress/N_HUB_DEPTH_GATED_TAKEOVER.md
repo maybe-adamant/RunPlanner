@@ -1,7 +1,6 @@
 # N Hub Depth-Gated Takeover
 
-Status: selected implementation plan; normalized decision/takeover model;
-implementation pending
+Status: implementation complete and validated (2026-08-02)
 
 This plan deliberately accepts a data simplification in exchange for removing
 N-only continuation machinery. `N_GAME_RULES.md` owns the literal game facts
@@ -192,6 +191,27 @@ resolution for the source. It must not scan all takeover Preboss declarations
 in N after admitting Hub progression to shared normal-decision machinery. The
 zero-target persisted shape alone is never authority for Hub availability.
 
+The existing `CreateBatch` semantic command creates this envelope after its
+declaration-owned terminal query admits the PreHub source. For N it writes the
+same no-choice batch state used by the bounded entry policy:
+
+```ts
+{
+  normal: {
+    kind: 'batch',
+    rewardStore: { kind: 'none' },
+    batchState: null,
+    targets: [],
+  },
+  selection: { kind: 'unresolved' },
+}
+```
+
+`ReplaceWithHubDecision` accepts only that exact terminal envelope. It is not
+an implicit consequence of selecting PreHub and it cannot be represented by a
+missing decision. This keeps the authoring frontier explicit and gives
+remove/undo one complete persisted predecessor to restore.
+
 At the supported depth-2 frontier, Hub is required. Selecting it atomically:
 
 1. removes the empty or replaceable normal decision at that source;
@@ -203,6 +223,13 @@ At the supported depth-2 frontier, Hub is required. Selecting it atomically:
 
 Undo restores the exact prior decision envelope and its authored state. Redo
 reapplies the Hub takeover atomically.
+
+`RemoveHubDecision` is the explicit destructive counterpart. It accepts the
+Hub semantic address, removes the Hub board, slots, visits, and any
+completed-Hub handoff, then restores the exact terminal envelope at the
+persisted source. `RemoveExitDecision` remains the command for ordinary and
+completed-Hub exit decisions; it does not silently acquire Hub-decision
+semantics.
 
 ### Hub takeover and Preboss takeover are siblings
 
@@ -368,7 +395,7 @@ not a reason to preserve the entry type, `kind: 'linked'`, or canonical
 
 Expected additions include:
 
-- source-bearing `HubDecision` persistence and the selected schema-10 handling;
+- source-bearing `HubDecision` persistence and schema-10 rejection of schema 9;
 - one Hub takeover candidate/evaluator;
 - one atomic replace-with-Hub command path;
 - the bounded N Hub-entry/terminal descriptor selected by B1;
@@ -379,30 +406,24 @@ Acceptance is based on a smaller change neighborhood and removal of parallel
 paths, not raw line-count reduction. Nevertheless, unexplained net production
 growth after the linked path is removed is a stop-and-review signal.
 
-## Schema Migration
+## Schema Policy
 
-This is a schema-10 change. The current codec has no legacy-schema migration
-dispatcher, so B1 must explicitly choose one of two policies: add one narrow,
-pure schema-9-to-10 migration before normal decoding, or deliberately reject
-schema-9 profiles under the repository's release policy. The implementation
-cannot imply a migration without that dispatcher.
+This is a schema-10 change. B1 selects the repository's established pre-release
+replacement policy: schema 10 **rejects** schema-9 documents. It adds no
+legacy-schema migration dispatcher, compatibility decoder, or mixed-shape
+runtime branch.
 
-If migration is selected, transformation from a valid schema-9 N topology is
-deterministic:
+This is deliberate. The normalized shape changes both the persisted N entry
+decision and the Hub source, and a schema-9 linked PreHub can validly exist
+with or without a later Hub decision. A migration would need to manufacture the
+new terminal envelope, choose its exact no-choice batch state, and distinguish
+all partial historical shapes. That is migration machinery for an unreleased
+format rather than a supported product contract.
 
-1. Locate the sole start-owned linked PreHub decision.
-2. Replace it with a width-one normal batch using the same source, exit key,
-   target occurrence, and selected outcome.
-3. Use a declaration-owned no-choice batch-store state; retain the PreHub
-   occurrence's existing forced RunProgress offer unchanged.
-4. If a Hub decision exists, add the linked PreHub target occurrence as its
-   source.
-5. Retain Hub open targets, visits, side state, completed handoff, and all
-   occurrence IDs unchanged.
-
-A schema-9 document with a detached, duplicate, mis-targeted, or ambiguous N
-chain is rejected. Migration must not locate PreHub by label, rendered order,
-or an arbitrary occurrence search.
+The existing rejection/recovery boundary continues to preserve an unreadable
+payload for explicit user recovery; it must not reinterpret a schema-9 project
+as schema 10. Codec tests must assert rejection of schema 9 once the version
+increments.
 
 ## Engine Implementation Inventory
 
@@ -417,9 +438,10 @@ or an arbitrary occurrence search.
 
 ### Authored topology and commands
 
-- add the Hub source and selected schema migration-or-rejection handling;
+- add the Hub source and schema-10 rejection of schema 9;
 - create/replace a width-one ordinary PreHub batch;
 - add `ReplaceWithHubDecision` or an equivalently explicit semantic command;
+- add `RemoveHubDecision`, restoring its exact terminal envelope;
 - make replacement and removal impact atomic and source-addressed;
 - update selected-spine reachability and cycle validation;
 - delete linked-entry commands and topology branches.
@@ -460,7 +482,7 @@ No slice may leave both linked and normalized production paths active.
   takeover, complete Hub decision -> Preboss handoff;
 - inventory all `ProgressionDescriptor` switches and select the smallest
   coherent bounded ownership surface with recorded rationale;
-- freeze the schema-10 migration-or-rejection policy and exact shape.
+- freeze the schema-10 rejection policy and no-choice terminal-envelope shape.
 
 This slice may be test/document-only. It must not add a fake Chaos model,
 production shadow model, or generic resume vocabulary.
@@ -530,31 +552,33 @@ The implementation is acceptable only if all gates pass.
     key and its existing semantic addresses.
 14. Removing or replacing the Hub restores exactly its source decision; undo
     and redo are atomic.
-15. Codec, cycle, reachability, closure, and topology impact reject competing or
+15. `RemoveHubDecision` removes all Hub-owned state and any completed-Hub
+    handoff, then restores the exact no-choice terminal envelope at PreHub.
+16. Codec, cycle, reachability, closure, and topology impact reject competing or
     detached source products.
 
 ### Application behavior
 
-16. PreHub room and reward use the ordinary picker controls.
-17. Hub appears as a projected forced N candidate and selecting it replaces the
+17. PreHub room and reward use the ordinary picker controls.
+18. Hub appears as a projected forced N candidate and selecting it replaces the
     entire decision node with the existing Hub workbench.
-18. React contains no N depth, eligibility, room-name, or command-construction
+19. React contains no N depth, eligibility, room-name, or command-construction
     policy.
-19. Findings cannot hide either the PreHub or Hub control.
-20. Rail selection, semantic focus, native keyboard continuity, and undo/redo
+20. Findings cannot hide either the PreHub or Hub control.
+21. Rail selection, semantic focus, native keyboard continuity, and undo/redo
     remain stable.
 
 ### Deletion and health
 
-21. No production linked-entry path, canonical linked product, or forwarding
+22. No production linked-entry path, canonical linked product, or forwarding
     compatibility wrapper remains.
-22. Completed-Hub metadata no longer depends on `LinkedNormalExitDescriptor`,
+23. Completed-Hub metadata no longer depends on `LinkedNormalExitDescriptor`,
     while its Hub-sourced Preboss behavior remains unchanged.
-23. Shared normal-decision consumers resolve one bounded policy product rather
+24. Shared normal-decision consumers resolve one bounded policy product rather
     than accumulating `generated || hub` branches.
-24. Each new policy has one primary test owner; integration suites retain only
+25. Each new policy has one primary test owner; integration suites retain only
     representative witnesses.
-25. Production growth is explained by a retained authority, and the final
+26. Production growth is explained by a retained authority, and the final
     change neighborhood is smaller than the current linked-plus-Hub path.
 
 The phase closes with:
@@ -562,6 +586,38 @@ The phase closes with:
 ```text
 npm run check
 ```
+
+## Implementation Record
+
+The selected model is now the only production N path.
+
+- Schema 10 rejects schema-9 documents. The N Opening owns an ordinary
+  width-one `prehub` decision, and its selected `N_PreHub01` occurrence owns
+  the exact zero-target terminal envelope.
+- `ReplaceWithHubDecision` atomically replaces only that envelope with a
+  source-bearing Hub. `RemoveHubDecision`, undo, and redo restore the exact
+  source envelope and remove all Hub-owned continuation state.
+- The completed-Hub `N_PreBoss01` handoff remains a separate Hub-sourced
+  batch. One shared persisted-board readiness query now gates codec closure,
+  commands, materialization, completeness, and candidate evaluation, so an
+  undersized Hub cannot expose an unexecutable Preboss action.
+- Workspace projection presents PreHub through the ordinary room and reward
+  controls. The terminal Hub action is structural and remains visible with a
+  stable marker and inspector destination when evaluation is unavailable; its
+  lazy candidate result controls only its affordance.
+- The linked normal-exit model, source-less Hub creation, standalone Hub
+  outline, and their canonical/workspace/UI branches are deleted. Completed
+  Hub metadata now has its own fixed-exit descriptor.
+
+Focused engine, workspace, and UI regressions cover the normal entry, exact
+terminal replacement, removal, rail/focus/undo behavior, undersized-Hub
+handoff guard, and an invalid PreHub reward finding that leaves the terminal
+Hub control visible.
+
+Final validation passed:
+
+- `npm run check` — typecheck, 100 test files / 883 tests, lint, formatting,
+  and production build.
 
 ## Decision Record
 
@@ -609,7 +665,7 @@ Complete B1 before changing production topology. It must establish:
 - the current-N lifecycle and depth equivalence fixtures;
 - the complete linked-family and progression-switch inventories;
 - the closed PreHub-to-Hub and completed-Hub-to-Preboss terminal matrix;
-- the schema-10 migration-or-rejection decision;
+- the schema-10 rejection and no-choice terminal-envelope decisions;
 - which branches the implementation deletes rather than forwards;
 - whether the normalized current N path preserves every observable pre-Hub and
   Hub product; and
