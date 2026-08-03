@@ -147,11 +147,10 @@ copied elsewhere.
   Commit 5a prompt removal, the re-anchor program, and the four Commit 5b
   presentation slices are complete. Campaign B made candidate artifacts
   explicit, Campaign C separated the justified authored-core authorities, and
-  Campaign D retained the coherent ordered history and reward folds. The
-  [Shop purchase-order delivery record](docs/progress/SHOP_PURCHASE_ORDER.md)
-  captures Commit 5c's completed schema, engine, projection, and UI slices;
-  final desktop/narrow visual sign-off is the remaining Phase 7 acceptance
-  input.
+  Campaign D retained the coherent ordered history and reward folds. Commit 5c
+  completed the schema-11 exact Shop purchase order across the engine,
+  projection, and UI; final desktop/narrow visual sign-off is the remaining
+  Phase 7 acceptance input.
 
 ## Source Evidence
 
